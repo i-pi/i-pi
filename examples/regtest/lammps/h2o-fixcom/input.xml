@@ -1,0 +1,40 @@
+<!-- REGTEST
+DEPENDENCIES init.xyz in.lmp data.lmp
+COMMAND(4) lmp_serial -i in.lmp
+ENDREGTEST -->
+<simulation verbosity='high' threading='false'>
+  <output prefix='simulation'>
+    <properties stride='4' filename='temp'>  [ step, time{picosecond}, temperature{kelvin}(1), temperature{kelvin}(2), temperature{kelvin}(0), temperature{kelvin}(O), temperature{kelvin}(H),  temperature{kelvin} ] </properties>
+    <properties stride='4' filename='kine'>  [ step, time{picosecond}, conserved, kinetic_md(1), kinetic_md(2), kinetic_md(0), kinetic_md(O), kinetic_md(H), kinetic_md ] </properties>
+    <trajectory stride='40' filename='pos'>  positions  </trajectory>
+  </output>
+  <total_steps> 40 </total_steps>
+  <prng>
+    <seed> 32342 </seed>
+  </prng>
+  <ffsocket name='lmp' mode='unix' pbc='true'>
+    <address> h2o-qn-fixcom </address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='4'>
+      <file mode='xyz'>  init.xyz </file>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='lmp'> </force>
+    </forces>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <thermostat mode='pile_l'>
+          <tau units='femtosecond'> 1e2 </tau>
+          <pile_lambda> 0.1 </pile_lambda>
+        </thermostat>
+        <timestep units='femtosecond'> 0.25 </timestep>
+      </dynamics>
+      <fixcom> True </fixcom>
+    </motion>
+    <ensemble>
+      <temperature units='kelvin'> 300 </temperature>
+    </ensemble>
+  </system>
+</simulation>

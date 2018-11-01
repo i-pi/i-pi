@@ -1,193 +1,221 @@
-"""Deals with creating the simulation class.
+"""Creates objects that hold the whole simulation."""
 
-Copyright (C) 2013, Joshua More and Michele Ceriotti
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program. If not, see <http.//www.gnu.org/licenses/>.
+# This file is part of i-PI.
+# i-PI Copyright (C) 2014-2015 i-PI developers
+# See the "licenses" directory for full license information.
 
 
-Classes:
-   InputSimulation: Deals with creating the Simulation object from a file, and
-      writing the checkpoints.
-"""
+import os.path
+import sys
+import time
+
+import numpy as np
+
+from ipi.utils.depend import *
+from ipi.utils.inputvalue import *
+from ipi.utils.units import *
+from ipi.utils.prng import *
+from ipi.utils.io import *
+from ipi.utils.io.inputs.io_xml import *
+from ipi.utils.messages import verbosity
+from ipi.engine.smotion import Smotion
+from ipi.inputs.prng import InputRandom
+from ipi.inputs.system import InputSystem, InputSysTemplate
+from ipi.engine.system import System
+import ipi.inputs.forcefields as iforcefields
+import ipi.engine.forcefields as eforcefields
+import ipi.inputs.outputs as ioutputs
+from ipi.inputs.smotion import InputSmotion
+
 
 __all__ = ['InputSimulation']
 
-import numpy as np
-import os.path, sys
-import ipi.engine.simulation
-from ipi.utils.depend import *
-from ipi.utils.inputvalue import *
-from ipi.utils.units  import *
-from ipi.utils.prng   import *
-from ipi.utils.io     import *
-from ipi.utils.io.io_xml import *
-from ipi.utils.messages import verbosity
-from ipi.inputs.forces import InputForces
-from ipi.inputs.prng import InputRandom
-from ipi.inputs.initializer import InputInitializer
-from ipi.inputs.beads import InputBeads
-from ipi.inputs.cell import InputCell
-from ipi.inputs.ensembles import InputEnsemble
-from ipi.inputs.outputs import InputOutputs
-from ipi.inputs.normalmodes import InputNormalModes
-from ipi.engine.normalmodes import NormalModes
-from ipi.engine.atoms import Atoms
-from ipi.engine.beads import Beads
-from ipi.engine.cell import Cell
-from ipi.engine.initializer import Initializer
 
 class InputSimulation(Input):
-   """Simulation input class.
 
-   Handles generating the appropriate forcefield class from the xml input file,
-   and generating the xml checkpoint tags and data from an instance of the
-   object.
+    """Simulation input class.
 
-   Attributes:
-      verbosity: A string saying how much should be output to standard output.
+    Handles generating the appropriate forcefield class from the xml input file,
+    and generating the xml checkpoint tags and data from an instance of the
+    object.
 
-   Fields:
-      force: A restart force instance. Used as a model for all the replicas.
-      ensemble: A restart ensemble instance.
-      beads: A restart beads instance.
-      normal_modes: Setup of normal mode integrator.
-      cell: A restart cell instance.
-      output: A list of the required outputs.
-      prng: A random number generator object.
-      step: An integer giving the current simulation step. Defaults to 0.
-      total_steps: The total number of steps. Defaults to 1000
-      total_time:  The wall clock time limit. Defaults to 0 (no limit).
-      initialize: An array of strings giving all the quantities that should
-         be output.
-   """
+    Attributes:
+       verbosity: A string saying how much should be output to standard output.
+       mode: A string which determines what type of simulation will be run.
 
-   fields = { "forces" :   (InputForces,    { "help"  : InputForces.default_help }),
-             "ensemble": (InputEnsemble, { "help"  : InputEnsemble.default_help } ),
-             "prng" :    (InputRandom,   { "help"  : InputRandom.default_help,
-                                         "default" : input_default(factory=Random)} ),
-             "initialize" : (InputInitializer, { "help" : InputInitializer.default_help,
-                                                "default" : input_default(factory=Initializer) } ),
-             "beads" :   (InputBeads, { "help"     : InputBeads.default_help,
-                                        "default"  : input_default(factory=Beads, kwargs={'natoms': 0, 'nbeads': 0}) } ),
-             "normal_modes" :   (InputNormalModes, { "help"     : InputNormalModes.default_help,
-                                        "default"  : input_default(factory=NormalModes, kwargs={'mode': "rpmd"}) } ),
-             "cell" :    (InputCell,   { "help"    : InputCell.default_help,
-                                        "default"  : input_default(factory=Cell) }),
-             "output" :  (InputOutputs, { "help"   : InputOutputs.default_help,
-                                          "default": input_default(factory=InputOutputs.make_default)  }),
-             "step" :       ( InputValue, { "dtype"    : int,
-                                            "default"  : 0,
-                                            "help"     : "The current simulation time step." }),
-             "total_steps": ( InputValue, { "dtype"    : int,
-                                            "default"  : 1000,
-                                            "help"     : "The total number of steps that will be done. If 'step' is equal to or greater than 'total_steps', then the simulation will finish." }),
-             "total_time" :       ( InputValue, { "dtype"    : float,
-                                            "default"  : 0,
-                                            "help"     : "The maximum wall clock time (in seconds)." }),
-                                             }
+    Fields:
+       output: A list of the required outputs.
+       prng: A random number generator object.
+       step: An integer giving the current simulation step. Defaults to 0.
+       total_steps: The total number of steps. Defaults to 1000
+       total_time:  The wall clock time limit. Defaults to 0 (no limit).
+       paratemp: A helper object for parallel tempering simulations
 
-   attribs = { "verbosity" : (InputAttribute, { "dtype"   : str,
-                                      "default" : "low",
-                                      "options" : [ "quiet", "low", "medium", "high", "debug" ],
-                                      "help"    : "The level of output on stdout."
-                                         })
-             }
+    Dynamic fields:
+       system: Holds the data needed to specify the state of a single system.
+       ffsocket: Gives a forcefield which will use a socket interface to
+          communicate with the driver code.
+       fflj: Gives a forcefield which uses the internal Python Lennard-Jones
+          script to calculate the potential and forces.
+    """
 
-   default_help = "This is the top level class that deals with the running of the simulation, including holding the simulation specific properties such as the time step and outputting the data."
-   default_label = "SIMULATION"
+    fields = {
+        "prng": (InputRandom, {"help": InputRandom.default_help,
+                               "default": input_default(factory=Random)}),
+              "output": (ioutputs.InputOutputs, {"help": ioutputs.InputOutputs.default_help,
+                                                 "default": input_default(factory=ioutputs.InputOutputs.make_default)}),
+              "step": (InputValue, {"dtype": int,
+                                    "default": 0,
+                                    "help": "The current simulation time step."}),
+              "total_steps": (InputValue, {"dtype": int,
+                                           "default": 1000,
+                                           "help": "The total number of steps that will be done. If 'step' is equal to or greater than 'total_steps', then the simulation will finish."}),
+              "total_time": (InputValue, {"dtype": float,
+                                          "default": 0,
+                                          "help": "The maximum wall clock time (in seconds)."}),
+              "smotion": (InputSmotion, {"default": input_default(factory=Smotion),
+                                         "help": "Options for a 'super-motion' step between system replicas"})
+    }
 
-   def store(self, simul):
-      """Takes a simulation instance and stores a minimal representation of it.
+    attribs = {"verbosity": (InputAttribute, {"dtype": str,
+                                              "default": "low",
+                                              "options": ["quiet", "low", "medium", "high", "debug"],
+                                              "help": "The level of output on stdout."
+                                              }),
+               "threading": (InputAttribute, {"dtype": bool,
+                                              "default": True,
+                                              "help": "Whether multiple-systems execution should be parallel. Makes execution non-reproducible due to the random number generator being used from concurrent threads."
+                                              }),
+               "mode": (InputAttribute, {"dtype": str,
+                                         "default": "md",
+                                         "help": "What kind of simulation should be run.",
+                                         "options": ['md', 'paratemp', 'static']})
+               }
 
-      Args:
-         simul: A simulation object.
-      """
+    dynamic = {
+        "system": (InputSystem, {"help": InputSystem.default_help}),
+              "system_template": (InputSysTemplate, {"help": InputSysTemplate.default_help}),
+              "ffsocket": (iforcefields.InputFFSocket, {"help": iforcefields.InputFFSocket.default_help}),
+              "fflj": (iforcefields.InputFFLennardJones, {"help": iforcefields.InputFFLennardJones.default_help}),
+              "ffdebye": (iforcefields.InputFFDebye, {"help": iforcefields.InputFFDebye.default_help}),
+              "ffplumed": (iforcefields.InputFFPlumed, {"help": iforcefields.InputFFPlumed.default_help}),
+              "ffyaff": (iforcefields.InputFFYaff, {"help": iforcefields.InputFFYaff.default_help})
+    }
 
-      super(InputSimulation,self).store()
-      self.forces.store(simul.flist)
-      self.ensemble.store(simul.ensemble)
+    default_help = "This is the top level class that deals with the running of the simulation, including holding the simulation specific properties such as the time step and outputting the data."
+    default_label = "SIMULATION"
 
-      self.beads.store(simul.beads)
+    def store(self, simul):
+        """Takes a simulation instance and stores a minimal representation of it.
 
-      self.normal_modes.store(simul.nm)
-      self.cell.store(simul.cell)
-      self.prng.store(simul.prng)
-      self.step.store(simul.step)
-      self.total_steps.store(simul.tsteps)
-      self.total_time.store(simul.ttime)
-      self.output.store(simul.outputs)
+        Args:
+           simul: A simulation object.
+        """
 
-      # this we pick from the messages class. kind of a "global" but it seems to
-      # be the best way to pass around the (global) information on the level of output.
-      if verbosity.debug:
-         self.verbosity.store("debug")
-      elif verbosity.high:
-         self.verbosity.store("high")
-      elif verbosity.medium:
-         self.verbosity.store("medium")
-      elif verbosity.low:
-         self.verbosity.store("low")
-      elif verbosity.quiet:
-         self.verbosity.store("quiet")
-      else:
-         raise ValueError("Invalid verbosity level")
+        super(InputSimulation, self).store()
 
-   def fetch(self):
-      """Creates a simulation object.
+        self.output.store(simul.outtemplate)
+        self.prng.store(simul.prng)
+        self.step.store(simul.step)
+        self.total_steps.store(simul.tsteps)
+        self.total_time.store(simul.ttime)
+        self.smotion.store(simul.smotion)
+        self.threading.store(simul.threading)
 
-      Returns:
-         A simulation object of the appropriate type and with the appropriate
-         properties and other objects given the attributes of the
-         InputSimulation object.
+        # this we pick from the messages class. kind of a "global" but it seems to
+        # be the best way to pass around the (global) information on the level of output.
+        if verbosity.debug:
+            self.verbosity.store("debug")
+        elif verbosity.high:
+            self.verbosity.store("high")
+        elif verbosity.medium:
+            self.verbosity.store("medium")
+        elif verbosity.low:
+            self.verbosity.store("low")
+        elif verbosity.quiet:
+            self.verbosity.store("quiet")
+        else:
+            raise ValueError("Invalid verbosity level")
 
-      Raises:
-         TypeError: Raised if one of the file types in the stride keyword
-            is incorrect.
-      """
+        self.mode.store(simul.mode)
 
-      super(InputSimulation,self).fetch()
+        _fflist = [v for k, v in sorted(simul.fflist.iteritems())]
+        if len(self.extra) != len(_fflist) + len(simul.syslist):
+            self.extra = [0] * (len(_fflist) + len(simul.syslist))
 
-      # small hack: initialize here the verbosity level -- we really assume to have
-      # just one simulation object
-      verbosity.level=self.verbosity.fetch()
+        for _ii, _obj, in enumerate(_fflist + simul.syslist):
+            if self.extra[_ii] == 0:
+                if isinstance(_obj, eforcefields.FFSocket):
+                    _iobj = iforcefields.InputFFSocket()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffsocket", _iobj)
+                elif isinstance(_obj, eforcefields.FFLennardJones):
+                    _iobj = iforcefields.InputFFLennardJones()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("fflj", _iobj)
+                elif isinstance(_obj, eforcefields.FFDebye):
+                    _iobj = iforcefields.InputFFDebye()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffdebye", _iobj)
+                elif isinstance(_obj, eforcefields.FFPlumed):
+                    _iobj = iforcefields.InputFFPlumed()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffplumed", _iobj)
+                elif isinstance(_obj, eforcefields.FFYaff):
+                    _iobj = iforcefields.InputFFYaff()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffyaff", _iobj)
+                elif isinstance(_obj, System):
+                    _iobj = InputSystem()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("system", _iobj)
+            else:
+                self.extra[_ii][1].store(_obj)
 
-      # this creates a simulation object which gathers all the little bits
-      #TODO use named arguments since this list is a bit too long...
-      rsim = ipi.engine.simulation.Simulation(self.beads.fetch(), self.cell.fetch(),
-               self.forces.fetch(), self.ensemble.fetch(), self.prng.fetch(),
-                  self.output.fetch(), self.normal_modes.fetch(),
-                     self.initialize.fetch(), self.step.fetch(),
-                        tsteps=self.total_steps.fetch(),
-                           ttime=self.total_time.fetch())
+    def fetch(self):
+        """Creates a simulation object.
 
-      # this does all of the piping between the components of the simulation
-      rsim.bind()
+        Returns:
+           A simulation object of the appropriate type and with the appropriate
+           properties and other objects given the attributes of the
+           InputSimulation object.
 
-      return rsim
+        Raises:
+           TypeError: Raised if one of the file types in the stride keyword
+              is incorrect.
+        """
 
-   def check(self):
-      """Function that deals with optional arguments.
+        super(InputSimulation, self).fetch()
 
-      Deals with the difference between classical and PI dynamics. If there is
-      no beads argument, the bead positions are generated from the atoms, with
-      the necklace being fixed at the atom position. Similarly, if no nbeads
-      argument is specified a classical simulation is done.
+        # small hack: initialize here the verbosity level -- we really assume to have
+        # just one simulation object
+        verbosity.level = self.verbosity.fetch()
 
-      Raises:
-         TypeError: Raised if no beads or atoms attribute is defined.
-      """
+        syslist = []
+        fflist = []
+        for (k, v) in self.extra:
+            if k == "system":
+                syslist.append(v.fetch())
+            elif k == "system_template":
+                syslist += v.fetch()  # this will actually generate automatically a bunch of system objects with the desired properties set automatically to many values
+            elif k == "ffsocket" or k == "fflj" or k == "ffdebye" or k == "ffplumed":
+                print "fetching", k
+                fflist.append(v.fetch())
+            elif k == "ffyaff":
+                fflist.append(v.fetch())
 
-      super(InputSimulation,self).check()
-      if self.total_steps.fetch() <= self.step.fetch():
-         raise ValueError("Current step greater than total steps, no dynamics will be done.")
+        # this creates a simulation object which gathers all the little bits
+        import ipi.engine.simulation as esimulation   # import here as otherwise this is the mother of all circular imports...
+        rsim = esimulation.Simulation(
+            mode=self.mode.fetch(),
+            syslist=syslist,
+            fflist=fflist,
+            outputs=self.output.fetch(),
+            prng=self.prng.fetch(),
+            smotion=self.smotion.fetch(),
+            step=self.step.fetch(),
+            tsteps=self.total_steps.fetch(),
+            ttime=self.total_time.fetch(),
+            threads=self.threading.fetch())
+
+        return rsim

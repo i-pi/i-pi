@@ -1,0 +1,46 @@
+&CONTROL
+    calculation='scf'
+    verbosity='low'
+    restart_mode='from_scratch'
+    tstress=.true.
+    tprnfor=.true.
+    etot_conv_thr=5.0D-5
+    forc_conv_thr=1.0D-4
+    prefix='h2o'
+    outdir='./'
+    pseudo_dir='../'
+    max_seconds=7200
+/
+&SYSTEM
+    ibrav=0
+    celldm(1)= 10.0
+    NAT=3
+    NTYP=2
+    ECUTWFC=18
+    ECUTRHO=100
+    nspin=1
+    occupations='fixed'
+    nosym=.true.
+/
+&ELECTRONS
+    conv_thr=1.0e-9
+    mixing_mode='plain' 
+    mixing_beta=0.7
+    startingpot='atomic' 
+    startingwfc='atomic'
+/
+&IONS
+/
+ATOMIC_SPECIES   
+    H  1.008 H.pbe-rrkjus.UPF
+    O  1.008 O.pbe-rrkjus.UPF
+ATOMIC_POSITIONS (alat)
+H 0.1 0 0 
+H -0.1 0 0
+O 0 0 0 
+K_POINTS (gamma)
+CELL_PARAMETERS
+1 0 0
+0 1 0
+0 0 1 
+

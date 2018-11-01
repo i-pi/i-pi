@@ -1,0 +1,34 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='5' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, 
+    pressure_cv{megapascal},isotope_zetasc(1.998;H), isotope_zetasc(1.1253;O)] </properties>
+    <trajectory filename='pos' stride='1000'> positions </trajectory>
+  </output>
+  <total_steps>500000</total_steps>
+  <prng>
+    <seed>32346</seed>
+  </prng>
+  <ffsocket name='lmpserial1' mode='unix'>
+    <address>isof-vapor</address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='32'>
+      <file mode='pdb'> init.pdb </file>
+      <velocities mode='thermal' units='kelvin'> 298 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='lmpserial1'> </force>
+    </forces>
+    <ensemble>
+      <temperature units='kelvin'>298</temperature>
+    </ensemble>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <thermostat mode='pile_l'>
+          <tau units='femtosecond'>100</tau>
+        </thermostat>
+        <timestep units='femtosecond'> 0.25</timestep>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>

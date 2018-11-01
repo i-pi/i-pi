@@ -1,0 +1,37 @@
+<simulation mode="static" verbosity="medium">
+    <output prefix='inst'>
+        <properties stride='1' filename='out'>  [ step, potential{electronvolt}] </properties>
+        <trajectory stride="1" filename="xc" format="xyz">x_centroid{angstrom}</trajectory>
+        <trajectory stride='1' filename='pos'>  positions{angstrom}  </trajectory>
+   </output>
+   <total_steps>400       </total_steps>
+   <ffsocket name="aims" mode="unix" >
+       <address> localhost </address>  
+   </ffsocket>
+   <system >
+       <initialize nbeads='1'> 
+           <file mode='xyz' >  TS.xyz </file>
+           <cell mode='abc'> [200.0,  200.0,  200.0  ] </cell>
+       </initialize>
+       <forces>
+          <force forcefield="aims"> </force>
+       </forces>
+       <ensemble>
+           <temperature units="kelvin">35</temperature>
+       </ensemble>
+       <motion mode='instanton'>
+           <instanton mode='rate'>
+               <tolerances>
+                   <energy> 1e-6 </energy>
+	           <force> 1e-6 </force>
+	           <position> 5e-3 </position>
+               </tolerances>
+               <hessian_init>true</hessian_init>
+               <hessian_update>recompute</hessian_update>
+               <hessian_asr>poly</hessian_asr>
+               <hessian_final>true</hessian_final>
+	       <biggest_step>0.3</biggest_step>
+           </instanton>
+       </motion>
+   </system>
+</simulation>

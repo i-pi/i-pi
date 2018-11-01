@@ -1,11 +1,15 @@
 #ignored patterns
 
-bin/*
+bin/i-pi-driver
+doc/manual.pdf
+doc/manual.xml
 *.pyc
 *.pyo
 *.x
 *.mod
 *.out
 *.o
-*.pdf
 *~
+\#*
+*.orig
+regtest-ref

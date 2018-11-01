@@ -1,0 +1,53 @@
+&CONTROL
+    calculation='scf'
+    verbosity='high'
+    restart_mode='from_scratch'
+    tstress=.true.
+    tprnfor=.true.
+    etot_conv_thr=5.0D-5
+    forc_conv_thr=1.0D-4
+    prefix='libcc'
+    outdir='./'
+    pseudo_dir='../'
+    max_seconds=7200
+/
+&SYSTEM
+    ibrav=0
+    celldm(1)= 6.57
+    NAT=4
+    NTYP=1
+    ECUTWFC=20
+    ECUTRHO=100
+    nspin=1
+    occupations='smearing'
+    smearing='gauss'
+    degauss=1e-3
+    nosym=.true.
+/
+&ELECTRONS
+    conv_thr=1.0e-10
+    mixing_mode='plain' 
+    mixing_beta=0.7
+    startingpot='atomic' 
+    startingwfc='atomic'
+/
+&IONS
+    pot_extrapolation = 'second_order'
+    wfc_extrapolation = 'second_order'
+/
+&CELL
+/
+ATOMIC_SPECIES   
+    Li     6.941   Li.pbe-tm.UPF
+ATOMIC_POSITIONS (alat)
+Li 0 0 0
+Li 0.5 0.5 0
+Li 0 0.5 0.5
+Li 0.5 0 0.5
+K_POINTS (automatic)
+ 04 04 04 1 1 1
+CELL_PARAMETERS
+1 0 0
+0 1 0
+0 0 1 
+

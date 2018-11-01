@@ -1,0 +1,28 @@
+units  real 
+atom_style	full
+
+read_data       data.lmp
+
+# TIP4PF in current LAMMPS does not give the correct stress with triclinic boxes...
+# pair_style lj/cut/tip4p/long 1 2 1 1 0.14714951 7
+pair_style	lj/cut/coul/long 8
+
+pair_coeff  * * 0 0
+pair_coeff  1  1  0.18508368 3.1589022
+
+bond_style      class2 
+angle_style     harmonic
+kspace_style	ewald 0.0001
+
+#qtip4pf bond parameters
+bond_coeff      1 0.9419 607.19354  -1388.6516 1852.577
+angle_coeff     1 43.93  107.4
+
+neighbor	2.0 bin
+
+timestep	0.0001
+
+fix 1 all ipi ice-nst 32345 unix
+
+run		100000000
+

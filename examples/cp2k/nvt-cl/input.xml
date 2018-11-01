@@ -1,0 +1,44 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='1' flush='1'>[step, time{femtosecond}, conserved, potential, kinetic_cv, pressure_cv, volume, temperature{kelvin}, kinetic_md, pressure_md ] </properties>
+    <trajectory stride='5' format='pdb' filename='xc' cell_units='atomic_unit'> x_centroid{atomic_unit} </trajectory>
+    <trajectory stride='1' format='xyz' filename='pos'> positions </trajectory>
+    <trajectory stride='1' format='xyz' filename='vel'> velocities </trajectory>
+    <trajectory stride='1' format='xyz' filename='for'> forces </trajectory>
+    <checkpoint stride='100' overwrite='true' filename='chk'/>
+    <checkpoint stride='5000' overwrite='false' filename='restart'/>
+  </output>
+  <total_steps>1000</total_steps>
+  <prng>
+    <seed>20222</seed>
+  </prng>
+  <ffsocket mode='inet' name='driver'>
+    <address>localhost</address>
+    <port>21340</port>
+    <latency>0.01</latency>
+    <timeout>5000</timeout>
+  </ffsocket>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='xyz'>init.xyz</file>
+      <momenta mode='thermal' units='kelvin'> 750 </momenta>
+    </initialize>
+    <forces>
+      <force forcefield='driver'/>
+    </forces>
+    <ensemble>
+      <temperature units='kelvin'> 750 </temperature>
+    </ensemble>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <thermostat mode='cl'>
+          <tau units='femtosecond'> 5 </tau>
+          <idtau units='femtosecond'> 50 </idtau>
+          <apat units='femtosecond'> 100 </apat>
+        </thermostat>
+        <timestep units='femtosecond'> 0.5 </timestep>
+      </dynamics>
+      <fixcom>True</fixcom>
+    </motion>
+  </system>
+</simulation>

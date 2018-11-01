@@ -1,0 +1,39 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties filename='out' stride='1' flush='1000'> [step, time{picosecond},
+potential{electronvolt}] </properties>
+    <trajectory filename='pos' stride='1' format='xyz' cell_units='angstrom' flush='1000'> 
+positions{angstrom} </trajectory>
+    <trajectory filename='for' stride='1' format='xyz' cell_units='angstrom' flush='1000'> 
+forces{piconewton} </trajectory>
+  </output>
+  <total_steps>10000</total_steps>
+  <prng>
+    <seed>32342</seed>
+  </prng>
+  <ffsocket name='qtip4pf' mode='unix' pbc='false'>
+    <address>qtip4pf</address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='10'>
+      <file mode='pdb'> init.pdb </file>
+      <velocities mode='thermal' units='kelvin'> 298 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='qtip4pf'> </force>
+    </forces>
+    <ensemble>
+      <temperature units='kelvin'>298</temperature>
+    </ensemble>
+    <motion mode='dynamics'>
+      <fixcom>False</fixcom>
+      <dynamics mode='nvt'>
+        <timestep units='femtosecond'> 0.5 </timestep>
+        <thermostat mode='pile_l'>
+          <tau units='femtosecond'>100</tau>
+          <pile_lambda>0.1</pile_lambda>
+        </thermostat>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>

@@ -1,0 +1,34 @@
+<simulation verbosity='high'>
+  <ffsocket mode='unix' name='driver'>
+    <latency>  1.00000000e-01</latency>
+    <timeout>  6.00000000e+02</timeout>
+    <address>zundel</address>
+  </ffsocket>
+  <total_steps>20</total_steps>
+  <output prefix='simulation'>
+    <properties stride='10'> [ step, time, conserved, temperature{kelvin}, kinetic_cv,
+            potential, kinetic_cv(H), kinetic_cv(O) ] </properties>
+  </output>
+  <prng>
+    <seed>18885</seed>
+  </prng>
+  <system>
+    <forces>
+      <force forcefield='driver'/>
+    </forces>
+    <initialize nbeads='8'>
+      <file mode='xyz'>init.xyz</file>
+    </initialize>
+    <ensemble>
+      <temperature units='kelvin'> 300.0 </temperature>
+    </ensemble>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <timestep units='femtosecond'> 0.25 </timestep>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'>100</tau>
+        </thermostat>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>

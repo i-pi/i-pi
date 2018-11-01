@@ -1,0 +1,46 @@
+<!-- REGTEST
+DEPENDENCIES init.xyz h5o2.dms4B.coeff.com.dat h5o2.pes4B.coeff.dat 
+COMMAND(4) i-pi-driver -u -h REGTEST_SOCKET -m zundel
+ENDREGTEST -->
+<simulation mode='static' verbosity='high'>
+  <ffsocket mode='unix' name='zundel'>
+    <latency> 1.00000000e-02 </latency>
+    <slots> 4 </slots>
+    <port> 20614 </port>
+    <timeout> 6.00000000e+02 </timeout>
+    <address> REGTEST_SOCKET  </address>
+  </ffsocket>
+  <total_steps> 10 </total_steps>
+  <output prefix='simulation'>
+    <trajectory stride='2' filename='pos' cell_units='angstrom'> positions{angstrom} </trajectory>
+    <properties stride='1'> [step, time, potential, forcemod] </properties>
+    <properties stride='1' filename='neb'> [step, potential(0), potential(1), potential(2), potential(3), potential(4), potential(5), potential(6), potential(7), potential(8), potential(9), potential(10), potential(11), potential(12), potential(13), potential(14), potential(15), potential(16)] </properties>
+  </output>
+  <prng>
+    <seed> 18885 </seed>
+  </prng>
+  <system>
+    <forces>
+      <force forcefield='zundel'/>
+    </forces>
+    <initialize nbeads='17'>
+      <file mode='xyz' units='angstrom'> init.xyz </file>
+      <cell> [25.29166, 0, 0, 0, 25.29166, 0, 0, 0, 25.29166] </cell>
+    </initialize>
+    <motion mode='neb'>
+      <neb_optimizer mode='lbfgs'>
+        <ls_options>
+          <step> 1.0e-3 </step>
+          <tolerance> 1.0e-5 </tolerance>
+          <iter> 150 </iter>
+        </ls_options>
+        <tolerances>
+          <energy> 1.0e-7 </energy>
+          <force> 1.0e-3 </force>
+          <position> 1.0e-7 </position>
+        </tolerances>
+        <biggest_step> 2.0 </biggest_step>
+      </neb_optimizer>
+    </motion>
+  </system>
+</simulation>

@@ -1,0 +1,50 @@
+<simulation verbosity='medium'>
+  <output prefix='simulation'>
+    <properties stride='10' filename='out'>  [step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, volume, pressure_cv{megapascal}] </properties>
+    <trajectory stride='10' filename='pos' format='pdb' cell_units='angstrom'>positions{angstrom}</trajectory>
+    <checkpoint stride='1000'/>
+  </output>
+  <total_steps>2000</total_steps>
+  <prng>
+    <seed>32345</seed>
+  </prng>
+  <ffyaff name='yaff'>
+    <yaffsys> init.chk </yaffsys>
+    <yaffpara> pars.txt </yaffpara>
+    <rcut> 28.345892008818783 </rcut>
+    <smooth_ei> True </smooth_ei>
+    <alpha_scale> 3.2 </alpha_scale>
+    <gcut_scale> 1.5 </gcut_scale>
+  </ffyaff>
+  <system>
+    <initialize nbeads='4'>
+      <positions mode='xyz'> init.xyz </positions>
+      <labels mode='xyz'> init.xyz </labels>
+      <masses mode='xyz'> init.xyz </masses>
+      <cell mode='manual' units='angstrom'> [16.53, 0.00, 0.00, 0.00, 13.37, 0.00, 0.00, 0.00, 13.64] </cell>
+    </initialize>
+    <forces>
+      <force forcefield='yaff'> </force>
+    </forces>
+    <motion mode='dynamics'>
+      <dynamics mode='nst'>
+        <barostat mode='anisotropic'>
+          <h0 units='angstrom'> [16.53, 0.00, 0.00, 0.00, 13.37, 0.00, 0.00, 0.00, 13.64] </h0>
+          <tau units='femtosecond'> 100 </tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+        </barostat>
+        <thermostat mode='pile_l'>
+          <tau units='femtosecond'> 100 </tau>
+          <pile_lambda> 0.1 </pile_lambda>
+        </thermostat>
+        <timestep units='femtosecond'> 0.25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units='kelvin'> 300 </temperature>
+      <stress units='megapascal'> [100.0, 0.0, 0.0, 0.0, 100.0, 0.0, 0.0, 0.0, 100.0] </stress>
+    </ensemble>
+  </system>
+</simulation>

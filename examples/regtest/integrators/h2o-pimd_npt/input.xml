@@ -1,0 +1,47 @@
+<!-- REGTEST
+DEPENDENCIES init.pdb  in.lmp data.lmp
+COMMAND(1) lmp_serial -i in.lmp
+ENDREGTEST -->
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potential{electronvolt}, pressure_cv{megapascal} ] </properties>
+    <trajectory filename='pos' stride='1'> positions </trajectory>
+    <checkpoint stride='200'/>
+  </output>
+  <total_steps>10</total_steps>
+  <prng>
+    <seed>31415</seed>
+  </prng>
+  <ffsocket name='lammps' mode='unix'>
+    <address>h2o-pimd.1</address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='4'>
+      <file mode='pdb'> init.pdb </file>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='lammps'> </force>
+    </forces>
+    <motion mode='dynamics'>
+      <fixcom> False </fixcom>
+      <dynamics mode='npt'>
+        <timestep units='femtosecond'> 0.5 </timestep>
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='svr'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 35.233, 0, 0, 0, 35.233, 0, 0, 0, 35.233 ] </h0>
+        </barostat>
+        <thermostat mode='svr'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units='kelvin'> 300 </temperature>
+      <pressure units='pascal'> 1e5 </pressure>
+    </ensemble>
+  </system>
+</simulation>

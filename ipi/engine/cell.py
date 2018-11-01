@@ -1,140 +1,130 @@
-"""Contains the classes which deal with the system box.
-
-Copyright (C) 2013, Joshua More and Michele Ceriotti
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program. If not, see <http.//www.gnu.org/licenses/>.
-
+"""Classes which deal with the system box.
 
 Used for implementing the minimum image convention.
-
-Classes:
-   Cell: Base cell class with the generic methods and attributes.
 """
 
-__all__ = ['Cell']
+# This file is part of i-PI.
+# i-PI Copyright (C) 2014-2015 i-PI developers
+# See the "licenses" directory for full license information.
+
 
 import numpy as np
+
 from ipi.utils.depend import *
 from ipi.utils.mathtools import *
 from ipi.utils import units
 
 
+__all__ = ['Cell']
+
+
 class Cell(dobject):
-   """Base class to represent the simulation cell in a periodic system.
 
-   This class has the base attributes required for either flexible or
-   isotropic cell dynamics. Uses an upper triangular lattice vector matrix to
-   represent the cell.
+    """Base class to represent the simulation cell in a periodic system.
 
-   Depend objects:
-      h: An array giving the lattice vector matrix.
-      ih: An array giving the inverse of the lattice vector matrix.
-      V: The volume of the cell.
-   """
+    This class has the base attributes required for either flexible or
+    isotropic cell dynamics. Uses an upper triangular lattice vector matrix to
+    represent the cell.
 
-   def __init__(self, h=None):
-      """Initialises base cell class.
+    Depend objects:
+       h: An array giving the lattice vector matrix.
+       ih: An array giving the inverse of the lattice vector matrix.
+       V: The volume of the cell.
+    """
 
-      Args:
-         h: Optional array giving the initial lattice vector matrix. The
-            reference cell matrix is set equal to this. Must be an upper
-            triangular 3*3 matrix. Defaults to a 3*3 zeroes matrix.
-      """
+    def __init__(self, h=None):
+        """Initialises base cell class.
 
-      if h is None:
-         #h = np.identity(3,float)
-         h = np.zeros((3,3), float)
-      dset(self,"h",depend_array(name = 'h', value = h) )
+        Args:
+           h: Optional array giving the initial lattice vector matrix. The
+              reference cell matrix is set equal to this. Must be an upper
+              triangular 3*3 matrix. Defaults to a 3*3 zeroes matrix.
+        """
 
-      dset(self,"ih",
-         depend_array(name = "ih", value = np.zeros((3,3),float),
-            func=self.get_ih, dependencies=[dget(self,"h")]) )
-      dset(self,"V",
-         depend_value(name = 'V', func=self.get_volume,
-            dependencies=[dget(self,"h")]) )
+        if h is None:
+            h = np.zeros((3, 3), float)
 
-   def get_ih(self):
-      """Inverts the lattice vector matrix."""
+        dself = dd(self)  # gets a direct-access view to self
 
-      return invert_ut3x3(self.h)
+        dself.h = depend_array(name='h', value=h)
+        dself.ih = depend_array(name="ih", value=np.zeros((3, 3), float),
+                                func=self.get_ih, dependencies=[dself.h])
+        dself.V = depend_value(name='V', func=self.get_volume,
+                               dependencies=[dself.h])
 
-   def get_volume(self):
-      """Calculates the volume of the system box."""
+    def copy(self):
+        return Cell(dstrip(self.h).copy())
 
-      return det_ut3x3(self.h)
+    def get_ih(self):
+        """Inverts the lattice vector matrix."""
 
-   def apply_pbc(self, atom):
-      """Uses the minimum image convention to return a particle to the
-         unit cell.
+        return invert_ut3x3(self.h)
 
-      Args:
-         atom: An Atom object.
+    def get_volume(self):
+        """Calculates the volume of the system box."""
 
-      Returns:
-         An array giving the position of the image that is inside the
-         system box.
-      """
+        return det_ut3x3(self.h)
 
-      s = np.dot(self.ih,atom.q)
+    def apply_pbc(self, atom):
+        """Uses the minimum image convention to return a particle to the
+           unit cell.
 
+        Args:
+           atom: An Atom object.
 
-      for i in range(3):
-         s[i] = s[i] - round(s[i])
+        Returns:
+           An array giving the position of the image that is inside the
+           system box.
+        """
 
-      return np.dot(self.h,s)
+        s = np.dot(self.ih, atom.q)
 
-   def array_pbc(self, pos):
-      """Uses the minimum image convention to return a list of particles to the
-         unit cell.
+        for i in range(3):
+            s[i] = s[i] - round(s[i])
 
-      Args:
-         atom: An Atom object.
+        return np.dot(self.h, s)
 
-      Returns:
-         An array giving the position of the image that is inside the
-         system box.
-      """
+    def array_pbc(self, pos):
+        """Uses the minimum image convention to return a list of particles to the
+           unit cell.
 
-      s = depstrip(pos).copy()
-      s.shape = (len(pos)/3,3)
+        Args:
+           atom: An Atom object.
 
-      s = np.dot(depstrip(self.ih),s.T)
-      s = s - np.round(s)
+        Returns:
+           An array giving the position of the image that is inside the
+           system box.
+        """
 
-      s = np.dot(depstrip(self.h),s).T
+        s = dstrip(pos).copy()
+        s.shape = (len(pos) / 3, 3)
 
-      pos[:] = s.reshape((len(s)*3))
+        s = np.dot(dstrip(self.ih), s.T)
+        s = s - np.round(s)
 
-   def minimum_distance(self, atom1, atom2):
-      """Takes two atoms and tries to find the smallest vector between two
-      images.
+        s = np.dot(dstrip(self.h), s).T
 
-      This is only rigorously accurate in the case of a cubic cell,
-      but gives the correct results as long as the cut-off radius is defined
-      as smaller than the smallest width between parallel faces even for
-      triclinic cells.
+        pos[:] = s.reshape((len(s) * 3))
 
-      Args:
-         atom1: An Atom object.
-         atom2: An Atom object.
+    def minimum_distance(self, atom1, atom2):
+        """Takes two atoms and tries to find the smallest vector between two
+        images.
 
-      Returns:
-         An array giving the minimum distance between the positions of atoms
-         atom1 and atom2 in the minimum image convention.
-      """
+        This is only rigorously accurate in the case of a cubic cell,
+        but gives the correct results as long as the cut-off radius is defined
+        as smaller than the smallest width between parallel faces even for
+        triclinic cells.
 
-      s = np.dot(self.ih,atom1.q-atom2.q)
-      for i in range(3):
-         s[i] -= round(s[i])
-      return np.dot(self.h, s)
+        Args:
+           atom1: An Atom object.
+           atom2: An Atom object.
+
+        Returns:
+           An array giving the minimum distance between the positions of atoms
+           atom1 and atom2 in the minimum image convention.
+        """
+
+        s = np.dot(self.ih, atom1.q - atom2.q)
+        for i in range(3):
+            s[i] -= round(s[i])
+        return np.dot(self.h, s)

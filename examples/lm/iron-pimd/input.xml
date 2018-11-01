@@ -1,0 +1,36 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out' flush='1'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, kinetic_cv(H), kinetic_cv(Fe), pressure_cv{megapascal}] </properties>
+    <trajectory stride='1' filename='pos' flush='1'>positions{angstrom}</trajectory>
+    <trajectory stride='1' filename='for' flush='1'>forces</trajectory>
+    <checkpoint stride='1000' overwrite='false'/>
+  </output>
+  <total_steps>100000</total_steps>
+  <prng>
+    <seed>8417</seed>
+  </prng>
+  <ffsocket mode='inet' name='libtbe' pbc='false'>
+    <address> localhost </address>
+    <port> 23456 </port>
+  </ffsocket>
+  <system>
+    <initialize nbeads='4'>
+      <file mode='xyz'> init.xyz  </file>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='libtbe'> </force>
+    </forces>
+    <ensemble>
+      <temperature units='kelvin'>300</temperature>
+    </ensemble>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <thermostat mode='pile_l'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units='femtosecond'>1.0</timestep>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>

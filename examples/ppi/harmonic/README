@@ -1,0 +1,51 @@
+ -- Example with the 1D harmonic oscillator code --
+
+ * This gives an example of a Hydrogen atom in a 1D harmonic potential well.
+   The input file is set up so that the spring constant of the harmonic oscillator 
+   is set to k = 0.2.
+
+ * To run, first compile the driver code in drivers/. This should be as 
+   simple as: 
+
+$ make
+
+ * Next, source the env.sh file in the i-pi root.
+
+$ source i-pi-root/env.sh
+
+** Run the examples automatically:
+ 
+ * A Makefile is provided to run this example. To run simply use:
+
+$ make harmonic
+
+ * To clean up output files:
+
+$ make clean
+
+
+** Run the examples manually:
+
+ * Go to the i-pi root directory and from there
+
+$ source env.sh
+
+ * Go back to the example directory and run
+
+$ i-pi input.xml
+ 
+   the wrapper will start and sit waiting on the UDS /tmp/ipi
+ 
+ * Open a separate terminal and run the harmonic oscillator driver code 
+ 
+$ i-pi-driver -u -h harmonic -m harm -o 0.2
+
+   You can run multiple instances of the code; it is so fast that parallel 
+   scaling won't be appreciable.
+
+ * If your system does not support Unix domain sockets, just set in input.xml
+   <socket mode="inet"> <port> port_no </port>
+
+  then run the driver as:
+
+$ i-pi-driver -h harmonic -m harm -o 1 -p port_no

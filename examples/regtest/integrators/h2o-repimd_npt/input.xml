@@ -1,0 +1,60 @@
+<!-- REGTEST
+DEPENDENCIES 0_init.xyz 1_init.xyz 2_init.xyz  in.lmp data.lmp
+COMMAND(1) lmp_serial -i in.lmp
+ENDREGTEST -->
+<simulation verbosity="low" threading='false'>
+   <output prefix="simulation">
+      <properties stride="1" filename="out">  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv, volume, ensemble_temperature ] </properties>
+      <trajectory filename="xc" stride="1"> x_centroid </trajectory>
+      <checkpoint stride="4000"/>
+   </output>
+   <total_steps> 4 </total_steps>
+   <total_time> 3400 </total_time>
+   <prng><seed>31415</seed></prng>
+   <ffsocket name="qtip4pf" mode="unix" matching="any">
+       <address>  driver </address>
+       <latency> 1e-3 </latency> 
+   </ffsocket>
+   <system_template>
+       <labels>   [ IDX, TEMP, PRESSURE ,INITFILE] </labels>
+       <instance> [ 0,  250, 1.0, 0_init.xyz ] </instance>
+       <instance> [ 1,  260, 1.0, 1_init.xyz ] </instance>
+       <instance> [ 2,  270, 1.0, 2_init.xyz ] </instance>
+       <template>
+           <system prefix="IDX">
+              <initialize nbeads="2">
+                 <file mode="xyz"> INITFILE </file>
+                 <velocities mode="thermal" units="kelvin"> TEMP </velocities>
+              </initialize>
+              <forces>
+                 <force forcefield ="qtip4pf"> </force>
+              </forces> 
+              <motion mode="dynamics">
+                 <fixcom> False </fixcom>
+                 <dynamics mode="npt">
+                    <barostat mode="isotropic">
+                        <tau units="femtosecond"> 1189.3531 </tau>
+                        <thermostat mode="svr">
+                            <tau units="femtosecond"> 100 </tau>
+                        </thermostat>
+                    </barostat>
+                    <timestep units="femtosecond"> 0.25 </timestep>
+                    <thermostat mode="pile_g">
+                        <tau units="femtosecond"> 100 </tau>
+                    </thermostat>
+                 </dynamics>
+              </motion>
+              <ensemble>
+                 <temperature units="kelvin"> TEMP </temperature>
+                 <pressure units="bar"> PRESSURE </pressure>
+              </ensemble>
+           </system>
+       </template>
+   </system_template>
+
+   <smotion mode="remd">
+      <remd>
+         <stride> 1 </stride>
+      </remd>
+   </smotion>   
+</simulation>

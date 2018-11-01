@@ -1,0 +1,36 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties filename='md' stride='1'> [step, time{femtosecond}, temperature{kelvin}, potential{atomic_unit}, pressure_md{pascal}] </properties>
+    <trajectory filename='pos' stride='1' format='xyz' cell_units='atomic_unit'> x_centroid{atomic_unit} </trajectory>
+    <trajectory filename='vel' stride='1' format='xyz' cell_units='atomic_unit'> v_centroid{atomic_unit} </trajectory>
+    <trajectory filename='frc' stride='1' format='xyz' cell_units='atomic_unit'> f_centroid{atomic_unit} </trajectory>
+    <checkpoint filename='checkpoint' stride='1' overwrite='True'/>
+  </output>
+  <total_steps> 1000 </total_steps>
+  <ffsocket mode='inet' name='driver'>
+    <address> 127.0.0.1 </address>
+    <port> 54321 </port>
+  </ffsocket>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='xyz'> init.xyz </file>
+      <velocities mode='thermal' units='kelvin'> 5000 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='driver'/>
+    </forces>
+    <ensemble>
+      <temperature units='kelvin'> 5000 </temperature>
+    </ensemble>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <thermostat mode='cl'>
+          <tau units='femtosecond'> 100 </tau>
+          <intau units='femtosecond'> 500 </intau>
+          <apat units='femtosecond'> 100 </apat>
+        </thermostat>
+        <timestep units='femtosecond'> 0.1 </timestep>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>

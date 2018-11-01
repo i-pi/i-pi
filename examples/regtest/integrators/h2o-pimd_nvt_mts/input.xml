@@ -1,0 +1,49 @@
+<!-- REGTEST
+DEPENDENCIES init.pdb  in_short.lmp data_short.lmp in_long.lmp data_long.lmp
+COMMAND(2) lmp_serial -i in_short.lmp
+COMMAND(2) lmp_serial -i in_long.lmp
+ENDREGTEST -->
+<simulation mode='md' verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv{megapascal} ] </properties>
+    <trajectory filename='pos' stride='1'> positions </trajectory>
+    <checkpoint stride='200'/>
+  </output>
+  <total_steps>20</total_steps>
+  <prng>
+    <seed>31415</seed>
+  </prng>
+  <ffsocket name='lmpserial1' mode='unix'>
+    <address>h2o-pimd+mts.4_short</address>
+  </ffsocket>
+  <ffsocket name='lmpserial2' mode='unix'>
+    <address>h2o-pimd+mts.4_long</address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='4'>
+      <file mode='pdb'> init.pdb </file>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='lmpserial1'>
+        <mts_weights>[0,1]</mts_weights>
+      </force>
+      <force forcefield='lmpserial2'>
+        <mts_weights>[1,0]</mts_weights>
+      </force>
+    </forces>
+    <motion mode='dynamics'>
+      <fixcom> False </fixcom>
+      <dynamics mode='nvt'>
+        <timestep units='femtosecond'> 2.00 </timestep>
+        <thermostat mode='svr'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <nmts>[1,4]</nmts>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units='kelvin'> 300 </temperature>
+    </ensemble>
+  </system>
+</simulation>

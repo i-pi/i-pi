@@ -1,0 +1,43 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved{kelvin}, temperature{kelvin}, kinetic_cv{kelvin}, potential{kelvin}, pressure_cv{megapascal}, volume, cell_h] </properties>
+    <trajectory stride='1' filename='pos' format='pdb'> x_centroid</trajectory>
+    <checkpoint stride='2000'/>
+  </output>
+  <total_steps>100000</total_steps>
+  <prng>
+    <seed>31415</seed>
+  </prng>
+  <ffsocket name='sgdriver' mode='unix'>
+    <address>nst-cubic</address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='4'>
+      <file mode='pdb'> init.pdb </file>
+      <velocities mode='thermal' units='kelvin'> 30 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='sgdriver'> </force>
+    </forces>
+    <motion mode='dynamics'>
+      <dynamics mode='nst'>
+        <barostat mode='anisotropic'>
+          <tau units='femtosecond'>100</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'>50</tau>
+          </thermostat>
+          <h0> [ 29.865, 0, 0, 0,   29.865, 0, 0, 0,   29.865 ]</h0>
+        </barostat>
+        <thermostat mode='pile_l'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units='femtosecond'> 2 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units='kelvin'> 10 </temperature>
+      <stress units='megapascal'>  [ 100, 10, 1, 0, 50, 1, 0, 0, 2 ] </stress>
+      <!-- <pressure units='megapascal'> 2 </pressure> -->
+    </ensemble>
+  </system>
+</simulation>

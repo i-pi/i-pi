@@ -1,0 +1,50 @@
+&CONTROL
+    calculation='scf'
+    verbosity='high'
+    restart_mode='from_scratch'
+    tstress=.true.
+    tprnfor=.true.
+    etot_conv_thr=5.0D-5
+    forc_conv_thr=1.0D-4
+    prefix='dia'
+    outdir='./'
+    pseudo_dir='../'
+    max_seconds=7200
+/
+&SYSTEM
+    ibrav=0
+    NAT=8
+    NTYP=1
+    ECUTWFC=80
+    ECUTRHO=100
+    nspin=1
+    occupations='fixed'
+    nosym=.true.
+/
+&ELECTRONS
+    conv_thr=1.0e-9
+    mixing_mode='plain' 
+    mixing_beta=0.7
+    startingpot='atomic' 
+    startingwfc='atomic'
+/
+&IONS
+/
+ATOMIC_SPECIES   
+    C  12.01 C.pbe-rrkjus.UPF
+ATOMIC_POSITIONS (angstrom)
+ C  0.000   0.000   0.000
+ C  0.000   1.784   1.784
+ C  1.784   1.784   0.000
+ C  1.784   0.000   1.784
+ C  2.675   0.892   2.675
+ C  0.892   0.892   0.892
+ C  0.892   2.675   2.675
+ C  2.675   2.675   0.892
+K_POINTS (gamma)
+CELL_PARAMETERS (bohr)
+6.741 .0 .0
+.0 6.741 .0
+.0 .0 6.741
+
+

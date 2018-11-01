@@ -1,0 +1,59 @@
+<simulation verbosity='high'>
+  <total_steps> 10000 </total_steps>
+  <ffsocket mode='unix' name='dftbuff'>
+    <address> c18s4 </address>
+    <slots> 20 </slots>
+    <timeout> 5 </timeout>
+  </ffsocket>
+  <output prefix='simulation'>
+    <properties filename='md' stride='10' flush='10'> [step, time{picosecond}, conserved{kilocal/mol}, temperature{kelvin}, potential{kilocal/mol}, kinetic_md{kilocal/mol}] </properties>
+    <properties filename='xyz.md' stride='50' flush='10'> [step, time{picosecond}, conserved{kilocal/mol}, temperature{kelvin}, potential{kilocal/mol}, kinetic_md{kilocal/mol}] </properties>
+    <trajectory filename='pos' stride='50' format='xyz' flush='1'> positions{angstrom} </trajectory>
+    <checkpoint filename='checkpoint' stride='1000' overwrite='True'/>
+  </output>
+  <system>
+    <initialize nbeads='1'>
+      <cell mode='abc' units='angstrom'>
+	[100, 100, 100]
+      </cell>
+      <file mode='xyz' units='angstrom'> init.xyz </file>
+      <velocities mode='thermal' units='kelvin'> 1500 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='dftbuff'>  </force>
+    </forces>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <!--
+# Generated at http://epfl-cosmo.github.io/gle4md
+# Please cite:
+# M. Ceriotti, G. Bussi and M. Parrinello, J. Chem. Theory Comput. 6, 1170 (2010) 
+# M. Ceriotti, G. Bussi and M. Parrinello, Phys. Rev. Lett. 102, 020601 (2009)
+# Smart-sampling GLE. Enforces efficient sampling, focussing the effort on the slowest mode 
+# accessible by the simulation. Generated from the parameter file
+# library/smart/smart-0.5_6-3.a, 
+# and shifted so that they are effective to sample optimally 
+# a time scale of t_opt=20 picoseconds,
+# and do as well as possible upt to a cutoff frequency of 
+# νmax=50 THz [1668 cm^-1]
+-->
+        <thermostat mode='gle'>
+          <A shape='(7,7)'>
+      [   1.533249866713e-4,    1.959322663379e-3,    1.985037928000e-4,    2.875616503110e-4,    9.755133676641e-5,   -3.804253355833e-6,   -6.054491052075e-5, 
+   5.923968590672e-5,    8.074287740564e-3,   -5.866114407186e-3,    9.205222753267e-4,    6.719561547068e-4,   -1.586358554817e-4,    3.001262131518e-4, 
+   2.875151223166e-4,    5.866114407186e-3,    2.700066729556e-3,    2.540395015664e-3,   -9.105477826198e-5,    5.787560270609e-4,   -1.199722081428e-3, 
+  -2.941348166739e-4,   -9.205222753267e-4,   -2.540395015664e-3,    2.661656937342e-5,   -7.561619872520e-6,    6.900071995791e-5,    9.286574707341e-5, 
+  -9.760913467896e-5,   -6.719561547068e-4,    9.105477826198e-5,    7.561619872520e-6,    1.402567678033e-7,   -2.284914639732e-5,   -7.913486492183e-6, 
+   3.799719725490e-6,    1.586358554817e-4,   -5.787560270609e-4,   -6.900071995791e-5,    2.284914639732e-5,    4.476731731668e-8,    5.241513958367e-5, 
+   6.054737769091e-5,   -3.001262131518e-4,    1.199722081428e-3,   -9.286574707341e-5,    7.913486492183e-6,   -5.241513958367e-5,   3.159953013350e-12
+     ]
+    </A>
+        </thermostat>
+        <timestep units='femtosecond'> .250 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units='kelvin'> 1500 </temperature>
+    </ensemble>
+  </system>
+</simulation>

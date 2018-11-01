@@ -125,7 +125,7 @@
             DOUBLE PRECISION, INTENT(OUT) :: pot_lr
             DOUBLE PRECISION, INTENT(OUT) :: vir_lr
 
-            DOUBLE PRECISION sbyr, s3byr3, s6byr3, s6byr6, prefactor
+            DOUBLE PRECISION sbyr, s3byr3, s6byr6, prefactor
 
             sbyr = sigma/rc
             s3byr3 = sbyr*sbyr*sbyr

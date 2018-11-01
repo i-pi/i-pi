@@ -1,25 +1,14 @@
 # Makefile for the CP2K example
-# 
-# Copyright (C) 2013, Joshua More and Michele Ceriotti
-# 
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-# 
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-# GNU General Public License for more details.
-# 
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <http.//www.gnu.org/licenses/>.
+#
+# This file is part of i-PI.
+# i-PI Copyright (C) 2014-2015 i-PI developers
+# See the "licenses" directory for full license information.
 
-.PHONY: all clean npt-classical npt-piglet nvt-classical nvt-piglet
-all: npt-classical npt-piglet nvt-classical nvt-piglet
+.PHONY: all clean npt-classical npt-piglet nvt-classical nvt-piglet nvt-cl
+all: npt-classical npt-piglet nvt-classical nvt-piglet nvt-cl
 
 CP2K:=cp2k.x
-IPI:=../../../i-pi
+IPI:=i-pi
 
 define run_cp2k
   for i in `seq 1 $1`; do \
@@ -30,24 +19,30 @@ endef
 -include make.in
 
 npt-classical:
-	cd npt-classical; $(IPI) nptcls_ipi.xml & sleep 5; \
-	$(call run_cp2k,1,nptcls_cp2k.in) \
+	cd npt-classical; $(IPI) input.xml & sleep 5; \
+	$(call run_cp2k,1,in.cp2k) \
 	wait
-	
+
 nvt-classical:
-	cd nvt-classical; $(IPI) nvtcls_ipi.xml & sleep 5; \
-	$(call run_cp2k,1,nvtcls_cp2k.in) \
+	cd nvt-classical; $(IPI) input.xml & sleep 5; \
+	$(call run_cp2k,1,in.cp2k) \
 	wait
 
 npt-piglet:
-	cd npt-piglet; $(IPI) nptpgl_ipi.xml & sleep 10; \
-	$(call run_cp2k,4,nptpgl_cp2k.in) \
+	cd npt-piglet; $(IPI) input.xml & sleep 10; \
+	$(call run_cp2k,4,in.cp2k) \
 	wait
 
 nvt-piglet:
-	cd nvt-piglet; $(IPI) nvtpgl_ipi.xml & sleep 10; \
-	$(call run_cp2k,4,nvtpgl_cp2k.in) \
+	cd nvt-piglet; $(IPI) input.xml & sleep 10; \
+	$(call run_cp2k,4,in.cp2k) \
+	wait
+
+#standard output is needed for postprocessing, and saved as "output"
+nvt-cl:
+	cd nvt-cl; $(IPI) input.xml 2>&1 | tee output & sleep 5; \
+	$(call run_cp2k,1,in.cp2k) \
 	wait
 
 clean:
-	rm -rf */*_output.* */*.log */run_* */RESTART */EXIT
+	rm -rf */*simulation* */*output* */*.log* */*run_* */*RESTART* */EXIT

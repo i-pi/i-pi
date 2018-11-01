@@ -1,0 +1,992 @@
+<simulation>
+  <output prefix="simulation">
+    <properties stride="4" filename="out" flush="1">  [ step, time{picosecond},
+    conserved{kilocal/mol}, temperature{kelvin},
+    kinetic_cv{kilocal/mol}, potential{kilocal/mol}, pressure_cv{megapascal},
+    volume{angstrom3}, hweights_component(1), bweights_component(0),
+    ensemble_temperature{kelvin}, ensemble_pressure{megapascal}] </properties>
+    <trajectory filename="pos" stride="100" cell_units="angstrom"> positions{angstrom} </trajectory>
+    <checkpoint stride="2000"/>
+  </output>
+  <total_steps>10000000</total_steps>
+  <prng><seed>31415</seed></prng>
+  <ffsocket name="lmpserial1" mode="unix">
+    <address>remd_short</address>
+  </ffsocket>
+  <ffsocket name="lmpserial2" mode="unix">
+    <address>remd_long</address>
+  </ffsocket>
+
+  <system prefix="R00">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield ="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 400 </temperature>
+      <pressure units="megapascal"> 150 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [0.0] </bias_weights>
+    </ensemble>
+  </system>
+
+  <system prefix="R01">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield ="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 403.30 </temperature>
+      <pressure units="megapascal"> 150 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [0.0] </bias_weights>
+    </ensemble>
+  </system>
+
+  <system prefix="R02">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield ="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 406.90 </temperature>
+      <pressure units="megapascal"> 150 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [0.0] </bias_weights>
+    </ensemble>
+  </system>
+
+    <system prefix="R03">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield ="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 410.85 </temperature>
+      <pressure units="megapascal"> 150 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [0.0] </bias_weights>
+    </ensemble>
+  </system>
+
+  <system prefix="R04">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield ="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 415.17 </temperature>
+      <pressure units="megapascal"> 150 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [0.0] </bias_weights>
+    </ensemble>
+  </system>
+
+  <system prefix="R05">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield ="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 419.89 </temperature>
+      <pressure units="megapascal"> 150 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [0.0] </bias_weights>
+    </ensemble>
+  </system>
+
+  <system prefix="R06">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield ="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 425.06 </temperature>
+      <pressure units="megapascal"> 150 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [0.0] </bias_weights>
+    </ensemble>
+  </system>
+
+  <system prefix="R07">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield ="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 430.71 </temperature>
+      <pressure units="megapascal"> 150 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [0.0] </bias_weights>
+    </ensemble>
+  </system>
+
+  <system prefix="R08">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield ="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 436.90 </temperature>
+      <pressure units="megapascal"> 150 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [0.0] </bias_weights>
+    </ensemble>
+  </system>
+
+  <system prefix="R09">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield ="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 443.67 </temperature>
+      <pressure units="megapascal"> 150 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [0.0] </bias_weights>
+    </ensemble>
+  </system>
+
+  <system prefix="R10">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield ="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 451.08 </temperature>
+      <pressure units="megapascal"> 150 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [0.0] </bias_weights>
+    </ensemble>
+  </system>
+
+  <system prefix="R11">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield ="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 459.19 </temperature>
+      <pressure units="megapascal"> 150 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [0.0] </bias_weights>
+    </ensemble>
+  </system>
+
+  <system prefix="R12">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield ="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 468.06 </temperature>
+      <pressure units="megapascal"> 150 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [0.0] </bias_weights>
+    </ensemble>
+  </system>
+
+  <system prefix="R13">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield ="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 477.66 </temperature>
+      <pressure units="megapascal"> 150 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [0.0] </bias_weights>
+    </ensemble>
+  </system>
+
+  <system prefix="R14">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield ="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 488.38 </temperature>
+      <pressure units="megapascal"> 150 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [0.0] </bias_weights>
+    </ensemble>
+  </system>
+
+  <system prefix="R15">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield ="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 500 </temperature>
+      <pressure units="megapascal"> 150 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [0.0] </bias_weights>
+    </ensemble>
+  </system>
+
+  <system prefix="R16">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield ="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 500 </temperature>
+      <pressure units="megapascal"> 200 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [0.0] </bias_weights>
+    </ensemble>
+  </system>
+
+  <system prefix="R17">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield ="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 500 </temperature>
+      <pressure units="megapascal"> 250 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [0.0] </bias_weights>
+    </ensemble>
+  </system>
+
+  <system prefix="R18">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield ="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 500 </temperature>
+      <pressure units="megapascal"> 300 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [0.0] </bias_weights>
+    </ensemble>
+  </system>
+
+  <system prefix="R19">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield ="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 500 </temperature>
+      <pressure units="megapascal"> 350 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [0.0] </bias_weights>
+    </ensemble>
+  </system>
+
+  <system prefix="R20">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield ="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 500 </temperature>
+      <pressure units="megapascal"> 150 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [0.0] </bias_weights>
+      <hamiltonian_weights> [1,0.975] </hamiltonian_weights>
+    </ensemble>
+  </system>
+
+  <system prefix="R21">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield ="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 500 </temperature>
+      <pressure units="megapascal"> 150 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [0.0] </bias_weights>
+      <hamiltonian_weights> [1,0.95] </hamiltonian_weights>
+    </ensemble>
+  </system>
+
+  <system prefix="R22">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield ="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 500 </temperature>
+      <pressure units="megapascal"> 150 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [0.0] </bias_weights>
+      <hamiltonian_weights> [1,0.91] </hamiltonian_weights>
+    </ensemble>
+  </system>
+
+    <system prefix="R23">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield ="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 500 </temperature>
+      <pressure units="megapascal"> 150 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [0.0] </bias_weights>
+      <hamiltonian_weights> [1,0.86] </hamiltonian_weights>
+    </ensemble>
+  </system>
+
+    <system prefix="R24">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield ="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 500 </temperature>
+      <pressure units="megapascal"> 150 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [0.0] </bias_weights>
+      <hamiltonian_weights> [1,0.8] </hamiltonian_weights>
+    </ensemble>
+  </system>
+
+  <system prefix="R25">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 500 </temperature>
+      <pressure units="megapascal"> 150 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [-.2] </bias_weights>
+    </ensemble>
+  </system>
+
+  <system prefix="R26">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 500 </temperature>
+      <pressure units="megapascal"> 150 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [-.14] </bias_weights>
+    </ensemble>
+  </system>
+
+  <system prefix="R27">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 500 </temperature>
+      <pressure units="megapascal"> 150 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [-.09] </bias_weights>
+    </ensemble>
+  </system>
+
+  <system prefix="R28">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 500 </temperature>
+      <pressure units="megapascal"> 150 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [-.05] </bias_weights>
+    </ensemble>
+  </system>
+
+  <system prefix="R29">
+    <initialize nbeads="1">
+      <file mode="xyz"> h2o-32.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 450 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield ="lmpserial1"/>
+      <force forcefield="lmpserial2"/>
+    </forces>
+    <motion mode="dynamics">
+      <dynamics mode="npt">
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+        </barostat>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <timestep units="femtosecond"> .25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units="kelvin"> 500 </temperature>
+      <pressure units="megapascal"> 150 </pressure>
+      <bias> <force forcefield="lmpserial2"/> </bias>
+      <bias_weights> [-0.25] </bias_weights>
+    </ensemble>
+  </system>
+
+
+  <smotion mode="remd">
+    <remd>
+      <stride> 25e100 </stride>
+    </remd>
+  </smotion>
+
+</simulation>

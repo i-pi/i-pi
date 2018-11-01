@@ -1,0 +1,43 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'> [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, kinetic_td, potential, pressure_cv{megapascal} ] </properties>
+    <trajectory filename='pos' stride='100' cell_units='angstrom' format='pdb' bead='0'> positions{angstrom} </trajectory>
+  </output>
+  <total_steps>10000</total_steps>
+  <prng>
+    <seed>32345</seed>
+  </prng>
+  <ffsocket name='lmpserial' mode='unix'>
+    <address> h2o-multi </address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='32'>
+      <file mode='pdb' units='angstrom'> init.pdb </file>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='lmpserial'> </force>
+    </forces>
+    <motion mode='multi'>
+      <motion mode='dynamics'>
+        <dynamics mode='nvt'>
+          <thermostat mode='pile_g'>
+            <tau units='femtosecond'>50</tau>
+          </thermostat>
+          <timestep units='femtosecond'> 0.5</timestep>
+        </dynamics>
+      </motion>
+      <motion mode='dynamics'>
+        <dynamics mode='nvt'>
+          <thermostat mode='pile_g'>
+            <tau units='femtosecond'>50</tau>
+          </thermostat>
+          <timestep units='femtosecond'> 0.5</timestep>
+        </dynamics>
+      </motion>
+    </motion>
+    <ensemble>
+      <temperature units='kelvin'>3000</temperature>
+    </ensemble>
+  </system>
+</simulation>

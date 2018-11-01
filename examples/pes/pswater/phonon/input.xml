@@ -1,0 +1,27 @@
+<simulation mode='static' verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved{electronvolt},                 temperature{kelvin}, kinetic_cv{electronvolt}, potential{electronvolt}, pressure_cv{megapascal}] </properties>
+    <trajectory filename='pos' stride='20'> positions{angstrom} </trajectory>
+  </output>
+  <total_steps> 1000 </total_steps>
+  <prng>
+    <seed> 32342 </seed>
+  </prng>
+  <ffsocket name='driver' mode='unix' pbc='false'>
+    <address> driver </address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='xyz' units='angstrom'> init.xyz </file>
+      <cell mode='abc'> [35.233, 35.233, 35.233] </cell>
+    </initialize>
+    <forces>
+      <force forcefield='driver'> </force>
+    </forces>
+    <motion mode='vibrations'>
+      <vibrations>
+        <pos_shift>0.001</pos_shift>
+      </vibrations>
+    </motion>
+  </system>
+</simulation>

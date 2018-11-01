@@ -1,0 +1,25 @@
+<simulation mode='static' verbosity='high'>
+  <output prefix='simulation_cage'>
+    <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potential{electronvolt}, pressure_cv{megapascal}] </properties>
+    <trajectory filename='pos' stride='1'> positions{angstrom} </trajectory>
+  </output>
+  <total_steps> 5000 </total_steps>
+  <prng>
+    <seed> 32342 </seed>
+  </prng>
+  <ffsocket name='qtip4pf' mode='unix' pbc='false'>
+    <address> driver </address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='xyz' units='angstrom'> init.xyz </file>
+      <cell mode='abc' units='angstrom'> [15.0, 15.0, 15.0] </cell>
+    </initialize>
+    <forces>
+      <force forcefield='qtip4pf'/>
+    </forces>
+    <motion mode='minimize'>
+      <optimizer mode='lbfgs'> </optimizer>
+    </motion>
+  </system>
+</simulation>

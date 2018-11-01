@@ -22,12 +22,9 @@
 
 $ make
 
- * Next, create a make.in
-   file containing the path to the driver.x executable, the
-   drivers directory and i-pi, e.g.
+ * Next, source the env.sh file in the i-pi root.
 
-driver:=~/bin/driver.x
-IPI:=~/bin/i-pi/i-pi
+$ source i-pi-root/env.sh
 
 
 ** Run the examples automatically:
@@ -44,12 +41,16 @@ $ make clean
 
 ** Run the examples manually:
 
+Before continuing, source the env.sh file in the i-pi root directory
+
+$ source <i-pi-root>/env.sh
+
 
 ** The MHT directories:
 
  * Go back to the example directory and run
 
-$ python path/i-pi input_equilibrated.xml
+$ i-pi input_equilibrated.xml
  
    the wrapper will start and sit waiting on the UDS /tmp/ipi.
  
@@ -57,7 +58,7 @@ $ python path/i-pi input_equilibrated.xml
    runs using a different server address, which are related to their
    directory names. For example, the 25K problem is run using:
  
-$ path/drivers/driver.x -u -h T_25K -m sg -o 15.0
+$ i-pi-driver -u -h T_25K -m sg -o 15.0
 
    You can run multiple instances of the code; evaluation of the forces is 
    inexpensive relative to the communication and nuclear dynamics overhead, 
@@ -69,20 +70,20 @@ $ path/drivers/driver.x -u -h T_25K -m sg -o 15.0
 
   then run the driver as:
 
-$ path/drivers/driver.x -h T_25K -m sg -o 15.0 -p port_no
+$ i-pi-driver -h T_25K -m sg -o 15.0 -p port_no
 
 
 ** The nvt directory:
 
  * Go back to the example directory and run
 
-$ python ../../../i-pi input.xml
+$ i-pi input.xml
  
    the wrapper will start and sit waiting on the UDS /tmp/ipi
  
  * Open a separate terminal and run the SG driver code 
  
-$ path/drivers/driver.x -u -h ph2_nvt -m sg -o 15.0
+$ i-pi-driver -u -h ph2_nvt -m sg -o 15.0
 
    You can run multiple instances of the code; it is so fast that parallel 
    scaling won't be appreciable.
@@ -92,7 +93,7 @@ $ path/drivers/driver.x -u -h ph2_nvt -m sg -o 15.0
 
   then run the driver as:
 
-$ path/drivers/driver.x -h ph2_nvt -m sg -o 15.0 -p port_no
+$ i-pi-driver -h ph2_nvt -m sg -o 15.0 -p port_no
 
 
 ** The RPMD directory:

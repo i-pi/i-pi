@@ -1,0 +1,33 @@
+MICHAEL GAUS (mgaus@wisc.edu) Nov 13th, 2012
+
+GENERAL PURPOSE PARAMETER SET
+
+name   requires    elements
+3ob     -           C-H-N-O
+
+short description:
+DFTB3 files for bio and organic molecules
+
+detailed description:
+This set has been specifically designed for DFTB3 and supersedes the MIO
+parameter set. Main improvements over MIO are improved geometries for 
+non-covalent bonds as e.g. the hydrogen bond in the water dimer, a 
+great reduction of the consistent overbinding and an overall improved
+performance. Comprehensive benchmark tests can be found in [JCTC2012]. 
+
+The following zeta and Hubbard derivative parameters should be used
+for DFTB3 calculations (atomic units):
+zeta: 4.00 (also called DampXHExponent)
+C     -0.1492
+H     -0.1857
+N     -0.1535
+O     -0.1575
+
+RELEVANT PUBLICATIONS
+[JCTC2012]   J. Chem. Theory Comput., 2013, 9 (1), pp 338–354.
+             DOI: http://dx.doi.org/10.1021/ct300849w
+
+PUBLICATIONS TO BE CITED
+[JCTC2012]   J. Chem. Theory Comput., 2013, 9 (1), pp 338–354.
+             DOI: http://dx.doi.org/10.1021/ct300849w
+

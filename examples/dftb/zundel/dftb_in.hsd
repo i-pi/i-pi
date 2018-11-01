@@ -1,0 +1,60 @@
+Geometry = GenFormat {
+    7  S
+    O  H
+    1 1   0.54044984       -0.97485007       -0.21657970
+    2 1   2.92484146       -0.83925223        0.15239669
+    3 2   0.18385954       -1.25804198       -1.07875142
+    4 2   1.74328720       -0.90927800       -0.10039502
+    5 2   3.29706729       -1.59324218        0.64725255
+    6 2   3.53032937       -0.60813812       -0.57607828
+    7 2   0.04233158       -0.19485993        0.09228101
+    0. 0. 0.
+    25.29166 0. 0.
+    0. 25.29166 0.
+    0. 0. 25.29166
+}
+
+# Socket controlled DFTB+
+Driver = Socket {
+    File = "zundel" # File name, i.e., /tmp/ipi_dftb-zundel
+    MaxSteps = -1 # keep running until i-PI terminates the run
+}
+
+# DFTB+ model specification
+Hamiltonian = DFTB {
+    Charge = +1
+    DampXH = Yes
+    DampXHExponent = 4.0
+    HubbardDerivs = {
+        H = -0.1857
+        O = -0.1492
+    }
+    MaxAngularMomentum = {
+        H = "s"
+        O = "p"
+    }
+    SCC = Yes
+    SlaterKosterFiles = Type2FileNames {
+        Prefix = ../dftb-param/
+        Separator = "-"
+        Suffix = ".skf"
+        LowerCaseTypeName = No
+    }
+    ThirdOrderFull = Yes
+    Filling = Fermi {
+        Temperature [K] = 300
+    }
+    KPointsAndWeights = {
+        0.0 0.0 0.0 1.0
+    }
+}
+
+Options = {
+    WriteResultsTag = No
+    WriteDetailedOut = No
+    WriteBandOut = No
+}
+
+ParserOptions = {
+    ParserVersion = 4 # Input is for an older DFTB+ parser
+}

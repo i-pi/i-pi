@@ -1,0 +1,139 @@
+# Bond stretch
+# ============
+# Mathematical form depends on the kind selected below. Few kinds are supported:
+# - BONDHARM: 0.5*K*(r-R0)**2
+# - BONDFUES: 0.5*K*R0**2*(1+(R0/r)*((R0/r)-2.0))
+# The actual parameters and their units may depend on the kind.
+
+BONDHARM:UNIT K kjmol/angstrom**2
+BONDHARM:UNIT R0 angstrom
+
+# -----------------------------------------------------------------
+# KEY              ffatype0    ffatype1     K              R0
+# -----------------------------------------------------------------
+BONDHARM:PARS       O_HY        H_HY    7029.723261     1.045807
+BONDHARM:PARS       AL          O_HY    1737.596439     2.136528
+BONDHARM:PARS       AL          O_CA    1078.580542     2.150706
+BONDHARM:PARS       C_CA        O_CA    5465.659761     1.337256
+BONDHARM:PARS       C_PH        C_PC    2897.280380     1.398049
+BONDHARM:PARS       C_PH        H_PH    3420.282040     1.086105
+BONDHARM:PARS       C_PH        C_PH    3413.251018     1.385619
+BONDHARM:PARS       C_CA        C_PC    2579.690003     1.508182
+
+
+# Angle bending
+# =============
+# Mathematical form depends on the kind selected below. Few kinds are supported:
+# - BENDAHARM: 0.5*K*(theta-THETA0)**2
+# - BENDCHARM: 0.5*K*(cos(theta)-cos(THETA0))**2
+# - UBHARM: 0.5*K*(r-R0)**2
+# where theta is the bending angle and r is the distance between the non-bonded
+# pair of atoms.
+# The actual parameters and their units may depend on the kind.
+
+BENDAHARM:UNIT K kjmol/rad**2
+BENDAHARM:UNIT THETA0 deg
+
+# ---------------------------------------------------------------------------
+# KEY             ffatype0 ffatype1 ffatype2      K        THETA0/COS0/R0
+# ---------------------------------------------------------------------------
+BENDAHARM:PARS      O_HY     AL       O_CA     120.980392     91.063008
+BENDAHARM:PARS      AL       O_HY     AL       172.709471     73.491273
+BENDAHARM:PARS      AL       O_HY     H_HY     103.570139     85.017370
+BENDAHARM:PARS      AL       O_CA     C_CA      58.125199     87.674019
+BENDAHARM:PARS      O_CA     C_CA     O_CA     671.817495    122.891078
+BENDAHARM:PARS      C_PC     C_PH     C_PH     448.485089    121.617905
+BENDAHARM:PARS      C_PH     C_PC     C_PH     345.440886    118.444780
+BENDAHARM:PARS      C_PH     C_PH     H_PH     350.852076    121.972660
+BENDAHARM:PARS      C_PC     C_PH     H_PH     296.978958    121.413847
+BENDAHARM:PARS      C_PC     C_CA     O_CA     136.486147    123.801370
+BENDAHARM:PARS      C_CA     C_PC     C_PH     678.261137    120.725664
+
+
+# Torsional terms
+# ===============
+# The following mathemetical for is supported:
+#  - TORSION: 0.5*A*(1-COS(M*(PHI-PHI0)))
+# The actual parameters and their units may depend on the kind.
+
+TORSION:UNIT A kjmol
+TORSION:UNIT PHI0 deg
+
+# -------------------------------------------------------------------------------------
+# KEY         ffatype0 ffatype1 ffatype2 ffatype4  M     A         PHI0
+# -------------------------------------------------------------------------------------
+TORSION:PARS    C_PC     C_PH     C_PH     H_PH    2  35.661761     0.0
+TORSION:PARS    H_PH     C_PH     C_PH     H_PH    2  22.694773     0.0
+TORSION:PARS    H_PH     C_PH     C_PC     C_PH    2  27.427975     0.0
+TORSION:PARS    C_PH     C_PH     C_PC     C_PH    2  31.842313     0.0
+TORSION:PARS    C_PC     C_PH     C_PH     C_PC    2  41.120143     0.0
+TORSION:PARS    H_PH     C_PH     C_PC     C_CA    2  29.168960     0.0
+TORSION:PARS    C_PH     C_PH     C_PC     C_CA    2  58.382656     0.0
+TORSION:PARS    C_PH     C_PC     C_CA     O_CA    2  22.934506     0.0
+TORSION:PARS    C_PC     C_CA     O_CA     AL      2  13.566934     0.0
+TORSION:PARS    O_CA     C_CA     O_CA     AL      2  11.127322     0.0
+
+
+# Fixed charges
+# =============
+
+# Mathematical form: q_A = q_0A + sum'_B p_BA
+# where q0_A is the reference charge of atom A. It is mostly zero, sometimes a
+# non-zero integer. The total charge of a fragment is the sum of all reference
+# charges. The parameter p_BA is the charge transfered from B to A. Such charge
+# transfers are only carried out over bonds in the FF topology.
+# The charge on an atom is modeled as a Gaussian distribution. The spread on the
+# Gaussian is called the radius R. When the radius is set to zero, point charges
+# will be used instead of smeared charges.
+
+FIXQ:UNIT Q0 e
+FIXQ:UNIT P e
+FIXQ:UNIT R angstrom
+FIXQ:SCALE 1 1.0
+FIXQ:SCALE 2 1.0
+FIXQ:SCALE 3 1.0
+FIXQ:DIELECTRIC 1.0
+
+# Atomic parameters
+# -------------------------------------------
+# KEY        label  Q_0A        R_A
+# -------------------------------------------
+FIXQ:ATOM   H_PH   0.126842     0.0
+FIXQ:ATOM   C_CA   0.892030     0.0
+FIXQ:ATOM   O_HY  -1.323997     0.0
+FIXQ:ATOM   H_HY   0.512675     0.0
+FIXQ:ATOM     AL   2.076350     0.0
+FIXQ:ATOM   C_PC  -0.111887     0.0
+FIXQ:ATOM   O_CA  -0.741212     0.0
+FIXQ:ATOM   C_PH  -0.091958     0.0
+
+
+# van der Waals
+#==============
+
+# The following mathemetical form is supported:
+#  - MM3:   EPSILON*(1.84e5*exp(-12*r/SIGMA)-2.25*(SIGMA/r)^6)
+#  - LJ:    4.0*EPSILON*((SIGMA/r)^12 - (SIGMA/r)^6)
+#
+# Remark:
+#  In MM3, if ONLYPAULI=1 then only the pauli term will be used.
+#  If ONLYPAULI=0, the full MM3 expression is used with 12.
+
+MM3:UNIT SIGMA angstrom
+MM3:UNIT EPSILON 0.86*kcalmol
+MM3:SCALE 1 0.0
+MM3:SCALE 2 0.0
+MM3:SCALE 3 1.0
+
+# ---------------------------------------------
+# KEY      ffatype  SIGMA  EPSILON  ONLYPAULI
+# ---------------------------------------------
+
+MM3:PARS      AL     2.360   0.116      0
+MM3:PARS    O_HY     1.820   0.059      0
+MM3:PARS    O_CA     1.820   0.059      0
+MM3:PARS    C_CA     1.940   0.056      0
+MM3:PARS    C_PC     1.940   0.056      0
+MM3:PARS    C_PH     1.940   0.056      0
+MM3:PARS    H_HY     1.600   0.016      0
+MM3:PARS    H_PH     1.620   0.020      0

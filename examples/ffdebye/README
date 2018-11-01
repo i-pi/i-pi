@@ -1,0 +1,20 @@
+                  -- Running the ffdebye example --
+
+** Run the examples automatically:
+
+#TODO description of the example goes here 
+ * You can run debye crystal simulation...
+   To run the single_particle example, just type:
+
+$ make single_particle
+
+ * To clean up output files:
+
+$ make clean
+
+  
+** Run the examples manually:
+ 
+ * Go to example directory and run 
+
+$ python path/src/i-pi input.xml

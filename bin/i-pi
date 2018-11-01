@@ -1,0 +1,105 @@
+#!/usr/bin/env python2
+
+"""Main script from which the simulation is run.
+
+Deals with creation of the simulation object, reading the input file and
+initialising the system.
+
+Run using:
+      i-pi input_file.xml
+
+Where 'input_file.xml' should be replaced by the name of the xml input file
+from which the system data will be read. For a description of how the input
+file should be formatted, see the reference manual.
+"""
+
+# This file is part of i-PI.
+# i-PI Copyright (C) 2014-2015 i-PI developers
+# See the "licenses" directory for full license information.
+
+
+import sys
+import os
+
+# Check that we have the import path for this i-PI set and if not, add it.
+dir_root = os.path.realpath(
+    os.path.join(os.path.dirname(os.path.realpath(__file__)), '..'))
+if not dir_root in sys.path:
+    sys.path.insert(0, dir_root)
+
+from ipi.utils.softexit import softexit
+from ipi.engine.simulation import Simulation
+
+
+def main(fn_input, options):
+    """Loads and runs the simulation stored in `fn_input`."""
+
+    # optionally profile this run - set up
+    # ~ if do_yappi:
+    # ~ try:
+    # ~ import yappi
+    #~ yappi.start(builtins=True, profile_threads=True)
+    # ~ except ImportError:
+    # ~ print 'Profiling with yappi was enabled but could not be imported.'
+    # ~ print "Profiling with yappi was enabled but could not be imported."
+    #~ sys.exit(1)
+
+    # construct simulation based on input file
+    simulation = Simulation.load_from_xml(fn_input, request_banner=True, custom_verbosity=options.verbosity)
+
+    # run the simulation
+    simulation.run()
+
+    # optionally profile this run - wrap up
+    # TODO
+    # We do not get to this if the run is ctrl interrupted and exits cleanly.
+    # Maybe the profiler should be global and cleaned up on exit?
+    if options.do_yappi:
+        yappi.stop()
+        yappi.get_thread_stats().print_all()
+        yfs = yappi.get_func_stats()
+        yfs.save("profile.kgrind", type="callgrind")
+        ypo = open("profile.yappi", "w")
+        yfs.print_all(out=ypo)
+        ypo.close()
+
+    # It seems that checkpoints are written by the following.
+    # TODO: Have them written when simulation.run() finishes instead.
+    # It should be sufficient to run `self.softexit() at the end of
+    # `Simulation.run()`. Anything else missing?
+    softexit.trigger(" @ SIMULATION: Exiting cleanly.")
+
+
+if __name__ == '__main__':
+
+    # TODO: Use argparse once we move to Python 2.7.
+
+    from optparse import OptionParser
+
+    parser = OptionParser(usage='%prog [options] <input file>',
+                          description='The main i-PI executable used to run '
+                                      'a simulation, given an XML input file.'
+                          )
+
+    parser.add_option('-p', '--profile',
+                      action='store_true', dest='do_yappi', default=False,
+                      help='Profile this run using Yappi.')
+
+    parser.add_option('-V', '--verbosity', dest='verbosity', default=None,
+                      choices=['quiet', 'low', 'medium', 'high', 'debug'],
+                      help='Define the verbosity level.')
+
+    options, args = parser.parse_args()
+
+    # make sure that we have exactly one input file and it exists
+    if len(args) == 0:
+        parser.error('No input file name provided.')
+    elif len(args) > 1:
+        parser.error('Provide only one input file name.')
+    else:
+        fn_in = args[0]
+        if not os.path.exists(fn_in):
+            parser.error('Input file not found: {:s}'.format(fn_in))
+
+    # Everything is ready. Go!
+    main(args[0], options)

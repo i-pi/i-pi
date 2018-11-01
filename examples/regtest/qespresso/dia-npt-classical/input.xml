@@ -1,0 +1,50 @@
+<!-- REGTEST
+DEPENDENCIES  C.pbe-rrkjus.UPF init.xyz pw.in
+COMMAND(1) pw.x -ipi localhost:3142 -in pw.in > pw.out
+ENDREGTEST -->
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'>  [ step, time{femtosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv{bar}, volume ] </properties>
+    <trajectory stride='1' filename='pos' cell_units='angstrom'> positions{angstrom} </trajectory>
+  </output>
+  <total_steps>10</total_steps>
+  <prng>
+    <seed>3141</seed>
+  </prng>
+  <ffsocket name='pw' mode='inet'>
+    <address>localhost</address>
+    <port>3142</port>
+    <timeout>100</timeout>
+    <latency> 0.01</latency>
+  </ffsocket>
+  <system>
+    <forces>
+      <force forcefield='pw'/>
+    </forces>
+    <initialize nbeads='1'>
+      <file mode='xyz' units='angstrom'> init.xyz </file>
+      <cell units='angstrom'>[3.567, 0, 0, 0, 3.567, 0, 0, 0, 3.567] </cell>
+      <velocities mode='thermal' units='kelvin'> 150 </velocities>
+    </initialize>
+    <ensemble>
+      <temperature units='kelvin'>150</temperature>
+      <pressure units='bar'> 10 </pressure>
+    </ensemble>
+    <motion mode='dynamics'>
+      <dynamics mode='npt'>
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 100</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 25.6156, 0, 0, 0, 29.5783, 0, 0, 0, 27.8867 ]</h0>
+        </barostat>
+        <thermostat mode='pile_l'>
+          <tau units='femtosecond'>100</tau>
+        </thermostat>
+        <timestep units='femtosecond'>0.5</timestep>
+      </dynamics>
+      <fixcom>True</fixcom>
+    </motion>
+  </system>
+</simulation>

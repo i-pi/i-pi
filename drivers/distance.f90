@@ -64,7 +64,7 @@
             DOUBLE PRECISION, DIMENSION(3) :: sij  
             ! The separation in a basis where the simulation box  
             ! is a unit cube.
-                                                   
+                                                 
             sij = matmul(cell_ih, ri - rj)
             DO k = 1, 3
                ! Finds the smallest separation of all the images of atom i and j

@@ -1,0 +1,50 @@
+<!-- REGTEST
+DEPENDENCIES init.xyz
+COMMAND(4) i-pi-driver -h localhost -p 31400 -m pswater
+ENDREGTEST -->
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'>  [ time{picosecond}, conserved, temperature{kelvin}, kinetic_md, kinetic_cv, kinetic_cv(O), kinetic_cv(H), potential ] </properties>
+    <trajectory filename='pos' format='xyz' stride='2'> positions{angstrom} </trajectory>
+    <trajectory filename='vel' format='xyz' stride='5'> velocities </trajectory>
+    <trajectory filename='for' format='xyz' stride='2'> forces </trajectory>
+    <trajectory filename='kin' format='xyz' stride='2'> kinetic_cv </trajectory>
+    <trajectory filename='dip' stride='2'> extras </trajectory>
+    <checkpoint stride='100' filename='chk' overwrite='true'/>
+    <checkpoint stride='400' filename='restart' overwrite='false'/>
+  </output>
+  <total_steps>100</total_steps>
+  <prng>
+    <seed>23658</seed>
+  </prng>
+  <ffsocket mode='inet' pbc='false' name='driver'>
+    <address>localhost</address>
+    <!-- <address>driver</address> -->
+    <port>31400</port>
+    <latency>0.02</latency>
+    <timeout>400</timeout>
+  </ffsocket>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='xyz' units='angstrom'> init.xyz </file>
+      <cell mode='abc' units='angstrom'> [ 10.0, 10.0, 10.0 ] </cell>
+      <!--     <gle mode='chk'> restart.chk </gle> -->
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='driver'/>
+    </forces>
+    <ensemble>
+      <temperature units='kelvin'>300</temperature>
+    </ensemble>
+    <motion mode='dynamics'>
+      <fixcom>True</fixcom>
+      <dynamics mode='nvt'>
+        <timestep units='femtosecond'>0.5</timestep>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100</tau>
+        </thermostat>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>

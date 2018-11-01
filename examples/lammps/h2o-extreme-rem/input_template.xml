@@ -1,0 +1,69 @@
+<simulation>
+  <output prefix="simulation">
+    <properties stride="4" filename="out" flush="1">  [ step, time{picosecond},
+    conserved{kilocal/mol}, temperature{kelvin},
+    kinetic_cv{kilocal/mol}, potential{kilocal/mol}, pressure_cv{megapascal},
+    volume{angstrom3}, hweights_component(1), bweights_component(0),
+    ensemble_temperature{kelvin}, ensemble_pressure{megapascal}] </properties>
+    <trajectory filename="pos" stride="100" cell_units="angstrom"> positions{angstrom} </trajectory>
+    <checkpoint stride="2000"/>
+  </output>
+  <total_steps>10000000</total_steps>
+  <prng><seed>31415</seed></prng>
+  <ffsocket name="lmpserial1" mode="unix">
+    <address>remd_short</address>
+  </ffsocket>
+  <ffsocket name="lmpserial2" mode="unix">
+    <address>remd_long</address>
+  </ffsocket>
+
+  <system_template>
+     <labels>   [ PREFIX, FILENAME, TEMPERATURE, PRESSURE ] </labels> 
+     <instance> [ REF00, h2o-32.xyz, 300, 1 ] </instance>
+     <instance> [ REF01, h2o-32.xyz, 310, 1 ] </instance>
+     <instance> [ REF02, h2o-32.xyz, 320, 1 ] </instance>
+     <instance> [ REF10, h2o-32.xyz, 300, 10 ] </instance>
+     <instance> [ REF11, h2o-32.xyz, 310, 10 ] </instance>
+     <instance> [ REF12, h2o-32.xyz, 320, 10 ] </instance>
+     <template>          
+          <system prefix="PREFIX">
+            <initialize nbeads="1">
+              <file mode="xyz"> FILENAME </file>
+              <velocities mode="thermal" units="kelvin"> TEMPERATURE </velocities>
+            </initialize>
+            <forces>
+              <force forcefield ="lmpserial1"/>
+              <force forcefield ="lmpserial2"/>
+            </forces>
+            <motion mode="dynamics">
+              <dynamics mode="npt">
+                <barostat mode='isotropic'>
+                  <tau units='femtosecond'> 200</tau>
+                  <thermostat mode='langevin'>
+                    <tau units='femtosecond'> 100</tau>
+                  </thermostat>
+                  <h0> [ 32.84024, 0, 0, 0, 32.84024, 0, 0, 0, 32.84024 ]</h0>
+                </barostat>
+                <thermostat mode='langevin'>
+                  <tau units='femtosecond'> 100 </tau>
+                </thermostat>
+                <timestep units="femtosecond"> .25 </timestep>
+              </dynamics>
+            </motion>
+            <ensemble>
+              <temperature units="kelvin"> TEMPERATURE </temperature>
+              <pressure units="megapascal"> PRESSURE </pressure>
+              <bias> <force forcefield="lmpserial2"/> </bias>
+              <bias_weights> [0.0] </bias_weights>
+            </ensemble>
+          </system>
+  </template>
+  </system_template>
+  
+  <smotion mode="remd">
+    <remd>
+      <stride> 25e100 </stride>
+    </remd>
+  </smotion>
+
+</simulation>

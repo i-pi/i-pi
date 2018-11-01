@@ -1,1 +1,5 @@
-__all__ = ["engine",  "inputs",  "interfaces", "utils"]
+"""
+The i-PI package.
+"""
+
+__all__ = ["clients", "engine", "inputs", "interfaces", "utils"]

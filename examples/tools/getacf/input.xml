@@ -1,0 +1,36 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='2' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potential{electronvolt}, pressure_cv{megapascal} ] </properties>
+    <trajectory filename='vel' stride='2'> velocities </trajectory>
+    <trajectory filename='extra' stride='2'> extras </trajectory>
+    <checkpoint stride='40000'/>
+  </output>
+  <total_steps> 4000000 </total_steps>
+  <prng>
+    <seed> 32225 </seed>
+  </prng>
+  <ffsocket name='lammps' mode='unix' pbc='false'>
+    <address> driver </address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='chk'> init.chk </file>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='lammps'> </force>
+    </forces>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <timestep units='femtosecond'> 0.50 </timestep>
+        <thermostat mode='pile_g'>
+          <pile_lambda> 0.5 </pile_lambda>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units='kelvin'> 300 </temperature>
+    </ensemble>
+  </system>
+</simulation>

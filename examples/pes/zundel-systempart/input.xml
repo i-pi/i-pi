@@ -1,0 +1,45 @@
+<simulation>
+    <ffsocket mode='unix' name='driver'>
+         <address>zundel</address>
+         <activelist> [0,1,2,3,4,5,6] </activelist>
+   </ffsocket>
+  <ffsocket mode='unix' name='driver2'>
+         <address>zundel2</address>
+         <activelist> [7,8,9,10,11,12,13] </activelist>
+   </ffsocket>
+   <total_steps>1200</total_steps>
+   <output prefix="databoth">
+      <trajectory stride="2" filename="pos" cell_units="angstrom">positions{angstrom}</trajectory>
+      <trajectory stride="2" filename="xc" format="xyz">x_centroid{angstrom}</trajectory>
+      <trajectory stride="2" filename="xc2" format="xyz">x_centroid</trajectory>
+      <trajectory stride="2" filename="vc">v_centroid</trajectory>
+      <properties stride="2"> [ step, time, conserved, temperature{kelvin}, kinetic_cv, 
+            potential, kinetic_cv(H), kinetic_cv(O) ] </properties>
+   </output>
+   <prng>
+      <seed>18885</seed>
+   </prng>
+   <system>
+   <motion mode='dynamics'>
+     <dynamics mode='nvt'>
+          <timestep units="femtosecond"> 0.25 </timestep>
+          <thermostat mode='langevin'>
+            <tau units="femtosecond">100</tau>
+         </thermostat>
+     </dynamics>
+   </motion>
+      <forces> 
+           <force forcefield="driver" nbeads="1" > <mts_weights> [1,0] </mts_weights> </force>
+           <force forcefield="driver2" nbeads="4" > <mts_weights> [0,1] </mts_weights> </force> 
+      </forces>
+      <initialize nbeads="4">
+        <file mode="xyz">./double.xyz</file>
+        <cell>
+         [   25.29166, 0, 0, 0, 25.29166, 0, 0, 0, 25.29166 ]
+        </cell>
+      </initialize>
+      <ensemble>
+         <temperature units="kelvin"> 300.0 </temperature>
+      </ensemble>
+  </system>
+</simulation>

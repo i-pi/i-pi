@@ -1,0 +1,54 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='1' flush='1'>[step, time{femtosecond}, conserved, potential, kinetic_cv, pressure_cv, volume, temperature{kelvin}, kinetic_md, pressure_md ] </properties>
+    <trajectory stride='5' format='pdb' filename='xc' cell_units='angstrom'> x_centroid{angstrom} </trajectory>
+    <trajectory stride='1' format='xyz' filename='pos'> positions </trajectory>
+    <trajectory stride='1' format='xyz' filename='vel'> velocities </trajectory>
+    <trajectory stride='1' format='xyz' filename='for'> forces </trajectory>
+    <checkpoint stride='100' overwrite='true' filename='chk'/>
+    <checkpoint stride='5000' overwrite='false' filename='restart'/>
+  </output>
+  <total_steps>10</total_steps>
+  <prng>
+    <seed>20222</seed>
+  </prng>
+  <ffsocket mode='inet' name='driver'>
+    <address>localhost</address>
+    <port>22340</port>
+    <latency>0.01</latency>
+    <timeout>5000</timeout>
+  </ffsocket>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='xyz'>init.xyz</file>
+      <cell mode='manual'>
+	 [   1.96756644e+01,   0.00000000e+00,   0.00000000e+00,   0.00000000e+00,   1.96756644e+01, 0.00000000e+00,   0.00000000e+00,   0.00000000e+00,   1.96756644e+01 ]
+       </cell>
+      <momenta mode='thermal' units='kelvin'> 750 </momenta>
+    </initialize>
+    <forces>
+      <force forcefield='driver'/>
+    </forces>
+    <ensemble>
+      <temperature units='kelvin'> 750 </temperature>
+      <pressure units='gigapascal'> 10. </pressure>
+    </ensemble>
+    <motion mode='dynamics'>
+      <dynamics mode='npt'>
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'>200</tau>
+          <thermostat mode='gle'>
+            <A shape='(7,7)'>
+	       [   9.822428371325e-5,     9.987293287233e-4,     1.987949984950e-4,     1.167630465085e-4,     3.407805402035e-5,    -3.809578945845e-6,    -3.557949480433e-5,    -1.006086293230e-4,     2.884635397417e-3,    -1.808195074487e-3,     3.105591152937e-4,     1.818881186933e-4,    -7.145653317127e-5,     5.034621457449e-5,     9.351978526107e-5,     1.808195074487e-3,     1.027573372763e-3,     7.196219288616e-4,     1.273553606339e-4,     1.311818833038e-4,    -3.191681106027e-4,    -1.160410651555e-4,    -3.105591152937e-4,    -7.196219288616e-4,     3.214325993719e-6,    -6.253304332929e-6,     5.074053232816e-5,    -2.524126504125e-6,    -3.408037266645e-5,    -1.818881186933e-4,    -1.273553606339e-4,     6.253304332929e-6,    1.719493838289e-10,    -5.086367869690e-6,     9.485647980709e-6,     3.997082848080e-6,     7.145653317127e-5,    -1.311818833038e-4,    -5.074053232816e-5,     5.086367869690e-6,     2.860684970232e-9,    -3.764500495111e-6,     3.558577019017e-5,    -5.034621457449e-5,     3.191681106027e-4,     2.524126504125e-6,    -9.485647980709e-6,     3.764500495111e-6,    2.917061291585e-12]
+	     </A>
+          </thermostat>
+        </barostat>
+        <thermostat mode='svr'>
+          <tau units='femtosecond'>20</tau>
+        </thermostat>
+        <timestep units='femtosecond'> 0.5 </timestep>
+      </dynamics>
+      <fixcom>True</fixcom>
+    </motion>
+  </system>
+</simulation>

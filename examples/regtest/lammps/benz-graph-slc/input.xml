@@ -1,0 +1,68 @@
+<!-- REGTEST
+DEPENDENCIES CH.airebo init.chk data.full data.part in.full in.partbeads in.partcontr 
+COMMAND(1) lmp_serial -i in.full
+COMMAND(1) lmp_serial -i in.partcontr
+COMMAND(8) lmp_serial -i in.partbeads
+ENDREGTEST -->
+
+<simulation threading='false'>
+    <ffsocket mode='unix' name='benbeads' pbc='true'>
+         <latency>  1.00000000e-03</latency>
+         <slots> 8 </slots>
+         <port> 13234 </port>
+         <timeout>  6.00000000e+02</timeout>
+         <address> benzenebeads3 </address>
+         <activelist>[128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139] </activelist>
+   </ffsocket>
+    <ffsocket mode='unix' name='bencent' pbc='true'>
+         <latency>  1.00000000e-03</latency>
+         <slots> 8 </slots>
+         <port> 13234 </port>
+         <timeout>  6.00000000e+02</timeout>
+         <address> benzenecent3 </address>
+         <activelist>[128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139]</activelist>
+   </ffsocket>
+    <ffsocket mode='unix' name='full' pbc='true'>
+         <latency>  1.00000000e-03</latency>
+         <slots> 8 </slots>
+         <port> 13234 </port>
+         <timeout>  6.00000000e+02</timeout>
+         <address> fullcent3 </address>
+   </ffsocket>
+
+   <total_steps>100</total_steps>
+   <output prefix="databoth">
+      <trajectory filename='for' stride='100' format='xyz' cell_units='angstrom'> forces </trajectory>
+      <trajectory stride="100" filename="pos" cell_units="angstrom">positions{angstrom}</trajectory>
+      <trajectory stride="100" filename="xc" format="xyz">x_centroid{angstrom}</trajectory>
+      <trajectory stride="100" filename="vc" format="xyz">v_centroid</trajectory>
+      <properties stride="10"> [ step, time, conserved, temperature{kelvin}, kinetic_md, kinetic_cv, potential, kinetic_cv(H), kinetic_cv(C) ] </properties>
+   </output>
+   <prng>
+      <seed>18885</seed>
+   </prng>
+   <system>
+   <motion mode='dynamics'>
+     <dynamics mode='nvt'>
+          <timestep units="femtosecond"> 0.50 </timestep>
+          <thermostat mode='pile_l'>
+            <tau units="femtosecond">100</tau>
+          </thermostat>
+          <nmts> [1, 4] </nmts>
+     </dynamics>
+   </motion>
+      <forces> 
+   <force forcefield="benbeads" nbeads="32"> <mts_weights> [0,1] </mts_weights> </force>
+   <force forcefield="full" nbeads="1"> <mts_weights> [1,0] </mts_weights> </force>
+   <force forcefield="bencent" nbeads="1"> <mts_weights> [-1,0] </mts_weights> </force>
+      </forces>
+      <initialize nbeads="32">
+        <file mode="chk"> init.chk </file>
+        <cell mode='abc' units="angstrom"> [ 17.1404, 19.792, 30.00 ] </cell>
+        <velocities mode="thermal" units='kelvin'> 300 </velocities>
+      </initialize>
+      <ensemble>
+         <temperature units="kelvin"> 300.0 </temperature>
+      </ensemble>
+  </system>
+</simulation>

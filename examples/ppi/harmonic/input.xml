@@ -1,0 +1,35 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='10' filename='out' flush='100'>  [ step, time{picosecond}, potential{kelvin}] </properties>
+    <trajectory filename='pos' stride='10' format='xyz' cell_units='angstrom' flush='100'> positions{angstrom} </trajectory>
+    <trajectory filename='for' stride='10' format='xyz' cell_units='angstrom' flush='100'> forces{atomic_unit} </trajectory>
+  </output>
+  <total_steps>5000000</total_steps>
+  <prng>
+    <seed>4348</seed>
+  </prng>
+  <ffsocket mode='unix' name='driver'>
+    <address>harmonic</address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='2'>
+      <file mode='pdb'> init.pdb </file>
+      <velocities mode='thermal' units='kelvin'>1841.7060385</velocities>
+    </initialize>
+    <forces>
+      <force forcefield='driver'/>
+    </forces>
+    <ensemble>
+      <temperature units='kelvin'>1841.7060385</temperature>
+    </ensemble>
+    <motion mode='dynamics'>
+      <fixcom>False</fixcom>
+      <dynamics mode='nvt'>
+        <thermostat mode='pile_l'>
+          <tau units='femtosecond'>10</tau>
+        </thermostat>
+        <timestep units='femtosecond'>0.01</timestep>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>

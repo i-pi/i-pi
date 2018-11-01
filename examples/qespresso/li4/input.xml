@@ -1,0 +1,39 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'>  [ time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv] </properties>
+    <trajectory stride='1' filename='pos'>positions</trajectory>
+    <checkpoint stride='20'/>
+  </output>
+  <total_steps>100</total_steps>
+  <prng>
+    <seed>31415</seed>
+  </prng>
+  <ffsocket mode='inet' name='pw'>
+    <address>localhost</address>
+    <port>31415</port>
+    <slots>4</slots>
+    <latency> 0.01</latency>
+  </ffsocket>
+  <system>
+    <forces>
+      <force forcefield='pw'/>
+    </forces>
+    <initialize nbeads='8'>
+      <file mode='pdb'> init.pdb </file>
+      <velocities mode='thermal' units='kelvin'> 100 </velocities>
+    </initialize>
+    <ensemble>
+      <temperature units='kelvin'>100</temperature>
+    </ensemble>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <thermostat mode='pile_l'>
+          <tau units='femtosecond'>200</tau>
+          <ethermo>0.0</ethermo>
+        </thermostat>
+        <timestep units='femtosecond'>1.5</timestep>
+      </dynamics>
+      <fixcom>True</fixcom>
+    </motion>
+  </system>
+</simulation>

@@ -1,0 +1,36 @@
+<simulation mode="md">
+   <output prefix="simulation">
+      <properties stride="1" filename="out">  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potential, ensemble_bias ] </properties>
+      <trajectory filename="pos" stride="20"> positions </trajectory>
+      <checkpoint stride="200"/>
+   </output>
+   <total_steps>10000</total_steps>
+   <prng><seed>31415</seed></prng>
+   <ffsocket name="lmpserial1" mode="unix">
+   <address>mts_short</address>
+   </ffsocket>
+   <ffsocket name="lmpserial2" mode="unix">
+   <address>mts_long</address>
+   </ffsocket>
+   <system>
+      <initialize nbeads="1">
+         <file mode="pdb"> water_298K.pdb </file>
+         <velocities mode="thermal" units="kelvin"> 300 </velocities>
+      </initialize>
+      <forces>
+         <force forcefield ="lmpserial1" > </force>
+      </forces> 
+      <motion mode="dynamics">
+         <dynamics mode="mts">
+            <timestep units="femtosecond"> 0.25 </timestep>
+            <thermostat mode="langevin">
+                <tau units="femtosecond"> 100 </tau>
+            </thermostat>
+         </dynamics>
+      </motion>
+      <ensemble>
+         <temperature units="kelvin"> 300 </temperature>
+         <bias> <force forcefield ="lmpserial2" /> </bias>
+      </ensemble>
+   </system>
+</simulation>

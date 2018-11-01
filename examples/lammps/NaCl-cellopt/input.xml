@@ -1,0 +1,32 @@
+<simulation mode='static' verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'>  [ step, potential{electronvolt}] </properties>
+    <trajectory stride='1' filename='pos'>  positions{angstrom}  </trajectory>
+  </output>
+  <total_steps> 1000 </total_steps>
+  <ffsocket name='lmp' mode='unix' pbc='true'>
+    <address>  NaCl-cellopt </address>
+    <latency> 1e-4</latency>
+  </ffsocket>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='xyz'>  init.xyz </file>
+      <cell mode='abcABC'> [1, 2, 3, 90, 90, 90] </cell>
+    </initialize>
+    <forces>
+      <force forcefield='lmp'> </force>
+    </forces>
+    <motion mode='minimize'>
+      <optimizer mode='bfgs'>
+        <tolerances>
+          <energy> 1e-8 </energy>
+          <force> 1e-7 </force>
+          <position> 1e-7 </position>
+        </tolerances>
+        <biggest_step>
+	      100.0
+	    </biggest_step>
+      </optimizer>
+    </motion>
+  </system>
+</simulation>

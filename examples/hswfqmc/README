@@ -1,0 +1,88 @@
+****************************************************************************
+  NOTE: These examples are provided as templates to use i-pi with HswfQMC,
+  and are designed to demonstrate the operation of the 'CL' thermostat
+  in this context. They are by no means templates for meaningful production
+  simulations of hydrogen. However, it is still recommended to use a HPC
+  node to execute the HswfQMC client and expect half a day of execution
+  time to finish the full 1000 time steps of MD. Alternatively, cut down
+  the number of steps and use a low number of CPUs for a quick local test.
+
+  HswfQMC Git Repository: https://github.com/francesco086/HswfQMC
+  Example created by Jan Kessler <jakessle@t-online.de>
+****************************************************************************
+
+                  -- Preparing the HswfQMC software --
+
+ * Make sure you have bash, python, git, svn and gfortran+MPI
+   already installed on your system
+
+ * First you have to obtain the HswfQMC code from GitHub and
+   then use HswfQMC's 'pilot' script for guided compilation.
+   Go to the folder on top of your desired location for HswfQMC
+   and clone the repository:
+
+$ git clone https://github.com/francesco086/HswfQMC.git
+$ cd HswfQMC
+
+ * Now proceed with the pilot script to add the new directory to your path:
+
+$ ./pilot-HswfQMC.sh set_path
+$ source ~/.bashrc
+
+ * To keep it easy it is now recommended to install the markuspline and LAPACK
+   libraries locally via the pilot script. Instead it is also possible to use
+   the LAPACK library provided by your system, but not discussed in this example.
+   Do yourself a favor and get a coffee while waiting for LAPACK compilation...
+
+$ pilot-HswfQMC.sh install_markuspline
+$ pilot-HswfQMC.sh install_lapack
+
+ * Set up the Makefile and build HswfQMC + i-pi client.
+
+$ pilot-HswfQMC.sh set_makefile
+$ pilot-HswfQMC.sh build
+$ pilot-HswfQMC.sh make_ipic
+
+ * HswfQMC is now ready to use.
+
+                  -- Running the HswfQMC examples --
+
+ * If you run both HswfQMC and i-pi on the same machine, you can directly
+   run the examples (but better adjust the number of MPI ranks before).
+   Assuming you are in the top level directory of the examples
+   (where README is) and i-pi is in your PATH:
+
+ * Fixed wavefunction classical MD:
+$ cd FixWF_1Bead
+$ i-pi input.xml > output &
+$ cd HswfQMC_Example_FixWF
+$ HswfQMC_ipic -h 127.0.0.1 -p 54321 -m fix -o 0 -c 64 -l 10 -v > output &
+
+ * PIMD with wavefunction optimization:
+$ cd WFOpt_2Bead
+$ i-pi HswfQMC_i-pi_Example_2Bead.xml > output &
+$ cd HswfQMC_Example_WFOpt
+$ cd 0
+$ HswfQMC_ipic -h 127.0.0.1 -p 54322 -m sim -o 0 -c 32 -l 10 -v > output &
+$ cd ../1
+$ HswfQMC_ipic -h 127.0.0.1 -p 54322 -m sim -o 0 -c 32 -l 10 -v > output &
+
+ * In the HswfQMC_ipic commands above 64 (or 2x 32) is the number of MPI ranks.
+   The examples are tested with 64 ranks, but should in principle be ok with
+   any other number. The number of ranks is proportional to the total number
+   of MC sampling steps done.
+
+ * If you run HswfQMC on a different machine than the i-pi server, you have
+   to adjust the -h argument of the HswfQMC_ipic command according to your
+   server's hostname/IP. Also, you need to change the address in the example's
+   i-pi input file accordingly.
+
+ * If you completed at least 2 steps you may now visualize the intau parameter
+   adjustment of the CL thermostat by using the provided python script within
+   the HswfQMC example directories (you need pylab):
+
+$ python intau_plot.py
+
+ * NOTE: For production runs the idea is to first find a good intau value via
+   the automatic adjustment and to keep it fixed afterwards by setting apat = 0
+   for the actual production calculation.

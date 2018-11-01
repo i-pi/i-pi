@@ -1,0 +1,60 @@
+Geometry = GenFormat {
+    <<< "c6.gen"
+    <<< "init.gen"
+}
+
+# Socket controlled DFTB+
+Driver = Socket {
+    File="c18s4" # File name, i.e., /tmp/ipi_dftb
+    Protocol = i-PI {} # i-PI interface protocol
+    MaxSteps = -1 # keep running until i-PI terminates the run
+}
+
+# DFTB+ model choices
+Hamiltonian = DFTB {
+    DampXH = Yes
+    DampXHExponent = 4.0
+    HubbardDerivs = {
+        H = -0.1857
+        C = -0.1492
+        S = -0.11
+    }
+    MaxAngularMomentum = {
+        H = "s"
+        C = "p"
+        S = "d"
+    }
+    SCC = Yes
+    SlaterKosterFiles = Type2FileNames{
+        Prefix = ../dftb-param/
+        Separator = "-"
+        Suffix = ".skf"
+    }
+    ThirdOrderFull = Yes
+    Filling = Fermi{
+        Temperature[K] = 300
+    }
+    KPointsAndWeights[absolute] = {
+        0.0 0.0 0.0 1.0
+    }
+    Dispersion = LennardJones {
+        Parameters = UFFParameters{}
+    }
+}
+
+Options {
+    # Minimize output during run
+    WriteResultsTag = No
+    WriteDetailedOut = No
+}
+
+Analysis = {
+    # Minimize analysis within DFTB+
+    WriteBandOut = No
+    MullikenAnalysis = No
+}
+
+ParserOptions = {
+    # For forward compatibility, specifiy the DFTB+ input version
+    ParserVersion = 5
+}

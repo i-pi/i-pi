@@ -1,0 +1,663 @@
+Created by charmm2lammps v1.8.1 on Fri Jan  9 15:19:29 CET 2015
+
+          80  atoms
+          80  bonds
+         124  angles
+         224  dihedrals
+          32  impropers
+
+           9  atom types
+          10  bond types
+          13  angle types
+          24  dihedral types
+           6  improper types
+
+     -3.48580318  3.48580318 xlo xhi
+     -4.57322881  4.57322881 ylo yhi
+     -6.40481989   6.40481989 zlo zhi
+      1.1 1.1 1.1    xy xz yz
+
+Masses
+
+       1     12.011  # CB
+       2    15.9994  # OR
+       3    14.0067  # NC=O
+       4     12.011  # C=O
+       5     12.011  # CR
+       6    15.9994  # O=C
+       7    1.00794  # HCMM
+       8    1.00794  # HOCC
+       9    1.00794  # HNCO
+
+Pair Coeffs
+
+       1       0.07   3.550053       0.07   3.550053  # CB
+       2     0.1521   3.153781     0.1521   3.153781  # OR
+       3        0.2   3.296325        0.2   3.296325  # NC=O
+       4       0.11   3.563595       0.11   3.563595  # C=O
+       5      0.055   3.875409       0.01   3.385415  # CR
+       6       0.12   3.029056       0.12   2.494516  # O=C
+       7      0.022   2.351973      0.022   2.351973  # HCMM
+       8      0.046  0.4000135      0.046  0.4000135  # HOCC
+       9      0.046  0.4000135      0.046  0.4000135  # HNCO
+
+Atoms
+
+       1       1     5     0.061       8.394       5.465         9.6  # CR
+       2       1     7         0       8.233       6.528       9.383  # HCMM
+       3       1     7         0       7.765       5.229      10.466  # HCMM
+       4       1     7         0       9.447       5.314       9.856  # HCMM
+       5       1     4     0.569       7.965       4.648       8.411  # C=O
+       6       1     6     -0.57       6.757       4.551       8.078  # O=C
+       7       1     3    -0.547       8.963       4.047       7.729  # NC=O
+       8       1     9      0.37       9.902       4.131       8.142  # HNCO
+       9       1     1     0.117        8.89       3.219       6.588  # CB
+      10       1     1     -0.15       7.782       3.157       5.733  # CB
+      11       1     7      0.15       6.909       3.769       5.924  # HCMM
+      12       1     1     -0.15         7.8       2.308       4.629  # CB
+      13       1     7      0.15       6.941       2.287       3.962  # HCMM
+      14       1     1     -0.15       10.02       2.444       6.295  # CB
+      15       1     7      0.15      10.894       2.511       6.942  # HCMM
+      16       1     1     -0.15      10.037       1.595       5.196  # CB
+      17       1     7      0.15      10.917       0.989       4.992  # HCMM
+      18       1     1    0.0825       8.917       1.508       4.357  # CB
+      19       1     2   -0.5325        8.87       0.665       3.282  # OR
+      20       1     8      0.45       9.781       0.322       3.011  # HOCC
+      21       2     5     0.061       6.352      10.039       7.974  # CR
+      22       2     7         0       5.299       9.888       7.718  # HCMM
+      23       2     7         0       6.981       9.803       7.108  # HCMM
+      24       2     7         0       6.513      11.102       8.191  # HCMM
+      25       2     4     0.569       6.781       9.221       9.163  # C=O
+      26       2     6     -0.57        7.99       9.125       9.496  # O=C
+      27       2     3    -0.547       5.783       8.621       9.845  # NC=O
+      28       2     9      0.37       4.845       8.705       9.432  # HNCO
+      29       2     1     0.117       5.856       7.793      10.986  # CB
+      30       2     1     -0.15       4.726       7.017      11.279  # CB
+      31       2     7      0.15       3.852       7.084      10.632  # HCMM
+      32       2     1     -0.15        4.71       6.168      12.379  # CB
+      33       2     7      0.15        3.83       5.563      12.582  # HCMM
+      34       2     1     -0.15       6.964        7.73      11.841  # CB
+      35       2     7      0.15       7.837       8.343       11.65  # HCMM
+      36       2     1     -0.15       6.946       6.882      12.945  # CB
+      37       2     7      0.15       7.805       6.861      13.612  # HCMM
+      38       2     1    0.0825       5.829       6.082      13.217  # CB
+      39       2     2   -0.5325       5.876       5.239      14.292  # OR
+      40       2     8      0.45       4.965       4.896      14.563  # HOCC
+      41       3     5     0.061       3.761       3.683       2.116  # CR
+      42       3     7         0        4.39       3.918        1.25  # HCMM
+      43       3     7         0       3.921       2.619       2.333  # HCMM
+      44       3     7         0       2.707       3.833        1.86  # HCMM
+      45       3     4     0.569       4.189         4.5       3.305  # C=O
+      46       3     6     -0.57       5.398       4.596       3.638  # O=C
+      47       3     3    -0.547       3.192         5.1       3.987  # NC=O
+      48       3     9      0.37       2.253       5.017       3.574  # HNCO
+      49       3     1     0.117       3.265       5.928       5.128  # CB
+      50       3     1     -0.15       2.135       6.704       5.421  # CB
+      51       3     7      0.15       1.261       6.637       4.774  # HCMM
+      52       3     1     -0.15       2.118       7.553        6.52  # CB
+      53       3     7      0.15       1.238       8.158       6.724  # HCMM
+      54       3     1     -0.15       4.373       5.991       5.983  # CB
+      55       3     7      0.15       5.246       5.379       5.792  # HCMM
+      56       3     1     -0.15       4.354        6.84       7.087  # CB
+      57       3     7      0.15       5.214        6.86       7.754  # HCMM
+      58       3     1    0.0825       3.238       7.639       7.359  # CB
+      59       3     2   -0.5325       3.285       8.482       8.434  # OR
+      60       3     8      0.45       2.373       8.825       8.705  # HOCC
+      61       4     5     0.061       5.803      -0.891       3.742  # CR
+      62       4     7         0       5.174      -0.656       4.608  # HCMM
+      63       4     7         0       6.856       -0.74       3.998  # HCMM
+      64       4     7         0       5.642      -1.955       3.525  # HCMM
+      65       4     4     0.569       5.374      -0.074       2.553  # C=O
+      66       4     6     -0.57       4.165       0.022        2.22  # O=C
+      67       4     3    -0.547       6.372       0.527       1.871  # NC=O
+      68       4     9      0.37        7.31       0.443       2.284  # HNCO
+      69       4     1     0.117       6.299       1.354        0.73  # CB
+      70       4     1     -0.15       7.429        2.13       0.437  # CB
+      71       4     7      0.15       8.303       2.063       1.084  # HCMM
+      72       4     1     -0.15       7.445       2.979      -0.662  # CB
+      73       4     7      0.15       8.325       3.584      -0.866  # HCMM
+      74       4     1     -0.15       5.191       1.417      -0.125  # CB
+      75       4     7      0.15       4.318       0.805       0.066  # HCMM
+      76       4     1     -0.15       5.209       2.266      -1.229  # CB
+      77       4     7      0.15        4.35       2.286      -1.896  # HCMM
+      78       4     1    0.0825       6.326       3.066      -1.501  # CB
+      79       4     2   -0.5325       6.279       3.909      -2.576  # OR
+      80       4     8      0.45        7.19       4.252      -2.847  # HOCC
+
+Bond Coeffs
+
+       1    301.539      1.492  # C=O  CR  
+       2    419.491      1.369  # C=O  NC=O
+       3    931.963      1.222  # C=O  O=C 
+       4    401.068      1.374  # CB   CB  
+       5    381.853      1.084  # CB   HCMM
+       6    394.519      1.395  # CB   NC=O
+       7    404.019      1.376  # CB   OR  
+       8    342.991      1.093  # CR   HCMM
+       9    479.511      1.015  # HNCO NC=O
+      10    564.143      0.973  # HOCC OR  
+
+Bonds
+
+       1       8       1       2  # CR   HCMM
+       2       8       1       3  # CR   HCMM
+       3       8       1       4  # CR   HCMM
+       4       1       5       1  # C=O  CR  
+       5       3       5       6  # C=O  O=C 
+       6       2       7       5  # C=O  NC=O
+       7       9       7       8  # HNCO NC=O
+       8       6       9       7  # CB   NC=O
+       9       5      10      11  # CB   HCMM
+      10       4      10       9  # CB   CB  
+      11       5      12      13  # CB   HCMM
+      12       4      12      10  # CB   CB  
+      13       5      14      15  # CB   HCMM
+      14       4      14      16  # CB   CB  
+      15       4      14       9  # CB   CB  
+      16       5      16      17  # CB   HCMM
+      17       4      16      18  # CB   CB  
+      18       4      18      12  # CB   CB  
+      19       7      19      18  # CB   OR  
+      20      10      19      20  # HOCC OR  
+      21       8      21      22  # CR   HCMM
+      22       8      21      23  # CR   HCMM
+      23       8      21      24  # CR   HCMM
+      24       1      25      21  # C=O  CR  
+      25       3      25      26  # C=O  O=C 
+      26       2      27      25  # C=O  NC=O
+      27       9      27      28  # HNCO NC=O
+      28       6      29      27  # CB   NC=O
+      29       5      30      31  # CB   HCMM
+      30       4      30      29  # CB   CB  
+      31       5      32      33  # CB   HCMM
+      32       4      32      30  # CB   CB  
+      33       5      34      35  # CB   HCMM
+      34       4      34      36  # CB   CB  
+      35       4      34      29  # CB   CB  
+      36       5      36      37  # CB   HCMM
+      37       4      36      38  # CB   CB  
+      38       4      38      32  # CB   CB  
+      39       7      39      38  # CB   OR  
+      40      10      39      40  # HOCC OR  
+      41       8      41      42  # CR   HCMM
+      42       8      41      43  # CR   HCMM
+      43       8      41      44  # CR   HCMM
+      44       1      45      41  # C=O  CR  
+      45       3      45      46  # C=O  O=C 
+      46       2      47      45  # C=O  NC=O
+      47       9      47      48  # HNCO NC=O
+      48       6      49      47  # CB   NC=O
+      49       5      50      51  # CB   HCMM
+      50       4      50      49  # CB   CB  
+      51       5      52      53  # CB   HCMM
+      52       4      52      50  # CB   CB  
+      53       5      54      55  # CB   HCMM
+      54       4      54      56  # CB   CB  
+      55       4      54      49  # CB   CB  
+      56       5      56      57  # CB   HCMM
+      57       4      56      58  # CB   CB  
+      58       4      58      52  # CB   CB  
+      59       7      59      58  # CB   OR  
+      60      10      59      60  # HOCC OR  
+      61       8      61      62  # CR   HCMM
+      62       8      61      63  # CR   HCMM
+      63       8      61      64  # CR   HCMM
+      64       1      65      61  # C=O  CR  
+      65       3      65      66  # C=O  O=C 
+      66       2      67      65  # C=O  NC=O
+      67       9      67      68  # HNCO NC=O
+      68       6      69      67  # CB   NC=O
+      69       5      70      71  # CB   HCMM
+      70       4      70      69  # CB   CB  
+      71       5      72      73  # CB   HCMM
+      72       4      72      70  # CB   CB  
+      73       5      74      75  # CB   HCMM
+      74       4      74      76  # CB   CB  
+      75       4      74      69  # CB   CB  
+      76       5      76      77  # CB   HCMM
+      77       4      76      78  # CB   CB  
+      78       4      78      72  # CB   CB  
+      79       7      79      78  # CB   OR  
+      80      10      79      80  # HOCC OR  
+
+Angle Coeffs
+
+       1     46.778    108.385          0          0  # C=O  CR   HCMM
+       2     73.621    118.596          0          0  # C=O  NC=O CB  
+       3      41.38    120.277          0          0  # C=O  NC=O HNCO
+       4     48.145    119.977          0          0  # CB   CB   CB  
+       5     40.517    120.571          0          0  # CB   CB   HCMM
+       6     73.765    117.918          0          0  # CB   CB   NC=O
+       7     69.663    116.495          0          0  # CB   CB   OR  
+       8     45.194    118.227          0          0  # CB   NC=O HNCO
+       9     52.247    105.409          0          0  # CB   OR   HOCC
+      10     70.814    112.735          0          0  # CR   C=O  NC=O
+      11     67.504     124.41          0          0  # CR   C=O  O=C 
+      12     37.134    108.836          0          0  # HCMM CR   HCMM
+      13     65.273    127.152          0          0  # NC=O C=O  O=C 
+
+Angles
+
+       1      11       1       5       6  # CR   C=O  O=C 
+       2      12       2       1       4  # HCMM CR   HCMM
+       3      12       2       1       3  # HCMM CR   HCMM
+       4      12       3       1       4  # HCMM CR   HCMM
+       5       3       5       7       8  # C=O  NC=O HNCO
+       6       1       5       1       4  # C=O  CR   HCMM
+       7       1       5       1       3  # C=O  CR   HCMM
+       8       1       5       1       2  # C=O  CR   HCMM
+       9       6       7       9      10  # CB   CB   NC=O
+      10       6       7       9      14  # CB   CB   NC=O
+      11      13       7       5       6  # NC=O C=O  O=C 
+      12      10       7       5       1  # CR   C=O  NC=O
+      13       8       9       7       8  # CB   NC=O HNCO
+      14       2       9       7       5  # C=O  NC=O CB  
+      15       5      11      10       9  # CB   CB   HCMM
+      16       5      11      10      12  # CB   CB   HCMM
+      17       4      12      10       9  # CB   CB   CB  
+      18       5      13      12      10  # CB   CB   HCMM
+      19       5      13      12      18  # CB   CB   HCMM
+      20       4      14      16      18  # CB   CB   CB  
+      21       4      14       9      10  # CB   CB   CB  
+      22       5      15      14       9  # CB   CB   HCMM
+      23       5      15      14      16  # CB   CB   HCMM
+      24       4      16      18      12  # CB   CB   CB  
+      25       4      16      14       9  # CB   CB   CB  
+      26       5      17      16      18  # CB   CB   HCMM
+      27       5      17      16      14  # CB   CB   HCMM
+      28       9      18      19      20  # CB   OR   HOCC
+      29       4      18      12      10  # CB   CB   CB  
+      30       7      19      18      12  # CB   CB   OR  
+      31       7      19      18      16  # CB   CB   OR  
+      32      11      21      25      26  # CR   C=O  O=C 
+      33      12      22      21      24  # HCMM CR   HCMM
+      34      12      22      21      23  # HCMM CR   HCMM
+      35      12      23      21      24  # HCMM CR   HCMM
+      36       3      25      27      28  # C=O  NC=O HNCO
+      37       1      25      21      24  # C=O  CR   HCMM
+      38       1      25      21      23  # C=O  CR   HCMM
+      39       1      25      21      22  # C=O  CR   HCMM
+      40       6      27      29      30  # CB   CB   NC=O
+      41       6      27      29      34  # CB   CB   NC=O
+      42      13      27      25      26  # NC=O C=O  O=C 
+      43      10      27      25      21  # CR   C=O  NC=O
+      44       8      29      27      28  # CB   NC=O HNCO
+      45       2      29      27      25  # C=O  NC=O CB  
+      46       5      31      30      29  # CB   CB   HCMM
+      47       5      31      30      32  # CB   CB   HCMM
+      48       4      32      30      29  # CB   CB   CB  
+      49       5      33      32      30  # CB   CB   HCMM
+      50       5      33      32      38  # CB   CB   HCMM
+      51       4      34      36      38  # CB   CB   CB  
+      52       4      34      29      30  # CB   CB   CB  
+      53       5      35      34      29  # CB   CB   HCMM
+      54       5      35      34      36  # CB   CB   HCMM
+      55       4      36      38      32  # CB   CB   CB  
+      56       4      36      34      29  # CB   CB   CB  
+      57       5      37      36      38  # CB   CB   HCMM
+      58       5      37      36      34  # CB   CB   HCMM
+      59       9      38      39      40  # CB   OR   HOCC
+      60       4      38      32      30  # CB   CB   CB  
+      61       7      39      38      32  # CB   CB   OR  
+      62       7      39      38      36  # CB   CB   OR  
+      63      11      41      45      46  # CR   C=O  O=C 
+      64      12      42      41      44  # HCMM CR   HCMM
+      65      12      42      41      43  # HCMM CR   HCMM
+      66      12      43      41      44  # HCMM CR   HCMM
+      67       3      45      47      48  # C=O  NC=O HNCO
+      68       1      45      41      44  # C=O  CR   HCMM
+      69       1      45      41      43  # C=O  CR   HCMM
+      70       1      45      41      42  # C=O  CR   HCMM
+      71       6      47      49      50  # CB   CB   NC=O
+      72       6      47      49      54  # CB   CB   NC=O
+      73      13      47      45      46  # NC=O C=O  O=C 
+      74      10      47      45      41  # CR   C=O  NC=O
+      75       8      49      47      48  # CB   NC=O HNCO
+      76       2      49      47      45  # C=O  NC=O CB  
+      77       5      51      50      49  # CB   CB   HCMM
+      78       5      51      50      52  # CB   CB   HCMM
+      79       4      52      50      49  # CB   CB   CB  
+      80       5      53      52      50  # CB   CB   HCMM
+      81       5      53      52      58  # CB   CB   HCMM
+      82       4      54      56      58  # CB   CB   CB  
+      83       4      54      49      50  # CB   CB   CB  
+      84       5      55      54      49  # CB   CB   HCMM
+      85       5      55      54      56  # CB   CB   HCMM
+      86       4      56      58      52  # CB   CB   CB  
+      87       4      56      54      49  # CB   CB   CB  
+      88       5      57      56      58  # CB   CB   HCMM
+      89       5      57      56      54  # CB   CB   HCMM
+      90       9      58      59      60  # CB   OR   HOCC
+      91       4      58      52      50  # CB   CB   CB  
+      92       7      59      58      52  # CB   CB   OR  
+      93       7      59      58      56  # CB   CB   OR  
+      94      11      61      65      66  # CR   C=O  O=C 
+      95      12      62      61      64  # HCMM CR   HCMM
+      96      12      62      61      63  # HCMM CR   HCMM
+      97      12      63      61      64  # HCMM CR   HCMM
+      98       3      65      67      68  # C=O  NC=O HNCO
+      99       1      65      61      64  # C=O  CR   HCMM
+     100       1      65      61      63  # C=O  CR   HCMM
+     101       1      65      61      62  # C=O  CR   HCMM
+     102       6      67      69      70  # CB   CB   NC=O
+     103       6      67      69      74  # CB   CB   NC=O
+     104      13      67      65      66  # NC=O C=O  O=C 
+     105      10      67      65      61  # CR   C=O  NC=O
+     106       8      69      67      68  # CB   NC=O HNCO
+     107       2      69      67      65  # C=O  NC=O CB  
+     108       5      71      70      69  # CB   CB   HCMM
+     109       5      71      70      72  # CB   CB   HCMM
+     110       4      72      70      69  # CB   CB   CB  
+     111       5      73      72      70  # CB   CB   HCMM
+     112       5      73      72      78  # CB   CB   HCMM
+     113       4      74      76      78  # CB   CB   CB  
+     114       4      74      69      70  # CB   CB   CB  
+     115       5      75      74      69  # CB   CB   HCMM
+     116       5      75      74      76  # CB   CB   HCMM
+     117       4      76      78      72  # CB   CB   CB  
+     118       4      76      74      69  # CB   CB   CB  
+     119       5      77      76      78  # CB   CB   HCMM
+     120       5      77      76      74  # CB   CB   HCMM
+     121       9      78      79      80  # CB   OR   HOCC
+     122       4      78      72      70  # CB   CB   CB  
+     123       7      79      78      72  # CB   CB   OR  
+     124       7      79      78      76  # CB   CB   OR  
+
+Dihedral Coeffs
+
+       1          3          2        180          1  # C=O  NC=O CB   CB  
+       2        3.5          2        180        0.5  # CB   CB   CB   CB  
+       3        3.5          2        180          1  # CB   CB   CB   HCMM
+       4        3.5          2        180          1  # CB   CB   CB   NC=O
+       5        3.5          2        180          1  # CB   CB   CB   OR  
+       6          3          2        180          1  # CB   CB   NC=O HNCO
+       7      1.401          2        180          1  # CB   CB   OR   HOCC
+       8          3          2        180          1  # CB   NC=O C=O  CR  
+       9          3          2        180          1  # CB   NC=O C=O  O=C 
+      10     -0.147          1          0          1  # CR   C=O  NC=O HNCO
+      11      2.902          2        180          0  # CR   C=O  NC=O HNCO
+      12      0.671          3          0          0  # CR   C=O  NC=O HNCO
+      13        3.5          2        180          1  # HCMM CB   CB   HCMM
+      14        3.5          2        180          1  # HCMM CB   CB   NC=O
+      15        3.5          2        180          1  # HCMM CB   CB   OR  
+      16     -0.206          1          0          1  # HCMM CR   C=O  NC=O
+      17      0.346          2        180          0  # HCMM CR   C=O  NC=O
+      18      0.043          3          0          0  # HCMM CR   C=O  NC=O
+      19       0.33          1          0          1  # HCMM CR   C=O  O=C 
+      20     -0.704          2        180          0  # HCMM CR   C=O  O=C 
+      21      0.154          3          0          0  # HCMM CR   C=O  O=C 
+      22      0.718          1          0          1  # HNCO NC=O C=O  O=C 
+      23      2.487          2        180          0  # HNCO NC=O C=O  O=C 
+      24     -0.227          3          0          0  # HNCO NC=O C=O  O=C 
+
+Dihedrals
+
+       1       8       1       5       7       9  # CB   NC=O C=O  CR  
+       2      10       1       5       7       8  # CR   C=O  NC=O HNCO
+       3      11       1       5       7       8  # CR   C=O  NC=O HNCO
+       4      12       1       5       7       8  # CR   C=O  NC=O HNCO
+       5      16       2       1       5       7  # HCMM CR   C=O  NC=O
+       6      17       2       1       5       7  # HCMM CR   C=O  NC=O
+       7      18       2       1       5       7  # HCMM CR   C=O  NC=O
+       8      19       2       1       5       6  # HCMM CR   C=O  O=C 
+       9      20       2       1       5       6  # HCMM CR   C=O  O=C 
+      10      21       2       1       5       6  # HCMM CR   C=O  O=C 
+      11      16       3       1       5       7  # HCMM CR   C=O  NC=O
+      12      17       3       1       5       7  # HCMM CR   C=O  NC=O
+      13      18       3       1       5       7  # HCMM CR   C=O  NC=O
+      14      19       3       1       5       6  # HCMM CR   C=O  O=C 
+      15      20       3       1       5       6  # HCMM CR   C=O  O=C 
+      16      21       3       1       5       6  # HCMM CR   C=O  O=C 
+      17      16       4       1       5       7  # HCMM CR   C=O  NC=O
+      18      17       4       1       5       7  # HCMM CR   C=O  NC=O
+      19      18       4       1       5       7  # HCMM CR   C=O  NC=O
+      20      19       4       1       5       6  # HCMM CR   C=O  O=C 
+      21      20       4       1       5       6  # HCMM CR   C=O  O=C 
+      22      21       4       1       5       6  # HCMM CR   C=O  O=C 
+      23       1       5       7       9      14  # C=O  NC=O CB   CB  
+      24       1       5       7       9      10  # C=O  NC=O CB   CB  
+      25       9       6       5       7       9  # CB   NC=O C=O  O=C 
+      26      22       6       5       7       8  # HNCO NC=O C=O  O=C 
+      27      23       6       5       7       8  # HNCO NC=O C=O  O=C 
+      28      24       6       5       7       8  # HNCO NC=O C=O  O=C 
+      29      14       7       9      14      15  # HCMM CB   CB   NC=O
+      30       4       7       9      14      16  # CB   CB   CB   NC=O
+      31      14       7       9      10      11  # HCMM CB   CB   NC=O
+      32       4       7       9      10      12  # CB   CB   CB   NC=O
+      33       6       8       7       9      14  # CB   CB   NC=O HNCO
+      34       6       8       7       9      10  # CB   CB   NC=O HNCO
+      35       3       9      14      16      17  # CB   CB   CB   HCMM
+      36       2       9      14      16      18  # CB   CB   CB   CB  
+      37       3       9      10      12      13  # CB   CB   CB   HCMM
+      38       2       9      10      12      18  # CB   CB   CB   CB  
+      39       5      10      12      18      19  # CB   CB   CB   OR  
+      40       2      10      12      18      16  # CB   CB   CB   CB  
+      41       3      10       9      14      15  # CB   CB   CB   HCMM
+      42       2      10       9      14      16  # CB   CB   CB   CB  
+      43      13      11      10      12      13  # HCMM CB   CB   HCMM
+      44       3      11      10      12      18  # CB   CB   CB   HCMM
+      45       3      11      10       9      14  # CB   CB   CB   HCMM
+      46       7      12      18      19      20  # CB   CB   OR   HOCC
+      47       3      12      18      16      17  # CB   CB   CB   HCMM
+      48       2      12      18      16      14  # CB   CB   CB   CB  
+      49       2      12      10       9      14  # CB   CB   CB   CB  
+      50      15      13      12      18      19  # HCMM CB   CB   OR  
+      51       3      13      12      18      16  # CB   CB   CB   HCMM
+      52       5      14      16      18      19  # CB   CB   CB   OR  
+      53      13      15      14      16      17  # HCMM CB   CB   HCMM
+      54       3      15      14      16      18  # CB   CB   CB   HCMM
+      55       7      16      18      19      20  # CB   CB   OR   HOCC
+      56      15      17      16      18      19  # HCMM CB   CB   OR  
+      57       8      21      25      27      29  # CB   NC=O C=O  CR  
+      58      10      21      25      27      28  # CR   C=O  NC=O HNCO
+      59      11      21      25      27      28  # CR   C=O  NC=O HNCO
+      60      12      21      25      27      28  # CR   C=O  NC=O HNCO
+      61      16      22      21      25      27  # HCMM CR   C=O  NC=O
+      62      17      22      21      25      27  # HCMM CR   C=O  NC=O
+      63      18      22      21      25      27  # HCMM CR   C=O  NC=O
+      64      19      22      21      25      26  # HCMM CR   C=O  O=C 
+      65      20      22      21      25      26  # HCMM CR   C=O  O=C 
+      66      21      22      21      25      26  # HCMM CR   C=O  O=C 
+      67      16      23      21      25      27  # HCMM CR   C=O  NC=O
+      68      17      23      21      25      27  # HCMM CR   C=O  NC=O
+      69      18      23      21      25      27  # HCMM CR   C=O  NC=O
+      70      19      23      21      25      26  # HCMM CR   C=O  O=C 
+      71      20      23      21      25      26  # HCMM CR   C=O  O=C 
+      72      21      23      21      25      26  # HCMM CR   C=O  O=C 
+      73      16      24      21      25      27  # HCMM CR   C=O  NC=O
+      74      17      24      21      25      27  # HCMM CR   C=O  NC=O
+      75      18      24      21      25      27  # HCMM CR   C=O  NC=O
+      76      19      24      21      25      26  # HCMM CR   C=O  O=C 
+      77      20      24      21      25      26  # HCMM CR   C=O  O=C 
+      78      21      24      21      25      26  # HCMM CR   C=O  O=C 
+      79       1      25      27      29      34  # C=O  NC=O CB   CB  
+      80       1      25      27      29      30  # C=O  NC=O CB   CB  
+      81       9      26      25      27      29  # CB   NC=O C=O  O=C 
+      82      22      26      25      27      28  # HNCO NC=O C=O  O=C 
+      83      23      26      25      27      28  # HNCO NC=O C=O  O=C 
+      84      24      26      25      27      28  # HNCO NC=O C=O  O=C 
+      85      14      27      29      34      35  # HCMM CB   CB   NC=O
+      86       4      27      29      34      36  # CB   CB   CB   NC=O
+      87      14      27      29      30      31  # HCMM CB   CB   NC=O
+      88       4      27      29      30      32  # CB   CB   CB   NC=O
+      89       6      28      27      29      34  # CB   CB   NC=O HNCO
+      90       6      28      27      29      30  # CB   CB   NC=O HNCO
+      91       3      29      34      36      37  # CB   CB   CB   HCMM
+      92       2      29      34      36      38  # CB   CB   CB   CB  
+      93       3      29      30      32      33  # CB   CB   CB   HCMM
+      94       2      29      30      32      38  # CB   CB   CB   CB  
+      95       5      30      32      38      39  # CB   CB   CB   OR  
+      96       2      30      32      38      36  # CB   CB   CB   CB  
+      97       3      30      29      34      35  # CB   CB   CB   HCMM
+      98       2      30      29      34      36  # CB   CB   CB   CB  
+      99      13      31      30      32      33  # HCMM CB   CB   HCMM
+     100       3      31      30      32      38  # CB   CB   CB   HCMM
+     101       3      31      30      29      34  # CB   CB   CB   HCMM
+     102       7      32      38      39      40  # CB   CB   OR   HOCC
+     103       3      32      38      36      37  # CB   CB   CB   HCMM
+     104       2      32      38      36      34  # CB   CB   CB   CB  
+     105       2      32      30      29      34  # CB   CB   CB   CB  
+     106      15      33      32      38      39  # HCMM CB   CB   OR  
+     107       3      33      32      38      36  # CB   CB   CB   HCMM
+     108       5      34      36      38      39  # CB   CB   CB   OR  
+     109      13      35      34      36      37  # HCMM CB   CB   HCMM
+     110       3      35      34      36      38  # CB   CB   CB   HCMM
+     111       7      36      38      39      40  # CB   CB   OR   HOCC
+     112      15      37      36      38      39  # HCMM CB   CB   OR  
+     113       8      41      45      47      49  # CB   NC=O C=O  CR  
+     114      10      41      45      47      48  # CR   C=O  NC=O HNCO
+     115      11      41      45      47      48  # CR   C=O  NC=O HNCO
+     116      12      41      45      47      48  # CR   C=O  NC=O HNCO
+     117      16      42      41      45      47  # HCMM CR   C=O  NC=O
+     118      17      42      41      45      47  # HCMM CR   C=O  NC=O
+     119      18      42      41      45      47  # HCMM CR   C=O  NC=O
+     120      19      42      41      45      46  # HCMM CR   C=O  O=C 
+     121      20      42      41      45      46  # HCMM CR   C=O  O=C 
+     122      21      42      41      45      46  # HCMM CR   C=O  O=C 
+     123      16      43      41      45      47  # HCMM CR   C=O  NC=O
+     124      17      43      41      45      47  # HCMM CR   C=O  NC=O
+     125      18      43      41      45      47  # HCMM CR   C=O  NC=O
+     126      19      43      41      45      46  # HCMM CR   C=O  O=C 
+     127      20      43      41      45      46  # HCMM CR   C=O  O=C 
+     128      21      43      41      45      46  # HCMM CR   C=O  O=C 
+     129      16      44      41      45      47  # HCMM CR   C=O  NC=O
+     130      17      44      41      45      47  # HCMM CR   C=O  NC=O
+     131      18      44      41      45      47  # HCMM CR   C=O  NC=O
+     132      19      44      41      45      46  # HCMM CR   C=O  O=C 
+     133      20      44      41      45      46  # HCMM CR   C=O  O=C 
+     134      21      44      41      45      46  # HCMM CR   C=O  O=C 
+     135       1      45      47      49      54  # C=O  NC=O CB   CB  
+     136       1      45      47      49      50  # C=O  NC=O CB   CB  
+     137       9      46      45      47      49  # CB   NC=O C=O  O=C 
+     138      22      46      45      47      48  # HNCO NC=O C=O  O=C 
+     139      23      46      45      47      48  # HNCO NC=O C=O  O=C 
+     140      24      46      45      47      48  # HNCO NC=O C=O  O=C 
+     141      14      47      49      54      55  # HCMM CB   CB   NC=O
+     142       4      47      49      54      56  # CB   CB   CB   NC=O
+     143      14      47      49      50      51  # HCMM CB   CB   NC=O
+     144       4      47      49      50      52  # CB   CB   CB   NC=O
+     145       6      48      47      49      54  # CB   CB   NC=O HNCO
+     146       6      48      47      49      50  # CB   CB   NC=O HNCO
+     147       3      49      54      56      57  # CB   CB   CB   HCMM
+     148       2      49      54      56      58  # CB   CB   CB   CB  
+     149       3      49      50      52      53  # CB   CB   CB   HCMM
+     150       2      49      50      52      58  # CB   CB   CB   CB  
+     151       5      50      52      58      59  # CB   CB   CB   OR  
+     152       2      50      52      58      56  # CB   CB   CB   CB  
+     153       3      50      49      54      55  # CB   CB   CB   HCMM
+     154       2      50      49      54      56  # CB   CB   CB   CB  
+     155      13      51      50      52      53  # HCMM CB   CB   HCMM
+     156       3      51      50      52      58  # CB   CB   CB   HCMM
+     157       3      51      50      49      54  # CB   CB   CB   HCMM
+     158       7      52      58      59      60  # CB   CB   OR   HOCC
+     159       3      52      58      56      57  # CB   CB   CB   HCMM
+     160       2      52      58      56      54  # CB   CB   CB   CB  
+     161       2      52      50      49      54  # CB   CB   CB   CB  
+     162      15      53      52      58      59  # HCMM CB   CB   OR  
+     163       3      53      52      58      56  # CB   CB   CB   HCMM
+     164       5      54      56      58      59  # CB   CB   CB   OR  
+     165      13      55      54      56      57  # HCMM CB   CB   HCMM
+     166       3      55      54      56      58  # CB   CB   CB   HCMM
+     167       7      56      58      59      60  # CB   CB   OR   HOCC
+     168      15      57      56      58      59  # HCMM CB   CB   OR  
+     169       8      61      65      67      69  # CB   NC=O C=O  CR  
+     170      10      61      65      67      68  # CR   C=O  NC=O HNCO
+     171      11      61      65      67      68  # CR   C=O  NC=O HNCO
+     172      12      61      65      67      68  # CR   C=O  NC=O HNCO
+     173      16      62      61      65      67  # HCMM CR   C=O  NC=O
+     174      17      62      61      65      67  # HCMM CR   C=O  NC=O
+     175      18      62      61      65      67  # HCMM CR   C=O  NC=O
+     176      19      62      61      65      66  # HCMM CR   C=O  O=C 
+     177      20      62      61      65      66  # HCMM CR   C=O  O=C 
+     178      21      62      61      65      66  # HCMM CR   C=O  O=C 
+     179      16      63      61      65      67  # HCMM CR   C=O  NC=O
+     180      17      63      61      65      67  # HCMM CR   C=O  NC=O
+     181      18      63      61      65      67  # HCMM CR   C=O  NC=O
+     182      19      63      61      65      66  # HCMM CR   C=O  O=C 
+     183      20      63      61      65      66  # HCMM CR   C=O  O=C 
+     184      21      63      61      65      66  # HCMM CR   C=O  O=C 
+     185      16      64      61      65      67  # HCMM CR   C=O  NC=O
+     186      17      64      61      65      67  # HCMM CR   C=O  NC=O
+     187      18      64      61      65      67  # HCMM CR   C=O  NC=O
+     188      19      64      61      65      66  # HCMM CR   C=O  O=C 
+     189      20      64      61      65      66  # HCMM CR   C=O  O=C 
+     190      21      64      61      65      66  # HCMM CR   C=O  O=C 
+     191       1      65      67      69      74  # C=O  NC=O CB   CB  
+     192       1      65      67      69      70  # C=O  NC=O CB   CB  
+     193       9      66      65      67      69  # CB   NC=O C=O  O=C 
+     194      22      66      65      67      68  # HNCO NC=O C=O  O=C 
+     195      23      66      65      67      68  # HNCO NC=O C=O  O=C 
+     196      24      66      65      67      68  # HNCO NC=O C=O  O=C 
+     197      14      67      69      74      75  # HCMM CB   CB   NC=O
+     198       4      67      69      74      76  # CB   CB   CB   NC=O
+     199      14      67      69      70      71  # HCMM CB   CB   NC=O
+     200       4      67      69      70      72  # CB   CB   CB   NC=O
+     201       6      68      67      69      74  # CB   CB   NC=O HNCO
+     202       6      68      67      69      70  # CB   CB   NC=O HNCO
+     203       3      69      74      76      77  # CB   CB   CB   HCMM
+     204       2      69      74      76      78  # CB   CB   CB   CB  
+     205       3      69      70      72      73  # CB   CB   CB   HCMM
+     206       2      69      70      72      78  # CB   CB   CB   CB  
+     207       5      70      72      78      79  # CB   CB   CB   OR  
+     208       2      70      72      78      76  # CB   CB   CB   CB  
+     209       3      70      69      74      75  # CB   CB   CB   HCMM
+     210       2      70      69      74      76  # CB   CB   CB   CB  
+     211      13      71      70      72      73  # HCMM CB   CB   HCMM
+     212       3      71      70      72      78  # CB   CB   CB   HCMM
+     213       3      71      70      69      74  # CB   CB   CB   HCMM
+     214       7      72      78      79      80  # CB   CB   OR   HOCC
+     215       3      72      78      76      77  # CB   CB   CB   HCMM
+     216       2      72      78      76      74  # CB   CB   CB   CB  
+     217       2      72      70      69      74  # CB   CB   CB   CB  
+     218      15      73      72      78      79  # HCMM CB   CB   OR  
+     219       3      73      72      78      76  # CB   CB   CB   HCMM
+     220       5      74      76      78      79  # CB   CB   CB   OR  
+     221      13      75      74      76      77  # HCMM CB   CB   HCMM
+     222       3      75      74      76      78  # CB   CB   CB   HCMM
+     223       7      76      78      79      80  # CB   CB   OR   HOCC
+     224      15      77      76      78      79  # HCMM CB   CB   OR  
+
+Improper Coeffs
+
+       1      9.284          0  # C=O  O=C  NC=O CR  
+       2      1.079          0  # CB   CB   CB   HCMM
+       3      2.519          0  # CB   CB   CB   NC=O
+       4      3.454          0  # CB   CB   CB   OR  
+       5          0          0  # CR   HCMM C=O  HCMM
+       6     -1.439          0  # HNCO CB   C=O  NC=O
+
+Impropers
+
+       1       1       5       6       7       1  # C=O  O=C  NC=O CR  
+       2       6       7       5       9       8  # HNCO CB   C=O  NC=O
+       3       3       9      10      14       7  # CB   CB   CB   NC=O
+       4       2      10       9      12      11  # CB   CB   CB   HCMM
+       5       2      12      10      18      13  # CB   CB   CB   HCMM
+       6       2      14      16       9      15  # CB   CB   CB   HCMM
+       7       2      16      18      14      17  # CB   CB   CB   HCMM
+       8       4      18      12      16      19  # CB   CB   CB   OR  
+       9       1      25      26      27      21  # C=O  O=C  NC=O CR  
+      10       6      27      25      29      28  # HNCO CB   C=O  NC=O
+      11       3      29      30      34      27  # CB   CB   CB   NC=O
+      12       2      30      29      32      31  # CB   CB   CB   HCMM
+      13       2      32      30      38      33  # CB   CB   CB   HCMM
+      14       2      34      36      29      35  # CB   CB   CB   HCMM
+      15       2      36      38      34      37  # CB   CB   CB   HCMM
+      16       4      38      32      36      39  # CB   CB   CB   OR  
+      17       1      45      46      47      41  # C=O  O=C  NC=O CR  
+      18       6      47      45      49      48  # HNCO CB   C=O  NC=O
+      19       3      49      50      54      47  # CB   CB   CB   NC=O
+      20       2      50      49      52      51  # CB   CB   CB   HCMM
+      21       2      52      50      58      53  # CB   CB   CB   HCMM
+      22       2      54      56      49      55  # CB   CB   CB   HCMM
+      23       2      56      58      54      57  # CB   CB   CB   HCMM
+      24       4      58      52      56      59  # CB   CB   CB   OR  
+      25       1      65      66      67      61  # C=O  O=C  NC=O CR  
+      26       6      67      65      69      68  # HNCO CB   C=O  NC=O
+      27       3      69      70      74      67  # CB   CB   CB   NC=O
+      28       2      70      69      72      71  # CB   CB   CB   HCMM
+      29       2      72      70      78      73  # CB   CB   CB   HCMM
+      30       2      74      76      69      75  # CB   CB   CB   HCMM
+      31       2      76      78      74      77  # CB   CB   CB   HCMM
+      32       4      78      72      76      79  # CB   CB   CB   OR  
+

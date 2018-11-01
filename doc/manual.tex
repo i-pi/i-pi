@@ -187,11 +187,11 @@
 \par\end{center}
 
 \begin{center}
-{\Large\bf A Python interface for \\Path Integral Molecular Dynamics}
+{\Large\bf A Universal Force Engine for Advanced Molecular Dynamics}
 \par\end{center}
 
 \begin{center}
-{\large v. 1.0}
+{\large v. 2.0}
 \par\end{center}
 
 \end{titlepage}
@@ -208,12 +208,16 @@
 
 \label{intro}
 
-\ipi is a Path Integral Molecular Dynamics (PIMD) interface written
+\ipi is a interface for advanced molecular simulations written
 in Python, designed to be used together with an \emph{ab initio} evaluation
 of the interactions between the atoms. The main goal is to decouple
 the problem of evolving the ionic positions to sample the appropriate
 thermodynamic ensemble and the problem of computing the inter-atomic
-forces. 
+forces. \ipi was initially developed for Path Integral Molecular Dynamics (PIMD)
+simulations, and contains probably the most comprehensive array of PIMD
+techniques. Since v2.0, however, it also contains several general-purpose 
+methods for molecular simulations, ranging from phonon calculators to 
+replica exchange molecular dynamics.
 
 \begin{figure}[hb]
 \centering\includegraphics[width=0.9\textwidth]{figures/ipi-scheme.pdf}
@@ -352,6 +356,68 @@ physical properties, one does not need to take care of book-keeping
 and the code can be clean, transparent and readable.
 
 
+\begin{figure}[hpbt]
+\centering\includegraphics[width=0.9\textwidth]{figures/ipi-forces.pdf}
+\caption{\label{fig:forces} Schematic representation of the different objects
+that are involved in the evaluation of the forces. The multiple layers and complex
+structure are necessary to give the possibility of decomposing the evaluation 
+of the forces between multiple different clients and using different imaginary
+time partitioning (e.g. one can compute the bonded interactions using one client,
+and use a different client to compute the long-range electrostatic interactions,
+contracted on a single bead~\cite{mark-mano08jcp}). 
+}
+\end{figure}
+
+
+\subsection{Force evaluation}
+
+Within \ipi{}, the evaluation of the forces plays a crucial role, 
+as it is the step requiring communication with the client code. 
+In order to have a flexible infrastructure that makes it possible
+to perform simulations with advanced techniques such as ring-polymer
+contraction~\cite{mark-mano08jcp}, the force evaluation machinery
+in \ipi{} might appear complicated at first, and deserves a brief
+discussion.
+
+A scheme of the objects involved in the calculation of the forces
+is presented in Figure~\ref{fig:forces}. The infrastracture comprises
+a force provider class that deals with the actual subdivision of 
+work among the clients, and a sequence of objects that translate
+the request of the overall force of the system into atomic 
+evaluations of one component of the force for an individual bead:
+\ipi{} is built to hide the path integral infrastructure from the client, and so 
+beads must be transferred individually.
+
+Let us discuss for clarity a practical example -- a calculation 
+of an empirical water model where the bonded interactions are 
+computed on 32 beads by the program A, and the non-bonded interactions
+are computed by client B, ring-polymer contracted on 8 beads.
+Each client ``type'' is associated with a \hyperref[FORCEFIELD]{ForceField} 
+object in the input. In the case of a \hyperref[FFSOCKET]{socket} interface,
+the forcefield object specifies the address to which a client should connect,
+and so multiple clients of type A or B can connect to \ipi{} at the same time.
+Each forcefield object deals with queueing force evaluation requests
+and computing them in a first-in-first-out fashion, possibly executing 
+multiple requests in parallel. 
+
+On the force evaluation side, the task of splitting the request of a
+force evaluation into individual components and individual beads is 
+accomplished by a chain of three objects, Forces, ForceComponent and ForceBead.
+is the main force Forces evaluator, that is built from the prototypes
+listed within the \hyperref[FORCES]{forces} field of \hyperref[SYSTEM]{system}.
+Each \hyperref[FORCECOMPONENT]{force} item within the 
+\hyperref[FORCES]{forces} tag describe one component of the force --
+in our example one ForceComponent bound to a forcefield of type A, 
+evaluated on 32 beads, and one ForceComponent bound to type B, evaluated
+on 8 beads. Forces contains the machinery that automatically contracts the
+actual ring polymer to the number of beads required by each component,
+and combines the various components with the given weights to provide the 
+overall force, energy and virial where required. 
+ForceComponent is a very simple helper class that associates with each bead 
+a ForceBead object, that is the entity in charge of filing force requests to
+the appropriate ForceField object and waiting for completion of the
+evaluation. 
+
 \subsection{Communication protocol}
 
 Since \ipi is designed to be used with a wide range of codes and
@@ -408,28 +474,67 @@ Pressure & N.A. & 2.9421912e13 Pa\\
 }
 
 
+Regarding the specification of these units in the i-PI input files, the user is able to specify units both in the i-PI input file or in the structure file. 
+If the structure file is of the .xyz format, the units specifications should be present in the comment line. Examples of such inputs can be found in \texttt{examples/pes-regtest/io-units/} .
+The code then behaves in the following way, depending on the user's choice: 
+\begin{itemize}
+\item If no units are specified in the input, i-PI tries to guess from the comment line of the structure file and it nothing is present, assumes atomic units, or angstrom for PDB files.
+\item If units are specified in both input and structure file and they match, conversion happens just once. If they do not match, an error is raised and i-PI stops.
+\end{itemize}
+
+
 \section{Core features}
 
-The functionality of \ipi includes:
+\ipi{} includes a large number of advanced molecular dynamics features, with an obvious focus on path integral molecular dynamics, but also several methods for sampling classical trajectories.
+
+\subsection{Features in version 1.0}
 \begin{itemize}
-\item Thermostats for constant temperature ensembles, including: \begin{itemize}
-\item Local and global stochastic thermostats \cite{plangevin1908cras,buss-parr08cpc}, with optional optimized sampling of the ring polymer normal mode coordinates \cite{ceri+10jcp}.
-\item Optimal sampling generalized Langevin equation (GLE) thermostats \cite{ceri+09jctc}.
-\item Path integral + GLE (PI+GLE) thermostats \cite{ceri+11jcp} for accelerating the
-convergence of the potential energy with respect to the number of replicas, 
-as well as the more recent PIGLET method \cite{ceri-mano12prl}, which also
-accelerates the convergence of the kinetic energy.
+\item molecular dynamics and PIMD in the {\em NVE}, {\em NVT} and {\em NPT} ensembles, with the high-frequency internal vibrations of the path propagated in the normal-mode representation~\cite{ceri+10jcp} {to allow for longer time steps};
+\item ring polymer contraction~\cite{mark-mano08jcp,mark-mano08cpl}, implemented 
+by exposing multiple socket interfaces to deal with short and long-range components of the potential energy separately; {treating different components that have different computational cost and characteristic time scale separately can reduce substantially the overall effort associated with a simulation}
+\item efficient stochastic velocity rescaling \cite{buss+07jcp} and 
+path integral Langevin equation thermostats~\cite{ceri+10jcp} {to sample efficiently the canonical ensemble}; 
+\item various generalized Langevin equation (GLE) thermostats,
+including the optimal sampling~\cite{ceri+09prl,ceri+10jctc}, quantum 
+~\cite{ceri+09prl2}, and $\delta$~\cite{ceri-parr10pcs} thermostats; the parameters 
+{for different GLE flavors and the conditions in which they should be applied can be obtained from a separate website~\cite{gle4md};}
+\item mixed path integral--generalized Langevin equation techniques for 
+accelerated convergence, including both PI+GLE~\cite{ceri+11jcp} and the 
+more recent and effective version PIGLET~\cite{ceri-mano12prl}; {these techniques reduce the number of path integral replicas needed, while allowing for systematic convergence;}
+\item all the standard estimators for structural properties, the quantum 
+kinetic energy, pressure, etc.;
+\item more sophisticated estimators such as the scaled-coordinate 
+heat capacity estimator~\cite{yama05jcp}, 
+estimators to obtain isotope fractionation free energies by re-weighting a 
+simulation of the most abundant isotope~\cite{ceri-mark13jcp}, and 
+a displaced-path estimator for the particle momentum distribution~\cite{lin+10prl};
+\item the infrastructure that is needed to perform approximate quantum dynamics calculations such as ring polymer molecular dynamics (RPMD)~\cite{crai-mano04jcp,habe+13arpc} and centroid molecular dynamics
+(CMD)~\cite{cao-voth93jcp,cao-voth94jcp}.
 \end{itemize}
-\item Barostats for constant pressure ensembles \cite{mart+99jcp,buss+09jpc}.
-\item Ring polymer contraction \cite{mark-mano08jcp}.
-\item Scaled path finite difference energy and heat capacity estimators
-\cite{tyamamoto05jcp}.
-\item Displaced path momentum distribution estimator \cite{linlin+10prl}.
-\item Dynamical property calculation modes:\begin{itemize}
-\item Ring polymer molecular dynamics \cite{crai-mano04jcp}.
-\item Partially-adiabatic centroid molecular dynamics \cite{habe+08jcp,hone+06jcp}.
+
+\subsection{Features added in version 2.0}
+
+\begin{itemize}
+\item reweighted fourth-order path integral MD (M. Ceriotti, G.A.R. Brain)~\cite{ceri+12prsa,jang-voth01jcp}; {this method makes it possible to obtain fourth-order statistics by re-weighting second-order trajectories; attention should be paid to avoid statistical inefficiencies;}
+\item finite-differences implementation of fourth-order path integrals (V. Kapil, M. Ceriotti)~\cite{kapi+16jcp2}; {this schemes enables explicit fourth-order path integral simulations, that converge faster than conventional Trotter methods};
+\item perturbed path integrals (I. Poltavsky)~\cite{polt-tkat16cs}; {essentially, a truncated cumulant expansion of fourth-order reweighting, that often enables fast convergence avoiding statistical instability; }
+\item open path integrals and momentum distribution estimators (V. Kapil, A. Cuzzocrea, M. Ceriotti) \cite{kapi+18jpcb}; {makes it possible to compute the particle momentum distribution including quantum fluctuations of nuclei;} 
+\item quantum alchemical transformations (B. Cheng) \cite{liu+13jpcc,chen+16jpcl}; {Monte Carlo exchanges between isotopes of different mass, useful to sample isotope propensity for different molecules or environments;}
+\item direct isotope fractionation estimators (B. Cheng, M. Ceriotti) ~\cite{chen-ceri14jcp}; {avoid thermodynamic integration to obtain isotope fractionation ratios;}
+\item spatially localized ring polymer contraction (M. Rossi, M. Ceriotti) \cite{litm+17jcp}; {simple contraction scheme for weakly bound molecules, e.g. on surfaces;}
+\item ring polymer instantons (Y. Litman, J.O. Richardson, M. Rossi); {evaluation of reaction rates and tunnelling splittings for molecular rearrangements and chemical reactions;}
+\item thermodynamic integration (M. Rossi, M. Ceriotti) \cite{ross+16prl}; {classical scheme to compute free energy differences;}
+\item geometry optimizers for minimization and saddle point search (B. Helfrecht, R. Petraglia, Y. Litman, M. Rossi) \cite{ross+16prl}
+\item harmonic vibrations through finite differences (V. Kapil, S. Bienvenue)  \cite{ross+16prl}; {simple evaluation of the harmonic Hessian;}
+\item multiple time stepping (V. Kapil, M. Ceriotti) \cite{kapi+16jcp}; {accelerated simulations by separating slow and fast degrees of freedom into different components of the potential energy;}
+\item metadynamics through a PLUMED interface (G. Tribello, M. Ceriotti); {simulation of rare events and free energy calculations;}
+\item replica exchange MD (R. Petraglia, R. Meissner, M. Ceriotti)~\cite{petr+15jcc}; {accelerated convergence of averages by performing Monte Carlo exchanges of configurations between parallel calculations}
+\item thermostatted RPMD~\cite{ross+14jcp}, including optimized-GLE TRPMD~\cite{ross+18jcp}; {reduces well-known artifacts in the simulation of dynamical properties by path integral methods;}
+\item dynamical corrections to Langevin trajectories (M. Rossi, V. Kapil, M. Ceriotti)~\cite{ross+18jcp}; {eliminates the artifacts introduced into dynamical properties by the presence of thermostats;}
+\item fast forward Langevin thermostat (M. Hijazi, D. M. Wilkins, M. Ceriotti); {a simple scheme to reduce the impact of strongly-damped Langevin thermostats on sampling efficiency;} \cite{hija+18jcp}
+\item Langevin sampling for noisy and/or dissipative forces (J. Kessler, T. D. K\"uhne); {suitable to stabilize and correct the artifacts that are introduced in MD trajectories by different extrapolation schemes;}
 \end{itemize}
-\end{itemize}
+
 
 \section{Licence and credits}
 
@@ -440,7 +545,7 @@ in the directory {}``drivers'' are all held under the MIT licence.
 For more details see \url{https://fedoraproject.org/wiki/Licensing:MIT}.
 
 If you use this code in any
-future publications, please cite this using {[}cpc paper citation{]}.
+future publications, please cite this using {[}\cite{ceri+14cpc}{]}.
 
 \subsection{Contributors}
 
@@ -845,7 +950,7 @@ in mind, it also includes a Fortran empirical potential client code to do
 simple calculations and to run the examples.
 
 The source code for this is included in the directory {}``drivers'', and can
-be compiled into an executable {}``driver.x'' using the UNIX utility make.
+be compiled into an executable {}``i-pi-driver'' using the UNIX utility make.
 
 This code currently has four empirical potentials hardcoded into it, 
 a Lennard-Jones potential, the Silvera-Goldman potential \cite{silv-gold78jcp},
@@ -856,7 +961,7 @@ How the code is run is based on what command line arguments are passed to it.
 The command line syntax is:
 
 \begin{code}
-> driver.x [-u] -h hostname -p port -m [gas|lj|sg|harm] -o parameters [-v]
+> i-pi-driver [-u] -h hostname -p port -m [gas|lj|sg|harm] -o parameters [-v]
 \end{code}
 
 The flags do the following:
@@ -1041,6 +1146,17 @@ through a login node (see section~\ref{distrib} for more details).
 
 \label{tests}
 
+\subsection{test the installation with `nose`}
+
+There are several test cases included, that can be run automatically with
+`nosetests` from the root directory.
+
+\begin{code}
+> nosetests -v
+\end{code}
+
+\subsection{test cases with input files}
+
 Several test cases are distributed with the code to ensure that your
 distribution is working correctly. There are also simple tests to
 see if the client codes are working correctly.
@@ -1065,7 +1181,7 @@ client is functioning correctly. There is one simple 4-atom lithium
 test, and a test using a single water molecule.
 \item [{harmonic:}] This has a simple example of a 1D harmonic oscillator.
 This demonstrates the displaced path integral momentum distribution
-estimator as given in \cite{linlin+10prl}. As the momentum distribution
+estimator as given in \cite{lin+10prl}. As the momentum distribution
 is known analytically for this simple system, this provides an indication
 of how well the method is working.
 \item [{lammps:}] This has a simple implementation of the q-TIP4P-F empirical
@@ -1076,7 +1192,7 @@ methods \cite{mark-mano08jcp}.
 
 This also contains one example using LAMMPS to calculate the interactions
 between carbon atoms in graphene. This uses the optimized Tersoff 
-parameters for carbon given in \cite{lind-broi10prb,errlind-broi10prb}.
+parameters for carbon given in \cite{lind-broi10prb}.
 \item [{cp2k:}] Contains the tests for the CP2K client code. Holds input files
 to run the high-pressure water calculations 
 presented in [cpc publication citation].
@@ -1167,20 +1283,20 @@ by having a {}``\hyperref[SIMULATION]{simulation}'' tag, containing an
 {}``\hyperref[ENSEMBLE]{ensemble}''
 tag, which itself contains a {}``pressure'' tag, which will contain
 a float value corresponding to the external pressure. In this
-manner, the simulation class structure can be constructed iteratively.
+manner, the class structure can be constructed iteratively.
 
-As a specific example, suppose we want to generate a \emph{NPT} ensemble at an external
-pressure of 1e-7 atomic pressure units. This would be specified by
-the following input file: 
+For example, suppose we want to generate a \emph{NPT} ensemble at an external
+pressure of \(10^{-7}\) atomic pressure units. This would be specified by
+the following input file:
 
 \begin{code}
-<simulation>
-   <ensemble mode='npt'>
+<system>
+   <ensemble>
       <pressure> 1e-7 </pressure>
       ...
    </ensemble>
    ...
-</simulation>
+</system>
 \end{code}
 
 To help detect any user error the recognized tag names, data types
@@ -1201,26 +1317,26 @@ MPa. Instead of converting this to the atomic unit of pressure, it
 is possible to use pascals directly using:
 
 \begin{code}
-<simulation>
-   <ensemble mode=`npt'>
+<system>
+   <ensemble>
       <pressure units=`pascal'> 3e6 </pressure>
       ...
    </ensemble>
    ...
-</simulation>
+</system>
 \end{code}
 
 The code can also understand S.I. prefixes, so this can be simplified
 further using:
 
 \begin{code}
-<simulation>
-   <ensemble mode='npt'>
+<system>
+   <ensemble>
       <pressure units=`megapascal'> 3 </pressure>
       ...
    </ensemble>
    ...
-</simulation>
+</system>
 \end{code}
 
 A full list of which units are defined for which dimensions
@@ -1650,7 +1766,7 @@ for the calculation. UNIX-domain sockets create a special file
 in the local file system, that serves as a rendezvous point
 between server and clients, and are uniquely identified by the
 name of the file itself, that can be specified in the ``address'' tag of 
-``\hyperref[SOCKET]{socket}'' in the xml input file and in 
+``\hyperref[FFSOCKET]{socket}'' in the xml input file and in 
 the input of the client.
 
 Unfortunately, UNIX sockets do not allow one to run \ipi{} and 
@@ -1666,14 +1782,14 @@ Internet sockets are described by an address and a port number.
 The address of the host is given as the IP address,
 or as a hostname that is resolved to an IP address by a domain name server,
 and is specified by the {}``address'' variable of a 
-\hyperref[SOCKET]{socket} object. 
+\hyperref[FFSOCKET]{socket} object. 
 The port number is an integer between 1 and 65535 used to distinguish
 between all the different sockets open on a particular host. As
 many of the lower numbers are protected for use in important system
 processes or internet communication, it is generally advisable to
 only use numbers in the range 1025-65535 for simulations.
 
-The \hyperref[SOCKET]{socket} object has two more parameters.
+The \hyperref[FFSOCKET]{socket} object has two more parameters.
 The option ``latency'' specifies how often \ipi{} polls the list of 
 active clients to dispatch positions and collect results:
 setting it to a small value makes the program more responsive, 
@@ -1852,6 +1968,23 @@ possibly followed by their attributes.
 \emph{\small Other supplementary information} will be in small font and italicized.
 
 \input{input_docs/simulation}
+\input{input_docs/forcefield}
+\input{input_docs/ffsocket}
+\input{input_docs/ffdebye}
+\input{input_docs/fflj}
+\input{input_docs/ffplumed}
+\input{input_docs/ffyaff}
+\input{input_docs/system}
+\input{input_docs/smotion}
+\input{input_docs/remd}
+\input{input_docs/meta}
+\input{input_docs/motion}
+\input{input_docs/dynamics}
+\input{input_docs/alchemy}
+\input{input_docs/instanton}
+\input{input_docs/phonons}
+\input{input_docs/geop}
+\input{input_docs/neb}
 \input{input_docs/initializer}
 \input{input_docs/init_file}
 \input{input_docs/init_pos}
@@ -1863,11 +1996,12 @@ possibly followed by their attributes.
 \input{input_docs/init_therm}
 \input{input_docs/ensembles}
 \input{input_docs/forces}
-\input{input_docs/socket}
+\input{input_docs/forcecomponent}
 \input{input_docs/cell}
 \input{input_docs/beads}
 \input{input_docs/atoms}
-\input{input_docs/normal_modes}
+\input{input_docs/normalmodes}
+\input{input_docs/nmfrequencies}
 \input{input_docs/barostats}
 \input{input_docs/thermostats}
 \input{input_docs/prng}
@@ -1906,7 +2040,8 @@ client code that is capable of calculating the potential interactions
 of para-hydrogen molecules. Fortunately, one of the client codes distributed
 with \ipi has an appropriate empirical potential already hard-coded
 into it, and
-so all that is required is to create the {}``driver.x'' file in
+so all that is required is to create the {}``i-pi-driver'' file
+compiling the code in
 the {}``drivers'' directory, using the UNIX utility make.
 
 This client code can be used for several different problems
@@ -1916,7 +2051,7 @@ we will use the Silvera-Goldman potential with a cut-off radius
 of 15 \(a_0\). This is run using the following command:
 
 \begin{code}
-> ./driver.x -m sg -h localhost -o 15 -p 31415
+> i-pi-driver -m sg -h localhost -o 15 -p 31415
 \end{code}
 
 The option {}``-m'' is followed by the empirical potential required,
@@ -1965,12 +2100,26 @@ input file is not well formed can be found in \ref{trouble}.
 For the sake of this first tutorial however, we will simply discuss the
 those tags which are needed for a single \emph{NVT} equilibration run.
 The most important tags are {}``\hyperref[INITIALIZER]{initialize}'', 
-{}``\hyperref[ENSEMBLE]{ensemble}'', 
-{}``total\_steps'' and {}``\hyperref[FORCES]{forces}''.
-These correspond to the tag to initialize the atom configurations,
-the tag to define the appropriate ensemble,
-the tag to set the length of the simulation and the tag to specify the 
-client code respectively.
+{}``\hyperref[ENSEMBLE]{ensemble}'', {}``\hyperref[MOTION]{motion}'', 
+{}``\hyperref[DYNAMICS]{dynamics}'',{}``total\_steps''
+{}``\hyperref[FFSOCKET]{ffsocket}'',
+ and {}``\hyperref[FORCES]{forces}''.
+These correspond to the tag to initialize the atom configurations (initialize),
+the tag ensemble defines the properties of the statistical ensemble considered (like
+temperature and pressure). While motion contains everything regarding
+the motion of the atoms in general and allows to specify
+which type of computation is expected (dynamics, geometry
+optimization, etc.), the tag dynamics contains all the specifics
+relative to the molecular dynamics (such as the barostat,
+thermostat and the time step, whose total number is defined in
+the total\_step tags.). In theory it would be possible to join many
+force with different way into the tag forces, even though each of those
+forces needs a force field socket (ffsocket tag) that specify who is
+in charge of computing the forces and sending them to \ipi.  Note that
+the attribute ``forcefield'' of the force tag must correspond to the
+attribute ``name'' of one of the ffsocket tag. All the tags that
+define the actual simulation must be within the {}``\hyperref[SYSTEM]{system}''
+environment.
 We will also discuss {}``\hyperref[OUTPUTS]{output}'', 
 which is used to define what output data
 is generated by the code.
@@ -1982,15 +2131,31 @@ At this point then, the input file looks like:
    <total_steps>
       ...
    </total_steps>
-   <initialize>
+   <ffsocket name='some_name'>
       ...
-   </initialize>
-   <forces>
-      ...
-   </forces>
-   <ensemble>
-      ...
-   </ensemble>
+   </ffsocket>
+   <system>
+      <initialize>
+         ...
+      </initialize>
+      <forces>
+         <force forcefield='some_name_A'>
+            ...
+         </force>
+         <force forcefield='some_name_B'>
+            ...
+         </force>
+      </forces>
+      <ensemble>
+         ...
+      </ensemble>
+      <motion mode='dynamics'>
+         ...
+         <dynamics>
+            ...
+         </dynamics>
+      <motion>
+   </system>
    <output>
       ...
    </output>
@@ -2022,7 +2187,7 @@ Next, we must specify the atomic configuration. Rather than initialize
 the atom positions manually, we will instead use a separate configuration 
 file for this purpose.
 Here we will discuss two of the input formats that are compatible
-with \ipi, xyz files and pdb files.
+with \ipi: xyz files and pdb files.
 
 Note that, for the sake of this tutorial, we have 
 included valid xyz and pdb input
@@ -2035,7 +2200,7 @@ syntax:
 
 \begin{code}
 natoms
-# COMMENT LINE: PUT TITLE OF FILE HERE
+# COMMENT LINE + CELL{abcABC}: a b c A B C cell{angstrom} postions{angstrom}
 atom1   x1  y1  z1
 atom2   x2  y2  z2
 ...
@@ -2043,7 +2208,9 @@ atom2   x2  y2  z2
 where {}``natoms'' is replaced by an integer giving the total number
 of atoms, in this case 108, atom1 is a label for atom 1, in this case
 H2 (since we are simulating para-hydrogen), and (x1, y1, z1) are the
-x, y and z components of atom 1 respectively. 
+x, y and z components of atom 1 respectively. The comment line can
+also contains the cell parameters and the position and cell units
+(angstrom in the example above).
 
 Note that we are treating the para-hydrogen molecules isotropically here,
 i.e. as spherical psuedo-atoms.
@@ -2062,7 +2229,7 @@ The other file format that we can use is the pdb format. This
 has the following structure:
 
 \begin{code}
-TITLE insert title here...
+TITLE insert title here... position{angstrom} cell{angstrom}
 CRYST1        a        b        c      A      B      C P 1           1
 ATOM      1   n1   1     1          x1      y1      z1  0.00  0.00             0
 ATOM      2   n2   1     1          x2      y2      z2  0.00  0.00             0
@@ -2111,16 +2278,45 @@ Note that if no units are specified then atomic units are assumed.
 For more information on the \ipi unit conversion libraries, 
 and the available units, see \ref{inputunits}.
 
-This then gives:
+The {}``units'' attribute is now deprecated and will be removed in the
+future version of i-PI. The alternative, and the only one available in
+the future, is to specify the units within the comment line of the xyz
+or the TITLE line of the pdb formats (as shown in the examples
+above). It is also important to put the units only in one place: if
+the units will be present in both, the configuration file with the tag
+{}``units'' and in the input files (xyz or pdb) the conversion will be
+applied twice. It is also important to note that the units of the cell
+parameters and the units of the content of the files are specified
+separately ({}``position{units}'' specify the units of the data and
+{}``cell{units}'' specify the units of the cell). This is necessary
+because the xyz format can be used to 
+store also quantity which have a different dimension than length
+(velocities, forces, etc.). Even the cell parameters can now be specified
+directly within the xyz format. The comment line is parsed looking for
+a cell specification in of the following format:
+\begin{itemize}
+\item ``CELL\{abcABC\}:'' followed by six float numbers.
+\item ``CELL\{H\}:'' followed by nine float numbers.
+\item ``CELL\{GENH\}:'' followed by nine float numbers.
+\end{itemize}
+The {}``CELL\{abcABC\}'' must be followed by the length of the vector
+cell and the three angle between them (as in the CRYST1 field of the
+pdb format -see above-). The other two must be followed
+by nine floats specifying, respectively, all the values of the cell
+matrix (flattened) or all the value of the inverse of the cell matrix
+(flattened).
+
+Since the units are already specified into the xyz and pdb files, the
+config file will contain:
 
 \begin{code}
 <initialize nbeads='4'>
-   <file mode='xyz' units='angstrom'> our_ref.xyz </file>
+   <file mode='xyz'> our_ref.xyz </file>
    ...
 </initialize>
 \end{code}
 
-In this case, since the cell parameters are not specified in the
+If the cell parameters are not specified in the xyz file, then, in the 
 configuration file we must specify them separately. 
 To initialize just the cell parameters, 
 we use the tag {}``\hyperref[INITCELL]{cell}''.
@@ -2147,6 +2343,13 @@ the {}``\hyperref[INITCELL]{cell}'' tag in three different ways:
 </cell>
 \end{code}
 
+If the xyz already contains the cell parameters, i-PI will use those
+which are read the last in the config file (if the {}``cell'' tag
+follows the {}``file'' specification then the cell parameters are those
+defined in the {}``cell'' tag. If, otherwise, the {}``cell'' tag
+compares in the config file before the {}``file'' specification, then
+the cell parameters of the xyz file are used).
+
 Note the use of the different {}``mode'' attributes, {}``manual'',
 {}``abcABC'' and {}``abc''. The first creates the cell vector
 matrix manually, the second takes the length of the three unit vectors
@@ -2157,7 +2360,7 @@ We will take the last version for brevity, giving as our final
 
 \begin{code}
 <initialize nbeads='4'>
-   <file mode='xyz' units='angstrom'> our_ref.xyz </file>
+   <file mode='xyz'> our_ref.xyz </file>
    <cell mode='abc' units='angstrom'>
       [17.847, 17.847, 17.847]
    </cell>
@@ -2168,11 +2371,12 @@ We will take the last version for brevity, giving as our final
 The pdb file is specified in a similar way, except that no 
 {}``\hyperref[INITCELL]{cell}''
 tag needs be specified and the {}``mode'' tag should be
-set to {}``pdb'':
+set to {}``pdb'' (the units should be specified into the pdb file as
+shown in the example above):
 
 \begin{code}
 <initialize nbeads='4'>
-   <file mode='pdb' units='angstrom'> our_ref.pdb </file>
+   <file mode='pdb'> our_ref.pdb </file>
    ...
 </initialize>
 \end{code}
@@ -2189,24 +2393,22 @@ velocities to. With this, the final
 
 \begin{code}
 <initialize nbeads='4'>
-   <file mode='pdb' units='angstrom'> our_ref.pdb </file>
+   <file mode='pdb'> our_ref.pdb </file>
    <velocities mode='thermal' units='kelvin'> 25 </velocities>
 </initialize>
 \end{code}
 
 \subsubsection{Creating the server socket}
 
-Next let us consider the 
-{}``\hyperref[FORCES]{forces}'' section, which deals with communication
+Next let us consider the {}``\hyperref[FFSOCKET]{ffsocket}'' and the 
+{}``\hyperref[FORCES]{forces}'' sections, which deals with communication
 with the client codes. Since in this example we do not use ring-polymer contraction,
-we only need to specify a single {}``\hyperref[SOCKET]{socket}'' tag:
+we only need to specify a single {}``\hyperref[FFSOCKET]{ffsocket}'' tag:
 
 \begin{code}
-<forces>
-   <socket>
-      ...
-   </socket>
-</forces>
+<ffsocket>
+   ...
+</ffsocket>
 \end{code}
 
 A socket is specified with three parameters; the port number, the
@@ -2217,34 +2419,69 @@ To match up with the client socket specified above,
 we will take an internet socket on the hostname localhost and
 use port number 31415. 
 
-This gives the final {}``\hyperref[FORCES]{forces}'' section:
+This gives the final {}``\hyperref[FFSOCKET]{ffsocket}'' section:
 
 \begin{code}
-<forces>
-   <socket mode="inet">
-      <address> localhost </address>
-      <port> 31415 </port>
-   </socket>
-</forces>
+<ffsocket mode="inet" name="driver-sg">
+   <address> localhost </address>
+   <port> 31415 </port>
+</ffsocket>
 \end{code}
 
-\subsubsection{Generating the correct ensemble}
+To enhance the generality of the input, the forces used to move the
+atoms are red from the ``forces'' tag, within the ``system'' environment:
+
+\begin{code}
+<system>
+   ...
+   <forces>
+      ...
+   </forces>
+   ...
+</system>
+\end{code}
+
+Within this tag, the user can specify many different ``force''
+tags. The final force will be the sum of the contribution from each
+``force'' tag. Each force tag must be associate to an
+``ffsocket''. In particular the ``forcefield'' attribute of the
+``force'' must match the ``name'' attribute of the ``ffsocket''. In
+this tutorial only a single force is used that must match the ffsocket
+created above:
+
+\begin{code}
+<system>
+   ...
+   <forces>
+      <force forcefield="driver-sg"/>
+   </forces>
+   ...
+</system>
+\end{code}
+
+For the sake of this tutorial, the ``force'' tag must be empty.
+
+\subsubsection{Generating the correct dynamics}
 
 The next section that we will need is 
-{}``\hyperref[ENSEMBLE]{ensemble}'', which determines
-how the dynamics integrator will be initialized. Since we wish to
+{}``\hyperref[MOTION]{motion}'', which determines the computation i-pi
+will perform. Since we wish to do a molecular dynamics, the attribute
+``mode'' of the ``motion'' tag must be equal to ``dynamics''.
+The details of the dynamics integration are given within
+{}``\hyperref[DYNAMICS]{dynamics}''.  Since we wish to
 do a \emph{NVT} simulation, we set the {}``mode'' attribute to {}``nvt''
 (note that we use lower case, and that the tags are case sensitive),
 and must specify the temperature using the appropriate tag:
 
 \begin{code}
-<ensemble mode='nvt'>
-   ...
-   <temperature units='kelvin'> 25 </temperature>
-</ensemble>
+<motion mode='dynamics'>
+   <dynamics mode='nvt'>
+      ...
+   </dynamics>
+</motion>
 \end{code}
 
-This defines the ensemble that will be sampled. We also must decide
+This defines the computation that will be performed. We also must decide
 which integration algorithm to use, and how large the time step should
 be. In general, the time step should be made as large as possible
 without there being a drift in the conserved quantity. Usually we
@@ -2253,11 +2490,10 @@ this, but for the sake of this tutorial we will use a safe value of
 1 femtosecond, giving:
 
 \begin{code}
-<ensemble mode='nvt'>
+<dynamics mode='nvt'>
    ...
    <timestep units='femtosecond'> 1 </timestep>
-   <temperature units='kelvin'> 25 </temperature>
-</ensemble>
+</dynamics>
 \end{code}
 
 Finally, while the microcanonical part of the integrator
@@ -2273,13 +2509,12 @@ how strong the thermostat is, which we will set to 25 femtoseconds.
 Putting all of this together, we get:
 
 \begin{code}
-<ensemble mode='nvt'>
+<dynamics mode='nvt'>
    <thermostat mode='pile_g'>
       <tau units='femtosecond'> 25 </tau>
    </thermostat>
    <timestep units='femtosecond'> 1 </timestep>
-   <temperature units='kelvin'> 25 </temperature>
-</ensemble>
+</dynamics>
 \end{code}
 
 Now that we have decided on the time step, we will decide the total
@@ -2289,6 +2524,18 @@ steps, using:
 
 \begin{code}
 <total_steps> 5000 </total_steps>
+\end{code}
+
+The temperature must be specified within the
+{}``\hyperref{ENSEMBLE}{ensemble}'':
+\begin{code}
+<system>
+   ...
+   <ensemble>
+      <temperature units='kelvin'> 300 </temperature>
+   </ensemble>
+   ...
+</system>
 \end{code}
 
 \subsubsection{Customizing the output}
@@ -2549,7 +2796,7 @@ from the {}``drivers'' directory using the command
 specified above:
 
 \begin{code}
-> ./driver.x -m sg -h localhost -o 15 -p 31415
+> i-pi-driver -m sg -h localhost -o 15 -p 31415
 \end{code}
 
 The \ipi code should now output a message saying that a new client
@@ -2571,7 +2818,7 @@ the last step using
 \begin{code}
 > ../../../i-pi tut1.checkpoint
 \end{code}
-followed by running {}``driver.x'' as before.
+followed by running {}``i-pi-driver'' as before.
 
 The difference between these two files is that, while {}``tut1.checkpoint''
 was specified by the user, {}``RESTART'' is automatically generated at the
@@ -2667,20 +2914,21 @@ Putting this together this gives:
 \end{code}
 
 Finally, we must change the {}``\hyperref[ENSEMBLE]{ensemble}'' 
-tag so that the correct
-ensemble is sampled. The first thing that must be done is  
-the {}``mode'' tag must be changed from {}``nvt'' to {}``npt'',
-and a {}``pressure'' tag must be added:
+and the {}``\hyperref[DYNAMICS]{dynamics}'' tags so that the correct
+ensemble is sampled. The first thing that must be done is
+adding a {}``pressure'' tag in the ensemble:
 
 \begin{code}
-<ensemble mode='npt'>
+<ensemble>
    <pressure> 0 </pressure>
    ...
 </ensemble>
 \end{code}
 
-We must also specify the constant pressure algorithm,
-using the tag {}``\hyperref[BAROSTAT]{barostat}''.
+Then, we must also specify the constant pressure algorithm,
+using the tag {}``\hyperref[BAROSTAT]{barostat}'' within the dynamics
+environment. Do not forget to change the mode attribute of the
+dynamics from ``nvt'' to ``npt''.
 At present, \ipi only contains a stochastic barostat to apply pressure
 to an isotropic system, which can be specified with the option ``isotropic''. 
 Anisotropic versions of the barostat may be added in future releases of \ipi. 
@@ -2693,34 +2941,50 @@ constant temperature algorithms for the atomic degrees of freedom, and
 we will take its time scale to be 250 femtoseconds:
 
 \begin{code}
-<ensemble mode='npt'>
-   <pressure> 0 </pressure>
-   <barostat mode='isotropic'>
-      <thermostat mode='langevin'>
-         <tau units='femtosecond'> 250 </tau>
-      </thermostat>
+<system>
+   <ensemble>
+      <pressure> 0 </pressure>
+   </ensemble>
+   <motion mode='dynamics'>
+      <dynamics mode='npt'>
+         <barostat mode='isotropic'>
+            <thermostat mode='langevin'>
+               <tau units='femtosecond'> 250 </tau>
+            </thermostat>
+            ...
+         </barostat>
+         ...
+      </dynamics>
       ...
-   </barostat>
+   </motion>
    ...
-</ensemble>
+</system>
 \end{code}
 
 Finally, we will take the barostat time scale to be 250 femtoseconds also, giving:
 
 \begin{code}
-<ensemble mode='npt'>
-   <pressure> 0 </pressure>
-   <barostat mode='isotropic'>
-      <thermostat mode='langevin'>
-         <tau units='femtosecond'> 250 </tau>
-      </thermostat>
-      <tau units='femtosecond'> 250 </tau>
-   </barostat>
+<system>
+   <ensemble>
+      <pressure> 0 </pressure>
+   </ensemble>
+   <motion mode='dynamics'>
+      <dynamics mode='npt'>
+         <barostat mode='isotropic'>
+            <thermostat mode='langevin'>
+               <tau units='femtosecond'> 250 </tau>
+            </thermostat>
+            <tau units='femtosecond'> 250 </tau>
+         </barostat>
+         ...
+      </dynamics>
+      ...
+   </motion>
    ...
-</ensemble>
+</system>
 \end{code}
-with the rest of the {}``\hyperref[ENSEMBLE]{ensemble}'' 
-tag being the same as before.
+with the rest of the {}``\hyperref[ENSEMBLE]{ensemble}'' and
+{}``\hyperref[DYNAMICS]{dynamics}'' tag being the same as before.
 
 \subsection{Initialization from RESTART}
 
@@ -2788,21 +3052,19 @@ processes on a single computer, and so for the current problem they will be much
 faster than internet sockets.
 
 To specify this, we simply set the {}``mode'' attribute of the
-{}``\hyperref[SOCKET]{socket}'' tag to {}``unix'':
+{}``\hyperref[FFSOCKET]{ffsocket}'' tag to {}``unix'':
 
 \begin{code}
-<forces>
-   <socket mode='unix'>
-      ...
-   </socket>
-</forces>
+<ffsocket mode='unix' name="driver-sg">
+   ...
+</ffsocket>
 \end{code}
 
 We then specify that the client code should connect to a unix socket
 using the -u flag:
 
 \begin{code}
-> ./driver.x -u -m sg -h localhost -o 15 -p 31415
+> i-pi-driver -u -m sg -h localhost -o 15 -p 31415
 \end{code}
 
 Parallelizing the force calculation over the different replicas of the system
@@ -2812,7 +3074,7 @@ command multiple times. For example, if we wish to run
 
 \begin{code}
 > for a in 1 2 3 4; do
->    ./driver.x -u -m sg -h localhost -o 15 -p 31415 &
+>    i-pi-driver -u -m sg -h localhost -o 15 -p 31415 &
 > done
 \end{code}
 

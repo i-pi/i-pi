@@ -1,0 +1,32 @@
+# Created by charmm2lammps v1.8.1 on Wed Oct  8 17:52:44 CEST 2014
+
+units           real
+neigh_modify    delay 2 every 1
+
+atom_style      full
+bond_style      harmonic
+angle_style     charmm
+dihedral_style  charmm
+improper_style  harmonic
+
+pair_style      lj/charmm/coul/long 8 10
+pair_modify     mix arithmetic
+
+box tilt large
+read_data       data.lmp 
+
+kspace_style    pppm 1e-4
+
+special_bonds   charmm
+fix  1 all ipi paracetamol-phonons 1234 unix
+
+thermo          100 
+thermo_style    one
+timestep        0.5
+
+#restart         10 gammabox.restart1 gammabox.restart2
+#dump_modify     1 image yes scale yes
+#dump            1 all xyz 100 alphalmp.xyz
+
+
+run          1999999999

@@ -1,0 +1,29 @@
+<simulation mode='static' verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='10' filename='out'>  [ step, potential ] </properties>
+  </output>
+  <total_steps> 5000 </total_steps>
+  <prng>
+    <seed> 32342 </seed>
+  </prng>
+  <ffsocket name='lmp' mode='unix' pbc='true'>
+    <address> h2o-enmfdphonons </address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='xyz'> init.xyz </file>
+    </initialize>
+    <forces>
+      <force forcefield='lmp'> </force>
+    </forces>
+    <motion mode='vibrations'>
+      <vibrations mode='enmfd'>
+        <dynmat mode='file'> data.dynmat </dynmat>
+        <pos_shift> 0.001 </pos_shift>
+        <energy_shift> 0.001 </energy_shift>
+        <prefix> simulation </prefix>
+        <asr> crystal </asr>
+      </vibrations>
+    </motion>
+  </system>
+</simulation>

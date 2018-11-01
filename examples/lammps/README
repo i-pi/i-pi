@@ -23,17 +23,21 @@
 ** Run the examples automatically:
 
  * First, it is necessary to patch and compile LAMMPS, and create a make.in
-   file containing the path to the executable and i-pi, e.g.
+   file containing the path to the lammps executable e.g.
 
+```
 LAMMPS:=~/bin/lmp_serial
-IPI:=~/bin/i-pi
+```
+
+ * Make sure you source the env.sh file in the root directory of i-pi to
+   set all the necessary enviroment variables.
  
  * The runs can be done automatically using the Makefile provided. The make 
    targets are self-explanatory. To run the RPC example, for instance, just type:
 
-$ make h2o-rpc
+$ make h2o-pimd.1
 
- * To clean up output files:
+ * To clean up output files from all examples:
 
 $ make clean
 
@@ -42,18 +46,18 @@ $ make clean
 
  * Go back to the example directory and run
 
-$ python path/i-pi input.xml
+$ i-pi input.xml
  
    the wrapper will start and sit waiting on the UDS /tmp/ipi.
  
  * Open a separate terminal and run the LAMMPS driver code using:
  
-$ path/lammps/src/lmp_serial < in.water
+$ path/lammps/src/lmp_serial < in.lmp
 
-   For the RPC run, instead use:
+   For the runs h2o-pimd+mts.4, h2o-pimd+rpc, h2o-pimd+sc+rpc instead use:
 
-$ path/lammps/src/lmp_serial < in.water_longrange
-$ path/lammps/src/lmp_serial < in.water_shortrange
+$ path/lammps/src/lmp_serial < in_long.lmp
+$ path/lammps/src/lmp_serial < in_short.lmp
 
    You can run multiple instances of the code; it is so fast that parallel 
    scaling won't be appreciable.
@@ -61,10 +65,9 @@ $ path/lammps/src/lmp_serial < in.water_shortrange
  * If your system does not support Unix domain sockets, just set in input.xml
    <socket mode="unix"> <port> port_no </port>
 
-   To make the client socket connect, the in.water file should 
+   To make the client socket connect, the in.lmp file should 
    be changed so that it has the line:
 
    fix 1 all driver hostname port_no
 
-   where hostname is the address the socket is binding to; either graphene, piglet_2,
-   piglet_4, piglet_8, rpc_long, rpc_short or no_rpc depending on the run.
+   where hostname is the address the socket is binding to.

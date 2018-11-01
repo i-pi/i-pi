@@ -1,0 +1,36 @@
+<!-- REGTEST
+DEPENDENCIES  water_298K.pdb
+COMMAND(8)    i-pi-driver -u -h ffdriver -m qtip4pf
+ENDREGTEST -->
+
+<simulation>
+  <output prefix='qtip4pf'>
+    <properties stride='4' filename='out'>  [ step, time{picosecond}, 
+conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potential{electronvolt}, pressure_cv{megapascal}] </properties>
+    <trajectory filename='pos' stride='4'> positions{angstrom} </trajectory>
+    <trajectory filename='for' stride='4'> forces{piconewton} </trajectory>
+  </output>
+  <total_steps>30</total_steps>
+  <prng><seed>322</seed></prng>
+  <ffsocket name="qtip4pf" mode="unix" pbc="false">
+    <address>ffdriver</address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='4'>
+      <file mode='pdb'> water_298K.pdb </file>
+      <velocities mode="thermal" units='kelvin'> 298 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='qtip4pf'> </force>
+   </forces>
+   <ensemble>
+      <temperature units='kelvin'>298</temperature>
+   </ensemble>
+   <motion mode='dynamics'>
+     <dynamics mode='nvt' splitting='baoab'>
+       <thermostat mode='langevin'> <tau units='femtosecond'> 10 </tau> </thermostat>
+       <timestep units='femtosecond'> 0.5</timestep>
+     </dynamics>
+   </motion>
+ </system>
+</simulation>

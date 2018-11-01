@@ -1,0 +1,9 @@
+Please run the following to predict the VVAC of a GLE thermostat:
+prefix=wle1e1
+../../../../bin/i-pi-gleacf -iipi input-${prefix}.xml -ivvac simulation-svr.vvac  -mrows 5000 -oprefix svrto${prefix} -a conv -dt "1 femtosecond"
+
+
+Please run the following to extract the microcanonical vvac out of a vvac affected by a GLE thermostat:
+prefix=wle1e1
+../../../../bin/i-pi-gleacf -iipi input-${prefix}.xml -ivvac simulation-${prefix}.vvac  -mrows 5000 -oprefix ${prefix}tosvr -a deconv -dt "1 femtosecond" -dparam 250 5
+

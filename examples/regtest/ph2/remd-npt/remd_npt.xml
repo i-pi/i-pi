@@ -1,0 +1,229 @@
+<!-- REGTEST
+DEPENDENCIES our_ref.pdb our_ref.xyz remd_npt.xml
+COMMAND(8) i-pi-driver -h localhost -p 31415 -m sg -o 30.0
+ENDREGTEST -->
+
+<!-- With REMD is necessary to use threading='False' in regtests -->
+
+<simulation verbosity='high' threading='False'>
+   <output prefix='remd'>
+      <properties filename='md' stride='1'> [step, time{picosecond}, conserved{kelvin}, temperature{kelvin}, potential{kelvin}, kinetic_cv{kelvin}, spring{kelvin}, kinetic_md{kelvin}, volume, pressure_cv{megapascal} ] </properties>
+      <properties filename='force' stride='1'> [atom_f{piconewton}(atom=0;bead=0)] </properties>
+      <trajectory filename='pos' stride='1' format='pdb' cell_units='angstrom'> positions{angstrom} </trajectory>
+      <checkpoint filename='checkpoint' stride='1000' overwrite='True'/>
+   </output>
+   <total_steps> 10 </total_steps>
+   <ffsocket mode="inet" name="driver">
+      <address>localhost</address>
+      <port> 31415 </port>
+   </ffsocket>
+   <prng> <seed> 456123 </seed> </prng>
+
+   <system prefix="1">
+      <initialize nbeads='2'>
+         <file mode='pdb'> our_ref.pdb </file>
+         <velocities mode='thermal' units='kelvin'> 30 </velocities>
+      </initialize>
+      <forces><force forcefield='driver'></force></forces>
+      <ensemble>
+         <temperature units='kelvin'> 30 </temperature>
+         <pressure units='megapascal'> 10 </pressure>
+      </ensemble>
+      <motion mode='dynamics'>
+	       <dynamics mode='npt'>
+	          <barostat mode='isotropic'>
+                <tau units='femtosecond'> 100 </tau>
+	            <thermostat mode='langevin'> <tau units='femtosecond'> 100 </tau> </thermostat>
+	          </barostat>
+	          <thermostat mode='pile_g'>
+               <tau units='femtosecond'> 25 </tau>
+              </thermostat>
+            <timestep units='femtosecond'> 4.0 </timestep>
+	       </dynamics>
+      </motion>
+   </system>
+
+   <system prefix="2">
+      <initialize nbeads='2'>
+         <file mode='pdb'> our_ref.pdb </file>
+         <velocities mode='thermal' units='kelvin'> 32.2711122 </velocities>
+      </initialize>
+      <forces><force forcefield='driver'></force></forces>
+      <ensemble>
+         <temperature units='kelvin'> 32.2711122 </temperature>
+         <pressure units='megapascal'> 10.7570374 </pressure>
+      </ensemble>
+      <motion mode='dynamics'>
+	       <dynamics mode='npt'>
+   	          <barostat mode='isotropic'>
+                <tau units='femtosecond'> 100 </tau>
+	            <thermostat mode='langevin'> <tau units='femtosecond'> 100 </tau> </thermostat>
+	          </barostat>
+	          <thermostat mode='pile_g'>
+               <tau units='femtosecond'> 25 </tau>
+            </thermostat>
+            <timestep units='femtosecond'> 4.0 </timestep>
+	       </dynamics>
+      </motion>
+   </system>
+
+   <system prefix="3">
+      <initialize nbeads='2'>
+         <file mode='pdb'> our_ref.pdb </file>
+         <velocities mode='thermal' units='kelvin'> 34.71415608 </velocities>
+      </initialize>
+      <forces><force forcefield='driver'></force></forces>
+      <ensemble>
+         <temperature units='kelvin'> 34.71415608 </temperature>
+         <pressure units='megapascal'> 11.57138536 </pressure>
+      </ensemble>
+      <motion mode='dynamics'>
+           <dynamics mode='npt'>
+	          <barostat mode='isotropic'>
+                <tau units='femtosecond'> 100 </tau>
+                 <thermostat mode='langevin'> <tau units='femtosecond'> 100 </tau> </thermostat>
+              </barostat>
+	          <thermostat mode='pile_g'>
+               <tau units='femtosecond'> 25 </tau>
+            </thermostat>
+            <timestep units='femtosecond'> 4.0 </timestep>
+	       </dynamics>
+      </motion>
+   </system>
+
+   <system prefix="4">
+      <initialize nbeads='2'>
+         <file mode='pdb'> our_ref.pdb </file>
+         <velocities mode='thermal' units='kelvin'> 37.34214752 </velocities>
+      </initialize>
+      <forces><force forcefield='driver'></force></forces>
+      <ensemble>
+         <temperature units='kelvin'> 37.34214752 </temperature>
+         <pressure units='megapascal'> 12.44738251 </pressure>
+      </ensemble>
+      <motion mode='dynamics'>
+	       <dynamics mode='npt'>
+	          <barostat mode='isotropic'>
+                <tau units='femtosecond'> 100 </tau>
+                 <thermostat mode='langevin'> <tau units='femtosecond'> 100 </tau> </thermostat>
+              </barostat>
+	          <thermostat mode='pile_g'>
+               <tau units='femtosecond'> 25 </tau>
+            </thermostat>
+            <timestep units='femtosecond'> 4.0 </timestep>
+	       </dynamics>
+      </motion>
+   </system>
+
+
+
+
+
+
+
+
+
+
+
+   <system prefix="5">
+      <initialize nbeads='2'>
+         <file mode='pdb'> our_ref.pdb </file>
+         <velocities mode='thermal' units='kelvin'> 40.16908774 </velocities>
+      </initialize>
+      <forces><force forcefield='driver'></force></forces>
+      <ensemble>
+         <temperature units='kelvin'> 40.16908774 </temperature>
+         <pressure units='megapascal'> 13.38969591 </pressure>
+      </ensemble>
+      <motion mode='dynamics'>
+	       <dynamics mode='npt'>
+	          <barostat mode='isotropic'>
+                <tau units='femtosecond'> 100 </tau>
+                 <thermostat mode='langevin'> <tau units='femtosecond'> 100 </tau> </thermostat>
+              </barostat>
+	          <thermostat mode='pile_g'>
+               <tau units='femtosecond'> 25 </tau>
+            </thermostat>
+            <timestep units='femtosecond'> 4.0 </timestep>
+	       </dynamics>
+      </motion>
+   </system>
+
+   <system prefix="6">
+      <initialize nbeads='2'>
+         <file mode='pdb'> our_ref.pdb </file>
+         <velocities mode='thermal' units='kelvin'> 43.21003791 </velocities>
+      </initialize>
+      <forces><force forcefield='driver'></force></forces>
+      <ensemble>
+         <temperature units='kelvin'> 43.21003791 </temperature>
+         <pressure units='megapascal'> 14.40334597 </pressure>
+      </ensemble>
+      <motion mode='dynamics'>
+	       <dynamics mode='npt'>
+	          <barostat mode='isotropic'>
+                <tau units='femtosecond'> 100 </tau>
+                 <thermostat mode='langevin'> <tau units='femtosecond'> 100 </tau> </thermostat>
+              </barostat>
+	          <thermostat mode='pile_g'>
+               <tau units='femtosecond'> 25 </tau>
+            </thermostat>
+            <timestep units='femtosecond'> 4.0 </timestep>
+	       </dynamics>
+      </motion>
+   </system>
+
+   <system prefix="7">
+      <initialize nbeads='2'>
+         <file mode='pdb'> our_ref.pdb </file>
+         <velocities mode='thermal' units='kelvin'> 46.48119937 </velocities>
+      </initialize>
+      <forces><force forcefield='driver'></force></forces>
+      <ensemble>
+         <temperature units='kelvin'> 46.48119937 </temperature>
+         <pressure units='megapascal'> 15.49373312 </pressure>
+      </ensemble>
+      <motion mode='dynamics'>
+	       <dynamics mode='npt'>
+	          <barostat mode='isotropic'>
+                <tau units='femtosecond'> 100 </tau>
+                 <thermostat mode='langevin'> <tau units='femtosecond'> 100 </tau> </thermostat>
+              </barostat>
+	          <thermostat mode='pile_g'>
+               <tau units='femtosecond'> 25 </tau>
+            </thermostat>
+            <timestep units='femtosecond'> 4.0 </timestep>
+	       </dynamics>
+      </motion>
+   </system>
+
+   <system prefix="8">
+      <initialize nbeads='2'>
+         <file mode='pdb'> our_ref.pdb </file>
+         <velocities mode='thermal' units='kelvin'> 50 </velocities>
+      </initialize>
+      <forces><force forcefield='driver'></force></forces>
+      <ensemble>
+         <temperature units='kelvin'> 50 </temperature>
+         <pressure units='megapascal'> 16.66666667 </pressure>
+      </ensemble>
+      <motion mode='dynamics'>
+	       <dynamics mode='npt'>
+	          <barostat mode='isotropic'>
+                <tau units='femtosecond'> 100 </tau>
+                 <thermostat mode='langevin'> <tau units='femtosecond'> 100 </tau> </thermostat>
+              </barostat>
+	          <thermostat mode='pile_g'>
+               <tau units='femtosecond'> 25 </tau>
+            </thermostat>
+            <timestep units='femtosecond'> 4.0 </timestep>
+	       </dynamics>
+      </motion>
+   </system>
+
+   <smotion mode="remd">
+      <remd>
+         <stride> 2 </stride>
+      </remd>
+   </smotion>
+</simulation>

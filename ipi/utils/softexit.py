@@ -1,73 +1,161 @@
-"""Utility functions for killing the wrapper softly.
+"""Classes to deal with calls for a soft exit."""
 
-Copyright (C) 2013, Joshua More and Michele Ceriotti
-
-This program is free software: you can redistribute it and/or modify
-it under the terms of the GNU General Public License as published by
-the Free Software Foundation, either version 3 of the License, or
-(at your option) any later version.
-
-This program is distributed in the hope that it will be useful,
-but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the 
-GNU General Public License for more details.
-
-You should have received a copy of the GNU General Public License
-along with this program. If not, see <http.//www.gnu.org/licenses/>.
+# This file is part of i-PI.
+# i-PI Copyright (C) 2014-2015 i-PI developers
+# See the "licenses" directory for full license information.
 
 
-Classes:
-   Softexit: Concise class to manage cleaning up in case of an emergency exit.
-"""
+import traceback
+import sys
+import os
+import time
+import threading
+import signal
 
-import traceback, sys
 from ipi.utils.messages import verbosity, warning
+
 
 __all__ = ['Softexit', 'softexit']
 
 
+SOFTEXITLATENCY = 10.0   # seconds to sleep between checking for soft exit
+
+
 class Softexit(object):
-   """Class to deal with stopping a simulation half way through.
 
-   Holds the functions used to clean up a simulation that has been
-   stopped early, either because of a SIGTERM signal or because the
-   user has added an EXIT file to the directory in which it is 
-   running. This will then properly shut down the socket interface,
-   and print out a RESTART file for the appropriate time step.
+    """Class to deal with stopping a simulation half way through.
 
-   Attributes:
-      flist: A list of functions used to close down the socket
-         interface.
-   """
+    Provides a mechanism to end a simulation from any thread that has
+    been properly registered, and to call a series of "emergency" functions
+    to try as hard as possible to produce a restartable snapshot of
+    the simulation.
+    Also, provides a loop to check for soft-exit requests and
+    trigger termination when necessary.
 
-   def __init__(self):
-      """Initializes SoftExit."""
+    Attributes:
+       flist: A list of callback functions used to clean up and exit gracefully.
+       tlist: A list of threads registered for monitoring
+    """
 
-      self.flist = []
+    def __init__(self):
+        """Initializes SoftExit."""
 
-   def register(self, func):
-      """Adds another function to flist.
+        self.flist = []
+        self.tlist = []
+        self._kill = {}
+        self._thread = None
+        self.triggered = False
+        self.exiting = False
+        self._doloop = [False]
 
-      Args:
-         func: The function to be added to flist.
-      """
+    def register_function(self, func):
+        """Adds another function to flist.
 
-      self.flist.append(func)
+        Args:
+           func: The function to be added to flist.
+        """
 
-   def trigger(self, message=""):
-      """Halts the simulation.
+        self.flist.append(func)
 
-      Prints out a warning message, then runs all the exit functions in flist
-      before terminating the simulation.
+    def register_thread(self, thread, loop_control=None):
+        """Adds a thread to the monitored list.
 
-      Args:
-         message: The message to output to standard output.
-      """
+        Args:
+           thread: The thread to be monitored.
+           loop_control: the variable that causes the thread to terminate.
+        """
 
-      if message != "":
-         warning("Soft exit has been requested with message: '" + message + "'. Cleaning up.", verbosity.low)
-      for f in self.flist:
-         f()
-      sys.exit()
+        self.tlist.append((thread, loop_control))
+
+    def trigger(self, message=""):
+        """Halts the simulation.
+
+        Prints out a warning message, then runs all the exit functions in flist
+        before terminating the simulation.
+
+        Args:
+           message: The message to output to standard output.
+        """
+
+        print "SOFTEXIT CALLED FROM THREAD", threading.currentThread(), message
+        if not self.triggered:    # avoid double calls from different threads
+            self.exiting = True
+            self.triggered = True
+
+            if message != "":
+                warning("Soft exit has been requested with message: '" + message + "'. Cleaning up.", verbosity.low)
+
+            # calls all the registered emergency softexit procedures
+            for f in self.flist:
+                f()
+
+            self.exiting = False  # emergency is over, signal we can be relaxed
+
+            for (t, dl) in self.tlist:  # set thread exit flag
+                dl[0] = False
+
+        # wait for all (other) threads to finish
+        for (t, dl) in self.tlist:
+            if not threading.currentThread() is self._thread:
+                t.join()
+
+        sys.exit()
+
+    def start(self, timeout=0.0):
+        """Starts the softexit monitoring loop.
+
+        Args:
+           timeout: Number of seconds to wait before softexit is triggered.
+        """
+
+        self._main = threading.currentThread()
+        self.timeout = -1.0
+        if (timeout > 0.0):
+            self.timeout = time.time() + timeout
+
+        self._thread = threading.Thread(target=self._softexit_monitor, name="softexit")
+        self._thread.daemon = True
+        self._doloop[0] = True
+        self._kill[signal.SIGINT] = signal.signal(signal.SIGINT, self._kill_handler)
+        self._kill[signal.SIGTERM] = signal.signal(signal.SIGTERM, self._kill_handler)
+        self._thread.start()
+        self.register_thread(self._thread, self._doloop)
+
+    def _kill_handler(self, signal, frame):
+        """Deals with handling a kill call gracefully.
+
+        Intercepts kill signals to trigger softexit.
+        Called when signals SIG_INT and SIG_TERM are received.
+
+        Args:
+           signal: An integer giving the signal number of the signal received
+              from the socket.
+           frame: Current stack frame.
+        """
+
+        warning(" @SOFTEXIT:   Kill signal. Trying to make a clean exit.", verbosity.low)
+
+        self.trigger(" @SOFTEXIT: Kill signal received")
+
+        try:
+            self.__del__()
+        except:
+            pass
+        if signal in self._kill:
+            self._kill[signal](signal, frame)
+
+    def _softexit_monitor(self):
+        """Keeps checking for soft exit conditions. """
+
+        while self._doloop[0]:
+            time.sleep(SOFTEXITLATENCY)
+            if os.path.exists("EXIT"):
+                self.trigger(" @SOFTEXIT: EXIT file detected.")
+                break
+
+            if (self.timeout > 0 and self.timeout < time.time()):
+                self.trigger(" @SOFTEXIT: Maximum wallclock time elapsed.")
+                break
+
 
 softexit = Softexit()

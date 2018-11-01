@@ -1,0 +1,47 @@
+<!-- REGTEST
+DEPENDENCIES init.xyz  in.lmp data.lmp
+COMMAND(4) lmp_serial -i in.lmp
+ENDREGTEST -->
+<simulation verbosity='high' threading='false'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv{megapascal}, volume, cell_h] </properties>
+    <trajectory stride='1' filename='xc' format='pdb' cell_units='angstrom'> x_centroid{angstrom}</trajectory>
+    <checkpoint stride='2000'/>
+  </output>
+  <total_steps>20</total_steps>
+  <prng>
+    <seed>31415</seed>
+  </prng>
+  <ffsocket name='lammps' mode='unix'>
+    <address>ice-npt</address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='4'>
+      <file mode='xyz'> init.xyz </file>
+      <velocities mode='thermal' units='kelvin'> 200 </velocities>
+    </initialize>
+    <forces>
+      <force name='lammps' forcefield='lammps'>  </force>
+    </forces>
+    <ensemble>
+      <temperature units='kelvin'> 200 </temperature>
+      <pressure units='megapascal'> 10 </pressure>
+    </ensemble>
+    <motion mode='dynamics'>
+      <dynamics mode='npt'>
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 25.6156, 0, 0, 0, 29.5783, 0, 0, 0, 27.8867 ]</h0>
+        </barostat>
+        <thermostat mode='pile_l'>
+          <tau units='femtosecond'> 100 </tau>
+          <pile_lambda> 0.2 </pile_lambda>
+        </thermostat>
+        <timestep units='femtosecond'> 0.25 </timestep>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>
