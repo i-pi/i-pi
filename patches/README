@@ -1,0 +1,12 @@
+ -- Driver patches directory --
+
+ * This directory gives the patches required to compile the driver codes such
+   that they can be used with wrap-PI.
+
+ * Files:
+   - espresso-x_ipi.patch: A diff file that can be used to edit the Quantum-Espresso 
+      code version x so that it can be used as a driver.
+   - cp2k-x_ipi.patch: A diff file that can be used to edit the CP2K
+      code version x so that it can be used as a driver.
+   - lammps-x_ipi.patch: A diff file that can be used to edit the LAMMPS
+      code version x so that it can be used as a driver.

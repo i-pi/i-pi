@@ -1,0 +1,12 @@
+#ignored patterns
+
+bin/*
+*.pyc
+*.pyo
+*.x
+*.mod
+*.out
+*.o
+*.tex
+*.pdf
+*~

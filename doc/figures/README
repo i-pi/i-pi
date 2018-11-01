@@ -1,0 +1,11 @@
+ -- Figures directory --
+
+ * This gives the figures used in the user manual.
+
+ * Files:
+   ipi-depend.pdf: Figure to show how the dependency mechanism works.
+   ipi-logo.pdf: ipi logo, used on the front of the manual.
+   ipi-network.pdf: Figure to show how the internet network addresses are
+      named, and how they are used to connect between computers.
+   ipi-running.pdf: Figure to show the different modes of running ipi.
+   ipi-scheme.pdf: Figure to show how an ipi simulation is run.

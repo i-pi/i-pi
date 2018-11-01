@@ -1,0 +1,24 @@
+<simulation>
+   <initialize nbeads='4'>
+      <file mode='pdb'> our_ref.pdb </file>
+      <velocities mode='thermal' units='kelvin'>3683.412077</velocities>
+   </initialize>
+   <output prefix='harm'>
+      <properties stride='5' filename='out'>  [ step, time{picosecond}, conserved{kelvin}, temperature{kelvin}, kinetic_cv{kelvin}, potential{kelvin}, pressure_cv{megapascal}] </properties>
+      <properties stride='100' filename='mom'> [time, displacedpath(ux=0.2552), displacedpath(ux=0.1255)] </properties>
+   </output>
+   <total_steps>100000</total_steps>
+   <prng><seed>3348</seed></prng>
+   <forces>
+      <socket mode="unix">
+         <address>harmonic</address>
+      </socket>
+   </forces>
+   <ensemble mode='nvt'>
+      <thermostat mode='langevin'>
+         <tau units='femtosecond'>25</tau>
+      </thermostat>
+      <timestep units='femtosecond'>0.003</timestep>
+      <temperature units='kelvin'>3683.412077</temperature>
+   </ensemble>
+</simulation>

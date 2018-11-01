@@ -1,0 +1,26 @@
+<simulation>
+   <initialize nbeads='24'>
+      <file mode='pdb'> our_ref.pdb </file>
+      <velocities mode="thermal" units='kelvin'> 50 </velocities>
+   </initialize>
+   <output prefix='ph2'>
+      <properties stride='5' filename='out'>  [ step, time{picosecond}, conserved{kelvin}, temperature{kelvin}, kinetic_cv{kelvin}, potential{kelvin}, pressure_cv{megapascal}] </properties>
+      <trajectory stride='100' filename='pos'>positions</trajectory>
+      <trajectory stride='10' filename='xtra'>extras</trajectory>
+      <checkpoint stride='2000'/>
+   </output>
+   <total_steps>100000</total_steps>
+   <prng><seed>31415</seed></prng>
+   <forces>
+      <socket nbeads='24' mode="unix">
+         <address>ph2_nvt</address>
+      </socket>
+   </forces>
+   <ensemble mode='nvt'>
+      <thermostat mode='pile_l'>
+         <tau units='femtosecond'>25</tau>
+      </thermostat>
+      <timestep units='femtosecond'> 1 </timestep>
+      <temperature units='kelvin'>25</temperature>
+   </ensemble>
+</simulation>

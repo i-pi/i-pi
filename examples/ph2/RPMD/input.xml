@@ -1,0 +1,28 @@
+<simulation>
+   <initialize nbeads='24'>
+     <file mode="chk"> run_YYY/RESTART </file>
+     <velocities mode='thermal' units='kelvin'> 25 </velocities>
+   </initialize>
+   <forces>
+      <socket mode='unix'>
+         <latency>5.00000000e-04</latency>
+         <address>run-YYY-XXX</address>
+      </socket>
+   </forces>
+   <total_steps>8000</total_steps>
+   <output prefix='run_YYY/testXXX'>
+      <trajectory stride='1' filename='vel'> v_centroid </trajectory>
+      <properties stride='1'> [ step, time{picosecond}, conserved{kelvin}, temperature{kelvin}, kinetic_cv{kelvin}, potential{kelvin}, pressure_cv{megapascal}] </properties>
+   </output>
+   <cell shape='(3,3)'>
+       [   3.37260000e+01,   5.71316102e-15,   5.71316102e-15,   0.00000000e+00,   3.37260000e+01, 
+           5.71316102e-15,   0.00000000e+00,   0.00000000e+00,   3.37260000e+01 ]
+   </cell>
+   <prng>
+      <seed>YYY00XXX0</seed>
+   </prng>
+   <ensemble mode='nve'>
+      <timestep>  2.00000000e+01</timestep>
+      <temperature units='kelvin'>  2.50000000e+01</temperature>
+   </ensemble>
+</simulation>

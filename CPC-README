@@ -1,0 +1,17 @@
+                         CPC Librarian's Notes
+--------------------------------------------------------------------------------
+
+The ..../i-pi_v1.0beta/i-pi file is the main script from which the simulation is 
+run. 
+
+The ...examples/tutorial/tutotial-1/tutorial-1.xml file specifies a .pdb output 
+format not .xyz as mentioned in the tutorial.
+
+The simulation ends with a message,
+    "ERROR reading from socket: Success"
+This is normal behaviour. 
+When the i-pi program stops the driver program can no longer detect the server
+and therefore reports an error.  
+The "tail -f log" command will "hang" at this point and should be stopped by 
+entering "ctrl C".  
+                        

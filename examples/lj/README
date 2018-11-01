@@ -1,0 +1,64 @@
+ -- Example with the rudimentary LJ code --
+
+ * This gives an example of Neon with a Lennard-Jones potential 
+   pair potential, which can be compared to the following data:
+
+   - low_density: Loup Verlet, Phys. Rev. 159, 1, (1967)
+           State point (N, rho, T) = (864, 0.35, 1.620)
+   - mid_density: Loup Verlet, Phys. Rev. 159, 1, (1967)
+           State point (N, rho, T) = (864, 0.75, 1.069)
+   - high_density: Loup Verlet, Phys. Rev. 159, 1, (1967)
+           State point (N, rho, T) = (864, 0.88, 1.095)
+
+   Note that the last one appears to illustrate a typo in the paper, since
+   the potental energy as found by this wrapper and by the LAMMPS MD code
+   are both -5.86 rather than -5.66 as reported in the original paper.
+
+ * First, compile the driver code in drivers/. This should be as simple as: 
+
+$ make
+
+ * Next, create a make.in
+   file containing the path to the driver.x executable and i-pi, e.g.
+
+driver:=~/bin/driver.x
+IPI:=~/bin/i-pi
+
+
+** Run the examples automatically:
+ 
+ * These can be run automatically using the Makefile provided. The make 
+   targets are self-explanatory -- high_density, mid_density and low_density. 
+   To run the high density example, for instance, just type:
+
+$ make high_density
+
+ * To clean up output files:
+
+$ make clean
+
+
+** Run the examples manually:
+
+ * Go back to the example directory and run
+
+$ python path/i-pi input.xml
+ 
+   the wrapper will start and sit waiting on the UDS /tmp/ipi.
+ 
+ * Open a separate terminal and run the LJ driver code. Each of the tests
+   runs using a different server address, which are indentical to their
+   directory names. For example, the high density problem is run using:
+ 
+$ path/drivers/driver.x -u -h high_density -m lj -o 5.270446,1.1663e-4,13.176115
+
+   You can run multiple instances of the code; it is so fast that parallel 
+   scaling won't be appreciable.
+
+ * If your system does not support Unix domain sockets, just set in input.xml
+   <socket mode="inet"> <port> port_no </port>
+
+  then run the driver as:
+
+$ path/drivers/driver.x -h high_density -m lj 
+  -o 5.270446,1.1663e-4,13.176115 -p port_no

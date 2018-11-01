@@ -1,0 +1,26 @@
+<simulation verbosity="high">
+   <initialize nbeads='8'>
+      <file mode='pdb'> h2o-init.pdb </file>
+      <velocities mode='thermal' units="kelvin"> 150 </velocities>
+   </initialize>
+   <output prefix='h2o_output'>
+      <properties stride='1' filename='out'>  [ time{femtosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv{bar} ] </properties>
+      <trajectory stride='1' filename='pos' cell_units="angstrom"> positions{angstrom} </trajectory>
+      <checkpoint stride='20'/>
+   </output>
+   <total_steps>1000</total_steps>
+   <prng><seed>3141</seed></prng>
+   <forces>
+      <socket mode="inet">
+         <address>localhost</address>   <port>3141</port>   <timeout>100</timeout>   <latency> 0.01</latency>
+      </socket>
+   </forces>
+   <ensemble mode='nvt'>
+      <thermostat mode='pile_l'>
+         <tau units="femtosecond">100</tau>
+      </thermostat>
+      <timestep units="femtosecond">0.5</timestep>
+      <fixcom>True</fixcom>
+      <temperature units="kelvin">150</temperature>
+   </ensemble>
+</simulation>

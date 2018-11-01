@@ -1,0 +1,112 @@
+A list of things that should be fixed or improved
+Format of "bug-reports":
+
+PRIORITY  Title of bug (REPORTER) (ASSIGNEE)
+Longer description....
+
+PRIORITY:
+*    Can wait
+**   Should be done before release
+***  High priority
+**** Code broken! Must fix now!
+The person who "reports" a bug should indicate his initials in the title.
+If one decides to actively work on one issue, it should indicate it on the title line.
+
+
+DONE **   Clean up help (MC) (JM)
+New dynamic attributes should be properly included in the documentation. 
+
+DONE **   Clean up help (MC) (JM)
+The whole input generation method should be documented with comments in the code.
+
+**   Clean up help (MC)
+The whole input generation method should be bug-checked.
+
+DONE **   Robust input defaults (MC) (JM)
+In many places the default value of a storage class is set by defining 
+fields = { "tag" : ( Class, { "default" : EngineClass(default paramenters) } ) }
+This is bad, because the class is generated at parse time, and 
+just one default object will be returned by any instance of the 
+container Input class. 
+Defaults which are not immutable (strings, ints or floats) should be defined by
+overloading the __init__ class and calling the parent class with the appropriate default, e.g.
+InputSimulation.__init__(self, .... default=None, ....):
+   if (default is None): default=WhateverClass(parameters)
+   super(InputSimulation,self).__init__(..... default=default ...)
+
+DONE **** Make the new NM thing actually work (MC) (MC)
+
+DONE ***  Move the synchro business out of Beads and into NormalModes (MC) (MC)
+
+DONE ***  Fix PDB output NOT to use Atom interface, that is horribly slow (MC) (JM)
+
+DONE **   Fix (or remove) "springs" trajectory output. Not really needed anymore... (MC)
+
+DONE *** More in general, rationalize and clean up the available properties and trajectories. The help strings and function documentation often don't match, often which arguments are supposed to be passed to the function aren't given in the help string, some properties have tensorial equivalents and some don't, some are also trajectories and some aren't. This really needs to be tidied up. (MC/JM) (JM) 
+
+DONE (MC) *** Should NOT use the Cholesky decomposition in initializing GLE. Use symmetric decomposition instead (MC) (MC)
+
+DONE ***  Benchmark the new property implementation. (MC) (JM)
+Completely revamped properties and trajectories scheme. 
+Now it is possible to specify units and a short help string.
+
+DONE * Multiforce object should be implemented. (JM) (JM)
+
+DONE *** Write a very clean driver for LJ and SG for examples (JM) (JM)
+DONE *** Test NPT on the pH2 system (JM) (JM)
+
+*   Implement NST (MC) (MC)
+
+DONE ** Find out why NPT and NST ensembles both appear to give jumps in the 
+conserved quantity (JM)
+I have made some progress with this. I got it to stop and go back one step 
+and print a restart file whenever there was a jump. Restarting from this file
+did not reproduce the jump, suggesting that there was a problem with the 
+neighbour lists, not the wrapper.
+I then made it redo the neighbour list at each time step. This appeared to 
+reduce the frequency and magnitude of the energy jumps, but not eliminate them.
+The effect is much larger with a NST than with a NPT ensemble, in fact the 
+jumps appear to be very rare with the NPT ensemble.
+
+DONE * Figure out how to use FFTW with python for the normal-mode 
+transformations. (JM) (JM)
+
+DONE ** Add help strings to all the trajectories and properties in the property
+list (JM) (JM)
+
+DONE *** Take care that all the arguments for the properties, are being converted to the correct type. (JM) (JM)
+I'm pretty sure that at the moment we're using strings as index variables 
+rather than integers.
+
+DONE * It might be useful to have some kind of standardized error message format
+(JM) (JM)
+
+DONE ** In both engine and inputs directories, we need to document initializer, 
+normalmodes, forces and outputs (JM) (JM)
+
+DONE *** Rework the cell class, and the NPT ensemble (JM)
+
+DONE ** Add property and trajectory help string to the manual (JM) (JM)
+
+DONE *** Re-write the input files for all the test directories. (JM) (JM)
+
+DONE ** Add read cell from (A, B, C) and (alpha, beta, gamma) (JM) (JM)
+
+* Merge the io_xyz.py, io_binary.py and io_pdb.py files (JM)
+
+DONE * In the manual, the attributes of the trajectory, properties and
+checkpoint tags in the code snippets of 4.5 and 4.6 are now out-of-date. (JM) (JM)
+
+DONE ** Write the paper (JM) (MC)
+** Finish writing the manual (JM) (JM)
+
+DONE ** Implement warning() and info() everywhere (For example, it is missing
+from normalmodes.py) (JM) (JM)
+
+** Implement a more robust walltime clock limit mechanism. (MC)
+
+** Alternative communication mechanisms not relying on sockets (MC)
+
+*** Fix the 'dummy' thermostat/barostat options. At the moment, forgetting
+to set the barostat style doesn't give an error, and then you get a
+fairly unhelpful error message to go with it. (JM)

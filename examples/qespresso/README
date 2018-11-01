@@ -1,0 +1,60 @@
+*******************************************************************************
+  NOTE: These examples are provided as a template to use i-pi and quantum 
+  Espresso, and are designed to run (relatively) quickly on a normal 
+  workstation. The parameters of both the path integral MD and electronic 
+  structure calculation are NOT converged and should not be used verbatim 
+  in production calculations.
+*******************************************************************************
+
+                  -- Running the q-Espresso example --
+
+ * First, it is necessary to patch and compile q-Espresso, and create a make.in
+   file containing the path to pw.x and i-pi, e.g.
+
+PW:=~/bin/pw.x
+IPI:=~/bin/i-pi
+
+
+
+** Run the examples automatically:
+ 
+ * To run the water example, just type:
+
+$ make water
+
+ * To run the lithium example, just type
+ 
+$ make lithium
+
+ * To clean up output files:
+
+$ make clean
+
+
+  
+** Run the examples manually:
+ 
+ * In the main example directory run 
+
+$ python path/src/i-pi lithium.xml
+ 
+ * In another terminal, create up to 8 temporary directories to run pw.x,
+ and launch it from within:
+ 
+$ mkdir run_1
+$ cd run_1
+$ $PW < ../h2o_pw.in
+ 
+ * Repeat several times to get multiple instances
+ 
+ * To run q-Espresso remotely, you should:
+    1. make sure that the machine you run i-pi on has a port accessible 
+       from outside
+    2. change the <interface> option in lithium.xml so that <address> points 
+       to the external network interface (i.e. give a fully-qualified domain 
+       name or IP address rather than localhost) and that the <port>
+       selected is accessible from outside
+    3. change the srvaddress input parameter in driver.in, making it point to 
+       the same address and port
+    4. copy the pw.x inputs to the remote machine (do not forget the pseudos!) 
+       and launch n copies of pw-driver.x remotely

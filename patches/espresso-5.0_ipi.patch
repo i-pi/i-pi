@@ -1,0 +1,455 @@
+diff -rupN espresso-5.0_ref/Modules/control_flags.f90 espresso-5.0/Modules/control_flags.f90
+--- espresso-5.0_ref/Modules/control_flags.f90	2013-08-12 08:06:40.567819139 +0100
++++ espresso-5.0/Modules/control_flags.f90	2013-08-12 08:18:18.763837015 +0100
+@@ -175,6 +175,7 @@ MODULE control_flags
+     lscf    =.FALSE., &! if .TRUE. the calc. is selfconsistent
+     lbfgs   =.FALSE., &! if .TRUE. the calc. is a relaxation based on BFGS
+     lmd     =.FALSE., &! if .TRUE. the calc. is a dynamics
++    ldriver =.FALSE., &! if .TRUE. run in driver mode
+     llang   =.FALSE., &! if .TRUE. the calc. is Langevin dynamics
+     lpath   =.FALSE., &! if .TRUE. the calc. is a path optimizations
+     lneb    =.FALSE., &! if .TRUE. the calc. is NEB dynamics
+diff -rupN espresso-5.0_ref/Modules/input_parameters.f90 espresso-5.0/Modules/input_parameters.f90
+--- espresso-5.0_ref/Modules/input_parameters.f90	2013-08-12 08:06:40.567819139 +0100
++++ espresso-5.0/Modules/input_parameters.f90	2013-08-12 08:18:18.763837015 +0100
+@@ -96,9 +96,9 @@ MODULE input_parameters
+         CHARACTER(len=80) :: calculation = 'none'
+           ! Specify the type of the simulation
+           ! See below for allowed values
+-        CHARACTER(len=80) :: calculation_allowed(15)
++        CHARACTER(len=80) :: calculation_allowed(16)
+         DATA calculation_allowed / 'scf', 'nscf', 'relax', 'md', 'cp', &
+-          'vc-relax', 'vc-md', 'vc-cp', 'bands', 'neb', 'smd', 'cp-wf', &
++          'vc-relax', 'vc-md', 'vc-cp', 'bands', 'neb', 'smd', 'cp-wf', 'driver', &
+           'cp-wf-nscf','cp-wf-pbe0', 'pbe0-nscf'/   ! Lingzhu Kong
+         CHARACTER(len=80) :: verbosity = 'default'
+           ! define the verbosity of the code output
+@@ -153,6 +153,10 @@ MODULE input_parameters
+           ! specify the prefix for the output file, if not specified the
+           ! files are opened as standard fortran units.
+ 
++        CHARACTER(len=1024) :: srvaddress = 'localhost:31415'
++          ! specify the hostname:port of the socket opened on the server side
++          ! to run in driver mode.
++          
+         CHARACTER(len=256) :: pseudo_dir = './'
+           ! specify the directory containing the pseudopotentials
+ 
+@@ -259,7 +263,7 @@ MODULE input_parameters
+           forc_conv_thr, pseudo_dir, disk_io, tefield, dipfield, lberry,  &
+           gdir, nppstr, wf_collect, printwfc, lelfield, nberrycyc, refg,  &
+           tefield2, saverho, tabps, lkpoint_dir, use_wannier, lecrpa,     &
+-          vdw_table_name
++          vdw_table_name, srvaddress
+ 
+ 
+ #if defined ( __MS2)
+diff -rupN espresso-5.0_ref/Modules/io_files.f90 espresso-5.0/Modules/io_files.f90
+--- espresso-5.0_ref/Modules/io_files.f90	2013-08-12 08:06:40.567819139 +0100
++++ espresso-5.0/Modules/io_files.f90	2013-08-12 08:18:18.779837016 +0100
+@@ -20,6 +20,8 @@ MODULE io_files
+   CHARACTER(len=256) :: tmp_dir = './'            ! directory for temporary files
+   CHARACTER(len=256) :: wfc_dir = 'undefined'     ! directory for large files on each node, should be kept 'undefined' if not known 
+   CHARACTER(len=256) :: prefix  = 'os'            ! prepended to file names
++  CHARACTER(len=1024) :: srvaddress = 'localhost:31415'     ! address of the server for driver mode 
++  
+   CHARACTER(len=6)   :: nd_nmbr = '000000'        ! node number (used only in parallel case)
+   CHARACTER(len=256) :: pseudo_dir = './'    ! original location of PP files
+   CHARACTER(len=256) :: pseudo_dir_cur = ' ' ! current location when restarting
+diff -rupN espresso-5.0_ref/Modules/read_namelists.f90 espresso-5.0/Modules/read_namelists.f90
+--- espresso-5.0_ref/Modules/read_namelists.f90	2013-08-12 08:06:40.551819138 +0100
++++ espresso-5.0/Modules/read_namelists.f90	2013-08-12 08:18:18.803837016 +0100
+@@ -751,6 +751,7 @@ MODULE read_namelists_module
+        CALL mp_bcast( outdir,        ionode_id )
+        CALL mp_bcast( wfcdir,        ionode_id )
+        CALL mp_bcast( prefix,        ionode_id )
++       CALL mp_bcast( srvaddress,    ionode_id )       
+        CALL mp_bcast( max_seconds,   ionode_id )
+        CALL mp_bcast( ekin_conv_thr, ionode_id )
+        CALL mp_bcast( etot_conv_thr, ionode_id )
+@@ -1793,6 +1794,8 @@ MODULE read_namelists_module
+              ELSE IF( prog == 'PW' ) THEN
+                 ion_dynamics = 'beeman'
+              END IF
++         CASE ('driver')
++            !do nothing
+              !
+           CASE DEFAULT
+              !
+diff -rupN espresso-5.0_ref/PW/src/driver.f90 espresso-5.0/PW/src/driver.f90
+--- espresso-5.0_ref/PW/src/driver.f90	1970-01-01 01:00:00.000000000 +0100
++++ espresso-5.0/PW/src/driver.f90	2013-08-15 10:28:50.667872744 +0100
+@@ -0,0 +1,114 @@
++  SUBROUTINE driver()
++    USE io_global,        ONLY : stdout, ionode, ionode_id
++    USE io_files,         ONLY : srvaddress
++    USE mp_global,        ONLY : mp_startup, mp_bcast, mp_global_end, intra_image_comm
++    USE control_flags,    ONLY : conv_elec
++    
++    USE ions_base,              ONLY : tau
++    USE cell_base,              ONLY : alat, at, omega
++    USE force_mod,              ONLY : force
++    USE ener,                   ONLY : etot
++    IMPLICIT NONE
++    
++    INTEGER, PARAMETER :: MSGLEN=12
++    LOGICAL :: isinit=.true., hasdata=.false.
++    CHARACTER*12 :: header
++    CHARACTER*1024 :: parbuffer, host
++    INTEGER socket, nat, inet, port, ccmd, i
++    REAL*8 :: sigma(3,3)
++    REAL *8 :: cellh(3,3), cellih(3,3), vir(3,3), pot
++    REAL*8, ALLOCATABLE :: combuf(:)
++
++    ! parses host name, port and socket type
++    inet=1
++    host=srvaddress(1:INDEX(srvaddress,':',back=.true.)-1)//achar(0)
++    read(srvaddress(INDEX(srvaddress,':',back=.true.)+1:),*) port
++        
++    IF (srvaddress(1:INDEX(srvaddress,':')-1).eq.('UNIX')) THEN
++      inet=0
++      host=srvaddress(6:INDEX(srvaddress,':',back=.true.)-1)//achar(0)    
++    ENDIF
++
++    IF (ionode) write(*,*) " @ DRIVER MODE: Connecting to host:port ", trim(host), port
++
++    ! opens socket and starts main loop
++    IF (ionode) call open_socket(socket, inet, port, host)            
++    driver_loop: DO
++      ! do communication on master node only...
++      if (ionode) call readbuffer(socket, header, MSGLEN)      
++      call mp_bcast(header,ionode_id, intra_image_comm)
++      
++      if (ionode) write(*,*) " @ DRIVER MODE: Message from server: ", trim(header)
++      if (trim(header) == "STATUS") then
++         if (ionode) then  ! does not  need init (well, maybe it should, just to check atom numbers and the like... )
++            if (hasdata) then
++               call writebuffer(socket,"HAVEDATA    ",MSGLEN)
++            else
++               call writebuffer(socket,"READY       ",MSGLEN)
++            endif
++         endif
++      else if (trim(header) == "POSDATA") then
++         ! receives the positions & the cell data
++         if (ionode) then    ! first the cell and the number of atoms
++            call readbuffer(socket, cellh, 9*8)
++            call readbuffer(socket, cellih, 9*8)
++            call readbuffer(socket, nat, 4)
++         endif         
++         call mp_bcast(cellh,ionode_id, intra_image_comm)  ! must communicate to other nodes
++         call mp_bcast(cellih,ionode_id, intra_image_comm)
++         call mp_bcast(nat,ionode_id, intra_image_comm)
++         
++         ! then we can allocate the buffer for the positions, and receive them
++         if (.not.allocated(combuf)) allocate(combuf(3*nat))
++         if (ionode) call readbuffer(socket, combuf, nat*3*8)         
++         call mp_bcast(combuf,ionode_id, intra_image_comm) ! and broadcast them to all nodes
++         
++         ! convert the incoming configuration to the internal pwscf format
++         cellh=transpose(cellh)                       ! row-major to column-major 
++         cellih=transpose(cellih)         
++         tau = RESHAPE(combuf, (/ 3 , nat /) )/alat   ! internally positions are in alat 
++         at = cellh / alat                            ! and so the cell
++                  
++         if (ionode) write(*,*) " @ DRIVER MODE: Received positions "
++         
++         ! does SCF
++         CALL hinit1()
++         CALL electrons()
++         IF ( .NOT. conv_elec ) THEN
++           CALL punch( 'all' )
++           CALL stop_run( conv_elec )
++         ENDIF         
++         CALL forces()
++         CALL stress(sigma)
++         
++         ! converts energy & forces to the format expected by i-pi (so go from Ry to Ha)
++         combuf=RESHAPE(force, (/ 3 * nat /) ) * 0.5   ! return force in atomic units
++         pot=etot * 0.5                                ! return potential in atomic units
++         vir=transpose(sigma)*omega*0.5                ! return virial in atomic units and without the volume scaling
++                  
++         hasdata=.true.
++      else if (trim(header)=="GETFORCE") then
++         ! communicates energy info back to i-pi
++         if (ionode) write(*,*) " @ DRIVER MODE: Returning v,forces,stress "
++         if (ionode) then      
++            call writebuffer(socket,"FORCEREADY  ",MSGLEN)            
++            call writebuffer(socket,pot,8)
++            call writebuffer(socket,nat,4)            
++            call writebuffer(socket,combuf,3*nat*8)
++            call writebuffer(socket,vir,9*8)
++            
++            ! i-pi can also receive an arbitrary string, that will be printed out to the "extra" 
++            ! trajectory file. this is useful if you want to return additional information, e.g.
++            ! atomic charges, wannier centres, etc. one must return the number of characters, then
++            ! the string. here we just send back zero characters.
++            nat = 0
++            call writebuffer(socket,nat,4)
++         endif
++         
++         hasdata=.false.
++         CALL punch( 'config' )
++         CALL save_in_ions()
++      endif
++    ENDDO driver_loop    
++    
++  END SUBROUTINE
+diff -rupN espresso-5.0_ref/PW/src/input.f90 espresso-5.0/PW/src/input.f90
+--- espresso-5.0_ref/PW/src/input.f90	2013-08-12 08:06:40.583819139 +0100
++++ espresso-5.0/PW/src/input.f90	2013-08-12 08:18:18.803837016 +0100
+@@ -77,7 +77,8 @@ SUBROUTINE iosys()
+   USE io_files,      ONLY : input_drho, output_drho, &
+                             psfile, tmp_dir, wfc_dir, &
+                             prefix_     => prefix, &
+-                            pseudo_dir_ => pseudo_dir
++                            pseudo_dir_ => pseudo_dir, &
++                            srvaddress_ => srvaddress
+   !
+   USE force_mod,     ONLY : lforce, lstres, force
+   !
+@@ -173,7 +174,7 @@ SUBROUTINE iosys()
+                             lkpoint_dir_      => lkpoint_dir, &
+                             tqr_              => tqr, &
+                             io_level, ethr, lscf, lbfgs, lmd, &
+-                            ldamped, lbands, llang,           &
++                            ldamped, lbands, llang, ldriver,  &
+                             lconstrain, restart, twfcollect, &
+                             llondon, do_makov_payne, &
+                             lecrpa_           => lecrpa
+@@ -228,8 +229,8 @@ SUBROUTINE iosys()
+                                wfcdir, prefix, etot_conv_thr, forc_conv_thr,   &
+                                pseudo_dir, disk_io, tefield, dipfield, lberry, &
+                                gdir, nppstr, wf_collect,lelfield, efield,      &
+-                               nberrycyc, lkpoint_dir, efield_cart, lecrpa,    &
+-                               vdw_table_name
++                               nberrycyc, lkpoint_dir, efield_cart, lecrpa,    & 
++                               vdw_table_name, srvaddress
+ 
+ #if defined __MS2
+   USE input_parameters, ONLY : MS2_enabled, MS2_handler
+@@ -399,6 +400,12 @@ SUBROUTINE iosys()
+                    & ' not supported', 1 )
+      END SELECT
+      !
++  CASE( 'driver' )
++     !
++     ldriver   = .true.
++     lscf      = .true.
++     lforce    = .true. 
++     lstres    = .true.
+   CASE( 'vc-relax' )
+      !
+      lscf      = .true.
+@@ -488,7 +495,7 @@ SUBROUTINE iosys()
+      !
+   END SELECT
+   !
+-  lstres = lmovecell .OR. ( tstress .and. lscf )
++  lstres = ldriver .OR. lmovecell .OR. ( tstress .and. lscf )
+   !
+   IF ( tefield .and. ( .not. nosym ) ) THEN
+      nosym = .true.
+@@ -1099,6 +1106,7 @@ SUBROUTINE iosys()
+   tefield_    = tefield
+   dipfield_   = dipfield
+   prefix_     = trim( prefix )
++  srvaddress_ = trim( srvaddress)
+   pseudo_dir_ = trimcheck( pseudo_dir )
+   nstep_      = nstep
+   iprint_     = iprint
+diff -rupN espresso-5.0_ref/PW/src/Makefile espresso-5.0/PW/src/Makefile
+--- espresso-5.0_ref/PW/src/Makefile	2013-08-12 08:06:40.583819139 +0100
++++ espresso-5.0/PW/src/Makefile	2013-08-12 08:22:09.667842928 +0100
+@@ -61,6 +61,8 @@ divide.o \
+ divide_et_impera.o \
+ dqvan2.o \
+ drhoc.o \
++driver.o \
++sockets.o \
+ dvloc_of_g.o \
+ dynamics_module.o \
+ efermig.o \
+diff -rupN espresso-5.0_ref/PW/src/pwscf.f90 espresso-5.0/PW/src/pwscf.f90
+--- espresso-5.0_ref/PW/src/pwscf.f90	2013-08-12 08:06:40.579819138 +0100
++++ espresso-5.0/PW/src/pwscf.f90	2013-08-12 08:18:18.803837016 +0100
+@@ -14,7 +14,7 @@ PROGRAM pwscf
+   USE io_global,        ONLY : stdout, ionode, ionode_id
+   USE parameters,       ONLY : ntypx, npk, lmaxx
+   USE cell_base,        ONLY : fix_volume
+-  USE control_flags,    ONLY : conv_elec, gamma_only, lscf
++  USE control_flags,    ONLY : conv_elec, gamma_only, lscf, ldriver
+   USE control_flags,    ONLY : conv_ions, istep, nstep, restart, lmd, lbfgs
+   USE force_mod,        ONLY : lforce, lstres, sigma
+   USE environment,      ONLY : environment_start
+@@ -94,6 +94,11 @@ PROGRAM pwscf
+   !
+   CALL init_run()
+   !
++  if (ldriver) THEN 
++    CALL driver()
++    GOTO 111
++  end if
++  !
+   main_loop: DO
+      !
+      ! ... electronic self-consistentcy
+@@ -166,7 +171,7 @@ PROGRAM pwscf
+   !
+   ! ... save final data file
+   !
+-  CALL punch('all')
++111  CALL punch('all')
+   CALL stop_run( conv_ions )
+   !
+   !  END IF      
+diff -rupN espresso-5.0_ref/PW/src/sockets.c espresso-5.0/PW/src/sockets.c
+--- espresso-5.0_ref/PW/src/sockets.c	1970-01-01 01:00:00.000000000 +0100
++++ espresso-5.0/PW/src/sockets.c	2013-08-12 08:19:42.407839158 +0100
+@@ -0,0 +1,141 @@
++/* A minimal wrapper for socket communication.
++
++Copyright (C) 2013, Joshua More and Michele Ceriotti
++
++Permission is hereby granted, free of charge, to any person obtaining
++a copy of this software and associated documentation files (the
++"Software"), to deal in the Software without restriction, including
++without limitation the rights to use, copy, modify, merge, publish,
++distribute, sublicense, and/or sell copies of the Software, and to
++permit persons to whom the Software is furnished to do so, subject to
++the following conditions:
++
++The above copyright notice and this permission notice shall be included
++in all copies or substantial portions of the Software.
++
++THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
++EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
++MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
++IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
++CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
++TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
++SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
++
++
++Contains both the functions that transmit data to the socket and read the data
++back out again once finished, and the function which opens the socket initially.
++Can be linked to a FORTRAN code that does not support sockets natively.
++
++Functions:
++   error: Prints an error message and then exits.
++   open_socket_: Opens a socket with the required host server, socket type and
++      port number.
++   write_buffer_: Writes a string to the socket.
++   read_buffer_: Reads data from the socket.
++*/
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <unistd.h>
++#include <string.h>
++#include <sys/types.h>
++#include <sys/socket.h>
++#include <netinet/in.h>
++#include <sys/un.h>
++#include <netdb.h>
++
++void error(const char *msg)
++// Prints an error message and then exits.
++{   perror(msg);  exit(-1);   }
++
++void open_socket_(int *psockfd, int* inet, int* port, char* host)
++/* Opens a socket.
++
++Note that fortran passes an extra argument for the string length, but this is
++ignored here for C compatibility.
++
++Args:
++   psockfd: The id of the socket that will be created.
++   inet: An integer that determines whether the socket will be an inet or unix
++      domain socket. Gives unix if 0, inet otherwise.
++   port: The port number for the socket to be created. Low numbers are often
++      reserved for important channels, so use of numbers of 4 or more digits is
++      recommended.
++   host: The name of the host server.
++*/
++
++{
++   int sockfd, portno, n;
++   struct hostent *server;
++
++   struct sockaddr * psock; int ssock;
++
++   if (*inet>0)
++   {  // creates an internet socket
++      struct sockaddr_in serv_addr;      psock=(struct sockaddr *)&serv_addr;     ssock=sizeof(serv_addr);
++      sockfd = socket(AF_INET, SOCK_STREAM, 0);
++      if (sockfd < 0)  error("ERROR opening socket");
++
++      server = gethostbyname(host);
++      if (server == NULL)
++      {
++         fprintf(stderr, "ERROR, no such host %s \n", host);
++         exit(-1);
++      }
++
++      bzero((char *) &serv_addr, sizeof(serv_addr));
++      serv_addr.sin_family = AF_INET;
++      bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
++      serv_addr.sin_port = htons(*port);
++   }
++   else
++   {  // creates a unix socket
++      struct sockaddr_un serv_addr;      psock=(struct sockaddr *)&serv_addr;     ssock=sizeof(serv_addr);
++      sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
++      bzero((char *) &serv_addr, sizeof(serv_addr));
++      serv_addr.sun_family = AF_UNIX;
++      strcpy(serv_addr.sun_path, "/tmp/ipi_");
++      strcpy(serv_addr.sun_path+9, host);
++   }
++
++   if (connect(sockfd, psock, ssock) < 0) error("ERROR connecting");
++
++   *psockfd=sockfd;
++}
++
++void writebuffer_(int *psockfd, char *data, int* plen)
++/* Writes to a socket.
++
++Args:
++   psockfd: The id of the socket that will be written to.
++   data: The data to be written to the socket.
++   plen: The length of the data in bytes.
++*/
++
++{
++   int n;
++   int sockfd=*psockfd;
++   int len=*plen;
++
++   n = write(sockfd,data,len);
++   if (n < 0) error("ERROR writing to socket");
++}
++
++
++void readbuffer_(int *psockfd, char *data, int* plen)
++/* Reads from a socket.
++
++Args:
++   psockfd: The id of the socket that will be read from.
++   data: The storage array for data read from the socket.
++   plen: The length of the data in bytes.
++*/
++
++{
++   int n, nr;
++   int sockfd=*psockfd;
++   int len=*plen;
++
++   n = nr = read(sockfd,data,len);
++
++   while (nr>0 && n<len )
++   {  nr=read(sockfd,&data[n],len-n); n+=nr; }
++
++   if (n == 0) error("ERROR reading from socket");
++}
++
++
