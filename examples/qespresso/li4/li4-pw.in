@@ -29,8 +29,8 @@
     conv_thr=1.0e-10
     mixing_mode='plain' 
     mixing_beta=0.7
-    startingpot='file' 
-    startingwfc='file'
+    startingpot='atomic' 
+    startingwfc='atomic'
 /
 &IONS
     pot_extrapolation = 'second_order'

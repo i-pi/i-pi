@@ -1250,6 +1250,9 @@ class Trajectories(dobject):
          stream.write(" #*EXTRAS*# Step:  %10d  Bead:  %5d  \n" % (self.simul.step+1, b) )
          stream.write(cq[b])
          stream.write("\n")
+         if flush :
+			stream.flush()
+			os.fsync(stream)
          return
       elif getkey(what) in [ "positions", "velocities", "forces" ] :
          self.fatom.q[:] = cq[b]

@@ -87,6 +87,7 @@ Args:
       serv_addr.sin_family = AF_INET;
       bcopy((char *)server->h_addr, (char *)&serv_addr.sin_addr.s_addr, server->h_length);
       serv_addr.sin_port = htons(*port);
+      if (connect(sockfd, psock, ssock) < 0) error("Error opening socket: wrong host address, or broken connection");
    }
    else
    {  // creates a unix socket
@@ -96,9 +97,8 @@ Args:
       serv_addr.sun_family = AF_UNIX;
       strcpy(serv_addr.sun_path, "/tmp/ipi_");
       strcpy(serv_addr.sun_path+9, host);
+      if (connect(sockfd, psock, ssock) < 0) error("Error opening socket: wrong host address, or broken connection");
    }
-
-   if (connect(sockfd, psock, ssock) < 0) error("Error opening socket: wrong host address, or broken connection");
 
    *psockfd=sockfd;
 }

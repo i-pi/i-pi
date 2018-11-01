@@ -27,8 +27,10 @@
     conv_thr=1.0e-9
     mixing_mode='plain' 
     mixing_beta=0.7
-    startingpot='file' 
-    startingwfc='file'
+    startingpot='atomic' 
+    startingwfc='atomic'
+/
+&IONS
 /
 ATOMIC_SPECIES   
     H  1.008 H.pbe-rrkjus.UPF
