@@ -72,9 +72,9 @@ class GeopMotion(Motion):
            fixcom: An optional boolean which decides whether the centre of mass
               motion will be constrained or not. Defaults to False.
         """
-        if len(fixatoms) > 0:
-            raise ValueError("The optimization algorithm with fixatoms is not implemented. "
-                             "We stop here. Comment this line and continue only if you know what you are doing")
+        # if len(fixatoms) > 0:
+        #     raise ValueError("The optimization algorithm with fixatoms is not implemented. "
+        #                      "We stop here. Comment this line and continue only if you know what you are doing")
 
         super(GeopMotion, self).__init__(fixcom=fixcom, fixatoms=fixatoms)
 
@@ -150,10 +150,22 @@ class LineMapper(object):
         self.dcell = dumop.cell.copy()
         self.dforces = dumop.forces.copy(self.dbeads, self.dcell)
 
+        # self.fixatoms_mask_short = np.ones(dumop.beads.natoms, dtype=bool)  # Mask to exclude fixed atoms from N-arrays
+        self.fixatoms_mask = np.ones(3 * dumop.beads.natoms, dtype=bool)    # Mask to exclude fixed atoms from 3N-arrays
+        if len(dumop.fixatoms) > 0:
+            # self.fixatoms_mask_short[dumop.fixatoms] = 0
+            self.fixatoms_mask[3 * dumop.fixatoms] = 0
+            self.fixatoms_mask[3 * dumop.fixatoms + 1] = 0
+            self.fixatoms_mask[3 * dumop.fixatoms + 2] = 0
+
     def set_dir(self, x0, mdir):
-        self.x0 = x0.copy()
-        self.d = mdir.copy() / np.sqrt(np.dot(mdir.flatten(), mdir.flatten()))
-        if self.x0.shape != self.d.shape:
+        self.x0 = x0.copy()         # I keep this as is, because x0 is used outside the mapper.
+
+        # exclude fixed degrees of freedom and renormalize direction vector to unit length:
+        tmp3 = mdir.copy()[:, self.fixatoms_mask]
+        self.d = tmp3 / np.sqrt(np.dot(tmp3.flatten(), tmp3.flatten()))
+        del tmp3
+        if self.x0[:, self.fixatoms_mask].shape != self.d.shape:
             raise ValueError("Incompatible shape of initial value and displacement direction")
 
     def __call__(self, x):
@@ -161,9 +173,9 @@ class LineMapper(object):
             determines new position (x0+d*x)"""
 
         self.fcount += 1
-        self.dbeads.q = self.x0 + self.d * x
+        self.dbeads.q[:, self.fixatoms_mask] = self.x0[:, self.fixatoms_mask] + self.d * x
         e = self.dforces.pot   # Energy
-        g = - np.dot(dstrip(self.dforces.f).flatten(), self.d.flatten())   # Gradient
+        g = - np.dot(dstrip(self.dforces.f[:, self.fixatoms_mask]).flatten(), self.d.flatten())   # Gradient
         return e, g
 
 
@@ -187,11 +199,19 @@ class GradientMapper(object):
         self.dcell = dumop.cell.copy()
         self.dforces = dumop.forces.copy(self.dbeads, self.dcell)
 
+        # self.fixatoms_mask_short = np.ones(dumop.beads.natoms, dtype=bool)  # Mask to exclude fixed atoms from N-arrays
+        self.fixatoms_mask = np.ones(3 * dumop.beads.natoms, dtype=bool)    # Mask to exclude fixed atoms from 3N-arrays
+        if len(dumop.fixatoms) > 0:
+            # self.fixatoms_mask_short[dumop.fixatoms] = 0
+            self.fixatoms_mask[3 * dumop.fixatoms] = 0
+            self.fixatoms_mask[3 * dumop.fixatoms + 1] = 0
+            self.fixatoms_mask[3 * dumop.fixatoms + 2] = 0
+
     def __call__(self, x):
         """computes energy and gradient for optimization step"""
 
         self.fcount += 1
-        self.dbeads.q = x
+        self.dbeads.q[:, self.fixatoms_mask] = x[:, self.fixatoms_mask]
         e = self.dforces.pot   # Energy
         g = -self.dforces.f   # Gradient
         return e, g
@@ -522,11 +542,11 @@ class SDOptimizer(DummyOptimizer):
         self.old_f[:] = self.forces.f
 
         # Check for fixatoms
-        if len(self.fixatoms) > 0:
-            for dqb in self.old_f:
-                dqb[self.fixatoms * 3] = 0.0
-                dqb[self.fixatoms * 3 + 1] = 0.0
-                dqb[self.fixatoms * 3 + 2] = 0.0
+        # if len(self.fixatoms) > 0:
+        #     for dqb in self.old_f:
+        #         dqb[self.fixatoms * 3] = 0.0
+        #         dqb[self.fixatoms * 3 + 1] = 0.0
+        #         dqb[self.fixatoms * 3 + 2] = 0.0
 
         dq1 = dstrip(self.old_f)
 
@@ -614,11 +634,11 @@ class CGOptimizer(DummyOptimizer):
         self.d[:] = dq1
         self.old_f[:] = gradf1
 
-        if len(self.fixatoms) > 0:
-            for dqb in dq1_unit:
-                dqb[self.fixatoms * 3] = 0.0
-                dqb[self.fixatoms * 3 + 1] = 0.0
-                dqb[self.fixatoms * 3 + 2] = 0.0
+        # if len(self.fixatoms) > 0:
+        #     for dqb in dq1_unit:
+        #         dqb[self.fixatoms * 3] = 0.0
+        #         dqb[self.fixatoms * 3 + 1] = 0.0
+        #         dqb[self.fixatoms * 3 + 2] = 0.0
 
         self.lm.set_dir(dstrip(self.beads.q), dq1_unit)
 
