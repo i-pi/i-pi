@@ -208,7 +208,7 @@ class Ensemble(dobject):
         for the ensemble.
         """
 
-        lpens = (self.forces.pot + self.bias.pot + self.nm.kin + self.nm.vspring * self.nm.omegan2);
+        lpens = (self.forces.pot + self.bias.pot + self.nm.kin + self.nm.vspring);
 
         # inlcude terms associated with an extended Lagrangian integrator of some sort
         for p in self._xlpot:

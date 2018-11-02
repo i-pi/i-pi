@@ -1,0 +1,75 @@
+<simulation threading="false">
+    <ffsocket mode='unix' name='driver'>
+         <latency>  1.00000000e-02</latency>
+         <slots>4</slots>
+         <port>20614</port>
+         <timeout>  6.00000000e+02</timeout>
+         <address>zundel</address>
+   </ffsocket>
+   <total_steps>10000</total_steps>
+   <output prefix="data">
+      <trajectory stride="40" filename="pos" cell_units="angstrom">positions{angstrom}</trajectory>
+      <trajectory stride="20" filename="xc" format="xyz">x_centroid{angstrom}</trajectory>
+      <properties stride="2"> [ step, time, conserved, temperature{kelvin}, kinetic_cv, 
+          potential, kinetic_cv(H), kinetic_cv(O), ensemble_bias, ensemble_temperature{kelvin} ] </properties>
+   </output>
+   <prng>
+      <seed>18885</seed>
+   </prng>
+   <system_template>
+   <labels> [IDX, TEMP, T0] </labels>
+   <instance> [0, 200, 300] </instance>
+   <instance> [1, 250, 500] </instance>
+   <instance> [2, 320, 640] </instance>
+   <template>	   
+   <system prefix="RE-IDX">
+      <forces> 
+          <force forcefield="driver"></force>
+      </forces>
+      <initialize nbeads="8">
+        <file mode="xyz">./h5o2+.xyz</file>
+        <cell>
+         [   25.29166, 0, 0, 0, 25.29166, 0, 0, 0, 25.29166 ]
+        </cell>
+        <velocities mode="thermal" units="kelvin"> T0 </velocities>
+      </initialize>
+      <ensemble>
+         <temperature units="kelvin"> TEMP </temperature>
+      </ensemble>
+      <motion mode="dynamics">
+        <dynamics mode="nvt">
+            <timestep units="femtosecond"> 0.5 </timestep>
+<!--
+# Generated at http://cosmo-epfl.github.io/gle4md
+# Please cite:
+# M. Ceriotti, G. Bussi and M. Parrinello, J. Chem. Theory Comput. 6, 1170 (2010) 
+# M. Ceriotti, G. Bussi and M. Parrinello, Phys. Rev. Lett. 102, 020601 (2009)
+# Smart-sampling GLE. Enforces efficient sampling, focussing the effort on the slowest mode 
+# accessible by the simulation. Generated from the parameter file
+# library/smart/smart-0.5_6-2.a, 
+# and shifted so that they are effective to sample optimally 
+# a time scale of t_opt=2 picoseconds,
+# and do as well as possible upt to a cutoff frequency of 
+# νmax=50 THz [1668 cm^-1]
+-->
+  <thermostat mode='gle'>
+    <A shape='(3,3)'>
+        [   5e-4, 1e-3, 1e-3, 
+            0   , 1e-2, 1e-3,
+            0   , 1e-3, 1e-2 ]
+     ]
+    </A>
+  </thermostat>          
+<!--  <thermostat mode="langevin"> <tau units="femtosecond"> 100 </tau> </thermostat> -->
+        </dynamics>
+      </motion>
+  </system>
+  </template>
+  </system_template>
+  <smotion mode="remd">
+      <remd>
+         <krescale> True </krescale>
+         <stride> 2 </stride>
+      </remd>
+   </smotion>
+</simulation>

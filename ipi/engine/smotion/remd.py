@@ -24,6 +24,9 @@ __all__ = ['ReplicaExchange']
 # TODO: Do not shout :-)
 #       (1) Exchange of Hamiltonians is missing
 
+# utility functions to traverse systems to rescale all of the s momenta of 
+# GLE thermostats that might be around. should look also inside multi-motion
+# and multi-thermo classes
 def thermo_scale(thermo, scale):
     if hasattr(thermo,"tlist"):
         for t in thermo.tlist:

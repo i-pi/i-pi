@@ -12,7 +12,7 @@ ENDREGTEST -->
       <trajectory filename='pos' stride='1' format='pdb' cell_units='angstrom'> positions{angstrom} </trajectory>
       <checkpoint filename='checkpoint' stride='1000' overwrite='True'/>
    </output>
-   <total_steps> 1000 </total_steps>
+   <total_steps> 10 </total_steps>
    <ffsocket mode="inet" name="driver">
       <address>localhost</address>
       <port> 31415 </port>
