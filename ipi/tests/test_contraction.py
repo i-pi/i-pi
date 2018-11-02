@@ -5,8 +5,9 @@
 # See the "licenses" directory for full license information.
 
 
+import pytest
 import numpy as np
-from numpy.testing import assert_almost_equal as assert_equals
+from numpy.testing import assert_almost_equal
 
 from ipi.utils import nmtransform
 
@@ -32,7 +33,7 @@ def check_up_and_down_scaling(n, q):
     print "Final position of the beads:"
     print beads_final
 
-    assert_equals(q, beads_final)
+    assert_almost_equal(q, beads_final)
     return beads_n
 
 
@@ -51,7 +52,7 @@ def check_rpc_consistency(n, q):
     beads_1 = rescale1.b2tob1(beads_n)
     beads_2 = rescale2.b1tob2(beads_n)
 
-    assert_equals(beads_1, beads_2)
+    assert_almost_equal(beads_1, beads_2)
 
 
 def check_centroid_pos(n, q):
@@ -70,53 +71,31 @@ def check_centroid_pos(n, q):
     centroid_big = np.dot(rescale_big, beads_big)
     centroid_q = np.dot(rescale_q, q)
 
-    assert_equals(centroid_q, centroid_big)
+    assert_almost_equal(centroid_q, centroid_big)
 
 
 numbers_to_check = range(10, 56, 9)
 
 
-def test_1_to_n():
-    """Contraction with one bead."""
-
-    for n in numbers_to_check:
-        q = np.array([[0.0, 0.0, 0.0, 1.0, 0.0, 0.0]])
-        yield check_up_and_down_scaling, n, q
-        yield check_rpc_consistency, n, q
-        yield check_centroid_pos, n, q
-
-
-def test_2_to_n():
-    """Contraction with two beads."""
-
-    for n in numbers_to_check:
-        q = np.array([[0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
-                      [0.0, 0.1, 0.0, 1.0, 0.1, 0.0]])
-        yield check_up_and_down_scaling, n, q
-        yield check_rpc_consistency, n, q
-        yield check_centroid_pos, n, q
+qs_to_check = [
+    np.array([[0.0, 0.0, 0.0, 1.0, 0.0, 0.0]]),
+    np.array([[0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+              [0.0, 0.1, 0.0, 1.0, 0.1, 0.0]]),
+    np.array([[0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+              [0.0, 0.1, 0.0, 1.0, 0.1, 0.0],
+              [0.0, -0.1, 0.0, 1.0, -0.1, 0.0]]),
+    np.array([[0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
+              [0.0, 0.1, 0.0, 1.0, 0.1, 0.0],
+              [0.0, 0.2, 0.0, 1.0, 0.2, 0.0],
+              [0.0, -0.1, 0.0, 1.0, -0.1, 0.0]])
+]
 
 
-def test_3_to_n():
-    """Contraction with tree beads."""
+@pytest.mark.parametrize("n", numbers_to_check)
+@pytest.mark.parametrize("q", qs_to_check)
+def test_contraction(n, q):
+    """Test contraction to `n` replicas with original positions `q`."""
 
-    for n in numbers_to_check:
-        q = np.array([[0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
-                      [0.0, 0.1, 0.0, 1.0, 0.1, 0.0],
-                      [0.0, -0.1, 0.0, 1.0, -0.1, 0.0]])
-        yield check_up_and_down_scaling, n, q
-        yield check_rpc_consistency, n, q
-        yield check_centroid_pos, n, q
-
-
-def test_4_to_n():
-    """Contraction with four beads."""
-
-    for n in numbers_to_check:
-        q = np.array([[0.0, 0.0, 0.0, 1.0, 0.0, 0.0],
-                      [0.0, 0.1, 0.0, 1.0, 0.1, 0.0],
-                      [0.0, 0.2, 0.0, 1.0, 0.2, 0.0],
-                      [0.0, -0.1, 0.0, 1.0, -0.1, 0.0]])
-        yield check_up_and_down_scaling, n, q
-        yield check_rpc_consistency, n, q
-        yield check_centroid_pos, n, q
+    check_up_and_down_scaling(n, q)
+    check_rpc_consistency(n, q)
+    check_centroid_pos(n, q)
