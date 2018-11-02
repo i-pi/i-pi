@@ -24,6 +24,23 @@ __all__ = ['ReplicaExchange']
 # TODO: Do not shout :-)
 #       (1) Exchange of Hamiltonians is missing
 
+def thermo_scale(thermo, scale):
+    if hasattr(thermo,"tlist"):
+        for t in thermo.tlist:
+            thermo_scale(t, scale)
+    if hasattr(thermo, "s"): # scale the GLE degrees of freedom
+        thermo.s *= scale    
+
+def motion_scale(motion, scale):
+    if hasattr(motion,"mlist"):
+        for m in motion.mlist:
+            motion_scale(m, scale)
+    thermo_scale(motion.thermostat, scale)
+    thermo_scale(motion.barostat.thermostat, scale)
+
+def gle_scale(sys, scale):        
+    motion_scale(sys.motion, scale)
+            
 class ReplicaExchange(Smotion):
     """Replica exchange routine.
 
@@ -65,8 +82,8 @@ class ReplicaExchange(Smotion):
             self.repindex = np.asarray(range(len(self.syslist)))
         else:
             if len(self.syslist) != len(self.repindex):
-                raise ValueError("Size of replica index does not match number of systems replicas")
-
+                raise ValueError("Size of replica index does not match number of systems replicas")    
+      
     def step(self, step=None):
         """Tries to exchange replica."""
 
@@ -112,6 +129,11 @@ class ReplicaExchange(Smotion):
                     # we just have to carry on with the swapped ensembles, but we also keep track of the changes in econs
                     sl[i].ensemble.eens += eci - sl[i].ensemble.econs
                     sl[j].ensemble.eens += ecj - sl[j].ensemble.econs
+                    
+                    # if we have GLE thermostats, we also have to exchange rescale the s!!!
+                    gle_scale(sl[i], (tj / ti))
+                    gle_scale(sl[j], (ti / tj))
+                    
                     self.repindex[i], self.repindex[j] = self.repindex[j], self.repindex[i]  # keeps track of the swap
 
                     fxc = True  # signal that an exchange has been made!
