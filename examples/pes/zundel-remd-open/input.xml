@@ -56,7 +56,7 @@
   <smotion mode="remd">
       <remd>
          <krescale> True </krescale>
-         <stride> 2e10 </stride>
+         <stride> 2 </stride>
       </remd>
    </smotion>
 </simulation>

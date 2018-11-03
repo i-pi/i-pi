@@ -31,8 +31,8 @@
    <system_template>
    <labels> [IDX, TEMP, W0, W1, W2] </labels>
    <instance> [0, 200, 1, 0, 0] </instance>
-   <instance> [0, 300, 0, 1, 0] </instance>
-   <instance> [0, 450, 0, 0, 1] </instance>
+   <instance> [0, 250, 0, 1, 0] </instance>
+   <instance> [0, 320, 0, 0, 1] </instance>
    <template>	   
    <system name="RMTD-IDX">
       <forces> 
@@ -88,5 +88,8 @@
   </system_template>
   <smotion mode="metad">
      <metad> <metaff> plumed </metaff> </metad>
+  </smotion>
+  <smotion mode="remd">
+     <stride> 2 </stride>
   </smotion>
 </simulation>
