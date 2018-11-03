@@ -18,12 +18,12 @@
          <init_file mode="xyz">./h5o2+.xyz</init_file>
          <plumeddat> plumed-320K/plumed.dat </plumeddat>
    </ffplumed>
-   <total_steps>100000</total_steps>
+   <total_steps>20000</total_steps>
    <output prefix="data">
       <trajectory stride="40" filename="pos" cell_units="angstrom">positions{angstrom}</trajectory>
       <trajectory stride="20" filename="xc" format="xyz">x_centroid{angstrom}</trajectory>
       <properties stride="2"> [ step, time, conserved, temperature{kelvin}, kinetic_cv, 
-            potential, kinetic_cv(H), kinetic_cv(O), ensemble_bias ] </properties>
+            potential, kinetic_cv(H), kinetic_cv(O), ensemble_temperature, ensemble_bias ] </properties>
    </output>
    <prng>
       <seed>18885</seed>
@@ -86,10 +86,12 @@
   </system>
   </template>
   </system_template>
-  <smotion mode="metad">
-     <metad> <metaff> [ plumed-200K, plumed-250K, plumed-320K ] </metaff> </metad>
+  <smotion mode="multi">
+    <smotion mode="metad">
+      <metad> <metaff> [ plumed-200K, plumed-250K, plumed-320K ] </metaff> </metad>
+    </smotion>
+    <smotion mode="remd">
+      <remd> <stride> 1 </stride> </remd>
+    </smotion> 
   </smotion>
-  <!--  <smotion mode="remd">
-      <remd> <stride> 2 </stride> </remd>
-  </smotion> -->
 </simulation>

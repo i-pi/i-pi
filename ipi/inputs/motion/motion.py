@@ -165,7 +165,7 @@ class InputMotionBase(Input):
 
 class InputMotion(InputMotionBase):
 
-    """ Extends InputThermoBase to allow the definition of a multithermo """
+    """ Extends InputMotionBase to allow the definition of a multimotion """
 
     attribs = copy(InputMotionBase.attribs)
 

@@ -10,3 +10,4 @@
 from .smotion import Smotion
 from .remd import ReplicaExchange
 from .metad import MetaDyn
+from .multi import MultiSmotion

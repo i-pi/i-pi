@@ -516,6 +516,7 @@ class FFPlumed(ForceField):
         if self.plumedstep > 0:
             # we are restarting, signal that PLUMED should continue
             self.plumedrestart = True
+            print "Restarting PLUMED"
             self.plumed.cmd("setRestart", 1)
         self.plumed.cmd("init")
         self.charges = dstrip(myatoms.q) * 0.0

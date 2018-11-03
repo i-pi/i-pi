@@ -6,50 +6,31 @@
 # See the "licenses" directory for full license information.
 
 from ipi.utils.depend import depend_value, dd
-from ipi.engine.motion import Motion
+from ipi.engine.smotion import Smotion
 
 
-class MultiMotion(Motion):
+__all__ = ['MultiSmotion']
 
-    """A class to hold multiple motion objects to be executed serially.
+class MultiSmotion(Smotion):
+
+    """A class to hold multiple Smotion objects to be executed serially.
     """
 
-    def __init__(self, motionlist=None):
-        """Initialises MultiMotion.
+    def __init__(self, smotionlist=None):
+        """Initialises MultiSmotion.
 
         Args:
-           fixcom: An optional boolean which decides whether the centre of mass
-              motion will be constrained or not. Defaults to False.
+           smotionlist: A list of Smotion objects
         """
 
-        dself = dd(self)
-        dself.dt = depend_value(name="dt", func=self.get_totdt)
-        self.mlist = motionlist
-        for m in self.mlist:
-            dd(m).dt.add_dependant(dself.dt)
-            print dd(m).dt._dependants
-        a = self.dt  # DON'T ASK WHY BUT IF YOU DON'T DO THAT WEAKREFS TO SELF.DT WILL BE INVALIDATED
-
-        self.fixatoms = set(self.mlist[0].fixatoms)
-        for m in self.mlist:
-            self.fixatoms = self.fixatoms.intersection(m.fixatoms)
-        self.fixatoms = list(self.fixatoms)
-
-        self.fixcom = True  # fixcom is true only if all movers are fixed
-        for m in self.mlist:
-            self.fixcom = self.fixcom and m.fixcom
-
-    def get_totdt(self):
-        dt = 0.0
-        for m in self.mlist:
-            dt += m.dt
-        return dt
+        self.mlist = smotionlist
+        self.mode = "multi"    
 
     def step(self, step=None):
         for m in self.mlist:
             m.step(step)
 
-    def bind(self, ens, beads, nm, cell, bforce, prng):
+    def bind(self, syslist, prng):
         """Binds beads, cell, bforce, and prng to the calculator.
 
         This takes a beads object, a cell object, a forcefield object and a
@@ -68,5 +49,6 @@ class MultiMotion(Motion):
                 generation.
         """
 
-        for m in self.mlist:
-            m.bind(ens, beads, nm, cell, bforce, prng)
+        super(MultiSmotion, self).bind(syslist, prng)
+        for m in self.mlist:            
+            m.bind(syslist,prng)
