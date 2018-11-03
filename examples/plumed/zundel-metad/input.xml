@@ -10,7 +10,7 @@
          <init_file mode="xyz">./h5o2+.xyz</init_file>
          <plumeddat> plumed/plumed.dat </plumeddat>
    </ffplumed>
-   <total_steps>200</total_steps>
+   <total_steps>400</total_steps>
    <output prefix="data">
       <trajectory stride="40" filename="pos" cell_units="angstrom">positions{angstrom}</trajectory>
       <trajectory stride="20" filename="xc" format="xyz">x_centroid{angstrom}</trajectory>
@@ -68,6 +68,6 @@
       </motion>
   </system>
   <smotion mode="metad">
-     <metad> <metaff> plumed </metaff> </metad>
+     <metad> <metaff> [ plumed ] </metaff> </metad>
   </smotion>
 </simulation>

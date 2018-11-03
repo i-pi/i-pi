@@ -10,15 +10,15 @@
          <init_file mode="xyz">./h5o2+.xyz</init_file>
          <plumeddat> plumed-200K/plumed.dat </plumeddat>
    </ffplumed>
-   <ffplumed name="plumed-300K">
+   <ffplumed name="plumed-250K">
          <init_file mode="xyz">./h5o2+.xyz</init_file>
-         <plumeddat> plumed-300K/plumed.dat </plumeddat>
+         <plumeddat> plumed-250K/plumed.dat </plumeddat>
    </ffplumed>
-   <ffplumed name="plumed-450K">
+   <ffplumed name="plumed-320K">
          <init_file mode="xyz">./h5o2+.xyz</init_file>
-         <plumeddat> plumed-450K/plumed.dat </plumeddat>
+         <plumeddat> plumed-320K/plumed.dat </plumeddat>
    </ffplumed>
-   <total_steps>200</total_steps>
+   <total_steps>100000</total_steps>
    <output prefix="data">
       <trajectory stride="40" filename="pos" cell_units="angstrom">positions{angstrom}</trajectory>
       <trajectory stride="20" filename="xc" format="xyz">x_centroid{angstrom}</trajectory>
@@ -31,10 +31,10 @@
    <system_template>
    <labels> [IDX, TEMP, W0, W1, W2] </labels>
    <instance> [0, 200, 1, 0, 0] </instance>
-   <instance> [0, 250, 0, 1, 0] </instance>
-   <instance> [0, 320, 0, 0, 1] </instance>
+   <instance> [1, 250, 0, 1, 0] </instance>
+   <instance> [2, 320, 0, 0, 1] </instance>
    <template>	   
-   <system name="RMTD-IDX">
+   <system prefix="REMTD-IDX">
       <forces> 
           <force forcefield="driver"></force>
       </forces>
@@ -48,10 +48,10 @@
          <temperature units="kelvin"> TEMP </temperature>
          <bias>
 		 <force forcefield="plumed-200K" nbeads="1"></force>
-		 <force forcefield="plumed-300K" nbeads="1"></force>
-		<force forcefield="plumed-450K" nbeads="1"></force>
+         <force forcefield="plumed-250K" nbeads="1"></force>
+         <force forcefield="plumed-320K" nbeads="1"></force>
 	</bias>
-        <bias_weights> [ W0, W1, W2 ] </bias_weights>
+    <bias_weights> [ W0, W1, W2 ] </bias_weights> 
       </ensemble>
       <motion mode="dynamics">
         <dynamics mode="nvt">
@@ -87,9 +87,9 @@
   </template>
   </system_template>
   <smotion mode="metad">
-     <metad> <metaff> plumed </metaff> </metad>
+     <metad> <metaff> [ plumed-200K, plumed-250K, plumed-320K ] </metaff> </metad>
   </smotion>
-  <smotion mode="remd">
-     <stride> 2 </stride>
-  </smotion>
+  <!--  <smotion mode="remd">
+      <remd> <stride> 2 </stride> </remd>
+  </smotion> -->
 </simulation>
