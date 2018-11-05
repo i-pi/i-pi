@@ -128,16 +128,10 @@ class ForceField(dobject):
 
         # Indexes come from input in a per atom basis and we need to make a per atom-coordinate basis
         # Reformat indexes for full system (default) or piece of system
-#        fullat=True
         if self.active[0] == -1:
             activehere = np.array([i for i in range(len(pbcpos))])
         else:
             activehere = np.array([[3 * n, 3 * n + 1, 3 * n + 2] for n in self.active])
-
-#           fullat=False
-#
-#        if (self.active[0]!=-1 and fullat==False):
-#           temp=np.array([[3*n, 3*n+1, 3*n+2] for n in self.active])
 
         # Reassign active indexes in order to use them
         activehere = activehere.flatten()
@@ -174,12 +168,16 @@ class ForceField(dobject):
     def poll(self):
         """Polls the forcefield object to check if it has finished."""
 
-        for r in self.requests:
-            if r["status"] == "Queued":
-                r["t_dispatched"] = time.time()
-                r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]
-                r["status"] = "Done"
-                r["t_finished"] = time.time()
+        self._threadlock.acquire()
+        try:
+            for r in self.requests:
+                if r["status"] == "Queued":
+                    r["t_dispatched"] = time.time()
+                    r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]
+                    r["status"] = "Done"
+                    r["t_finished"] = time.time()
+        finally:
+            self._threadlock.release()
 
     def _poll_loop(self):
         """Polling loop.
@@ -190,8 +188,10 @@ class ForceField(dobject):
 
         info(" @ForceField: Starting the polling thread main loop.", verbosity.low)
         while self._doloop[0]:
-            time.sleep(self.latency)
-            self.poll()
+            if len(self.requests) == 0 :
+                time.sleep(self.latency)
+            else:
+                self.poll()
 
     def release(self, request):
         """Shuts down the client code interface thread.
@@ -521,7 +521,7 @@ class FFPlumed(ForceField):
         self.charges = dstrip(myatoms.q) * 0.0
         self.masses = dstrip(myatoms.m)
         self.lastq = np.zeros(3 * self.natoms)
-
+                
     def poll(self):
         """Polls the forcefield checking if there are requests that should
         be answered, and if necessary evaluates the associated forces and energy."""
@@ -535,6 +535,7 @@ class FFPlumed(ForceField):
                     r["status"] = "Running"
                     r["t_dispatched"] = time.time()
                     self.evaluate(r)
+                    r["t_finished"] = time.time()
         finally:
             self._threadlock.release()
 
