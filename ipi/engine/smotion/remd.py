@@ -94,19 +94,30 @@ class ReplicaExchange(Smotion):
 
         info("\nTrying to exchange replicas on STEP %d" % step, verbosity.debug)
 
+        mc_start = time.time()
+        mc_swap = 0
+        mc_tnrg = 0
+        mc_tries = 0
+        mc_success = 0
         fxc = False
-        sl = self.syslist
+        sl = self.syslist        
         for i in range(len(sl)):
             for j in range(i):
                 if (1.0 / self.stride < self.prng.u): continue  # tries a swap with probability 1/stride
+                mc_tries +=1
+                
+                mc_tnrg -= time.time()                
                 ti = sl[i].ensemble.temp
                 tj = sl[j].ensemble.temp
                 eci = sl[i].ensemble.econs
                 ecj = sl[j].ensemble.econs
                 pensi = sl[i].ensemble.lpens
                 pensj = sl[j].ensemble.lpens
+                mc_tnrg += time.time()
 
+                mc_swap -= time.time()
                 ensemble_swap(sl[i].ensemble, sl[j].ensemble)  # tries to swap the ensembles!
+                mc_swap += time.time()
 
                 # it is generally a good idea to rescale the kinetic energies,
                 # which means that the exchange is done only relative to the potential energy part.
@@ -121,13 +132,17 @@ class ReplicaExchange(Smotion):
                         sl[j].motion.barostat.p *= (ti / tj)
                     except AttributeError:
                         pass
-
+                        
+                mc_tnrg -= time.time()
                 newpensi = sl[i].ensemble.lpens
                 newpensj = sl[j].ensemble.lpens
+                mc_tnrg += time.time()
+
 
                 pxc = np.exp((newpensi + newpensj) - (pensi + pensj))
 
                 if (pxc > self.prng.u):  # really does the exchange
+                    mc_success += 1
                     info(" @ PT:  SWAPPING replicas % 5d and % 5d." % (i, j), verbosity.low)
                     # we just have to carry on with the swapped ensembles, but we also keep track of the changes in econs
                     sl[i].ensemble.eens += eci - sl[i].ensemble.econs
@@ -141,7 +156,10 @@ class ReplicaExchange(Smotion):
 
                     fxc = True  # signal that an exchange has been made!
                 else:  # undoes the swap
+                    mc_swap -= time.time()
                     ensemble_swap(sl[i].ensemble, sl[j].ensemble)
+                    mc_swap += time.time()
+
 
                     if self.rescalekin:
                         sl[i].beads.p *= np.sqrt(ti / tj)
@@ -164,3 +182,5 @@ class ReplicaExchange(Smotion):
                 for i in self.repindex:
                     sf.write(" % 5d" % (i))
                 sf.write("\n")
+        
+        print "PARATEMP STATS ", mc_tries, mc_success, "TIME:", time.time() - mc_start, "SWAP", mc_swap, "ENSEMBLE", mc_tnrg
