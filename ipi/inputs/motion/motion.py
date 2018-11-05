@@ -179,6 +179,7 @@ class InputMotion(InputMotionBase):
 
         if type(motion) is MultiMotion:
             self.mode.store("multi")
+            self.extra = []
             for m in motion.mlist:
                 im = InputMotionBase()
                 im.store(m)

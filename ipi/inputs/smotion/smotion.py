@@ -115,6 +115,7 @@ class InputSmotion(InputSmotionBase):
 
         if type(smotion) is MultiSmotion:
             self.mode.store("multi")
+            self.extra = []
             for m in smotion.mlist:
                 im = InputSmotionBase()
                 im.store(m)
