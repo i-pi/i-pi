@@ -521,7 +521,7 @@ class FFPlumed(ForceField):
         self.charges = dstrip(myatoms.q) * 0.0
         self.masses = dstrip(myatoms.m)
         self.lastq = np.zeros(3 * self.natoms)
-                
+
     def poll(self):
         """Polls the forcefield checking if there are requests that should
         be answered, and if necessary evaluates the associated forces and energy."""
