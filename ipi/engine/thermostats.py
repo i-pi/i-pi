@@ -1051,7 +1051,7 @@ class ThermoFFL(Thermostat):
                                dependencies=[dself.temp, dself.T])
         dself.flip = depend_value(value=flip, name='flip')
 
-        allowed_flips = ['soft','hard','rescale','none']
+        allowed_flips = ['soft', 'hard', 'rescale', 'none']
         if not (self.flip in allowed_flips):
             raise KeyError('Invalid flip type ' + self.flip + '; allowed flip types: "' + '", "'.join(allowed_flips) + '"')
 
@@ -1075,21 +1075,21 @@ class ThermoFFL(Thermostat):
         p += self.S * self.prng.gvec(len(p))
 
         # Check whether to flip momenta back
-        if   (self.flip == 'soft'):
+        if self.flip == 'soft':
             # Soft flip
-            p_old  = np.reshape(p_old,(len(p)/3,3))
-            p_new  = np.reshape(p    ,(len(p)/3,3))
-            dotpr  = hfunc(np.sum(np.multiply(p_old,p_new),axis=1) / np.sum(np.multiply(p_old,p_old),axis=1))
-            p     += np.reshape(np.multiply(dotpr,p_old.T).T,len(p))
+            p_old = np.reshape(p_old, (len(p) / 3, 3))
+            p_new = np.reshape(p, (len(p) / 3, 3))
+            dotpr = hfunc(np.sum(np.multiply(p_old, p_new), axis=1) / np.sum(np.multiply(p_old, p_old), axis=1))
+            p += np.reshape(np.multiply(dotpr, p_old.T).T, len(p))
         elif (self.flip == 'hard'):
             # Hard flip
-            p = np.multiply(p,np.sign(np.multiply(p,p_old)))
+            p = np.multiply(p, np.sign(np.multiply(p, p_old)))
         elif (self.flip == 'rescale'):
             # Rescale flip
-            p_old   = np.reshape(p_old,(len(p)/3,3))
-            p_new   = np.reshape(p    ,(len(p)/3,3))
-            scalfac = np.linalg.norm(p_new,axis=1) / np.linalg.norm(p_old,axis=1)
-            p       = np.reshape(np.multiply(scalfac,p_old.T).T,len(p))
+            p_old = np.reshape(p_old, (len(p) / 3, 3))
+            p_new = np.reshape(p, (len(p) / 3, 3))
+            scalfac = np.linalg.norm(p_new, axis=1) / np.linalg.norm(p_old, axis=1)
+            p = np.reshape(np.multiply(scalfac, p_old.T).T, len(p))
         # Otherwise we have chosen 'none', and we just don't do anything here
 
         # Accumulate conserved quantity
@@ -1099,7 +1099,6 @@ class ThermoFFL(Thermostat):
 
         self.p = p
         self.ethermo = et
-
 
 
 class MultiThermo(Thermostat):
@@ -1146,6 +1145,7 @@ class MultiThermo(Thermostat):
         for t in self.tlist:
             t.step()
         pass
+
 
 def hfunc(x):
     return (np.sign(x) - 1.0) * x

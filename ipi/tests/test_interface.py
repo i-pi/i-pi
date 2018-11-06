@@ -32,10 +32,10 @@ def test_interface():
     """InterfaceSocket: startup."""
     InterfaceSocket()
 
+
 @pytest.mark.skipif(not has_ase, reason='ASE not installed.')
 def test_ASE():
     """Socket client for ASE."""
-
 
     # create ASE atoms and calculator
     atoms = build.bulk('Ar', cubic=True)
