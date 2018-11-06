@@ -97,7 +97,6 @@ class InputNormalModes(Input):
                                     "help": "Indices of the atmoms whose path should be opened (zero-based)."})
     }
 
-
     default_label = "NORMALMODES"
     default_help = "Deals with the normal mode transformations, including the adjustment of bead masses to give the desired ring polymer normal mode frequencies if appropriate. Takes as arguments frequencies, of which different numbers must be specified and which are used to scale the normal mode frequencies in different ways depending on which 'mode' is specified."
 

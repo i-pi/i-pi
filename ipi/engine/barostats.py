@@ -145,7 +145,7 @@ class Barostat(dobject):
         dself.pot = depend_value(name='pot', value=0.0)
 
         dself.kin = depend_value(name='kin', value=0.0)
-        
+
         dself.cell_jacobian = depend_value(name='kin', value=0.0)
 
         if bias != None:
@@ -413,7 +413,7 @@ class BaroBZP(Barostat):
 
         # defines the term that accounts for the explicit dependence of the volume on the ensemble
         dself.cell_jacobian = depend_value(name='cell_jacobian', func=self.get_cell_jacobian,
-                                   dependencies=[dd(self.cell).V, dself.temp])
+                                           dependencies=[dd(self.cell).V, dself.temp])
 
         # the barostat energy must be computed from bits & pieces (overwrite the default)
         dself.ebaro = depend_value(name='ebaro', func=self.get_ebaro,
@@ -431,7 +431,6 @@ class BaroBZP(Barostat):
         """Calculates the energy term that accounts for the size of the box"""
 
         return -1.0 * np.log(self.cell.V) * Constants.kb * self.temp
-
 
     def get_ebaro(self):
         """Calculates the barostat conserved quantity."""
@@ -561,12 +560,12 @@ class BaroSCBZP(Barostat):
 
         # defines the term that accounts for the explicit dependence of the ensemble probability on the volume
         dself.cell_jacobian = depend_value(name='cell_jacobian', func=self.get_cell_jacobian,
-                                   dependencies=[dd(self.cell).V, dself.temp])
+                                           dependencies=[dd(self.cell).V, dself.temp])
 
         # the barostat energy must be computed from bits & pieces (overwrite the default)
         dself.ebaro = depend_value(name='ebaro', func=self.get_ebaro,
                                    dependencies=[dself.kin, dself.pot,
-                                                 dself.cell_jacobian,                                                 
+                                                 dself.cell_jacobian,
                                                  dd(self.thermostat).ethermo])
 
     def get_pot(self):
@@ -738,7 +737,7 @@ class BaroRGB(Barostat):
 
         # defines the term that accounts for the explicit dependence of the ensemble on the cell
         dself.cell_jacobian = depend_value(name='cell_jacobian', func=self.get_cell_jacobian,
-                                   dependencies=[dd(self.cell).h, dself.temp])
+                                           dependencies=[dd(self.cell).h, dself.temp])
 
         # the barostat energy must be computed from bits & pieces (overwrite the default)
         dself.ebaro = depend_value(name='ebaro', func=self.get_ebaro,
