@@ -128,16 +128,10 @@ class ForceField(dobject):
 
         # Indexes come from input in a per atom basis and we need to make a per atom-coordinate basis
         # Reformat indexes for full system (default) or piece of system
-#        fullat=True
         if self.active[0] == -1:
             activehere = np.array([i for i in range(len(pbcpos))])
         else:
             activehere = np.array([[3 * n, 3 * n + 1, 3 * n + 2] for n in self.active])
-
-#           fullat=False
-#
-#        if (self.active[0]!=-1 and fullat==False):
-#           temp=np.array([[3*n, 3*n+1, 3*n+2] for n in self.active])
 
         # Reassign active indexes in order to use them
         activehere = activehere.flatten()
@@ -163,23 +157,21 @@ class ForceField(dobject):
             "t_finished": 0
         })
 
-        self._threadlock.acquire()
-        try:
+        with self._threadlock:
             self.requests.append(newreq)
-        finally:
-            self._threadlock.release()
 
         return newreq
 
     def poll(self):
         """Polls the forcefield object to check if it has finished."""
 
-        for r in self.requests:
-            if r["status"] == "Queued":
-                r["t_dispatched"] = time.time()
-                r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]
-                r["status"] = "Done"
-                r["t_finished"] = time.time()
+        with self._threadlock:
+            for r in self.requests:
+                if r["status"] == "Queued":
+                    r["t_dispatched"] = time.time()
+                    r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]
+                    r["status"] = "Done"
+                    r["t_finished"] = time.time()
 
     def _poll_loop(self):
         """Polling loop.
@@ -190,8 +182,10 @@ class ForceField(dobject):
 
         info(" @ForceField: Starting the polling thread main loop.", verbosity.low)
         while self._doloop[0]:
-            time.sleep(self.latency)
-            self.poll()
+            if len(self.requests) == 0 :
+                time.sleep(self.latency)
+            else:
+                self.poll()
 
     def release(self, request):
         """Shuts down the client code interface thread.
@@ -202,8 +196,7 @@ class ForceField(dobject):
 
         """Frees up a request."""
 
-        self._threadlock.acquire()
-        try:
+        with self._threadlock:
             if request in self.requests:
                 try:
                     self.requests.remove(request)
@@ -211,8 +204,6 @@ class ForceField(dobject):
                     print "failed removing request", id(request), ' ',
                     print [id(r) for r in self.requests], "@", threading.currentThread()
                     raise
-        finally:
-            self._threadlock.release()
 
     def stop(self):
         """Dummy stop method."""
@@ -350,15 +341,12 @@ class FFLennardJones(ForceField):
 
         # We have to be thread-safe, as in multi-system mode this might get
         # called by many threads at once.
-        self._threadlock.acquire()
-        try:
+        with self._threadlock:
             for r in self.requests:
                 if r["status"] == "Queued":
                     r["status"] = "Running"
                     r["t_dispatched"] = time.time()
                     self.evaluate(r)
-        finally:
-            self._threadlock.release()
 
     def evaluate(self, r):
         """Just a silly function evaluating a non-cutoffed, non-pbc and
@@ -431,15 +419,11 @@ class FFDebye(ForceField):
         be answered, and if necessary evaluates the associated forces and energy. """
 
         # we have to be thread-safe, as in multi-system mode this might get called by many threads at once
-        self._threadlock.acquire()
-        try:
+        with self._threadlock:
             for r in self.requests:
                 if r["status"] == "Queued":
                     r["status"] = "Running"
-
                     self.evaluate(r)
-        finally:
-            self._threadlock.release()
 
     def evaluate(self, r):
         """ A simple evaluator for a harmonic Debye crystal potential. """
@@ -468,7 +452,7 @@ except:
 class FFPlumed(ForceField):
     """Direct PLUMED interface
 
-    Computes forces from a PLUMED input. 
+    Computes forces from a PLUMED input.
 
     Attributes:
         parameters: A dictionary of the parameters used by the driver. Of the
@@ -477,7 +461,7 @@ class FFPlumed(ForceField):
             containing the relevant data for determining the progress of the step.
             Of the form {'atoms': atoms, 'cell': cell, 'pars': parameters,
                       'status': status, 'result': result, 'id': bead id,
-                      'start': starting time}.  
+                      'start': starting time}.
     """
 
     def __init__(self, latency=1.0e-3, name="", pars=None, dopbc=False, init_file="", plumeddat="", precision=8, plumedstep=0):
@@ -528,15 +512,13 @@ class FFPlumed(ForceField):
 
         # We have to be thread-safe, as in multi-system mode this might get
         # called by many threads at once.
-        self._threadlock.acquire()
-        try:
+        with self._threadlock:
             for r in self.requests:
                 if r["status"] == "Queued":
                     r["status"] = "Running"
                     r["t_dispatched"] = time.time()
                     self.evaluate(r)
-        finally:
-            self._threadlock.release()
+                    r["t_finished"] = time.time()
 
     def evaluate(self, r):
         """A wrapper function to call the PLUMED evaluation routines
@@ -661,15 +643,11 @@ class FFYaff(ForceField):
         be answered, and if necessary evaluates the associated forces and energy. """
 
         # we have to be thread-safe, as in multi-system mode this might get called by many threads at once
-        self._threadlock.acquire()
-        try:
+        with self._threadlock:
             for r in self.requests:
                 if r["status"] == "Queued":
                     r["status"] = "Running"
-
                     self.evaluate(r)
-        finally:
-            self._threadlock.release()
 
     def evaluate(self, r):
         """ Evaluate the energy and forces with the Yaff force field. """
