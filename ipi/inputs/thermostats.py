@@ -200,7 +200,7 @@ class InputThermoBase(Input):
         elif self.mode.fetch() == "cl":
             thermo = ethermostats.ThermoCL(tau=self.tau.fetch(), intau=self.intau.fetch(), idtau=self.idtau.fetch(), apat=self.apat.fetch())
         elif self.mode.fetch() == "ffl":
-            thermo = ethermostats.ThermoFFL(tau=self.tau.fetch(),flip=self.flip.fetch())
+            thermo = ethermostats.ThermoFFL(tau=self.tau.fetch(), flip=self.flip.fetch())
         elif self.mode.fetch() == "":
             thermo = ethermostats.Thermostat()
         else:
