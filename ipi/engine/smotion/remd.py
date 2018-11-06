@@ -24,26 +24,27 @@ __all__ = ['ReplicaExchange']
 # TODO: Do not shout :-)
 #       (1) Exchange of Hamiltonians is missing
 
-# utility functions to traverse systems to rescale all of the s momenta of 
+# utility functions to traverse systems to rescale all of the s momenta of
 # GLE thermostats that might be around. should look also inside multi-motion
 # and multi-thermo classes
 def thermo_scale(thermo, scale):
-    if hasattr(thermo,"tlist"):
+    if hasattr(thermo, "tlist"):
         for t in thermo.tlist:
             thermo_scale(t, scale)
     if hasattr(thermo, "s"): # scale the GLE degrees of freedom
-        thermo.s *= scale    
+        thermo.s *= scale
 
 def motion_scale(motion, scale):
-    if hasattr(motion,"mlist"):
+    if hasattr(motion, "mlist"):
         for m in motion.mlist:
             motion_scale(m, scale)
     thermo_scale(motion.thermostat, scale)
     thermo_scale(motion.barostat.thermostat, scale)
 
-def gle_scale(sys, scale):        
+def gle_scale(sys, scale):
     motion_scale(sys.motion, scale)
-            
+
+
 class ReplicaExchange(Smotion):
     """Replica exchange routine.
 
@@ -85,8 +86,8 @@ class ReplicaExchange(Smotion):
             self.repindex = np.asarray(range(len(self.syslist)))
         else:
             if len(self.syslist) != len(self.repindex):
-                raise ValueError("Size of replica index does not match number of systems replicas")    
-      
+                raise ValueError("Size of replica index does not match number of systems replicas")
+
     def step(self, step=None):
         """Tries to exchange replica."""
 
@@ -95,18 +96,18 @@ class ReplicaExchange(Smotion):
         info("\nTrying to exchange replicas on STEP %d" % step, verbosity.debug)
 
         fxc = False
-        sl = self.syslist        
+        sl = self.syslist
         for i in range(len(sl)):
             for j in range(i):
                 if (1.0 / self.stride < self.prng.u): continue  # tries a swap with probability 1/stride
-                               
+
                 ti = sl[i].ensemble.temp
                 tj = sl[j].ensemble.temp
                 eci = sl[i].ensemble.econs
                 ecj = sl[j].ensemble.econs
                 pensi = sl[i].ensemble.lpens
                 pensj = sl[j].ensemble.lpens
-                
+
                 ensemble_swap(sl[i].ensemble, sl[j].ensemble)  # tries to swap the ensembles!
 
                 # it is generally a good idea to rescale the kinetic energies,
@@ -122,29 +123,29 @@ class ReplicaExchange(Smotion):
                         sl[j].motion.barostat.p *= (ti / tj)
                     except AttributeError:
                         pass
-                        
+
                 newpensi = sl[i].ensemble.lpens
                 newpensj = sl[j].ensemble.lpens
-                
+
                 pxc = np.exp((newpensi + newpensj) - (pensi + pensj))
 
                 if (pxc > self.prng.u):  # really does the exchange
                     info(" @ PT:  SWAPPING replicas % 5d and % 5d." % (i, j), verbosity.low)
-                    
+
                     # if we have GLE thermostats, we also have to exchange rescale the s!!!
                     gle_scale(sl[i], (tj / ti))
                     gle_scale(sl[j], (ti / tj))
-                    
-                    
+
+
                     # we just have to carry on with the swapped ensembles, but we also keep track of the changes in econs
                     sl[i].ensemble.eens += eci - sl[i].ensemble.econs
-                    sl[j].ensemble.eens += ecj - sl[j].ensemble.econs                    
-                    
+                    sl[j].ensemble.eens += ecj - sl[j].ensemble.econs
+
                     self.repindex[i], self.repindex[j] = self.repindex[j], self.repindex[i]  # keeps track of the swap
 
                     fxc = True  # signal that an exchange has been made!
                 else:  # undoes the swap
-                    ensemble_swap(sl[i].ensemble, sl[j].ensemble)                    
+                    ensemble_swap(sl[i].ensemble, sl[j].ensemble)
 
                     if self.rescalekin:
                         sl[i].beads.p *= np.sqrt(ti / tj)
@@ -167,4 +168,4 @@ class ReplicaExchange(Smotion):
                 for i in self.repindex:
                     sf.write(" % 5d" % (i))
                 sf.write("\n")
-                
+

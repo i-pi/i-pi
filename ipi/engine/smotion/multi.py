@@ -1,4 +1,5 @@
-"""TODO
+"""Implementation of a Smotion that can hold a list of Smotion objects that
+will be executed serially at each step.
 """
 
 # This file is part of i-PI.
@@ -12,7 +13,6 @@ from ipi.engine.smotion import Smotion
 __all__ = ['MultiSmotion']
 
 class MultiSmotion(Smotion):
-
     """A class to hold multiple Smotion objects to be executed serially.
     """
 
@@ -24,7 +24,7 @@ class MultiSmotion(Smotion):
         """
 
         self.mlist = smotionlist
-        self.mode = "multi"    
+        self.mode = "multi"
 
     def step(self, step=None):
         for m in self.mlist:
@@ -50,5 +50,5 @@ class MultiSmotion(Smotion):
         """
 
         super(MultiSmotion, self).bind(syslist, prng)
-        for m in self.mlist:            
+        for m in self.mlist:
             m.bind(syslist,prng)
