@@ -1,4 +1,4 @@
-<simulation>
+<simulation threading="true">
     <ffsocket mode='unix' name='driver'>
          <latency>  1.00000000e-02</latency>
          <slots>4</slots>
@@ -6,21 +6,36 @@
          <timeout>  6.00000000e+02</timeout>
          <address>zundel</address>
    </ffsocket>
-   <ffplumed name="plumed">
+   <ffplumed name="plumed-200K">
          <init_file mode="xyz">./h5o2+.xyz</init_file>
-         <plumeddat> plumed/plumed.dat </plumeddat>
+         <plumeddat> plumed-200K/plumed.dat </plumeddat>
    </ffplumed>
-   <total_steps>200</total_steps>
+   <ffplumed name="plumed-250K">
+         <init_file mode="xyz">./h5o2+.xyz</init_file>
+         <plumeddat> plumed-250K/plumed.dat </plumeddat>
+   </ffplumed>
+   <ffplumed name="plumed-320K">
+         <init_file mode="xyz">./h5o2+.xyz</init_file>
+         <plumeddat> plumed-320K/plumed.dat </plumeddat>
+   </ffplumed>
+   <total_steps>20000</total_steps>
    <output prefix="data">
       <trajectory stride="40" filename="pos" cell_units="angstrom">positions{angstrom}</trajectory>
       <trajectory stride="20" filename="xc" format="xyz">x_centroid{angstrom}</trajectory>
-      <properties stride="2"> [ step, time, conserved, temperature{kelvin}, kinetic_cv, 
-            potential, kinetic_cv(H), kinetic_cv(O), ensemble_bias ] </properties>
+      <properties stride="4" filename="oo"> [step, atom_x(0){angstrom}, atom_x(1){angstrom} ] </properties> 
+      <properties stride="4"> [ step, time, conserved, temperature{kelvin}, kinetic_cv, 
+            potential, kinetic_cv(H), kinetic_cv(O), ensemble_temperature, ensemble_bias ] </properties>
    </output>
    <prng>
       <seed>18885</seed>
    </prng>
-   <system>
+   <system_template>
+   <labels> [IDX, TEMP, W0, W1, W2] </labels>
+   <instance> [0, 200, 1, 0, 0] </instance>
+   <instance> [1, 250, 0, 1, 0] </instance>
+   <instance> [2, 320, 0, 0, 1] </instance>
+   <template>	   
+   <system prefix="REMTD-IDX">
       <forces> 
           <force forcefield="driver"></force>
       </forces>
@@ -31,10 +46,13 @@
         </cell>
       </initialize>
       <ensemble>
-         <temperature units="kelvin"> 300.0 </temperature>
+         <temperature units="kelvin"> TEMP </temperature>
          <bias>
-            <force forcefield="plumed" nbeads="1"></force>
-         </bias>
+		 <force forcefield="plumed-200K" nbeads="1"></force>
+         <force forcefield="plumed-250K" nbeads="1"></force>
+         <force forcefield="plumed-320K" nbeads="1"></force>
+	</bias>
+    <bias_weights> [ W0, W1, W2 ] </bias_weights> 
       </ensemble>
       <motion mode="dynamics">
         <dynamics mode="nvt">
@@ -67,7 +85,15 @@
         </dynamics>
       </motion>
   </system>
-  <smotion mode="metad">
-     <metad> <metaff> plumed </metaff> </metad>
+  </template>
+  </system_template>
+  <smotion mode="multi">
+    <smotion mode="remd">          
+      <remd> <stride> 1 </stride> </remd>
+    </smotion>
+    <!-- It is *very* important that metad is called as the last smotion action, since otherwise there will be an offset between the status printed by i-pi and plumed outputs -->
+    <smotion mode="metad">
+      <metad> <metaff> [ plumed-200K, plumed-250K, plumed-320K ] </metaff> </metad>
+    </smotion>
   </smotion>
 </simulation>

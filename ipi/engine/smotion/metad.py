@@ -46,11 +46,16 @@ class MetaDyn(Smotion):
 
         for s in self.syslist:
             oldf = dstrip(s.forces.f).copy()
-            for k, f in s.ensemble.bias.ff.iteritems():
-                if not k == self.metaff:
+            for ik, bc in enumerate(s.ensemble.bcomp):
+                k = bc.ffield
+                if not k in self.metaff:
                     continue  # only does metad for the indicated forcefield
+                f = s.ensemble.bias.ff[k]
                 if not hasattr(f, "mtd_update"):  # forcefield does not expose mtd_update interface
-                    raise ValueError("The forcefield associated with metadynamics does not have a mtd_update interface")
+                    raise ValueError("The forcefield '%s' associated with metadynamics \
+                                      does not have a mtd_update interface" % (k))
+                if s.ensemble.bweights[ik] == 0:
+                    continue # do not put metad bias on biases with zero weights (useful to do remd+metad!)
                 fmtd = f.mtd_update(pos=s.beads.qc, cell=s.cell.h)
                 if fmtd:  # if metadyn has updated, then we must recompute forces.
                     # hacky but cannot think of a better way: we must manually taint *just* that component

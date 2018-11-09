@@ -1,0 +1,88 @@
+<!-- REGTEST
+DEPENDENCIES our_ref.pdb our_ref.xyz remd.xml
+COMMAND(8) i-pi-driver -h localhost -p 31415 -m sg -o 30.0
+ENDREGTEST -->
+
+<!-- With REMD is necessary to use threading='False' in regtests -->
+
+<simulation verbosity='high' threading='False'>
+   <output prefix='remd'>
+       <properties filename='md' stride='1'> [step, time{picosecond}, conserved{kelvin}, temperature{kelvin}, potential{kelvin}, kinetic_cv{kelvin}, spring{kelvin}, kinetic_md{kelvin}, volume, pressure_cv{megapascal}, ensemble_temperature{kelvin}, ensemble_pressure{megapascal} ] </properties>
+      <properties filename='force' stride='1'> [atom_f{piconewton}(atom=0;bead=0)] </properties>
+      <trajectory filename='pos' stride='1' format='pdb' cell_units='angstrom'> positions{angstrom} </trajectory>
+      <checkpoint filename='checkpoint' stride='1000' overwrite='True'/>
+   </output>
+   <total_steps> 10 </total_steps>
+   <ffsocket mode="inet" name="driver">
+      <address>localhost</address>
+      <port> 31415 </port>
+   </ffsocket>
+   <prng> <seed> 456123 </seed> </prng>
+   <system_template>
+   <labels>   [ PREFIX,TEMPERATURE, PRESSURE ] </labels> 
+   <instance> [ REF00, 300, 1 ] </instance>
+   <instance> [ REF01, 310, 1 ] </instance>
+   <instance> [ REF02, 330, 1 ] </instance>
+   <instance> [ REF12, 320, 1.1 ] </instance> 
+   <template>
+   <system prefix="PREFIX">
+      <initialize nbeads='2'>
+         <file mode='pdb'> our_ref.pdb </file>
+         <velocities mode='thermal' units='kelvin'> 30 </velocities>
+      </initialize>
+      <forces><force forcefield='driver'></force></forces>
+      <ensemble>
+         <temperature units='kelvin'> TEMPERATURE </temperature>
+         <pressure units='megapascal'> PRESSURE </pressure>
+      </ensemble>
+      <motion mode='dynamics'>
+	       <dynamics mode='npt'>
+	          <barostat mode='isotropic'>
+                <tau units='femtosecond'> 100 </tau>
+	            <thermostat mode='langevin'> <tau units='femtosecond'> 100 </tau> </thermostat>
+              </barostat>
+              <thermostat mode='multi'>
+<!--                <thermostat mode='pile_g'>
+                  <tau units='femtosecond'> 25 </tau>
+                </thermostat>
+-->
+<!--
+# Generated at http://cosmo-epfl.github.io/gle4md
+# Please cite:
+# M. Ceriotti, G. Bussi and M. Parrinello, J. Chem. Theory Comput. 6, 1170 (2010) 
+# M. Ceriotti, G. Bussi and M. Parrinello, Phys. Rev. Lett. 102, 020601 (2009)
+# Smart-sampling GLE. Enforces efficient sampling, focussing the effort on the slowest mode 
+# accessible by the simulation. Generated from the parameter file
+# library/smart/smart-0.5_6-2.a, 
+# and shifted so that they are effective to sample optimally 
+# a time scale of t_opt=1 picoseconds,
+# and do as well as possible upt to a cutoff frequency of 
+# νmax=100 THz [3336 cm^-1]
+-->
+
+  <thermostat mode='gle'>
+    <A shape='(7,7)'>
+      [   8.191023526179e-4,    8.328506066524e-3,    1.657771834013e-3,    9.736989925341e-4,    2.841803794895e-4,   -3.176846864198e-5,   -2.967010478210e-4, 
+  -8.389856546341e-4,    2.405526974742e-2,   -1.507872374848e-2,    2.589784240185e-3,    1.516783633362e-3,   -5.958833418565e-4,    4.198422349789e-4, 
+   7.798710586406e-4,    1.507872374848e-2,    8.569039501219e-3,    6.001000899602e-3,    1.062029383877e-3,    1.093939147968e-3,   -2.661575532976e-3, 
+  -9.676783161546e-4,   -2.589784240185e-3,   -6.001000899602e-3,    2.680459336535e-5,   -5.214694469742e-5,    4.231304910751e-4,   -2.104894919743e-5, 
+  -2.841997149166e-4,   -1.516783633362e-3,   -1.062029383877e-3,    5.214694469742e-5,    1.433903506353e-9,   -4.241574212449e-5,    7.910178912362e-5, 
+   3.333208286893e-5,    5.958833418565e-4,   -1.093939147968e-3,   -4.231304910751e-4,    4.241574212449e-5,    2.385554468441e-8,   -3.139255482869e-5, 
+   2.967533789056e-4,   -4.198422349789e-4,    2.661575532976e-3,    2.104894919743e-5,   -7.910178912362e-5,    3.139255482869e-5,   2.432567259684e-11
+     ]
+    </A>
+  </thermostat>
+
+              </thermostat>
+            <timestep units='femtosecond'> 4.0 </timestep>
+	       </dynamics>
+      </motion>
+   </system>
+   </template>
+   </system_template>
+   <smotion mode="remd">
+      <remd>
+         <stride> 2 </stride>
+      </remd>
+   </smotion>
+</simulation>

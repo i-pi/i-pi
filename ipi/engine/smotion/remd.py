@@ -24,6 +24,27 @@ __all__ = ['ReplicaExchange']
 # TODO: Do not shout :-)
 #       (1) Exchange of Hamiltonians is missing
 
+# utility functions to traverse systems to rescale all of the s momenta of
+# GLE thermostats that might be around. should look also inside multi-motion
+# and multi-thermo classes
+def thermo_scale(thermo, scale):
+    if hasattr(thermo, "tlist"):
+        for t in thermo.tlist:
+            thermo_scale(t, scale)
+    if hasattr(thermo, "s"): # scale the GLE degrees of freedom
+        thermo.s *= scale
+
+def motion_scale(motion, scale):
+    if hasattr(motion, "mlist"):
+        for m in motion.mlist:
+            motion_scale(m, scale)
+    thermo_scale(motion.thermostat, scale)
+    thermo_scale(motion.barostat.thermostat, scale)
+
+def gle_scale(sys, scale):
+    motion_scale(sys.motion, scale)
+
+
 class ReplicaExchange(Smotion):
     """Replica exchange routine.
 
@@ -79,6 +100,7 @@ class ReplicaExchange(Smotion):
         for i in range(len(sl)):
             for j in range(i):
                 if (1.0 / self.stride < self.prng.u): continue  # tries a swap with probability 1/stride
+
                 ti = sl[i].ensemble.temp
                 tj = sl[j].ensemble.temp
                 eci = sl[i].ensemble.econs
@@ -109,9 +131,16 @@ class ReplicaExchange(Smotion):
 
                 if (pxc > self.prng.u):  # really does the exchange
                     info(" @ PT:  SWAPPING replicas % 5d and % 5d." % (i, j), verbosity.low)
+
+                    # if we have GLE thermostats, we also have to exchange rescale the s!!!
+                    gle_scale(sl[i], (tj / ti))
+                    gle_scale(sl[j], (ti / tj))
+
+
                     # we just have to carry on with the swapped ensembles, but we also keep track of the changes in econs
                     sl[i].ensemble.eens += eci - sl[i].ensemble.econs
                     sl[j].ensemble.eens += ecj - sl[j].ensemble.econs
+
                     self.repindex[i], self.repindex[j] = self.repindex[j], self.repindex[i]  # keeps track of the swap
 
                     fxc = True  # signal that an exchange has been made!
@@ -139,3 +168,4 @@ class ReplicaExchange(Smotion):
                 for i in self.repindex:
                     sf.write(" % 5d" % (i))
                 sf.write("\n")
+

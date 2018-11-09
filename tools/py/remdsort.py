@@ -38,12 +38,15 @@ def main(inputfile, prefix="PT"):
     xmlrestart = io_xml.xml_parse_file(ifile)  # Parses the file.
     ifile.close()
 
+    # ugly hack to remove ffplumed objects to avoid messing up with plumed output files
+    newfields = [ f for f in xmlrestart.fields[0][1].fields if f[0] != "ffplumed" ]
+    xmlrestart.fields[0][1].fields = newfields
+    
     isimul = InputSimulation()
     isimul.parse(xmlrestart.fields[0][1])
 
-    simul = isimul.fetch()
-
-    if simul.smotion.mode != "remd":
+    simul = isimul.fetch()    
+    if simul.smotion.mode != "remd" and simul.smotion.mode != "multi":
         raise ValueError("Simulation does not look like a parallel tempering one.")
 
     # reconstructs the list of the property and trajectory files that have been output
