@@ -59,30 +59,29 @@ def main(inputfile, prefix="PT"):
             pass
         elif type(o) is PropertyOutput:
             nprop = []
-            isys = 0
-            for s in simul.syslist:   # create multiple copies
+            for isys,s in enumerate(simul.syslist):   # create multiple copies
                 if s.prefix != "":
                     filename = s.prefix + "_" + o.filename
                 else: filename = o.filename
-                ofilename = prefix + str(isys) + "_" + o.filename
+                pads = (("%0" + str(int(1 + np.floor(np.log(nsys) / np.log(10)))) + "d") % (isys)) 
+                ofilename = prefix + pads + "_" + o.filename
                 nprop.append({"filename": filename, "ofilename": ofilename, "stride": o.stride,
                               "ifile": open(filename, "r"), "ofile": open(ofilename, "w")
                               })
-                isys += 1
             lprop.append(nprop)
         elif type(o) is TrajectoryOutput:   # trajectories are more complex, as some have per-bead output
             if getkey(o.what) in ["positions", "velocities", "forces", "extras"]:   # multiple beads
                 nbeads = simul.syslist[0].beads.nbeads
                 for b in range(nbeads):
                     ntraj = []
-                    isys = 0
                     # zero-padded bead number
-                    padb = (("%0" + str(int(1 + np.floor(np.log(nbeads) / np.log(10)))) + "d") % (b))
-                    for s in simul.syslist:
+                    padb = (("%0" + str(int(1 + np.floor(np.log(nbeads) / np.log(10)))) + "d") % (b))                    
+                    for isys,s in enumerate(simul.syslist):
+                        pads = (("%0" + str(int(1 + np.floor(np.log(nsys) / np.log(10)))) + "d") % (isys))
                         if s.prefix != "":
                             filename = s.prefix + "_" + o.filename
                         else: filename = o.filename
-                        ofilename = prefix + str(isys) + "_" + o.filename
+                        ofilename = prefix + pads + "_" + o.filename
                         if (o.ibead < 0 or o.ibead == b):
                             if getkey(o.what) == "extras":
                                 filename = filename + "_" + padb
@@ -94,25 +93,23 @@ def main(inputfile, prefix="PT"):
                                               "ofilename": ofilename, "stride": o.stride,
                                               "ifile": open(filename, "r"), "ofile": open(ofilename, "w")
                                               })
-                        isys += 1
                     if ntraj != []:
                         ltraj.append(ntraj)
 
             else:
                 ntraj = []
-                isys = 0
-                for s in simul.syslist:   # create multiple copies
+                for isys,s in enumerate(simul.syslist):   # create multiple copies
+                    pads = (("%0" + str(int(1 + np.floor(np.log(nsys) / np.log(10)))) + "d") % (isys))
                     if s.prefix != "":
                         filename = s.prefix + "_" + o.filename
                     else: filename = o.filename
                     filename = filename + "." + o.format
-                    ofilename = prefix + str(isys) + "_" + o.filename + "." + o.format
+                    ofilename = prefix + pads + "_" + o.filename + "." + o.format
                     ntraj.append({"filename": filename, "format": o.format,
                                   "ofilename": ofilename, "stride": o.stride,
                                   "ifile": open(filename, "r"), "ofile": open(ofilename, "w")
                                   })
 
-                    isys += 1
                 ltraj.append(ntraj)
 
     ptfile = open("PARATEMP", "r")
