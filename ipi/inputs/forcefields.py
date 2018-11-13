@@ -42,8 +42,10 @@ class InputForceField(Input):
                                          "help": "Mandatory. The name by which the forcefield will be identified in the System forces section."}),
                "pbc": (InputAttribute, {"dtype": bool,
                                         "default": True,
-                                        "help": "Applies periodic boundary conditions to the atoms coordinates before passing them on to the driver code."})
-
+                                        "help": "Applies periodic boundary conditions to the atoms coordinates before passing them on to the driver code."}),
+                "threaded": (InputValue, {"dtype": bool,
+                                 "default": False,
+                                 "help": "Whether the forcefield should use a thread loop to evaluate, or work in serial"})
                }
     fields = {
         "latency": (InputValue, {"dtype": float,
@@ -74,6 +76,7 @@ class InputForceField(Input):
         self.parameters.store(ff.pars)
         self.pbc.store(ff.dopbc)
         self.activelist.store(ff.active)
+        self.threaded.store(ff.threaded)
 
     def fetch(self):
         """Creates a ForceField object.
@@ -84,7 +87,7 @@ class InputForceField(Input):
 
         super(InputForceField, self).fetch()
 
-        return ForceField(pars=self.parameters.fetch(), name=self.name.fetch(), latency=self.latency.fetch(), dopbc=self.pbc.fetch(), active=self.activelist.fetch())
+        return ForceField(pars=self.parameters.fetch(), name=self.name.fetch(), latency=self.latency.fetch(), dopbc=self.pbc.fetch(), active=self.activelist.fetch(), threaded = self.threaded.fetch())
 
 
 class InputFFSocket(InputForceField):
@@ -131,6 +134,11 @@ class InputFFSocket(InputForceField):
     attribs.update(InputForceField.attribs)
     fields.update(InputForceField.fields)
 
+    # FFSocket polling mechanism won't work with non-threaded execution
+    attribs["threaded"] = (InputValue, {"dtype": bool,
+                                 "default": True,
+                                 "help": "Whether the forcefield should use a thread loop to evaluate, or work in serial. Should be set to True for FFSockets"});
+
     default_help = "Deals with the assigning of force calculation jobs to different driver codes, and collecting the data, using a socket for the data communication."
     default_label = "FFSOCKET"
 
@@ -152,6 +160,7 @@ class InputFFSocket(InputForceField):
         self.slots.store(ff.socket.slots)
         self.mode.store(ff.socket.mode)
         self.matching.store(ff.socket.match_mode)
+        self.threaded.store(True) #hard-coded
 
     def fetch(self):
         """Creates a ForceSocket object.
@@ -160,8 +169,11 @@ class InputFFSocket(InputForceField):
            A ForceSocket object with the correct socket parameters.
         """
 
+        if self.threaded.fetch() == False:
+            raise ValueError("FFSockets cannot poll without threaded mode.")
+        # just use threaded throughout
         return FFSocket(pars=self.parameters.fetch(), name=self.name.fetch(), latency=self.latency.fetch(), dopbc=self.pbc.fetch(),
-                        active=self.activelist.fetch(), interface=InterfaceSocket(address=self.address.fetch(), port=self.port.fetch(),
+                        active=self.activelist.fetch(), threaded=self.threaded.fetch(), interface=InterfaceSocket(address=self.address.fetch(), port=self.port.fetch(),
                                                                                   slots=self.slots.fetch(), mode=self.mode.fetch(), timeout=self.timeout.fetch()))
 
     def check(self):
@@ -197,7 +209,7 @@ class InputFFLennardJones(InputForceField):
         super(InputFFLennardJones, self).fetch()
 
         return FFLennardJones(pars=self.parameters.fetch(), name=self.name.fetch(),
-                              latency=self.latency.fetch(), dopbc=self.pbc.fetch())
+                              latency=self.latency.fetch(), dopbc=self.pbc.fetch(), threaded=self.threaded.fetch())
 
         if self.slots.fetch() < 1 or self.slots.fetch() > 5:
             raise ValueError("Slot number " + str(self.slots.fetch()) + " out of acceptable range.")
@@ -233,7 +245,7 @@ class InputFFDebye(InputForceField):
         super(InputFFDebye, self).fetch()
 
         return FFDebye(H=self.hessian.fetch(), xref=self.x_reference.fetch(), vref=self.v_reference.fetch(), name=self.name.fetch(),
-                       latency=self.latency.fetch(), dopbc=self.pbc.fetch())
+                       latency=self.latency.fetch(), dopbc=self.pbc.fetch(), threaded=self.threaded.fetch())
 
 
 class InputFFPlumed(InputForceField):
@@ -269,6 +281,7 @@ class InputFFPlumed(InputForceField):
         super(InputFFPlumed, self).fetch()
 
         return FFPlumed(name=self.name.fetch(), latency=self.latency.fetch(), dopbc=self.pbc.fetch(),
+                        threaded=self.threaded.fetch(),
                         precision=self.precision.fetch(), plumeddat=self.plumeddat.fetch(),
                         plumedstep=self.plumedstep.fetch(), init_file=self.init_file.fetch())
 
@@ -327,4 +340,5 @@ class InputFFYaff(InputForceField):
     def fetch(self):
         super(InputFFYaff, self).fetch()
 
-        return FFYaff(yaffpara=self.yaffpara.fetch(), yaffsys=self.yaffsys.fetch(), yafflog=self.yafflog.fetch(), rcut=self.rcut.fetch(), alpha_scale=self.alpha_scale.fetch(), gcut_scale=self.gcut_scale.fetch(), skin=self.skin.fetch(), smooth_ei=self.smooth_ei.fetch(), reci_ei=self.reci_ei.fetch(), name=self.name.fetch(), latency=self.latency.fetch(), dopbc=self.pbc.fetch())
+        return FFYaff(yaffpara=self.yaffpara.fetch(), yaffsys=self.yaffsys.fetch(), yafflog=self.yafflog.fetch(), rcut=self.rcut.fetch(), alpha_scale=self.alpha_scale.fetch(), gcut_scale=self.gcut_scale.fetch(), skin=self.skin.fetch(), smooth_ei=self.smooth_ei.fetch(), reci_ei=self.reci_ei.fetch(), name=self.name.fetch(), latency=self.latency.fetch(),
+        dopbc=self.pbc.fetch(), threaded=self.threaded.fetch())

@@ -173,7 +173,7 @@ class ForceBead(dobject):
                 # we are in.
                 softexit.trigger(" @ FORCES : cannot return so will die off here")
                 while softexit.exiting:
-                    time.sleep(self.ff.latencyt)
+                    time.sleep(self.ff.latency)
                 sys.exit()
             time.sleep(self.ff.latency)
 
@@ -253,7 +253,7 @@ class ForceComponent(dobject):
        _forces: A list of the forcefield objects for all the replicas.
        weight: A float that will be used to weight the contribution of this
           forcefield to the total force.
-       mts_weights: A list of floats that will be used to weight the 
+       mts_weights: A list of floats that will be used to weight the
           contribution of this forcefield at each level of a MTS scheme
        ffield: A model to be used to create the forcefield objects for all
           the replicas of the system.
