@@ -265,7 +265,13 @@ class NormalModes(dobject):
     def get_vspring(self):
         """Returns the spring energy calculated in NM representation."""
 
-        vspring = (self.beads.m3 * self.omegak[:, np.newaxis]**2 * self.qnm**2).sum()
+        if self.nbeads == 0:
+            return 0.0
+
+        sqnm = dstrip(self.qnm)*dstrip(self.beads.sm3)
+        q2 = (sqnm**2).sum(axis=1)
+
+        vspring = (self.omegak2 * q2).sum()
 
         for j in self.open_paths:
             vspring += (self.beads.m[j] * (self.o_omegak**2 - self.omegak**2) *
@@ -527,17 +533,11 @@ class NormalModes(dobject):
 
         Returns:
            A list of the kinetic energy for each NM.
+
         """
-
-        kmd = np.zeros(self.nbeads, float)
-        sm = dstrip(self.beads.sm3[0])
-        pnm = dstrip(self.pnm)
-        nmf = dstrip(self.nm_factor)
-
-        # computes the MD ke in the normal modes representation, to properly account for CMD mass scaling
-        for b in range(self.nbeads):
-            sp = pnm[b] / sm                      # mass-scaled momentum of b-th NM
-            kmd[b] = np.dot(sp, sp) * 0.5 / nmf[b]   # include the partially adiabatic CMD mass scaling
+	# include the partially adiabatic CMD mass scaling
+        pnm = dstrip(self.pnm)/dstrip(self.beads.sm3)
+        kmd = 0.5*(pnm**2).sum(axis=1)/dstrip(self.nm_factor)
 
         return kmd
 

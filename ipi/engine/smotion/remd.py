@@ -95,19 +95,27 @@ class ReplicaExchange(Smotion):
 
         info("\nTrying to exchange replicas on STEP %d" % step, verbosity.debug)
 
+        t_start = time.time()
         fxc = False
         sl = self.syslist
+
+        t_eval = 0
+        t_swap = 0
         for i in range(len(sl)):
             for j in range(i):
                 if (1.0 / self.stride < self.prng.u): continue  # tries a swap with probability 1/stride
 
+                t_eval -= time.time()
                 ti = sl[i].ensemble.temp
                 tj = sl[j].ensemble.temp
                 eci = sl[i].ensemble.econs
                 ecj = sl[j].ensemble.econs
                 pensi = sl[i].ensemble.lpens
                 pensj = sl[j].ensemble.lpens
+                t_eval += time.time()
 
+
+                t_swap -= time.time()
                 ensemble_swap(sl[i].ensemble, sl[j].ensemble)  # tries to swap the ensembles!
 
                 # it is generally a good idea to rescale the kinetic energies,
@@ -123,11 +131,14 @@ class ReplicaExchange(Smotion):
                         sl[j].motion.barostat.p *= (ti / tj)
                     except AttributeError:
                         pass
+                t_swap += time.time()
 
+                t_eval -= time.time()
                 newpensi = sl[i].ensemble.lpens
                 newpensj = sl[j].ensemble.lpens
 
                 pxc = np.exp((newpensi + newpensj) - (pensi + pensj))
+                t_eval += time.time()
 
                 if (pxc > self.prng.u):  # really does the exchange
                     info(" @ PT:  SWAPPING replicas % 5d and % 5d." % (i, j), verbosity.low)
@@ -136,17 +147,20 @@ class ReplicaExchange(Smotion):
                     gle_scale(sl[i], (tj / ti))
                     gle_scale(sl[j], (ti / tj))
 
-
+                    t_eval -= time.time()
                     # we just have to carry on with the swapped ensembles, but we also keep track of the changes in econs
                     sl[i].ensemble.eens += eci - sl[i].ensemble.econs
                     sl[j].ensemble.eens += ecj - sl[j].ensemble.econs
+                    t_eval += time.time()
 
                     self.repindex[i], self.repindex[j] = self.repindex[j], self.repindex[i]  # keeps track of the swap
 
                     fxc = True  # signal that an exchange has been made!
                 else:  # undoes the swap
+                    t_swap -= time.time()
                     ensemble_swap(sl[i].ensemble, sl[j].ensemble)
 
+                    # undoes the kinetic scaling
                     if self.rescalekin:
                         sl[i].beads.p *= np.sqrt(ti / tj)
                         sl[j].beads.p *= np.sqrt(tj / ti)
@@ -155,6 +169,7 @@ class ReplicaExchange(Smotion):
                             sl[j].motion.barostat.p *= (tj / ti)
                         except AttributeError:
                             pass
+                    t_swap += time.time()
                     info(" @ PT:  SWAP REJECTED BETWEEN replicas % 5d and % 5d." % (i, j), verbosity.low)
 
                    #tempi = copy(self.syslist[i].ensemble.temp)
@@ -168,4 +183,7 @@ class ReplicaExchange(Smotion):
                 for i in self.repindex:
                     sf.write(" % 5d" % (i))
                 sf.write("\n")
+
+        info("# REMD step evaluated in %f (%f eval, %f swap) sec." % (time.time()-t_start, t_eval, t_swap), verbosity.debug)
+
 
