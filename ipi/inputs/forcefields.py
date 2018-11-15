@@ -173,8 +173,10 @@ class InputFFSocket(InputForceField):
             raise ValueError("FFSockets cannot poll without threaded mode.")
         # just use threaded throughout
         return FFSocket(pars=self.parameters.fetch(), name=self.name.fetch(), latency=self.latency.fetch(), dopbc=self.pbc.fetch(),
-                        active=self.activelist.fetch(), threaded=self.threaded.fetch(), interface=InterfaceSocket(address=self.address.fetch(), port=self.port.fetch(),
-                                                                                  slots=self.slots.fetch(), mode=self.mode.fetch(), timeout=self.timeout.fetch()))
+                        active=self.activelist.fetch(), threaded=self.threaded.fetch(), 
+                        interface=InterfaceSocket(address=self.address.fetch(), port=self.port.fetch(),
+                                                 slots=self.slots.fetch(), mode=self.mode.fetch(), timeout=self.timeout.fetch(),
+                                                 match_mode=self.matching.fetch()))
 
     def check(self):
         """Deals with optional parameters."""
