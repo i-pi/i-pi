@@ -551,7 +551,7 @@ class InterfaceSocket(object):
         jobs, adds jobs to free clients and initialises the forcefields of new
         clients.
         """
-
+        
         # get clients that are still free
         freec = self.clients[:]
         for [r2, c] in self.jobs:
@@ -568,6 +568,12 @@ class InterfaceSocket(object):
         elif self.match_mode == "any":
             match_seq = ["any"]
 
+        debug = 0
+        if npend>0 and ncli>0 and len(freec)>0: #MCMC
+            print "starting distribute ", npend, ncli, len(freec) #MCMC
+            debug = 1
+        t_start = time.time()   #MCMC
+        t_check = 0
         # first: dispatches jobs to free clients (if any!)
         # tries first to match previous replica<>driver association, then to get new clients, and only finally send the a new replica to old drivers
         if len(freec) > 0 and len(self.prlist) > 0:
@@ -600,7 +606,9 @@ class InterfaceSocket(object):
                             while fc.status & Status.Busy:  # waits for initialization to finish. hopefully this is fast
                                 fc.poll()
                         if fc.status & Status.Ready:
+                            t_check -= time.time()
                             fc.sendpos(r["pos"][r["active"]], r["cell"])
+                            t_check += time.time()
                             r["status"] = "Running"
                             r["t_dispatched"] = time.time()
                             r["start"] = time.time()  # sets start time for the request
@@ -626,6 +634,7 @@ class InterfaceSocket(object):
             if not c.status & (Status.Ready | Status.NeedsInit):
                 c.poll()
 
+        t_finish = time.time() 
         # check for finished jobs
         for [r, c] in self.jobs[:]:
             if c.status & Status.HasData:
@@ -681,6 +690,10 @@ class InterfaceSocket(object):
                 c.close()
                 c.poll()
                 c.status = Status.Disconnected
+
+        #MCMC
+        if debug == 1:
+            print " distribute done ", time.time()-t_start, "t_check", t_check, "t_finish", time.time()-t_finish, len(self.prlist)
 
     def poll(self):
         """The main thread loop.
