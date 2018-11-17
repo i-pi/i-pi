@@ -262,10 +262,6 @@ class Simulation(dobject):
 
             self.chk.store()
 
-            tchk = time.time()
-            tmot = 0
-            tmoq = 0
-            tmop = 0
             if self.threading:
                 stepthreads = []
                 # steps through all the systems
@@ -274,9 +270,6 @@ class Simulation(dobject):
                     st = threading.Thread(target=s.motion.step, name=s.prefix, kwargs={"step": self.step})
                     st.daemon = True
                     stepthreads.append(st)
-                    tmot += s.motion.integrator.timet
-                    tmoq += s.motion.integrator.timeq
-                    tmop += s.motion.integrator.timep
 
                 for st in stepthreads:
                     st.start()
@@ -288,11 +281,6 @@ class Simulation(dobject):
             else:
                 for s in self.syslist:
                     s.motion.step(step=self.step)
-
-            print "STEP TIME ", time.time()-tchk
-            print "T:  ", tmot/(self.step+1)/len(self.syslist)
-            print "Q:  ", tmoq/(self.step+1)/len(self.syslist)
-            print "P:  ", tmop/(self.step+1)/len(self.syslist)
 
             if softexit.triggered:
                 # Don't continue if we are about to exit.

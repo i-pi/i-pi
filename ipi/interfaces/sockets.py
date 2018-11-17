@@ -437,7 +437,6 @@ class InterfaceSocket(object):
         self.poll_iter = UPDATEFREQ  # triggers pool_update at first poll
         self.prlist = []
         self.match_mode = match_mode
-        self.base_time = time.time()
 
     def open(self):
         """Creates a new socket.
@@ -582,7 +581,7 @@ class InterfaceSocket(object):
                 nt = threading.Thread(target=fc.sendpos, name="sendpos", args = (r["pos"][r["active"]], r["cell"]))
                 nt.daemon = True
                 nt.start()
-                #fc.sendpos(r["pos"][r["active"]], r["cell"])
+
                 r["t_dispatched"] = time.time()
                 r["start"] = time.time()  # sets start time for the request
                 # fc.poll()
@@ -665,21 +664,11 @@ class InterfaceSocket(object):
         if len(self.prlist) == 0:
             self.prlist = [r for r in self.requests if r["status"] == "Queued"]
 
-        npend = len(self.prlist)
-        ncli = len(self.clients)
         if self.match_mode == "auto":
             match_seq = ["match", "none", "free", "any"]
         elif self.match_mode == "any":
             match_seq = ["any"]
 
-        debug = 0
-        if npend>0 and ncli>0 and len(freec)>0: #MCMC
-            print "starting distribute ", time.time()-self.base_time, npend, ncli, len(freec) #MCMC
-            debug = 1
-        else:
-            self.base_time = time.time()
-        t_start = time.time()   #MCMC
-        t_dispatch = -time.time()
         # first: dispatches jobs to free clients (if any!)
         # tries first to match previous replica<>driver association, then to get new clients, and only finally send the a new replica to old drivers
         nreq = len(self.prlist)
@@ -692,16 +681,11 @@ class InterfaceSocket(object):
                         break
 
             self.prlist = [r for r in self.requests if r["status"] == "Queued"]
-            if len(self.prlist)>0:
-                nreq += len(self.prlist)
-                print "ADDING REQUESTS ", len(self.prlist),"/", nreq,"sec.", time.time()+t_dispatch
-        t_dispatch += time.time()
 
         # force a pool_update if there are requests pending
         # if len(pendr)>0:
         #   self.poll_iter = UPDATEFREQ
         # now check for client status
-        t_poll = -time.time()
         if len(self.jobs)==0:
             for c in self.clients:
                 if c.status == Status.Disconnected:  # client disconnected. force a pool_update
@@ -709,9 +693,7 @@ class InterfaceSocket(object):
                     return
                 if not c.status & (Status.Ready | Status.NeedsInit):
                     c.poll()
-        t_poll += time.time()
 
-        t_finish = -time.time()
         # check for finished jobs
         cthreads = []
         for [r, c] in self.jobs[:]:
@@ -738,13 +720,6 @@ class InterfaceSocket(object):
                 c.close()
                 c.poll()
                 c.status = Status.Disconnected
-
-        t_finish += time.time()
-
-        #MCMC
-        if debug == 1:
-            print "distribute done ", len(self.prlist), "total time", time.time()-t_start
-            print "t_dispatch", t_dispatch, "t_finish", t_finish, "t_poll", t_poll
 
     def poll(self):
         """The main thread loop.
