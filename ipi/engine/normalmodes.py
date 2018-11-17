@@ -141,7 +141,9 @@ class NormalModes(dobject):
         dpipe(dd(motion).dt, dself.dt)
 
         # sets up what's necessary to perform nm transformation.
-        if self.transform_method == "fft":
+        if self.nbeads == 1:  # classical trajectory! don't waste time doing anything!
+            self.transform = nmtransform.nm_noop(nbeads = self.nbeads)
+        elif self.transform_method == "fft":
             self.transform = nmtransform.nm_fft(nbeads=self.nbeads, natoms=self.natoms, open_paths=self.open_paths)
         elif self.transform_method == "matrix":
             self.transform = nmtransform.nm_trans(nbeads=self.nbeads, open_paths=self.open_paths)

@@ -261,6 +261,10 @@ class DummyIntegrator(dobject):
             self.coeffsc[::2] /= -3.
             self.coeffsc[1::2] /= 3.
 
+        self.timet = 0
+        self.timep = 0
+        self.timeq = 0
+
     def pstep(self):
         """Dummy momenta propagator which does nothing."""
         pass
@@ -360,28 +364,39 @@ class NVEIntegrator(DummyIntegrator):
         mk = int(self.nmts[index] / 2)
 
         for i in range(mk):  # do nmts/2 full sub-steps
+
+            self.timep -= time.time()
             self.pstep(index)
             self.pconstraints()
+            self.timep -= time.time()
             if index == self.nmtslevels - 1:
                 # call Q propagation for dt/alpha at the inner step
+                self.timeq -= time.time()
                 self.qcstep()
                 self.nm.free_qstep()
                 self.nm.free_qstep()
                 self.qcstep()
+                self.timeq += time.time()
             else:
                 self.mtsprop(index + 1)
 
+            self.timep -= time.time()
             self.pstep(index)
             self.pconstraints()
+            self.timep += time.time()
 
         if self.nmts[index] % 2 == 1:
             # propagate p for dt/2alpha with force at level index
+            self.timep -= time.time()
             self.pstep(index)
             self.pconstraints()
+            self.timep += time.time()
             if index == self.nmtslevels - 1:
                 # call Q propagation for dt/alpha at the inner step
+                self.timeq -= time.time()
                 self.qcstep()
                 self.nm.free_qstep()
+                self.timeq += time.time()
             else:
                 self.mtsprop_ba(index + 1)
 
@@ -391,14 +406,18 @@ class NVEIntegrator(DummyIntegrator):
         if self.nmts[index] % 2 == 1:
             if index == self.nmtslevels - 1:
                 # call Q propagation for dt/alpha at the inner step
+                self.timeq -= time.time()
                 self.qcstep()
                 self.nm.free_qstep()
+                self.timeq += time.time()
             else:
                 self.mtsprop_ab(index + 1)
 
             # propagate p for dt/2alpha with force at level index
+            self.timep -= time.time()
             self.pstep(index)
             self.pconstraints()
+            self.timep += time.time()
 
         for i in range(int(self.nmts[index] / 2)):  # do nmts/2 full sub-steps
             self.pstep(index)
@@ -441,7 +460,9 @@ class NVTIntegrator(NVEIntegrator):
     def tstep(self):
         """Velocity Verlet thermostat step"""
 
+        self.timet -= time.time()
         self.thermostat.step()
+        self.timet += time.time()
 
     def step(self, step=None):
         """Does one simulation time step."""
