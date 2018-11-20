@@ -544,7 +544,7 @@ class InterfaceSocket(object):
             else:
                 keepsearch = False
 
-    def dispatch_free_client(self, fc, match_ids="any"):
+    def dispatch_free_client(self, fc, match_ids="any", send_threads=[]):
         """
            Tries to find a request to match a free client.
         """
@@ -581,6 +581,7 @@ class InterfaceSocket(object):
                 nt = threading.Thread(target=fc.sendpos, name="sendpos", args = (r["pos"][r["active"]], r["cell"]))
                 nt.daemon = True
                 nt.start()
+                send_threads.append(nt)
 
                 r["t_dispatched"] = time.time()
                 r["start"] = time.time()  # sets start time for the request
@@ -672,10 +673,11 @@ class InterfaceSocket(object):
         # first: dispatches jobs to free clients (if any!)
         # tries first to match previous replica<>driver association, then to get new clients, and only finally send the a new replica to old drivers
         nreq = len(self.prlist)
+        send_threads = []
         while len(freec) > 0 and len(self.prlist) > 0:
             for match_ids in match_seq:
                 for fc in freec[:]:
-                    if self.dispatch_free_client(fc, match_ids):
+                    if self.dispatch_free_client(fc, match_ids, send_threads):
                         freec.remove(fc)
                     if len(self.prlist)==0:
                         break
@@ -720,6 +722,11 @@ class InterfaceSocket(object):
                 c.close()
                 c.poll()
                 c.status = Status.Disconnected
+
+        # makes sure all data is sent to clients before returning.
+        for st in send_threads:
+            while st.isAlive():
+                st.join(1.0)
 
     def poll(self):
         """The main thread loop.

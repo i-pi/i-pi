@@ -239,8 +239,8 @@ class ForceField(dobject):
             self._thread = threading.Thread(target=self._poll_loop, name="poll_" + self.name)
             self._thread.daemon = True
             self._thread.start()
+            softexit.register_thread(self._thread, self._doloop)
         softexit.register_function(self.softexit)
-        softexit.register_thread(self._thread, self._doloop)
 
     def softexit(self):
         """ Takes care of cleaning up upon softexit """
