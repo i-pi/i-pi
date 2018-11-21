@@ -112,6 +112,28 @@ class GeopMotion(Motion):
         else:
             self.optimizer = DummyOptimizer()
 
+
+    def reset(self):  # necessary for Al6xxx-kmc
+        # zeroes out all memory of previous steps
+        self.old_x *= 0.0
+        self.old_f *= 0.0
+        self.old_u *= 0.0
+        self.d *= 0.0
+
+        if self.mode =="bfgs":
+            self.invhessian[:] = np.eye(len(self.invhessian), len(self.invhessian), 0,   float)
+        # bfgstrm
+        elif self.mode =="bfgstrm":
+            self.hessian[:] = np.eye(len(self.hessian), len(self.hessian), 0, float)
+            self.tr = self.initial_values["tr_trm"]
+        # lbfgs
+        elif self.mode =="lbfgst":
+            self.corrections *= 0.0
+            self.scale *= 0.0
+            self.qlist *= 0.0
+            self.glist *= 0.0
+
+
     def bind(self, ens, beads, nm, cell, bforce, prng):
         """Binds beads, cell, bforce and prng to GeopMotion
 

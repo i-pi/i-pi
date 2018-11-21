@@ -118,6 +118,9 @@ class Ensemble(dobject):
             hweights = np.ones(0)
         self.hweights = np.asarray(hweights)
 
+    def copy(self):
+        return Ensemble(self.eens, 0.0, self.temp, self.pext, dstrip(self.stressext).copy()) # necessary for Al6xxx-kmc
+
     def bind(self, beads, nm, cell, bforce, fflist, elist=[], xlpot=[], xlkin=[]):
         self.beads = beads
         self.cell = cell
