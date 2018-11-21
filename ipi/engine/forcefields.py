@@ -474,7 +474,7 @@ class FFPlumed(ForceField):
                       'start': starting time}.
     """
 
-    def __init__(self, latency=1.0e-3, name="", pars=None, dopbc=False, threaded=False, init_file="", plumeddat="", precision=8, plumedstep=0):
+    def __init__(self, latency=1.0e-3, name="", pars=None, dopbc=False, threaded=False, init_file="", plumeddat="", plumedstep=0):
         """Initialises FFPlumed.
 
         Args:
@@ -485,8 +485,7 @@ class FFPlumed(ForceField):
         if plumed is None:
             raise ImportError("Cannot find plumed libraries to link to a FFPlumed object/")
         super(FFPlumed, self).__init__(latency, name, pars, dopbc=False, threaded=threaded)
-        self.plumed = plumed.Plumed(precision)
-        self.precision = precision
+        self.plumed = plumed.Plumed()
         self.plumeddat = plumeddat
         self.plumedstep = plumedstep
         self.init_file = init_file

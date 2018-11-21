@@ -255,7 +255,6 @@ class InputFFPlumed(InputForceField):
     fields = {
         "init_file": (InputInitFile, {"default": input_default(factory=ipi.engine.initializer.InitFile, kwargs={"mode": "xyz"}),
                                       "help": "This describes the location to read the reference structure file from."}),
-        "precision": (InputValue, {"dtype": int, "default": 8, "help": "The precision PLUMED was compiled with"}),
         "plumeddat": (InputValue, {"dtype": str, "default": "plumed.dat", "help": "The PLUMED input file"}),
         "plumedstep": (InputValue, {"dtype": int, "default": 0, "help": "The current step counter for PLUMED calls"}),
 
@@ -271,7 +270,6 @@ class InputFFPlumed(InputForceField):
 
     def store(self, ff):
         super(InputFFPlumed, self).store(ff)
-        self.precision.store(ff.precision)
         self.plumeddat.store(ff.plumeddat)
         # pstep = ff.plumedstep
         # if pstep > 0: pstep -= 1 # roll back plumed step before writing a restart
@@ -283,8 +281,7 @@ class InputFFPlumed(InputForceField):
         super(InputFFPlumed, self).fetch()
 
         return FFPlumed(name=self.name.fetch(), latency=self.latency.fetch(), dopbc=self.pbc.fetch(),
-                        threaded=self.threaded.fetch(),
-                        precision=self.precision.fetch(), plumeddat=self.plumeddat.fetch(),
+                        threaded=self.threaded.fetch(), plumeddat=self.plumeddat.fetch(),
                         plumedstep=self.plumedstep.fetch(), init_file=self.init_file.fetch())
 
 
