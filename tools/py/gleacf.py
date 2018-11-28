@@ -145,7 +145,7 @@ def ISRA(omega, ker, y, dparam, oprefix):
     return f
 
 
-def gleacf(path2iipi, path2ivvac, oprefix, action, nrows, stride, dparam):
+def gleacf(path2iipi, path2ivvac, oprefix, action, nrows, stride, tscale, dparam):
 
     # opens & parses the i-pi input file
     ifile = open(path2iipi, "r")
@@ -158,15 +158,20 @@ def gleacf(path2iipi, path2ivvac, oprefix, action, nrows, stride, dparam):
 
     # parses the drift and diffusion matrices of the GLE thermostat.
     ttype = str(type(simul.syslist[0].motion.thermostat).__name__)
-    kbT = float(simul.syslist[0].ensemble.temp)
+    P =  float(simul.syslist[0].init.nbeads)
+    kbT = float(simul.syslist[0].ensemble.temp) * P
     simul.syslist[0].motion.thermostat.temp = kbT
 
     if(ttype == "ThermoGLE"):
-        Ap = simul.syslist[0].motion.thermostat.A * unit_to_internal("time", dt[1], float(dt[0]))
+        Ap = simul.syslist[0].motion.thermostat.A * tscale
         Cp = simul.syslist[0].motion.thermostat.C / kbT
         Dp = np.dot(Ap, Cp) + np.dot(Cp, Ap.T)
+    if(ttype == "ThermoNMGLE"):
+        Ap = simul.syslist[0].motion.thermostat.A[0] * tscale
+        Cp = simul.syslist[0].motion.thermostat.C[0] / kbT
+        Dp = np.dot(Ap, Cp) + np.dot(Cp, Ap.T)
     elif(ttype == "ThermoLangevin"):
-        Ap = np.asarray([1.0 / simul.syslist[0].motion.thermostat.tau]).reshape((1, 1)) * unit_to_internal("time", dt[1], float(dt[0]))
+        Ap = np.asarray([1.0 / simul.syslist[0].motion.thermostat.tau]).reshape((1, 1)) * tscale 
         Cp = np.asarray([1.0]).reshape((1, 1))
         Dp = np.dot(Ap, Cp) + np.dot(Cp, Ap.T)
 
@@ -197,7 +202,7 @@ if __name__ == '__main__':
     parser.add_argument("-ivvac", "--input_vvac", type=str, default=None, help="the relative path to the input velocity-velocity autocorrelation function")
     parser.add_argument("-mrows", "--maximum_rows", type=int, default=-1, help="the index of the last row to be imported from INPUT_VVAC")
     parser.add_argument("-s", "--stride", type=int, default=1, help="the stride for importing the IVVAC and computing the kernel")
-    parser.add_argument("-dt", "--timestep", type=str, default="1 atomic_unit", help="timestep associated with the vvac. <number> <unit>. Defaults to 1.0 atomic_unit")
+    parser.add_argument("-tscale", "--time_scaling", type=str, default="1", help="the unit of time associated with the input acf in atomic units.  Defaults to 1.0 assuming that the acf is in atomic units of time.")
     parser.add_argument("-dparam", "--deconv_parameters", nargs=2, type=int, default=[500, 10], help="the parameters associated with the deconvolution. Since the operation is based on an iterative algorithm, it requires the total number of epochs NEPOCHS and the stride PSTRIDE at which the output spectrum is returned. Usage: [NEPOCHS,PSTRIDE]")
     parser.add_argument("-oprefix", "--output_prefix", type=str, default="output", help="the prefix of the (various) output files.")
 
@@ -215,7 +220,7 @@ if __name__ == '__main__':
     action = str(args.action)
     nrows = int(args.maximum_rows)
     stride = int(args.stride)
-    dt = str(args.timestep).split()
+    tscale = float(args.time_scaling)
     dparam = np.asarray(args.deconv_parameters, dtype=int)
 
-    gleacf(path2iipi, path2ivvac, oprefix, action, nrows, stride, dparam)
+    gleacf(path2iipi, path2ivvac, oprefix, action, nrows, stride, tscale, dparam)
