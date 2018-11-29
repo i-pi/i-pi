@@ -375,6 +375,96 @@ class FFLennardJones(ForceField):
         r["status"] = "Done"
 
 
+try:
+    import quippy
+except Exception as e:
+    quippy = None
+    quippy_exc = e
+
+
+class FFQUIP(ForceField):
+
+    """Basic fully pythonic force provider.
+
+    Computes an arbitrary interaction potential implemented in QUIP. 
+    Parallel evaluation with threads.
+
+    Attributes:
+        parameters: A dictionary of the parameters used by QUIP. Of the
+            form {'name': value}.
+        requests: During the force calculation step this holds a dictionary
+            containing the relevant data for determining the progress of the step.
+            Of the form {'atoms': atoms, 'cell': cell, 'pars': parameters,
+                         'status': status, 'result': result, 'id': bead id,
+                         'start': starting time}.
+    """
+
+    def __init__(self, latency=1.0e-3, name="", pars=None, dopbc=True):
+        """Initialises QUIP.
+
+        Args:
+        pars: Mandatory dictionaru, giving the parameters needed by QUIP.
+        """
+        if quippy is None:
+            raise ImportError("QUIPPY import failed due to expection : " + str(e))
+
+        # a socket to the communication library is created or linked
+        super(FFQUIP, self).__init__(latency, name, pars, dopbc)
+        self.init_file = str(self.pars["init_file"])
+        self.args_str = str(self.pars["args_str"])
+        self.param_file = str(self.pars["param_file"])
+
+        # Initializes an atoms object and the interaction potential
+        self.atoms = quippy.Atoms(self.init_file)
+        self.pot = quippy.Potential(self.args_str, param_filename=self.param_file)
+       
+        # Initializes the conversion factors from i-pi to QUIP
+        self.len_conv = 0.529177 
+        self.energy_conv = 27.211386
+
+    def poll(self):
+        """Polls the forcefield checking if there are requests that should
+        be answered, and if necessary evaluates the associated forces and energy."""
+
+        # We have to be thread-safe, as in multi-system mode this might get
+        # called by many threads at once.
+        with self._threadlock:
+            for r in self.requests:
+                if r["status"] == "Queued":
+                    r["status"] = "Running"
+                    r["t_dispatched"] = time.time()
+                    self.evaluate(r)
+
+    def evaluate(self, r):
+        """ The function that evaluates the
+        QUIP interaction potential."""
+
+        # Obtains the positions and the cell.
+        q = r["pos"].reshape((-1, 3)) 
+        h, ih = r["cell"]
+
+        nat = len(q)
+
+        # Performs conversion of units.
+        q *= self.len_conv
+        h *= self.len_conv
+
+        # Updates the QUIP atoms object.
+        self.atoms.set_positions(q)
+        self.atoms.set_cell(h)
+
+        # Calculates the energies, forces and the virial.
+        self.pot.calc(self.atoms, energy=True, force=True, virial=True) 
+
+        # Obtains the energetics and converts to i-pi units.
+        u = self.atoms.energy  / self.energy_conv
+        f = self.atoms.force.T.flatten()   / self.energy_conv * self.len_conv 
+        v = np.triu(self.atoms.virial)
+
+        r["result"] = [u, f.reshape(nat * 3), v, ""]
+        r["status"] = "Done"
+
+
 class FFDebye(ForceField):
 
     """Debye crystal harmonic reference potential
