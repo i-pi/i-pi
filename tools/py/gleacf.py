@@ -199,12 +199,12 @@ if __name__ == '__main__':
     # adds arguments.
     parser.add_argument("-a", "--action", choices=["conv", "deconv"], default=None, help="choose conv if you want to obtain the response of the thermostat on the vibrational density of states; choose deconv if you want to obtain the micro-canonical density of states by removing the disturbance induced by the thermostat")
     parser.add_argument("-iipi", "--input_ipi", type=str, default=None, help="the relative path to the i-PI inputfile")
-    parser.add_argument("-ivvac", "--input_vvac", type=str, default=None, help="the relative path to the input velocity-velocity autocorrelation function")
-    parser.add_argument("-mrows", "--maximum_rows", type=int, default=-1, help="the index of the last row to be imported from INPUT_VVAC")
+    parser.add_argument("-ifacf", "--input_facf", type=str, default=None, help="the relative path to the input Fourier transform of the autocorrelation function")
+    parser.add_argument("-mr", "--maximum_rows", type=int, default=-1, help="the index of the last row to be imported from INPUT_VVAC")
     parser.add_argument("-s", "--stride", type=int, default=1, help="the stride for importing the IVVAC and computing the kernel")
-    parser.add_argument("-tscale", "--time_scaling", type=str, default="1", help="the unit of time associated with the input acf in atomic units.  Defaults to 1.0 assuming that the acf is in atomic units of time.")
-    parser.add_argument("-dparam", "--deconv_parameters", nargs=2, type=int, default=[500, 10], help="the parameters associated with the deconvolution. Since the operation is based on an iterative algorithm, it requires the total number of epochs NEPOCHS and the stride PSTRIDE at which the output spectrum is returned. Usage: [NEPOCHS,PSTRIDE]")
-    parser.add_argument("-oprefix", "--output_prefix", type=str, default="output", help="the prefix of the (various) output files.")
+    parser.add_argument("-ts", "--time_scaling", type=str, default="1", help="the unit of time associated with the input acf in atomic units.  Defaults to 1.0 assuming that the acf is in atomic units of time.")
+    parser.add_argument("-dp", "--deconv_parameters", nargs=2, type=int, default=[500, 10], help="the parameters associated with the deconvolution. Since the operation is based on an iterative algorithm, it requires the total number of epochs NEPOCHS and the stride PSTRIDE at which the output spectrum is returned. Usage: -dparam NEPOCHS PSTRIDE")
+    parser.add_argument("-op", "--output_prefix", type=str, default="output", help="the prefix of the (various) output files.")
 
     # parses arguments.
     if(len(sys.argv) > 1):
@@ -215,7 +215,7 @@ if __name__ == '__main__':
 
     # stores the arguments
     path2iipi = str(args.input_ipi)
-    path2ivvac = str(args.input_vvac)
+    path2ivvac = str(args.input_facf)
     oprefix = str(args.output_prefix)
     action = str(args.action)
     nrows = int(args.maximum_rows)
