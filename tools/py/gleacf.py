@@ -174,10 +174,12 @@ def gleacf(path2ixml, path2iA, path2iC, path2ifacf, oprefix, action, nrows, stri
             Ap = simul.syslist[0].motion.thermostat.A[0] * tscale
             Cp = simul.syslist[0].motion.thermostat.C[0] / kbT
             Dp = np.dot(Ap, Cp) + np.dot(Cp, Ap.T)
-        elif(ttype == "ThermoLangevin"):
+        elif(ttype == "ThermoLangevin" or ttype == "ThermoPILE_L"):
             Ap = np.asarray([1.0 / simul.syslist[0].motion.thermostat.tau]).reshape((1, 1)) * tscale 
             Cp = np.asarray([1.0]).reshape((1, 1))
             Dp = np.dot(Ap, Cp) + np.dot(Cp, Ap.T)
+        else:
+            raise Exception("GLE thermostat not found. The allowed thermostats are gle, nm_gle, langevin and pile_l.")
 
     elif path2ixml == None and path2iA != None:
         Ap = np.loadtxt(path2iA, dtype=float, ndmin=2) * tscale
@@ -214,8 +216,8 @@ if __name__ == '__main__':
     # adds arguments.
     parser.add_argument("-A", "--action", choices=["conv", "deconv"], default=None, required=True, help="choose conv if you want to obtain the response of the thermostat on the vibrational density of states; choose deconv if you want to obtain the micro-canonical density of states by removing the disturbance induced by the thermostat")
     parser.add_argument("-iFACF", "--input_facf", type=str, default=None, help="The input Fourier transform of the auto-correlation function (FACF). The unit of time is assumed to be atomic units unless the additional -time_scaling parameter is provided.")
-    parser.add_argument("-iXML", "--input_xml", type=str, default=None, help="The i-PI xml file that contains the Drift (A) and the Covariance (C) matrices as well as the ensemble temperature (T). The units are interpretted from the file and the A and C matrices are converted to atomic units. The C matrix is further divided by k_B T. If the -time_scaling parameter is provided, the units of A are modified using the scaling factor.")
-    parser.add_argument("-iA", "--input_A", type=str, default=None, help="The file containing the Drift matrix A. The units are assumed to be atomic units. If the -time_scaling factor is provided the units of A are chaned to match those of the FACF.")
+    parser.add_argument("-iXML", "--input_xml", type=str, default=None, help="The i-PI xml file that contains the Drift (A) and the Covariance (C) matrices as well as the ensemble temperature (T). If a normal mode GLE thermostat is used then only the parameters of the thermostat that acts on the centroid is are used assuming that the spectrum that is to be deconvoluted is computed from the dynamics of the centroid.  The units are interpretted from the file and the A and C matrices are converted to atomic units. The C matrix is further divided by k_B T. If the -time_scaling parameter is provided, the units of A are modified using the scaling factor.")
+    parser.add_argument("-iA", "--input_A", type=str, default=None, help="The file containing the Drift matrix A of the GLE thermostat. The units are assumed to be atomic units. If the -time_scaling factor is provided the units of A are chaned to match those of the FACF.")
     parser.add_argument("-iC", "--input_C", type=str, default=None, help="The file containing the dimensionless Covariance matrix C which is assumed to be rescaled with respect to k_B T. It is assumed to be an Identity matrix of the appropriate rank by default.")
     parser.add_argument("-MR", "--max_rows", type=int, default=-1, help="The index of the last row to be imported from FACF. Allows one to choose the maximum frequency which is considered during the process of (de)convolution.")
     parser.add_argument("-S", "--stride", type=int, default=1, help="The stride for importing the FACF. Allows one to choose the granularity of the frequency scale. ")
