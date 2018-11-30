@@ -399,20 +399,20 @@ class FFQUIP(ForceField):
                          'start': starting time}.
     """
 
-    def __init__(self, latency=1.0e-3, name="", pars=None, dopbc=True):
+    def __init__(self, init_file, args_str, param_file, latency=1.0e-3, name="", pars=None, dopbc=True):
         """Initialises QUIP.
 
         Args:
         pars: Mandatory dictionaru, giving the parameters needed by QUIP.
         """
         if quippy is None:
-            raise ImportError("QUIPPY import failed due to expection : " + str(e))
+            raise ImportError("QUIPPY import failed due to exception : " + str(e))
 
         # a socket to the communication library is created or linked
         super(FFQUIP, self).__init__(latency, name, pars, dopbc)
-        self.init_file = str(self.pars["init_file"])
-        self.args_str = str(self.pars["args_str"])
-        self.param_file = str(self.pars["param_file"])
+        self.init_file = init_file
+        self.args_str = args_str
+        self.param_file = param_file
 
         # Initializes an atoms object and the interaction potential
         self.atoms = quippy.Atoms(self.init_file)

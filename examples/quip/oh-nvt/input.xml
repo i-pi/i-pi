@@ -9,7 +9,9 @@
     <seed>31415</seed>
   </prng>
   <ffquip name='quip' pbc='True'>
-    <parameters> {init_file : quip.xyz, args_str : IP Morse, param_file : morse.xml} </parameters>
+    <init_file> quip.xyz  </init_file>
+    <args_str> IP Morse </args_str>
+    <param_file> morse.xml </param_file>
   </ffquip>
   <system>
     <initialize nbeads='1'>

@@ -209,33 +209,31 @@ class InputFFLennardJones(InputForceField):
 
 class InputFFQUIP(InputForceField):
 
+    fields = { 
+        "init_file": (InputValue, {"dtype": str, "default": None, "help": "An extended xyz file that initializes the system."}),
+        "args_str": (InputValue, {"dtype": str, "default": None, "help": "A string that identifies the type of interaction potential."}),
+        "param_file": (InputValue, {"dtype": str, "default": None, "help": "An xml file that contains the parameters of the interaction potential."})
+    }   
+
+    fields.update(InputForceField.fields)
+
     attribs = {}
     attribs.update(InputForceField.attribs)
 
-    default_help = """A general QUIP interaction potential evaluator.
-                   Expects three parameters : init_file, args_str and para_str 
-                   init_file : An extended xyz file that initializes the system
-                   args_str : A string that identifies the type of potential.
-                   param_file : A file containing an XML string that contains the
-                              parameters of the interaction potential.
-                   """
+    default_help = """ A general QUIP interaction potential evaluator. """
     default_label = "FFQUIP"
 
     def store(self, ff):
         super(InputFFQUIP, self).store(ff)
+        self.init_file.store(ff.init_file)
+        self.args_str.store(ff.args_str)
+        self.param_file.store(ff.param_file)
 
     def fetch(self):
         super(InputFFQUIP, self).fetch()
 
-        return FFQUIP(pars=self.parameters.fetch(), name=self.name.fetch(),
-                              latency=self.latency.fetch(), dopbc=self.pbc.fetch())
-
-        if self.slots.fetch() < 1 or self.slots.fetch() > 5:
-            raise ValueError("Slot number " + str(self.slots.fetch()) + " out of acceptable range.")
-        if self.latency.fetch() < 0:
-            raise ValueError("Negative latency parameter specified.")
-        if self.timeout.fetch() < 0.0:
-            raise ValueError("Negative timeout parameter specified.")
+        return FFQUIP(init_file=self.init_file.fetch(), args_str=self.args_str.fetch(), param_file=self.param_file.fetch(), name=self.name.fetch(),
+                       latency=self.latency.fetch(), dopbc=self.pbc.fetch())
 
 
 class InputFFDebye(InputForceField):
