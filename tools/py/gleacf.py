@@ -30,17 +30,17 @@ from ipi.utils.io.inputs import io_xml
 from ipi.utils.units import unit_to_internal, unit_to_user
 
 
-def input_vvac(path2inputfile, mrows, stride):
-    """Imports the vvac file and extracts the ."""
-    dvvac = np.genfromtxt(path2inputfile, usecols=((0, 1)))
+def input_facf(path2inputfile, mrows, stride):
+    """Reads the facf file."""
+    dfacf = np.genfromtxt(path2inputfile, usecols=((0, 1)))
     if(mrows == -1):
-        mrows = len(dvvac)
-    return dvvac[:mrows][::stride]
+        mrows = len(dfacf)
+    return dfacf[:mrows][::stride]
 
 
-def output_vvac(xy, oprefix, refvvac):
-    """Exports the vvac file."""
-    np.savetxt(oprefix + "-vv.data", np.vstack((xy[0], xy[1])).T)
+def output_facf(xy, oprefix, reffacf):
+    """Exports the facf file."""
+    np.savetxt(oprefix + "_facf.data", np.vstack((xy[0], xy[1])).T)
 
 
 def Aqp(omega_0, Ap):
@@ -125,7 +125,7 @@ def gleKernel(omega, Ap, Dp):
 
 
 def ISRA(omega, ker, y, dparam, oprefix):
-    """Given the thermostatted vvac spectrum and the range of frequencies, constructs the vibration density of states"""
+    """Given the thermostatted facf spectrum and the range of frequencies, constructs the vibration density of states"""
     delta_omega = abs(omega[1] - omega[0])
     steps = dparam[0]
     stride = dparam[1]
@@ -145,66 +145,80 @@ def ISRA(omega, ker, y, dparam, oprefix):
     return f
 
 
-def gleacf(path2iipi, path2ivvac, oprefix, action, nrows, stride, tscale, dparam):
+def gleacf(path2ixml, path2iA, path2iC, path2ifacf, oprefix, action, nrows, stride, tscale, dparam):
 
-    # opens & parses the i-pi input file
-    ifile = open(path2iipi, "r")
-    xmlrestart = io_xml.xml_parse_file(ifile)
-    ifile.close()
+    if path2ixml != None:
+        # opens & parses the i-pi input file
+        ifile = open(path2ixml, "r")
+        xmlrestart = io_xml.xml_parse_file(ifile)
+        ifile.close()
 
-    isimul = InputSimulation()
-    isimul.parse(xmlrestart.fields[0][1])
-    simul = isimul.fetch()
+        isimul = InputSimulation()
+        isimul.parse(xmlrestart.fields[0][1])
+        simul = isimul.fetch()
 
-    # parses the drift and diffusion matrices of the GLE thermostat.
-    ttype = str(type(simul.syslist[0].motion.thermostat).__name__)
-    P =  float(simul.syslist[0].init.nbeads)
-    kbT = float(simul.syslist[0].ensemble.temp) * P
-    simul.syslist[0].motion.thermostat.temp = kbT
+        # parses the drift and diffusion matrices of the GLE thermostat.
+        ttype = str(type(simul.syslist[0].motion.thermostat).__name__)
+        P =  float(simul.syslist[0].init.nbeads)
+        kbT = float(simul.syslist[0].ensemble.temp) * P
+        simul.syslist[0].motion.thermostat.temp = kbT
 
-    if(ttype == "ThermoGLE"):
-        Ap = simul.syslist[0].motion.thermostat.A * tscale
-        Cp = simul.syslist[0].motion.thermostat.C / kbT
+        if(ttype == "ThermoGLE"):
+            Ap = simul.syslist[0].motion.thermostat.A * tscale
+            Cp = simul.syslist[0].motion.thermostat.C / kbT
+            Dp = np.dot(Ap, Cp) + np.dot(Cp, Ap.T)
+        if(ttype == "ThermoNMGLE"):
+            Ap = simul.syslist[0].motion.thermostat.A[0] * tscale
+            Cp = simul.syslist[0].motion.thermostat.C[0] / kbT
+            Dp = np.dot(Ap, Cp) + np.dot(Cp, Ap.T)
+        elif(ttype == "ThermoLangevin"):
+            Ap = np.asarray([1.0 / simul.syslist[0].motion.thermostat.tau]).reshape((1, 1)) * tscale 
+            Cp = np.asarray([1.0]).reshape((1, 1))
+            Dp = np.dot(Ap, Cp) + np.dot(Cp, Ap.T)
+
+    elif path2iA != None:
+        Ap = np.loadtxt(input_A) * tscale
+        if path2iC != None: 
+          Cp = np.loadtxt(input_C)
+        else:
+          Cp = np.eye(len(Ap))
         Dp = np.dot(Ap, Cp) + np.dot(Cp, Ap.T)
-    if(ttype == "ThermoNMGLE"):
-        Ap = simul.syslist[0].motion.thermostat.A[0] * tscale
-        Cp = simul.syslist[0].motion.thermostat.C[0] / kbT
-        Dp = np.dot(Ap, Cp) + np.dot(Cp, Ap.T)
-    elif(ttype == "ThermoLangevin"):
-        Ap = np.asarray([1.0 / simul.syslist[0].motion.thermostat.tau]).reshape((1, 1)) * tscale 
-        Cp = np.asarray([1.0]).reshape((1, 1))
-        Dp = np.dot(Ap, Cp) + np.dot(Cp, Ap.T)
 
-    # imports the vvac function.
-    ivvac = input_vvac(path2ivvac, nrows, stride)
-    ix = ivvac[:, 0]
-    iy = ivvac[:, 1]
+    else:
+        raise Exception("The drift and covariance matrixes have to be provided either through the i-pi xml file or manually.")
+        
+    # imports the facf function.
+    ifacf = input_facf(path2ifacf, nrows, stride)
+    ix = ifacf[:, 0]
+    iy = ifacf[:, 1]
 
-    # computes the vvac kernel
+    # computes the facf kernel
     print "# computing the kernel."
     ker = gleKernel(ix, Ap, Dp)
 
     # (de-)convolutes the spectrum
     if(action == "conv"):
         print "# printing the output spectrum."
-        output_vvac((ix, np.dot(iy, ker.T)), oprefix, input_vvac(path2ivvac, nrows, 1))
+        output_facf((ix, np.dot(iy, ker.T)), oprefix, input_facf(path2ifacf, nrows, 1))
     elif(action == "deconv"):
         print "# deconvoluting the input spectrum."
         oy = ISRA(ix, ker, iy, dparam, oprefix)
 
 if __name__ == '__main__':
     # adds description of the program.
-    parser = argparse.ArgumentParser(description="Given the parameters of a Generalized Langevin Equation and the vibrational density of states predicts the velocity-velocity autcorrelation obtained by the dynamics. Conversely, given the velocity-velocity autocorrelation function removes the disturbance affected by the thermostat and returns the underlying vibrational density of states. ")
+    parser = argparse.ArgumentParser(description="Given the parameters of a Generalized Langevin Equation and the microcanonical density of states predicts the power spectrum of the velocity-velocity auto-correlation obtained by the dynamics. Conversely, given the power spectrum velocity-velocity autocorrelation function removes the disturbance affected by the thermostat and returns the underlying vibrational density of states. ")
 
     # adds arguments.
-    parser.add_argument("-a", "--action", choices=["conv", "deconv"], default=None, help="choose conv if you want to obtain the response of the thermostat on the vibrational density of states; choose deconv if you want to obtain the micro-canonical density of states by removing the disturbance induced by the thermostat")
-    parser.add_argument("-iipi", "--input_ipi", type=str, default=None, help="the relative path to the i-PI inputfile")
-    parser.add_argument("-ifacf", "--input_facf", type=str, default=None, help="the relative path to the input Fourier transform of the autocorrelation function")
-    parser.add_argument("-mr", "--maximum_rows", type=int, default=-1, help="the index of the last row to be imported from INPUT_VVAC")
-    parser.add_argument("-s", "--stride", type=int, default=1, help="the stride for importing the IVVAC and computing the kernel")
-    parser.add_argument("-ts", "--time_scaling", type=str, default="1", help="the unit of time associated with the input acf in atomic units.  Defaults to 1.0 assuming that the acf is in atomic units of time.")
-    parser.add_argument("-dp", "--deconv_parameters", nargs=2, type=int, default=[500, 10], help="the parameters associated with the deconvolution. Since the operation is based on an iterative algorithm, it requires the total number of epochs NEPOCHS and the stride PSTRIDE at which the output spectrum is returned. Usage: -dparam NEPOCHS PSTRIDE")
-    parser.add_argument("-op", "--output_prefix", type=str, default="output", help="the prefix of the (various) output files.")
+    parser.add_argument("-A", "--action", choices=["conv", "deconv"], default=None, required=True, help="choose conv if you want to obtain the response of the thermostat on the vibrational density of states; choose deconv if you want to obtain the micro-canonical density of states by removing the disturbance induced by the thermostat")
+    parser.add_argument("-iFACF", "--input_facf", type=str, default=None, help="The input Fourier transform of the auto-correlation function (FACF). The unit of time is assumed to be atomic units unless the additional -time_scaling parameter is provided.")
+    parser.add_argument("-iXML", "--input_xml", type=str, default=None, help="The i-PI xml file that contains the Drift (A) and the Covariance (C) matrices as well as the ensemble temperature (T). The units are interpretted from the file and the A and C matrices are converted to atomic units. The C matrix is further divided by k_B T. If the -time_scaling parameter is provided, the units of A are modified using the scaling factor.")
+    parser.add_argument("-iA", "--input_A", type=str, default=None, help="The file containing the Drift matrix A. The units are assumed to be atomic units. If the -time_scaling factor is provided the units of A are chaned to match those of the FACF.")
+    parser.add_argument("-iC", "--input_C", type=str, default=None, help="The file containing the dimensionless Covariance matrix C which is assumed to be rescaled with respect to k_B T. It is assumed to be an Identity matrix of the appropriate rank by default.")
+    parser.add_argument("-MR", "--max_rows", type=int, default=-1, help="The index of the last row to be imported from FACF. Allows one to choose the maximum frequency which is considered during the process of (de)convolution.")
+    parser.add_argument("-S", "--stride", type=int, default=1, help="The stride for importing the FACF. Allows one to choose the granularity of the frequency scale. ")
+    parser.add_argument("-TS", "--time_scaling", type=float, default="1.0", help="The unit of time associated with the FACF w.r.t atomic units. Defaults to 1.0. ")
+    parser.add_argument("-DP", "--deconv_param", nargs=2, type=int, default=[500, 10], help="The parameters associated with the deconvolution. Since the operation is based on an iterative algorithm, it requires the total number of epochs NEPOCHS and the stride PSTRIDE at which the output spectrum is returned. Usage: -DP NEPOCHS PSTRIDE")
+    parser.add_argument("-oP", "--output_prefix", type=str, default="output", help="the prefix of the (various) output files.")
 
     # parses arguments.
     if(len(sys.argv) > 1):
@@ -214,13 +228,15 @@ if __name__ == '__main__':
         sys.exit()
 
     # stores the arguments
-    path2iipi = str(args.input_ipi)
-    path2ivvac = str(args.input_facf)
-    oprefix = str(args.output_prefix)
-    action = str(args.action)
-    nrows = int(args.maximum_rows)
-    stride = int(args.stride)
-    tscale = float(args.time_scaling)
-    dparam = np.asarray(args.deconv_parameters, dtype=int)
+    path2ixml = args.input_xml
+    path2iA = args.input_A
+    path2iC = args.input_C
+    path2ifacf = args.input_facf
+    oprefix = args.output_prefix
+    action = args.action
+    nrows = args.max_rows
+    stride = args.stride
+    tscale = args.time_scaling
+    dparam = np.asarray(args.deconv_param, dtype=int)
 
-    gleacf(path2iipi, path2ivvac, oprefix, action, nrows, stride, tscale, dparam)
+    gleacf(path2ixml, path2iA, path2iC, path2ifacf, oprefix, action, nrows, stride, tscale, dparam)
