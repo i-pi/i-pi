@@ -147,7 +147,10 @@ def ISRA(omega, ker, y, dparam, oprefix):
 
 def gleacf(path2ixml, path2iA, path2iC, path2ifacf, oprefix, action, nrows, stride, tscale, dparam):
 
-    if path2ixml != None:
+    if path2ixml != None and path2iA != None:
+        raise Exception("The drift and covariance matrices have to be provided either through the i-pi xml file or manually. Can not use both forms of input simultaneously. ")
+
+    elif path2ixml != None and path2iA == None:
         # opens & parses the i-pi input file
         ifile = open(path2ixml, "r")
         xmlrestart = io_xml.xml_parse_file(ifile)
@@ -176,10 +179,10 @@ def gleacf(path2ixml, path2iA, path2iC, path2ifacf, oprefix, action, nrows, stri
             Cp = np.asarray([1.0]).reshape((1, 1))
             Dp = np.dot(Ap, Cp) + np.dot(Cp, Ap.T)
 
-    elif path2iA != None:
-        Ap = np.loadtxt(input_A) * tscale
+    elif path2ixml == None and path2iA != None:
+        Ap = np.loadtxt(path2iA, dtype=float, ndmin=2) * tscale
         if path2iC != None: 
-          Cp = np.loadtxt(input_C)
+          Cp = np.loadtxt(path2iC)
         else:
           Cp = np.eye(len(Ap))
         Dp = np.dot(Ap, Cp) + np.dot(Cp, Ap.T)
