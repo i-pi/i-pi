@@ -21,10 +21,8 @@ from ipi.interfaces.sockets import InterfaceSocket
 from ipi.utils.depend import dobject
 from ipi.utils.depend import dstrip
 from ipi.utils.io import read_file
-from ipi.utils.units import unit_to_internal
+from ipi.utils.units import unit_to_internal, unit_to_user
 
-
-__all__ = ['ForceField', 'FFSocket', 'FFLennardJones', 'FFDebye', 'FFPlumed', 'FFYaff']
 
 
 class ForceRequest(dict):
@@ -419,8 +417,10 @@ class FFQUIP(ForceField):
         self.pot = quippy.Potential(self.args_str, param_filename=self.param_file)
        
         # Initializes the conversion factors from i-pi to QUIP
-        self.len_conv = 0.529177 
-        self.energy_conv = 27.211386
+        unit_to_internal("length", "", float(dt[0]))
+        self.len_conv = unit_to_user("length", "angstrom", 1)
+        self.energy_conv = unit_to_user("energy", "electronvolt", 1)
+        self.force_conv = unit_to_user("force", "ev/ang", 1)
 
     def poll(self):
         """Polls the forcefield checking if there are requests that should
@@ -458,8 +458,8 @@ class FFQUIP(ForceField):
 
         # Obtains the energetics and converts to i-pi units.
         u = self.atoms.energy  / self.energy_conv
-        f = self.atoms.force.T.flatten()   / self.energy_conv * self.len_conv 
-        v = np.triu(self.atoms.virial)
+        f = self.atoms.force.T.flatten()   / self.force_conv
+        v = np.triu(self.atoms.virial) / self.energy_conv
 
         r["result"] = [u, f.reshape(nat * 3), v, ""]
         r["status"] = "Done"
