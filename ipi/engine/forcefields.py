@@ -417,7 +417,6 @@ class FFQUIP(ForceField):
         self.pot = quippy.Potential(self.args_str, param_filename=self.param_file)
        
         # Initializes the conversion factors from i-pi to QUIP
-        unit_to_internal("length", "", float(dt[0]))
         self.len_conv = unit_to_user("length", "angstrom", 1)
         self.energy_conv = unit_to_user("energy", "electronvolt", 1)
         self.force_conv = unit_to_user("force", "ev/ang", 1)
