@@ -8,11 +8,13 @@
     <seed> 32342 </seed>
   </prng>
   <ffquip name='quip' pbc='True'>
-    <parameters> {init_file : quip.xyz, args_str : IP SW, param_file : sw.xml} </parameters>
+    <init_file> quip.xyz  </init_file>
+    <args_str> IP sw </args_str>
+    <param_file> sw.xml </param_file>
   </ffquip>
   <system>
     <initialize nbeads='1'>
-      <file mode='chk'>  init.chk </file>
+      <file mode='xyz'>  init.xyz </file>
     </initialize>
     <forces>
       <force forcefield='quip'> </force>
