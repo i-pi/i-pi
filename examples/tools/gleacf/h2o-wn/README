@@ -1,9 +1,12 @@
 Please run the following to predict the VVAC of a GLE thermostat:
 prefix=wle1e1
-../../../../bin/i-pi-gleacf -iipi input-${prefix}.xml -ivvac simulation-svr.vvac  -mrows 5000 -oprefix svrto${prefix} -a conv -dt "1 femtosecond"
-
+../../../../bin/i-pi-gleacf -a conv -ifacf simulation-svr.vvac -ixml input.xml -mr 5000 -s 1 -ts 41.341373 -op svrto${prefix}
+or 
+../../../../bin/i-pi-gleacf -a conv -ifacf simulation-svr.vvac -ia A.data -mr 5000 -s 10 -ts 1.0 -op output
+Note that TS has been to 1 since the units of the A matrix are in fs^-1.
 
 Please run the following to extract the microcanonical vvac out of a vvac affected by a GLE thermostat:
 prefix=wle1e1
-../../../../bin/i-pi-gleacf -iipi input-${prefix}.xml -ivvac simulation-${prefix}.vvac  -mrows 5000 -oprefix ${prefix}tosvr -a deconv -dt "1 femtosecond" -dparam 250 5
-
+../../../../bin/i-pi-gleacf -a deconv -ifacf simulation-${prefix}.vvac -ixml input.xml -mr 5000 -s 1 -ts 41.341373 -op ${prefix}2svr -dp 500 50
+or
+../../../../bin/i-pi-gleacf -a deconv -ifacf simulation-${prefix}.vvac -ia A.data -mr 5000 -s 1 -ts 1.0 -op ${prefix}2svr -dp 500 50

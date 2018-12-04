@@ -1,0 +1,4 @@
+<Morse_params n_types="2" label="OH">
+<!-- Morse potential from doi: 10.1063/1.4883861 -->
+  <pair atnum_i="1" atnum_j="8" r0="0.96966" D="5.1017442" alpha="2.185033" />
+</Morse_params>
