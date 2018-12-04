@@ -170,7 +170,7 @@ def gleacf(path2ixml, path2iA, path2iC, path2ifacf, oprefix, action, nrows, stri
             Ap = simul.syslist[0].motion.thermostat.A * tscale
             Cp = simul.syslist[0].motion.thermostat.C / kbT
             Dp = np.dot(Ap, Cp) + np.dot(Cp, Ap.T)
-        if(ttype == "ThermoNMGLE"):
+        elif(ttype == "ThermoNMGLE"):
             Ap = simul.syslist[0].motion.thermostat.A[0] * tscale
             Cp = simul.syslist[0].motion.thermostat.C[0] / kbT
             Dp = np.dot(Ap, Cp) + np.dot(Cp, Ap.T)

@@ -4,4 +4,4 @@ prefix=gle01
 
 Please run the following to extract the microcanonical vvac out of a vvac affected by a GLE thermostat:
 prefix=gle01
-../../../../bin/i-pi-gleacf -a deconv -ifacf simulation-${prefix}.vvac -ixml input.xml -mr 5000 -s 1 -ts 41.341373 -op ${prefix}2svr -DP 500 50
+../../../../bin/i-pi-gleacf -a deconv -ifacf simulation-${prefix}.vvac -ixml input.xml -mr 5000 -s 1 -ts 41.341373 -op ${prefix}2svr -dp 500 50
