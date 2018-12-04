@@ -8,14 +8,14 @@
 from copy import copy
 import numpy as np
 
-from ipi.engine.forcefields import ForceField, FFSocket, FFLennardJones, FFDebye, FFPlumed, FFYaff
+from ipi.engine.forcefields import ForceField, FFSocket, FFLennardJones, FFQUIP, FFDebye, FFPlumed, FFYaff
 from ipi.interfaces.sockets import InterfaceSocket
 import ipi.engine.initializer
 from ipi.inputs.initializer import *
 from ipi.utils.inputvalue import *
 
 
-__all__ = ["InputFFSocket", 'InputFFLennardJones', 'InputFFDebye', 'InputFFPlumed', 'InputFFYaff']
+__all__ = ["InputFFSocket", 'InputFFLennardJones', 'InputFFQUIP', 'InputFFDebye', 'InputFFPlumed', 'InputFFYaff']
 
 
 class InputForceField(Input):
@@ -205,6 +205,35 @@ class InputFFLennardJones(InputForceField):
             raise ValueError("Negative latency parameter specified.")
         if self.timeout.fetch() < 0.0:
             raise ValueError("Negative timeout parameter specified.")
+
+
+class InputFFQUIP(InputForceField):
+
+    fields = { 
+        "init_file": (InputValue, {"dtype": str, "default": None, "help": "An extended xyz file that initializes the system."}),
+        "args_str": (InputValue, {"dtype": str, "default": None, "help": "A string that identifies the type of interaction potential."}),
+        "param_file": (InputValue, {"dtype": str, "default": None, "help": "An xml file that contains the parameters of the interaction potential."})
+    }   
+
+    fields.update(InputForceField.fields)
+
+    attribs = {}
+    attribs.update(InputForceField.attribs)
+
+    default_help = """ A general QUIP interaction potential evaluator. """
+    default_label = "FFQUIP"
+
+    def store(self, ff):
+        super(InputFFQUIP, self).store(ff)
+        self.init_file.store(ff.init_file)
+        self.args_str.store(ff.args_str)
+        self.param_file.store(ff.param_file)
+
+    def fetch(self):
+        super(InputFFQUIP, self).fetch()
+
+        return FFQUIP(init_file=self.init_file.fetch(), args_str=self.args_str.fetch(), param_file=self.param_file.fetch(), name=self.name.fetch(),
+                       latency=self.latency.fetch(), dopbc=self.pbc.fetch())
 
 
 class InputFFDebye(InputForceField):
