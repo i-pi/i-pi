@@ -247,7 +247,7 @@ class InputFFQUIP(InputForceField):
         super(InputFFQUIP, self).fetch()
 
         return FFQUIP(init_file=self.init_file.fetch(), args_str=self.args_str.fetch(), param_file=self.param_file.fetch(), name=self.name.fetch(),
-                       latency=self.latency.fetch(), dopbc=self.pbc.fetch())
+                       latency=self.latency.fetch(), dopbc=self.pbc.fetch(), threaded=self.threaded.fetch())
 
 
 class InputFFDebye(InputForceField):

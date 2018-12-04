@@ -407,7 +407,7 @@ class FFQUIP(ForceField):
                          'start': starting time}.
     """
 
-    def __init__(self, init_file, args_str, param_file, latency=1.0e-3, name="", pars=None, dopbc=True):
+    def __init__(self, init_file, args_str, param_file, latency=1.0e-3, name="", pars=None, dopbc=True, threaded=False):
         """Initialises QUIP.
 
         Args:
@@ -417,7 +417,7 @@ class FFQUIP(ForceField):
             raise ImportError("QUIPPY import failed due to exception : " + str(e))
 
         # a socket to the communication library is created or linked
-        super(FFQUIP, self).__init__(latency, name, pars, dopbc)
+        super(FFQUIP, self).__init__(latency, name, pars, dopbc, threaded=threaded)
         self.init_file = init_file
         self.args_str = args_str
         self.param_file = param_file
