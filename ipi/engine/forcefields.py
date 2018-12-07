@@ -21,10 +21,8 @@ from ipi.interfaces.sockets import InterfaceSocket
 from ipi.utils.depend import dobject
 from ipi.utils.depend import dstrip
 from ipi.utils.io import read_file
-from ipi.utils.units import unit_to_internal
+from ipi.utils.units import unit_to_internal, unit_to_user
 
-
-__all__ = ['ForceField', 'FFSocket', 'FFLennardJones', 'FFDebye', 'FFPlumed', 'FFYaff']
 
 
 class ForceRequest(dict):
@@ -128,16 +126,10 @@ class ForceField(dobject):
 
         # Indexes come from input in a per atom basis and we need to make a per atom-coordinate basis
         # Reformat indexes for full system (default) or piece of system
-#        fullat=True
         if self.active[0] == -1:
             activehere = np.array([i for i in range(len(pbcpos))])
         else:
             activehere = np.array([[3 * n, 3 * n + 1, 3 * n + 2] for n in self.active])
-
-#           fullat=False
-#
-#        if (self.active[0]!=-1 and fullat==False):
-#           temp=np.array([[3*n, 3*n+1, 3*n+2] for n in self.active])
 
         # Reassign active indexes in order to use them
         activehere = activehere.flatten()
@@ -163,23 +155,21 @@ class ForceField(dobject):
             "t_finished": 0
         })
 
-        self._threadlock.acquire()
-        try:
+        with self._threadlock:
             self.requests.append(newreq)
-        finally:
-            self._threadlock.release()
 
         return newreq
 
     def poll(self):
         """Polls the forcefield object to check if it has finished."""
 
-        for r in self.requests:
-            if r["status"] == "Queued":
-                r["t_dispatched"] = time.time()
-                r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]
-                r["status"] = "Done"
-                r["t_finished"] = time.time()
+        with self._threadlock:
+            for r in self.requests:
+                if r["status"] == "Queued":
+                    r["t_dispatched"] = time.time()
+                    r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]
+                    r["status"] = "Done"
+                    r["t_finished"] = time.time()
 
     def _poll_loop(self):
         """Polling loop.
@@ -190,8 +180,10 @@ class ForceField(dobject):
 
         info(" @ForceField: Starting the polling thread main loop.", verbosity.low)
         while self._doloop[0]:
-            time.sleep(self.latency)
-            self.poll()
+            if len(self.requests) == 0 :
+                time.sleep(self.latency)
+            else:
+                self.poll()
 
     def release(self, request):
         """Shuts down the client code interface thread.
@@ -202,8 +194,7 @@ class ForceField(dobject):
 
         """Frees up a request."""
 
-        self._threadlock.acquire()
-        try:
+        with self._threadlock:
             if request in self.requests:
                 try:
                     self.requests.remove(request)
@@ -211,8 +202,6 @@ class ForceField(dobject):
                     print "failed removing request", id(request), ' ',
                     print [id(r) for r in self.requests], "@", threading.currentThread()
                     raise
-        finally:
-            self._threadlock.release()
 
     def stop(self):
         """Dummy stop method."""
@@ -350,15 +339,12 @@ class FFLennardJones(ForceField):
 
         # We have to be thread-safe, as in multi-system mode this might get
         # called by many threads at once.
-        self._threadlock.acquire()
-        try:
+        with self._threadlock:
             for r in self.requests:
                 if r["status"] == "Queued":
                     r["status"] = "Running"
                     r["t_dispatched"] = time.time()
                     self.evaluate(r)
-        finally:
-            self._threadlock.release()
 
     def evaluate(self, r):
         """Just a silly function evaluating a non-cutoffed, non-pbc and
@@ -384,6 +370,97 @@ class FFLennardJones(ForceField):
         v *= self.epsfour
 
         r["result"] = [v, f.reshape(nat * 3), np.zeros((3, 3), float), ""]
+        r["status"] = "Done"
+
+
+try:
+    import quippy
+except Exception as e:
+    quippy = None
+    quippy_exc = e
+
+
+class FFQUIP(ForceField):
+
+    """Basic fully pythonic force provider.
+
+    Computes an arbitrary interaction potential implemented in QUIP. 
+    Parallel evaluation with threads.
+
+    Attributes:
+        parameters: A dictionary of the parameters used by QUIP. Of the
+            form {'name': value}.
+        requests: During the force calculation step this holds a dictionary
+            containing the relevant data for determining the progress of the step.
+            Of the form {'atoms': atoms, 'cell': cell, 'pars': parameters,
+                         'status': status, 'result': result, 'id': bead id,
+                         'start': starting time}.
+    """
+
+    def __init__(self, init_file, args_str, param_file, latency=1.0e-3, name="", pars=None, dopbc=True):
+        """Initialises QUIP.
+
+        Args:
+        pars: Mandatory dictionaru, giving the parameters needed by QUIP.
+        """
+        if quippy is None:
+            raise ImportError("QUIPPY import failed due to exception : " + str(e))
+
+        # a socket to the communication library is created or linked
+        super(FFQUIP, self).__init__(latency, name, pars, dopbc)
+        self.init_file = init_file
+        self.args_str = args_str
+        self.param_file = param_file
+
+        # Initializes an atoms object and the interaction potential
+        self.atoms = quippy.Atoms(self.init_file)
+        self.pot = quippy.Potential(self.args_str, param_filename=self.param_file)
+       
+        # Initializes the conversion factors from i-pi to QUIP
+        self.len_conv = unit_to_user("length", "angstrom", 1)
+        self.energy_conv = unit_to_user("energy", "electronvolt", 1)
+        self.force_conv = unit_to_user("force", "ev/ang", 1)
+
+    def poll(self):
+        """Polls the forcefield checking if there are requests that should
+        be answered, and if necessary evaluates the associated forces and energy."""
+
+        # We have to be thread-safe, as in multi-system mode this might get
+        # called by many threads at once.
+        with self._threadlock:
+            for r in self.requests:
+                if r["status"] == "Queued":
+                    r["status"] = "Running"
+                    r["t_dispatched"] = time.time()
+                    self.evaluate(r)
+
+    def evaluate(self, r):
+        """ The function that evaluates the
+        QUIP interaction potential."""
+
+        # Obtains the positions and the cell.
+        q = r["pos"].reshape((-1, 3)) 
+        h, ih = r["cell"]
+
+        nat = len(q)
+
+        # Performs conversion of units.
+        q *= self.len_conv
+        h *= self.len_conv
+
+        # Updates the QUIP atoms object.
+        self.atoms.set_positions(q)
+        self.atoms.set_cell(h)
+
+        # Calculates the energies, forces and the virial.
+        self.pot.calc(self.atoms, energy=True, force=True, virial=True) 
+
+        # Obtains the energetics and converts to i-pi units.
+        u = self.atoms.energy  / self.energy_conv
+        f = self.atoms.force.T.flatten()   / self.force_conv
+        v = np.triu(self.atoms.virial) / self.energy_conv
+
+        r["result"] = [u, f.reshape(nat * 3), v, ""]
         r["status"] = "Done"
 
 
@@ -431,15 +508,11 @@ class FFDebye(ForceField):
         be answered, and if necessary evaluates the associated forces and energy. """
 
         # we have to be thread-safe, as in multi-system mode this might get called by many threads at once
-        self._threadlock.acquire()
-        try:
+        with self._threadlock:
             for r in self.requests:
                 if r["status"] == "Queued":
                     r["status"] = "Running"
-
                     self.evaluate(r)
-        finally:
-            self._threadlock.release()
 
     def evaluate(self, r):
         """ A simple evaluator for a harmonic Debye crystal potential. """
@@ -468,7 +541,7 @@ except:
 class FFPlumed(ForceField):
     """Direct PLUMED interface
 
-    Computes forces from a PLUMED input. 
+    Computes forces from a PLUMED input.
 
     Attributes:
         parameters: A dictionary of the parameters used by the driver. Of the
@@ -477,7 +550,7 @@ class FFPlumed(ForceField):
             containing the relevant data for determining the progress of the step.
             Of the form {'atoms': atoms, 'cell': cell, 'pars': parameters,
                       'status': status, 'result': result, 'id': bead id,
-                      'start': starting time}.  
+                      'start': starting time}.
     """
 
     def __init__(self, latency=1.0e-3, name="", pars=None, dopbc=False, init_file="", plumeddat="", precision=8, plumedstep=0):
@@ -528,15 +601,13 @@ class FFPlumed(ForceField):
 
         # We have to be thread-safe, as in multi-system mode this might get
         # called by many threads at once.
-        self._threadlock.acquire()
-        try:
+        with self._threadlock:
             for r in self.requests:
                 if r["status"] == "Queued":
                     r["status"] = "Running"
                     r["t_dispatched"] = time.time()
                     self.evaluate(r)
-        finally:
-            self._threadlock.release()
+                    r["t_finished"] = time.time()
 
     def evaluate(self, r):
         """A wrapper function to call the PLUMED evaluation routines
@@ -661,15 +732,11 @@ class FFYaff(ForceField):
         be answered, and if necessary evaluates the associated forces and energy. """
 
         # we have to be thread-safe, as in multi-system mode this might get called by many threads at once
-        self._threadlock.acquire()
-        try:
+        with self._threadlock:
             for r in self.requests:
                 if r["status"] == "Queued":
                     r["status"] = "Running"
-
                     self.evaluate(r)
-        finally:
-            self._threadlock.release()
 
     def evaluate(self, r):
         """ Evaluate the energy and forces with the Yaff force field. """

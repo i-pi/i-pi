@@ -4,8 +4,16 @@
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
+import pytest
+try:
+    from ase import build
+    from ase import units
+    from ase.calculators.lj import LennardJones
+    has_ase = True
+except ImportError:
+    has_ase = False
 
-import nose
+
 from ipi.interfaces.sockets import Driver, InterfaceSocket
 from ipi.interfaces.clients import Client, ClientASE
 
@@ -25,15 +33,9 @@ def test_interface():
     InterfaceSocket()
 
 
+@pytest.mark.skipif(not has_ase, reason='ASE not installed.')
 def test_ASE():
     """Socket client for ASE."""
-
-    try:
-        from ase import build
-        from ase import units
-        from ase.calculators.lj import LennardJones
-    except ImportError:
-        raise nose.SkipTest
 
     # create ASE atoms and calculator
     atoms = build.bulk('Ar', cubic=True)
@@ -44,4 +46,4 @@ def test_ASE():
     atoms.get_potential_energy()
 
     # create the socket client
-    client = ClientASE(atoms, address='ase', _socket=False)
+    ClientASE(atoms, address='ase', _socket=False)

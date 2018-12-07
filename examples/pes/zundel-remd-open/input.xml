@@ -1,0 +1,62 @@
+<simulation threading="false">
+    <ffsocket mode='unix' name='driver'>
+         <latency>  1.00000000e-02</latency>
+         <slots>4</slots>
+         <port>20614</port>
+         <timeout>  6.00000000e+02</timeout>
+         <address>o-zundel</address>
+   </ffsocket>
+   <total_steps>10000</total_steps>
+   <output prefix="data">
+      <trajectory stride="40" filename="pos" cell_units="angstrom">positions{angstrom}</trajectory>
+      <trajectory stride="20" filename="xc" format="xyz">x_centroid{angstrom}</trajectory>
+      <properties stride="20" filename="open-1"> [ atom_x_path(1)] ] </properties>
+      <properties stride="20" filename="open-3"> [ atom_x_path(3)] ] </properties>
+      <properties stride="20" filename="open-5"> [ atom_x_path(5)] ] </properties>
+      <properties stride="2"> [ step, time, conserved, temperature{kelvin}, kinetic_cv, 
+          potential, kinetic_cv(H), kinetic_cv(O), ensemble_bias, ensemble_temperature{kelvin} ] </properties>
+   </output>
+   <prng>
+      <seed>18885</seed>
+   </prng>
+   <system_template>
+   <labels> [IDX, TEMP, T0] </labels>
+   <instance> [0, 200, 300] </instance>
+   <instance> [1, 250, 500] </instance>
+   <instance> [2, 320, 640] </instance>
+   <template>	   
+   <system prefix="RE-IDX">
+      <forces> 
+          <force forcefield="driver"></force>
+      </forces>
+      <initialize nbeads="8">
+        <file mode="xyz">./h5o2+.xyz</file>
+        <cell>
+         [   25.29166, 0, 0, 0, 25.29166, 0, 0, 0, 25.29166 ]
+        </cell>
+        <velocities mode="thermal" units="kelvin"> T0 </velocities>
+      </initialize>
+      <ensemble>
+         <temperature units="kelvin"> TEMP </temperature>
+      </ensemble>
+      <motion mode="dynamics">
+        <dynamics mode="nvt">
+            <timestep units="femtosecond"> 0.5 </timestep>
+  <thermostat mode='pile_l'>
+      <tau units="femtosecond"> 100 </tau>
+  </thermostat>          
+        </dynamics>
+    </motion>
+    <normal_modes>
+        <open_paths> [1,3,5] </open_paths>
+    </normal_modes>
+  </system>
+  </template>
+  </system_template>
+  <smotion mode="remd">
+      <remd>
+         <krescale> True </krescale>
+         <stride> 2 </stride>
+      </remd>
+   </smotion>
+</simulation>

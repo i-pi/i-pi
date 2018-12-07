@@ -308,7 +308,7 @@ class Properties(dobject):
 
             "spring": {"dimension": "energy",
                        "help": "The total spring potential energy between the beads of all the ring polymers in the system.",
-                       'func': (lambda: self.beads.vpath * self.nm.omegan2 / self.beads.nbeads)},
+                       'func': (lambda: self.nm.vspring / self.beads.nbeads)},
 
             "kinetic_md": {"dimension": "energy",
                            "help": "The kinetic energy of the (extended) classical system.",

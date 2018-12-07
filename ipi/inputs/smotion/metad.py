@@ -37,8 +37,8 @@ class InputMetaDyn(InputDictionary):
     """
 
     fields = {
-        "metaff": (InputValue, {"dtype": str, "default": "",
-                                "help": "Name of the forcefield that does metadynamics."
+        "metaff": (InputArray, {"dtype": str, "default": input_default(factory=np.zeros, args=(0,)),
+                                "help": "List of names of forcefields that should do metadynamics."
                                 })
     }
 

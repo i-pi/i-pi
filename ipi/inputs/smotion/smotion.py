@@ -22,8 +22,9 @@ Classes:
 """
 
 import numpy as np
+from copy import copy
 import ipi.engine.initializer
-from ipi.engine.smotion import Smotion, ReplicaExchange, MetaDyn
+from ipi.engine.smotion import Smotion, ReplicaExchange, MetaDyn, MultiSmotion
 from ipi.utils.inputvalue import *
 from .remd import InputReplicaExchange
 from .metad import InputMetaDyn
@@ -32,10 +33,10 @@ from ipi.utils.units import *
 __all__ = ['InputSmotion']
 
 
-class InputSmotion(Input):
+class InputSmotionBase(Input):
     """Smotion calculation input class.
 
-    A class to encompass the different "smootion" :) calculations.
+    A class to encompass the different "smotion" calculations.
 
     Attributes:
        mode: An obligatory string giving the kind of smootion calculation to be performed.
@@ -64,7 +65,7 @@ class InputSmotion(Input):
            sc: A smootion calculation class.
         """
 
-        super(InputSmotion, self).store(sc)
+        super(InputSmotionBase, self).store(sc)
 
         if type(sc) is Smotion:
             self.mode.store("dummy")
@@ -85,7 +86,7 @@ class InputSmotion(Input):
            objects given the attributes of the InputEnsemble object.
         """
 
-        super(InputSmotion, self).fetch()
+        super(InputSmotionBase, self).fetch()
 
         if self.mode.fetch() == "remd":
             sc = ReplicaExchange(**self.remd.fetch())
@@ -96,3 +97,39 @@ class InputSmotion(Input):
             #raise ValueError("'" + self.mode.fetch() + "' is not a supported motion calculation mode.")
 
         return sc
+
+
+class InputSmotion(InputSmotionBase):
+    """ Extends InputSmotionBase to allow the definition of a multismotion """
+
+    attribs = copy(InputSmotionBase.attribs)
+
+    attribs["mode"][1]["options"].append("multi")
+
+    dynamic = {"smotion": (InputSmotionBase, {"default": input_default(factory=Smotion),
+                                            "help": "A smotion class that can be included as a member of a 'multi' Smotion."})
+               }
+
+    def store(self, smotion):
+
+        if type(smotion) is MultiSmotion:
+            self.mode.store("multi")
+            self.extra = []
+            for m in smotion.mlist:
+                im = InputSmotionBase()
+                im.store(m)
+                self.extra.append(("smotion", im))
+        else:
+            super(InputSmotion, self).store(smotion)
+
+    def fetch(self):
+
+        if self.mode.fetch() == "multi":
+            mlist = []
+            for (k, m) in self.extra:
+                mlist.append(m.fetch())
+            smotion = MultiSmotion(smotionlist=mlist)
+        else:
+            smotion = super(InputSmotion, self).fetch()
+
+        return smotion
