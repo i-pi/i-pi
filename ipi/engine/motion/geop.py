@@ -116,7 +116,7 @@ class GeopMotion(Motion):
         """Binds beads, cell, bforce and prng to GeopMotion
 
             Args:
-            beads: The beads object from whcih the bead positions are taken.
+            beads: The beads object from which the bead positions are taken.
             nm: A normal modes object used to do the normal modes transformation.
             cell: The cell object from which the system box is taken.
             bforce: The forcefield object from which the force and virial are taken.
@@ -211,9 +211,9 @@ class GradientMapper(object):
         """computes energy and gradient for optimization step"""
 
         self.fcount += 1
-        self.dbeads.q[:, self.fixatoms_mask] = x[:, self.fixatoms_mask]
+        self.dbeads.q[:, self.fixatoms_mask] = x
         e = self.dforces.pot   # Energy
-        g = -self.dforces.f   # Gradient
+        g = -self.dforces.f[:, self.fixatoms_mask]   # Gradient
         return e, g
 
 
@@ -366,12 +366,32 @@ class BFGSOptimizer(DummyOptimizer):
                 dqb[self.fixatoms * 3 + 1] = 0.0
                 dqb[self.fixatoms * 3 + 2] = 0.0
 
-        fdf0 = (self.old_u, -self.old_f)
+            fdf0 = (self.old_u, -self.old_f[:, self.gm.fixatoms_mask])
 
-        # Do one iteration of BFGS
-        # The invhessian and the directions are updated inside.
-        BFGS(self.old_x, self.d, self.gm, fdf0, self.invhessian, self.big_step,
-             self.ls_options["tolerance"] * self.tolerances["energy"], self.ls_options["iter"])
+            # Do one iteration of BFGS
+            # The invhessian and the directions are updated inside.
+            # Everything passed inside BFGS() in masked form, including the invhessian
+
+            masked_d = self.d[:, self.gm.fixatoms_mask]
+            masked_invhessian = (self.invhessian[:, self.gm.fixatoms_mask])[self.gm.fixatoms_mask, :]
+            BFGS(self.old_x[:, self.gm.fixatoms_mask],
+                 masked_d,
+                 self.gm,
+                 fdf0,
+                 masked_invhessian,
+                 self.big_step,
+                 self.ls_options["tolerance"] * self.tolerances["energy"],
+                 self.ls_options["iter"])
+            self.d[:, self.gm.fixatoms_mask] = masked_d
+            (self.invhessian[:, self.gm.fixatoms_mask])[self.gm.fixatoms_mask, :] = masked_invhessian
+
+        else:
+            fdf0 = (self.old_u, -self.old_f)
+
+            # Do one iteration of BFGS
+            # The invhessian and the directions are updated inside.
+            BFGS(self.old_x, self.d, self.gm, fdf0, self.invhessian, self.big_step,
+                 self.ls_options["tolerance"] * self.tolerances["energy"], self.ls_options["iter"])
 
         info("   Number of force calls: %d" % (self.gm.fcount)); self.gm.fcount = 0
         # Update positions and forces
