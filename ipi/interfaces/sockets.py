@@ -164,7 +164,7 @@ class DriverSocket(socket.socket):
                     raise socket.timeoout    # if this keeps returning no data, we are in trouble....
                 self._buf[bpos:bpos + len(bpart)] = np.fromstring(bpart, np.byte)
             except socket.timeout:
-                warning(" @SOCKET:   Timeout in recvall, trying again!", verbosity.low)
+                #warning(" @SOCKET:   Timeout in recvall, trying again!", verbosity.low)
                 timeout = True
                 ntimeout += 1
                 if ntimeout > NTIMEOUT:
@@ -575,7 +575,6 @@ class InterfaceSocket(object):
                 fc.poll()
 
             if fc.status & Status.NeedsInit:
-                print "initializing"
                 fc.initialize(r["id"], r["pars"])
                 fc.poll()
                 while fc.status & Status.Busy:  # waits for initialization to finish. hopefully this is fast
@@ -752,7 +751,7 @@ class InterfaceSocket(object):
         tjoin += time.time()
 
         ttotal += time.time()
-        print "POLL TOTAL: ", ttotal, "JOIN: ", tjoin, "DISPATCH:", ndispatch, tdispatch, "CHECK:", nchecked, tcheck
+        #print "POLL TOTAL: ", ttotal, "JOIN: ", tjoin, "DISPATCH:", ndispatch, tdispatch, "CHECK:", nchecked, tcheck
 
     def poll(self):
         """The main thread loop.
