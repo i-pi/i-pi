@@ -137,7 +137,6 @@ class nm_noop(object):
         if nbeads > 1:
             raise ValueError("Shouldn't use a noop transformation for ring-polymer systems ")
 
-
     def b2nm(self, q):
         return q
 
