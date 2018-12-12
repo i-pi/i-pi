@@ -196,7 +196,7 @@ class Ensemble(dobject):
         ensembles.
         """
 
-        eham = self.nm.vspring + self.nm.kin +self.forces.pot
+        eham = self.nm.vspring + self.nm.kin + self.forces.pot
 
         eham += self.bias.pot   # bias
 
