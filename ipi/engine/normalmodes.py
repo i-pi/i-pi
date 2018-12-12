@@ -267,7 +267,7 @@ class NormalModes(dobject):
     def get_vspring(self):
         """Returns the spring energy calculated in NM representation."""
 
-        if self.nbeads == 0:
+        if self.nbeads == 1:
             return 0.0
 
         sqnm = dstrip(self.qnm)*dstrip(self.beads.sm3)
