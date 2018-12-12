@@ -142,6 +142,3 @@ class InputForces(Input):
                 self.extra[ii] = ("force", iff)
             else:
                 self.extra[ii][1].store(el)
-
-
-

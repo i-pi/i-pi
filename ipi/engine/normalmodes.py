@@ -538,8 +538,8 @@ class NormalModes(dobject):
 
         """
         # include the partially adiabatic CMD mass scaling
-        pnm = dstrip(self.pnm)/dstrip(self.beads.sm3)
-        kmd = 0.5*(pnm**2).sum(axis=1)/dstrip(self.nm_factor)
+        pnm = dstrip(self.pnm) / dstrip(self.beads.sm3)
+        kmd = 0.5 * (pnm**2).sum(axis=1) / dstrip(self.nm_factor)
 
         return kmd
 

@@ -180,7 +180,6 @@ class InputMotion(InputMotionBase):
         if type(motion) is MultiMotion:
             self.mode.store("multi")
 
-
             if len(self.extra) != len(motion.mlist):
                 self.extra = [0] * len(motion.mlist)
 

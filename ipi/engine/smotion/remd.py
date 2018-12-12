@@ -185,5 +185,3 @@ class ReplicaExchange(Smotion):
                 sf.write("\n")
 
         info("# REMD step evaluated in %f (%f eval, %f swap) sec." % (time.time()-t_start, t_eval, t_swap), verbosity.debug)
-
-
