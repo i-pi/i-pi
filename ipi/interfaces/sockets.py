@@ -297,7 +297,7 @@ class Driver(DriverSocket):
                 self.sendall(np.int32(len(pars)))
                 self.sendall(pars)
             except:
-                self.poll()
+                self.get_status()
                 return
         else:
             raise InvalidStatus("Status in init was " + self.status)
@@ -380,6 +380,58 @@ class Driver(DriverSocket):
 
         return [mu, mf, mvir, mxtra]
 
+    def get_status(self):
+
+        status = self._getstatus()
+        while status & Status.Busy:
+            status = self._getstatus()
+        self.status = status
+        return status
+
+    def dispatch(self, r):
+        """ Dispatches a request r and looks after it setting results
+            once it has been evaluated
+        """
+
+        if not self.status & Status.Up:
+            warning(" @SOCKET:   Inconsistent client state in dispatch thread! (I)", verbosity.low)
+            return
+
+
+
+        r["t_dispatched"] = time.time()
+
+        self.get_status()
+        if self.status & Status.NeedsInit:
+            self.initialize(r["id"], r["pars"])
+            self.status = self.get_status()
+
+        if not (self.status & Status.Ready):
+            warning(" @SOCKET:   Inconsistent client state in dispatch thread! (II)", verbosity.low)
+            return
+
+        r["start"] = time.time()
+        self.sendpos(r["pos"][r["active"]], r["cell"])
+
+        self.get_status()
+        if not (self.status & Status.HasData) :
+            warning(" @SOCKET:   Inconsistent client state in dispatch thread! (III)", verbosity.low)
+            return
+
+
+        r["result"] = self.getforce()
+        if len(r["result"][1]) != len(r["pos"][r["active"]]):
+            raise InvalidSize
+
+        # If only a piece of the system is active, resize forces and reassign
+        rftemp = r["result"][1]
+        r["result"][1] = np.zeros(len(r["pos"]), dtype=np.float64)
+        r["result"][1][r["active"]] = rftemp
+        r["status"] = "Done"
+        r["t_finished"] = time.time()
+        self.lastreq = r["id"]  #
+
+        self.get_status()
 
 class InterfaceSocket(object):
 
@@ -438,9 +490,10 @@ class InterfaceSocket(object):
         self.mode = mode
         self.timeout = timeout
         self.poll_iter = UPDATEFREQ  # triggers pool_update at first poll
-        self.prlist = []
-        self.match_mode = match_mode
+        self.prlist = [] # list of pending requests
+        self.match_mode = match_mode # heuristics to match jobs and active clients
         self.threadlock = threading.Lock()
+        self.requests = None # these will be linked to the request list of the FFSocket object using the interface
 
     def open(self):
         """Creates a new socket.
@@ -467,8 +520,10 @@ class InterfaceSocket(object):
 
         self.server.listen(self.slots)
         self.server.settimeout(SERVERTIMEOUT)
-        self.clients = []
-        self.jobs = []
+
+        # these are the two main objects the socket interface should worry about and manage
+        self.clients = [] # list of active clients (working or ready to compute)
+        self.jobs = []    # list of jobs
 
     def close(self):
         """Closes down the socket."""
@@ -494,6 +549,23 @@ class InterfaceSocket(object):
         if self.mode == "unix":
             os.unlink("/tmp/ipi_" + self.address)
 
+    def poll(self):
+        """Called in the main thread loop.
+
+        Runs until either the program finishes or a kill call is sent. Updates
+        the pool of clients every UPDATEFREQ loops and loops every latency
+        seconds until _poll_true becomes false.
+        """
+
+        # makes sure to remove the last dead client as soon as possible -- and to get clients if we are dry
+        if (self.poll_iter >= UPDATEFREQ or len(self.clients) == 0 or
+             (len(self.clients) > 0 and not(self.clients[0].status & Status.Up))):
+            self.poll_iter = 0
+            self.pool_update()
+
+        self.poll_iter += 1
+        self.pool_distribute()
+
     def pool_update(self):
         """Deals with keeping the pool of client drivers up-to-date during a
         force calculation step.
@@ -516,7 +588,9 @@ class InterfaceSocket(object):
                 self.clients.remove(c)
                 # requeue jobs that have been left hanging
                 with self.threadlock:
-                    for [k, j] in self.jobs[:]:
+                    for [k, j, tc] in self.jobs[:]:
+                        if tc.isAlive():
+                            tc.join(2)
                         if j is c:
                             self.jobs = [w for w in self.jobs if not (w[0] is k and w[1] is j)]  # removes pair in a robust way
 
@@ -536,7 +610,7 @@ class InterfaceSocket(object):
                 client.settimeout(TIMEOUT)
                 driver = Driver(client)
                 info(" @SOCKET:   Client asked for connection from " + str(address) + ". Now hand-shaking.", verbosity.low)
-                driver.poll()
+                driver.get_status()
                 if (driver.status | Status.Up):
                     self.clients.append(driver)
                     info(" @SOCKET:   Handshaking was successful. Added to the client list.", verbosity.low)
@@ -548,134 +622,6 @@ class InterfaceSocket(object):
                     client.close()
             else:
                 keepsearch = False
-
-    def dispatch_free_client(self, fc, match_ids="any", send_threads=[]):
-        """
-           Tries to find a request to match a free client.
-        """
-        # first, makes sure that the client is REALLY free
-        if not (fc.status & Status.Up):
-            return False
-        if fc.status & Status.HasData:
-            return False
-        if not (fc.status & (Status.Ready | Status.NeedsInit | Status.Busy)):
-            warning(" @SOCKET: Client " + str(fc.peername) + " is in an unexpected status " + str(fc.status) + " at (1). Will try to keep calm and carry on.", verbosity.low)
-            return False
-
-        for r in self.prlist[:]:
-            if match_ids == "match" and not fc.lastreq is r["id"]:
-                continue
-            elif match_ids == "none" and not fc.lastreq is None:
-                continue
-            elif match_ids == "free" and fc.locked:
-                continue
-            info(" @SOCKET: %s Assigning [%5s] request id %4s to client with last-id %4s (% 3d/% 3d : %s)" % (time.strftime("%y/%m/%d-%H:%M:%S"), match_ids, str(r["id"]), str(fc.lastreq), self.clients.index(fc), len(self.clients), str(fc.peername)), verbosity.high)
-
-            while fc.status & Status.Busy:
-                fc.poll()
-
-            if fc.status & Status.NeedsInit:
-                fc.initialize(r["id"], r["pars"])
-                fc.poll()
-                while fc.status & Status.Busy:  # waits for initialization to finish. hopefully this is fast
-                    fc.poll()
-
-            if fc.status & Status.Ready:
-                r["status"] = "Running"
-                #fc.sendpos(r["pos"][r["active"]], r["cell"])
-                nt = threading.Thread(target=fc.sendpos, name="sendpos", args = (r["pos"][r["active"]], r["cell"]))
-                nt.daemon = True
-                nt.start()
-                send_threads.append(nt)
-
-                r["t_dispatched"] = time.time()
-                r["start"] = time.time()  # sets start time for the request
-                # fc.poll()
-                with self.threadlock:
-                    self.jobs.append([r, fc])
-                fc.locked = (fc.lastreq is r["id"])
-
-                # removes r from the list of pending jobs
-                self.prlist.remove(r)
-
-                return True
-            else:
-                warning(" @SOCKET: Client " + str(fc.peername) + " is in an unexpected status " + str(fc.status) + " at (2). Will try to keep calm and carry on.", verbosity.low)
-
-    def check_job_finished(self, r, c):
-        """
-            Checks if a job has been completed, and retrieves the results
-        """
-
-        if not c.status & (Status.Ready | Status.NeedsInit):
-            c.poll()
-        if not (c.status & Status.HasData):
-            return False
-        try:
-            r["result"] = c.getforce()
-            if len(r["result"][1]) != len(r["pos"][r["active"]]):
-                raise InvalidSize
-            # If only a piece of the system is active, resize forces and reassign
-            rftemp = r["result"][1]
-            r["result"][1] = np.zeros(len(r["pos"]), dtype=np.float64)
-            r["result"][1][r["active"]] = rftemp
-        except Disconnected:
-            c.status = Status.Disconnected
-            return False
-        except InvalidSize:
-            warning(" @SOCKET:   Client returned an inconsistent number of forces. Will mark as disconnected and try to carry on.", verbosity.low)
-            c.status = Status.Disconnected
-            return False
-        except:
-            warning(" @SOCKET:   Client got in a awkward state during getforce. Will mark as disconnected and try to carry on.", verbosity.low)
-            c.status = Status.Disconnected
-            return False
-
-        c.poll()
-        while c.status & Status.Busy:  # waits, but check if we got stuck.
-            if self.timeout > 0 and r["start"] > 0 and time.time() - r["start"] > self.timeout:
-                warning(" @SOCKET:  Timeout! HASDATA for bead " + str(r["id"]) + " has been running for " + str(time.time() - r["start"]) + " sec.", verbosity.low)
-                warning(" @SOCKET:   Client " + str(c.peername) + " died or got unresponsive(A). Disconnecting.", verbosity.low)
-                try:
-                    c.shutdown(socket.SHUT_RDWR)
-                except socket.error:
-                    pass
-                c.close()
-                c.status = Status.Disconnected
-                return False
-            c.poll()
-        if not (c.status & Status.Up):
-            warning(" @SOCKET:   Client died a horrible death while getting forces. Will try to cleanup.", verbosity.low)
-            return False
-        r["status"] = "Done"
-        r["t_finished"] = time.time()
-        c.lastreq = r["id"]  # saves the ID of the request that the client has just processed
-        return True
-
-    def join_threads(self, sthreads, cthreads):
-        for st in sthreads:
-            while st.isAlive():
-                st.join(1.0)
-
-        for ct, r, c in cthreads:
-            while ct is not None and ct.isAlive():
-                ct.join(1.0)
-
-            if r["status"] == "Done":
-                with self.threadlock:
-                    self.jobs = [w for w in self.jobs if not (w[0] is r and w[1] is c)]  # removes pair in a robust way
-
-            if self.timeout > 0 and c.status != Status.Disconnected and r["start"] > 0 and time.time() - r["start"] > self.timeout:
-                warning(" @SOCKET:  Timeout! Request for bead " + str(r["id"]) + " has been running for " + str(time.time() - r["start"]) + " sec.", verbosity.low)
-                warning(" @SOCKET:   Client " + str(c.peername) + " died or got unresponsive(B). Disconnecting.", verbosity.low)
-                try:
-                    c.shutdown(socket.SHUT_RDWR)
-                except socket.error:
-                    e = sys.exc_info()
-                    warning(" @SOCKET:  could not shut down cleanly the socket. %s: %s in file '%s' on line %d" % (e[0].__name__, e[1], os.path.basename(e[2].tb_frame.f_code.co_filename), e[2].tb_lineno), verbosity.low)
-                c.close()
-                c.poll()
-                c.status = Status.Disconnected
 
     def pool_distribute(self):
         """Deals with keeping the list of jobs up-to-date during a force
@@ -693,7 +639,7 @@ class InterfaceSocket(object):
         # get clients that are still free
         with self.threadlock:
             freec = self.clients[:]
-            for [r2, c] in self.jobs:
+            for [r2, c, ct] in self.jobs:
                 freec.remove(c)
 
         # fills up list of pending requests if empty, or if clients are abundant
@@ -707,15 +653,16 @@ class InterfaceSocket(object):
 
         # first: dispatches jobs to free clients (if any!)
         # tries first to match previous replica<>driver association, then to get new clients, and only finally send the a new replica to old drivers
-        sthreads = []
         ndispatch = 0
         tdispatch -= time.time()
         while len(freec) > 0 and len(self.prlist) > 0:
             for match_ids in match_seq:
                 for fc in freec[:]:
-                    if self.dispatch_free_client(fc, match_ids, sthreads):
+                    d_thread = self.dispatch_free_client(fc, match_ids)
+                    if not (d_thread is None):
                         freec.remove(fc)
                         ndispatch += 1
+
                     if len(self.prlist)==0:
                         break
             if len(freec)>0:
@@ -729,43 +676,78 @@ class InterfaceSocket(object):
                 if c.status == Status.Disconnected:  # client disconnected. force a pool_update
                     self.poll_iter = UPDATEFREQ
                     return
-                if not c.status & (Status.Ready | Status.NeedsInit):
-                    c.poll()
 
         # check for finished jobs
-        cthreads = []
         nchecked = 0
         tcheck -= time.time()
-        for [r, c] in self.jobs[:]:
-            #self.check_job_finished(r,c)
-            #ct = None
-            ct = threading.Thread(target=self.check_job_finished, name="", args=(r,c))
-            ct.daemon = True
-            ct.start()
-            cthreads.append((ct, r, c))
+        for [r, c, ct] in self.jobs[:]:
+            self.check_job_finished(r,c,ct)
             nchecked += 1
         tcheck += time.time()
 
         tjoin -= time.time()
-        self.join_threads(sthreads,cthreads)
         tjoin += time.time()
 
         ttotal += time.time()
         #print "POLL TOTAL: ", ttotal, "JOIN: ", tjoin, "DISPATCH:", ndispatch, tdispatch, "CHECK:", nchecked, tcheck
 
-    def poll(self):
-        """The main thread loop.
 
-        Runs until either the program finishes or a kill call is sent. Updates
-        the pool of clients every UPDATEFREQ loops and loops every latency
-        seconds until _poll_true becomes false.
+    def dispatch_free_client(self, fc, match_ids="any", send_threads=[]):
+        """
+           Tries to find a request to match a free client.
+        """
+        # first, makes sure that the client is REALLY free
+        if not (fc.status & Status.Up):
+            return None
+        if fc.status & Status.HasData:
+            return None
+        if not (fc.status & (Status.Ready | Status.NeedsInit | Status.Busy)):
+            warning(" @SOCKET: Client " + str(fc.peername) + " is in an unexpected status " + str(fc.status) + " at (1). Will try to keep calm and carry on.", verbosity.low)
+            return None
+
+        fc_thread = None
+        for r in self.prlist[:]:
+            if match_ids == "match" and not fc.lastreq is r["id"]:
+                continue
+            elif match_ids == "none" and not fc.lastreq is None:
+                continue
+            elif match_ids == "free" and fc.locked:
+                continue
+
+            with self.threadlock:
+                # makes sure the request is marked as running and the client included in the jobs list
+                fc.locked = (fc.lastreq is r["id"])
+                r["status"] = "Running"
+                self.prlist.remove(r)
+                info(" @SOCKET: %s Assigning [%5s] request id %4s to client with last-id %4s (% 3d/% 3d : %s)" % (time.strftime("%y/%m/%d-%H:%M:%S"), match_ids, str(r["id"]), str(fc.lastreq), self.clients.index(fc), len(self.clients), str(fc.peername)), verbosity.high)
+                fc_thread = threading.Thread(target=fc.dispatch, name="DISPATCH", kwargs={"r":r} )
+                self.jobs.append([r, fc, fc_thread])
+                fc_thread.daemon = True
+                fc_thread.start()
+                break
+        return fc_thread
+
+    def check_job_finished(self, r, c, ct):
+        """
+            Checks if a job has been completed, and retrieves the results
         """
 
-        # makes sure to remove the last dead client as soon as possible -- and to get clients if we are dry
-        if (self.poll_iter >= UPDATEFREQ or len(self.clients) == 0 or
-             (len(self.clients) > 0 and not(self.clients[0].status & Status.Up))):
-            self.poll_iter = 0
-            self.pool_update()
+        if self.timeout > 0 and r["start"] > 0 and time.time() - r["start"] > self.timeout:
+            warning(" @SOCKET:  Timeout! request has been running for " + str(time.time() - r["start"]) + " sec.", verbosity.low)
+            warning(" @SOCKET:   Client " + str(c.peername) + " died or got unresponsive(A). Disconnecting.", verbosity.low)
+            try:
+                c.shutdown(socket.SHUT_RDWR)
+            except socket.error:
+                pass
+            c.close()
+            c.status = Status.Disconnected
+            return False # client will be cleared and request resuscitated in poll_update
 
-        self.poll_iter += 1
-        self.pool_distribute()
+        if r["status"] == "Done":
+            while ct.isAlive(): # we can wait for end of thread
+                ct.join()
+            with self.threadlock:
+                self.jobs = [w for w in self.jobs if not (w[0] is r and w[1] is c)]  # removes pair in a robust way
+
+        return True
+
