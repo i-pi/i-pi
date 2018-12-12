@@ -537,7 +537,7 @@ class NormalModes(dobject):
            A list of the kinetic energy for each NM.
 
         """
-	# include the partially adiabatic CMD mass scaling
+        # include the partially adiabatic CMD mass scaling
         pnm = dstrip(self.pnm)/dstrip(self.beads.sm3)
         kmd = 0.5*(pnm**2).sum(axis=1)/dstrip(self.nm_factor)
 
