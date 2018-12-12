@@ -309,9 +309,7 @@ class NVEIntegrator(DummyIntegrator):
         connected to the centroid is chosen.
         """
 
-        if (self.fixcom):
-            pcom = np.zeros(3, float)
-
+        if (self.fixcom):            
             na3 = self.beads.natoms * 3
             nb = self.beads.nbeads
             p = dstrip(self.beads.p)
