@@ -177,7 +177,6 @@ class ForceBead(dobject):
                     time.sleep(self.ff.latency)
                 sys.exit()
             time.sleep(self.ff.latency)
-        
         # print diagnostics about the elapsed time
         info("# forcefield %s evaluated in %f (queue) and %f (dispatched) sec." % (self.ff.name, self.request["t_finished"] - self.request["t_queued"], self.request["t_finished"] - self.request["t_dispatched"]), verbosity.debug)
 
