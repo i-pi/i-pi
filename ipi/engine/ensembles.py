@@ -118,11 +118,6 @@ class Ensemble(dobject):
             hweights = np.ones(0)
         self.hweights = np.asarray(hweights)
 
-        self.mc_t1 = 0
-        self.mc_t2 = 0
-        self.mc_t3 = 0
-        self.mc_nt = 0
-
     def bind(self, beads, nm, cell, bforce, fflist, elist=[], xlpot=[], xlkin=[]):
         self.beads = beads
         self.cell = cell
