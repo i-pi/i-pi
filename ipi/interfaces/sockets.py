@@ -653,7 +653,7 @@ class InterfaceSocket(object):
 
                     if len(self.prlist)==0:
                         break
-            if len(freec)>0:
+            if len(freec) > 0:
                 self.prlist = [r for r in self.requests if r["status"] == "Queued"]
         tdispatch += time.time()
 
