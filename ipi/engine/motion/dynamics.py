@@ -326,7 +326,7 @@ class NVEIntegrator(DummyIntegrator):
                 pcom /= Mnb
                 self.beads.p[:, i:na3:3] -= m * pcom
 
-            self.ensemble.eens += dens*0.5/(Mnb)
+            self.ensemble.eens += dens * 0.5 / Mnb
 
         if len(self.fixatoms) > 0:
             for bp in self.beads.p:
