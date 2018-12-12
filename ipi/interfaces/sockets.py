@@ -659,7 +659,7 @@ class InterfaceSocket(object):
 
         # force a pool_update if there are requests pending
         # now check for client status
-        if len(self.jobs)==0:
+        if len(self.jobs) == 0:
             for c in self.clients:
                 if c.status == Status.Disconnected:  # client disconnected. force a pool_update
                     self.poll_iter = UPDATEFREQ
