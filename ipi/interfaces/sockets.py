@@ -222,7 +222,6 @@ class Driver(DriverSocket):
         self.status = Status.Up
         self.lastreq = None
         self.locked = False
-        self.threadlock = threading.Lock()
 
     def shutdown(self, how=socket.SHUT_RDWR):
         """Tries to send an exit message to clients to let them exit gracefully."""
@@ -230,13 +229,6 @@ class Driver(DriverSocket):
         self.sendall(Message("exit"))
         self.status = Status.Disconnected
         super(DriverSocket, self).shutdown(how)
-
-    def poll(self):
-        """Waits for driver status."""
-
-        with self.threadlock:
-            self.status = Status.Disconnected  # sets disconnected as failsafe status, in case _getstatus fails and exceptions are ignored upstream
-            self.status = self._getstatus()
 
     def _getstatus(self):
         """Gets driver status.
@@ -338,45 +330,44 @@ class Driver(DriverSocket):
            A list of the form [potential, force, virial, extra].
         """
 
-        with self.threadlock:
-            if (self.status & Status.HasData):
-                self.sendall(Message("getforce"));
-                reply = ""
-                while True:
-                    try:
-                        reply = self.recv_msg()
-                    except socket.timeout:
-                        warning(" @SOCKET:   Timeout in getforce, trying again!", verbosity.low)
-                        continue
-                    if reply == Message("forceready"):
-                        break
-                    else:
-                        warning(" @SOCKET:   Unexpected getforce reply: %s" % (reply), verbosity.low)
-                    if reply == "":
-                        raise Disconnected()
-            else:
-                raise InvalidStatus("Status in getforce was " + str(self.status))
+        if (self.status & Status.HasData):
+            self.sendall(Message("getforce"));
+            reply = ""
+            while True:
+                try:
+                    reply = self.recv_msg()
+                except socket.timeout:
+                    warning(" @SOCKET:   Timeout in getforce, trying again!", verbosity.low)
+                    continue
+                if reply == Message("forceready"):
+                    break
+                else:
+                    warning(" @SOCKET:   Unexpected getforce reply: %s" % (reply), verbosity.low)
+                if reply == "":
+                    raise Disconnected()
+        else:
+            raise InvalidStatus("Status in getforce was " + str(self.status))
 
-            mu = np.float64()
-            mu = self.recvall(mu)
+        mu = np.float64()
+        mu = self.recvall(mu)
 
-            mlen = np.int32()
-            mlen = self.recvall(mlen)
-            mf = np.zeros(3 * mlen, np.float64)
-            mf = self.recvall(mf)
+        mlen = np.int32()
+        mlen = self.recvall(mlen)
+        mf = np.zeros(3 * mlen, np.float64)
+        mf = self.recvall(mf)
 
-            mvir = np.zeros((3, 3), np.float64)
-            mvir = self.recvall(mvir)
+        mvir = np.zeros((3, 3), np.float64)
+        mvir = self.recvall(mvir)
 
-            #! Machinery to return a string as an "extra" field. Comment if you are using a old patched driver that does not return anything!
-            mlen = np.int32()
-            mlen = self.recvall(mlen)
-            if mlen > 0:
-                mxtra = np.zeros(mlen, np.character)
-                mxtra = self.recvall(mxtra)
-                mxtra = "".join(mxtra)
-            else:
-                mxtra = ""
+        #! Machinery to return a string as an "extra" field. Comment if you are using a old patched driver that does not return anything!
+        mlen = np.int32()
+        mlen = self.recvall(mlen)
+        if mlen > 0:
+            mxtra = np.zeros(mlen, np.character)
+            mxtra = self.recvall(mxtra)
+            mxtra = "".join(mxtra)
+        else:
+            mxtra = ""
 
         return [mu, mf, mvir, mxtra]
 
@@ -492,7 +483,6 @@ class InterfaceSocket(object):
         self.poll_iter = UPDATEFREQ  # triggers pool_update at first poll
         self.prlist = [] # list of pending requests
         self.match_mode = match_mode # heuristics to match jobs and active clients
-        self.threadlock = threading.Lock()
         self.requests = None # these will be linked to the request list of the FFSocket object using the interface
 
     def open(self):
@@ -587,15 +577,14 @@ class InterfaceSocket(object):
                 c.status = Status.Disconnected
                 self.clients.remove(c)
                 # requeue jobs that have been left hanging
-                with self.threadlock:
-                    for [k, j, tc] in self.jobs[:]:
-                        if tc.isAlive():
-                            tc.join(2)
-                        if j is c:
-                            self.jobs = [w for w in self.jobs if not (w[0] is k and w[1] is j)]  # removes pair in a robust way
+                for [k, j, tc] in self.jobs[:]:
+                    if tc.isAlive():
+                        tc.join(2)
+                    if j is c:
+                        self.jobs = [w for w in self.jobs if not (w[0] is k and w[1] is j)]  # removes pair in a robust way
 
-                            k["status"] = "Queued"
-                            k["start"] = -1
+                        k["status"] = "Queued"
+                        k["start"] = -1
 
         if len(self.clients) == 0:
             searchtimeout = SERVERTIMEOUT
@@ -637,10 +626,9 @@ class InterfaceSocket(object):
         ttotal -= time.time()
 
         # get clients that are still free
-        with self.threadlock:
-            freec = self.clients[:]
-            for [r2, c, ct] in self.jobs:
-                freec.remove(c)
+        freec = self.clients[:]
+        for [r2, c, ct] in self.jobs:
+            freec.remove(c)
 
         # fills up list of pending requests if empty, or if clients are abundant
         if len(self.prlist) == 0 or len(freec)>len(self.prlist):
@@ -714,17 +702,16 @@ class InterfaceSocket(object):
             elif match_ids == "free" and fc.locked:
                 continue
 
-            with self.threadlock:
-                # makes sure the request is marked as running and the client included in the jobs list
-                fc.locked = (fc.lastreq is r["id"])
-                r["status"] = "Running"
-                self.prlist.remove(r)
-                info(" @SOCKET: %s Assigning [%5s] request id %4s to client with last-id %4s (% 3d/% 3d : %s)" % (time.strftime("%y/%m/%d-%H:%M:%S"), match_ids, str(r["id"]), str(fc.lastreq), self.clients.index(fc), len(self.clients), str(fc.peername)), verbosity.high)
-                fc_thread = threading.Thread(target=fc.dispatch, name="DISPATCH", kwargs={"r":r} )
-                self.jobs.append([r, fc, fc_thread])
-                fc_thread.daemon = True
-                fc_thread.start()
-                break
+            # makes sure the request is marked as running and the client included in the jobs list
+            fc.locked = (fc.lastreq is r["id"])
+            r["status"] = "Running"
+            self.prlist.remove(r)
+            info(" @SOCKET: %s Assigning [%5s] request id %4s to client with last-id %4s (% 3d/% 3d : %s)" % (time.strftime("%y/%m/%d-%H:%M:%S"), match_ids, str(r["id"]), str(fc.lastreq), self.clients.index(fc), len(self.clients), str(fc.peername)), verbosity.high)
+            fc_thread = threading.Thread(target=fc.dispatch, name="DISPATCH", kwargs={"r":r} )
+            self.jobs.append([r, fc, fc_thread])
+            fc_thread.daemon = True
+            fc_thread.start()
+            break
         return fc_thread
 
     def check_job_finished(self, r, c, ct):
@@ -746,8 +733,7 @@ class InterfaceSocket(object):
         if r["status"] == "Done":
             while ct.isAlive(): # we can wait for end of thread
                 ct.join()
-            with self.threadlock:
-                self.jobs = [w for w in self.jobs if not (w[0] is r and w[1] is c)]  # removes pair in a robust way
+            self.jobs = [w for w in self.jobs if not (w[0] is r and w[1] is c)]  # removes pair in a robust way
 
         return True
 
