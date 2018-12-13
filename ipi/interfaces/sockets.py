@@ -99,6 +99,8 @@ class DriverSocket(socket.socket):
     Deals with sending and receiving the data between the client and the driver
     code. This class holds common functions which are used in the driver code,
     but can also be used to directly implement a python client.
+    Basically it's just a wrapper around socket to simplify some of the
+    specific needs of i-PI communication pattern.
 
     Attributes:
        _buf: A string buffer to hold the reply from the other connection.
@@ -256,6 +258,7 @@ class Driver(DriverSocket):
             warning(" @SOCKET:   Timeout in status recv!", verbosity.trace)
             return Status.Up | Status.Busy | Status.Timeout
         except:
+            warning(" @SOCKET:   Other socket exception. Disconnecting client and trying to carry on.", verbosity.trace)
             return Status.Disconnected
 
         if not len(reply) == HDRLEN:
@@ -269,6 +272,15 @@ class Driver(DriverSocket):
         else:
             warning(" @SOCKET:    Unrecognized reply: " + str(reply), verbosity.low)
             return Status.Up
+
+    def get_status(self):
+        """ Sets (and returns) the client internal status. Wait for an answer if
+            the client is busy. """
+        status = self._getstatus()
+        while status & Status.Busy:
+            status = self._getstatus()
+        self.status = status
+        return status
 
     def initialize(self, rid, pars):
         """Sends the initialisation string to the driver.
@@ -363,7 +375,9 @@ class Driver(DriverSocket):
         mvir = np.zeros((3, 3), np.float64)
         mvir = self.recvall(mvir)
 
-        #! Machinery to return a string as an "extra" field. Comment if you are using a old patched driver that does not return anything!
+        #! Machinery to return a string as an "extra" field.
+        # Comment if you are using a ancient patched driver that does not return anything!
+        # Actually, you should really update your driver, you're like half a decade behind.
         mlen = np.int32()
         mlen = self.recvall(mlen)
         if mlen > 0:
@@ -375,24 +389,16 @@ class Driver(DriverSocket):
 
         return [mu, mf, mvir, mxtra]
 
-    def get_status(self):
-
-        status = self._getstatus()
-        while status & Status.Busy:
-            status = self._getstatus()
-        self.status = status
-        return status
-
     def dispatch(self, r):
         """ Dispatches a request r and looks after it setting results
-            once it has been evaluated
+            once it has been evaluated. This is meant to be launched as a
+            separate thread, and takes clear of all the communication related to
+            the request.
         """
 
         if not self.status & Status.Up:
             warning(" @SOCKET:   Inconsistent client state in dispatch thread! (I)", verbosity.low)
             return
-
-
 
         r["t_dispatched"] = time.time()
 
@@ -413,7 +419,6 @@ class Driver(DriverSocket):
             warning(" @SOCKET:   Inconsistent client state in dispatch thread! (III)", verbosity.low)
             return
 
-
         try:
             r["result"] = self.getforce()
         except Disconnected:
@@ -427,11 +432,15 @@ class Driver(DriverSocket):
         rftemp = r["result"][1]
         r["result"][1] = np.zeros(len(r["pos"]), dtype=np.float64)
         r["result"][1][r["active"]] = rftemp
-        r["status"] = "Done"
         r["t_finished"] = time.time()
         self.lastreq = r["id"]  #
 
+        # updates the status of the client before leaving
         self.get_status()
+
+        # marks the request as done as the very last thing
+        r["status"] = "Done"
+
 
 class InterfaceSocket(object):
 
@@ -552,8 +561,8 @@ class InterfaceSocket(object):
         """Called in the main thread loop.
 
         Runs until either the program finishes or a kill call is sent. Updates
-        the pool of clients every UPDATEFREQ loops and loops every latency
-        seconds until _poll_true becomes false.
+        the pool of clients every UPDATEFREQ loops and loops every latency seconds.
+        The actual loop is in the associated forcefield class.
         """
 
         # makes sure to remove the last dead client as soon as possible -- and to get clients if we are dry
@@ -665,7 +674,6 @@ class InterfaceSocket(object):
                 self.prlist = [r for r in self.requests if r["status"] == "Queued"]
         tdispatch += time.time()
 
-        # force a pool_update if there are requests pending
         # now check for client status
         if len(self.jobs) == 0:
             for c in self.clients:
@@ -677,7 +685,8 @@ class InterfaceSocket(object):
         nchecked = 0
         tcheck -= time.time()
         for [r, c, ct] in self.jobs[:]:
-            self.check_job_finished(r,c,ct)
+            if not self.check_job_finished(r,c,ct):
+                self.poll_iter = UPDATEFREQ    # client disconnected. force a pool_update
             nchecked += 1
         tcheck += time.time()
 
@@ -689,6 +698,7 @@ class InterfaceSocket(object):
         """
            Tries to find a request to match a free client.
         """
+
         # first, makes sure that the client is REALLY free
         if not (fc.status & Status.Up):
             return False
@@ -723,7 +733,6 @@ class InterfaceSocket(object):
         """
             Checks if a job has been completed, and retrieves the results
         """
-
 
         if r["status"] == "Done":
             while ct.isAlive(): # we can wait for end of thread
