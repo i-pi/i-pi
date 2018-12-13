@@ -314,7 +314,8 @@ class Driver(DriverSocket):
                 self.sendall(pos)
                 self.status = Status.Up | Status.Busy
             except:
-                self.poll()
+                print "Error in sendall, resetting status"
+                self.get_status()
                 return
         else:
             raise InvalidStatus("Status in sendpos was " + self.status)
@@ -339,6 +340,9 @@ class Driver(DriverSocket):
                 except socket.timeout:
                     warning(" @SOCKET:   Timeout in getforce, trying again!", verbosity.low)
                     continue
+                except:
+                    warning(" @SOCKET:   Error while receiving message: %s" % (reply), verbosity.low)
+                    raise Disconnected()
                 if reply == Message("forceready"):
                     break
                 else:
@@ -410,7 +414,12 @@ class Driver(DriverSocket):
             return
 
 
-        r["result"] = self.getforce()
+        try:
+            r["result"] = self.getforce()
+        except Disconnected:
+            self.status = Status.Disconnected
+            return
+
         if len(r["result"][1]) != len(r["pos"][r["active"]]):
             raise InvalidSize
 
@@ -622,7 +631,7 @@ class InterfaceSocket(object):
         clients.
         """
 
-        ttotal = tdispatch = tcheck = tjoin = 0
+        ttotal = tdispatch = tcheck = 0
         ttotal -= time.time()
 
         # get clients that are still free
@@ -646,8 +655,7 @@ class InterfaceSocket(object):
         while len(freec) > 0 and len(self.prlist) > 0:
             for match_ids in match_seq:
                 for fc in freec[:]:
-                    d_thread = self.dispatch_free_client(fc, match_ids)
-                    if not (d_thread is None):
+                    if self.dispatch_free_client(fc, match_ids):
                         freec.remove(fc)
                         ndispatch += 1
 
@@ -673,11 +681,8 @@ class InterfaceSocket(object):
             nchecked += 1
         tcheck += time.time()
 
-        tjoin -= time.time()
-        tjoin += time.time()
-
         ttotal += time.time()
-        #print "POLL TOTAL: ", ttotal, "JOIN: ", tjoin, "DISPATCH:", ndispatch, tdispatch, "CHECK:", nchecked, tcheck
+        info("POLL TOTAL: %10.4f  Dispatch(N,t):  %4i, %10.4f   Check(N,t):   %4i, %10.4f" % (ttotal, ndispatch, tdispatch, nchecked, tcheck), verbosity.debug)
 
 
     def dispatch_free_client(self, fc, match_ids="any", send_threads=[]):
@@ -686,14 +691,13 @@ class InterfaceSocket(object):
         """
         # first, makes sure that the client is REALLY free
         if not (fc.status & Status.Up):
-            return None
+            return False
         if fc.status & Status.HasData:
-            return None
+            return False
         if not (fc.status & (Status.Ready | Status.NeedsInit | Status.Busy)):
             warning(" @SOCKET: Client " + str(fc.peername) + " is in an unexpected status " + str(fc.status) + " at (1). Will try to keep calm and carry on.", verbosity.low)
-            return None
+            return False
 
-        fc_thread = None
         for r in self.prlist[:]:
             if match_ids == "match" and not fc.lastreq is r["id"]:
                 continue
@@ -711,13 +715,21 @@ class InterfaceSocket(object):
             self.jobs.append([r, fc, fc_thread])
             fc_thread.daemon = True
             fc_thread.start()
-            break
-        return fc_thread
+            return True
+
+        return False
 
     def check_job_finished(self, r, c, ct):
         """
             Checks if a job has been completed, and retrieves the results
         """
+
+
+        if r["status"] == "Done":
+            while ct.isAlive(): # we can wait for end of thread
+                ct.join()
+            self.jobs = [w for w in self.jobs if not (w[0] is r and w[1] is c)]  # removes pair in a robust way
+            return True
 
         if self.timeout > 0 and r["start"] > 0 and time.time() - r["start"] > self.timeout:
             warning(" @SOCKET:  Timeout! request has been running for " + str(time.time() - r["start"]) + " sec.", verbosity.low)
@@ -729,11 +741,6 @@ class InterfaceSocket(object):
             c.close()
             c.status = Status.Disconnected
             return False # client will be cleared and request resuscitated in poll_update
-
-        if r["status"] == "Done":
-            while ct.isAlive(): # we can wait for end of thread
-                ct.join()
-            self.jobs = [w for w in self.jobs if not (w[0] is r and w[1] is c)]  # removes pair in a robust way
 
         return True
 
