@@ -179,11 +179,17 @@ class InputMotion(InputMotionBase):
 
         if type(motion) is MultiMotion:
             self.mode.store("multi")
-            self.extra = []
-            for m in motion.mlist:
-                im = InputMotionBase()
-                im.store(m)
-                self.extra.append(("motion", im))
+
+            if len(self.extra) != len(motion.mlist):
+                self.extra = [0] * len(motion.mlist)
+
+            for ii, m in enumerate(motion.mlist):
+                if self.extra[ii] == 0:
+                    im = InputMotionBase()
+                    im.store(m)
+                    self.extra[ii] = ("motion", im)
+                else:
+                    self.extra[ii][1].store(m)
         else:
             super(InputMotion, self).store(motion)
 

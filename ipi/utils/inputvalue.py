@@ -860,8 +860,7 @@ class InputValue(InputAttribute):
         super(InputValue, self).store(value)
 
         if units != "":
-            self.units.store(units)  # User can define in the code the units to be
-            # printed
+            self.units.store(units)  # User can define in the code the units to be printed
 
         self.value = value
         if self._dimension != "undefined":

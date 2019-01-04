@@ -23,8 +23,16 @@ from ipi.utils.depend import dstrip
 from ipi.utils.io import read_file
 from ipi.utils.units import unit_to_internal, unit_to_user
 
+try:
+    import plumed
+except:
+    plumed = None
 
-
+try:
+    import quippy
+except Exception as quippy_exc:
+    quippy = None
+    
 class ForceRequest(dict):
 
     """An extension of the standard Python dict class which only has a == b
@@ -62,7 +70,7 @@ class ForceField(dobject):
         _threadlock: Python handle used to lock the thread held in _thread.
     """
 
-    def __init__(self, latency=1.0, name="", pars=None, dopbc=True, active=np.array([-1])):
+    def __init__(self, latency=1.0, name="", pars=None, dopbc=True, active=np.array([-1]), threaded=False):
         """Initialises ForceField.
 
         Args:
@@ -86,6 +94,8 @@ class ForceField(dobject):
         self.requests = []
         self.dopbc = dopbc
         self.active = active
+        self.iactive = None
+        self.threaded = threaded
         self._thread = None
         self._doloop = [False]
         self._threadlock = threading.Lock()
@@ -126,17 +136,21 @@ class ForceField(dobject):
 
         # Indexes come from input in a per atom basis and we need to make a per atom-coordinate basis
         # Reformat indexes for full system (default) or piece of system
-        if self.active[0] == -1:
-            activehere = np.array([i for i in range(len(pbcpos))])
-        else:
-            activehere = np.array([[3 * n, 3 * n + 1, 3 * n + 2] for n in self.active])
+        # active atoms do not change but we only know how to build this array once we get the positions once
+        if self.iactive is None:
+            if self.active[0] == -1:
+                activehere = np.arange(len(pbcpos))
+            else:
+                activehere = np.array([[3 * n, 3 * n + 1, 3 * n + 2] for n in self.active])
 
-        # Reassign active indexes in order to use them
-        activehere = activehere.flatten()
+            # Reassign active indexes in order to use them
+            activehere = activehere.flatten()
 
-        # Perform sanity check for active atoms
-        if (len(activehere) > len(pbcpos) or activehere[-1] > (len(pbcpos) - 1)):
-            raise ValueError("There are more active atoms than atoms!")
+            # Perform sanity check for active atoms
+            if (len(activehere) > len(pbcpos) or activehere[-1] > (len(pbcpos) - 1)):
+                raise ValueError("There are more active atoms than atoms!")
+
+            self.iactive = activehere
 
         if self.dopbc:
             cell.array_pbc(pbcpos)
@@ -144,7 +158,7 @@ class ForceField(dobject):
         newreq = ForceRequest({
             "id": reqid,
             "pos": pbcpos,
-            "active": activehere,
+            "active": self.iactive,
             "cell": (dstrip(cell.h).copy(), dstrip(cell.ih).copy()),
             "pars": par_str,
             "result": None,
@@ -157,6 +171,9 @@ class ForceField(dobject):
 
         with self._threadlock:
             self.requests.append(newreq)
+
+        if not self.threaded:
+            self.poll()
 
         return newreq
 
@@ -223,12 +240,13 @@ class ForceField(dobject):
         if not self._thread is None:
             raise NameError("Polling thread already started")
 
-        self._doloop[0] = True
-        self._thread = threading.Thread(target=self._poll_loop, name="poll_" + self.name)
-        self._thread.daemon = True
-        self._thread.start()
+        if self.threaded:
+            self._doloop[0] = True
+            self._thread = threading.Thread(target=self._poll_loop, name="poll_" + self.name)
+            self._thread.daemon = True
+            self._thread.start()
+            softexit.register_thread(self._thread, self._doloop)
         softexit.register_function(self.softexit)
-        softexit.register_thread(self._thread, self._doloop)
 
     def softexit(self):
         """ Takes care of cleaning up upon softexit """
@@ -255,7 +273,7 @@ class FFSocket(ForceField):
             communication between the forcefield and the driver is done.
     """
 
-    def __init__(self, latency=1.0, name="", pars=None, dopbc=True, active=np.array([-1]), interface=None):
+    def __init__(self, latency=1.0, name="", pars=None, dopbc=True, active=np.array([-1]), threaded=True, interface=None, matching="auto"):
         """Initialises FFSocket.
 
         Args:
@@ -271,7 +289,7 @@ class FFSocket(ForceField):
         """
 
         # a socket to the communication library is created or linked
-        super(FFSocket, self).__init__(latency, name, pars, dopbc, active)
+        super(FFSocket, self).__init__(latency, name, pars, dopbc, active, threaded)
         if interface is None:
             self.socket = InterfaceSocket()
         else:
@@ -316,7 +334,7 @@ class FFLennardJones(ForceField):
                          'start': starting time}.
     """
 
-    def __init__(self, latency=1.0e-3, name="", pars=None, dopbc=False):
+    def __init__(self, latency=1.0e-3, name="", pars=None, dopbc=False, threaded=False):
         """Initialises FFLennardJones.
 
         Args:
@@ -328,7 +346,7 @@ class FFLennardJones(ForceField):
             raise ValueError("Periodic boundary conditions are not supported by FFLennardJones.")
 
         # a socket to the communication library is created or linked
-        super(FFLennardJones, self).__init__(latency, name, pars, dopbc=False)
+        super(FFLennardJones, self).__init__(latency, name, pars, dopbc=dopbc, threaded=threaded)
         self.epsfour = float(self.pars["eps"]) * 4
         self.sixepsfour = 6 * self.epsfour
         self.sigma2 = float(self.pars["sigma"]) * float(self.pars["sigma"])
@@ -373,13 +391,6 @@ class FFLennardJones(ForceField):
         r["status"] = "Done"
 
 
-try:
-    import quippy
-except Exception as e:
-    quippy = None
-    quippy_exc = e
-
-
 class FFQUIP(ForceField):
 
     """Basic fully pythonic force provider.
@@ -397,17 +408,18 @@ class FFQUIP(ForceField):
                          'start': starting time}.
     """
 
-    def __init__(self, init_file, args_str, param_file, latency=1.0e-3, name="", pars=None, dopbc=True):
+    def __init__(self, init_file, args_str, param_file, latency=1.0e-3, name="", pars=None, dopbc=True, threaded=False):
         """Initialises QUIP.
 
         Args:
-        pars: Mandatory dictionaru, giving the parameters needed by QUIP.
+        pars: Mandatory dictionary, giving the parameters needed by QUIP.
         """
         if quippy is None:
-            raise ImportError("QUIPPY import failed due to exception : " + str(e))
+            info("QUIPPY import failed", verbosity.low)
+            raise quippy_exc
 
         # a socket to the communication library is created or linked
-        super(FFQUIP, self).__init__(latency, name, pars, dopbc)
+        super(FFQUIP, self).__init__(latency, name, pars, dopbc, threaded=threaded)
         self.init_file = init_file
         self.args_str = args_str
         self.param_file = param_file
@@ -480,7 +492,7 @@ class FFDebye(ForceField):
                        'start': starting time}.
     """
 
-    def __init__(self, latency=1.0, name="", H=None, xref=None, vref=0.0, pars=None, dopbc=False, threaded=True):
+    def __init__(self, latency=1.0, name="", H=None, xref=None, vref=0.0, pars=None, dopbc=False, threaded=False):
         """Initialises FFDebye.
 
         Args:
@@ -532,12 +544,6 @@ class FFDebye(ForceField):
         r["t_finished"] = time.time()
 
 
-try:
-    import plumed
-except:
-    plumed = None
-
-
 class FFPlumed(ForceField):
     """Direct PLUMED interface
 
@@ -553,7 +559,7 @@ class FFPlumed(ForceField):
                       'start': starting time}.
     """
 
-    def __init__(self, latency=1.0e-3, name="", pars=None, dopbc=False, init_file="", plumeddat="", precision=8, plumedstep=0):
+    def __init__(self, latency=1.0e-3, name="", pars=None, dopbc=False, threaded=False, init_file="", plumeddat="", plumedstep=0):
         """Initialises FFPlumed.
 
         Args:
@@ -563,9 +569,8 @@ class FFPlumed(ForceField):
         # a socket to the communication library is created or linked
         if plumed is None:
             raise ImportError("Cannot find plumed libraries to link to a FFPlumed object/")
-        super(FFPlumed, self).__init__(latency, name, pars, dopbc=False)
-        self.plumed = plumed.Plumed(precision)
-        self.precision = precision
+        super(FFPlumed, self).__init__(latency, name, pars, dopbc=False, threaded=threaded)
+        self.plumed = plumed.Plumed()
         self.plumeddat = plumeddat
         self.plumedstep = plumedstep
         self.init_file = init_file
@@ -670,7 +675,7 @@ class FFYaff(ForceField):
 
     """ Use Yaff as a library to construct a force field """
 
-    def __init__(self, latency=1.0, name="", yaffpara=None, yaffsys=None, yafflog='yaff.log', rcut=18.89726133921252, alpha_scale=3.5, gcut_scale=1.1, skin=0, smooth_ei=False, reci_ei='ewald', pars=None, dopbc=False, threaded=True):
+    def __init__(self, latency=1.0, name="", threaded=False, yaffpara=None, yaffsys=None, yafflog='yaff.log', rcut=18.89726133921252, alpha_scale=3.5, gcut_scale=1.1, skin=0, smooth_ei=False, reci_ei='ewald', pars=None, dopbc=False):
         """Initialises FFYaff and enables a basic Yaff force field.
 
         Args:
@@ -694,7 +699,7 @@ class FFYaff(ForceField):
         import atexit
 
         # a socket to the communication library is created or linked
-        super(FFYaff, self).__init__(latency, name, pars, dopbc)
+        super(FFYaff, self).__init__(latency, name, pars, dopbc, threaded=threaded)
 
         # A bit weird to use keyword argument for a required argument, but this
         # is also done in the code above.

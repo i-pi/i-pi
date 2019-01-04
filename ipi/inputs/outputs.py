@@ -297,19 +297,31 @@ class InputOutputs(Input):
         """
 
         super(InputOutputs, self).store()
-        self.extra = []
 
         self.prefix.store("")  # do not store prefix, as on load it is added to the innermost output filenames
-        for el in plist:
+
+        if len(self.extra) != len(plist):
+            self.extra = [0] * len(plist)
+
+        for ii,el in enumerate(plist):
             if (isinstance(el, eoutputs.PropertyOutput)):
-                ip = InputProperties()
-                ip.store(el)
-                self.extra.append(("properties", ip))
+                if isinstance(self.extra[ii], InputProperties):
+                    self.extra[ii][1].store(el)
+                else:
+                    ip = InputProperties()
+                    ip.store(el)
+                    self.extra[ii] = ("properties", ip)
             elif (isinstance(el, eoutputs.TrajectoryOutput)):
-                ip = InputTrajectory()
-                ip.store(el)
-                self.extra.append(("trajectory", ip))
+                if isinstance(self.extra[ii], InputTrajectory):
+                    self.extra[ii][1].store(el)
+                else:
+                    ip = InputTrajectory()
+                    ip.store(el)
+                    self.extra[ii] = ("trajectory", ip)
             elif (isinstance(el, eoutputs.CheckpointOutput)):
-                ip = InputCheckpoint()
-                ip.store(el)
-                self.extra.append(("checkpoint", ip))
+                if isinstance(self.extra[ii], InputCheckpoint):
+                    self.extra[ii][1].store(el)
+                else:
+                    ip = InputCheckpoint()
+                    ip.store(el)
+                    self.extra[ii] = ("checkpoint", ip)
