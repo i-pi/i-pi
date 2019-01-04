@@ -23,8 +23,16 @@ from ipi.utils.depend import dstrip
 from ipi.utils.io import read_file
 from ipi.utils.units import unit_to_internal, unit_to_user
 
+try:
+    import plumed
+except:
+    plumed = None
 
-
+try:
+    import quippy
+except Exception as quippy_exc:
+    quippy = None
+    
 class ForceRequest(dict):
 
     """An extension of the standard Python dict class which only has a == b
@@ -383,13 +391,6 @@ class FFLennardJones(ForceField):
         r["status"] = "Done"
 
 
-try:
-    import quippy
-except Exception as e:
-    quippy = None
-    quippy_exc = e
-
-
 class FFQUIP(ForceField):
 
     """Basic fully pythonic force provider.
@@ -411,10 +412,11 @@ class FFQUIP(ForceField):
         """Initialises QUIP.
 
         Args:
-        pars: Mandatory dictionaru, giving the parameters needed by QUIP.
+        pars: Mandatory dictionary, giving the parameters needed by QUIP.
         """
         if quippy is None:
-            raise ImportError("QUIPPY import failed due to exception : " + str(e))
+            info("QUIPPY import failed", verbosity.low)
+            raise quippy_exc
 
         # a socket to the communication library is created or linked
         super(FFQUIP, self).__init__(latency, name, pars, dopbc, threaded=threaded)
@@ -540,12 +542,6 @@ class FFDebye(ForceField):
         r["result"] = [self.vref + 0.5 * np.dot(d, mf), -mf, np.zeros((3, 3), float), ""]
         r["status"] = "Done"
         r["t_finished"] = time.time()
-
-
-try:
-    import plumed
-except:
-    plumed = None
 
 
 class FFPlumed(ForceField):
