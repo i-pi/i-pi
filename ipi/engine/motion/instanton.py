@@ -19,7 +19,8 @@ from ipi.utils.messages import verbosity, info
 from ipi.utils import units
 from ipi.utils.mintools import nichols, Powell
 from ipi.engine.motion.geop import L_BFGS
-from ipi.utils.instools import banded_hessian, invmul_banded, red2comp, get_hessian, clean_hessian, get_imvector, print_instanton_geo, print_instanton_hess
+from ipi.utils.instools import banded_hessian, invmul_banded, red2comp, get_imvector, print_instanton_geo, print_instanton_hess
+from ipi.utils.hesstools import get_hessian, clean_hessian
 
 __all__ = ['InstantonMotion']
 
@@ -422,7 +423,8 @@ class DummyOptimizer(dobject):
 
             else:
                 info("We are going to compute the final hessian", verbosity.low)
-                get_hessian(self.optarrays["hessian"], self.gm, self.im.dbeads.q)
+                self.optarrays["hessian"][:] = get_hessian(self.gm, self.im.dbeads.q.copy(),
+                                                        self.beads.natoms, self.beads.nbeads)
                 print_instanton_hess(self.options["prefix"] + '_FINAL', step, self.optarrays["hessian"])
 
             exitt = True
@@ -473,7 +475,8 @@ class HessianOptimizer(DummyOptimizer):
             if self.beads.nbeads == 1:
                 info(" @GEOP: Classical TS search", verbosity.low)
                 if self.options["hessian_init"] == 'true':
-                    get_hessian(self.optarrays["hessian"], self.gm, self.beads.q)
+                    self.optarrays["hessian"][:] = get_hessian(self.gm, self.beads.q.copy(),
+                                                            self.beads.natoms, self.beads.nbeads)
             else:
                 # If the coordinates in all the imaginary time slices are the same
                 if ((self.beads.q - self.beads.q[0]) == 0).all():
@@ -498,7 +501,8 @@ class HessianOptimizer(DummyOptimizer):
 
                 if self.options["hessian_init"] == 'true':
                     info(" @GEOP: We are computing the initial hessian", verbosity.low)
-                    get_hessian(self.optarrays["hessian"], self.gm, self.beads.q)
+                    self.optarrays["hessian"][:] = get_hessian(self.gm, self.beads.q.copy(),
+                                                            self.beads.natoms, self.beads.nbeads)
 
             # Update positions and forces
             self.optarrays["old_x"][:] = self.beads.q
@@ -575,7 +579,7 @@ class NicholsOptimizer(HessianOptimizer):
                 dx = d_x[j, :]
                 Powell(dx, dg, aux)
         elif self.options["hessian_update"] == 'recompute':
-            get_hessian(self.optarrays["hessian"], self.gm, x)
+            self.optarrays["hessian"][:] = get_hessian(self.gm, x, self.beads.natoms, self.beads.nbeads)
 
         # Update positions and forces
         self.beads.q = self.gm.dbeads.q
@@ -649,7 +653,7 @@ class NROptimizer(HessianOptimizer):
                 dx = d_x[j, :]
                 Powell(dx, dg, aux)
         elif self.options["hessian_update"] == 'recompute':
-            get_hessian(self.optarrays["hessian"], self.gm, x)
+            self.optarrays["hessian"][:] = get_hessian(self.gm, x, self.beads.natoms, self.beads.nbeads)
 
         # Update positions and forces
         self.beads.q = self.gm.dbeads.q
@@ -727,7 +731,7 @@ class LBFGSOptimizer(DummyOptimizer):
 
             if self.beads.nbeads == 1:
                 raise ValueError("We can not perform an splitting calculation with nbeads =1")
-                # get_hessian(self.hessian, self.gm, self.beads.q)
+
             else:
                 if ((self.beads.q - self.beads.q[0]) == 0).all():
                     # If the coordinates in all the imaginary time slices are the same
