@@ -399,23 +399,28 @@ class DummyOptimizer(dobject):
         self.gm.bind(self)
         self.optarrays["energy_shift"] = geop.optarrays["energy_shift"]
 
-    def exitstep(self, fx, fx0, x, exitt, step):
+    def exitstep(self, d_x_max, step):
         """ Exits the simulation step. Computes time, checks for convergence. """
         self.qtime += time.time()
 
         tolerances = self.options["tolerances"]
+        d_u = self.forces.pot - self.optarrays["old_u"].sum()
 
-        info(' @Exit step: Energy difference: %.1e, (condition: %.1e)' % (np.absolute((fx - fx0) / self.beads.natoms), tolerances["energy"]), verbosity.low)
-        info(' @Exit step: Maximum force component: %.1e, (condition: %.1e)' % (np.amax(np.absolute(self.forces.f + self.im.f)), tolerances["force"]), verbosity.low)
-        info(' @Exit step: Maximum component step component: %.1e, (condition: %.1e)' % (x, tolerances["position"]), verbosity.low)
+        info(' @Exit step: Energy difference: %.1e, (condition: %.1e)'
+             % (np.absolute(d_u / self.beads.natoms), tolerances["energy"]), verbosity.low)
+        info(' @Exit step: Maximum force component: %.1e, (condition: %.1e)'
+             % (np.amax(np.absolute(self.forces.f + self.im.f)), tolerances["force"]), verbosity.low)
+        info(' @Exit step: Maximum component step component: %.1e, (condition: %.1e)'
+             % (d_x_max, tolerances["position"]), verbosity.low)
 
-        if (np.absolute((fx - fx0) / self.beads.natoms) <= tolerances["energy"]) \
+        if (np.absolute(d_u / self.beads.natoms) <= tolerances["energy"]) \
                 and ((np.amax(np.absolute(self.forces.f + self.im.f)) <= tolerances["force"]) or
                      (np.linalg.norm(self.forces.f.flatten() - self.optarrays["old_f"].flatten()) <= 1e-08)) \
-                and (x <= tolerances["position"]):
+                and (d_x_max <= tolerances["position"]):
 
-            print_instanton_geo(self.options["prefix"] + '_FINAL', step, self.im.dbeads.nbeads, self.im.dbeads.natoms, self.im.dbeads.names,
-                                self.im.dbeads.q, self.optarrays["old_u"], self.cell, self.optarrays["energy_shift"])
+            print_instanton_geo(self.options["prefix"] + '_FINAL', step, self.beads.nbeads, self.beads.natoms,
+                                self.beads.names, self.beads.q, self.forces.pots, self.cell,
+                                self.optarrays["energy_shift"])
 
             if self.options["hessian_final"] != 'true':
                 info("We are not going to compute the final hessian.", verbosity.low)
@@ -423,15 +428,32 @@ class DummyOptimizer(dobject):
 
             else:
                 info("We are going to compute the final hessian", verbosity.low)
-                self.optarrays["hessian"][:] = get_hessian(self.gm, self.im.dbeads.q.copy(),
-                                                        self.beads.natoms, self.beads.nbeads)
+                self.optarrays["hessian"][:] = get_hessian(self.gm, self.beads.q.copy(),
+                                                           self.beads.natoms, self.beads.nbeads)
                 print_instanton_hess(self.options["prefix"] + '_FINAL', step, self.optarrays["hessian"])
 
-            exitt = True
+            return True
             # If we just exit here, the last step (including the last hessian) will not be in the RESTART file
 
-        return exitt
+        return False
 
+    def update_pos_for(self):
+        """ Update positions and forces """
+        self.beads.q = self.gm.dbeads.q
+        self.forces.transfer_forces(self.gm.dforces)  # This forces the update of the forces
+
+    def update_pos_for_old(self):
+        # Update "old" positions and forces
+        self.optarrays["old_x"][:] = self.beads.q
+        self.optarrays["old_u"][:] = self.forces.pots
+        self.optarrays["old_f"][:] = self.forces.f
+
+    def print_geo(self, step):
+        # Print current instanton geometry
+        if (self.options["save"] > 0 and np.mod(step, self.options["save"]) == 0) or self.exit:
+            print_instanton_geo(self.options["prefix"], step, self.beads.nbeads, self.beads.natoms,
+                                self.beads.names, self.beads.q, self.forces.pots, self.cell,
+                                self.optarrays["energy_shift"])
 
 class HessianOptimizer(DummyOptimizer):
     """ Class that implements an optimization when a hessian is available."""
@@ -517,6 +539,24 @@ class HessianOptimizer(DummyOptimizer):
 
         self.init=True
 
+    def update_hessian(self, update,new_x,d_x,d_g):
+        """ Update hessian """
+
+        if update == 'powell':
+
+            i = self.im.dbeads.natoms * 3
+            for j in range(self.im.dbeads.nbeads):
+                aux = self.optarrays["hessian"][:, j * i:(j + 1) * i]
+                dg = d_g[j, :]
+                dx = d_x[j, :]
+                Powell(dx, dg, aux)
+        elif update == 'recompute':
+            self.optarrays["hessian"][:] = get_hessian(self.gm, new_x, self.beads.natoms, self.beads.nbeads)
+
+    def print_hess(self, step):
+        if (self.options["save"] > 0 and np.mod(step, self.options["save"]) == 0) or self.exit:
+            print_instanton_hess(self.options["prefix"], step, self.optarrays["hessian"])
+
     def step(self, step=None):
         """Dummy simulation time step which does nothing."""
         pass
@@ -562,46 +602,27 @@ class NicholsOptimizer(HessianOptimizer):
                  % (d_x_max, self.optarrays["big_step"]), verbosity.low)
             
             d_x *= self.optarrays["big_step"] / np.amax(np.absolute(d_x_max))
-
+            d_x_max = np.amax(np.absolute(d_x))
         # Make movement and get new energy (u)  and forces(f) using mapper
+
         x = self.optarrays["old_x"] + d_x
         self.im(x, ret=False)  # Only to update the mapper
         u, g2 = self.gm(x)
+
         f = -g2
+        d_g = np.subtract(self.optarrays["old_f"], f)
 
-        # Update hessian
-        if self.options["hessian_update"] == 'powell':
-            d_g = np.subtract(self.optarrays["old_f"], f)
-            i = self.im.dbeads.natoms * 3
-            for j in range(self.im.dbeads.nbeads):
-                aux = self.optarrays["hessian"][:, j * i:(j + 1) * i]
-                dg = d_g[j, :]
-                dx = d_x[j, :]
-                Powell(dx, dg, aux)
-        elif self.options["hessian_update"] == 'recompute':
-            self.optarrays["hessian"][:] = get_hessian(self.gm, x, self.beads.natoms, self.beads.nbeads)
+        # Update
+        self.update_hessian(self.options["hessian_update"], x , d_x, d_g)
+        self.update_pos_for()
 
-        # Update positions and forces
-        self.beads.q = self.gm.dbeads.q
-        self.forces.transfer_forces(self.gm.dforces)  # This forces the update of the forces
+        # Print
+        self.print_geo(step)
+        self.print_hess(step)
 
-        # Print current instanton geometry and hessian
-        if (self.options["save"] > 0 and np.mod(step, self.options["save"]) == 0) or self.exit:
-            print_instanton_geo(self.options["prefix"], step, self.im.dbeads.nbeads, self.im.dbeads.natoms,
-                                self.im.dbeads.names,self.im.dbeads.q, self.optarrays["old_u"], self.cell,
-                                self.optarrays["energy_shift"])
-            
-            print_instanton_hess(self.options["prefix"], step, self.optarrays["hessian"])
-
-        # Check Exit
-        d_x_max = np.amax(np.absolute(np.subtract(self.beads.q, self.optarrays["old_x"])))
-        self.exit = self.exitstep(self.forces.pot, self.optarrays["old_u"].sum(), d_x_max, self.exit, step)
-
-        # Update positions and forces
-        self.optarrays["old_x"][:] = self.beads.q
-        self.optarrays["old_u"][:] = self.forces.pots
-        self.optarrays["old_f"][:] = self.forces.f
-
+        # Check Exit and only then update old arrays
+        self.exit = self.exitstep(d_x_max,step)
+        self.update_pos_for_old()
 
 class NROptimizer(HessianOptimizer):
     """ Class that implements a Newton-Raphson optimizations. It can find first order saddle points or minima"""
@@ -636,45 +657,27 @@ class NROptimizer(HessianOptimizer):
                  % (d_x_max, self.optarrays["big_step"]), verbosity.low)
 
             d_x *= self.optarrays["big_step"] / np.amax(np.absolute(d_x_max))
+            d_x_max = np.amax(d_x)
 
         # Make movement and get new energy (u)  and forces(f) using mapper
         x = self.optarrays["old_x"] + d_x
         self.im(x, ret=False)  # Only to update the mapper
         u, g2 = self.gm(x)
         f = -g2
+        d_g = np.subtract(self.optarrays["old_f"], f)
 
-        # Update hessian
-        if self.options["hessian_update"] == 'powell':
-            d_g = np.subtract(self.optarrays["old_f"], f)
-            i = self.im.dbeads.natoms * 3
-            for j in range(self.im.dbeads.nbeads):
-                aux = self.optarrays["hessian"][:, j * i:(j + 1) * i]
-                dg = d_g[j, :]
-                dx = d_x[j, :]
-                Powell(dx, dg, aux)
-        elif self.options["hessian_update"] == 'recompute':
-            self.optarrays["hessian"][:] = get_hessian(self.gm, x, self.beads.natoms, self.beads.nbeads)
+        # Update
+        self.update_hessian(self.options["hessian_update"], x, d_x, d_g)
+        self.update_pos_for()
 
-        # Update positions and forces
-        self.beads.q = self.gm.dbeads.q
-        self.forces.transfer_forces(self.gm.dforces)  # This forces the update of the forces
+        # Print
+        self.print_geo(step)
+        self.print_hess(step)
 
-        # Print current instanton geometry and hessian
-        if (self.options["save"] > 0 and np.mod(step, self.options["save"]) == 0) or self.exit:
-            print_instanton_geo(self.options["prefix"], step, self.im.dbeads.nbeads, self.im.dbeads.natoms,
-                                self.im.dbeads.names, self.im.dbeads.q, self.optarrays["old_u"], self.cell,
-                                self.optarrays["energy_shift"])
+        # Check Exit and only then update old arrays
+        self.exit = self.exitstep(d_x_max, step)
+        self.update_pos_for_old()
 
-            print_instanton_hess(self.options["prefix"], step, self.optarrays["hessian"])
-
-        # Check Exit
-        d_x_max = np.amax(np.absolute(np.subtract(self.beads.q, self.optarrays["old_x"])))
-        self.exit = self.exitstep(self.forces.pot, self.optarrays["old_u"].sum(), d_x_max, self.exit, step)
-
-        # Update positions and forces
-        self.optarrays["old_x"][:] = self.beads.q
-        self.optarrays["old_u"][:] = self.forces.pots
-        self.optarrays["old_f"][:] = self.forces.f
 
 class LBFGSOptimizer(DummyOptimizer):
 
@@ -754,7 +757,7 @@ class LBFGSOptimizer(DummyOptimizer):
 
         # Specific for LBFGS
         if np.linalg.norm(self.d) == 0.0:
-            f = self.forces.f + self.im.f  # ALBERTO1
+            f = self.forces.f + self.im.f
             self.d += dstrip(f) / np.sqrt(np.dot(f.flatten(), f.flatten()))
 
         if (self.old_x == np.zeros((self.beads.nbeads, 3 * self.beads.natoms), float)).all():
@@ -780,21 +783,15 @@ class LBFGSOptimizer(DummyOptimizer):
                fdf0, self.big_step, self.ls_options["tolerance"] * self.tolerances["energy"],
                self.ls_options["iter"], self.corrections, self.scale, step)
 
-        # Update positions and forces
-        self.beads.q = self.gm.dbeads.q
-        self.forces.transfer_forces(self.gm.dforces)  # This forces the update of the forces
+        # Update
+        self.update_pos_for()
 
-        # Print current instanton geometry
-        if (self.options["save"] > 0 and np.mod(step, self.options["save"]) == 0) or self.exit:
-            print_instanton_geo(self.options["prefix"], step, self.im.dbeads.nbeads, self.im.dbeads.natoms,
-                                self.im.dbeads.names, self.im.dbeads.q, self.optarrays["old_u"], self.cell,
-                                self.optarrays["energy_shift"])
+        # Print
+        self.print_geo(step)
 
-        # Check exit
+        # Check Exit and only then update old arrays
         d_x_max = np.amax(np.absolute(np.subtract(self.beads.q, self.optarrays["old_x"])))
-        self.exit = self.exitstep(self.forces.pot, self.optarrays["old_u"].sum(), d_x_max, self.exit, step)
+        self.exit = self.exitstep(d_x_max, step)
+        self.update_pos_for_old()
 
-        # Update positions and forces
-        self.old_x[:] = self.beads.q
-        self.old_u[:] = self.forces.pots
-        self.old_f[:] = self.forces.f
+
