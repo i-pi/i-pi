@@ -176,7 +176,7 @@ class InputInst(InputDictionary):
             self.hessian.store(optarrays["hessian"])
             self.hessian_update.store(options["hessian_update"])
             self.hessian_asr.store(options["hessian_asr"])
-        elif geop.opt == 'lbfgs':
+        elif geop.options["opt"] == 'lbfgs':
             self.qlist_lbfgs.store(optarrays["qlist"])
             self.glist_lbfgs.store(optarrays["glist"])
             self.old_direction.store(optarrays["d"])
@@ -184,7 +184,7 @@ class InputInst(InputDictionary):
             self.corrections_lbfgs.store(options["corrections"])
             self.ls_options.store(options["ls_options"])
             self.hessian_final.store(options["hessian_final"])
-            if geop.hessian_final == 'true':
+            if options["hessian_final"] == 'true':
                 self.hessian.store(optarrays["hessian"])
 
     def fetch(self):

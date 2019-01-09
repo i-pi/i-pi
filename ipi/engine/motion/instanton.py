@@ -139,7 +139,7 @@ class InstantonMotion(Motion):
             self.options["hessian_init"] = hessian_init
             self.optarrays["hessian"] = hessian
 
-        elif self.opt == 'lbfgs':
+        elif self.options["opt"] == 'lbfgs':
             self.optimizer = LBFGSOptimizer()
             self.optarrays["hessian"] = hessian  # Only for initial (to spread) or final
             self.options["hessian_asr"] = hessian_asr
@@ -691,7 +691,7 @@ class LBFGSOptimizer(DummyOptimizer):
 
         if geop.options["hessian_final"] == 'true':
             self.options["hessian_asr"] = geop.options["hessian_asr"]
-            if geop.optarrays["hessian.size"] == 0:
+            if geop.optarrays["hessian"].size == 0:
                 geop.optarrays["hessian"] = np.zeros((self.beads.natoms * 3, self.beads.q.size))
             self.optarrays["hessian"] = geop.optarrays["hessian"]
 
@@ -707,7 +707,7 @@ class LBFGSOptimizer(DummyOptimizer):
                 raise ValueError("qlist size does not match system size")
         if geop.optarrays["glist"].size != (self.options["corrections"] * self.beads.q.size):
             if geop.optarrays["glist"].size == 0:
-                geop.optarrays["glist"] = np.zeros((self.corrections, self.beads.q.size), float)
+                geop.optarrays["glist"] = np.zeros((self.options["corrections"], self.beads.q.size), float)
             else:
                 raise ValueError("qlist size does not match system size")
 
@@ -738,30 +738,32 @@ class LBFGSOptimizer(DummyOptimizer):
             else:
                 if ((self.beads.q - self.beads.q[0]) == 0).all():
                     # If the coordinates in all the imaginary time slices are the same
-                    info(" @GEOP: We stretch the initial geometry with an 'amplitud' of %4.2f" % self.delta, verbosity.low)
-                    imvector = get_imvector(self.initial_hessian, self.beads.m3[0].flatten())
+                    info(" @GEOP: We stretch the initial geometry with an 'amplitud' of %4.2f" % self.optarrays["delta"]
+                         , verbosity.low)
+                    imvector = get_imvector(self.optarrays["initial_hessian"], self.beads.m3[0].flatten())
                     for i in range(self.beads.nbeads):
 
-                        self.beads.q[i, :] += self.delta * np.cos(i * np.pi / float(self.beads.nbeads - 1)) * imvector[:]
+                        self.beads.q[i, :] += self.optarrays["delta"] * \
+                                              np.cos(i * np.pi / float(self.beads.nbeads - 1)) * imvector[:]
                 else:
                     info(" @GEOP: Starting from the provided geometry in the extended phase space", verbosity.low)
 
             # Update positions and forces
-            self.old_x[:] = self.beads.q
-            self.old_u[:] = self.forces.pots
-            self.old_f[:] = self.forces.f
+            self.optarrays["old_x"][:] = self.beads.q
+            self.optarrays["old_u"][:] = self.forces.pots
+            self.optarrays["old_f"][:] = self.forces.f
 
         # This must be done after the stretching and before the self.d.
         if type(self.im.f) == type(None):
             self.im(self.beads.q, ret=False)  # Init instanton mapper
 
         # Specific for LBFGS
-        if np.linalg.norm(self.d) == 0.0:
+        if np.linalg.norm(self.optarrays["d"]) == 0.0:
             f = self.forces.f + self.im.f
-            self.d += dstrip(f) / np.sqrt(np.dot(f.flatten(), f.flatten()))
+            self.optarrays["d"] += dstrip(f) / np.sqrt(np.dot(f.flatten(), f.flatten()))
 
-        if (self.old_x == np.zeros((self.beads.nbeads, 3 * self.beads.natoms), float)).all():
-            self.old_x[:] = self.beads.q
+        if (self.optarrays["old_x"] == np.zeros((self.beads.nbeads, 3 * self.beads.natoms), float)).all():
+            self.optarrays["old_x"][:] = self.beads.q
 
     def step(self, step=None):
         """ Does one simulation time step."""
@@ -779,9 +781,10 @@ class LBFGSOptimizer(DummyOptimizer):
         fdf0 = (e, g)
 
         # Do one step. Update hessian for the new position. Update the position and force inside the mapper.
-        L_BFGS(self.old_x, self.d, self.fm, self.qlist, self.glist,
-               fdf0, self.big_step, self.ls_options["tolerance"] * self.tolerances["energy"],
-               self.ls_options["iter"], self.corrections, self.scale, step)
+        L_BFGS(self.optarrays["old_x"], self.optarrays["d"], self.fm, self.optarrays["qlist"], self.optarrays["glist"],
+               fdf0, self.optarrays["big_step"], self.options["ls_options"]["tolerance"] *
+               self.options["tolerances"]["energy"], self.options["ls_options"]["iter"], self.options["corrections"],
+               self.options["scale"], step)
 
         # Update
         self.update_pos_for()
