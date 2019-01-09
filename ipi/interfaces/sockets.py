@@ -683,9 +683,13 @@ class InterfaceSocket(object):
 
         # check for finished jobs
         nchecked = 0
+        nfinished = 0
         tcheck -= time.time()
         for [r, c, ct] in self.jobs[:]:
-            if not self.check_job_finished(r,c,ct):
+            chk = self.check_job_finished(r,c,ct)
+            if chk ==1:
+                nfinished +=1
+            elif chk == 0:
                 self.poll_iter = UPDATEFREQ    # client disconnected. force a pool_update
             nchecked += 1
         tcheck += time.time()
@@ -693,6 +697,9 @@ class InterfaceSocket(object):
         ttotal += time.time()
         info("POLL TOTAL: %10.4f  Dispatch(N,t):  %4i, %10.4f   Check(N,t):   %4i, %10.4f" % (ttotal, ndispatch, tdispatch, nchecked, tcheck), verbosity.debug)
 
+        if nfinished >0 :
+            # don't wait, just try again to distribute
+            self.pool_distribute()
 
     def dispatch_free_client(self, fc, match_ids="any", send_threads=[]):
         """
@@ -738,7 +745,7 @@ class InterfaceSocket(object):
             while ct.isAlive(): # we can wait for end of thread
                 ct.join()
             self.jobs = [w for w in self.jobs if not (w[0] is r and w[1] is c)]  # removes pair in a robust way
-            return True
+            return 1
 
         if self.timeout > 0 and r["start"] > 0 and time.time() - r["start"] > self.timeout:
             warning(" @SOCKET:  Timeout! request has been running for " + str(time.time() - r["start"]) + " sec.", verbosity.low)
@@ -749,7 +756,7 @@ class InterfaceSocket(object):
                 pass
             c.close()
             c.status = Status.Disconnected
-            return False # client will be cleared and request resuscitated in poll_update
+            return 0 # client will be cleared and request resuscitated in poll_update
 
-        return True
+        return -1
 
