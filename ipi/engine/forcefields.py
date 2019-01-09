@@ -32,7 +32,7 @@ try:
     import quippy
 except Exception as quippy_exc:
     quippy = None
-    
+
 class ForceRequest(dict):
 
     """An extension of the standard Python dict class which only has a == b
@@ -197,9 +197,8 @@ class ForceField(dobject):
 
         info(" @ForceField: Starting the polling thread main loop.", verbosity.low)
         while self._doloop[0]:
-            if len(self.requests) == 0 :
-                time.sleep(self.latency)
-            else:
+            time.sleep(self.latency)
+            if len(self.requests) > 0:
                 self.poll()
 
     def release(self, request):
@@ -395,7 +394,7 @@ class FFQUIP(ForceField):
 
     """Basic fully pythonic force provider.
 
-    Computes an arbitrary interaction potential implemented in QUIP. 
+    Computes an arbitrary interaction potential implemented in QUIP.
     Parallel evaluation with threads.
 
     Attributes:
@@ -427,7 +426,7 @@ class FFQUIP(ForceField):
         # Initializes an atoms object and the interaction potential
         self.atoms = quippy.Atoms(self.init_file)
         self.pot = quippy.Potential(self.args_str, param_filename=self.param_file)
-       
+
         # Initializes the conversion factors from i-pi to QUIP
         self.len_conv = unit_to_user("length", "angstrom", 1)
         self.energy_conv = unit_to_user("energy", "electronvolt", 1)
@@ -451,7 +450,7 @@ class FFQUIP(ForceField):
         QUIP interaction potential."""
 
         # Obtains the positions and the cell.
-        q = r["pos"].reshape((-1, 3)) 
+        q = r["pos"].reshape((-1, 3))
         h, ih = r["cell"]
 
         nat = len(q)
@@ -465,7 +464,7 @@ class FFQUIP(ForceField):
         self.atoms.set_cell(h)
 
         # Calculates the energies, forces and the virial.
-        self.pot.calc(self.atoms, energy=True, force=True, virial=True) 
+        self.pot.calc(self.atoms, energy=True, force=True, virial=True)
 
         # Obtains the energetics and converts to i-pi units.
         u = self.atoms.energy  / self.energy_conv
