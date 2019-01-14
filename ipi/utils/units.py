@@ -277,7 +277,8 @@ UnitMap = {
         "": 1.00,
         "automatic": 1.00,
         "atomic_unit": 1.00,
-        "newton": 12137805
+        "newton": 12137805,
+        "ev/ang" : 0.019446904,
     }
 }
 

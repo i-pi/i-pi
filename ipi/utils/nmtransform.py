@@ -10,7 +10,7 @@ import numpy as np
 from ipi.utils.messages import verbosity, info
 
 
-__all__ = ['nm_trans', 'nm_rescale', 'nm_fft', 'mk_nm_matrix', 'mk_o_nm_matrix', 'nm_eva', 'o_nm_eva']
+__all__ = ['nm_noop', 'nm_trans', 'nm_rescale', 'nm_fft', 'mk_nm_matrix', 'mk_o_nm_matrix', 'nm_eva', 'o_nm_eva']
 
 
 def mk_nm_matrix(nbeads):
@@ -129,6 +129,19 @@ def mk_o_rs_matrix(nb1, nb2):
     else:
         return mk_o_rs_matrix(nb2, nb1).T * (float(nb2) / float(nb1))
 
+class nm_noop(object):
+    """ A no-op NM transformation for classical trajectories """
+
+    def __init__(self, nbeads, open_paths=None):
+        """Initializes nm_noop. """
+        if nbeads > 1:
+            raise ValueError("Shouldn't use a noop transformation for ring-polymer systems ")
+
+    def b2nm(self, q):
+        return q
+
+    def nm2b(self, qnm):
+        return qnm
 
 class nm_trans(object):
 

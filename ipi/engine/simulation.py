@@ -269,8 +269,10 @@ class Simulation(dobject):
                     # creates separate threads for the different systems
                     st = threading.Thread(target=s.motion.step, name=s.prefix, kwargs={"step": self.step})
                     st.daemon = True
-                    st.start()
                     stepthreads.append(st)
+
+                for st in stepthreads:
+                    st.start()
 
                 for st in stepthreads:
                     while st.isAlive():

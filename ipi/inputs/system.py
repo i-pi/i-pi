@@ -8,6 +8,7 @@
 import os.path
 import sys
 import re
+import time
 
 import numpy as np
 
@@ -46,7 +47,7 @@ class InputSysTemplate(Input):
     Fields:
         template: The text that corresponds to the system field template
         labels: List of strings identifying substitution fields in the template
-        instance: List of strings that should be used to substitute the labels    
+        instance: List of strings that should be used to substitute the labels
     """
 
     fields = {

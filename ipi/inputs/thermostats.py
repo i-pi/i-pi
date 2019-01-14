@@ -245,14 +245,19 @@ class InputThermo(InputThermoBase):
                }
 
     def store(self, thermo):
-        self.extra = []
-
         if type(thermo) is ethermostats.MultiThermo:
             self.mode.store("multi")
-            for t in thermo.tlist:
-                it = InputThermoBase()
-                it.store(t)
-                self.extra.append(("thermostat", it))
+
+            if len(self.extra) != len(thermo.tlist):
+                self.extra = [0] * len(thermo.tlist)
+            for ii,t in enumerate(thermo.tlist):
+                if self.extra[ii] ==0:
+                    it = InputThermoBase()
+                    it.store(t)
+                    self.extra[ii] = ("thermostat", it)
+                else:
+                    self.extra[ii][1].store(t)
+
             self.ethermo.store(thermo.ethermo)
         else:
             super(InputThermo, self).store(thermo)

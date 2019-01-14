@@ -43,7 +43,7 @@ class InputInterfaceSocket(Input):
        latency: A float giving the number of seconds that the interface waits
           before updating the client list.
        timeout: A float giving a number of seconds after which a calculation core
-          is considered dead. Defaults to zero, i.e. no timeout.
+          is considered dead. Defaults to one hour.
     """
 
     fields = {"address": (InputValue, {"dtype": str,
@@ -59,7 +59,7 @@ class InputInterfaceSocket(Input):
                                        "default": 1e-3,
                                        "help": "This gives the number of seconds between each check for new clients."}),
               "timeout": (InputValue, {"dtype": float,
-                                       "default": 0.0,
+                                       "default": 3600.0,
                                        "help": "This gives the number of seconds before assuming a calculation has died. If 0 there is no timeout."})}
     attribs = {"mode": (InputAttribute, {"dtype": str,
                                          "options": ["unix", "inet"],

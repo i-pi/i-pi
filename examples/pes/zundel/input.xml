@@ -3,7 +3,7 @@
     <latency>  1.00000000e-02</latency>
     <slots>4</slots>
     <port>20614</port>
-    <timeout>  6.00000000e+02</timeout>
+    <timeout>  6.000000e+00</timeout>
     <address>zundel</address>
   </ffsocket>
   <total_steps>400</total_steps>
