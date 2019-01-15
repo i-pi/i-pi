@@ -62,7 +62,7 @@ class InputInst(InputDictionary):
                                          "dimension": "force"}),
               "opt": (InputValue, {"dtype": str,
                                    "default": 'None',
-                                   "options": ["nichols", "NR", "lbfgs", "None"],
+                                   "options": ["nichols", "NR", "lbfgs", "lanczos", "None"],
                                    "help": "The geometry optimization algorithm to be used"}),
               "alt_out": (InputValue, {"dtype": int,
                                        "default": 1,
