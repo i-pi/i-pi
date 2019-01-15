@@ -25,7 +25,7 @@ def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):
 
         #Adapted from ipi/engine/motion/phonons.py apply_asr    """
 
-    info(" @clean_hessian", verbosity.high)
+    info(" @clean_hessian: asr = %s " %asr, verbosity.medium)
     # Set some useful things
     ii = natoms * nbeads
     mm = np.zeros((nbeads, natoms))
@@ -37,7 +37,7 @@ def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):
     # ismm = np.outer(ism, ism)
     # dynmat = np.multiply(h, ismm)
 
-    if asr == 'none':
+    if asr == 'none' or asr is None:
         hm = dynmat
     else:
         # Computes the centre of mass.
@@ -97,6 +97,7 @@ def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):
     # Count
     dd = np.sign(d) * np.absolute(d) ** 0.5 / (2 * np.pi * 3e10 * 2.4188843e-17)  # convert to cm^-1
 
+
     # Zeros
     cut0 = 0.01  # Note that dd[] units are cm^1
     condition = np.abs(dd) < cut0
@@ -133,30 +134,32 @@ def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):
         return d, w
 
 
-def get_hessian(gm, x0, natoms, nbeads=1,d=0.001):
+def get_hessian(gm, x0, natoms, nbeads=1, fixatoms=[], d=0.001):
     """Compute the physical hessian given a function to evaluate energy and forces (gm).
-       The intermediate steps are written as a temporal files.
+       The intermediate steps are written as a temporal files so the full hessian calculations is only ONE step. 
        
-       IN     gm      = gradient mapper
-              x0      = position vector
-              natoms  = number of atoms
-              nbeads  = number of beads
+       IN     gm       = gradient mapper
+              x0       = position vector
+              natoms   = number of atoms
+              nbeads   = number of beads
+              fixatoms = indexes of fixed atoms
+              d        = displacement
 
-       OUT    h       = physical hessian (natoms*3,nbeads*natoms*3)
-        """
+       OUT    h       = physical hessian ( (natoms-len(fixatoms) )*3 , nbeads*( natoms-len(fixatoms) )*3)
+    """
+
     # TODO What about the case you have numerical gradients?
 
-    info(" @Instanton: Computing hessian", verbosity.low)
-    ii = natoms * 3
+    info(" @get_hessian: Computing hessian", verbosity.low)
+    ii = (natoms - len(fixatoms)) * 3
     if x0.size != natoms * 3 * nbeads:
         raise ValueError("The position vector is not consistent with the number of atoms/beads.")
 
-    h = np.zeros((ii , ii*nbeads), float)
-
-
-    i0 = -1
+    h = np.zeros((ii, ii*nbeads), float)
 
     # Check if there is a temporal file:
+    i0 = -1
+
     for i in range(ii, -1, -1):
         try:
             b = np.loadtxt('hessian_' + str(i) + '.tmp')
@@ -171,8 +174,9 @@ def get_hessian(gm, x0, natoms, nbeads=1,d=0.001):
             else:
                 continue
 
+    # Start calculation:
     for j in range(i0 + 1, ii):
-        info(" @Instanton: Computing hessian: %d of %d" % ((j + 1), ii), verbosity.low)
+        info(" @get_hessian: Computing hessian: %d of %d" % ((j + 1), ii), verbosity.low)
         x = x0.copy()
 
         x[:, j] = x0[:, j] + d
@@ -194,6 +198,6 @@ def get_hessian(gm, x0, natoms, nbeads=1,d=0.001):
             os.remove('hessian_' + str(i) + '.tmp')
         except OSError:
             pass
-    print 'HERE',h.shape
+
     return h
 

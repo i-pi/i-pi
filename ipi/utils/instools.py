@@ -77,6 +77,20 @@ def invmul_banded(A, B, posdef=False):
         # sys.exit(0)
         return linalg.solve_banded((l, u), newA, B)
 
+def diag_banded(A,n=0):
+    """A is in upper banded form.
+        Returns the smallest n eigenvalue and its corresponding eigenvector.
+        """
+    try:
+        from scipy.linalg import eig_banded
+        info("Import of scipy successful", verbosity.medium)
+    except ImportError:
+        raise ValueError(" ")
+
+    d , w =  eig_banded(A, select='i', select_range=(0, n))
+
+    return d, w
+
 def red2comp(h, nbeads, natoms):
     """Takes the reduced physical hessian (3*natoms*nbeads,3*natoms)
      and construct the 'complete' one (3*natoms*nbeads)^2 """
@@ -122,7 +136,7 @@ def get_imvector(h, m3):
     imv = w[:, 0] * (m3[:] ** 0.5)
     imv = imv / np.linalg.norm(imv)
 
-    return imv
+    return imv.reshape(1, imv.size)
 
 def print_instanton_geo(prefix, step, nbeads, natoms, names, q, pots, cell, shift):
 
