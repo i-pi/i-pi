@@ -309,24 +309,22 @@ class NVEIntegrator(DummyIntegrator):
         connected to the centroid is chosen.
         """
 
-        if (self.fixcom):
-            pcom = np.zeros(3, float)
-
+        if (self.fixcom):            
             na3 = self.beads.natoms * 3
             nb = self.beads.nbeads
             p = dstrip(self.beads.p)
             m = dstrip(self.beads.m3)[:, 0:na3:3]
             M = self.beads[0].M
+            Mnb = M*nb
 
+            dens = 0
             for i in range(3):
-                pcom[i] = p[:, i:na3:3].sum()
+                pcom = p[:, i:na3:3].sum()
+                dens += pcom**2
+                pcom /= Mnb
+                self.beads.p[:, i:na3:3] -= m * pcom
 
-            self.ensemble.eens += np.dot(pcom, pcom) / (2.0 * M * nb)
-
-            # subtracts COM velocity
-            pcom *= 1.0 / (nb * M)
-            for i in range(3):
-                self.beads.p[:, i:na3:3] -= m * pcom[i]
+            self.ensemble.eens += dens * 0.5 / Mnb
 
         if len(self.fixatoms) > 0:
             for bp in self.beads.p:
@@ -360,6 +358,7 @@ class NVEIntegrator(DummyIntegrator):
         mk = int(self.nmts[index] / 2)
 
         for i in range(mk):  # do nmts/2 full sub-steps
+
             self.pstep(index)
             self.pconstraints()
             if index == self.nmtslevels - 1:
