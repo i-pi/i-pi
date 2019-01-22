@@ -262,7 +262,7 @@ class Barostat(dobject):
         return kst
 
     def get_kstress_sc(self):
-        """Calculates the high order part of the Suzuki-Chin 
+        """Calculates the high order part of the Suzuki-Chin
         quantum centroid virial kinetic stress tensor
         associated with the forces at a MTS level.
         """
@@ -585,7 +585,7 @@ class BaroSCBZP(Barostat):
         return self.thermostat.ethermo + self.kin + self.pot + self.cell_jacobian
 
     def pscstep(self):
-        """Propagates the momentum of the barostat with respect to the 
+        """Propagates the momentum of the barostat with respect to the
         high order part of the Suzuki-Chin stress"""
 
         # integrates with respect to the "high order" part of the stress with a timestep of dt /2
@@ -811,12 +811,17 @@ class BaroRGB(Barostat):
         halfdt = self.qdt
         expq, expp = (matrix_exp(v * halfdt), matrix_exp(-v * halfdt))
 
-        m = dstrip(self.beads.m)
 
         sinh = np.dot(invert_ut3x3(v), (expq - expp) / (2.0))
-        for i in range(self.beads.natoms):
-            self.nm.qnm[0, 3 * i:3 * (i + 1)] = np.dot(expq, self.nm.qnm[0, 3 * i:3 * (i + 1)])
-            self.nm.qnm[0, 3 * i:3 * (i + 1)] += np.dot(sinh, dstrip(self.nm.pnm)[0, 3 * i:3 * (i + 1)] / m[i])
-            self.nm.pnm[0, 3 * i:3 * (i + 1)] = np.dot(expp, self.nm.pnm[0, 3 * i:3 * (i + 1)])
+
+        q = dstrip(self.nm.qnm)[0].copy().reshape((self.beads.natoms, 3))
+        p = dstrip(self.nm.pnm)[0].copy()
+
+        q = np.dot(q, expq.T)
+        q += np.dot((p/self.beads.m3[0]).reshape((self.beads.natoms, 3)), sinh.T)
+        p = np.dot(p.reshape((self.beads.natoms, 3)), expp.T)
+
+        self.nm.qnm[0] = q.reshape((self.beads.natoms* 3))
+        self.nm.pnm[0] = p.reshape((self.beads.natoms* 3))
 
         self.cell.h = np.dot(expq, self.cell.h)
