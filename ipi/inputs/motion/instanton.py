@@ -172,7 +172,7 @@ class InputInst(InputDictionary):
         self.energy_shift.store(optarrays["energy_shift"])
 
         # Now we decide what to store depending on optimization algorithm
-        if geop.options["opt"] == 'nichols' or geop.options["opt"] == 'NR':
+        if geop.options["opt"] == 'nichols' or geop.options["opt"] == 'NR' or geop.options["opt"] == 'lanczos':
             self.hessian.store(optarrays["hessian"])
             self.hessian_update.store(options["hessian_update"])
             self.hessian_asr.store(options["hessian_asr"])

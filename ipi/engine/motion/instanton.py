@@ -21,7 +21,7 @@ from ipi.utils.mintools import nichols, Powell
 from ipi.engine.motion.geop import L_BFGS
 from ipi.utils.instools import banded_hessian, invmul_banded, red2comp, get_imvector, print_instanton_geo,\
     print_instanton_hess, diag_banded
-from ipi.utils.hesstools import get_hessian, clean_hessian
+from ipi.utils.hesstools import get_hessian, clean_hessian, get_dynmat
 from ipi.engine.beads import Beads
 
 __all__ = ['InstantonMotion']
@@ -371,7 +371,7 @@ class SpringMapper(object):
         elif dumop.options["mode"] == 'splitting':
             self.omega2 = (self.temp * self.dbeads.nbeads * units.Constants.kb / units.Constants.hbar) ** 2
 
-        if dumop.options["opt"] == 'nichols' or dumop.options["opt"] == 'NR':
+        if dumop.options["opt"] == 'nichols' or dumop.options["opt"] == 'NR' or dumop.options["opt"] == 'lanczos':
             self.h = self.spring_hessian(self.dbeads.natoms, self.dbeads.nbeads, self.dbeads.m3[0], self.omega2)
 
     def save(self, e, g):
@@ -500,6 +500,8 @@ class DummyOptimizer(dobject):
         self.forces = geop.forces
         self.fixcom = geop.fixcom
         self.fixatoms = geop.fixatoms
+        self.nm = geop.nm
+        #self.ensemble = geop.ens
 
         # The resize action must be done before the bind
 
@@ -704,7 +706,7 @@ class HessianOptimizer(DummyOptimizer):
             active_hessian = get_hessian(self.gm, self.beads.q.copy(), self.beads.natoms, self.beads.nbeads,self.fixatoms)
             self.optarrays["hessian"][:] = self.fix.get_full_vector(active_hessian, 2)
 
-        if type(self.im.f) == type(None):
+        if self.im.f is None:
             self.im(self.beads.q, ret=False)  # Init instanton mapper
 
         self.update_old_pos_for()
@@ -732,7 +734,7 @@ class HessianOptimizer(DummyOptimizer):
             print_instanton_hess(self.options["prefix"], step, self.optarrays["hessian"])
 
 class NicholsOptimizer(HessianOptimizer):
-    """ Class that implements a nichols optimizations. It can find first order saddle points or minima"""
+    """ Class that implements a nichols optimizations. It can find first order saddle points or minimum"""
 
     def bind(self, geop):
         # call bind function from HessianOptimizer
@@ -762,11 +764,13 @@ class NicholsOptimizer(HessianOptimizer):
 
         # Rescale step if necessary
         d_x_max = np.amax(np.absolute(d_x))
-        info("Current step norm = %g" % d_x_max, verbosity.medium)
+        info("Current max component  norm = %g" % d_x_max, verbosity.medium)
         if np.amax(np.absolute(d_x)) > activearrays["big_step"]:
             info("Attempted step norm = %g, scaled down to %g" % (d_x_max, activearrays["big_step"]), verbosity.low)
 
+            print 'here', np.linalg.norm(d_x)
             d_x *= activearrays["big_step"] / np.amax(np.absolute(d_x_max))
+            print 'here', np.linalg.norm(d_x), activearrays["big_step"]
             d_x_max = np.amax(np.absolute(d_x))
 
         # Get the new full-position
@@ -775,8 +779,8 @@ class NicholsOptimizer(HessianOptimizer):
 
         # Get new energy (u)  and forces(f) using mapper
         self.im(new_x, ret=False)  # Only to update the mapper
-        u, g2 = self.gm(new_x)
 
+        u, g2 = self.gm(new_x)
         f = -g2
         d_g = np.subtract(activearrays["old_f"], f)
 
@@ -864,11 +868,77 @@ class LanczosOptimizer(HessianOptimizer):
 
         activearrays = self.pre_step(step)
 
-        h_up_band = banded_hessian(activearrays["hessian"], self.im)  # create upper band matrix
         f = (activearrays["old_f"] + self.im.f).reshape(self.im.dbeads.natoms * 3 * self.im.dbeads.nbeads, 1)
-        d, w = diag_banded(h_up_band)
 
-        d_x = f + 2.0*np.dot(f,w.T) * w
+        banded = True
+        cartesian = True
+        #BANDED Version
+        if banded: #ALBERTO
+            # TEST CARTESIAN and mass-weighted and mass^2 weighted #ALBERTO
+            if not cartesian:
+                # no masses
+                dyn_mat = get_dynmat(activearrays["hessian"], self.im.dbeads.m3, self.im.dbeads.nbeads)
+                h_up_band = banded_hessian(dyn_mat, self.im, masses=False, shift=0.0000001)  # create upper band matrix
+                f = np.multiply(f, self.im.dbeads.m3.reshape(f.shape)**-0.5)
+                print "MASS-scaled"
+            else:
+            #with masses
+                h_up_band = banded_hessian(activearrays["hessian"], self.im)  # create upper band matrix
+                print "CARTESIAN"
+            d = diag_banded(h_up_band)
+            print "BANDED"
+        else:
+            # FULL dimensions version
+            h_0 = red2comp(activearrays["hessian"], self.im.dbeads.nbeads, self.im.dbeads.natoms)
+            h_test = np.add(self.im.h, h_0)  # add spring terms to the physical hessian
+            d = np.linalg.eigvalsh(h_test)
+            print "Full"
+
+        print'TEST eig, ',d[0],d[1],d[2]
+
+        if d[0] > 0:
+            if d[1] / 2 > d[0]:
+                alpha = 1
+                lamb = (2 * d[0] + d[1]) / 4
+                print 'Factor I'
+            else:
+                alpha = (d[1] - d[0]) / d[1]
+                lamb = (3 * d[0] + d[1]) / 4  # midpoint between b[0] and b[1]*(1-alpha/2)
+                print 'Factor II.'
+        elif d[1] < 0:  # Jeremy Richardson
+            if (d[1] >= d[0] / 2):
+                alpha = 1
+                lamb = (d[0] + 2 * d[1]) / 4
+                print 'Factor III'
+            else:
+                alpha = (d[0] - d[1]) / d[1]
+                lamb = (d[0] + 3 * d[1]) / 4
+                print 'Factor IV'
+        #elif d[1] < 0:  #Litman for Second Order Saddle point
+        #    alpha = 1
+        #    lamb = (d[1] + d[2]) / 4
+        #    print 'WARNING: We are not using the standard Nichols'
+        #    print 'd_x', d_x[0],d_x[1]
+
+        else:  # Only d[0] <0
+            alpha = 1
+            lamb = (d[0] + d[1]) / 4
+            print 'Factor V'
+
+        print'HERE: Alpha',alpha,' lambda',lamb
+
+        if banded:
+            # USE alpha #ALBERTO
+            h_up_band[-1, :] += - np.ones(h_up_band.shape[1])*lamb
+            d_x = invmul_banded(h_up_band, f)
+        else:
+            h_test = alpha*(h_test - np.eye(h_test.shape[0])*lamb)
+            d_x = np.linalg.solve(h_test,f)
+
+        d_x.shape = self.im.dbeads.q.shape
+
+        if not cartesian:
+            d_x = np.multiply(d_x, self.im.dbeads.m3**-0.5)
 
         # Rescale step if necessary
         d_x_max = np.amax(np.absolute(d_x))
@@ -901,6 +971,8 @@ class LanczosOptimizer(HessianOptimizer):
         # Check Exit and only then update old arrays
         self.exit = self.exitstep(d_x_max, step)
         self.update_old_pos_for()
+
+
 
 class LBFGSOptimizer(DummyOptimizer):
 

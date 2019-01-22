@@ -8,6 +8,28 @@ import numpy as np
 from ipi.utils.messages import verbosity, info
 import os
 
+def get_dynmat(h,  m3, nbeads=1):
+    """Computes the dynamical matrix.
+    If nbeads > 1 the reduced form with shape = (3*natoms, 3*natoms*nbeads) is expected"""
+
+    # Check dimensions
+
+    if h.shape != (m3.shape[1], m3.shape[1]*nbeads):
+        print h.shape, m3.shape
+        raise ValueError("@get_dynmat: The provided hessian hasn't the proper dimension (3*natoms, 3*natoms*nbeads) ")
+
+
+    ism = m3.reshape((1, -1)) ** (-0.5)
+    ismT = m3[0].reshape((-1, 1)) ** (-0.5)
+    print 'INSIDE'
+
+    dynmat = np.zeros(h.shape)
+    print dynmat.shape, ism.shape, ismT.shape
+    for i in range(nbeads):
+        dynmat = np.multiply(ismT, np.multiply(h, ism))
+    return dynmat
+
+
 
 def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):
     """
@@ -96,7 +118,7 @@ def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):
 
     # Count
     dd = np.sign(d) * np.absolute(d) ** 0.5 / (2 * np.pi * 3e10 * 2.4188843e-17)  # convert to cm^-1
-
+    #print "ALBERTO", dd[0:10]
 
     # Zeros
     cut0 = 0.01  # Note that dd[] units are cm^1

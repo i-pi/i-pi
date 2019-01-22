@@ -4,15 +4,16 @@ from ipi.utils.messages import verbosity, info
 from ipi.utils import units
 import ipi.utils.mathtools as mt
 
-def banded_hessian(h, im, shift=0.001):
+def banded_hessian(h, im, masses=True,shift=0.001):
     """Given Hessian in the reduced format (h), construct
-    the upper band hessian including the RP terms"""
+    the upper band hessian including the RP terms.
+    If masses is True returns hessian otherwise it returns dynmat"""
     nbeads = im.dbeads.nbeads
     natoms = im.dbeads.natoms
     ii = natoms * 3 * nbeads
     ndiag = natoms * 3 + 1  # only upper diagonal form
 
-    # np.set_printoptions(precision=6, suppress=True, threshold=np.nan, linewidth=1000)
+    # np.set_printoptions(precision=6, suppress=True, threshold=np.nan, linewidth=1000) #ALBERTO
 
     hnew = np.zeros((ndiag, ii))
 
@@ -26,7 +27,11 @@ def banded_hessian(h, im, shift=0.001):
 
     if nbeads > 1:
         # Diagonal
-        d_corner = im.dbeads.m3[0] * im.omega2
+        if masses:
+            d_corner = im.dbeads.m3[0] * im.omega2
+        else:
+            d_corner = np.ones(im.dbeads.m3[0].shape) * im.omega2
+
         d_0 = np.array([[d_corner * 2]]).repeat(im.dbeads.nbeads - 2, axis=0).flatten()
         diag_sp = np.concatenate((d_corner, d_0, d_corner))
         hnew[-1, :] += diag_sp
@@ -77,7 +82,7 @@ def invmul_banded(A, B, posdef=False):
         # sys.exit(0)
         return linalg.solve_banded((l, u), newA, B)
 
-def diag_banded(A,n=0):
+def diag_banded(A,n=2):
     """A is in upper banded form.
         Returns the smallest n eigenvalue and its corresponding eigenvector.
         """
@@ -87,9 +92,9 @@ def diag_banded(A,n=0):
     except ImportError:
         raise ValueError(" ")
 
-    d , w =  eig_banded(A, select='i', select_range=(0, n))
+    d = eig_banded(A, select='i', select_range=(0, n),eigvals_only =True, check_finite=False)
 
-    return d, w
+    return d
 
 def red2comp(h, nbeads, natoms):
     """Takes the reduced physical hessian (3*natoms*nbeads,3*natoms)
