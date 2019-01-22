@@ -333,6 +333,10 @@ class BFGSOptimizer(DummyOptimizer):
             else:
                 raise ValueError("Inverse Hessian size does not match system size")
 
+        if len(self.fixatoms) > 0:
+            if len(self.fixatoms) == len(self.beads[0]):
+                softexit.trigger("WARNING: all atoms are fixed, geometry won't change. Exiting simulation")
+
         self.invhessian = geop.invhessian
         self.gm.bind(self)
         self.big_step = geop.big_step
@@ -549,6 +553,10 @@ class SDOptimizer(DummyOptimizer):
         self.lm.bind(self)
         self.ls_options = geop.ls_options
 
+        if len(self.fixatoms) > 0:
+            if len(self.fixatoms) == len(self.beads[0]):
+                softexit.trigger("WARNING: all atoms are fixed, geometry won't change. Exiting simulation")
+
     def step(self, step=None):
         """ Does one simulation time step
             Attributes:
@@ -618,6 +626,10 @@ class CGOptimizer(DummyOptimizer):
         super(CGOptimizer, self).bind(geop)
         self.lm.bind(self)
         self.ls_options = geop.ls_options
+
+        if len(self.fixatoms) > 0:
+            if len(self.fixatoms) == len(self.beads[0]):
+                softexit.trigger("WARNING: all atoms are fixed, geometry won't change. Exiting simulation")
 
     def step(self, step=None):
         """Does one simulation time step
