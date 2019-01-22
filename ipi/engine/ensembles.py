@@ -39,6 +39,10 @@ def ensemble_swap(ens1, ens2):
         ens1.temp, ens2.temp = ens2.temp, ens1.temp
     if ens1.pext != ens2.pext:
         ens1.pext, ens2.pext = ens2.pext, ens1.pext
+    if np.linalg.norm(ens1.stressext-ens2.stressext) > 1e-10:
+        tmp = dstrip(ens1.stressext).copy()
+        ens1.stressext[:] = ens2.stressext
+        ens2.stressext[:] = tmp
     if len(ens1.bweights) != len(ens2.bweights):
         raise ValueError("Cannot exchange ensembles that have different numbers of bias components")
     if len(ens1.hweights) != len(ens2.hweights):

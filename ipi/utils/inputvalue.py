@@ -862,19 +862,21 @@ class InputValue(InputAttribute):
         if units != "":
             self.units.store(units)  # User can define in the code the units to be printed
 
-        self.value = value
         if self._dimension != "undefined":
-            self.value *= unit_to_user(self._dimension, units, 1.0)
+            self.value = value * unit_to_user(self._dimension, units, 1.0)
+        else:
+            self.value = value
 
     def fetch(self):
         """Returns the stored data in the user defined units."""
 
         super(InputValue, self).fetch()
 
-        rval = self.value
         if self._dimension != "undefined":
-            rval *= unit_to_internal(self._dimension, self.units.fetch(), 1.0)
-        return rval
+            print "returning ", self.value * unit_to_internal(self._dimension, self.units.fetch(), 1.0)
+            return self.value * unit_to_internal(self._dimension, self.units.fetch(), 1.0)
+        else:
+            return self.value
 
     def write(self, name="", indent=""):
         """Writes data in xml file format.
@@ -984,9 +986,9 @@ class InputArray(InputValue):
 
         # if the shape is not specified, assume the array is linear.
         if self.shape.fetch() == (0,):
-            value = np.resize(self.value, 0).copy()
+            value = np.resize(value, 0).copy()
         else:
-            value = self.value.reshape(self.shape.fetch()).copy()
+            value = value.reshape(self.shape.fetch()).copy()
 
         return value
 
