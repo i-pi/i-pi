@@ -132,15 +132,15 @@ class Barostat(dobject):
 
         dself = dd(self)
 
-        dself.kstress = depend_value(name='kstress', func=self.get_kstress,
-                                     dependencies=[dd(beads).q,
-                                                   dd(beads).qc,
-                                                   dd(beads).pc,
-                                                   dd(forces).f])
-        dself.stress = depend_value(name='stress', func=self.get_stress,
-                                    dependencies=[dself.kstress,
-                                                  dd(cell).V,
-                                                  dd(forces).vir])
+        # ~ dself.kstress = depend_value(name='kstress', func=self.get_kstress,
+                                     # ~ dependencies=[dd(beads).q,
+                                                   # ~ dd(beads).qc,
+                                                   # ~ dd(beads).pc,
+                                                   # ~ dd(forces).f])
+        # ~ dself.stress = depend_value(name='stress', func=self.get_stress,
+                                    # ~ dependencies=[dself.kstress,
+                                                  # ~ dd(cell).V,
+                                                  # ~ dd(forces).vir])
 
         dself.pot = depend_value(name='pot', value=0.0)
 
@@ -148,18 +148,18 @@ class Barostat(dobject):
 
         dself.cell_jacobian = depend_value(name='kin', value=0.0)
 
-        if bias != None:
-            dself.kstress.add_dependency(dd(bias).f)
-            dself.stress.add_dependency(dd(bias).vir)
+        # ~ if bias != None:
+            # ~ dself.kstress.add_dependency(dd(bias).f)
+            # ~ dself.stress.add_dependency(dd(bias).vir)
 
         # Stress depend objects for Suzuki-Chin PIMD
-        dself.kstress_sc = depend_value(name='kstress_sc', func=self.get_kstress_sc,
-                                        dependencies=[dd(beads).q, dd(beads).qc,
-                                                      dd(forces).fsc_part_2, dd(forces).f])
+        # ~ dself.kstress_sc = depend_value(name='kstress_sc', func=self.get_kstress_sc,
+                                        # ~ dependencies=[dd(beads).q, dd(beads).qc,
+                                                      # ~ dd(forces).fsc_part_2, dd(forces).f])
 
-        dself.stress_sc = depend_value(name='stress_sc', func=self.get_stress_sc,
-                                       dependencies=[dself.kstress_sc, dd(self.cell).V,
-                                                     dd(forces).vir, dd(forces).virssc_part_2])
+        # ~ dself.stress_sc = depend_value(name='stress_sc', func=self.get_stress_sc,
+                                       # ~ dependencies=[dself.kstress_sc, dd(self.cell).V,
+                                                     # ~ dd(forces).vir, dd(forces).virssc_part_2])
 
         if fixdof is None:
             self.mdof = float(self.beads.natoms) * 3.0
@@ -173,35 +173,36 @@ class Barostat(dobject):
         dself.tdt = depend_value(name="tdt", value=self.dt)
         dpipe(dself.tdt, dd(self.thermostat).dt)
 
-    def get_kstress(self):
-        """Calculates the quantum centroid virial kinetic stress tensor
-        estimator.
-        """
+    # THESE SHOULD NOT BE USED ANYMORE
+    # ~ def get_kstress(self):
+        # ~ """Calculates the quantum centroid virial kinetic stress tensor
+        # ~ estimator.
+        # ~ """
 
-        kst = np.zeros((3, 3), float)
-        q = dstrip(self.beads.q)
-        qc = dstrip(self.beads.qc)
-        pc = dstrip(self.beads.pc)
-        m = dstrip(self.beads.m)
-        na3 = 3 * self.beads.natoms
-        fall = dstrip(self.forces.f)
-        if self.bias == None:
-            ball = fall * 0.00
-        else:
-            ball = dstrip(self.bias.f)
+        # ~ kst = np.zeros((3, 3), float)
+        # ~ q = dstrip(self.beads.q)
+        # ~ qc = dstrip(self.beads.qc)
+        # ~ pc = dstrip(self.beads.pc)
+        # ~ m = dstrip(self.beads.m)
+        # ~ na3 = 3 * self.beads.natoms
+        # ~ fall = dstrip(self.forces.f)
+        # ~ if self.bias == None:
+            # ~ ball = fall * 0.00
+        # ~ else:
+            # ~ ball = dstrip(self.bias.f)
 
-        for b in range(self.beads.nbeads):
-            for i in range(3):
-                for j in range(i, 3):
-                    kst[i, j] -= np.dot(q[b, i:na3:3] - qc[i:na3:3],
-                                        fall[b, j:na3:3] + ball[b, j:na3:3])
+        # ~ for b in range(self.beads.nbeads):
+            # ~ for i in range(3):
+                # ~ for j in range(i, 3):
+                    # ~ kst[i, j] -= np.dot(q[b, i:na3:3] - qc[i:na3:3],
+                                        # ~ fall[b, j:na3:3] + ball[b, j:na3:3])
 
-        # NOTE: In order to have a well-defined conserved quantity, the Nf kT term in the
-        # diagonal stress estimator must be taken from the centroid kinetic energy.
-        for i in range(3):
-            kst[i, i] += np.dot(pc[i:na3:3], pc[i:na3:3] / m) * self.beads.nbeads
+        # ~ # NOTE: In order to have a well-defined conserved quantity, the Nf kT term in the
+        # ~ # diagonal stress estimator must be taken from the centroid kinetic energy.
+        # ~ for i in range(3):
+            # ~ kst[i, i] += np.dot(pc[i:na3:3], pc[i:na3:3] / m) * self.beads.nbeads
 
-        return kst
+        # ~ return kst
 
     def kstress_mts_sc(self, level):
         """Calculates the Suzuki-Chin quantum centroid virial kinetic stress tensor
@@ -261,39 +262,39 @@ class Barostat(dobject):
 
         return kst
 
-    def get_kstress_sc(self):
-        """Calculates the high order part of the Suzuki-Chin
-        quantum centroid virial kinetic stress tensor
-        associated with the forces at a MTS level.
-        """
+    # ~ def get_kstress_sc(self):
+        # ~ """Calculates the high order part of the Suzuki-Chin
+        # ~ quantum centroid virial kinetic stress tensor
+        # ~ associated with the forces at a MTS level.
+        # ~ """
 
-        kst = np.zeros((3, 3), float)
-        q = dstrip(self.beads.q)
-        qc = dstrip(self.beads.qc)
-        pc = dstrip(self.beads.pc)
-        m = dstrip(self.beads.m)
-        na3 = 3 * self.beads.natoms
-        fall = dstrip(self.forces.fsc_part_2)
+        # ~ kst = np.zeros((3, 3), float)
+        # ~ q = dstrip(self.beads.q)
+        # ~ qc = dstrip(self.beads.qc)
+        # ~ pc = dstrip(self.beads.pc)
+        # ~ m = dstrip(self.beads.m)
+        # ~ na3 = 3 * self.beads.natoms
+        # ~ fall = dstrip(self.forces.fsc_part_2)
 
-        for b in range(self.beads.nbeads):
-            for i in range(3):
-                for j in range(i, 3):
-                    kst[i, j] -= np.dot(q[b, i:na3:3] - qc[i:na3:3],
-                                        fall[b, j:na3:3])
-        return kst
+        # ~ for b in range(self.beads.nbeads):
+            # ~ for i in range(3):
+                # ~ for j in range(i, 3):
+                    # ~ kst[i, j] -= np.dot(q[b, i:na3:3] - qc[i:na3:3],
+                                        # ~ fall[b, j:na3:3])
+        # ~ return kst
 
-    def get_stress(self):
-        """Calculates the internal stress tensor."""
+    # ~ def get_stress(self):
+        # ~ """Calculates the internal stress tensor."""
 
-        bvir = np.zeros((3, 3), float)
-        if self.bias != None:
-            bvir[:] = self.bias.vir
+        # ~ bvir = np.zeros((3, 3), float)
+        # ~ if self.bias != None:
+            # ~ bvir[:] = self.bias.vir
 
-        return (self.kstress + self.forces.virs + bvir) / self.cell.V
+        # ~ return (self.kstress + self.forces.virs + bvir) / self.cell.V
 
-    def get_stress_sc(self):
-        """Calculates the high order part of the Suzuki-Chin internal stress tensor."""
-        return (self.kstress_sc + np.sum(dstrip(self.forces.virssc_part_2), axis=0)) / self.cell.V
+    # ~ def get_stress_sc(self):
+        # ~ """Calculates the high order part of the Suzuki-Chin internal stress tensor."""
+        # ~ return (self.kstress_sc + np.sum(dstrip(self.forces.virssc_part_2), axis=0)) / self.cell.V
 
     def stress_mts_sc(self, level):
         """Calculates the internal Suzuki-Chin stress tensor
@@ -317,12 +318,12 @@ class Barostat(dobject):
 
         return (self.kstress_mts(level) + self.forces.vir_mts(level) + bvir) / self.cell.V
 
-    def pstep(self, alpha=1.0):
+    def pstep(self, level=0):
         """Dummy momenta propagator step."""
 
         pass
 
-    def qcstep(self, alpha=1.0):
+    def qcstep(self, level=0):
         """Dummy centroid position propagator step."""
 
         pass

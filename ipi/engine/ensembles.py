@@ -15,6 +15,7 @@ import time
 
 import numpy as np
 
+from ipi.utils.messages import verbosity, info, warning
 from ipi.utils.depend import *
 from ipi.utils.softexit import softexit
 from ipi.utils.io import read_file
@@ -128,7 +129,6 @@ class Ensemble(dobject):
         self.forces = bforce
         self.nm = nm
         dself = dd(self)
-        dself.econs = depend_value(name='econs', func=self.get_econs)
 
         # this binds just the explicit bias forces
         self.bias.bind(self.beads, self.cell, self.bcomp, fflist)

@@ -644,6 +644,7 @@ class FFPlumed(ForceField):
         bias = np.zeros(1, float)
         self.plumed.cmd("getBias", bias)
         v = bias[0]
+        vir *= -1
 
         r["result"] = [v, f, vir, ""]
         r["status"] = "Done"
