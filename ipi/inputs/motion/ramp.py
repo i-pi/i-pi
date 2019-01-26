@@ -26,7 +26,7 @@ from ipi.engine.motion import *
 from ipi.utils.inputvalue import *
 from ipi.utils.units import *
 
-__all__ = ['InputTemperatureRamp']
+__all__ = ['InputTemperatureRamp', 'InputPressureRamp']
 
 
 class InputTemperatureRamp(InputDictionary):
@@ -62,7 +62,7 @@ class InputTemperatureRamp(InputDictionary):
                     temperature in steps, between the indicated temperatures, and
                     then holds to the highest value. It should typically be combined
                     with a dynamics class and thermostats, using a MultiMotion."""
-    default_label = "RAMP"
+    default_label = "TRAMP"
 
     def store(self, ramp):
         if ramp == {}: return
@@ -74,4 +74,53 @@ class InputTemperatureRamp(InputDictionary):
 
     def fetch(self):
         rv = super(InputTemperatureRamp, self).fetch()
+        return rv
+
+
+class InputPressureRamp(InputDictionary):
+    """Pressure ramp options.
+
+    Contains options controlling a pressure ramp
+
+    """
+
+    fields = {
+        "p_start": (InputValue, {"dtype": float,
+                                "dimension" : "pressure",
+                                "default": 1.0,
+                                "help": "Initial pressure"
+                                }),
+        "p_end": (InputValue, {"dtype": float,
+                                "dimension" : "pressure",
+                                "default": 1.0,
+                                "help": "Final pressure"
+                                }),
+        "logscale": (InputValue, {"dtype": bool,
+                                     "default": False,
+                                     "help": "Change pressure on a logarihthmic scale."}),
+         "total_steps": (InputValue, {"dtype": int,
+                               "default":0,
+                               "help": "Total number of steps for the ramp"}),
+         "current_step": (InputValue, {"dtype": int,
+                               "default": 0,
+                               "help": "Current step along the ramp"})
+    }
+
+    default_help = """PressureRamp Motion class. It just updates the ensemble
+                    pressure in steps, between the indicated values, and
+                    then holds to the highest value. It should typically be combined
+                    with a dynamics class and barostats, using a MultiMotion."""
+
+    default_label = "PRAMP"
+
+    def store(self, ramp):
+        if ramp == {}: return
+        self.p_start.store(ramp.p_start)
+        self.p_end.store(ramp.p_end)
+        self.logscale.store(ramp.logscale)
+        self.total_steps.store(ramp.total_steps)
+        self.current_step.store(ramp.current_step)
+
+    def fetch(self):
+        rv = super(InputPressureRamp, self).fetch()
         return rv

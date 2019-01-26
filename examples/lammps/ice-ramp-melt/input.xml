@@ -40,13 +40,21 @@
         <timestep units='femtosecond'> 0.5 </timestep>
       </dynamics>
     </motion>
-    <motion mode="ramp">
-       <ramp>
+    <motion mode="t_ramp">
+       <t_ramp>
          <t_start units="kelvin"> 200 </t_start>
          <t_end units="kelvin"> 800 </t_end>
          <total_steps> 20000 </total_steps> 
          <logscale> True </logscale>
-       </ramp>
+     </t_ramp>
+    </motion>
+    <motion mode="p_ramp">
+       <p_ramp>
+         <p_start units="megapascal"> 10 </p_start>
+         <p_end units="megapascal"> 1000 </p_end>
+         <total_steps> 4000 </total_steps>
+         <logscale> True </logscale>
+       </p_ramp>
     </motion>
     </motion>
     </system>

@@ -17,7 +17,7 @@ from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, info
 
 
-__all__ = ['TemperatureRamp']
+__all__ = ['TemperatureRamp', 'PressureRamp']
 
 
 class TemperatureRamp(Motion):
@@ -59,3 +59,41 @@ class TemperatureRamp(Motion):
             else:
                 self.ensemble.temp = self.t_start + self.current_step*(self.t_end - self.t_start)/self.total_steps
 
+class PressureRamp(Motion):
+    """Pressure ramp (quench/heat).
+
+    Attributes:
+
+    """
+
+    def __init__(self, fixcom=False, fixatoms=None,
+                p_start=1.0, p_end=1.0, total_steps=0,
+                current_step=0, logscale=True):
+        """Initialises a temperature ramp motion
+
+        Args:
+        """
+
+        super(PressureRamp, self).__init__()
+        self.p_start = p_start
+        self.p_end = p_end
+        self.total_steps = total_steps
+        self.current_step = current_step
+        self.logscale = logscale
+
+    def bind(self, ens, beads, nm, cell, bforce, prng):
+
+        super(PressureRamp, self).bind(ens, beads, nm, cell, bforce, prng)
+
+    def step(self, step=None):
+        """Updates ensemble temperature. Yes, that's it everything else should follow through"""
+
+        self.current_step += 1
+        # just sets the temperature
+        if self.current_step >= self.total_steps:
+            self.ensemble.pext = self.p_end
+        else:
+            if self.logscale:
+                self.ensemble.pext = self.p_start * (self.p_end/self.p_start)**(self.current_step*1.0/self.total_steps)
+            else:
+                self.ensemble.pext = self.p_start + self.current_step*(self.p_end - self.p_start)/self.total_steps

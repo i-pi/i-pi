@@ -16,4 +16,4 @@ from .neb import NEBMover
 from .phonons import DynMatrixMover
 from .multi import MultiMotion
 from .alchemy import AlchemyMC
-from .ramp import TemperatureRamp
+from .ramp import TemperatureRamp, PressureRamp
