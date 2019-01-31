@@ -15,12 +15,11 @@ def read(fname):
 
 setup(
     name='i-PI',
-    version='1.0',
+    version='2.0',
     description='A Python interface for ab initio path integral molecular dynamics simulations.',
     long_description=read('README.rst'),
     packages=find_packages(),
     scripts=['bin/i-pi'],
-    libraries=[('ipi', {'sources': ['drivers/sockets.c']})],
     author="Michele Ceriotti",
     author_email="michele.ceriotti@gmail.com",
     classifiers=['Development Status :: 5 - Production/Stable'],
