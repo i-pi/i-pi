@@ -25,8 +25,13 @@ from ipi.engine.properties import getkey
 from ipi.engine.atoms import *
 from ipi.engine.cell import *
 
-__all__ = ['PropertyOutput', 'TrajectoryOutput', 'CheckpointOutput']
+__all__ = ['PropertyOutput', 'TrajectoryOutput', 'CheckpointOutput', 'OutputList']
 
+class OutputList(list):
+    # TODO : docstring
+    def __init__(self, prefix, olist):
+        super(OutputList, self).__init__(olist)
+        self.prefix = prefix
 
 class PropertyOutput(dobject):
 

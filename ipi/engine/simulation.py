@@ -164,6 +164,12 @@ class Simulation(dobject):
             # binds important computation engines
             s.bind(self)
 
+        #!!TODO  check that we can call this here so we avoid having a shitload of files printed
+        # out only to find the socket is busy or whatever
+        # in case, rename the run() call to something like "start"
+        for k, f in self.fflist.iteritems():
+            f.run()
+
         # Checks for repeated filenames.
         filename_list = [x.filename for x in self.outtemplate]
         if len(filename_list) > len(set(filename_list)):
@@ -217,8 +223,8 @@ class Simulation(dobject):
         softexit.register_function(self.softexit)
         softexit.start(self.ttime)
 
-        for k, f in self.fflist.iteritems():
-            f.run()
+#        for k, f in self.fflist.iteritems():
+#            f.run()
 
         # prints inital configuration -- only if we are not restarting
         if self.step == 0:
