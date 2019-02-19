@@ -28,7 +28,9 @@ from ipi.engine.cell import *
 __all__ = ['PropertyOutput', 'TrajectoryOutput', 'CheckpointOutput', 'OutputList']
 
 class OutputList(list):
-    # TODO : docstring
+    """ A simple decorated list to save the output prefix and bring it
+    back to the initialization phase of the simulation """
+
     def __init__(self, prefix, olist):
         super(OutputList, self).__init__(olist)
         self.prefix = prefix

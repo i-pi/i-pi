@@ -164,11 +164,10 @@ class Simulation(dobject):
             # binds important computation engines
             s.bind(self)
 
-        #!!TODO  check that we can call this here so we avoid having a shitload of files printed
-        # out only to find the socket is busy or whatever
-        # in case, rename the run() call to something like "start"
+        # start forcefields here so we avoid having a shitload of files printed
+        # out only to find the socket is busy or whatever prevented starting the threads
         for k, f in self.fflist.iteritems():
-            f.run()
+            f.start()
 
         # Checks for repeated filenames.
         filename_list = [x.filename for x in self.outtemplate]
@@ -177,6 +176,9 @@ class Simulation(dobject):
 
         self.outputs = []
         for o in self.outtemplate:
+            o = deepcopy(o) # avoids overwriting the actual filename
+            if self.outtemplate.prefix != "":
+                o.filename = self.outtemplate.prefix + "." + o.filename
             if type(o) is eoutputs.CheckpointOutput:    # checkpoints are output per simulation
                 o.bind(self)
                 self.outputs.append(o)
