@@ -514,6 +514,8 @@ a displaced-path estimator for the particle momentum distribution~\cite{lin+10pr
 
 \subsection{Features added in version 2.0}
 
+Further details can be found in Ref. \cite{Kapil:2019ju}.
+
 \begin{itemize}
 \item reweighted fourth-order path integral MD (M. Ceriotti, G.A.R. Brain)~\cite{ceri+12prsa,jang-voth01jcp}; {this method makes it possible to obtain fourth-order statistics by re-weighting second-order trajectories; attention should be paid to avoid statistical inefficiencies;}
 \item finite-differences implementation of fourth-order path integrals (V. Kapil, M. Ceriotti)~\cite{kapi+16jcp2}; {this schemes enables explicit fourth-order path integral simulations, that converge faster than conventional Trotter methods};
@@ -545,8 +547,7 @@ in the directory {}``drivers'' are all held under the MIT licence.
 For more details see \url{https://fedoraproject.org/wiki/Licensing:MIT}.
 
 If you use this code in any
-future publications, please cite this using {[}\cite{ceri+14cpc}{]}.
-
+future publications, please cite this using \cite{ceri+14cpc} for v1 and \cite{Kapil:2019ju} for v2.
 \subsection{Contributors}
 
 \ipi was originally written by M. Ceriotti and J. More at Oxford University,
@@ -3273,5 +3274,5 @@ equilibrated the system before starting and that the timestep is short
 enough to not introduce very large integration errors.
 \end{itemize}
 \bibliographystyle{elsarticle-num-names}
-\bibliography{mybib}
+\bibliography{mybib,morebib}
 \end{document}
