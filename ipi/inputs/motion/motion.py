@@ -24,7 +24,9 @@ Classes:
 import numpy as np
 from copy import copy
 import ipi.engine.initializer
-from ipi.engine.motion import Motion, Dynamics, Replay, GeopMotion, NEBMover, DynMatrixMover, MultiMotion, AlchemyMC, InstantonMotion, AlKMC
+from ipi.engine.motion import Motion, Dynamics, Replay, GeopMotion, NEBMover,\
+                            DynMatrixMover, MultiMotion, AlchemyMC, InstantonMotion,\
+                            TemperatureRamp, PressureRamp, , AlKMC
 from ipi.utils.inputvalue import *
 from ipi.inputs.thermostats import *
 from ipi.inputs.initializer import *
@@ -34,6 +36,7 @@ from .neb import InputNEB
 from .dynamics import InputDynamics
 from .phonons import InputDynMatrix
 from .alchemy import InputAlchemy
+from .ramp import InputTemperatureRamp, InputPressureRamp
 from .al6xxx_kmc import InputAlKMC
 from ipi.utils.units import *
 
@@ -58,7 +61,7 @@ class InputMotionBase(Input):
 
     attribs = {"mode": (InputAttribute, {"dtype": str,
                                          "help": "How atoms should be moved at each step in the simulatio. 'replay' means that a simulation is restarted from a previous simulation.",
-                                         "options": ['vibrations', 'minimize', 'replay', 'neb', 'dynamics', 'alchemy', 'instanton','al-kmc', 'dummy']})}
+                                         "options": ['vibrations', 'minimize', 'replay', 'neb', 'dynamics', 'alchemy', 'instanton', 'dummy']})}
 
     fields = {"fixcom": (InputValue, {"dtype": bool,
                                       "default": True,
@@ -79,9 +82,7 @@ class InputMotionBase(Input):
               "alchemy": (InputAlchemy, {"default": {},
                                          "help": "Option for alchemical exchanges"}),
               "instanton": (InputInst, {"default": {},
-                                        "help": "Option for Instanton optimization"}),
-              "al6xxx_kmc" : ( InputAlKMC, { "default" : {},
-                                             "help":  "Option for Al-6xxx KMC" } )
+                                        "help": "Option for Instanton optimization"})
               }
     dynamic = {}
 
@@ -126,10 +127,6 @@ class InputMotionBase(Input):
             self.mode.store("instanton")
             self.instanton.store(sc)
             tsc = 1
-        elif type(sc) is AlKMC:
-            self.mode.store("al-kmc")
-            self.al6xxx_kmc.store(sc)
-            tsc = 1
         else:
             raise ValueError("Cannot store Mover calculator of type " + str(type(sc)))
 
@@ -163,8 +160,6 @@ class InputMotionBase(Input):
             sc = AlchemyMC(fixcom=self.fixcom.fetch(), fixatoms=self.fixatoms.fetch(), **self.alchemy.fetch())
         elif self.mode.fetch() == "instanton":
             sc = InstantonMotion(fixcom=self.fixcom.fetch(), fixatoms=self.fixatoms.fetch(), **self.instanton.fetch())
-        elif self.mode.fetch() == "al-kmc":
-            sc = AlKMC(fixcom=self.fixcom.fetch(), fixatoms=self.fixatoms.fetch(), **self.al6xxx_kmc.fetch() )
         else:
             sc = Motion()
             # raise ValueError("'" + self.mode.fetch() + "' is not a supported motion calculation mode.")

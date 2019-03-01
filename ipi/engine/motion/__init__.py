@@ -15,5 +15,5 @@ from .instanton import InstantonMotion
 from .neb import NEBMover
 from .phonons import DynMatrixMover
 from .multi import MultiMotion
+from .ramp import TemperatureRamp, PressureRamp
 from .alchemy import AlchemyMC
-from .al6xxx_kmc import AlKMC
