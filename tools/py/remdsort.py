@@ -22,6 +22,7 @@ Syntax:
 
 
 import sys
+from copy import deepcopy
 import numpy as np
 from ipi.utils.messages import verbosity
 from ipi.engine.outputs import *
@@ -41,11 +42,11 @@ def main(inputfile, prefix="SRT_"):
     # ugly hack to remove ffplumed objects to avoid messing up with plumed output files
     newfields = [ f for f in xmlrestart.fields[0][1].fields if f[0] != "ffplumed" ]
     xmlrestart.fields[0][1].fields = newfields
-    
+
     isimul = InputSimulation()
     isimul.parse(xmlrestart.fields[0][1])
 
-    simul = isimul.fetch()    
+    simul = isimul.fetch()
     if simul.smotion.mode != "remd" and simul.smotion.mode != "multi":
         raise ValueError("Simulation does not look like a parallel tempering one.")
 
@@ -55,6 +56,9 @@ def main(inputfile, prefix="SRT_"):
     ltraj = []  # list of trajectory files
     nsys = len(simul.syslist)
     for o in simul.outtemplate:
+        o = deepcopy(o) # avoids overwriting the actual filename
+        if simul.outtemplate.prefix != "":
+            o.filename = simul.outtemplate.prefix + "." + o.filename
         if type(o) is CheckpointOutput:   # properties and trajectories are output per system
             pass
         elif type(o) is PropertyOutput:

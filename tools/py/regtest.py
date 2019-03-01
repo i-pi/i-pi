@@ -48,6 +48,7 @@ import sys
 import re
 import time
 import os
+from copy import deepcopy
 import shutil
 from collections import deque
 import xml.etree.ElementTree as etree
@@ -844,7 +845,10 @@ def get_output_filenames(xml_path):
     lprop = []  # list of property files
     ltraj = []  # list of trajectory files
     for o in simul.outtemplate:
-            # properties and trajectories are output per system
+        o = deepcopy(o) # avoids overwriting the actual filename
+        if simul.outtemplate.prefix != "":
+            o.filename = simul.outtemplate.prefix + "." + o.filename
+        # properties and trajectories are output per system
         if isinstance(o, CheckpointOutput):
             pass
         elif isinstance(o, PropertyOutput):
@@ -853,7 +857,6 @@ def get_output_filenames(xml_path):
                 if _ss.prefix != "":
                     filename = _ss.prefix + "_" + filename
                 lprop.append(filename)
-
         # trajectories are more complex, as some have per-bead output
         elif isinstance(o, TrajectoryOutput):
             if getkey(o.what) in ['positions', 'velocities',

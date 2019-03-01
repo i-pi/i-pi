@@ -174,6 +174,7 @@ class Simulation(dobject):
         if len(filename_list) > len(set(filename_list)):
             raise ValueError("Output filenames are not unique. Modify filename attributes.")
 
+        self.output_maker = eoutputs.FOMaker(self.outtemplate.prefix)
         self.outputs = []
         for o in self.outtemplate:
             o = deepcopy(o) # avoids overwriting the actual filename

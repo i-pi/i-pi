@@ -25,7 +25,7 @@ from ipi.engine.properties import getkey
 from ipi.engine.atoms import *
 from ipi.engine.cell import *
 
-__all__ = ['PropertyOutput', 'TrajectoryOutput', 'CheckpointOutput', 'OutputList']
+__all__ = ['PropertyOutput', 'TrajectoryOutput', 'CheckpointOutput', 'OutputList', 'FOMaker', 'FloatingOutput']
 
 class OutputList(list):
     """ A simple decorated list to save the output prefix and bring it
@@ -35,7 +35,103 @@ class OutputList(list):
         super(OutputList, self).__init__(olist)
         self.prefix = prefix
 
-class PropertyOutput(dobject):
+class FOMaker(dobject):
+    """ Class to create floating outputs with an appropriate prefix """
+
+    def __init__(self, prefix):
+        self.prefix = prefix
+
+
+class FloatingOutput(dobject,file):
+
+    """Class to streamline unstructured output from anywhere in the code.
+
+    Minimal set of features include optional overwrite protection, flushing
+    upon softexit, etc.
+
+    Attributes:
+       filename: The (base) name of the file to output to
+       append: Whether to append
+    """
+
+    def __init__(self, filename="restart", append=False):
+        """Initializes a checkpoint output proxy.
+
+        Args:
+           filename: A string giving the name of the file to be output to.
+           append: If True, the checkpoint file is overwritten at each output.
+              If False, will output to 'filename_step'. Note that no check is done
+              on whether 'filename_step' exists already.
+           step: The number of checkpoint files that have been created so far.
+        """
+
+        self.filename = filename
+        self.append = append
+
+    def open(self):
+        """Writes out the required trajectories.
+
+        Used for both the checkpoint files and the soft-exit restart file.
+        We have slightly different behaviour for these two different types of
+        checkpoint file, as the soft-exit files have their store() function
+        called automatically, and we do not want this to be updated as the
+        status of the simulation after a soft-exit call is unlikely to be in
+        a consistent state. On the other hand, the standard checkpoint files
+        are not automatically updated in this way, and we must manually store the
+        current state of the system before writing them.
+
+        Args:
+           store: A boolean saying whether the state of the system should be
+              stored before writing the checkpoint file.
+        """
+
+        filename = self.__prefix__.self.filename
+
+        if self.append:
+            rfile = open(filename,"a")
+        else:
+            rfile = open_backup(filename)
+
+class BaseOutput(dobject):
+    """Base class for outputs. Deals with flushing upon close and little more """
+
+    def __init__(self, filename="out"):
+        self.filename = filename
+        self.out = None
+
+    def softexit(self):
+        """Emergency call when i-pi must exit quickly"""
+
+        self.close_stream()
+
+    def close_stream(self):
+        """Closes the output stream."""
+
+        if not self.out is None:
+            self.out.close()
+
+    def open_stream(self):
+        """Opens the output stream."""
+
+        # Only open a new file if this is a new run, otherwise append.
+        if self.is_start:
+            mode = "w"
+        else:
+            mode = "a"
+
+        self.out = open_backup(self.filename, mode)
+
+    def bind(self, system):
+        """ Stores a reference to system and registers for exiting """
+
+        self.system = system
+        # Is this the start of the simulation?
+        self.is_start = self.system.simul.step == 0
+
+        self.open_stream()
+        softexit.register_function(self.softexit)
+
+class PropertyOutput(BaseOutput):
 
     """Class dealing with outputting a set of properties to file.
 
@@ -67,14 +163,14 @@ class PropertyOutput(dobject):
            outlist: A list of all the properties that should be output.
         """
 
+        super(PropertyOutput,self).__init__(filename)
+
         if outlist is None:
             outlist = np.zeros(0, np.dtype('|S1024'))
-        self.filename = filename
         self.outlist = np.asarray(outlist, np.dtype('|S1024'))
         self.stride = stride
         self.flush = flush
         self.nout = 0
-        self.out = None
 
     def bind(self, system):
         """Binds output proxy to System object.
@@ -83,35 +179,25 @@ class PropertyOutput(dobject):
            system: A System object to be bound.
         """
 
-        self.system = system
 
         # Checks as soon as possible if some asked-for properties are
         # missing or mispelled
         for what in self.outlist:
             key = getkey(what)
-            if not key in self.system.properties.property_dict.keys():
-                print "Computable properties list: ", self.system.properties.property_dict.keys()
+            if not key in system.properties.property_dict.keys():
+                print "Computable properties list: ", system.properties.property_dict.keys()
                 raise KeyError(key + " is not a recognized property")
 
-        self.open_stream()
-        softexit.register_function(self.softexit)
+        super(PropertyOutput,self).bind(system)
+
 
     def open_stream(self):
         """Opens the output stream."""
 
-        # Is this the start of the simulation?
-        is_start = self.system.simul.step == 0
-
-        # Only open a new file if this is a new run, otherwise append.
-        if is_start:
-            mode = "w"
-        else:
-            mode = "a"
-
-        self.out = open_backup(self.filename, mode)
+        super(PropertyOutput,self).open_stream()
 
         # print nice header if information is available on the properties
-        if is_start:
+        if self.is_start:
             icol = 1
             for what in self.outlist:
                 ohead = "# "
@@ -128,16 +214,6 @@ class PropertyOutput(dobject):
                 if "help" in prop:
                     ohead += ": " + prop["help"]
                 self.out.write(ohead + "\n")
-
-    def softexit(self):
-        """Emergency call when i-pi must exit quickly"""
-
-        self.close_stream()
-
-    def close_stream(self):
-        """Closes the output stream."""
-
-        self.out.close()
 
     def write(self):
         """Outputs the required properties of the system.
