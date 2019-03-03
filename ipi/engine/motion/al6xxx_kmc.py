@@ -518,6 +518,7 @@ class AlKMC(Motion):
         self.kmcfile.write("%12.5e  %12.5e  %18.11e  %s\n"% (self.tottime, dt, ecurr, ostr) )
         self.kmcfile.flush()
         self.tottime += dt
+        self.ens.time += dt  # updates time counter
         print  "Finishing step at ", "".join(self.state)
 
         # updates the positions
