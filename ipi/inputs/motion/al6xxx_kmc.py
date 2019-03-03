@@ -45,32 +45,32 @@ class InputAlKMC(InputDictionary):
     attribs={"mode"  : (InputAttribute, {"dtype"   : str, "default": "rfkmc",
                                     "help"    : "The KMC algorithm to be used",
                                     "options" : ['rfkmc']}) }
-    
-    # options of the method nstep, a0, ncell, nvac, nsi, nmg, state="", 
+
+    # options of the method nstep, a0, ncell, nvac, nsi, nmg, state="",
     fields = {
                 "geop" : ( InputGeop, { "default" : {},
                                      "help":  "Option for geometry optimization step" } ),
                 "nstep": (InputValue, {"dtype" : int,
                               "default"  : 10,
-                              "help"     : "The number of optimization steps."}),                              
+                              "help"     : "The number of optimization steps."}),
                 "a0": (InputValue, {"dtype" : float, "dimension": "length",
                               "default"  : 1.0,
                               "help"     : "FCC lattice parameter "}),
                 "diffusion_barrier_al": (InputValue, {"dtype" : float, "dimension": "energy",
                               "default"  : 0.01,
-                              "help"     : "Barrier for vacancy diffusion in pure Al."}),                
+                              "help"     : "Barrier for vacancy diffusion in pure Al."}),
                 "diffusion_prefactor_al": (InputValue, {"dtype" : float, "dimension": "frequency",
                               "default"  : 2.4188843e-05,
                               "help"     : "Prefactor for vacancy diffusion in pure Al."}),
                 "diffusion_barrier_mg": (InputValue, {"dtype" : float, "dimension": "energy",
                               "default"  : 0,
-                              "help"     : "Barrier for vacancy-assisted diffusion of Mg."}),                
+                              "help"     : "Barrier for vacancy-assisted diffusion of Mg."}),
                 "diffusion_prefactor_mg": (InputValue, {"dtype" : float, "dimension": "frequency",
                               "default"  : 0,
                               "help"     : "Prefactor for vacancy-assisted diffusion of Mg."}),
                 "diffusion_barrier_si": (InputValue, {"dtype" : float, "dimension": "energy",
                               "default"  : 0,
-                              "help"     : "Barrier for vacancy-assisted diffusion of Si."}),                
+                              "help"     : "Barrier for vacancy-assisted diffusion of Si."}),
                 "diffusion_prefactor_si": (InputValue, {"dtype" : float, "dimension": "frequency",
                               "default"  : 0,
                               "help"     : "Prefactor for vacancy-assisted diffusion of Si."}),
@@ -91,20 +91,19 @@ class InputAlKMC(InputDictionary):
                               "help"     : "The number of magnesium atoms."}),
                 "idx": (InputArray, {"dtype" : int,
                               "default"  :  input_default(factory=np.zeros, args=(0, int)),
-                              "help"     : "The position of the atoms on the lattice, relative to the canonical ordering."}),              
+                              "help"     : "The position of the atoms on the lattice, relative to the canonical ordering."}),
                 "tottime": (InputValue, {"dtype" : float, "dimension": "time",
                               "default"  : 0.0,
                               "help"     : "Total KMC time elapsed "}),
                 "ecache_file": (InputValue, {"dtype" : str,
                               "default"  : "",
-                              "help"     : "Filename for storing/loading energy cache"}),         
+                              "help"     : "Filename for storing/loading energy cache"}),
                 "qcache_file": (InputValue, {"dtype" : str,
                               "default"  : "",
-                              "help"     : "Filename for storing/loading positions cache"}),                     
+                              "help"     : "Filename for storing/loading positions cache"}),
                 }
 
-    STORE_STRIDE = 10
-    STORE_STEP = 0
+    STORE_STRIDE = 1.1
 
     dynamic = {  }
 
@@ -118,7 +117,7 @@ class InputAlKMC(InputDictionary):
             kmc: A kMC object.
         """
 
-        if kmc == {}: 
+        if kmc == {}:
             return
 
         #"""self.state.store(kmc.state)
@@ -143,18 +142,20 @@ class InputAlKMC(InputDictionary):
         self.tottime.store(kmc.tottime)
         self.ecache_file.store(kmc.ecache_file)
         self.qcache_file.store(kmc.qcache_file)
-        # this actually triggers storage at every time step which gets heavy. quick hack to avoid too much overhead
-        if kmc.ecache_file != "" and self.STORE_STEP % self.STORE_STRIDE==0:
-            print "Storing ECACHE in ", kmc.ecache_file
-            ff = open(kmc.ecache_file, "wb")
-            pickle.dump(kmc.ecache, ff)
-            ff.close()
-        if kmc.qcache_file != "" and self.STORE_STEP % self.STORE_STRIDE==0:
-            print "Storing QCACHE in ", kmc.qcache_file
-            ff = open(kmc.qcache_file, "wb")
-            pickle.dump(kmc.qcache, ff)
-            ff.close()
-        self.STORE_STEP += 1 # horrible hack...
+
+        # only stores cache after a decent amount of new structures have been found
+        if kmc.ncache_stored*self.STORE_STRIDE<kmc.ncache:
+            if kmc.ecache_file != "":
+                print "Storing ECACHE in ", kmc.ecache_file
+                ff = open(kmc.ecache_file, "wb")
+                pickle.dump(kmc.ecache, ff)
+                ff.close()
+            if kmc.qcache_file != "":
+                print "Storing QCACHE in ", kmc.qcache_file
+                ff = open(kmc.qcache_file, "wb")
+                pickle.dump(kmc.qcache, ff)
+                ff.close()
+            kmc.ncache_stored = kmc.ncache
 
     def fetch(self):
         rv = super(InputAlKMC,self).fetch()

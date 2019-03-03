@@ -158,10 +158,14 @@ class AlKMC(Motion):
             ff = open(self.qcache_file, "rb")
             self.qcache = pickle.load(ff)
             ff.close()
+            print "Loaded %d cached energies" % (len(self.ecache))
         except:
             print "Couldn't load cache files "+self.ecache_file+","+self.qcache_file+" - resetting"
             self.ecache = {}
             self.qcache = {}
+        self.ncache = len(self.ecache)
+        self.ncache_stored = self.ncache
+
 
         # no TS evaluation implemented yet
         self.tscache = {}
@@ -237,7 +241,7 @@ class AlKMC(Motion):
                 print "inconsistent site string for atom ",i, " and site ", self.ridx[i]
 
         if not f_restart:
-            self.beads.q[0,:] = self.sites[self.unique_idx(self.state)[0:self.natoms]].flatten() # also sets global q so we can use it further down
+            self.beads.q[0,:] = self.sites[self.idx].flatten() # also sets global q so we can use it further down
 
         self.dbeads = [None] * self.neval
         self.dforces = [None] * self.neval
@@ -272,6 +276,7 @@ class AlKMC(Motion):
         with self._threadlock:
             self.ecache[nstr] = newpot
             self.qcache[nstr] = newq
+            self.ncache += 1
             nevent[2] = self.ecache[nstr]
             nevent[3] = self.qcache[nstr]
 
@@ -402,10 +407,10 @@ class AlKMC(Motion):
         ostr = "".join(self.state)  # this is a unique id string that charactrizes the current state
         self.tscache[ostr] = {}
         if not ostr in self.ecache:
-            self.dbeads[0].q[0,:] = self.sites[self.unique_idx(self.state)[0:self.natoms]].flatten()
+            self.dbeads[0].q[0,:] = self.sites[self.unique_idx(self.state)].flatten()
             rv = [0, 0, 0, 0, 0]
             self.geop_thread(0, ostr, rv)
-            self.beads.q[0,:] = self.dbeads[0].q[0,:] # also updates current position
+            #self.beads.q[0,:] = self.dbeads[0].q[0,:] # also updates current position
             # self.forces.transfer_forces(self.dforces[0]) # forces have already been computed here...
 
         ecurr = self.ecache[ostr]
@@ -440,7 +445,7 @@ class AlKMC(Motion):
 
                     ieval = self.find_eval(ethreads)
                     # launches evaluator
-                    self.dbeads[ieval].q[0,:] = self.sites[self.unique_idx(nstate)[0:self.natoms]].flatten()
+                    self.dbeads[ieval].q[0,:] = self.sites[self.unique_idx(nstate)].flatten()
 
                     nevent = [svac, sneigh, 0.0, 0.0, 0.0]
 
@@ -518,7 +523,23 @@ class AlKMC(Motion):
         # updates the positions
         self.cell.h = self.dcell.h
 
+        uidx = self.unique_idx(self.state)
+        ruidx = np.zeros(self.nsites,int)
+        ruidx[uidx] = range(self.nsites)
+
+        self.sites[self.unique_idx(self.state)]
+        oldq = dstrip(self.beads.q[0]).copy()
+
+        newq = np.zeros(self.nsites*3, float)
         # we want continuity (modulo PBC jumps, that we'll take care of later...)
         for i in xrange(self.nsites):
-            self.beads.q[0,:] = iev[3]
+            # in which site sits atom i?
+            isite = self.idx[i]
+            # which atom sits in this site in the unique-mapped structure?
+            iuid = ruidx[self.idx[i]]
+            newq[3*i:3*i+3] = iev[3][3*iuid:3*(iuid+1)]
+        newq-=oldq
+        self.cell.array_pbc(newq)
+        self.beads.q[0]+=newq
+
 
