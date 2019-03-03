@@ -66,6 +66,10 @@ class InputEnsemble(Input):
                                                  "default": np.zeros(0),
                                                  "help": "Hamiltonian weights.",
                                                  "dimension": "undefined"}),
+            "time": (InputValue, {"dtype": float,
+                                  "default": 0.0,
+                                  "dimension": "time",
+                                  "help": "The internal time for this system"})
     }
     dynamic = {}
 
@@ -87,6 +91,7 @@ class InputEnsemble(Input):
         self.bias.store(ens.bcomp)
         self.bias_weights.store(ens.bweights)
         self.hamiltonian_weights.store(ens.hweights)
+        self.time.store(ens.time)
 
     def fetch(self):
         """Creates an ensemble object.
@@ -101,6 +106,7 @@ class InputEnsemble(Input):
         ens = Ensemble(eens=self.eens.fetch(), temp=self.temperature.fetch(),
                        pext=self.pressure.fetch(), stressext=self.stress.fetch(),
                        bcomponents=self.bias.fetch(), bweights=self.bias_weights.fetch(),
-                       hweights=self.hamiltonian_weights.fetch())
+                       hweights=self.hamiltonian_weights.fetch(),
+                       time=self.time.fetch())
 
         return ens
