@@ -62,7 +62,7 @@ class Ensemble(dobject):
         bias: Explicit bias forces
     """
 
-    def __init__(self, eens=0.0, econs=0.0, temp=None, pext=None, stressext=None, bcomponents=None, bweights=None, hweights=None):
+    def __init__(self, eens=0.0, econs=0.0, temp=None, pext=None, stressext=None, bcomponents=None, bweights=None, hweights=None, time=0.0):
         """Initialises Ensemble.
 
         Args:
@@ -117,6 +117,12 @@ class Ensemble(dobject):
         if hweights is None:
             hweights = np.ones(0)
         self.hweights = np.asarray(hweights)
+
+
+        # Internal time counter
+        dd(self).time = depend_value(name='time')
+        self.time = time
+
 
     def bind(self, beads, nm, cell, bforce, fflist, elist=[], xlpot=[], xlkin=[]):
         self.beads = beads
