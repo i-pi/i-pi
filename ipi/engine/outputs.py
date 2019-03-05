@@ -25,7 +25,7 @@ from ipi.engine.properties import getkey
 from ipi.engine.atoms import *
 from ipi.engine.cell import *
 
-__all__ = ['PropertyOutput', 'TrajectoryOutput', 'CheckpointOutput', 'OutputList', 'FOMaker', 'FloatingOutput']
+__all__ = ['PropertyOutput', 'TrajectoryOutput', 'CheckpointOutput', 'OutputList', 'OutputMaker', 'BaseOutput']
 
 class OutputList(list):
     """ A simple decorated list to save the output prefix and bring it
@@ -35,62 +35,29 @@ class OutputList(list):
         super(OutputList, self).__init__(olist)
         self.prefix = prefix
 
-class FOMaker(dobject):
+class OutputMaker(dobject):
     """ Class to create floating outputs with an appropriate prefix """
 
-    def __init__(self, prefix):
+    def __init__(self, prefix="", f_start=False):
         self.prefix = prefix
+        self.f_start = f_start
 
+    def bind(self, system):
 
-class FloatingOutput(dobject,file):
+        self.system = system
 
-    """Class to streamline unstructured output from anywhere in the code.
+    def get_output(self, filename="out", mode=None):
 
-    Minimal set of features include optional overwrite protection, flushing
-    upon softexit, etc.
-
-    Attributes:
-       filename: The (base) name of the file to output to
-       append: Whether to append
-    """
-
-    def __init__(self, filename="restart", append=False):
-        """Initializes a checkpoint output proxy.
-
-        Args:
-           filename: A string giving the name of the file to be output to.
-           append: If True, the checkpoint file is overwritten at each output.
-              If False, will output to 'filename_step'. Note that no check is done
-              on whether 'filename_step' exists already.
-           step: The number of checkpoint files that have been created so far.
-        """
-
-        self.filename = filename
-        self.append = append
-
-    def open(self):
-        """Writes out the required trajectories.
-
-        Used for both the checkpoint files and the soft-exit restart file.
-        We have slightly different behaviour for these two different types of
-        checkpoint file, as the soft-exit files have their store() function
-        called automatically, and we do not want this to be updated as the
-        status of the simulation after a soft-exit call is unlikely to be in
-        a consistent state. On the other hand, the standard checkpoint files
-        are not automatically updated in this way, and we must manually store the
-        current state of the system before writing them.
-
-        Args:
-           store: A boolean saying whether the state of the system should be
-              stored before writing the checkpoint file.
-        """
-
-        filename = self.__prefix__.self.filename
-
-        if self.append:
-            rfile = open(filename,"a")
-        else:
-            rfile = open_backup(filename)
+        if self.prefix != "":
+            filename = self.prefix + "." + filename
+        rout = BaseOutput(filename)
+        if mode is None:
+            if self.f_start:
+                mode="w"
+            else:
+                mode="a"
+        rout.bind(mode)
+        return rout
 
 class BaseOutput(dobject):
     """Base class for outputs. Deals with flushing upon close and little more """
@@ -110,26 +77,26 @@ class BaseOutput(dobject):
         if not self.out is None:
             self.out.close()
 
-    def open_stream(self):
+    def open_stream(self, mode="w"):
         """Opens the output stream."""
 
         # Only open a new file if this is a new run, otherwise append.
-        if self.is_start:
-            mode = "w"
-        else:
-            mode = "a"
+        self.mode = mode
+        self.out = open_backup(self.filename, self.mode)
 
-        self.out = open_backup(self.filename, mode)
-
-    def bind(self, system):
+    def bind(self, mode="w"):
         """ Stores a reference to system and registers for exiting """
 
-        self.system = system
-        # Is this the start of the simulation?
-        self.is_start = self.system.simul.step == 0
-
-        self.open_stream()
+        self.open_stream(mode)
         softexit.register_function(self.softexit)
+
+    def force_flush(self):
+        """ Tries hard to flush the output stream """
+
+        if self.out is not None:
+            self.out.flush()
+            os.fsync(self.out)
+
 
 class PropertyOutput(BaseOutput):
 
@@ -172,7 +139,7 @@ class PropertyOutput(BaseOutput):
         self.flush = flush
         self.nout = 0
 
-    def bind(self, system):
+    def bind(self, system, mode="w"):
         """Binds output proxy to System object.
 
         Args:
@@ -182,38 +149,34 @@ class PropertyOutput(BaseOutput):
 
         # Checks as soon as possible if some asked-for properties are
         # missing or mispelled
+        self.system = system
         for what in self.outlist:
             key = getkey(what)
             if not key in system.properties.property_dict.keys():
                 print "Computable properties list: ", system.properties.property_dict.keys()
                 raise KeyError(key + " is not a recognized property")
 
-        super(PropertyOutput,self).bind(system)
+        super(PropertyOutput,self).bind(mode)
 
 
-    def open_stream(self):
-        """Opens the output stream."""
-
-        super(PropertyOutput,self).open_stream()
-
+    def print_header(self):
         # print nice header if information is available on the properties
-        if self.is_start:
-            icol = 1
-            for what in self.outlist:
-                ohead = "# "
-                key = getkey(what)
-                prop = self.system.properties.property_dict[key]
+        icol = 1
+        for what in self.outlist:
+            ohead = "# "
+            key = getkey(what)
+            prop = self.system.properties.property_dict[key]
 
-                if "size" in prop and prop["size"] > 1:
-                    ohead += "cols.  %3d-%-3d" % (icol, icol + prop["size"] - 1)
-                    icol += prop["size"]
-                else:
-                    ohead += "column %3d    " % (icol)
-                    icol += 1
-                ohead += " --> %s " % (what)
-                if "help" in prop:
-                    ohead += ": " + prop["help"]
-                self.out.write(ohead + "\n")
+            if "size" in prop and prop["size"] > 1:
+                ohead += "cols.  %3d-%-3d" % (icol, icol + prop["size"] - 1)
+                icol += prop["size"]
+            else:
+                ohead += "column %3d    " % (icol)
+                icol += 1
+            ohead += " --> %s " % (what)
+            if "help" in prop:
+                ohead += ": " + prop["help"]
+            self.out.write(ohead + "\n")
 
     def write(self):
         """Outputs the required properties of the system.
@@ -253,7 +216,7 @@ class PropertyOutput(BaseOutput):
             self.nout = 0
 
 
-class TrajectoryOutput(dobject):
+class TrajectoryOutput(BaseOutput):
 
     """Class dealing with outputting atom-based properties as a
     trajectory file.
@@ -303,7 +266,7 @@ class TrajectoryOutput(dobject):
         self.out = None
         self.nout = 0
 
-    def bind(self, system):
+    def bind(self, system, mode="w"):
         """Binds output proxy to System object.
 
         Args:
@@ -311,27 +274,20 @@ class TrajectoryOutput(dobject):
         """
 
         self.system = system
-
         # Checks as soon as possible if some asked-for trajs are missing or mispelled
         key = getkey(self.what)
         if not key in self.system.trajs.traj_dict.keys():
             print "Computable trajectories list: ", self.system.trajs.traj_dict.keys()
             raise KeyError(key + " is not a recognized output trajectory")
 
-        self.open_stream()
-        softexit.register_function(self.softexit)
+        super(TrajectoryOutput,self).bind( mode)
 
-    def open_stream(self):
+    def print_header(self):
+        """ No headers for trajectory files """
+        pass
+
+    def open_stream(self, mode):
         """Opens the output stream(s)."""
-
-        # Is this the start of the simulation?
-        is_start = self.system.simul.step == 0
-
-        # Only open a new file if this is a new run, otherwise append.
-        if is_start:
-            mode = "w"
-        else:
-            mode = "a"
 
         # prepare format string for zero-padded number of beads,
         # including underscpre
@@ -361,11 +317,6 @@ class TrajectoryOutput(dobject):
             # open one file
             filename = self.filename + "." + self.format
             self.out = open_backup(filename, mode)
-
-    def softexit(self):
-        """Emergency cleanup if i-pi wants to exit"""
-
-        self.close_stream()
 
     def close_stream(self):
         """Closes the output stream."""

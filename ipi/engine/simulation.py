@@ -174,7 +174,12 @@ class Simulation(dobject):
         if len(filename_list) > len(set(filename_list)):
             raise ValueError("Output filenames are not unique. Modify filename attributes.")
 
-        self.output_maker = eoutputs.FOMaker(self.outtemplate.prefix)
+        f_start = (self.step == 0) # special operations if we're starting from scratch
+        if f_start:
+            mode = "w"
+        else:
+            mode = "a"
+        self.output_maker = eoutputs.OutputMaker(self.outtemplate.prefix, f_start)
         self.outputs = []
         for o in self.outtemplate:
             o = deepcopy(o) # avoids overwriting the actual filename
@@ -189,15 +194,17 @@ class Simulation(dobject):
                     no = deepcopy(o)
                     if s.prefix != "":
                         no.filename = s.prefix + "_" + no.filename
-                    no.bind(s)
+                    no.bind(s, mode)
                     self.outputs.append(no)
+                    if f_start : # starting of simulation, print headers (if any)
+                        no.print_header()
                     isys += 1
 
         self.chk = eoutputs.CheckpointOutput("RESTART", 1, True, 0)
         self.chk.bind(self)
 
         if not self.smotion is None:
-            self.smotion.bind(self.syslist, self.prng)
+            self.smotion.bind(self.syslist, self.prng, self.output_maker)
 
     def softexit(self):
         """Deals with a soft exit request.
