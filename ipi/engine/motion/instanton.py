@@ -143,7 +143,7 @@ class InstantonMotion(Motion):
         if self.opt == 'NR':
             info("Note that we need scipy to use NR. If storage and diagonalization of the full hessian is not a problem use nichols even though it may not be as efficient.", verbosity.low)
 
-    def bind(self, ens, beads, nm, cell, bforce, prng):
+    def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         """Binds beads, cell, bforce and prng to InstantonMotion
 
             Args:
@@ -154,7 +154,7 @@ class InstantonMotion(Motion):
             prng: The random number generator object which controls random number generation.
         """
 
-        super(InstantonMotion, self).bind(ens, beads, nm, cell, bforce, prng)
+        super(InstantonMotion, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
         # Binds optimizer
 
         self.optimizer.bind(self)

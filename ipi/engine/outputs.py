@@ -59,7 +59,7 @@ class OutputMaker(dobject):
         rout.bind(mode)
         return rout
 
-class BaseOutput(dobject):
+class BaseOutput(object):
     """Base class for outputs. Deals with flushing upon close and little more """
 
     def __init__(self, filename="out"):
@@ -96,6 +96,9 @@ class BaseOutput(dobject):
         if self.out is not None:
             self.out.flush()
             os.fsync(self.out)
+
+    def __getattr__(self, name):
+        return getattr(self.out, name)
 
 
 class PropertyOutput(BaseOutput):

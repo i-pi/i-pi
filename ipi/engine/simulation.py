@@ -160,6 +160,14 @@ class Simulation(dobject):
             raise ValueError("Simulation has already run for total_steps, will not even start. "
                              "Modify total_steps or step counter to continue.")
 
+        # initializes the output maker so it can be passed around to systems
+        f_start = (self.step == 0) # special operations if we're starting from scratch
+        if f_start:
+            mode = "w"
+        else:
+            mode = "a"
+        self.output_maker = eoutputs.OutputMaker(self.outtemplate.prefix, f_start)
+
         for s in self.syslist:
             # binds important computation engines
             s.bind(self)
@@ -174,12 +182,6 @@ class Simulation(dobject):
         if len(filename_list) > len(set(filename_list)):
             raise ValueError("Output filenames are not unique. Modify filename attributes.")
 
-        f_start = (self.step == 0) # special operations if we're starting from scratch
-        if f_start:
-            mode = "w"
-        else:
-            mode = "a"
-        self.output_maker = eoutputs.OutputMaker(self.outtemplate.prefix, f_start)
         self.outputs = []
         for o in self.outtemplate:
             o = deepcopy(o) # avoids overwriting the actual filename

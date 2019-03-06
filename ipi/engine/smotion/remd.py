@@ -181,10 +181,10 @@ class ReplicaExchange(Smotion):
 
         if fxc:  # writes out the new status
             #with open(self.swapfile, "a") as sf:
-            self.sf.out.write("% 10d" % (step))
+            self.sf.write("% 10d" % (step))
             for i in self.repindex:
-                self.sf.out.write(" % 5d" % (i))
-            self.sf.out.write("\n")
+                self.sf.write(" % 5d" % (i))
+            self.sf.write("\n")
             self.sf.force_flush()
 
         info("# REMD step evaluated in %f (%f eval, %f swap) sec." % (time.time()-t_start, t_eval, t_swap), verbosity.debug)
