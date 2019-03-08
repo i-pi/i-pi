@@ -1,0 +1,21 @@
+clear
+units metal
+boundary p p p
+atom_style atomic
+box tilt large
+read_data "data.runnerformat.lmp"
+
+mass 1 24.305
+mass 2 26.9815385
+mass 3 28.0855
+variable nnpDir string "../potential_n2p2_v2ag"
+pair_style nnp dir ${nnpDir} showew no resetew yes maxew 100000000 cflength 1.8897261328 cfenergy 0.0367493254
+pair_coeff * * 11.0
+#write_data ./pos.data # would this be the final struct?
+
+timestep 0.001   # timestep (ps)
+velocity all create 300 4928459
+thermo 1   # screen output interval (timesteps)
+fix 1 all ipi fidis 12345 unix
+
+run 66000000
