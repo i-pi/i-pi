@@ -16,7 +16,7 @@
     <total_time> 258800 </total_time>
     <system>
         <initialize nbeads="1">
-            <file mode="xyz" units="angstrom"> data.ipi </file>
+            <file mode="xyz" units="angstrom"> init.xyz </file>
             <velocities mode="thermal" units="kelvin"> 0 </velocities>
         </initialize>
         <forces>
