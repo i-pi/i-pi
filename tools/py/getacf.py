@@ -157,11 +157,7 @@ if __name__ == "__main__":
     parser.add_argument("-oprefix", "--output_prefix", required=True, type=str, help="the prefix of the output file.")
     parser.add_argument("-der", "--derivative", action="store_true", help="computes the autocorrelation function of the time derivative of the xyz formatted input")
 
-    try:
-        args = parser.parse_args()
-    except:
-        parser.print_help()
-        sys.exit()
+    args = parser.parse_args()
 
     # Process everything.
     compute_acf(args.input_file, args.output_prefix, args.maximum_lag, args.block_length, args.length_zeropadding, args.spectral_windowing, args.labels, args.timestep, args.skip, args.derivative)
