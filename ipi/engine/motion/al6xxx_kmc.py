@@ -144,6 +144,10 @@ class AlKMC(Motion):
         self.fixatoms = np.asarray([])
         self.fixcom = True
         self.geop = [None] * self.neval
+        # need to set higher energy convergence to avoid soft exits from geomery optimizer
+        tol_f = geop["tolerances"]["force"]
+        tol_p = geop["tolerances"]["position"]
+        geop["tolerances"] = {"energy": 1e-10, "force": tol_f,"position": tol_p}
         for i in xrange(self.neval):
             # geometry optimizer should not have *any* hystory dependence
             self.geop[i] = GeopMotion(fixcom=fixcom, fixatoms=fixatoms,**geop) #mode="cg", ls_options={"tolerance": 1, "iter": 20,  "step": 1e-3, "adaptive": 0.0}, tolerances={"energy": 1e-7, "force": 1e-2, "position": 1e-4}, ) #!TODO: set the geop parameters properly
