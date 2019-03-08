@@ -304,7 +304,7 @@ class DummyOptimizer(dobject):
         e = np.absolute((fx - u0) / self.beads.natoms)
         info("@GEOP", verbosity.medium)
         self.tolerances["position"]
-        info("   Current energy             %e" % (fx))
+        info("   Current energy             %e" % (fx),verbosity.medium)
         info("   Position displacement      %e  Tolerance %e" % (x, self.tolerances["position"]), verbosity.medium)
         info("   Max force component        %e  Tolerance %e" % (fmax, self.tolerances["force"]), verbosity.medium)
         info("   Energy difference per atom %e  Tolerance %e" % (e, self.tolerances["energy"]), verbosity.medium)
@@ -375,7 +375,7 @@ class BFGSOptimizer(DummyOptimizer):
         BFGS(self.old_x, self.d, self.gm, fdf0, self.invhessian, self.big_step,
              self.ls_options["tolerance"] * self.tolerances["energy"], self.ls_options["iter"])
 
-        info("   Number of force calls: %d" % (self.gm.fcount)); self.gm.fcount = 0
+        info("   Number of force calls: %d" % (self.gm.fcount),verbosity.medium); self.gm.fcount = 0
         # Update positions and forces
         self.beads.q = self.gm.dbeads.q
         self.forces.transfer_forces(self.gm.dforces)  # This forces the update of the forces
@@ -432,7 +432,7 @@ class BFGSTRMOptimizer(DummyOptimizer):
         BFGSTRM(self.old_x, self.old_u, self.old_f, self.hessian, self.tr,
                 self.gm, self.big_step)
 
-        info("   Number of force calls: %d" % (self.gm.fcount)); self.gm.fcount = 0
+        info("   Number of force calls: %d" % (self.gm.fcount),verbosity.medium); self.gm.fcount = 0
         # Update positions and forces
         self.beads.q = self.gm.dbeads.q
         self.forces.transfer_forces(self.gm.dforces)  # This forces the update of the forces
@@ -507,7 +507,7 @@ class LBFGSOptimizer(DummyOptimizer):
                fdf0, self.big_step, self.ls_options["tolerance"] * self.tolerances["energy"],
                self.ls_options["iter"], self.corrections, self.scale, step)
 
-        info("   Number of force calls: %d" % (self.gm.fcount)); self.gm.fcount = 0
+        info("   Number of force calls: %d" % (self.gm.fcount),verbosity.medium); self.gm.fcount = 0
 
         # Update positions and forces
         self.beads.q = self.gm.dbeads.q
@@ -567,7 +567,7 @@ class SDOptimizer(DummyOptimizer):
         min_brent(self.lm, fdf0=(u0, du0), x0=0.0,
                   tol=self.ls_options["tolerance"] * self.tolerances["energy"],
                   itmax=self.ls_options["iter"], init_step=self.ls_options["step"])
-        info("   Number of force calls: %d" % (self.lm.fcount)); self.lm.fcount = 0
+        info("   Number of force calls: %d" % (self.lm.fcount),verbosity.medium); self.lm.fcount = 0
 
         # Update positions and forces
         self.beads.q = self.lm.dbeads.q
@@ -651,7 +651,7 @@ class CGOptimizer(DummyOptimizer):
         min_brent(self.lm, fdf0=(u0, du0), x0=0.0,
                   tol=self.ls_options["tolerance"] * self.tolerances["energy"],
                   itmax=self.ls_options["iter"], init_step=self.ls_options["step"])
-        info("   Number of force calls: %d" % (self.lm.fcount)); self.lm.fcount = 0
+        info("   Number of force calls: %d" % (self.lm.fcount),verbosity.medium); self.lm.fcount = 0
 
         # Update positions and forces
         self.beads.q = self.lm.dbeads.q
