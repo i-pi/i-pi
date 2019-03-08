@@ -64,10 +64,10 @@ def compute_acf(input_file, output_prefix, maximum_lag, block_length, length_zer
     data = np.zeros((bsize, nspecies, 3), float)
     time = np.asarray(range(mlag + 1)) * dt
     omega = np.asarray(range(2 * (mlag + npad))) / float(2 * (mlag + npad)) * (2 * np.pi / dt)
-
-
-    fvvacf = []
-    vvacf = [] 
+    fvvacf = omega.copy() * 0.0
+    fvvacf2 = fvvacf.copy() * 0.0 
+    vvacf = time.copy() * 0.0
+    vvacf2 = time.copy() * 0.0
 
     # selects window function for fft.
     if(ftbox == "none"):
@@ -115,8 +115,12 @@ def compute_acf(input_file, output_prefix, maximum_lag, block_length, length_zer
             # Recomputes the Fourier transform assuming the data is an even function of time.
             mfpvvacf = np.fft.hfft(mpvvacf)
 
-            fvvacf.append(mfpvvacf)
-            vvacf.append(mvvacf)
+            # Accumulates the (f)acfs and their squares.
+            fvvacf += mfpvvacf
+            fvvacf2 += mfpvvacf**2
+            vvacf +=mvvacf
+            vvacf2 +=mvvacf**2
+
 
             nblocks += 1
 
@@ -125,15 +129,15 @@ def compute_acf(input_file, output_prefix, maximum_lag, block_length, length_zer
     ff.close()
 
     # Performs the block average of the Fourier transform.
-    rfvvacf = np.mean(fvvacf, axis=0)
-    rfvvacf_err = np.std(fvvacf, axis=0) / np.sqrt(nblocks)
+    fvvacf = fvvacf / nblocks
+    fvvacf_err = np.sqrt(fvvacf2  / nblocks - fvvacf**2)
 
-    np.savetxt(ofile + "_facf.data", np.c_[omega, rfvvacf, rfvvacf_err][:mlag + npad])
+    np.savetxt(ofile + "_facf.data", np.c_[omega, fvvacf, fvvacf_err][:mlag + npad])
 
     # Computes the inverse Fourier transform to get the vvac.
-    rvvacf = np.mean(vvacf, axis=0)
-    rvvacf_err = np.std(vvacf, axis=0) / np.sqrt(nblocks)
-    np.savetxt(ofile + "_acf.data", np.c_[time, rvvacf, rvvacf_err][:mlag + npad])
+    vvacf = vvacf / nblocks
+    vvacf_err = np.sqrt(vvacf2  / nblocks - vvacf**2)
+    np.savetxt(ofile + "_acf.data", np.c_[time, vvacf, vvacf_err][:mlag + npad])
 
 
 if __name__ == "__main__":
