@@ -142,7 +142,7 @@ def main(inputfile, prefix="SRT_"):
     irep = range(nsys)  # Could this be harmful?
     step = 0
     while True:
-        # reads one line from PARATEMP index file
+        # reads one line from index file
         try:
 
             for prop in lprop:

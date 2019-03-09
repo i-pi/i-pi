@@ -67,7 +67,7 @@ class DynMatrixMover(Motion):
         self.asr = asr
 
         if self.prefix == "":
-            self.prefix = "PHONONS"
+            self.prefix = "phonons"
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
 

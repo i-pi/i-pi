@@ -331,9 +331,8 @@ def print_instanton_geo(prefix, step, nbeads, natoms, names, q, pots, cell, shif
     outfile = output_maker.get_output(prefix + '_' + str(step) + '.xyz', 'w')
     for i in range(nbeads):
         print >> outfile, natoms
-        # print >> outfile, (('CELL(abcABC): Traj: positions(%s) Bead: %i' %(unit,i) ))
+
         print >> outfile, ('CELL(abcABC):  %f %f %f %f %f %f cell{atomic_unit}  Traj: positions{%s}   Bead:       %i' % (a, b, c, alpha, beta, gamma, unit, i))
-        # print >> outfile, ('#Potential (eV):   ' + str(units.unit_to_user('energy', "electronvolt", pots[i] - shift)))
 
         for j in range(natoms):
             print >> outfile, names[j], \
