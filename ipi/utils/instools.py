@@ -112,7 +112,7 @@ def get_hessian(h, gm, x0, d=0.0005):
     # ddforces = gm.dforces.copy(ddbeads, ddcell)
 
     i0 = -1
-    # Check if there is a temporal file:
+    # Check if there is a temporary file:
     for i in range(ii, -1, -1):
         try:
             b = np.loadtxt('hessian_' + str(i) + '.tmp')
@@ -139,7 +139,7 @@ def get_hessian(h, gm, x0, d=0.0005):
 
         h[j, :] = g.flatten()
 
-        f = output_maker.get_output('hessian_' + str(j) + '.tmp', 'w')
+        f = open('hessian_' + str(j) + '.tmp', 'w')
         #print >> f, 'STEP %i' % j
         np.savetxt(f, h)
         f.close()

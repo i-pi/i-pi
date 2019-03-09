@@ -223,6 +223,7 @@ class DummyOptimizer(dobject):
 
         self.mode = geop.mode
         self.tolerances = geop.tolerances
+        self.output_maker = geop.output_maker
 
         # Check for very tight tolerances
 

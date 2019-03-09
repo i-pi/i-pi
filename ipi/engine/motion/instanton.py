@@ -336,6 +336,7 @@ class DummyOptimizer(dobject):
         self.forces = geop.forces
         self.fixcom = geop.fixcom
         self.fixatoms = geop.fixatoms
+        self.output_maker = geop.output_maker
 
         # The resize action must be done before the bind
         if geop.old_x.size != self.beads.q.size:
@@ -429,7 +430,7 @@ class HessianOptimizer(DummyOptimizer):
         self.hessian_update = geop.hessian_update
         self.hessian_asr = geop.hessian_asr
         self.hessian_init = geop.hessian_init
-        self.output_maker = geop.output_maker
+#        self.output_maker = geop.output_maker
 
         self.im.bind(self)
 
