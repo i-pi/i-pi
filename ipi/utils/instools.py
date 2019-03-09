@@ -139,7 +139,7 @@ def get_hessian(h, gm, x0, d=0.0005):
 
         h[j, :] = g.flatten()
 
-        f = open('hessian_' + str(j) + '.tmp', 'w')
+        f = output_maker.get_output('hessian_' + str(j) + '.tmp', 'w')
         #print >> f, 'STEP %i' % j
         np.savetxt(f, h)
         f.close()
@@ -315,9 +315,9 @@ def get_imvector(h, m3):
     return imv
 
 
-def print_instanton_geo(prefix, step, nbeads, natoms, names, q, pots, cell, shift):
+def print_instanton_geo(prefix, step, nbeads, natoms, names, q, pots, cell, shift, output_maker):
 
-    outfile = open(prefix + '_' + str(step) + '.ener', 'w')
+    outfile = output_maker.get_output(prefix + '_' + str(step) + '.ener', 'w')
     print >> outfile, ('#Bead    Energy (eV)')
     for i in range(nbeads):
         print >> outfile, (str(i) + '     ' + str(units.unit_to_user('energy', "electronvolt", pots[i] - shift)))
@@ -328,7 +328,7 @@ def print_instanton_geo(prefix, step, nbeads, natoms, names, q, pots, cell, shif
     unit = 'angstrom'
     a, b, c, alpha, beta, gamma = mt.h2abc_deg(cell.h)
 
-    outfile = open(prefix + '_' + str(step) + '.xyz', 'w')
+    outfile = output_maker.get_output(prefix + '_' + str(step) + '.xyz', 'w')
     for i in range(nbeads):
         print >> outfile, natoms
         # print >> outfile, (('CELL(abcABC): Traj: positions(%s) Bead: %i' %(unit,i) ))
@@ -344,9 +344,9 @@ def print_instanton_geo(prefix, step, nbeads, natoms, names, q, pots, cell, shif
     outfile.close()
 
 
-def print_instanton_hess(prefix, step, hessian):
+def print_instanton_hess(prefix, step, hessian, output_maker):
 
     np.set_printoptions(precision=7, suppress=True, threshold=np.nan, linewidth=3000)
-    outfile = open(prefix + '.hess_' + str(step), 'w')
+    outfile = output_maker.get_output(prefix + '.hess_' + str(step), 'w')
     np.savetxt(outfile, hessian.reshape(1, hessian.size))
     outfile.close()

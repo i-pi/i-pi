@@ -401,7 +401,7 @@ class DummyOptimizer(dobject):
                 and (x <= self.tolerances["position"]):
 
             print_instanton_geo(self.prefix + '_FINAL', step, self.im.dbeads.nbeads, self.im.dbeads.natoms, self.im.dbeads.names,
-                                self.im.dbeads.q, self.old_u, self.cell, self.energy_shift)
+                                self.im.dbeads.q, self.old_u, self.cell, self.energy_shift, self.output_maker)
 
             if self.hessian_final != 'true':
                 info("We are not going to compute the final hessian.", verbosity.low)
@@ -410,7 +410,7 @@ class DummyOptimizer(dobject):
             else:
                 info("We are going to compute the final hessian", verbosity.low)
                 get_hessian(self.hessian, self.gm, self.im.dbeads.q)
-                print_instanton_hess(self.prefix + '_FINAL', step, self.hessian)
+                print_instanton_hess(self.prefix + '_FINAL', step, self.hessian, self.output_maker)
 
             exitt = True  # If we just exit here, the last step (including the last hessian) will not be in the RESTART file
 
@@ -429,6 +429,7 @@ class HessianOptimizer(DummyOptimizer):
         self.hessian_update = geop.hessian_update
         self.hessian_asr = geop.hessian_asr
         self.hessian_init = geop.hessian_init
+        self.output_maker = geop.output_maker
 
         self.im.bind(self)
 
@@ -510,8 +511,8 @@ class HessianOptimizer(DummyOptimizer):
         # Print current instanton geometry and hessian
         if (self.save > 0 and np.mod(step, self.save) == 0) or self.exit:
             print_instanton_geo(self.prefix, step, self.im.dbeads.nbeads, self.im.dbeads.natoms, self.im.dbeads.names,
-                                self.im.dbeads.q, self.old_u, self.cell, self.energy_shift)
-            print_instanton_hess(self.prefix, step, self.hessian)
+                                self.im.dbeads.q, self.old_u, self.cell, self.energy_shift, self.output_maker)
+            print_instanton_hess(self.prefix, step, self.hessian, self.output_maker)
 
         # Exit simulation step
         d_x_max = np.amax(np.absolute(np.subtract(self.beads.q, self.old_x)))
@@ -706,4 +707,4 @@ class LBFGSOptimizer(DummyOptimizer):
         # Print current instanton geometry and hessian
         if (self.save > 0 and np.mod(step, self.save) == 0) or self.exit:
             print_instanton_geo(self.prefix, step, self.im.dbeads.nbeads, self.im.dbeads.natoms, self.im.dbeads.names,
-                                self.im.dbeads.q, self.old_u, self.cell, self.energy_shift)
+                                self.im.dbeads.q, self.old_u, self.cell, self.energy_shift, self.output_maker)
