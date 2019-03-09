@@ -190,7 +190,10 @@ class Dynamics(Motion):
         return self.ensemble.temp * self.beads.nbeads
 
     def step(self, step=None):
+        """ Advances the dynamics by one time step """
+
         self.integrator.step(step)
+        self.ensemble.time += self.dt # increments internal time
 
 
 class DummyIntegrator(dobject):
@@ -309,7 +312,7 @@ class NVEIntegrator(DummyIntegrator):
         connected to the centroid is chosen.
         """
 
-        if (self.fixcom):            
+        if (self.fixcom):
             na3 = self.beads.natoms * 3
             nb = self.beads.nbeads
             p = dstrip(self.beads.p)
