@@ -52,6 +52,7 @@ class GeopMotion(Motion):
 
     def __init__(self, fixcom=False, fixatoms=None,
                  mode="lbfgs",
+                 exit_on_convergence=True,
                  biggest_step=100.0,
                  old_pos=np.zeros(0, float),
                  old_pot=np.zeros(0, float),
@@ -81,6 +82,7 @@ class GeopMotion(Motion):
         # Optimization Options
 
         self.mode = mode
+        self.conv_exit = exit_on_convergence
         self.big_step = biggest_step
         self.tolerances = tolerances
         self.ls_options = ls_options
@@ -128,7 +130,14 @@ class GeopMotion(Motion):
         self.optimizer.bind(self)
 
     def step(self, step=None):
-        self.optimizer.step(step)
+        if self.optimizer.converged:
+            # if required, exit upon convergence. otherwise just return without action
+            if self.conv_exit:
+                softexit.trigger("Geometry optimization converged. Exiting simulation")
+            else:
+                info("Convergence threshold met. Will carry on but do nothing.", verbosity.high)
+        else:
+            self.optimizer.step(step)
 
 
 class LineMapper(object):
@@ -205,6 +214,7 @@ class DummyOptimizer(dobject):
 
         self.lm = LineMapper()
         self.gm = GradientMapper()
+        self.converged = False
 
     def step(self, step=None):
         """Dummy simulation time step which does nothing."""
@@ -289,7 +299,7 @@ class DummyOptimizer(dobject):
         info("   Energy difference per atom %e  Tolerance %e" % (e, self.tolerances["energy"]), verbosity.medium)
 
         if (np.linalg.norm(self.forces.f.flatten() - self.old_f.flatten()) <= 1e-20):
-            softexit.trigger("Something went wrong, the forces are not changing anymore."
+            info("Something went wrong, the forces are not changing anymore."
                              " This could be due to an overly small tolerance threshold "
                              "that makes no physical sense. Please check if you are able "
                              "to reach such accuracy with your force evaluation"
@@ -298,7 +308,7 @@ class DummyOptimizer(dobject):
         if (np.absolute((fx - u0) / self.beads.natoms) <= self.tolerances["energy"])   \
                 and (fmax <= self.tolerances["force"])  \
                 and (x <= self.tolerances["position"]):
-            softexit.trigger("Geometry optimization converged. Exiting simulation")
+            self.converged = True
 
 
 class BFGSOptimizer(DummyOptimizer):
@@ -365,7 +375,7 @@ class BFGSOptimizer(DummyOptimizer):
 
 
 class BFGSTRMOptimizer(DummyOptimizer):
-    """ BFGSTRM Minimization with Trust Radius Method.	"""
+    """ BFGSTRM Minimization with Trust Radius Method.  """
 
     def bind(self, geop):
 
