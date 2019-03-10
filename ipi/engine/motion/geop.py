@@ -135,7 +135,7 @@ class GeopMotion(Motion):
             if self.conv_exit:
                 softexit.trigger("Geometry optimization converged. Exiting simulation")
             else:
-                info("Convergence threshold met. Will carry on but do nothing.", verbosity.low)
+                info("Convergence threshold met. Will carry on but do nothing.", verbosity.high)
         else:
             self.optimizer.step(step)
 
