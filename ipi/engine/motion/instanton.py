@@ -71,7 +71,7 @@ class InstantonMotion(Motion):
                  old_force=np.zeros(0, float),
                  opt='None',
                  alt_out=1,
-                 prefix="INSTANTON",
+                 prefix="instanton",
                  delta=np.zeros(0, float),
                  hessian_init=None,
                  hessian=np.eye(0, 0, 0, float),
