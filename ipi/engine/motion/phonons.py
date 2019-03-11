@@ -67,7 +67,7 @@ class DynMatrixMover(Motion):
         self.asr = asr
 
         if self.prefix == "":
-            self.prefix = "PHONONS"
+            self.prefix = "phonons"
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
 
@@ -105,14 +105,14 @@ class DynMatrixMover(Motion):
             wstr = ""
         # prints out the dynamical matrix
 
-        outfile = self.output_maker.get_output('dynmat', 'w')
+        outfile = self.output_maker.get_output(self.prefix + '.dynmat', 'w')
         print >> outfile, "# Dynamical matrix (atomic units)" + wstr
         for i in range(3 * self.beads.natoms):
             print >> outfile, ' '.join(map(str, dmatx[i]))
         outfile.close()
 
         # also prints out the Hessian
-        outfile = self.output_maker.get_output('hess', 'w')
+        outfile = self.output_maker.get_output(self.prefix + '.hess', 'w')
         print >> outfile, "# Hessian matrix (atomic units)" + wstr
         for i in range(3 * self.beads.natoms):
             print >> outfile, ' '.join(map(str, dmatx[i] / (self.ism[i] * self.ism)))
@@ -121,11 +121,11 @@ class DynMatrixMover(Motion):
         # eigsys=np.linalg.eigh(dmatx)
         eigsys = np.linalg.eigh(dmatx)
         # prints eigenvalues & eigenvectors
-        outfile = self.output_maker.get_output('eigval', 'w')
+        outfile = self.output_maker.get_output(self.prefix + '.eigval', 'w')
         print >> outfile, "# Eigenvalues (atomic units)" + wstr
         print >> outfile, '\n'.join(map(str, eigsys[0]))
         outfile.close()
-        outfile = self.output_maker.get_output('eigvec', 'w')
+        outfile = self.output_maker.get_output(self.prefix + '.eigvec', 'w')
         print >> outfile, "# Eigenvector  matrix (normalized)"
         for i in range(0, 3 * self.beads.natoms):
             print >> outfile, ' '.join(map(str, eigsys[1][i]))
@@ -136,7 +136,7 @@ class DynMatrixMover(Motion):
             eigmode[i] *= self.ism[i]
         for i in range(0, 3 * self.beads.natoms):
             eigmode[:, i] /= np.sqrt(np.dot(eigmode[:, i], eigmode[:, i]))
-        outfile = self.output_maker.get_output('mode', 'w')
+        outfile = self.output_maker.get_output(self.prefix + '.mode', 'w')
         print >> outfile, "# Phonon modes (mass-scaled)"
         for i in range(0, 3 * self.beads.natoms):
             print >> outfile, ' '.join(map(str, eigmode[i]))
