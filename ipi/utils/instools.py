@@ -3,7 +3,7 @@ import numpy as np
 from ipi.utils.messages import verbosity, info
 from ipi.utils import units
 import ipi.utils.mathtools as mt
-import os.path
+import os.path, glob
 
 
 def banded_hessian(h, im, shift=0.001):
@@ -92,7 +92,7 @@ def red2comp(h, nbeads, natoms):
     return h0
 
 
-def get_hessian(h, gm, x0, d=0.0005):
+def get_hessian(h, gm, x0, output_maker, d=0.0005):
     """Compute the physical hessian
        IN     h       = physical hessian
               gm      = gradient mapper
@@ -139,7 +139,7 @@ def get_hessian(h, gm, x0, d=0.0005):
 
         h[j, :] = g.flatten()
 
-        f = open('hessian_' + str(j) + '.tmp', 'w')
+        f = output_maker.get_output('hessian_' + str(j) + '.tmp', 'w')
         #print >> f, 'STEP %i' % j
         np.savetxt(f, h)
         f.close()
@@ -150,11 +150,18 @@ def get_hessian(h, gm, x0, d=0.0005):
     # gm.dbeads.q = ddbeads.q
     # gm.dforces.transfer_forces(ddforces)
 
-    for i in range(ii):
+# MR: should be done with remove from BaseOutput class
+    for i in glob.glob("*hessian_*.tmp"):
         try:
-            os.remove('hessian_' + str(i) + '.tmp')
+            os.remove(i)
         except OSError:
             pass
+
+#    for i in range(ii):
+#        try:
+#            os.remove('hessian_' + str(i) + '.tmp')
+#        except OSError:
+#            pass
 
 
 def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):

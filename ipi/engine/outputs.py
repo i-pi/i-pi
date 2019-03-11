@@ -97,6 +97,11 @@ class BaseOutput(object):
             self.out.flush()
             os.fsync(self.out)
 
+    def remove(self):
+        """Removes (temporary) output """
+        if self.out is not None:
+            os.remove(self.out)
+
     def __getattr__(self, name):
         return getattr(self.out, name)
 
