@@ -144,6 +144,9 @@ class AlKMC(Motion):
         self.fixatoms = np.asarray([])
         self.fixcom = True
         self.geop = [None] * self.neval
+        # geop should not trigger exit if there is early convergence, but just carry on.
+        # we hard-code this option to avoid early-termination that would be hard to debug for a user
+        geop["exit_on_convergence"] = False
         for i in xrange(self.neval):
             # geometry optimizer should not have *any* hystory dependence
             self.geop[i] = GeopMotion(fixcom=fixcom, fixatoms=fixatoms,**geop) #mode="cg", ls_options={"tolerance": 1, "iter": 20,  "step": 1e-3, "adaptive": 0.0}, tolerances={"energy": 1e-7, "force": 1e-2, "position": 1e-4}, ) #!TODO: set the geop parameters properly
