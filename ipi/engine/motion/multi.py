@@ -49,7 +49,7 @@ class MultiMotion(Motion):
         for m in self.mlist:
             m.step(step)
 
-    def bind(self, ens, beads, nm, cell, bforce, prng):
+    def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         """Binds beads, cell, bforce, and prng to the calculator.
 
         This takes a beads object, a cell object, a forcefield object and a
@@ -69,4 +69,4 @@ class MultiMotion(Motion):
         """
 
         for m in self.mlist:
-            m.bind(ens, beads, nm, cell, bforce, prng)
+            m.bind(ens, beads, nm, cell, bforce, prng, omaker)

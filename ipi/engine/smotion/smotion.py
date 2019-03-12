@@ -34,7 +34,7 @@ class Smotion(dobject):
 
         pass
 
-    def bind(self, syslist, prng):
+    def bind(self, syslist, prng, omaker):
         """Binds systems and prng to the calculator.
 
         This takes a beads object, a cell object, a forcefield object and a
@@ -53,6 +53,7 @@ class Smotion(dobject):
         # store local references to the different bits of the simulation
         self.syslist = syslist
         self.prng = prng
+        self.output_maker = omaker
 
     def step(self, step=None):
         """Dummy simulation time step which does nothing."""

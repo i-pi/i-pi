@@ -114,7 +114,7 @@ class GeopMotion(Motion):
         else:
             self.optimizer = DummyOptimizer()
 
-    def bind(self, ens, beads, nm, cell, bforce, prng):
+    def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         """Binds beads, cell, bforce and prng to GeopMotion
 
             Args:
@@ -125,7 +125,7 @@ class GeopMotion(Motion):
             prng: The random number generator object which controls random number generation.
         """
 
-        super(GeopMotion, self).bind(ens, beads, nm, cell, bforce, prng)
+        super(GeopMotion, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
         # Binds optimizer
         self.optimizer.bind(self)
 
@@ -233,6 +233,7 @@ class DummyOptimizer(dobject):
 
         self.mode = geop.mode
         self.tolerances = geop.tolerances
+        self.output_maker = geop.output_maker
 
         # Check for very tight tolerances
 

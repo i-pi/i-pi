@@ -20,7 +20,7 @@
       <vibrations mode='fd'>
         <pos_shift> 0.001 </pos_shift>
         <energy_shift> 0.001 </energy_shift>
-        <prefix> simulation </prefix>
+        <prefix> phonons </prefix>
         <asr> poly </asr>
       </vibrations>
     </motion>

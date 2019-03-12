@@ -96,7 +96,7 @@ class System(dobject):
         self.forces.bind(self.beads, self.cell, self.fcomp, self.simul.fflist)
         self.nm.bind(self.ensemble, self.motion, beads=self.beads, forces=self.forces)
         self.ensemble.bind(self.beads, self.nm, self.cell, self.forces, self.simul.fflist)
-        self.motion.bind(self.ensemble, self.beads, self.nm, self.cell, self.forces, self.prng)
+        self.motion.bind(self.ensemble, self.beads, self.nm, self.cell, self.forces, self.prng, simul.output_maker)
 
         dpipe(dd(self.nm).omegan2, dd(self.forces).omegan2)
 

@@ -25,10 +25,89 @@ from ipi.engine.properties import getkey
 from ipi.engine.atoms import *
 from ipi.engine.cell import *
 
-__all__ = ['PropertyOutput', 'TrajectoryOutput', 'CheckpointOutput']
+__all__ = ['PropertyOutput', 'TrajectoryOutput', 'CheckpointOutput', 'OutputList', 'OutputMaker', 'BaseOutput']
+
+class OutputList(list):
+    """ A simple decorated list to save the output prefix and bring it
+    back to the initialization phase of the simulation """
+
+    def __init__(self, prefix, olist):
+        super(OutputList, self).__init__(olist)
+        self.prefix = prefix
+
+class OutputMaker(dobject):
+    """ Class to create floating outputs with an appropriate prefix """
+
+    def __init__(self, prefix="", f_start=False):
+        self.prefix = prefix
+        self.f_start = f_start
+
+    def bind(self, system):
+
+        self.system = system
+
+    def get_output(self, filename="out", mode=None):
+
+        if self.prefix != "":
+            filename = self.prefix + "." + filename
+        rout = BaseOutput(filename)
+        if mode is None:
+            if self.f_start:
+                mode="w"
+            else:
+                mode="a"
+        rout.bind(mode)
+        return rout
+
+class BaseOutput(object):
+    """Base class for outputs. Deals with flushing upon close and little more """
+
+    def __init__(self, filename="out"):
+        self.filename = filename
+        self.out = None
+
+    def softexit(self):
+        """Emergency call when i-pi must exit quickly"""
+
+        self.close_stream()
+
+    def close_stream(self):
+        """Closes the output stream."""
+
+        if not self.out is None:
+            self.out.close()
+
+    def open_stream(self, mode="w"):
+        """Opens the output stream."""
+
+        # Only open a new file if this is a new run, otherwise append.
+        self.mode = mode
+        self.out = open_backup(self.filename, self.mode)
+
+    def bind(self, mode="w"):
+        """ Stores a reference to system and registers for exiting """
+
+        self.open_stream(mode)
+        softexit.register_function(self.softexit)
+
+    def force_flush(self):
+        """ Tries hard to flush the output stream """
+
+        if self.out is not None:
+            self.out.flush()
+            os.fsync(self.out)
+
+    def remove(self):
+        """Removes (temporary) output """
+        if self.out is not None:
+            self.out.close()
+            os.remove(self.filename)
+
+    def __getattr__(self, name):
+        return getattr(self.out, name)
 
 
-class PropertyOutput(dobject):
+class PropertyOutput(BaseOutput):
 
     """Class dealing with outputting a set of properties to file.
 
@@ -60,77 +139,53 @@ class PropertyOutput(dobject):
            outlist: A list of all the properties that should be output.
         """
 
+        super(PropertyOutput,self).__init__(filename)
+
         if outlist is None:
             outlist = np.zeros(0, np.dtype('|S1024'))
-        self.filename = filename
         self.outlist = np.asarray(outlist, np.dtype('|S1024'))
         self.stride = stride
         self.flush = flush
         self.nout = 0
-        self.out = None
 
-    def bind(self, system):
+    def bind(self, system, mode="w"):
         """Binds output proxy to System object.
 
         Args:
            system: A System object to be bound.
         """
 
-        self.system = system
 
         # Checks as soon as possible if some asked-for properties are
         # missing or mispelled
+        self.system = system
         for what in self.outlist:
             key = getkey(what)
-            if not key in self.system.properties.property_dict.keys():
-                print "Computable properties list: ", self.system.properties.property_dict.keys()
+            if not key in system.properties.property_dict.keys():
+                print "Computable properties list: ", system.properties.property_dict.keys()
                 raise KeyError(key + " is not a recognized property")
 
-        self.open_stream()
-        softexit.register_function(self.softexit)
+        super(PropertyOutput,self).bind(mode)
 
-    def open_stream(self):
-        """Opens the output stream."""
 
-        # Is this the start of the simulation?
-        is_start = self.system.simul.step == 0
-
-        # Only open a new file if this is a new run, otherwise append.
-        if is_start:
-            mode = "w"
-        else:
-            mode = "a"
-
-        self.out = open_backup(self.filename, mode)
-
+    def print_header(self):
         # print nice header if information is available on the properties
-        if is_start:
-            icol = 1
-            for what in self.outlist:
-                ohead = "# "
-                key = getkey(what)
-                prop = self.system.properties.property_dict[key]
+        icol = 1
+        for what in self.outlist:
+            ohead = "# "
+            key = getkey(what)
+            prop = self.system.properties.property_dict[key]
 
-                if "size" in prop and prop["size"] > 1:
-                    ohead += "cols.  %3d-%-3d" % (icol, icol + prop["size"] - 1)
-                    icol += prop["size"]
-                else:
-                    ohead += "column %3d    " % (icol)
-                    icol += 1
-                ohead += " --> %s " % (what)
-                if "help" in prop:
-                    ohead += ": " + prop["help"]
-                self.out.write(ohead + "\n")
-
-    def softexit(self):
-        """Emergency call when i-pi must exit quickly"""
-
-        self.close_stream()
-
-    def close_stream(self):
-        """Closes the output stream."""
-
-        self.out.close()
+            if "size" in prop and prop["size"] > 1:
+                ohead += "cols.  %3d-%-3d" % (icol, icol + prop["size"] - 1)
+                icol += prop["size"]
+            else:
+                ohead += "column %3d    " % (icol)
+                icol += 1
+            ohead += " --> %s " % (what)
+            if "help" in prop:
+                ohead += ": " + prop["help"]
+            self.out.write(ohead + "\n")
 
     def write(self):
         """Outputs the required properties of the system.
@@ -170,7 +225,7 @@ class PropertyOutput(dobject):
             self.nout = 0
 
 
-class TrajectoryOutput(dobject):
+class TrajectoryOutput(BaseOutput):
 
     """Class dealing with outputting atom-based properties as a
     trajectory file.
@@ -220,7 +275,7 @@ class TrajectoryOutput(dobject):
         self.out = None
         self.nout = 0
 
-    def bind(self, system):
+    def bind(self, system, mode="w"):
         """Binds output proxy to System object.
 
         Args:
@@ -228,27 +283,20 @@ class TrajectoryOutput(dobject):
         """
 
         self.system = system
-
         # Checks as soon as possible if some asked-for trajs are missing or mispelled
         key = getkey(self.what)
         if not key in self.system.trajs.traj_dict.keys():
             print "Computable trajectories list: ", self.system.trajs.traj_dict.keys()
             raise KeyError(key + " is not a recognized output trajectory")
 
-        self.open_stream()
-        softexit.register_function(self.softexit)
+        super(TrajectoryOutput,self).bind( mode)
 
-    def open_stream(self):
+    def print_header(self):
+        """ No headers for trajectory files """
+        pass
+
+    def open_stream(self, mode):
         """Opens the output stream(s)."""
-
-        # Is this the start of the simulation?
-        is_start = self.system.simul.step == 0
-
-        # Only open a new file if this is a new run, otherwise append.
-        if is_start:
-            mode = "w"
-        else:
-            mode = "a"
 
         # prepare format string for zero-padded number of beads,
         # including underscpre
@@ -278,11 +326,6 @@ class TrajectoryOutput(dobject):
             # open one file
             filename = self.filename + "." + self.format
             self.out = open_backup(filename, mode)
-
-    def softexit(self):
-        """Emergency cleanup if i-pi wants to exit"""
-
-        self.close_stream()
 
     def close_stream(self):
         """Closes the output stream."""

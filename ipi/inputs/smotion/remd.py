@@ -46,7 +46,7 @@ class InputReplicaExchange(InputDictionary):
                                      "default": True,
                                      "help": "Rescale kinetic energy upon exchanges."}),
            "swapfile": (InputValue, {"dtype": str,
-                                     "default": "PARATEMP",
+                                     "default": "remd_idx",
                                      "help": "File to keep track of replica exchanges"
                                      }),
             "repindex": (InputArray, {"dtype": int,
