@@ -100,7 +100,8 @@ class BaseOutput(object):
     def remove(self):
         """Removes (temporary) output """
         if self.out is not None:
-            os.remove(self.out)
+            self.out.close()
+            os.remove(self.filename)
 
     def __getattr__(self, name):
         return getattr(self.out, name)
