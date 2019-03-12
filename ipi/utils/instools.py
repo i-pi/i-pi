@@ -122,11 +122,11 @@ def get_hessian(h, gm, x0, output_maker, d=0.0005):
             h[:, :] = b[:, :]
             i0 = i
             print('We have found a temporary file ( hessian_' + str(i) + '.tmp). ')
-            if b.shape == h.shape:  # Check that the last temporal file was properly written
+            if b.shape == h.shape:  # Check that the last temporary file was properly written
                 break
             else:
                 continue
-
+    tmp_hess = []
     for j in range(i0 + 1, ii):
         info(" @Instanton: Computing hessian: %d of %d" % ((j + 1), ii), verbosity.low)
         x = x0.copy()
@@ -143,6 +143,7 @@ def get_hessian(h, gm, x0, output_maker, d=0.0005):
         #print >> f, 'STEP %i' % j
         np.savetxt(f, h)
         f.close()
+        tmp_hess.append(f)
 
     u, g = gm(x0)  # Keep the mapper updated
 
@@ -150,12 +151,14 @@ def get_hessian(h, gm, x0, output_maker, d=0.0005):
     # gm.dbeads.q = ddbeads.q
     # gm.dforces.transfer_forces(ddforces)
 
-# MR: should be done with remove from BaseOutput class
-    for i in glob.glob("*hessian_*.tmp"):
-        try:
-            os.remove(i)
-        except OSError:
-            pass
+    # MR: should be done with remove from BaseOutput class
+    for f in tmp_hess:
+        f.remove()
+#    for i in glob.glob("*hessian_*.tmp"):
+#        try:
+#            os.remove(i)
+#        except OSError:
+#            pass
 
 #    for i in range(ii):
 #        try:
