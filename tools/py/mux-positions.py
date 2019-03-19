@@ -25,52 +25,40 @@ def cell_dot_pos(cell,pos):
     for row in pos:
         s = np.append(s,np.dot(cell,row))
     s.shape = (len(pos),3)
-    #s = np.round(s,12)
     return s
 
-def wrap_positions(pos, cell):
-    if len(pos.shape) == 1:
-        pos.shape = (len(pos)/3,3)
+def wrap_positions(frame):
+    pos = frame['atoms'].q.copy()
+    pos.shape = (len(pos)/3,3)
+    cell = frame['cell'].h
     cell_inv = np.linalg.inv(cell)
     s = cell_dot_pos(cell_inv,pos)
     sc = s - np.round(s)
-    wrapped = cell_dot_pos(cell,sc)
-    return wrapped
+    frame['atoms'].q = cell_dot_pos(cell,sc).flatten()
+    return frame
 
-def unwrap_positions(pos_wr, poslast_wr, poslast_uwr, cell):
-    if len(pos_wr.shape) == 1:
-        pos_wr.shape = (len(pos_wr)/3,3)
-    if len(poslast_wr.shape) == 1:
-        poslast_wr.shape = (len(poslast_wr)/3,3)
-    cell_inv = np.linalg.inv(cell)
-    d = pos_wr - poslast_wr
+
+def unwrap_positions(frame,framelast):
+    frame_wr = wrap_positions(frame)
+    if type(framelast) == bool:
+        return frame
+
+    poslast_uwr       = framelast['atoms'].q.copy()
+    poslast_uwr.shape = (len(poslast_uwr)/3,3)
+
+    pos = frame['atoms'].q.copy()
+    pos.shape = (len(pos)/3,3)
+    d = pos - poslast_uwr
+
+    cell            = frame['cell'].h
+    cell_inv        = np.linalg.inv(cell)
     s = cell_dot_pos(cell_inv,d)
     sc = s-np.round(s)
     q = cell_dot_pos(cell,sc)
-    return q+poslast_uwr
+    frame['atoms'].q = (q+poslast_uwr).flatten()
+    return frame
 
-def unwrap_or_wrap(frame,pos_last_wr,pos_last_uwr,idx,args):
-    frc = frame.copy()
-    pos = frc['atoms'].q
-    pos_= pos.copy()
-    pos_wr = wrap_positions(pos_, frc['cell'].h)
-
-    pos_uwr = False
-    if args.unwrap and idx == 0:
-        pos_uwr = pos_wr
-    elif args.unwrap and idx > 0:
-        pos_uwr = unwrap_positions(pos_wr, pos_last_wr, pos_last_uwr, frc['cell'].h)
-
-    if args.wrap == True:
-        frc['atoms'].q = pos_wr.flatten()
-    elif args.unwrap == True:
-        frc['atoms'].q = pos_uwr.flatten()
-    frame = frc.copy()
-    return frame, pos_wr, pos_uwr
-
-
-
-def main(fns_in, fn_out, begin, end, stride):
+def main(fns_in, fn_out, begin, end, stride, wrap, unwrap):
 
     verbosity.level = "low"
     print('Multiplexing {:d} beads into one trajectory.'.format(len(fns_in)))
@@ -106,13 +94,17 @@ def main(fns_in, fn_out, begin, end, stride):
         try:
             # Get the frames from all trajectories...
             for trj in trjs_in:
+                frame_last = False
+                if i_frame > 0: frame_last = frame.copy()
+
                 frame = trj.next()
 
-                if args.wrap or args.unwrap:
-                    if i_frame == 0:
-                        pos_last_wr = False
-                        pos_last_uwr = False
-                    frame,pos_last_wr,pos_last_uwr = unwrap_or_wrap(frame,pos_last_wr,pos_last_uwr,i_frame,args)
+                if wrap:
+                    frame = wrap_positions(frame)
+                if unwrap:
+                    frame = unwrap_positions(frame,frame_last)
+
+
 
                 # ... and possibly save them in the output trajectory.
                 if do_output:
@@ -159,4 +151,4 @@ if __name__ == '__main__':
     args = parser.parse_args()
 
     # Process everything.
-    main(args.filenames, args.filename_out, args.begin, args.end, args.stride)
+    main(args.filenames, args.filename_out, args.begin, args.end, args.stride, args.wrap, args.unwrap)
