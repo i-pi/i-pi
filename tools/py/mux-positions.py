@@ -40,7 +40,7 @@ def wrap_positions(frame):
 
 def unwrap_positions(frame,framelast):
     frame_wr = wrap_positions(frame)
-    if type(framelast) == bool:
+    if framelast is None:
         return frame
 
     poslast_uwr       = framelast['atoms'].q.copy()
@@ -82,6 +82,7 @@ def main(fns_in, fn_out, begin, end, stride, wrap, unwrap):
     # Loop over all frames.
     i_frame = 0
     i_frame_saved = 0
+    frame_last = None
     while True:
 
         # Check the endpoint index, exit if we're done.
@@ -93,10 +94,7 @@ def main(fns_in, fn_out, begin, end, stride, wrap, unwrap):
 
         try:
             # Get the frames from all trajectories...
-            for trj in trjs_in:
-                frame_last = False
-                if i_frame > 0: frame_last = frame.copy()
-
+            for trj in trjs_in:                
                 frame = trj.next()
 
                 if wrap:
@@ -105,7 +103,7 @@ def main(fns_in, fn_out, begin, end, stride, wrap, unwrap):
                     frame = unwrap_positions(frame,frame_last)
 
 
-
+                frame_last = frame
                 # ... and possibly save them in the output trajectory.
                 if do_output:
                     print_file(mode_out, frame['atoms'], frame['cell'], f_out)
