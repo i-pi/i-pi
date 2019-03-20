@@ -47,7 +47,7 @@ def main(fns_in, fn_out, begin, end, stride, wrap, unwrap):
     i_frame_saved = 0
 
     # There can be multiple trajectories, so we store a frame_last for each trajectory
-    frame_last = [False] * len(fns_in)
+    frame_last = [None] * len(fns_in)
 
     while True:
 
@@ -112,7 +112,7 @@ def wrap_positions(frame):
     return frame
 
 def unwrap_positions(frame,framelast):
-    if type(framelast) == bool:
+    if framelast is None:
         return frame
 
     poslast_uwr       = framelast['atoms'].q.copy()
