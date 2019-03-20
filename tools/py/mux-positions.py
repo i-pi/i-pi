@@ -20,43 +20,6 @@ Trajectory file formats are inferred from file extensions, the number
 of beads is given by the number of input files.
 """
 
-def cell_dot_pos(cell,pos):
-    s = np.array([])
-    for row in pos:
-        s = np.append(s,np.dot(cell,row))
-    s.shape = (len(pos),3)
-    return s
-
-def wrap_positions(frame):
-    pos = frame['atoms'].q.copy()
-    pos.shape = (len(pos)/3,3)
-    cell = frame['cell'].h
-    cell_inv = np.linalg.inv(cell)
-    s = cell_dot_pos(cell_inv,pos)
-    sc = s - np.round(s)
-    frame['atoms'].q = cell_dot_pos(cell,sc).flatten()
-    return frame
-
-
-def unwrap_positions(frame,framelast):
-    frame_wr = wrap_positions(frame)
-    if framelast is None:
-        return frame
-
-    poslast_uwr       = framelast['atoms'].q.copy()
-    poslast_uwr.shape = (len(poslast_uwr)/3,3)
-
-    pos = frame['atoms'].q.copy()
-    pos.shape = (len(pos)/3,3)
-    d = pos - poslast_uwr
-
-    cell            = frame['cell'].h
-    cell_inv        = np.linalg.inv(cell)
-    s = cell_dot_pos(cell_inv,d)
-    sc = s-np.round(s)
-    q = cell_dot_pos(cell,sc)
-    frame['atoms'].q = (q+poslast_uwr).flatten()
-    return frame
 
 def main(fns_in, fn_out, begin, end, stride, wrap, unwrap):
 
@@ -82,7 +45,6 @@ def main(fns_in, fn_out, begin, end, stride, wrap, unwrap):
     # Loop over all frames.
     i_frame = 0
     i_frame_saved = 0
-    frame_last = None
     while True:
 
         # Check the endpoint index, exit if we're done.
@@ -92,18 +54,22 @@ def main(fns_in, fn_out, begin, end, stride, wrap, unwrap):
         # Should we save output from this frame?
         do_output = (i_frame >= begin) and ((i_frame % stride) == 0)
 
+        # There can be multiple trajectories, so we store a frame_last for each trajectory
+        frame_last = [False] * len(fns_in)
+
         try:
             # Get the frames from all trajectories...
-            for trj in trjs_in:                
+            for idx,trj in enumerate(trjs_in):
                 frame = trj.next()
 
                 if wrap:
                     frame = wrap_positions(frame)
                 if unwrap:
-                    frame = unwrap_positions(frame,frame_last)
+                    frame = unwrap_positions(frame,frame_last[idx])
+
+                if i_frame > 0: frame_last[idx] = frame.copy()
 
 
-                frame_last = frame
                 # ... and possibly save them in the output trajectory.
                 if do_output:
                     print_file(mode_out, frame['atoms'], frame['cell'], f_out)
@@ -126,6 +92,43 @@ def main(fns_in, fn_out, begin, end, stride, wrap, unwrap):
     print('Loaded {:d} frames.'.format(i_frame))
     print('Saved {:d} frames.'.format(i_frame_saved))
 
+
+def cell_dot_pos(cell,pos):
+    s = np.array([])
+    for row in pos:
+        s = np.append(s,np.dot(cell,row))
+    s.shape = (len(pos),3)
+    return s
+
+def wrap_positions(frame):
+    pos = frame['atoms'].q.copy()
+    pos.shape = (len(pos)/3,3)
+    cell = frame['cell'].h
+    cell_inv = np.linalg.inv(cell)
+    s = cell_dot_pos(cell_inv,pos)
+    sc = s - np.round(s)
+    frame['atoms'].q = cell_dot_pos(cell,sc).flatten()
+    return frame
+
+def unwrap_positions(frame,framelast):
+    if type(framelast) == bool:
+        return frame
+
+    poslast_uwr       = framelast['atoms'].q.copy()
+    poslast_uwr.shape = (len(poslast_uwr)/3,3)
+
+    pos               = frame['atoms'].q.copy()
+    pos.shape         = (len(pos)/3,3)
+
+    d = pos - poslast_uwr
+
+    cell            = frame['cell'].h
+    cell_inv        = np.linalg.inv(cell)
+    s = cell_dot_pos(cell_inv,d)
+    sc = s-np.round(s)
+    q = cell_dot_pos(cell,sc)
+    frame['atoms'].q = (q+poslast_uwr).flatten()
+    return frame
 
 if __name__ == '__main__':
 
