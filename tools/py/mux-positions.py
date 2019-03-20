@@ -45,6 +45,10 @@ def main(fns_in, fn_out, begin, end, stride, wrap, unwrap):
     # Loop over all frames.
     i_frame = 0
     i_frame_saved = 0
+
+    # There can be multiple trajectories, so we store a frame_last for each trajectory
+    frame_last = [False] * len(fns_in)
+
     while True:
 
         # Check the endpoint index, exit if we're done.
@@ -53,9 +57,6 @@ def main(fns_in, fn_out, begin, end, stride, wrap, unwrap):
 
         # Should we save output from this frame?
         do_output = (i_frame >= begin) and ((i_frame % stride) == 0)
-
-        # There can be multiple trajectories, so we store a frame_last for each trajectory
-        frame_last = [False] * len(fns_in)
 
         try:
             # Get the frames from all trajectories...
@@ -67,7 +68,7 @@ def main(fns_in, fn_out, begin, end, stride, wrap, unwrap):
                 if unwrap:
                     frame = unwrap_positions(frame,frame_last[idx])
 
-                if i_frame > 0: frame_last[idx] = frame.copy()
+                frame_last[idx] = frame.copy()
 
 
                 # ... and possibly save them in the output trajectory.
