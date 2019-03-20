@@ -62,9 +62,12 @@ def compute_acf(input_file, output_prefix, maximum_lag, block_length, length_zer
     nblocks = 0
     dt = unit_to_internal("time", timestep[1], float(timestep[0]))
     data = np.zeros((bsize, nspecies, 3), float)
-    fvvacf = np.zeros(bsize / 2 + 1, float)
     time = np.asarray(range(mlag + 1)) * dt
     omega = np.asarray(range(2 * (mlag + npad))) / float(2 * (mlag + npad)) * (2 * np.pi / dt)
+    fvvacf = omega.copy() * 0.0
+    fvvacf2 = fvvacf.copy() * 0.0 
+    vvacf = time.copy() * 0.0
+    vvacf2 = time.copy() * 0.0
 
     # selects window function for fft.
     if(ftbox == "none"):
@@ -101,8 +104,24 @@ def compute_acf(input_file, output_prefix, maximum_lag, block_length, length_zer
             tfvvacf = fdata * np.conjugate(fdata)
 
             # Averages over all species and sums over the x,y,z directions. Also multiplies with the time step and a prefactor of (2pi)^-1.
-            macf = 3.0 * np.real(np.mean(tfvvacf, axis=(1, 2))) * dt / (2 * np.pi) / bsize
-            fvvacf += macf
+            mfvvacf = 3.0 * np.real(np.mean(tfvvacf, axis=(1, 2))) * dt / (2 * np.pi) / bsize
+
+            # Computes the inverse Fourier transform to get the vvac.
+            mvvacf = np.fft.irfft(mfvvacf)[:mlag + 1]
+
+            # Applies window in one direction and pads the vvac with zeroes.
+            mpvvacf = np.append(mvvacf * win[mlag:], np.zeros(npad))
+
+            # Recomputes the Fourier transform assuming the data is an even function of time.
+            mfpvvacf = np.fft.hfft(mpvvacf)
+
+            # Accumulates the (f)acfs and their squares.
+            fvvacf += mfpvvacf
+            fvvacf2 += mfpvvacf**2
+            vvacf +=mvvacf
+            vvacf2 +=mvvacf**2
+
+
             nblocks += 1
 
         except EOFError:
@@ -111,17 +130,15 @@ def compute_acf(input_file, output_prefix, maximum_lag, block_length, length_zer
 
     # Performs the block average of the Fourier transform.
     fvvacf = fvvacf / nblocks
+    fvvacf_err = np.sqrt(fvvacf2  / nblocks - fvvacf**2)
+
+    np.savetxt(ofile + "_facf.data", np.c_[omega, fvvacf, fvvacf_err][:mlag + npad])
 
     # Computes the inverse Fourier transform to get the vvac.
-    vvacf = np.fft.irfft(fvvacf)[:mlag + 1]
-    np.savetxt(ofile + "_acf.data", np.vstack((time, vvacf)).T[:mlag + npad])
+    vvacf = vvacf / nblocks
+    vvacf_err = np.sqrt(vvacf2  / nblocks - vvacf**2)
+    np.savetxt(ofile + "_acf.data", np.c_[time, vvacf, vvacf_err][:mlag + npad])
 
-    # Applies window in one direction and pads the vvac with zeroes.
-    pvvacf = np.append(vvacf * win[mlag:], np.zeros(npad))
-
-    # Recomputes the Fourier transform assuming the data is an even function of time.
-    fpvvacf = np.fft.hfft(pvvacf)
-    np.savetxt(ofile + "_facf.data", np.vstack((omega, fpvvacf)).T[:mlag + npad])
 
 if __name__ == "__main__":
 
@@ -140,11 +157,7 @@ if __name__ == "__main__":
     parser.add_argument("-oprefix", "--output_prefix", required=True, type=str, help="the prefix of the output file.")
     parser.add_argument("-der", "--derivative", action="store_true", help="computes the autocorrelation function of the time derivative of the xyz formatted input")
 
-    try:
-        args = parser.parse_args()
-    except:
-        parser.print_help()
-        sys.exit()
+    args = parser.parse_args()
 
     # Process everything.
     compute_acf(args.input_file, args.output_prefix, args.maximum_lag, args.block_length, args.length_zeropadding, args.spectral_windowing, args.labels, args.timestep, args.skip, args.derivative)

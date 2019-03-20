@@ -53,7 +53,7 @@ class Motion(dobject):
 
         self.beads = self.cell = self.forces = self.prng = self.nm = None
 
-    def bind(self, ens, beads, nm, cell, bforce, prng):
+    def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         """Binds beads, cell, bforce, and prng to the calculator.
 
         This takes a beads object, a cell object, a forcefield object and a
@@ -79,6 +79,7 @@ class Motion(dobject):
         self.prng = prng
         self.nm = nm
         self.ensemble = ens
+        self.output_maker = omaker
 
     def step(self, step=None):
         """Dummy simulation time step which does nothing."""
