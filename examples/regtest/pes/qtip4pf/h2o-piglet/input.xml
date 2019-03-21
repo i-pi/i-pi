@@ -6,7 +6,7 @@ ENDREGTEST -->
   <output prefix='simulation'>
     <properties stride='20' filename='out'>  [ step, time{picosecond}, 
 conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potential{electronvolt}, pressure_cv{megapascal}] </properties>
-    <trajectory filename='pos' stride='20'> positions{angstrom} </trajectory>
+    <trajectory filename='pos' stride='20' format='pdb'> positions{angstrom} </trajectory>
     <trajectory filename='for' stride='20'> forces{piconewton} </trajectory>
   </output>
   <total_steps>100</total_steps>
