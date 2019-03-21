@@ -106,9 +106,8 @@ def wrap_positions(frame):
     pos.shape = (len(pos)/3,3)
     cell = frame['cell'].h
     cell_inv = np.linalg.inv(cell)
-    s = cell_dot_pos(cell_inv,pos)
-    sc = s - np.round(s)
-    frame['atoms'].q = cell_dot_pos(cell,sc).flatten()
+    rel_coords = cell_dot_pos(cell_inv,pos)%1.
+    frame['atoms'].q = cell_dot_pos(cell,rel_coords).flatten()
     return frame
 
 def unwrap_positions(frame,framelast):
