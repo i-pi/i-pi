@@ -136,7 +136,7 @@ class GeopMotion(Motion):
             self.glist *= 0.0
 
 
-    def bind(self, ens, beads, nm, cell, bforce, prng):
+    def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         """Binds beads, cell, bforce and prng to GeopMotion
 
             Args:
@@ -147,7 +147,7 @@ class GeopMotion(Motion):
             prng: The random number generator object which controls random number generation.
         """
 
-        super(GeopMotion, self).bind(ens, beads, nm, cell, bforce, prng)
+        super(GeopMotion, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
         # Binds optimizer
         self.optimizer.bind(self)
 
@@ -385,7 +385,7 @@ class BFGSOptimizer(DummyOptimizer):
         BFGS(self.old_x, self.d, self.gm, fdf0, self.invhessian, self.big_step,
              self.ls_options["tolerance"] * self.tolerances["energy"], self.ls_options["iter"])
 
-        info("   Number of force calls: %d" % (self.gm.fcount),verbosity.medium); self.gm.fcount = 0
+        info("   Number of force calls: %d" % (self.gm.fcount)); self.gm.fcount = 0
         # Update positions and forces
         self.beads.q = self.gm.dbeads.q
         self.forces.transfer_forces(self.gm.dforces)  # This forces the update of the forces
@@ -442,7 +442,7 @@ class BFGSTRMOptimizer(DummyOptimizer):
         BFGSTRM(self.old_x, self.old_u, self.old_f, self.hessian, self.tr,
                 self.gm, self.big_step)
 
-        info("   Number of force calls: %d" % (self.gm.fcount),verbosity.medium); self.gm.fcount = 0
+        info("   Number of force calls: %d" % (self.gm.fcount)); self.gm.fcount = 0
         # Update positions and forces
         self.beads.q = self.gm.dbeads.q
         self.forces.transfer_forces(self.gm.dforces)  # This forces the update of the forces
@@ -517,7 +517,7 @@ class LBFGSOptimizer(DummyOptimizer):
                fdf0, self.big_step, self.ls_options["tolerance"] * self.tolerances["energy"],
                self.ls_options["iter"], self.corrections, self.scale, step)
 
-        info("   Number of force calls: %d" % (self.gm.fcount),verbosity.medium); self.gm.fcount = 0
+        info("   Number of force calls: %d" % (self.gm.fcount)); self.gm.fcount = 0
 
         # Update positions and forces
         self.beads.q = self.gm.dbeads.q
@@ -577,7 +577,7 @@ class SDOptimizer(DummyOptimizer):
         min_brent(self.lm, fdf0=(u0, du0), x0=0.0,
                   tol=self.ls_options["tolerance"] * self.tolerances["energy"],
                   itmax=self.ls_options["iter"], init_step=self.ls_options["step"])
-        info("   Number of force calls: %d" % (self.lm.fcount),verbosity.medium); self.lm.fcount = 0
+        info("   Number of force calls: %d" % (self.lm.fcount)); self.lm.fcount = 0
 
         # Update positions and forces
         self.beads.q = self.lm.dbeads.q
@@ -661,7 +661,7 @@ class CGOptimizer(DummyOptimizer):
         min_brent(self.lm, fdf0=(u0, du0), x0=0.0,
                   tol=self.ls_options["tolerance"] * self.tolerances["energy"],
                   itmax=self.ls_options["iter"], init_step=self.ls_options["step"])
-        info("   Number of force calls: %d" % (self.lm.fcount),verbosity.medium); self.lm.fcount = 0
+        info("   Number of force calls: %d" % (self.lm.fcount)); self.lm.fcount = 0
 
         # Update positions and forces
         self.beads.q = self.lm.dbeads.q

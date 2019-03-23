@@ -3,7 +3,7 @@ import numpy as np
 from ipi.utils.messages import verbosity, info
 from ipi.utils import units
 import ipi.utils.mathtools as mt
-import os.path
+import os.path, glob
 
 
 def banded_hessian(h, im, shift=0.001):
@@ -92,7 +92,7 @@ def red2comp(h, nbeads, natoms):
     return h0
 
 
-def get_hessian(h, gm, x0, d=0.0005):
+def get_hessian(h, gm, x0, output_maker, d=0.0005):
     """Compute the physical hessian
        IN     h       = physical hessian
               gm      = gradient mapper
@@ -112,7 +112,7 @@ def get_hessian(h, gm, x0, d=0.0005):
     # ddforces = gm.dforces.copy(ddbeads, ddcell)
 
     i0 = -1
-    # Check if there is a temporal file:
+    # Check if there is a temporary file:
     for i in range(ii, -1, -1):
         try:
             b = np.loadtxt('hessian_' + str(i) + '.tmp')
@@ -122,11 +122,11 @@ def get_hessian(h, gm, x0, d=0.0005):
             h[:, :] = b[:, :]
             i0 = i
             print('We have found a temporary file ( hessian_' + str(i) + '.tmp). ')
-            if b.shape == h.shape:  # Check that the last temporal file was properly written
+            if b.shape == h.shape:  # Check that the last temporary file was properly written
                 break
             else:
                 continue
-
+    tmp_hess = []
     for j in range(i0 + 1, ii):
         info(" @Instanton: Computing hessian: %d of %d" % ((j + 1), ii), verbosity.low)
         x = x0.copy()
@@ -139,10 +139,11 @@ def get_hessian(h, gm, x0, d=0.0005):
 
         h[j, :] = g.flatten()
 
-        f = open('hessian_' + str(j) + '.tmp', 'w')
+        f = output_maker.get_output('hessian_' + str(j) + '.tmp', 'w')
         #print >> f, 'STEP %i' % j
         np.savetxt(f, h)
         f.close()
+        tmp_hess.append(f)
 
     u, g = gm(x0)  # Keep the mapper updated
 
@@ -150,11 +151,20 @@ def get_hessian(h, gm, x0, d=0.0005):
     # gm.dbeads.q = ddbeads.q
     # gm.dforces.transfer_forces(ddforces)
 
-    for i in range(ii):
-        try:
-            os.remove('hessian_' + str(i) + '.tmp')
-        except OSError:
-            pass
+    # MR: should be done with remove from BaseOutput class
+    for f in tmp_hess:
+        f.remove()
+#    for i in glob.glob("*hessian_*.tmp"):
+#        try:
+#            os.remove(i)
+#        except OSError:
+#            pass
+
+#    for i in range(ii):
+#        try:
+#            os.remove('hessian_' + str(i) + '.tmp')
+#        except OSError:
+#            pass
 
 
 def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):
@@ -315,9 +325,9 @@ def get_imvector(h, m3):
     return imv
 
 
-def print_instanton_geo(prefix, step, nbeads, natoms, names, q, pots, cell, shift):
+def print_instanton_geo(prefix, step, nbeads, natoms, names, q, pots, cell, shift, output_maker):
 
-    outfile = open(prefix + '_' + str(step) + '.ener', 'w')
+    outfile = output_maker.get_output(prefix + '_' + str(step) + '.ener', 'w')
     print >> outfile, ('#Bead    Energy (eV)')
     for i in range(nbeads):
         print >> outfile, (str(i) + '     ' + str(units.unit_to_user('energy', "electronvolt", pots[i] - shift)))
@@ -328,12 +338,11 @@ def print_instanton_geo(prefix, step, nbeads, natoms, names, q, pots, cell, shif
     unit = 'angstrom'
     a, b, c, alpha, beta, gamma = mt.h2abc_deg(cell.h)
 
-    outfile = open(prefix + '_' + str(step) + '.xyz', 'w')
+    outfile = output_maker.get_output(prefix + '_' + str(step) + '.xyz', 'w')
     for i in range(nbeads):
         print >> outfile, natoms
-        # print >> outfile, (('CELL(abcABC): Traj: positions(%s) Bead: %i' %(unit,i) ))
+
         print >> outfile, ('CELL(abcABC):  %f %f %f %f %f %f cell{atomic_unit}  Traj: positions{%s}   Bead:       %i' % (a, b, c, alpha, beta, gamma, unit, i))
-        # print >> outfile, ('#Potential (eV):   ' + str(units.unit_to_user('energy', "electronvolt", pots[i] - shift)))
 
         for j in range(natoms):
             print >> outfile, names[j], \
@@ -344,9 +353,9 @@ def print_instanton_geo(prefix, step, nbeads, natoms, names, q, pots, cell, shif
     outfile.close()
 
 
-def print_instanton_hess(prefix, step, hessian):
+def print_instanton_hess(prefix, step, hessian, output_maker):
 
     np.set_printoptions(precision=7, suppress=True, threshold=np.nan, linewidth=3000)
-    outfile = open(prefix + '.hess_' + str(step), 'w')
+    outfile = output_maker.get_output(prefix + '.hess_' + str(step), 'w')
     np.savetxt(outfile, hessian.reshape(1, hessian.size))
     outfile.close()

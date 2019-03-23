@@ -104,7 +104,7 @@ class Dynamics(Motion):
         else:
             self.fixatoms = fixatoms
 
-    def bind(self, ens, beads, nm, cell, bforce, prng):
+    def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         """Binds ensemble beads, cell, bforce, and prng to the dynamics.
 
         This takes a beads object, a cell object, a forcefield object and a
@@ -124,7 +124,7 @@ class Dynamics(Motion):
                 generation.
         """
 
-        super(Dynamics, self).bind(ens, beads, nm, cell, bforce, prng)
+        super(Dynamics, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
 
         # Checks if the number of mts levels is equal to the dimensionality of the mts weights.
         if (len(self.nmts) != self.forces.nmtslevels):
