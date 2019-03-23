@@ -178,7 +178,7 @@ class AlKMC(Motion):
         self.tottime = tottime
 
 
-    def bind(self, ens, beads, nm, cell, bforce, prng):
+    def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         """Binds ensemble beads, cell, bforce, and prng to the dynamics.
 
         This takes a beads object, a cell object, a forcefield object and a
@@ -198,12 +198,7 @@ class AlKMC(Motion):
                 generation.
         """
 
-
-        self.prng = prng
-        self.beads = beads
-        self.cell = cell
-        self.ens = ens
-        self.forces = bforce
+        super(AlKMC, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
 
         # this is the index for the atoms, self.idx[i] indicates the lattice site of atom i.
         # atoms are in the order Si1 Si2 ... Mg1 Mg2 .... Al1 Al2 .... Vac1 Vac2 ...
@@ -259,7 +254,7 @@ class AlKMC(Motion):
             self.dnm[i].bind(self.dens[i], self, beads=self.dbeads[i], forces=self.dforces[i])
             self.dbias[i] = ens.bias.copy(self.dbeads[i], self.dcell)
             self.dens[i].bind(self.dbeads[i], self.dnm[i], self.dcell, self.dforces[i], self.dbias[i])
-            self.geop[i].bind(self.dens[i], self.dbeads[i], self.dnm[i], self.dcell, self.dforces[i], prng)
+            self.geop[i].bind(self.dens[i], self.dbeads[i], self.dnm[i], self.dcell, self.dforces[i], prng, omaker)
         self.feval = np.ones(self.neval,int)
         self._threadlock = threading.Lock()
 
@@ -405,7 +400,7 @@ class AlKMC(Motion):
 
     def step(self, step=None):
 
-        kT = Constants.kb  * self.ens.temp
+        kT = Constants.kb  * self.ensemble.temp
         # computes current energy (if not already stored)
         ostr = "".join(self.state)  # this is a unique id string that charactrizes the current state
         self.tscache[ostr] = {}
@@ -521,7 +516,7 @@ class AlKMC(Motion):
         self.kmcfile.write("%12.5e  %12.5e  %18.11e  %s\n"% (self.tottime, dt, ecurr, ostr) )
         self.kmcfile.flush()
         self.tottime += dt
-        self.ens.time += dt  # updates time counter
+        self.ensemble.time += dt  # updates time counter
         print  "Finishing step at ", "".join(self.state)
 
         # updates the positions
