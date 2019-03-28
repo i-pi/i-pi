@@ -16,4 +16,5 @@ from .neb import NEBMover
 from .phonons import DynMatrixMover
 from .multi import MultiMotion
 from .alchemy import AlchemyMC
+from .planetary import Planetary
 from .ramp import TemperatureRamp, PressureRamp
