@@ -3,7 +3,7 @@
 -->
 <simulation verbosity="low">
     <output prefix="simulation">
-        <properties stride="1" filename="out"> [ step, potential] </properties>
+        <properties stride="1" filename="out"> [ step, time{picosecond}, potential] </properties>
         <properties stride="1" filename="vac"> [ step, time{picosecond}, atom_x{angstrom}(123), atom_x{angstrom}(124) ] </properties>
         <trajectory filename="pos" stride="1" cell_units="angstrom" format="xyz" bead="0"> positions{angstrom} </trajectory>
     </output>
