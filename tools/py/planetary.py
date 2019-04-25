@@ -8,8 +8,8 @@ import argparse
 import importlib
 
 import numpy as np
-from scipy import sparse
-
+try: from scipy import sparse
+except: from ipi.utils import sparse
 from ipi.utils.io import read_file
 from ipi.utils.prng import Random
 from ipi.utils.messages import warning

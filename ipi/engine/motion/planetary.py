@@ -10,7 +10,8 @@ import copy
 import os
 import sys
 import numpy as np
-from scipy import sparse
+try: from scipy import sparse
+except: from ipi.utils import sparse
 
 from ipi.engine.motion import Motion, Dynamics
 from ipi.utils.depend import *
