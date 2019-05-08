@@ -1,5 +1,9 @@
 """Compressed sparse row and compressed sparse column sparse matrix implementation"""
 
+# This file is part of i-PI.
+# i-PI Copyright (C) 2014-2015 i-PI developers
+# See the "licenses" directory for full license information.
+
 import numpy as np
 
 ##########################################################################################
@@ -8,9 +12,9 @@ import numpy as np
 def load_npz(file):
   l = np.load(file)
   if l['kind'] == 'csr':
-    return csr_matrix(a=l['a'], ia=l['ia'], ja=l['ja'], m=l['m'], n=l['n']) 
+    return csr_matrix(a=l['a'], ia=l['ia'], ja=l['ja'], m=l['m'], n=l['n'])
   else:
-    return csc_matrix(a=l['a'], ia=l['ia'], ja=l['ja'], m=l['m'], n=l['n']) 
+    return csc_matrix(a=l['a'], ia=l['ia'], ja=l['ja'], m=l['m'], n=l['n'])
 
 ##########################################################################################
 
@@ -24,7 +28,7 @@ def save_npz(file, matrix, compressed=True):
   kind = matrix.kind
   if compressed == True:
     np.savez_compressed(file, a=a, ia=ia, ja=ja, m=m, n=n, kind=kind)
-  else: 
+  else:
     np.savez(file, a=a, ia=ia, ja=ja, m=m, n=n, kind=kind)
 
 ##########################################################################################

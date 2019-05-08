@@ -21,11 +21,11 @@ from ipi.engine.barostats import Barostat
 from ipi.utils.units import Constants
 
 class Planetary(Motion):
-    """Evaluation of the matrices needed in a planetary model by 
-    constrained MD. 
-
-    Gives the standard methods and attributes needed in all the
-    dynamics classes.
+    """Evaluation of the matrices needed in a planetary model by
+    centroid-constrained MD. Basically uses a nested motion class
+    to perform several constrained evaluation steps every time
+    Planetary.step is called, accumulating averages of the
+    covariance and of the frequency matrices.
 
     Attributes:
         beads: A beads object giving the atoms positions.
@@ -54,21 +54,25 @@ class Planetary(Motion):
             fixcom: An optional boolean which decides whether the centre of mass
                 motion will be constrained or not. Defaults to False.
         """
-        
+
         self.mode = mode
         self.nsamples = nsamples
         self.stride = stride
         self.nbeads = nbeads
         self.screen = screen
-         
+
         dself = dd(self)
-        # the planetary step just computes constrained-centroid properties so it 
+
+        # the planetary step just computes constrained-centroid properties so it
         # should not advance the timer
         dself.dt = depend_value(name="dt", value=0.0)
-        #dset(self, "dt", depend_value(name="dt", value = 0.0) ) 
+        #dset(self, "dt", depend_value(name="dt", value = 0.0) )
         self.fixatoms = np.asarray([])
         self.fixcom = True
+
         # nvt-cc means contstant-temperature with constrained centroid
+        # this basically is a motion class that will be used to make the
+        # centroid propagation at each time step
         self.ccdyn = Dynamics(timestep, mode="nvt-cc", thermostat=thermostat, nmts=nmts, fixcom=fixcom, fixatoms=fixatoms)
 
 
@@ -97,10 +101,14 @@ class Planetary(Motion):
         self.prng = prng
         self.basebeads = beads
         self.basenm = nm
+
+        # copies of all of the helper classes that are needed to bind the ccdyn object
         self.dbeads = beads.copy(nbeads=self.nbeads)
         self.dcell = cell.copy()
         self.dforces = bforce.copy(self.dbeads, self.dcell)
-        #self.dnm = nm.copy(freqs = nm.omegak[1]*np.ones(self.dbeads.nbeads-1))
+
+        # options for NM propagation - hardcoded frequencies unless using a GLE thermo
+        # for which frequencies matter
         if isinstance(self.ccdyn.thermostat, (ThermoGLE, ThermoNMGLE, ThermoNMGLEG)):
             self.dnm = nm.copy()
             self.dnm.mode = "rpmd"
@@ -110,41 +118,51 @@ class Planetary(Motion):
                                       / (beads.nbeads*np.sin(np.pi/beads.nbeads))
                              )
             self.dnm.mode = "manual"
+
         self.dnm.bind(ens, self, beads=self.dbeads, forces=self.dforces)
         self.dnm.qnm[:] = nm.qnm[:self.nbeads] * np.sqrt(self.nbeads) / np.sqrt(beads.nbeads)
         self.dens = ens.copy()
         self.dbias = ens.bias.copy(self.dbeads, self.dcell)
         self.dens.bind(self.dbeads, self.dnm, self.dcell, self.dforces, self.dbias)
-       
-        self.natoms = self.dbeads.natoms 
+
+        self.natoms = self.dbeads.natoms
         natoms3 = self.dbeads.natoms*3
         self.omega2 = np.zeros((natoms3,natoms3), float)
-        
+
+        # initializes counters
         self.tmc = 0
         self.tmtx = 0
         self.tsave =0
         self.neval = 0
-        
+
+        # finally, binds the ccdyn object
         self.ccdyn.bind(self.dens, self.dbeads, self.dnm, self.dcell, self.dforces, prng, omaker)
-        
+
     def increment(self, dnm):
+
+        # accumulates an estimate of the frequency matrix
         sm3 = dstrip(self.dbeads.sm3)
         qms = dstrip(dnm.qnm) * sm3
         fms = dstrip(dnm.fnm) / sm3
         fms[0,:]=0
         qms[0,:]=0
         qms *= (dnm.omegak**2)[:,np.newaxis]
-         
+
         self.omega2 += np.tensordot(fms,fms,axes=(0,0))
         qffq = np.tensordot(fms,qms,axes=(0,0))
         qffq = qffq + qffq.T
         qffq *= 0.5
-        self.omega2 -= qffq        
-    
+        self.omega2 -= qffq
+
     def matrix_screen(self):
+
+        """ Computes a screening matrix tho avoid the impact of
+        noisy elements of the covariance and frequency matrices for
+        far-away atoms """
+
         q = np.array(self.dbeads[0].q).reshape(self.natoms, 3)
         sij = q[:, np.newaxis, :] - q
-        sij = sij.transpose().reshape(3, self.natoms**2)    
+        sij = sij.transpose().reshape(3, self.natoms**2)
         # find minimum distances between atoms (rigorous for cubic cell)
         sij = np.matmul(self.dcell.ih, sij)
         sij -= np.around(sij)
@@ -156,56 +174,62 @@ class Planetary(Motion):
         sij = (sij < self.screen**2).astype(float)
         # sij = np.exp(-sij / (self.screen**2))
         # acount for 3 dimensions
-        sij = np.concatenate((sij,sij,sij), axis=0)  
-        sij = np.concatenate((sij,sij,sij), axis=1) 
+        sij = np.concatenate((sij,sij,sij), axis=0)
+        sij = np.concatenate((sij,sij,sij), axis=1)
         sij = sij.reshape(-1).reshape(-1, self.natoms).transpose()
         sij = sij.reshape(-1).reshape(-1, 3*self.natoms).transpose()
         return sij
-    
+
     def step(self, step=None):
-        
+
         if step is not None and step % self.stride != 0:
             return
-            
-        print "start planetary step"
+
+        # Initialize positions to the actual positions, possibly with contraction
+
         self.dnm.qnm[:] = self.basenm.qnm[:self.nbeads] * np.sqrt(self.nbeads) / np.sqrt(self.basebeads.nbeads)
-        # randomized momenta
+
+        # Randomized momenta
         self.dnm.pnm = self.prng.gvec((self.dbeads.nbeads,3*self.dbeads.natoms))*np.sqrt(self.dnm.dynm3)*np.sqrt(self.dens.temp*self.dbeads.nbeads*Constants.kb)
         self.dnm.pnm[0] = 0.0
-        
+
+        # Resets the frequency matrix
         self.omega2[:] = 0.0
-        
+
         self.tmtx -= time.time()
-        self.increment(self.dnm)        
+        self.increment(self.dnm)
         self.tmtx += time.time()
-        
+
+        # sample by constrained-centroid dynamics
         for istep in xrange(self.nsamples):
             self.tmc -= time.time()
-            self.ccdyn.step(step)    
+            self.ccdyn.step(step)
             self.tmc += time.time()
-            self.tmtx -= time.time()        
-            self.increment(self.dnm)  
-            self.tmtx += time.time()                
-        
+            self.tmtx -= time.time()
+            self.increment(self.dnm)
+            self.tmtx += time.time()
+
         self.neval += 1
-        
+
         self.omega2 /= self.dbeads.nbeads*self.dens.temp*(self.nsamples+1)*(self.dbeads.nbeads-1)
         self.tsave -= time.time()
-        
+
         if self.screen > 0.0:
             scr = self.matrix_screen()
             self.omega2 *= scr
-       
+
         # ensure perfect symmetry
         self.omega2[:] = 0.5 * (self.omega2 + self.omega2.transpose())
         # only save lower triangular part
         self.omega2[:] = np.tril(self.omega2)
- 
+
         # save as a sparse matrix in half precision
         save_omega2 = sparse.csc_matrix(self.omega2.astype(np.float16))
-       
-        # Write to temporary binary file, then cut and append contents 
+
+        # Write to temporary binary file, then cut and append contents
         # to permanent PLANETARY file
+        #!TODO - use omaker mechanism for all of these files
+        #!TODO - there must be a better way to save a series of binary chunks. this ugly hack makes me sad :-(
         with open("TEMP_PLANETARY", "wb") as f:
             sparse.save_npz(f, save_omega2, compressed=True)
         with open("TEMP_PLANETARY", "r") as f:
@@ -217,7 +241,7 @@ class Planetary(Motion):
         with open("PLANETARY", fmt) as f:
             f.write(text)
             f.write("\nXXXXXXXXXX\n")
-        os.remove("TEMP_PLANETARY") 
-        
+        os.remove("TEMP_PLANETARY")
+
         self.tsave += time.time()
         print "AVG TIMING: ", self.tmc/self.neval, self.tmtx/self.neval, self.tsave/self.neval
