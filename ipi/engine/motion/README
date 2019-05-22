@@ -59,14 +59,14 @@ In the above example, 256 frequency matrix samples are averaged for each centroi
 configuration. The sampling is performed with constrained-centroid dynamics with
 thermostatting of the non-centroid ring polymer modes. The frequency matrix is sampled
 after every stride centroid position updates (once every femtosecond in the above
-example). The output of the simulation is binary file called PLANETARY, which contains the
+example). The output of the simulation is binary file called [prefix].omega2, which contains the
 effective frequency matrices from the simulation in a compressed sparse column format. One
 should also record the centroid positions and momenta, e.g.
 
 <trajectory filename="xc" stride="4" format="xyz"> x_centroid </trajectory>
 <trajectory filename="pc" stride="4" format="xyz"> p_centroid </trajectory>
 
-With the PLANETARY file and associated xyz files, one can calculate planetary model
+With the [prefix].omega2 file and associated xyz files, one can calculate planetary model
 time-correlation functions using the Python program i-pi-planetary. As described in
 i-pi-planetary (tools/py/planetary.py), one must provide functions for the observables A
 and B, examples of which are given in tools/py/estmod_example.py.

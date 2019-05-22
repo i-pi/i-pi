@@ -76,7 +76,7 @@ class Planetary(Motion):
         self.ccdyn = Dynamics(timestep, mode="nvt-cc", thermostat=thermostat, nmts=nmts, fixcom=fixcom, fixatoms=fixatoms)
 
 
-    def bind(self, ens, beads, nm, cell, bforce, prng, omaker=None):
+    def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         """Binds ensemble beads, cell, bforce, and prng to the dynamics.
 
         This takes a beads object, a cell object, a forcefield object and a
@@ -138,6 +138,9 @@ class Planetary(Motion):
         # finally, binds the ccdyn object
         self.ccdyn.bind(self.dens, self.dbeads, self.dnm, self.dcell, self.dforces, prng, omaker)
 
+        self.omaker = omaker
+        self.fomega2 = omaker.get_output("omega2")
+
     def increment(self, dnm):
 
         # accumulates an estimate of the frequency matrix
@@ -156,7 +159,7 @@ class Planetary(Motion):
 
     def matrix_screen(self):
 
-        """ Computes a screening matrix tho avoid the impact of
+        """ Computes a screening matrix to avoid the impact of
         noisy elements of the covariance and frequency matrices for
         far-away atoms """
 
@@ -179,6 +182,26 @@ class Planetary(Motion):
         sij = sij.reshape(-1).reshape(-1, self.natoms).transpose()
         sij = sij.reshape(-1).reshape(-1, 3*self.natoms).transpose()
         return sij
+
+    def save_matrix(self, matrix):
+
+        """ Writes the compressed, sparse frequency matrix to a temporary binary file, 
+        then cut and append contents to the permanent PLANETARY file. Cannot find a
+        prettier way of doing this... """
+
+        #with open("TEMP_PLANETARY", "wb") as f:
+        #    sparse.save_npz(f, matrix, compressed=True)
+        #with open("TEMP_PLANETARY", "r") as f:
+        #    text = f.read()
+
+        f = self.omaker.get_output("temporary", "wb")
+        sparse.save_npz(f, matrix, compressed=True)
+        f.close_stream()
+        f = self.omaker.get_output("temporary", "r")
+        text = f.read()
+        f.remove()
+        self.fomega2.write(text)
+        self.fomega2.write("\nXXXXXXXXXX\n")
 
     def step(self, step=None):
 
@@ -226,22 +249,8 @@ class Planetary(Motion):
         # save as a sparse matrix in half precision
         save_omega2 = sparse.csc_matrix(self.omega2.astype(np.float16))
 
-        # Write to temporary binary file, then cut and append contents
-        # to permanent PLANETARY file
-        #!TODO - use omaker mechanism for all of these files
-        #!TODO - there must be a better way to save a series of binary chunks. this ugly hack makes me sad :-(
-        with open("TEMP_PLANETARY", "wb") as f:
-            sparse.save_npz(f, save_omega2, compressed=True)
-        with open("TEMP_PLANETARY", "r") as f:
-            text = f.read()
-        if step == 0:
-            fmt = "w"
-        else:
-            fmt = "a"
-        with open("PLANETARY", fmt) as f:
-            f.write(text)
-            f.write("\nXXXXXXXXXX\n")
-        os.remove("TEMP_PLANETARY")
+        # save the frequency matrix to the PLANETARY file
+        self.save_matrix(save_omega2)
 
         self.tsave += time.time()
         print "AVG TIMING: ", self.tmc/self.neval, self.tmtx/self.neval, self.tsave/self.neval
