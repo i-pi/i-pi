@@ -39,7 +39,7 @@ Assumes existance of the following files in the working directory:
     <prefix>.pc.xyz
   Stores centroid momenta along trajectory
 
-    PLANETARY
+    PLANETARY.omega2
   Binary file storing path-integral frequency matrices at each centroid
   configuration along trajectory
 
@@ -226,7 +226,7 @@ class Planets(object):
         # Boolean mask for frequencies close to 0
         self.mask = np.zeros(3*self.natoms, dtype=bool)
         
-        self.fomega2 = open("PLANETARY", "r") 
+        self.fomega2 = open("PLANETARY.omega2", "r") 
         self.fqc = open("{}.xc.xyz".format(self.prefix), "r") 
         self.fpc = open("{}.pc.xyz".format(self.prefix), "r") 
         
@@ -250,7 +250,7 @@ class Planets(object):
     
     def read_omega2(self):
         """
-        Read in next instance of path-integral frequency matrix from PLANETARY
+        Read in next instance of path-integral frequency matrix from PLANETARY.omega2
         """
         text = ""
         line = self.fomega2.readline()
@@ -259,7 +259,7 @@ class Planets(object):
             text += line
             line = self.fomega2.readline()
             if line == "":
-                sys.exit("!ERROR! looks like I've reached the end of the PLANETARY file")
+                sys.exit("!ERROR! looks like I've reached the end of the PLANETARY.omega2 file")
         
         with open("TEMP2_PLANETARY", "w") as f:
             f.write(text)
