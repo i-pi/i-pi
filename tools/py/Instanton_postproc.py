@@ -45,7 +45,8 @@ main directory must be added to the PYTHONPATH environment variable.
 
 from ipi.engine.simulation import Simulation
 from ipi.utils.units import unit_to_internal, unit_to_user, Constants, Elements
-from ipi.utils.instools import red2comp, clean_hessian
+from ipi.utils.instools import red2comp
+from ipi.utils.hesstools import  clean_hessian
 from ipi.engine.motion.instanton import SpringMapper
 
 np.set_printoptions(precision=6, suppress=True, threshold=np.nan)

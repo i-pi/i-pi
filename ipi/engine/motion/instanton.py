@@ -871,7 +871,7 @@ class LanczosOptimizer(HessianOptimizer):
         f = (activearrays["old_f"] + self.im.f).reshape(self.im.dbeads.natoms * 3 * self.im.dbeads.nbeads, 1)
 
         banded = True
-        cartesian = True
+        cartesian = False
         #BANDED Version
         if banded: #ALBERTO
             # TEST CARTESIAN and mass-weighted and mass^2 weighted #ALBERTO
