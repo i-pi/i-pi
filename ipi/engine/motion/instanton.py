@@ -86,7 +86,7 @@ class InstantonMotion(Motion):
                  corrections_lbfgs=5,
                  ls_options={"tolerance": 1e-1, "iter": 100},
                  old_direction=np.zeros(0, float),
-                 hessian_final='False',
+                 hessian_final='False', 
                  energy_shift=np.zeros(0, float)):
         """Initialises InstantonMotion.
         """
@@ -159,7 +159,7 @@ class InstantonMotion(Motion):
                  "problem use nichols even though it may not be as efficient.", verbosity.low)
 
     
-     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
+    def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         """Binds beads, cell, bforce and prng to InstantonMotion
 
             Args:
@@ -587,8 +587,8 @@ class DummyOptimizer(dobject):
                      (np.linalg.norm(self.forces.f.flatten() - self.optarrays["old_f"].flatten()) <= 1e-08)) \
                 and (d_x_max <= tolerances["position"]):
 
-            print_instanton_geo(self.prefix + '_FINAL', step, self.im.dbeads.nbeads, self.im.dbeads.natoms, self.im.dbeads.names,
-                                self.im.dbeads.q, self.old_u, self.cell, self.energy_shift, self.output_maker)
+            print_instanton_geo(self.options["prefix"] + '_FINAL', step, self.im.dbeads.nbeads, self.im.dbeads.natoms, self.im.dbeads.names,
+                                self.im.dbeads.q, self.optarrays["old_u"], self.cell, self.optarrays["energy_shift"], self.output_maker)
 
             if self.options["hessian_final"] != 'true':
                 info("We are not going to compute the final hessian.", verbosity.low)
@@ -596,8 +596,8 @@ class DummyOptimizer(dobject):
 
             else:
                 info("We are going to compute the final hessian", verbosity.low)
-                get_hessian(self.hessian, self.gm, self.im.dbeads.q, self.output_maker)
-                print_instanton_hess(self.prefix + '_FINAL', step, self.hessian, self.output_maker)
+                get_hessian(self.optarrays["hessian"], self.gm, self.im.dbeads.q, self.output_maker)
+                print_instanton_hess(self.options["prefix"] + '_FINAL', step, self.hessian, self.output_maker)
 
             return True
             # If we just exit here, the last step (including the last hessian) will not be in the RESTART file
@@ -620,7 +620,7 @@ class DummyOptimizer(dobject):
         if (self.options["save"] > 0 and np.mod(step, self.options["save"]) == 0) or self.exit:
             print_instanton_geo(self.options["prefix"], step, self.beads.nbeads, self.beads.natoms,
                                 self.beads.names, self.beads.q, self.forces.pots, self.cell,
-                                self.optarrays["energy_shift"])
+                                self.optarrays["energy_shift"],self.output_maker)
 
     def pre_step(self, step=None):
         """ Todo before actual step"""
@@ -731,7 +731,7 @@ class HessianOptimizer(DummyOptimizer):
 
     def print_hess(self, step):
         if (self.options["save"] > 0 and np.mod(step, self.options["save"]) == 0) or self.exit:
-            print_instanton_hess(self.options["prefix"], step, self.optarrays["hessian"])
+            print_instanton_hess(self.options["prefix"], step, self.optarrays["hessian"],self.output_maker)
 
 class NicholsOptimizer(HessianOptimizer):
     """ Class that implements a nichols optimizations. It can find first order saddle points or minimum"""
@@ -1082,5 +1082,5 @@ class LBFGSOptimizer(DummyOptimizer):
 
         # Print current instanton geometry and hessian
         if (self.save > 0 and np.mod(step, self.save) == 0) or self.exit:
-            print_instanton_geo(self.prefix, step, self.im.dbeads.nbeads, self.im.dbeads.natoms, self.im.dbeads.names,
-                                self.im.dbeads.q, self.old_u, self.cell, self.energy_shift, self.output_maker)
+            print_instanton_geo(self.options["prefix"], step, self.im.dbeads.nbeads, self.im.dbeads.natoms, self.im.dbeads.names,
+                                self.im.dbeads.q, self.old_u, self.cell, self.optarrays["energy_shift"], self.output_maker)
