@@ -87,14 +87,6 @@ class ConstrainedDynamics(Motion):
             self.integrator = NVEIntegrator()
         elif self.enstype == "nvt":
             self.integrator = NVTIntegrator()
-        elif self.enstype == "npt":
-            self.integrator = NPTIntegrator()
-        elif self.enstype == "nst":
-            self.integrator = NSTIntegrator()
-        elif self.enstype == "sc":
-            self.integrator = SCIntegrator()
-        elif self.enstype == "scnpt":
-            self.integrator = SCNPTIntegrator()
         else:
             self.integrator = DummyIntegrator()
 
@@ -210,10 +202,7 @@ class DummyIntegrator(dobject):
         pass
 
     def get_qdt(self):
-        if self.splitting == "obabo":
-            return self.dt 
-        elif self.splitting == "baoab":
-            return self.dt * 0.50
+        return self.dt * 0.5 
 
     def get_pdt(self):
         return self.dt * 0.5
@@ -363,6 +352,7 @@ class NVEIntegrator(DummyIntegrator):
 
         self.B()
         self.A()
+        self.A()
         self.B()
 
 
@@ -378,32 +368,25 @@ class NVTIntegrator(NVEIntegrator):
         thermostat: A thermostat object to keep the temperature constant.
     """
 
-    def tstep(self):
+    def O(self):
         """Velocity Verlet thermostat step"""
-
         self.thermostat.step()
 
     def step(self, step=None):
         """Does one simulation time step."""
 
         if self.splitting == "obabo":
-            # thermostat is applied for dt/2
-            self.tstep()
-            self.pconstraints()
+            self.O()
+            self.B()
+            self.A()
+            self.A()
+            self.B()
+            self.O()
 
-            # forces are integerated for dt with MTS.
-            self.mtsprop(0)
-
-            # thermostat is applied for dt/2
-            self.tstep()
-            self.pconstraints()
 
         elif self.splitting == "baoab":
-
-            self.mtsprop_ba(0)
-            # thermostat is applied for dt
-            self.tstep()
-            self.pconstraints()
-            self.mtsprop_ab(0)
-
-
+            self.B()
+            self.A()
+            self.O()
+            self.A()
+            self.B()
