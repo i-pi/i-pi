@@ -44,7 +44,8 @@ def print_xyz_path(beads, cell, filedesc=sys.stdout, cell_conv=1.0, atoms_conv=1
         for i in range(natoms):
             qs = dstrip(beads.q) * atoms_conv
             lab = dstrip(beads.names)
-            filedesc.write("%8s %12.5e %12.5e %12.5e\n" % (lab[i], qs[j][3 * i], qs[j][3 * i + 1], qs[j][3 * i + 2]))
+            #filedesc.write("%8s %12.5e %12.5e %12.5e\n" % (lab[i], qs[j][3 * i], qs[j][3 * i + 1], qs[j][3 * i + 2])) ALBERTO
+            filedesc.write("{} {:30.20f} {:30.20f} {:30.20f}\n".format(lab[i], qs[j][3 * i], qs[j][3 * i + 1], qs[j][3 * i + 2]))
 
 
 def print_xyz(atoms, cell, filedesc=sys.stdout, title="", cell_conv=1.0, atoms_conv=1.0):
@@ -66,7 +67,8 @@ def print_xyz(atoms, cell, filedesc=sys.stdout, title="", cell_conv=1.0, atoms_c
     qs = dstrip(atoms.q) * atoms_conv
     lab = dstrip(atoms.names)
     for i in range(natoms):
-        filedesc.write("%8s %12.5e %12.5e %12.5e\n" % (lab[i], qs[3 * i], qs[3 * i + 1], qs[3 * i + 2]))
+        #filedesc.write("%8s %12.5e %12.5e %12.5e\n" % (lab[i], qs[3 * i], qs[3 * i + 1], qs[3 * i + 2])) #ALBERTO
+        filedesc.write("{} {:30.20f} {:30.20f} {:30.20f}\n".format( lab[i], qs[3 * i], qs[3 * i + 1], qs[3 * i + 2]))# lab[i], qs[j][3 * i], qs[j][3 * i + 1], qs[j][3 * i + 2]))
 
 
 # Cell type patterns

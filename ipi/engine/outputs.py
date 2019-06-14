@@ -8,6 +8,7 @@ and the restart files.
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
+from decimal import *
 
 import os
 import time
@@ -156,10 +157,14 @@ class PropertyOutput(dobject):
             except KeyError:
                 raise KeyError(what + " is not a recognized property")
             if not hasattr(quantity, "__len__"):
-                self.out.write(write_type(float, quantity) + "   ")
+                #self.out.write(write_type(float, quantity) + "   ") ALBERTO
+                #self.out.write(' {} '.format(Decimal(quantity) ))
+                self.out.write(' {:30.20f} '.format(Decimal(quantity) ))
             else:
                 for el in quantity:
-                    self.out.write(write_type(float, el) + " ")
+                    #  self.out.write(write_type(float, el) + " ")  ALBERTO
+                    #self.out.write(' {} '.format(Decimal(el) ))
+                    self.out.write(' {:30.20f} '.format(Decimal(el) ))
 
         self.out.write("\n")
 
