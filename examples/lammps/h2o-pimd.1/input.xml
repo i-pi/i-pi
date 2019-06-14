@@ -19,12 +19,9 @@
     <forces>
       <force forcefield='lammps'> </force>
     </forces>
-    <motion mode='dynamics'>
-      <dynamics mode='nvt'>
+    <motion mode='constrained_dynamics'>
+      <dynamics mode='nve'>
         <timestep units='femtosecond'> 0.5 </timestep>
-        <thermostat mode='svr'>
-          <tau units='femtosecond'> 100 </tau>
-        </thermostat>
       </dynamics>
     </motion>
     <ensemble>
