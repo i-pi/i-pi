@@ -46,11 +46,10 @@ class InstantonMotion(Motion):
         old_pot: The previous step potential energy during the optimization
         old_force:  The previous step force during the optimization
         opt: The geometry optimization algorithm to be used
-        alt_out: (Alternative output) Prints different formatting of outputs for geometry, hessian and bead potential
-         energies.
+        alt_out: (Alternative outpu) Prints different formatting of outputs for geometry, hessian and bead potential energies.
         All quantities are also accessible from typical i-pi output infrastructure. Default to 1, which prints 
-        every step. -1 will suppress the output (except the last one). Any other positive number will set the frequency 
-        (in steps) with which the quantities are written to file.
+        every step. -1 will suppress the output (except the last one). Any other positive number will set the frequency (in steps) with
+        which the quantities are written to file.
         prefix: Prefix of the output files.
         delta: Initial stretch amplitude.
         hessian_init: Boolean which decides whether the initial hessian is going to be computed.
@@ -75,7 +74,7 @@ class InstantonMotion(Motion):
                  old_force=np.zeros(0, float),
                  opt='None',
                  alt_out=1,
-                 prefix="INSTANTON",
+                 prefix="instanton",
                  delta=np.zeros(0, float),
                  hessian_init=None,
                  hessian=np.eye(0, 0, 0, float),
@@ -101,6 +100,8 @@ class InstantonMotion(Motion):
         self.options["mode"] = mode
 
         # Generic optimization
+        self.big_step = biggest_step
+        self.tolerances = tolerances
 
         self.options["tolerances"] = tolerances
         self.options["save"] = alt_out
@@ -157,7 +158,8 @@ class InstantonMotion(Motion):
             info("Note that we need scipy to use NR. If storage and diagonalization of the full hessian is not a "
                  "problem use nichols even though it may not be as efficient.", verbosity.low)
 
-    def bind(self, ens, beads, nm, cell, bforce, prng):
+    
+     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         """Binds beads, cell, bforce and prng to InstantonMotion
 
             Args:
@@ -168,7 +170,7 @@ class InstantonMotion(Motion):
             prng: The random number generator object which controls random number generation.
         """
 
-        super(InstantonMotion, self).bind(ens, beads, nm, cell, bforce, prng)
+        super(InstantonMotion, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
         # Binds optimizer
 
         self.optimizer.bind(self)
@@ -502,7 +504,7 @@ class DummyOptimizer(dobject):
         self.fixatoms = geop.fixatoms
         self.nm = geop.nm
         #self.ensemble = geop.ens
-
+	self.output_maker = geop.output_maker
         # The resize action must be done before the bind
 
         if geop.optarrays["old_x"].size != self.beads.q.size:
@@ -585,9 +587,8 @@ class DummyOptimizer(dobject):
                      (np.linalg.norm(self.forces.f.flatten() - self.optarrays["old_f"].flatten()) <= 1e-08)) \
                 and (d_x_max <= tolerances["position"]):
 
-            print_instanton_geo(self.options["prefix"] + '_FINAL', step, self.beads.nbeads, self.beads.natoms,
-                                self.beads.names, self.beads.q, self.forces.pots, self.cell,
-                                self.optarrays["energy_shift"])
+            print_instanton_geo(self.prefix + '_FINAL', step, self.im.dbeads.nbeads, self.im.dbeads.natoms, self.im.dbeads.names,
+                                self.im.dbeads.q, self.old_u, self.cell, self.energy_shift, self.output_maker)
 
             if self.options["hessian_final"] != 'true':
                 info("We are not going to compute the final hessian.", verbosity.low)
@@ -595,9 +596,8 @@ class DummyOptimizer(dobject):
 
             else:
                 info("We are going to compute the final hessian", verbosity.low)
-                active_hessian = get_hessian(self.gm, self.beads.q.copy(), self.beads.natoms, self.beads.nbeads,self.fixatoms)
-                self.optarrays["hessian"][:] = self.fix.get_full_vector(active_hessian, 2)
-                print_instanton_hess(self.options["prefix"] + '_FINAL', step, self.optarrays["hessian"])
+                get_hessian(self.hessian, self.gm, self.im.dbeads.q, self.output_maker)
+                print_instanton_hess(self.prefix + '_FINAL', step, self.hessian, self.output_maker)
 
             return True
             # If we just exit here, the last step (including the last hessian) will not be in the RESTART file
@@ -642,7 +642,7 @@ class DummyOptimizer(dobject):
         pass
 
 class HessianOptimizer(DummyOptimizer):
-    """ Class that implements an optimization when a hessian is available."""
+    """ Instaton Rate calculation"""
 
     def bind(self, geop):
         # call bind function from DummyOptimizer
@@ -654,7 +654,7 @@ class HessianOptimizer(DummyOptimizer):
         if len(self.fixatoms) > 0:
             info(" 'fixatoms' is enabled. Setting asr to None", verbosity.low)
             self.options["hessian_asr"] = 'none'
-
+#        self.output_maker = geop.output_maker
         self.options["hessian_init"] = geop.options["hessian_init"]
         self.optarrays["initial_hessian"] = None
 
@@ -1025,7 +1025,7 @@ class LBFGSOptimizer(DummyOptimizer):
     def initialize(self, step):
 
         if step == 0:
-            info(" @GEOP: Initializing INSTANTON", verbosity.low)
+            info(" @GEOP: Initializing instanton", verbosity.low)
 
             if self.beads.nbeads == 1:
                 raise ValueError("We can not perform an splitting calculation with nbeads =1")
@@ -1080,4 +1080,7 @@ class LBFGSOptimizer(DummyOptimizer):
         self.exit = self.exitstep(d_x_max, step)
         self.update_old_pos_for()
 
-
+        # Print current instanton geometry and hessian
+        if (self.save > 0 and np.mod(step, self.save) == 0) or self.exit:
+            print_instanton_geo(self.prefix, step, self.im.dbeads.nbeads, self.im.dbeads.natoms, self.im.dbeads.names,
+                                self.im.dbeads.q, self.old_u, self.cell, self.energy_shift, self.output_maker)

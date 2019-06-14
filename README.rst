@@ -16,7 +16,12 @@ Silvera-Goldman potentials is included for test purposes.
 Quick Setup and Test
 ====================
 
-Follow these instructions to set up and test i-PI. It is assumed that i-PI will
+To use i-PI with already existing drivers, install using Pip::
+
+   $ pip install git+https://github.com/i-pi/i-pi.git
+
+To develop i-PI or test it with the self-contained driver, follow these
+instructions. It is assumed that i-PI will
 be run from a Linux environment, with a recent version of Python, Numpy and
 gfortran, and that the terminal is initially in the i-pi package directory (the
 directory containing this file).

@@ -37,10 +37,6 @@ class MetaDyn(Smotion):
         super(MetaDyn, self).__init__()
         self.metaff = metaff
 
-    def bind(self, syslist, prng):
-
-        super(MetaDyn, self).bind(syslist, prng)
-
     def step(self, step=None):
         """Updates metad bias."""
 

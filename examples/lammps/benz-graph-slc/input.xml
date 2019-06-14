@@ -35,7 +35,7 @@
   </prng>
   <system>
     <motion mode='dynamics'>
-      <dynamics mode='mts'>
+      <dynamics mode='nvt'>
         <timestep units='femtosecond'> 0.10 </timestep>
         <thermostat mode='pile_l'>
           <tau units='femtosecond'>100</tau>

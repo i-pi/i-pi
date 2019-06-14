@@ -514,6 +514,8 @@ a displaced-path estimator for the particle momentum distribution~\cite{lin+10pr
 
 \subsection{Features added in version 2.0}
 
+Further details can be found in Ref. \cite{Kapil:2019ju}.
+
 \begin{itemize}
 \item reweighted fourth-order path integral MD (M. Ceriotti, G.A.R. Brain)~\cite{ceri+12prsa,jang-voth01jcp}; {this method makes it possible to obtain fourth-order statistics by re-weighting second-order trajectories; attention should be paid to avoid statistical inefficiencies;}
 \item finite-differences implementation of fourth-order path integrals (V. Kapil, M. Ceriotti)~\cite{kapi+16jcp2}; {this schemes enables explicit fourth-order path integral simulations, that converge faster than conventional Trotter methods};
@@ -545,8 +547,7 @@ in the directory {}``drivers'' are all held under the MIT licence.
 For more details see \url{https://fedoraproject.org/wiki/Licensing:MIT}.
 
 If you use this code in any
-future publications, please cite this using {[}\cite{ceri+14cpc}{]}.
-
+future publications, please cite this using \cite{ceri+14cpc} for v1 and \cite{Kapil:2019ju} for v2.
 \subsection{Contributors}
 
 \ipi was originally written by M. Ceriotti and J. More at Oxford University,
@@ -584,7 +585,9 @@ of how to do this.
 \subsection{\ipi resources}
 
 For more information about \ipi{} and to download the source code
-go to \url{http://imx-cosmo.github.io/gle4md/ }, where one can also obtain colored-noise
+go to \url{http://ipi-code.org/}. 
+
+In \url{http://gle4md.org/} one can also obtain colored-noise
 parameters to run Path Integral with Generalized Langevin Equation
 thermostat (PI+GLE/PIGLET) calculations.
 
@@ -603,10 +606,10 @@ thermostat (PI+GLE/PIGLET) calculations.
 
 \ipi is Python code, and as such strictly speaking does not 
 need to be compiled and installed. The {\tt i-pi} file in the
-root directory of the distribution is the main (executable) script, 
+{\tt bin} directory of the distribution is the main (executable) script, 
 and can be run as long as the system has installed:
 \begin{itemize}
-\item Python version 2.4 or greater
+\item Python version 2.4 or greater (i-PI up to version v2.0 is not Python3 compatible)
 \item The Python numerical library NumPy
 \end{itemize}
 See \ref{runningsimulations} for more details on how to launch
@@ -685,21 +688,23 @@ Either way, it will now be possible to run the code automatically, using
 
 \subsection{\ipi download}
 
-A tar file can be downloaded from the website \url{http://imx-cosmo.github.io/gle4md/}.
-To install this you need to input the following command:
+%A tar file can be downloaded from the website \url{http://imx-cosmo.github.io/gle4md/}.
+%To install this you need to input the following command:
+%
+%\begin{code}
+%> tar xf [ipi_tar_file.tar]
+%\end{code}
+%
 
-\begin{code}
-> tar xf [ipi_tar_file.tar]
-\end{code}
+You can find information how to download \ipi from \url{http://ipi-code.org/download/}.
 
+%You can also obtain a local clone of the git repository (listed on \url{http://imx-cosmo.github.io/gle4md/}) using:
+%
+%\begin{code}
+%> git clone [repository name]
+%\end{code}
 
-You can also obtain a local clone of the git repository (listed on \url{http://imx-cosmo.github.io/gle4md/}) using:
-
-\begin{code}
-> git clone [repository name]
-\end{code}
-
-The \ipi executable will run immediately, without needing to be installed
+The \ipi executable, found in the \texttt{bin} folder,  will run immediately, without needing to be installed
 or compiled, but we include a setup.py module in the main directory so it can
 be installed to the Python tree if so desired.
 
@@ -803,84 +808,11 @@ default. Otherwise the slower NumPy version will be used.
 
 \label{clientinstall}
 
-\subsection{Patching CP2K}
+As of today, the following codes provide out-of-the-box an i-PI interface: CP2K, DFTB+, Lammps, Quantum ESPRESSO, Siesta, FHI-aims, Yaff, deMonNano, TBE. 
+Links to the webpages of these codes, including information on how to obtain them, can be found in \url{http://ipi-code.org/}.
 
-
-You can download the source code for CP2K at \url{www.cp2k.org/}.
-This can either be downloaded as a tar file, which
-can be extracted in the same way as the Python and NumPy
-libraries above, or via a svn client. 
-
-As an example of the latter, CP2K version 2.4 can be downloaded to
-a directory {}``cp2k-2.4'' using the command:
-
-\begin{code}
-> svn checkout svn://svn.code.sf.net/p/cp2k/code/branches/cp2k-2_4-branch cp2k-2.4
-\end{code}
-
-Before CP2K can run with \ipi, the code
-must be adapted to use the socket interface. 
-For this purpose \ipi is distributed with patch files in the
-directory {}``patches''. When applied to a clean 
-distribution, these will adjust the source code to make it
-compatible with \ipi. 
-
-For example, if we take CP2K 
-version 2.4.0, and assuming that you are
-currently in the top level directory of the CP2K distribution,
-the patch can be applied to the source code using:
-
-\begin{code}
-> patch -p1 < ipidir/i-pi/patches/cp2k-2.4.0_ipi.patch
-\end{code}
-where ipidir is the directory containing the \ipi source code.
-
-After this, continue the compilation as per the instructions at 
-\url{www.cp2k.org/} to complete the install.
-There are currently patches available for CP2K versions 2.4, 2.3, 2.2 and 2.1.
-
-\subsection{Patching Quantum-Espresso}
-
-You can download the source code for Quantum Espresso at \url{www.quantum-espresso.org/}
-as a tar file. The tar file can be extracted in the same way as the Python and NumPy
-libraries above. As for CP2K above, we include patch files to
-adapt the Quantum Espresso source code so that it will work with \ipi.
-Taking version 5.0 as an example, and again assuming you are in
-the top level directory of the Quantum Espresso distribution,
-this patch can be applied to the source code using:
-
-\begin{code}
-> patch -p1 < ipidir/i-pi/patches/espresso-5.0_ipi.patch
-\end{code}
-
-After this, continue the compilation as per the instructions at 
-\url{www.quantum-espresso.org/} to complete the install.
-There are currently patches available for 
-Quantum Espresso versions 5.0, 4.3, 4.2 and 4.1.3.
-
-\subsection{Patching LAMMPS}
-
-You can download the source code for LAMMPS at \url{http://lammps.sandia.gov/index.html}.
-This can either be downloaded as a tar file, which
-can be extracted in the same way as the Python and NumPy
-libraries above, via a svn client, which can be run in the
-same way as for CP2K, or from a git repository, which can be downloaded
-in the same way as for \ipi. 
-
-As for CP2K above, we include patch files to
-adapt the LAMMPS source code so that it will work with \ipi.
-Currently we only provide a patch file for a recent 
-version of LAMMPS, which can be applied to the source code using:
-
-\begin{code}
-> patch -p1 < ipidir/i-pi/patches/lammps-26Aug13_ipi.patch
-\end{code}
-
-After this, continue the compilation as per the instructions at 
-\url{http://lammps.sandia.gov/index.html} to complete the install.
-Note that the optional libraries CLASS2, KSPACE, MANYBODY and 
-MOLECULE will all need to be included to run the examples provided
-in the {}``examples'' directory.
+If you are interested in interfacing your code to i-PI please get in touch, we are always glad to help.
+We keep some information below in case you are interested in writing a patch to a code.
 
 \subsection{Writing a patch}
 
@@ -930,6 +862,9 @@ poll for incoming connections.
 
 \label{runningclients}
 
+Below we give examples on how to make different clients communicate with i-PI.
+Most clients also include descriptions on how to do this from their own documentation.
+
 \subsubsection{Built-in, example client}
 
 \label{driver.x}
@@ -965,7 +900,8 @@ of the server.
 \item[-m:] Is followed in the command line argument list by a string
 specifying the type of potential to be used. {}``gas'' gives no potential,
 {}``lj'' gives a Lennard-Jones potential, {}``sg'' gives a Silvera-Goldman
-potential and {}``harm'' gives a 1D harmonic oscillator potential.
+potential and {}``harm'' gives a 1D harmonic oscillator potential. Other options
+should be clear from their description.
 \item[-o:] Is followed in the command line argument list by a string of
 comma separated values needed to initialize the potential parameters.
 {}``gas'' requires no parameters, {}``harm'' requires a spring constant,
@@ -1061,18 +997,47 @@ address {}``host\_address'' and on the port number {}``port''
 the following lines must be added to its input file:
 
 \begin{code}
-fix 1  all driver host_address port
+fix  1 all ipi host_address port
 \end{code}
 
 If instead a unix domain socket is required then the following
 modification is necessary:
 
 \begin{code}
-fix 1  all driver host_address port unix
+fix 1  all ipi host_address port unix
 \end{code}
 
 The rest of the input file should be the same as for a standard LAMMPS 
 calculation, as explained at \url{http://lammps.sandia.gov/index.html}.
+Note that LAMMPS must be compiled with the \texttt{yes-user-misc} option
+to communicate with i-PI. More information from \url{https://lammps.sandia.gov/doc/fix_ipi.html}.
+
+\subsubsection{FHI-aims}
+
+To use FHI-aims as the client code using an
+internet domain socket on the host
+address {}``host\_address'' and on the port number {}``port''
+the following lines must be added to its \texttt{control.in} file:
+
+\begin{code}
+use_pimd_wrapper host_address port
+\end{code}
+
+If instead a unix domain socket is required then the following
+modification is necessary:
+
+\begin{code}
+use_pimd_wrapper UNIX:host_address port
+\end{code}
+
+One can also communicate different electronic-structure quantities to i-PI
+through the {\small{\tt extra}} string from FHI-aims. In this case the following lines
+can be added to the {\tt control.in} file:
+
+\begin{code}
+communicate_pimd_wrapper option
+\end{code}
+where option can be, e.g., {\small {\tt dipole, hirshfeld, workfunction, friction}}.
 
 \subsection{Running on a HPC system}\label{hpc}
 
@@ -1622,6 +1587,12 @@ is created must correspond to the state of the system \emph{before}
 that step began. To this end, the state of the system is saved at the
 start of every step.
 
+In order to restart i-PI from a file named ``RESTART" one simply has to run
+
+\begin{code}
+> python i-pi RESTART 
+\end{code}
+
 
 \section{Distributed execution}
 
@@ -1974,6 +1945,8 @@ possibly followed by their attributes.
 \input{input_docs/phonons}
 \input{input_docs/geop}
 \input{input_docs/neb}
+\input{input_docs/t_ramp}
+\input{input_docs/p_ramp}
 \input{input_docs/initializer}
 \input{input_docs/init_file}
 \input{input_docs/init_pos}
@@ -3301,5 +3274,5 @@ equilibrated the system before starting and that the timestep is short
 enough to not introduce very large integration errors.
 \end{itemize}
 \bibliographystyle{elsarticle-num-names}
-\bibliography{mybib}
+\bibliography{mybib,morebib}
 \end{document}

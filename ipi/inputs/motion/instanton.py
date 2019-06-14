@@ -37,7 +37,7 @@ class InputInst(InputDictionary):
 
     """
     attribs = {"mode": (InputAttribute, {"dtype": str, "default": "rate",
-                                         "help": "Use the full or half of the ring polymer during the optimization",
+                                         "help": "Defines whether it is an instanton rate or instanton tunneling splitting calculaion",
                                          "options": ['rate', 'splitting']})}
 
     fields = {"tolerances": (InputDictionary, {"dtype": float,
@@ -81,7 +81,7 @@ class InputInst(InputDictionary):
                                                'H_x1_x1, H_x1_y1, H_x1_z1, H_x1_x2, H_x1_y2,H_x1_z2'
                                                'H_x2_x1, H_x2_y1, H_x2_z1, H_x2_x2, H_x2_y2,H_x2_z2' """}),
               "prefix": (InputValue, {"dtype": str,
-                                      "default": "OPT",
+                                      "default": "instanton",
                                       "help": "Prefix of the output files."}),
               "delta": (InputValue, {"dtype": float,
                                      "default": 0.1,
@@ -145,7 +145,7 @@ class InputInst(InputDictionary):
     dynamic = {}
 
     default_help = "A class for instanton calculations"
-    default_label = "INSTANTON"
+    default_label = "instanton"
 
     def store(self, geop):
         if geop == {}:

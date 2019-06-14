@@ -3,6 +3,7 @@ import numpy as np
 from ipi.utils.messages import verbosity, info
 from ipi.utils import units
 import ipi.utils.mathtools as mt
+import os.path, glob
 
 def banded_hessian(h, im, masses=True,shift=0.001):
     """Given Hessian in the reduced format (h), construct
@@ -143,9 +144,11 @@ def get_imvector(h, m3):
 
     return imv.reshape(1, imv.size)
 
-def print_instanton_geo(prefix, step, nbeads, natoms, names, q, pots, cell, shift):
+#def print_instanton_geo(prefix, step, nbeads, natoms, names, q, pots, cell, shift):
 
-    outfile = open(prefix + '_' + str(step) + '.ener', 'w')
+def print_instanton_geo(prefix, step, nbeads, natoms, names, q, pots, cell, shift, output_maker):
+
+    outfile = output_maker.get_output(prefix + '_' + str(step) + '.ener', 'w')
     print >> outfile, ('#Bead    Energy (eV)')
     for i in range(nbeads):
         print >> outfile, (str(i) + '     ' + str(units.unit_to_user('energy', "electronvolt", pots[i] - shift)))
@@ -156,10 +159,10 @@ def print_instanton_geo(prefix, step, nbeads, natoms, names, q, pots, cell, shif
     unit = 'angstrom'
     a, b, c, alpha, beta, gamma = mt.h2abc_deg(cell.h)
 
-    outfile = open(prefix + '_' + str(step) + '.xyz', 'w')
+    outfile = output_maker.get_output(prefix + '_' + str(step) + '.xyz', 'w')
     for i in range(nbeads):
         print >> outfile, natoms
-        # print >> outfile, (('CELL(abcABC): Traj: positions(%s) Bead: %i' %(unit,i) ))
+
         print >> outfile, ('CELL(abcABC):  %f %f %f %f %f %f cell{atomic_unit}  Traj: positions{%s}   Bead:       %i' % (a, b, c, alpha, beta, gamma, unit, i))
         # print >> outfile, ('#Potential (eV):   ' + str(units.unit_to_user('energy', "electronvolt", pots[i] - shift)))
 
@@ -171,10 +174,11 @@ def print_instanton_geo(prefix, step, nbeads, natoms, names, q, pots, cell, shif
 
     outfile.close()
 
-
-def print_instanton_hess(prefix, step, hessian):
+#def print_instanton_hess(prefix, step, hessian):
+def print_instanton_hess(prefix, step, hessian, output_maker):
 
     np.set_printoptions(precision=7, suppress=True, threshold=np.nan, linewidth=3000)
-    outfile = open(prefix + '.hess_' + str(step), 'w')
+#    outfile = open(prefix + '.hess_' + str(step), 'w')
+    outfile = output_maker.get_output(prefix + '.hess_' + str(step), 'w')
     np.savetxt(outfile, hessian.reshape(1, hessian.size))
     outfile.close()
