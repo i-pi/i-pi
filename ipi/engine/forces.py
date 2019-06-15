@@ -1011,9 +1011,9 @@ class Forces(dobject):
         self.queue_mts(level)
         rp = np.zeros((self.beads.nbeads, 3, 3), float)
         for index in range(len(self.mforces)):
-            if len(self.mforces[index].mts_weights) > level
+            if (len(self.mforces[index].mts_weights) > level
                 and self.mforces[index].mts_weights[level] != 0 and
-                self.mforces[index].weight != 0:
+                self.mforces[index].weight != 0):
                 dv = np.zeros((self.beads.nbeads, 3, 3), float)
                 for i in range(3):
                     for j in range(3):
