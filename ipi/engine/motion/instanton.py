@@ -587,17 +587,18 @@ class DummyOptimizer(dobject):
                      (np.linalg.norm(self.forces.f.flatten() - self.optarrays["old_f"].flatten()) <= 1e-08)) \
                 and (d_x_max <= tolerances["position"]):
 
-            print_instanton_geo(self.options["prefix"] + '_FINAL', step, self.im.dbeads.nbeads, self.im.dbeads.natoms, self.im.dbeads.names,
-                                self.im.dbeads.q, self.optarrays["old_u"], self.cell, self.optarrays["energy_shift"], self.output_maker)
-
+            print_instanton_geo(self.options["prefix"] + '_FINAL', step, self.beads.nbeads, self.beads.natoms,
+                                self.beads.names, self.beads.q, self.forces.pots, self.cell,
+                                self.optarrays["energy_shift"],self.output_maker)
             if self.options["hessian_final"] != 'true':
                 info("We are not going to compute the final hessian.", verbosity.low)
                 info("Warning, The current hessian is not the real hessian is only an approximation .", verbosity.low)
 
             else:
                 info("We are going to compute the final hessian", verbosity.low)
-                get_hessian(self.optarrays["hessian"], self.gm, self.im.dbeads.q, self.output_maker)
-                print_instanton_hess(self.options["prefix"] + '_FINAL', step, self.hessian, self.output_maker)
+                active_hessian = get_hessian(self.gm, self.beads.q.copy(), self.beads.natoms, self.beads.nbeads,self.fixatoms)
+                self.optarrays["hessian"][:] = self.fix.get_full_vector(active_hessian, 2)
+                print_instanton_hess(self.options["prefix"] + '_FINAL', step, self.optarrays["hessian"], self.output_maker)
 
             return True
             # If we just exit here, the last step (including the last hessian) will not be in the RESTART file

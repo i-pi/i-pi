@@ -224,12 +224,13 @@ elif case == 'TS':
         print 'Overwriting energy shift with the provided values'
         V0 = V00 * eV2au
 elif case == 'instanton':
-    hessian = simulation.syslist[0].motion.hessian.copy()
-    mode = simulation.syslist[0].motion.mode
+    
+    hessian = simulation.syslist[0].motion.optarrays["hessian"].copy()
+    mode = simulation.syslist[0].motion.options["mode"]
     temp2 = simulation.syslist[0].ensemble.temp
-    pots = simulation.syslist[0].motion.old_u
-    grads = -simulation.syslist[0].motion.old_f
-    V0 = simulation.syslist[0].motion.energy_shift
+    pots = simulation.syslist[0].motion.optarrays["old_u"]
+    grads = -simulation.syslist[0].motion.optarrays["old_f"]
+    V0 = simulation.syslist[0].motion.optarrays["energy_shift"]
 
     if V00 != 0.0:
         print 'Overwriting energy shift with the provided values'
