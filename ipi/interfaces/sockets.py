@@ -163,7 +163,7 @@ class DriverSocket(socket.socket):
                 bpart = ""
                 bpart = self.recv(blen - bpos)
                 if len(bpart) == 0:
-                    raise socket.timeoout    # if this keeps returning no data, we are in trouble....
+                    raise socket.timeout    # if this keeps returning no data, we are in trouble....
                 self._buf[bpos:bpos + len(bpart)] = np.fromstring(bpart, np.byte)
             except socket.timeout:
                 #warning(" @SOCKET:   Timeout in recvall, trying again!", verbosity.low)
