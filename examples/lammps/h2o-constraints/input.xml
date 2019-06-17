@@ -1,0 +1,36 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potential{electronvolt}, pressure_cv{megapascal} ] </properties>
+    <trajectory filename='pos' stride='20'> positions </trajectory>
+    <checkpoint stride='200'/>
+  </output>
+  <total_steps> 1000 </total_steps>
+  <prng>
+    <seed>31415</seed>
+  </prng>
+  <ffsocket name='lammps' mode='unix'>
+    <address> lmp </address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='xyz'> init.xyz </file>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='lammps'> </force>
+    </forces>
+    <motion mode='constrained_dynamics'>
+      <constrained_dynamics mode='nve' splitting='baoab'>
+        <constrained_indices> [0,1] </constrained_indices>
+        <constrained_distances> [1.8897261] </constrained_distances>
+        <timestep units='femtosecond'> 0.5 </timestep>
+        <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+      </constrained_dynamics>
+    </motion>
+    <ensemble>
+      <temperature units='kelvin'> 300 </temperature>
+    </ensemble>
+  </system>
+</simulation>

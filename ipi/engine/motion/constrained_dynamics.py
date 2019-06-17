@@ -195,6 +195,73 @@ class ConstrainedDynamics(Motion):
         self.ensemble.time += self.dt # increments internal time
 
 
+class Constraint(dobject):
+    """ Constraint class for MD"""
+
+    def __init__(self):
+        """
+        Does nothing.
+        """
+        pass
+
+    def get_G(self):
+        """
+        Calculates the constraint.
+        """
+
+        r = np.zeros(len(self.constrained_distances))
+        for i in xrange(len(self.constrained_distances)):
+            c_atoms = self.constrained_indices[i]
+            c_dist = self.constrained_distances[i]
+            print c_atoms, self.constrained_indices
+            r[i] = np.sum((self.beads.q[0][c_atoms[0] * 3:c_atoms[0] * 3 + 3] - self.beads.q[0][c_atoms[1] * 3: c_atoms[1] * 3 + 3])**2) - c_dist**2
+        return r
+
+    def get_DG(self):
+        """
+        Calculates the Jacobian of the constraint.
+        """
+
+        r = np.zeros((len(self.constrained_distances), 3 * self.beads.natoms))
+        for i in xrange(len(self.constrained_distances)):
+          inst_position_vector = (self.beads.q[0][c_atoms[0] * 3:c_atoms[0] * 3 + 3] - self.beads.q[0][c_atoms[1] * 3: c_atoms[1] * 3 + 3])
+          r[i][c_atoms[0] * 3, c_atoms[0] * 3 + 3] = 2.0 * inst_position_vector
+          r[i][c_atoms[1] * 3, c_atoms[1] * 3 + 3] = 2.0 * inst_position_vector * -1.0
+        return r
+ 
+    def get_P(self):
+        """
+        Calculates the projection matrix.
+        """
+        pass
+
+    def bind(self, integrator):
+        """
+        Reference all the variables for simpler access
+        """
+
+        self.beads = integrator.beads
+
+        dself = dd(self)
+        dself.constrained_indices = depend_value(name="constrained_indices", func=lambda: integrator.constrained_indices.reshape((len(integrator.constrained_indices) / 2, 2)))
+        dself.constrained_distances = depend_value(name="constrained_distances", func=lambda: integrator.constrained_distances)
+        dself.G = depend_array(name="G", func=self.get_G, value=np.zeros(len(self.constrained_distances)), dependencies=[dself.beads.q, dself.constrained_indices, dself.constrained_distances])
+        dself.DG = depend_array(name="DG", func=self.get_DG, value=np.zeros((len(self.constrained_distances), 3 * self.beads.natoms)), dependencies=[self.G, dself.beads.q, dself.constrained_indices, dself.constrained_distances])
+
+
+    def step(self):
+        """
+        Dummy step.
+        """
+
+        for i in xrange(len(self.constrained_distances)):
+            c_atoms = self.constrained_indices[i]
+            c_dist = self.constrained_distances[i]
+            print "Constrained atoms : ", c_atoms
+            print "Current distance :",  np.linalg.norm(self.beads.q[0][c_atoms[0] * 3:c_atoms[0] * 3 + 3] - self.beads.q[0][c_atoms[1] * 3: c_atoms[1] * 3 + 3])
+            print "Target distance :", c_dist 
+
+
 class DummyIntegrator(dobject):
     """ No-op integrator for (PI)MD """
 
@@ -255,6 +322,10 @@ class DummyIntegrator(dobject):
         dpipe(dself.tdt, dd(self.barostat).tdt)
         dpipe(dself.tdt, dd(self.thermostat).dt)
 
+        # Defines the constraint.
+        self.constraint = Constraint()
+        self.constraint.bind(self)
+
         if motion.enstype == "sc" or motion.enstype == "scnpt":
             # coefficients to get the (baseline) trotter to sc conversion
             self.coeffsc = np.ones((self.beads.nbeads, 3 * self.beads.natoms), float)
@@ -276,6 +347,14 @@ class DummyIntegrator(dobject):
     def pconstraints(self):
         """Dummy centroid momentum step which does nothing."""
         pass
+
+    def constraint_step(self):
+        """
+        Dummy constraint step.
+        """
+
+        if len(self.constrained_distances) > 0:
+          self.constraint.step()
 
 
 class NVEIntegrator(DummyIntegrator):
@@ -349,6 +428,8 @@ class NVEIntegrator(DummyIntegrator):
 
     def step(self, step=None):
         """Does one simulation time step."""
+
+        self.constraint_step()
 
         self.B()
         self.A()
