@@ -21,7 +21,7 @@
          <force forcefield ="lmpserial1" > </force>
       </forces> 
       <motion mode="dynamics">
-         <dynamics mode="mts">
+         <dynamics mode="nvt">
             <timestep units="femtosecond"> 0.25 </timestep>
             <thermostat mode="langevin">
                 <tau units="femtosecond"> 100 </tau>

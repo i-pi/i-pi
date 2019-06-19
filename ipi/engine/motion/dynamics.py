@@ -104,7 +104,7 @@ class Dynamics(Motion):
         else:
             self.fixatoms = fixatoms
 
-    def bind(self, ens, beads, nm, cell, bforce, prng):
+    def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         """Binds ensemble beads, cell, bforce, and prng to the dynamics.
 
         This takes a beads object, a cell object, a forcefield object and a
@@ -124,7 +124,7 @@ class Dynamics(Motion):
                 generation.
         """
 
-        super(Dynamics, self).bind(ens, beads, nm, cell, bforce, prng)
+        super(Dynamics, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
 
         # Checks if the number of mts levels is equal to the dimensionality of the mts weights.
         if (len(self.nmts) != self.forces.nmtslevels):
@@ -190,7 +190,10 @@ class Dynamics(Motion):
         return self.ensemble.temp * self.beads.nbeads
 
     def step(self, step=None):
+        """ Advances the dynamics by one time step """
+
         self.integrator.step(step)
+        self.ensemble.time += self.dt # increments internal time
 
 
 class DummyIntegrator(dobject):
@@ -309,7 +312,7 @@ class NVEIntegrator(DummyIntegrator):
         connected to the centroid is chosen.
         """
 
-        if (self.fixcom):            
+        if (self.fixcom):
             na3 = self.beads.natoms * 3
             nb = self.beads.nbeads
             p = dstrip(self.beads.p)

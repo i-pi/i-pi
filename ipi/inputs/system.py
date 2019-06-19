@@ -119,15 +119,15 @@ class InputSystem(Input):
     fields = {
         "initialize": (InputInitializer, {"help": InputInitializer.default_help,
                                           "default": input_default(factory=Initializer)}),
-              "forces": (InputForces, {"help": InputForces.default_help}),
-              "ensemble": (InputEnsemble, {"help": InputEnsemble.default_help,
-                                           "default": input_default(factory=Ensemble, kwargs={'temp': 1.0})}),
-              "motion": (InputMotion, {"help": InputMotion.default_help, "default": input_default(factory=Motion)}),
-              "beads": (InputBeads, {"help": InputBeads.default_help,
-                                     "default": input_default(factory=Beads, kwargs={'natoms': 0, 'nbeads': 0})}),
-              "normal_modes": (InputNormalModes, {"help": InputNormalModes.default_help,
-                                                  "default": input_default(factory=NormalModes, kwargs={'mode': "rpmd"})}),
-              "cell": (InputCell, {"help": InputCell.default_help,
+        "forces": (InputForces, {"help": InputForces.default_help}),
+        "ensemble": (InputEnsemble, {"help": InputEnsemble.default_help,
+                                   "default": input_default(factory=Ensemble, kwargs={'temp': 1.0})}),
+        "motion": (InputMotion, {"help": InputMotion.default_help, "default": input_default(factory=Motion)}),
+        "beads": (InputBeads, {"help": InputBeads.default_help,
+                             "default": input_default(factory=Beads, kwargs={'natoms': 0, 'nbeads': 0})}),
+        "normal_modes": (InputNormalModes, {"help": InputNormalModes.default_help,
+                                          "default": input_default(factory=NormalModes, kwargs={'mode': "rpmd"})}),
+        "cell": (InputCell, {"help": InputCell.default_help,
                                    "default": input_default(factory=Cell)})
     }
 

@@ -78,15 +78,17 @@ class ReplicaExchange(Smotion):
 
         self.mode = 'remd'
 
-    def bind(self, syslist, prng):
+    def bind(self, syslist, prng, omaker):
 
-        super(ReplicaExchange, self).bind(syslist, prng)
+        super(ReplicaExchange, self).bind(syslist, prng, omaker)
 
         if self.repindex is None or len(self.repindex) == 0:
             self.repindex = np.asarray(range(len(self.syslist)))
         else:
             if len(self.syslist) != len(self.repindex):
                 raise ValueError("Size of replica index does not match number of systems replicas")
+
+        self.sf = self.output_maker.get_output(self.swapfile)
 
     def step(self, step=None):
         """Tries to exchange replica."""
@@ -178,10 +180,11 @@ class ReplicaExchange(Smotion):
                    # velocities have to be adjusted according to the new temperature
 
         if fxc:  # writes out the new status
-            with open(self.swapfile, "a") as sf:
-                sf.write("% 10d" % (step))
-                for i in self.repindex:
-                    sf.write(" % 5d" % (i))
-                sf.write("\n")
+            #with open(self.swapfile, "a") as sf:
+            self.sf.write("% 10d" % (step))
+            for i in self.repindex:
+                self.sf.write(" % 5d" % (i))
+            self.sf.write("\n")
+            self.sf.force_flush()
 
         info("# REMD step evaluated in %f (%f eval, %f swap) sec." % (time.time()-t_start, t_eval, t_swap), verbosity.debug)

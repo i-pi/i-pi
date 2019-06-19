@@ -1,4 +1,4 @@
-<simulation mode="static" verbosity="medium">
+<simulation mode="static" verbosity="high">
     <output prefix='inst'>
         <properties stride='1' filename='out'>  [ step, potential{electronvolt}] </properties>
    </output>

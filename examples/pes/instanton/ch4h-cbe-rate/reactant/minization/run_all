@@ -1,8 +1,5 @@
-
- rm /tmp/ipi_localhost
- 
- ipi=/home/litman/Yair/Instanton/I-PI-mc/i-pi-mc/bin/i-pi
- driver=/home/litman/Yair/Instanton/I-PI-mc/i-pi-mc/drivers/driver.x
+ ipi=../../../../../../bin/i-pi
+ driver=../../../../../../drivers/driver.x
  
  file='input.xml'
 

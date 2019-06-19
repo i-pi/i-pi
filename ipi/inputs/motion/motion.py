@@ -59,7 +59,7 @@ class InputMotionBase(Input):
     """
 
     attribs = {"mode": (InputAttribute, {"dtype": str,
-                                         "help": "How atoms should be moved at each step in the simulatio. 'replay' means that a simulation is restarted from a previous simulation.",
+                                         "help": "How atoms should be moved at each step in the simulatio. 'replay' means that a simulation is replayed from trajectories provided to i-PI.",
                                          "options": ['vibrations', 'minimize', 'replay', 'neb', 'dynamics', 't_ramp', 'p_ramp', 'alchemy', 'instanton', 'dummy']})}
 
     fields = {"fixcom": (InputValue, {"dtype": bool,
