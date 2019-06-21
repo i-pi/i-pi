@@ -41,9 +41,9 @@ class InputConstrainedDynamics(InputDictionary):
                                   "help": "The ensemble that will be sampled during the simulation. ",
                                   "options": ['nve', 'nvt']}),
         "splitting": (InputAttribute, {"dtype": str,
-                                       "default": 'obabo',
-                                       "help": "The Louiville splitting used for sampling the target ensemble. ",
-                                       "options": ['obabo', 'baoab']})
+                                       "default": 'baoab',
+                                       "help": "The integrator used for sampling the target ensemble. ",
+                      "options": ['rattle','geodesic','gobabo', 'baoab']})
     }
 
     fields = {
@@ -58,6 +58,12 @@ class InputConstrainedDynamics(InputDictionary):
         "nmts": (InputArray, {"dtype": int,
                               "default": np.zeros(0, int),
                               "help": "Number of iterations for each MTS level (including the outer loop, that should in most cases have just one iteration)."}),
+        "nsteps_o": (InputValue, {"dtype": int,
+                                "default": 1,
+                                "help": "The number of sub steps used in the evolution of the thermostat (used in function step_Oc). Relevant only for GLE thermostats" }),
+        "nsteps_geo": (InputValue, {"dtype": int,
+                                           "default": 1,
+                                           "help": "The number of sub steps used in the evolution of the geodesic flow (used in function step_Ag)." }),
         "constrained_indices": (InputArray, {"dtype": int,
                               "default": np.zeros(0, int),
                               "help": "List of the form [i,j] containing the list of atoms indices that are to be constrained."}),

@@ -22,12 +22,20 @@
     </forces>
     <motion mode='constrained_dynamics'>
       <constrained_dynamics mode='nvt' splitting='baoab'>
-        <nsteps_geo> 5 </nsteps_geo>
+        <nsteps_geo> 1 </nsteps_geo>
+        <nsteps_o> 10 </nsteps_o>
         <constrained_indices> [0,1,0,2] </constrained_indices>
         <constrained_distances> [1.8897261,1.8897261] </constrained_distances>
-        <timestep units='femtosecond'> 2.0 </timestep>
-        <thermostat mode='langevin'>
-            <tau units='femtosecond'> 100 </tau>
+        <timestep units='femtosecond'> 0.5 </timestep>
+        <thermostat mode='gle'>
+            <A shape='(5,5)'>
+                [   4.498098855452e-3,    6.594810718477e-6,    2.788030342989e-4,   -8.808265165053e-4,    5.605371493938e-3,
+                -6.726802271646e-6,    2.079069559861e-9,    1.746169548818e-5,   -4.800164465960e-6,    1.025830873432e-5,
+                -3.586191452340e-4,   -1.746169548818e-5,    3.287481976399e-5,    1.245698716799e-4,   -2.417657162526e-4,
+                -2.508912543565e-4,    4.800164465960e-6,   -1.245698716799e-4,    6.449207766266e-4,    2.783583234046e-4,
+                5.273493443008e-3,   -1.025830873432e-5,    2.417657162526e-4,   -2.783583234046e-4,    7.488477456790e-3
+                ]
+            </A>
         </thermostat>
       </constrained_dynamics>
     </motion>
