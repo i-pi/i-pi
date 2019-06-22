@@ -7,12 +7,34 @@
 import numpy as np
 import ipi.engine.thermostats
 import ipi.engine.barostats
-from ipi.utils.inputvalue import InputDictionary, InputAttribute, InputValue, InputArray, input_default
+from ipi.utils.inputvalue import InputDictionary, InputAttribute, InputValue, InputArray, Input, input_default
 from ipi.inputs.barostats import InputBaro
 from ipi.inputs.thermostats import InputThermo
 
+__all__ = ['InputConstrainedDynamics', 'InputConstraint']
 
-__all__ = ['InputConstrainedDynamics']
+class InputConstraint(Input):
+    """
+        An input class to define constraints. ATM built just for bonds,
+        but general enough to be extended.
+    """
+    attribs = {
+        "mode": (InputAttribute, {"dtype": str,
+                                  "default": 'distance',
+                                  "help": "The type onf constraint. ",
+                                  "options": ['distance']})
+              }
+
+    fields = {
+        "atoms": (InputArray, {"dtype": int,
+                              "default": np.zeros(0, int),
+                              "help": "List of atoms indices that are to be constrained."}),
+        "distance": (InputValue, {"dtype": float,
+                              "default": 0,
+                              "dimension": "length",
+                              "help": "Constrained distance."})
+    }
+
 
 
 class InputConstrainedDynamics(InputDictionary):
@@ -72,7 +94,8 @@ class InputConstrainedDynamics(InputDictionary):
                               "help": "List of the form [rij] containing the bond distances."})
     }
 
-    dynamic = {}
+    dynamic = {"constraint" : (InputConstraint, {"help" : "Define a constraint to be applied onto atoms"})
+              }
 
     default_help = "Holds all the information for the MD integrator, such as timestep, the thermostats and barostats that control it."
     default_label = "CONSTRAINED_DYNAMICS"

@@ -22,9 +22,6 @@ from ipi.utils.depend import *
 from ipi.engine.thermostats import Thermostat
 from ipi.engine.barostats import Barostat
 
-
-#__all__ = ['Dynamics', 'NVEIntegrator', 'NVTIntegrator', 'NPTIntegrator', 'NSTIntegrator', 'SCIntegrator`']
-
 class ConstrainedDynamics(Dynamics):
 
     """self (path integral) molecular dynamics class.
@@ -52,7 +49,7 @@ class ConstrainedDynamics(Dynamics):
     """
 
     def __init__(self, timestep, mode="nve", splitting="obabo", thermostat=None, barostat=None, fixcom=False, fixatoms=None, nmts=None, nsteps_geo=1, nsteps_o = 1, constrained_indices=None, constrained_distances=None):
- 
+
         """Initialises a "dynamics" motion object.
 
         Args:
@@ -63,35 +60,33 @@ class ConstrainedDynamics(Dynamics):
 
         super(Dynamics, self).__init__(fixcom=fixcom, fixatoms=fixatoms)
         dd(self).dt = depend_value(name='dt', value=timestep)
-        
+
         if thermostat is None:
             self.thermostat = Thermostat()
         else:
             self.thermostat = thermostat
-        
+
         if nmts is None or len(nmts) == 0:
             dd(self).nmts = depend_array(name="nmts", value=np.asarray([1], int))
         else:
             dd(self).nmts = depend_array(name="nmts", value=np.asarray(nmts, int))
-        
+
         if barostat is None:
             self.barostat = Barostat()
         else:
             self.barostat = barostat
         self.enstype = mode
         if self.enstype == "nve":
-            #print("##################### bla bla nve #####################")
             self.integrator = NVEIntegrator_constraint()
-            #print self.integrator.__class__.__name__
         elif self.enstype == "nvt":
             self.integrator = NVTIntegrator_constraint()
         else:
             ValueError("No valid ensemble provided")
-        
-    
+
+
         # splitting mode for the integrators
         dd(self).splitting = depend_value(name='splitting', value=splitting)
-        
+
         # constraints
         self.fixcom = fixcom
         if fixatoms is None:
@@ -129,19 +124,19 @@ class ConstrainedDynamics(Dynamics):
         """
 
         super(ConstrainedDynamics, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
-        
+
         if len(self.nmts) > 1 or (len(self.nmts) == 1 and self.nmts[0] != 1):
             raise ValueError("MTS with constrains has not been implemented.")
 
 class Constraint(dobject):
     """ Constraint class for MD"""
-    
+
     def __init__(self, ncons):
         self.ncons = ncons
-    
+
     def gfunc(self):
         pass
-    
+
     def Dgfunc(self):
         """
         Calculates the Jacobian of the constraint.
@@ -152,11 +147,11 @@ class RigidBondConstraint(Constraint):
     """ Constraint class for MD"""
 
     def __init__(self,constrained_indices,constrained_distances):
-    
+
         super(RigidBondConstraint,self).__init__(ncons=len(constrained_distances))
         self.constrained_indices = constrained_indices.reshape([self.ncons, 2])
         self.constrained_distances = constrained_distances
-    
+
         #print "RigidBondConstraint bla bla"
 
     def gfunc(self, beads):
@@ -201,9 +196,9 @@ class RigidBondConstraint(Constraint):
         Reference all the variables for simpler access
         '''
         super(RigidBondConstraint, self).bind(integrator)
-        
+
         dself = dd(self)
-        
+
 
         dself.constrained_indices = depend_value(name="constrained_indices", func=lambda: integrator.constrained_indices.reshape((len(integrator.constrained_indices) / 2, 2)))
         dself.constrained_distances = depend_value(name="constrained_distances", func=lambda: integrator.constrained_distances)
@@ -211,7 +206,7 @@ class RigidBondConstraint(Constraint):
         dself.DG = depend_array(name="DG", func=self.Dgfunc, value=np.zeros((len(self.constrained_distances), 3 * self.beads.natoms)), dependencies=[dself.G, dself.beads.q, dself.constrained_indices, dself.constrained_distances])
         #MS: why not dself.G
     """
-    
+
     def step(self,beads):
         """
         Dummy step.
@@ -234,10 +229,10 @@ class ConstrainedIntegrator(DummyIntegrator):
         super(ConstrainedIntegrator,self).__init__()
         self.tol = tol
         self.maxit = maxit
-    
+
 
     def get_qdt(self):
-        return self.dt * 0.5 
+        return self.dt * 0.5
 
     def get_pdt(self):
         return np.array([self.dt * 0.5])
@@ -247,15 +242,15 @@ class ConstrainedIntegrator(DummyIntegrator):
         print("nsteps_o", self.nsteps_o)
         print("tdt", tdt)
         return super(ConstrainedIntegrator,self).get_tdt()/self.nsteps_o
-    
+
     def bind(self, motion):
         """ Reference all the variables for simpler access."""
         #print "************************** ConstrainedIntegrator bind ****************************"
         if len(motion.nmts) > 1 or motion.nmts[0] != 1 :
              raise ValueError("Constrained integrator does not support multiple time stepping")
-        
+
         super(ConstrainedIntegrator,self).bind(motion)
-        
+
         self.constraint = motion.constraint # constraint is not a dependent obejct, thus not updated during simulation
         self.ciu = False
 
@@ -292,7 +287,7 @@ class ConstrainedIntegrator(DummyIntegrator):
         """
         if stepsize is None:
             stepsize = self.dt
-        
+
         if not self.ciu:
             self.update_constraints(self.beads)
 
@@ -302,14 +297,14 @@ class ConstrainedIntegrator(DummyIntegrator):
     """
     def proj_cotangent(self, beads):
         pass
-    
+
     def proj_manifold(self, beads, stepsize=None):
         pass
     """
     def proj_cotangent(self, beads):
         if not self.ciu:
             self.update_constraints(beads)
-            
+
         if self.constraint.ncons > 0:
             b = np.dot(self.Dg, self.beads.p[0]/beads.m3[0])
             x = np.linalg.solve(np.transpose(self.GramChol),np.linalg.solve(self.GramChol, b))
@@ -322,14 +317,14 @@ class ConstrainedIntegrator(DummyIntegrator):
         '''
         if stepsize is None:
             stepsize = self.dt
-        
+
         self.g = self.constraint.gfunc(beads)
         #print("beads.q[0] before",  beads.q[0])
         #print("g :", self.g)
         #print("Dg :",self.Dg)
         #print("Gram :",self.Gram)
         #print("GramChol :",self.GramChol)
-        
+
         i = 0
         if self.constraint.ncons > 0:
             while (i < self.maxit and self.tol <= np.linalg.norm(self.g)):
@@ -337,7 +332,7 @@ class ConstrainedIntegrator(DummyIntegrator):
                 #print("proj_manifold error", np.linalg.norm(self.g))
                 #print(self.GramChol)
                 #print("g, i :", self.g, i)
-                
+
                 self.constraint.step(beads)
                 self.g = self.constraint.gfunc(beads)
                 dlambda = np.linalg.solve(np.transpose(self.GramChol),np.linalg.solve(self.GramChol, self.g))
@@ -361,7 +356,7 @@ class ConstrainedIntegrator(DummyIntegrator):
     def step_Ag(self, stepsize=None, Nsteps=None):
         '''
         Geodesic flow
-        
+
         When called:
         -self.d_params is  assumed to satisfy contraint
         '''
@@ -369,20 +364,20 @@ class ConstrainedIntegrator(DummyIntegrator):
             stepsize = self.qdt
         if Nsteps is None:
             Nsteps = self.n_geoflow
-                        
+
         substepsize = (1.0 * stepsize)/Nsteps
-                        
+
         '''
         Resolve momentum constraint and update Gram matrix if neccesary
         '''
-        
-        
+
+
         if not self.ciu:
             self.update_constraints(self.beads)
         self.proj_cotangent(self.beads)
 
         for i in range(Nsteps):
-            
+
             self.step_A(substepsize)
             self.update_constraints(self.beads)
             self.proj_manifold(self.beads, substepsize)
@@ -392,16 +387,16 @@ class ConstrainedIntegrator(DummyIntegrator):
     def step(self, step=None):
         """Dummy simulation time step which does nothing."""
         pass
-    
+
     def pconstraints(self):
         """Dummy centroid momentum step which does nothing."""
         pass
-    
+
     def constraint_step(self):
         """
             Dummy constraint step.
             """
-        
+
         if len(self.constrained_distances) > 0:
             self.constraint.step()
 
@@ -432,11 +427,11 @@ class NVEIntegrator_constraint(ConstrainedIntegrator):
 
     def step(self, step=None):
         """Does one simulation time step."""
-        
+
         #print("NVE step called")
         if self.splitting == "rattle":
              #self.constraint_step()
-            
+
             self.step_BAc(self.dt)
             self.step_Bc(.5 * self.dt)
             #print("rattle")
@@ -446,9 +441,9 @@ class NVEIntegrator_constraint(ConstrainedIntegrator):
             self.step_Ag(stepsize=self.dt, Nsteps=self.nsteps_geo)
             self.step_Bc(.5 * self.dt)
             #print("geodesic")
-    
-    
-    
+
+
+
     def pconstraints(self):
         """This removes the centre of mass contribution to the kinetic energy.
 
@@ -506,13 +501,13 @@ class NVTIntegrator_constraint(NVEIntegrator_constraint):
         #print "**************** NVEIntegrator_constraint init **************"
         super(NVTIntegrator_constraint,self).__init__()
     #print("~~~~~~~~~~~~~~~~~~~~~~ tau = ", self.thermostat.tau)
-    
+
     def step_Oc(self):
 
         for i in xrange(self.nsteps_o):
             self.thermostat.step()
             self.proj_cotangent(self.beads)
-        
+
     def step(self, step=None):
         """Does one simulation time step."""
         #print("~~~~~~~~~~~~~~~~~~~~~~ tau = ", self.thermostat.tau)

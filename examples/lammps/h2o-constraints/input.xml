@@ -29,6 +29,9 @@
         <thermostat mode='langevin'>
             <tau units='femtosecond'> 100 </tau>
         </thermostat>
+        <constraint mode="distance"> 
+            <atoms> [0, 1] </atoms> <distance> 1.8897261 </distance>
+        </constraint>
       </constrained_dynamics>
     </motion>
     <ensemble>
