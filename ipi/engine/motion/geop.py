@@ -422,7 +422,7 @@ class BFGSTRMOptimizer(DummyOptimizer):
     """ BFGSTRM Minimization with Trust Radius Method.  """
 
     def bind(self, geop):
-
+        # call bind function from DummyOptimizer
         super(BFGSTRMOptimizer, self).bind(geop)
 
         if geop.hessian.size != (self.beads.q.size * self.beads.q.size):
@@ -430,6 +430,10 @@ class BFGSTRMOptimizer(DummyOptimizer):
                 geop.hessian = np.eye(self.beads.q.size, self.beads.q.size, 0, float)
             else:
                 raise ValueError("Hessian size does not match system size")
+
+        if len(self.fixatoms) > 0:
+            if len(self.fixatoms) == len(self.beads[0]):
+                softexit.trigger("WARNING: all atoms are fixed, geometry won't change. Exiting simulation")
 
         self.hessian = geop.hessian
         if geop.tr.size == 0:
@@ -461,9 +465,23 @@ class BFGSTRMOptimizer(DummyOptimizer):
                 dqb[self.fixatoms * 3 + 1] = 0.0
                 dqb[self.fixatoms * 3 + 2] = 0.0
 
-        # Make one step. ( A step is finished when a movement is accepted)
-        BFGSTRM(self.old_x, self.old_u, self.old_f, self.hessian, self.tr,
-                self.gm, self.big_step)
+            # Do one iteration of BFGSTRM
+            # The Hessian is updated inside.
+            # Everything passed inside BFGSTRM() in masked form, including the Hessian
+
+            masked_hessian = (self.hessian[:, self.gm.fixatoms_mask])[self.gm.fixatoms_mask, :]
+            BFGSTRM(self.old_x[:, self.gm.fixatoms_mask],
+                    self.old_u,
+                    self.old_f[:, self.gm.fixatoms_mask],
+                    masked_hessian,
+                    self.tr,
+                    self.gm,
+                    self.big_step)
+            (self.hessian[:, self.gm.fixatoms_mask])[self.gm.fixatoms_mask, :] = masked_hessian
+        else:
+            # Make one step. ( A step is finished when a movement is accepted)
+            BFGSTRM(self.old_x, self.old_u, self.old_f, self.hessian, self.tr,
+                    self.gm, self.big_step)
 
         info("   Number of force calls: %d" % (self.gm.fcount)); self.gm.fcount = 0
         # Update positions and forces
@@ -489,6 +507,10 @@ class LBFGSOptimizer(DummyOptimizer):
         self.gm.bind(self)
         self.big_step = geop.big_step
         self.ls_options = geop.ls_options
+
+        if len(self.fixatoms) > 0:
+            softexit.trigger("The optimization algorithm with fixatoms is not implemented for LBFGS. "
+                             "We stop here. Comment this line and continue only if you know what you are doing.")
 
         if geop.qlist.size != (self.corrections * self.beads.q.size):
             if geop.qlist.size == 0:
@@ -581,11 +603,11 @@ class SDOptimizer(DummyOptimizer):
         self.old_f[:] = self.forces.f
 
         # Check for fixatoms
-        # if len(self.fixatoms) > 0:
-        #     for dqb in self.old_f:
-        #         dqb[self.fixatoms * 3] = 0.0
-        #         dqb[self.fixatoms * 3 + 1] = 0.0
-        #         dqb[self.fixatoms * 3 + 2] = 0.0
+        if len(self.fixatoms) > 0:
+            for dqb in self.old_f:
+                dqb[self.fixatoms * 3] = 0.0
+                dqb[self.fixatoms * 3 + 1] = 0.0
+                dqb[self.fixatoms * 3 + 2] = 0.0
 
         dq1 = dstrip(self.old_f)
 
@@ -677,11 +699,11 @@ class CGOptimizer(DummyOptimizer):
         self.d[:] = dq1
         self.old_f[:] = gradf1
 
-        # if len(self.fixatoms) > 0:
-        #     for dqb in dq1_unit:
-        #         dqb[self.fixatoms * 3] = 0.0
-        #         dqb[self.fixatoms * 3 + 1] = 0.0
-        #         dqb[self.fixatoms * 3 + 2] = 0.0
+        if len(self.fixatoms) > 0:
+            for dqb in dq1_unit:
+                dqb[self.fixatoms * 3] = 0.0
+                dqb[self.fixatoms * 3 + 1] = 0.0
+                dqb[self.fixatoms * 3 + 2] = 0.0
 
         self.lm.set_dir(dstrip(self.beads.q), dq1_unit)
 

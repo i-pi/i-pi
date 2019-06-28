@@ -1,0 +1,11 @@
+#=======================================================
+# FHI-aims file: ./geometry.in
+# Created using the Atomic Simulation Environment (ASE)
+# Thu Jun 20 20:32:53 2019
+#=======================================================
+lattice_vector 40.0  0.0  0.0
+lattice_vector 0.0  40.0  0.0
+lattice_vector 0.0  0.0  40.0
+atom    12.1246  28.093   22.6  O
+atom    12.5368  28.7561  22.8993  H
+atom    11.4948  28.5639  21.6568  H

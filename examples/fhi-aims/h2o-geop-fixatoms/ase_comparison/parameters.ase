@@ -1,0 +1,12 @@
+dict(charge_mix_param='0.02',
+     compute_forces=True,
+     k_grid=[1, 1, 1],
+     occupation_type='gaussian 0.1',
+     output_level='MD_light',
+     sc_accuracy_forces='1E-3',
+     sc_init_iter='200',
+     sc_iter_limit='200',
+     species_dir='/home/fidanyan/soft/fhi-aims.190214/species_defaults/light',
+     spin='none',
+     use_pimd_wrapper=('theobook-karen', 31415),
+     xc='pbe')

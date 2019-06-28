@@ -1,0 +1,1011 @@
+Accepting clients on INET port 31415
+Launch subprocess: mpirun -np 4 ipi.aims.190214.mpi.x > aims.out
+Awaiting client
+Accepted connection from ('127.0.0.1', 51990)
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver: calculate
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'NEEDINIT'
+Driver:  sendinit
+Driver:   sendmsg 'INIT'
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 1 bytes of <type 'numpy.int8'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'READY'
+Driver:  sendposdata
+Driver:   sendmsg 'POSDATA'
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:   send 4 bytes of <type 'numpy.int32'>
+Driver:   send 72 bytes of <type 'numpy.float64'>
+Driver:  status
+Driver:   sendmsg 'STATUS'
+Driver:   recvmsg u'HAVEDATA'
+Driver:  sendrecv_force
+Driver:   sendmsg 'GETFORCE'
+Driver:   recvmsg u'FORCEREADY'
+Driver:   recv 8 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 72 bytes of <type 'numpy.float64'>
+Driver:   recv 4 bytes of <type 'numpy.int32'>
