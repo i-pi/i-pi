@@ -695,7 +695,7 @@ class InterfaceSocket(object):
         tcheck += time.time()
 
         ttotal += time.time()
-        info("POLL TOTAL: %10.4f  Dispatch(N,t):  %4i, %10.4f   Check(N,t):   %4i, %10.4f" % (ttotal, ndispatch, tdispatch, nchecked, tcheck), verbosity.debug)
+        #info("POLL TOTAL: %10.4f  Dispatch(N,t):  %4i, %10.4f   Check(N,t):   %4i, %10.4f" % (ttotal, ndispatch, tdispatch, nchecked, tcheck), verbosity.debug)
 
         if nfinished >0 :
             # don't wait, just try again to distribute
