@@ -61,9 +61,9 @@ class GeopMotion(Motion):
                  invhessian_bfgs=np.eye(0, 0, 0, float),
                  hessian_trm=np.eye(0, 0, 0, float),
                  tr_trm=np.zeros(0, float),
-                 ls_options={"tolerance": 1, "iter": 100, "step": 1e-3, "adaptive": 1.0},
+                 ls_options={"tolerance": 1e-5, "iter": 100, "step": 1e-3, "adaptive": 1.0},
                  tolerances={"energy": 1e-7, "force": 1e-4, "position": 1e-4},
-                 corrections_lbfgs=5,
+                 corrections_lbfgs=6,   # changed to 6 because it's 6 in inputs/motion/geop.py, which overrides it
                  scale_lbfgs=1,
                  qlist_lbfgs=np.zeros(0, float),
                  glist_lbfgs=np.zeros(0, float)):
@@ -159,16 +159,14 @@ class LineMapper(object):
         self.dcell = dumop.cell.copy()
         self.dforces = dumop.forces.copy(self.dbeads, self.dcell)
 
-        # self.fixatoms_mask_short = np.ones(dumop.beads.natoms, dtype=bool)  # Mask to exclude fixed atoms from N-arrays
         self.fixatoms_mask = np.ones(3 * dumop.beads.natoms, dtype=bool)    # Mask to exclude fixed atoms from 3N-arrays
         if len(dumop.fixatoms) > 0:
-            # self.fixatoms_mask_short[dumop.fixatoms] = 0
             self.fixatoms_mask[3 * dumop.fixatoms] = 0
             self.fixatoms_mask[3 * dumop.fixatoms + 1] = 0
             self.fixatoms_mask[3 * dumop.fixatoms + 2] = 0
 
     def set_dir(self, x0, mdir):
-        self.x0 = x0.copy()         # I keep this as is, because x0 is used outside the mapper.
+        self.x0 = x0.copy()
 
         # exclude fixed degrees of freedom and renormalize direction vector to unit length:
         tmp3 = mdir.copy()[:, self.fixatoms_mask]
@@ -208,10 +206,8 @@ class GradientMapper(object):
         self.dcell = dumop.cell.copy()
         self.dforces = dumop.forces.copy(self.dbeads, self.dcell)
 
-        # self.fixatoms_mask_short = np.ones(dumop.beads.natoms, dtype=bool)  # Mask to exclude fixed atoms from N-arrays
         self.fixatoms_mask = np.ones(3 * dumop.beads.natoms, dtype=bool)    # Mask to exclude fixed atoms from 3N-arrays
         if len(dumop.fixatoms) > 0:
-            # self.fixatoms_mask_short[dumop.fixatoms] = 0
             self.fixatoms_mask[3 * dumop.fixatoms] = 0
             self.fixatoms_mask[3 * dumop.fixatoms + 1] = 0
             self.fixatoms_mask[3 * dumop.fixatoms + 2] = 0
@@ -388,7 +384,7 @@ class BFGSOptimizer(DummyOptimizer):
             # Everything passed inside BFGS() in masked form, including the invhessian
 
             masked_d = self.d[:, self.gm.fixatoms_mask]
-            masked_invhessian = (self.invhessian[:, self.gm.fixatoms_mask])[self.gm.fixatoms_mask, :]
+            masked_invhessian = self.invhessian[np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)]
             BFGS(self.old_x[:, self.gm.fixatoms_mask],
                  masked_d,
                  self.gm,
@@ -397,8 +393,9 @@ class BFGSOptimizer(DummyOptimizer):
                  self.big_step,
                  self.ls_options["tolerance"] * self.tolerances["energy"],
                  self.ls_options["iter"])
+            # Restore dimensionality of d and invhessian
             self.d[:, self.gm.fixatoms_mask] = masked_d
-            (self.invhessian[:, self.gm.fixatoms_mask])[self.gm.fixatoms_mask, :] = masked_invhessian
+            self.invhessian[np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)] = masked_invhessian
 
         else:
             fdf0 = (self.old_u, -self.old_f)
@@ -469,7 +466,7 @@ class BFGSTRMOptimizer(DummyOptimizer):
             # The Hessian is updated inside.
             # Everything passed inside BFGSTRM() in masked form, including the Hessian
 
-            masked_hessian = (self.hessian[:, self.gm.fixatoms_mask])[self.gm.fixatoms_mask, :]
+            masked_hessian = self.hessian[np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)]
             BFGSTRM(self.old_x[:, self.gm.fixatoms_mask],
                     self.old_u,
                     self.old_f[:, self.gm.fixatoms_mask],
@@ -477,7 +474,8 @@ class BFGSTRMOptimizer(DummyOptimizer):
                     self.tr,
                     self.gm,
                     self.big_step)
-            (self.hessian[:, self.gm.fixatoms_mask])[self.gm.fixatoms_mask, :] = masked_hessian
+            # Restore dimensionality of the hessian
+            self.hessian[np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)] = masked_hessian
         else:
             # Make one step. ( A step is finished when a movement is accepted)
             BFGSTRM(self.old_x, self.old_u, self.old_f, self.hessian, self.tr,
@@ -523,6 +521,10 @@ class LBFGSOptimizer(DummyOptimizer):
             else:
                 raise ValueError("qlist size does not match system size")
 
+        if len(self.fixatoms) > 0:
+            if len(self.fixatoms) == len(self.beads[0]):
+                softexit.trigger("WARNING: all atoms are fixed, geometry won't change. Exiting simulation")
+
         self.qlist = geop.qlist
         self.glist = geop.glist
 
@@ -555,12 +557,42 @@ class LBFGSOptimizer(DummyOptimizer):
                 dqb[self.fixatoms * 3 + 1] = 0.0
                 dqb[self.fixatoms * 3 + 2] = 0.0
 
-        fdf0 = (self.old_u, -self.old_f)
+            # Reduce the dimensionality
+            masked_old_x = self.old_x[:, self.gm.fixatoms_mask]
+            masked_d = self.d[:, self.gm.fixatoms_mask]
+            # d should have unit length
+            masked_d = masked_d / np.sqrt(np.dot(masked_d.flatten(), masked_d.flatten()))
+            # self.gm is reduced inside its __init__() and __call__() functions
+            masked_qlist = self.qlist[:, self.gm.fixatoms_mask]    # The shape is just 3N
+            masked_glist = self.glist[:, self.gm.fixatoms_mask]    #
+            fdf0 = (self.old_u, -self.old_f[:, self.gm.fixatoms_mask])
 
-        # We update everything  within L_BFGS (and all other calls).
-        L_BFGS(self.old_x, self.d, self.gm, self.qlist, self.glist,
-               fdf0, self.big_step, self.ls_options["tolerance"] * self.tolerances["energy"],
-               self.ls_options["iter"], self.corrections, self.scale, step)
+            # We update everything within L_BFGS (and all other calls).
+            L_BFGS(masked_old_x,
+                   masked_d,
+                   self.gm,
+                   masked_qlist,
+                   masked_glist,
+                   fdf0,
+                   self.big_step,
+                   self.ls_options["tolerance"] * self.tolerances["energy"],
+                   self.ls_options["iter"],
+                   self.corrections,
+                   self.scale,
+                   step)
+            # Restore the dimensionality
+            self.d[:, self.gm.fixatoms_mask] = masked_d
+            self.d /= np.sqrt(np.dot(self.d.flatten(), self.d.flatten()))
+            self.qlist[:, self.gm.fixatoms_mask] = masked_qlist
+            self.glist[:, self.gm.fixatoms_mask] = masked_glist
+
+        else:
+            fdf0 = (self.old_u, -self.old_f)
+
+            # We update everything  within L_BFGS (and all other calls).
+            L_BFGS(self.old_x, self.d, self.gm, self.qlist, self.glist,
+                   fdf0, self.big_step, self.ls_options["tolerance"] * self.tolerances["energy"],
+                   self.ls_options["iter"], self.corrections, self.scale, step)
 
         info("   Number of force calls: %d" % (self.gm.fcount)); self.gm.fcount = 0
 
