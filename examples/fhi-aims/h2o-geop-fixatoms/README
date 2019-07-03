@@ -28,7 +28,7 @@ All optimizers pass this test successfully and give the same energies and struct
 But CG and SD have HUGE problems with convergence. It is unrelated to fixatoms.
 
 #       Energy-0-fixed  Energy-1-fixed  Energy-2-fixed  Force calls total   aims (re)initializations
-BFGS      -2078.496560    -2078.496543    -2078.446832                 35                         38
-BFGSTRM   -2078.496559    -2078.496542    -2078.446833                 40                         43
+BFGS      -2078.496559    -2078.496548    -2078.446833                 28                         31
+BFGSTRM   -2078.496560    -2078.496545    -2078.446833                 30                         33
 CG        -2078.496558    -2078.496549    -2078.446834                479                        482
 SD        -2078.496556    -2078.496546    -2078.446615               1196                       1199 (I stopped at this point)
