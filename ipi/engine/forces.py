@@ -738,6 +738,7 @@ class Forces(dobject):
                 dfkbref = dd(mreff._forces[b])
                 dfkbself = dd(mself._forces[b])
                 dfkbself.ufvx.set(deepcopy(dfkbref.ufvx._value), manual=False)
+                dfkbself.ufvx.taint(taintme=False)
 
     def run(self):
         """Makes the socket start looking for driver codes.
