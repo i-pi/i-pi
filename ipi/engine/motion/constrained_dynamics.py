@@ -135,13 +135,45 @@ class Constraint(dobject):
         self.ncons = ncons
 
     def gfunc(self):
-        pass
+        raise NotImplementedError()
 
     def Dgfunc(self):
         """
         Calculates the Jacobian of the constraint.
         """
-        pass
+        raise NotImplementedError()
+
+class ConstraintList(Constraint):
+    """ Constraint class for MD"""
+    
+    def __init__(self, constraint_list):
+        self.constraint_list = constraint_list
+        self.ncons = sum([constr.ncons for constr in constraint_list])
+    
+    
+    
+    def gfunc(self, beads)
+        """
+        Compute the constraint function.
+        """
+        r = np.zeros(self.ncons)
+        si = 0
+        for constr in constraint_list:
+            r[si:si+constr.ncons] = constr.gfunc(beads)
+            si += constr.ncons
+        return r
+    
+    def Dgfunc(self, beads):
+        """
+        Compute the Jacobian of the constraint function.
+        """
+        r = np.zeros((self.ncons, 3 * beads.natoms))
+        for constr in constraint_list:
+            r[si:si+constr.ncons,:] = constr.Gfunc(beads)
+            si += constr.ncons
+        return r
+
+
 
 class RigidBondConstraint(Constraint):
     """ Constraint class for MD"""
@@ -256,6 +288,7 @@ class ConstrainedIntegrator(DummyIntegrator):
 
         dd(self).nsteps_geo = depend_value(name="nsteps_geo", func=lambda: motion.nsteps_geo)
         dd(self).nsteps_o = depend_value(name="nsteps_o", func=lambda: motion.nsteps_o)
+    #print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Number of constraints: ", self.constraint.ncons)
 
     def update_constraints(self, beads):
         self.Dg = self.constraint.Dgfunc(beads)
@@ -385,8 +418,8 @@ class ConstrainedIntegrator(DummyIntegrator):
 
 
     def step(self, step=None):
-        """Dummy simulation time step which does nothing."""
-        pass
+        """Dummy simulation time step which raises an error if called."""
+        raise NotImplementedError()
 
     def pconstraints(self):
         """Dummy centroid momentum step which does nothing."""
@@ -399,6 +432,7 @@ class ConstrainedIntegrator(DummyIntegrator):
 
         if len(self.constrained_distances) > 0:
             self.constraint.step()
+
 
 class NVEIntegrator_constraint(ConstrainedIntegrator):
 
