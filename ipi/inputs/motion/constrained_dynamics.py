@@ -65,7 +65,7 @@ class InputConstrainedDynamics(InputDictionary):
         "splitting": (InputAttribute, {"dtype": str,
                                        "default": 'baoab',
                                        "help": "The integrator used for sampling the target ensemble. ",
-                      "options": ['rattle','geodesic','gobabo', 'baoab']})
+                      "options": ['rattle','geodesic','obabo', 'baoab', 'respa','grespa','o-respa-o','o-grespa-o']})
     }
 
     fields = {
@@ -80,11 +80,11 @@ class InputConstrainedDynamics(InputDictionary):
         "nmts": (InputArray, {"dtype": int,
                               "default": np.zeros(0, int),
                               "help": "Number of iterations for each MTS level (including the outer loop, that should in most cases have just one iteration)."}),
-        "nsteps_o": (InputValue, {"dtype": int,
-                                "default": 1,
+        "nsteps_o": (InputArray, {"dtype": int,
+                                "default": np.zeros(0, int),
                                 "help": "The number of sub steps used in the evolution of the thermostat (used in function step_Oc). Relevant only for GLE thermostats" }),
-        "nsteps_geo": (InputValue, {"dtype": int,
-                                           "default": 1,
+        "nsteps_geo": (InputArray, {"dtype": int,
+                                           "default": np.zeros(0, int),
                                            "help": "The number of sub steps used in the evolution of the geodesic flow (used in function step_Ag)." }),
         "constrained_indices": (InputArray, {"dtype": int,
                               "default": np.zeros(0, int),
