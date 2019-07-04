@@ -87,6 +87,18 @@ class InputConstrainedDynamics(InputDictionary):
                                   "default": 1.0,
                                   "help": "The time step.",
                                   "dimension": "time"}),
+        "tolerance": (InputValue, { "dtype": float,
+                                    "default": .0001,
+                                    "help": "Tolerance value used in the Quasi-Newton iteration scheme."
+                                    }),
+        "maxit": (InputValue, { "dtype": int,
+                                    "default": 1000,
+                                    "help": "Maximum number of steps used in the Quasi-Newton iteration scheme."
+                                    }),
+        "norm_order": (InputValue, { "dtype": int,
+                                 "default": 2,
+                                 "help": "Order of norm used to determine termination of the Quasi-newton iteration."
+                                }),
         "nmts": (InputArray, {"dtype": int,
                               "default": np.zeros(0, int),
                               "help": "Number of iterations for each MTS level (including the outer loop, that should in most cases have just one iteration)."}),

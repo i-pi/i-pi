@@ -51,7 +51,7 @@ class ConstrainedDynamics(Dynamics):
     def __init__(self, timestep, mode="nve", splitting="obabo",
                 thermostat=None, barostat=None, fixcom=False, fixatoms=None,
                 nmts=None, nsteps_geo=1, nsteps_o = 1,
-                constraint_list=[]):
+                constraint_list=[], tolerance=.0001, maxit=1000, norm_order=2):
 
         """Initialises a "dynamics" motion object.
 
@@ -80,7 +80,6 @@ class ConstrainedDynamics(Dynamics):
             self.barostat = barostat
         self.enstype = mode
 
-        # MISSING: provide tolerance value etc..
 
         if nmts is None or len(nmts) == 0:
             if self.enstype == "nve":
@@ -112,8 +111,16 @@ class ConstrainedDynamics(Dynamics):
         if constraint_list is not None:
             self.constraints = ConstraintList(constraint_list)
 
+        # MS: should all these be initialized as dependent arrays/values.?
         self.nsteps_geo = nsteps_geo
         self.nsteps_o = nsteps_o
+        self.tolerance = tolerance
+        self.maxit = maxit
+        if norm_order == -1:
+            self.norm_order = float('inf')
+        else:
+            self.norm_order = norm_order
+
         #print "constrained_dynamics constructor"
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
@@ -167,8 +174,8 @@ class RigidBondConstraint(ConstraintBase):
     def __init__(self,constrained_indices,constrained_distances):
 
         super(RigidBondConstraint,self).__init__(ncons=len(constrained_distances))
-        print("@@@@@@@: ", self.ncons)
-        print("!!!!!!1: ", constrained_indices.shape)
+        #print("@@@@@@@: ", self.ncons)
+        #print("!!!!!!1: ", constrained_indices.shape)
         self.constrained_indices = constrained_indices.reshape([self.ncons, 2])
         self.constrained_distances = constrained_distances
 
@@ -227,17 +234,6 @@ class RigidBondConstraint(ConstraintBase):
         #MS: why not dself.G
     """
 
-    def step(self,beads):
-        """
-        Dummy step.
-        """
-
-        for i in xrange(len(self.constrained_distances)):
-            c_atoms = self.constrained_indices[i]
-            c_dist = self.constrained_distances[i]
-            #print "Constrained atoms : ", c_atoms
-            #print "Current distance :",  np.linalg.norm(beads.q[0][c_atoms[0] * 3:c_atoms[0] * 3 + 3] - beads.q[0][c_atoms[1] * 3: c_atoms[1] * 3 + 3])
-            #print "Target distance :", c_dist
 
 class ConstraintList(dobject):
     """ Constraint class for MD"""
@@ -264,19 +260,17 @@ class ConstraintList(dobject):
         r = np.zeros((self.ncons, 3 * beads.natoms))
         si = 0
         for constr in self.constraint_list:
-            r[si:si+constr.ncons,:] = constr.gfunc(beads)
+            r[si:si+constr.ncons,:] = constr.Dgfunc(beads)
             si += constr.ncons
         return r
 
 class ConstrainedIntegrator(DummyIntegrator):
     """ No-op integrator for (PI)MD """
 
-    def __init__(self, tol=0.00001, maxit=float('inf')):
+    def __init__(self):
         # Fix attribute input
         #print "**************** ConstrainedIntegrator init **************"
         super(ConstrainedIntegrator,self).__init__()
-        self.tol = tol
-        self.maxit = maxit
 
 
     def get_qdt(self):
@@ -307,8 +301,11 @@ class ConstrainedIntegrator(DummyIntegrator):
         else:
             dd(self).nsteps_o = depend_array(name="nsteps_o", value=np.asarray(motion.nsteps_o, int))
 
+        dd(self).tolerance = depend_value(name="tolerance", func=lambda: motion.tolerance)
+        dd(self).maxit = depend_value(name="maxit", func=lambda: motion.maxit)
+        dd(self).norm_order = depend_value(name="norm_order", func=lambda: motion.norm_order)
 
-    #print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Number of constraints: ", self.constraint.ncons)
+    #print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Number of constraints: ", self.constraints.ncons)
 
     def update_constraints(self, beads):
         self.Dg = self.constraints.Dgfunc(beads)
@@ -383,20 +380,19 @@ class ConstrainedIntegrator(DummyIntegrator):
 
         i = 0
         if self.constraints.ncons > 0:
-            while (i < self.maxit and self.tol <= np.linalg.norm(self.g)):
+            while (i < self.maxit and self.tolerance <= np.linalg.norm(self.g, ord=self.norm_order)):
                 #print("proj_manifold index", i)
                 #print("proj_manifold error", np.linalg.norm(self.g))
                 #print(self.GramChol)
                 #print("g, i :", self.g, i)
 
-                self.constraints.step(beads)
                 self.g = self.constraints.gfunc(beads)
                 dlambda = np.linalg.solve(np.transpose(self.GramChol),np.linalg.solve(self.GramChol, self.g))
                 #print("dlambda", dlambda)
                 delta = np.dot(np.transpose(self.Dg),dlambda)
                 beads.q[0] += - delta /beads.m3[0]
                 #self.d_momentum += - delta/self.p_stepsize
-                self.g = self.constraint.gfunc(beads)
+                self.g = self.constraints.gfunc(beads)
                 #print("g, i after ud:", self.g, i)
                 #print("beads.q[0] after",  beads.q[0])
                 #print("delta",  delta)
@@ -436,8 +432,8 @@ class ConstrainedIntegrator(DummyIntegrator):
         for i in range(Nsteps):
 
             self.step_A(substepsize)
-            self.update_constraints(self.beads)
             self.proj_manifold(self.beads, substepsize)
+            self.update_constraints(self.beads)
             self.proj_cotangent(self.beads)
 
 
@@ -449,13 +445,6 @@ class ConstrainedIntegrator(DummyIntegrator):
         """Dummy centroid momentum step which does nothing."""
         pass
 
-    def constraint_step(self):
-        """
-            Dummy constraint step.
-            """
-
-        if len(self.constrained_distances) > 0:
-            self.constraint.step()
 
 
 class NVEIntegrator_constraint(ConstrainedIntegrator):
@@ -665,14 +654,19 @@ class ConstrainedIntegratorMTS(NVTIntegrator_constraint):
 
     def step_respa(self, level=0):
 
+        #print("level: ", level)
         stepsize = self.dt/np.prod(self.nmts[:(level+1)])
-
+        
+        print("stepsize: ", stepsize)
         self.step_Bc(stepsize = .5 * stepsize, level = level)
-        if level < np.size(self.nmts):
-            self.step_respa(level=level+1)
+        #self.step_B(stepsize = .5 * stepsize, level = level)
+        if level+1 < np.size(self.nmts):
+            for i in range(self.nmts[level+1]):
+                self.step_respa(level=level+1)
         else:
             self.step_A(stepsize)
-            self.proj_manifold(self.beads)
+            self.proj_manifold(self.beads, stepsize=stepsize, proj_p=True)
+        #self.step_B(stepsize = .5 * stepsize, level = level)
         self.step_Bc(stepsize = .5 * stepsize, level = level)
 
     def step_grespa(self, level=0):
@@ -680,8 +674,9 @@ class ConstrainedIntegratorMTS(NVTIntegrator_constraint):
         stepsize = self.dt/np.prod(self.nmts[:(level+1)])
 
         self.step_Bc(stepsize = .5 * stepsize, level = level)
-        if level < np.size(self.nmts):
-            self.step_respa(level=level+1)
+        if level+1 < np.size(self.nmts):
+            for i in range(self.nmts[level+1]):
+                self.step_grespa(level=level+1)
         else:
             self.step_Ag(stepsize, Nsteps=self.nsteps_geo[level])
         self.step_Bc(stepsize = .5 * stepsize, level = level)
