@@ -7,6 +7,7 @@
 import numpy as np
 import ipi.engine.thermostats
 import ipi.engine.barostats
+from ipi.engine.motion.constrained_dynamics import RigidBondConstraint
 from ipi.utils.inputvalue import InputDictionary, InputAttribute, InputValue, InputArray, Input, input_default
 from ipi.inputs.barostats import InputBaro
 from ipi.inputs.thermostats import InputThermo
@@ -29,13 +30,22 @@ class InputConstraint(Input):
         "atoms": (InputArray, {"dtype": int,
                               "default": np.zeros(0, int),
                               "help": "List of atoms indices that are to be constrained."}),
-        "distance": (InputValue, {"dtype": float,
-                              "default": 0,
+        "distances": (InputArray, {"dtype": float,
+                              "default":  np.zeros(0, int),
                               "dimension": "length",
-                              "help": "Constrained distance."})
+                              "help": "List of constraint lengths."})
     }
 
+    def store(self, cnstr):
+        if type(cnstr) is RigidBondConstraint:
+            self.mode.store("distance")
+            self.atoms.store(cnstr.constrained_indices)
+            self.distances.store(cnstr.constrained_distances)
 
+    def fetch(self):
+        if self.mode.fetch() == "distance":
+            robj = RigidBondConstraint(self.atoms.fetch(), self.distances.fetch())
+        return robj
 
 class InputConstrainedDynamics(InputDictionary):
 
@@ -84,14 +94,8 @@ class InputConstrainedDynamics(InputDictionary):
                                 "default": np.zeros(0, int),
                                 "help": "The number of sub steps used in the evolution of the thermostat (used in function step_Oc). Relevant only for GLE thermostats" }),
         "nsteps_geo": (InputArray, {"dtype": int,
-                                           "default": np.zeros(0, int),
-                                           "help": "The number of sub steps used in the evolution of the geodesic flow (used in function step_Ag)." }),
-        "constrained_indices": (InputArray, {"dtype": int,
-                              "default": np.zeros(0, int),
-                              "help": "List of the form [i,j] containing the list of atoms indices that are to be constrained."}),
-        "constrained_distances": (InputArray, {"dtype": float,
-                              "default": np.zeros(0, float),
-                              "help": "List of the form [rij] containing the bond distances."})
+                                    "default": np.zeros(0, int),
+                                    "help": "The number of sub steps used in the evolution of the geodesic flow (used in function step_Ag)." })
     }
 
     dynamic = {"constraint" : (InputConstraint, {"help" : "Define a constraint to be applied onto atoms"})
@@ -115,11 +119,15 @@ class InputConstrainedDynamics(InputDictionary):
         self.thermostat.store(dyn.thermostat)
         self.barostat.store(dyn.barostat)
         self.nmts.store(dyn.nmts)
-        self.constraint_list.store(dyn.constraint_list)
         self.splitting.store(dyn.splitting)
+        self.extra = []
+        for constr in dyn.constraints.constraint_list:
+            iobj = InputConstraint()
+            iobj.store(constr)
+            self.extra.append( ("constraint", iobj) )
 
     def fetch(self):
-        """Creates an ensemble object.
+        """Creates a ConstrainedDynamics object.
 
         Returns:
             An ensemble object of the appropriate mode and with the appropriate
@@ -129,4 +137,23 @@ class InputConstrainedDynamics(InputDictionary):
         rv = super(InputConstrainedDynamics, self).fetch()
         rv["mode"] = self.mode.fetch()
         rv["splitting"] = self.splitting.fetch()
+
+
+        cnstr_list = []
+        for (k, v) in self.extra:
+            if k == "constraint":
+                mode = v.mode.fetch()
+                if mode == "distance":
+                    alist = v.atoms.fetch()
+                    dlist = v.distances.fetch()
+                    print alist.shape, len(alist.shape)
+                    if len(alist.shape) == 1:
+                        alist.shape = (alist.shape[0]/2, 2)
+                    print alist.shape, len(alist)
+                    if len(dlist) != len(alist):
+                        raise ValueError("Length of atom indices and of distance list do not match")
+                cnstr_list.append(RigidBondConstraint(alist, dlist))
+
+        rv["constraint_list"] = cnstr_list
+
         return rv

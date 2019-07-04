@@ -22,13 +22,19 @@
     </forces>
     <motion mode='constrained_dynamics'>
       <constrained_dynamics mode='nvt' splitting='baoab'>
-        <nsteps_geo> 5 </nsteps_geo>
+        <nsteps_geo> [ 5 ] </nsteps_geo>
         <timestep units='femtosecond'> 2.0 </timestep>
         <thermostat mode='langevin'>
             <tau units='femtosecond'> 100 </tau>
         </thermostat>
         <constraint mode="distance"> 
-            <atoms> [0, 1] </atoms> <distance> 1.8897261 </distance>
+            <atoms> [1, 2] </atoms> <distances> [ 2.8687441 ] </distances>
+        </constraint>
+        <constraint mode="distance"> 
+            <atoms> [0, 1, 
+                     0, 2] 
+            </atoms> 
+            <distances> [ 1.8897261, 1.8897261 ]  </distances>
         </constraint>
       </constrained_dynamics>
     </motion>
