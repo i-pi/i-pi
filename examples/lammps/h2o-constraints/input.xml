@@ -5,7 +5,7 @@
     <trajectory filename='vel' stride='1'> velocities </trajectory>
     <checkpoint stride='200'/>
   </output>
-  <total_steps> 1000 </total_steps>
+  <total_steps> 2 </total_steps>
   <prng>
     <seed>31415</seed>
   </prng>
@@ -23,8 +23,6 @@
     <motion mode='constrained_dynamics'>
       <constrained_dynamics mode='nvt' splitting='baoab'>
         <nsteps_geo> 5 </nsteps_geo>
-        <constrained_indices> [0,1,0,2] </constrained_indices>
-        <constrained_distances> [1.8897261,1.8897261] </constrained_distances>
         <timestep units='femtosecond'> 2.0 </timestep>
         <thermostat mode='langevin'>
             <tau units='femtosecond'> 100 </tau>
