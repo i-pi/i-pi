@@ -657,7 +657,7 @@ class ConstrainedIntegratorMTS(NVTIntegrator_constraint):
         #print("level: ", level)
         stepsize = self.dt/np.prod(self.nmts[:(level+1)])
         
-        print("stepsize: ", stepsize)
+        #print("stepsize: ", stepsize)
         self.step_Bc(stepsize = .5 * stepsize, level = level)
         #self.step_B(stepsize = .5 * stepsize, level = level)
         if level+1 < np.size(self.nmts):
