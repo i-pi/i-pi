@@ -4,7 +4,7 @@
     <trajectory filename='pos' stride='20'> positions </trajectory>
     <checkpoint stride='200'/>
   </output>
-  <total_steps>1000</total_steps>
+  <total_steps>10000</total_steps>
   <prng>
     <seed>31415</seed>
   </prng>
@@ -19,13 +19,13 @@
     <forces>
       <force forcefield='lammps'> </force>
     </forces>
-    <motion mode='constrained_dynamics'>
-      <constrained_dynamics mode='nvt' splitting='baoab'>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
         <timestep units='femtosecond'> 0.5 </timestep>
-        <thermostat mode='langevin'>
-            <tau units='femtosecond'> 100 </tau>
+        <thermostat mode='svr'>
+          <tau units='femtosecond'> 100 </tau>
         </thermostat>
-      </constrained_dynamics>
+      </dynamics>
     </motion>
     <ensemble>
       <temperature units='kelvin'> 300 </temperature>
