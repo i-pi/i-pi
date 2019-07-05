@@ -123,7 +123,7 @@ class InputMotionBase(Input):
             tsc = 1
         elif type(sc) is ConstrainedDynamics:
             self.mode.store("constrained_dynamics")
-            self.dynamics.store(sc)
+            self.constrained_dynamics.store(sc)
             tsc = 1
         elif type(sc) is DynMatrixMover:
             self.mode.store("vibrations")
