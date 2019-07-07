@@ -5,25 +5,28 @@
 # See the "licenses" directory for full license information.
 
 import numpy as np
+from copy import copy
 import ipi.engine.thermostats
 import ipi.engine.barostats
-from ipi.engine.motion.constrained_dynamics import RigidBondConstraint
+from ipi.engine.motion.constrained_dynamics import ConstraintBase, RigidBondConstraint, ConstraintList
 from ipi.utils.inputvalue import InputDictionary, InputAttribute, InputValue, InputArray, Input, input_default
 from ipi.inputs.barostats import InputBaro
 from ipi.inputs.thermostats import InputThermo
 
 __all__ = ['InputConstrainedDynamics', 'InputConstraint']
 
-class InputConstraint(Input):
+class InputConstraintBase(Input):
     """
         An input class to define constraints. ATM built just for bonds,
-        but general enough to be extended.
+        but general enough to be extended. Also incorporate a "multi"
+        mode that makes it possible to define a set of constraints that
+        are coupled and should hence be handled simultaneously.
     """
     attribs = {
         "mode": (InputAttribute, {"dtype": str,
                                   "default": 'distance',
                                   "help": "The type onf constraint. ",
-                                  "options": ['distance']})
+                                  "options": ['distance', 'multi']})
               }
 
     fields = {
@@ -36,15 +39,58 @@ class InputConstraint(Input):
                               "help": "List of constraint lengths."})
     }
 
+
     def store(self, cnstr):
+
         if type(cnstr) is RigidBondConstraint:
             self.mode.store("distance")
             self.atoms.store(cnstr.constrained_indices)
             self.distances.store(cnstr.constrained_distances)
 
+
     def fetch(self):
         if self.mode.fetch() == "distance":
-            robj = RigidBondConstraint(self.atoms.fetch(), self.distances.fetch())
+            alist = self.atoms.fetch()
+            dlist = self.distances.fetch()
+            if len(alist.shape) == 1:
+                alist.shape = (alist.shape[0]/2, 2)
+            if len(dlist) != len(alist):
+                raise ValueError("Length of atom indices and of distance list do not match")
+            robj = RigidBondConstraint(alist, dlist)
+
+        return robj
+
+class InputConstraint(InputConstraintBase):
+    attribs = copy(InputConstraintBase.attribs)
+
+    attribs["mode"][1]["options"].append("multi")
+
+    dynamic = {"constraint": (InputConstraintBase, {
+                    "help": "One or more constraints that have to be considered coupled"})
+               }
+
+    def store(self, cnstr):
+        if type(cnstr) is ConstraintList:
+            self.mode.store("multi")
+            self.extra = []
+            for constr in cnstr.constraint_list:
+                iobj = InputConstraint()
+                iobj.store(constr)
+                self.extra.append( ("constraint", iobj) )
+        else:
+            super(InputConstraint, self).store(cnstr)
+
+    def fetch(self):
+        if self.mode.fetch() == "multi":
+            cnstr_list = []
+            for (k, v) in self.extra:
+                if k == "constraint":
+                    cnstr_list.append(v.fetch())
+                else:
+                    raise ValueError("Invalid entry "+k+" in constraint(multi)")
+            robj = ConstraintList(cnstr_list)
+        else:
+            robj = super(InputConstraint, self).fetch()
         return robj
 
 class InputConstrainedDynamics(InputDictionary):
@@ -154,17 +200,9 @@ class InputConstrainedDynamics(InputDictionary):
         cnstr_list = []
         for (k, v) in self.extra:
             if k == "constraint":
-                mode = v.mode.fetch()
-                if mode == "distance":
-                    alist = v.atoms.fetch()
-                    dlist = v.distances.fetch()
-                    print alist.shape, len(alist.shape)
-                    if len(alist.shape) == 1:
-                        alist.shape = (alist.shape[0]/2, 2)
-                    print alist.shape, len(alist)
-                    if len(dlist) != len(alist):
-                        raise ValueError("Length of atom indices and of distance list do not match")
-                cnstr_list.append(RigidBondConstraint(alist, dlist))
+                cnstr_list.append(v.fetch())
+            else:
+                raise ValueError("Invalid entry "+k+" in constrained_dynamics")
 
         rv["constraint_list"] = cnstr_list
 

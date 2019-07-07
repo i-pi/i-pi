@@ -235,7 +235,7 @@ class RigidBondConstraint(ConstraintBase):
     """
 
 
-class ConstraintList(dobject):
+class ConstraintList(ConstraintBase):
     """ Constraint class for MD"""
 
     def __init__(self, constraint_list):
@@ -656,7 +656,7 @@ class ConstrainedIntegratorMTS(NVTIntegrator_constraint):
 
         #print("level: ", level)
         stepsize = self.dt/np.prod(self.nmts[:(level+1)])
-        
+
         #print("stepsize: ", stepsize)
         self.step_Bc(stepsize = .5 * stepsize, level = level)
         #self.step_B(stepsize = .5 * stepsize, level = level)
