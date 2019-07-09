@@ -657,7 +657,7 @@ class Properties(dobject):
                           of atoms. The 5 numbers output are 1) the average over the excess potential energy for
                           an isotope atom substitution <sc>, 2) the average of the squares of the excess potential
                           energy <sc**2>, and 3) the average of the exponential of excess potential energy
-                          <exp(-beta*sc)>, and 4-5) Suzuki-Chin and Takahashi-Imada 4th-order reweighing term"""},
+                          <exp(-beta*sc)>, and 4-5) Suzuki-Chin and Takahashi-Imada 4th-order reweighing term"""}
         }
 
     def bind(self, system):
