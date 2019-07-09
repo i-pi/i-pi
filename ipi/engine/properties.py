@@ -657,7 +657,22 @@ class Properties(dobject):
                           of atoms. The 5 numbers output are 1) the average over the excess potential energy for
                           an isotope atom substitution <sc>, 2) the average of the squares of the excess potential
                           energy <sc**2>, and 3) the average of the exponential of excess potential energy
-                          <exp(-beta*sc)>, and 4-5) Suzuki-Chin and Takahashi-Imada 4th-order reweighing term"""}
+                          <exp(-beta*sc)>, and 4-5) Suzuki-Chin and Takahashi-Imada 4th-order reweighing term"""},
+
+         "isotope_zetatd_sc": {"dimension": "undefined",
+                                "size": 1,
+                                'func': self.get_isotope_zetatd_sc,
+                                "help": "Suzuki-Chin isotope fractionation thermodynamic estimator in the form of ratios of partition functions.",
+                          },
+
+         "isotope_zetasc_sc": {"dimension": "undefined",
+                                "size": 1,
+                                'func': self.get_isotope_zetasc_sc,
+                                "help": "Suzuki-Chin isotope fractionation scaled-coordinate estimator in the form of ratios of partition functions.",
+                          },
+
+
+
         }
 
     def bind(self, system):
@@ -1950,6 +1965,7 @@ class Properties(dobject):
 
         return np.asarray([tdsum / ni, td2sum / ni, tdexpsum / ni, tiexpsum / ni, chinexpsum / ni])
 
+
     def get_isotope_zetasc_4th(self, alpha="1.0", atom=""):
         """Gives the components  to directly compute the relative probablity of
            isotope substitution in two different systems/phases.
@@ -2141,6 +2157,135 @@ class Properties(dobject):
             warning("Couldn't find an atom which matched the argument of TI potential, setting to zero.", verbosity.medium)
 
         return ti
+
+
+
+    def get_isotope_zetatd_sc(self, alpha="1.0", atom=""):
+        """Calculates the Suzuki-Chin thermodynamic estimator of the ratio of partition functions of 
+           systems that differ in the isotope of a given atom.
+
+        Args:
+           alpha: m'/m the mass ratio
+           atom: the label or index of the atom to compute the estimator
+
+        Returns:
+           a tuple from which one can reconstruct all that is needed to
+           compute the relative probability of isotope substitution:
+           (spraverage, spr2average, sprexpaverage)
+        """
+
+        try:
+            # iatom gives the index of the atom to be studied
+            iatom = int(atom)
+            latom = ""
+            if iatom >= self.beads.natoms:
+                raise IndexError("Cannot output scaled-mass kinetic energy estimator as atom index %d is larger than the number of atoms" % iatom)
+        except ValueError:
+            # here 'atom' is a label rather than an index which is stored in latom
+            iatom = -1
+            latom = atom
+
+        alpha = float(alpha)
+
+        dhexpsum = 0.0
+        ni = 0
+
+        # strips dependency control since we are not gonna change the true beads in what follows
+        q = dstrip(self.beads.q)
+        f = dstrip(self.forces.f)
+        m = dstrip(self.beads.m)
+        coeffsc = dstrip(self.forces.coeffsc_part_2)
+        betaP = 1.0 / (Constants.kb * self.ensemble.temp * self.beads.nbeads)
+
+        for i in range(self.beads.natoms):
+            # selects only the atoms we care about
+            if (atom != "" and iatom != i and latom != self.beads.names[i]):
+                continue
+
+            ni += 1
+
+            spr = 0.0
+            f2 = 0.0
+            for b in range(1, self.beads.nbeads):
+                for j in range(3 * i, 3 * (i + 1)):
+                    spr += (q[b, j] - q[b - 1, j])**2
+                    f2 += coeffsc[b] * f[b,j]**2
+            for j in range(3 * i, 3 * (i + 1)):
+                spr += (q[self.beads.nbeads - 1, j] - q[0, j])**2
+                f2 += coeffsc[0] * f[0,j]**2
+
+            spr *= 0.5 * (alpha - 1.0) * self.beads.m[i] * self.nm.omegan2
+            f2 *= (1.0 / alpha - 1.0)  / m[i]
+            dhexp = np.exp(-betaP * (spr + f2))
+
+            dhexpsum += dhexp
+
+        if ni == 0:
+            raise IndexError("Couldn't find an atom which matched the argument of isotope_zetatd")
+
+        dhexpavg = dhexpsum / ni
+
+        return dhexpavg
+
+    def get_isotope_zetasc_sc(self, alpha="1.0", atom=""):
+        """Calculates the Suzuki-Chin scaled coordinates estimator of the ratio of partition functions of 
+           systems that differ in the isotope of a given atom.
+
+        Args:
+           alpha: m'/m the mass ratio
+           atom: the label or index of the atom to compute the isotope fractionation pair for
+
+        Returns:
+           a tuple from which one can reconstruct all that is needed to
+           compute the relative probability of isotope substitution using
+           scaled coordinates:
+           (yamaaverage, yama2average, yamaexpaverage)
+        """
+
+        try:
+            # iatom gives the index of the atom to be studied
+            iatom = int(atom)
+            latom = ""
+            if iatom >= self.beads.natoms:
+                raise IndexError("Cannot output scaled-mass kinetic energy estimator as atom index %d is larger than the number of atoms" % iatom)
+        except ValueError:
+            # here 'atom' is a label rather than an index which is stored in latom
+            iatom = -1
+            latom = atom
+
+        alpha = float(alpha)
+        scalefactor = 1.0 / np.sqrt(alpha) 
+        betaP = 1.0 / (Constants.kb * self.ensemble.temp * self.beads.nbeads)
+
+        dhexpsum = 0.0
+        ni = 0
+
+        qc = dstrip(self.beads.qc)
+        q = dstrip(self.beads.q)
+        v0 = dstrip(self.forces.potsc)
+        coeffsc_part_1 = dstrip(self.forces.coeffsc_part_1)
+        coeffsc_part_2 = dstrip(self.forces.coeffsc_part_2)
+
+        for i in range(self.beads.natoms):
+            # selects only the atoms we care about
+            if (atom != "" and iatom != i and latom != self.beads.names[i]):
+                continue
+
+            ni += 1
+            self.dbeads.q = q
+            for b in range(self.beads.nbeads):
+              for j in range(3 * i, 3 * (i + 1)):
+                self.dbeads.q[b, j] = qc[j] * (1.0 - scalefactor) + scalefactor * q[b, j]
+
+            potssc = coeffsc_part_1.T * dstrip(self.dforces.pots) + coeffsc_part_2.T * np.sum(dstrip(self.dforces.f) / self.beads.m3 * dstrip(self.dforces.f), axis=1)
+            dh = np.sum(potssc) - v0
+            dhexp = np.exp(-betaP * dh)
+
+            dhexpsum += dhexp
+
+        if ni == 0:
+            raise IndexError("Couldn't find an atom which matched the argument of isotope_zetasc")
+        return dhexpsum / ni
 
 
 class Trajectories(dobject):
