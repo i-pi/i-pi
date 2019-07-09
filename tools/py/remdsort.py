@@ -22,15 +22,17 @@ Syntax:
 
 
 import sys
+from copy import deepcopy
 import numpy as np
 from ipi.utils.messages import verbosity
 from ipi.engine.outputs import *
 from ipi.engine.properties import getkey
 from ipi.inputs.simulation import InputSimulation
+from ipi.engine.smotion import ReplicaExchange
 from ipi.utils.io.inputs import io_xml
 
 
-def main(inputfile, prefix="PT"):
+def main(inputfile, prefix="SRT_"):
 
     verbosity.level = "low"
     # opens & parses the input file
@@ -41,13 +43,27 @@ def main(inputfile, prefix="PT"):
     # ugly hack to remove ffplumed objects to avoid messing up with plumed output files
     newfields = [ f for f in xmlrestart.fields[0][1].fields if f[0] != "ffplumed" ]
     xmlrestart.fields[0][1].fields = newfields
-    
+
     isimul = InputSimulation()
     isimul.parse(xmlrestart.fields[0][1])
 
-    simul = isimul.fetch()    
-    if simul.smotion.mode != "remd" and simul.smotion.mode != "multi":
+    simul = isimul.fetch()
+    swapfile = ""
+    if simul.smotion is None or (simul.smotion.mode != "remd" and simul.smotion.mode != "multi"):
         raise ValueError("Simulation does not look like a parallel tempering one.")
+    else:
+        if simul.smotion.mode == "remd":
+            swapfile = simul.smotion.swapfile
+        else:
+            for sm in simul.smotion.mlist:
+                if sm.mode == "remd":
+                    if swapfile != "":
+                        raise ValueError("I'm not equipped to deal with multiple REMD outputs, sorry")
+                    swapfile = sm.swapfile
+        if swapfile == "":
+            raise ValueError("Could not determine the REMD swapfile name. Sorry, you'll have to look carefully at your inputs.")
+
+
 
     # reconstructs the list of the property and trajectory files that have been output
     # and that should be re-ordered
@@ -55,6 +71,9 @@ def main(inputfile, prefix="PT"):
     ltraj = []  # list of trajectory files
     nsys = len(simul.syslist)
     for o in simul.outtemplate:
+        o = deepcopy(o) # avoids overwriting the actual filename
+        if simul.outtemplate.prefix != "":
+            o.filename = simul.outtemplate.prefix + "." + o.filename
         if type(o) is CheckpointOutput:   # properties and trajectories are output per system
             pass
         elif type(o) is PropertyOutput:
@@ -64,7 +83,7 @@ def main(inputfile, prefix="PT"):
                 if s.prefix != "":
                     filename = s.prefix + "_" + o.filename
                 else: filename = o.filename
-                ofilename = prefix + str(isys) + "_" + o.filename
+                ofilename = prefix + filename
                 nprop.append({"filename": filename, "ofilename": ofilename, "stride": o.stride,
                               "ifile": open(filename, "r"), "ofile": open(ofilename, "w")
                               })
@@ -82,7 +101,7 @@ def main(inputfile, prefix="PT"):
                         if s.prefix != "":
                             filename = s.prefix + "_" + o.filename
                         else: filename = o.filename
-                        ofilename = prefix + str(isys) + "_" + o.filename
+                        ofilename = prefix + filename
                         if (o.ibead < 0 or o.ibead == b):
                             if getkey(o.what) == "extras":
                                 filename = filename + "_" + padb
@@ -106,7 +125,7 @@ def main(inputfile, prefix="PT"):
                         filename = s.prefix + "_" + o.filename
                     else: filename = o.filename
                     filename = filename + "." + o.format
-                    ofilename = prefix + str(isys) + "_" + o.filename + "." + o.format
+                    ofilename = prefix + filename
                     ntraj.append({"filename": filename, "format": o.format,
                                   "ofilename": ofilename, "stride": o.stride,
                                   "ifile": open(filename, "r"), "ofile": open(ofilename, "w")
@@ -115,7 +134,7 @@ def main(inputfile, prefix="PT"):
                     isys += 1
                 ltraj.append(ntraj)
 
-    ptfile = open("PARATEMP", "r")
+    ptfile = open(simul.outtemplate.prefix+"."+swapfile, "r")
 
     # now reads files one frame at a time, and re-direct output to the appropriate location
 
@@ -123,7 +142,7 @@ def main(inputfile, prefix="PT"):
     irep = range(nsys)  # Could this be harmful?
     step = 0
     while True:
-        # reads one line from PARATEMP index file
+        # reads one line from index file
         try:
 
             for prop in lprop:

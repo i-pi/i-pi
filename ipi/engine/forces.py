@@ -161,6 +161,7 @@ class ForceBead(dobject):
             self._getallcount += 1
 
         # this is converting the distribution library requests into [ u, f, v ]  lists
+        t_start = time.time()
         if self.request is None:
             self.request = self.queue()
 
@@ -173,10 +174,9 @@ class ForceBead(dobject):
                 # we are in.
                 softexit.trigger(" @ FORCES : cannot return so will die off here")
                 while softexit.exiting:
-                    time.sleep(self.ff.latencyt)
+                    time.sleep(self.ff.latency)
                 sys.exit()
             time.sleep(self.ff.latency)
-
         # print diagnostics about the elapsed time
         info("# forcefield %s evaluated in %f (queue) and %f (dispatched) sec." % (self.ff.name, self.request["t_finished"] - self.request["t_queued"], self.request["t_finished"] - self.request["t_dispatched"]), verbosity.debug)
 
@@ -253,7 +253,7 @@ class ForceComponent(dobject):
        _forces: A list of the forcefield objects for all the replicas.
        weight: A float that will be used to weight the contribution of this
           forcefield to the total force.
-       mts_weights: A list of floats that will be used to weight the 
+       mts_weights: A list of floats that will be used to weight the
           contribution of this forcefield at each level of a MTS scheme
        ffield: A model to be used to create the forcefield objects for all
           the replicas of the system.
@@ -738,6 +738,7 @@ class Forces(dobject):
                 dfkbref = dd(mreff._forces[b])
                 dfkbself = dd(mself._forces[b])
                 dfkbself.ufvx.set(deepcopy(dfkbref.ufvx._value), manual=False)
+                dfkbself.ufvx.taint(taintme=False)
 
     def run(self):
         """Makes the socket start looking for driver codes.

@@ -378,9 +378,9 @@ class NEBMover(Motion):
         self.neblm = NEBLineMover()
         self.nebbfgsm = NEBBFGSMover()
 
-    def bind(self, ens, beads, nm, cell, bforce, prng):
+    def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
 
-        super(NEBMover, self).bind(ens, beads, nm, cell, bforce, prng)
+        super(NEBMover, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
         if self.old_f.shape != beads.q.shape:
             if self.old_f.shape == (0,):
                 self.old_f = np.zeros(beads.q.shape, float)
@@ -391,7 +391,7 @@ class NEBMover(Motion):
                 self.old_d = np.zeros(beads.q.shape, float)
             else:
                 raise ValueError("Conjugate gradient direction size does not match system size")
-        if self.invhessian.size != (beads.q.size * beads.q.size):
+        if self.mode == "bfgs" and self.invhessian.size != (beads.q.size * beads.q.size):
             if self.invhessian.size == 0:
                 self.invhessian = np.eye(beads.q.flatten().size, beads.q.flatten().size, 0, float)
             else:
@@ -403,7 +403,7 @@ class NEBMover(Motion):
     def step(self, step=None):
         """Does one simulation time step."""
 
-        info("\nMD STEP %d" % step, verbosity.debug)
+        info(" @NEB STEP %d" % step, verbosity.debug)
 
         # Fetch spring constants
         self.nebbfgsm.kappa = self.spring["kappa"]
@@ -417,7 +417,7 @@ class NEBMover(Motion):
             # L-BFGS Minimization
             # Initialize direction to the steepest descent direction
             if step == 0:   # or np.sqrt(np.dot(self.bfgsm.d, self.bfgsm.d)) == 0.0: <-- this part for restarting at claimed minimum
-                info(" @GEOP: Initializing L-BFGS", verbosity.debug)
+                info(" @NEB: Initializing L-BFGS", verbosity.debug)
                 fx, nebgrad = self.nebbfgsm(self.beads.q)
 
                 # Set direction to direction of NEB forces
@@ -440,13 +440,15 @@ class NEBMover(Motion):
             # Do one iteration of L-BFGS and return positions, gradient modulus,
             # direction, list of positions, list of gradients
             # self.beads.q, fx, self.nebbfgsm.d, self.qlist, self.glist = L_BFGS(self.beads.q,
+            info(" @NEB: Entering BFGS", verbosity.debug)
+
             L_BFGS(self.beads.q, self.nebbfgsm.d, self.nebbfgsm, self.qlist, self.glist,
                    fdf0=(u0, du0), big_step=self.big_step, tol=self.ls_options["tolerance"],
                    itmax=self.ls_options["iter"],
                    m=self.corrections, scale=self.scale, k=step)
 
-            info(" @GEOP: Updated position list", verbosity.debug)
-            info(" @GEOP: Updated gradient list", verbosity.debug)
+            info(" @NEB: Updated position list", verbosity.debug)
+            info(" @NEB: Updated gradient list", verbosity.debug)
 
             # x = current position - previous position. Use to determine converged minimization
             x = np.amax(np.absolute(np.subtract(self.beads.q, self.nebbfgsm.xold)))
@@ -456,7 +458,7 @@ class NEBMover(Motion):
             self.beads.q = self.nebbfgsm.dbeads.q
             self.forces.transfer_forces(self.nebbfgsm.dforces)
 
-            info(" @GEOP: Updated bead positions", verbosity.debug)
+            info(" @NEB: Updated bead positions", verbosity.debug)
 
         # Routine for steepest descent and conjugate gradient
         # TODO: CURRENTLY DOES NOT WORK. MUST BE ELIMINATED OR DEBUGGED
@@ -472,7 +474,7 @@ class NEBMover(Motion):
 
                 # Move direction for steepest descent and 1st conjugate gradient step
                 dq1_unit = dq1 / np.sqrt(np.dot(gradf1.flatten(), gradf1.flatten()))
-                info(" @GEOP: Determined SD direction", verbosity.debug)
+                info(" @NEB: Determined SD direction", verbosity.debug)
 
             else:
 
@@ -489,7 +491,7 @@ class NEBMover(Motion):
                 beta = np.dot((gradf1.flatten() - gradf0.flatten()), gradf1.flatten()) / (np.dot(gradf0.flatten(), gradf0.flatten()))
                 dq1 = gradf1 + max(0.0, beta) * dq0
                 dq1_unit = dq1 / np.sqrt(np.dot(dq1.flatten(), dq1.flatten()))
-                info(" @GEOP: Determined CG direction", verbosity.debug)
+                info(" @NEB: Determined CG direction", verbosity.debug)
 
             # Store force and direction for next CG step
             self.old_d[:] = dq1
@@ -516,7 +518,7 @@ class NEBMover(Motion):
             self.ls_options["step"] = 0.1 * x * self.ls_options["adaptive"] + (1 - self.ls_options["adaptive"]) * self.ls_options["step"]
 
             self.beads.q += dq1_unit * x
-            info(" @GEOP: Updated bead positions", verbosity.debug)
+            info(" @NEB: Updated bead positions", verbosity.debug)
 
         self.qtime += time.time()
 
@@ -528,7 +530,7 @@ class NEBMover(Motion):
                 and (x <= self.tolerances["position"]):
             softexit.trigger("Geometry optimization converged. Exiting simulation")
         else:
-            info(" @GEOP: Not converged, deltaEnergy = %.8f, tol = %.8f" % ((fx - u0 / self.beads.natoms), self.tolerances["energy"]), verbosity.debug)
-            info(" @GEOP: Not converged, force = %.8f, tol = %f" % (np.amax(np.absolute(self.forces.f)), self.tolerances["force"]), verbosity.debug)
-            info(" @GEOP: Not converged, deltaForce = %.8f, tol = 0.00000000" % (np.sqrt(np.dot(self.forces.f.flatten() - self.old_f.flatten(), self.forces.f.flatten() - self.old_f.flatten()))), verbosity.debug)
-            info(" @GEOP: Not converged, deltaX = %.8f, tol = %.8f" % (x, self.tolerances["position"]), verbosity.debug)
+            info(" @NEB: Not converged, deltaEnergy = %.8f, tol = %.8f" % ((fx - u0 / self.beads.natoms), self.tolerances["energy"]), verbosity.debug)
+            info(" @NEB: Not converged, force = %.8f, tol = %f" % (np.amax(np.absolute(self.forces.f)), self.tolerances["force"]), verbosity.debug)
+            info(" @NEB: Not converged, deltaForce = %.8f, tol = 0.00000000" % (np.sqrt(np.dot(self.forces.f.flatten() - self.old_f.flatten(), self.forces.f.flatten() - self.old_f.flatten()))), verbosity.debug)
+            info(" @NEB: Not converged, deltaX = %.8f, tol = %.8f" % (x, self.tolerances["position"]), verbosity.debug)

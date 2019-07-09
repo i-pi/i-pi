@@ -131,9 +131,14 @@ class InputForces(Input):
         """
 
         super(InputForces, self).store()
-        self.extra = []
 
-        for el in flist:
-            iff = InputForceComponent()
-            iff.store(el)
-            self.extra.append(("force", iff))
+        if len(self.extra) != len(flist):
+            self.extra = [0] * len(flist)
+
+        for ii, el in enumerate(flist):
+            if self.extra[ii] == 0:
+                iff = InputForceComponent()
+                iff.store(el)
+                self.extra[ii] = ("force", iff)
+            else:
+                self.extra[ii][1].store(el)

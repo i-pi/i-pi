@@ -1,0 +1,12 @@
+TODO: Update with detailed instructions
+
+Folders
+TS: Finds classical transition state 
+reactant: minimizes and calculates phonons for the reactant, necessary for the final calculation of the rate
+instanton: finds instanton geometries with 80 and 40 beads at 300 K.
+
+
+Necessary command to run driver.x in all folders:
+
+driver.x -u -h localhost -m ch4hcbe
+
