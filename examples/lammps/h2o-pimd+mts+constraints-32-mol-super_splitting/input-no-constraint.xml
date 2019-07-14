@@ -1,0 +1,55 @@
+<simulation mode='md' verbosity='high'>
+    <output prefix='simulation'>
+        <properties stride='1' filename='pot'>  [ pot_component_raw(0), pot_component_raw(1) ] </properties>
+        <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv{megapascal} ] </properties>
+        <trajectory stride='10' filename='pos'>  positions </trajectory>
+        <checkpoint stride='10'/>
+    </output>
+    <total_steps> 100000 </total_steps>
+    <prng>
+        <seed>31415</seed>
+    </prng>
+    <ffsocket name='lmp_short' mode='unix'>
+        <address>h2o-pimd+mts.1_short</address>
+    </ffsocket>
+    <ffsocket name='lmp_long' mode='unix'>
+        <address>h2o-pimd+mts.1</address>
+    </ffsocket>
+    <system>
+        <initialize nbeads='1'>
+            <file mode='pdb'> init.pdb </file>
+            <velocities mode='thermal' units='kelvin'> 300 </velocities>
+        </initialize>
+        <forces>
+            <!--
+             MTS setup - apply the fast (short-range) force in the inner loop and the slow (long-range) force in the outer loop.
+             Note that if the outer loop contains a *correction* to the inner loop the weights should be
+             [-1,1] (fast force) and [1,0] (slow force)
+             -->
+            <force forcefield='lmp_short'>
+                <mts_weights>[-1,1]</mts_weights>
+            </force>
+            <force forcefield='lmp_long'>
+                <mts_weights>[ 1,0]</mts_weights>
+            </force>
+        </forces>
+        <motion mode='constrained_dynamics'>
+            <constrained_dynamics mode='nvt' splitting='o-respa-o'>
+                <!--nsteps_geo> [1,1] </nsteps_geo-->
+                <csolver mode='full'>
+                    <tolerance> .0001 </tolerance>
+                    <maxit> 10000 </maxit>
+                    <norm_order> 2 </norm_order>
+                </csolver>
+                <nmts> [1, 10] </nmts>
+                <timestep units='femtosecond'> 8.0 </timestep>
+                <thermostat mode='langevin'>
+                    <tau units='femtosecond'> 5 </tau>
+                </thermostat>
+            </constrained_dynamics>
+        </motion>
+        <ensemble>
+            <temperature units='kelvin'> 300 </temperature>
+        </ensemble>
+    </system>
+</simulation>

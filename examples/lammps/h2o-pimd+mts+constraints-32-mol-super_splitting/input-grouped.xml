@@ -2,10 +2,10 @@
     <output prefix='simulation'>
         <properties stride='1' filename='pot'>  [ pot_component_raw(0), pot_component_raw(1) ] </properties>
         <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv{megapascal} ] </properties>
-        <trajectory stride='1' filename='pos'>  positions </trajectory>
-        <checkpoint stride='1'/>
+        <trajectory stride='10' filename='pos'>  positions </trajectory>
+        <checkpoint stride='10'/>
     </output>
-    <total_steps> 100 </total_steps>
+    <total_steps> 100000 </total_steps>
     <prng>
         <seed>31415</seed>
     </prng>
@@ -34,13 +34,11 @@
             </force>
         </forces>
         <motion mode='constrained_dynamics'>
-            <constrained_dynamics mode='nve' splitting='respa'>
+            <constrained_dynamics mode='nvt' splitting='o-respa-o'>
                 <!--nsteps_geo> [1,1] </nsteps_geo-->
-                <csolver mode='sparse'>
-                    <maxit> 10000 </maxit>
-                    <norm_order> 2 </norm_order>
-                    <tolerance> .0001 </tolerance>
-                </csolver>
+                <tolerance> .0001 </tolerance>
+                <maxit> 10000 </maxit>
+                <norm_order> 2 </norm_order>
                 <nmts> [1, 4] </nmts>
                 <timestep units='femtosecond'> 8.0 </timestep>
                 <thermostat mode='langevin'>

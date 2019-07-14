@@ -8,12 +8,58 @@ import numpy as np
 from copy import copy
 import ipi.engine.thermostats
 import ipi.engine.barostats
-from ipi.engine.motion.constrained_dynamics import ConstraintBase, RigidBondConstraint, ConstraintList
+from ipi.engine.motion.constrained_dynamics import ConstraintBase, RigidBondConstraint, ConstraintList, ConstraintSolver, SparseConstraintSolver
 from ipi.utils.inputvalue import InputDictionary, InputAttribute, InputValue, InputArray, Input, input_default
 from ipi.inputs.barostats import InputBaro
 from ipi.inputs.thermostats import InputThermo
 
-__all__ = ['InputConstrainedDynamics', 'InputConstraint']
+__all__ = ['InputConstrainedDynamics', 'InputConstraint','InputConstraintSolver']
+
+
+class InputConstraintSolver(InputDictionary):
+    attribs = {
+        "mode": (InputAttribute, {"dtype": str,
+                 "default": 'full',
+                 "help": "The type of numerical method. ",
+                 "options": ['full', 'sparse']})
+                 
+        }
+    fields = {
+        "tolerance": (InputValue, { "dtype": float,
+                          "default": .0001,
+                          "help": "Tolerance value used in the Quasi-Newton iteration scheme."
+                          }),
+        "maxit": (InputValue, { "dtype": int,
+          "default": 1000,
+          "help": "Maximum number of steps used in the Quasi-Newton iteration scheme."
+          }),
+        "norm_order": (InputValue, { "dtype": int,
+                   "default": 2,
+                   "help": "Order of norm used to determine termination of the Quasi-newton iteration."
+                   }),
+        }
+    default_help = "Holds all parameters for the numerical method used to solve the contraint."
+    default_label = "CSOLVER"
+
+
+    def store(self, csolver):
+        
+        if type(csolver) is ConstraintSolver:
+            self.mode.store("full")
+        elif type(csolver) is SparseConstraintSolver:
+            self.mode.store("sparse")
+
+        self.tolerance.store(csolver.tolerance)
+        self.maxit.store(csolver.maxit)
+        self.norm_order.store(csolver.norm_order)
+
+        
+        
+    
+    def fetch(self):
+        csolver = super(InputConstraintSolver, self).fetch()
+        csolver["mode"] = self.mode.fetch()
+        return csolver
 
 class InputConstraintBase(Input):
     """
@@ -133,18 +179,6 @@ class InputConstrainedDynamics(InputDictionary):
                                   "default": 1.0,
                                   "help": "The time step.",
                                   "dimension": "time"}),
-        "tolerance": (InputValue, { "dtype": float,
-                                    "default": .0001,
-                                    "help": "Tolerance value used in the Quasi-Newton iteration scheme."
-                                    }),
-        "maxit": (InputValue, { "dtype": int,
-                                    "default": 1000,
-                                    "help": "Maximum number of steps used in the Quasi-Newton iteration scheme."
-                                    }),
-        "norm_order": (InputValue, { "dtype": int,
-                                 "default": 2,
-                                 "help": "Order of norm used to determine termination of the Quasi-newton iteration."
-                                }),
         "nmts": (InputArray, {"dtype": int,
                               "default": np.zeros(0, int),
                               "help": "Number of iterations for each MTS level (including the outer loop, that should in most cases have just one iteration)."}),
@@ -153,7 +187,9 @@ class InputConstrainedDynamics(InputDictionary):
                                 "help": "The number of sub steps used in the evolution of the thermostat (used in function step_Oc). Relevant only for GLE thermostats" }),
         "nsteps_geo": (InputArray, {"dtype": int,
                                     "default": np.zeros(0, int),
-                                    "help": "The number of sub steps used in the evolution of the geodesic flow (used in function step_Ag)." })
+                                    "help": "The number of sub steps used in the evolution of the geodesic flow (used in function step_Ag)." }),
+                                    
+        "csolver": (InputConstraintSolver, {"help" : "Define a numerical method for computing the projection operators associated with the constraint."})
     }
 
     dynamic = {"constraint" : (InputConstraint, {"help" : "Define a constraint to be applied onto atoms"})
@@ -178,7 +214,10 @@ class InputConstrainedDynamics(InputDictionary):
         self.barostat.store(dyn.barostat)
         self.nmts.store(dyn.nmts)
         self.splitting.store(dyn.splitting)
+        self.csolver.store(dyn.csolver)
+
         self.extra = []
+        
         for constr in dyn.constraints.constraint_list:
             iobj = InputConstraint()
             iobj.store(constr)
@@ -195,7 +234,7 @@ class InputConstrainedDynamics(InputDictionary):
         rv = super(InputConstrainedDynamics, self).fetch()
         rv["mode"] = self.mode.fetch()
         rv["splitting"] = self.splitting.fetch()
-
+        rv["csolver"] = self.csolver.fetch()
 
         cnstr_list = []
         for (k, v) in self.extra:
