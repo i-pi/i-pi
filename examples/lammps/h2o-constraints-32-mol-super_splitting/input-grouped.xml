@@ -36,9 +36,11 @@
         <motion mode='constrained_dynamics'>
             <constrained_dynamics mode='nvt' splitting='o-respa-o'>
                 <!--nsteps_geo> [1,1] </nsteps_geo-->
-                <tolerance> .0001 </tolerance>
-                <maxit> 10000 </maxit>
-                <norm_order> 2 </norm_order>
+                <csolver mode='sparse'>
+                    <maxit> 10000 </maxit>
+                    <norm_order> 2 </norm_order>
+                    <tolerance> .0001 </tolerance>
+                </csolver>
                 <nmts> [1, 4] </nmts>
                 <timestep units='femtosecond'> 8.0 </timestep>
                 <thermostat mode='langevin'>

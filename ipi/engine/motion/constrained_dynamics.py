@@ -111,7 +111,7 @@ class ConstrainedDynamics(Dynamics):
         if constraint_list is not None:
             self.constraints = ConstraintList(constraint_list)
 
-            
+
         if csolver is None:
             self.csolver = ConstraintSolver(self.constraints, tolerance=0.0001,maxit=10000,norm_order=2)
         else:
@@ -133,7 +133,7 @@ class ConstrainedDynamics(Dynamics):
         # MS: should all these be initialized as dependent arrays/values.?
         self.nsteps_geo = nsteps_geo
         self.nsteps_o = nsteps_o
-        
+
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         """Binds ensemble beads, cell, bforce, and prng to the dynamics.
@@ -175,7 +175,7 @@ class ConstraintBase(dobject):
         Calculates the Jacobian of the constraint.
         """
         raise NotImplementedError()
-    
+
     def get_ic(self):
         """
         returns the indices constrained coordinate indices
@@ -185,7 +185,7 @@ class ConstraintBase(dobject):
     def get_iai(self):
         """
         get indices of atoms to which the constraint applies. Implementation of this function is required if constraints are handled by a subclass of SparseConstraintSolver
-            
+
         """
         raise NotImplementedError()
 
@@ -201,13 +201,13 @@ class RigidBondConstraint(ConstraintBase):
         super(RigidBondConstraint,self).__init__(ncons=len(constrained_distances))
         self.constrained_indices = constrained_indices.reshape([self.ncons, 2])
         self.constrained_distances = constrained_distances
-        
+
         self.iai = self.get_iai()
         self.iai_inv = { value : i for i,value in enumerate(self.iai)}
-    
+
     def get_iai(self):
         return np.unique(self.constrained_indices.flatten())
-    
+
 
     def gfunc(self, q):
         """
@@ -241,7 +241,7 @@ class RigidBondConstraint(ConstraintBase):
             r[i,c_atoms[0] * 3 : c_atoms[0] * 3 + 3] =   2.0 * inst_position_vector
             r[i,c_atoms[1] * 3 : c_atoms[1] * 3 + 3] = - 2.0 * inst_position_vector
         return r
-        
+
     """
     def bind(self, integrator):
         '''
@@ -296,7 +296,7 @@ class ConstraintList(ConstraintBase):
         return np.unique(iai)
 
 class ConstraintSolverBase(dobject):
-    
+
     def __init__(self, constraints):
         self.constraints = constraints
 
@@ -311,29 +311,29 @@ class ConstraintSolverBase(dobject):
 
 
 class ConstraintSolver(ConstraintSolverBase):
-    
+
     def __init__(self, constraints, tolerance=0.0001,maxit=1000,norm_order=2):
         super(ConstraintSolver,self).__init__(constraints)
-    
+
         self.tolerance = tolerance
         self.maxit = maxit
         self.norm_order = norm_order
-    
+
     def update_constraints(self, beads):
-        
+
         self.Dg = self.constraints.Dgfunc(dstrip(beads.q[0]))
         self.Gram = np.dot(self.Dg, np.dot(np.diagflat(1.0/beads.m3[0]), np.transpose(self.Dg)))
         self.GramChol = np.linalg.cholesky(self.Gram)
         self.ciu = True
-    
+
     def proj_cotangent(self, beads):
-        
-        
+
+
         m3 = dstrip(beads.m3[0])
         p = dstrip(beads.p[0]).copy()
-        
-        
-        
+
+
+
         b = np.dot(self.Dg, p/m3[0])
         x = np.linalg.solve(np.transpose(self.GramChol),np.linalg.solve(self.GramChol, b))
         p += - np.dot(np.transpose(self.Dg),x)
@@ -347,11 +347,11 @@ class ConstraintSolver(ConstraintSolverBase):
         m3 = dstrip(beads.m3[0])
         p = dstrip(beads.p[0]).copy()
         q = dstrip(beads.q[0]).copy()
-        
-        
+
+
         if proj_p and stepsize is None:
             stepsize = self.dt
-        
+
         i = 0
         if self.constraints.ncons > 0:
             self.g = self.constraints.gfunc(q)
@@ -364,41 +364,41 @@ class ConstraintSolver(ConstraintSolverBase):
                     update_diff = - delta / stepsize
                     p += update_diff
                 i += 1
-                
+
                 if (i == self.maxit):
                     print('No convergence in Newton iteration for positional component');
 
         beads.p[0] = p
         beads.q[0] = q
 
-    
+
 class SparseConstraintSolver(ConstraintSolverBase):
-    
+
     def __init__(self, constraints, tolerance=0.001,maxit=1000,norm_order=2):
         super(SparseConstraintSolver,self).__init__(constraints)
-        
+
         self.tolerance = tolerance
         self.maxit = maxit
         self.norm_order = norm_order
-        
+
         self.constraint_list = constraints.constraint_list
         self.ic_list = [constr.get_ic() for constr in self.constraint_list]
 
-    
+
     def update_constraints(self, beads):
-        
+
         m3 = dstrip(beads.m3[0])
         self.Dg_list = [constr.Dgfunc(dstrip(beads.q[0]))[:,ic] for constr, ic in zip(self.constraint_list,self.ic_list) ]
         self.Gram_list = [np.dot(dg,(dg/m3[ic]).T) for dg, ic in zip(self.Dg_list,self.ic_list)]
         self.GramChol_list = [ np.linalg.cholesky(G) for G in self.Gram_list]
         self.ciu = True
-                             
-                                                  
+
+
     def proj_cotangent(self, beads):
-        
+
         m3 = dstrip(beads.m3[0])
         p = dstrip(beads.p[0]).copy()
-        
+
         if len(self.constraint_list) > 0:
             #print("number of constraints: ", len(self.constraint_list))
             for dg, ic, gramchol in zip(self.Dg_list, self.ic_list, self.GramChol_list):
@@ -406,7 +406,7 @@ class SparseConstraintSolver(ConstraintSolverBase):
                 x = np.linalg.solve(np.transpose(gramchol),np.linalg.solve(gramchol, b))
                 p[ic] += - np.dot(np.transpose(dg),x)
         beads.p[0] = p
-                        
+
     def proj_manifold(self, beads, stepsize=None, proj_p=True):
         '''
         projects onto Manifold using the Gram matrix defined by self.Dg and self.Gram
@@ -414,7 +414,7 @@ class SparseConstraintSolver(ConstraintSolverBase):
         m3 = dstrip(beads.m3[0])
         p = dstrip(beads.p[0]).copy()
         q = dstrip(beads.q[0]).copy()
-        
+
         i = 0
         if len(self.constraint_list) > 0:
             for dg, ic, gramchol, constr in zip(self.Dg_list, self.ic_list, self.GramChol_list, self.constraint_list):
@@ -430,11 +430,11 @@ class SparseConstraintSolver(ConstraintSolverBase):
                         i += 1
                     if (i == self.maxit):
                         print('No convergence in Newton iteration for positional component');
-    
+
         beads.p[0] = p
         beads.q[0] = q
-                                
-    
+
+
 class ConstrainedIntegrator(DummyIntegrator):
     """ No-op integrator for (PI)MD """
 
@@ -473,7 +473,7 @@ class ConstrainedIntegrator(DummyIntegrator):
             dd(self).nsteps_o = depend_array(name="nsteps_o", value=np.asarray(motion.nsteps_o, int))
 
         dd(self).csolver = motion.csolver
-        
+
 
         #tolerance = depend_value(name="tolerance", func=lambda: motion.tolerance)
         #dd(self).maxit = depend_value(name="maxit", func=lambda: motion.maxit)
@@ -518,7 +518,7 @@ class ConstrainedIntegrator(DummyIntegrator):
         if self.constraints.ncons > 0:
             self.csolver.update_constraints(beads)
             self.ciu = True
-    
+
     def proj_cotangent(self, beads):
         if self.constraints.ncons > 0:
             if not self.ciu:
@@ -531,8 +531,8 @@ class ConstrainedIntegrator(DummyIntegrator):
             if proj_p and stepsize is None:
                 stepsize = self.dt
             self.csolver.proj_manifold(beads, stepsize, proj_p)
-    
-    
+
+
     def step_Ag(self, stepsize=None, Nsteps=None):
         '''
         Geodesic flow
@@ -651,7 +651,18 @@ class NVTIntegrator_constraint(NVEIntegrator_constraint):
 
         for i in xrange(self.nsteps_o):
             self.thermostat.step()
+
+            p = dstrip(self.beads.p).copy()
+            sm = dstrip(self.thermostat.sm)
+            p /= sm
+            self.ensemble.eens += np.dot(p.flatten(), p.flatten()) * 0.5
+
             self.proj_cotangent(self.beads)
+
+            p = dstrip(self.beads.p).copy()
+            p /= sm
+            self.ensemble.eens -= np.dot(p.flatten(), p.flatten()) * 0.5
+
 
     def step(self, step=None):
         """Does one simulation time step."""
@@ -736,7 +747,7 @@ class ConstrainedIntegratorMTS(NVTIntegrator_constraint):
 
         #print("level: ", level)
         stepsize = self.dt/np.prod(self.nmts[:(level+1)])
-        
+
         #print("stepsize: ", stepsize)
         self.step_Bc(stepsize = .5 * stepsize, level = level)
         #self.step_B(stepsize = .5 * stepsize, level = level)
