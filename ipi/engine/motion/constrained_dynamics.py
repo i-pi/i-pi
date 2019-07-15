@@ -175,37 +175,49 @@ class ConstraintBase(dobject):
         if ncons == 0:
             self.ncons = len(constraint_values)
 
+        # determines the list of unique indices of atoms that are affected by this constraint
+        self.i_unique = np.unique(self.constrained_indices.flatten())
+        self.mk_idmaps()
+
+    def mk_idmaps(self):
+
+        # makes lookup dictionary and lists to quickly access the portions of arrays that are affected by this constraint
+        self.i_reverse = { value : i for i,value in enumerate(self.i_unique)}
+        self.n_unique = len(self.i_unique)
+        self.i3_unique = np.zeros(self.n_unique*3, int)
+        for i in range(self.n_unique):
+            self.i3_unique[3*i:3*(i+1)] = [3*self.i_unique[i], 3*self.i_unique[i]+1, 3*self.i_unique[i]+2]
+
+
     def bind(self, beads):
 
         self.beads = beads
 
         dself = dd(self)
+
+        dself.m3 = depend_array(name="g", value=np.zeros(self.n_unique*3),
+                    func=(lambda: self.beads.m3[0,self.i3_unique]), dependencies=[dd(self.beads).m3])
         dself.g = depend_array(name="g", value=np.zeros(self.ncons),
                         func=self.gfunc, dependencies=[dd(self.beads).q, dself.constraint_values])
-        dself.Dg = depend_array(name="Dg", value=np.zeros((self.ncons, 3*self.beads.natoms)),
+        dself.Dg = depend_array(name="Dg", value=np.zeros((self.ncons, self.n_unique*3)),
                         func=self.Dgfunc, dependencies=[dd(self.beads).q, dself.constraint_values])
+        dself.GramChol = depend_array(name="GramChol", value=np.zeros((self.ncons,self.ncons)),
+                func=self.GCfunc, dependencies = [dself.Dg] )
 
 
-    def gfunc(self,q):
+    def gfunc(self):
         raise NotImplementedError()
 
-    def Dgfunc(self,q):
+    def Dgfunc(self):
         """
         Calculates the Jacobian of the constraint.
         """
         raise NotImplementedError()
 
-    def get_ic(self):
-        """
-        returns the indices constrained coordinate indices
-        """
-        return [ i for j in self.get_iai() for i in range(3*j,3*j+3) ]
-
-    def get_iai(self):
-        """
-        get indices of atoms to which the constraint applies. Implementation of this function is required if constraints are handled by a subclass of SparseConstraintSolver
-        """
-        raise NotImplementedError()
+    def GCfunc(self):
+        dg = dstrip(self.Dg).copy()
+        dgm = dg/self.m3
+        return np.linalg.cholesky(np.dot(dg, dgm.T))
 
 
 class RigidBondConstraint(ConstraintBase):
@@ -218,12 +230,6 @@ class RigidBondConstraint(ConstraintBase):
 
         super(RigidBondConstraint,self).__init__(constrained_indices, constraint_values)
         self.constrained_indices.shape = (self.ncons, 2)
-
-        self.iai = self.get_iai()
-        self.iai_inv = { value : i for i,value in enumerate(self.iai)}
-
-    def get_iai(self):
-        return np.unique(self.constrained_indices.flatten())
 
     def gfunc(self):
         """
@@ -253,12 +259,14 @@ class RigidBondConstraint(ConstraintBase):
 
         q = dstrip(self.beads.q[0])
         constrained_indices = self.constrained_indices
-        r = np.zeros([self.ncons, np.size(q)])
+        r = np.zeros((self.ncons, self.n_unique*3))
         for i in range(self.ncons):
             c_atoms = constrained_indices[i]
+            c_idx_0 = self.i_reverse[c_atoms[0]]
+            c_idx_1 = self.i_reverse[c_atoms[1]]
             inst_position_vector = q[c_atoms[0] * 3:c_atoms[0] * 3 + 3] - q[c_atoms[1] * 3 : c_atoms[1] * 3 + 3]
-            r[i,c_atoms[0] * 3 : c_atoms[0] * 3 + 3] =   2.0 * inst_position_vector
-            r[i,c_atoms[1] * 3 : c_atoms[1] * 3 + 3] = - 2.0 * inst_position_vector
+            r[i, 3*c_idx_0: 3*c_idx_0+3] =   2.0 * inst_position_vector
+            r[i, 3*c_idx_1: 3*c_idx_1+3] = - 2.0 * inst_position_vector
         return r
 
     """
@@ -286,6 +294,19 @@ class ConstraintList(ConstraintBase):
         self.constraint_list = constraint_list
         self.ncons = sum([constr.ncons for constr in constraint_list])
 
+        # determines the list of unique indices of atoms that are affected by this constraint
+        self.i_unique = np.zeros(0)
+        for c in self.constraint_list:
+            self.i_unique = np.union1d(c.constrained_indices.flatten(),self.i_unique)
+        self.mk_idmaps()
+
+        # must now find the mapping from the unique indices in each constraint and these
+        # basically ic_map[i] gives the position where the atoms involved in the i-th constraint
+        # are stored in the compact list
+        self.ic_map = []
+        for c in self.constraint_list:
+            self.ic_map.append(np.array([self.i_reverse[i] for i in c.i_unique]))
+
     def bind(self, beads):
 
         # this is special because it doesn't hold constraint_values so we have to really specoalize
@@ -293,7 +314,9 @@ class ConstraintList(ConstraintBase):
 
         dself = dd(self)
         dself.g = depend_array(name="g", value=np.zeros(self.ncons), func=self.gfunc)
-        dself.Dg = depend_array(name="Dg", value=np.zeros((self.ncons, 3*self.beads.natoms)), func=self.Dgfunc)
+        dself.Dg = depend_array(name="Dg", value=np.zeros((self.ncons, self.n_unique*3)), func=self.Dgfunc)
+        dself.GramChol = depend_array(name="GramChol", value=np.zeros((self.ncons,self.ncons)),
+                func=self.GCfunc, dependencies = [dself.Dg] )
         for c in self.constraint_list:
             c.bind(beads)
             dself.g.add_dependency(dd(c).g)
@@ -319,16 +342,10 @@ class ConstraintList(ConstraintBase):
 
         r = np.zeros((self.ncons, np.size(q)))
         si = 0
-        for constr in self.constraint_list:
-            r[si:si+constr.ncons,:] = constr.Dg
+        for ic, constr in enumerate(self.constraint_list):
+            r[si:si+constr.ncons, self.ic_map[ic]] = constr.Dg
             si += constr.ncons
         return r
-
-    def get_iai(self):
-        iai = []
-        for constr in self.constraint_list:
-            iai += list(constr.get_iai())
-        return np.unique(iai)
 
 class ConstraintSolverBase(dobject):
 
@@ -345,6 +362,7 @@ class ConstraintSolverBase(dobject):
         raise NotImplementedError()
 
 
+#### DEPRECATED, TO BE REMOVED ASAP
 class ConstraintSolver(ConstraintSolverBase):
 
     def __init__(self, constraints, tolerance=0.0001,maxit=1000,norm_order=2):
@@ -417,15 +435,15 @@ class SparseConstraintSolver(ConstraintSolverBase):
         self.norm_order = norm_order
 
         self.constraint_list = constraints.constraint_list
-        self.ic_list = [constr.get_ic() for constr in self.constraint_list]
+        #self.ic_list = [constr.get_ic() for constr in self.constraint_list]
 
 
     def update_constraints(self, beads):
 
-        m3 = dstrip(beads.m3[0])
-        self.Dg_list = [constr.Dg[:,ic] for constr, ic in zip(self.constraint_list,self.ic_list) ]
-        self.Gram_list = [np.dot(dg,(dg/m3[ic]).T) for dg, ic in zip(self.Dg_list,self.ic_list)]
-        self.GramChol_list = [ np.linalg.cholesky(G) for G in self.Gram_list]
+        #m3 = dstrip(beads.m3[0])
+        #self.Dg_list = [constr.Dg[:,constr] for constr in self.constraint_list ]
+        #self.Gram_list = [np.dot(dg,(dg/m3[ic]).T) for dg, ic in zip(self.Dg_list,self.ic_list)]
+        #self.GramChol_list = [ np.linalg.cholesky(G) for G in self.Gram_list]
         self.ciu = True
 
 
@@ -436,8 +454,12 @@ class SparseConstraintSolver(ConstraintSolverBase):
 
         if len(self.constraint_list) > 0:
             #print("number of constraints: ", len(self.constraint_list))
-            for dg, ic, gramchol in zip(self.Dg_list, self.ic_list, self.GramChol_list):
-                b = np.dot(dg, p[ic]/m3[ic])
+            for constr in self.constraint_list : #zip(self.Dg_list, self.ic_list, self.GramChol_list):
+                dg = dstrip(constr.Dg)
+                ic = constr.i3_unique
+                gramchol = dstrip(constr.GramChol)
+
+                b = np.dot(dg, p[ic]/constr.m3)
                 x = np.linalg.solve(np.transpose(gramchol),np.linalg.solve(gramchol, b))
                 p[ic] += - np.dot(np.transpose(dg),x)
         beads.p[0] = p
@@ -452,12 +474,15 @@ class SparseConstraintSolver(ConstraintSolverBase):
 
         i = 0
         if len(self.constraint_list) > 0:
-            for dg, ic, gramchol, constr in zip(self.Dg_list, self.ic_list, self.GramChol_list, self.constraint_list):
+            for constr in self.constraint_list: # zip(self.Dg_list, self.ic_list, self.GramChol_list, self.constraint_list):
                 g = dstrip(constr.g)
+                dg = dstrip(constr.Dg)
+                ic = constr.i3_unique
+                gramchol = constr.GramChol
                 while (i < self.maxit and self.tolerance <= np.linalg.norm(g, ord=self.norm_order)):
                     dlambda = np.linalg.solve(np.transpose(gramchol),np.linalg.solve(gramchol, g))
                     delta = np.dot(np.transpose(dg),dlambda)
-                    q[ic] += - delta /m3[ic]
+                    q[ic] += - delta / m3[ic]
                     g = dstrip(constr.g)
                     if proj_p:
                         update_diff = - delta / stepsize
