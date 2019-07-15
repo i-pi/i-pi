@@ -218,7 +218,7 @@ class InputConstrainedDynamics(InputDictionary):
 
         self.extra = []
 
-        for constr in dyn.constraints.constraint_list:
+        for constr in dyn.constraint_list:
             iobj = InputConstraint()
             iobj.store(constr)
             self.extra.append( ("constraint", iobj) )
