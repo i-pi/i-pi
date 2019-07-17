@@ -26,7 +26,7 @@ from copy import copy
 import ipi.engine.initializer
 from ipi.engine.motion import Motion, Dynamics, Replay, GeopMotion, NEBMover,\
                             DynMatrixMover, MultiMotion, AlchemyMC, InstantonMotion,\
-                            TemperatureRamp, PressureRamp
+                            TemperatureRamp, PressureRamp, AtomSwap
 from ipi.utils.inputvalue import *
 from ipi.inputs.thermostats import *
 from ipi.inputs.initializer import *
@@ -36,6 +36,7 @@ from .neb import InputNEB
 from .dynamics import InputDynamics
 from .phonons import InputDynMatrix
 from .alchemy import InputAlchemy
+from .atomswap import InputAtomSwap
 from .ramp import InputTemperatureRamp, InputPressureRamp
 from ipi.utils.units import *
 
@@ -60,7 +61,7 @@ class InputMotionBase(Input):
 
     attribs = {"mode": (InputAttribute, {"dtype": str,
                                          "help": "How atoms should be moved at each step in the simulatio. 'replay' means that a simulation is replayed from trajectories provided to i-PI.",
-                                         "options": ['vibrations', 'minimize', 'replay', 'neb', 'dynamics', 't_ramp', 'p_ramp', 'alchemy', 'instanton', 'dummy']})}
+                                         "options": ['vibrations', 'minimize', 'replay', 'neb', 'dynamics', 't_ramp', 'p_ramp', 'alchemy', 'atomswap', 'instanton', 'dummy']})}
 
     fields = {"fixcom": (InputValue, {"dtype": bool,
                                       "default": True,
@@ -80,6 +81,8 @@ class InputMotionBase(Input):
                                               "help": "Option for phonon computation"}),
               "alchemy": (InputAlchemy, {"default": {},
                                          "help": "Option for alchemical exchanges"}),
+              "atomswap": (InputAtomSwap, {"default": {},
+                                         "help": "Option for Monte Carlo atom swap"}),
               "t_ramp": (InputTemperatureRamp, {"default": {},
                                               "help": "Option for temperature ramp"}),
               "p_ramp": (InputPressureRamp, {"default": {},
@@ -126,6 +129,10 @@ class InputMotionBase(Input):
             self.mode.store("alchemy")
             self.alchemy.store(sc)
             tsc = 1
+        elif type(sc) is AtomSwap:
+            self.mode.store("atomswap")
+            self.atomswap.store(sc)
+            tsc = 1
         elif type(sc) is InstantonMotion:
             self.mode.store("instanton")
             self.instanton.store(sc)
@@ -169,6 +176,8 @@ class InputMotionBase(Input):
             sc = DynMatrixMover(fixcom=self.fixcom.fetch(), fixatoms=self.fixatoms.fetch(), **self.vibrations.fetch())
         elif self.mode.fetch() == "alchemy":
             sc = AlchemyMC(fixcom=self.fixcom.fetch(), fixatoms=self.fixatoms.fetch(), **self.alchemy.fetch())
+        elif self.mode.fetch() == "atomswap":
+            sc = AtomSwap(fixcom=self.fixcom.fetch(), fixatoms=self.fixatoms.fetch(), **self.atomswap.fetch())
         elif self.mode.fetch() == "instanton":
             sc = InstantonMotion(fixcom=self.fixcom.fetch(), fixatoms=self.fixatoms.fetch(), **self.instanton.fetch())
         elif self.mode.fetch() == "t_ramp":
