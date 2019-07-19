@@ -11,8 +11,12 @@ import numpy as np
 ##########################################################################################
 
 #Load sparse matrix file in binary format
-def load_npz(file):
-  l = np.load(file)
+#Pass a function capable of loading the file to avoid np.load (loader='numpy')
+def load_npz(file, loader='numpy'):
+  if loader == 'numpy':
+    l = np.load(file)
+  else:
+    l = loader(file)
   if l['kind'] == 'csr':
     return csr_matrix(a=l['a'], ia=l['ia'], ja=l['ja'], m=l['m'], n=l['n'])
   else:
@@ -21,17 +25,21 @@ def load_npz(file):
 ##########################################################################################
 
 #Save sparse matrix file in binary format
-def save_npz(file, matrix, compressed=True):
+#Pass a function capable of saving the file to avoid np.savez (saver='numpy')
+def save_npz(file, matrix, saver='numpy', compressed=True):
   a = matrix.a
   ia = matrix.ia
   ja = matrix.ja
   m = matrix.m
   n = matrix.n
   kind = matrix.kind
-  if compressed == True:
-    np.savez_compressed(file, a=a, ia=ia, ja=ja, m=m, n=n, kind=kind)
+  if saver == 'numpy':
+    if compressed == True:
+      np.savez_compressed(file, a=a, ia=ia, ja=ja, m=m, n=n, kind=kind)
+    else:
+      np.savez(file, a=a, ia=ia, ja=ja, m=m, n=n, kind=kind)
   else:
-    np.savez(file, a=a, ia=ia, ja=ja, m=m, n=n, kind=kind)
+    saver(file, compressed=compressed, a=a, ia=ia, ja=ja, m=m, n=n, kind=kind)
 
 ##########################################################################################
 

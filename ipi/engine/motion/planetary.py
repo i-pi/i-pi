@@ -10,8 +10,7 @@ import copy
 import os
 import sys
 import numpy as np
-try: from scipy import sparse
-except: from ipi.utils import sparse
+from ipi.utils import sparse
 
 from ipi.engine.motion import Motion, Dynamics
 from ipi.utils.depend import *
@@ -19,6 +18,7 @@ from ipi.engine.thermostats import *
 from ipi.engine.normalmodes import NormalModes
 from ipi.engine.barostats import Barostat
 from ipi.utils.units import Constants
+from ipi.utils.io import netstring_encoded_savez
 
 class Planetary(Motion):
     """Evaluation of the matrices needed in a planetary model by
@@ -185,23 +185,9 @@ class Planetary(Motion):
 
     def save_matrix(self, matrix):
 
-        """ Writes the compressed, sparse frequency matrix to a temporary binary file, 
-        then cut and append contents to the permanent PLANETARY file. Cannot find a
-        prettier way of doing this... """
+        """ Writes the compressed, sparse frequency matrix to a netstring encoded file """
 
-        #with open("TEMP_PLANETARY", "wb") as f:
-        #    sparse.save_npz(f, matrix, compressed=True)
-        #with open("TEMP_PLANETARY", "r") as f:
-        #    text = f.read()
-
-        f = self.omaker.get_output("temporary", "wb")
-        sparse.save_npz(f, matrix, compressed=True)
-        f.close_stream()
-        f = self.omaker.get_output("temporary", "r")
-        text = f.read()
-        f.remove()
-        self.fomega2.write(text)
-        self.fomega2.write("\nXXXXXXXXXX\n")
+        sparse.save_npz(self.fomega2, matrix, saver=netstring_encoded_savez, compressed=True)
 
     def step(self, step=None):
 
