@@ -3,6 +3,7 @@
 # Created using the Atomic Simulation Environment (ASE)
 # Thu Jun 20 19:05:27 2019
 # ---------- I just use the same for the i-PI ----------
+#     species_dir : /home/fidanyan/soft/fhi-aims.190214/species_defaults/light
 #===============================================================================
 output_level                       MD_light
 sc_init_iter                       200
@@ -15,6 +16,7 @@ sc_accuracy_forces                 1E-4
 occupation_type                    gaussian 0.1
 compute_forces                     .true.
 spin                               none
+#===============================================================================
 
 ################################################################################
 #

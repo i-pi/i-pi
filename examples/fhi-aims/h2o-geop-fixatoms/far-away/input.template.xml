@@ -1,9 +1,8 @@
 <simulation mode='static' verbosity='medium'>
   <output prefix='PREFIX'>
-<!--    <properties stride='1' filename='out'>  [ step, potential{kilocal/mol} ] </properties>-->
     <trajectory stride='1' filename='pos'>  positions{angstrom}  </trajectory>
   </output>
-  <total_steps> 1000 </total_steps>
+  <total_steps> 10000 </total_steps>
   <ffsocket name='aims' mode='inet' pbc='true'>
     <address> localhost </address>
     <latency> 1e-4</latency>
@@ -11,7 +10,7 @@
   </ffsocket>
   <system>
     <initialize nbeads='1'>
-      <file mode='xyz'>  init.xyz </file>
+      <file mode='xyz'>  init.far-away.xyz </file>
     </initialize>
     <forces>
       <force forcefield='aims'> </force>
@@ -19,9 +18,6 @@
     <motion mode='minimize'>
       <fixatoms> [FIXATOMS] </fixatoms>
       <optimizer mode='MODE'>
-<!--    This ls_options tolerance is needed to make LBFGS work.-->
-<!--    The default value in inputs/ is 1., in engine/ is 1E-5-->
-        <ls_options>  <tolerance> 1e-2 </tolerance> </ls_options>
         <tolerances>
           <energy units='electronvolt'> 1e-3 </energy>
           <position> 1e-4 </position>

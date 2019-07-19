@@ -1,0 +1,7 @@
+lattice_vector 80.0  0.0  0.0
+lattice_vector 0.0  80.0  0.0
+lattice_vector 0.0  0.0  80.0
+atom    2.1246  0.093   2.6  O
+atom    2.5368  0.7561  2.8993  H
+atom    1.4948  0.5639  1.6568  H
+atom    40.0    40.0    40.0    H
