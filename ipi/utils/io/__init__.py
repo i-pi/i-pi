@@ -21,7 +21,7 @@ from ipi.utils.units import unit_to_user
 from ipi.external import importlib
 from ipi.utils.decorators import cached
 
-__all__ = ["io_units", "iter_file", "print_file_path", "print_file", "read_file"]
+__all__ = ["io_units", "iter_file", "print_file_path", "print_file", "read_file", "netstring_encoded_savez", "netstring_encoded_loadz"]
 
 mode_map = {
     "bin": "binary",
