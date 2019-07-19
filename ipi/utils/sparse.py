@@ -1,7 +1,9 @@
-"""Compressed sparse row and compressed sparse column sparse matrix implementation"""
+"""Minimal compressed sparse row and compressed sparse column sparse matrix implementation,
+used only for storage and retrieval but (ATM) not for calculations.
+"""
 
 # This file is part of i-PI.
-# i-PI Copyright (C) 2014-2015 i-PI developers
+# i-PI Copyright (C) 2014-2019 i-PI developers
 # See the "licenses" directory for full license information.
 
 import numpy as np
