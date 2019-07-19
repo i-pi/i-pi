@@ -1,10 +1,8 @@
-------------------------------------------------------------------------------------------
-------------------------------------THE PLANETARY MODEL-----------------------------------
-------------------------------------------------------------------------------------------
+Planetary model example
+======================
 
-------------------------------------------------------------------------------------------
-----------------------------------------BACKGROUND----------------------------------------
-------------------------------------------------------------------------------------------
+Background
+-----------
 
 The planetary model was developed by Smith et al.[1,2] and developed further by Willatt
 et al.[3] The model is based on a locally-harmonic approximation of the fluctuation of an
@@ -24,36 +22,35 @@ dynamics instead of Feynman-Kleinert CMD. The advantage of this approach is that
 centroid statistics are then exact. The planetary model is implemented in i-PI in this
 modified form. The code was written by M. J. Willatt, R. Benson, and M. Ceriotti.
 
-------------------------------------------------------------------------------------------
--------------------------------------------USAGE------------------------------------------
-------------------------------------------------------------------------------------------
 
+Usage
+---------
 In the xml input, one should include both <motion mode="dynamics"> and <motion
 mode="planetary">. The former describes the TRPMD simulation, and the latter provides
 details of the centroid-constrained frequency matrix sampling, e.g.
 
-<motion mode="multi">
-  <motion mode="dynamics">
-    <dynamics mode='nvt'>
-      <thermostat mode="pile_g">
-        <tau units="femtosecond">100</tau>
-        <pile_lambda> 0.5 </pile_lambda>
-      </thermostat>
-      <timestep units="femtosecond"> 0.25</timestep>
-    </dynamics>
+   <motion mode="multi">
+    <motion mode="dynamics">
+      <dynamics mode='nvt' splitting="baoab">
+	<thermostat mode="pile_g">
+          <tau units="femtosecond">100</tau>
+          <pile_lambda> 0.5 </pile_lambda>
+	</thermostat>
+	<timestep units="femtosecond"> 0.50 </timestep>
+      </dynamics>
+    </motion>
+    <motion mode="planetary">
+      <planetary mode='md'>
+        <thermostat mode="pile_g">
+          <tau units="femtosecond">1e10</tau>
+          <pile_lambda> 0.5 </pile_lambda>
+        </thermostat>
+        <timestep units="femtosecond"> 0.50 </timestep>
+        <stride> 2 </stride>
+        <nsamples> 128 </nsamples>
+      </planetary>
+    </motion>
   </motion>
-  <motion mode="planetary">
-    <planetary mode='md'>
-      <thermostat mode="pile_g">
-        <tau units="femtosecond">1e10</tau>
-        <pile_lambda> 0.5 </pile_lambda>
-      </thermostat>
-      <timestep units="femtosecond"> 0.75 </timestep>
-      <stride> 4 </stride>
-      <nsamples> 256 </nsamples>
-    </planetary>
-  </motion>
-</motion>
 
 In the above example, 256 frequency matrix samples are averaged for each centroid
 configuration. The sampling is performed with constrained-centroid dynamics with
@@ -63,21 +60,28 @@ example). The output of the simulation is binary file called [prefix].omega2, wh
 effective frequency matrices from the simulation in a compressed sparse column format. One
 should also record the centroid positions and momenta, e.g.
 
-<trajectory filename="xc" stride="4" format="xyz"> x_centroid </trajectory>
-<trajectory filename="pc" stride="4" format="xyz"> p_centroid </trajectory>
+<trajectory filename="xc" stride="2" format="xyz"> x_centroid </trajectory>
+<trajectory filename="pc" stride="2" format="xyz"> p_centroid </trajectory>
 
 With the [prefix].omega2 file and associated xyz files, one can calculate planetary model
 time-correlation functions using the Python program i-pi-planetary. As described in
 i-pi-planetary (tools/py/planetary.py), one must provide functions for the observables A
-and B, examples of which are given in tools/py/estmod_example.py.
+and B.
 
-An example input.xml file for a 64 water molecule q-TIP4P/F simulation can be found in
-examples/lammps/h2o-planetary-64/.
+Here we provide an example to compute the dipole module of qTIP4P water molecules.
+You should then run 
 
-------------------------------------------------------------------------------------------
-----------------------------------------REFERENCES----------------------------------------
-------------------------------------------------------------------------------------------
+i-pi-planetary PLANETARY 0.25 300 4 8 16 12345 ./estmode_dipole
+
+The observable - in this case mu - is output in PLANETARY_pl_qTIP4P-cmumu-re.dat
+and can be further processed to compute e.g. the autocorrelation function with 
+i-pi-get_acf (although a bit more than 16 steps would be needed for it to make sense!)
+
+
+References
+----------
 
 1. http://www.doi.org/10.1063/1.4922887
 2. http://www.doi.org/10.1063/1.4922888
 3. http://www.doi.org/10.1063/1.5004808
+

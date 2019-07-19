@@ -19,6 +19,7 @@ from ipi.engine.normalmodes import NormalModes
 from ipi.engine.barostats import Barostat
 from ipi.utils.units import Constants
 from ipi.utils.io import netstring_encoded_savez
+from ipi.utils.messages import verbosity, info
 
 class Planetary(Motion):
     """Evaluation of the matrices needed in a planetary model by
@@ -239,4 +240,4 @@ class Planetary(Motion):
         self.save_matrix(save_omega2)
 
         self.tsave += time.time()
-        print "AVG TIMING: ", self.tmc/self.neval, self.tmtx/self.neval, self.tsave/self.neval
+        info("@ PLANETARY MODEL Average timing: %f s, %f s, %f s\n" %( self.tmc/self.neval, self.tmtx/self.neval, self.tsave/self.neval ), verbosity.high)
