@@ -8,13 +8,13 @@ import argparse
 import importlib
 
 import numpy as np
-try: from scipy import sparse
-except: from ipi.utils import sparse
+from ipi.utils import sparse
 from ipi.utils.io import read_file
 from ipi.utils.prng import Random
 from ipi.utils.messages import warning
 from ipi.utils.depend import *
 from ipi.utils.units import *
+from ipi.utils.io import netstring_encoded_loadz
 
 matmul = np.matmul
 multi_dot = np.linalg.multi_dot
@@ -39,7 +39,7 @@ Assumes existance of the following files in the working directory:
     <prefix>.pc.xyz
   Stores centroid momenta along trajectory
 
-    PLANETARY.omega2
+    <prefix>.omega2
   Binary file storing path-integral frequency matrices at each centroid
   configuration along trajectory
 
@@ -226,7 +226,7 @@ class Planets(object):
         # Boolean mask for frequencies close to 0
         self.mask = np.zeros(3*self.natoms, dtype=bool)
         
-        self.fomega2 = open("PLANETARY.omega2", "r") 
+        self.fomega2 = open("{}.omega2".format(self.prefix), "r") 
         self.fqc = open("{}.xc.xyz".format(self.prefix), "r") 
         self.fpc = open("{}.pc.xyz".format(self.prefix), "r") 
         
@@ -250,23 +250,10 @@ class Planets(object):
     
     def read_omega2(self):
         """
-        Read in next instance of path-integral frequency matrix from PLANETARY.omega2
+        Read in next instance of path-integral frequency matrix from <prefix>.omega2
         """
-        text = ""
-        line = self.fomega2.readline()
-        
-        while line != "XXXXXXXXXX\n":
-            text += line
-            line = self.fomega2.readline()
-            if line == "":
-                sys.exit("!ERROR! looks like I've reached the end of the PLANETARY.omega2 file")
-        
-        with open("TEMP2_PLANETARY", "w") as f:
-            f.write(text)
-        
-        omega2 = sparse.load_npz("TEMP2_PLANETARY")
+        omega2 = sparse.load_npz(self.fomega2, loader=netstring_encoded_loadz)
         # Convert self.omega2 to double precision (need at least single precision for np.linalg to work)
-        #self.omega2[:] =  omega2.toarray().astype(np.float16).astype(np.float64) # for testing
         self.omega2[:] =  omega2.toarray().astype(np.float64)
         
     def read_qcpc(self):
@@ -447,7 +434,7 @@ class Planets(object):
         """
         Prepare to end simulation by safely closing any open files and removing temporary files
         """
-        os.remove("TEMP2_PLANETARY") 
+        #os.remove("TEMP2_PLANETARY") 
         self.fomega2.close() 
         self.fqc.close() 
         self.fpc.close() 
@@ -505,7 +492,7 @@ class Planets(object):
             print "SIMULATION COMPLETE. SHUTTING DOWN."
             self.shutdown()
         else:
-            warning("Reached end of simulation but files may remain open. TEMP2_PLANETARY may still exist.")
+            warning("Reached end of simulation but files may remain open.")
          
 def main():
     P = Planets(*getInput())
