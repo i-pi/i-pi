@@ -68,15 +68,13 @@ time-correlation functions using the Python program i-pi-planetary. As described
 i-pi-planetary (tools/py/planetary.py), one must provide functions for the observables A
 and B.
 
-Here we provide an example to compute the dipole module of qTIP4P water molecules.
-You should then run 
+Here we provide an example to compute the dipole moment autocorrelation function of qTIP4P
+water molecules. You should run 
 
-i-pi-planetary PLANETARY 0.25 300 4 8 16 12345 ./estmode_dipole
+i-pi-planetary PLANETARY 0.25 300 4 8 16 12345 ./estmod_dipole
 
-The observable - in this case mu - is output in PLANETARY_pl_qTIP4P-cmumu-re.dat
-and can be further processed to compute e.g. the autocorrelation function with 
-i-pi-get_acf (although a bit more than 16 steps would be needed for it to make sense!)
-
+The real part of the planetary model dipole moment autocorrelation function is output in
+PLANETARY_pl_qTIP4P-cmumu-re.dat.
 
 References
 ----------
@@ -84,4 +82,3 @@ References
 1. http://www.doi.org/10.1063/1.4922887
 2. http://www.doi.org/10.1063/1.4922888
 3. http://www.doi.org/10.1063/1.5004808
-

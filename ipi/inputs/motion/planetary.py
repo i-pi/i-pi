@@ -65,7 +65,7 @@ class InputPlanetary(InputDictionary):
 
     dynamic = {}
 
-    default_help = "Holds all the information for the planetary A B calculator."
+    default_help = "Holds all the information for the planetary model frequency matrix calculator."
     default_label = "PLANETARY"
 
     def store(self, plan):

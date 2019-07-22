@@ -328,12 +328,15 @@ def open_backup(filename, mode='r', buffering=-1):
 
     return open(filename, mode, buffering)
 
-def netstring_encoded_savez(ofile, compressed=True, *unnamed_objs, **named_objs):
+#def netstring_encoded_savez(ofile, compressed=True, *unnamed_objs, **named_objs):
+def netstring_encoded_savez(ofile, compressed=True, **named_objs):
     output = cStringIO.StringIO()
     if compressed:
-        np.savez_compressed(output,*unnamed_objs,**named_objs)
+        #np.savez_compressed(output,*unnamed_objs,**named_objs)
+        np.savez_compressed(output,**named_objs)
     else:
-        np.savez(output,*unnamed_objs,**named_objs)
+        #np.savez(output,*unnamed_objs,**named_objs)
+        np.savez(output,**named_objs)
     content = output.getvalue()
     ofile.write(str(len(content))+":"+content+",")
 
