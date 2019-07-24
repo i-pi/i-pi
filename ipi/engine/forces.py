@@ -326,6 +326,7 @@ class ForceComponent(dobject):
         self.ff = fflist[self.ffield]
 
         self._forces = [];
+        self.beads = beads
         for b in range(self.nbeads):
             new_force = ForceBead()
             new_force.bind(beads[b], cell, self.ff)
@@ -737,6 +738,7 @@ class Forces(dobject):
             for b in xrange(mself.nbeads):
                 dfkbref = dd(mreff._forces[b])
                 dfkbself = dd(mself._forces[b])
+                dd(dfkbself.atoms).q.set(deepcopy(dfkbref.atoms.q), manual=False)
                 dfkbself.ufvx.set(deepcopy(dfkbref.ufvx._value), manual=False)
                 dfkbself.ufvx.taint(taintme=False)
 
