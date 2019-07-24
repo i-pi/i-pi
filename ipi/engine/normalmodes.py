@@ -110,7 +110,7 @@ class NormalModes(dobject):
         if freqs is None:
             freqs = self.nm_freqs.copy()
 
-        newnm = NormalModes(self.mode, self.transform_method, freqs, self.dt)
+        newnm = NormalModes(self.mode, self.transform_method, freqs, self.open_paths, self.dt)
         return newnm
 
     def bind(self, ensemble, motion, beads=None, forces=None):

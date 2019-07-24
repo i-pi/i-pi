@@ -182,7 +182,7 @@ class GradientMapper(object):
     Used in the BFGS and L-BFGS minimizers.
 
     Attributes:
-        dbeds:   copy of the bead object
+        dbeads:   copy of the bead object
         dcell:   copy of the cell object
         dforces: copy of the forces object
     """
