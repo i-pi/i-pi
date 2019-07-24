@@ -1,0 +1,49 @@
+<simulation verbosity="high">
+  <output prefix="PLANETARY">
+    <properties stride="1" filename="out"> [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential,kinetic_md,
+    pressure_cv{megapascal}, volume] </properties>
+    <trajectory filename="xc" stride="2" format="xyz"> x_centroid </trajectory>
+    <trajectory filename="pc" stride="2" format="xyz"> p_centroid </trajectory>    
+  </output>
+  <total_steps>32</total_steps>
+  <prng>
+    <seed>32345</seed>
+  </prng>
+  <ffsocket name="lmpserial" mode="unix" pbc="true">
+    <address>water</address> <latency>0.001</latency>
+  </ffsocket>
+  <system>
+    <initialize nbeads="16">
+      <file mode="xyz"> water-64.xyz </file> 
+      <velocities mode="thermal" units="kelvin"> 300 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='lmpserial'>  </force>
+    </forces>
+    <ensemble>
+      <temperature units="kelvin">300</temperature>
+    </ensemble>
+   <motion mode="multi">
+    <motion mode="dynamics">
+      <dynamics mode='nvt' splitting="baoab">
+	<thermostat mode="pile_g">
+          <tau units="femtosecond">100</tau>
+          <pile_lambda> 0.5 </pile_lambda>
+	</thermostat>
+	<timestep units="femtosecond"> 0.50 </timestep>
+      </dynamics>
+    </motion>
+    <motion mode="planetary">
+      <planetary mode='md'>
+        <thermostat mode="pile_g">
+          <tau units="femtosecond">1e10</tau>
+          <pile_lambda> 0.5 </pile_lambda>
+        </thermostat>
+        <timestep units="femtosecond"> 0.50 </timestep>
+        <stride> 2 </stride>
+        <nsamples> 128 </nsamples>
+      </planetary>
+    </motion>
+  </motion>
+  </system>
+</simulation>
