@@ -55,7 +55,7 @@ class InputGeop(InputDictionary):
                               adaptive: whether to update initial step.
                               """,
                                                "options": ["tolerance", "iter", "step", "adaptive"],
-                                               "default": [1e-2, 100, 1e-3, 1.0],
+                                               "default": [1e-4, 100, 1e-3, 1.0],
                                                "dimension": ["undefined", "undefined", "length", "undefined"]}),
               "exit_on_convergence": (InputValue, {"dtype": bool,
                                             "default": True,

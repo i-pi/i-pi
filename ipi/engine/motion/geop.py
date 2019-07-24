@@ -61,7 +61,7 @@ class GeopMotion(Motion):
                  invhessian_bfgs=np.eye(0, 0, 0, float),
                  hessian_trm=np.eye(0, 0, 0, float),
                  tr_trm=np.zeros(0, float),
-                 ls_options={"tolerance": 1e-2, "iter": 100, "step": 1e-3, "adaptive": 1.0},
+                 ls_options={"tolerance": 1e-4, "iter": 100, "step": 1e-3, "adaptive": 1.0},
                  tolerances={"energy": 1e-7, "force": 1e-4, "position": 1e-4},
                  corrections_lbfgs=6,   # changed to 6 because it's 6 in inputs/motion/geop.py, which overrides it anyways
                  scale_lbfgs=1,
