@@ -347,14 +347,14 @@ class NormalModes(dobject):
         # Note that the propagator uses mass-scaled momenta.
         for b in range(1, self.nbeads):
             sk = np.sqrt(self.nm_factor[b])
-            square = (self.omegak[b] * dt / 2)**2
-            pqk[b, 0, 0] = (1-square) / (1+square)
-            pqk[b, 1, 1] = (1-square) / (1+square)
-            pqk[b, 0, 1] = (4*square / dt * sk) / (1+square)
-            pqk[b, 1, 0] = dt / sk / (1+square)
-
+            dtomegak = self.omegak[b] * dt / sk
+            c = np.cos(dtomegak)
+            s = np.sin(dtomegak)
+            pqk[b, 0, 0] = c
+            pqk[b, 1, 1] = c
+            pqk[b, 0, 1] = -s * self.omegak[b] * sk
+            pqk[b, 1, 0] = s / (self.omegak[b] * sk)
         return pqk
-
 
     def get_cay_prop_pq(self):
         """Gets the normal mode propagator matrix using Cayley transform. 
