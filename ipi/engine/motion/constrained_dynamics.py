@@ -254,7 +254,7 @@ class RigidBondConstraint(ConstraintBase):
         for i in range(self.ncons):
             c_atoms = self.i3_indirect[i]
             c_dist = constraint_distances[i]
-            print q[c_atoms[0]], q[c_atoms[1]], c_dist
+            #print q[c_atoms[0]], q[c_atoms[1]], c_dist
             r[i] = np.sum((q[c_atoms[0]] - q[c_atoms[1]])**2) - c_dist**2
         if q[0] == float('inf'):
             ValueError("fgfgf")
@@ -347,7 +347,7 @@ class ConstraintList(ConstraintBase):
             dself.Dg.add_dependency(dd(c).Dg)
 
 
-    def gfunc(self):
+    def gfunc(self, q):
         """
         Compute the constraint function.
         """
@@ -363,11 +363,11 @@ class ConstraintList(ConstraintBase):
         """
         Compute the Jacobian of the constraint function.
         """
-
+        q = dstrip(self.beads.q[0])
         r = np.zeros((self.ncons, np.size(q)))
         si = 0
         for ic, constr in enumerate(self.constraint_list):
-            r[si:si+constr.ncons, self.ic_map[ic]] = constr.Dg
+            r[si:si+constr.ncons, self.ic3_map[ic]] = constr.Dg
             si += constr.ncons
         return r
 
@@ -505,8 +505,8 @@ class SparseConstraintSolver(ConstraintSolverBase):
         q = dstrip(beads.q[0]).copy()
 
         for constr in self.constraint_list:
-                print "before", constr.q
-                print "vs", q[constr.i3_unique.flatten()]
+            print "before", constr.q
+            print "vs", q[constr.i3_unique.flatten()]
 
         i = 0
         if len(self.constraint_list) > 0:
@@ -514,9 +514,10 @@ class SparseConstraintSolver(ConstraintSolverBase):
                 # these must only be computed on the manifold so we store them and don't update them
                 dg = dstrip(constr.Dg).copy()
                 gramchol = dstrip(constr.GramChol).copy()
+                #print "gramchol ", gramchol
                 ic = constr.i3_unique
                 g = constr.gfunc(q[ic])
-                print "g vector", g
+                # print "g vector", g
                 while (i < self.maxit and self.tolerance <= np.linalg.norm(g, ord=self.norm_order)):
                     dlambda = np.linalg.solve(np.transpose(gramchol),np.linalg.solve(gramchol, g))
                     delta = np.dot(np.transpose(dg),dlambda)
@@ -613,16 +614,21 @@ class ConstrainedIntegrator(DummyIntegrator):
         """
         if stepsize is None:
             stepsize = self.dt
-
-        if not self.ciu:
-            self.update_constraints(self.beads)
+        
+        #if not self.ciu:
+        self.update_constraints(self.beads)
 
         self.step_B(.5 * stepsize)
         self.step_A(stepsize)
+        for constr in self.csolver.constraint_list:
+            print("updated Dg 2 : ", constr.Dg)
         self.proj_manifold(self.beads, stepsize)
 
     def update_constraints(self, beads):
-        pass
+        for constr in self.csolver.constraint_list:
+            print("before Dg : ", dstrip(constr.Dg))
+            a = constr.Dg
+            print("updated Dg : ", a)
 
     def proj_cotangent(self, beads):
         self.csolver.proj_cotangent(beads)
@@ -816,8 +822,8 @@ class ConstrainedIntegratorMTS(NVTIntegrator_constraint):
         if stepsize is None:
             stepsize = self.dt/np.prod(self.nmts[:(level+1)])
 
-        if not self.ciu:
-            self.update_constraints(self.beads)
+        print("~~~~~~~~~~~~~~~BA step~~~~~~~~~~~~~~")
+        self.update_constraints(self.beads)
 
         self.step_B(.5 * stepsize,level=level)
         self.step_A(stepsize)
@@ -849,6 +855,7 @@ class ConstrainedIntegratorMTS(NVTIntegrator_constraint):
         #print("level: ", level)
         stepsize = self.dt/np.prod(self.nmts[:(level+1)])
 
+        self.update_constraints(self.beads)
         #print("stepsize: ", stepsize)
         self.step_Bc(stepsize = .5 * stepsize, level = level)
         #self.step_B(stepsize = .5 * stepsize, level = level)
@@ -857,6 +864,8 @@ class ConstrainedIntegratorMTS(NVTIntegrator_constraint):
                 self.step_respa(level=level+1)
         else:
             self.step_A(stepsize)
+            for constr in self.csolver.constraint_list:
+                print("updated Dg 2 : ", constr.Dg)
             self.proj_manifold(self.beads, stepsize=stepsize, proj_p=True)
         #self.step_B(stepsize = .5 * stepsize, level = level)
         self.step_Bc(stepsize = .5 * stepsize, level = level)
