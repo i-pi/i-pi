@@ -211,7 +211,7 @@ class ConstraintBase(dobject):
         dself.m3 = depend_array(name="g", value=np.zeros(self.n_unique*3),
                     func=(lambda: self.beads.m3[0,self.i3_unique]), dependencies=[dd(self.beads).m3])
         dself.g = depend_array(name="g", value=np.zeros(self.ncons),
-                        func=(lambda: self.gfunc(self.q)), dependencies=[dself.q, dself.constraint_values])
+                        func=self.gfunc, dependencies=[dself.q, dself.constraint_values])
         dself.Dg = depend_array(name="Dg", value=np.zeros((self.ncons, self.n_unique*3)),
                         func=self.Dgfunc, dependencies=[dself.q, dself.constraint_values])
         dself.GramChol = depend_array(name="GramChol", value=np.zeros((self.ncons,self.ncons)),
@@ -220,7 +220,7 @@ class ConstraintBase(dobject):
     def gfunc(self):
         raise NotImplementedError()
 
-    def Dgfunc(self, q):
+    def Dgfunc(self):
         """
         Calculates the Jacobian of the constraint.
         """
@@ -244,11 +244,12 @@ class RigidBondConstraint(ConstraintBase):
         self.constrained_indices.shape = (self.ncons, 2)
         self.i3_indirect.shape = (self.ncons, 2, 3)
 
-    def gfunc(self, q):
+    def gfunc(self):
         """
         Calculates the constraint.
         """
 
+        q = dstrip(self.q)
         r = np.zeros(self.ncons)
         constraint_distances = dstrip(self.constraint_values)
         for i in range(self.ncons):
@@ -263,7 +264,7 @@ class RigidBondConstraint(ConstraintBase):
         #print("gfunc", r)
         return r
 
-    def Dgfunc(self):
+    def Dgfunc(self, reduced=False):
         """
         Calculates the Jacobian of the constraint.
         """
@@ -515,14 +516,15 @@ class SparseConstraintSolver(ConstraintSolverBase):
                 dg = dstrip(constr.Dg).copy()
                 gramchol = dstrip(constr.GramChol).copy()
                 ic = constr.i3_unique
-                g = constr.gfunc(q[ic])
+                constr.q = q[ic]
+                g = dstrip(constr.g)
                 print "g vector", g
                 while (i < self.maxit and self.tolerance <= np.linalg.norm(g, ord=self.norm_order)):
                     dlambda = np.linalg.solve(np.transpose(gramchol),np.linalg.solve(gramchol, g))
                     delta = np.dot(np.transpose(dg),dlambda)
                     q[ic] += - delta / m3[ic]
                     constr.q = q[ic] # updates the constraint to recompute g
-                    g = constr.gfunc(q[ic])
+                    g = dstrip(constr.g)
                     if proj_p:
                         update_diff = - delta / stepsize
                         p[ic] += update_diff
