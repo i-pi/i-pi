@@ -5,7 +5,7 @@
     <trajectory filename='vel' stride='1'> velocities </trajectory>
     <checkpoint stride='200'/>
   </output>
-  <total_steps> 1000 </total_steps>
+  <total_steps> 2 </total_steps>
   <prng>
     <seed>31415</seed>
   </prng>
@@ -21,14 +21,12 @@
       <force forcefield='lammps'> </force>
     </forces>
     <motion mode='constrained_dynamics'>
-      <constrained_dynamics mode='nve' splitting='rattle'>
+      <constrained_dynamics mode='nvt' splitting='baoab'>
         <nsteps_geo> [ 5 ] </nsteps_geo>
         <timestep units='femtosecond'> 2.0 </timestep>
-        <!--<thermostat mode='langevin'>
+        <thermostat mode='langevin'>
             <tau units='femtosecond'> 100 </tau>
         </thermostat>
-         -->
-        <!--
         <constraint mode="distance"> 
             <atoms> [1, 2] </atoms> <distances> [ 2.8687441 ] </distances>
         </constraint>
@@ -38,24 +36,17 @@
             </atoms> 
             <distances> [ 1.8897261, 1.8897261 ]  </distances>
         </constraint>
-         -->
         <constraint mode="multi">
-          <constraint mode="distance">
-            <atoms> [1, 2] </atoms> <distances> [ 2.8687441 ] </distances>
-          </constraint>
-          <constraint mode="distance">
-            <atoms> [0, 1,0, 2] </atoms>
-          <distances> [ 1.8897261, 1.8897261 ]  </distances>
-          </constraint>
+            <constraint mode="distance">
+                <atoms> [1, 2] </atoms> <distances> [ 2.8687441 ] </distances>
+            </constraint>
+            <constraint mode="distance">
+                <atoms> [0, 1,
+                         0, 2]
+                </atoms>
+                <distances> [ 1.8897261, 1.8897261 ]  </distances>
+            </constraint>
         </constraint>
-         <csolver mode='sparse'>
-             <maxit> 10000 </maxit>
-             <norm_order> 2 </norm_order>
-             <tolerance> .0001 </tolerance>
-         </csolver>
-         <constraint mode="distance">
-             <atoms> [1, 2, 0, 1, 0, 2] </atoms> <distances> [ 2.8687441, 1.8897261, 1.8897261  ] </distances>
-         </constraint>
       </constrained_dynamics>
     </motion>
     <ensemble>
