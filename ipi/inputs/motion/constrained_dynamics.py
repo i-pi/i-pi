@@ -22,7 +22,7 @@ class InputConstraintSolver(InputDictionary):
                  "default": 'full',
                  "help": "The type of numerical method. ",
                  "options": ['full', 'sparse']})
-
+                 
         }
     fields = {
         "tolerance": (InputValue, { "dtype": float,
@@ -43,7 +43,7 @@ class InputConstraintSolver(InputDictionary):
 
 
     def store(self, csolver):
-
+        
         if type(csolver) is ConstraintSolver:
             self.mode.store("full")
         elif type(csolver) is SparseConstraintSolver:
@@ -53,9 +53,9 @@ class InputConstraintSolver(InputDictionary):
         self.maxit.store(csolver.maxit)
         self.norm_order.store(csolver.norm_order)
 
-
-
-
+        
+        
+    
     def fetch(self):
         csolver = super(InputConstraintSolver, self).fetch()
         csolver["mode"] = self.mode.fetch()
@@ -91,7 +91,7 @@ class InputConstraintBase(Input):
         if type(cnstr) is RigidBondConstraint:
             self.mode.store("distance")
             self.atoms.store(cnstr.constrained_indices)
-            self.distances.store(cnstr.constraint_values)
+            self.distances.store(cnstr.constrained_distances)
 
 
     def fetch(self):
@@ -188,7 +188,7 @@ class InputConstrainedDynamics(InputDictionary):
         "nsteps_geo": (InputArray, {"dtype": int,
                                     "default": np.zeros(0, int),
                                     "help": "The number of sub steps used in the evolution of the geodesic flow (used in function step_Ag)." }),
-
+                                    
         "csolver": (InputConstraintSolver, {"help" : "Define a numerical method for computing the projection operators associated with the constraint."})
     }
 
@@ -217,7 +217,7 @@ class InputConstrainedDynamics(InputDictionary):
         self.csolver.store(dyn.csolver)
 
         self.extra = []
-
+        
         for constr in dyn.constraints.constraint_list:
             iobj = InputConstraint()
             iobj.store(constr)

@@ -156,9 +156,6 @@ class ConstrainedDynamics(Dynamics):
         """
         super(ConstrainedDynamics, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
 
-        # now binds the constraints
-        self.constraints.bind(beads)
-
         """
         if len(self.nmts) > 1 or (len(self.nmts) == 1 and self.nmts[0] != 1):
             raise ValueError("MTS with constrains has not been implemented.")
@@ -167,24 +164,8 @@ class ConstrainedDynamics(Dynamics):
 class ConstraintBase(dobject):
     """ Constraint class for MD. Base class."""
 
-    def __init__(self, constrained_indices, constraint_values, ncons=0):
-        self.constrained_indices = constrained_indices
-
-        dd(self).constraint_values = depend_array(name="constraint_values",
-                value=np.asarray(constraint_values).copy())
-        if ncons == 0:
-            self.ncons = len(constraint_values)
-
-    def bind(self, beads):
-
-        self.beads = beads
-
-        dself = dd(self)
-        dself.g = depend_array(name="g", value=np.zeros(self.ncons),
-                        func=self.gfunc, dependencies=[dd(self.beads).q, dself.constraint_values])
-        dself.Dg = depend_array(name="Dg", value=np.zeros((self.ncons, 3*self.beads.natoms)),
-                        func=self.Dgfunc, dependencies=[dd(self.beads).q, dself.constraint_values])
-
+    def __init__(self, ncons):
+        self.ncons = ncons
 
     def gfunc(self,q):
         raise NotImplementedError()
@@ -204,6 +185,7 @@ class ConstraintBase(dobject):
     def get_iai(self):
         """
         get indices of atoms to which the constraint applies. Implementation of this function is required if constraints are handled by a subclass of SparseConstraintSolver
+
         """
         raise NotImplementedError()
 
@@ -214,10 +196,11 @@ class RigidBondConstraint(ConstraintBase):
         of rigid bonds, i.e. there will be a list of pairs of atoms and
         a list of bond lengths. """
 
-    def __init__(self,constrained_indices,constraint_values):
+    def __init__(self,constrained_indices,constrained_distances):
 
-        super(RigidBondConstraint,self).__init__(constrained_indices, constraint_values)
-        self.constrained_indices.shape = (self.ncons, 2)
+        super(RigidBondConstraint,self).__init__(ncons=len(constrained_distances))
+        self.constrained_indices = constrained_indices.reshape([self.ncons, 2])
+        self.constrained_distances = constrained_distances
 
         self.iai = self.get_iai()
         self.iai_inv = { value : i for i,value in enumerate(self.iai)}
@@ -225,20 +208,20 @@ class RigidBondConstraint(ConstraintBase):
     def get_iai(self):
         return np.unique(self.constrained_indices.flatten())
 
-    def gfunc(self):
+
+    def gfunc(self, q):
         """
         Calculates the constraint.
         """
-
-        q = dstrip(self.beads.q[0])
         r = np.zeros(self.ncons)
         constrained_indices = dstrip(self.constrained_indices)
-        constraint_distances = dstrip(self.constraint_values)
+        constrained_distances = dstrip(self.constrained_distances)
         for i in range(self.ncons):
             c_atoms = constrained_indices[i]
-            c_dist = constraint_distances[i]
+            c_dist = constrained_distances[i]
             #print c_atoms, self.constrained_indices
             r[i] = np.sum((q[c_atoms[0] * 3:c_atoms[0] * 3 + 3] - q[c_atoms[1] * 3: c_atoms[1] * 3 + 3])**2) - c_dist**2
+                #print("q", beads.q[0])
         if q[0] == float('inf'):
             ValueError("fgfgf")
             print("autsch")
@@ -246,13 +229,11 @@ class RigidBondConstraint(ConstraintBase):
         #print("gfunc", r)
         return r
 
-    def Dgfunc(self, reduced=False):
+    def Dgfunc(self, q, reduced=False):
         """
         Calculates the Jacobian of the constraint.
         """
-
-        q = dstrip(self.beads.q[0])
-        constrained_indices = self.constrained_indices
+        constrained_indices = dstrip(self.constrained_indices)
         r = np.zeros([self.ncons, np.size(q)])
         for i in range(self.ncons):
             c_atoms = constrained_indices[i]
@@ -280,47 +261,31 @@ class RigidBondConstraint(ConstraintBase):
 
 
 class ConstraintList(ConstraintBase):
-    """ Constraint class holding a list of constraints"""
+    """ Constraint class for MD"""
 
     def __init__(self, constraint_list):
         self.constraint_list = constraint_list
         self.ncons = sum([constr.ncons for constr in constraint_list])
 
-    def bind(self, beads):
-
-        # this is special because it doesn't hold constraint_values so we have to really specoalize
-        self.beads = beads
-
-        dself = dd(self)
-        dself.g = depend_array(name="g", value=np.zeros(self.ncons), func=self.gfunc)
-        dself.Dg = depend_array(name="Dg", value=np.zeros((self.ncons, 3*self.beads.natoms)), func=self.Dgfunc)
-        for c in self.constraint_list:
-            c.bind(beads)
-            dself.g.add_dependency(dd(c).g)
-            dself.Dg.add_dependency(dd(c).Dg)
-
-
-    def gfunc(self):
+    def gfunc(self, q):
         """
         Compute the constraint function.
         """
         r = np.zeros(self.ncons)
-
         si = 0
         for constr in self.constraint_list:
-            r[si:si+constr.ncons] = constr.g
+            r[si:si+constr.ncons] = constr.gfunc(q)
             si += constr.ncons
         return r
 
-    def Dgfunc(self):
+    def Dgfunc(self, q):
         """
         Compute the Jacobian of the constraint function.
         """
-
         r = np.zeros((self.ncons, np.size(q)))
         si = 0
         for constr in self.constraint_list:
-            r[si:si+constr.ncons,:] = constr.Dg
+            r[si:si+constr.ncons,:] = constr.Dgfunc(q)
             si += constr.ncons
         return r
 
@@ -423,7 +388,7 @@ class SparseConstraintSolver(ConstraintSolverBase):
     def update_constraints(self, beads):
 
         m3 = dstrip(beads.m3[0])
-        self.Dg_list = [constr.Dg[:,ic] for constr, ic in zip(self.constraint_list,self.ic_list) ]
+        self.Dg_list = [constr.Dgfunc(dstrip(beads.q[0]))[:,ic] for constr, ic in zip(self.constraint_list,self.ic_list) ]
         self.Gram_list = [np.dot(dg,(dg/m3[ic]).T) for dg, ic in zip(self.Dg_list,self.ic_list)]
         self.GramChol_list = [ np.linalg.cholesky(G) for G in self.Gram_list]
         self.ciu = True
@@ -448,17 +413,17 @@ class SparseConstraintSolver(ConstraintSolverBase):
         '''
         m3 = dstrip(beads.m3[0])
         p = dstrip(beads.p[0]).copy()
-        q = beads.q[0] # dstrip(beads.q[0]).copy()
+        q = dstrip(beads.q[0]).copy()
 
         i = 0
         if len(self.constraint_list) > 0:
             for dg, ic, gramchol, constr in zip(self.Dg_list, self.ic_list, self.GramChol_list, self.constraint_list):
-                g = dstrip(constr.g)
+                g = constr.gfunc(q)
                 while (i < self.maxit and self.tolerance <= np.linalg.norm(g, ord=self.norm_order)):
                     dlambda = np.linalg.solve(np.transpose(gramchol),np.linalg.solve(gramchol, g))
                     delta = np.dot(np.transpose(dg),dlambda)
                     q[ic] += - delta /m3[ic]
-                    g = dstrip(constr.g)
+                    g = constr.gfunc(q)
                     if proj_p:
                         update_diff = - delta / stepsize
                         p[ic] += update_diff
@@ -467,6 +432,7 @@ class SparseConstraintSolver(ConstraintSolverBase):
                         print('No convergence in Newton iteration for positional component');
 
         beads.p[0] = p
+        beads.q[0] = q
 
 
 class ConstrainedIntegrator(DummyIntegrator):
@@ -495,8 +461,6 @@ class ConstrainedIntegrator(DummyIntegrator):
 
         self.constraints = motion.constraints
         self.ciu = False
-
-        self.beads = motion.beads
 
         if motion.nsteps_geo is None or len(motion.nsteps_geo) == 0:
             dd(self).nsteps_geo = depend_array(name="nsteps_geo", value=np.asarray([1], int))
