@@ -107,25 +107,24 @@ class ConstrainedDynamics(Dynamics):
         else:
             self.fixatoms = fixatoms
 
-        # The list of constraints coming from the input is an actual list of independent
-        # constraints, and should be treated as such
+        # Create constraint object
         if constraint_list is not None:
-            self.constraint_list = constraint_list
+            self.constraints = ConstraintList(constraint_list)
 
 
         if csolver is None:
-            self.csolver = ConstraintSolver(self.constraint_list, tolerance=0.0001,maxit=10000,norm_order=2)
+            self.csolver = ConstraintSolver(self.constraints, tolerance=0.0001,maxit=10000,norm_order=2)
         else:
             if csolver["norm_order"] == -1:
                 norm_order = float('inf')
             else:
                 norm_order = csolver["norm_order"]
             if csolver["mode"] == "full":
-                self.csolver = ConstraintSolver(self.constraint_list, tolerance=csolver["tolerance"],
+                self.csolver = ConstraintSolver(self.constraints, tolerance=csolver["tolerance"],
                                                 maxit=csolver["maxit"],
                                                 norm_order=norm_order)
             else:
-                self.csolver = SparseConstraintSolver(self.constraint_list, tolerance=csolver["tolerance"],
+                self.csolver = SparseConstraintSolver(self.constraints, tolerance=csolver["tolerance"],
                                                       maxit=csolver["maxit"],
                                                       norm_order=norm_order)
 
@@ -158,9 +157,7 @@ class ConstrainedDynamics(Dynamics):
         super(ConstrainedDynamics, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
 
         # now binds the constraints
-        for c in self.constraint_list:
-            c.bind(beads)
-        self.csolver.bind(beads)
+        self.constraints.bind(beads)
 
         """
         if len(self.nmts) > 1 or (len(self.nmts) == 1 and self.nmts[0] != 1):
@@ -190,12 +187,6 @@ class ConstraintBase(dobject):
         self.i3_unique = np.zeros(self.n_unique*3, int)
         for i in range(self.n_unique):
             self.i3_unique[3*i:3*(i+1)] = [3*self.i_unique[i], 3*self.i_unique[i]+1, 3*self.i_unique[i]+2]
-        # this can be used to access the position array based on the constrained_indices list
-        self.i3_indirect = np.zeros((len(self.constrained_indices.flatten()),3), int)
-        for ri, i in enumerate(self.constrained_indices.flatten()):
-            rri = self.i_reverse[i]
-            self.i3_indirect[ri] = [3*rri, 3*rri+1, 3*rri+2]
-
 
 
     def bind(self, beads):
@@ -204,18 +195,15 @@ class ConstraintBase(dobject):
 
         dself = dd(self)
 
-        # the constraint is not necessarily computed on the instantaneous positions,
-        # so we need to decouple it from the beads q
-
-        dself.q = depend_array(name="q", value=np.zeros(self.n_unique*3))
         dself.m3 = depend_array(name="g", value=np.zeros(self.n_unique*3),
                     func=(lambda: self.beads.m3[0,self.i3_unique]), dependencies=[dd(self.beads).m3])
         dself.g = depend_array(name="g", value=np.zeros(self.ncons),
-                        func=self.gfunc, dependencies=[dself.q, dself.constraint_values])
+                        func=self.gfunc, dependencies=[dd(self.beads).q, dself.constraint_values])
         dself.Dg = depend_array(name="Dg", value=np.zeros((self.ncons, self.n_unique*3)),
-                        func=self.Dgfunc, dependencies=[dself.q, dself.constraint_values])
+                        func=self.Dgfunc, dependencies=[dd(self.beads).q, dself.constraint_values])
         dself.GramChol = depend_array(name="GramChol", value=np.zeros((self.ncons,self.ncons)),
                 func=self.GCfunc, dependencies = [dself.Dg] )
+
 
     def gfunc(self):
         raise NotImplementedError()
@@ -242,21 +230,21 @@ class RigidBondConstraint(ConstraintBase):
 
         super(RigidBondConstraint,self).__init__(constrained_indices, constraint_values)
         self.constrained_indices.shape = (self.ncons, 2)
-        self.i3_indirect.shape = (self.ncons, 2, 3)
 
     def gfunc(self):
         """
         Calculates the constraint.
         """
 
-        q = dstrip(self.q)
+        q = dstrip(self.beads.q[0])
         r = np.zeros(self.ncons)
+        constrained_indices = dstrip(self.constrained_indices)
         constraint_distances = dstrip(self.constraint_values)
         for i in range(self.ncons):
-            c_atoms = self.i3_indirect[i]
+            c_atoms = constrained_indices[i]
             c_dist = constraint_distances[i]
-            print q[c_atoms[0]], q[c_atoms[1]], c_dist
-            r[i] = np.sum((q[c_atoms[0]] - q[c_atoms[1]])**2) - c_dist**2
+            #print c_atoms, self.constrained_indices
+            r[i] = np.sum((q[c_atoms[0] * 3:c_atoms[0] * 3 + 3] - q[c_atoms[1] * 3: c_atoms[1] * 3 + 3])**2) - c_dist**2
         if q[0] == float('inf'):
             ValueError("fgfgf")
             print("autsch")
@@ -273,10 +261,12 @@ class RigidBondConstraint(ConstraintBase):
         constrained_indices = self.constrained_indices
         r = np.zeros((self.ncons, self.n_unique*3))
         for i in range(self.ncons):
-            c_atoms = self.i3_indirect[i]
-            inst_position_vector = q[c_atoms[0]] - q[c_atoms[1]]
-            r[i][c_atoms[0]] =   2.0 * inst_position_vector
-            r[i][c_atoms[1]] = - 2.0 * inst_position_vector
+            c_atoms = constrained_indices[i]
+            c_idx_0 = self.i_reverse[c_atoms[0]]
+            c_idx_1 = self.i_reverse[c_atoms[1]]
+            inst_position_vector = q[c_atoms[0] * 3:c_atoms[0] * 3 + 3] - q[c_atoms[1] * 3 : c_atoms[1] * 3 + 3]
+            r[i, 3*c_idx_0: 3*c_idx_0+3] =   2.0 * inst_position_vector
+            r[i, 3*c_idx_1: 3*c_idx_1+3] = - 2.0 * inst_position_vector
         return r
 
     """
@@ -308,18 +298,14 @@ class ConstraintList(ConstraintBase):
         self.i_unique = np.zeros(0)
         for c in self.constraint_list:
             self.i_unique = np.union1d(c.constrained_indices.flatten(),self.i_unique)
-        self.constrained_indices = self.i_unique
         self.mk_idmaps()
 
         # must now find the mapping from the unique indices in each constraint and these
         # basically ic_map[i] gives the position where the atoms involved in the i-th constraint
         # are stored in the compact list
         self.ic_map = []
-        self.ic3_map = []
         for c in self.constraint_list:
-            i_map = np.array([self.i_reverse[i] for i in c.i_unique])
-            self.ic_map.append(i_map)
-            self.ic3_map.append(np.array([[i*3, i*3+1, i*3+2] for i in i_map]).flatten())
+            self.ic_map.append(np.array([self.i_reverse[i] for i in c.i_unique]))
 
     def bind(self, beads):
 
@@ -327,23 +313,12 @@ class ConstraintList(ConstraintBase):
         self.beads = beads
 
         dself = dd(self)
-        # this holds all of the atoms in this list of constraints
-        dself.q = depend_array(name="q", value=np.zeros(self.n_unique*3))
-
-
         dself.g = depend_array(name="g", value=np.zeros(self.ncons), func=self.gfunc)
         dself.Dg = depend_array(name="Dg", value=np.zeros((self.ncons, self.n_unique*3)), func=self.Dgfunc)
         dself.GramChol = depend_array(name="GramChol", value=np.zeros((self.ncons,self.ncons)),
                 func=self.GCfunc, dependencies = [dself.Dg] )
-
-        # we link all of the sub-constraints to the unique q list, so each constraint gets automatically updated
-        def make_qgetter(k):
-            return lambda: self.q[self.ic3_map[k]]
-        for ic, c in enumerate(self.constraint_list):
+        for c in self.constraint_list:
             c.bind(beads)
-            dq = dd(c).q
-            dq.add_dependency(dself.q)
-            dq._func = make_qgetter(ic)
             dself.g.add_dependency(dd(c).g)
             dself.Dg.add_dependency(dd(c).Dg)
 
@@ -374,8 +349,8 @@ class ConstraintList(ConstraintBase):
 
 class ConstraintSolverBase(dobject):
 
-    def __init__(self, constraint_list):
-        self.constraint_list = constraint_list
+    def __init__(self, constraints):
+        self.constraints = constraints
 
     def update_constraints(self, beads):
         raise NotImplementedError()
@@ -452,23 +427,15 @@ class ConstraintSolver(ConstraintSolverBase):
 
 class SparseConstraintSolver(ConstraintSolverBase):
 
-    def __init__(self, constraint_list, tolerance=0.001,maxit=1000,norm_order=2):
-        super(SparseConstraintSolver,self).__init__(constraint_list)
+    def __init__(self, constraints, tolerance=0.001,maxit=1000,norm_order=2):
+        super(SparseConstraintSolver,self).__init__(constraints)
 
         self.tolerance = tolerance
         self.maxit = maxit
         self.norm_order = norm_order
 
+        self.constraint_list = constraints.constraint_list
         #self.ic_list = [constr.get_ic() for constr in self.constraint_list]
-
-    def bind(self, beads):
-
-        self.beads = beads
-
-        # sets the initial value of the constraint positions
-        q = dstrip(beads.q[0])
-        for constr in self.constraint_list:
-            constr.q = q[constr.i3_unique.flatten()]
 
 
     def update_constraints(self, beads):
@@ -503,27 +470,19 @@ class SparseConstraintSolver(ConstraintSolverBase):
         '''
         m3 = dstrip(beads.m3[0])
         p = dstrip(beads.p[0]).copy()
-        q = dstrip(beads.q[0]).copy()
-
-        for constr in self.constraint_list:
-                print "before", constr.q
-                print "vs", q[constr.i3_unique.flatten()]
+        q = beads.q[0] # dstrip(beads.q[0]).copy()
 
         i = 0
         if len(self.constraint_list) > 0:
             for constr in self.constraint_list: # zip(self.Dg_list, self.ic_list, self.GramChol_list, self.constraint_list):
-                # these must only be computed on the manifold so we store them and don't update them
-                dg = dstrip(constr.Dg).copy()
-                gramchol = dstrip(constr.GramChol).copy()
-                ic = constr.i3_unique
-                constr.q = q[ic]
                 g = dstrip(constr.g)
-                print "g vector", g
+                dg = dstrip(constr.Dg)
+                ic = constr.i3_unique
+                gramchol = constr.GramChol
                 while (i < self.maxit and self.tolerance <= np.linalg.norm(g, ord=self.norm_order)):
                     dlambda = np.linalg.solve(np.transpose(gramchol),np.linalg.solve(gramchol, g))
                     delta = np.dot(np.transpose(dg),dlambda)
                     q[ic] += - delta / m3[ic]
-                    constr.q = q[ic] # updates the constraint to recompute g
                     g = dstrip(constr.g)
                     if proj_p:
                         update_diff = - delta / stepsize
@@ -531,14 +490,7 @@ class SparseConstraintSolver(ConstraintSolverBase):
                         i += 1
                     if (i == self.maxit):
                         print('No convergence in Newton iteration for positional component');
-            # in theory each constraint update should be independent but we cannot be sure...
-            # after all constraints have been applied, q is on the manifold and we can update the constraint
-            # positions
-            for constr in self.constraint_list:
-                constr.q = q[constr.i3_unique.flatten()]
-                print "after", constr.q
 
-        beads.q[0] = q
         beads.p[0] = p
 
 
@@ -566,7 +518,7 @@ class ConstrainedIntegrator(DummyIntegrator):
 
         super(ConstrainedIntegrator,self).bind(motion)
 
-        self.constraint_list = motion.constraint_list
+        self.constraints = motion.constraints
         self.ciu = False
 
         self.beads = motion.beads
@@ -624,16 +576,22 @@ class ConstrainedIntegrator(DummyIntegrator):
         self.proj_manifold(self.beads, stepsize)
 
     def update_constraints(self, beads):
-        pass
+        if self.constraints.ncons > 0:
+            self.csolver.update_constraints(beads)
+            self.ciu = True
 
     def proj_cotangent(self, beads):
-        self.csolver.proj_cotangent(beads)
+        if self.constraints.ncons > 0:
+            if not self.ciu:
+                self.update_constraints(beads)
+            self.csolver.proj_cotangent(beads)
 
 
     def proj_manifold(self, beads, stepsize=None, proj_p=True):
-        if proj_p and stepsize is None:
-            stepsize = self.dt
-        self.csolver.proj_manifold(beads, stepsize, proj_p)
+        if self.constraints.ncons > 0:
+            if proj_p and stepsize is None:
+                stepsize = self.dt
+            self.csolver.proj_manifold(beads, stepsize, proj_p)
 
 
     def step_Ag(self, stepsize=None, Nsteps=None):
