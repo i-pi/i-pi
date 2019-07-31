@@ -352,7 +352,7 @@ class NormalModes(dobject):
                 square = (self.omegak[b] * dt/2)**2
                 pqk[b, 0, 0] = (1-square) / (1+square)
                 pqk[b, 1, 1] = (1-square) / (1+square)
-                pqk[b, 0, 1] = (4*square / dt * sk) / (1+square)
+                pqk[b, 0, 1] = -(4*square / dt * sk) / (1+square)
                 pqk[b, 1, 0] = dt / sk / (1+square)
         else: # exact propagator
             for b in range(1, self.nbeads):
@@ -392,7 +392,7 @@ class NormalModes(dobject):
                 square = (self.o_omegak[b] * dt / 2)**2
                 pqk[b, 0, 0] = (1-square) / (1+square)
                 pqk[b, 1, 1] = (1-square) / (1+square)
-                pqk[b, 0, 1] = (4*square / dt * sk) / (1+square)
+                pqk[b, 0, 1] = -(4*square / dt * sk) / (1+square)
                 pqk[b, 1, 0] = dt / sk / (1+square)
         else: # exact propagator
             for b in range(1, self.nbeads):
