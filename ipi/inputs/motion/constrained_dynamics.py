@@ -91,7 +91,7 @@ class InputConstraintBase(Input):
         if type(cnstr) is RigidBondConstraint:
             self.mode.store("distance")
             self.atoms.store(cnstr.constrained_indices)
-            self.distances.store(cnstr.constrained_distances)
+            self.distances.store(cnstr.constraint_values)
 
 
     def fetch(self):
@@ -217,8 +217,8 @@ class InputConstrainedDynamics(InputDictionary):
         self.csolver.store(dyn.csolver)
 
         self.extra = []
-        
-        for constr in dyn.constraints.constraint_list:
+
+        for constr in dyn.constraint_list:
             iobj = InputConstraint()
             iobj.store(constr)
             self.extra.append( ("constraint", iobj) )
