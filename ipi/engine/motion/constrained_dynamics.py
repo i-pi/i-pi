@@ -172,12 +172,16 @@ class ConstraintBase(dobject):
 
     def __init__(self, constrained_indices, constraint_values, ncons=0):
         self.constrained_indices = constrained_indices
-
-        dd(self).constraint_values = depend_array(name="constraint_values",
-                value=np.asarray(constraint_values).copy())
-        if ncons == 0:
+        if len(constraint_values) != 0:
             self.ncons = len(constraint_values)
-
+            dd(self).constraint_values = depend_array(name="constraint_values",
+                value=np.asarray(constraint_values).copy())
+        elif ncons != 0:
+            self.ncons = ncons
+            dd(self).constraint_values = depend_array(name="constraint_values",
+                value=np.zeros(ncons))
+        else:
+            raise ValueError("cannot determine the number of constraints in list")
         # determines the list of unique indices of atoms that are affected by this constraint
         self.i_unique = np.unique(self.constrained_indices.flatten())
         self.mk_idmaps()
@@ -248,9 +252,25 @@ class RigidBondConstraint(ConstraintBase):
 
     def __init__(self,constrained_indices,constraint_values):
 
-        super(RigidBondConstraint,self).__init__(constrained_indices, constraint_values)
+        if len(constraint_values) == 0:
+            ncons = -1
+            self._calc_cons = True
+        else:
+            ncons = len(constraint_values)
+            self._calc_cons = False
+        icons = np.reshape(constrained_indices,(ncons,2))
+        super(RigidBondConstraint,self).__init__(
+                constrained_indices, constraint_values, 
+                ncons=len(icons))
         self.constrained_indices.shape = (self.ncons, 2)
         self.i3_indirect.shape = (self.ncons, 2, 3)
+        
+    def bind(self, beads):
+        
+        super(RigidBondConstraint, self).bind(beads)
+        if self._calc_cons:
+            self.q = dstrip(beads.q[0])[self.i3_unique.flatten()]
+            self.constraint_values = np.sqrt(dstrip(self.g))
 
     def gfunc(self):
         """
@@ -358,12 +378,12 @@ class ConstraintList(ConstraintBase):
             return lambda: self.qprev[self.ic3_map[k]]
         for ic, c in enumerate(self.constraint_list):
             c.bind(beads)
-            # deal with constraint values
+            # deal with constraint functions
             dq = dd(c).q
             dq.add_dependency(dself.q)
             dq._func = make_qgetter(ic)
             dself.g.add_dependency(dd(c).g)
-            # ...and gradients
+            # ...and their gradients
             dqprev = dd(c).qprev
             dqprev.add_dependency(dself.qprev)
             dqprev._func = make_qprevgetter(ic)

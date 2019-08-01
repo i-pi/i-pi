@@ -100,7 +100,7 @@ class InputConstraintBase(Input):
             dlist = self.distances.fetch()
             if len(alist.shape) == 1:
                 alist.shape = (alist.shape[0]/2, 2)
-            if len(dlist) != len(alist):
+            if len(dlist) != len(alist) and len(dlist) != 0:
                 raise ValueError("Length of atom indices and of distance list do not match")
             robj = RigidBondConstraint(alist, dlist)
 
