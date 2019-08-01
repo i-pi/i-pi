@@ -228,12 +228,14 @@ UnitMap = {
         "automatic": 1.00,
         "atomic_unit": 1.00
     },
-    "length": {
+    "length": {  # TODO move angles to separate entry; difficult for now because of dimension of 
         "": 1.00,
         "automatic": 1.00,
         "atomic_unit": 1.00,
         "angstrom": 1.8897261,
-        "meter": 1.8897261e+10
+        "meter": 1.8897261e+10,
+        "radian": 1.00,
+        "degree": 0.017453292519943295
     },
     "volume": {
         "": 1.00,

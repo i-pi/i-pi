@@ -204,7 +204,7 @@ class ConstraintBase(dobject):
 
         self.beads = beads
         dself = dd(self)
-        dself.m3 = depend_array(name="g", value=np.zeros(self.n_unique*3),
+        dself.m3 = depend_array(name="m3", value=np.zeros(self.n_unique*3),
                     func=(lambda: self.beads.m3[0,self.i3_unique]),
                     dependencies=[dd(self.beads).m3])
         # The constraint function is computed at iteratively updated 
@@ -291,7 +291,7 @@ class RigidBondConstraint(ConstraintBase):
             exit()
         #print("gfunc", r)
         return r
-
+    
     def Dgfunc(self, reduced=False):
         """
         Calculates the Jacobian of the constraint.
@@ -306,24 +306,76 @@ class RigidBondConstraint(ConstraintBase):
             r[i][c_atoms[0]] =   2.0 * inst_position_vector
             r[i][c_atoms[1]] = - 2.0 * inst_position_vector
         return r
-
-    """
-    def bind(self, integrator):
-        '''
-        Reference all the variables for simpler access
-        '''
-        super(RigidBondConstraint, self).bind(integrator)
-
-        dself = dd(self)
-
-
-        dself.constrained_indices = depend_value(name="constrained_indices", func=lambda: integrator.constrained_indices.reshape((len(integrator.constrained_indices) / 2, 2)))
-        dself.constrained_distances = depend_value(name="constrained_distances", func=lambda: integrator.constrained_distances)
-        dself.G = depend_array(name="G", func=self.gfunc, value=np.zeros(len(self.constrained_distances)), dependencies=[dself.beads.q, dself.constrained_indices, dself.constrained_distances])
-        dself.DG = depend_array(name="DG", func=self.Dgfunc, value=np.zeros((len(self.constrained_distances), 3 * self.beads.natoms)), dependencies=[dself.G, dself.beads.q, dself.constrained_indices, dself.constrained_distances])
-        #MS: why not dself.G
+    
+class AngleConstraint(ConstraintBase):
+    """ Constraint class for MD specialized for angles. 
+        This can hold a list of angles, i.e. a list of triples of atoms
+        and the corresponding values. We adopt the convention that the 
+        middle atom appears first in the list.
     """
 
+    def __init__(self,constrained_indices,constraint_values):
+
+        if len(constraint_values) == 0:
+            ncons = -1
+            self._calc_cons = True
+        else:
+            ncons = len(constraint_values)
+            self._calc_cons = False
+        icons = np.reshape(constrained_indices,(ncons,3))
+        super(AngleConstraint,self).__init__(
+                constrained_indices, constraint_values, 
+                ncons=len(icons))
+        self.constrained_indices.shape = (self.ncons, 3)
+        self.i3_indirect.shape = (self.ncons, 3, 3)
+        
+    def bind(self, beads):
+        
+        super(AngleConstraint, self).bind(beads)
+        if self._calc_cons:
+            self.constraint_values = np.pi/2 # so that cos(angle) = 0
+            self.q = dstrip(beads.q[0])[self.i3_unique.flatten()]
+            self.constraint_values = np.arccos(dstrip(self.g))
+
+    def gfunc(self):
+        """
+        Calculates the constraint.
+        """
+
+        q = dstrip(self.q)
+        r = np.zeros(self.ncons)
+        constraint_cosines = np.cos(dstrip(self.constraint_values))
+        for i in range(self.ncons):
+            c_atoms = self.i3_indirect[i]
+            c_cos = constraint_cosines[i]
+            q1 = q[c_atoms[1]] - q[c_atoms[0]]
+            r1 = np.sqrt(np.dot(q1,q1))
+            q2 = q[c_atoms[2]] - q[c_atoms[0]]
+            r2 = np.sqrt(np.dot(q2,q2))
+            r[i] = np.dot(q1,q2)/r1/r2
+            r[i] -= c_cos
+        return r
+
+    def Dgfunc(self, reduced=False):
+        """
+        Calculates the Jacobian of the constraint.
+        """
+
+        q = dstrip(self.qprev)
+        r = np.zeros((self.ncons, self.n_unique*3))
+        for i in range(self.ncons):
+            c_atoms = self.i3_indirect[i]
+            q1 = q[c_atoms[1]] - q[c_atoms[0]]
+            r1 = np.sqrt(np.dot(q1,q1))
+            q1 /= r1
+            q2 = q[c_atoms[2]] - q[c_atoms[0]]
+            r2 = np.sqrt(np.dot(q2,q2))
+            q2 /= r2
+            ct = np.dot(q1,q2)
+            r[i][c_atoms[1]] = (q2 - ct*q1)/r1
+            r[i][c_atoms[2]] = (q1 - ct*q2)/r2
+            r[i][c_atoms[0]] = -(r[i][c_atoms[1]] + r[i][c_atoms[2]])
+        return r
 
 class ConstraintList(ConstraintBase):
     """ Constraint class for MD"""
@@ -357,6 +409,9 @@ class ConstraintList(ConstraintBase):
         # this is special because it doesn't hold constraint_values so we have to really specialize
         self.beads = beads
         dself = dd(self)
+        dself.m3 = depend_array(name="m3", value=np.zeros(self.n_unique*3),
+            func=(lambda: self.beads.m3[0,self.i3_unique]),
+            dependencies=[dd(self.beads).m3])
         # this holds all of the atoms in this list of constraints
         dself.q = depend_array(name="q", value=np.zeros(self.n_unique*3))
         # this holds the configurations of the listed atom obtained
@@ -404,10 +459,11 @@ class ConstraintList(ConstraintBase):
         """
         Compute the Jacobian of the constraint function.
         """
+        q = dstrip(self.qprev)
         r = np.zeros((self.ncons, np.size(q)))
         si = 0
         for ic, constr in enumerate(self.constraint_list):
-            r[si:si+constr.ncons, self.ic_map[ic]] = constr.Dg
+            r[si:si+constr.ncons, self.ic3_map[ic]] = constr.Dg
             si += constr.ncons
         return r
 

@@ -8,7 +8,7 @@ import numpy as np
 from copy import copy
 import ipi.engine.thermostats
 import ipi.engine.barostats
-from ipi.engine.motion.constrained_dynamics import ConstraintBase, RigidBondConstraint, ConstraintList, ConstraintSolver, SparseConstraintSolver
+from ipi.engine.motion.constrained_dynamics import ConstraintBase, RigidBondConstraint, AngleConstraint, ConstraintList, ConstraintSolver, SparseConstraintSolver
 from ipi.utils.inputvalue import InputDictionary, InputAttribute, InputValue, InputArray, Input, input_default
 from ipi.inputs.barostats import InputBaro
 from ipi.inputs.thermostats import InputThermo
@@ -71,15 +71,15 @@ class InputConstraintBase(Input):
     attribs = {
         "mode": (InputAttribute, {"dtype": str,
                                   "default": 'distance',
-                                  "help": "The type onf constraint. ",
-                                  "options": ['distance', 'multi']})
+                                  "help": "The type of constraint. ",
+                                  "options": ['distance', 'angle', 'multi']})
               }
 
     fields = {
         "atoms": (InputArray, {"dtype": int,
                               "default": np.zeros(0, int),
                               "help": "List of atoms indices that are to be constrained."}),
-        "distances": (InputArray, {"dtype": float,
+        "values": (InputArray, {"dtype": float,
                               "default":  np.zeros(0, int),
                               "dimension": "length",
                               "help": "List of constraint lengths."})
@@ -91,18 +91,29 @@ class InputConstraintBase(Input):
         if type(cnstr) is RigidBondConstraint:
             self.mode.store("distance")
             self.atoms.store(cnstr.constrained_indices)
-            self.distances.store(cnstr.constraint_values)
-
+            self.values.store(cnstr.constraint_values)
+        if type(cnstr) is AngleConstraint:
+            self.mode.store("angle")
+            self.atoms.store(cnstr.constrained_indices)
+            self.values.store(cnstr.constraint_values)
 
     def fetch(self):
         if self.mode.fetch() == "distance":
             alist = self.atoms.fetch()
-            dlist = self.distances.fetch()
+            dlist = self.values.fetch()
             if len(alist.shape) == 1:
                 alist.shape = (alist.shape[0]/2, 2)
             if len(dlist) != len(alist) and len(dlist) != 0:
                 raise ValueError("Length of atom indices and of distance list do not match")
             robj = RigidBondConstraint(alist, dlist)
+        elif self.mode.fetch() == "angle":
+            alist = self.atoms.fetch()
+            dlist = self.values.fetch()
+            if len(alist.shape) == 1:
+                alist.shape = (alist.shape[0]/3, 3)
+            if len(dlist) != len(alist) and len(dlist) != 0:
+                raise ValueError("Length of atom indices and of distance list do not match")
+            robj = AngleConstraint(alist, dlist)
 
         return robj
 
