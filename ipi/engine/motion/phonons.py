@@ -113,13 +113,9 @@ class DynMatrixMover(Motion):
 
         #get active arrays:
         activedof = 3 *self.beads.natoms - fixdof.size
-        print('here',activedof)
         mask  =  np.delete(np.arange(3*self.beads.natoms), fixdof)
-        print('alberto',len(mask),activedof)
         dmatx = dmatx[mask][:,mask] 
         ism   = self.ism[mask] 
-        print('alberto3',dmatx.shape) 
-        print('alberto4',ism.shape) 
          
 
         # prints out the dynamical matrix
@@ -137,7 +133,6 @@ class DynMatrixMover(Motion):
         outfile.close()
 
         eigsys = np.linalg.eigh(dmatx)
-        print('alberto2',eigsys[0].shape) 
         # prints eigenvalues 
         outfile = self.output_maker.get_output(self.prefix + '.eigval', 'w')
         outfile.write( "# Eigenvalues (atomic units)" + wstr+'\n')
