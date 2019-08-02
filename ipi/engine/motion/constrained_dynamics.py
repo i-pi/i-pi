@@ -376,6 +376,111 @@ class AngleConstraint(ConstraintBase):
             r[i][c_atoms[2]] = (q1 - ct*q2)/r2
             r[i][c_atoms[0]] = -(r[i][c_atoms[1]] + r[i][c_atoms[2]])
         return r
+    
+class EckartConstraint(ConstraintBase):
+    """ Constraint class for MD specialized for enforcing the Eckart conditions
+        (see E. Bright Wilson et al. 'Molecular Vibrations') 
+        Unlike the constraints above, a single instance of this class can only
+        describe one set of Eckart condition.
+    """
+
+    def __init__(self,constrained_indices,constraint_values):
+
+        super(EckartConstraint,self).__init__(
+                constrained_indices, np.zeros(0,float), ncons=6)
+        self.constrained_indices.shape = -1
+        # Check that there are no repeats
+        if np.any(self.constrained_indices != self.i_unique):
+            raise ValueError("repeated atom indices in EckartConstraint")
+        self.i3_indirect.shape = (-1, 3)
+        if len(constraint_values) == 0:
+            self._calc_cons = True
+            dd(self).qref = depend_array(
+                    name="qref", value=np.zeros_like(self.i3_indirect, float)
+                    )
+        else:
+            self._calc_cons = False
+            dd(self).qref = depend_array(
+                    name="qref", 
+                    value=np.reshape(constraint_values, 
+                                     self.i3_indirect.shape).copy()
+                    )
+        
+    def bind(self, beads):
+        
+        super(EckartConstraint, self).bind(beads)
+        if self._calc_cons:
+            self.qref[:] = dstrip(beads.q[0])[self.i3_unique].reshape((-1,3))
+        dself = dd(self)
+        # Total mass of the group of atoms
+        dself.mtot = depend_value(name="mtot", value=1.0, 
+            func=(lambda: dstrip(self.m3)[::3].sum()),
+            dependencies=[dself.m3]
+            )
+        # Coords of reference centre of mass
+        dself.qref_com = depend_array(
+                name="qref_com", value=np.zeros(3, float),
+                func=(lambda: np.sum(
+                      dstrip(self.qref)*dstrip(self.m3).reshape((-1,3)),
+                      axis=0)/self.mtot),
+                dependencies=[dself.m3, dself.qref]
+                )
+        # qref in its centre of mass frame
+        dself.qref_rel = depend_array(
+                name="qref_rel", value=np.zeros_like(dstrip(self.qref)),
+                func=(lambda: dstrip(self.qref)-dstrip(self.qref_com)),
+                dependencies=[dself.qref, dself.qref_com]
+                )
+        # qref in the CoM frame, mass-weighted
+        dself.mqref_rel = depend_array(
+                name="mqref_rel", value=np.zeros_like(dstrip(self.qref)),
+                func=(lambda: 
+                    dstrip(self.qref_rel)*dstrip(self.m3).reshape((-1,3))),
+                dependencies=[dself.qref_rel, dself.m3]
+                )
+        # Make constraint function and gradient depend on the parameters
+        dself.g.add_dependency(dself.qref)
+        dself.g.add_dependency(dself.m3)
+        dself.Dg.add_dependency(dself.qref)
+        dself.Dg.add_dependency(dself.m3)
+        
+    def gfunc(self):
+        """
+        Calculates the constraint.
+        """
+
+        q = dstrip(self.q).reshape((-1,3))
+        m = dstrip(self.m3).reshape((-1,3))
+        qref = dstrip(self.qref)
+        r = np.zeros(self.ncons)
+        Delta = q-qref
+        r[:3] = np.sum(m*Delta, axis=0)/self.mtot
+        r[3:] = np.sum(np.cross(dstrip(self.mqref_rel), Delta), axis=0)/self.mtot
+        return r
+
+    def Dgfunc(self, reduced=False):
+        """
+        Calculates the Jacobian of the constraint.
+        """
+
+        q = dstrip(self.qprev)
+        r = np.zeros((self.ncons, self.n_unique, 3))
+        m = dstrip(self.m3).reshape((-1,3))
+        mqref_rel = dstrip(self.mqref_rel)
+        for i in range(3):
+            r[i,:,i] = m[:,i]
+        # Eckart rotation, x-component
+        r[3,:,1] =-mqref_rel[:,2]
+        r[3,:,2] = mqref_rel[:,1]
+        # Eckart rotation, y-component
+        r[4,:,0] = mqref_rel[:,2]
+        r[4,:,2] =-mqref_rel[:,0]
+        # Eckart rotation, z-component
+        r[5,:,0] =-mqref_rel[:,1]
+        r[5,:,1] = mqref_rel[:,0]
+        r /= self.mtot
+        r.shape = (self.ncons,-1)
+        return r
 
 class ConstraintList(ConstraintBase):
     """ Constraint class for MD"""

@@ -8,7 +8,7 @@ import numpy as np
 from copy import copy
 import ipi.engine.thermostats
 import ipi.engine.barostats
-from ipi.engine.motion.constrained_dynamics import ConstraintBase, RigidBondConstraint, AngleConstraint, ConstraintList, ConstraintSolver, SparseConstraintSolver
+from ipi.engine.motion.constrained_dynamics import ConstraintBase, RigidBondConstraint, AngleConstraint, EckartConstraint, ConstraintList, ConstraintSolver, SparseConstraintSolver
 from ipi.utils.inputvalue import InputDictionary, InputAttribute, InputValue, InputArray, Input, input_default
 from ipi.inputs.barostats import InputBaro
 from ipi.inputs.thermostats import InputThermo
@@ -72,7 +72,7 @@ class InputConstraintBase(Input):
         "mode": (InputAttribute, {"dtype": str,
                                   "default": 'distance',
                                   "help": "The type of constraint. ",
-                                  "options": ['distance', 'angle', 'multi']})
+                                  "options": ['distance', 'angle', 'eckart', 'multi']})
               }
 
     fields = {
@@ -96,6 +96,10 @@ class InputConstraintBase(Input):
             self.mode.store("angle")
             self.atoms.store(cnstr.constrained_indices)
             self.values.store(cnstr.constraint_values)
+        if type(cnstr) is EckartConstraint:
+            self.mode.store("eckart")
+            self.atoms.store(cnstr.constrained_indices)
+            self.values.store(cnstr.constraint_values)
 
     def fetch(self):
         if self.mode.fetch() == "distance":
@@ -114,6 +118,13 @@ class InputConstraintBase(Input):
             if len(dlist) != len(alist) and len(dlist) != 0:
                 raise ValueError("Length of atom indices and of distance list do not match")
             robj = AngleConstraint(alist, dlist)
+        elif self.mode.fetch() == "eckart":
+            alist = self.atoms.fetch()
+            dlist = self.values.fetch()
+            alist.shape = -1
+            if len(dlist) != 3*len(alist) and len(dlist) != 0:
+                raise ValueError("Length of atom indices and of list of coordinates do not match")
+            robj = EckartConstraint(alist, dlist)
 
         return robj
 
