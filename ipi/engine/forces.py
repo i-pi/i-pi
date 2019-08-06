@@ -326,6 +326,7 @@ class ForceComponent(dobject):
         self.ff = fflist[self.ffield]
 
         self._forces = [];
+        self.beads = beads
         for b in range(self.nbeads):
             new_force = ForceBead()
             new_force.bind(beads[b], cell, self.ff)
@@ -737,6 +738,7 @@ class Forces(dobject):
             for b in xrange(mself.nbeads):
                 dfkbref = dd(mreff._forces[b])
                 dfkbself = dd(mself._forces[b])
+                dd(dfkbself.atoms).q.set(deepcopy(dfkbref.atoms.q), manual=False)
                 dfkbself.ufvx.set(deepcopy(dfkbref.ufvx._value), manual=False)
                 dfkbself.ufvx.taint(taintme=False)
 
@@ -803,16 +805,29 @@ class Forces(dobject):
         else:
             return self.mrpc[index].b2tob1(dstrip(self.mforces[index].f))
 
+    def queue_mts(self, level):
+        """Submits all the required force calculations to the forcefields."""
+
+        for ff in self.mforces:
+            # forces with no MTS specification are applied at the outer level
+            if ((len(ff.mts_weights) == 0 and level == 0) or
+                (len(ff.mts_weights) > level
+                 and ff.mts_weights[level] != 0
+                 and ff.weight != 0)):
+                # do not queue forces which have zero weight
+                ff.queue()
+
     def forces_mts(self, level):
         """ Fetches ONLY the forces associated with a given MTS level."""
 
+        self.queue_mts(level)
         fk = np.zeros((self.nbeads, 3 * self.natoms))
         for index in range(len(self.mforces)):
             # forces with no MTS specification are applied at the outer level
             if ((len(self.mforces[index].mts_weights) == 0 and level == 0) or
                 (len(self.mforces[index].mts_weights) > level
                  and self.mforces[index].mts_weights[level] != 0
-                 and self.mforces[index].weight > 0)):
+                 and self.mforces[index].weight != 0)):
                 fk += self.mforces[index].weight * self.mforces[index].mts_weights[level] * self.mrpc[index].b2tob1(dstrip(self.mforces[index].f))
         return fk
 
@@ -996,9 +1011,12 @@ class Forces(dobject):
     def virs_mts(self, level):
         """ Fetches ONLY the total virial associated with a given MTS level."""
 
+        self.queue_mts(level)
         rp = np.zeros((self.beads.nbeads, 3, 3), float)
         for index in range(len(self.mforces)):
-            if len(self.mforces[index].mts_weights) > level and self.mforces[index].mts_weights[level] != 0 and self.mforces[index].weight > 0:
+            if (len(self.mforces[index].mts_weights) > level
+                and self.mforces[index].mts_weights[level] != 0 and
+                self.mforces[index].weight != 0):
                 dv = np.zeros((self.beads.nbeads, 3, 3), float)
                 for i in range(3):
                     for j in range(3):
