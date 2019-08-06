@@ -114,6 +114,8 @@ class DynMatrixMover(Motion):
         #get active arrays:
         activedof = 3 *self.beads.natoms - fixdof.size
         mask  =  np.delete(np.arange(3*self.beads.natoms), fixdof)
+        dmatx_full = dmatx.copy()
+        ism_full   = self.ism.copy()
         dmatx = dmatx[mask][:,mask] 
         ism   = self.ism[mask] 
          
@@ -125,14 +127,22 @@ class DynMatrixMover(Motion):
             outfile.write( ' '.join(map(str, dmatx[i]))+'\n')
         outfile.close()
 
-        # prints out the Hessian
+        # prints out the Hessian for the activedof
         outfile = self.output_maker.get_output(self.prefix + '.hess', 'w')
         outfile.write( "# Hessian matrix (atomic units)" + wstr +'\n')
         for i in range(activedof):
             outfile.write(' '.join(map(str, dmatx[i] / (ism[i] * ism)))+'\n')
         outfile.close()
 
+        # prints out the full Hessian (with all zeros)
+        outfile = self.output_maker.get_output(self.prefix + '_full.hess', 'w')
+        outfile.write( "# Hessian matrix (atomic units)" + wstr +'\n')
+        for i in range(3 *self.beads.natoms):
+            outfile.write(' '.join(map(str, dmatx_full[i] / (ism_full[i] * ism_full)))+'\n')
+        outfile.close()
+
         eigsys = np.linalg.eigh(dmatx)
+
         # prints eigenvalues 
         outfile = self.output_maker.get_output(self.prefix + '.eigval', 'w')
         outfile.write( "# Eigenvalues (atomic units)" + wstr+'\n')
