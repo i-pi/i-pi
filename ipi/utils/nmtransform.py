@@ -220,14 +220,19 @@ class nm_rescale(object):  # !! TODO - make compatible with a open path formulat
         """
 
         if instanton:
+
+           #b1tob2
            A = np.eye(nbeads1)
            B = np.concatenate((A,np.flip(A,axis=1)))
            C = np.concatenate((np.eye(nbeads2),np.zeros((nbeads2,nbeads2))),axis=1)
-           print(type(A),type(B),type(C))
-           print(C.shape,mk_rs_matrix(2*nbeads1, 2*nbeads2).shape, B.shape)
            self._b1tob2 = np.dot(C,np.dot(mk_rs_matrix(2*nbeads1, 2*nbeads2),B))
-           self._b2tob1 = self._b1tob2.T * (float(2*nbeads1) / float(2*nbeads2))
-          
+
+           #b2tob1
+           A = np.eye(nbeads2)
+           B = np.concatenate((A,np.flip(A,axis=1)))
+           C = np.concatenate((np.eye(nbeads1),np.zeros((nbeads1,nbeads1))),axis=1)
+           self._b2tob1 = np.dot(C,np.dot(mk_rs_matrix(2*nbeads1, 2*nbeads2).T,B))
+           self._b2tob1 *= float(2*nbeads1) / float(2*nbeads2)
            open_paths = []
         else:
            self._b1tob2 = mk_rs_matrix(nbeads1, nbeads2)
