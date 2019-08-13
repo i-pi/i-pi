@@ -577,7 +577,7 @@ class Forces(dobject):
             if newb == 0 or newb > beads.nbeads: newb = beads.nbeads
             newforce = ForceComponent(ffield=fc.ffield, name=fc.name, nbeads=newb, weight=fc.weight, mts_weights=fc.mts_weights, epsilon=fc.epsilon)
             newbeads = Beads(beads.natoms, newb)
-            newrpc = nm_rescale(beads.nbeads, newb)
+            newrpc = nm_rescale(beads.nbeads, newb,instanton=True) #ALBERTO
 
             # the beads positions for this force components are obtained
             # automatically, when needed, as a contraction of the full beads

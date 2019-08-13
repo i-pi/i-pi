@@ -108,13 +108,17 @@ if input_geo != 'None' or chk != 'None':
     print( 'We will expand the ring polymer to get a half polymer of {} beads.'.format( nbeadsNew))
 
     # Compose the full ring polymer.
-    #q2 = np.concatenate((q, np.flipud(q)), axis=0)
+    q2 = np.concatenate((q, np.flipud(q)), axis=0)
 
-    # Make the rpc step
-    #rpc = nm_rescale(2 * nbeads, 2 * nbeadsNew)
+    # Make the rpc step (standar)
+    # rpc = nm_rescale(2 * nbeads, 2 * nbeadsNew)
     #new_q = rpc.b1tob2(q2)[0:nbeadsNew]
-    rpc = nm_rescale(nbeads, nbeadsNew, np.asarray(range(natoms)))  # We use open path RPC
-    new_q = rpc.b1tob2(q)
+    # Make the rpc step (normal modes)
+    #rpc = nm_rescale(nbeads, nbeadsNew, np.asarray(range(natoms)))  # We use open path RPC
+    #new_q = rpc.b1tob2(q)
+    # Make the rpc step (instanton)
+    rpc = nm_rescale(nbeads, nbeadsNew,instanton=True)
+    new_q = rpc.b1tob2(q2)[0:nbeadsNew]
 
     # Print
     out = open("NEW_INSTANTON.xyz", "w")

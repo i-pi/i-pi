@@ -174,11 +174,8 @@ def print_instanton_geo(prefix, step, nbeads, natoms, names, q, pots, cell, shif
 
     outfile.close()
 
-#def print_instanton_hess(prefix, step, hessian):
 def print_instanton_hess(prefix, step, hessian, output_maker):
 
-    np.set_printoptions(precision=7, suppress=True, threshold=np.nan, linewidth=3000)
-#    outfile = open(prefix + '.hess_' + str(step), 'w')
     outfile = output_maker.get_output(prefix + '.hess_' + str(step), 'w')
     np.savetxt(outfile, hessian.reshape(1, hessian.size))
     outfile.close()
