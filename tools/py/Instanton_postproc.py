@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python2   
 import numpy as np
 import sys
 import os
@@ -368,8 +368,7 @@ elif case == 'instanton':
         action1 = (2 * pots.sum() * factor - nbeads * V0) * 1. / (temp * nbeads * kb)
         action2 = spring_pot(nbeads, pos, omega2, m3) / (temp * nbeads * kb)
 
-        print( '\nWe are done. Instanton rate')
-        print( 'Nbeads= {} (diff only {})'.format(nbeads,nbeads/2))
+        print( '\nWe are done. Instanton rate. Nbeads {} (diff only {})'.format( nbeads,nbeads/2))
         print( '   {:8s} {:8s}  | {:11s} | {:11s} | {:11s} | {:8s} ( {:8s},{:8s} ) |'.format('BN','(BN*N)','Qt(bohr^-3)','Qrot','log(Qvib*N)','S/hbar','S1/hbar','S2/hbar'))
         print( '{:8.3f} ( {:8.3f} ) | {:11.3f} | {:11.3f} | {:11.3f} | {:8.3f} ( {:8.3f} {:8.3f} ) |'.format( BN,BN*nbeads,Qtras,Qrot,logQvib,(action1 + action2),action1,action2))
         print('\n\n')
