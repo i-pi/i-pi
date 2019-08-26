@@ -21,10 +21,8 @@ def get_dynmat(h,  m3, nbeads=1):
 
     ism = m3.reshape((1, -1)) ** (-0.5)
     ismT = m3[0].reshape((-1, 1)) ** (-0.5)
-    print 'INSIDE'
 
     dynmat = np.zeros(h.shape)
-    print dynmat.shape, ism.shape, ismT.shape
     for i in range(nbeads):
         dynmat = np.multiply(ismT, np.multiply(h, ism))
     return dynmat

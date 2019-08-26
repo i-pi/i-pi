@@ -373,8 +373,8 @@ class SpringMapper(object):
         elif dumop.options["mode"] == 'splitting':
             self.omega2 = (self.temp * self.dbeads.nbeads * units.Constants.kb / units.Constants.hbar) ** 2
 
-        if dumop.options["opt"] == 'nichols' or dumop.options["opt"] == 'NR' or dumop.options["opt"] == 'lanczos':
-            self.h = self.spring_hessian(self.dbeads.natoms, self.dbeads.nbeads, self.dbeads.m3[0], self.omega2)
+        #if dumop.options["opt"] == 'nichols' or dumop.options["opt"] == 'NR' or dumop.options["opt"] == 'lanczos':
+        #    self.h = self.spring_hessian(self.dbeads.natoms, self.dbeads.nbeads, self.dbeads.m3[0], self.omega2)
 
     def save(self, e, g):
         self.pot = e
@@ -389,7 +389,7 @@ class SpringMapper(object):
 
         info(" @spring_hessian", verbosity.high)
         ii = natoms * 3
-        h = np.zeros([ii * nbeads, ii * nbeads])
+        h = np.zeros([ii * nbeads, ii * nbeads]) 
 
         if nbeads == 1:
             return h
@@ -875,46 +875,36 @@ class LanczosOptimizer(HessianOptimizer):
         cartesian = False
         #BANDED Version
         if banded: #ALBERTO
-            # TEST CARTESIAN and mass-weighted and mass^2 weighted #ALBERTO
+            #print "BANDED"
             if not cartesian:
-                # no masses
+                # MASS-scaled
                 dyn_mat = get_dynmat(activearrays["hessian"], self.im.dbeads.m3, self.im.dbeads.nbeads)
                 h_up_band = banded_hessian(dyn_mat, self.im, masses=False, shift=0.0000001)  # create upper band matrix
                 f = np.multiply(f, self.im.dbeads.m3.reshape(f.shape)**-0.5)
-                print "MASS-scaled"
             else:
-            #with masses
+            # CARTESIAN 
                 h_up_band = banded_hessian(activearrays["hessian"], self.im)  # create upper band matrix
-                print "CARTESIAN"
             d = diag_banded(h_up_band)
-            print "BANDED"
         else:
             # FULL dimensions version
             h_0 = red2comp(activearrays["hessian"], self.im.dbeads.nbeads, self.im.dbeads.natoms)
             h_test = np.add(self.im.h, h_0)  # add spring terms to the physical hessian
             d = np.linalg.eigvalsh(h_test)
-            print "Full"
-
-        print'TEST eig, ',d[0],d[1],d[2]
 
         if d[0] > 0:
             if d[1] / 2 > d[0]:
                 alpha = 1
                 lamb = (2 * d[0] + d[1]) / 4
-                print 'Factor I'
             else:
                 alpha = (d[1] - d[0]) / d[1]
                 lamb = (3 * d[0] + d[1]) / 4  # midpoint between b[0] and b[1]*(1-alpha/2)
-                print 'Factor II.'
         elif d[1] < 0:  # Jeremy Richardson
             if (d[1] >= d[0] / 2):
                 alpha = 1
                 lamb = (d[0] + 2 * d[1]) / 4
-                print 'Factor III'
             else:
                 alpha = (d[0] - d[1]) / d[1]
                 lamb = (d[0] + 3 * d[1]) / 4
-                print 'Factor IV'
         #elif d[1] < 0:  #Litman for Second Order Saddle point
         #    alpha = 1
         #    lamb = (d[1] + d[2]) / 4
@@ -924,12 +914,8 @@ class LanczosOptimizer(HessianOptimizer):
         else:  # Only d[0] <0
             alpha = 1
             lamb = (d[0] + d[1]) / 4
-            print 'Factor V'
-
-        print'HERE: Alpha',alpha,' lambda',lamb
 
         if banded:
-            # USE alpha #ALBERTO
             h_up_band[-1, :] += - np.ones(h_up_band.shape[1])*lamb
             d_x = invmul_banded(h_up_band, f)
         else:
