@@ -373,8 +373,8 @@ class SpringMapper(object):
         elif dumop.options["mode"] == 'splitting':
             self.omega2 = (self.temp * self.dbeads.nbeads * units.Constants.kb / units.Constants.hbar) ** 2
 
-        #if dumop.options["opt"] == 'nichols' or dumop.options["opt"] == 'NR' or dumop.options["opt"] == 'lanczos':
-        #    self.h = self.spring_hessian(self.dbeads.natoms, self.dbeads.nbeads, self.dbeads.m3[0], self.omega2)
+        if dumop.options["opt"] == 'nichols' or dumop.options["opt"] == 'NR' or dumop.options["opt"] == 'lanczos':
+            self.h = self.spring_hessian(self.dbeads.natoms, self.dbeads.nbeads, self.dbeads.m3[0], self.omega2)
 
     def save(self, e, g):
         self.pot = e
