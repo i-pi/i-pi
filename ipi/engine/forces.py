@@ -528,7 +528,7 @@ class Forces(dobject):
         dself.virs.add_dependency(dforces.virs)
         dself.extras.add_dependency(dforces.extras)
 
-    def bind(self, beads, cell, fcomponents, fflist):
+    def bind(self, beads, cell, fcomponents, fflist, open_paths):
         """Binds beads, cell and forces to the forcefield.
 
 
@@ -554,6 +554,7 @@ class Forces(dobject):
         self.nforces = len(fcomponents)
         self.fcomp = fcomponents
         self.ff = fflist
+        self.open_paths = open_paths
 
         # fflist should be a dictionary of forcefield objects
         self.mforces = []
@@ -578,7 +579,7 @@ class Forces(dobject):
             if newb == 0 or newb > beads.nbeads: newb = beads.nbeads
             newforce = ForceComponent(ffield=fc.ffield, name=fc.name, nbeads=newb, weight=fc.weight, mts_weights=fc.mts_weights, epsilon=fc.epsilon)
             newbeads = Beads(beads.natoms, newb)
-            newrpc = nm_rescale(beads.nbeads, newb)
+            newrpc = nm_rescale(beads.nbeads, newb,open_paths=self.open_paths)
 
             # the beads positions for this force components are obtained
             # automatically, when needed, as a contraction of the full beads
@@ -720,7 +721,7 @@ class Forces(dobject):
         if nbeads is None: nbeads = self.beads
         ncell = cell
         if cell is None: ncell = self.cell
-        nforce.bind(nbeads, ncell, self.fcomp, self.ff)
+        nforce.bind(nbeads, ncell, self.fcomp, self.ff,self.open_paths)
         return nforce
 
     def transfer_forces(self, refforce):

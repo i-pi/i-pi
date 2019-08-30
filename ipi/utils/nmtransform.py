@@ -179,9 +179,13 @@ class nm_trans(object):
 
         qnm = np.dot(self._b2nm, q)
         for io in self._open:  # does separately the transformation for the atom that are marked as open paths
-            qnm[:, 3 * io] = np.dot(self._b2o_nm, q[:, 3 * io])
-            qnm[:, 3 * io + 1] = np.dot(self._b2o_nm, q[:, 3 * io + 1])
-            qnm[:, 3 * io + 2] = np.dot(self._b2o_nm, q[:, 3 * io + 2])
+            try:
+                qnm[:, 3 * io] = np.dot(self._b2o_nm, q[:, 3 * io])
+                qnm[:, 3 * io + 1] = np.dot(self._b2o_nm, q[:, 3 * io + 1])
+                qnm[:, 3 * io + 2] = np.dot(self._b2o_nm, q[:, 3 * io + 2])
+            except:
+                qnm = np.dot(self._b2o_nm, q)
+                
         return qnm
 
     def nm2b(self, qnm):
@@ -193,9 +197,13 @@ class nm_trans(object):
 
         q = np.dot(self._nm2b, qnm)
         for io in self._open:  # does separately the transformation for the atom that are marked as open paths
-            q[:, 3 * io] = np.dot(self._o_nm2b, qnm[:, 3 * io])
-            q[:, 3 * io + 1] = np.dot(self._o_nm2b, qnm[:, 3 * io + 1])
-            q[:, 3 * io + 2] = np.dot(self._o_nm2b, qnm[:, 3 * io + 2])
+            try:
+               q[:, 3 * io] = np.dot(self._o_nm2b, qnm[:, 3 * io])
+               q[:, 3 * io + 1] = np.dot(self._o_nm2b, qnm[:, 3 * io + 1])
+               q[:, 3 * io + 2] = np.dot(self._o_nm2b, qnm[:, 3 * io + 2])
+            except:
+               q = np.dot(self._o_nm2b, qnm)
+           
         return q
 
 
@@ -236,9 +244,12 @@ class nm_rescale(object):  # !! TODO - make compatible with a open path formulat
         """
         q_scal = np.dot(self._b1tob2, q)
         for io in self._open:  # does separately the transformation for the atom that are marked as open paths
-            q_scal[:, 3 * io] = np.dot(self._o_b1tob2, q[:, 3 * io])
-            q_scal[:, 3 * io + 1] = np.dot(self._o_b1tob2, q[:, 3 * io + 1])
-            q_scal[:, 3 * io + 2] = np.dot(self._o_b1tob2, q[:, 3 * io + 2])
+            try: 
+              q_scal[:, 3 * io] = np.dot(self._o_b1tob2, q[:, 3 * io])
+              q_scal[:, 3 * io + 1] = np.dot(self._o_b1tob2, q[:, 3 * io + 1])
+              q_scal[:, 3 * io + 2] = np.dot(self._o_b1tob2, q[:, 3 * io + 2])
+            except: #For the potential we consider that if  a path is open, all are open
+              q_scal = np.dot(self._o_b1tob2, q)
         return q_scal
 
 #      return np.dot(self._b1tob2,q)
@@ -251,9 +262,12 @@ class nm_rescale(object):  # !! TODO - make compatible with a open path formulat
         """
         q_scal = np.dot(self._b2tob1, q)
         for io in self._open:  # does separately the transformation for the atom that are marked as open paths
-            q_scal[:, 3 * io] = np.dot(self._o_b2tob1, q[:, 3 * io])
-            q_scal[:, 3 * io + 1] = np.dot(self._o_b2tob1, q[:, 3 * io + 1])
-            q_scal[:, 3 * io + 2] = np.dot(self._o_b2tob1, q[:, 3 * io + 2])
+            try: 
+              q_scal[:, 3 * io] = np.dot(self._o_b2tob1, q[:, 3 * io])
+              q_scal[:, 3 * io + 1] = np.dot(self._o_b2tob1, q[:, 3 * io + 1])
+              q_scal[:, 3 * io + 2] = np.dot(self._o_b2tob1, q[:, 3 * io + 2])
+            except: #For the potential we consider that if  a path is open, all are open
+              q_scal = np.dot(self._o_b2tob1, q)
         return q_scal
 #      return np.dot(self._b2tob1,q)
 
