@@ -324,16 +324,17 @@ class GradientMapper(object):
 
     def bind(self, dumop):
 
-        self.dbeads = dumop.beads.copy()
-        self.dcell = dumop.cell.copy()
+        self.dbeads  = dumop.beads.copy()
+        self.dcell   = dumop.cell.copy()
         self.dforces = dumop.forces.copy(self.dbeads, self.dcell)
-        self.fix = Fix(dumop.beads.natoms, dumop.fixatoms, dumop.beads.nbeads)
+        self.fix     = Fix(dumop.beads.natoms, dumop.fixatoms, dumop.beads.nbeads)
+        self.coef    = np.loadtxt('coefficients.dat').reshape(-1,1) 
 
     def set_pos(self, x):
         """Set the positions """
         self.dbeads.q = x
 
-    def __call__(self, x, full=False):
+    def __call__(self, x, full=False,new_disc=True):
         """computes energy and gradient for optimization step"""
 
         self.dbeads.q = x
@@ -343,6 +344,11 @@ class GradientMapper(object):
             g = self.fix.get_active_vector(g, 1)
 
         # APPLY OTHERS CONSTRAIN?
+     
+        # Discretization
+        if new_disc:
+           e = e*(self.coef[1:]+self.coef[:-1])/2
+           g = g*(self.coef[1:]+self.coef[:-1])/2
 
         return e, g
 
@@ -358,6 +364,7 @@ class SpringMapper(object):
         self.f = None
         self.dbeads = None
         self.fix = None
+        self.coef    = np.loadtxt('coefficients.dat').reshape(-1,1) 
 
     def bind(self, dumop):
 
@@ -381,11 +388,18 @@ class SpringMapper(object):
         self.f = -g
 
     @staticmethod
-    def spring_hessian(natoms, nbeads, m3, omega2, mode='half'):
+    def spring_hessian(natoms, nbeads, m3, omega2, mode='half',coef=None):
         """Compute the 'spring hessian'
 
            OUT    h       = hessian with only the spring terms ('spring hessian')
             """
+        if coef is None:
+           coef = np.ones(nbeads+1) 
+
+        #Check size of discretization:
+        if coef.size != nbeads+1:
+          print('@spring_hessian: discretization size error')
+          sys.exit()
 
         info(" @spring_hessian", verbosity.high)
         ii = natoms * 3
@@ -397,18 +411,19 @@ class SpringMapper(object):
         # Diagonal
         h_sp = m3 * omega2
         diag1 = np.diag(h_sp)
-        diag2 = np.diag(2.0 * h_sp)
+        #diag2 = np.diag(2.0 * h_sp)
+
 
         if mode == 'half':
             i = 0
-            h[i * ii:(i + 1) * ii, i * ii:(i + 1) * ii] += diag1
+            h[i * ii:(i + 1) * ii, i * ii:(i + 1) * ii] += diag1/coef[1]
             i = nbeads - 1
-            h[i * ii:(i + 1) * ii, i * ii:(i + 1) * ii] += diag1
+            h[i * ii:(i + 1) * ii, i * ii:(i + 1) * ii] += diag1/coef[-2]
             for i in range(1, nbeads - 1):
-                h[i * ii:(i + 1) * ii, i * ii:(i + 1) * ii] += diag2
+                h[i * ii:(i + 1) * ii, i * ii:(i + 1) * ii] += diag1*(1./coef[i]+1.0/coef[i+1])
         elif mode == 'splitting' or mode == 'full':
             for i in range(0, nbeads):
-                h[i * ii:(i + 1) * ii, i * ii:(i + 1) * ii] += diag2
+                h[i * ii:(i + 1) * ii, i * ii:(i + 1) * ii] += diag1*(1./coef[i]+1.0/coef[i+1])
         else:
             raise ValueError("We can't compute the spring hessian.")
 
@@ -416,13 +431,13 @@ class SpringMapper(object):
         ndiag = np.diag(-h_sp)
         # Quasi-band
         for i in range(0, nbeads - 1):
-            h[i * ii:(i + 1) * ii, (i + 1) * ii:(i + 2) * ii] += ndiag
-            h[(i + 1) * ii:(i + 2) * ii, i * ii:(i + 1) * ii] += ndiag
+            h[i * ii:(i + 1) * ii, (i + 1) * ii:(i + 2) * ii] += ndiag*(1.0/coef[i+1])
+            h[(i + 1) * ii:(i + 2) * ii, i * ii:(i + 1) * ii] += ndiag*(1.0/coef[i+1])
 
         # Corner
         if mode == 'full':
-            h[0:ii, (nbeads - 1) * ii:(nbeads) * ii] += ndiag
-            h[(nbeads - 1) * ii:(nbeads) * ii, 0:ii] += ndiag
+            h[0:ii, (nbeads - 1) * ii:(nbeads) * ii] += ndiag/coef[0]
+            h[(nbeads - 1) * ii:(nbeads) * ii, 0:ii] += ndiag/coef[0]
 
         return h
 
@@ -441,13 +456,25 @@ class SpringMapper(object):
             self.dbeads.q = x
             e = 0.00
             g = np.zeros(self.dbeads.q.shape, float)
+
+            #OLD reference
+            #for i in range(self.dbeads.nbeads - 1):
+            #    dq = self.dbeads.q[i + 1, :] - self.dbeads.q[i, :]
+            #    e += self.omega2 * 0.5 * np.dot(self.dbeads.m3[0] * dq, dq)
+            #for i in range(0, self.dbeads.nbeads - 1):
+            #    g[i, :] += self.dbeads.m3[i, :] * self.omega2 * (self.dbeads.q[i, :] - self.dbeads.q[i + 1, :])
+            #for i in range(1, self.dbeads.nbeads):
+            #    g[i, :] += self.dbeads.m3[i, :] * self.omega2 * (self.dbeads.q[i, :] - self.dbeads.q[i - 1, :])
+
+
+            #With new discretization
             for i in range(self.dbeads.nbeads - 1):
-                dq = self.dbeads.q[i + 1, :] - self.dbeads.q[i, :]
+                dq = (self.dbeads.q[i + 1, :] - self.dbeads.q[i, :])/np.sqrt(self.coef[i+1])   #coef[0] and coef[-1] do not enter
                 e += self.omega2 * 0.5 * np.dot(self.dbeads.m3[0] * dq, dq)
             for i in range(0, self.dbeads.nbeads - 1):
-                g[i, :] += self.dbeads.m3[i, :] * self.omega2 * (self.dbeads.q[i, :] - self.dbeads.q[i + 1, :])
+                g[i, :] += self.dbeads.m3[i, :] * self.omega2 * ( self.dbeads.q[i, :]/self.coef[i+1] - self.dbeads.q[i + 1, :]/self.coef[i+1] )
             for i in range(1, self.dbeads.nbeads):
-                g[i, :] += self.dbeads.m3[i, :] * self.omega2 * (self.dbeads.q[i, :] - self.dbeads.q[i - 1, :])
+                g[i, :] += self.dbeads.m3[i, :] * self.omega2 * ( self.dbeads.q[i, :]/self.coef[i] - self.dbeads.q[i - 1, :]/self.coef[i] )
 
             self.save(e, g)
 
@@ -874,7 +901,7 @@ class LanczosOptimizer(HessianOptimizer):
         banded = True
         cartesian = False
         #BANDED Version
-        if banded: #ALBERTO
+        if banded: 
             #print "BANDED"
             if not cartesian:
                 # MASS-scaled

@@ -200,9 +200,9 @@ def get_hessian(gm, x0, natoms, nbeads=1, fixatoms=[], d=0.001):
         x = x0.copy()
 
         x[:, j] = x0[:, j] + d
-        e, f1 = gm(x)
+        e, f1 = gm(x,new_disc=False)
         x[:, j] = x0[:, j] - d
-        e, f2 = gm(x)
+        e, f2 = gm(x,new_disc=False)
         g = (f1 - f2) / (2 * d)
 
         h[j, :] = g.flatten()

@@ -3,7 +3,7 @@ import numpy as np
 from ipi.utils.messages import verbosity, info
 from ipi.utils import units
 import ipi.utils.mathtools as mt
-import os.path, glob
+import os.path, glob,copy
 
 def banded_hessian(h, im, masses=True,shift=0.001):
     """Given Hessian in the reduced format (h), construct
@@ -11,21 +11,20 @@ def banded_hessian(h, im, masses=True,shift=0.001):
     If masses is True returns hessian otherwise it returns dynmat"""
     nbeads = im.dbeads.nbeads
     natoms = im.dbeads.natoms
+    coef   = im.coef  #new_disc
+
     ii = natoms * 3 * nbeads
     ndiag = natoms * 3 + 1  # only upper diagonal form
 
-    # np.set_printoptions(precision=6, suppress=True, threshold=np.nan, linewidth=1000) #ALBERTO
-
-    hnew = np.zeros((ndiag, ii))
+    href = np.zeros((ndiag, ii))
 
     # add physical part
     for i in range(nbeads):
         h_aux = h[:, i * natoms * 3:(i + 1) * natoms * 3]  # Peaks one physical hessian
         for j in range(1, ndiag):
-            hnew[j, (ndiag - 1 - j) + i * natoms * 3:(i + 1) * natoms * 3] = np.diag(h_aux, ndiag - 1 - j)
+            href[j, (ndiag - 1 - j) + i * natoms * 3:(i + 1) * natoms * 3] = np.diag(h_aux, ndiag - 1 - j)
 
     # add spring parts
-
     if nbeads > 1:
         # Diagonal
         if masses:
@@ -35,12 +34,49 @@ def banded_hessian(h, im, masses=True,shift=0.001):
 
         d_0 = np.array([[d_corner * 2]]).repeat(im.dbeads.nbeads - 2, axis=0).flatten()
         diag_sp = np.concatenate((d_corner, d_0, d_corner))
-        hnew[-1, :] += diag_sp
+        href[-1, :] += diag_sp
 
         # Non-Diagonal
         d_out = - d_corner
         ndiag_sp = np.array([[d_out]]).repeat(im.dbeads.nbeads - 1, axis=0).flatten()
-        hnew[0, :] = np.concatenate((np.zeros(natoms * 3), ndiag_sp))
+        href[0, :] = np.concatenate((np.zeros(natoms * 3), ndiag_sp))
+
+    # Add safety shift value
+    href[-1, :] += shift
+
+    ########## new Discretization ################
+    hnew = np.zeros((ndiag, ii))
+
+    # add physical part
+    for i in range(nbeads):
+        h_aux = h[:, i * natoms * 3:(i + 1) * natoms * 3]*(coef[i]+coef[i+1])/2  # Peaks one physical hessian
+        for j in range(1, ndiag):
+            hnew[j, (ndiag - 1 - j) + i * natoms * 3:(i + 1) * natoms * 3] = np.diag(h_aux, ndiag - 1 - j)
+
+    if nbeads > 1:
+        # Diagonal
+        if masses:
+            d_corner = im.dbeads.m3[0] * im.omega2
+        else:
+            d_corner = np.ones(im.dbeads.m3[0].shape) * im.omega2
+
+        d_init = d_corner/coef[1]
+        d_fin  = d_corner/coef[-1]
+
+        d_mid  = d_corner*(1./coef[1]+1.0/coef[2])
+        for i in range(2,im.dbeads.nbeads-1):
+           d_mid = np.concatenate((d_mid,d_corner*(1./coef[i]+1.0/coef[i+1])))
+
+        diag_sp = np.concatenate((d_init, d_mid, d_fin))
+        hnew[-1, :] += diag_sp
+
+        # Non-Diagonal
+        d_mid  = -d_corner*(1.0/coef[1])
+        for i in range(2,im.dbeads.nbeads):
+           d_mid = np.concatenate( ( d_mid,-d_corner*(1./coef[i]) ) )
+        hnew[0, :] = np.concatenate((np.zeros(natoms * 3), d_mid))
+
+
 
     # Add safety shift value
     hnew[-1, :] += shift
