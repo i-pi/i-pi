@@ -133,16 +133,19 @@ def diag_banded(A,n=2):
 
     return d
 
-def red2comp(h, nbeads, natoms):
+def red2comp(h, nbeads, natoms,coef=None):
     """Takes the reduced physical hessian (3*natoms*nbeads,3*natoms)
      and construct the 'complete' one (3*natoms*nbeads)^2 """
     info("\n @Instanton: Creating 'complete' physical hessian \n", verbosity.high)
+    
+    if coef is None:
+       coef =np.ones(nbeads+1).reshape(-1,1)
     i = natoms * 3
     ii = nbeads * i
     h0 = np.zeros((ii, ii), float)
 
     for j in range(nbeads):
-        h0[j * i:(j + 1) * i, j * i:(j + 1) * i] = h[:, j * i:(j + 1) * i]
+        h0[j * i:(j + 1) * i, j * i:(j + 1) * i] = h[:, j * i:(j + 1) * i]*(coef[j]+coef[j+1])/2
     return h0
 
 def get_imvector(h, m3):

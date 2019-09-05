@@ -10,7 +10,7 @@ Algorithms implemented by Yair Litman and Mariana Rossi, 2017
 
 
 import numpy as np
-import time
+import time,sys
 
 from ipi.engine.motion import Motion
 from ipi.utils.depend import dstrip, dobject
@@ -350,6 +350,7 @@ class GradientMapper(object):
            e = e*(self.coef[1:]+self.coef[:-1])/2
            g = g*(self.coef[1:]+self.coef[:-1])/2
 
+            
         return e, g
 
 
@@ -394,7 +395,7 @@ class SpringMapper(object):
            OUT    h       = hessian with only the spring terms ('spring hessian')
             """
         if coef is None:
-           coef = np.ones(nbeads+1) 
+           coef    = np.loadtxt('coefficients.dat').reshape(-1,1) 
 
         #Check size of discretization:
         if coef.size != nbeads+1:
@@ -441,10 +442,15 @@ class SpringMapper(object):
 
         return h
 
-    def __call__(self, x, ret=True):
+    def __call__(self, x, ret=True,new_disc=True):
         """Computes spring energy and gradient for instanton optimization step"""
 
         x = self.fix.get_active_vector(x, 1).copy()
+
+        if new_disc:
+            coef =self.coef
+        else:
+            coef = np.ones(self.coef.shape)
 
         if x.shape[0] == 1:  # only one bead
             self.dbeads.q = x
@@ -469,12 +475,12 @@ class SpringMapper(object):
 
             #With new discretization
             for i in range(self.dbeads.nbeads - 1):
-                dq = (self.dbeads.q[i + 1, :] - self.dbeads.q[i, :])/np.sqrt(self.coef[i+1])   #coef[0] and coef[-1] do not enter
+                dq = (self.dbeads.q[i + 1, :] - self.dbeads.q[i, :])/np.sqrt(coef[i+1])   #coef[0] and coef[-1] do not enter
                 e += self.omega2 * 0.5 * np.dot(self.dbeads.m3[0] * dq, dq)
             for i in range(0, self.dbeads.nbeads - 1):
-                g[i, :] += self.dbeads.m3[i, :] * self.omega2 * ( self.dbeads.q[i, :]/self.coef[i+1] - self.dbeads.q[i + 1, :]/self.coef[i+1] )
+                g[i, :] += self.dbeads.m3[i, :] * self.omega2 * ( self.dbeads.q[i, :]/coef[i+1] - self.dbeads.q[i + 1, :]/coef[i+1] )
             for i in range(1, self.dbeads.nbeads):
-                g[i, :] += self.dbeads.m3[i, :] * self.omega2 * ( self.dbeads.q[i, :]/self.coef[i] - self.dbeads.q[i - 1, :]/self.coef[i] )
+                g[i, :] += self.dbeads.m3[i, :] * self.omega2 * ( self.dbeads.q[i, :]/coef[i] - self.dbeads.q[i - 1, :]/coef[i] )
 
             self.save(e, g)
 
@@ -601,6 +607,10 @@ class DummyOptimizer(dobject):
         tolerances = self.options["tolerances"]
         d_u = self.forces.pot - self.optarrays["old_u"].sum()
         active_force = self.fix.get_active_vector(self.forces.f, 1) + self.im.f
+
+        fff = self.fix.get_active_vector(self.forces.f, 1)*(self.im.coef[1:]+self.im.coef[:-1])/2
+        active_force = fff + self.im.f
+        print('dirty2')
 
         info(' @Exit step: Energy difference: %.1e, (condition: %.1e)'
              % (np.absolute(d_u / self.im.dbeads.natoms), tolerances["energy"]), verbosity.low)
@@ -761,6 +771,31 @@ class HessianOptimizer(DummyOptimizer):
         if (self.options["save"] > 0 and np.mod(step, self.options["save"]) == 0) or self.exit:
             print_instanton_hess(self.options["prefix"], step, self.optarrays["hessian"],self.output_maker)
 
+    def post_step(self,step,new_x,d_x,activearrays):
+
+        d_x_max = np.amax(np.absolute(d_x))
+        info("Current step norm = %g" % d_x_max, verbosity.medium)
+
+        # Get new energy (u)  and forces(f) using mapper
+        print('check here new_disc')
+        self.im(new_x, ret=False,new_disc=True)  # Only to update the mapper
+
+        u, g2 = self.gm(new_x,new_disc=False)
+        f = -g2
+        d_g = np.subtract(activearrays["old_f"], f)
+
+        # Update
+        self.update_hessian(self.options["hessian_update"], activearrays["hessian"], new_x, d_x, d_g)
+        self.update_pos_for()
+
+        #  Print
+        self.print_geo(step)
+        self.print_hess(step)
+
+        # Check Exit and only then update old arrays
+        self.exit = self.exitstep(d_x_max, step)
+        self.update_old_pos_for()
+
 class NicholsOptimizer(HessianOptimizer):
     """ Class that implements a nichols optimizations. It can find first order saddle points or minimum"""
 
@@ -777,53 +812,35 @@ class NicholsOptimizer(HessianOptimizer):
 
         activearrays = self.pre_step(step)
 
-        # Construct hessian and get eigenvalues and eigenvector.
         # First construct complete hessian from reduced
-        h0 = red2comp(activearrays["hessian"], self.im.dbeads.nbeads, self.im.dbeads.natoms)
-        h1 = np.add(self.im.h, h0)  # add spring terms to the physical hessian
+        h0 = red2comp(activearrays["hessian"], self.im.dbeads.nbeads, self.im.dbeads.natoms,self.im.coef)
+
+        # Add spring terms to the physical hessian
+        h1 = np.add(self.im.h, h0)  
+       
+        # Get eigenvalues and eigenvector.
         d, w = clean_hessian(h1, self.im.dbeads.q, self.im.dbeads.natoms,
                              self.im.dbeads.nbeads, self.im.dbeads.m, self.im.dbeads.m3, self.options["hessian_asr"])
 
         # Find new movement direction
         if self.options["mode"] == 'rate':
-            d_x = nichols(activearrays["old_f"], self.im.f, d, w, self.im.dbeads.m3, activearrays["big_step"])
+            s = activearrays["old_f"]*(self.im.coef[1:]+self.im.coef[:-1])/2
+            print('dirty')
+            d_x = nichols(s, self.im.f, d, w, self.im.dbeads.m3, activearrays["big_step"])
         elif self.options["mode"] == 'splitting':
             d_x = nichols(activearrays["old_f"], self.im.f, d, w, self.im.dbeads.m3, activearrays["big_step"], mode=0)
 
         # Rescale step if necessary
-        d_x_max = np.amax(np.absolute(d_x))
-        info("Current max component  norm = %g" % d_x_max, verbosity.medium)
         if np.amax(np.absolute(d_x)) > activearrays["big_step"]:
-            info("Attempted step norm = %g, scaled down to %g" % (d_x_max, activearrays["big_step"]), verbosity.low)
-
-            print 'here', np.linalg.norm(d_x)
-            d_x *= activearrays["big_step"] / np.amax(np.absolute(d_x_max))
-            print 'here', np.linalg.norm(d_x), activearrays["big_step"]
-            d_x_max = np.amax(np.absolute(d_x))
+            info("Step norm, scaled down to {}".format(activearrays["big_step"]), verbosity.low)
+            d_x *= activearrays["big_step"] / np.amax(np.absolute(d_x))
 
         # Get the new full-position
         d_x_full = self.fix.get_full_vector(d_x, t=1)
         new_x = self.optarrays["old_x"].copy() + d_x_full
 
-        # Get new energy (u)  and forces(f) using mapper
-        self.im(new_x, ret=False)  # Only to update the mapper
 
-        u, g2 = self.gm(new_x)
-        f = -g2
-        d_g = np.subtract(activearrays["old_f"], f)
-
-        # Update
-        self.update_hessian(self.options["hessian_update"], activearrays["hessian"], new_x, d_x, d_g)
-        self.update_pos_for()
-
-        #  Print
-        self.print_geo(step)
-        self.print_hess(step)
-
-        # Check Exit and only then update old arrays
-        self.exit = self.exitstep(d_x_max, step)
-        self.update_old_pos_for()
-
+        self.post_step(step,new_x,d_x,activearrays)
 
 class NROptimizer(HessianOptimizer):
     """ Class that implements a Newton-Raphson optimizations. It can find first order saddle points or minima"""
@@ -848,37 +865,15 @@ class NROptimizer(HessianOptimizer):
         d_x.shape = self.im.dbeads.q.shape
 
         # Rescale step if necessary
-        d_x_max = np.amax(np.absolute(d_x))
-        info("Current step norm = %g" % d_x_max, verbosity.medium)
         if np.amax(np.absolute(d_x)) > activearrays["big_step"]:
-            info("Attempted step norm = %g, scaled down to %g" % (d_x_max, activearrays["big_step"]), verbosity.low)
-
-            d_x *= activearrays["big_step"] / np.amax(np.absolute(d_x_max))
-            d_x_max = np.amax(np.absolute(d_x))
+            info("Step norm, scaled down to {}".format(activearrays["big_step"]), verbosity.low)
+            d_x *= activearrays["big_step"] / np.amax(np.absolute(d_x))
 
         # Get the new full-position
         d_x_full = self.fix.get_full_vector(d_x, t=1)
         new_x = self.optarrays["old_x"].copy() + d_x_full
 
-        # Get new energy (u)  and forces(f) using mapper
-        self.im(new_x, ret=False)  # Only to update the mapper
-        u, g2 = self.gm(new_x)
-
-        f = -g2
-        d_g = np.subtract(activearrays["old_f"], f)
-
-        # Update
-        self.update_hessian(self.options["hessian_update"], activearrays["hessian"], new_x, d_x, d_g)
-        self.update_pos_for()
-
-        # Print
-        self.print_geo(step)
-        self.print_hess(step)
-
-        # Check Exit and only then update old arrays
-        self.exit = self.exitstep(d_x_max, step)
-        self.update_old_pos_for()
-
+        self.post_step(step,new_x,d_x,activearrays)
 
 class LanczosOptimizer(HessianOptimizer):
     """ Class that implements a Newton-Raphson optimizations. It can find first order saddle points or minima"""
@@ -897,6 +892,10 @@ class LanczosOptimizer(HessianOptimizer):
         activearrays = self.pre_step(step)
 
         f = (activearrays["old_f"] + self.im.f).reshape(self.im.dbeads.natoms * 3 * self.im.dbeads.nbeads, 1)
+        
+        print('dirty')
+        fff = activearrays["old_f"]*(self.im.coef[1:]+self.im.coef[:-1])/2
+        f = (fff + self.im.f).reshape(self.im.dbeads.natoms * 3 * self.im.dbeads.nbeads, 1)
 
         banded = True
         cartesian = False
@@ -955,38 +954,15 @@ class LanczosOptimizer(HessianOptimizer):
             d_x = np.multiply(d_x, self.im.dbeads.m3**-0.5)
 
         # Rescale step if necessary
-        d_x_max = np.amax(np.absolute(d_x))
-        info("Current step norm = %g" % d_x_max, verbosity.medium)
         if np.amax(np.absolute(d_x)) > activearrays["big_step"]:
-            info("Attempted step norm = %g, scaled down to %g" % (d_x_max, activearrays["big_step"]), verbosity.low)
-
-            d_x *= activearrays["big_step"] / np.amax(np.absolute(d_x_max))
-            d_x_max = np.amax(np.absolute(d_x))
+            info("Step norm, scaled down to {}".format(activearrays["big_step"]), verbosity.low)
+            d_x *= activearrays["big_step"] / np.amax(np.absolute(d_x))
 
         # Get the new full-position
         d_x_full = self.fix.get_full_vector(d_x, t=1)
         new_x = self.optarrays["old_x"].copy() + d_x_full
 
-        # Get new energy (u)  and forces(f) using mapper
-        self.im(new_x, ret=False)  # Only to update the mapper
-        u, g2 = self.gm(new_x)
-
-        f = -g2
-        d_g = np.subtract(activearrays["old_f"], f)
-
-        # Update
-        self.update_hessian(self.options["hessian_update"], activearrays["hessian"], new_x, d_x, d_g)
-        self.update_pos_for()
-
-        # Print
-        self.print_geo(step)
-        self.print_hess(step)
-
-        # Check Exit and only then update old arrays
-        self.exit = self.exitstep(d_x_max, step)
-        self.update_old_pos_for()
-
-
+        self.post_step(step,new_x,d_x,activearrays)
 
 class LBFGSOptimizer(DummyOptimizer):
 
