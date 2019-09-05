@@ -512,6 +512,61 @@ class NormalModes(dobject):
         not altered here.
         """
 
+        #PIMD for Bosons numerical propagator.
+        #The free ring polymer Hamiltonian now contains more than one ring polymer configuration.
+        #So the propagation is done numerically through a velocity verlet step.
+        #Time step is reduced compared to the physical time step.
+        
+        if self.nbeads == 1:
+            pass
+        else:
+
+            dt_fac = 10 #Factor to determine smaller time step. Must be integer, how to check?
+            
+            dt = self.dt/dt_fac
+            p = dstrip(self.beads.p).copy()
+            q = dstrip(self.beads.q).copy()
+            m = dstrip(self.beads.m)
+            #F_bosons = Calc_F_bosons() !!BH!! Still Need to Add
+            F_bosons = np.zeros((1, self.natoms * 3),float)
+            
+            for k in range(1, self.nbeads):
+                #These  forces require shorter time step than physical time step
+                #Either implement as another input parameter or just use 0.1 of physical dt
+                
+                for j in range(1,dt_fac+1):
+                    p[k] = p[k] + 0.5*dt*F_bosons
+                    q[k] = q[k] + dt*p[k]/m
+                    #F_bosons = Calc_F_bosons() !!BH!! Still Need to Add
+                    p[k] = p[k] + 0.5*dt*F_bosons                                     
+
+            self.beads.p = p
+            self.beads.q = q
+            
+            """
+            pq = np.zeros((2, self.natoms * 3), float)
+            sm = dstrip(self.beads.sm3)
+            prop_pq = dstrip(self.prop_pq)
+            o_prop_pq = dstrip(self.o_prop_pq)
+            pnm = dstrip(self.pnm) / sm
+            qnm = dstrip(self.qnm) * sm
+
+            for k in range(1, self.nbeads):
+                pq[0, :] = pnm[k]
+                pq[1, :] = qnm[k]
+                pq = np.dot(prop_pq[k], pq)
+                qnm[k] = pq[1, :]
+                pnm[k] = pq[0, :]
+
+            for k in range(1, self.nbeads):
+                pq[0, :] = pnm[k]
+                pq[1, :] = qnm[k]
+                qnm[k] = pq[1, :]
+                pnm[k] = pq[0, :]
+            """
+        
+        """Analytic propagation for free ring polymer of distinguishable particles
+
         if self.nbeads == 1:
             pass
         else:
@@ -534,7 +589,8 @@ class NormalModes(dobject):
                 pq[1, :] = qnm[k]
                 qnm[k] = pq[1, :]
                 pnm[k] = pq[0, :]
-
+        """
+        
             # now for open paths we recover the initial conditions (that have not yet been overwritten)
             # and do open path propagation
             pq = np.zeros(2)
