@@ -656,7 +656,8 @@ class NormalModes(dobject):
         """
         PIMD for Bosons numerical propagator.
         The free ring polymer Hamiltonian now contains more than one ring polymer configuration.
-        So the propagation is done numerically through a velocity verlet step. All atoms are propagated in one step.
+        So the propagation is done numerically through a velocity verlet step. 
+        All beasd of all atoms are propagated in one step.
         Time step is reduced compared to the physical time step."""
         
         if self.nbeads == 1:
@@ -673,17 +674,16 @@ class NormalModes(dobject):
 
             #Evalaute spring forces for bosons
             F_bosons = get_spring_forces() 
-            
-            for k in range(1, self.nbeads):
+
+            for j in range(1,dt_fac+1):
+
                 #These  forces require shorter time step than physical time step
                 #Either implement as another input parameter or just use 0.1 of physical dt
                 #Hard coded above
-                
-                for j in range(1,dt_fac+1):
-                    p[k, :] = p[k, :] + 0.5*dt*F_bosons
-                    q[k, :] = q[k, :] + dt*p[k, :]/m
-                    F_bosons = get_spring_forces() 
-                    p[k, :] = p[k, :] + 0.5*dt*F_bosons                                     
+                p = p + 0.5*dt*F_bosons
+                q = q + dt*p/m
+                F_bosons = get_spring_forces()
+                p = p + 0.5*dt*F_bosons                                     
 
             self.beads.p = p
             self.beads.q = q
