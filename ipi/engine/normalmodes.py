@@ -598,18 +598,23 @@ class NormalModes(dobject):
         count = 0
         for m in range(1,N+1):
             sig = 0.0
-            for k in range(1,m+1):
+            #for k in range(1,m+1):
+            for k in range(m,0,-1):
 
                 E_k_N = self.Evaluate_EkN(m,k)
-                print('k, N, E_k_N, V[m-k] are: ' + str(k) + ' ' + str(N) + ' ' + str(E_k_N) + ' ' + str(V[m-k]))
-                sig = sig + np.exp(-beta*(E_k_N + V[m-k]))
+                Elong = 0.5*(E_k_N + V[m-1])
+                #print('k, N, E_k_N, V[m-k] are: ' + str(k) + ' ' + str(N) + ' ' + str(E_k_N) + ' ' + str(V[m-k]))
+                #sig = sig + np.exp(-beta*(E_k_N + V[m-k]))
+                sig = sig + np.exp(-beta*(E_k_N + V[m-k]-Elong))
                 #print('sig is: ' + str(sig))
                 save_Ek_N[count] = E_k_N
                 count = count + 1
 
-                print('sig is: ' + str(sig))
-            V[m] = (-1/beta*np.log(1/m*sig))
-            print('m, V[m] are: ' + str(m) + ' ' + str(V[m-k]))
+                #print('sig is: ' + str(sig))
+
+                #V[m] = - np.log(sig/m)/beta
+                V[m] = Elong - np.log(sig/m)/beta
+            #print('m, V[m] are: ' + str(m) + ' ' + str(V[m]))
         return (save_Ek_N, V)
     
     def Evaluate_dVB(self, E_k_N, V, l, j):
