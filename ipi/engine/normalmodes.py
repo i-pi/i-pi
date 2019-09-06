@@ -18,7 +18,7 @@ from ipi.utils.depend import *
 from ipi.utils import units
 from ipi.utils import nmtransform
 from ipi.utils.messages import verbosity, warning, info
-
+from ipi.utils.units import Constants #Perhaps not needed and beta can be found elsewhere?
 
 __all__ = ["NormalModes"]
 
@@ -535,7 +535,7 @@ class NormalModes(dobject):
                 r_next = q[next_bead_ind, next_atom_ind:(next_atom_ind+3)]
                 diff = (r_next - r)
                 sumE = sumE + np.dot(diff,diff)
-            
+        print('sumE is: ' + str( 0.5*m*omega_sq*sumE))
         return 0.5*m*omega_sq*sumE
 
     def Evaluate_dEkn_on_atom(self, l, j, N, k):
@@ -578,8 +578,8 @@ class NormalModes(dobject):
         r_next = q[next_bead_ind, next_atom_ind:(next_atom_ind+3)]
         r_prev = q[prev_bead_ind, prev_atom_ind:(prev_atom_ind+3)]
         diff = (2*r - r_next - r_prev)
-
-    return m*omega_sq*diff
+                
+        return m*omega_sq*diff
 
     def Evaluate_VB(self):
         """ Evaluate VB_m, m = {1,...,N}. VB0 = 0.0 by definition. 
@@ -591,14 +591,15 @@ class NormalModes(dobject):
         #betaP = 1.0 / (self.beads.nbeads * Constants.kb * self.ensemble.temp)
         
         V = np.zeros((1,N+1), float)
-        save_Ek_N = np.zeros(int(N*(N+1)/2))
+        save_Ek_N = np.zeros((1,int(N*(N+1)/2)), float)
         
         count = 0
         for m in range(1,N+1):
             sig = 0.0
             for k in range(1,m+1):
 
-                E_k_N = Evaluate_EkN(m,k)
+                E_k_N = self.Evaluate_EkN(m,k)
+                print(E_k_N)
                 sig = sig + np.exp(-beta*(E_k_N + V[m-k]))
                 save_Ek_N[count] = E_k_N
                 count = count + 1
@@ -625,7 +626,7 @@ class NormalModes(dobject):
                 else:
                     for k in range(1,m+1):
                         if (l+1 >= m-k+1 and l+1 <= m): #l goes from 0 to N-1 so check for l+1
-                            dE_k_N = Evaluate_dEkn_on_atom(l, j, m, k)
+                            dE_k_N = self.Evaluate_dEkn_on_atom(l, j, m, k)
                         else:
                             dE_k_N = 0
                         sig = sig + (dE_k_N + dV[m-k, :])*np.exp(-beta*(E_k_N[count] + V[m-k]))
@@ -639,7 +640,7 @@ class NormalModes(dobject):
         """Calculate spring forces for Bosons. F is an array of size (P,3*N) so that
         F[i,,:] contains Fx, Fy, Fz for Natoms in replica i"""
 
-        (E_k_N, V) = Evaluate_VB()
+        (E_k_N, V) = self.Evaluate_VB()
 
         N = self.natoms
         P = self.nbeads
@@ -647,7 +648,7 @@ class NormalModes(dobject):
         F = np.zeros(P,3*N,float)
         for l in range(N):
                for j in range(P):
-                   F[j, 3*l:3*(l+1)] = Evaluate_dVB(E_k_N, V, l, j)
+                   F[j, 3*l:3*(l+1)] = self.Evaluate_dVB(E_k_N, V, l, j)
 
         return F
                    
@@ -659,7 +660,7 @@ class NormalModes(dobject):
         So the propagation is done numerically through a velocity verlet step. 
         All beasd of all atoms are propagated in one step.
         Time step is reduced compared to the physical time step."""
-        
+
         if self.nbeads == 1:
             pass
         else:
@@ -673,7 +674,7 @@ class NormalModes(dobject):
             m = dstrip(self.beads.m)
 
             #Evalaute spring forces for bosons
-            F_bosons = get_spring_forces() 
+            F_bosons = self.get_spring_forces() 
 
             for j in range(1,dt_fac+1):
 
