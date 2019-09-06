@@ -499,7 +499,195 @@ class NormalModes(dobject):
                     dm3[k, a] = self.beads.m3[k, a] * self.o_nm_factor[k]
         return dm3
 
+    def Evaluate_EkN(self, N, k):
+        """Returns E_N^{(k)} as defined in Equation 5 of arXiv:1905.09053.
+        That is, the energy of k particles R_{N-k+1},...,R_N, connceted sequentially 
+        into a ring polymer. 
+        j and l go from 0 to N-1 and P-1, respectively, for indexing. (In the paper they start from 1)"""
+    
+        m = dstrip(self.beads.m)
+        omega_sq = self.omegan2
+        P = self.nbeads
+        q = dstrip(self.beads.q).copy()
+        
+        sumE = 0.0
+        #Here indices go from 0 to N-1 and P-1, respectively. In paper they start from 1.
+        for l in range(N-k,N):
+            for j in range(P):
+                #q[j,:] stores 3*natoms xyz coordinates of all atoms.
+                #Index of bead #(j+1) of atom #(l+1) is [l,3*l]
+                r = q[j, 3*l:3*(l+1)]
+                
+                #Taking care of boundary conditions.
+                #Usually r_l_jp1 is the next bead of same atom.
+                next_bead_ind = j + 1
+                next_atom_ind = 3*l
+                
+                if (j == P-1):
+                    #If on the last bead, r_l_jp1 is the first bead of next atom
+                    next_bead_ind = 0
+                    next_atom_ind = 3*(l+1)
+                    
+                    if (l == N-1):
+                        #If on the last bead of last atom, r_l_jp1 is the first bead of N-k atom
+                        next_atom_ind = 3*(N-k)
+                
+                r_next = q[next_bead_ind, next_atom_ind:(next_atom_ind+3)]
+                diff = (r_next - r)
+                sumE = sumE + np.dot(diff,diff)
+            
+        return 0.5*m*omega_sq*sumE
+
+    def Evaluate_dEkn_on_atom(self, l, j, N, k):
+        """Returns dE_N^{(k)} as defined in Equation 3 of SI to arXiv:1905.09053.
+        That is, the force on bead j of atom l due to k particles 
+        R_{N-k+1},...,R_N, connceted sequentially into a ring polymer.
+        j and l go from 0 to N-1 and P-1, respectively, for indexing. (In the paper they start from 1)"""
+    
+        m = dstrip(self.beads.m)
+        omega_sq = self.omegan2
+        P = self.nbeads
+        q = dstrip(self.beads.q).copy()
+
+        #q[j,:] stores 3*natoms xyz coordinates of all atoms.
+        #Index of bead #(j+1) of atom #(l+1) is [l,3*l]
+        r = q[j, 3*l:3*(l+1)]
+        next_bead_ind = j + 1
+        next_atom_ind = 3*l
+        prev_bead_ind = j - 1
+        prev_atom_ind = 3*l
+
+        if (j == P-1):
+                #If on the last bead, r_l_jp1 is the first bead of next atom
+                next_bead_ind = 0
+                next_atom_ind = 3*(l+1)
+
+                if (l == N-1):
+                    #If on the last bead of last atom, r_l_jp1 is the first bead of N-k atom
+                    next_atom_ind = 3*(N-k)
+
+        if (j == 0):
+                #If on the first bead, r_l_j-1 is the last bead of previous atom
+                prev_bead_ind = P-1
+                prev_atom_ind = 3*(l-1)
+
+                if (l == 0):
+                    #If on the first bead of first atom, r_l_j-1 is the last bead of last atom
+                    prev_atom_ind = 3*(N-1)    
+
+        r_next = q[next_bead_ind, next_atom_ind:(next_atom_ind+3)]
+        r_prev = q[prev_bead_ind, prev_atom_ind:(prev_atom_ind+3)]
+        diff = (2*r - r_next - r_prev)
+
+    return m*omega_sq*diff
+
+    def Evaluate_VB(self):
+        """ Evaluate VB_m, m = {1,...,N}. VB0 = 0.0 by definition. 
+        Evalaution of each VB_m is done using Equation 6 of arXiv:1905.0905.
+        Returns VB_m and E_n^{(k)} which are required for the forces later."""
+
+        N = self.natoms
+        beta = 1.0 / (self.ensemble.temp * Constants.kb) #NOTE SURE. SHOULD THIS BE BETA OR BETA_P?
+        #betaP = 1.0 / (self.beads.nbeads * Constants.kb * self.ensemble.temp)
+        
+        V = np.zeros((1,N+1), float)
+        save_Ek_N = np.zeros(int(N*(N+1)/2))
+        
+        count = 0
+        for m in range(1,N+1):
+            sig = 0.0
+            for k in range(1,m+1):
+
+                E_k_N = Evaluate_EkN(m,k)
+                sig = sig + np.exp(-beta*(E_k_N + V[m-k]))
+                save_Ek_N[count] = E_k_N
+                count = count + 1
+
+            V[m] = (-1/beta*np.log(1/m*sig))
+
+        return (save_Ek_N, V)
+    
+    def Evaluate_dVB(self, E_k_N, V, l, j):
+        """ Evaluate dVB_m, m = {1,...,N} for bead #(j+1) of atom #(l+1). dVB0 = 0.0 by definition. 
+        Evalaution of each VB_m is done using Equation 6 of arXiv:1905.0905.
+        Returns VB_m and E_n^{(k)} which are required for the forces later."""
+
+        beta = 1.0 / (self.ensemble.temp * Constants.kb)
+        #betaP = 1.0 / (self.beads.nbeads * Constants.kb * self.ensemble.temp)
+        
+        dV = np.zeros((N+1,3),float)
+                
+        count = 0
+        for m in range(1,N+1):
+                sig = 0
+                if (l+1 > m): #l goes from 0 to N-1 so check for l+1
+                    pass #dV[m,:] is initialized to zero vector already
+                else:
+                    for k in range(1,m+1):
+                        if (l+1 >= m-k+1 and l+1 <= m): #l goes from 0 to N-1 so check for l+1
+                            dE_k_N = Evaluate_dEkn_on_atom(l, j, m, k)
+                        else:
+                            dE_k_N = 0
+                        sig = sig + (dE_k_N + dV[m-k, :])*np.exp(-beta*(E_k_N[count] + V[m-k]))
+                        count = count + 1
+
+                    dV[m, :]=(sig/(m*np.exp(-beta*V[m])))
+
+        return -1.0 * dV[N,:]
+    
+    def get_spring_forces(self):
+        """Calculate spring forces for Bosons. F is an array of size (P,3*N) so that
+        F[i,,:] contains Fx, Fy, Fz for Natoms in replica i"""
+
+        (E_k_N, V) = Evaluate_VB()
+
+        N = self.natoms
+        P = self.nbeads
+
+        F = np.zeros(P,3*N,float)
+        for l in range(N):
+               for j in range(P):
+                   F[j, 3*l:3*(l+1)] = Evaluate_dVB(E_k_N, V, l, j)
+
+        return F
+                   
+        
     def free_qstep(self):
+        """
+        PIMD for Bosons numerical propagator.
+        The free ring polymer Hamiltonian now contains more than one ring polymer configuration.
+        So the propagation is done numerically through a velocity verlet step. All atoms are propagated in one step.
+        Time step is reduced compared to the physical time step."""
+        
+        if self.nbeads == 1:
+            pass
+        else:
+
+            dt_fac = 10 #Factor to determine smaller time step. Must be integer, how to check?
+            #Also, should be read from input? Can be determined by some physical considerations?
+            
+            dt = self.dt/dt_fac
+            p = dstrip(self.beads.p).copy()
+            q = dstrip(self.beads.q).copy()
+            m = dstrip(self.beads.m)
+
+            #Evalaute spring forces for bosons
+            F_bosons = get_spring_forces() 
+            
+            for k in range(1, self.nbeads):
+                #These  forces require shorter time step than physical time step
+                #Either implement as another input parameter or just use 0.1 of physical dt
+                #Hard coded above
+                
+                for j in range(1,dt_fac+1):
+                    p[k, :] = p[k, :] + 0.5*dt*F_bosons
+                    q[k, :] = q[k, :] + dt*p[k, :]/m
+                    F_bosons = get_spring_forces() 
+                    p[k, :] = p[k, :] + 0.5*dt*F_bosons                                     
+
+            self.beads.p = p
+            self.beads.q = q
+
         """Exact normal mode propagator for the free ring polymer.
 
         Note that the propagator works in mass scaled coordinates, so that the
@@ -511,85 +699,31 @@ class NormalModes(dobject):
         Also note that the centroid coordinate is propagated in qcstep, so is
         not altered here.
         """
-
-        #PIMD for Bosons numerical propagator.
-        #The free ring polymer Hamiltonian now contains more than one ring polymer configuration.
-        #So the propagation is done numerically through a velocity verlet step.
-        #Time step is reduced compared to the physical time step.
-        
-        if self.nbeads == 1:
-            pass
-        else:
-
-            dt_fac = 10 #Factor to determine smaller time step. Must be integer, how to check?
-            
-            dt = self.dt/dt_fac
-            p = dstrip(self.beads.p).copy()
-            q = dstrip(self.beads.q).copy()
-            m = dstrip(self.beads.m)
-            #F_bosons = Calc_F_bosons() !!BH!! Still Need to Add
-            F_bosons = np.zeros((1, self.natoms * 3),float)
-            
-            for k in range(1, self.nbeads):
-                #These  forces require shorter time step than physical time step
-                #Either implement as another input parameter or just use 0.1 of physical dt
-                
-                for j in range(1,dt_fac+1):
-                    p[k] = p[k] + 0.5*dt*F_bosons
-                    q[k] = q[k] + dt*p[k]/m
-                    #F_bosons = Calc_F_bosons() !!BH!! Still Need to Add
-                    p[k] = p[k] + 0.5*dt*F_bosons                                     
-
-            self.beads.p = p
-            self.beads.q = q
-            
-            """
-            pq = np.zeros((2, self.natoms * 3), float)
-            sm = dstrip(self.beads.sm3)
-            prop_pq = dstrip(self.prop_pq)
-            o_prop_pq = dstrip(self.o_prop_pq)
-            pnm = dstrip(self.pnm) / sm
-            qnm = dstrip(self.qnm) * sm
-
-            for k in range(1, self.nbeads):
-                pq[0, :] = pnm[k]
-                pq[1, :] = qnm[k]
-                pq = np.dot(prop_pq[k], pq)
-                qnm[k] = pq[1, :]
-                pnm[k] = pq[0, :]
-
-            for k in range(1, self.nbeads):
-                pq[0, :] = pnm[k]
-                pq[1, :] = qnm[k]
-                qnm[k] = pq[1, :]
-                pnm[k] = pq[0, :]
-            """
-        
-        """Analytic propagation for free ring polymer of distinguishable particles
-
-        if self.nbeads == 1:
-            pass
-        else:
-            pq = np.zeros((2, self.natoms * 3), float)
-            sm = dstrip(self.beads.sm3)
-            prop_pq = dstrip(self.prop_pq)
-            o_prop_pq = dstrip(self.o_prop_pq)
-            pnm = dstrip(self.pnm) / sm
-            qnm = dstrip(self.qnm) * sm
-
-            for k in range(1, self.nbeads):
-                pq[0, :] = pnm[k]
-                pq[1, :] = qnm[k]
-                pq = np.dot(prop_pq[k], pq)
-                qnm[k] = pq[1, :]
-                pnm[k] = pq[0, :]
-
-            for k in range(1, self.nbeads):
-                pq[0, :] = pnm[k]
-                pq[1, :] = qnm[k]
-                qnm[k] = pq[1, :]
-                pnm[k] = pq[0, :]
+    
         """
+        if self.nbeads == 1:
+            pass
+        else:
+            pq = np.zeros((2, self.natoms * 3), float)
+            sm = dstrip(self.beads.sm3)
+            prop_pq = dstrip(self.prop_pq)
+            o_prop_pq = dstrip(self.o_prop_pq)
+            pnm = dstrip(self.pnm) / sm
+            qnm = dstrip(self.qnm) * sm
+
+            for k in range(1, self.nbeads):
+                pq[0, :] = pnm[k]
+                pq[1, :] = qnm[k]
+                pq = np.dot(prop_pq[k], pq)
+                qnm[k] = pq[1, :]
+                pnm[k] = pq[0, :]
+
+            for k in range(1, self.nbeads):
+                pq[0, :] = pnm[k]
+                pq[1, :] = qnm[k]
+                qnm[k] = pq[1, :]
+                pnm[k] = pq[0, :]
+        
         
             # now for open paths we recover the initial conditions (that have not yet been overwritten)
             # and do open path propagation
@@ -613,7 +747,8 @@ class NormalModes(dobject):
             #   pq = np.dot(prop_pq[k],pq)
             #   self.qnm[k] = pq[1,:]/sm
             #   self.pnm[k] = pq[0,:]*sm
-
+        """
+        
     def get_kins(self):
         """Gets the MD kinetic energy for all the normal modes.
 
