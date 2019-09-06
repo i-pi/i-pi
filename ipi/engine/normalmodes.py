@@ -505,7 +505,8 @@ class NormalModes(dobject):
         into a ring polymer. 
         j and l go from 0 to N-1 and P-1, respectively, for indexing. (In the paper they start from 1)"""
     
-        m = dstrip(self.beads.m)
+        m = dstrip(self.beads.m)[0] #Right now I assume that all atoms are itendical so m[0] is the mass of al of them. Change?
+        
         omega_sq = self.omegan2
         P = self.nbeads
         q = dstrip(self.beads.q).copy()
@@ -535,7 +536,7 @@ class NormalModes(dobject):
                 r_next = q[next_bead_ind, next_atom_ind:(next_atom_ind+3)]
                 diff = (r_next - r)
                 sumE = sumE + np.dot(diff,diff)
-        print('sumE is: ' + str( 0.5*m*omega_sq*sumE))
+
         return 0.5*m*omega_sq*sumE
 
     def Evaluate_dEkn_on_atom(self, l, j, N, k):
@@ -544,7 +545,7 @@ class NormalModes(dobject):
         R_{N-k+1},...,R_N, connceted sequentially into a ring polymer.
         j and l go from 0 to N-1 and P-1, respectively, for indexing. (In the paper they start from 1)"""
     
-        m = dstrip(self.beads.m)
+        m = dstrip(self.beads.m)[0] #Right now I assume that all atoms are itendical so m[0] is the mass of al of them. Change?
         omega_sq = self.omegan2
         P = self.nbeads
         q = dstrip(self.beads.q).copy()
@@ -590,8 +591,8 @@ class NormalModes(dobject):
         beta = 1.0 / (self.ensemble.temp * Constants.kb) #NOTE SURE. SHOULD THIS BE BETA OR BETA_P?
         #betaP = 1.0 / (self.beads.nbeads * Constants.kb * self.ensemble.temp)
         
-        V = np.zeros((1,N+1), float)
-        save_Ek_N = np.zeros((1,int(N*(N+1)/2)), float)
+        V = np.zeros(N+1, float)
+        save_Ek_N = np.zeros( N*(N+1)/2, float)
         
         count = 0
         for m in range(1,N+1):
@@ -599,7 +600,6 @@ class NormalModes(dobject):
             for k in range(1,m+1):
 
                 E_k_N = self.Evaluate_EkN(m,k)
-                print(E_k_N)
                 sig = sig + np.exp(-beta*(E_k_N + V[m-k]))
                 save_Ek_N[count] = E_k_N
                 count = count + 1
@@ -613,6 +613,7 @@ class NormalModes(dobject):
         Evalaution of each VB_m is done using Equation 6 of arXiv:1905.0905.
         Returns VB_m and E_n^{(k)} which are required for the forces later."""
 
+        N = self.natoms
         beta = 1.0 / (self.ensemble.temp * Constants.kb)
         #betaP = 1.0 / (self.beads.nbeads * Constants.kb * self.ensemble.temp)
         
@@ -645,7 +646,7 @@ class NormalModes(dobject):
         N = self.natoms
         P = self.nbeads
 
-        F = np.zeros(P,3*N,float)
+        F = np.zeros((P,3*N),float)
         for l in range(N):
                for j in range(P):
                    F[j, 3*l:3*(l+1)] = self.Evaluate_dVB(E_k_N, V, l, j)
@@ -671,7 +672,7 @@ class NormalModes(dobject):
             dt = self.dt/dt_fac
             p = dstrip(self.beads.p).copy()
             q = dstrip(self.beads.q).copy()
-            m = dstrip(self.beads.m)
+            m = dstrip(self.beads.m)[0] #Right now I assume that all atoms are itendical so m[0] is the mass of al of them. Change?
 
             #Evalaute spring forces for bosons
             F_bosons = self.get_spring_forces() 
@@ -684,7 +685,7 @@ class NormalModes(dobject):
                 
                 p = p + 0.5*dt*F_bosons
                 q = q + dt*p/m
-                F_bosons = get_spring_forces()
+                F_bosons = self.get_spring_forces()
                 p = p + 0.5*dt*F_bosons                                     
 
             self.beads.p = p
