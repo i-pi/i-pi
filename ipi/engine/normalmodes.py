@@ -678,8 +678,9 @@ class NormalModes(dobject):
             for j in range(1,dt_fac+1):
 
                 #These  forces require shorter time step than physical time step
-                #Either implement as another input parameter or just use 0.1 of physical dt
-                #Hard coded above
+                #Either implement as another input parameter or just use
+                #0.1 of physical dt, hard coded above
+                
                 p = p + 0.5*dt*F_bosons
                 q = q + dt*p/m
                 F_bosons = get_spring_forces()
