@@ -589,6 +589,7 @@ class NormalModes(dobject):
 
         N = self.natoms
         beta = 1.0 / (self.ensemble.temp * Constants.kb) #NOTE SURE. SHOULD THIS BE BETA OR BETA_P?
+        #print('beta is: ' + str(beta))
         #betaP = 1.0 / (self.beads.nbeads * Constants.kb * self.ensemble.temp)
         
         V = np.zeros(N+1, float)
@@ -600,12 +601,15 @@ class NormalModes(dobject):
             for k in range(1,m+1):
 
                 E_k_N = self.Evaluate_EkN(m,k)
+                print('k, N, E_k_N, V[m-k] are: ' + str(k) + ' ' + str(N) + ' ' + str(E_k_N) + ' ' + str(V[m-k]))
                 sig = sig + np.exp(-beta*(E_k_N + V[m-k]))
+                #print('sig is: ' + str(sig))
                 save_Ek_N[count] = E_k_N
                 count = count + 1
 
+                print('sig is: ' + str(sig))
             V[m] = (-1/beta*np.log(1/m*sig))
-
+            print('m, V[m] are: ' + str(m) + ' ' + str(V[m-k]))
         return (save_Ek_N, V)
     
     def Evaluate_dVB(self, E_k_N, V, l, j):
