@@ -195,7 +195,7 @@ class GradientMapper(object):
     Used in the BFGS and L-BFGS minimizers.
 
     Attributes:
-        dbeds:   copy of the bead object
+        dbeads:   copy of the bead object
         dcell:   copy of the cell object
         dforces: copy of the forces object
     """
@@ -535,6 +535,7 @@ class LBFGSOptimizer(DummyOptimizer):
 
         if step == 0:
             info(" @GEOP: Initializing L-BFGS", verbosity.debug)
+            print self.d
             self.d += dstrip(self.forces.f) / np.sqrt(np.dot(self.forces.f.flatten(), self.forces.f.flatten()))
 
         self.old_x[:] = self.beads.q
