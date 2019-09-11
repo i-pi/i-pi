@@ -1,3 +1,8 @@
+<!-- REGTEST
+DEPENDENCIES init.far-away.xyz in.lmp data.water
+COMMAND(1) lmp_mpi -i in.lmp
+ENDREGTEST -->
+
 <!--<simulation mode='static' verbosity='medium'>-->
 <simulation mode='static' verbosity='high'>
   <output prefix='PREFIX'>

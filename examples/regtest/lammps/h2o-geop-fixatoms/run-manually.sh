@@ -1,8 +1,7 @@
 #!/bin/bash
 
 . ~/soft/i-pi-mahrossi/env.sh
-IPI_EXE='python2 -u /home/fidanyan/bin/i-pi-geop'
-#IPI_EXE='python2 -u /home/fidanyan/soft/i-pi-cosmo/bin/i-pi'
+IPI_EXE='python2 -u ../../../../bin/i-pi'
 LMP_EXE=lmp_mpi
 
 mode=$1
@@ -83,9 +82,8 @@ sleep 1
 mpirun -np 4 $LMP_EXE -in in.lmp -log log.3-fixed.${mode}.lmp &
 wait
 
-cd far-away
-    ./run.sh ${mode}
-    ./get-results.sh
-cd ..
+#cd far-away
+#    ./run.sh ${mode}
+#cd ..
 
-./get-results.sh
+#./get-results.sh
