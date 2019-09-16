@@ -822,6 +822,13 @@ class NicholsOptimizer(HessianOptimizer):
         d, w = clean_hessian(h1, self.im.dbeads.q, self.im.dbeads.natoms,
                              self.im.dbeads.nbeads, self.im.dbeads.m, self.im.dbeads.m3, self.options["hessian_asr"])
 
+        #d,w =np.linalg.eigh(h1) #Cartesian
+        info('\n@Nichols: 1st freq {} cm^-1'.format(units.unit_to_user('frequency','inversecm',np.sign(d[0])*np.sqrt(np.absolute(d[0])))),verbosity.medium)
+        info('@Nichols: 2nd freq {} cm^-1'.format(units.unit_to_user('frequency','inversecm',np.sign(d[1])*np.sqrt(np.absolute(d[1])))),verbosity.medium)
+        info('@Nichols: 3rd freq {} cm^-1'.format(units.unit_to_user('frequency','inversecm',np.sign(d[2])*np.sqrt(np.absolute(d[2])))),verbosity.medium)
+        info('@Nichols: 4th freq {} cm^-1'.format(units.unit_to_user('frequency','inversecm',np.sign(d[3])*np.sqrt(np.absolute(d[3])))),verbosity.medium)
+        info('@Nichols: 8th freq {} cm^-1\n'.format(units.unit_to_user('frequency','inversecm',np.sign(d[7])*np.sqrt(np.absolute(d[7])))),verbosity.medium)
+
         # Find new movement direction
         if self.options["mode"] == 'rate':
             s = activearrays["old_f"]*(self.im.coef[1:]+self.im.coef[:-1])/2
@@ -858,12 +865,20 @@ class NROptimizer(HessianOptimizer):
 
         activearrays = self.pre_step(step)
 
-        h_up_band = banded_hessian(activearrays["hessian"], self.im)  # create upper band matrix
-        f = (activearrays["old_f"] + self.im.f).reshape(self.im.dbeads.natoms * 3 * self.im.dbeads.nbeads, 1)
+        #h_up_band = banded_hessian(activearrays["hessian"], self.im)  # create upper band matrix
+        #f = (activearrays["old_f"] + self.im.f).reshape(self.im.dbeads.natoms * 3 * self.im.dbeads.nbeads, 1)
+
+        print('dirty + go to mass scaled for new discretization')
+        fff = activearrays["old_f"]*(self.im.coef[1:]+self.im.coef[:-1])/2
+        f = (fff + self.im.f).reshape(self.im.dbeads.natoms * 3 * self.im.dbeads.nbeads, 1)
+        dyn_mat = get_dynmat(activearrays["hessian"], self.im.dbeads.m3, self.im.dbeads.nbeads)
+        h_up_band = banded_hessian(dyn_mat, self.im, masses=False, shift=0.0000001)  # create upper band matrix
+        f = np.multiply(f, self.im.dbeads.m3.reshape(f.shape)**-0.5)
 
         d_x = invmul_banded(h_up_band, f)
         d_x.shape = self.im.dbeads.q.shape
-
+        d_x = np.multiply(d_x, self.im.dbeads.m3**-0.5)
+        
         # Rescale step if necessary
         if np.amax(np.absolute(d_x)) > activearrays["big_step"]:
             info("Step norm, scaled down to {}".format(activearrays["big_step"]), verbosity.low)
@@ -897,25 +912,29 @@ class LanczosOptimizer(HessianOptimizer):
         fff = activearrays["old_f"]*(self.im.coef[1:]+self.im.coef[:-1])/2
         f = (fff + self.im.f).reshape(self.im.dbeads.natoms * 3 * self.im.dbeads.nbeads, 1)
 
+        banded = False
         banded = True
-        cartesian = False
-        #BANDED Version
         if banded: 
-            #print "BANDED"
-            if not cartesian:
-                # MASS-scaled
-                dyn_mat = get_dynmat(activearrays["hessian"], self.im.dbeads.m3, self.im.dbeads.nbeads)
-                h_up_band = banded_hessian(dyn_mat, self.im, masses=False, shift=0.0000001)  # create upper band matrix
-                f = np.multiply(f, self.im.dbeads.m3.reshape(f.shape)**-0.5)
-            else:
+        #BANDED Version
+            # MASS-scaled
+            dyn_mat   = get_dynmat(activearrays["hessian"], self.im.dbeads.m3, self.im.dbeads.nbeads)
+            h_up_band = banded_hessian(dyn_mat, self.im, masses=False, shift=0.000000001)  # create upper band matrix
+            f = np.multiply(f, self.im.dbeads.m3.reshape(f.shape)**-0.5)
             # CARTESIAN 
-                h_up_band = banded_hessian(activearrays["hessian"], self.im)  # create upper band matrix
+            #h_up_band = banded_hessian(activearrays["hessian"], self.im,masses=True)  # create upper band matrix
+
             d = diag_banded(h_up_band)
         else:
-            # FULL dimensions version
-            h_0 = red2comp(activearrays["hessian"], self.im.dbeads.nbeads, self.im.dbeads.natoms)
+        # FULL dimensions version
+            h_0 = red2comp(activearrays["hessian"], self.im.dbeads.nbeads, self.im.dbeads.natoms,self.im.coef)
             h_test = np.add(self.im.h, h_0)  # add spring terms to the physical hessian
-            d = np.linalg.eigvalsh(h_test)
+            d, w = clean_hessian(h_test, self.im.dbeads.q, self.im.dbeads.natoms,
+                             self.im.dbeads.nbeads, self.im.dbeads.m, self.im.dbeads.m3, None)
+            # CARTESIAN 
+            #d,w =np.linalg.eigh(h_test) #Cartesian
+        info('\n@Lanczos: 1st freq {} cm^-1'.format(units.unit_to_user('frequency','inversecm',np.sign(d[0])*np.sqrt(np.absolute(d[0])))),verbosity.medium)
+        info('@Lanczos: 2nd freq {} cm^-1'.format(units.unit_to_user('frequency','inversecm',np.sign(d[1])*np.sqrt(np.absolute(d[1])))),verbosity.medium)
+        info('@Lanczos: 3rd freq {} cm^-1\n'.format(units.unit_to_user('frequency','inversecm',np.sign(d[2])*np.sqrt(np.absolute(d[2])))),verbosity.medium)
 
         if d[0] > 0:
             if d[1] / 2 > d[0]:
@@ -941,6 +960,7 @@ class LanczosOptimizer(HessianOptimizer):
             alpha = 1
             lamb = (d[0] + d[1]) / 4
 
+
         if banded:
             h_up_band[-1, :] += - np.ones(h_up_band.shape[1])*lamb
             d_x = invmul_banded(h_up_band, f)
@@ -950,8 +970,8 @@ class LanczosOptimizer(HessianOptimizer):
 
         d_x.shape = self.im.dbeads.q.shape
 
-        if not cartesian:
-            d_x = np.multiply(d_x, self.im.dbeads.m3**-0.5)
+        #MASS-scaled
+        d_x = np.multiply(d_x, self.im.dbeads.m3**-0.5)
 
         # Rescale step if necessary
         if np.amax(np.absolute(d_x)) > activearrays["big_step"]:

@@ -61,7 +61,7 @@ def banded_hessian(h, im, masses=True,shift=0.001):
             d_corner = np.ones(im.dbeads.m3[0].shape) * im.omega2
 
         d_init = d_corner/coef[1]
-        d_fin  = d_corner/coef[-1]
+        d_fin  = d_corner/coef[-2]
 
         d_mid  = d_corner*(1./coef[1]+1.0/coef[2])
         for i in range(2,im.dbeads.nbeads-1):
@@ -104,7 +104,7 @@ def invmul_banded(A, B, posdef=False):
 
     try:
         from scipy import linalg
-        info("Import of scipy successful", verbosity.medium)
+        info("Import of scipy successful", verbosity.high)
     except ImportError:
         raise ValueError(" ")
 
@@ -125,7 +125,7 @@ def diag_banded(A,n=2):
         """
     try:
         from scipy.linalg import eig_banded
-        info("Import of scipy successful", verbosity.medium)
+        info("Import of scipy successful", verbosity.high)
     except ImportError:
         raise ValueError(" ")
 
