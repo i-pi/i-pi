@@ -87,8 +87,8 @@ class InputNormalModes(Input):
                                    "options": ['fft', 'matrix']}),
         "propagator": (InputAttribute, {"dtype": str,
                                    "default": "exact",
-                                   "help": "How to propagate the free ring polymer dynamics. Cayley transform is not exact but is strongly stable and avoid potential resonance issues.",
-                                   "options": ['exact', 'cayley']})
+                                   "help": "How to propagate the free ring polymer dynamics. Cayley transform is not exact but is strongly stable and avoid potential resonance issues. A bab scheme is also added to perform numerical verlet type propagation.",
+                                   "options": ['exact', 'cayley', 'bab']})
     }
 
     fields = {
@@ -98,7 +98,14 @@ class InputNormalModes(Input):
         }),
         "open_paths": (InputArray, {"dtype": int,
                                     "default": np.zeros(0, int),
-                                    "help": "Indices of the atmoms whose path should be opened (zero-based)."})
+                                    "help": "Indices of the atoms whose path should be opened (zero-based)."}),
+        "bosons": (InputArray, {"dtype": int,
+                                    "default": np.zeros(0, int),
+                                    "help": "Indices of the atoms that are bosons (zero-based)."}),
+        "nmts": (InputValue, {"dtype": int,
+                                    "default": 10,
+                                    "help" : "The number of interations to perform one bab step.",
+                                    "dimension" : None})
     }
 
     default_label = "NORMALMODES"
@@ -109,8 +116,10 @@ class InputNormalModes(Input):
         self.frequencies.store((nm.mode, nm.nm_freqs))
         self.propagator.store(nm.propagator)
         self.open_paths.store(nm.open_paths)
+        self.bosons.store(nm.bosons)
+        self.nmts.store(nm.nmts)
 
     def fetch(self):
         mode, freqs = self.frequencies.fetch()
         return NormalModes(mode, self.transform.fetch(), self.propagator.fetch(),
-                           freqs, open_paths=self.open_paths.fetch())
+                           freqs, open_paths=self.open_paths.fetch(), bosons=self.bosons.fetch(), nmts=self.nmts.fetch())

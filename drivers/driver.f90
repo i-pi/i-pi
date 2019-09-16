@@ -28,7 +28,6 @@
 
       PROGRAM DRIVER
          USE LJ
-         USE LJPolymer
          USE SG
          USE PSWATER
          USE F90SOCKETS, ONLY : open_socket, writebuffer, readbuffer
@@ -55,8 +54,6 @@
       
       ! PARAMETERS OF THE SYSTEM (CELL, ATOM POSITIONS, ...)
       DOUBLE PRECISION sigma, eps, rc, rn, ks ! potential parameters
-      DOUBLE PRECISION stiffness ! lennard-jones polymer
-      INTEGER n_monomer ! lennard-jones polymer
       INTEGER nat
       DOUBLE PRECISION pot, dpot, dist
       DOUBLE PRECISION, ALLOCATABLE :: atoms(:,:), forces(:,:), datoms(:,:)
@@ -122,6 +119,8 @@
                   vstyle = 2
                ELSEIF (trim(cmdbuffer) == "harm") THEN
                   vstyle = 3
+               ELSEIF (trim(cmdbuffer) == "harm3d") THEN
+                  vstyle = 30
                ELSEIF (trim(cmdbuffer) == "morse") THEN
                   vstyle = 4
                ELSEIF (trim(cmdbuffer) == "zundel") THEN
@@ -142,13 +141,11 @@
                   vstyle = 20
                ELSEIF (trim(cmdbuffer) == "ch4hcbe") THEN
                   vstyle = 21
-               ELSEIF (trim(cmdbuffer) == "ljpolymer") THEN
-                  vstyle = 22
                ELSEIF (trim(cmdbuffer) == "gas") THEN
                   vstyle = 0  ! ideal gas
                ELSE
                   WRITE(*,*) " Unrecognized potential type ", trim(cmdbuffer)
-                  WRITE(*,*) " Use -m [gas|lj|sg|harm|morse|zundel|qtip4pf|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer] "
+                  WRITE(*,*) " Use -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe] "
                   STOP "ENDED"
                ENDIF
             ELSEIF (ccmd == 4) THEN
@@ -231,20 +228,6 @@
             STOP "ENDED"
          ENDIF
          isinit = .true.
-      ELSEIF (22 == vstyle) THEN !ljpolymer
-         IF (4/= par_count) THEN
-            WRITE(*,*) "Error: parameters not initialized correctly."
-            WRITE(*,*) "For ljpolymer potential use n_monomer,sigma,epsilon,cutoff"
-            STOP "ENDED"
-         ELSE
-            n_monomer = nint(vpars(1))
-            sigma = vpars(2)
-            eps = vpars(3)
-            rc = vpars(4)
-            rn = rc * 1.2d0
-            stiffness = 36.d0 * (2.d0 ** (2.d0/3.d0))*eps
-            isinit = .true.
-         ENDIF
       ELSEIF (vstyle == 8) THEN
          IF (par_count /= 0) THEN
             WRITE(*,*) "Error: no initialization string needed for Partridge-Schwenke H2O potential."
@@ -300,7 +283,15 @@
             WRITE(*,*) "For 1D harmonic potential use -o k "
             STOP "ENDED" ! Note that if initialization from the wrapper is implemented this exit should be removed.
          ENDIF
-         ks = vpars(1)
+         ks = vpars(1)  !è la k dell'ho, unica chiaramente perché in 1D
+         isinit = .true.
+      ELSEIF (vstyle == 30) THEN
+         IF (par_count /= 1) THEN
+            WRITE(*,*) "Error: parameters not initialized correctly."
+            WRITE(*,*) "For 3D harmonic potential use -o k "
+            STOP "ENDED" ! Note that if initialization from the wrapper is implemented this exit should be removed.
+         ENDIF
+         ks = vpars(1)  !è la k dell'ho, unica chiaramente perché in 1D
          isinit = .true.
       ELSEIF (vstyle == 7) THEN
          IF (par_count /= 1) THEN
@@ -399,6 +390,19 @@
                forces(1,1) = -ks*atoms(1,1)
                virial = 0.0d0
                virial(1,1) = forces(1,1)*atoms(1,1)
+            ELSEIF (vstyle == 30) THEN ! 3D harmonic potential
+                   pot = 0.0d0
+                   forces = 0.0d0
+                   virial = 0.0d0
+               DO i=1,nat 
+                   pot = pot + 0.5*ks*atoms(i,1)**2 + 0.5*ks*atoms(i,2)**2 + 0.5*ks*atoms(i,3)**2
+                   forces(i,1) = -ks*atoms(i,1)
+                   forces(i,2) = -ks*atoms(i,2)
+                   forces(i,3) = -ks*atoms(i,3)
+                   virial(i,1) = forces(i,1)*atoms(i,1)
+                   virial(i,2) = forces(i,2)*atoms(i,2)
+                   virial(i,3) = forces(i,3)*atoms(i,3)
+                enddo
             ELSEIF (vstyle == 7) THEN ! linear potential in x position of the 1st atom
                pot = ks*atoms(1,1)
                forces = 0.0d0
@@ -554,8 +558,6 @@
                   CALL LJ_getall(rc, sigma, eps, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
                ELSEIF (vstyle == 2) THEN
                   CALL SG_getall(rc, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
-               ELSEIF (vstyle == 22) THEN ! ljpolymer potential.
-                  CALL ljpolymer_getall(n_monomer,rc,sigma,eps,stiffness,nat,atoms,cell_h,cell_ih,index_list,n_list,pot,forces,virial)
                ENDIF
                IF (verbose > 0) WRITE(*,*) " Calculated energy is ", pot
             ENDIF
@@ -605,15 +607,14 @@
     CONTAINS
       SUBROUTINE helpmessage
          ! Help banner
-         WRITE(*,*) " SYNTAX: driver.x [-u] -h hostname -p port -m [gas|lj|sg|harm|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe] "
+         WRITE(*,*) " SYNTAX: driver.x [-u] -h hostname -p port -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe] "
          WRITE(*,*) "         -o 'comma_separated_parameters' [-v] "
          WRITE(*,*) ""
          WRITE(*,*) " For LJ potential use -o sigma,epsilon,cutoff "
          WRITE(*,*) " For SG potential use -o cutoff "
-         WRITE(*,*) " For 1D harmonic oscillator use -o k "
+         WRITE(*,*) " For 1D/3D harmonic oscillator use -o k "
          WRITE(*,*) " For 1D morse oscillator use -o r0,D,a"
          WRITE(*,*) " For qtip4pf-efield use -o Ex,Ey,Ez with Ei in V/nm"         
-         WRITE(*,*) " For ljpolymer use -o n_monomer,sigma,epsilon,cutoff "
          WRITE(*,*) " For the ideal gas, qtip4pf, zundel, ch4hcbe or nasa no options needed! "
        END SUBROUTINE helpmessage
 

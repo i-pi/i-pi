@@ -78,7 +78,7 @@ class NormalModes(dobject):
     """
 
     def __init__(self, mode="rpmd", transform_method="fft", propagator="exact",
-                       freqs=None, open_paths=None, dt=1.0):
+                       freqs=None, open_paths=None, bosons=None, dt=1.0, nmts=1):
         """Initializes NormalModes.
 
         Sets the options for the normal mode transform.
@@ -94,8 +94,12 @@ class NormalModes(dobject):
             freqs = []
         if open_paths is None:
             open_paths = []
+        if bosons is None:
+            bosons = []
         self.open_paths = np.asarray(open_paths, int)
+        self.bosons = np.asarray(bosons, int)
         dself = dd(self)
+        dself.nmts = depend_value(name='nmts', value=nmts)
         dself.dt = depend_value(name='dt', value=dt)
         dself.mode = depend_value(name='mode', value=mode)
         dself.transform_method = depend_value(name='transform_method', value=transform_method)
@@ -258,8 +262,9 @@ class NormalModes(dobject):
         # spring forces on beads, transformed from normal modes
         dself.fspring = depend_array(name="fs",
                                      value=np.zeros((self.nbeads, 3 * self.natoms), float),
-                                     func=(lambda: self.transform.nm2b(dstrip(self.fspringnm))),
-                                     dependencies=[dself.fspringnm])
+                                     #func=(lambda: self.transform.nm2b(dstrip(self.fspringnm))),
+                                     func=self.get_fspring,
+                                     dependencies=[dself.fspringnm, dself.beads.q, dself.beads.m3, dself.omegak])
 
     def get_fspringnm(self):
         """Returns the spring force calculated in NM representation."""
@@ -505,10 +510,11 @@ class NormalModes(dobject):
         into a ring polymer. 
         j and l go from 0 to N-1 and P-1, respectively, for indexing. (In the paper they start from 1)"""
     
-        m = dstrip(self.beads.m)[0] #Right now I assume that all atoms are itendical so m[0] is the mass of al of them. Change?
+        m = dstrip(self.beads.m)[self.bosons[0]] #Take mass of first boson
         
-        omega_sq = self.omegan2
         P = self.nbeads
+        #omega_sq = self.omegan2/P #This is due to the fact that in i-pi omegan is P/(beta*hbar)
+        omegaP_sq = self.omegan2
         q = dstrip(self.beads.q).copy()
         
         sumE = 0.0
@@ -537,7 +543,7 @@ class NormalModes(dobject):
                 diff = (r_next - r)
                 sumE = sumE + np.dot(diff,diff)
 
-        return 0.5*m*omega_sq*sumE
+        return 0.5*m*omegaP_sq*sumE
 
     def Evaluate_dEkn_on_atom(self, l, j, N, k):
         """Returns dE_N^{(k)} as defined in Equation 3 of SI to arXiv:1905.09053.
@@ -545,9 +551,10 @@ class NormalModes(dobject):
         R_{N-k+1},...,R_N, connceted sequentially into a ring polymer.
         j and l go from 0 to N-1 and P-1, respectively, for indexing. (In the paper they start from 1)"""
     
-        m = dstrip(self.beads.m)[0] #Right now I assume that all atoms are itendical so m[0] is the mass of al of them. Change?
-        omega_sq = self.omegan2
+        m = dstrip(self.beads.m)[self.bosons[0]] #Take mass of first boson
         P = self.nbeads
+        #omega_sq = self.omegan2/P #This is due to the fact that in i-pi omegan is P/(beta*hbar)
+        omegaP_sq = self.omegan2
         q = dstrip(self.beads.q).copy()
 
         #q[j,:] stores 3*natoms xyz coordinates of all atoms.
@@ -580,7 +587,7 @@ class NormalModes(dobject):
         r_prev = q[prev_bead_ind, prev_atom_ind:(prev_atom_ind+3)]
         diff = (2*r - r_next - r_prev)
                 
-        return m*omega_sq*diff
+        return m*omegaP_sq*diff
 
     def Evaluate_VB(self):
         """ Evaluate VB_m, m = {1,...,N}. VB0 = 0.0 by definition. 
@@ -588,9 +595,9 @@ class NormalModes(dobject):
         Returns VB_m and E_n^{(k)} which are required for the forces later."""
 
         N = self.natoms
-        beta = 1.0 / (self.ensemble.temp * Constants.kb) #NOTE SURE. SHOULD THIS BE BETA OR BETA_P?
+        #beta = 1.0 / (self.ensemble.temp * Constants.kb) 
         #print('beta is: ' + str(beta))
-        #betaP = 1.0 / (self.beads.nbeads * Constants.kb * self.ensemble.temp)
+        betaP = 1.0 / (self.beads.nbeads * Constants.kb * self.ensemble.temp)
         
         V = np.zeros(N+1, float)
         save_Ek_N = np.zeros( N*(N+1)/2, float)
@@ -605,7 +612,7 @@ class NormalModes(dobject):
                 Elong = 0.5*(E_k_N + V[m-1])
                 #print('k, N, E_k_N, V[m-k] are: ' + str(k) + ' ' + str(N) + ' ' + str(E_k_N) + ' ' + str(V[m-k]))
                 #sig = sig + np.exp(-beta*(E_k_N + V[m-k]))
-                sig = sig + np.exp(-beta*(E_k_N + V[m-k]-Elong))
+                sig = sig + np.exp(-betaP*(E_k_N + V[m-k]-Elong))
                 #print('sig is: ' + str(sig))
                 save_Ek_N[count] = E_k_N
                 count = count + 1
@@ -613,7 +620,7 @@ class NormalModes(dobject):
                 #print('sig is: ' + str(sig))
 
                 #V[m] = - np.log(sig/m)/beta
-                V[m] = Elong - np.log(sig/m)/beta
+                V[m] = Elong - np.log(sig/m)/betaP
             #print('m, V[m] are: ' + str(m) + ' ' + str(V[m]))
         return (save_Ek_N, V)
     
@@ -623,8 +630,8 @@ class NormalModes(dobject):
         Returns VB_m and E_n^{(k)} which are required for the forces later."""
 
         N = self.natoms
-        beta = 1.0 / (self.ensemble.temp * Constants.kb)
-        #betaP = 1.0 / (self.beads.nbeads * Constants.kb * self.ensemble.temp)
+        #beta = 1.0 / (self.ensemble.temp * Constants.kb)
+        betaP = 1.0 / (self.beads.nbeads * Constants.kb * self.ensemble.temp)
         
         dV = np.zeros((N+1,3),float)
                 
@@ -639,31 +646,35 @@ class NormalModes(dobject):
                             dE_k_N = self.Evaluate_dEkn_on_atom(l, j, m, k)
                         else:
                             dE_k_N = 0
-                        sig = sig + (dE_k_N + dV[m-k, :])*np.exp(-beta*(E_k_N[count] + V[m-k]))
+                        sig = sig + (dE_k_N + dV[m-k, :])*np.exp(-betaP*(E_k_N[count] + V[m-k]))
                         count = count + 1
 
-                    dV[m, :]=(sig/(m*np.exp(-beta*V[m])))
+                    dV[m, :]=(sig/(m*np.exp(-betaP*V[m])))
 
         return -1.0 * dV[N,:]
     
-    def get_spring_forces(self):
+    def get_fspring(self):
         """Calculate spring forces for Bosons. F is an array of size (P,3*N) so that
         F[i,,:] contains Fx, Fy, Fz for Natoms in replica i"""
 
-        (E_k_N, V) = self.Evaluate_VB()
 
-        N = self.natoms
-        P = self.nbeads
+        if len(self.bosons) is 0 :
+            return self.transform.nm2b(dstrip(self.fspringnm))
+        else:
+            (E_k_N, V) = self.Evaluate_VB()
 
-        F = np.zeros((P,3*N),float)
-        for l in range(N):
-               for j in range(P):
-                   F[j, 3*l:3*(l+1)] = self.Evaluate_dVB(E_k_N, V, l, j)
+            N = self.natoms
+            P = self.nbeads
+
+            F = np.zeros((P,3*N),float)
+            for l in range(N):
+                   for j in range(P):
+                       F[j, 3*l:3*(l+1)] = self.Evaluate_dVB(E_k_N, V, l, j)
 
         return F
                    
         
-    def free_qstep(self):
+    def free_babstep(self):
         """
         PIMD for Bosons numerical propagator.
         The free ring polymer Hamiltonian now contains more than one ring polymer configuration.
@@ -675,31 +686,24 @@ class NormalModes(dobject):
             pass
         else:
 
-            dt_fac = 10 #Factor to determine smaller time step. Must be integer, how to check?
+            #Factor to determine smaller time step. Must be integer, how to check?
             #Also, should be read from input? Can be determined by some physical considerations?
-            
-            dt = self.dt/dt_fac
-            p = dstrip(self.beads.p).copy()
-            q = dstrip(self.beads.q).copy()
-            m = dstrip(self.beads.m)[0] #Right now I assume that all atoms are itendical so m[0] is the mass of al of them. Change?
+            dt = self.dt / dstrip(self.nmts)
 
-            #Evalaute spring forces for bosons
-            F_bosons = self.get_spring_forces() 
-
-            for j in range(1,dt_fac+1):
+            for j in range(0, dstrip(self.nmts)):
 
                 #These  forces require shorter time step than physical time step
                 #Either implement as another input parameter or just use
                 #0.1 of physical dt, hard coded above
                 
-                p = p + 0.5*dt*F_bosons
-                q = q + dt*p/m
-                F_bosons = self.get_spring_forces()
-                p = p + 0.5*dt*F_bosons                                     
+                self.beads.p += 0.5 * dt * self.fspring
+                self.beads.q += dt * self.beads.p / dstrip(self.beads.m3) 
+                # The depend machinery will take care of automatically calculating 
+                # the forces at the updated positions.
+                self.beads.p += 0.5 * dt * self.fspring                            
 
-            self.beads.p = p
-            self.beads.q = q
 
+    def free_qstep(self):
         """Exact normal mode propagator for the free ring polymer.
 
         Note that the propagator works in mass scaled coordinates, so that the
@@ -711,11 +715,21 @@ class NormalModes(dobject):
         Also note that the centroid coordinate is propagated in qcstep, so is
         not altered here.
         """
-    
-        """
+
         if self.nbeads == 1:
             pass
+
+        elif self.propagator == "bab":
+
+            if len(self.open_paths) > 0 :
+                raise("@Normalmodes : Open path propagator not implemented for bosons. Feel free to implement it if you want to use it :) ")
+
+            self.free_babstep()
+
         else:
+            if len(self.bosons) > 0 :
+                raise("@Normalmodes : Bosonic propagator not implemented for the exact or Cayley propagators.")
+
             pq = np.zeros((2, self.natoms * 3), float)
             sm = dstrip(self.beads.sm3)
             prop_pq = dstrip(self.prop_pq)
@@ -759,7 +773,6 @@ class NormalModes(dobject):
             #   pq = np.dot(prop_pq[k],pq)
             #   self.qnm[k] = pq[1,:]/sm
             #   self.pnm[k] = pq[0,:]*sm
-        """
         
     def get_kins(self):
         """Gets the MD kinetic energy for all the normal modes.
