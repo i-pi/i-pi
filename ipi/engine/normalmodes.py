@@ -505,10 +505,11 @@ class NormalModes(dobject):
         return dm3
 
     def Evaluate_EkN(self, N, k):
-        """Returns E_N^{(k)} as defined in Equation 5 of arXiv:1905.09053.
-        That is, the energy of k particles R_{N-k+1},...,R_N, connceted sequentially 
-        into a ring polymer. 
-        j and l go from 0 to N-1 and P-1, respectively, for indexing. (In the paper they start from 1)"""
+        """
+        Returns E_N^{(k)} as defined in Equation 5 of arXiv:1905.09053.
+        That is, the energy of k particles R_{N-k+1},...,R_N, connceted sequentially into a ring polymer. 
+        j and l go from 0 to N-1 and P-1, respectively, for indexing. (In the paper they start from 1)
+        """
     
         m = dstrip(self.beads.m)[self.bosons[0]] #Take mass of first boson
         
@@ -546,10 +547,12 @@ class NormalModes(dobject):
         return 0.5*m*omegaP_sq*sumE
 
     def Evaluate_dEkn_on_atom(self, l, j, N, k):
-        """Returns dE_N^{(k)} as defined in Equation 3 of SI to arXiv:1905.09053.
+        """
+        Returns dE_N^{(k)} as defined in Equation 3 of SI to arXiv:1905.09053.
         That is, the force on bead j of atom l due to k particles 
         R_{N-k+1},...,R_N, connceted sequentially into a ring polymer.
-        j and l go from 0 to N-1 and P-1, respectively, for indexing. (In the paper they start from 1)"""
+        j and l go from 0 to N-1 and P-1, respectively, for indexing. (In the paper they start from 1)
+        """
     
         m = dstrip(self.beads.m)[self.bosons[0]] #Take mass of first boson
         P = self.nbeads
@@ -590,9 +593,11 @@ class NormalModes(dobject):
         return m*omegaP_sq*diff
 
     def Evaluate_VB(self):
-        """ Evaluate VB_m, m = {1,...,N}. VB0 = 0.0 by definition. 
+        """ 
+        Evaluate VB_m, m = {0,...,N}. VB0 = 0.0 by definition. 
         Evalaution of each VB_m is done using Equation 6 of arXiv:1905.0905.
-        Returns VB_m and E_n^{(k)} which are required for the forces later."""
+        Returns all VB_m and all E_m^{(k)} which are required for the forces later.        
+        """
 
         N = self.natoms
         #beta = 1.0 / (self.ensemble.temp * Constants.kb) 
@@ -630,9 +635,11 @@ class NormalModes(dobject):
         return (save_Ek_N, V)
     
     def Evaluate_dVB(self, E_k_N, V, l, j):
-        """ Evaluate dVB_m, m = {1,...,N} for bead #(j+1) of atom #(l+1). dVB0 = 0.0 by definition. 
+        """ 
+        Evaluates dVB_m, m = {0,...,N} for bead #(j+1) of atom #(l+1). dVB_0 = 0.0 by definition. 
         Evalaution of each VB_m is done using Equation 6 of arXiv:1905.0905.
-        Returns VB_m and E_n^{(k)} which are required for the forces later."""
+        Returns -dVB_N, the force acting on bead #(j+1) of atom #(l+1).
+        """
 
         N = self.natoms
         #beta = 1.0 / (self.ensemble.temp * Constants.kb)
@@ -662,8 +669,11 @@ class NormalModes(dobject):
         return -1.0 * dV[N,:]
     
     def get_fspring(self):
-        """Calculate spring forces for Bosons. F is an array of size (P,3*N) so that
-        F[i,,:] contains Fx, Fy, Fz for Natoms in replica i"""
+        """
+        Calculate spring forces. Required for numerical propagator in Cartesian coords.
+        For distinguishable particles you simply transfrom from self.fspringnm. 
+        For Bosons, evaluate using recursion relation from arXiv:1905.090.
+        """
 
 
         if len(self.bosons) is 0 :
@@ -686,11 +696,11 @@ class NormalModes(dobject):
         
     def free_babstep(self):
         """
-        PIMD for Bosons numerical propagator.
-        The free ring polymer Hamiltonian now contains more than one ring polymer configuration.
-        So the propagation is done numerically through a velocity verlet step. 
-        All beasd of all atoms are propagated in one step.
-        Time step is reduced compared to the physical time step."""
+        Numerical propagator in Cartesian coordinates.
+        So the propagation is done through a velocity verlet step with a time step that is 
+        self.nmts smaller than the one for the physical forces. 
+        All beads of all atoms are propagated in one step.
+        """
 
         if self.nbeads == 1:
             pass
@@ -714,6 +724,7 @@ class NormalModes(dobject):
 
 
     def free_qstep(self):
+        #Should we update the comment here that now the propagator is either exact/Cayley in NM or numerical in Cartesian?
         """Exact normal mode propagator for the free ring polymer.
 
         Note that the propagator works in mass scaled coordinates, so that the
@@ -729,6 +740,7 @@ class NormalModes(dobject):
         if self.nbeads == 1:
             pass
 
+        #Check error raising below w/Venkat!
         elif self.propagator == "bab":
 
             if len(self.open_paths) > 0 :
