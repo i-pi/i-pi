@@ -605,23 +605,27 @@ class NormalModes(dobject):
         count = 0
         for m in range(1,N+1):
             sig = 0.0
-            #for k in range(1,m+1):
+
             for k in range(m,0,-1):
 
                 E_k_N = self.Evaluate_EkN(m,k)
-                Elong = 0.5*(E_k_N + V[m-1])
+                
+                #This is required for numerical stability. See SI of arXiv:1905.0905
+                if (k==m):
+                    Elong = 0.5*(E_k_N + V[m-1])
                 #print('k, N, E_k_N, V[m-k] are: ' + str(k) + ' ' + str(N) + ' ' + str(E_k_N) + ' ' + str(V[m-k]))
                 #sig = sig + np.exp(-beta*(E_k_N + V[m-k]))
                 sig = sig + np.exp(-betaP*(E_k_N + V[m-k]-Elong))
                 #print('sig is: ' + str(sig))
                 save_Ek_N[count] = E_k_N
-                count = count + 1
+                count += 1
 
                 #print('sig is: ' + str(sig))
 
                 #V[m] = - np.log(sig/m)/beta
-                V[m] = Elong - np.log(sig/m)/betaP
+            V[m] = Elong - np.log(sig/m)/betaP
             #print('m, V[m] are: ' + str(m) + ' ' + str(V[m]))
+        #print('betaP is: ' + str(betaP))
         return (save_Ek_N, V)
     
     def Evaluate_dVB(self, E_k_N, V, l, j):
@@ -641,13 +645,14 @@ class NormalModes(dobject):
                 if (l+1 > m): #l goes from 0 to N-1 so check for l+1
                     pass #dV[m,:] is initialized to zero vector already
                 else:
-                    for k in range(1,m+1):
+                    #for k in range(1,m+1):
+                    for k in range(m,0,-1):
                         if (l+1 >= m-k+1 and l+1 <= m): #l goes from 0 to N-1 so check for l+1
                             dE_k_N = self.Evaluate_dEkn_on_atom(l, j, m, k)
                         else:
                             dE_k_N = 0
                         sig = sig + (dE_k_N + dV[m-k, :])*np.exp(-betaP*(E_k_N[count] + V[m-k]))
-                        count = count + 1
+                        count += 1
 
                     dV[m, :]=(sig/(m*np.exp(-betaP*V[m])))
 
@@ -662,7 +667,9 @@ class NormalModes(dobject):
             return self.transform.nm2b(dstrip(self.fspringnm))
         else:
             (E_k_N, V) = self.Evaluate_VB()
-
+            #print('E_k_N is: ' + str(E_k_N))
+            #print('V is: ' + str(V))
+            
             N = self.natoms
             P = self.nbeads
 
