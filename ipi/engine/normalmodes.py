@@ -606,6 +606,7 @@ class NormalModes(dobject):
         for m in range(1,N+1):
             sig = 0.0
 
+            #Reversed sum order to be able to use energy of longest ring polymer in Elong
             for k in range(m,0,-1):
 
                 E_k_N = self.Evaluate_EkN(m,k)
@@ -640,6 +641,8 @@ class NormalModes(dobject):
         dV = np.zeros((N+1,3),float)
                 
         count = 0
+
+        #Reversed sum order to agree with Evaluate_VB() above
         for m in range(1,N+1):
                 sig = 0
                 if (l+1 > m): #l goes from 0 to N-1 so check for l+1
