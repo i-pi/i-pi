@@ -944,7 +944,7 @@ class InputArray(InputValue):
     attribs["mode"] = (InputAttribute, {"dtype": str,
                                         "default": "manual",
                                         "options": ["manual", "file"],
-                                        "help": "If 'mode' is 'manual', then the array is read from the content of 'cell' takes a 9-elements vector containing the cell matrix (row-major). If 'mode' is 'abcABC', then 'cell' takes an array of 6 floats, the first three being the length of the sides of the system parallelopiped, and the last three being the angles (in degrees) between those sides. Angle A corresponds to the angle between sides b and c, and so on for B and C. If mode is 'abc', then this is the same as for 'abcABC', but the cell is assumed to be orthorhombic. 'pdb' and 'chk' read the cell from a PDB or a checkpoint file, respectively."})
+                                        "help": "If 'mode' is 'manual', then the array is read in directly, then reshaped according to the 'shape' specified in a row-major manner. If 'mode' is 'file' then the array is read in from the file given."})
 
     def __init__(self, help=None, default=None, dtype=None, dimension=None):
         """Initialises InputArray.
