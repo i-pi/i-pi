@@ -652,8 +652,6 @@ class NormalModes(dobject):
         
         dV = np.zeros((N+1,3),float)
                 
-        count = 0
-
         #Reversed sum order to agree with Evaluate_VB() above
         for m in range(1,N+1):
                 sig = 0
@@ -661,6 +659,7 @@ class NormalModes(dobject):
                     pass #dV[m,:] is initialized to zero vector already
                 else:
                     #for k in range(1,m+1):
+                    count = m*(m-1)/2
                     for k in range(m,0,-1):
                         if (l+1 >= m-k+1 and l+1 <= m): #l goes from 0 to N-1 so check for l+1
                             dE_k_N = self.Evaluate_dEkn_on_atom(l, j, m, k)
