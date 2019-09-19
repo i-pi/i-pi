@@ -664,7 +664,7 @@ class NormalModes(dobject):
                         if (l+1 >= m-k+1 and l+1 <= m): #l goes from 0 to N-1 so check for l+1
                             dE_k_N = self.Evaluate_dEkn_on_atom(l, j, m, k)
                         else:
-                            dE_k_N = 0
+                            dE_k_N = np.zeros((1,3),float)
                         sig = sig + (dE_k_N + dV[m-k, :])*np.exp(-betaP*(E_k_N[count] + V[m-k]))
                         count += 1
 
