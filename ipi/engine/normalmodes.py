@@ -139,7 +139,8 @@ class NormalModes(dobject):
         self.forces = forces
         self.nbeads = beads.nbeads
         self.natoms = beads.natoms
-
+        
+        
         dself = dd(self)
 
         # stores a reference to the bound beads and ensemble objects
@@ -264,7 +265,7 @@ class NormalModes(dobject):
                                      value=np.zeros((self.nbeads, 3 * self.natoms), float),
                                      #func=(lambda: self.transform.nm2b(dstrip(self.fspringnm))),
                                      func=self.get_fspring,
-                                     dependencies=[dself.fspringnm, dself.beads.q, dself.beads.m3, dself.omegak])
+                                     dependencies=[dself.fspringnm, dself.beads.q, dself.beads.m3, dself.omegan2])
 
     def get_fspringnm(self):
         """Returns the spring force calculated in NM representation."""
@@ -517,6 +518,8 @@ class NormalModes(dobject):
         #omega_sq = self.omegan2/P #This is due to the fact that in i-pi omegan is P/(beta*hbar)
         omegaP_sq = self.omegan2
         q = dstrip(self.beads.q).copy()
+        #q = self.transform.nm2b(dstrip(self.qnm))
+        #print(q)
         
         sumE = 0.0
         #Here indices go from 0 to N-1 and P-1, respectively. In paper they start from 1.
@@ -542,6 +545,7 @@ class NormalModes(dobject):
                 
                 r_next = q[next_bead_ind, next_atom_ind:(next_atom_ind+3)]
                 diff = (r_next - r)
+        
                 sumE = sumE + np.dot(diff,diff)
 
         return 0.5*m*omegaP_sq*sumE
@@ -560,7 +564,7 @@ class NormalModes(dobject):
         omegaP_sq = self.omegan2
         q = dstrip(self.beads.q).copy()
 
-        #q[j,:] stores 3*natoms xyz coordinates of all atoms.
+        #q[j,:] stores 3*nuatoms xyz coordinates of all atoms.
         #Index of bead #(j+1) of atom #(l+1) is [l,3*l]
         r = q[j, 3*l:3*(l+1)]
         next_bead_ind = j + 1
@@ -582,8 +586,8 @@ class NormalModes(dobject):
                 prev_bead_ind = P-1
                 prev_atom_ind = 3*(l-1)
 
-                if (l == 0):
-                    #If on the first bead of first atom, r_l_j-1 is the last bead of last atom
+                if (l == N-k):
+                    #If on the first bead of N-k atom, r_l_j-1 is the last bead of last atom
                     prev_atom_ind = 3*(N-1)    
 
         r_next = q[next_bead_ind, next_atom_ind:(next_atom_ind+3)]
@@ -632,6 +636,7 @@ class NormalModes(dobject):
             V[m] = Elong - np.log(sig/m)/betaP
             #print('m, V[m] are: ' + str(m) + ' ' + str(V[m]))
         #print('betaP is: ' + str(betaP))
+        #print('m, omegaP_sq are: ' + str( dstrip(self.beads.m)[self.bosons[0]] ) + ' ' + str(self.omegan2))
         return (save_Ek_N, V)
     
     def Evaluate_dVB(self, E_k_N, V, l, j):
@@ -675,6 +680,7 @@ class NormalModes(dobject):
         For Bosons, evaluate using recursion relation from arXiv:1905.090.
         """
 
+        #print('CALLED get_fspring() !!!!!!!')
 
         if len(self.bosons) is 0 :
             return self.transform.nm2b(dstrip(self.fspringnm))
@@ -714,14 +720,13 @@ class NormalModes(dobject):
 
                 #These  forces require shorter time step than physical time step
                 #Either implement as another input parameter or just use
-                #0.1 of physical dt, hard coded above
+                #0.1 of physical dt, hard coded above            
                 
                 self.beads.p += 0.5 * dt * self.fspring
                 self.beads.q += dt * self.beads.p / dstrip(self.beads.m3) 
                 # The depend machinery will take care of automatically calculating 
                 # the forces at the updated positions.
-                self.beads.p += 0.5 * dt * self.fspring                            
-
+                self.beads.p += 0.5 * dt * self.fspring
 
     def free_qstep(self):
         #Should we update the comment here that now the propagator is either exact/Cayley in NM or numerical in Cartesian?
@@ -736,7 +741,7 @@ class NormalModes(dobject):
         Also note that the centroid coordinate is propagated in qcstep, so is
         not altered here.
         """
-
+               
         if self.nbeads == 1:
             pass
 
