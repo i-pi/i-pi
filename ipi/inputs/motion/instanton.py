@@ -64,6 +64,9 @@ class InputInst(InputDictionary):
                                    "default": 'None',
                                    "options": ["nichols", "NR", "lbfgs", "lanczos", "None"],
                                    "help": "The geometry optimization algorithm to be used"}),
+              "discretization": (InputArray, {"dtype": float,
+                                       "default": input_default(factory=np.ones, args=(0,)),
+                                       "help": "Time discretization"}),
               "alt_out": (InputValue, {"dtype": int,
                                        "default": 1,
                                        "help": """Alternative output:Prints different formatting of outputs for geometry, hessian and bead potential energies.
@@ -163,6 +166,7 @@ class InputInst(InputDictionary):
         self.opt.store(options["opt"])
 
         # Generic instanton
+        self.discretization.store(options["discretization"])
         self.alt_out.store(options["save"])
         self.prefix.store(options["prefix"])
         self.delta.store(optarrays["delta"])
