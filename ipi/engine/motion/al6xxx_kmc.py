@@ -151,7 +151,7 @@ class AlKMC(Motion):
             # geometry optimizer should not have *any* hystory dependence
             self.geop[i] = GeopMotion(fixcom=fixcom, fixatoms=fixatoms,**geop) #mode="cg", ls_options={"tolerance": 1, "iter": 20,  "step": 1e-3, "adaptive": 0.0}, tolerances={"energy": 1e-7, "force": 1e-2, "position": 1e-4}, ) #!TODO: set the geop parameters properly
 
-        # dictionary of previous energy evaluations.
+        # dictionary of previous energy evaluations - kind of tricky to use this with the omaker thingie
         self.ecache_file = ecache_file
         self.qcache_file = qcache_file
         try:
@@ -172,9 +172,6 @@ class AlKMC(Motion):
 
         # no TS evaluation implemented yet
         self.tscache = {}
-
-        # todo make these optional and restarted
-        self.kmcfile = open("KMC_AL6XXX","w+")
         self.tottime = tottime
 
 
@@ -199,6 +196,10 @@ class AlKMC(Motion):
         """
 
         super(AlKMC, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
+
+
+        # todo make these optional and restarted
+        self.kmcfile = self.output_maker.get_output("KMC_AL6XXX")
 
         # this is the index for the atoms, self.idx[i] indicates the lattice site of atom i.
         # atoms are in the order Si1 Si2 ... Mg1 Mg2 .... Al1 Al2 .... Vac1 Vac2 ...

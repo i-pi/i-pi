@@ -118,13 +118,11 @@ class Ensemble(dobject):
             hweights = np.ones(0)
         self.hweights = np.asarray(hweights)
 
-
         # Internal time counter
         dd(self).time = depend_value(name='time')
         self.time = time
 
     def copy(self):
-
         return Ensemble(eens = self.eens, econs = 0.0, temp=self.temp,
                         pext=self.pext, stressext =dstrip(self.stressext).copy(),
                         bcomponents = self.bcomp, bweights = dstrip(self.bweights).copy(),
