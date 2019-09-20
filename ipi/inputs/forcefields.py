@@ -15,7 +15,7 @@ from ipi.inputs.initializer import *
 from ipi.utils.inputvalue import *
 
 
-__all__ = ["InputFFSocket", 'InputFFLennardJones', 'InputFFQUIP', 'InputFFDebye', 'InputFFPlumed', 'InputFFYaff']
+__all__ = ["InputFFSocket", 'InputFFLennardJones', 'InputFFQUIP', 'InputFFDebye', 'InputFFPlumed', 'InputFFYaff', 'InputFFCommittee']
 
 
 class InputForceField(Input):
@@ -173,7 +173,7 @@ class InputFFSocket(InputForceField):
             raise ValueError("FFSockets cannot poll without threaded mode.")
         # just use threaded throughout
         return FFSocket(pars=self.parameters.fetch(), name=self.name.fetch(), latency=self.latency.fetch(), dopbc=self.pbc.fetch(),
-                        active=self.activelist.fetch(), threaded=self.threaded.fetch(), 
+                        active=self.activelist.fetch(), threaded=self.threaded.fetch(),
                         interface=InterfaceSocket(address=self.address.fetch(), port=self.port.fetch(),
                                                  slots=self.slots.fetch(), mode=self.mode.fetch(), timeout=self.timeout.fetch(),
                                                  match_mode=self.matching.fetch()))
@@ -223,11 +223,11 @@ class InputFFLennardJones(InputForceField):
 
 class InputFFQUIP(InputForceField):
 
-    fields = { 
+    fields = {
         "init_file": (InputValue, {"dtype": str, "default": None, "help": "An extended xyz file that initializes the system."}),
         "args_str": (InputValue, {"dtype": str, "default": None, "help": "A string that identifies the type of interaction potential."}),
         "param_file": (InputValue, {"dtype": str, "default": None, "help": "An xml file that contains the parameters of the interaction potential."})
-    }   
+    }
 
     fields.update(InputForceField.fields)
 
@@ -370,3 +370,66 @@ class InputFFYaff(InputForceField):
 
         return FFYaff(yaffpara=self.yaffpara.fetch(), yaffsys=self.yaffsys.fetch(), yafflog=self.yafflog.fetch(), rcut=self.rcut.fetch(), alpha_scale=self.alpha_scale.fetch(), gcut_scale=self.gcut_scale.fetch(), skin=self.skin.fetch(), smooth_ei=self.smooth_ei.fetch(), reci_ei=self.reci_ei.fetch(), name=self.name.fetch(), latency=self.latency.fetch(),
         dopbc=self.pbc.fetch(), threaded=self.threaded.fetch())
+
+
+class InputFFMulti(Input):
+    default_help = """A class to consolidate multiple FF inputs in a single XML field"""
+    default_label = "FFMULTI"
+
+    dynamic = {
+          "ffsocket": (InputFFSocket, {"help": InputFFSocket.default_help}),
+          "fflj": (InputFFLennardJones, {"help": InputFFLennardJones.default_help}),
+          "ffquip": (InputFFQUIP, {"help": InputFFQUIP.default_help}),
+          "ffdebye": (InputFFDebye, {"help": InputFFDebye.default_help}),
+          "ffplumed": (InputFFPlumed, {"help": InputFFPlumed.default_help}),
+          "ffyaff": (InputFFYaff, {"help": InputFFYaff.default_help})
+    }
+
+    def store(self, ff):
+        """ TODO WRITE DOCSTRING """
+        _fflist = [v for k, v in sorted(ff.fflist.iteritems())]
+        if len(self.extra) != len(_fflist):
+            self.extra = [0] * len(_fflist)
+
+
+        for _ii, _obj, in enumerate(_fflist):
+            if self.extra[_ii] == 0:
+                if isinstance(_obj, eforcefields.FFSocket):
+                    _iobj = InputFFSocket()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffsocket", _iobj)
+                elif isinstance(_obj, eforcefields.FFLennardJones):
+                    _iobj = InputFFLennardJones()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("fflj", _iobj)
+                elif isinstance(_obj, eforcefields.FFQUIP):
+                    _iobj = InputFFQUIP()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffquip", _iobj)
+                elif isinstance(_obj, eforcefields.FFDebye):
+                    _iobj = InputFFDebye()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffdebye", _iobj)
+                elif isinstance(_obj, eforcefields.FFPlumed):
+                    _iobj = InputFFPlumed()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffplumed", _iobj)
+                elif isinstance(_obj, eforcefields.FFYaff):
+                    _iobj = InputFFYaff()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffyaff", _iobj)
+            else:
+                self.extra[_ii][1].store(_obj)
+
+    def fetch(self):
+        """ TODO WRITE DOCSTRING """
+
+        super(InputFFMulti, self).fetch()
+
+        fflist = []
+        for (k, v) in self.extra:
+            fflist.append(v.fetch())
+
+        # TODO: will actually need to create a FF object here!
+        return fflist
+

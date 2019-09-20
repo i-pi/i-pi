@@ -100,7 +100,8 @@ class InputSimulation(Input):
               "ffquip": (iforcefields.InputFFQUIP, {"help": iforcefields.InputFFQUIP.default_help}),
               "ffdebye": (iforcefields.InputFFDebye, {"help": iforcefields.InputFFDebye.default_help}),
               "ffplumed": (iforcefields.InputFFPlumed, {"help": iforcefields.InputFFPlumed.default_help}),
-              "ffyaff": (iforcefields.InputFFYaff, {"help": iforcefields.InputFFYaff.default_help})
+              "ffyaff": (iforcefields.InputFFYaff, {"help": iforcefields.InputFFYaff.default_help}),
+              "ffcommittee": (iforcefields.InputFFMulti, {"help": iforcefields.InputFFMulti.default_help})
     }
 
     default_help = "This is the top level class that deals with the running of the simulation, including holding the simulation specific properties such as the time step and outputting the data."
@@ -203,10 +204,7 @@ class InputSimulation(Input):
                 syslist.append(v.fetch())
             elif k == "system_template":
                 syslist += v.fetch()  # this will actually generate automatically a bunch of system objects with the desired properties set automatically to many values
-            elif k == "ffsocket" or k == "fflj" or k == 'ffquip' or k == "ffdebye" or k == "ffplumed":
-                print "fetching", k
-                fflist.append(v.fetch())
-            elif k == "ffyaff":
+            elif k == "ffsocket" or k == "fflj" or k == 'ffquip' or k == "ffdebye" or k == "ffplumed" or k=="ffyaff" or k=="ffmulti":
                 fflist.append(v.fetch())
 
         # this creates a simulation object which gathers all the little bits
