@@ -179,12 +179,9 @@ class nm_trans(object):
 
         qnm = np.dot(self._b2nm, q)
         for io in self._open:  # does separately the transformation for the atom that are marked as open paths
-            try:
-                qnm[:, 3 * io] = np.dot(self._b2o_nm, q[:, 3 * io])
-                qnm[:, 3 * io + 1] = np.dot(self._b2o_nm, q[:, 3 * io + 1])
-                qnm[:, 3 * io + 2] = np.dot(self._b2o_nm, q[:, 3 * io + 2])
-            except:
-                qnm = np.dot(self._b2o_nm, q)
+            qnm[:, 3 * io] = np.dot(self._b2o_nm, q[:, 3 * io])
+            qnm[:, 3 * io + 1] = np.dot(self._b2o_nm, q[:, 3 * io + 1])
+            qnm[:, 3 * io + 2] = np.dot(self._b2o_nm, q[:, 3 * io + 2])
                 
         return qnm
 
@@ -197,12 +194,9 @@ class nm_trans(object):
 
         q = np.dot(self._nm2b, qnm)
         for io in self._open:  # does separately the transformation for the atom that are marked as open paths
-            try:
-               q[:, 3 * io] = np.dot(self._o_nm2b, qnm[:, 3 * io])
-               q[:, 3 * io + 1] = np.dot(self._o_nm2b, qnm[:, 3 * io + 1])
-               q[:, 3 * io + 2] = np.dot(self._o_nm2b, qnm[:, 3 * io + 2])
-            except:
-               q = np.dot(self._o_nm2b, qnm)
+            q[:, 3 * io] = np.dot(self._o_nm2b, qnm[:, 3 * io])
+            q[:, 3 * io + 1] = np.dot(self._o_nm2b, qnm[:, 3 * io + 1])
+            q[:, 3 * io + 2] = np.dot(self._o_nm2b, qnm[:, 3 * io + 2])
            
         return q
 
