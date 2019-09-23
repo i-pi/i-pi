@@ -740,16 +740,15 @@ class NormalModes(dobject):
             pass
         else:
 
-            #Factor to determine smaller time step. Must be integer, how to check?
-            #Also, should be read from input? Can be determined by some physical considerations?
+            #If particles are bosons, I need to revert centroid step done separately in qcstep
+            if len(self.bosons) > 0:
+                 self.qnm[0, :] -= dstrip(self.pnm)[0, :] / dstrip(self.beads.m3)[0] * self.dt
+
+            #Free ring polymer dynamics are done with smaller time step detlat = dt/nmts
             dt = self.dt / dstrip(self.nmts)
 
             for j in range(0, dstrip(self.nmts)):
 
-                #These  forces require shorter time step than physical time step
-                #Either implement as another input parameter or just use
-                #0.1 of physical dt, hard coded above            
-                
                 self.beads.p += 0.5 * dt * self.fspring
                 self.beads.q += dt * self.beads.p / dstrip(self.beads.m3)
                 # The depend machinery will take care of automatically calculating 
