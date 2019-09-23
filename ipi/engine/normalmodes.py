@@ -134,8 +134,10 @@ class NormalModes(dobject):
         self.motion = motion
         if beads is None:
             self.beads = motion.beads
+            self.dbeads = motion.beads.copy()
         else:
             self.beads = beads
+            self.dbeads = beads.copy()
         self.forces = forces
         self.nbeads = beads.nbeads
         self.natoms = beads.natoms
@@ -517,7 +519,7 @@ class NormalModes(dobject):
         P = self.nbeads
         #omega_sq = self.omegan2/P #This is due to the fact that in i-pi omegan is P/(beta*hbar)
         omegaP_sq = self.omegan2
-        q = dstrip(self.beads.q).copy()
+        q = dstrip(self.beads.q).copy() #!BH!
         #q = self.transform.nm2b(dstrip(self.qnm))
         #print(q)
         
@@ -562,8 +564,9 @@ class NormalModes(dobject):
         P = self.nbeads
         #omega_sq = self.omegan2/P #This is due to the fact that in i-pi omegan is P/(beta*hbar)
         omegaP_sq = self.omegan2
-        q = dstrip(self.beads.q).copy()
-
+        q = dstrip(self.beads.q).copy() #!BH!
+        #print(q)
+        
         #q[j,:] stores 3*nuatoms xyz coordinates of all atoms.
         #Index of bead #(j+1) of atom #(l+1) is [l,3*l]
         r = q[j, 3*l:3*(l+1)]
@@ -593,7 +596,25 @@ class NormalModes(dobject):
         r_next = q[next_bead_ind, next_atom_ind:(next_atom_ind+3)]
         r_prev = q[prev_bead_ind, prev_atom_ind:(prev_atom_ind+3)]
         diff = (2*r - r_next - r_prev)
-                
+
+        """
+        print("l,j,N,k,dE: " + str(l+1) + " " + str(j+1) + " " + str(N) + " " + str(k) + " " + str(m*omegaP_sq*diff))
+        print("next_bead_ind: " + str(next_bead_ind))
+        print("next_atom_ind: " + str(next_atom_ind))
+        print("prev_bead_ind: " + str(prev_bead_ind))
+        print("prev_atom_ind: " + str(prev_atom_ind))
+        """
+        
+        """
+        if (l==0 and j==1):
+            print("m, omegaP_sq: " + str(m) + " " + str(omegaP_sq))
+            #print("l,j,N,k,dE: " + str(l+1) + " " + str(j+1) + " " + str(N) + " " + str(k) + " " + str(m*omegaP_sq*diff))
+            print("l,j,N,k,dE: " + str(l+1) + " " + str(j+1) + " " + str(N) + " " + str(k) + " " + str(diff))
+            print(r)
+            print(r_next)
+            print(r_prev)
+        """
+        
         return m*omegaP_sq*diff
 
     def Evaluate_VB(self):
@@ -656,20 +677,22 @@ class NormalModes(dobject):
         for m in range(1,N+1):
                 sig = 0
                 if (l+1 > m): #l goes from 0 to N-1 so check for l+1
+                    #print("zero dV_" + str(m) + " for atom " + str(l))
                     pass #dV[m,:] is initialized to zero vector already
                 else:
                     #for k in range(1,m+1):
                     count = m*(m-1)/2
                     for k in range(m,0,-1):
+                        #print("m " + str(m) + " k " + str(k))
                         if (l+1 >= m-k+1 and l+1 <= m): #l goes from 0 to N-1 so check for l+1
                             dE_k_N = self.Evaluate_dEkn_on_atom(l, j, m, k)
                         else:
-                            dE_k_N = np.zeros((1,3),float)
-                        sig = sig + (dE_k_N + dV[m-k, :])*np.exp(-betaP*(E_k_N[count] + V[m-k]))
+                            dE_k_N = np.zeros(3,float)
+                        sig += (dE_k_N + dV[m-k, :])*np.exp(-betaP*(E_k_N[count] + V[m-k]))
                         count += 1
 
                     dV[m, :]=(sig/(m*np.exp(-betaP*V[m])))
-
+        #print('dV_N is: ' + str(dV[N,:]))
         return -1.0 * dV[N,:]
     
     def get_fspring(self):
@@ -694,8 +717,14 @@ class NormalModes(dobject):
             F = np.zeros((P,3*N),float)
             for l in range(N):
                    for j in range(P):
+                       """
+                       print("*************************************")
+                       print("atom: " + str(l) + " bead " + str(j))
+                       print("*************************************")
+                       """
                        F[j, 3*l:3*(l+1)] = self.Evaluate_dVB(E_k_N, V, l, j)
 
+            #print(F)
         return F
                    
         
@@ -722,7 +751,7 @@ class NormalModes(dobject):
                 #0.1 of physical dt, hard coded above            
                 
                 self.beads.p += 0.5 * dt * self.fspring
-                self.beads.q += dt * self.beads.p / dstrip(self.beads.m3) 
+                self.beads.q += dt * self.beads.p / dstrip(self.beads.m3)
                 # The depend machinery will take care of automatically calculating 
                 # the forces at the updated positions.
                 self.beads.p += 0.5 * dt * self.fspring

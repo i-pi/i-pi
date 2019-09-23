@@ -368,10 +368,10 @@ class NVEIntegrator(DummyIntegrator):
             self.pconstraints()
             if index == self.nmtslevels - 1:
                 # call Q propagation for dt/alpha at the inner step
-                self.qcstep()
+                #self.qcstep() !BH!
                 self.nm.free_qstep()
                 self.nm.free_qstep()
-                self.qcstep()
+                #self.qcstep() !BH!
             else:
                 self.mtsprop(index + 1)
 
@@ -384,7 +384,7 @@ class NVEIntegrator(DummyIntegrator):
             self.pconstraints()
             if index == self.nmtslevels - 1:
                 # call Q propagation for dt/alpha at the inner step
-                self.qcstep()
+                #self.qcstep() !BH!
                 self.nm.free_qstep()
             else:
                 self.mtsprop_ba(index + 1)
@@ -395,7 +395,7 @@ class NVEIntegrator(DummyIntegrator):
         if self.nmts[index] % 2 == 1:
             if index == self.nmtslevels - 1:
                 # call Q propagation for dt/alpha at the inner step
-                self.qcstep()
+                #self.qcstep() !BH!
                 self.nm.free_qstep()
             else:
                 self.mtsprop_ab(index + 1)
@@ -409,10 +409,10 @@ class NVEIntegrator(DummyIntegrator):
             self.pconstraints()
             if index == self.nmtslevels - 1:
                 # call Q propagation for dt/alpha at the inner step
-                self.qcstep()
+                #self.qcstep() !BH!
                 self.nm.free_qstep()
                 self.nm.free_qstep()
-                self.qcstep()
+                #self.qcstep() !BH!
             else:
                 self.mtsprop(index + 1)
 
