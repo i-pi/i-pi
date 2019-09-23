@@ -134,14 +134,16 @@ class NormalModes(dobject):
         self.motion = motion
         if beads is None:
             self.beads = motion.beads
-            self.dbeads = motion.beads.copy()
+            #self.dbeads = motion.beads.copy()
         else:
             self.beads = beads
-            self.dbeads = beads.copy()
+            #self.dbeads = beads.copy()
         self.forces = forces
         self.nbeads = beads.nbeads
         self.natoms = beads.natoms
-        
+
+        if ( (len(self.bosons) > 0) and (len(self.bosons) < self.natoms) ):
+            raise(IOError("@NormalModes : Currently, only full bosonic/distinguishable simulations are allowed"))
         
         dself = dd(self)
 
@@ -734,6 +736,7 @@ class NormalModes(dobject):
         So the propagation is done through a velocity verlet step with a time step that is 
         self.nmts smaller than the one for the physical forces. 
         All beads of all atoms are propagated in one step.
+        Works for both distinguishable particles and bosons. Difference is in fspring.
         """
 
         if self.nbeads == 1:
@@ -742,7 +745,7 @@ class NormalModes(dobject):
 
             #If particles are bosons, I need to revert centroid step done separately in qcstep
             if len(self.bosons) > 0:
-                 self.qnm[0, :] -= dstrip(self.pnm)[0, :] / dstrip(self.beads.m3)[0] * self.dt
+                self.qnm[0, :] -= dstrip(self.pnm)[0, :] / dstrip(self.beads.m3)[0] * self.dt
 
             #Free ring polymer dynamics are done with smaller time step detlat = dt/nmts
             dt = self.dt / dstrip(self.nmts)
