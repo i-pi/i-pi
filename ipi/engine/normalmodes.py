@@ -743,9 +743,9 @@ class NormalModes(dobject):
             pass
         else:
 
-            #If particles are bosons, I need to revert centroid step done separately in qcstep
-            if len(self.bosons) > 0:
-                self.qnm[0, :] -= dstrip(self.pnm)[0, :] / dstrip(self.beads.m3)[0] * self.dt
+            #Since the dynamcis are done in Cartesian coordinates below (including all modes),
+            #I need to revert centroid step done separately in qcstep
+            self.qnm[0, :] -= dstrip(self.pnm)[0, :] / dstrip(self.beads.m3)[0] * self.dt
 
             #Free ring polymer dynamics are done with smaller time step detlat = dt/nmts
             dt = self.dt / dstrip(self.nmts)
@@ -785,7 +785,7 @@ class NormalModes(dobject):
 
         else:
             if len(self.bosons) > 0 :
-                raise("@Normalmodes : Bosonic propagator not implemented for the exact or Cayley propagators.")
+                raise("@Normalmodes : Bosonic forces not compatible right now with the exact or Cayley propagators.")
 
             pq = np.zeros((2, self.natoms * 3), float)
             sm = dstrip(self.beads.sm3)
