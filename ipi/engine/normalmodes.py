@@ -717,7 +717,7 @@ class NormalModes(dobject):
 
         #print('CALLED get_vspring_and_fspring_B() !!!!!!!')
         if len(self.bosons) is 0 :
-            return [0.0, np.zeros((P,3*N),float)]
+            pass
         else:
             (E_k_N, V) = self.Evaluate_VB()
             #print('E_k_N is: ' + str(E_k_N))
