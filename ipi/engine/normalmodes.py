@@ -253,10 +253,16 @@ class NormalModes(dobject):
                                      func=self.get_kstress,
                                      dependencies=[dself.pnm, dd(self.beads).sm3, dself.nm_factor])
 
+        #Array that holds both vspring and fspring for bosons
+        dself.vspring_and_fspring_B = depend_value(name="v_and_fs_B",
+                                     value=[None, None],
+                                     func=self.get_vspring_and_fspring_B,
+                                     dependencies=[dself.beads.q, dself.beads.m3, dself.omegan2])
+
         # spring energy, calculated in normal modes
         dself.vspring = depend_value(name="vspring",
                                      value=0.0, func=self.get_vspring,
-                                     dependencies=[dself.qnm, dself.omegak, dself.o_omegak, dd(self.beads).m3])
+                                     dependencies=[dself.qnm, dself.omegak, dself.o_omegak, dd(self.beads).m3, dself.vspring_and_fspring_B])
 
         # spring forces on normal modes
         dself.fspringnm = depend_array(name="fspringnm",
@@ -269,7 +275,7 @@ class NormalModes(dobject):
                                      value=np.zeros((self.nbeads, 3 * self.natoms), float),
                                      #func=(lambda: self.transform.nm2b(dstrip(self.fspringnm))),
                                      func=self.get_fspring,
-                                     dependencies=[dself.fspringnm, dself.beads.q, dself.beads.m3, dself.omegan2])
+                                     dependencies=[dself.fspringnm, dself.vspring_and_fspring_B])
 
     def get_fspringnm(self):
         """Returns the spring force calculated in NM representation."""
@@ -281,17 +287,22 @@ class NormalModes(dobject):
 
         if self.nbeads == 1:
             return 0.0
+        
+        if len(self.bosons) is 0 :
 
-        sqnm = dstrip(self.qnm)*dstrip(self.beads.sm3)
-        q2 = (sqnm**2).sum(axis=1)
+            sqnm = dstrip(self.qnm)*dstrip(self.beads.sm3)
+            q2 = (sqnm**2).sum(axis=1)
 
-        vspring = (self.omegak2 * q2).sum()
+            vspring = (self.omegak2 * q2).sum()
 
-        for j in self.open_paths:
-            vspring += (self.beads.m[j] * (self.o_omegak**2 - self.omegak**2) *
-                        (self.qnm[:, 3 * j]**2 + self.qnm[:, 3 * j + 1]**2 + self.qnm[:, 3 * j + 2]**2)).sum()
+            for j in self.open_paths:
+                vspring += (self.beads.m[j] * (self.o_omegak**2 - self.omegak**2) *
+                            (self.qnm[:, 3 * j]**2 + self.qnm[:, 3 * j + 1]**2 + self.qnm[:, 3 * j + 2]**2)).sum()
 
-        return vspring * 0.5
+            return vspring * 0.5
+        
+        else:
+            return self.vspring_and_fspring_B[0]
 
     def get_omegan(self):
         """Returns the effective vibrational frequency for the interaction
@@ -697,6 +708,37 @@ class NormalModes(dobject):
         #print('dV_N is: ' + str(dV[N,:]))
         return -1.0 * dV[N,:]
     
+    def get_vspring_and_fspring_B(self):
+        """
+        Calculate spring forces. Required for numerical propagator in Cartesian coords.
+        For distinguishable particles you simply transfrom from self.fspringnm. 
+        For Bosons, evaluate using recursion relation from arXiv:1905.090.
+        """
+
+        #print('CALLED get_vspring_and_fspring_B() !!!!!!!')
+        if len(self.bosons) is 0 :
+            return [0.0, np.zeros((P,3*N),float)]
+        else:
+            (E_k_N, V) = self.Evaluate_VB()
+            #print('E_k_N is: ' + str(E_k_N))
+            #print('V is: ' + str(V))
+            
+            N = self.natoms
+            P = self.nbeads
+            
+            F = np.zeros((P,3*N),float)
+            for l in range(N):
+                for j in range(P):
+                    """
+                    print("*************************************")
+                    print("atom: " + str(l) + " bead " + str(j))
+                    print("*************************************")
+                    """
+                    F[j, 3*l:3*(l+1)] = self.Evaluate_dVB(E_k_N, V, l, j)
+
+            #print(F)
+            return [V[N],F]
+
     def get_fspring(self):
         """
         Calculate spring forces. Required for numerical propagator in Cartesian coords.
@@ -709,26 +751,7 @@ class NormalModes(dobject):
         if len(self.bosons) is 0 :
             return self.transform.nm2b(dstrip(self.fspringnm))
         else:
-            (E_k_N, V) = self.Evaluate_VB()
-            #print('E_k_N is: ' + str(E_k_N))
-            #print('V is: ' + str(V))
-            
-            N = self.natoms
-            P = self.nbeads
-
-            F = np.zeros((P,3*N),float)
-            for l in range(N):
-                   for j in range(P):
-                       """
-                       print("*************************************")
-                       print("atom: " + str(l) + " bead " + str(j))
-                       print("*************************************")
-                       """
-                       F[j, 3*l:3*(l+1)] = self.Evaluate_dVB(E_k_N, V, l, j)
-
-            #print(F)
-        return F
-                   
+            return self.vspring_and_fspring_B[1]
         
     def free_babstep(self):
         """
