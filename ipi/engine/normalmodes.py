@@ -286,7 +286,9 @@ class NormalModes(dobject):
 
     def get_vspring(self):
         """ Returns the spring energy calculated in NM representation for distinguishable particles.
-            For bosons, get the first element of vspring_and_fspring_B[0]"""
+            For bosons, get the first element of vspring_and_fspring_B[0]
+            For a mixture of both, calculate separately and combine.
+        """
 
         if self.nbeads == 1:
             return 0.0
@@ -769,7 +771,7 @@ class NormalModes(dobject):
                     print("atom: " + str(l) + " bead " + str(j))
                     print("*************************************")
                     """
-                    F[j, 3*l:3*(l+1)] = self.Evaluate_dVB(E_k_N, V, l, j)
+                    F[j, 3*l:3*(l+1)] = self.Evaluate_dVB(E_k_N, V, ind, j)
 
             #print(F)
             return [V[-1],F]
