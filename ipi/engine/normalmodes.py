@@ -134,10 +134,9 @@ class NormalModes(dobject):
         self.motion = motion
         if beads is None:
             self.beads = motion.beads
-            #self.dbeads = motion.beads.copy()
         else:
             self.beads = beads
-            #self.dbeads = beads.copy()
+
         self.forces = forces
         self.nbeads = beads.nbeads
         self.natoms = beads.natoms

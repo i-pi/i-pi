@@ -104,7 +104,7 @@ class InputNormalModes(Input):
                                     "help": "Indices of the atoms that are bosons (zero-based)."}),
         "nmts": (InputValue, {"dtype": int,
                                     "default": 10,
-                                    "help" : "The number of interations to perform one bab step.",
+                                    "help" : "The number of iterations to perform one bab step.",
                                     "dimension" : None})
     }
 
