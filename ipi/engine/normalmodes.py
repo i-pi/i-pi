@@ -309,7 +309,18 @@ class NormalModes(dobject):
         elif len(self.bosons) is self.natoms:
             return self.vspring_and_fspring_B[0]
         else:
-            #raise("@NormalModes: Implementing mixtures of B and D")
+            #Sum over only those particles who are distinguishable.
+            vspring = 0.0
+
+            notbosons = list( set(range(self.natoms)) - set(self.bosons) )
+            for j in notbosons:
+                vspring += (self.beads.m[j] * self.omegak**2 *
+                            (self.qnm[:, 3 * j]**2 + self.qnm[:, 3 * j + 1]**2 + self.qnm[:, 3 * j + 2]**2)).sum()
+
+            return vspring * 0.5 +  self.vspring_and_fspring_B[0]
+
+            """
+            vspring = 0.0
             
             P = self.nbeads
             omegaP_sq = self.omegan2
@@ -332,9 +343,10 @@ class NormalModes(dobject):
                     sumE = sumE + self.beads.m[l]*np.dot(diff,diff)
 
             vspring =  0.5*omegaP_sq*sumE
+            print(vspring)
 
             return vspring + self.vspring_and_fspring_B[0]
-            
+            """
 
     def get_omegan(self):
         """Returns the effective vibrational frequency for the interaction
@@ -789,11 +801,14 @@ class NormalModes(dobject):
             return self.vspring_and_fspring_B[1]
         else:
             #raise("@NormalModes: Implementing mixtures of B and D")
-            #f_distinguish = self.transform.nm2b(dstrip(self.fspringnm))
+            f_distinguish = self.transform.nm2b(dstrip(self.fspringnm))
             #zero force for bosons
-            #for boson in self.bosons:
-                #f_distinguish[:,3*boson:(3*boson+3)] = 0.0
+            for boson in self.bosons:
+                f_distinguish[:,3*boson:(3*boson+3)] = 0.0
 
+            return f_distinguish + self.vspring_and_fspring_B[1]
+
+            """
             P = self.nbeads
             omegaP_sq = self.omegan2
             notbosons = list( set(range(self.natoms)) - set(self.bosons) )
@@ -817,9 +832,11 @@ class NormalModes(dobject):
                     diff = (2*r - r_next - r_prev)
 
                     f_distinguish[j, 3*l:(3*l+3)] = -1.0 * self.beads.m[l]*omegaP_sq*diff
-            
+
+            print(f_distinguish)
             return f_distinguish + self.vspring_and_fspring_B[1]
-        
+            """
+            
     def free_babstep(self):
         """
         Numerical propagator in Cartesian coordinates.
