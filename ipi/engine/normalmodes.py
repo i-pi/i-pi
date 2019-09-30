@@ -319,35 +319,6 @@ class NormalModes(dobject):
 
             return vspring * 0.5 +  self.vspring_and_fspring_B[0]
 
-            """
-            vspring = 0.0
-            
-            P = self.nbeads
-            omegaP_sq = self.omegan2
-            notbosons = list( set(range(self.natoms)) - set(self.bosons) )
-            
-            q = dstrip(self.beads.q).copy()
-        
-            sumE = 0.0
-            for l in notbosons:                
-                for j in range(P):
-                    r = q[j, 3*l:3*(l+1)]
-                    next_bead_ind = j + 1
-
-                    if (j == P-1):
-                        next_bead_ind = 0
-                       
-                    r_next = q[next_bead_ind, 3*l:3*(l+1)]
-                    diff = (r_next - r)
-
-                    sumE = sumE + self.beads.m[l]*np.dot(diff,diff)
-
-            vspring =  0.5*omegaP_sq*sumE
-            print(vspring)
-
-            return vspring + self.vspring_and_fspring_B[0]
-            """
-
     def get_omegan(self):
         """Returns the effective vibrational frequency for the interaction
         between replicas.
@@ -575,14 +546,14 @@ class NormalModes(dobject):
         
         P = self.nbeads
         omegaP_sq = self.omegan2
-        #q = dstrip(self.beads.q).copy()
         
         q = np.zeros((P,3*len(self.bosons)), float)
         qall = dstrip(self.beads.q).copy()
+
+        #Stores coordinates just for bosons in separate arrays with new indices 1,...,Nbosons
         for ind,boson in enumerate(self.bosons):
             q[:,3*ind:(3*ind+3)] = qall[:,3*boson:(3*boson+3)]
-        #print(q)
-        
+                
         sumE = 0.0
         #Here indices go from 0 to N-1 and P-1, respectively. In paper they start from 1.
         for l in range(N-k,N):
@@ -624,14 +595,14 @@ class NormalModes(dobject):
         P = self.nbeads
         omegaP_sq = self.omegan2
 
-        #q = dstrip(self.beads.q).copy()
         q = np.zeros((P,3*len(self.bosons)), float)
         qall = dstrip(self.beads.q).copy()
+        
+        #Stores coordinates just for bosons in separate arrays with new indices 1,...,Nbosons
         for ind,boson in enumerate(self.bosons):
             q[:,3*ind:(3*ind+3)] = qall[:,3*boson:(3*boson+3)]
-        #print(q)
         
-        #q[j,:] stores 3*nuatoms xyz coordinates of all atoms.
+        #q[j,:] stores 3*natoms xyz coordinates of all atoms.
         #Index of bead #(j+1) of atom #(l+1) is [l,3*l]
         r = q[j, 3*l:3*(l+1)]
         next_bead_ind = j + 1
@@ -661,24 +632,6 @@ class NormalModes(dobject):
         r_prev = q[prev_bead_ind, prev_atom_ind:(prev_atom_ind+3)]
         diff = (2*r - r_next - r_prev)
 
-        """
-        print("l,j,N,k,dE: " + str(l+1) + " " + str(j+1) + " " + str(N) + " " + str(k) + " " + str(m*omegaP_sq*diff))
-        print("next_bead_ind: " + str(next_bead_ind))
-        print("next_atom_ind: " + str(next_atom_ind))
-        print("prev_bead_ind: " + str(prev_bead_ind))
-        print("prev_atom_ind: " + str(prev_atom_ind))
-        """
-        
-        """
-        if (l==0 and j==1):
-            print("m, omegaP_sq: " + str(m) + " " + str(omegaP_sq))
-            #print("l,j,N,k,dE: " + str(l+1) + " " + str(j+1) + " " + str(N) + " " + str(k) + " " + str(m*omegaP_sq*diff))
-            print("l,j,N,k,dE: " + str(l+1) + " " + str(j+1) + " " + str(N) + " " + str(k) + " " + str(diff))
-            print(r)
-            print(r_next)
-            print(r_prev)
-        """
-        
         return m*omegaP_sq*diff
 
     def Evaluate_VB(self):
@@ -688,7 +641,6 @@ class NormalModes(dobject):
         Returns all VB_m and all E_m^{(k)} which are required for the forces later.        
         """
 
-        #N = self.natoms
         N = len(self.bosons)
         betaP = 1.0 / (self.beads.nbeads * Constants.kb * self.ensemble.temp)
         
@@ -701,25 +653,19 @@ class NormalModes(dobject):
 
             #Reversed sum order to be able to use energy of longest ring polymer in Elong
             for k in range(m,0,-1):
-
                 E_k_N = self.Evaluate_EkN(m,k)
                 
                 #This is required for numerical stability. See SI of arXiv:1905.0905
                 if (k==m):
                     Elong = 0.5*(E_k_N + V[m-1])
-                #print('k, N, E_k_N, V[m-k] are: ' + str(k) + ' ' + str(N) + ' ' + str(E_k_N) + ' ' + str(V[m-k]))
-                #sig = sig + np.exp(-beta*(E_k_N + V[m-k]))
+
                 sig = sig + np.exp(-betaP*(E_k_N + V[m-k]-Elong))
-                #print('sig is: ' + str(sig))
+
                 save_Ek_N[count] = E_k_N
                 count += 1
 
-                #print('sig is: ' + str(sig))
-
             V[m] = Elong - np.log(sig/m)/betaP
-            #print('m, V[m] are: ' + str(m) + ' ' + str(V[m]))
-        #print('betaP is: ' + str(betaP))
-        #print('m, omegaP_sq are: ' + str( dstrip(self.beads.m)[self.bosons[0]] ) + ' ' + str(self.omegan2))
+        
         return (save_Ek_N, V)
     
     def Evaluate_dVB(self, E_k_N, V, l, j):
@@ -729,7 +675,6 @@ class NormalModes(dobject):
         Returns -dVB_N, the force acting on bead #(j+1) of atom #(l+1).
         """
 
-        #N = self.natoms
         N = len(self.bosons)
         betaP = 1.0 / (self.beads.nbeads * Constants.kb * self.ensemble.temp)
         
@@ -754,12 +699,11 @@ class NormalModes(dobject):
 
                     dV[m, :]=(sig/(m*np.exp(-betaP*V[m])))
                     
-        #print('dV_N is: ' + str(dV[N,:]))
         return -1.0 * dV[N,:]
     
     def get_vspring_and_fspring_B(self):
         """
-        Calculate spring forces for bosons. 
+        Calculates spring forces and potential for bosons. 
         Evaluated using recursion relation from arXiv:1905.090.
         """
 
@@ -767,25 +711,15 @@ class NormalModes(dobject):
             pass
         else:
             (E_k_N, V) = self.Evaluate_VB()
-            #print('E_k_N is: ' + str(E_k_N))
-            #print('V is: ' + str(V))
-            
-            #N = self.natoms
+
             P = self.nbeads
             
-            #F = np.zeros((P,3*N),float)
             F = np.zeros((P,3*self.natoms),float)
-            #for l in range(N):
+
             for ind,l in enumerate(self.bosons):
                 for j in range(P):
-                    """
-                    print("*************************************")
-                    print("atom: " + str(l) + " bead " + str(j))
-                    print("*************************************")
-                    """
                     F[j, 3*l:3*(l+1)] = self.Evaluate_dVB(E_k_N, V, ind, j)
 
-            #print(F)
             return [V[-1],F]
 
     def get_fspring(self):
@@ -793,6 +727,7 @@ class NormalModes(dobject):
         Returns the spring force. Required for numerical propagation in free_babstep().
         For distinguishable particles, simply transform fnm to Cartesian coordinates.
         For bosons, get the second element of vspring_and_fspring_B
+        For a mixture of both, calculate separately and combine.
         """
     
         if len(self.bosons) is 0 :
@@ -807,35 +742,6 @@ class NormalModes(dobject):
                 f_distinguish[:,3*boson:(3*boson+3)] = 0.0
 
             return f_distinguish + self.vspring_and_fspring_B[1]
-
-            """
-            P = self.nbeads
-            omegaP_sq = self.omegan2
-            notbosons = list( set(range(self.natoms)) - set(self.bosons) )
-            
-            q = dstrip(self.beads.q).copy()
-
-            f_distinguish = np.zeros((P,3*self.natoms), float)
-            for l in notbosons:
-                for j in range(P):
-                    r = q[j, 3*l:3*(l+1)]
-                    next_bead_ind = j + 1
-                    prev_bead_ind = j - 1
-
-                    if (j == P-1):
-                        next_bead_ind = 0
-                    if(j == 0):
-                        prev_bead_ind = P-1
-                       
-                    r_next = q[next_bead_ind, 3*l:3*(l+1)]
-                    r_prev = q[prev_bead_ind, 3*l:3*(l+1)]
-                    diff = (2*r - r_next - r_prev)
-
-                    f_distinguish[j, 3*l:(3*l+3)] = -1.0 * self.beads.m[l]*omegaP_sq*diff
-
-            print(f_distinguish)
-            return f_distinguish + self.vspring_and_fspring_B[1]
-            """
             
     def free_babstep(self):
         """
@@ -850,7 +756,7 @@ class NormalModes(dobject):
             pass
         else:
 
-            #Since the dynamcis are done in Cartesian coordinates below (including all modes),
+            #Since the dynamics are done in Cartesian coordinates below (including all modes),
             #I need to revert centroid step done separately in qcstep
             self.qnm[0, :] -= dstrip(self.pnm)[0, :] / dstrip(self.beads.m3)[0] * self.dt
 
@@ -866,7 +772,7 @@ class NormalModes(dobject):
                 self.beads.p += 0.5 * dt * self.fspring
 
     def free_qstep(self):
-        #!BH!: Should we update the comment here that now the propagator is either exact/Cayley in NM or numerical in Cartesian?
+        #!BH!: Should we update the comment here that now the propagator is either exact, NM or numerical, Cartesian?
         """Exact normal mode propagator for the free ring polymer.
 
         Note that the propagator works in mass scaled coordinates, so that the
