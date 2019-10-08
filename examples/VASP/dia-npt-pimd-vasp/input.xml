@@ -8,7 +8,7 @@
     <seed>3141</seed>
   </prng>
   <ffsocket name='pw' mode='inet'>
-    <address>192.168.2.96</address>
+    <address>127.0.0.1</address>
     <port>23330</port>
     <timeout>100</timeout>
     <latency> 0.01</latency>

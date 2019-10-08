@@ -18,7 +18,7 @@ define run_vasp
 endef
 
 h2o:
-	cd water-1-npt-md-vasp; $(IPI) ipi-input.xml & sleep 5; \
+	cd water-1-npt-md-vasp; $(IPI) ipi-vasp.xml & sleep 5; \
 	$(call run_vasp,1) \
 	wait
 
@@ -28,4 +28,4 @@ dia:
 	wait
 
 clean:
-	rm -rf */*simulation* */*output* */*.log* */*run_* */*RESTART* */EXIT
+	rm -rf */*simulation* */*out* */*.log* */*run_* */*RESTART* */EXIT

@@ -1,5 +1,5 @@
 <simulation verbosity="high">
-  <output prefix="npt-300k-1GP">
+  <output prefix="simulation">
       <properties stride='1' filename='out'>
         [ step, time{picosecond}, conserved, temperature{kelvin}, potential{electronvolt}, pressure_md{gigapascal} ]
       </properties>
