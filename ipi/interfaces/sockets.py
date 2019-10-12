@@ -226,7 +226,7 @@ class Driver(DriverSocket):
         self.status = Status.Up
         self.lastreq = None
         self.locked = False
-        self.softexit_on_disconnect = False
+        self.exit_on_disconnect = False
 
     def _getstatus(self):
         """Gets driver status.
@@ -272,9 +272,7 @@ class Driver(DriverSocket):
     def shutdown(self, how=socket.SHUT_RDWR):
         """Tries to send an exit message to clients to let them exit gracefully."""
 
-        print "Shutting down socket"
-        
-        if self.softexit_on_disconnect:
+        if self.exit_on_disconnect:
             trd=threading.Thread(target=softexit.trigger, kwargs={"message":"Client shutdown."})
             trd.daemon=True
             trd.start()
@@ -486,7 +484,8 @@ class InterfaceSocket(object):
           update the list of clients and then be reset to zero.
     """
 
-    def __init__(self, address="localhost", port=31415, slots=4, mode="unix", timeout=1.0, match_mode="auto"):
+    def __init__(self, address="localhost", port=31415, slots=4, 
+                mode="unix", timeout=1.0, match_mode="auto", exit_on_disconnect=False):
         """Initialises interface.
 
         Args:
@@ -514,6 +513,7 @@ class InterfaceSocket(object):
         self.prlist = [] # list of pending requests
         self.match_mode = match_mode # heuristics to match jobs and active clients
         self.requests = None # these will be linked to the request list of the FFSocket object using the interface
+        self.exit_on_disconnect = exit_on_disconnect
 
     def open(self):
         """Creates a new socket.
@@ -631,7 +631,7 @@ class InterfaceSocket(object):
                 info(" @SOCKET:   Client asked for connection from " + str(address) + ". Now hand-shaking.", verbosity.low)
                 driver.get_status()
                 if (driver.status | Status.Up):
-                    driver.softexit_on_disconnect = True
+                    driver.exit_on_disconnect = self.exit_on_disconnect
                     self.clients.append(driver)                    
                     info(" @SOCKET:   Handshaking was successful. Added to the client list.", verbosity.low)
                     self.poll_iter = UPDATEFREQ   # if a new client was found, will try again harder next time
