@@ -134,7 +134,7 @@ class Ensemble(dobject):
         dself.econs = depend_value(name='econs', func=self.get_econs)
 
         # this binds just the explicit bias forces
-        self.bias.bind(self.beads, self.cell, self.bcomp, fflist)
+        self.bias.bind(self.beads, self.cell, self.bcomp, fflist,open_paths=nm.open_paths)
 
         dself.econs = depend_value(name='econs', func=self.get_econs)
         # dependencies of the conserved quantity
