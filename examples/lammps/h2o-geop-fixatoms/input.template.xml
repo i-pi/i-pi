@@ -1,0 +1,32 @@
+<simulation mode='static' verbosity='medium'>
+  <output prefix='PREFIX'>
+    <properties stride='1' filename='out'>  [ step, potential{electronvolt} ] </properties>
+    <trajectory stride='1' filename='pos'>  positions  </trajectory>
+  </output>
+  <total_steps> 10000 </total_steps>
+  <ffsocket name='lmp' mode='unix' pbc='true'>
+    <address> water-geop </address>
+    <latency> 1e-4</latency>
+  </ffsocket>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='xyz'>  init.xyz </file>
+    </initialize>
+    <forces>
+      <force forcefield='lmp'> </force>
+    </forces>
+    <motion mode='minimize'>
+      <fixatoms> [FIXATOMS] </fixatoms>
+      <optimizer mode='MODE'>
+        <ls_options>  <tolerance> 1e-5 </tolerance> </ls_options>
+        <tolerances>
+<!--          <energy> 1e-6 </energy>-->
+          <energy units='electronvolt'> 1e-3 </energy>
+          <position> 1e-4 </position>
+<!--          <force> 1e-4 </force>-->
+          <force units='ev/ang'> 1e-2 </force>
+        </tolerances>
+      </optimizer>
+    </motion>
+  </system>
+</simulation>
