@@ -87,7 +87,7 @@ class InputNormalModes(Input):
                                    "options": ['fft', 'matrix']}),
         "propagator": (InputAttribute, {"dtype": str,
                                    "default": "exact",
-                                   "help": "How to propagate the free ring polymer dynamics. Cayley transform is not exact but is strongly stable and avoid potential resonance issues. A bab scheme is also added to perform numerical verlet type propagation.",
+                                   "help": "How to propagate the free ring polymer dynamics. Cayley transform is not exact but is strongly stable and avoid potential resonance issues. A bab scheme performs numerical verlet type propagation. All three options work for distinguishable particles. Only the bab propagator can be used with bosonic particles.",
                                    "options": ['exact', 'cayley', 'bab']})
     }
 
