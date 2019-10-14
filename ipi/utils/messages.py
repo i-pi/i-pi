@@ -99,7 +99,7 @@ verbosity = Verbosity()
 def banner():
     """Prints out a banner."""
 
-    print """
+    print("""
  ____       ____       ____       ____
 /    \     /    \     /    \     /    \ 
 |  #################################  |
@@ -115,7 +115,7 @@ def banner():
 |  #################################  |
 \____/     \____/     \____/     \____/
 
-    """
+    """)
 
 
 def info(text="", show=True):
@@ -129,7 +129,7 @@ def info(text="", show=True):
 
     if not show:
         return
-    print text
+    print(text)
 
 
 def warning(text="", show=True):
@@ -147,4 +147,4 @@ def warning(text="", show=True):
         return
     if verbosity.trace:
         traceback.print_stack(file=sys.stdout)
-    print " !W! " + text
+    print(" !W! " + text)
