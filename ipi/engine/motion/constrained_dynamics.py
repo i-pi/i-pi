@@ -783,14 +783,6 @@ class ConstrainedIntegrator(DummyIntegrator):
 
         dd(self).csolver = motion.csolver
 
-
-        #tolerance = depend_value(name="tolerance", func=lambda: motion.tolerance)
-        #dd(self).maxit = depend_value(name="maxit", func=lambda: motion.maxit)
-        #dd(self).norm_order = depend_value(name="norm_order", func=lambda: motion.norm_order)
-
-    #print("~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~Number of constraints: ", self.constraints.ncons)
-
-
     def step_A(self, stepsize=None):
         if stepsize is None:
             stepsize = self.qdt
