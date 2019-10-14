@@ -118,11 +118,12 @@ class Ensemble(dobject):
             hweights = np.ones(0)
         self.hweights = np.asarray(hweights)
 
-
         # Internal time counter
         dd(self).time = depend_value(name='time')
         self.time = time
 
+    def copy(self):
+        return Ensemble(self.eens, 0.0, self.temp, self.pext, dstrip(self.stressext).copy())
 
     def bind(self, beads, nm, cell, bforce, fflist, elist=[], xlpot=[], xlkin=[]):
         self.beads = beads
