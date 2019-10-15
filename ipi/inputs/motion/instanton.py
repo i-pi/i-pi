@@ -62,21 +62,24 @@ class InputInst(InputDictionary):
                                          "dimension": "force"}),
               "opt": (InputValue, {"dtype": str,
                                    "default": 'None',
-                                   "options": ["nichols", "NR", "lbfgs", "None"],
+                                   "options": ["nichols", "NR", "lbfgs", "lanczos", "None"],
                                    "help": "The geometry optimization algorithm to be used"}),
+              "discretization": (InputArray, {"dtype": float,
+                                       "default": input_default(factory=np.ones, args=(0,)),
+                                       "help": "Time discretization"}),
               "alt_out": (InputValue, {"dtype": int,
                                        "default": 1,
                                        "help": """Alternative output:Prints different formatting of outputs for geometry, hessian and bead potential energies.
-                                               All quantities are also accessible from typical i-pi output infrastructure.
-                                               Default to 1, which prints every step. -1 will suppress the output (except the last one).
-                                               Any other positive number will set the frequency (in steps) with which the quantities are
+                                               All quantities are also accessible from typical i-pi output infrastructure. 
+                                               Default to 1, which prints every step. -1 will suppress the output (except the last one). 
+                                               Any other positive number will set the frequency (in steps) with which the quantities are 
                                                written to file.
                                                The instanton geometry is printed in xyz format and the distances are in angrstroms
                                                The hessian is printed in one line with the following format:
                                                h1_1,h2_1,...,hN_1,   h2_2,h2_2,hN_2,   ....   ,h1_d,h2_d,...,hN_d.
                                                Where N represents the total number of replicas, d the number of dimension of each replica (3*n_atoms) and
-                                               hi_j means the row j of the physical hessian corresponding to the replica i.
-                                               The physical hessian uses a convention according to the positions convention used in  i-pi.
+                                               hi_j means the row j of the physical hessian corresponding to the replica i. 
+                                               The physical hessian uses a convention according to the positions convention used in  i-pi. 
                                                Example of 2 particles, the first two rows of the physical hessian reads:
                                                'H_x1_x1, H_x1_y1, H_x1_z1, H_x1_x2, H_x1_y2,H_x1_z2'
                                                'H_x2_x1, H_x2_y1, H_x2_z1, H_x2_x2, H_x2_y2,H_x2_z2' """}),
@@ -145,45 +148,48 @@ class InputInst(InputDictionary):
     dynamic = {}
 
     default_help = "A class for instanton calculations"
-    default_label = "INSTANTON"
+    default_label = "instanton"
 
     def store(self, geop):
         if geop == {}:
             return
 
+        options = geop.options
+        optarrays = geop.optarrays
+
         # Optimization mode
-        self.mode.store(geop.mode)
+        self.mode.store(options["mode"])
 
         # Generic optimization
-        self.tolerances.store(geop.tolerances)
-        self.biggest_step.store(geop.big_step)
-        self.opt.store(geop.opt)
+        self.tolerances.store(options["tolerances"])
+        self.biggest_step.store(optarrays["big_step"])
+        self.opt.store(options["opt"])
 
         # Generic instanton
-        self.alt_out.store(geop.save)
-        self.prefix.store(geop.prefix)
-        self.delta.store(geop.delta)
-        self.hessian_final.store(geop.hessian_final)
-        self.old_pot.store(geop.old_u)
-        self.old_force.store(geop.old_f)
-        self.energy_shift.store(geop.energy_shift)
+        self.discretization.store(options["discretization"])
+        self.alt_out.store(options["save"])
+        self.prefix.store(options["prefix"])
+        self.delta.store(optarrays["delta"])
+        self.hessian_final.store(options["hessian_final"])
+        self.old_pot.store(optarrays["old_u"])
+        self.old_force.store(optarrays["old_f"])
+        self.energy_shift.store(optarrays["energy_shift"])
 
         # Now we decide what to store depending on optimization algorithm
-        if geop.opt == 'nichols' or geop.opt == 'NR':
-            self.hessian.store(geop.hessian)
-            self.hessian_update.store(geop.hessian_update)
-            self.hessian_asr.store(geop.hessian_asr)
-            self.hessian_final.store(geop.hessian_final)
-        elif geop.opt == 'lbfgs':
-            self.qlist_lbfgs.store(geop.qlist)
-            self.glist_lbfgs.store(geop.glist)
-            self.old_direction.store(geop.d)
-            self.scale_lbfgs.store(geop.scale)
-            self.corrections_lbfgs.store(geop.corrections)
-            self.ls_options.store(geop.ls_options)
-            self.hessian_final.store(geop.hessian_final)
-            if geop.hessian_final == 'true':
-                self.hessian.store(geop.hessian)
+        if geop.options["opt"] == 'nichols' or geop.options["opt"] == 'NR' or geop.options["opt"] == 'lanczos':
+            self.hessian.store(optarrays["hessian"])
+            self.hessian_update.store(options["hessian_update"])
+            self.hessian_asr.store(options["hessian_asr"])
+        elif geop.options["opt"] == 'lbfgs':
+            self.qlist_lbfgs.store(optarrays["qlist"])
+            self.glist_lbfgs.store(optarrays["glist"])
+            self.old_direction.store(optarrays["d"])
+            self.scale_lbfgs.store(options["scale"])
+            self.corrections_lbfgs.store(options["corrections"])
+            self.ls_options.store(options["ls_options"])
+            self.hessian_final.store(options["hessian_final"])
+            if options["hessian_final"] == 'true':
+                self.hessian.store(optarrays["hessian"])
 
     def fetch(self):
         rv = super(InputInst, self).fetch()

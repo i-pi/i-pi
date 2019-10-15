@@ -57,7 +57,7 @@ class Simulation(dobject):
     """
 
     @staticmethod
-    def load_from_xml(fn_input, custom_verbosity=None, request_banner=False):
+    def load_from_xml(fn_input, custom_verbosity=None, request_banner=False,read_only=False):
         """Load an XML input file and return a `Simulation` object.
 
         Arguments:
@@ -91,7 +91,7 @@ class Simulation(dobject):
         simulation = input_simulation.fetch()
 
         # pipe between the components of the simulation
-        simulation.bind()
+        simulation.bind(read_only)
 
         # echo the input file if verbose enough
         if verbosity.level > 0:
@@ -153,7 +153,7 @@ class Simulation(dobject):
         self.chk = None
         self.rollback = True
 
-    def bind(self):
+    def bind(self,read_only=False):
         """Calls the bind routines for all the objects in the simulation."""
 
         if self.tsteps <= self.step:
@@ -171,6 +171,9 @@ class Simulation(dobject):
         for s in self.syslist:
             # binds important computation engines
             s.bind(self)
+
+        if read_only: # returns before we open the sockets
+            return 
 
         # start forcefields here so we avoid having a shitload of files printed
         # out only to find the socket is busy or whatever prevented starting the threads
