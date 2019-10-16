@@ -171,11 +171,17 @@ class ConstraintSolverBase(dobject):
 class ConstraintSolver(ConstraintSolverBase):
     """ An implementation of a constraint solver that uses M-RATTLE to
     impose constraints onto the momenta and M-SHAKE to impose constraints
-    onto the positions.
+    onto the positions. The constraint is applied sparsely, i.e. on each
+    block of constraints separately. 
     """
 
     def __init__(self, constraint_list, dt=1.0, 
                  tolerance=0.001, maxit=1000, norm_order=2):
+                     
+        """ Solver options include a tolerance for the projection on the
+        manifold, maximum number of iterations for the projection, and 
+        the order of the norm to estimate the convergence """
+        
         super(ConstraintSolver,self).__init__(constraint_list, dt)
         self.tolerance = tolerance
         self.maxit = maxit
@@ -190,10 +196,13 @@ class ConstraintSolver(ConstraintSolverBase):
         for constr in self.constraint_list:
             dg = dstrip(constr.Dg)
             ic = constr.i3_unique
-            gramchol = dstrip(constr.GramChol)
             b = np.dot(dg, p[ic]/constr.m3)
-            x = np.linalg.solve( 
-                    np.transpose(gramchol),np.linalg.solve(gramchol, b))
+            
+            x = np.linalg.solve(dstrip(constr.Gram), b)
+            # would be faster if linalg.solve used the fact gramchol is triangular
+            #gramchol = dstrip(constr.GramChol)
+            #x = np.linalg.solve( 
+            #        np.transpose(gramchol),np.linalg.solve(gramchol, b))
             p[ic] -= np.dot(np.transpose(dg),x)
         self.beads.p[0] = p
         self.beads.p.resume()
@@ -205,15 +214,18 @@ class ConstraintSolver(ConstraintSolverBase):
         q = dstrip(self.beads.q[0]).copy()
         for constr in self.constraint_list:
             dg = dstrip(constr.Dg)
-            gramchol = dstrip(constr.GramChol)
+            #gramchol = dstrip(constr.GramChol)
+            gram = dstrip(constr.Gram)
             ic = constr.i3_unique
             constr.q = q[ic]
-            g = dstrip(constr.g)
-            i = 0
+            g = dstrip(constr.g)            
+            i = 0            
+            # iterative projection on the manifold
             while (i < self.maxit and self.tolerance <= np.linalg.norm(g, ord=self.norm_order)):
-                dlambda = np.linalg.solve( 
-                        np.transpose(gramchol), 
-                        np.linalg.solve(gramchol, g))
+                #dlambda = np.linalg.solve( 
+                #        np.transpose(gramchol), 
+                #        np.linalg.solve(gramchol, g))
+                dlambda = np.linalg.solve(gram, g)
                 delta = np.dot(np.transpose(dg), dlambda)
                 q[ic] -= delta / m3[ic]
                 constr.q = q[ic] # updates the constraint to recompute g
@@ -222,6 +234,7 @@ class ConstraintSolver(ConstraintSolverBase):
                 i += 1
                 if (i == self.maxit):
                     print('No convergence in Newton iteration for positional component');
+
         # after all constraints have been applied, q is on the manifold and we can update the constraint positions
         for constr in self.constraint_list:
             constr.qprev = q[constr.i3_unique.flatten()]
@@ -243,7 +256,7 @@ class ConstrainedIntegrator(DummyIntegrator):
         super(ConstrainedIntegrator,self).pconstraints()
 
     def get_qdt(self):
-        # get the base dt for doing 
+        # get the base dt for doing q propagation (center of the integrator)
         return super(ConstrainedIntegrator,self).get_qdt()/self.nsteps_geo
 
     def get_tdt(self):
