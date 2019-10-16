@@ -11,6 +11,10 @@ import numpy as np
 from ipi.utils.depend import *
 from ipi.utils.messages import verbosity, warning
 
+try:
+    import scipy.linalg as spla
+except:
+    spla = None
 
 __all__ = ['ConstraintBase', 'ConstraintList', 'AngleConstraint', 'RigidBondConstraint', 'EckartConstraint']
            
@@ -88,9 +92,15 @@ class ConstraintBase(dobject):
                                       value=np.zeros((self.ncons,self.ncons)),
                                       func=self.Gfunc, 
                                       dependencies=[dself.Dg] )
-                                      
-        dself.GramChol = depend_array(name="GramChol",
+        if spla is None:
+            dself.GramChol = depend_array(name="GramChol",
                                       value=np.zeros((self.ncons,self.ncons)),
+                                      func=self.GCfunc, 
+                                      dependencies=[dself.Gram] )
+        else:
+            # scipy cho_factor returns both c and lower, so we need to have a depend tuple            
+            dself.GramChol = depend_value(name="GramChol",
+                                      value=(),
                                       func=self.GCfunc, 
                                       dependencies=[dself.Gram] )
 
@@ -112,11 +122,18 @@ class ConstraintBase(dobject):
         dgm = dg/self.m3
         return np.dot(dg, dgm.T)
         
-    def GCfunc(self):
-        """ Computes a cholesky decomposition of the mass-scaled Jacobian,
-        used in a few places """
-        
-        return np.linalg.cholesky(self.Gram)
+    if spla is None:
+        def GCfunc(self):
+            """ Computes a cholesky decomposition of the mass-scaled Jacobian,
+            used in a few places """
+                    
+            return np.linalg.cholesky(self.Gram)
+    else:
+        def GCfunc(self):
+            """ Computes a cholesky decomposition of the mass-scaled Jacobian,
+            used in a few places """
+                    
+            return spla.cho_factor(self.Gram)
 
 class ValueConstraintBase(ConstraintBase):
     """ Base class for a constraint that contains target values. """

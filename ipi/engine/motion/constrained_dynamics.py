@@ -23,6 +23,16 @@ from ipi.utils.constrtools import *
 from ipi.engine.thermostats import Thermostat
 from ipi.engine.barostats import Barostat
 
+from ipi.utils.messages import verbosity, warning
+
+
+# tries to import scipy to do the cholesky decomposition solver,
+# but falls back on numpy if it's not there
+try:
+    import scipy.linalg as spla
+except:
+    spla = None
+
 class ConstrainedDynamics(Dynamics):
     """Constrained molecular dynamics class.
 
@@ -186,7 +196,7 @@ class ConstraintSolver(ConstraintSolverBase):
         self.tolerance = tolerance
         self.maxit = maxit
         self.norm_order = norm_order
-
+    
     def proj_cotangent(self):
         
         m3 = dstrip(self.beads.m3[0])
@@ -198,11 +208,11 @@ class ConstraintSolver(ConstraintSolverBase):
             ic = constr.i3_unique
             b = np.dot(dg, p[ic]/constr.m3)
             
-            x = np.linalg.solve(dstrip(constr.Gram), b)
-            # would be faster if linalg.solve used the fact gramchol is triangular
-            #gramchol = dstrip(constr.GramChol)
-            #x = np.linalg.solve( 
-            #        np.transpose(gramchol),np.linalg.solve(gramchol, b))
+            if spla is None:
+                x = np.linalg.solve(dstrip(constr.Gram), b)
+            else:
+                x = spla.cho_solve(dstrip(constr.GramChol), b)
+                
             p[ic] -= np.dot(np.transpose(dg),x)
         self.beads.p[0] = p
         self.beads.p.resume()
@@ -212,28 +222,37 @@ class ConstraintSolver(ConstraintSolverBase):
         m3 = dstrip(self.beads.m3[0])
         p = dstrip(self.beads.p[0]).copy()
         q = dstrip(self.beads.q[0]).copy()
+                    
         for constr in self.constraint_list:
             dg = dstrip(constr.Dg)
-            #gramchol = dstrip(constr.GramChol)
-            gram = dstrip(constr.Gram)
+            
+            if spla is None:
+                gram = dstrip(constr.Gram)
+            else:
+                chol_gram = dstrip(constr.GramChol)
+            
             ic = constr.i3_unique
-            constr.q = q[ic]
-            g = dstrip(constr.g)            
-            i = 0            
+            constr.q = q[ic]            
+            
             # iterative projection on the manifold
-            while (i < self.maxit and self.tolerance <= np.linalg.norm(g, ord=self.norm_order)):
-                #dlambda = np.linalg.solve( 
-                #        np.transpose(gramchol), 
-                #        np.linalg.solve(gramchol, g))
-                dlambda = np.linalg.solve(gram, g)
+            for i in xrange(self.maxit):
+                g = dstrip(constr.g)
+                # bailout condition
+                if self.tolerance > np.linalg.norm(g, ord=self.norm_order):
+                    break
+                
+                if spla is None:
+                    dlambda = np.linalg.solve(gram, g)
+                else:
+                    dlambda = spla.cho_solve(chol_gram, g)
                 delta = np.dot(np.transpose(dg), dlambda)
                 q[ic] -= delta / m3[ic]
                 constr.q = q[ic] # updates the constraint to recompute g
-                g = dstrip(constr.g)
+                
                 p[ic] -= delta / self.dt
-                i += 1
-                if (i == self.maxit):
-                    print('No convergence in Newton iteration for positional component');
+                
+            if (i == self.maxit):
+                warning("No convergence in Newton iteration for positional component", verbosity.low)
 
         # after all constraints have been applied, q is on the manifold and we can update the constraint positions
         for constr in self.constraint_list:
@@ -243,7 +262,16 @@ class ConstraintSolver(ConstraintSolverBase):
 
 
 class ConstrainedIntegrator(DummyIntegrator):
-    """ No-op integrator for classical constrained propagation """
+    """ No-op integrator for classical constrained propagation.
+    It also incorporates a constraint solver, so as to make the 
+    integration modular in case one wanted to implement multiple
+    solvers. 
+    
+    Note that this and other constrained integrators inherit
+    from the non-constrained dynamics class, so the logic of 
+    the integration and multiple time stepping machinery is 
+    better documented in dynamics.py
+    """
 
     def __init__(self):
         super(ConstrainedIntegrator,self).__init__()
@@ -263,7 +291,7 @@ class ConstrainedIntegrator(DummyIntegrator):
         return super(ConstrainedIntegrator,self).get_tdt()/self.nsteps_o
 
     def bind(self, motion):
-        """ Reference all the variables for simpler access."""
+        """ Creates local references to all the variables for simpler access."""
 
         super(ConstrainedIntegrator,self).bind(motion)
 
@@ -297,21 +325,25 @@ class NVEConstrainedIntegrator(ConstrainedIntegrator):
     """
     
     def step_A(self):
-        """Unconstrained A-step"""
+        """Unconstrained A-step (coordinate integration)"""
         self.beads.q[0] += self.beads.p[0] / dstrip(self.beads.m3)[0] * self.qdt
 
     def step_B(self, level=0):
-        """Unconstrained B-step"""
+        """Unconstrained B-step (momentum integration)"""
         self.beads.p[0] += self.forces.forces_mts(level)[0] * self.pdt[level]
 
     def step_Bc(self, level=0):
-        """Unconstrained B-step followed by a projection into the cotangent space"""
+        """Unconstrained B-step (momentum integration)
+        followed by a projection into the cotangent space"""
         self.step_B(level)
         self.proj_cotangent()
 
     def step_Ag(self):
         """
-        Geodesic flow 
+        Geodesic flow integrator. Makes one A step including manifold 
+        projection of the position and update of the momenta following 
+        the orthogonalization. Can be broken down into a MTS-like fashion
+        to increase the accuracy without having to recompute forces.
         """
         # Resolve momentum constraint and update Gram matrix if neccesary
         # GT: is the following line necessary?
@@ -405,16 +437,22 @@ class NVTConstrainedIntegrator(NVEConstrainedIntegrator):
     """
 
     def step_Oc(self):
+        """ Constrained stochastic propagation. We solve the problem that
+        the thermostat and the projective step do not necessarily commute
+        (e.g. in GLE) by doing a MTS splitting scheme """
+        
+        m3 = dstrip(self.beads.m3)
         for i in xrange(self.nsteps_o):
             self.thermostat.step()
-            p = dstrip(self.beads.p).copy()
-            sm = dstrip(self.thermostat.sm)
-            p /= sm
-            self.ensemble.eens += np.dot(p.flatten(), p.flatten()) * 0.5
+            
+            # accumulates conserved quantity 
+            p = dstrip(self.beads.p)            
+            self.ensemble.eens += np.dot(p.flatten(), (p/m3).flatten()) * 0.5
+
             self.proj_cotangent()
+
             p = dstrip(self.beads.p).copy()
-            p /= sm
-            self.ensemble.eens -= np.dot(p.flatten(), p.flatten()) * 0.5
+            self.ensemble.eens -= np.dot(p.flatten(), (p/m3).flatten()) * 0.5
 
     def step(self, step=None):
         """Does one simulation time step."""
