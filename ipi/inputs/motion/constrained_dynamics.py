@@ -8,7 +8,8 @@ import numpy as np
 from copy import copy
 import ipi.engine.thermostats
 import ipi.engine.barostats
-from ipi.engine.motion.constrained_dynamics import ConstraintBase, RigidBondConstraint, AngleConstraint, EckartConstraint, ConstraintList, ConstraintSolver, SparseConstraintSolver
+from ipi.engine.motion.constrained_dynamics import ConstraintSolver, SparseConstraintSolver
+from ipi.utils.constrtools import ConstraintBase, RigidBondConstraint, AngleConstraint, EckartConstraint, ConstraintList
 from ipi.utils.inputvalue import InputDictionary, InputAttribute, InputValue, InputArray, Input, input_default
 from ipi.inputs.barostats import InputBaro
 from ipi.inputs.thermostats import InputThermo

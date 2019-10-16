@@ -16,9 +16,19 @@ __all__ = ['ConstraintBase', 'ConstraintList', 'AngleConstraint', 'RigidBondCons
            
            
 class ConstraintBase(dobject):
-    """ Constraint class for MD. Base class."""
+    """ Base constraint class for MD. Takes care of indexing of 
+    the atoms that are affected by the constraint, and creates
+    depend objects to store the constraint function and gradient."""
 
     def __init__(self, constrained_indices, constraint_values, ncons=0):
+        """ Initialize the constraint. 
+        
+        constrained_indices: Indices of the atoms that are involved in the constraint
+        constraint_values: Value or values associated with the constraint
+        ncons: number of constraints. Can be used to create a constraint class
+               without specifying the values of the constraints 
+        """
+        
         self.constrained_indices = constrained_indices
         if len(constraint_values) != 0:
             self.ncons = len(constraint_values)
@@ -30,15 +40,23 @@ class ConstraintBase(dobject):
                 value=np.zeros(ncons))
         else:
             raise ValueError("cannot determine the number of constraints in list")
-        # determines the list of unique indices of atoms that are affected by this constraint
+        
+        # determines the list of unique indices of atoms that are 
+        # affected by this constraint. this is necessary because the 
+        # same atom may appear multiple times in the definition of the constraint
         self.i_unique = np.unique(self.constrained_indices.flatten())
         self.mk_idmaps()
 
     def mk_idmaps(self):
+        """ Creates arrays of indices that can be used for bookkeeping
+        and quickly accessing elements and positions """
 
-        # makes lookup dictionary and lists to quickly access the portions of arrays that are affected by this constraint
+        # position of the UID associated with each index (i_reverse[atom_id] 
+        # gives the position in the list of unique atoms of atom_id
         self.i_reverse = { value : i for i,value in enumerate(self.i_unique)}
         self.n_unique = len(self.i_unique)
+        
+        # access of the portion of 3-vectors corresponding to constraint atoms
         self.i3_unique = np.zeros(self.n_unique*3, int)
         for i in range(self.n_unique):
             self.i3_unique[3*i:3*(i+1)] = [3*self.i_unique[i], 3*self.i_unique[i]+1, 3*self.i_unique[i]+2]
@@ -49,19 +67,27 @@ class ConstraintBase(dobject):
             self.i3_indirect[ri] = [3*rri, 3*rri+1, 3*rri+2]
 
     def bind(self, beads):
-
+        """ Binds the constraint to a beads object - so that all of the 
+        necessary quantities are easily and depend-ably accessable """
+        
         self.beads = beads
         dself = dd(self)
+        
+        # masses of the atoms involved in the constraint - repeated 4 
+        # times to vectorize operations on 3-vectors
         dself.m3 = depend_array(name="m3", value=np.zeros(self.n_unique*3),
                     func=(lambda: self.beads.m3[0,self.i3_unique]),
                     dependencies=[dd(self.beads).m3])
+        
         # The constraint function is computed at iteratively updated 
         # coordinates during geodesic integration; this array holds such
-        # updates
+        # updates. this is useful to avoid messing with the beads q 
+        # until they can be updated
         dself.q = depend_array(name="q", value=np.zeros(self.n_unique*3))
         dself.g = depend_array(name="g", value=np.zeros(self.ncons),
                                func=self.gfunc, 
                                dependencies=[dself.q, dself.constraint_values])
+
         # The gradient of the constraint function is computed at the configuration
         # obtained from the previous converged SHAKE step; this array holds
         # a local copy of that configuration
@@ -78,6 +104,7 @@ class ConstraintBase(dobject):
                                       dependencies=[dself.Dg] )
 
     def gfunc(self):
+        """ Calculates the value of the constraint(s) """
         raise NotImplementedError()
 
     def Dgfunc(self):
@@ -87,6 +114,9 @@ class ConstraintBase(dobject):
         raise NotImplementedError()
 
     def GCfunc(self):
+        """ Computes a cholesky decomposition of the mass-scaled Jacobian,
+        used in a few places """
+        
         dg = dstrip(self.Dg).copy()
         dgm = dg/self.m3
         return np.linalg.cholesky(np.dot(dg, dgm.T))
@@ -98,8 +128,10 @@ class RigidBondConstraint(ConstraintBase):
         of rigid bonds, i.e. there will be a list of pairs of atoms and
         a list of bond lengths. """
 
-    def __init__(self,constrained_indices,constraint_values):
+    def __init__(self,constrained_indices, constraint_values, ncons):
 
+        # NB: if constraint_values are not provided, it will 
+        #     use the *initial* values of the constraints to initialize values
         if len(constraint_values) == 0:
             ncons = -1
             self._calc_cons = True
@@ -110,19 +142,22 @@ class RigidBondConstraint(ConstraintBase):
         super(RigidBondConstraint,self).__init__(
                 constrained_indices, constraint_values, 
                 ncons=len(icons))
+                
+        # reshapes accessors to simplify picking individual bonds
         self.constrained_indices.shape = (self.ncons, 2)
         self.i3_indirect.shape = (self.ncons, 2, 3)
         
     def bind(self, beads):
         
         super(RigidBondConstraint, self).bind(beads)
+        # if bond lengths are not specified, initializes based on the first frame
         if self._calc_cons:
             self.q = dstrip(beads.q[0])[self.i3_unique.flatten()]
             self.constraint_values = np.sqrt(dstrip(self.g))
 
     def gfunc(self):
         """
-        Calculates the constraint.
+        Calculates the deviation of the constraint frp, its target 
         """
 
         q = dstrip(self.q)
@@ -162,7 +197,7 @@ class AngleConstraint(ConstraintBase):
         middle atom appears first in the list.
     """
 
-    def __init__(self,constrained_indices,constraint_values):
+    def __init__(self,constrained_indices, constraint_values):
 
         if len(constraint_values) == 0:
             ncons = -1
@@ -180,6 +215,8 @@ class AngleConstraint(ConstraintBase):
     def bind(self, beads):
         
         super(AngleConstraint, self).bind(beads)
+        # if constraint values have not been provided, infers them from the
+        # initial geometry
         if self._calc_cons:
             self.constraint_values = np.pi/2 # so that cos(angle) = 0
             self.q = dstrip(beads.q[0])[self.i3_unique.flatten()]
@@ -229,7 +266,7 @@ class EckartConstraint(ConstraintBase):
     """ Constraint class for MD specialized for enforcing the Eckart conditions
         (see E. Bright Wilson et al. 'Molecular Vibrations') 
         Unlike the constraints above, a single instance of this class can only
-        describe one set of Eckart condition.
+        describe one set of Eckart conditions.
     """
 
     def __init__(self,constrained_indices,constraint_values):
@@ -237,6 +274,7 @@ class EckartConstraint(ConstraintBase):
         super(EckartConstraint,self).__init__(
                 constrained_indices, np.zeros(0,float), ncons=6)
         self.constrained_indices.shape = -1
+        
         # Check that there are no repeats
         if np.any(self.constrained_indices != self.i_unique):
             raise ValueError("repeated atom indices in EckartConstraint")
@@ -260,11 +298,13 @@ class EckartConstraint(ConstraintBase):
         if self._calc_cons:
             self.qref[:] = dstrip(beads.q[0])[self.i3_unique].reshape((-1,3))
         dself = dd(self)
+        
         # Total mass of the group of atoms
         dself.mtot = depend_value(name="mtot", value=1.0, 
             func=(lambda: dstrip(self.m3)[::3].sum()),
             dependencies=[dself.m3]
             )
+            
         # Coords of reference centre of mass
         dself.qref_com = depend_array(
                 name="qref_com", value=np.zeros(3, float),
@@ -331,9 +371,15 @@ class EckartConstraint(ConstraintBase):
         return r
 
 class ConstraintList(ConstraintBase):
-    """ Constraint class for MD"""
+    """ Class to hold a list of constraints to be treated 
+    simultaneously by the solver."""
 
     def __init__(self, constraint_list):
+        """ Initialize the constraint list. 
+        Contains a list of constraint objects, that will
+        be stored and used to compute the different blocks
+        of the constraint values and Jacobian """
+        
         self.constraint_list = constraint_list
         self.ncons = sum([constr.ncons for constr in constraint_list])
 
@@ -365,8 +411,10 @@ class ConstraintList(ConstraintBase):
         dself.m3 = depend_array(name="m3", value=np.zeros(self.n_unique*3),
             func=(lambda: self.beads.m3[0,self.i3_unique]),
             dependencies=[dd(self.beads).m3])
+        
         # this holds all of the atoms in this list of constraints
         dself.q = depend_array(name="q", value=np.zeros(self.n_unique*3))
+        
         # this holds the configurations of the listed atom obtained
         # at the end of the previous step
         dself.qprev = depend_array(name="qprev", value=np.zeros(self.n_unique*3))
@@ -378,8 +426,12 @@ class ConstraintList(ConstraintBase):
         dself.GramChol = depend_array(name="GramChol", 
                                       value=np.zeros((self.ncons,self.ncons)),
                                       func=self.GCfunc, dependencies=[dself.Dg])
+        
         # we link all of the sub-constraints to the lists of unique q and qprev,
-        # so that each constraint gets automatically updated
+        # so that each constraint gets automatically updated. This involves 
+        # defining a function that transfer q and qprev to the individual
+        # constraints, and setting dependencies appropriately
+        
         def make_qgetter(k):
             return lambda: self.q[self.ic3_map[k]]
         def make_qprevgetter(k):
