@@ -25,18 +25,16 @@ from ipi.engine.barostats import Barostat
 
 class ConstrainedDynamics(Dynamics):
 
-    """self (path integral) molecular dynamics class.
+    """Constrained molecular dynamics class.
 
-    Gives the standard methods and attributes needed in all the
-    dynamics classes.
+    Provides the basic infrastructure to use constraints in molecular dynamics simulations.
 
-    Attributes:
-        beads: A beads object giving the atoms positions.
-        cell: A cell object giving the system box.
-        forces: A forces object giving the virial and the forces acting on
-            each bead.
-        prng: A random number generator object.
-        nm: An object which does the normal modes transformation.
+    Attributes (on top of those inherited):
+        nsteps_geo: number of geodesic integrator iterations
+        nsteps_o: number of steps for the stochastic thermostat integrator 
+                (needed because O does not commute with the constraint)
+        constraint_list: list of constraints that must be applied
+        csolver: solver to be used for the constraining
 
     Depend objects:
         econs: The conserved energy quantity appropriate to the given
@@ -132,29 +130,16 @@ class ConstrainedDynamics(Dynamics):
 
 
 
-        # MS: should all these be initialized as dependent arrays/values.?
+        # parameters of the geodesic integrator. will probably never need    
+        # to be changed dynamically, so for the moment we don't consider them depend objects
         self.nsteps_geo = nsteps_geo
         self.nsteps_o = nsteps_o
 
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
-        """Binds ensemble beads, cell, bforce, and prng to the dynamics.
-
-        This takes a beads object, a cell object, a forcefield object and a
-        random number generator object and makes them members of the ensemble.
-        It also then creates the objects that will hold the data needed in the
-        ensemble algorithms and the dependency network. Note that the conserved
-        quantity is defined in the init, but as each ensemble has a different
-        conserved quantity the dependencies are defined in bind.
-
-        Args:
-            beads: The beads object from whcih the bead positions are taken.
-            nm: A normal modes object used to do the normal modes transformation.
-            cell: The cell object from which the system box is taken.
-            bforce: The forcefield object from which the force and virial are
-                taken.
-            prng: The random number generator object which controls random number
-                generation.
+        """Binds the constrained dynamics object.
+        Just passes control to the parent class, and then binds the constraints
+        and the solver. 
         """
         super(ConstrainedDynamics, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
 
@@ -163,12 +148,11 @@ class ConstrainedDynamics(Dynamics):
             c.bind(beads)
         self.csolver.bind(beads)
 
-        """
-        if len(self.nmts) > 1 or (len(self.nmts) == 1 and self.nmts[0] != 1):
-            raise ValueError("MTS with constrains has not been implemented.")
-        """
 
 class ConstraintSolverBase(dobject):
+    """ Empty base class for the constraint solver. Provides the interface
+    that must be used to offer constraint functionalities to an integrator.
+    """
 
     def __init__(self, constraint_list):
         self.constraint_list = constraint_list
