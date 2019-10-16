@@ -24,7 +24,6 @@ from ipi.engine.thermostats import Thermostat
 from ipi.engine.barostats import Barostat
 
 class ConstrainedDynamics(Dynamics):
-
     """Constrained molecular dynamics class.
 
     Provides the basic infrastructure to use constraints in molecular dynamics simulations.
@@ -136,20 +135,36 @@ class ConstrainedDynamics(Dynamics):
 
 class ConstraintSolverBase(dobject):
     """ Empty base class for the constraint solver. Provides the interface
-    that must be used to offer constraint functionalities to an integrator.
+    that must be used to offer constraint functionalities to an integrator.    
     """
 
     def __init__(self, constraint_list, dt=1.0):
         self.constraint_list = constraint_list
+        
+        # time step - will have to be linked to the dynamics time step
         dd(self).dt = depend_value(name="dt", value=dt)
 
-    def update_constraints(self, beads):
-        raise NotImplementedError()
+    def bind(self, beads):
 
+        self.beads = beads
+        # Sets the initial value of the constraint positions
+        q = dstrip(beads.q[0])
+        for constr in self.constraint_list:
+            constr.qprev = q[constr.i3_unique.flatten()]
+            
     def proj_cotangent(self, beads):
+        """Set the momenta conjugate to the constrained degrees of freedom
+        to zero by projecting onto the cotangent space of the constraint
+        manifold.
+        """
+        
         raise NotImplementedError()
 
     def proj_manifold(self, beads, stepsize=None, proj_p=True):
+        """Enforce the constraints on the positions (project onto the 
+        constraint manifold using the Gramian matrix).
+        """
+                    
         raise NotImplementedError()
 
 
@@ -166,38 +181,24 @@ class ConstraintSolver(ConstraintSolverBase):
         self.maxit = maxit
         self.norm_order = norm_order
 
-    def bind(self, beads):
-
-        self.beads = beads
-        # Sets the initial value of the constraint positions
-        q = dstrip(beads.q[0])
-        for constr in self.constraint_list:
-            constr.qprev = q[constr.i3_unique.flatten()]
-
     def proj_cotangent(self):
-        """Set the momenta conjugate to the constrained degrees of freedom
-        to zero by projecting onto the cotangent space of the constraint
-        manifold.
-        """
+        
         m3 = dstrip(self.beads.m3[0])
         p = dstrip(self.beads.p[0]).copy()
         self.beads.p.hold()
-        if len(self.constraint_list) > 0:
-            for constr in self.constraint_list:
-                dg = dstrip(constr.Dg)
-                ic = constr.i3_unique
-                gramchol = dstrip(constr.GramChol)
-                b = np.dot(dg, p[ic]/constr.m3)
-                x = np.linalg.solve( 
-                        np.transpose(gramchol),np.linalg.solve(gramchol, b))
-                p[ic] -= np.dot(np.transpose(dg),x)
+        
+        for constr in self.constraint_list:
+            dg = dstrip(constr.Dg)
+            ic = constr.i3_unique
+            gramchol = dstrip(constr.GramChol)
+            b = np.dot(dg, p[ic]/constr.m3)
+            x = np.linalg.solve( 
+                    np.transpose(gramchol),np.linalg.solve(gramchol, b))
+            p[ic] -= np.dot(np.transpose(dg),x)
         self.beads.p[0] = p
         self.beads.p.resume()
 
     def proj_manifold(self):
-        """Enforce the constraints on the positions (project onto the 
-        constraint manifold using the Gramian matrix).
-        """
         
         m3 = dstrip(self.beads.m3[0])
         p = dstrip(self.beads.p[0]).copy()
@@ -236,11 +237,13 @@ class ConstrainedIntegrator(DummyIntegrator):
         
     def pconstraints(self):
         """Dummy centroid momentum step which does nothing."""
-        #TODO: should fix CoM here; fixing atoms should at least raise 
-        # warning, as may interfere with constraints
-        pass
+        
+        if len(self.fixatoms) > 0:
+            raise ValueError("Cannot fix atoms together with constrained MD")
+        super(ConstrainedIntegrator,self).pconstraints()
 
     def get_qdt(self):
+        # get the base dt for doing 
         return super(ConstrainedIntegrator,self).get_qdt()/self.nsteps_geo
 
     def get_tdt(self):

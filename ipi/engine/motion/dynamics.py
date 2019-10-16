@@ -281,29 +281,6 @@ class DummyIntegrator(dobject):
         pass
 
     def pconstraints(self):
-        """Dummy centroid momentum step which does nothing."""
-        pass
-
-
-class NVEIntegrator(DummyIntegrator):
-
-    """ Integrator object for constant energy simulations.
-
-    Has the relevant conserved quantity and normal mode propagator for the
-    constant energy ensemble. Note that a temperature of some kind must be
-    defined so that the spring potential can be calculated.
-
-    Attributes:
-        ptime: The time taken in updating the velocities.
-        qtime: The time taken in updating the positions.
-        ttime: The time taken in applying the thermostat steps.
-
-    Depend objects:
-        econs: Conserved energy quantity. Depends on the bead kinetic and
-            potential energy, and the spring potential energy.
-    """
-
-    def pconstraints(self):
         """This removes the centre of mass contribution to the kinetic energy.
 
         Calculates the centre of mass momenta, then removes the mass weighted
@@ -342,6 +319,26 @@ class NVEIntegrator(DummyIntegrator):
                 bp[self.fixatoms * 3] = 0.0
                 bp[self.fixatoms * 3 + 1] = 0.0
                 bp[self.fixatoms * 3 + 2] = 0.0
+
+class NVEIntegrator(DummyIntegrator):
+
+    """ Integrator object for constant energy simulations.
+
+    Has the relevant conserved quantity and normal mode propagator for the
+    constant energy ensemble. Note that a temperature of some kind must be
+    defined so that the spring potential can be calculated.
+
+    Attributes:
+        ptime: The time taken in updating the velocities.
+        qtime: The time taken in updating the positions.
+        ttime: The time taken in applying the thermostat steps.
+
+    Depend objects:
+        econs: Conserved energy quantity. Depends on the bead kinetic and
+            potential energy, and the spring potential energy.
+    """
+
+
 
     def pstep(self, level=0):
         """Velocity Verlet monemtum propagator."""

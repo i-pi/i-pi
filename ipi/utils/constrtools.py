@@ -65,6 +65,8 @@ class ConstraintBase(dobject):
         for ri, i in enumerate(self.constrained_indices.flatten()):
             rri = self.i_reverse[i]
             self.i3_indirect[ri] = [3*rri, 3*rri+1, 3*rri+2]
+            
+    def bind_values
 
     def bind(self, beads):
         """ Binds the constraint to a beads object - so that all of the 
@@ -98,10 +100,15 @@ class ConstraintBase(dobject):
                                 func=self.Dgfunc, 
                                 dependencies=[dself.qprev,
                                               dself.constraint_values])
+        dself.Gram = depend_array(name="Gram",
+                                      value=np.zeros((self.ncons,self.ncons)),
+                                      func=self.Gfunc, 
+                                      dependencies=[dself.Dg] )
+                                      
         dself.GramChol = depend_array(name="GramChol",
                                       value=np.zeros((self.ncons,self.ncons)),
                                       func=self.GCfunc, 
-                                      dependencies=[dself.Dg] )
+                                      dependencies=[dself.Gram] )
 
     def gfunc(self):
         """ Calculates the value of the constraint(s) """
@@ -113,13 +120,19 @@ class ConstraintBase(dobject):
         """
         raise NotImplementedError()
 
-    def GCfunc(self):
+    def Gfunc(self):
         """ Computes a cholesky decomposition of the mass-scaled Jacobian,
         used in a few places """
         
         dg = dstrip(self.Dg).copy()
         dgm = dg/self.m3
-        return np.linalg.cholesky(np.dot(dg, dgm.T))
+        return np.dot(dg, dgm.T)
+        
+    def GCfunc(self):
+        """ Computes a cholesky decomposition of the mass-scaled Jacobian,
+        used in a few places """
+        
+        return np.linalg.cholesky(self.Gram)
 
 
 class RigidBondConstraint(ConstraintBase):
@@ -418,8 +431,7 @@ class ConstraintList(ConstraintBase):
         # this holds the configurations of the listed atom obtained
         # at the end of the previous step
         dself.qprev = depend_array(name="qprev", value=np.zeros(self.n_unique*3))
-        dself.g = depend_array(name="g", value=np.zeros(self.ncons),
-                               func=self.gfunc)
+        dself.g = depend_array(name="g", value=np.zeros(self.ncons), func=self.gfunc)
         dself.Dg = depend_array(name="Dg", 
                                 value=np.zeros((self.ncons, self.n_unique*3)), 
                                 func=self.Dgfunc)
