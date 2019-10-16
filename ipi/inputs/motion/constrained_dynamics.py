@@ -8,7 +8,6 @@ import numpy as np
 from copy import copy
 import ipi.engine.thermostats
 import ipi.engine.barostats
-from ipi.engine.motion.constrained_dynamics import ConstraintSolver, SparseConstraintSolver
 from ipi.utils.constrtools import ConstraintBase, RigidBondConstraint, AngleConstraint, EckartConstraint, ConstraintList
 from ipi.utils.inputvalue import InputDictionary, InputAttribute, InputValue, InputArray, Input, input_default
 from ipi.inputs.barostats import InputBaro
@@ -18,13 +17,7 @@ __all__ = ['InputConstrainedDynamics', 'InputConstraint','InputConstraintSolver'
 
 
 class InputConstraintSolver(InputDictionary):
-    attribs = {
-        "mode": (InputAttribute, {"dtype": str,
-                 "default": 'full',
-                 "help": "The type of numerical method. ",
-                 "options": ['full', 'sparse']})
-                 
-        }
+
     fields = {
         "tolerance": (InputValue, { "dtype": float,
                           "default": .0001,
@@ -44,23 +37,14 @@ class InputConstraintSolver(InputDictionary):
 
 
     def store(self, csolver):
-        
-        if type(csolver) is ConstraintSolver:
-            self.mode.store("full")
-        elif type(csolver) is SparseConstraintSolver:
-            self.mode.store("sparse")
 
         self.tolerance.store(csolver.tolerance)
         self.maxit.store(csolver.maxit)
         self.norm_order.store(csolver.norm_order)
-
-        
         
     
     def fetch(self):
-        csolver = super(InputConstraintSolver, self).fetch()
-        csolver["mode"] = self.mode.fetch()
-        return csolver
+        return super(InputConstraintSolver, self).fetch()
 
 class InputConstraintBase(Input):
     """
@@ -100,7 +84,8 @@ class InputConstraintBase(Input):
         if type(cnstr) is EckartConstraint:
             self.mode.store("eckart")
             self.atoms.store(cnstr.constrained_indices)
-            self.values.store(cnstr.constraint_values)
+            # NOTE: this is special
+            self.values.store(cnstr.qref.flatten())
 
     def fetch(self):
         if self.mode.fetch() == "distance":
@@ -190,7 +175,7 @@ class InputConstrainedDynamics(InputDictionary):
         "splitting": (InputAttribute, {"dtype": str,
                                        "default": 'baoab',
                                        "help": "The integrator used for sampling the target ensemble. ",
-                      "options": ['rattle','geodesic','obabo', 'baoab', 'respa','grespa','o-respa-o','o-grespa-o']})
+                      "options": ['obabo', 'baoab']})
     }
 
     fields = {
@@ -205,11 +190,11 @@ class InputConstrainedDynamics(InputDictionary):
         "nmts": (InputArray, {"dtype": int,
                               "default": np.zeros(0, int),
                               "help": "Number of iterations for each MTS level (including the outer loop, that should in most cases have just one iteration)."}),
-        "nsteps_o": (InputArray, {"dtype": int,
-                                "default": np.zeros(0, int),
+        "nsteps_o": (InputValue, {"dtype": int,
+                                "default": 1,
                                 "help": "The number of sub steps used in the evolution of the thermostat (used in function step_Oc). Relevant only for GLE thermostats" }),
-        "nsteps_geo": (InputArray, {"dtype": int,
-                                    "default": np.zeros(0, int),
+        "nsteps_geo": (InputValue, {"dtype": int,
+                                    "default": 1,
                                     "help": "The number of sub steps used in the evolution of the geodesic flow (used in function step_Ag)." }),
                                     
         "csolver": (InputConstraintSolver, {"help" : "Define a numerical method for computing the projection operators associated with the constraint."})
@@ -237,6 +222,8 @@ class InputConstrainedDynamics(InputDictionary):
         self.barostat.store(dyn.barostat)
         self.nmts.store(dyn.nmts)
         self.splitting.store(dyn.splitting)
+        self.nsteps_o.store(dyn.nsteps_o)
+        self.nsteps_geo.store(dyn.nsteps_geo)
         self.csolver.store(dyn.csolver)
 
         self.extra = []

@@ -128,7 +128,7 @@ class RigidBondConstraint(ConstraintBase):
         of rigid bonds, i.e. there will be a list of pairs of atoms and
         a list of bond lengths. """
 
-    def __init__(self,constrained_indices, constraint_values, ncons):
+    def __init__(self,constrained_indices, constraint_values):
 
         # NB: if constraint_values are not provided, it will 
         #     use the *initial* values of the constraints to initialize values
