@@ -34,6 +34,7 @@
             </force>
         </forces>
         <motion mode='constrained_dynamics'>
+            <fixcom> false </fixcom>
             <constrained_dynamics mode='nvt' splitting='baoab'>
                 <!-- This uses a mixture of constraints, some with default target value initialisation
                      and some with explicit specification; some molecules are fully fixed, some only

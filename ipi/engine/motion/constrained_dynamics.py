@@ -97,19 +97,39 @@ class ConstrainedDynamics(Dynamics):
 
         # splitting mode for the integrators
         dd(self).splitting = depend_value(name='splitting', value=splitting)
-
-        # GT: these are currently not used in constrained propagation
-        # constraints
-        self.fixcom = fixcom
-        if fixatoms is None:
-            self.fixatoms = np.zeros(0, int)
-        else:
-            self.fixatoms = fixatoms
-
+        
         # The list of constraints coming from the input is an actual list of independent
         # constraints, and should be treated as such
         if constraint_list is not None:
             self.constraint_list = constraint_list
+
+        has_eckart = False
+        for constr in self.constraint_list:
+            if isinstance(constr, ConstraintList):
+                for c in constr.constraint_list:
+                    if isinstance(c, ConstraintList):
+                        raise ValueError("Cannot have nested constraint lists!")
+                    elif isinstance(c, EckartConstraint):
+                        has_eckart = True
+            else:
+                if isinstance(constr, EckartConstraint):
+                    has_eckart = True
+                    
+        self.fixcom = fixcom
+        # If only some of the molecules have Eckart enforced, this will clash
+        # with fixing the overall CoM; if *all* the molecules have Eckart
+        # enforced, then cell CoM already fixed; in either case, raise
+        # an error if fixcom is True and any of the constraints are Eckart.
+        if self.fixcom and has_eckart:
+            raise ValueError(
+"Cannot simultaneously fix cell CoM and enforce Eckart constraints!")
+        
+        if fixatoms is None:
+            self.fixatoms = np.zeros(0, int)
+        else:
+            self.fixatoms = fixatoms
+        if len(self.fixatoms) > 0:
+            raise ValueError("Cannot fix atoms together with constrained MD")
 
         if csolver is None:
             self.csolver = ConstraintSolver(self.constraint_list, tolerance=0.0001,maxit=10000,norm_order=2)
@@ -276,13 +296,7 @@ class ConstrainedIntegrator(DummyIntegrator):
     def __init__(self):
         super(ConstrainedIntegrator,self).__init__()
         
-    def pconstraints(self):
-        """Dummy centroid momentum step which does nothing."""
         
-        if len(self.fixatoms) > 0:
-            raise ValueError("Cannot fix atoms together with constrained MD")
-        super(ConstrainedIntegrator,self).pconstraints()
-
     def get_qdt(self):
         # get the base dt for doing q propagation (center of the integrator)
         return super(ConstrainedIntegrator,self).get_qdt()/self.nsteps_geo
