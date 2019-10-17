@@ -200,9 +200,17 @@ class ConstraintSolverBase(dobject):
 
 class ConstraintSolver(ConstraintSolverBase):
     """ An implementation of a constraint solver that uses M-RATTLE to
-    impose constraints onto the momenta and M-SHAKE to impose constraints
-    onto the positions. The constraint is applied sparsely, i.e. on each
-    block of constraints separately. 
+    impose constraints onto the momenta and a quasi-Newton method
+    to impose constraints onto the positions. The constraint is applied 
+    sparsely, i.e. on each block of constraints separately. 
+    
+    For implementation details of M-RATTLE see 
+        H. C. Andersen, J. Comput. Phys. 52, 24 (1983),
+    and  
+        M. Tuckerman, "Statistical Mechanics: Theory and Molecular Simulation" pp 106-108 (OUP, Oxford, 2010).
+    
+    For the quasi-Newton method in proj_cotangent see
+        ???
     """
 
     def __init__(self, constraint_list, dt=1.0, 
@@ -334,8 +342,10 @@ class ConstrainedIntegrator(DummyIntegrator):
         
 
 class NVEConstrainedIntegrator(ConstrainedIntegrator):
-    """An propagator for constant-energy integration under a set of
-    constraints.
+    """A propagator for constant-energy integration under a set of constraints. 
+    
+    Implementation details:
+        B. Leimkuhler, C. Matthews Proc. R. Soc. A 472, 20160138, (2016)
     """
     
     def step_A(self):
@@ -445,6 +455,9 @@ class NVTConstrainedIntegrator(NVEConstrainedIntegrator):
     Has the relevant conserved quantity for the constant temperature 
     ensemble. Contains a thermostat object that keeps the temperature
     constant.
+    
+    Implementation details:
+        B. Leimkuhler, C. Matthews Proc. R. Soc. A 472, 20160138, (2016)
 
     Attributes:
         thermostat: A thermostat object to keep the temperature constant.

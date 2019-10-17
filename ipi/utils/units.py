@@ -235,7 +235,7 @@ UnitMap = {
         "automatic": 1.00,
         "atomic_unit": 1.00
     },
-    "length": {  # TODO move angles to separate entry; difficult for now because of dimension of 
+    "length": {  # TODO move angles to separate entry;
         "": 1.00,
         "automatic": 1.00,
         "atomic_unit": 1.00,

@@ -60,8 +60,7 @@ class Dynamics(Motion):
 
         super(Dynamics, self).__init__(fixcom=fixcom, fixatoms=fixatoms)
         dself = dd(self)
-        
-        print "Dynamics bla bla"
+
         # initialize time step. this is the master time step that covers a full time step
         dd(self).dt = depend_value(name='dt', value=timestep)
 
@@ -130,7 +129,6 @@ class Dynamics(Motion):
         super(Dynamics, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
 
         # Checks if the number of mts levels is equal to the dimensionality of the mts weights.
-        print("~~~~~~nmts: ", self.nmts)
         if (len(self.nmts) != self.forces.nmtslevels):
             raise ValueError("The number of mts levels for the integrator does not agree with the mts_weights of the force components.")
 
