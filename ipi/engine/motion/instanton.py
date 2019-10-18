@@ -319,6 +319,7 @@ class GradientMapper(object):
     """
 
     def __init__(self):
+        self.fcount = 0
         pass
 
     def bind(self, dumop,discretization):
@@ -338,8 +339,8 @@ class GradientMapper(object):
 
     def __call__(self, x, full=False,new_disc=True):
         """computes energy and gradient for optimization step"""
-
-        self.dbeads.q = x
+        self.fcount +=1
+        self.dbeads.q[:] = x[:]
         e = self.dforces.pot   # Energy
         g = -self.dforces.f   # Gradient
         if not full:
@@ -373,9 +374,9 @@ class SpringMapper(object):
         self.temp = dumop.temp
         self.fix = Fix(dumop.beads.natoms, dumop.fixatoms, dumop.beads.nbeads)
         self.dbeads = Beads(dumop.beads.natoms - len(dumop.fixatoms), dumop.beads.nbeads)
-        self.dbeads.q[:] = self.fix.get_active_vector(dumop.beads.q, 1)
-        self.dbeads.m[:] = self.fix.get_active_vector(dumop.beads.m, 0)
-        self.dbeads.names[:] = self.fix.get_active_vector(dumop.beads.names, 0)
+        self.dbeads.q[:] = self.fix.get_active_vector(dumop.beads.copy().q, 1)
+        self.dbeads.m[:] = self.fix.get_active_vector(dumop.beads.copy().m, 0)
+        self.dbeads.names[:] = self.fix.get_active_vector(dumop.beads.copy().names, 0)
         self.set_coef(discretization)
 
         if dumop.options["mode"] == 'rate':
@@ -658,8 +659,11 @@ class DummyOptimizer(dobject):
 
     def update_pos_for(self):
         """ Update positions and forces """
-        self.beads.q = self.gm.dbeads.q
+
+        self.beads.q[:] = self.gm.dbeads.q[:]
+        print('Here debug',self.gm.dforces.pots)
         self.forces.transfer_forces(self.gm.dforces)  # This forces the update of the forces
+        print('Here debug',self.forces.pots)
 
     def update_old_pos_for(self):
         # Update "old" positions and forces
