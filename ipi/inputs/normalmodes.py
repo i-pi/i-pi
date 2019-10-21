@@ -82,13 +82,13 @@ class InputNormalModes(Input):
 
     attribs = {
         "transform": (InputAttribute, {"dtype": str,
-                                   "default": "fft",
-                                   "help": "Specifies whether to calculate the normal mode transform using a fast Fourier transform or a matrix multiplication. For small numbers of beads the matrix multiplication may be faster.",
-                                   "options": ['fft', 'matrix']}),
+                                       "default": "fft",
+                                       "help": "Specifies whether to calculate the normal mode transform using a fast Fourier transform or a matrix multiplication. For small numbers of beads the matrix multiplication may be faster.",
+                                       "options": ['fft', 'matrix']}),
         "propagator": (InputAttribute, {"dtype": str,
-                                   "default": "exact",
-                                   "help": "How to propagate the free ring polymer dynamics. Cayley transform is not exact but is strongly stable and avoid potential resonance issues.",
-                                   "options": ['exact', 'cayley']})
+                                        "default": "exact",
+                                        "help": "How to propagate the free ring polymer dynamics. Cayley transform is not exact but is strongly stable and avoid potential resonance issues.",
+                                        "options": ['exact', 'cayley']})
     }
 
     fields = {

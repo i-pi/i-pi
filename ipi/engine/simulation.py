@@ -161,7 +161,7 @@ class Simulation(dobject):
                              "Modify total_steps or step counter to continue.")
 
         # initializes the output maker so it can be passed around to systems
-        f_start = (self.step == 0) # special operations if we're starting from scratch
+        f_start = (self.step == 0)  # special operations if we're starting from scratch
         if f_start:
             mode = "w"
         else:
@@ -184,7 +184,7 @@ class Simulation(dobject):
 
         self.outputs = []
         for o in self.outtemplate:
-            o = deepcopy(o) # avoids overwriting the actual filename
+            o = deepcopy(o)  # avoids overwriting the actual filename
             if self.outtemplate.prefix != "":
                 o.filename = self.outtemplate.prefix + "." + o.filename
             if type(o) is eoutputs.CheckpointOutput:    # checkpoints are output per simulation
@@ -198,7 +198,7 @@ class Simulation(dobject):
                         no.filename = s.prefix + "_" + no.filename
                     no.bind(s, mode)
                     self.outputs.append(no)
-                    if f_start : # starting of simulation, print headers (if any)
+                    if f_start:  # starting of simulation, print headers (if any)
                         no.print_header()
                     isys += 1
 

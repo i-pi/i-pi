@@ -17,6 +17,7 @@ from ipi.engine.motion import Motion
 from ipi.utils.depend import *
 from ipi.utils.units import Constants
 
+
 class AtomSwap(Motion):
 
     """Swap atom positions (typically useful to exchange species in
@@ -101,7 +102,7 @@ class AtomSwap(Motion):
 
         # this would be double-counting, we already have a bail-out condition above
         # if (1.0/self.nxc < self.prng.u) : return  # tries a round of exhanges with probability 1/nmc
-        self.dcell.h = self.cell.h # just in case the cell gets updated in the other motion classes
+        self.dcell.h = self.cell.h  # just in case the cell gets updated in the other motion classes
         for x in xrange(ntries):
             i = self.prng.rng.randint(lenlist)
             j = self.prng.rng.randint(lenlist)
@@ -111,10 +112,10 @@ class AtomSwap(Motion):
             old_energy = self.forces.pot
             # swap the atom positions
             self.dbeads.q[:] = self.beads.q[:]
-            self.dbeads.q[:,3*i:3*i+3] = self.beads.q[:,3*j:3*j+3]
-            self.dbeads.q[:,3*j:3*j+3] = self.beads.q[:,3*i:3*i+3]
+            self.dbeads.q[:, 3 * i:3 * i + 3] = self.beads.q[:, 3 * j:3 * j + 3]
+            self.dbeads.q[:, 3 * j:3 * j + 3] = self.beads.q[:, 3 * i:3 * i + 3]
             new_energy = self.dforces.pot
-            pexchange = np.exp(-betaP * (new_energy - old_energy) )
+            pexchange = np.exp(-betaP * (new_energy - old_energy))
 
             # attemps the exchange, and actually propagate the exchange if something has happened
             if (pexchange > self.prng.u):

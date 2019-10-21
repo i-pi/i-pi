@@ -78,7 +78,7 @@ class NormalModes(dobject):
     """
 
     def __init__(self, mode="rpmd", transform_method="fft", propagator="exact",
-                       freqs=None, open_paths=None, dt=1.0):
+                 freqs=None, open_paths=None, dt=1.0):
         """Initializes NormalModes.
 
         Sets the options for the normal mode transform.
@@ -144,7 +144,7 @@ class NormalModes(dobject):
 
         # sets up what's necessary to perform nm transformation.
         if self.nbeads == 1:  # classical trajectory! don't waste time doing anything!
-            self.transform = nmtransform.nm_noop(nbeads = self.nbeads)
+            self.transform = nmtransform.nm_noop(nbeads=self.nbeads)
         elif self.transform_method == "fft":
             self.transform = nmtransform.nm_fft(nbeads=self.nbeads, natoms=self.natoms, open_paths=self.open_paths)
         elif self.transform_method == "matrix":
@@ -272,7 +272,7 @@ class NormalModes(dobject):
         if self.nbeads == 1:
             return 0.0
 
-        sqnm = dstrip(self.qnm)*dstrip(self.beads.sm3)
+        sqnm = dstrip(self.qnm) * dstrip(self.beads.sm3)
         q2 = (sqnm**2).sum(axis=1)
 
         vspring = (self.omegak2 * q2).sum()
@@ -346,15 +346,15 @@ class NormalModes(dobject):
         pqk[0] = np.array([[1, 0], [dt, 1]])
 
         # Note that the propagator uses mass-scaled momenta.
-        if self.propagator=="cayley":
+        if self.propagator == "cayley":
             for b in range(1, self.nbeads):
                 sk = np.sqrt(self.nm_factor[b])
-                square = (self.omegak[b] * dt/2)**2
-                pqk[b, 0, 0] = (1-square) / (1+square)
-                pqk[b, 1, 1] = (1-square) / (1+square)
-                pqk[b, 0, 1] = -(4*square / dt * sk) / (1+square)
-                pqk[b, 1, 0] = dt / sk / (1+square)
-        else: # exact propagator
+                square = (self.omegak[b] * dt / 2)**2
+                pqk[b, 0, 0] = (1 - square) / (1 + square)
+                pqk[b, 1, 1] = (1 - square) / (1 + square)
+                pqk[b, 0, 1] = -(4 * square / dt * sk) / (1 + square)
+                pqk[b, 1, 0] = dt / sk / (1 + square)
+        else:  # exact propagator
             for b in range(1, self.nbeads):
                 sk = np.sqrt(self.nm_factor[b])
                 dtomegak = self.omegak[b] * dt / sk
@@ -365,7 +365,6 @@ class NormalModes(dobject):
                 pqk[b, 0, 1] = -s * self.omegak[b] * sk
                 pqk[b, 1, 0] = s / (self.omegak[b] * sk)
         return pqk
-
 
     def get_o_prop_pq(self):
         """Gets the normal mode propagator matrix for the open case.
@@ -386,15 +385,15 @@ class NormalModes(dobject):
         pqk[0] = np.array([[1, 0], [dt, 1]])
 
         # Note that the propagator uses mass-scaled momenta.
-        if self.propagator=="cayley":
+        if self.propagator == "cayley":
             for b in range(1, self.nbeads):
                 sk = np.sqrt(self.o_nm_factor[b])
                 square = (self.o_omegak[b] * dt / 2)**2
-                pqk[b, 0, 0] = (1-square) / (1+square)
-                pqk[b, 1, 1] = (1-square) / (1+square)
-                pqk[b, 0, 1] = -(4*square / dt * sk) / (1+square)
-                pqk[b, 1, 0] = dt / sk / (1+square)
-        else: # exact propagator
+                pqk[b, 0, 0] = (1 - square) / (1 + square)
+                pqk[b, 1, 1] = (1 - square) / (1 + square)
+                pqk[b, 0, 1] = -(4 * square / dt * sk) / (1 + square)
+                pqk[b, 1, 0] = dt / sk / (1 + square)
+        else:  # exact propagator
             for b in range(1, self.nbeads):
                 sk = np.sqrt(self.o_nm_factor[b])
                 dto_omegak = self.o_omegak[b] * dt / sk

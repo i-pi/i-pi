@@ -41,7 +41,7 @@ def main(inputfile, prefix="SRT_"):
     ifile.close()
 
     # ugly hack to remove ffplumed objects to avoid messing up with plumed output files
-    newfields = [ f for f in xmlrestart.fields[0][1].fields if f[0] != "ffplumed" ]
+    newfields = [f for f in xmlrestart.fields[0][1].fields if f[0] != "ffplumed"]
     xmlrestart.fields[0][1].fields = newfields
 
     isimul = InputSimulation()
@@ -63,15 +63,13 @@ def main(inputfile, prefix="SRT_"):
         if swapfile == "":
             raise ValueError("Could not determine the REMD swapfile name. Sorry, you'll have to look carefully at your inputs.")
 
-
-
     # reconstructs the list of the property and trajectory files that have been output
     # and that should be re-ordered
     lprop = []  # list of property files
     ltraj = []  # list of trajectory files
     nsys = len(simul.syslist)
     for o in simul.outtemplate:
-        o = deepcopy(o) # avoids overwriting the actual filename
+        o = deepcopy(o)  # avoids overwriting the actual filename
         if simul.outtemplate.prefix != "":
             o.filename = simul.outtemplate.prefix + "." + o.filename
         if type(o) is CheckpointOutput:   # properties and trajectories are output per system
@@ -134,7 +132,7 @@ def main(inputfile, prefix="SRT_"):
                     isys += 1
                 ltraj.append(ntraj)
 
-    ptfile = open(simul.outtemplate.prefix+"."+swapfile, "r")
+    ptfile = open(simul.outtemplate.prefix + "." + swapfile, "r")
 
     # now reads files one frame at a time, and re-direct output to the appropriate location
 

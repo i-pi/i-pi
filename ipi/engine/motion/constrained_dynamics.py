@@ -33,6 +33,7 @@ try:
 except:
     spla = None
 
+
 class ConstrainedDynamics(Dynamics):
     """Constrained molecular dynamics class.
 
@@ -57,10 +58,9 @@ class ConstrainedDynamics(Dynamics):
     """
 
     def __init__(self, timestep, mode="nve", splitting="obabo",
-                thermostat=None, barostat=None, fixcom=False, fixatoms=None,
-                nmts=None, nsteps_geo=1, nsteps_o=1,
-                constraint_list=[], csolver=None):
-
+                 thermostat=None, barostat=None, fixcom=False, fixatoms=None,
+                 nmts=None, nsteps_geo=1, nsteps_o=1,
+                 constraint_list=[], csolver=None):
         """Initialises a "dynamics" motion object.
 
         Args:
@@ -97,7 +97,7 @@ class ConstrainedDynamics(Dynamics):
 
         # splitting mode for the integrators
         dd(self).splitting = depend_value(name='splitting', value=splitting)
-        
+
         # The list of constraints coming from the input is an actual list of independent
         # constraints, and should be treated as such
         if constraint_list is not None:
@@ -114,7 +114,7 @@ class ConstrainedDynamics(Dynamics):
             else:
                 if isinstance(constr, EckartConstraint):
                     has_eckart = True
-                    
+
         self.fixcom = fixcom
         # If only some of the molecules have Eckart enforced, this will clash
         # with fixing the overall CoM; if *all* the molecules have Eckart
@@ -122,8 +122,8 @@ class ConstrainedDynamics(Dynamics):
         # an error if fixcom is True and any of the constraints are Eckart.
         if self.fixcom and has_eckart:
             raise ValueError(
-"Cannot simultaneously fix cell CoM and enforce Eckart constraints!")
-        
+                "Cannot simultaneously fix cell CoM and enforce Eckart constraints!")
+
         if fixatoms is None:
             self.fixatoms = np.zeros(0, int)
         else:
@@ -132,23 +132,22 @@ class ConstrainedDynamics(Dynamics):
             raise ValueError("Cannot fix atoms together with constrained MD")
 
         if csolver is None:
-            self.csolver = ConstraintSolver(self.constraint_list, tolerance=0.0001,maxit=10000,norm_order=2)
+            self.csolver = ConstraintSolver(self.constraint_list, tolerance=0.0001, maxit=10000, norm_order=2)
         else:
             if csolver["norm_order"] == -1:
                 norm_order = float('inf')
             else:
                 norm_order = csolver["norm_order"]
             self.csolver = ConstraintSolver(
-                    self.constraint_list, 
-                    tolerance=csolver["tolerance"],
-                    maxit=csolver["maxit"],
-                    norm_order=norm_order)
+                self.constraint_list,
+                tolerance=csolver["tolerance"],
+                maxit=csolver["maxit"],
+                norm_order=norm_order)
 
-        # parameters of the geodesic integrator. will probably never need    
+        # parameters of the geodesic integrator. will probably never need
         # to be changed dynamically, so for the moment we don't consider them depend objects
         self.nsteps_geo = nsteps_geo
         self.nsteps_o = nsteps_o
-
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         """Binds the constrained dynamics object.
@@ -170,7 +169,7 @@ class ConstraintSolverBase(dobject):
 
     def __init__(self, constraint_list, dt=1.0):
         self.constraint_list = constraint_list
-        
+
         # time step - will have to be linked to the dynamics time step
         dd(self).dt = depend_value(name="dt", value=dt)
 
@@ -181,20 +180,20 @@ class ConstraintSolverBase(dobject):
         q = dstrip(beads.q[0])
         for constr in self.constraint_list:
             constr.qprev = q[constr.i3_unique.flatten()]
-            
+
     def proj_cotangent(self, beads):
         """Set the momenta conjugate to the constrained degrees of freedom
         to zero by projecting onto the cotangent space of the constraint
         manifold.
         """
-        
+
         raise NotImplementedError()
 
     def proj_manifold(self, beads, stepsize=None, proj_p=True):
         """Enforce the constraints on the positions (project onto the 
         constraint manifold using the Gramian matrix).
         """
-                    
+
         raise NotImplementedError()
 
 
@@ -203,82 +202,81 @@ class ConstraintSolver(ConstraintSolverBase):
     impose constraints onto the momenta and a quasi-Newton method
     to impose constraints onto the positions. The constraint is applied 
     sparsely, i.e. on each block of constraints separately. 
-    
+
     For implementation details of M-RATTLE see 
         H. C. Andersen, J. Comput. Phys. 52, 24 (1983),
     and  
         M. Tuckerman, "Statistical Mechanics: Theory and Molecular Simulation" pp 106-108 (OUP, Oxford, 2010).
-    
+
     For the quasi-Newton method in proj_cotangent see
         ???
     """
 
-    def __init__(self, constraint_list, dt=1.0, 
+    def __init__(self, constraint_list, dt=1.0,
                  tolerance=0.001, maxit=1000, norm_order=2):
-                     
         """ Solver options include a tolerance for the projection on the
         manifold, maximum number of iterations for the projection, and 
         the order of the norm to estimate the convergence """
-        
-        super(ConstraintSolver,self).__init__(constraint_list, dt)
+
+        super(ConstraintSolver, self).__init__(constraint_list, dt)
         self.tolerance = tolerance
         self.maxit = maxit
         self.norm_order = norm_order
-    
+
     def proj_cotangent(self):
-        
+
         m3 = dstrip(self.beads.m3[0])
         p = dstrip(self.beads.p[0]).copy()
         self.beads.p.hold()
-        
+
         for constr in self.constraint_list:
             dg = dstrip(constr.Dg)
             ic = constr.i3_unique
-            b = np.dot(dg, p[ic]/constr.m3)
-            
+            b = np.dot(dg, p[ic] / constr.m3)
+
             if spla is None:
                 x = np.linalg.solve(dstrip(constr.Gram), b)
             else:
                 x = spla.cho_solve(dstrip(constr.GramChol), b)
-                
-            p[ic] -= np.dot(np.transpose(dg),x)
+
+            p[ic] -= np.dot(np.transpose(dg), x)
         self.beads.p[0] = p
         self.beads.p.resume()
 
     def proj_manifold(self):
-        
+
         m3 = dstrip(self.beads.m3[0])
         p = dstrip(self.beads.p[0]).copy()
         q = dstrip(self.beads.q[0]).copy()
-                    
+
         for constr in self.constraint_list:
             dg = dstrip(constr.Dg)
-            
+
             if spla is None:
                 gram = dstrip(constr.Gram)
             else:
                 chol_gram = dstrip(constr.GramChol)
-            
+
             ic = constr.i3_unique
-            constr.q = q[ic]            
-            
+            constr.q = q[ic]
+
             # iterative projection on the manifold
             for i in xrange(self.maxit):
                 g = dstrip(constr.g)
                 # bailout condition
                 if self.tolerance > np.linalg.norm(g, ord=self.norm_order):
                     break
-                
+
                 if spla is None:
                     dlambda = np.linalg.solve(gram, g)
                 else:
                     dlambda = spla.cho_solve(chol_gram, g)
                 delta = np.dot(np.transpose(dg), dlambda)
                 q[ic] -= delta / m3[ic]
-                constr.q = q[ic] # updates the constraint to recompute g
-                
+                constr.q = q[ic]  # updates the constraint to recompute g
+
                 p[ic] -= delta / self.dt
-                
+
             if (i == self.maxit):
                 warning("No convergence in Newton iteration for positional component", verbosity.low)
 
@@ -294,7 +292,7 @@ class ConstrainedIntegrator(DummyIntegrator):
     It also incorporates a constraint solver, so as to make the 
     integration modular in case one wanted to implement multiple
     solvers. 
-    
+
     Note that this and other constrained integrators inherit
     from the non-constrained dynamics class, so the logic of 
     the integration and multiple time stepping machinery is 
@@ -302,20 +300,19 @@ class ConstrainedIntegrator(DummyIntegrator):
     """
 
     def __init__(self):
-        super(ConstrainedIntegrator,self).__init__()
-        
-        
+        super(ConstrainedIntegrator, self).__init__()
+
     def get_qdt(self):
         # get the base dt for doing q propagation (center of the integrator)
-        return super(ConstrainedIntegrator,self).get_qdt()/self.nsteps_geo
+        return super(ConstrainedIntegrator, self).get_qdt() / self.nsteps_geo
 
     def get_tdt(self):
-        return super(ConstrainedIntegrator,self).get_tdt()/self.nsteps_o
+        return super(ConstrainedIntegrator, self).get_tdt() / self.nsteps_o
 
     def bind(self, motion):
         """ Creates local references to all the variables for simpler access."""
 
-        super(ConstrainedIntegrator,self).bind(motion)
+        super(ConstrainedIntegrator, self).bind(motion)
 
         self.constraint_list = motion.constraint_list
         dself = dd(self)
@@ -333,21 +330,21 @@ class ConstrainedIntegrator(DummyIntegrator):
         dself.tdt.add_dependency(dself.nsteps_o)
         dd(self).csolver = motion.csolver
         dpipe(dself.qdt, dd(self.csolver).dt)
-    
+
     def proj_cotangent(self):
         self.csolver.proj_cotangent()
 
     def proj_manifold(self):
         self.csolver.proj_manifold()
-        
+
 
 class NVEConstrainedIntegrator(ConstrainedIntegrator):
     """A propagator for constant-energy integration under a set of constraints. 
-    
+
     Implementation details:
         B. Leimkuhler, C. Matthews Proc. R. Soc. A 472, 20160138, (2016)
     """
-    
+
     def step_A(self):
         """Unconstrained A-step (coordinate integration)"""
         self.beads.q[0] += self.beads.p[0] / dstrip(self.beads.m3)[0] * self.qdt
@@ -377,7 +374,7 @@ class NVEConstrainedIntegrator(ConstrainedIntegrator):
             self.step_A()
             self.proj_manifold()
             self.proj_cotangent()
-            
+
     def mtsprop_ba(self, index):
         """ Recursive MTS step -- this is adapted directly from the 
         NVEIntegrator class"""
@@ -386,7 +383,7 @@ class NVEConstrainedIntegrator(ConstrainedIntegrator):
 
         for i in range(mk):  # do nmts/2 full sub-steps
             self.step_Bc(index)
-            self.pconstraints() # currently does nothing
+            self.pconstraints()  # currently does nothing
             if index == self.nmtslevels - 1:
                 # call Q propagation for dt/alpha at the inner step
                 self.step_Ag()
@@ -411,18 +408,17 @@ class NVEConstrainedIntegrator(ConstrainedIntegrator):
         """ Recursive MTS step -- this is adapted directly from the 
         NVEIntegrator class"""
 
-     
         if self.nmts[index] % 2 == 1:
             if index == self.nmtslevels - 1:
                 # call Q propagation for dt/alpha at the inner step
                 self.step_Ag()
             else:
                 self.mtsprop_ab(index + 1)
-                
+
             # propagate p for dt/2alpha with force at level index
             self.step_Bc(index)
             self.pconstraints()
-            
+
         mk = int(self.nmts[index] / 2)
         for i in range(mk):  # do nmts/2 full sub-steps
             self.step_Bc(index)
@@ -436,7 +432,7 @@ class NVEConstrainedIntegrator(ConstrainedIntegrator):
 
             self.step_Bc(index)
             self.pconstraints()
-            
+
     def mtsprop(self, index):
         # just calls the two pieces together
         self.mtsprop_ba(index)
@@ -446,7 +442,7 @@ class NVEConstrainedIntegrator(ConstrainedIntegrator):
         """Does one simulation time step."""
 
         self.mtsprop(0)
-    
+
 
 class NVTConstrainedIntegrator(NVEConstrainedIntegrator):
 
@@ -455,7 +451,7 @@ class NVTConstrainedIntegrator(NVEConstrainedIntegrator):
     Has the relevant conserved quantity for the constant temperature 
     ensemble. Contains a thermostat object that keeps the temperature
     constant.
-    
+
     Implementation details:
         B. Leimkuhler, C. Matthews Proc. R. Soc. A 472, 20160138, (2016)
 
@@ -467,23 +463,23 @@ class NVTConstrainedIntegrator(NVEConstrainedIntegrator):
         """ Constrained stochastic propagation. We solve the problem that
         the thermostat and the projective step do not necessarily commute
         (e.g. in GLE) by doing a MTS splitting scheme """
-        
+
         m3 = dstrip(self.beads.m3)
         for i in xrange(self.nsteps_o):
             self.thermostat.step()
-            
-            # accumulates conserved quantity 
-            p = dstrip(self.beads.p)            
-            self.ensemble.eens += np.dot(p.flatten(), (p/m3).flatten()) * 0.5
+
+            # accumulates conserved quantity
+            p = dstrip(self.beads.p)
+            self.ensemble.eens += np.dot(p.flatten(), (p / m3).flatten()) * 0.5
 
             self.proj_cotangent()
 
             p = dstrip(self.beads.p).copy()
-            self.ensemble.eens -= np.dot(p.flatten(), (p/m3).flatten()) * 0.5
+            self.ensemble.eens -= np.dot(p.flatten(), (p / m3).flatten()) * 0.5
 
     def step(self, step=None):
         """Does one simulation time step."""
-        
+
         if self.splitting == "obabo":
             self.step_Oc()
             self.pconstraints()

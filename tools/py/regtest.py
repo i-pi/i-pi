@@ -845,7 +845,7 @@ def get_output_filenames(xml_path):
     lprop = []  # list of property files
     ltraj = []  # list of trajectory files
     for o in simul.outtemplate:
-        o = deepcopy(o) # avoids overwriting the actual filename
+        o = deepcopy(o)  # avoids overwriting the actual filename
         if simul.outtemplate.prefix != "":
             o.filename = simul.outtemplate.prefix + "." + o.filename
         # properties and trajectories are output per system

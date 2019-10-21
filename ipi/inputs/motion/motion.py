@@ -25,8 +25,8 @@ import numpy as np
 from copy import copy
 import ipi.engine.initializer
 from ipi.engine.motion import Motion, Dynamics, ConstrainedDynamics, Replay, GeopMotion, NEBMover,\
-                            DynMatrixMover, MultiMotion, AlchemyMC, InstantonMotion,\
-                            TemperatureRamp, PressureRamp, AtomSwap, Planetary
+    DynMatrixMover, MultiMotion, AlchemyMC, InstantonMotion,\
+    TemperatureRamp, PressureRamp, AtomSwap, Planetary
 from ipi.utils.inputvalue import *
 from ipi.inputs.thermostats import *
 from ipi.inputs.initializer import *
@@ -78,7 +78,7 @@ class InputMotionBase(Input):
               "dynamics": (InputDynamics, {"default": {},
                                            "help": "Option for (path integral) molecular dynamics"}),
               "constrained_dynamics": (InputConstrainedDynamics, {"default": {},
-                                           "help": "Option for constrained classical molecular dynamics"}),
+                                                                  "help": "Option for constrained classical molecular dynamics"}),
               "file": (InputInitFile, {"default": input_default(factory=ipi.engine.initializer.InitFile, kwargs={"mode": "xyz"}),
                                        "help": "This describes the location to read a trajectory file from."}),
               "vibrations": (InputDynMatrix, {"default": {},
@@ -86,15 +86,15 @@ class InputMotionBase(Input):
               "alchemy": (InputAlchemy, {"default": {},
                                          "help": "Option for alchemical exchanges"}),
               "atomswap": (InputAtomSwap, {"default": {},
-                                         "help": "Option for Monte Carlo atom swap"}),
+                                           "help": "Option for Monte Carlo atom swap"}),
               "t_ramp": (InputTemperatureRamp, {"default": {},
-                                              "help": "Option for temperature ramp"}),
+                                                "help": "Option for temperature ramp"}),
               "p_ramp": (InputPressureRamp, {"default": {},
-                                              "help": "Option for pressure ramp"}),
+                                             "help": "Option for pressure ramp"}),
               "instanton": (InputInst, {"default": {},
                                         "help": "Option for Instanton optimization"}),
               "planetary": (InputPlanetary, {"default": {},
-                                      "help": "Option for planetary model calculator"})
+                                             "help": "Option for planetary model calculator"})
               }
     dynamic = {}
 
@@ -150,7 +150,7 @@ class InputMotionBase(Input):
         elif type(sc) is Planetary:
             self.mode.store("planetary")
             self.planetary.store(sc)
-            tsc = 1   
+            tsc = 1
         elif type(sc) is TemperatureRamp:
             self.mode.store("t_ramp")
             self.t_ramp.store(sc)

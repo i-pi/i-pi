@@ -3,7 +3,8 @@ import numpy as np
 from ipi.utils.messages import verbosity, info
 from ipi.utils import units
 import ipi.utils.mathtools as mt
-import os.path, glob
+import os.path
+import glob
 
 
 def banded_hessian(h, im, shift=0.001):

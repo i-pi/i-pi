@@ -63,7 +63,7 @@ class ConstrainedDynamics(Motion):
 
         # initialize time step. this is the master time step that covers a full time step
         dd(self).dt = depend_value(name='dt', value=timestep)
-        #MS: why dd(self) instead of dself ?
+        # MS: why dd(self) instead of dself ?
         # Stores the list of constraints.
         self.constrained_indices = constrained_indices
         self.constrained_distances = constrained_distances
@@ -192,7 +192,7 @@ class ConstrainedDynamics(Motion):
         """ Advances the dynamics by one time step """
 
         self.integrator.step(step)
-        self.ensemble.time += self.dt # increments internal time
+        self.ensemble.time += self.dt  # increments internal time
 
 
 class Constraint(dobject):
@@ -224,11 +224,12 @@ class Constraint(dobject):
 
         r = np.zeros((len(self.constrained_distances), 3 * self.beads.natoms))
         for i in xrange(len(self.constrained_distances)):
-          inst_position_vector = (self.beads.q[0][c_atoms[0] * 3:c_atoms[0] * 3 + 3] - self.beads.q[0][c_atoms[1] * 3: c_atoms[1] * 3 + 3])
-          r[i][c_atoms[0] * 3 : c_atoms[0] * 3 + 3] = 2.0 * inst_position_vector
-          r[i][c_atoms[1] * 3 : c_atoms[1] * 3 + 3] = 2.0 * inst_position_vector * -1.0
+            inst_position_vector = (self.beads.q[0][c_atoms[0] * 3:c_atoms[0] * 3 + 3] - self.beads.q[0][c_atoms[1] * 3: c_atoms[1] * 3 + 3])
+            r[i][c_atoms[0] * 3: c_atoms[0] * 3 + 3] = 2.0 * inst_position_vector
+            r[i][c_atoms[1] * 3: c_atoms[1] * 3 + 3] = 2.0 * inst_position_vector * -1.0
         return r
-        #MS: why c_atoms[0] * 3, c_atoms[0] * 3 + 3 ? (the commma...)
+        # MS: why c_atoms[0] * 3, c_atoms[0] * 3 + 3 ? (the commma...)
+
     def get_P(self):
         """
         Calculates the projection matrix.
@@ -247,7 +248,7 @@ class Constraint(dobject):
         dself.constrained_distances = depend_value(name="constrained_distances", func=lambda: integrator.constrained_distances)
         dself.G = depend_array(name="G", func=self.get_G, value=np.zeros(len(self.constrained_distances)), dependencies=[dself.beads.q, dself.constrained_indices, dself.constrained_distances])
         dself.DG = depend_array(name="DG", func=self.get_DG, value=np.zeros((len(self.constrained_distances), 3 * self.beads.natoms)), dependencies=[dself.G, dself.beads.q, dself.constrained_indices, dself.constrained_distances])
-        #MS: why not dself.G
+        # MS: why not dself.G
 
     def step(self):
         """
@@ -258,8 +259,8 @@ class Constraint(dobject):
             c_atoms = self.constrained_indices[i]
             c_dist = self.constrained_distances[i]
             print "Constrained atoms : ", c_atoms
-            print "Current distance :",  np.linalg.norm(self.beads.q[0][c_atoms[0] * 3:c_atoms[0] * 3 + 3] - self.beads.q[0][c_atoms[1] * 3: c_atoms[1] * 3 + 3])
-            print "Target distance :", c_dist 
+            print "Current distance :", np.linalg.norm(self.beads.q[0][c_atoms[0] * 3:c_atoms[0] * 3 + 3] - self.beads.q[0][c_atoms[1] * 3: c_atoms[1] * 3 + 3])
+            print "Target distance :", c_dist
 
 
 class DummyIntegrator(dobject):
@@ -269,7 +270,7 @@ class DummyIntegrator(dobject):
         pass
 
     def get_qdt(self):
-        return self.dt * 0.5 
+        return self.dt * 0.5
 
     def get_pdt(self):
         return self.dt * 0.5
@@ -296,8 +297,8 @@ class DummyIntegrator(dobject):
         self.fixcom = motion.fixcom
         self.fixatoms = motion.fixatoms
         self.enstype = motion.enstype
-        self.constrained_indices= motion.constrained_indices
-        self.constrained_distances= motion.constrained_distances
+        self.constrained_indices = motion.constrained_indices
+        self.constrained_distances = motion.constrained_distances
 
         dself = dd(self)
         dmotion = dd(motion)
@@ -311,7 +312,7 @@ class DummyIntegrator(dobject):
         dself.inmts = depend_value(name="inmts", func=lambda: np.prod(self.nmts))
         dself.nmtslevels = depend_value(name="nmtslevels", func=lambda: len(self.nmts))
         # these are the time steps to be used for the different parts of the integrator
-        dself.qdt = depend_value(name="qdt", func=self.get_qdt, dependencies=[dself.splitting, dself.dt, dself.nmts]) # positions
+        dself.qdt = depend_value(name="qdt", func=self.get_qdt, dependencies=[dself.splitting, dself.dt, dself.nmts])  # positions
         dself.pdt = depend_value(name="pdt", func=self.get_pdt, dependencies=[dself.splitting, dself.dt, dself.nmts])  # momenta
         dself.tdt = depend_value(name="tdt", func=self.get_tdt, dependencies=[dself.splitting, dself.dt, dself.nmts])  # thermostat
 
@@ -325,7 +326,7 @@ class DummyIntegrator(dobject):
         # Defines the constraint.
         self.constraint = Constraint()
         self.constraint.bind(self)
-        #MS: ??
+        # MS: ??
         if motion.enstype == "sc" or motion.enstype == "scnpt":
             # coefficients to get the (baseline) trotter to sc conversion
             self.coeffsc = np.ones((self.beads.nbeads, 3 * self.beads.natoms), float)
@@ -354,7 +355,7 @@ class DummyIntegrator(dobject):
         """
 
         if len(self.constrained_distances) > 0:
-          self.constraint.step()
+            self.constraint.step()
     """
     def proj_manifold(self, position, momentum=None, stepsize=None):
         '''
@@ -392,6 +393,8 @@ class DummyIntegrator(dobject):
             momentum += - np.dot(np.transpose(self.Dg),x) 
         return momentum
     """
+
+
 class NVEIntegrator(DummyIntegrator):
 
     """ Integrator object for constant energy simulations.
@@ -429,7 +432,7 @@ class NVEIntegrator(DummyIntegrator):
             p = dstrip(self.beads.p)
             m = dstrip(self.beads.m3)[:, 0:na3:3]
             M = self.beads[0].M
-            Mnb = M*nb
+            Mnb = M * nb
 
             dens = 0
             for i in range(3):
@@ -498,7 +501,6 @@ class NVTIntegrator(NVEIntegrator):
             self.A()
             self.B()
             self.O()
-
 
         elif self.splitting == "baoab":
             self.B()

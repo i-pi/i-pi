@@ -129,6 +129,7 @@ def mk_o_rs_matrix(nb1, nb2):
     else:
         return mk_o_rs_matrix(nb2, nb1).T * (float(nb2) / float(nb1))
 
+
 class nm_noop(object):
     """ A no-op NM transformation for classical trajectories """
 
@@ -142,6 +143,7 @@ class nm_noop(object):
 
     def nm2b(self, qnm):
         return qnm
+
 
 class nm_trans(object):
 
@@ -183,7 +185,7 @@ class nm_trans(object):
                 qnm[:, 3 * io] = np.dot(self._b2o_nm, q[:, 3 * io])
                 qnm[:, 3 * io + 1] = np.dot(self._b2o_nm, q[:, 3 * io + 1])
                 qnm[:, 3 * io + 2] = np.dot(self._b2o_nm, q[:, 3 * io + 2])
-            
+
         return qnm
 
     def nm2b(self, qnm):
@@ -195,14 +197,15 @@ class nm_trans(object):
 
         q = np.dot(self._nm2b, qnm)
         if len(self._open) > 0:
-            for io in self._open:  
+            for io in self._open:
                 q[:, 3 * io] = np.dot(self._o_nm2b, qnm[:, 3 * io])
                 q[:, 3 * io + 1] = np.dot(self._o_nm2b, qnm[:, 3 * io + 1])
                 q[:, 3 * io + 2] = np.dot(self._o_nm2b, qnm[:, 3 * io + 2])
-            
+
         return q
 
-class nm_rescale(object):  
+
+class nm_rescale(object):
 
     """Uses matrix multiplication to do ring polymer contraction or expansion
     between different numbers of beads.
@@ -237,12 +240,12 @@ class nm_rescale(object):
         Args:
            q: A matrix with nbeads1 rows, in the bead representation.
         """
-        
+
         # this applies to both bead property arrays (e.g. potentials) and bead vector properties (e.g. positions, forces)
         q_scal = np.dot(self._b1tob2, q)
         if len(self._open) > 0:
             if len(q_scal.shape) == 2:
-                for io in self._open:  
+                for io in self._open:
                     q_scal[:, 3 * io] = np.dot(self._o_b1tob2, q[:, 3 * io])
                     q_scal[:, 3 * io + 1] = np.dot(self._o_b1tob2, q[:, 3 * io + 1])
                     q_scal[:, 3 * io + 2] = np.dot(self._o_b1tob2, q[:, 3 * io + 2])
@@ -264,7 +267,7 @@ class nm_rescale(object):
         q_scal = np.dot(self._b2tob1, q)
         if len(self._open) > 0:
             if len(q_scal.shape) == 2:
-                for io in self._open:  
+                for io in self._open:
                     q_scal[:, 3 * io] = np.dot(self._o_b2tob1, q[:, 3 * io])
                     q_scal[:, 3 * io + 1] = np.dot(self._o_b2tob1, q[:, 3 * io + 1])
                     q_scal[:, 3 * io + 2] = np.dot(self._o_b2tob1, q[:, 3 * io + 2])

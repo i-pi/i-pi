@@ -28,8 +28,8 @@ class TemperatureRamp(Motion):
     """
 
     def __init__(self, fixcom=False, fixatoms=None,
-                t_start=1.0, t_end=1.0, total_steps=0,
-                current_step=0, logscale=True):
+                 t_start=1.0, t_end=1.0, total_steps=0,
+                 current_step=0, logscale=True):
         """Initialises a temperature ramp motion
 
         Args:
@@ -55,9 +55,10 @@ class TemperatureRamp(Motion):
             self.ensemble.temp = self.t_end
         else:
             if self.logscale:
-                self.ensemble.temp = self.t_start * (self.t_end/self.t_start)**(self.current_step*1.0/self.total_steps)
+                self.ensemble.temp = self.t_start * (self.t_end / self.t_start)**(self.current_step * 1.0 / self.total_steps)
             else:
-                self.ensemble.temp = self.t_start + self.current_step*(self.t_end - self.t_start)/self.total_steps
+                self.ensemble.temp = self.t_start + self.current_step * (self.t_end - self.t_start) / self.total_steps
+
 
 class PressureRamp(Motion):
     """Pressure ramp (quench/heat).
@@ -67,8 +68,8 @@ class PressureRamp(Motion):
     """
 
     def __init__(self, fixcom=False, fixatoms=None,
-                p_start=1.0, p_end=1.0, total_steps=0,
-                current_step=0, logscale=True):
+                 p_start=1.0, p_end=1.0, total_steps=0,
+                 current_step=0, logscale=True):
         """Initialises a temperature ramp motion
 
         Args:
@@ -94,6 +95,6 @@ class PressureRamp(Motion):
             self.ensemble.pext = self.p_end
         else:
             if self.logscale:
-                self.ensemble.pext = self.p_start * (self.p_end/self.p_start)**(self.current_step*1.0/self.total_steps)
+                self.ensemble.pext = self.p_start * (self.p_end / self.p_start)**(self.current_step * 1.0 / self.total_steps)
             else:
-                self.ensemble.pext = self.p_start + self.current_step*(self.p_end - self.p_start)/self.total_steps
+                self.ensemble.pext = self.p_start + self.current_step * (self.p_end - self.p_start) / self.total_steps

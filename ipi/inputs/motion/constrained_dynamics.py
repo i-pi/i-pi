@@ -13,38 +13,37 @@ from ipi.utils.inputvalue import InputDictionary, InputAttribute, InputValue, In
 from ipi.inputs.barostats import InputBaro
 from ipi.inputs.thermostats import InputThermo
 
-__all__ = ['InputConstrainedDynamics', 'InputConstraint','InputConstraintSolver']
+__all__ = ['InputConstrainedDynamics', 'InputConstraint', 'InputConstraintSolver']
 
 
 class InputConstraintSolver(InputDictionary):
 
     fields = {
-        "tolerance": (InputValue, { "dtype": float,
-                          "default": .0001,
-                          "help": "Tolerance value used in the Quasi-Newton iteration scheme."
-                          }),
-        "maxit": (InputValue, { "dtype": int,
-          "default": 1000,
-          "help": "Maximum number of steps used in the Quasi-Newton iteration scheme."
-          }),
-        "norm_order": (InputValue, { "dtype": int,
-                   "default": 2,
-                   "help": "Order of norm used to determine termination of the Quasi-newton iteration."
-                   }),
-        }
+        "tolerance": (InputValue, {"dtype": float,
+                                   "default": .0001,
+                                   "help": "Tolerance value used in the Quasi-Newton iteration scheme."
+                                   }),
+        "maxit": (InputValue, {"dtype": int,
+                               "default": 1000,
+                               "help": "Maximum number of steps used in the Quasi-Newton iteration scheme."
+                               }),
+        "norm_order": (InputValue, {"dtype": int,
+                                    "default": 2,
+                                    "help": "Order of norm used to determine termination of the Quasi-newton iteration."
+                                    }),
+    }
     default_help = "Holds all parameters for the numerical method used to solve the contraint."
     default_label = "CSOLVER"
-
 
     def store(self, csolver):
 
         self.tolerance.store(csolver.tolerance)
         self.maxit.store(csolver.maxit)
         self.norm_order.store(csolver.norm_order)
-        
-    
+
     def fetch(self):
         return super(InputConstraintSolver, self).fetch()
+
 
 class InputConstraintBase(Input):
     """
@@ -58,18 +57,17 @@ class InputConstraintBase(Input):
                                   "default": 'distance',
                                   "help": "The type of constraint. ",
                                   "options": ['distance', 'angle', 'eckart', 'multi']})
-              }
+    }
 
     fields = {
         "atoms": (InputArray, {"dtype": int,
-                              "default": np.zeros(0, int),
-                              "help": "List of atoms indices that are to be constrained."}),
+                               "default": np.zeros(0, int),
+                               "help": "List of atoms indices that are to be constrained."}),
         "values": (InputArray, {"dtype": float,
-                              "default":  np.zeros(0, int),
-                              "dimension": "length",
-                              "help": "List of constraint lengths."})
+                                "default": np.zeros(0, int),
+                                "dimension": "length",
+                                "help": "List of constraint lengths."})
     }
-
 
     def store(self, cnstr):
 
@@ -92,7 +90,7 @@ class InputConstraintBase(Input):
             alist = self.atoms.fetch()
             dlist = self.values.fetch()
             if len(alist.shape) == 1:
-                alist.shape = (alist.shape[0]/2, 2)
+                alist.shape = (alist.shape[0] / 2, 2)
             if len(dlist) != len(alist) and len(dlist) != 0:
                 raise ValueError("Length of atom indices and of distance list do not match")
             robj = RigidBondConstraint(alist, dlist)
@@ -100,7 +98,7 @@ class InputConstraintBase(Input):
             alist = self.atoms.fetch()
             dlist = self.values.fetch()
             if len(alist.shape) == 1:
-                alist.shape = (alist.shape[0]/3, 3)
+                alist.shape = (alist.shape[0] / 3, 3)
             if len(dlist) != len(alist) and len(dlist) != 0:
                 raise ValueError("Length of atom indices and of distance list do not match")
             robj = AngleConstraint(alist, dlist)
@@ -108,11 +106,12 @@ class InputConstraintBase(Input):
             alist = self.atoms.fetch()
             dlist = self.values.fetch()
             alist.shape = -1
-            if len(dlist) != 3*len(alist) and len(dlist) != 0:
+            if len(dlist) != 3 * len(alist) and len(dlist) != 0:
                 raise ValueError("Length of atom indices and of list of coordinates do not match")
             robj = EckartConstraint(alist, dlist)
 
         return robj
+
 
 class InputConstraint(InputConstraintBase):
     attribs = copy(InputConstraintBase.attribs)
@@ -120,8 +119,8 @@ class InputConstraint(InputConstraintBase):
     attribs["mode"][1]["options"].append("multi")
 
     dynamic = {"constraint": (InputConstraintBase, {
-                    "help": "One or more constraints that have to be considered coupled"})
-               }
+        "help": "One or more constraints that have to be considered coupled"})
+    }
 
     def store(self, cnstr):
         if type(cnstr) is ConstraintList:
@@ -130,7 +129,7 @@ class InputConstraint(InputConstraintBase):
             for constr in cnstr.constraint_list:
                 iobj = InputConstraint()
                 iobj.store(constr)
-                self.extra.append( ("constraint", iobj) )
+                self.extra.append(("constraint", iobj))
         else:
             super(InputConstraint, self).store(cnstr)
 
@@ -141,11 +140,12 @@ class InputConstraint(InputConstraintBase):
                 if k == "constraint":
                     cnstr_list.append(v.fetch())
                 else:
-                    raise ValueError("Invalid entry "+k+" in constraint(multi)")
+                    raise ValueError("Invalid entry " + k + " in constraint(multi)")
             robj = ConstraintList(cnstr_list)
         else:
             robj = super(InputConstraint, self).fetch()
         return robj
+
 
 class InputConstrainedDynamics(InputDictionary):
 
@@ -175,7 +175,7 @@ class InputConstrainedDynamics(InputDictionary):
         "splitting": (InputAttribute, {"dtype": str,
                                        "default": 'baoab',
                                        "help": "The integrator used for sampling the target ensemble. ",
-                      "options": ['obabo', 'baoab']})
+                                       "options": ['obabo', 'baoab']})
     }
 
     fields = {
@@ -191,17 +191,17 @@ class InputConstrainedDynamics(InputDictionary):
                               "default": np.zeros(0, int),
                               "help": "Number of iterations for each MTS level (including the outer loop, that should in most cases have just one iteration)."}),
         "nsteps_o": (InputValue, {"dtype": int,
-                                "default": 1,
-                                "help": "The number of sub steps used in the evolution of the thermostat (used in function step_Oc). Relevant only for GLE thermostats" }),
+                                  "default": 1,
+                                  "help": "The number of sub steps used in the evolution of the thermostat (used in function step_Oc). Relevant only for GLE thermostats"}),
         "nsteps_geo": (InputValue, {"dtype": int,
                                     "default": 1,
-                                    "help": "The number of sub steps used in the evolution of the geodesic flow (used in function step_Ag)." }),
-                                    
-        "csolver": (InputConstraintSolver, {"help" : "Define a numerical method for computing the projection operators associated with the constraint."})
+                                    "help": "The number of sub steps used in the evolution of the geodesic flow (used in function step_Ag)."}),
+
+        "csolver": (InputConstraintSolver, {"help": "Define a numerical method for computing the projection operators associated with the constraint."})
     }
 
-    dynamic = {"constraint" : (InputConstraint, {"help" : "Define a constraint to be applied onto atoms"})
-              }
+    dynamic = {"constraint": (InputConstraint, {"help": "Define a constraint to be applied onto atoms"})
+               }
 
     default_help = "Holds all the information for the MD integrator, such as timestep, the thermostats and barostats that control it."
     default_label = "CONSTRAINED_DYNAMICS"
@@ -231,7 +231,7 @@ class InputConstrainedDynamics(InputDictionary):
         for constr in dyn.constraint_list:
             iobj = InputConstraint()
             iobj.store(constr)
-            self.extra.append( ("constraint", iobj) )
+            self.extra.append(("constraint", iobj))
 
     def fetch(self):
         """Creates a ConstrainedDynamics object.
@@ -251,7 +251,7 @@ class InputConstrainedDynamics(InputDictionary):
             if k == "constraint":
                 cnstr_list.append(v.fetch())
             else:
-                raise ValueError("Invalid entry "+k+" in constrained_dynamics")
+                raise ValueError("Invalid entry " + k + " in constrained_dynamics")
 
         rv["constraint_list"] = cnstr_list
 

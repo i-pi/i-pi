@@ -31,8 +31,9 @@ def thermo_scale(thermo, scale):
     if hasattr(thermo, "tlist"):
         for t in thermo.tlist:
             thermo_scale(t, scale)
-    if hasattr(thermo, "s"): # scale the GLE degrees of freedom
+    if hasattr(thermo, "s"):  # scale the GLE degrees of freedom
         thermo.s *= scale
+
 
 def motion_scale(motion, scale):
     if hasattr(motion, "mlist"):
@@ -40,6 +41,7 @@ def motion_scale(motion, scale):
             motion_scale(m, scale)
     thermo_scale(motion.thermostat, scale)
     thermo_scale(motion.barostat.thermostat, scale)
+
 
 def gle_scale(sys, scale):
     motion_scale(sys.motion, scale)
@@ -116,7 +118,6 @@ class ReplicaExchange(Smotion):
                 pensj = sl[j].ensemble.lpens
                 t_eval += time.time()
 
-
                 t_swap -= time.time()
                 ensemble_swap(sl[i].ensemble, sl[j].ensemble)  # tries to swap the ensembles!
 
@@ -180,11 +181,11 @@ class ReplicaExchange(Smotion):
                    # velocities have to be adjusted according to the new temperature
 
         if fxc:  # writes out the new status
-            #with open(self.swapfile, "a") as sf:
+            # with open(self.swapfile, "a") as sf:
             self.sf.write("% 10d" % (step))
             for i in self.repindex:
                 self.sf.write(" % 5d" % (i))
             self.sf.write("\n")
             self.sf.force_flush()
 
-        info("# REMD step evaluated in %f (%f eval, %f swap) sec." % (time.time()-t_start, t_eval, t_swap), verbosity.debug)
+        info("# REMD step evaluated in %f (%f eval, %f swap) sec." % (time.time() - t_start, t_eval, t_swap), verbosity.debug)
