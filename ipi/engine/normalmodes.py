@@ -18,7 +18,6 @@ from ipi.utils.depend import *
 from ipi.utils import units
 from ipi.utils import nmtransform
 from ipi.utils.messages import verbosity, warning, info
-from ipi.utils.units import Constants #Perhaps not needed and beta can be found elsewhere?
 
 __all__ = ["NormalModes"]
 
@@ -641,7 +640,7 @@ class NormalModes(dobject):
         """
 
         N = len(self.bosons)
-        betaP = 1.0 / (self.beads.nbeads * Constants.kb * self.ensemble.temp)
+        betaP = 1.0 / (self.beads.nbeads * units.Constants.kb * self.ensemble.temp)
         
         V = np.zeros(N+1, float)
         save_Ek_N = np.zeros( N*(N+1)/2, float)
@@ -675,7 +674,7 @@ class NormalModes(dobject):
         """
 
         N = len(self.bosons)
-        betaP = 1.0 / (self.beads.nbeads * Constants.kb * self.ensemble.temp)
+        betaP = 1.0 / (self.beads.nbeads * units.Constants.kb * self.ensemble.temp)
         
         dV = np.zeros((N+1,3),float)
                 
