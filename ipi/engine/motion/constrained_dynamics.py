@@ -1,9 +1,9 @@
-"""Contains the classes that deal with the different dynamics required in
-different types of ensembles.
+"""Contains the classes that deal with the different constrained dynamics
+required in different types of ensembles.
 
-Holds the algorithms required for normal mode propagators, and the objects to
-do the constant temperature and pressure algorithms. Also calculates the
-appropriate conserved energy quantity for the ensemble of choice.
+Holds the algorithms for solving projecting phase-space coordinates onto
+manifolds defined by the constraints, and the integrators to perform
+constant energy and constant temperature dynamics.
 """
 
 # This file is part of i-PI.
@@ -148,6 +148,15 @@ class ConstrainedDynamics(Dynamics):
         # to be changed dynamically, so for the moment we don't consider them depend objects
         self.nsteps_geo = nsteps_geo
         self.nsteps_o = nsteps_o
+        
+    def get_fixdof(self):
+        """Calculate the number of fixed degrees of freedom, required for
+        temperature and pressure calculations.
+        """
+        fixdof = super(ConstrainedDynamics, self).get_fixdof()
+        for c in self.constraint_list:
+            fixdof += c.ncons
+        return fixdof
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         """Binds the constrained dynamics object.
@@ -224,6 +233,12 @@ class ConstraintSolver(ConstraintSolverBase):
         self.norm_order = norm_order
 
     def proj_cotangent(self):
+        """Set the momenta conjugate to the constrained degrees of freedom
+        to zero non-iteratively by inverting the Gram matrix. For further
+        details see H. C. Andersen, J. Comput. Phys. 52, 24 (1983). Note
+        that independent groups of constraints are treated separately
+        (sparsely).
+        """
 
         m3 = dstrip(self.beads.m3[0])
         p = dstrip(self.beads.p[0]).copy()
@@ -244,6 +259,11 @@ class ConstraintSolver(ConstraintSolverBase):
         self.beads.p.resume()
 
     def proj_manifold(self):
+        """Iteratively enforce the constraints onto the positions by finding 
+        the Lagrange multipliers using a quasi-Newton solver. Note
+        that independent groups of constraints are treated separately
+        (sparsely).
+        """
 
         m3 = dstrip(self.beads.m3[0])
         p = dstrip(self.beads.p[0]).copy()

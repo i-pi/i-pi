@@ -105,6 +105,16 @@ class Dynamics(Motion):
             self.fixatoms = np.zeros(0, int)
         else:
             self.fixatoms = fixatoms
+            
+    def get_fixdof(self):
+        """Calculate the number of fixed degrees of freedom, required for
+        temperature and pressure calculations.
+        """
+        
+        fixdof = len(self.fixatoms) * 3 * self.beads.nbeads
+        if self.fixcom:
+            fixdof += 3
+        return fixdof
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         """Binds ensemble beads, cell, bforce, and prng to the dynamics.
@@ -143,9 +153,7 @@ class Dynamics(Motion):
         dself.ntemp = depend_value(name='ntemp', func=self.get_ntemp, dependencies=[dens.temp])
 
         # fixed degrees of freedom count
-        fixdof = len(self.fixatoms) * 3 * self.beads.nbeads
-        if self.fixcom:
-            fixdof += 3
+        fixdof = self.get_fixdof()
 
         # first makes sure that the thermostat has the correct temperature and timestep, then proceeds with binding it.
         dpipe(dself.ntemp, dthrm.temp)
