@@ -329,9 +329,9 @@ on which it depends and a function used to calculate its value.
 \caption{\label{fig:depend} Schematic overview of the functioning of the 
 \emph{depend} class used as the base for properties and physical quantities in \ipi{}. 
 A few ``primitive'' quantities -- such as atomic positions or momenta -- can be modified
-directly. For most properties, one defines a function that can compute based on the
+directly. For most properties, one defines a function that can compute that property based on the
 value of other properties. Whenever one property is modified, all the quantities that
-depend on it are marked as tainted, so that -- when the value of one of the properties
+depend on it are marked as tainted, so that when the value of one of the properties
 is used, the function can be invoked and the updated value obtained. If a quantity
 is not marked as tainted, the cached value is returned instead. 
 }
@@ -345,7 +345,7 @@ value is cached, so further references to that quantity will not need
 to evaluate the function that calculates it. Furthermore, the code
 keeps track of when any of the dependencies of the variable are updated,
 and makes sure that the quantity is automatically recomputed when
-it is needed. 
+it is needed (i.e., when the quantity is assessed again). 
 
 This choice makes implementation slightly more complex when the physical
 observables are first introduced as variables, as one has to take
@@ -412,11 +412,14 @@ evaluated on 32 beads, and one ForceComponent bound to type B, evaluated
 on 8 beads. Forces contains the machinery that automatically contracts the
 actual ring polymer to the number of beads required by each component,
 and combines the various components with the given weights to provide the 
-overall force, energy and virial where required. 
+overall force, energy and virial where required. Note that in order to support
+ring polymer contraction (RPC), the RPC procedure is executed even if
+no contraction was required (i.e. even if all clients contain the full amount of beads). 
 ForceComponent is a very simple helper class that associates with each bead 
 a ForceBead object, that is the entity in charge of filing force requests to
 the appropriate ForceField object and waiting for completion of the
 evaluation. 
+
 
 \subsection{Communication protocol}
 
