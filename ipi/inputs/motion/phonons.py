@@ -54,7 +54,7 @@ class InputDynMatrix(InputDictionary):
                 "output_shift": (InputValue, {"dtype": float, "default": 0.000,
                                               "help": "Shift by the dynamical matrix diagonally before outputting."
                                               }),
-                "prefix": (InputValue, {"dtype": str, "default": "PHONONS",
+                "prefix": (InputValue, {"dtype": str, "default": "phonons",
                                         "help": "Prefix of the output files."
                                         }),
                 "asr": (InputValue, {"dtype": str, "default": "none", "options": ["none", "poly", "lin", "crystal"],

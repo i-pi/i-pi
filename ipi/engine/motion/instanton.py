@@ -71,7 +71,7 @@ class InstantonMotion(Motion):
                  old_force=np.zeros(0, float),
                  opt='None',
                  alt_out=1,
-                 prefix="INSTANTON",
+                 prefix="instanton",
                  delta=np.zeros(0, float),
                  hessian_init=None,
                  hessian=np.eye(0, 0, 0, float),
@@ -143,7 +143,7 @@ class InstantonMotion(Motion):
         if self.opt == 'NR':
             info("Note that we need scipy to use NR. If storage and diagonalization of the full hessian is not a problem use nichols even though it may not be as efficient.", verbosity.low)
 
-    def bind(self, ens, beads, nm, cell, bforce, prng):
+    def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         """Binds beads, cell, bforce and prng to InstantonMotion
 
             Args:
@@ -154,7 +154,7 @@ class InstantonMotion(Motion):
             prng: The random number generator object which controls random number generation.
         """
 
-        super(InstantonMotion, self).bind(ens, beads, nm, cell, bforce, prng)
+        super(InstantonMotion, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
         # Binds optimizer
 
         self.optimizer.bind(self)
@@ -336,6 +336,7 @@ class DummyOptimizer(dobject):
         self.forces = geop.forces
         self.fixcom = geop.fixcom
         self.fixatoms = geop.fixatoms
+        self.output_maker = geop.output_maker
 
         # The resize action must be done before the bind
         if geop.old_x.size != self.beads.q.size:
@@ -401,7 +402,7 @@ class DummyOptimizer(dobject):
                 and (x <= self.tolerances["position"]):
 
             print_instanton_geo(self.prefix + '_FINAL', step, self.im.dbeads.nbeads, self.im.dbeads.natoms, self.im.dbeads.names,
-                                self.im.dbeads.q, self.old_u, self.cell, self.energy_shift)
+                                self.im.dbeads.q, self.old_u, self.cell, self.energy_shift, self.output_maker)
 
             if self.hessian_final != 'true':
                 info("We are not going to compute the final hessian.", verbosity.low)
@@ -409,8 +410,8 @@ class DummyOptimizer(dobject):
 
             else:
                 info("We are going to compute the final hessian", verbosity.low)
-                get_hessian(self.hessian, self.gm, self.im.dbeads.q)
-                print_instanton_hess(self.prefix + '_FINAL', step, self.hessian)
+                get_hessian(self.hessian, self.gm, self.im.dbeads.q, self.output_maker)
+                print_instanton_hess(self.prefix + '_FINAL', step, self.hessian, self.output_maker)
 
             exitt = True  # If we just exit here, the last step (including the last hessian) will not be in the RESTART file
 
@@ -418,7 +419,7 @@ class DummyOptimizer(dobject):
 
 
 class HessianOptimizer(DummyOptimizer):
-    """ INSTANTON Rate calculation"""
+    """ Instaton Rate calculation"""
 
     def bind(self, geop):
         # call bind function from DummyOptimizer
@@ -429,6 +430,7 @@ class HessianOptimizer(DummyOptimizer):
         self.hessian_update = geop.hessian_update
         self.hessian_asr = geop.hessian_asr
         self.hessian_init = geop.hessian_init
+#        self.output_maker = geop.output_maker
 
         self.im.bind(self)
 
@@ -457,12 +459,12 @@ class HessianOptimizer(DummyOptimizer):
         info("\n Instanton optimization STEP %d" % step, verbosity.low)
 
         if step == 0:
-            info(" @GEOP: Initializing INSTANTON", verbosity.low)
+            info(" @GEOP: Initializing instanton", verbosity.low)
 
             if self.beads.nbeads == 1:
                 info(" @GEOP: Classical TS search", verbosity.low)
                 if self.hessian_init == 'true':
-                    get_hessian(self.hessian, self.gm, self.beads.q)
+                    get_hessian(self.hessian, self.gm, self.beads.q, self.output_maker)
             else:
                 if ((self.beads.q - self.beads.q[0]) == 0).all():  # If the coordinates in all the imaginary time slices are the same
                     info(" @GEOP: We stretch the initial geometry with an 'amplitud' of %4.2f" % self.delta, verbosity.low)
@@ -479,7 +481,7 @@ class HessianOptimizer(DummyOptimizer):
 
                 if self.hessian_init == 'true':
                     info(" @GEOP: We are computing the initial hessian", verbosity.low)
-                    get_hessian(self.hessian, self.gm, self.beads.q)
+                    get_hessian(self.hessian, self.gm, self.beads.q, self.output_maker)
 
             # Update positions and forces
             self.old_x[:] = self.beads.q
@@ -501,7 +503,7 @@ class HessianOptimizer(DummyOptimizer):
                 dqb[self.fixatoms * 3 + 2] = 0.0
 
         # Do one step. Update hessian for the new position. Update the position and force inside the mapper.
-        Instanton(self.old_x, self.old_f, self.im.f, self.hessian, self.hessian_update, self.hessian_asr, self.im, self.gm, self.big_step, self.opt, self.mode)
+        Instanton(self.old_x, self.old_f, self.im.f, self.hessian, self.hessian_update, self.hessian_asr, self.im, self.gm, self.big_step, self.opt, self.mode, self.output_maker)
 
         # Update positions and forces
         self.beads.q = self.gm.dbeads.q
@@ -510,8 +512,8 @@ class HessianOptimizer(DummyOptimizer):
         # Print current instanton geometry and hessian
         if (self.save > 0 and np.mod(step, self.save) == 0) or self.exit:
             print_instanton_geo(self.prefix, step, self.im.dbeads.nbeads, self.im.dbeads.natoms, self.im.dbeads.names,
-                                self.im.dbeads.q, self.old_u, self.cell, self.energy_shift)
-            print_instanton_hess(self.prefix, step, self.hessian)
+                                self.im.dbeads.q, self.old_u, self.cell, self.energy_shift, self.output_maker)
+            print_instanton_hess(self.prefix, step, self.hessian, self.output_maker)
 
         # Exit simulation step
         d_x_max = np.amax(np.absolute(np.subtract(self.beads.q, self.old_x)))
@@ -523,7 +525,7 @@ class HessianOptimizer(DummyOptimizer):
         self.old_f[:] = self.forces.f
 
 
-def Instanton(x0, f0, f1, h, update, asr, im, gm, big_step, opt, m):
+def Instanton(x0, f0, f1, h, update, asr, im, gm, big_step, opt, m, omaker):
     """Do one step. Update hessian for the new position. Update the position and force inside the mapper.
 
        Input:  x0 = last positions
@@ -582,7 +584,7 @@ def Instanton(x0, f0, f1, h, update, asr, im, gm, big_step, opt, m):
             dx = d_x[j, :]
             Powell(dx, dg, aux)
     elif update == 'recompute':
-        get_hessian(h, gm, x)
+        get_hessian(h, gm, x, omaker)
 
 
 class LBFGSOptimizer(DummyOptimizer):
@@ -640,7 +642,7 @@ class LBFGSOptimizer(DummyOptimizer):
         info("\n Instanton optimization STEP %d" % step, verbosity.low)
 
         if step == 0:
-            info(" @GEOP: Initializing INSTANTON", verbosity.low)
+            info(" @GEOP: Initializing instanton", verbosity.low)
 
             if self.beads.nbeads == 1:
                 raise ValueError("We can not perform an splitting calculation with nbeads =1")
@@ -706,4 +708,4 @@ class LBFGSOptimizer(DummyOptimizer):
         # Print current instanton geometry and hessian
         if (self.save > 0 and np.mod(step, self.save) == 0) or self.exit:
             print_instanton_geo(self.prefix, step, self.im.dbeads.nbeads, self.im.dbeads.natoms, self.im.dbeads.names,
-                                self.im.dbeads.q, self.old_u, self.cell, self.energy_shift)
+                                self.im.dbeads.q, self.old_u, self.cell, self.energy_shift, self.output_maker)

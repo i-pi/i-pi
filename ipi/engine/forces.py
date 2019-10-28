@@ -326,6 +326,7 @@ class ForceComponent(dobject):
         self.ff = fflist[self.ffield]
 
         self._forces = [];
+        self.beads = beads
         for b in range(self.nbeads):
             new_force = ForceBead()
             new_force.bind(beads[b], cell, self.ff)
@@ -527,7 +528,7 @@ class Forces(dobject):
         dself.virs.add_dependency(dforces.virs)
         dself.extras.add_dependency(dforces.extras)
 
-    def bind(self, beads, cell, fcomponents, fflist):
+    def bind(self, beads, cell, fcomponents, fflist, open_paths):
         """Binds beads, cell and forces to the forcefield.
 
 
@@ -553,6 +554,7 @@ class Forces(dobject):
         self.nforces = len(fcomponents)
         self.fcomp = fcomponents
         self.ff = fflist
+        self.open_paths = open_paths
 
         # fflist should be a dictionary of forcefield objects
         self.mforces = []
@@ -567,7 +569,7 @@ class Forces(dobject):
             return lambda: rpc.b1tob2(dstrip(beads.q))
 
         # creates new force objects, possibly acting on contracted path
-        # representations
+        # representations. note that this new object is always created even if no contraction is required.
         for fc in self.fcomp:
 
             # creates an automatically-updated contracted beads object
@@ -577,7 +579,7 @@ class Forces(dobject):
             if newb == 0 or newb > beads.nbeads: newb = beads.nbeads
             newforce = ForceComponent(ffield=fc.ffield, name=fc.name, nbeads=newb, weight=fc.weight, mts_weights=fc.mts_weights, epsilon=fc.epsilon)
             newbeads = Beads(beads.natoms, newb)
-            newrpc = nm_rescale(beads.nbeads, newb)
+            newrpc = nm_rescale(beads.nbeads, newb,open_paths=self.open_paths)
 
             # the beads positions for this force components are obtained
             # automatically, when needed, as a contraction of the full beads
@@ -719,12 +721,17 @@ class Forces(dobject):
         if nbeads is None: nbeads = self.beads
         ncell = cell
         if cell is None: ncell = self.cell
-        nforce.bind(nbeads, ncell, self.fcomp, self.ff)
+        nforce.bind(nbeads, ncell, self.fcomp, self.ff,self.open_paths)
         return nforce
 
     def transfer_forces(self, refforce):
         """Low-level function copying over the value of a second force object,
-        triggering updates but un-tainting this force depends themselves."""
+        triggering updates but un-tainting this force depends themselves.
+
+        We have noted that in some corner cases it is necessary to copy only
+        the values of updated forces rather than the full depend object, in order to
+        avoid triggering a repeated call to the client code that is potentially
+        very costly. This happens routinely in geometry relaxation routines, for example."""
 
         if len(self.mforces) != len(refforce.mforces):
             raise ValueError("Cannot copy forces between objects with different numbers of components")
@@ -734,10 +741,24 @@ class Forces(dobject):
             mself = self.mforces[k]
             if mreff.nbeads != mself.nbeads:
                 raise ValueError("Cannot copy forces between objects with different numbers of beads for the " + str(k) + "th component")
+            
+            # this is VERY subtle. beads in this force component are 
+            # obtained as a contraction, and so are computed automatically.
+            # when we set the master q, these get marked as tainted. 
+            # then we copy the force value, and set the force as untainted.
+            # next time we touch the master q, the tainting does not get 
+            # propagated, because the contracted q is already marked as tainted,
+            # so the force does not get updated. we can fix this by copying
+            # the value of the contracted bead, so that it's marked as NOT 
+            # tainted - it should not be as it's an internal of the force and
+            # therefore get copied 
+            dd(mself.beads).q.set(mreff.beads.q, manual=False)
             for b in xrange(mself.nbeads):
                 dfkbref = dd(mreff._forces[b])
                 dfkbself = dd(mself._forces[b])
+                
                 dfkbself.ufvx.set(deepcopy(dfkbref.ufvx._value), manual=False)
+                dfkbself.ufvx.taint(taintme=False)
 
     def run(self):
         """Makes the socket start looking for driver codes.
@@ -802,16 +823,29 @@ class Forces(dobject):
         else:
             return self.mrpc[index].b2tob1(dstrip(self.mforces[index].f))
 
+    def queue_mts(self, level):
+        """Submits all the required force calculations to the forcefields."""
+
+        for ff in self.mforces:
+            # forces with no MTS specification are applied at the outer level
+            if ((len(ff.mts_weights) == 0 and level == 0) or
+                (len(ff.mts_weights) > level
+                 and ff.mts_weights[level] != 0
+                 and ff.weight != 0)):
+                # do not queue forces which have zero weight
+                ff.queue()
+
     def forces_mts(self, level):
         """ Fetches ONLY the forces associated with a given MTS level."""
 
+        self.queue_mts(level)
         fk = np.zeros((self.nbeads, 3 * self.natoms))
         for index in range(len(self.mforces)):
             # forces with no MTS specification are applied at the outer level
             if ((len(self.mforces[index].mts_weights) == 0 and level == 0) or
                 (len(self.mforces[index].mts_weights) > level
                  and self.mforces[index].mts_weights[level] != 0
-                 and self.mforces[index].weight > 0)):
+                 and self.mforces[index].weight != 0)):
                 fk += self.mforces[index].weight * self.mforces[index].mts_weights[level] * self.mrpc[index].b2tob1(dstrip(self.mforces[index].f))
         return fk
 
@@ -995,9 +1029,12 @@ class Forces(dobject):
     def virs_mts(self, level):
         """ Fetches ONLY the total virial associated with a given MTS level."""
 
+        self.queue_mts(level)
         rp = np.zeros((self.beads.nbeads, 3, 3), float)
         for index in range(len(self.mforces)):
-            if len(self.mforces[index].mts_weights) > level and self.mforces[index].mts_weights[level] != 0 and self.mforces[index].weight > 0:
+            if (len(self.mforces[index].mts_weights) > level
+                and self.mforces[index].mts_weights[level] != 0 and
+                self.mforces[index].weight != 0):
                 dv = np.zeros((self.beads.nbeads, 3, 3), float)
                 for i in range(3):
                     for j in range(3):

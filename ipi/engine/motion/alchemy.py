@@ -51,7 +51,7 @@ class AlchemyMC(Motion):
             self.ealc = ealc
         else: self.ealc = 0.0
 
-    def bind(self, ens, beads, cell, bforce, nm, prng):
+    def bind(self, ens, beads, cell, bforce, nm, prng, omaker):
         """Binds ensemble beads, cell, bforce, and prng to the dynamics.
 
         This takes a beads object, a cell object, a forcefield object and a
@@ -67,7 +67,7 @@ class AlchemyMC(Motion):
                 generation.
         """
 
-        super(AlchemyMC, self).bind(ens, beads, cell, bforce, nm, prng)
+        super(AlchemyMC, self).bind(ens, beads, cell, bforce, nm, prng, omaker)
         self.ensemble.add_econs(dd(self).ealc)
 
     def AXlist(self, atomtype):
@@ -94,6 +94,8 @@ class AlchemyMC(Motion):
         nb = self.beads.nbeads
         axlist = self.AXlist(self.names)
         lenlist = len(axlist)
+        if lenlist == 0:
+            raise ValueError("Atoms exchange list is empty in alchemical sampler.")
         atomspring = np.zeros(lenlist)
         wk2 = dstrip(self.nm.omegak2)
 

@@ -34,11 +34,10 @@ class DynMatrixMover(Motion):
 
     """Dynamic matrix calculation routine by finite difference.
     """
-
     def __init__(self, fixcom=False, fixatoms=None, mode="fd", energy_shift=0.0, pos_shift=0.001, output_shift=0.000, dynmat=np.zeros(0, float), refdynmat=np.zeros(0, float), prefix="", asr="none"):
         """Initialises DynMatrixMover.
         Args:
-        fixcom	: An optional boolean which decides whether the centre of mass
+        fixcom  : An optional boolean which decides whether the centre of mass
                   motion will be constrained or not. Defaults to False.
         dynmatrix : A 3Nx3N array that stores the dynamic matrix.
         refdynmatrix : A 3Nx3N array that stores the refined dynamic matrix.
@@ -67,11 +66,19 @@ class DynMatrixMover(Motion):
         self.asr = asr
 
         if self.prefix == "":
-            self.prefix = "PHONONS"
+            self.prefix = "phonons"
 
-    def bind(self, ens, beads, nm, cell, bforce, prng):
+        if len(fixatoms)> 0:
+           fixdof = np.concatenate((3*fixatoms,3*fixatoms+1,3*fixatoms+2))
+           self.fixdof = np.sort(fixdof)
+           if self.mode == 'enmfd' or self.mode == "nmfd":
+               raise ValueError("Fixatoms is not implemented for the selected mode.")
+        else:
+           self.fixdof = np.array([])
 
-        super(DynMatrixMover, self).bind(ens, beads, nm, cell, bforce, prng)
+    def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
+
+        super(DynMatrixMover, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
 
         # Raises error for nbeads not equal to 1.
         if(self.beads.nbeads > 1):
@@ -92,10 +99,10 @@ class DynMatrixMover(Motion):
         else:
             self.phcalc.transform()
             self.refdynmatrix = self.apply_asr(self.refdynmatrix.copy())
-            self.printall(self.prefix, self.refdynmatrix.copy())
+            self.printall(self.prefix, self.refdynmatrix.copy(),fixdof=self.fixdof)
             softexit.trigger("Dynamic matrix is calculated. Exiting simulation")
 
-    def printall(self, prefix, dmatx, deltaw=0.0):
+    def printall(self, prefix, dmatx, deltaw=0.0,fixdof=np.array([])):
         """ Prints out diagnostics for a given dynamical matrix. """
 
         dmatx = dmatx + np.eye(len(dmatx)) * deltaw
@@ -103,42 +110,63 @@ class DynMatrixMover(Motion):
             wstr = " !! Shifted by %e !!" % (deltaw)
         else:
             wstr = ""
+
+        #get active arrays:
+        activedof = 3 *self.beads.natoms - fixdof.size
+        mask  =  np.delete(np.arange(3*self.beads.natoms), fixdof)
+        dmatx_full = dmatx.copy()
+        ism_full   = self.ism.copy()
+        dmatx = dmatx[mask][:,mask] 
+        ism   = self.ism[mask] 
+         
+
         # prints out the dynamical matrix
-        outfile = open(prefix + '.dynmat', 'w')
-        print >> outfile, "# Dynamical matrix (atomic units)" + wstr
-        for i in range(3 * self.beads.natoms):
-            print >> outfile, ' '.join(map(str, dmatx[i]))
+        outfile = self.output_maker.get_output(self.prefix + '.dynmat', 'w')
+        outfile.write( "# Dynamical matrix (atomic units)" + wstr +'\n')
+        for i in range(activedof):
+            outfile.write( ' '.join(map(str, dmatx[i]))+'\n')
         outfile.close()
 
-        # also prints out the Hessian
-        outfile = open(prefix + '.hess', 'w')
-        print >> outfile, "# Hessian matrix (atomic units)" + wstr
-        for i in range(3 * self.beads.natoms):
-            print >> outfile, ' '.join(map(str, dmatx[i] / (self.ism[i] * self.ism)))
+        # prints out the Hessian for the activedof
+        outfile = self.output_maker.get_output(self.prefix + '.hess', 'w')
+        outfile.write( "# Hessian matrix (atomic units)" + wstr +'\n')
+        for i in range(activedof):
+            outfile.write(' '.join(map(str, dmatx[i] / (ism[i] * ism)))+'\n')
         outfile.close()
 
-        # eigsys=np.linalg.eigh(dmatx)
+        # prints out the full Hessian (with all zeros)
+        outfile = self.output_maker.get_output(self.prefix + '_full.hess', 'w')
+        outfile.write( "# Hessian matrix (atomic units)" + wstr +'\n')
+        for i in range(3 *self.beads.natoms):
+            outfile.write(' '.join(map(str, dmatx_full[i] / (ism_full[i] * ism_full)))+'\n')
+        outfile.close()
+
         eigsys = np.linalg.eigh(dmatx)
-        # prints eigenvalues & eigenvectors
-        outfile = open(prefix + '.eigval', 'w')
-        print >> outfile, "# Eigenvalues (atomic units)" + wstr
-        print >> outfile, '\n'.join(map(str, eigsys[0]))
-        outfile.close()
-        outfile = open(prefix + '.eigvec', 'w')
-        print >> outfile, "# Eigenvector  matrix (normalized)"
-        for i in range(0, 3 * self.beads.natoms):
-            print >> outfile, ' '.join(map(str, eigsys[1][i]))
+
+        # prints eigenvalues 
+        outfile = self.output_maker.get_output(self.prefix + '.eigval', 'w')
+        outfile.write( "# Eigenvalues (atomic units)" + wstr+'\n')
+        outfile.write('\n'.join(map(str, eigsys[0])) )
         outfile.close()
 
+        # prints eigenvectors
+        outfile = self.output_maker.get_output(self.prefix + '.eigvec', 'w')
+        outfile.write( "# Eigenvector  matrix (normalized)" +'\n')
+        for i in range(activedof):
+            outfile.write( ' '.join(map(str, eigsys[1][i])) +'\n')
+        outfile.close()
+
+        # prints eigenmodes
         eigmode = 1.0 * eigsys[1]
-        for i in range(0, 3 * self.beads.natoms):
-            eigmode[i] *= self.ism[i]
-        for i in range(0, 3 * self.beads.natoms):
+        for i in range(activedof):
+            eigmode[i] *= ism[i]
+        for i in range(activedof):
             eigmode[:, i] /= np.sqrt(np.dot(eigmode[:, i], eigmode[:, i]))
-        outfile = open(prefix + '.mode', 'w')
-        print >> outfile, "# Phonon modes (mass-scaled)"
-        for i in range(0, 3 * self.beads.natoms):
-            print >> outfile, ' '.join(map(str, eigmode[i]))
+        outfile = self.output_maker.get_output(self.prefix + '.mode', 'w')
+
+        outfile.write( "# Phonon modes (mass-scaled)" +'\n')
+        for i in range(activedof):
+            outfile.write( ' '.join(map(str, eigmode[i]))+'\n' )
         outfile.close()
 
     def apply_asr(self, dm):
@@ -259,19 +287,22 @@ class FDPhononCalculator(DummyPhononCalculator):
     def step(self, step=None):
         """Computes one row of the dynamic matrix."""
 
-        # initializes the finite deviation
-        dev = np.zeros(3 * self.dm.beads.natoms, float)
-        dev[step] = self.dm.deltax
-        # displaces kth d.o.f by delta.
-        self.dm.dbeads.q = self.dm.beads.q + dev
-        plus = - dstrip(self.dm.dforces.f).copy()
-        # displaces kth d.o.f by -delta.
-        self.dm.dbeads.q = self.dm.beads.q - dev
-        minus = - dstrip(self.dm.dforces.f).copy()
-        # computes a row of force-constant matrix
-        dmrow = (plus - minus) / (2 * self.dm.deltax) * self.dm.ism[step] * self.dm.ism
-        self.dm.dynmatrix[step] = dmrow
-        self.dm.refdynmatrix[step] = dmrow
+        if step not in self.dm.fixdof: 
+          # initializes the finite deviation
+          dev = np.zeros(3 * self.dm.beads.natoms, float)
+          dev[step] = self.dm.deltax
+          # displaces kth d.o.f by delta.
+          self.dm.dbeads.q = self.dm.beads.q + dev
+          plus = - dstrip(self.dm.dforces.f).copy()
+          # displaces kth d.o.f by -delta.
+          self.dm.dbeads.q = self.dm.beads.q - dev
+          minus = - dstrip(self.dm.dforces.f).copy()
+          # computes a row of force-constant matrix
+          dmrow = (plus - minus) / (2 * self.dm.deltax) * self.dm.ism[step] * self.dm.ism
+          self.dm.dynmatrix[step] = dmrow
+          self.dm.refdynmatrix[step] = dmrow
+        else:
+         info(" We have skiped the dof # {}.".format(step), verbosity.low) 
 
     def transform(self):
         dm = self.dm.dynmatrix.copy()

@@ -42,9 +42,9 @@ class TemperatureRamp(Motion):
         self.current_step = current_step
         self.logscale = logscale
 
-    def bind(self, ens, beads, nm, cell, bforce, prng):
+    def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
 
-        super(TemperatureRamp, self).bind(ens, beads, nm, cell, bforce, prng)
+        super(TemperatureRamp, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
 
     def step(self, step=None):
         """Updates ensemble temperature. Yes, that's it everything else should follow through"""
@@ -81,9 +81,9 @@ class PressureRamp(Motion):
         self.current_step = current_step
         self.logscale = logscale
 
-    def bind(self, ens, beads, nm, cell, bforce, prng):
+    def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
 
-        super(PressureRamp, self).bind(ens, beads, nm, cell, bforce, prng)
+        super(PressureRamp, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
 
     def step(self, step=None):
         """Updates ensemble temperature. Yes, that's it everything else should follow through"""

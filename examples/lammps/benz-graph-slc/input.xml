@@ -1,25 +1,19 @@
-<simulation>
+<simulation verbosity="high">
   <ffsocket mode='unix' name='benbeads' pbc='true'>
     <latency>  1.00000000e-03</latency>
-    <slots> 8 </slots>
     <port> 13234 </port>
-    <timeout>  6.00000000e+02</timeout>
     <address> benzenebeads3 </address>
     <activelist>[128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139] </activelist>
   </ffsocket>
   <ffsocket mode='unix' name='bencent' pbc='true'>
     <latency>  1.00000000e-03</latency>
-    <slots> 8 </slots>
     <port> 13234 </port>
-    <timeout>  6.00000000e+02</timeout>
     <address> benzenecent3 </address>
     <activelist>[128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139]</activelist>
   </ffsocket>
   <ffsocket mode='unix' name='full' pbc='true'>
     <latency>  1.00000000e-03</latency>
-    <slots> 8 </slots>
     <port> 13234 </port>
-    <timeout>  6.00000000e+02</timeout>
     <address> fullcent3 </address>
   </ffsocket>
   <total_steps>105000</total_steps>
@@ -35,27 +29,20 @@
   </prng>
   <system>
     <motion mode='dynamics'>
-      <dynamics mode='mts'>
-        <timestep units='femtosecond'> 0.10 </timestep>
+      <dynamics mode='nvt'>
+        <timestep units='femtosecond'> 0.25 </timestep>
         <thermostat mode='pile_l'>
           <tau units='femtosecond'>100</tau>
         </thermostat>
-        <nmts>[1,1]</nmts>
       </dynamics>
     </motion>
     <forces>
-      <force forcefield='benbeads' nbeads='32'>
-        <mts_weights> [0,1] </mts_weights>
-      </force>
-      <force forcefield='full' nbeads='1'>
-        <mts_weights> [1,0] </mts_weights>
-      </force>
-      <force forcefield='bencent' nbeads='1'>
-        <mts_weights> [-1,0] </mts_weights>
-      </force>
+      <force forcefield='benbeads' nbeads='32' weight="1.0"/>
+      <force forcefield='full' nbeads='1' weight="1.0"/>
+      <force forcefield='bencent' nbeads='1' weight="-1.0"/>
     </forces>
     <initialize nbeads='32'>
-      <file mode='chk'> init.chk </file>
+      <file mode='xyz'> init.xyz </file>
       <cell mode='abc' units='angstrom'> [ 17.1404, 19.792, 30.00 ] </cell>
       <velocities mode='thermal' units='kelvin'> 300 </velocities>
     </initialize>

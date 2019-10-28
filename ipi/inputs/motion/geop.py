@@ -55,8 +55,11 @@ class InputGeop(InputDictionary):
                               adaptive: whether to update initial step.
                               """,
                                                "options": ["tolerance", "iter", "step", "adaptive"],
-                                               "default": [1, 100, 1e-3, 1.0],
+                                               "default": [1e-4, 100, 1e-3, 1.0],
                                                "dimension": ["undefined", "undefined", "length", "undefined"]}),
+              "exit_on_convergence": (InputValue, {"dtype": bool,
+                                            "default": True,
+                                            "help": "Terminates the simulation when the convergence criteria are met."}),
               "tolerances": (InputDictionary, {"dtype": float,
                                                "options": ["energy", "force", "position"],
                                                "default": [1e-7, 1e-4, 1e-3],
@@ -119,6 +122,7 @@ class InputGeop(InputDictionary):
 
         self.mode.store(geop.mode)
         self.tolerances.store(geop.tolerances)
+        self.exit_on_convergence.store(geop.conv_exit)
 
         if geop.mode == "bfgs":
             self.old_direction.store(geop.d)

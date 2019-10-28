@@ -263,9 +263,9 @@ class InputOutputs(Input):
         use any mutable objects as arguments.
         """
 
-        return [eoutputs.PropertyOutput(filename="i-pi.md", stride=10, outlist=["time", "step", "conserved", "temperature", "potential", "kinetic_cv"]),
-                eoutputs.TrajectoryOutput(filename="i-pi.pos", stride=100, what="positions", format="xyz"),
-                eoutputs.CheckpointOutput(filename="i-pi.checkpoint", stride=1000, overwrite=True)]
+        return eoutputs.OutputList("i-pi",[eoutputs.PropertyOutput(filename="md", stride=10, outlist=["time", "step", "conserved", "temperature", "potential", "kinetic_cv"]),
+                eoutputs.TrajectoryOutput(filename="pos", stride=100, what="positions", format="xyz"),
+                eoutputs.CheckpointOutput(filename="checkpoint", stride=1000, overwrite=True)])
 
     def fetch(self):
         """Returns a list of the output objects included in this dynamic
@@ -278,11 +278,7 @@ class InputOutputs(Input):
         """
 
         super(InputOutputs, self).fetch()
-        outlist = [p.fetch() for (n, p) in self.extra]
-        prefix = self.prefix.fetch()
-        if not prefix == "":
-            for p in outlist:
-                p.filename = prefix + "." + p.filename
+        outlist = eoutputs.OutputList(self.prefix.fetch(),  [p.fetch() for (n, p) in self.extra])
 
         return outlist
 
@@ -298,7 +294,7 @@ class InputOutputs(Input):
 
         super(InputOutputs, self).store()
 
-        self.prefix.store("")  # do not store prefix, as on load it is added to the innermost output filenames
+        self.prefix.store(plist.prefix)
 
         if len(self.extra) != len(plist):
             self.extra = [0] * len(plist)

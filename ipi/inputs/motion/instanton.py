@@ -37,7 +37,7 @@ class InputInst(InputDictionary):
 
     """
     attribs = {"mode": (InputAttribute, {"dtype": str, "default": "rate",
-                                         "help": "Use the full or half of the ring polymer during the optimization",
+                                         "help": "Defines whether it is an instanton rate or instanton tunneling splitting calculaion",
                                          "options": ['rate', 'splitting']})}
 
     fields = {"tolerances": (InputDictionary, {"dtype": float,
@@ -67,21 +67,21 @@ class InputInst(InputDictionary):
               "alt_out": (InputValue, {"dtype": int,
                                        "default": 1,
                                        "help": """Alternative output:Prints different formatting of outputs for geometry, hessian and bead potential energies.
-                                               All quantities are also accessible from typical i-pi output infrastructure. 
-                                               Default to 1, which prints every step. -1 will suppress the output (except the last one). 
-                                               Any other positive number will set the frequency (in steps) with which the quantities are 
+                                               All quantities are also accessible from typical i-pi output infrastructure.
+                                               Default to 1, which prints every step. -1 will suppress the output (except the last one).
+                                               Any other positive number will set the frequency (in steps) with which the quantities are
                                                written to file.
                                                The instanton geometry is printed in xyz format and the distances are in angrstroms
                                                The hessian is printed in one line with the following format:
                                                h1_1,h2_1,...,hN_1,   h2_2,h2_2,hN_2,   ....   ,h1_d,h2_d,...,hN_d.
                                                Where N represents the total number of replicas, d the number of dimension of each replica (3*n_atoms) and
-                                               hi_j means the row j of the physical hessian corresponding to the replica i. 
-                                               The physical hessian uses a convention according to the positions convention used in  i-pi. 
+                                               hi_j means the row j of the physical hessian corresponding to the replica i.
+                                               The physical hessian uses a convention according to the positions convention used in  i-pi.
                                                Example of 2 particles, the first two rows of the physical hessian reads:
                                                'H_x1_x1, H_x1_y1, H_x1_z1, H_x1_x2, H_x1_y2,H_x1_z2'
                                                'H_x2_x1, H_x2_y1, H_x2_z1, H_x2_x2, H_x2_y2,H_x2_z2' """}),
               "prefix": (InputValue, {"dtype": str,
-                                      "default": "INSTANTON",
+                                      "default": "instanton",
                                       "help": "Prefix of the output files."}),
               "delta": (InputValue, {"dtype": float,
                                      "default": 0.1,
