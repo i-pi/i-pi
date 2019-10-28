@@ -1,0 +1,14 @@
+Here you will find 3 examples for using PIMD-B (arXiv:1905.09053)
+1) Example for 3 bosons in a 3D isotropic harmonic trap @17.4 K. Analytical result for av. total energy:  0.00058031 Ha
+2) Example for 3 distinguishable particles in a 3D isotropic harmonic trap @17.4 K. Analytical result for av. total energy: 0.00065142 Ha
+3) Example for mixture of 2 bosons and 1 distinguishable particles in a 3D isotropic harmonic trap @17.4 K. Analytical result for av. total energy: 0.00062348 Ha
+
+IMPORTANT: the centroid virial estimator is not applicable for bosons due to the combination of different particles into long ring polymers.
+Therefore, you can print our virial_fq, which is a virial estimator for the kinetic energy but is not translationally invariant.
+If the system is trapped or is not symmetric under translations for any other reason, this should not matter.
+
+TO RUN:
+i-pi input.xml >& log &
+i-pi-driver -u -m harm3d -o 1.21647924E-8 -h free2 &
+
+
