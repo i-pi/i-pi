@@ -94,7 +94,7 @@ class System(dobject):
 
         # binds important computation engines
         print "NOW BINDING THE FORCES.... "
-        self.forces.bind(self.beads, self.cell, self.fcomp, self.simul.fflist)
+        self.forces.bind(self.beads, self.cell, self.fcomp, self.simul.fflist,open_paths=self.nm.open_paths)
         self.nm.bind(self.ensemble, self.motion, beads=self.beads, forces=self.forces)
         self.ensemble.bind(self.beads, self.nm, self.cell, self.forces, self.simul.fflist)
         self.motion.bind(self.ensemble, self.beads, self.nm, self.cell, self.forces, self.prng, simul.output_maker)
