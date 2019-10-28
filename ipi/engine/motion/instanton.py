@@ -661,9 +661,7 @@ class DummyOptimizer(dobject):
         """ Update positions and forces """
 
         self.beads.q[:] = self.gm.dbeads.q[:]
-        print('Here debug',self.gm.dforces.pots)
         self.forces.transfer_forces(self.gm.dforces)  # This forces the update of the forces
-        print('Here debug',self.forces.pots)
 
     def update_old_pos_for(self):
         # Update "old" positions and forces
