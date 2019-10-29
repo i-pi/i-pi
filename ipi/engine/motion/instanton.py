@@ -640,7 +640,7 @@ class DummyOptimizer(dobject):
                 and (d_x_max <= tolerances["position"]):
 
             print_instanton_geo(self.options["prefix"] + '_FINAL', step, self.beads.nbeads, self.beads.natoms,
-                                self.beads.names, self.beads.q, self.forces.pots, self.cell,
+                                self.beads.names, self.beads.q, self.forces.f,self.forces.pots, self.cell,
                                 self.optarrays["energy_shift"],self.output_maker)
             if self.options["hessian_final"] != 'true':
                 info("We are not going to compute the final hessian.", verbosity.low)

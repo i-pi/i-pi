@@ -185,7 +185,7 @@ def get_imvector(h, m3):
 
 #def print_instanton_geo(prefix, step, nbeads, natoms, names, q, pots, cell, shift):
 
-def print_instanton_geo(prefix, step, nbeads, natoms, names, q, pots, cell, shift, output_maker):
+def print_instanton_geo(prefix, step, nbeads, natoms, names, q, f,pots, cell, shift, output_maker):
 
     outfile = output_maker.get_output(prefix + '_' + str(step) + '.ener', 'w')
     print >> outfile, ('#Bead    Energy (eV)')
@@ -196,13 +196,17 @@ def print_instanton_geo(prefix, step, nbeads, natoms, names, q, pots, cell, shif
     # print_file("xyz", pos[0], cell, out, title='positions{angstrom}')
 
     unit = 'angstrom'
+    unit2 = 'atomic_unit'
     a, b, c, alpha, beta, gamma = mt.h2abc_deg(cell.h)
 
     outfile = output_maker.get_output(prefix + '_' + str(step) + '.xyz', 'w')
+    outfile2 = output_maker.get_output(prefix + '_forces_' + str(step) + '.xyz', 'w')
     for i in range(nbeads):
         print >> outfile, natoms
+        print >> outfile2, natoms
 
         print >> outfile, ('CELL(abcABC):  %f %f %f %f %f %f cell{atomic_unit}  Traj: positions{%s}   Bead:       %i' % (a, b, c, alpha, beta, gamma, unit, i))
+        print >> outfile2, ('CELL(abcABC):  %f %f %f %f %f %f cell{atomic_unit}  Traj: positions{%s}   Bead:       %i' % (a, b, c, alpha, beta, gamma, unit2, i))
         # print >> outfile, ('#Potential (eV):   ' + str(units.unit_to_user('energy', "electronvolt", pots[i] - shift)))
 
         for j in range(natoms):
@@ -211,7 +215,13 @@ def print_instanton_geo(prefix, step, nbeads, natoms, names, q, pots, cell, shif
                 str(units.unit_to_user('length', unit, q[i, 3 * j + 1])), \
                 str(units.unit_to_user('length', unit, q[i, 3 * j + 2]))
 
+        for j in range(natoms):
+            print >> outfile2, names[j], \
+                str(units.unit_to_user('force', unit2, f[i, 3 * j])), \
+                str(units.unit_to_user('force', unit2, f[i, 3 * j + 1])), \
+                str(units.unit_to_user('force', unit2, f[i, 3 * j + 2]))
     outfile.close()
+    outfile2.close()
 
 def print_instanton_hess(prefix, step, hessian, output_maker):
 
