@@ -156,7 +156,7 @@ def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):
 
 def get_hessian(gm, x0, natoms, nbeads=1, fixatoms=[], d=0.001):
     """Compute the physical hessian given a function to evaluate energy and forces (gm).
-       The intermediate steps are written as a temporal files so the full hessian calculations is only ONE step. 
+       The intermediate steps are written as a temporary files so the full hessian calculations is only ONE step. 
        
        IN     gm       = gradient mapper
               x0       = position vector
@@ -177,7 +177,7 @@ def get_hessian(gm, x0, natoms, nbeads=1, fixatoms=[], d=0.001):
 
     h = np.zeros((ii, ii*nbeads), float)
 
-    # Check if there is a temporal file:
+    # Check if there is a temporary file:
     i0 = -1
 
     for i in range(ii, -1, -1):
@@ -189,7 +189,7 @@ def get_hessian(gm, x0, natoms, nbeads=1, fixatoms=[], d=0.001):
             h[:, :] = b[:, :]
             i0 = i
             print('We have found a temporary file ( hessian_' + str(i) + '.tmp). ')
-            if b.shape == h.shape:  # Check that the last temporal file was properly written
+            if b.shape == h.shape:  # Check that the last temporary file was properly written
                 break
             else:
                 continue

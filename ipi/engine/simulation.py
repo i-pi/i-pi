@@ -51,6 +51,7 @@ class Simulation(dobject):
             the current state of the simulation. This is because we cannot
             restart from half way through a step, only from the beginning of a
             step, so this is necessary for the trajectory to be continuous.
+        read_only: If set to true, it creates the simulation object but doesn't  initialize/open the sockets
 
     Depend objects:
         step: The current simulation step.
