@@ -272,7 +272,8 @@ class FFSocket(ForceField):
             communication between the forcefield and the driver is done.
     """
 
-    def __init__(self, latency=1.0, name="", pars=None, dopbc=True, active=np.array([-1]), threaded=True, interface=None, matching="auto"):
+    def __init__(self, latency=1.0, name="", pars=None, dopbc=True, 
+    active=np.array([-1]), threaded=True, interface=None):
         """Initialises FFSocket.
 
         Args:
