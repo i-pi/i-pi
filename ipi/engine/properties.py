@@ -245,8 +245,8 @@ class Properties(dobject):
                           'func': (lambda: self.ensemble.econs / float(self.beads.nbeads))},
 
             "ensemble_lp": {"dimension": "undefined",
-                                     "help": "The log of the ensemble probability",
-                                     "func": (lambda: self.ensemble.lpens)},
+                            "help": "The log of the ensemble probability",
+                            "func": (lambda: self.ensemble.lpens)},
             "ensemble_temperature": {"dimension": "temperature",
                                      "help": "The target temperature for the current ensemble",
                                      "func": (lambda: self.ensemble.temp)},
@@ -794,11 +794,10 @@ class Properties(dobject):
 
             self.beads.p += self.beads.m3 * vcm
 
-            #Avoid double counting
+            # Avoid double counting
             if len(self.motion.fixatoms) > 0:
                 for i in self.motion.fixatoms:
-                    self.beads.p[:, 3 * i:3 * i + 3] -= np.multiply(self.beads.m[i] , pcm/M )
-
+                    self.beads.p[:, 3 * i:3 * i + 3] -= np.multiply(self.beads.m[i], pcm / M)
 
         kemd, ncount = self.get_kinmd(atom, bead, nm, return_count=True)
 

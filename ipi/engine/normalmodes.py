@@ -293,7 +293,6 @@ class NormalModes(dobject):
             return 0.0
 
         if len(self.bosons) is 0:
-
             sqnm = dstrip(self.qnm) * dstrip(self.beads.sm3)
             q2 = (sqnm**2).sum(axis=1)
 

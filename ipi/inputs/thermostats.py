@@ -250,8 +250,8 @@ class InputThermo(InputThermoBase):
 
             if len(self.extra) != len(thermo.tlist):
                 self.extra = [0] * len(thermo.tlist)
-            for ii,t in enumerate(thermo.tlist):
-                if self.extra[ii] ==0:
+            for ii, t in enumerate(thermo.tlist):
+                if self.extra[ii] == 0:
                     it = InputThermoBase()
                     it.store(t)
                     self.extra[ii] = ("thermostat", it)

@@ -82,13 +82,13 @@ class InputNormalModes(Input):
 
     attribs = {
         "transform": (InputAttribute, {"dtype": str,
-                                   "default": "fft",
-                                   "help": "Specifies whether to calculate the normal mode transform using a fast Fourier transform or a matrix multiplication. For small numbers of beads the matrix multiplication may be faster.",
-                                   "options": ['fft', 'matrix']}),
+                                       "default": "fft",
+                                       "help": "Specifies whether to calculate the normal mode transform using a fast Fourier transform or a matrix multiplication. For small numbers of beads the matrix multiplication may be faster.",
+                                       "options": ['fft', 'matrix']}),
         "propagator": (InputAttribute, {"dtype": str,
-                                   "default": "exact",
-                                   "help": "How to propagate the free ring polymer dynamics. Cayley transform is not exact but is strongly stable and avoid potential resonance issues. A bab scheme performs numerical verlet type propagation. All three options work for distinguishable particles. Only the bab propagator can be used with bosonic particles.",
-                                   "options": ['exact', 'cayley', 'bab']})
+                                        "default": "exact",
+                                        "help": "How to propagate the free ring polymer dynamics. Cayley transform is not exact but is strongly stable and avoid potential resonance issues. A bab scheme performs numerical verlet type propagation. All three options work for distinguishable particles. Only the bab propagator can be used with bosonic particles.",
+                                        "options": ['exact', 'cayley', 'bab']})
     }
 
     fields = {
@@ -100,12 +100,12 @@ class InputNormalModes(Input):
                                     "default": np.zeros(0, int),
                                     "help": "Indices of the atoms whose path should be opened (zero-based)."}),
         "bosons": (InputArray, {"dtype": int,
-                                    "default": np.zeros(0, int),
-                                    "help": "Indices of the atoms that are bosons (zero-based)."}),
+                                "default": np.zeros(0, int),
+                                "help": "Indices of the atoms that are bosons (zero-based)."}),
         "nmts": (InputValue, {"dtype": int,
-                                    "default": 10,
-                                    "help" : "The number of iterations to perform one bab step.",
-                                    "dimension" : None})
+                              "default": 10,
+                              "help": "The number of iterations to perform one bab step.",
+                              "dimension": None})
     }
 
     default_label = "NORMALMODES"

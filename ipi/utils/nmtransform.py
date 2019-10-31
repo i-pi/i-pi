@@ -265,6 +265,7 @@ class nm_rescale(object):
                     # a "per bead" NM transformation of the potential is not well-defined when different beads have different
                     # NM transformations
                     q_scal = np.dot(self._o_b1tob2, q)
+
         return q_scal
 
     def b2tob1(self, q):
