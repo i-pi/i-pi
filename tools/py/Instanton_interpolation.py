@@ -132,7 +132,8 @@ if input_geo != 'None' or chk != 'None':
     print( 'The new Instanton geometry (half polymer) was generated')
     print( 'Check new_instanton.xyz')
     print( '')
-    print( 'Remeber to change the number of beads {} in your input'.format(nbeadsNew))
+    print( "Don't forget to change the number of beads to the new value ({}) in your input file".format(nbeadsNew))
+    print( 'when starting your new simulation with an increased number of beads.' )
     print( '')
 
 if input_hess != 'None' or chk != 'None':

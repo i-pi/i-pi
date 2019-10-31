@@ -932,7 +932,8 @@ class NROptimizer(HessianOptimizer):
         self.post_step(step,new_x,d_x,activearrays)
 
 class LanczosOptimizer(HessianOptimizer):
-    """ Class that implements a Newton-Raphson optimizations. It can find first order saddle points or minima"""
+    """ Class that implements a modified Nichols algorithm based on Lanczos diagonalization to avoid constructing and diagonalizing
+        the full (3*natoms*nbeads)^2 matrix """
 
     def bind(self, geop):
         # call bind function from HessianOptimizer

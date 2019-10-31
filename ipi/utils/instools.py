@@ -8,7 +8,8 @@ import os.path, glob,copy
 def banded_hessian(h, im, masses=True,shift=0.001):
     """Given Hessian in the reduced format (h), construct
     the upper band hessian including the RP terms.
-    If masses is True returns hessian otherwise it returns dynmat"""
+    If masses is True returns hessian otherwise it returns dynmat
+    shift is value that is added to the diagonal to avoid numerical problems with close to 0 frequencies"""
     nbeads = im.dbeads.nbeads
     natoms = im.dbeads.natoms
     coef   = im.coef  #new_disc
