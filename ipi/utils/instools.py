@@ -3,16 +3,19 @@ import numpy as np
 from ipi.utils.messages import verbosity, info
 from ipi.utils import units
 import ipi.utils.mathtools as mt
-import os.path, glob,copy
+import os.path
+import glob
+import copy
 
-def banded_hessian(h, im, masses=True,shift=0.001):
+
+def banded_hessian(h, im, masses=True, shift=0.001):
     """Given Hessian in the reduced format (h), construct
     the upper band hessian including the RP terms.
     If masses is True returns hessian otherwise it returns dynmat
     shift is value that is added to the diagonal to avoid numerical problems with close to 0 frequencies"""
     nbeads = im.dbeads.nbeads
     natoms = im.dbeads.natoms
-    coef   = im.coef  #new_disc
+    coef = im.coef  # new_disc
 
     ii = natoms * 3 * nbeads
     ndiag = natoms * 3 + 1  # only upper diagonal form
@@ -50,7 +53,7 @@ def banded_hessian(h, im, masses=True,shift=0.001):
 
     # add physical part
     for i in range(nbeads):
-        h_aux = h[:, i * natoms * 3:(i + 1) * natoms * 3]*(coef[i]+coef[i+1])/2  # Peaks one physical hessian
+        h_aux = h[:, i * natoms * 3:(i + 1) * natoms * 3] * (coef[i] + coef[i + 1]) / 2  # Peaks one physical hessian
         for j in range(1, ndiag):
             hnew[j, (ndiag - 1 - j) + i * natoms * 3:(i + 1) * natoms * 3] = np.diag(h_aux, ndiag - 1 - j)
 
@@ -61,23 +64,21 @@ def banded_hessian(h, im, masses=True,shift=0.001):
         else:
             d_corner = np.ones(im.dbeads.m3[0].shape) * im.omega2
 
-        d_init = d_corner/coef[1]
-        d_fin  = d_corner/coef[-2]
+        d_init = d_corner / coef[1]
+        d_fin = d_corner / coef[-2]
 
-        d_mid  = d_corner*(1./coef[1]+1.0/coef[2])
-        for i in range(2,im.dbeads.nbeads-1):
-           d_mid = np.concatenate((d_mid,d_corner*(1./coef[i]+1.0/coef[i+1])))
+        d_mid = d_corner * (1. / coef[1] + 1.0 / coef[2])
+        for i in range(2, im.dbeads.nbeads - 1):
+            d_mid = np.concatenate((d_mid, d_corner * (1. / coef[i] + 1.0 / coef[i + 1])))
 
         diag_sp = np.concatenate((d_init, d_mid, d_fin))
         hnew[-1, :] += diag_sp
 
         # Non-Diagonal
-        d_mid  = -d_corner*(1.0/coef[1])
-        for i in range(2,im.dbeads.nbeads):
-           d_mid = np.concatenate( ( d_mid,-d_corner*(1./coef[i]) ) )
+        d_mid = -d_corner * (1.0 / coef[1])
+        for i in range(2, im.dbeads.nbeads):
+            d_mid = np.concatenate((d_mid, -d_corner * (1. / coef[i])))
         hnew[0, :] = np.concatenate((np.zeros(natoms * 3), d_mid))
-
-
 
     # Add safety shift value
     hnew[-1, :] += shift
@@ -120,7 +121,8 @@ def invmul_banded(A, B, posdef=False):
         # sys.exit(0)
         return linalg.solve_banded((l, u), newA, B)
 
-def diag_banded(A,n=2):
+
+def diag_banded(A, n=2):
     """A is in upper banded form.
         Returns the smallest n eigenvalue and its corresponding eigenvector.
         """
@@ -130,24 +132,26 @@ def diag_banded(A,n=2):
     except ImportError:
         raise ValueError(" ")
 
-    d = eig_banded(A, select='i', select_range=(0, n),eigvals_only =True, check_finite=False)
+    d = eig_banded(A, select='i', select_range=(0, n), eigvals_only=True, check_finite=False)
 
     return d
 
-def red2comp(h, nbeads, natoms,coef=None):
+
+def red2comp(h, nbeads, natoms, coef=None):
     """Takes the reduced physical hessian (3*natoms*nbeads,3*natoms)
      and construct the 'complete' one (3*natoms*nbeads)^2 """
     info("\n @Instanton: Creating 'complete' physical hessian \n", verbosity.high)
-    
+
     if coef is None:
-       coef =np.ones(nbeads+1).reshape(-1,1)
+        coef = np.ones(nbeads + 1).reshape(-1, 1)
     i = natoms * 3
     ii = nbeads * i
     h0 = np.zeros((ii, ii), float)
 
     for j in range(nbeads):
-        h0[j * i:(j + 1) * i, j * i:(j + 1) * i] = h[:, j * i:(j + 1) * i]*(coef[j]+coef[j+1])/2
+        h0[j * i:(j + 1) * i, j * i:(j + 1) * i] = h[:, j * i:(j + 1) * i] * (coef[j] + coef[j + 1]) / 2
     return h0
+
 
 def get_imvector(h, m3):
     """ Compute eigenvector  corresponding to the imaginary mode
@@ -184,9 +188,10 @@ def get_imvector(h, m3):
 
     return imv.reshape(1, imv.size)
 
-#def print_instanton_geo(prefix, step, nbeads, natoms, names, q, pots, cell, shift):
+# def print_instanton_geo(prefix, step, nbeads, natoms, names, q, pots, cell, shift):
 
-def print_instanton_geo(prefix, step, nbeads, natoms, names, q, f,pots, cell, shift, output_maker):
+
+def print_instanton_geo(prefix, step, nbeads, natoms, names, q, f, pots, cell, shift, output_maker):
 
     outfile = output_maker.get_output(prefix + '_' + str(step) + '.ener', 'w')
     print >> outfile, ('#Bead    Energy (eV)')
@@ -223,6 +228,7 @@ def print_instanton_geo(prefix, step, nbeads, natoms, names, q, f,pots, cell, sh
                 str(units.unit_to_user('force', unit2, f[i, 3 * j + 2]))
     outfile.close()
     outfile2.close()
+
 
 def print_instanton_hess(prefix, step, hessian, output_maker):
 

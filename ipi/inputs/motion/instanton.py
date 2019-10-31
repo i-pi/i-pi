@@ -68,8 +68,8 @@ class InputInst(InputDictionary):
                                             NR works in both cases given that the initial guess is close to the optimized geometry. 
                                             Finally lbfgs is used for tunneling splitting calculations. """}),
               "discretization": (InputArray, {"dtype": float,
-                                       "default": input_default(factory=np.ones, args=(0,)),
-                                       "help": "Allows to specified non uniform time discretization as proposed in J. Chem. Phys. 134, 184107 (2011)"}),
+                                              "default": input_default(factory=np.ones, args=(0,)),
+                                              "help": "Allows to specified non uniform time discretization as proposed in J. Chem. Phys. 134, 184107 (2011)"}),
               "alt_out": (InputValue, {"dtype": int,
                                        "default": 1,
                                        "help": """Alternative output:Prints different formatting of outputs for geometry, hessian and bead potential energies.

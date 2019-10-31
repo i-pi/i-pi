@@ -58,7 +58,7 @@ class Simulation(dobject):
     """
 
     @staticmethod
-    def load_from_xml(fn_input, custom_verbosity=None, request_banner=False,read_only=False):
+    def load_from_xml(fn_input, custom_verbosity=None, request_banner=False, read_only=False):
         """Load an XML input file and return a `Simulation` object.
 
         Arguments:
@@ -154,7 +154,7 @@ class Simulation(dobject):
         self.chk = None
         self.rollback = True
 
-    def bind(self,read_only=False):
+    def bind(self, read_only=False):
         """Calls the bind routines for all the objects in the simulation."""
 
         if self.tsteps <= self.step:
@@ -162,7 +162,7 @@ class Simulation(dobject):
                              "Modify total_steps or step counter to continue.")
 
         # initializes the output maker so it can be passed around to systems
-        f_start = (self.step == 0) # special operations if we're starting from scratch
+        f_start = (self.step == 0)  # special operations if we're starting from scratch
         if f_start:
             mode = "w"
         else:
@@ -173,8 +173,8 @@ class Simulation(dobject):
             # binds important computation engines
             s.bind(self)
 
-        if read_only: # returns before we open the sockets
-            return 
+        if read_only:  # returns before we open the sockets
+            return
 
         # start forcefields here so we avoid having a shitload of files printed
         # out only to find the socket is busy or whatever prevented starting the threads
@@ -188,7 +188,7 @@ class Simulation(dobject):
 
         self.outputs = []
         for o in self.outtemplate:
-            o = deepcopy(o) # avoids overwriting the actual filename
+            o = deepcopy(o)  # avoids overwriting the actual filename
             if self.outtemplate.prefix != "":
                 o.filename = self.outtemplate.prefix + "." + o.filename
             if type(o) is eoutputs.CheckpointOutput:    # checkpoints are output per simulation
@@ -202,7 +202,7 @@ class Simulation(dobject):
                         no.filename = s.prefix + "_" + no.filename
                     no.bind(s, mode)
                     self.outputs.append(no)
-                    if f_start : # starting of simulation, print headers (if any)
+                    if f_start:  # starting of simulation, print headers (if any)
                         no.print_header()
                     isys += 1
 

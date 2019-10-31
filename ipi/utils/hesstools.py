@@ -8,16 +8,16 @@ import numpy as np
 from ipi.utils.messages import verbosity, info
 import os
 
-def get_dynmat(h,  m3, nbeads=1):
+
+def get_dynmat(h, m3, nbeads=1):
     """Computes the dynamical matrix.
     If nbeads > 1 the reduced form with shape = (3*natoms, 3*natoms*nbeads) is expected"""
 
     # Check dimensions
 
-    if h.shape != (m3.shape[1], m3.shape[1]*nbeads):
+    if h.shape != (m3.shape[1], m3.shape[1] * nbeads):
         print h.shape, m3.shape
         raise ValueError("@get_dynmat: The provided hessian hasn't the proper dimension (3*natoms, 3*natoms*nbeads) ")
-
 
     ism = m3.reshape((1, -1)) ** (-0.5)
     ismT = m3[0].reshape((-1, 1)) ** (-0.5)
@@ -26,7 +26,6 @@ def get_dynmat(h,  m3, nbeads=1):
     for i in range(nbeads):
         dynmat = np.multiply(ismT, np.multiply(h, ism))
     return dynmat
-
 
 
 def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):
@@ -45,14 +44,14 @@ def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):
 
         #Adapted from ipi/engine/motion/phonons.py apply_asr    """
 
-    info(" @clean_hessian: asr = %s " %asr, verbosity.medium)
+    info(" @clean_hessian: asr = %s " % asr, verbosity.medium)
     # Set some useful things
     ii = natoms * nbeads
     mm = np.zeros((nbeads, natoms))
     for i in range(nbeads):
         mm[i] = m
     mm = mm.reshape(ii)
-    ism = m3.reshape((ii * 3,1)) ** (-0.5)
+    ism = m3.reshape((ii * 3, 1)) ** (-0.5)
     dynmat = np.multiply(ism.T, np.multiply(h, ism))
     # ismm = np.outer(ism, ism)
     # dynmat = np.multiply(h, ismm)
@@ -157,7 +156,7 @@ def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):
 def get_hessian(gm, x0, natoms, nbeads=1, fixatoms=[], d=0.001):
     """Compute the physical hessian given a function to evaluate energy and forces (gm).
        The intermediate steps are written as a temporary files so the full hessian calculations is only ONE step. 
-       
+
        IN     gm       = gradient mapper
               x0       = position vector
               natoms   = number of atoms
@@ -175,7 +174,7 @@ def get_hessian(gm, x0, natoms, nbeads=1, fixatoms=[], d=0.001):
     if x0.size != natoms * 3 * nbeads:
         raise ValueError("The position vector is not consistent with the number of atoms/beads.")
 
-    h = np.zeros((ii, ii*nbeads), float)
+    h = np.zeros((ii, ii * nbeads), float)
 
     # Check if there is a temporary file:
     i0 = -1
@@ -200,9 +199,9 @@ def get_hessian(gm, x0, natoms, nbeads=1, fixatoms=[], d=0.001):
         x = x0.copy()
 
         x[:, j] = x0[:, j] + d
-        e, f1 = gm(x,new_disc=False)
+        e, f1 = gm(x, new_disc=False)
         x[:, j] = x0[:, j] - d
-        e, f2 = gm(x,new_disc=False)
+        e, f2 = gm(x, new_disc=False)
         g = (f1 - f2) / (2 * d)
 
         h[j, :] = g.flatten()
@@ -220,4 +219,3 @@ def get_hessian(gm, x0, natoms, nbeads=1, fixatoms=[], d=0.001):
             pass
 
     return h
-
