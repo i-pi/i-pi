@@ -51,13 +51,14 @@ class Simulation(dobject):
             the current state of the simulation. This is because we cannot
             restart from half way through a step, only from the beginning of a
             step, so this is necessary for the trajectory to be continuous.
+        read_only: If set to true, it creates the simulation object but doesn't  initialize/open the sockets
 
     Depend objects:
         step: The current simulation step.
     """
 
     @staticmethod
-    def load_from_xml(fn_input, custom_verbosity=None, request_banner=False):
+    def load_from_xml(fn_input, custom_verbosity=None, request_banner=False, read_only=False):
         """Load an XML input file and return a `Simulation` object.
 
         Arguments:
@@ -91,7 +92,7 @@ class Simulation(dobject):
         simulation = input_simulation.fetch()
 
         # pipe between the components of the simulation
-        simulation.bind()
+        simulation.bind(read_only)
 
         # echo the input file if verbose enough
         if verbosity.level > 0:
@@ -153,7 +154,7 @@ class Simulation(dobject):
         self.chk = None
         self.rollback = True
 
-    def bind(self):
+    def bind(self, read_only=False):
         """Calls the bind routines for all the objects in the simulation."""
 
         if self.tsteps <= self.step:
@@ -171,6 +172,9 @@ class Simulation(dobject):
         for s in self.syslist:
             # binds important computation engines
             s.bind(self)
+
+        if read_only:  # returns before we open the sockets
+            return
 
         # start forcefields here so we avoid having a shitload of files printed
         # out only to find the socket is busy or whatever prevented starting the threads
