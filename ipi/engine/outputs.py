@@ -27,6 +27,7 @@ from ipi.engine.cell import *
 
 __all__ = ['PropertyOutput', 'TrajectoryOutput', 'CheckpointOutput', 'OutputList', 'OutputMaker', 'BaseOutput']
 
+
 class OutputList(list):
     """ A simple decorated list to save the output prefix and bring it
     back to the initialization phase of the simulation """
@@ -34,6 +35,7 @@ class OutputList(list):
     def __init__(self, prefix, olist):
         super(OutputList, self).__init__(olist)
         self.prefix = prefix
+
 
 class OutputMaker(dobject):
     """ Class to create floating outputs with an appropriate prefix """
@@ -53,11 +55,12 @@ class OutputMaker(dobject):
         rout = BaseOutput(filename)
         if mode is None:
             if self.f_start:
-                mode="w"
+                mode = "w"
             else:
-                mode="a"
+                mode = "a"
         rout.bind(mode)
         return rout
+
 
 class BaseOutput(object):
     """Base class for outputs. Deals with flushing upon close and little more """
@@ -139,7 +142,7 @@ class PropertyOutput(BaseOutput):
            outlist: A list of all the properties that should be output.
         """
 
-        super(PropertyOutput,self).__init__(filename)
+        super(PropertyOutput, self).__init__(filename)
 
         if outlist is None:
             outlist = np.zeros(0, np.dtype('|S1024'))
@@ -155,7 +158,6 @@ class PropertyOutput(BaseOutput):
            system: A System object to be bound.
         """
 
-
         # Checks as soon as possible if some asked-for properties are
         # missing or mispelled
         self.system = system
@@ -165,8 +167,7 @@ class PropertyOutput(BaseOutput):
                 print "Computable properties list: ", system.properties.property_dict.keys()
                 raise KeyError(key + " is not a recognized property")
 
-        super(PropertyOutput,self).bind(mode)
-
+        super(PropertyOutput, self).bind(mode)
 
     def print_header(self):
         # print nice header if information is available on the properties
@@ -289,7 +290,7 @@ class TrajectoryOutput(BaseOutput):
             print "Computable trajectories list: ", self.system.trajs.traj_dict.keys()
             raise KeyError(key + " is not a recognized output trajectory")
 
-        super(TrajectoryOutput,self).bind( mode)
+        super(TrajectoryOutput, self).bind(mode)
 
     def print_header(self):
         """ No headers for trajectory files """

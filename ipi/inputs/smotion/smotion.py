@@ -107,7 +107,7 @@ class InputSmotion(InputSmotionBase):
     attribs["mode"][1]["options"].append("multi")
 
     dynamic = {"smotion": (InputSmotionBase, {"default": input_default(factory=Smotion),
-                                            "help": "A smotion class that can be included as a member of a 'multi' Smotion."})
+                                              "help": "A smotion class that can be included as a member of a 'multi' Smotion."})
                }
 
     def store(self, smotion):

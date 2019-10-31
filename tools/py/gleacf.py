@@ -162,7 +162,7 @@ def gleacf(path2ixml, path2iA, path2iC, path2ifacf, oprefix, action, nrows, stri
 
         # parses the drift and diffusion matrices of the GLE thermostat.
         ttype = str(type(simul.syslist[0].motion.thermostat).__name__)
-        P =  float(simul.syslist[0].init.nbeads)
+        P = float(simul.syslist[0].init.nbeads)
         kbT = float(simul.syslist[0].ensemble.temp) * P
         simul.syslist[0].motion.thermostat.temp = kbT
 
@@ -175,7 +175,7 @@ def gleacf(path2ixml, path2iA, path2iC, path2ifacf, oprefix, action, nrows, stri
             Cp = simul.syslist[0].motion.thermostat.C[0] / kbT
             Dp = np.dot(Ap, Cp) + np.dot(Cp, Ap.T)
         elif(ttype == "ThermoLangevin" or ttype == "ThermoPILE_L"):
-            Ap = np.asarray([1.0 / simul.syslist[0].motion.thermostat.tau]).reshape((1, 1)) * tscale 
+            Ap = np.asarray([1.0 / simul.syslist[0].motion.thermostat.tau]).reshape((1, 1)) * tscale
             Cp = np.asarray([1.0]).reshape((1, 1))
             Dp = np.dot(Ap, Cp) + np.dot(Cp, Ap.T)
         else:
@@ -183,15 +183,15 @@ def gleacf(path2ixml, path2iA, path2iC, path2ifacf, oprefix, action, nrows, stri
 
     elif path2ixml == None and path2iA != None:
         Ap = np.loadtxt(path2iA, dtype=float, ndmin=2) * tscale
-        if path2iC != None: 
-          Cp = np.loadtxt(path2iC)
+        if path2iC != None:
+            Cp = np.loadtxt(path2iC)
         else:
-          Cp = np.eye(len(Ap))
+            Cp = np.eye(len(Ap))
         Dp = np.dot(Ap, Cp) + np.dot(Cp, Ap.T)
 
     else:
         raise Exception("The drift and covariance matrixes have to be provided either through the i-pi xml file or manually.")
-        
+
     # imports the facf function.
     ifacf = input_facf(path2ifacf, nrows, stride)
     ix = ifacf[:, 0]

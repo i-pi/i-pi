@@ -1,0 +1,427 @@
+<simulation mode='md' verbosity='high'>
+    <output prefix='simulation'>
+        <properties stride='1' filename='pot'>  [ pot_component_raw(0), pot_component_raw(1) ] </properties>
+        <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv{megapascal} ] </properties>
+        <trajectory stride='1' filename='pos'>  positions{angstrom} </trajectory>
+        <checkpoint stride='10'/>
+    </output>
+    <total_steps> 100 </total_steps>
+    <prng>
+        <seed>31415</seed>
+    </prng>
+    <ffsocket name='lmp_short' mode='unix'>
+        <address>h2o-pimd+mts.1_short</address>
+    </ffsocket>
+    <ffsocket name='lmp_long' mode='unix'>
+        <address>h2o-pimd+mts.1</address>
+    </ffsocket>
+    <system>
+        <initialize nbeads='1'>
+            <file mode='pdb'> init.pdb </file>
+            <velocities mode='thermal' units='kelvin'> 300 </velocities>
+        </initialize>
+        <forces>
+            <!--
+             MTS setup - apply the fast (short-range) force in the inner loop and the slow (long-range) force in the outer loop.
+             Note that if the outer loop contains a *correction* to the inner loop the weights should be
+             [-1,1] (fast force) and [1,0] (slow force)
+             -->
+            <force forcefield='lmp_short'>
+                <mts_weights>[-1,1]</mts_weights>
+            </force>
+            <force forcefield='lmp_long'>
+                <mts_weights>[ 1,0]</mts_weights>
+            </force>
+        </forces>
+        <motion mode='constrained_dynamics'>
+            <fixcom> false </fixcom>
+            <constrained_dynamics mode='nvt' splitting='baoab'>
+                <!-- This uses a mixture of constraints, some with default target value initialisation
+                     and some with explicit specification; some molecules are fully fixed, some only
+                     have internal constraints, and some only have Eckart constraints -->
+                <nsteps_geo> 5 </nsteps_geo>
+                <nsteps_o> 4 </nsteps_o>
+                <csolver>
+                    <maxit> 10000 </maxit>
+                    <norm_order> 2 </norm_order>
+                    <tolerance> .0001 </tolerance>
+                </csolver>
+                <nmts> [1, 4] </nmts>
+                <timestep units='femtosecond'> 4.0 </timestep>
+                <thermostat mode='langevin'>
+                    <tau units='femtosecond'> 5 </tau>
+                </thermostat>
+                <constraint mode="multi">
+                    <constraint mode="angle">
+                         <atoms>[0,1,2]</atoms>
+                         <values units="degree">[104.75]</values>
+                    </constraint>
+                    <constraint mode="distance">
+                         <atoms>[0,1,0,2]</atoms>
+                         <values units="angstrom">[0.96,0.96]</values>
+                    </constraint>
+                    <constraint mode="eckart">
+                         <atoms>[0,1,2]</atoms>
+                         <values units="angstrom">
+                             [ 3.8372566, 4.6989987,-0.6743520,
+                               4.5443361, 4.3348202,-0.6591143,
+                               3.9434185, 5.3120083,-1.4823316]
+                        </values>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="angle">
+                         <atoms>[3,4,5]</atoms>
+                         <values units="degree">[104.75]</values>
+                    </constraint>
+                    <constraint mode="distance">
+                         <atoms>[3,4,3,5]</atoms>
+                         <values units="angstrom">[0.96,0.96]</values>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="angle">
+                         <atoms>[6,7,8]</atoms>
+                         <values units="degree">[104.75]</values>
+                    </constraint>
+                    <constraint mode="distance">
+                         <atoms>[6,7,6,8]</atoms>
+                         <values units="angstrom">[0.96,0.96]</values>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="angle">
+                         <atoms>[9,10,11]</atoms>
+                         <values units="degree">[104.75]</values>
+                    </constraint>
+                    <constraint mode="distance">
+                         <atoms>[9,10,9,11]</atoms>
+                         <values units="angstrom">[0.96,0.96]</values>
+                    </constraint>
+                    <constraint mode="eckart">
+                         <atoms>[9,10,11]</atoms>
+                         <values units="angstrom">
+                             [-2.1805879,-0.4541683, 4.2392218,
+                              -3.0040636,-0.4960209, 4.8322081,
+                              -1.5993528,-0.9754454, 4.8620404]
+                        </values>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="angle">
+                         <atoms>[12,13,14]</atoms>
+                         <values units="degree">[104.75]</values>
+                    </constraint>
+                    <constraint mode="distance">
+                         <atoms>[12,13,12,14]</atoms>
+                         <values units="angstrom">[0.96,0.96]</values>
+                    </constraint>
+                    <constraint mode="eckart">
+                         <atoms>[12,13,14]</atoms>
+                         <values units="angstrom">
+                             [-4.5063171,-1.0984645, 11.0137306,
+                              -3.9002158,-0.6091493, 11.0768534,
+                              -5.1124067,-1.2672533, 11.8620475]
+                        </values>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="angle">
+                         <atoms>[15,16,17]</atoms>
+                         <values units="degree">[104.75]</values>
+                    </constraint>
+                    <constraint mode="distance">
+                         <atoms>[15,16,15,17]</atoms>
+                         <values units="angstrom">[0.96,0.96]</values>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="eckart">
+                         <atoms>[18,19,20]</atoms>
+                         <values units="angstrom">
+                             [ 8.1813899, 4.1093010, 0.7765578,
+                               7.7978632, 5.0514448, 0.9263880,
+                               7.7794691, 3.5630492, 1.4029249]
+                        </values>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="eckart">
+                         <atoms>[21,22,23]</atoms>
+                         <values units="angstrom">
+                             [-3.8296746, 3.2515744,-0.4902983,
+                              -3.0502534, 3.4593364,-0.0182594,
+                              -3.6790496, 2.4109471,-0.9772213]
+                        </values>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="eckart">
+                         <atoms>[24,25,26]</atoms>
+                         <values units="angstrom">
+                             [ 10.3619053,-2.5077793, 2.7732540,
+                               10.1867114,-2.0576056, 3.5683428,
+                               10.5138049,-3.4160936, 2.8717601]
+                        </values>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="angle">
+                         <atoms>[27,28,29]</atoms>
+                         <values units="degree">[104.75]</values>
+                    </constraint>
+                    <constraint mode="distance">
+                         <atoms>[27,28,27,29]</atoms>
+                         <values units="angstrom">[0.96,0.96]</values>
+                    </constraint>
+                    <constraint mode="eckart">
+                         <atoms>[27,28,29]</atoms>
+                         <values units="angstrom">
+                             [ 4.9591315, 2.5216964, 6.1637751,
+                               5.6117971, 3.2688070, 6.2000824,
+                               5.2912880, 2.0979251, 6.9466614]
+                        </values>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="angle">
+                         <atoms>[30,31,32]</atoms>
+                         <values units="degree">[104.75]</values>
+                    </constraint>
+                    <constraint mode="distance">
+                         <atoms>[30,31,30,32]</atoms>
+                         <values units="angstrom">[0.96,0.96]</values>
+                    </constraint>
+                    <constraint mode="eckart">
+                         <atoms>[30,31,32]</atoms>
+                         <values units="angstrom">
+                             [-3.1803677, 2.4780680, 2.3956603,
+                              -3.9710175, 2.3976094, 2.6774120,
+                              -2.8376122, 1.7102295, 2.1233087]
+                        </values>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="angle">
+                         <atoms>[33,34,35]</atoms>
+                         <values units="degree">[104.75]</values>
+                    </constraint>
+                    <constraint mode="distance">
+                         <atoms>[33,34,33,35]</atoms>
+                         <values units="angstrom">[0.96,0.96]</values>
+                    </constraint>
+                    <constraint mode="eckart">
+                         <atoms>[33,34,35]</atoms>
+                         <values units="angstrom">
+                             [ 3.2956295,-1.2499027, 3.1820205,
+                               2.8172177,-1.8553727, 2.7601782,
+                               2.6983146,-0.5408660, 3.3989637]
+                        </values>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="angle">
+                         <atoms>[36,37,38]</atoms>
+                         <values units="degree">[104.75]</values>
+                    </constraint>
+                    <constraint mode="distance">
+                         <atoms>[36,37,36,38]</atoms>
+                         <values units="angstrom">[0.96,0.96]</values>
+                    </constraint>
+                    <constraint mode="eckart">
+                         <atoms>[36,37,38]</atoms>
+                         <values units="angstrom">
+                             [ 1.5736648, 1.4938892, 0.7418145,
+                               0.9999392, 0.4814623, 0.5620509,
+                               1.6507137, 1.5367088, 1.8662431]
+                        </values>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="angle">
+                         <atoms>[39,40,41]</atoms>
+                         <values units="degree">[104.75]</values>
+                    </constraint>
+                    <constraint mode="distance">
+                         <atoms>[39,40,39,41]</atoms>
+                         <values units="angstrom">[0.96,0.96]</values>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="eckart">
+                         <atoms>[42,43,44]</atoms>
+                         <values units="angstrom">
+                             [-3.4922105, 6.4396111, 4.4275223,
+                              -3.1864429, 5.6978548, 5.0852053,
+                              -3.4214194, 7.3607223, 5.0601515]
+                        </values>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="angle">
+                         <atoms>[45,46,47]</atoms>
+                         <values units="degree">[104.75]</values>
+                    </constraint>
+                    <constraint mode="distance">
+                         <atoms>[45,46,45,47]</atoms>
+                         <values units="angstrom">[0.96,0.96]</values>
+                    </constraint>
+                    <constraint mode="eckart">
+                         <atoms>[45,46,47]</atoms>
+                         <values units="angstrom">
+                             [-0.9877256, 3.4067258, 4.3822256,
+                              -0.3309370, 3.8904837, 3.9410159,
+                              -1.6603550, 3.0606388, 4.0176098]
+                        </values>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="angle">
+                         <atoms>[48,49,50]</atoms>
+                    </constraint>
+                    <constraint mode="distance">
+                         <atoms>[48,49,48,50]</atoms>
+                    </constraint>
+                    <constraint mode="eckart">
+                         <atoms>[48,49,50]</atoms>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="angle">
+                         <atoms>[51,52,53]</atoms>
+                    </constraint>
+                    <constraint mode="distance">
+                         <atoms>[51,52,51,53]</atoms>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="angle">
+                         <atoms>[54,55,56]</atoms>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="eckart">
+                         <atoms>[57,58,59]</atoms>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="eckart">
+                         <atoms>[60,61,62]</atoms>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="angle">
+                         <atoms>[63,64,65]</atoms>
+                    </constraint>
+                    <constraint mode="distance">
+                         <atoms>[63,64,63,65]</atoms>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="angle">
+                         <atoms>[66,67,68]</atoms>
+                    </constraint>
+                    <constraint mode="distance">
+                         <atoms>[66,67,66,68]</atoms>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="angle">
+                         <atoms>[69,70,71]</atoms>
+                    </constraint>
+                    <constraint mode="distance">
+                         <atoms>[69,70,69,71]</atoms>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="angle">
+                         <atoms>[72,73,74]</atoms>
+                    </constraint>
+                    <constraint mode="distance">
+                         <atoms>[72,73,72,74]</atoms>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="angle">
+                         <atoms>[75,76,77]</atoms>
+                    </constraint>
+                    <constraint mode="distance">
+                         <atoms>[75,76,75,77]</atoms>
+                    </constraint>
+                    <constraint mode="eckart">
+                         <atoms>[75,76,77]</atoms>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="angle">
+                         <atoms>[78,79,80]</atoms>
+                    </constraint>
+                    <constraint mode="distance">
+                         <atoms>[78,79,78,80]</atoms>
+                    </constraint>
+                    <constraint mode="eckart">
+                         <atoms>[78,79,80]</atoms>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="angle">
+                         <atoms>[81,82,83]</atoms>
+                    </constraint>
+                    <constraint mode="distance">
+                         <atoms>[81,82,81,83]</atoms>
+                    </constraint>
+                    <constraint mode="eckart">
+                         <atoms>[81,82,83]</atoms>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="angle">
+                         <atoms>[84,85,86]</atoms>
+                    </constraint>
+                    <constraint mode="distance">
+                         <atoms>[84,85,84,86]</atoms>
+                    </constraint>
+                    <constraint mode="eckart">
+                         <atoms>[84,85,86]</atoms>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="angle">
+                         <atoms>[87,88,89]</atoms>
+                    </constraint>
+                    <constraint mode="distance">
+                         <atoms>[87,88,87,89]</atoms>
+                    </constraint>
+                    <constraint mode="eckart">
+                         <atoms>[87,88,89]</atoms>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="angle">
+                         <atoms>[90,91,92]</atoms>
+                    </constraint>
+                    <constraint mode="distance">
+                         <atoms>[90,91,90,92]</atoms>
+                    </constraint>
+                    <constraint mode="eckart">
+                         <atoms>[90,91,92]</atoms>
+                    </constraint>
+                </constraint>
+                <constraint mode="multi">
+                    <constraint mode="angle">
+                         <atoms>[93,94,95]</atoms>
+                    </constraint>
+                    <constraint mode="distance">
+                         <atoms>[93,94,93,95]</atoms>
+                    </constraint>
+                    <constraint mode="eckart">
+                         <atoms>[93,94,95]</atoms>
+                    </constraint>
+                </constraint>
+            </constrained_dynamics>
+        </motion>
+        <ensemble>
+            <temperature units='kelvin'> 300 </temperature>
+        </ensemble>
+    </system>
+</simulation>
