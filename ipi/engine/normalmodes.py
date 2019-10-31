@@ -293,14 +293,8 @@ class NormalModes(dobject):
             return 0.0
         
         if len(self.bosons) is 0 :
-
-<<<<<<< HEAD
-        sqnm = dstrip(self.qnm) * dstrip(self.beads.sm3)
-        q2 = (sqnm**2).sum(axis=1)
-=======
             sqnm = dstrip(self.qnm)*dstrip(self.beads.sm3)
             q2 = (sqnm**2).sum(axis=1)
->>>>>>> master
 
             vspring = (self.omegak2 * q2).sum()
 
