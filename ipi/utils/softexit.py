@@ -87,7 +87,12 @@ class Softexit(object):
 
             # calls all the registered emergency softexit procedures
             for f in self.flist:
-                f()
+                try:            
+                    f()
+                except RuntimeError as err:
+                    print "Error running emergency softexit, ", err
+                    pass
+                    
 
             self.exiting = False  # emergency is over, signal we can be relaxed
 
@@ -96,7 +101,8 @@ class Softexit(object):
 
         # wait for all (other) threads to finish
         for (t, dl) in self.tlist:
-            if not threading.currentThread() is self._thread:
+            if not (threading.currentThread() is self._thread or
+                    threading.currentThread() is t):
                 t.join()
 
         sys.exit()

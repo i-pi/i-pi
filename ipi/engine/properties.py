@@ -244,6 +244,9 @@ class Properties(dobject):
                           "help": "The value of the conserved energy quantity per bead.",
                           'func': (lambda: self.ensemble.econs / float(self.beads.nbeads))},
 
+            "ensemble_lp": {"dimension": "undefined",
+                                     "help": "The log of the ensemble probability",
+                                     "func": (lambda: self.ensemble.lpens)},
             "ensemble_temperature": {"dimension": "temperature",
                                      "help": "The target temperature for the current ensemble",
                                      "func": (lambda: self.ensemble.temp)},

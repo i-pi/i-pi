@@ -569,7 +569,7 @@ class Forces(dobject):
             return lambda: rpc.b1tob2(dstrip(beads.q))
 
         # creates new force objects, possibly acting on contracted path
-        # representations
+        # representations. note that this new object is always created even if no contraction is required.
         for fc in self.fcomp:
 
             # creates an automatically-updated contracted beads object
@@ -726,7 +726,12 @@ class Forces(dobject):
 
     def transfer_forces(self, refforce):
         """Low-level function copying over the value of a second force object,
-        triggering updates but un-tainting this force depends themselves."""
+        triggering updates but un-tainting this force depends themselves.
+
+        We have noted that in some corner cases it is necessary to copy only
+        the values of updated forces rather than the full depend object, in order to
+        avoid triggering a repeated call to the client code that is potentially
+        very costly. This happens routinely in geometry relaxation routines, for example."""
 
         if len(self.mforces) != len(refforce.mforces):
             raise ValueError("Cannot copy forces between objects with different numbers of components")
@@ -736,10 +741,22 @@ class Forces(dobject):
             mself = self.mforces[k]
             if mreff.nbeads != mself.nbeads:
                 raise ValueError("Cannot copy forces between objects with different numbers of beads for the " + str(k) + "th component")
+            
+            # this is VERY subtle. beads in this force component are 
+            # obtained as a contraction, and so are computed automatically.
+            # when we set the master q, these get marked as tainted. 
+            # then we copy the force value, and set the force as untainted.
+            # next time we touch the master q, the tainting does not get 
+            # propagated, because the contracted q is already marked as tainted,
+            # so the force does not get updated. we can fix this by copying
+            # the value of the contracted bead, so that it's marked as NOT 
+            # tainted - it should not be as it's an internal of the force and
+            # therefore get copied 
+            dd(mself.beads).q.set(mreff.beads.q, manual=False)
             for b in xrange(mself.nbeads):
                 dfkbref = dd(mreff._forces[b])
                 dfkbself = dd(mself._forces[b])
-                dd(dfkbself.atoms).q.set(deepcopy(dfkbref.atoms.q), manual=False)
+                
                 dfkbself.ufvx.set(deepcopy(dfkbref.ufvx._value), manual=False)
                 dfkbself.ufvx.taint(taintme=False)
 
