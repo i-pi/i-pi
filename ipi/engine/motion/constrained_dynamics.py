@@ -148,7 +148,7 @@ class ConstrainedDynamics(Dynamics):
         # to be changed dynamically, so for the moment we don't consider them depend objects
         self.nsteps_geo = nsteps_geo
         self.nsteps_o = nsteps_o
-        
+
     def get_fixdof(self):
         """Calculate the number of fixed degrees of freedom, required for
         temperature and pressure calculations.

@@ -87,12 +87,11 @@ class Softexit(object):
 
             # calls all the registered emergency softexit procedures
             for f in self.flist:
-                try:            
+                try:
                     f()
                 except RuntimeError as err:
                     print "Error running emergency softexit, ", err
                     pass
-                    
 
             self.exiting = False  # emergency is over, signal we can be relaxed
 

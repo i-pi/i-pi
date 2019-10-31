@@ -119,9 +119,8 @@ class DriverSocket(socket.socket):
         if socket:
             self.peername = self.getpeername()
         else:
-            self.peername = "no_socket"        
+            self.peername = "no_socket"
 
-        
     def send_msg(self, msg):
         """Send the next message through the socket.
 
@@ -273,16 +272,15 @@ class Driver(DriverSocket):
         """Tries to send an exit message to clients to let them exit gracefully."""
 
         if self.exit_on_disconnect:
-            trd=threading.Thread(target=softexit.trigger, kwargs={"message":"Client shutdown."})
-            trd.daemon=True
+            trd = threading.Thread(target=softexit.trigger, kwargs={"message": "Client shutdown."})
+            trd.daemon = True
             trd.start()
 
         self.sendall(Message("exit"))
         self.status = Status.Disconnected
-            
+
         super(DriverSocket, self).shutdown(how)
-            
-            
+
     def get_status(self):
         """ Sets (and returns) the client internal status. Wait for an answer if
             the client is busy. """
@@ -432,7 +430,7 @@ class Driver(DriverSocket):
         try:
             r["result"] = self.getforce()
         except Disconnected:
-            self.status = Status.Disconnected            
+            self.status = Status.Disconnected
             return
 
         if len(r["result"][1]) != len(r["pos"][r["active"]]):
@@ -484,8 +482,8 @@ class InterfaceSocket(object):
           update the list of clients and then be reset to zero.
     """
 
-    def __init__(self, address="localhost", port=31415, slots=4, 
-                mode="unix", timeout=1.0, match_mode="auto", exit_on_disconnect=False):
+    def __init__(self, address="localhost", port=31415, slots=4,
+                 mode="unix", timeout=1.0, match_mode="auto", exit_on_disconnect=False):
         """Initialises interface.
 
         Args:
@@ -510,9 +508,9 @@ class InterfaceSocket(object):
         self.mode = mode
         self.timeout = timeout
         self.poll_iter = UPDATEFREQ  # triggers pool_update at first poll
-        self.prlist = [] # list of pending requests
-        self.match_mode = match_mode # heuristics to match jobs and active clients
-        self.requests = None # these will be linked to the request list of the FFSocket object using the interface
+        self.prlist = []  # list of pending requests
+        self.match_mode = match_mode  # heuristics to match jobs and active clients
+        self.requests = None  # these will be linked to the request list of the FFSocket object using the interface
         self.exit_on_disconnect = exit_on_disconnect
 
     def open(self):
@@ -632,10 +630,10 @@ class InterfaceSocket(object):
                 driver.get_status()
                 if (driver.status | Status.Up):
                     driver.exit_on_disconnect = self.exit_on_disconnect
-                    self.clients.append(driver)                    
+                    self.clients.append(driver)
                     info(" @SOCKET:   Handshaking was successful. Added to the client list.", verbosity.low)
                     self.poll_iter = UPDATEFREQ   # if a new client was found, will try again harder next time
-                    searchtimeout = SERVERTIMEOUT                    
+                    searchtimeout = SERVERTIMEOUT
                 else:
                     warning(" @SOCKET:   Handshaking failed. Dropping connection.", verbosity.low)
                     client.shutdown(socket.SHUT_RDWR)

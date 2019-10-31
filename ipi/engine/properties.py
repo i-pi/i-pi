@@ -245,8 +245,8 @@ class Properties(dobject):
                           'func': (lambda: self.ensemble.econs / float(self.beads.nbeads))},
 
             "ensemble_lp": {"dimension": "undefined",
-                                     "help": "The log of the ensemble probability",
-                                     "func": (lambda: self.ensemble.lpens)},
+                            "help": "The log of the ensemble probability",
+                            "func": (lambda: self.ensemble.lpens)},
             "ensemble_temperature": {"dimension": "temperature",
                                      "help": "The target temperature for the current ensemble",
                                      "func": (lambda: self.ensemble.temp)},

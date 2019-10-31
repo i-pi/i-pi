@@ -118,8 +118,8 @@ class InputFFSocket(InputForceField):
                                      "default": 4,
                                      "help": "This gives the number of client codes that can queue at any one time."}),
               "exit_on_disconnect": (InputValue, {"dtype": bool,
-                                     "default": False,
-                                     "help": "Determines if i-PI should quit when a client disconnects."}),
+                                                  "default": False,
+                                                  "help": "Determines if i-PI should quit when a client disconnects."}),
               "timeout": (InputValue, {"dtype": float,
                                        "default": 0.0,
                                        "help": "This gives the number of seconds before assuming a calculation has died. If 0 there is no timeout."})}
@@ -164,7 +164,7 @@ class InputFFSocket(InputForceField):
         self.mode.store(ff.socket.mode)
         self.matching.store(ff.socket.match_mode)
         self.exit_on_disconnect.store(ff.socket.exit_on_disconnect)
-        self.threaded.store(True) #hard-coded
+        self.threaded.store(True)  # hard-coded
 
     def fetch(self):
         """Creates a ForceSocket object.
@@ -179,8 +179,8 @@ class InputFFSocket(InputForceField):
         return FFSocket(pars=self.parameters.fetch(), name=self.name.fetch(), latency=self.latency.fetch(), dopbc=self.pbc.fetch(),
                         active=self.activelist.fetch(), threaded=self.threaded.fetch(),
                         interface=InterfaceSocket(address=self.address.fetch(), port=self.port.fetch(),
-                                                 slots=self.slots.fetch(), mode=self.mode.fetch(), timeout=self.timeout.fetch(),
-                                                 match_mode=self.matching.fetch(), exit_on_disconnect=self.exit_on_disconnect.fetch()))
+                                                  slots=self.slots.fetch(), mode=self.mode.fetch(), timeout=self.timeout.fetch(),
+                                                  match_mode=self.matching.fetch(), exit_on_disconnect=self.exit_on_disconnect.fetch()))
 
     def check(self):
         """Deals with optional parameters."""

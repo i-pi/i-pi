@@ -246,7 +246,7 @@ class nm_rescale(object):
         Args:
            q: A matrix with nbeads1 rows, in the bead representation.
         """
-        
+
         if self.noop:
             # still must return a copy, as the contraction is meant to return new data, not a view
             q_scal = q.copy()
@@ -255,7 +255,7 @@ class nm_rescale(object):
             q_scal = np.dot(self._b1tob2, q)
             if len(self._open) > 0:
                 if len(q_scal.shape) == 2:
-                    for io in self._open:  
+                    for io in self._open:
                         q_scal[:, 3 * io] = np.dot(self._o_b1tob2, q[:, 3 * io])
                         q_scal[:, 3 * io + 1] = np.dot(self._o_b1tob2, q[:, 3 * io + 1])
                         q_scal[:, 3 * io + 2] = np.dot(self._o_b1tob2, q[:, 3 * io + 2])
@@ -274,16 +274,16 @@ class nm_rescale(object):
         Args:
            q: A matrix with nbeads2 rows, in the bead representation.
         """
-        
+
         if self.noop:
             # still must return a copy, as the contraction is meant to return new data, not a view
             q_scal = q.copy()
-        else:        
+        else:
             # see b1tob2 for an explanation of the rationale for dealing with open path transformations
             q_scal = np.dot(self._b2tob1, q)
             if len(self._open) > 0:
                 if len(q_scal.shape) == 2:
-                    for io in self._open:  
+                    for io in self._open:
                         q_scal[:, 3 * io] = np.dot(self._o_b2tob1, q[:, 3 * io])
                         q_scal[:, 3 * io + 1] = np.dot(self._o_b2tob1, q[:, 3 * io + 1])
                         q_scal[:, 3 * io + 2] = np.dot(self._o_b2tob1, q[:, 3 * io + 2])
