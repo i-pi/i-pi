@@ -668,7 +668,7 @@ class DummyOptimizer(dobject):
         # Print current instanton geometry
         if (self.options["save"] > 0 and np.mod(step, self.options["save"]) == 0) or self.exit:
             print_instanton_geo(self.options["prefix"], step, self.beads.nbeads, self.beads.natoms,
-                                self.beads.names, self.beads.q, self.forces.pots, self.cell,
+                                self.beads.names, self.beads.q, self.forces.f,self.forces.pots, self.cell,
                                 self.optarrays["energy_shift"], self.output_maker)
 
     def pre_step(self, step=None, adaptative=False):
