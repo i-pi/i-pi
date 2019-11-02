@@ -128,7 +128,11 @@ class Ensemble(dobject):
         self.time = time
 
     def copy(self):
-        return Ensemble(self.eens, 0.0, self.temp, self.pext, dstrip(self.stressext).copy())
+        return Ensemble(eens = self.eens, econs = 0.0, temp=self.temp,
+                        pext=self.pext, stressext =dstrip(self.stressext).copy(),
+                        bcomponents = self.bcomp, bweights = dstrip(self.bweights).copy(),
+                        hweights = dstrip(self.hweights).copy(),
+                        time = self.time)
 
     def bind(self, beads, nm, cell, bforce, fflist, elist=[], xlpot=[], xlkin=[]):
         self.beads = beads

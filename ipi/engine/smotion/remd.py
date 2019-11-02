@@ -67,12 +67,11 @@ class ReplicaExchange(Smotion):
 
         super(ReplicaExchange, self).__init__()
 
-        self.swapfile = swapfile  # !TODO make this an option!
-        self.rescalekin = krescale  # !TODO make this an option!
+        self.swapfile = swapfile  
+        self.rescalekin = krescale  
         # replica exchange options
         self.stride = stride
 
-        #! TODO ! allow saving and storing the replica indices
         if repindex is None:
             self.repindex = np.zeros(0, int)
         else:
@@ -198,7 +197,6 @@ class ReplicaExchange(Smotion):
                    # velocities have to be adjusted according to the new temperature
 
         if fxc:  # writes out the new status
-            # with open(self.swapfile, "a") as sf:
             self.sf.write("% 10d" % (step))
             for i in self.repindex:
                 self.sf.write(" % 5d" % (i))
