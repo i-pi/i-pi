@@ -134,6 +134,16 @@ class ReplicaExchange(Smotion):
                         sl[j].motion.barostat.p *= (ti / tj)
                     except AttributeError:
                         pass
+
+                try: # if motion has a barostat, and the barostat has a reference cell, does the swap
+                     # as that when there are very different pressures, the cell should reflect the
+                     # pressure/temperature dependence. this also changes the barostat conserved quantities
+                     bjh = dstrip(sl[j].motion.barostat.h0.h).copy()
+                     sl[j].motion.barostat.h0.h[:] = sl[i].motion.barostat.h0.h[:]
+                     sl[i].motion.barostat.h0.h[:] = bjh
+                except AttributeError:
+                    pass
+
                 t_swap += time.time()
 
                 t_eval -= time.time()
@@ -172,6 +182,13 @@ class ReplicaExchange(Smotion):
                             sl[j].motion.barostat.p *= (tj / ti)
                         except AttributeError:
                             pass
+                    try:
+                        bjh = dstrip(sl[j].motion.barostat.h0.h).copy()
+                        sl[j].motion.barostat.h0.h[:] = sl[i].motion.barostat.h0.h[:]
+                        sl[i].motion.barostat.h0.h[:] = bjh
+                    except AttributeError:
+                        pass
+
                     t_swap += time.time()
                     info(" @ PT:  SWAP REJECTED BETWEEN replicas % 5d and % 5d." % (i, j), verbosity.low)
 
