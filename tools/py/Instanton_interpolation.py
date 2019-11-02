@@ -2,7 +2,7 @@
 
 """ Instanton_interpolation.py
 Reads a hessian file  and/or a positions file (xyz format) and creates an interpolation
-that can be used in a further calculation
+that can be used in a further instanton optimization with more beads
 
 Syntax manual:    python  Instanton_interpolation.py -m -xyz <geometry file> -h <hessian file> -n <new-beads(half-polymer)>
 Syntax chk:       python  Instanton_interpolation.py -chk  <checkpoint_file>  -n <new-beads(half-polymer)>
@@ -55,11 +55,11 @@ manual = args.manual
 
 if not manual:
     if chk == 'None':
-        print 'Manual mode not specified and checkpoint file name not provided'
+        print('Manual mode not specified and checkpoint file name not provided')
         sys.exit()
 else:
     if input_geo == 'None':
-        print 'Manual mode  specified and geometry file name not provided'
+        print('Manual mode  specified and geometry file name not provided')
         sys.exit()
 
 # OPEN AND READ   ###########################################################3
@@ -70,7 +70,7 @@ if input_geo != 'None' or chk != 'None':
         if (os.path.exists(input_geo)):
             ipos = open(input_geo, "r")
         else:
-            print "We can't find %s " % input_geo
+            print("We can't find".format(input_geo))
             sys.exit()
 
         pos = list()
@@ -94,7 +94,7 @@ if input_geo != 'None' or chk != 'None':
         if (os.path.exists(chk)):
             simulation = Simulation.load_from_xml(chk, custom_verbosity='low', request_banner=False)
         else:
-            print "We can't find %s " % chk
+            print("We can't find".format(chk))
             sys.exit()
         cell = simulation.syslist[0].cell
         beads = simulation.syslist[0].motion.beads.copy()
@@ -103,40 +103,44 @@ if input_geo != 'None' or chk != 'None':
         q = beads.q
         atom = beads._blist[0]
 
-    print ' '
-    print 'We have a half ring polymer made of %i beads and %i atoms.' % (nbeads, natoms)
-    print 'We will expand the ring polymer to get a half polymer of %i beads.' % nbeadsNew
+    print(' ')
+    print('We have a half ring polymer made of {} beads and {} atoms.'.format(nbeads, natoms))
+    print('We will expand the ring polymer to get a half polymer of {} beads.'.format(nbeadsNew))
 
-    # Compose the full ring polymer.
-    #q2 = np.concatenate((q, np.flipud(q)), axis=0)
+    # Make the rpc step (standar)
+    # q2 = np.concatenate((q, np.flipud(q)), axis=0)   # Compose the full ring polymer.
+    # rpc = nm_rescale(2 * nbeads, 2 * nbeadsNew)
+    # new_q = rpc.b1tob2(q2)[0:nbeadsNew]
+    # Make the rpc step (instanton)
+    # rpc = nm_rescale(nbeads, nbeadsNew,instanton=True)
+    # new_q = rpc.b1tob2(q )
 
-    # Make the rpc step
-    #rpc = nm_rescale(2 * nbeads, 2 * nbeadsNew)
-    #new_q = rpc.b1tob2(q2)[0:nbeadsNew]
-    rpc = nm_rescale(nbeads, nbeadsNew, np.asarray(range(natoms)))  # We use open path RPC
+    # Make the rpc step (open path)
+    rpc = nm_rescale(nbeads, nbeadsNew, np.asarray(range(natoms)))
     new_q = rpc.b1tob2(q)
 
     # Print
-    out = open("NEW_INSTANTON.xyz", "w")
+    out = open("new_instanton.xyz", "w")
     for i in range(nbeadsNew):
         atom.q = new_q[i] / unit_to_internal("length", "angstrom", 1.0)  # Go back to angstrom
         print_file("xyz", atom, cell, out, title='cell{atomic_unit}  Traj: positions{angstrom}')
         # print_file("xyz",pos[0],cell,out,title='cell  }')
     out.close()
 
-    print 'The new Instanton geometry (half polymer) was generated'
-    print 'Check NEW_INSTANTON.xyz'
-    print ''
-    print 'Remeber to change the number of beads (%i) in your input' % nbeadsNew
-    print ''
+    print('The new Instanton geometry (half polymer) was generated')
+    print('Check new_instanton.xyz')
+    print('')
+    print("Don't forget to change the number of beads to the new value ({}) in your input file".format(nbeadsNew))
+    print('when starting your new simulation with an increased number of beads.')
+    print('')
 
 if input_hess != 'None' or chk != 'None':
 
     if manual:
-        if (os.path.exists(input_hess)):
+        try:
             hess = open(input_hess, "r")
-        else:
-            print "We can't find %s " % input_hess
+        except:
+            print("We can't find".format(input_hess))
             sys.exit()
         h = np.zeros((natoms * 3)**2 * nbeads)
         aux = hess.readline().split()
@@ -151,16 +155,16 @@ if input_hess != 'None' or chk != 'None':
         try:
             h = simulation.syslist[0].motion.hessian.copy()
         except:
-            print "We don't have a hessian so there is nothing more to do"
+            print("We don't have a hessian so there is nothing more to do")
             sys.exit()
         if np.linalg.norm(h) < 1e-13:
-            print "We don't have a hessian so there is nothing more to do"
+            print("We don't have a hessian so there is nothing more to do")
             sys.exit()
 
-    print 'The new hessian is %i x %i.' % (3 * natoms, natoms * 3 * nbeadsNew)
-    out = open("NEW_HESSIAN.dat", "w")
+    print('The new hessian is {} x {}.'.format(3 * natoms, natoms * 3 * nbeadsNew))
+    out = open("new_hessian.dat", "w")
 
-    print 'Creating matrix... '
+    print('Creating matrix... ')
 #    hessian = get_double_h(nbeads, natoms, h)
 
     hessian = h
@@ -171,28 +175,31 @@ if input_hess != 'None' or chk != 'None':
     size2 = size0 * nbeadsNew
 
     new_h = np.zeros([size0, size2])
-    rpc = nm_rescale(nbeads, nbeadsNew, np.asarray(range(1)))  # We use open path RPC
+    # rpc = nm_rescale(nbeads, nbeadsNew, np.asarray(range(1)))  # We use open path RPC
+    rpc = nm_rescale(nbeads, nbeadsNew, instanton=True)
+    new_q = rpc.b1tob2(q)
 
     for i in range(size0):
         for j in range(size0):
             h = np.array([])
             for n in range(nbeads):
                 h = np.append(h, hessian[i, j + size0 * n])
-            h3 = np.concatenate((h, h, h), axis=0).reshape((h.size, 3), order='F')  # Open path expect three coordinates per atom
-            diag = rpc.b1tob2(h3)[:, 0]
+#           h3 = np.concatenate((h, h, h), axis=0).reshape((h.size, 3), order='F')  # Open path expect three coordinates per atom
+#           diag = rpc.b1tob2(h3)[:, 0]
+            diag = rpc.b1tob2(h)
             new_h[i, j:size2:size0] += diag
 
     #new_h_half = new_h[:, 0:size2 / 2]
     #np.savetxt(out, new_h_half.reshape(1, new_h_half.size))
-    new_h_half = new_h[:, 0:size2 / 2]
+#   new_h_half = new_h[:, 0:size2 / 2]
     np.savetxt(out, new_h.reshape(1, new_h.size))
 
-    print 'The new physical Hessian (half polymer) was generated'
-    print 'Check NEW_HESSIAN.dat'
-    print ''
-    print 'Remeber to adapt/add the following line in your input:'
-    print ''
-    print " <hessian mode='file' shape='(%i, %i)' >hessian.dat</hessian>" % (3 * natoms, natoms * 3 * nbeadsNew)
-    print ''
+    print('The new physical Hessian (half polymer) was generated')
+    print('Check new_hessian.dat')
+    print('')
+    print('Remeber to adapt/add the following line in your input:')
+    print('')
+    print(" <hessian mode='file' shape='({}, {})' >hessian.dat</hessian>".format(3 * natoms, natoms * 3 * nbeadsNew))
+    print('')
 
 sys.exit()

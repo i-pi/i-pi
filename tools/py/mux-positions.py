@@ -62,7 +62,7 @@ def main(fns_in, fn_out, begin, end, stride, wrap, unwrap):
 
         try:
             # Get the frames from all trajectories...
-            for idx,trj in enumerate(trjs_in):
+            for idx, trj in enumerate(trjs_in):
                 frame = trj.next()
 
                 # gets units from first frame
@@ -72,10 +72,9 @@ def main(fns_in, fn_out, begin, end, stride, wrap, unwrap):
                 if wrap:
                     frame = wrap_positions(frame)
                 if unwrap:
-                    frame = unwrap_positions(frame,frame_last[idx])
+                    frame = unwrap_positions(frame, frame_last[idx])
 
                 frame_last[idx] = frame.copy()
-
 
                 # ... and possibly save them in the output trajectory.
                 if do_output:
@@ -102,32 +101,33 @@ def main(fns_in, fn_out, begin, end, stride, wrap, unwrap):
 
 def wrap_positions(frame):
     pos = frame['atoms'].q.copy()
-    pos.shape = (len(pos)/3,3)
+    pos.shape = (len(pos) / 3, 3)
     cell = frame['cell'].h
     cell_inv = np.linalg.inv(cell)
-    s = np.dot(cell_inv,pos.T)
+    s = np.dot(cell_inv, pos.T)
     s -= np.round(s)
-    frame['atoms'].q = np.dot(cell,s).T.flatten()
+    frame['atoms'].q = np.dot(cell, s).T.flatten()
     return frame
 
-def unwrap_positions(frame,framelast):
+
+def unwrap_positions(frame, framelast):
     if framelast is None:
         return frame
 
-    poslast_uwr       = framelast['atoms'].q.copy()
-    poslast_uwr.shape = (len(poslast_uwr)/3,3)
+    poslast_uwr = framelast['atoms'].q.copy()
+    poslast_uwr.shape = (len(poslast_uwr) / 3, 3)
 
-    pos               = frame['atoms'].q.copy()
-    pos.shape         = (len(pos)/3,3)
+    pos = frame['atoms'].q.copy()
+    pos.shape = (len(pos) / 3, 3)
 
     d = pos - poslast_uwr
 
-    cell            = frame['cell'].h
-    cell_inv        = np.linalg.inv(cell)
-    s = np.dot(cell_inv,d.T)
+    cell = frame['cell'].h
+    cell_inv = np.linalg.inv(cell)
+    s = np.dot(cell_inv, d.T)
     s -= np.round(s)
-    d = np.dot(cell,s).T
-    frame['atoms'].q = (poslast_uwr+d).flatten()
+    d = np.dot(cell, s).T
+    frame['atoms'].q = (poslast_uwr + d).flatten()
     return frame
 
 if __name__ == '__main__':
@@ -144,9 +144,9 @@ if __name__ == '__main__':
                         help='Step to end.')
     parser.add_argument('--stride', type=int, default=1,
                         help='Stride in steps.')
-    parser.add_argument('--wrap',  action='store_true', default=False,
+    parser.add_argument('--wrap', action='store_true', default=False,
                         help='Wrap atomic positions.')
-    parser.add_argument('--unwrap',  action='store_true', default=False,
+    parser.add_argument('--unwrap', action='store_true', default=False,
                         help='Unwrap atomic positions.')
 
     args = parser.parse_args()

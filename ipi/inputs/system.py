@@ -121,14 +121,14 @@ class InputSystem(Input):
                                           "default": input_default(factory=Initializer)}),
         "forces": (InputForces, {"help": InputForces.default_help}),
         "ensemble": (InputEnsemble, {"help": InputEnsemble.default_help,
-                                   "default": input_default(factory=Ensemble, kwargs={'temp': 1.0})}),
+                                     "default": input_default(factory=Ensemble, kwargs={'temp': 1.0})}),
         "motion": (InputMotion, {"help": InputMotion.default_help, "default": input_default(factory=Motion)}),
         "beads": (InputBeads, {"help": InputBeads.default_help,
-                             "default": input_default(factory=Beads, kwargs={'natoms': 0, 'nbeads': 0})}),
+                               "default": input_default(factory=Beads, kwargs={'natoms': 0, 'nbeads': 0})}),
         "normal_modes": (InputNormalModes, {"help": InputNormalModes.default_help,
-                                          "default": input_default(factory=NormalModes, kwargs={'mode': "rpmd"})}),
+                                            "default": input_default(factory=NormalModes, kwargs={'mode': "rpmd"})}),
         "cell": (InputCell, {"help": InputCell.default_help,
-                                   "default": input_default(factory=Cell)})
+                             "default": input_default(factory=Cell)})
     }
 
     attribs = {

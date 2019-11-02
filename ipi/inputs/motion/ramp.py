@@ -38,24 +38,24 @@ class InputTemperatureRamp(InputDictionary):
 
     fields = {
         "t_start": (InputValue, {"dtype": float,
-                                "dimension" : "energy",
-                                "default": 1.0,
-                                "help": "Initial temperature"
-                                }),
+                                 "dimension": "energy",
+                                 "default": 1.0,
+                                 "help": "Initial temperature"
+                                 }),
         "t_end": (InputValue, {"dtype": float,
-                                "dimension" : "energy",
-                                "default": 1.0,
-                                "help": "Final temperature"
-                                }),
+                               "dimension": "energy",
+                               "default": 1.0,
+                               "help": "Final temperature"
+                               }),
         "logscale": (InputValue, {"dtype": bool,
-                                     "default": False,
-                                     "help": "Change temperature on a logarihthmic scale."}),
+                                  "default": False,
+                                  "help": "Change temperature on a logarihthmic scale."}),
          "total_steps": (InputValue, {"dtype": int,
-                               "default":0,
-                               "help": "Total number of steps for the ramp"}),
+                                      "default": 0,
+                                      "help": "Total number of steps for the ramp"}),
          "current_step": (InputValue, {"dtype": int,
-                               "default": 0,
-                               "help": "Current step along the ramp"})
+                                       "default": 0,
+                                       "help": "Current step along the ramp"})
     }
 
     default_help = """TemperatureRamp Motion class. It just updates the ensemble
@@ -86,24 +86,24 @@ class InputPressureRamp(InputDictionary):
 
     fields = {
         "p_start": (InputValue, {"dtype": float,
-                                "dimension" : "pressure",
-                                "default": 1.0,
-                                "help": "Initial pressure"
-                                }),
+                                 "dimension": "pressure",
+                                 "default": 1.0,
+                                 "help": "Initial pressure"
+                                 }),
         "p_end": (InputValue, {"dtype": float,
-                                "dimension" : "pressure",
-                                "default": 1.0,
-                                "help": "Final pressure"
-                                }),
+                               "dimension": "pressure",
+                               "default": 1.0,
+                               "help": "Final pressure"
+                               }),
         "logscale": (InputValue, {"dtype": bool,
-                                     "default": False,
-                                     "help": "Change pressure on a logarihthmic scale."}),
+                                  "default": False,
+                                  "help": "Change pressure on a logarihthmic scale."}),
          "total_steps": (InputValue, {"dtype": int,
-                               "default":0,
-                               "help": "Total number of steps for the ramp"}),
+                                      "default": 0,
+                                      "help": "Total number of steps for the ramp"}),
          "current_step": (InputValue, {"dtype": int,
-                               "default": 0,
-                               "help": "Current step along the ramp"})
+                                       "default": 0,
+                                       "help": "Current step along the ramp"})
     }
 
     default_help = """PressureRamp Motion class. It just updates the ensemble

@@ -862,19 +862,21 @@ class InputValue(InputAttribute):
         if units != "":
             self.units.store(units)  # User can define in the code the units to be printed
 
-        self.value = value
         if self._dimension != "undefined":
-            self.value *= unit_to_user(self._dimension, units, 1.0)
+            self.value = value * unit_to_user(self._dimension, units, 1.0)
+        else:
+            self.value = value
 
     def fetch(self):
         """Returns the stored data in the user defined units."""
 
         super(InputValue, self).fetch()
 
-        rval = self.value
         if self._dimension != "undefined":
-            rval *= unit_to_internal(self._dimension, self.units.fetch(), 1.0)
-        return rval
+            print "returning ", self.value * unit_to_internal(self._dimension, self.units.fetch(), 1.0)
+            return self.value * unit_to_internal(self._dimension, self.units.fetch(), 1.0)
+        else:
+            return self.value
 
     def write(self, name="", indent=""):
         """Writes data in xml file format.
@@ -944,7 +946,7 @@ class InputArray(InputValue):
     attribs["mode"] = (InputAttribute, {"dtype": str,
                                         "default": "manual",
                                         "options": ["manual", "file"],
-                                        "help": "If 'mode' is 'manual', then the array is read from the content of 'cell' takes a 9-elements vector containing the cell matrix (row-major). If 'mode' is 'abcABC', then 'cell' takes an array of 6 floats, the first three being the length of the sides of the system parallelopiped, and the last three being the angles (in degrees) between those sides. Angle A corresponds to the angle between sides b and c, and so on for B and C. If mode is 'abc', then this is the same as for 'abcABC', but the cell is assumed to be orthorhombic. 'pdb' and 'chk' read the cell from a PDB or a checkpoint file, respectively."})
+                                        "help": "If 'mode' is 'manual', then the array is read in directly, then reshaped according to the 'shape' specified in a row-major manner. If 'mode' is 'file' then the array is read in from the file given."})
 
     def __init__(self, help=None, default=None, dtype=None, dimension=None):
         """Initialises InputArray.
@@ -984,9 +986,9 @@ class InputArray(InputValue):
 
         # if the shape is not specified, assume the array is linear.
         if self.shape.fetch() == (0,):
-            value = np.resize(self.value, 0).copy()
+            value = np.resize(value, 0).copy()
         else:
-            value = self.value.reshape(self.shape.fetch()).copy()
+            value = value.reshape(self.shape.fetch()).copy()
 
         return value
 
