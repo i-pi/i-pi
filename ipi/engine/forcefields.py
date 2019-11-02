@@ -33,6 +33,7 @@ try:
 except Exception as quippy_exc:
     quippy = None
 
+
 class ForceRequest(dict):
 
     """An extension of the standard Python dict class which only has a == b
@@ -272,7 +273,8 @@ class FFSocket(ForceField):
             communication between the forcefield and the driver is done.
     """
 
-    def __init__(self, latency=1.0, name="", pars=None, dopbc=True, active=np.array([-1]), threaded=True, interface=None, matching="auto"):
+    def __init__(self, latency=1.0, name="", pars=None, dopbc=True,
+                 active=np.array([-1]), threaded=True, interface=None):
         """Initialises FFSocket.
 
         Args:
@@ -467,8 +469,8 @@ class FFQUIP(ForceField):
         self.pot.calc(self.atoms, energy=True, force=True, virial=True)
 
         # Obtains the energetics and converts to i-pi units.
-        u = self.atoms.energy  / self.energy_conv
-        f = self.atoms.force.T.flatten()   / self.force_conv
+        u = self.atoms.energy / self.energy_conv
+        f = self.atoms.force.T.flatten() / self.force_conv
         v = np.triu(self.atoms.virial) / self.energy_conv
 
         r["result"] = [u, f.reshape(nat * 3), v, ""]

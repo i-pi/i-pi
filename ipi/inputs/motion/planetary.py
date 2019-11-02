@@ -35,33 +35,33 @@ class InputPlanetary(InputDictionary):
     """
 
     attribs = {
-        "mode": (InputAttribute, {"dtype":   str,
+        "mode": (InputAttribute, {"dtype": str,
                                   "default": 'md',
-                                  "help":    "The constrained-centroid sampling mode. ",
+                                  "help": "The constrained-centroid sampling mode. ",
                                   "options": ['md']})
-              }
+    }
 
     fields = {
         "thermostat": (InputThermo, {"default": input_default(factory=ipi.engine.thermostats.Thermostat),
-                                     "help":    "The thermostat for the atoms, keeps the atom velocity distribution at the correct temperature."}),
-        "timestep": (InputValue, {"dtype":     float,
-                                  "default":   1.0,
-                                  "help":      "The time step.",
+                                     "help": "The thermostat for the atoms, keeps the atom velocity distribution at the correct temperature."}),
+        "timestep": (InputValue, {"dtype": float,
+                                  "default": 1.0,
+                                  "help": "The time step.",
                                   "dimension": "time"}),
-        "nmts" : (InputArray, {"dtype" : int,
-                               "default" : np.zeros(0,int),
-                               "help"    : "Number of iterations for each MTS level (including the outer loop, that should in most cases have just one iteration)."}),
-        "nsamples" : (InputValue, {"dtype" : int, "default" : 0,
-                               "help"    : "Number of samples to accumulate for each planetary step."}),
-        "stride" : (InputValue, {"dtype" : int, "default" : 1,
-                               "help"    : "How often the planetary calculation should actually be triggered."}),
-        "nbeads" : (InputValue, {"dtype" : int, "default" : -1,
-                               "help"    : "Number of beads for centroid-constrained dynamics (default same as master trajectory)"}),
-        "screen" : (InputValue, {"dtype" : float, "default" : 0.0,
-                               "dimension": "length",
-                               "help"    : "Screening parameter for path-integral frequency matrix."})
-          
-             }
+        "nmts": (InputArray, {"dtype": int,
+                              "default": np.zeros(0, int),
+                              "help": "Number of iterations for each MTS level (including the outer loop, that should in most cases have just one iteration)."}),
+        "nsamples": (InputValue, {"dtype": int, "default": 0,
+                                  "help": "Number of samples to accumulate for each planetary step."}),
+        "stride": (InputValue, {"dtype": int, "default": 1,
+                                "help": "How often the planetary calculation should actually be triggered."}),
+        "nbeads": (InputValue, {"dtype": int, "default": -1,
+                                "help": "Number of beads for centroid-constrained dynamics (default same as master trajectory)"}),
+        "screen": (InputValue, {"dtype": float, "default": 0.0,
+                                "dimension": "length",
+                                "help": "Screening parameter for path-integral frequency matrix."})
+
+    }
 
     dynamic = {}
 
@@ -81,7 +81,7 @@ class InputPlanetary(InputDictionary):
         self.mode.store(plan.mode)
         self.timestep.store(plan.ccdyn.dt)
         self.thermostat.store(plan.ccdyn.thermostat)
-        self.nmts.store(plan.ccdyn.nmts) 
+        self.nmts.store(plan.ccdyn.nmts)
         self.nsamples.store(plan.nsamples)
         self.stride.store(plan.stride)
         self.screen.store(plan.screen)

@@ -9,6 +9,7 @@
 
 from .motion import Motion
 from .dynamics import Dynamics
+from .constrained_dynamics import ConstrainedDynamics
 from .replay import Replay
 from .geop import GeopMotion
 from .instanton import InstantonMotion
