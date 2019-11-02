@@ -24,9 +24,11 @@ Classes:
 import numpy as np
 from copy import copy
 import ipi.engine.initializer
+
 from ipi.engine.motion import Motion, Dynamics, ConstrainedDynamics, Replay, GeopMotion, NEBMover,\
     DynMatrixMover, MultiMotion, AlchemyMC, InstantonMotion,\
-    TemperatureRamp, PressureRamp, AtomSwap, Planetary
+    TemperatureRamp, PressureRamp, AtomSwap, Planetary, AlKMC
+
 from ipi.utils.inputvalue import *
 from ipi.inputs.thermostats import *
 from ipi.inputs.initializer import *
@@ -40,6 +42,7 @@ from .alchemy import InputAlchemy
 from .atomswap import InputAtomSwap
 from .planetary import InputPlanetary
 from .ramp import InputTemperatureRamp, InputPressureRamp
+from .al6xxx_kmc import InputAlKMC
 from ipi.utils.units import *
 
 __all__ = ['InputMotion']
@@ -63,7 +66,7 @@ class InputMotionBase(Input):
 
     attribs = {"mode": (InputAttribute, {"dtype": str,
                                          "help": "How atoms should be moved at each step in the simulatio. 'replay' means that a simulation is replayed from trajectories provided to i-PI.",
-                                         "options": ['vibrations', 'minimize', 'replay', 'neb', 'dynamics', 'constrained_dynamics', 't_ramp', 'p_ramp', 'alchemy', 'atomswap', 'planetary', 'instanton', 'dummy']})}
+                                         "options": ['vibrations', 'minimize', 'replay', 'neb', 'dynamics', 'constrained_dynamics', 't_ramp', 'p_ramp', 'alchemy', 'atomswap', 'planetary', 'instanton', 'al-kmc', 'dummy']})}
 
     fields = {"fixcom": (InputValue, {"dtype": bool,
                                       "default": True,
@@ -93,6 +96,8 @@ class InputMotionBase(Input):
                                              "help": "Option for pressure ramp"}),
               "instanton": (InputInst, {"default": {},
                                         "help": "Option for Instanton optimization"}),
+              "al6xxx_kmc" : ( InputAlKMC, { "default" : {},
+                                             "help":  "Option for Al-6xxx KMC" } ),
               "planetary": (InputPlanetary, {"default": {},
                                              "help": "Option for planetary model calculator"})
               }
@@ -158,6 +163,9 @@ class InputMotionBase(Input):
         elif type(sc) is PressureRamp:
             self.mode.store("p_ramp")
             self.p_ramp.store(sc)
+        elif type(sc) is AlKMC:
+            self.mode.store("al-kmc")
+            self.al6xxx_kmc.store(sc)
             tsc = 1
         else:
             raise ValueError("Cannot store Mover calculator of type " + str(type(sc)))
@@ -202,6 +210,8 @@ class InputMotionBase(Input):
             sc = TemperatureRamp(**self.t_ramp.fetch())
         elif self.mode.fetch() == "p_ramp":
             sc = PressureRamp(**self.p_ramp.fetch())
+        elif self.mode.fetch() == "al-kmc":
+            sc = AlKMC(fixcom=self.fixcom.fetch(), fixatoms=self.fixatoms.fetch(), **self.al6xxx_kmc.fetch() )
         else:
             sc = Motion()
             # raise ValueError("'" + self.mode.fetch() + "' is not a supported motion calculation mode.")
