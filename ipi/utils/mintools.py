@@ -510,7 +510,6 @@ def BFGS(x0, d0, fdf, fdf0, invhessian, big_step, tol, itmax):
     d_x = np.subtract(x, x0)
 
     # Update invhessian.
-    # Here we are breaking the fixatom constrain I
     d_g = np.subtract(g, g0)
     hdg = np.dot(invhessian, d_g.flatten())
 
@@ -532,7 +531,6 @@ def BFGS(x0, d0, fdf, fdf0, invhessian, big_step, tol, itmax):
         info(" @MINIMIZE: Skipped invhessian update; direction x gradient insufficient", verbosity.debug)
 
     # Update direction
-    # Here we are breaking the fixatom constrain II
     d = np.dot(invhessian, -g.flatten())
     d0[:] = d.reshape(d_x.shape)
     info(" @MINIMIZE: Updated search direction", verbosity.debug)
@@ -740,10 +738,10 @@ def L_BFGS(x0, d0, fdf, qlist, glist, fdf0, big_step, tol, itmax, m, scale, k):
     big_step = big_step * max(np.sqrt(linesum), n)
 
     # MC try to resolve the stuck BFGS bug
-    if (np.dot(g0.flatten(), d0.flatten())>0.0):
+    if (np.dot(g0.flatten(), d0.flatten()) > 0.0):
         # reset search direction if we are moving uphill!
         info(" @MINIMIZE: moving uphill, resetting search direction! ", verbosity.debug)
-        d0 = g0/np.sqrt(np.dot(g0.flatten(),g0.flatten()))
+        d0 = g0 / np.sqrt(np.dot(g0.flatten(), g0.flatten()))
 
     print "@ GEOP step ", big_step
     # Perform approximate line minimization in direction d0

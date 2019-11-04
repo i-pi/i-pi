@@ -263,9 +263,9 @@ class InputOutputs(Input):
         use any mutable objects as arguments.
         """
 
-        return eoutputs.OutputList("i-pi",[eoutputs.PropertyOutput(filename="md", stride=10, outlist=["time", "step", "conserved", "temperature", "potential", "kinetic_cv"]),
-                eoutputs.TrajectoryOutput(filename="pos", stride=100, what="positions", format="xyz"),
-                eoutputs.CheckpointOutput(filename="checkpoint", stride=1000, overwrite=True)])
+        return eoutputs.OutputList("i-pi", [eoutputs.PropertyOutput(filename="md", stride=10, outlist=["time", "step", "conserved", "temperature", "potential", "kinetic_cv"]),
+                                            eoutputs.TrajectoryOutput(filename="pos", stride=100, what="positions", format="xyz"),
+                                            eoutputs.CheckpointOutput(filename="checkpoint", stride=1000, overwrite=True)])
 
     def fetch(self):
         """Returns a list of the output objects included in this dynamic
@@ -278,7 +278,7 @@ class InputOutputs(Input):
         """
 
         super(InputOutputs, self).fetch()
-        outlist = eoutputs.OutputList(self.prefix.fetch(),  [p.fetch() for (n, p) in self.extra])
+        outlist = eoutputs.OutputList(self.prefix.fetch(), [p.fetch() for (n, p) in self.extra])
 
         return outlist
 
@@ -299,7 +299,7 @@ class InputOutputs(Input):
         if len(self.extra) != len(plist):
             self.extra = [0] * len(plist)
 
-        for ii,el in enumerate(plist):
+        for ii, el in enumerate(plist):
             if (isinstance(el, eoutputs.PropertyOutput)):
                 if isinstance(self.extra[ii], InputProperties):
                     self.extra[ii][1].store(el)

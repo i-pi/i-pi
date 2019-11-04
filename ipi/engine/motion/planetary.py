@@ -21,6 +21,7 @@ from ipi.utils.units import Constants
 from ipi.utils.io import netstring_encoded_savez
 from ipi.utils.messages import verbosity, info
 
+
 class Planetary(Motion):
     """Evaluation of the matrices needed in a planetary model by
     centroid-constrained MD. Basically uses a nested motion class
@@ -76,7 +77,6 @@ class Planetary(Motion):
         # centroid propagation at each time step
         self.ccdyn = Dynamics(timestep, mode="nvt-cc", thermostat=thermostat, nmts=nmts, fixcom=fixcom, fixatoms=fixatoms)
 
-
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         """Binds ensemble beads, cell, bforce, and prng to the dynamics.
 
@@ -114,10 +114,10 @@ class Planetary(Motion):
             self.dnm = nm.copy()
             self.dnm.mode = "rpmd"
         else:
-            self.dnm = nm.copy(freqs = nm.omegak[1]*self.nbeads*np.sin(np.pi/self.nbeads) \
-                                      * np.ones(self.nbeads-1)
-                                      / (beads.nbeads*np.sin(np.pi/beads.nbeads))
-                             )
+            self.dnm = nm.copy(freqs=nm.omegak[1] * self.nbeads * np.sin(np.pi / self.nbeads)
+                               * np.ones(self.nbeads - 1)
+                               / (beads.nbeads * np.sin(np.pi / beads.nbeads))
+                               )
             self.dnm.mode = "manual"
 
         self.dnm.bind(ens, self, beads=self.dbeads, forces=self.dforces)
@@ -127,13 +127,13 @@ class Planetary(Motion):
         self.dens.bind(self.dbeads, self.dnm, self.dcell, self.dforces, self.dbias)
 
         self.natoms = self.dbeads.natoms
-        natoms3 = self.dbeads.natoms*3
-        self.omega2 = np.zeros((natoms3,natoms3), float)
+        natoms3 = self.dbeads.natoms * 3
+        self.omega2 = np.zeros((natoms3, natoms3), float)
 
         # initializes counters
         self.tmc = 0
         self.tmtx = 0
-        self.tsave =0
+        self.tsave = 0
         self.neval = 0
 
         # finally, binds the ccdyn object
@@ -148,18 +148,17 @@ class Planetary(Motion):
         sm3 = dstrip(self.dbeads.sm3)
         qms = dstrip(dnm.qnm) * sm3
         fms = dstrip(dnm.fnm) / sm3
-        fms[0,:]=0
-        qms[0,:]=0
-        qms *= (dnm.omegak**2)[:,np.newaxis]
+        fms[0, :] = 0
+        qms[0, :] = 0
+        qms *= (dnm.omegak**2)[:, np.newaxis]
 
-        self.omega2 += np.tensordot(fms,fms,axes=(0,0))
-        qffq = np.tensordot(fms,qms,axes=(0,0))
+        self.omega2 += np.tensordot(fms, fms, axes=(0, 0))
+        qffq = np.tensordot(fms, qms, axes=(0, 0))
         qffq = qffq + qffq.T
         qffq *= 0.5
         self.omega2 -= qffq
 
     def matrix_screen(self):
-
         """ Computes a screening matrix to avoid the impact of
         noisy elements of the covariance and frequency matrices for
         far-away atoms """
@@ -173,19 +172,18 @@ class Planetary(Motion):
         sij = np.matmul(self.dcell.h, sij)
         sij = sij.reshape(3, self.natoms, self.natoms).transpose()
         # take square magnitudes of distances
-        sij = np.sum(sij*sij, axis=2)
+        sij = np.sum(sij * sij, axis=2)
         # screen with Heaviside step function
         sij = (sij < self.screen**2).astype(float)
         # sij = np.exp(-sij / (self.screen**2))
         # acount for 3 dimensions
-        sij = np.concatenate((sij,sij,sij), axis=0)
-        sij = np.concatenate((sij,sij,sij), axis=1)
+        sij = np.concatenate((sij, sij, sij), axis=0)
+        sij = np.concatenate((sij, sij, sij), axis=1)
         sij = sij.reshape(-1).reshape(-1, self.natoms).transpose()
-        sij = sij.reshape(-1).reshape(-1, 3*self.natoms).transpose()
+        sij = sij.reshape(-1).reshape(-1, 3 * self.natoms).transpose()
         return sij
 
     def save_matrix(self, matrix):
-
         """ Writes the compressed, sparse frequency matrix to a netstring encoded file """
 
         sparse.save_npz(self.fomega2, matrix, saver=netstring_encoded_savez, compressed=True)
@@ -200,7 +198,7 @@ class Planetary(Motion):
         self.dnm.qnm[:] = self.basenm.qnm[:self.nbeads] * np.sqrt(self.nbeads) / np.sqrt(self.basebeads.nbeads)
 
         # Randomized momenta
-        self.dnm.pnm = self.prng.gvec((self.dbeads.nbeads,3*self.dbeads.natoms))*np.sqrt(self.dnm.dynm3)*np.sqrt(self.dens.temp*self.dbeads.nbeads*Constants.kb)
+        self.dnm.pnm = self.prng.gvec((self.dbeads.nbeads, 3 * self.dbeads.natoms)) * np.sqrt(self.dnm.dynm3) * np.sqrt(self.dens.temp * self.dbeads.nbeads * Constants.kb)
         self.dnm.pnm[0] = 0.0
 
         # Resets the frequency matrix
@@ -221,7 +219,7 @@ class Planetary(Motion):
 
         self.neval += 1
 
-        self.omega2 /= self.dbeads.nbeads*self.dens.temp*(self.nsamples+1)*(self.dbeads.nbeads-1)
+        self.omega2 /= self.dbeads.nbeads * self.dens.temp * (self.nsamples + 1) * (self.dbeads.nbeads - 1)
         self.tsave -= time.time()
 
         if self.screen > 0.0:
@@ -240,4 +238,4 @@ class Planetary(Motion):
         self.save_matrix(save_omega2)
 
         self.tsave += time.time()
-        info("@ PLANETARY MODEL Average timing: %f s, %f s, %f s\n" %( self.tmc/self.neval, self.tmtx/self.neval, self.tsave/self.neval ), verbosity.high)
+        info("@ PLANETARY MODEL Average timing: %f s, %f s, %f s\n" % (self.tmc / self.neval, self.tmtx / self.neval, self.tsave / self.neval), verbosity.high)

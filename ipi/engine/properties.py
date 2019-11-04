@@ -244,6 +244,9 @@ class Properties(dobject):
                           "help": "The value of the conserved energy quantity per bead.",
                           'func': (lambda: self.ensemble.econs / float(self.beads.nbeads))},
 
+            "ensemble_lp": {"dimension": "undefined",
+                            "help": "The log of the ensemble probability",
+                            "func": (lambda: self.ensemble.lpens)},
             "ensemble_temperature": {"dimension": "temperature",
                                      "help": "The target temperature for the current ensemble",
                                      "func": (lambda: self.ensemble.temp)},
@@ -785,17 +788,16 @@ class Properties(dobject):
             # Adds a fake momentum to the centre of mass. This is the easiest way
             # of getting meaningful temperatures for subsets of the system when there
             # are fixed components
-            M = np.sum(self.beads.m) 
+            M = np.sum(self.beads.m)
             pcm = np.tile(np.sqrt(M * Constants.kb * self.ensemble.temp * self.beads.nbeads), 3)
             vcm = np.tile(pcm / M, self.beads.natoms)
 
             self.beads.p += self.beads.m3 * vcm
 
-            #Avoid double counting
+            # Avoid double counting
             if len(self.motion.fixatoms) > 0:
                 for i in self.motion.fixatoms:
-                    self.beads.p[:, 3 * i:3 * i + 3] -= np.multiply(self.beads.m[i] , pcm/M )
-
+                    self.beads.p[:, 3 * i:3 * i + 3] -= np.multiply(self.beads.m[i], pcm / M)
 
         kemd, ncount = self.get_kinmd(atom, bead, nm, return_count=True)
 

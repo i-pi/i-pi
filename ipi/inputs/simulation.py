@@ -94,14 +94,14 @@ class InputSimulation(Input):
 
     dynamic = {
         "system": (InputSystem, {"help": InputSystem.default_help}),
-              "system_template": (InputSysTemplate, {"help": InputSysTemplate.default_help}),
-              "ffsocket": (iforcefields.InputFFSocket, {"help": iforcefields.InputFFSocket.default_help}),
-              "fflj": (iforcefields.InputFFLennardJones, {"help": iforcefields.InputFFLennardJones.default_help}),
-              "ffquip": (iforcefields.InputFFQUIP, {"help": iforcefields.InputFFQUIP.default_help}),
-              "ffdebye": (iforcefields.InputFFDebye, {"help": iforcefields.InputFFDebye.default_help}),
-              "ffplumed": (iforcefields.InputFFPlumed, {"help": iforcefields.InputFFPlumed.default_help}),
-              "ffyaff": (iforcefields.InputFFYaff, {"help": iforcefields.InputFFYaff.default_help}),
-              "ffcommittee": (iforcefields.InputFFMulti, {"help": iforcefields.InputFFMulti.default_help})
+        "system_template": (InputSysTemplate, {"help": InputSysTemplate.default_help}),
+        "ffsocket": (iforcefields.InputFFSocket, {"help": iforcefields.InputFFSocket.default_help}),
+        "fflj": (iforcefields.InputFFLennardJones, {"help": iforcefields.InputFFLennardJones.default_help}),
+        "ffquip": (iforcefields.InputFFQUIP, {"help": iforcefields.InputFFQUIP.default_help}),
+        "ffdebye": (iforcefields.InputFFDebye, {"help": iforcefields.InputFFDebye.default_help}),
+        "ffplumed": (iforcefields.InputFFPlumed, {"help": iforcefields.InputFFPlumed.default_help}),
+        "ffyaff": (iforcefields.InputFFYaff, {"help": iforcefields.InputFFYaff.default_help}),
+        "ffcommittee": (iforcefields.InputFFMulti, {"help": iforcefields.InputFFMulti.default_help})
     }
 
     default_help = "This is the top level class that deals with the running of the simulation, including holding the simulation specific properties such as the time step and outputting the data."
