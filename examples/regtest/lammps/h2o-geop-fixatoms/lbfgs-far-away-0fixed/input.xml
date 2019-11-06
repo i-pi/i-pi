@@ -1,5 +1,5 @@
 <!-- REGTEST
-DEPENDENCIES init.far-away.xyz in.far-away.lmp data.far-away.water
+DEPENDENCIES ../init.far-away.xyz in.far-away.lmp data.far-away.water
 COMMAND(1) lmp_mpi -i in.far-away.lmp
 ENDREGTEST -->
 <!-- Note that DEPENDENCIES can be modified by sed in 'prepare-folders.sh' -->
@@ -16,7 +16,7 @@ ENDREGTEST -->
   </ffsocket>
   <system>
     <initialize nbeads='1'>
-      <file mode='xyz'> init.far-away.xyz </file>
+      <file mode='xyz'> ../init.far-away.xyz </file>
     </initialize>
     <forces>
       <force forcefield='water-geop'> </force>
