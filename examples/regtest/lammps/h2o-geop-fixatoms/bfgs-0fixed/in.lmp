@@ -3,7 +3,7 @@
 units		real	
 atom_style	full
 
-read_data	data.water
+read_data	../data.water
 
 pair_style	lj/cut/coul/long 9.8 9.8
 kspace_style	pppm 1.0e-4
