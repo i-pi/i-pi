@@ -165,7 +165,8 @@ class Dynamics(Motion):
         dpipe(dself.ntemp, dbaro.temp)
         dpipe(dens.pext, dbaro.pext)
         dpipe(dens.stressext, dbaro.stressext)
-        self.barostat.bind(beads, nm, cell, bforce, prng=prng, fixdof=fixdof, nmts=len(self.nmts))
+        self.barostat.bind(beads, nm, cell, bforce, bias=self.ensemble.bias,
+                            prng=prng, fixdof=fixdof, nmts=len(self.nmts))
 
         # now that the timesteps are decided, we proceed to bind the integrator.
         self.integrator.bind(self)
