@@ -1,0 +1,38 @@
+<!-- REGTEST
+DEPENDENCIES init.xyz in.lmp data.water
+COMMAND(1) lmp_mpi -i in.lmp
+ENDREGTEST -->
+<!-- Note that DEPENDENCIES can be modified by sed in 'prepare-folders.sh' -->
+
+<simulation mode='static' verbosity='medium'>
+  <output prefix='sim-2fixed.lbfgs'>
+    <properties stride='1' filename='out'>  [ step, potential{electronvolt} ] </properties>
+    <trajectory stride='1' filename='pos'>  positions  </trajectory>
+  </output>
+  <total_steps> 10000 </total_steps>
+  <ffsocket name='water-geop' mode='unix' pbc='true'>
+    <address> water-geop </address>
+    <latency> 1e-3</latency>
+  </ffsocket>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='xyz'> init.xyz </file>
+    </initialize>
+    <forces>
+      <force forcefield='water-geop'> </force>
+    </forces>
+    <motion mode='minimize'>
+      <fixatoms> [1,2] </fixatoms>
+      <optimizer mode='lbfgs'>
+        <ls_options>  <tolerance> 1e-2 </tolerance> </ls_options>
+        <tolerances>
+<!--          <energy> 1e-6 </energy>-->
+          <energy units='electronvolt'> 1e-3 </energy>
+          <position> 1e-4 </position>
+<!--          <force> 1e-4 </force>-->
+          <force units='ev/ang'> 1e-2 </force>
+        </tolerances>
+      </optimizer>
+    </motion>
+  </system>
+</simulation>
