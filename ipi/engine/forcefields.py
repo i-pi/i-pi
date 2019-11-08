@@ -791,30 +791,40 @@ class FFMulti(ForceField):
             req["ff_handles"].append(ff.queue(atoms, cell, reqid))        
         return req
     
+    def check_finish(self, r):
+        """ Checks if all sub-requests associated with a given 
+        request are finished """
+        for ff_r in r["ff_handles"]:
+            if ff_r["status"] != "Done":
+                return False
+        return True
+        
+    def gather(self, r):
+        """ Collects results from all sub-requests """
+        ff_res = []
+        for ff_r in r["ff_handles"]:
+            ff_res.append({
+            "v": ff_r["result"][0],
+            "f": list(ff_r["result"][1]),
+            "s": list(ff_r["result"][2].flatten()),
+            "x": ff_r["result"][3],
+            })
+        return ff_res
+        
     def poll(self):
         """Polls the forcefield object to check if it has finished."""
 
         with self._threadlock:
             for r in self.requests:
-                f_finished = True
-                for ff_r in r["ff_handles"]:
-                    if ff_r["status"] != "Done":
-                        f_finished = False
-                        break
-                if f_finished:
+                if self.check_finish(r):
+                    r["ff_results"] = self.gather(r)
                     r["t_dispatched"] = time.time()
                     r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]
                     r["t_finished"] = time.time()
-                    r["ff_results"] = []
-                    for ff_r in r["ff_handles"]:
-                        r["ff_results"].append({
-                        "v": ff_r["result"][0],
-                        "f": list(ff_r["result"][1]),
-                        "s": list(ff_r["result"][2].flatten()),
-                        "x": ff_r["result"][3],
-                        })
-                        for i in range(3):
-                            r["result"][i] += ff_r["result"][i]
+                    for res in r["ff_results"]:
+                        r["result"][0] += res["v"]
+                        r["result"][1] += np.asarray(res["f"])
+                        r["result"][2] += np.asarray(res["s"]).reshape((3,3))                        
                     r["result"][3] = json.dumps({
                         "position"  : list(r["pos"]),
                         "committee" : r["ff_results"] 
