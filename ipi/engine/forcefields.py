@@ -11,6 +11,7 @@ layer for a driver that gets positions and returns forces (and energy).
 
 import time
 import threading
+import json
 
 import numpy as np
 
@@ -761,3 +762,65 @@ class FFYaff(ForceField):
         r["result"] = [e, -gpos.ravel(), -vtens, ""]
         r["status"] = "Done"
         r["t_finished"] = time.time()
+
+class FFMulti(ForceField):
+    """ Combines multiple forcefields into a single forcefield object
+        that consolidates individual components """
+        
+    def __init__(self, latency=1.0, name="", pars=None, dopbc=True, active=np.array([-1]), threaded=True, fflist=[]):
+        
+        # force threaded mode as otherwise it cannot have threaded children
+        super(FFMulti, self).__init__(latency=latency, name=name, 
+                    pars=pars, dopbc=dopbc, active=active, threaded=True)
+        if len(fflist)==0:
+            raise ValueError("Multi forcefield cannot be initialized from an empty list")
+        self.fflist = fflist
+        self.ff_requests = {}        
+    
+    def start(self):
+        for ff in self.fflist:
+            ff.start()
+        super(FFMulti, self).start()
+
+    def queue(self, atoms, cell, reqid=-1):
+        
+        req = super(FFMulti, self).queue(atoms, cell, reqid)
+        
+        req["ff_handles"] = []
+        for ff in self.fflist:
+            req["ff_handles"].append(ff.queue(atoms, cell, reqid))        
+        return req
+    
+    def poll(self):
+        """Polls the forcefield object to check if it has finished."""
+
+        with self._threadlock:
+            for r in self.requests:
+                f_finished = True
+                for ff_r in r["ff_handles"]:
+                    if ff_r["status"] != "Done":
+                        f_finished = False
+                        break
+                if f_finished:
+                    r["t_dispatched"] = time.time()
+                    r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]
+                    r["t_finished"] = time.time()
+                    r["ff_results"] = []
+                    for ff_r in r["ff_handles"]:
+                        r["ff_results"].append({
+                        "v": ff_r["result"][0],
+                        "f": list(ff_r["result"][1]),
+                        "s": list(ff_r["result"][2].flatten()),
+                        "x": ff_r["result"][3],
+                        })
+                        for i in range(3):
+                            r["result"][i] += ff_r["result"][i]
+                    r["result"][3] = json.dumps({
+                        "position"  : list(r["pos"]),
+                        "committee" : r["ff_results"] 
+                        })
+                    r["status"] = "Done"
+                        
+                        
+                    
+     

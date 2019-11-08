@@ -8,14 +8,15 @@
 from copy import copy
 import numpy as np
 
-from ipi.engine.forcefields import ForceField, FFSocket, FFLennardJones, FFQUIP, FFDebye, FFPlumed, FFYaff
+from ipi.engine.forcefields import ForceField, FFSocket, FFLennardJones, FFQUIP, FFDebye, FFPlumed, FFYaff, FFMulti
 from ipi.interfaces.sockets import InterfaceSocket
 import ipi.engine.initializer
 from ipi.inputs.initializer import *
 from ipi.utils.inputvalue import *
 
 
-__all__ = ["InputFFSocket", 'InputFFLennardJones', 'InputFFQUIP', 'InputFFDebye', 'InputFFPlumed', 'InputFFYaff', 'InputFFCommittee']
+__all__ = ["InputFFSocket", 'InputFFLennardJones', 'InputFFQUIP', 'InputFFDebye', 
+            'InputFFPlumed', 'InputFFYaff', 'InputFFMulti']
 
 
 class InputForceField(Input):
@@ -376,10 +377,10 @@ class InputFFYaff(InputForceField):
         dopbc=self.pbc.fetch(), threaded=self.threaded.fetch())
 
 
-class InputFFMulti(Input):
+class InputFFMulti(InputForceField):
     default_help = """A class to consolidate multiple FF inputs in a single XML field"""
-    default_label = "FFMULTI"
-
+    default_label = "FFMULTI"    
+    
     dynamic = {
           "ffsocket": (InputFFSocket, {"help": InputFFSocket.default_help}),
           "fflj": (InputFFLennardJones, {"help": InputFFLennardJones.default_help}),
@@ -390,35 +391,37 @@ class InputFFMulti(Input):
     }
 
     def store(self, ff):
-        """ TODO WRITE DOCSTRING """
-        _fflist = [v for k, v in sorted(ff.fflist.iteritems())]
+        """ Store all the sub-forcefields """
+        
+        super(InputFFMulti, self).store(ff)
+        _fflist = ff.fflist
         if len(self.extra) != len(_fflist):
             self.extra = [0] * len(_fflist)
 
 
         for _ii, _obj, in enumerate(_fflist):
             if self.extra[_ii] == 0:
-                if isinstance(_obj, eforcefields.FFSocket):
+                if isinstance(_obj, FFSocket):
                     _iobj = InputFFSocket()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("ffsocket", _iobj)
-                elif isinstance(_obj, eforcefields.FFLennardJones):
+                elif isinstance(_obj, FFLennardJones):
                     _iobj = InputFFLennardJones()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("fflj", _iobj)
-                elif isinstance(_obj, eforcefields.FFQUIP):
+                elif isinstance(_obj, FFQUIP):
                     _iobj = InputFFQUIP()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("ffquip", _iobj)
-                elif isinstance(_obj, eforcefields.FFDebye):
+                elif isinstance(_obj, FFDebye):
                     _iobj = InputFFDebye()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("ffdebye", _iobj)
-                elif isinstance(_obj, eforcefields.FFPlumed):
+                elif isinstance(_obj, FFPlumed):
                     _iobj = InputFFPlumed()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("ffplumed", _iobj)
-                elif isinstance(_obj, eforcefields.FFYaff):
+                elif isinstance(_obj, FFYaff):
                     _iobj = InputFFYaff()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("ffyaff", _iobj)
@@ -426,7 +429,7 @@ class InputFFMulti(Input):
                 self.extra[_ii][1].store(_obj)
 
     def fetch(self):
-        """ TODO WRITE DOCSTRING """
+        """ Fetches all of the FF objects """
 
         super(InputFFMulti, self).fetch()
 
@@ -435,4 +438,7 @@ class InputFFMulti(Input):
             fflist.append(v.fetch())
 
         # TODO: will actually need to create a FF object here!
-        return fflist
+        return FFMulti(pars=self.parameters.fetch(), name=self.name.fetch(),
+                       latency=self.latency.fetch(), dopbc=self.pbc.fetch(),
+                       fflist = fflist)
+

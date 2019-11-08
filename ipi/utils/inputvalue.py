@@ -803,7 +803,11 @@ class InputAttribute(Input):
            A string giving the stored value in the appropriate format.
         """
 
-        return name + "='" + write_type(self.type, self.value) + "'"
+        try:
+            return name + "='" + write_type(self.type, self.value) + "'"
+        except:
+            print "Error writing attribute ", name
+            raise
 
 
 class InputValue(InputAttribute):

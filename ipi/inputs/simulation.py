@@ -101,7 +101,7 @@ class InputSimulation(Input):
         "ffdebye": (iforcefields.InputFFDebye, {"help": iforcefields.InputFFDebye.default_help}),
         "ffplumed": (iforcefields.InputFFPlumed, {"help": iforcefields.InputFFPlumed.default_help}),
         "ffyaff": (iforcefields.InputFFYaff, {"help": iforcefields.InputFFYaff.default_help}),
-        "ffcommittee": (iforcefields.InputFFMulti, {"help": iforcefields.InputFFMulti.default_help})
+        "ffmulti": (iforcefields.InputFFMulti, {"help": iforcefields.InputFFMulti.default_help})
     }
 
     default_help = "This is the top level class that deals with the running of the simulation, including holding the simulation specific properties such as the time step and outputting the data."
@@ -171,6 +171,10 @@ class InputSimulation(Input):
                     _iobj = iforcefields.InputFFYaff()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("ffyaff", _iobj)
+                elif isinstance(_obj, eforcefields.FFMulti):
+                    _iobj = iforcefields.InputFFMulti()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffmulti", _iobj)
                 elif isinstance(_obj, System):
                     _iobj = InputSystem()
                     _iobj.store(_obj)
