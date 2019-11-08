@@ -9,11 +9,15 @@
   <prng>
     <seed>31415</seed>
   </prng>
-  <ffmulti name="committee">
-    <ffsocket name='lammps' mode='unix'>
+  <ffcommittee name="committee">
+    <weights> [ 1, 1 ] </weights>
+    <ffsocket name='lammps-1' mode='unix'>
       <address>h2o-pimd.1</address>
     </ffsocket>
-  </ffmulti>
+    <ffsocket name='lammps-2' mode='unix'>
+      <address>h2o-pimd.2</address>
+    </ffsocket>
+  </ffcommittee>
   <system>
     <initialize nbeads='1'>
       <file mode='pdb'> init.pdb </file>

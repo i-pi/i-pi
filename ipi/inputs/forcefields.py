@@ -8,7 +8,8 @@
 from copy import copy
 import numpy as np
 
-from ipi.engine.forcefields import ForceField, FFSocket, FFLennardJones, FFQUIP, FFDebye, FFPlumed, FFYaff, FFMulti
+from ipi.engine.forcefields import (ForceField, FFSocket, FFLennardJones, 
+                                    FFQUIP, FFDebye, FFPlumed, FFYaff, FFCommittee)
 from ipi.interfaces.sockets import InterfaceSocket
 import ipi.engine.initializer
 from ipi.inputs.initializer import *
@@ -16,7 +17,7 @@ from ipi.utils.inputvalue import *
 
 
 __all__ = ["InputFFSocket", 'InputFFLennardJones', 'InputFFQUIP', 'InputFFDebye', 
-            'InputFFPlumed', 'InputFFYaff', 'InputFFMulti']
+            'InputFFPlumed', 'InputFFYaff', 'InputFFCommittee']
 
 
 class InputForceField(Input):
@@ -377,9 +378,11 @@ class InputFFYaff(InputForceField):
         dopbc=self.pbc.fetch(), threaded=self.threaded.fetch())
 
 
-class InputFFMulti(InputForceField):
-    default_help = """A class to consolidate multiple FF inputs in a single XML field"""
-    default_label = "FFMULTI"    
+class InputFFCommittee(InputForceField):
+    default_help = """A class to consolidate multiple FF inputs in a single XML field.
+                      Also contains options to use it for uncertainty estimation and for
+                      active learning in a ML context, based on a committee model."""
+    default_label = "FFCOMMITTEE"    
     
     dynamic = {
           "ffsocket": (InputFFSocket, {"help": InputFFSocket.default_help}),
@@ -390,14 +393,24 @@ class InputFFMulti(InputForceField):
           "ffyaff": (InputFFYaff, {"help": InputFFYaff.default_help})
     }
 
+    fields = copy(InputForceField.fields)
+
+    fields["weights"] =  (InputArray, {"dtype": float,
+                                       "default": np.array([]),
+                                       "help": "List of weights to be given to the forcefields. Defaults to 1 for each FF. Note that the components are divided by the number of FF, and so the default corresponds to an average."})
+    fields["alpha"] =  (InputValue, {"dtype": float,
+                                     "default": 1.0,
+                                     "help": "Scaling of the variance of the model, corresponding to a calibration of the error "} )
+
     def store(self, ff):
         """ Store all the sub-forcefields """
         
-        super(InputFFMulti, self).store(ff)
-        _fflist = ff.fflist
+        super(InputFFCommittee, self).store(ff)
+        _fflist = ff.fflist        
         if len(self.extra) != len(_fflist):
             self.extra = [0] * len(_fflist)
-
+        self.weights.store(ff.ffweights)
+        self.alpha.store(ff.alpha)
 
         for _ii, _obj, in enumerate(_fflist):
             if self.extra[_ii] == 0:
@@ -431,14 +444,15 @@ class InputFFMulti(InputForceField):
     def fetch(self):
         """ Fetches all of the FF objects """
 
-        super(InputFFMulti, self).fetch()
+        super(InputFFCommittee, self).fetch()
 
         fflist = []
         for (k, v) in self.extra:
             fflist.append(v.fetch())
 
         # TODO: will actually need to create a FF object here!
-        return FFMulti(pars=self.parameters.fetch(), name=self.name.fetch(),
+        return FFCommittee(pars=self.parameters.fetch(), name=self.name.fetch(),
                        latency=self.latency.fetch(), dopbc=self.pbc.fetch(),
-                       fflist = fflist)
+                       fflist = fflist, ffweights = self.weights.fetch(),
+                       alpha = self.alpha.fetch())
 

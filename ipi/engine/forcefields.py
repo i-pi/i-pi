@@ -102,7 +102,7 @@ class ForceField(dobject):
         self._doloop = [False]
         self._threadlock = threading.Lock()
 
-    def queue(self, atoms, cell, reqid=-1):
+    def queue(self, atoms, cell, reqid=-1, append=True):
         """Adds a request.
 
         Note that the pars dictionary need to be sent as a string of a
@@ -171,8 +171,9 @@ class ForceField(dobject):
             "t_finished": 0
         })
 
-        with self._threadlock:
-            self.requests.append(newreq)
+        if append:
+            with self._threadlock:
+                self.requests.append(newreq)
 
         if not self.threaded:
             self.poll()
@@ -763,32 +764,44 @@ class FFYaff(ForceField):
         r["status"] = "Done"
         r["t_finished"] = time.time()
 
-class FFMulti(ForceField):
+class FFCommittee(ForceField):
     """ Combines multiple forcefields into a single forcefield object
         that consolidates individual components """
         
-    def __init__(self, latency=1.0, name="", pars=None, dopbc=True, active=np.array([-1]), threaded=True, fflist=[]):
+    def __init__(self, latency=1.0, name="", pars=None, dopbc=True, 
+            active=np.array([-1]), threaded=True, fflist=[], 
+            ffweights=[], alpha = 1.0):
         
         # force threaded mode as otherwise it cannot have threaded children
-        super(FFMulti, self).__init__(latency=latency, name=name, 
+        super(FFCommittee, self).__init__(latency=latency, name=name, 
                     pars=pars, dopbc=dopbc, active=active, threaded=True)
         if len(fflist)==0:
-            raise ValueError("Multi forcefield cannot be initialized from an empty list")
+            raise ValueError("Committee forcefield cannot be initialized from an empty list")
         self.fflist = fflist
-        self.ff_requests = {}        
-    
+        self.ff_requests = {}
+        if len(ffweights)==0:
+            ffweights = np.ones(len(fflist))
+        if len(ffweights) != len(fflist):
+            raise ValueError("List of weights does not match length of committee model")
+        self.ffweights = ffweights
+        self.alpha = alpha
+            
     def start(self):
         for ff in self.fflist:
             ff.start()
-        super(FFMulti, self).start()
+        super(FFCommittee, self).start()
 
     def queue(self, atoms, cell, reqid=-1):
         
-        req = super(FFMulti, self).queue(atoms, cell, reqid)
-        
-        req["ff_handles"] = []
+        ffh = []
         for ff in self.fflist:
-            req["ff_handles"].append(ff.queue(atoms, cell, reqid))        
+            ffh.append(ff.queue(atoms, cell, reqid))        
+        
+        req = super(FFCommittee, self).queue(atoms, cell, reqid, append=False)
+        req["ff_handles"] = ffh
+        with self._threadlock:
+            self.requests.append(req)
+
         return req
     
     def check_finish(self, r):
@@ -802,14 +815,31 @@ class FFMulti(ForceField):
     def gather(self, r):
         """ Collects results from all sub-requests """
         ff_res = []
+        r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]                    
+        
+        # first computes (weighted) mean
+        tw = self.ffweights.sum()
+        for i_r, ff_r in enumerate(r["ff_handles"]):
+            if (ff_r["status"] != "Done"):
+                print ff_r["status"], "WHYYYY"
+                raise ValueError("Should be finished")
+            r["result"][0] += ff_r["result"][0]*self.ffweights[i_r]/tw
+            r["result"][1] += ff_r["result"][1]*self.ffweights[i_r]/tw
+            r["result"][2] += ff_r["result"][2]*self.ffweights[i_r]/tw
+        
         for ff_r in r["ff_handles"]:
             ff_res.append({
-            "v": ff_r["result"][0],
-            "f": list(ff_r["result"][1]),
-            "s": list(ff_r["result"][2].flatten()),
+            "v": r["result"][0] + self.alpha*(ff_r["result"][0]-r["result"][0]),
+            "f": list(r["result"][1] + self.alpha*(ff_r["result"][1]-r["result"][1])),
+            "s": list( (r["result"][2] + self.alpha*(ff_r["result"][2]-r["result"][2])).flatten() ),            
             "x": ff_r["result"][3],
             })
-        return ff_res
+        r["ff_results"]  = ff_res
+        r["result"][3] = json.dumps({
+                        "position"  : list(r["pos"]),
+                        "committee" : r["ff_results"] 
+                        })
+                    
         
     def poll(self):
         """Polls the forcefield object to check if it has finished."""
@@ -817,18 +847,9 @@ class FFMulti(ForceField):
         with self._threadlock:
             for r in self.requests:
                 if self.check_finish(r):
-                    r["ff_results"] = self.gather(r)
                     r["t_dispatched"] = time.time()
-                    r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]
                     r["t_finished"] = time.time()
-                    for res in r["ff_results"]:
-                        r["result"][0] += res["v"]
-                        r["result"][1] += np.asarray(res["f"])
-                        r["result"][2] += np.asarray(res["s"]).reshape((3,3))                        
-                    r["result"][3] = json.dumps({
-                        "position"  : list(r["pos"]),
-                        "committee" : r["ff_results"] 
-                        })
+                    self.gather(r)                    
                     r["status"] = "Done"
                         
                         

@@ -101,7 +101,7 @@ class InputSimulation(Input):
         "ffdebye": (iforcefields.InputFFDebye, {"help": iforcefields.InputFFDebye.default_help}),
         "ffplumed": (iforcefields.InputFFPlumed, {"help": iforcefields.InputFFPlumed.default_help}),
         "ffyaff": (iforcefields.InputFFYaff, {"help": iforcefields.InputFFYaff.default_help}),
-        "ffmulti": (iforcefields.InputFFMulti, {"help": iforcefields.InputFFMulti.default_help})
+        "ffcommittee": (iforcefields.InputFFCommittee, {"help": iforcefields.InputFFCommittee.default_help})
     }
 
     default_help = "This is the top level class that deals with the running of the simulation, including holding the simulation specific properties such as the time step and outputting the data."
@@ -171,10 +171,10 @@ class InputSimulation(Input):
                     _iobj = iforcefields.InputFFYaff()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("ffyaff", _iobj)
-                elif isinstance(_obj, eforcefields.FFMulti):
-                    _iobj = iforcefields.InputFFMulti()
+                elif isinstance(_obj, eforcefields.FFCommittee):
+                    _iobj = iforcefields.InputFFCommittee()
                     _iobj.store(_obj)
-                    self.extra[_ii] = ("ffmulti", _iobj)
+                    self.extra[_ii] = ("ffcommittee", _iobj)
                 elif isinstance(_obj, System):
                     _iobj = InputSystem()
                     _iobj.store(_obj)
@@ -208,7 +208,7 @@ class InputSimulation(Input):
                 syslist.append(v.fetch())
             elif k == "system_template":
                 syslist += v.fetch()  # this will actually generate automatically a bunch of system objects with the desired properties set automatically to many values
-            elif k == "ffsocket" or k == "fflj" or k == 'ffquip' or k == "ffdebye" or k == "ffplumed" or k=="ffyaff" or k=="ffmulti":
+            elif k == "ffsocket" or k == "fflj" or k == 'ffquip' or k == "ffdebye" or k == "ffplumed" or k=="ffyaff" or k=="ffcommittee":
                 fflist.append(v.fetch())
 
         # this creates a simulation object which gathers all the little bits
