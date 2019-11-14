@@ -5,12 +5,14 @@
     <trajectory filename='extra' stride='20'> extras </trajectory>
     <checkpoint stride='200'/>
   </output>
-  <total_steps>10000</total_steps>
+  <total_steps>150</total_steps>
   <prng>
     <seed>31415</seed>
   </prng>
   <ffcommittee name="committee">
     <weights> [ 1, 1 ] </weights>
+    <alpha> 1.0 </alpha>
+    <threshold> 0.355 </threshold>
     <ffsocket name='lammps-1' mode='unix'>
       <address>h2o-pimd.1</address>
     </ffsocket>

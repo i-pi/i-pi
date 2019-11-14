@@ -770,7 +770,7 @@ class FFCommittee(ForceField):
         
     def __init__(self, latency=1.0, name="", pars=None, dopbc=True, 
             active=np.array([-1]), threaded=True, fflist=[], 
-            ffweights=[], alpha = 1.0):
+            ffweights=[], alpha = 1.0, threshold = 0.0):
         
         # force threaded mode as otherwise it cannot have threaded children
         super(FFCommittee, self).__init__(latency=latency, name=name, 
@@ -785,6 +785,7 @@ class FFCommittee(ForceField):
             raise ValueError("List of weights does not match length of committee model")
         self.ffweights = ffweights
         self.alpha = alpha
+        self.threshold = threshold
             
     def start(self):
         for ff in self.fflist:
@@ -815,30 +816,35 @@ class FFCommittee(ForceField):
     def gather(self, r):
         """ Collects results from all sub-requests """
         ff_res = []
+        pot_uncertainty = []
         r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]                    
         
         # first computes (weighted) mean
         tw = self.ffweights.sum()
         for i_r, ff_r in enumerate(r["ff_handles"]):
             if (ff_r["status"] != "Done"):
-                print ff_r["status"], "WHYYYY"
                 raise ValueError("Should be finished")
             r["result"][0] += ff_r["result"][0]*self.ffweights[i_r]/tw
             r["result"][1] += ff_r["result"][1]*self.ffweights[i_r]/tw
             r["result"][2] += ff_r["result"][2]*self.ffweights[i_r]/tw
         
         for ff_r in r["ff_handles"]:
+            pot_rescaling = self.alpha*(ff_r["result"][0]-r["result"][0])
+            pot_uncertainty.append(pot_rescaling)
             ff_res.append({
-            "v": r["result"][0] + self.alpha*(ff_r["result"][0]-r["result"][0]),
+            #"v": r["result"][0] + self.alpha*(ff_r["result"][0]-r["result"][0]),
+            "v": r["result"][0] + pot_rescaling,
             "f": list(r["result"][1] + self.alpha*(ff_r["result"][1]-r["result"][1])),
             "s": list( (r["result"][2] + self.alpha*(ff_r["result"][2]-r["result"][2])).flatten() ),            
             "x": ff_r["result"][3],
             })
         r["ff_results"]  = ff_res
-        r["result"][3] = json.dumps({
-                        "position"  : list(r["pos"]),
-                        "committee" : r["ff_results"] 
-                        })
+        print np.std(np.array(pot_uncertainty)), self.threshold
+        if np.std(np.array(pot_uncertainty)) > self.threshold:
+            r["result"][3] = json.dumps({
+                            "position"  : list(r["pos"]),
+                            "committee" : r["ff_results"] 
+                            })
                     
         
     def poll(self):

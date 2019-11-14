@@ -401,6 +401,9 @@ class InputFFCommittee(InputForceField):
     fields["alpha"] =  (InputValue, {"dtype": float,
                                      "default": 1.0,
                                      "help": "Scaling of the variance of the model, corresponding to a calibration of the error "} )
+    fields["threshold"] =  (InputValue, {"dtype": float,
+                                       "default": 0.0,
+                                       "help": "The uncertainty threshold. Structure with an uncertainty above this value are printed in the extra file as a json list."})
 
     def store(self, ff):
         """ Store all the sub-forcefields """
@@ -411,6 +414,7 @@ class InputFFCommittee(InputForceField):
             self.extra = [0] * len(_fflist)
         self.weights.store(ff.ffweights)
         self.alpha.store(ff.alpha)
+        self.threshold.store(ff.threshold)
 
         for _ii, _obj, in enumerate(_fflist):
             if self.extra[_ii] == 0:
@@ -454,5 +458,5 @@ class InputFFCommittee(InputForceField):
         return FFCommittee(pars=self.parameters.fetch(), name=self.name.fetch(),
                        latency=self.latency.fetch(), dopbc=self.pbc.fetch(),
                        fflist = fflist, ffweights = self.weights.fetch(),
-                       alpha = self.alpha.fetch())
+                       alpha = self.alpha.fetch(), threshold = self.threshold.fetch())
 
