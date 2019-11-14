@@ -820,9 +820,6 @@ class FFCommittee(ForceField):
         # first computes (weighted) mean
         tw = self.ffweights.sum()
         for i_r, ff_r in enumerate(r["ff_handles"]):
-            if (ff_r["status"] != "Done"):
-                print ff_r["status"], "WHYYYY"
-                raise ValueError("Should be finished")
             r["result"][0] += ff_r["result"][0]*self.ffweights[i_r]/tw
             r["result"][1] += ff_r["result"][1]*self.ffweights[i_r]/tw
             r["result"][2] += ff_r["result"][2]*self.ffweights[i_r]/tw
@@ -840,7 +837,6 @@ class FFCommittee(ForceField):
                         "committee" : r["ff_results"] 
                         })
                     
-        
     def poll(self):
         """Polls the forcefield object to check if it has finished."""
 
