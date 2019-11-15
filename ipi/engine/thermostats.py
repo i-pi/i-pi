@@ -345,6 +345,30 @@ class ThermoPILE_L(Thermostat):
 
         # Also include an optional scaling factor to reduce the intensity of NM thermostats
         return np.array([1.0 / (2 * self.pilescale * self.nm.dynomegak[k]) for k in range(1, len(self._thermos))])
+        
+    def min_tauk(self):
+        """Computes the minimum thermostat damping time scale for the non-centroid
+        normal modes given by the Cayley ergodicity condition (37) in https://arxiv.org/pdf/1907.07941.pdf
+
+        Returns:
+           An array with the damping time scales for the non-centroid modes that saturate the Cayley ergodicity condition.
+        """
+        
+        # if Cayley propagator is used, the ergodicity condition needs to be checked as well
+        square = (np.array([self.nm.dynomegak[k] for k in range(1, len(self._thermos))])*self.dt)**2
+        # potential-dependent condition; needs a definition of the highest frequency of the system: max_freq;
+        # I was thinking of setting it as 4000 cm^-1. Unlike the previous condition, there is a lower bound on the allowed timestep: 2/max_freq
+        # square0 = (self.dt*max_freq)**2
+        gamma = np.arccosh(2/((4-square)/(4+square))**2 - 1)/self.dt
+        # if self.dt < 2./max_freq:
+            # gammaext = 2*np.arccosh((4+square)/np.abs(4-square-2*square0))/self.dt 
+            # gamma = np.minimum(gamma,gammaext)
+        # else:
+            # Warning("The timestep is larger than half of the largest fundumental frequency!")
+        return 1.0 / (2 * gamma)
+
+        # then to respect the condition one can do something like 
+        # final_tauk =np.maximum(1.1*min_tauk(),get_tauk())
 
     def get_ethermo(self):
         """Computes the total energy transferred to the heat bath for all the
