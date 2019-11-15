@@ -31,8 +31,9 @@ def thermo_scale(thermo, scale):
     if hasattr(thermo, "tlist"):
         for t in thermo.tlist:
             thermo_scale(t, scale)
-    if hasattr(thermo, "s"): # scale the GLE degrees of freedom
+    if hasattr(thermo, "s"):  # scale the GLE degrees of freedom
         thermo.s *= scale
+
 
 def motion_scale(motion, scale):
     if hasattr(motion, "mlist"):
@@ -40,6 +41,7 @@ def motion_scale(motion, scale):
             motion_scale(m, scale)
     thermo_scale(motion.thermostat, scale)
     thermo_scale(motion.barostat.thermostat, scale)
+
 
 def gle_scale(sys, scale):
     motion_scale(sys.motion, scale)
@@ -65,12 +67,11 @@ class ReplicaExchange(Smotion):
 
         super(ReplicaExchange, self).__init__()
 
-        self.swapfile = swapfile  # !TODO make this an option!
-        self.rescalekin = krescale  # !TODO make this an option!
+        self.swapfile = swapfile  
+        self.rescalekin = krescale  
         # replica exchange options
         self.stride = stride
 
-        #! TODO ! allow saving and storing the replica indices
         if repindex is None:
             self.repindex = np.zeros(0, int)
         else:
@@ -116,7 +117,6 @@ class ReplicaExchange(Smotion):
                 pensj = sl[j].ensemble.lpens
                 t_eval += time.time()
 
-
                 t_swap -= time.time()
                 ensemble_swap(sl[i].ensemble, sl[j].ensemble)  # tries to swap the ensembles!
 
@@ -133,6 +133,16 @@ class ReplicaExchange(Smotion):
                         sl[j].motion.barostat.p *= (ti / tj)
                     except AttributeError:
                         pass
+
+                try: # if motion has a barostat, and the barostat has a reference cell, does the swap
+                     # as that when there are very different pressures, the cell should reflect the
+                     # pressure/temperature dependence. this also changes the barostat conserved quantities
+                     bjh = dstrip(sl[j].motion.barostat.h0.h).copy()
+                     sl[j].motion.barostat.h0.h[:] = sl[i].motion.barostat.h0.h[:]
+                     sl[i].motion.barostat.h0.h[:] = bjh
+                except AttributeError:
+                    pass
+
                 t_swap += time.time()
 
                 t_eval -= time.time()
@@ -171,6 +181,13 @@ class ReplicaExchange(Smotion):
                             sl[j].motion.barostat.p *= (tj / ti)
                         except AttributeError:
                             pass
+                    try:
+                        bjh = dstrip(sl[j].motion.barostat.h0.h).copy()
+                        sl[j].motion.barostat.h0.h[:] = sl[i].motion.barostat.h0.h[:]
+                        sl[i].motion.barostat.h0.h[:] = bjh
+                    except AttributeError:
+                        pass
+
                     t_swap += time.time()
                     info(" @ PT:  SWAP REJECTED BETWEEN replicas % 5d and % 5d." % (i, j), verbosity.low)
 
@@ -180,11 +197,10 @@ class ReplicaExchange(Smotion):
                    # velocities have to be adjusted according to the new temperature
 
         if fxc:  # writes out the new status
-            #with open(self.swapfile, "a") as sf:
             self.sf.write("% 10d" % (step))
             for i in self.repindex:
                 self.sf.write(" % 5d" % (i))
             self.sf.write("\n")
             self.sf.force_flush()
 
-        info("# REMD step evaluated in %f (%f eval, %f swap) sec." % (time.time()-t_start, t_eval, t_swap), verbosity.debug)
+        info("# REMD step evaluated in %f (%f eval, %f swap) sec." % (time.time() - t_start, t_eval, t_swap), verbosity.debug)

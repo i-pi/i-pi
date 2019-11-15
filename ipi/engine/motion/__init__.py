@@ -9,6 +9,7 @@
 
 from .motion import Motion
 from .dynamics import Dynamics
+from .constrained_dynamics import ConstrainedDynamics
 from .replay import Replay
 from .geop import GeopMotion
 from .instanton import InstantonMotion
@@ -19,3 +20,4 @@ from .alchemy import AlchemyMC
 from .planetary import Planetary
 from .atomswap import AtomSwap
 from .ramp import TemperatureRamp, PressureRamp
+from .al6xxx_kmc import AlKMC

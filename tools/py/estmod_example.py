@@ -43,20 +43,21 @@ Written by Raz Benson
 
 import numpy as np
 
-name = "my_tcf"        #   str      something descriptive
+name = "my_tcf"  # str      something descriptive
 
-method = "0thorder_re" #   str      choice of "0thorder_re", "1storder_im", "2ndorder_re"
-                       #            (see above)
+method = "0thorder_re"  # str      choice of "0thorder_re", "1storder_im", "2ndorder_re"
+#            (see above)
 
-Ashape = (3,)          #   tuple    dimension of the zero-time operator A, i.e. in the
-                       #            TCF given by <A(0)B(t)>
-                       #            e.g. if A is the total dipole moment then it is a 3D 
-                       #            vector so Ashape = (3,)
+Ashape = (3,)  # tuple    dimension of the zero-time operator A, i.e. in the
+#            TCF given by <A(0)B(t)>
+#            e.g. if A is the total dipole moment then it is a 3D
+#            vector so Ashape = (3,)
 
-Bshape = (3,)          #   tuple    dimension of the time-evolved operator B, i.e. in the
-                       #            TCF given by <A(0)B(t)>
-                       #            e.g. if B is the total dipole moment then it is a 3D 
-                       #            vector so Bshape = (3,)
+Bshape = (3,)  # tuple    dimension of the time-evolved operator B, i.e. in the
+#            TCF given by <A(0)B(t)>
+#            e.g. if B is the total dipole moment then it is a 3D
+#            vector so Bshape = (3,)
+
 
 def Bfunc(qsum, psum):
     """
@@ -66,8 +67,9 @@ def Bfunc(qsum, psum):
     nndof, npl = qsum.shape
     ans = np.zeros((npl,) + Bshape)
     for i in xrange(npl):
-        ans[i] = 0.0 # Change this bit
+        ans[i] = 0.0  # Change this bit
     return ans
+
 
 def Afunc0(qsum, psum):
     """
@@ -81,8 +83,9 @@ def Afunc0(qsum, psum):
     nndof, npl = qsum.shape
     ans = np.zeros((npl,) + Ashape)
     for i in xrange(npl):
-        ans[i] = 0.0 # Change this bit
+        ans[i] = 0.0  # Change this bit
     return ans
+
 
 def Afunc1(qsum):
     """
@@ -93,8 +96,9 @@ def Afunc1(qsum):
     nndof, npl = qsum.shape
     ans = np.zeros((npl,) + Ashape + (ndof,))
     for i in xrange(npl):
-        ans[i] = 0.0 # Change this bit
+        ans[i] = 0.0  # Change this bit
     return ans
+
 
 def Afunc2(qsum):
     """
@@ -103,10 +107,11 @@ def Afunc2(qsum):
     (centroid + fluctuation) and returns the hessian of A for each planet
     """
     nndof, npl = qsum.shape
-    ans = np.zeros((npl,) + Ashape + (ndof,ndof))
+    ans = np.zeros((npl,) + Ashape + (ndof, ndof))
     for i in xrange(npl):
-        ans[i] = 0.0 # Change this bit
+        ans[i] = 0.0  # Change this bit
     return ans
+
 
 def corr(A, B, **kwargs):
     """
@@ -116,7 +121,7 @@ def corr(A, B, **kwargs):
     npts, npl = A.shape[:2]
     tcf = np.zeros(npts)
     for i in xrange(npl):
-        tcf[:] += 0.0 # Change this bit
+        tcf[:] += 0.0  # Change this bit
     return tcf
 
 ##########################################################################################
@@ -137,7 +142,7 @@ def corr(A, B, **kwargs):
 #qh = -0.50*qm
 #gam = 0.73612
 #
-#def Afunc0(qsum, psum):
+# def Afunc0(qsum, psum):
 #    nndof, npl = qsum.shape
 #    natoms = nndof / 3
 #    nmolec = natoms / 3
@@ -150,7 +155,7 @@ def corr(A, B, **kwargs):
 #                 x[j, 1, :]*qh + x[j, 2, :]*qh
 #    return ans
 #
-#def Bfunc(qsum, psum):
+# def Bfunc(qsum, psum):
 #    return Afunc0(qsum, psum)
 
 ##########################################################################################
@@ -167,7 +172,7 @@ def corr(A, B, **kwargs):
 #
 #Bshape = (3,)
 #
-## Change as appropriate # 
+## Change as appropriate #
 #nmolec = 128
 #natoms = nmolec*3
 #nndof = natoms*3
@@ -177,31 +182,31 @@ def corr(A, B, **kwargs):
 #qm = -1.1128
 #qh = -0.50*qm
 #gam = 0.73612
-#grad = np.zeros((3, nndof)) 
-## x component, oxygen
+#grad = np.zeros((3, nndof))
+# x component, oxygen
 #grad[0].reshape((nmolec,3,3))[:,0,0] = gam*qm
-## y component, oxygen
+# y component, oxygen
 #grad[1].reshape((nmolec,3,3))[:,0,1] = gam*qm
-## z component, oxygen
+# z component, oxygen
 #grad[2].reshape((nmolec,3,3))[:,0,2] = gam*qm
-## x component, H1
+# x component, H1
 #grad[0].reshape((nmolec,3,3))[:,1,0] = 0.5*(1.0-gam)*qm + qh
-## y component, H1
+# y component, H1
 #grad[1].reshape((nmolec,3,3))[:,1,1] = 0.5*(1.0-gam)*qm + qh
-## z component, H1
+# z component, H1
 #grad[2].reshape((nmolec,3,3))[:,1,2] = 0.5*(1.0-gam)*qm + qh
-## x component, H2
+# x component, H2
 #grad[0].reshape((nmolec,3,3))[:,2,0] = 0.5*(1.0-gam)*qm + qh
-## y component, H2
+# y component, H2
 #grad[1].reshape((nmolec,3,3))[:,2,1] = 0.5*(1.0-gam)*qm + qh
-## z component, H2
+# z component, H2
 #grad[2].reshape((nmolec,3,3))[:,2,2] = 0.5*(1.0-gam)*qm + qh
 #grad = np.array([grad]*npl)
 #
-#def Afunc1(qsum):
+# def Afunc1(qsum):
 #    return grad
 #
-#def Afunc0(qsum, psum):
+# def Afunc0(qsum, psum):
 #    nndof, npl = qsum.shape
 #    natoms = nndof / 3
 #    nmolec = natoms / 3
@@ -214,7 +219,7 @@ def corr(A, B, **kwargs):
 #                 x[j, 1, :]*qh + x[j, 2, :]*qh
 #    return ans
 #
-#def Bfunc(qsum, psum):
+# def Bfunc(qsum, psum):
 #    qm = -1.1128
 #    qh = -0.50*qm
 #    gam = 0.73612
