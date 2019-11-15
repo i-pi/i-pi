@@ -21,7 +21,7 @@ from ipi.interfaces.sockets import InterfaceSocket
 from ipi.utils.depend import dobject
 from ipi.utils.depend import dstrip
 from ipi.utils.io import read_file
-from ipi.utils.units import unit_to_internal, unit_to_user
+from ipi.utils.units import unit_to_internal, unit_to_user, UnitMap
 
 try:
     import plumed
@@ -756,5 +756,76 @@ class FFYaff(ForceField):
         e = self.ff.compute(gpos, vtens)
 
         r["result"] = [e, -gpos.ravel(), -vtens, ""]
+        r["status"] = "Done"
+        r["t_finished"] = time.time()
+
+
+class FFsGDML(ForceField):
+
+    """ A symmetric Gradient Domain Machine Learning (sGDML) force field. """
+
+    def __init__(self, latency=1.0, name="", threaded=False, sGDML_model=None, pars=None, dopbc=False):
+        """Initialises FFsGDML
+
+        Args:
+
+           sGDML_model: Filename contaning the sGDML model
+
+        """
+
+        # a socket to the communication library is created or linked
+        super(FFsGDML, self).__init__(latency, name, pars, dopbc, threaded=threaded)
+
+        # A bit weird to use keyword argument for a required argument, but this
+        # is also done in the code above.
+        if sGDML_model is None:
+            raise ValueError("Must provide a sGDML model file.")
+
+        if dopbc is True:
+            raise ValueError("Must set PBCs to False.")
+
+        self.sGDML_model = sGDML_model
+
+        # constants
+        self.bohr_to_ang = 1. / UnitMap["length"]['angstrom']  # bohr --> Angstrom
+        self.kcalmol_to_hartree = UnitMap["energy"]['cal/mol'] * 1000.  # 1 kcal / mol --> hartree
+        self.kcalmolang_to_hartreebohr = self.bohr_to_ang * self.kcalmol_to_hartree  # 1 kcal / mol / Ang --> hartree / bohr
+
+        # sGDML: Machine Learning Model
+        # Author: Stefan Chmiela (stefan@chmiela.com)
+
+        # --- Load model. ---
+        try:
+            self.model = np.load(self.sGDML_model)
+            info(" @ForceField: Model " + self.sGDML_model + " loaded" , verbosity.medium)
+        except:
+            self.model = np.load(self.sGDML_model)
+            #raise ValueError("ERROR: Reading model " + self.model + " file failed.")
+
+        # Evaluate model.
+        from ipi.utils.mltools.sGDML_predictors_v030118 import GDL_Predictor
+        self.predictor = GDL_Predictor(self.model)
+        self.predictor.print_info(self.model)
+
+        # ID of the atoms
+        self.z = self.model['z']
+
+    def poll(self):
+        """ Polls the forcefield checking if there are requests that should
+        be answered, and if necessary evaluates the associated forces and energy. """
+
+        # we have to be thread-safe, as in multi-system mode this might get called by many threads at once
+        with self._threadlock:
+            for r in self.requests:
+                if r["status"] == "Queued":
+                    r["status"] = "Running"
+                    self.evaluate(r)
+
+    def evaluate(self, r):
+        """ Evaluate the energy and forces. """
+
+        E, F = self.predictor.predict(r["pos"].reshape(-1, 3) * self.bohr_to_ang, self.z)
+
+        r["result"] = [E * self.kcalmol_to_hartree, F.flatten() * self.kcalmolang_to_hartreebohr, np.zeros((3, 3), float), ""]
         r["status"] = "Done"
         r["t_finished"] = time.time()
