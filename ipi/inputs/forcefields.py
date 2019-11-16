@@ -14,6 +14,7 @@ from ipi.interfaces.sockets import InterfaceSocket
 import ipi.engine.initializer
 from ipi.inputs.initializer import *
 from ipi.utils.inputvalue import *
+from ipi.inputs.outputs import InputTrajectory
 
 
 __all__ = ["InputFFSocket", 'InputFFLennardJones', 'InputFFQUIP', 'InputFFDebye', 
@@ -401,7 +402,13 @@ class InputFFCommittee(InputForceField):
     fields["alpha"] =  (InputValue, {"dtype": float,
                                      "default": 1.0,
                                      "help": "Scaling of the variance of the model, corresponding to a calibration of the error "} )
-
+    fields["al_thresh"] =  (InputValue, {"dtype": float,
+                                       "default": 0.0,
+                                       "help": "The uncertainty threshold. Structure with an uncertainty above this value are printed in the specified output file so they can be used for active learning."})
+    fields["al_output"] =  (InputValue, {"dtype": str,
+                "default": "al_output",
+                "help": "Output filename for structures that exceed the accuracy threshold of the model."})
+    
     def store(self, ff):
         """ Store all the sub-forcefields """
         
@@ -411,6 +418,8 @@ class InputFFCommittee(InputForceField):
             self.extra = [0] * len(_fflist)
         self.weights.store(ff.ffweights)
         self.alpha.store(ff.alpha)
+        self.al_thresh.store(ff.al_thresh)
+        self.al_output.store(ff.al_out)
 
         for _ii, _obj, in enumerate(_fflist):
             if self.extra[_ii] == 0:
@@ -454,5 +463,7 @@ class InputFFCommittee(InputForceField):
         return FFCommittee(pars=self.parameters.fetch(), name=self.name.fetch(),
                        latency=self.latency.fetch(), dopbc=self.pbc.fetch(),
                        fflist = fflist, ffweights = self.weights.fetch(),
-                       alpha = self.alpha.fetch())
+                       alpha = self.alpha.fetch(), al_thresh = self.al_thresh.fetch(),
+                       al_out = self.al_output.fetch()
+                       )
 
