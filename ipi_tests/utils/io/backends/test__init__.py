@@ -77,4 +77,4 @@ def test_read_file(prepare_read_file):
     npt.assert_almost_equal(expected_q * unit_conv_q, returned_q, 5)
     npt.assert_almost_equal(expected_cell.flatten() * unit_conv_cell, returned_cell, 5)
     if output_type.strip() == 'objects':
-        assert all([expected_names[_ii] == returned_names[_ii] for _ii in xrange(len(expected_names))])
+        assert all([expected_names[_ii] == returned_names[_ii] for _ii in range(len(expected_names))])

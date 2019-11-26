@@ -137,7 +137,7 @@ def main(inputfile, prefix="SRT_"):
     # now reads files one frame at a time, and re-direct output to the appropriate location
 
     line = ptfile.readline().split()
-    irep = range(nsys)  # Could this be harmful?
+    irep = list(range(nsys))  # Could this be harmful?
     step = 0
     while True:
         # reads one line from index file

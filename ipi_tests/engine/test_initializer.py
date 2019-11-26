@@ -57,7 +57,7 @@ def create_xyz_sample_file(request):
         masses[_ii] = Elements.mass(_at)
 
     ratoms = []
-    for _fr in xrange(frames):
+    for _fr in range(frames):
         ratoms.append(Atoms(natoms))
         ratoms[-1].q = xyz[_fr * natoms * 3:3 * (_fr + 1) * natoms] * units_conv_at
         ratoms[-1].m = masses[_fr * natoms:(_fr + 1) * natoms]

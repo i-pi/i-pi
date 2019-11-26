@@ -167,7 +167,7 @@ class Ensemble(dobject):
         dself.hweights = depend_array(name="hweights", value=np.asarray(self.hweights))
 
         # we use ScaledForceComponents to replicate the physical forces without (hopefully) them being actually recomputed
-        for ic in xrange(len(self.forces.mforces)):
+        for ic in range(len(self.forces.mforces)):
             sfc = ScaledForceComponent(self.forces.mforces[ic], 1.0)
             self.bias.add_component(self.forces.mbeads[ic], self.forces.mrpc[ic], sfc)
             dd(sfc).scaling._func = lambda i=ic: self.hweights[i] - 1

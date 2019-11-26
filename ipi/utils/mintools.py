@@ -669,7 +669,7 @@ def min_trm(f, h, tr):
     if (min_d > 0.0):
 
         if(neg != 0):
-            print "problem in 'find'!!!"
+            print("problem in 'find'!!!")
         if (np.linalg.norm(DXE) < tr):
             DX = np.dot(w, DXE)
             DX = DX.reshape(shape)
@@ -694,7 +694,7 @@ def min_trm(f, h, tr):
             lamb_min = max(lamb, lamb_min)
 
         if dy > 0.0 or lamb_min > lamb_max:
-            print 'Problem in find. II'
+            print('Problem in find. II')
 
         lamb = lamb - y / dy
         if lamb <= lamb_min or lamb >= lamb_max:
@@ -743,7 +743,7 @@ def L_BFGS(x0, d0, fdf, qlist, glist, fdf0, big_step, tol, itmax, m, scale, k):
         info(" @MINIMIZE: moving uphill, resetting search direction! ", verbosity.debug)
         d0 = g0 / np.sqrt(np.dot(g0.flatten(), g0.flatten()))
 
-    print "@ GEOP step ", big_step
+    print("@ GEOP step ", big_step)
     # Perform approximate line minimization in direction d0
     x, u, g = min_approx(fdf, x0, fdf0, d0, big_step, tol, itmax)
 
@@ -1134,7 +1134,7 @@ def L_BFGS_nls(x0, d0, fdf, qlist, glist, fdf0=None, big_step=100, tol=1.0e-6, i
             info(" @MINIMIZE: Scaled step size", verbosity.debug)
 
         x = np.add(x0, d0)
-        print "step size:", np.sqrt(np.dot(d0.flatten(), d0.flatten()))
+        print("step size:", np.sqrt(np.dot(d0.flatten(), d0.flatten())))
         fx, g = fdf(x)
 
     info(" @MINIMIZE: Started L-BFGS", verbosity.debug)

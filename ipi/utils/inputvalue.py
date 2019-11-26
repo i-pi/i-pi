@@ -172,10 +172,10 @@ class Input(object):
         # merge instencefields with the static class fields
         self.instancefields.update(self.fields)
 
-        for f, v in self.instancefields.iteritems():
+        for f, v in self.instancefields.items():
             self.__dict__[f] = v[0](**v[1])
 
-        for a, v in self.attribs.iteritems():
+        for a, v in self.attribs.items():
             self.__dict__[a] = v[0](**v[1])
 
         self.set_default()
@@ -235,7 +235,7 @@ class Input(object):
             newfield = self.dynamic[name][0](**self.dynamic[name][1])
             newfield.parse(xml)
         except:
-            print "Error parsing " + name + " from " + str(xml)
+            print("Error parsing " + name + " from " + str(xml))
             raise
         self.extra.append((name, newfield))
 
@@ -324,7 +324,7 @@ class Input(object):
         if xml is None:
             self._text = text
         else:
-            for a, v in xml.attribs.iteritems():
+            for a, v in xml.attribs.items():
                 if a in self.attribs:
                     self.__dict__[a].parse(text=v)
                 elif a == "_text":
@@ -486,7 +486,7 @@ class Input(object):
                 rstr += self.__dict__[f].help_latex(name=f, level=level + 1, stop_level=stop_level, standalone=standalone)
 
         if len(self.dynamic) != 0 and level != stop_level:
-            for f, v in self.dynamic.iteritems():
+            for f, v in self.dynamic.items():
                 dummy_obj = v[0](**v[1])
                 rstr += dummy_obj.help_latex(name=f, level=level + 1, stop_level=stop_level, standalone=standalone)
 
@@ -647,7 +647,7 @@ class Input(object):
         if show_fields:
             for f in self.instancefields:
                 rstr += self.__dict__[f].help_xml(f, "   " + indent, level + 1, stop_level)
-            for f, v in self.dynamic.iteritems():
+            for f, v in self.dynamic.items():
                 # we must create the object manually, as dynamic objects are
                 # not automatically added to the input object's dictionary
                 dummy_obj = v[0](**v[1])
@@ -697,7 +697,7 @@ class InputDictionary(Input):
         """Base function for storing data passed as a dictionary"""
 
         self._explicit = True
-        for f, v in value.iteritems():
+        for f, v in value.items():
             self.__dict__[f].store(value[f])
 
         pass
@@ -707,7 +707,7 @@ class InputDictionary(Input):
 
         self.check()
         rdic = {}
-        for f, v in self.instancefields.iteritems():
+        for f, v in self.instancefields.items():
             rdic[f] = self.__dict__[f].fetch()
         return rdic
 
@@ -873,7 +873,7 @@ class InputValue(InputAttribute):
         super(InputValue, self).fetch()
 
         if self._dimension != "undefined":
-            print "returning ", self.value * unit_to_internal(self._dimension, self.units.fetch(), 1.0)
+            print("returning ", self.value * unit_to_internal(self._dimension, self.units.fetch(), 1.0))
             return self.value * unit_to_internal(self._dimension, self.units.fetch(), 1.0)
         else:
             return self.value

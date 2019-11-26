@@ -6,7 +6,7 @@ import tempfile as tmp
 import numpy as np
 from ipi.utils.units import Elements
 from copy import copy
-all_elem = Elements.mass_list.keys()
+all_elem = list(Elements.mass_list.keys())
 at_names = None
 
 
@@ -25,7 +25,7 @@ def xyz_rand(natoms, comment, names=None):
     if not comment.endswith('\n'):
         comment += '\n'
     output = comment
-    for i in xrange(natoms):
+    for i in range(natoms):
         output += ('%-6s'    # Record name                       1- 6  1
                    '%5i'    # Atom serial number                7-11  2
                    ' '      # Space                               12
@@ -54,7 +54,7 @@ def xyz_traj(natoms, nframe, comment):
     """ Generate a fake xyz trajectory. Atoms and coordinates are random.
     """
     output, xyz, all_names = xyz_rand(natoms, comment)
-    for _ in xrange(nframe - 1):
+    for _ in range(nframe - 1):
         raw_output = xyz_rand(natoms, comment, names=True)
         output += raw_output[0]
         xyz = np.concatenate([xyz, raw_output[1]])
@@ -77,4 +77,4 @@ if __name__ == '__main__':
 
     # Fast autocheck... if the test is wrong itself... it is bad ;)
     natoms = 100
-    print xyz_rand(natoms, '')[0]
+    print(xyz_rand(natoms, '')[0])

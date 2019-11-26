@@ -130,7 +130,7 @@ def totalEnergy(prefix, temp, ss=0):
             f2ePA_av += f2ePA
             eVir_av += eVir
             ifr += 1
-            print(ifr - skipSteps)  # Printing current time frame (excluding thermalization)
+            print((ifr - skipSteps))  # Printing current time frame (excluding thermalization)
 
             dE = (3.0 * Constants.kb * temperature + ePA_av / float(ifr - skipSteps)) * f2_av / float(ifr - skipSteps) - \
                 f2ePA_av / float(ifr - skipSteps)

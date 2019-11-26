@@ -84,9 +84,9 @@ class InputSysTemplate(Input):
                 sys = template
                 if len(labels) != len(ins):
                     raise ValueError("Labels and instance length mismatch")
-                for l in xrange(len(ins)):  # string replacement within the template
+                for l in range(len(ins)):  # string replacement within the template
                     sys = sys.replace(labels[l], ins[l])
-                print "Generating system from template: \n", sys
+                print("Generating system from template: \n", sys)
                 xsys = xml_parse_string(sys)  # parses the string to an XML object
                 isys = InputSystem()
                 isys.parse(xsys.fields[0][1])  # parses the XML object into an InputSystem

@@ -93,7 +93,7 @@ class System(dobject):
         self.simul = simul  # keeps a handle to the parent simulation object
 
         # binds important computation engines
-        print "NOW BINDING THE FORCES.... "
+        print("NOW BINDING THE FORCES.... ")
         self.forces.bind(self.beads, self.cell, self.fcomp, self.simul.fflist, open_paths=self.nm.open_paths)
         self.nm.bind(self.ensemble, self.motion, beads=self.beads, forces=self.forces)
         self.ensemble.bind(self.beads, self.nm, self.cell, self.forces, self.simul.fflist)

@@ -128,7 +128,7 @@ class ForceField(dobject):
         par_str = " "
 
         if not self.pars is None:
-            for k, v in self.pars.items():
+            for k, v in list(self.pars.items()):
                 par_str += k + " : " + str(v) + " , "
         else:
             par_str = " "
@@ -216,8 +216,8 @@ class ForceField(dobject):
                 try:
                     self.requests.remove(request)
                 except ValueError:
-                    print "failed removing request", id(request), ' ',
-                    print [id(r) for r in self.requests], "@", threading.currentThread()
+                    print("failed removing request", id(request), ' ', end=' ')
+                    print([id(r) for r in self.requests], "@", threading.currentThread())
                     raise
 
     def stop(self):

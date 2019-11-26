@@ -141,7 +141,7 @@ class InputSimulation(Input):
 
         self.mode.store(simul.mode)
 
-        _fflist = [v for k, v in sorted(simul.fflist.iteritems())]
+        _fflist = [v for k, v in sorted(simul.fflist.items())]
         if len(self.extra) != len(_fflist) + len(simul.syslist):
             self.extra = [0] * (len(_fflist) + len(simul.syslist))
 
@@ -209,7 +209,7 @@ class InputSimulation(Input):
             elif k == "system_template":
                 syslist += v.fetch()  # this will actually generate automatically a bunch of system objects with the desired properties set automatically to many values
             elif k == "ffsocket" or k == "fflj" or k == 'ffquip' or k == "ffdebye" or k == "ffplumed" or k == "ffsgdml":
-                print "fetching", k
+                print("fetching", k)
                 fflist.append(v.fetch())
             elif k == "ffyaff":
                 fflist.append(v.fetch())

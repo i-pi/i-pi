@@ -163,8 +163,8 @@ class PropertyOutput(BaseOutput):
         self.system = system
         for what in self.outlist:
             key = getkey(what)
-            if not key in system.properties.property_dict.keys():
-                print "Computable properties list: ", system.properties.property_dict.keys()
+            if not key in list(system.properties.property_dict.keys()):
+                print("Computable properties list: ", list(system.properties.property_dict.keys()))
                 raise KeyError(key + " is not a recognized property")
 
         super(PropertyOutput, self).bind(mode)
@@ -286,8 +286,8 @@ class TrajectoryOutput(BaseOutput):
         self.system = system
         # Checks as soon as possible if some asked-for trajs are missing or mispelled
         key = getkey(self.what)
-        if not key in self.system.trajs.traj_dict.keys():
-            print "Computable trajectories list: ", self.system.trajs.traj_dict.keys()
+        if not key in list(self.system.trajs.traj_dict.keys()):
+            print("Computable trajectories list: ", list(self.system.trajs.traj_dict.keys()))
             raise KeyError(key + " is not a recognized output trajectory")
 
         super(TrajectoryOutput, self).bind(mode)

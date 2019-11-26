@@ -334,7 +334,7 @@ class Driver(DriverSocket):
                 self.sendall(pos)
                 self.status = Status.Up | Status.Busy
             except:
-                print "Error in sendall, resetting status"
+                print("Error in sendall, resetting status")
                 self.get_status()
                 return
         else:

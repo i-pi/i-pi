@@ -24,7 +24,7 @@ from ipi.utils.messages import verbosity
 
 cell_unit_re = re.compile(r'cell\{([A-Za-z_]*)\}')       # cell unit pattern
 traj_dict = Traj().traj_dict                             # trajectory dictionary
-traj_re = [re.compile('%s%s' % (key, r'\{[A-Za-z_]*\}')) for key in traj_dict.keys()]  # trajectory patterns
+traj_re = [re.compile('%s%s' % (key, r'\{[A-Za-z_]*\}')) for key in list(traj_dict.keys())]  # trajectory patterns
 verbosity.level = "low"
 
 
@@ -56,7 +56,7 @@ def get_key_dim_units(comment, mode):
 
     is_comment_useful = []
     if comment != "":
-        is_comment_useful = filter(None, [key.search(comment.strip()) for key in traj_re])
+        is_comment_useful = [_f for _f in [key.search(comment.strip()) for key in traj_re] if _f]
         if len(is_comment_useful) > 0:
             traj = is_comment_useful[0].group()[:-1].split('{')
             key, auto_dimension, auto_units = traj[0], traj_dict[traj[0]]['dimension'], traj[1]

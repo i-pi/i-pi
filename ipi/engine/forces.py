@@ -736,7 +736,7 @@ class Forces(dobject):
         if len(self.mforces) != len(refforce.mforces):
             raise ValueError("Cannot copy forces between objects with different numbers of components")
 
-        for k in xrange(len(self.mforces)):
+        for k in range(len(self.mforces)):
             mreff = refforce.mforces[k]
             mself = self.mforces[k]
             if mreff.nbeads != mself.nbeads:
@@ -753,7 +753,7 @@ class Forces(dobject):
             # tainted - it should not be as it's an internal of the force and
             # therefore get copied
             dd(mself.beads).q.set(mreff.beads.q, manual=False)
-            for b in xrange(mself.nbeads):
+            for b in range(mself.nbeads):
                 dfkbref = dd(mreff._forces[b])
                 dfkbself = dd(mself._forces[b])
 

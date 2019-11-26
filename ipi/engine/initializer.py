@@ -56,7 +56,7 @@ class InitBase(dobject):
         self.mode = mode
         self.units = units
 
-        for (o, v) in others.items():
+        for (o, v) in list(others.items()):
             self.__dict__[o] = v
 
 

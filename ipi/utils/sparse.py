@@ -108,7 +108,7 @@ class csr_matrix(sparse_matrix):
     # Convert to dense format
     def toarray(self):
         nparray = np.zeros((self.m, self.n), dtype=self.a.dtype)
-        for row in xrange(self.m):
+        for row in range(self.m):
             nparray[row, self.ja[self.ia[row]:self.ia[row + 1]]] = \
                 self.a[self.ia[row]:self.ia[row + 1]]
         return nparray
@@ -144,7 +144,7 @@ class csc_matrix(sparse_matrix):
     # Convert to dense format
     def toarray(self):
         nparray = np.zeros((self.m, self.n), dtype=self.a.dtype)
-        for col in xrange(self.n):
+        for col in range(self.n):
             nparray[self.ja[self.ia[col]:self.ia[col + 1]], col] = \
                 self.a[self.ia[col]:self.ia[col + 1]]
         return nparray

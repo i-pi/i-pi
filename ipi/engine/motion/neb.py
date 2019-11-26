@@ -252,7 +252,7 @@ class NEBBFGSMover(object):
                     btau[ii] = d2 * maxpot + d1 * minpot
 
                 else:
-                    print "Error in NEB tangents: Energy of images are equal"
+                    print("Error in NEB tangents: Energy of images are equal")
 
             btau[ii] *= 1.0 / np.linalg.norm(btau)
 

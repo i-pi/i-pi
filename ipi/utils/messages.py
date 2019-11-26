@@ -147,4 +147,4 @@ def warning(text="", show=True):
         return
     if verbosity.trace:
         traceback.print_stack(file=sys.stdout)
-    print(" !W! " + text)
+    print((" !W! " + text))

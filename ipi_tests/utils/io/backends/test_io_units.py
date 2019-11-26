@@ -40,9 +40,9 @@ def test_process_units_noobj(units_preparation):
 
     masses = []
     _count = 0
-    print 'atom_names', atom_names
+    print('atom_names', atom_names)
     for _at in atom_names:
-        print Elements.mass(_at), _count, _at
+        print(Elements.mass(_at), _count, _at)
         masses.append(Elements.mass(_at))
         _count += 1
 
@@ -50,7 +50,7 @@ def test_process_units_noobj(units_preparation):
     type(masses)
     res = testing.process_units(comment, cell.copy(), xyz.copy(), np.array(atom_names).copy(), np.array(masses).copy(), output=output)
 
-    print xyz, res['data']
+    print(xyz, res['data'])
     npt.assert_array_almost_equal(res['data'], xyz * conver_xyz, 5)
     npt.assert_array_almost_equal(res['masses'], masses, 5)
     npt.assert_array_almost_equal(res['cell'], cell * conver_cell, 5)
@@ -73,7 +73,7 @@ def test_process_units_object(units_preparation):
     _count = 0
 
     for _at in atom_names:
-        print Elements.mass(_at), _count, _at
+        print(Elements.mass(_at), _count, _at)
         masses.append(Elements.mass(_at))
         _count += 1
 

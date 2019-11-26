@@ -5,7 +5,7 @@
 # See the "licenses" directory for full license information.
 
 
-from common import SimulationTest
+from .common import SimulationTest
 
 
 def test_lj_gas():

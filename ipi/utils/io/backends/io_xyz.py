@@ -87,11 +87,11 @@ def read_xyz(filedesc):
     """
 
     try:
-        natoms = int(filedesc.next())
+        natoms = int(next(filedesc))
     except (StopIteration, ValueError):
         raise EOFError
 
-    comment = filedesc.next()
+    comment = next(filedesc)
 
     # Extracting cell
     cell = [key.search(comment) for key in cell_re]

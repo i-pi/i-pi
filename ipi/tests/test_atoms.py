@@ -5,7 +5,7 @@
 # See the "licenses" directory for full license information.
 
 
-from common import local
+from .common import local
 
 from ipi.utils.io import read_file
 

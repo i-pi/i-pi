@@ -209,7 +209,7 @@ class Planetary(Motion):
         self.tmtx += time.time()
 
         # sample by constrained-centroid dynamics
-        for istep in xrange(self.nsamples):
+        for istep in range(self.nsamples):
             self.tmc -= time.time()
             self.ccdyn.step(step)
             self.tmc += time.time()

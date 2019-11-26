@@ -146,12 +146,12 @@ class InputAlKMC(InputDictionary):
         # only stores cache after a decent amount of new structures have been found
         if kmc.ncache_stored*self.STORE_STRIDE<kmc.ncache:
             if kmc.ecache_file != "":
-                print "Storing ECACHE in ", kmc.ecache_file
+                print("Storing ECACHE in ", kmc.ecache_file)
                 ff = open(kmc.ecache_file, "wb")
                 pickle.dump(kmc.ecache, ff)
                 ff.close()
             if kmc.qcache_file != "":
-                print "Storing QCACHE in ", kmc.qcache_file
+                print("Storing QCACHE in ", kmc.qcache_file)
                 ff = open(kmc.qcache_file, "wb")
                 pickle.dump(kmc.qcache, ff)
                 ff.close()

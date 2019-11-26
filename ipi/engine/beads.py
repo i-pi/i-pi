@@ -233,7 +233,7 @@ class Beads(dobject):
             else:
                 dq = q[b, :] - q[self.nbeads - 1, :]
             epath += np.dot(dq, m * dq)
-        print "WARNING: RETURNS AN INCORRECT RESULT IF OPEN PATHS ARE BEING USED. CALL NM.VSPRING INSTEAD!!"
+        print("WARNING: RETURNS AN INCORRECT RESULT IF OPEN PATHS ARE BEING USED. CALL NM.VSPRING INSTEAD!!")
         return epath * 0.5
 
     def get_fpath(self):

@@ -62,8 +62,8 @@ def compute_acf(input_file, output_prefix, maximum_lag, block_length, length_zer
     nblocks = 0
     dt = unit_to_internal("time", timestep[1], float(timestep[0]))
     data = np.zeros((bsize, nspecies, 3), float)
-    time = np.asarray(range(mlag + 1)) * dt
-    omega = np.asarray(range(2 * (mlag + npad))) / float(2 * (mlag + npad)) * (2 * np.pi / dt)
+    time = np.asarray(list(range(mlag + 1))) * dt
+    omega = np.asarray(list(range(2 * (mlag + npad)))) / float(2 * (mlag + npad)) * (2 * np.pi / dt)
     fvvacf = omega.copy() * 0.0
     fvvacf2 = fvvacf.copy() * 0.0
     vvacf = time.copy() * 0.0
@@ -83,7 +83,7 @@ def compute_acf(input_file, output_prefix, maximum_lag, block_length, length_zer
 
     ff = open(ifile)
     # Skips the first fskip frames
-    for x in xrange(fskip):
+    for x in range(fskip):
         rr = read_file_raw("xyz", ff)
 
     while True:
