@@ -9,7 +9,6 @@ files with in the XML format.
 
 from xml.sax import parseString, parse
 from xml.sax.handler import ContentHandler
-import string
 
 import numpy as np
 
@@ -440,7 +439,7 @@ readtype_funcs = {
     float: read_float,
     int: read_int,
     bool: read_bool,
-    str: string.strip,
+    str: str.strip,
     tuple: read_tuple,
     np.uint: read_int
 }
@@ -572,7 +571,7 @@ writetype_funcs = {
     dict: write_dict,
     int: str,
     bool: write_bool,
-    str: string.strip,
+    str: str.strip,
     tuple: write_tuple,
     np.uint: str
 }
