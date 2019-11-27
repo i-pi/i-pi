@@ -116,6 +116,7 @@ class DriverSocket(socket.socket):
 
         super(DriverSocket, self).__init__(sock.family, sock.type, sock.proto,
                         fileno=socket.dup(sock.fileno()))
+        self.settimeout(sock.gettimeout())
         self._buf = np.zeros(0, np.byte)
         if socket:
             self.peername = self.getpeername()
