@@ -893,7 +893,7 @@ class Forces(dobject):
 
                 # we use an aux force evaluator with half the number of beads.
                 if self.dforces is None:
-                    self.dbeads = self.beads.copy(self.nbeads / 2)
+                    self.dbeads = self.beads.copy(self.nbeads // 2)
                     self.dcell = self.cell.copy()
                     self.dforces = self.copy(self.dbeads, self.dcell)
 
@@ -909,7 +909,7 @@ class Forces(dobject):
                 fminus = self.dforces.mrpc[index].b2tob1(dstrip(self.dforces.mforces[index].f))
 
                 # calculates the virial.
-                vminus = np.zeros((self.nbeads / 2, 3, 3), float)
+                vminus = np.zeros((self.nbeads // 2, 3, 3), float)
                 dmvirs = dstrip(self.dforces.mforces[index].virs)
                 for i in range(3):
                     for j in range(3):
@@ -968,8 +968,8 @@ class Forces(dobject):
             if self.alpha == 0:
 
                 # the first half of the aux beads are fwd displaced while the second half are bkwd displaced configurations.
-                self.dbeads.q[:self.nbeads / 2] = dstrip(self.beads.q)[1::2] + dq[1::2]
-                self.dbeads.q[-self.nbeads / 2:] = dstrip(self.beads.q)[1::2] - dq[1::2]
+                self.dbeads.q[:self.nbeads // 2] = dstrip(self.beads.q)[1::2] + dq[1::2]
+                self.dbeads.q[-self.nbeads // 2:] = dstrip(self.beads.q)[1::2] - dq[1::2]
 
                 # calculates the forces.
                 fplusminus = self.dforces.mrpc[index].b2tob1(dstrip(self.dforces.mforces[index].f))
@@ -984,8 +984,8 @@ class Forces(dobject):
                 # calculates the finite difference.
                 for k in range(self.nbeads / 2):
                     j = 2 * k + 1
-                    f_4th_order[j] = 2.0 * (fplusminus[self.nbeads / 2 + k] - fplusminus[k]) / 2.0 / delta
-                    v_4th_order[j] = 2.0 * (vplusminus[self.nbeads / 2 + k] - vplusminus[k]) / 2.0 / delta
+                    f_4th_order[j] = 2.0 * (fplusminus[self.nbeads // 2 + k] - fplusminus[k]) / 2.0 / delta
+                    v_4th_order[j] = 2.0 * (vplusminus[self.nbeads // 2 + k] - vplusminus[k]) / 2.0 / delta
 
             # For the case of alpha != 0, all the beads are displaced.
             else:
