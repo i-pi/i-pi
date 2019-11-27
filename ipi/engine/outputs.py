@@ -66,6 +66,8 @@ class BaseOutput(object):
     """Base class for outputs. Deals with flushing upon close and little more """
 
     def __init__(self, filename="out"):
+        """Initializes the class"""
+
         self.filename = filename
         self.out = None
 
@@ -75,39 +77,43 @@ class BaseOutput(object):
         self.close_stream()
 
     def close_stream(self):
-        """Closes the output stream."""
+        """Closes the output stream"""
 
         if not self.out is None:
             self.out.close()
 
     def open_stream(self, mode="w"):
-        """Opens the output stream."""
+        """Opens the output stream"""
 
         # Only open a new file if this is a new run, otherwise append.
         self.mode = mode
         self.out = open_backup(self.filename, self.mode)
 
     def bind(self, mode="w"):
-        """ Stores a reference to system and registers for exiting """
+        """Stores a reference to system and registers for exiting"""
 
         self.open_stream(mode)
         softexit.register_function(self.softexit)
 
     def force_flush(self):
-        """ Tries hard to flush the output stream """
+        """Tries hard to flush the output stream"""
 
         if self.out is not None:
             self.out.flush()
             os.fsync(self.out)
 
     def remove(self):
-        """Removes (temporary) output """
+        """Removes (temporary) output"""
+
         if self.out is not None:
             self.out.close()
             os.remove(self.filename)
 
-    def __getattr__(self, name):
-        return getattr(self.out, name)
+    def write(self, data):
+        """ Writes data to file """
+
+        if self.out is not None:
+            return self.out.write(data)
 
 
 class PropertyOutput(BaseOutput):
