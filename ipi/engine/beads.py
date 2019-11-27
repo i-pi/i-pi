@@ -92,7 +92,7 @@ class Beads(dobject):
 
         dself = dd(self)
 
-        dself.names = depend_array(name="names", value=np.zeros(natoms, np.dtype('|S6')))
+        dself.names = depend_array(name="names", value=np.zeros(natoms, np.dtype('|U6')))
 
         # atom masses, and mass-related arrays
         dself.m = depend_array(name="m", value=np.zeros(natoms, float))   # this is the prototype mass array (just one independent of bead n)

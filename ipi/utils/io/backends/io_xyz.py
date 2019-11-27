@@ -116,7 +116,7 @@ def read_xyz(filedesc):
     cell = h
 
     qatoms = np.zeros(3 * natoms)
-    names = np.zeros(natoms, dtype='|S4')
+    names = np.zeros(natoms, dtype='|U4')
     masses = np.zeros(natoms)
 
     # Extracting a time-frame information

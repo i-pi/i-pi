@@ -151,8 +151,8 @@ class PropertyOutput(BaseOutput):
         super(PropertyOutput, self).__init__(filename)
 
         if outlist is None:
-            outlist = np.zeros(0, np.dtype('|S1024'))
-        self.outlist = np.asarray(outlist, np.dtype('|S1024'))
+            outlist = np.zeros(0, np.dtype('|U1024'))
+        self.outlist = np.asarray(outlist, np.dtype('|U1024'))
         self.stride = stride
         self.flush = flush
         self.nout = 0
