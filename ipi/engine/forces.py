@@ -982,7 +982,7 @@ class Forces(dobject):
                         vplusminus[:, i, j] += self.dforces.mrpc[index].b2tob1(dmvirs[:, i, j])
 
                 # calculates the finite difference.
-                for k in range(self.nbeads / 2):
+                for k in range(self.nbeads // 2):
                     j = 2 * k + 1
                     f_4th_order[j] = 2.0 * (fplusminus[self.nbeads // 2 + k] - fplusminus[k]) / 2.0 / delta
                     v_4th_order[j] = 2.0 * (vplusminus[self.nbeads // 2 + k] - vplusminus[k]) / 2.0 / delta
