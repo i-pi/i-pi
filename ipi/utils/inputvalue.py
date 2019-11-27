@@ -873,7 +873,8 @@ class InputValue(InputAttribute):
         super(InputValue, self).fetch()
 
         if self._dimension != "undefined":
-            print("returning ", self.value * unit_to_internal(self._dimension, self.units.fetch(), 1.0))
+            # DEBUG PRINT STATEMENT.
+            #print("returning ", self.value * unit_to_internal(self._dimension, self.units.fetch(), 1.0))
             return self.value * unit_to_internal(self._dimension, self.units.fetch(), 1.0)
         else:
             return self.value
