@@ -121,7 +121,7 @@ def init_file(mode, filename, dimension="length", units="automatic", cell_units=
     rfile = open(filename, "r")
     ratoms = []
 
-    info("Initializing from file %s. Dimension: %s, units: %s, cell_units: %s" % (filename, dimension, units, cell_units), verbosity.low)
+    info(" # Initializing from file %s. Dimension: %s, units: %s, cell_units: %s" % (filename, dimension, units, cell_units), verbosity.low)
     while True:
         # while loop, so that more than one configuration can be given
         # so multiple beads can be initialized at once.

@@ -82,7 +82,7 @@ def process_units(comment, cell, data, names, masses, natoms, dimension="automat
     """
     dimension, units, cell_units = auto_units(comment, dimension, units, cell_units, mode)
 
-    info("Interpreting input with dimension %s, units %s and cell units %s" % (dimension, units, cell_units), verbosity.high)
+    info(" # Interpreting input with dimension %s, units %s and cell units %s" % (dimension, units, cell_units), verbosity.high)
 
     # Units transformation
     cell *= unit_to_internal('length', cell_units, 1)  # cell units transformation

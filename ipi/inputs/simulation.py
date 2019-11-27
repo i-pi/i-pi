@@ -17,7 +17,7 @@ from ipi.utils.units import *
 from ipi.utils.prng import *
 from ipi.utils.io import *
 from ipi.utils.io.inputs.io_xml import *
-from ipi.utils.messages import verbosity
+from ipi.utils.messages import verbosity, info
 from ipi.engine.smotion import Smotion
 from ipi.inputs.prng import InputRandom
 from ipi.inputs.system import InputSystem, InputSysTemplate
@@ -208,10 +208,8 @@ class InputSimulation(Input):
                 syslist.append(v.fetch())
             elif k == "system_template":
                 syslist += v.fetch()  # this will actually generate automatically a bunch of system objects with the desired properties set automatically to many values
-            elif k == "ffsocket" or k == "fflj" or k == 'ffquip' or k == "ffdebye" or k == "ffplumed" or k == "ffsgdml":
-                print("fetching", k)
-                fflist.append(v.fetch())
-            elif k == "ffyaff":
+            elif k == "ffsocket" or k == "fflj" or k == 'ffquip' or k == "ffdebye" or k == "ffplumed" or k == "ffsgdml" or k== "ffyaff":
+                info(" # Fetching" + k, verbosity.low)
                 fflist.append(v.fetch())
 
         # this creates a simulation object which gathers all the little bits
