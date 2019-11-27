@@ -2244,7 +2244,7 @@ class Trajectories(dobject):
         self._threadlock = system._propertylock
 
         if system.beads.nbeads >= 2:
-            self.scdbeads = system.beads.copy(system.beads.nbeads / 2)
+            self.scdbeads = system.beads.copy(system.beads.nbeads // 2)
             self.scdcell = system.cell.copy()
             self.scdforces = self.system.forces.copy(self.scdbeads, self.scdcell)
 
