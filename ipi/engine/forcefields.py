@@ -767,7 +767,7 @@ class FFsGDML(ForceField):
 
     """ A symmetric Gradient Domain Machine Learning (sGDML) force field.
      Chmiela et al. Sci. Adv., 3(5), e1603015, 2017; Nat. Commun., 9(1), 3887, 2018.
-     http://quantum-machine.org/gdml/
+     http://sgdml.org/doc/
      https://github.com/stefanch/sGDML
     """
 
