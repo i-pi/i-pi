@@ -381,6 +381,7 @@ elif case == 'instanton':
         if len(aux) != (natoms * 3):
             print('We are expecting {} frequencies.'.format((natoms * 3 - 6)))
             print('instead we have read  {}'.format(len(aux)))
+            sys.exit()
         for i in range((natoms * 3)):
             d_min[i] = float(aux[i])
         d_min = d_min.reshape((natoms * 3))
@@ -408,9 +409,9 @@ elif case == 'instanton':
         # cm2au= (2 * np.pi * 3e10 * 2.4188843e-17)
 
         print('\n\nWe are done')
-        print('Nbeads {}, betaP {} a.u.,hbar {} a.u'.format((nbeads, betaP, hbar)))
+        print('Nbeads {}, betaP {} a.u.,hbar {} a.u'.format(nbeads, betaP, hbar))
         print('')
-        print('V0  {} eV ( {} Kcal/mol) '.format((V0 / eV2au, V0 / cal2au / 1000)))
+        print('V0  {} eV ( {} Kcal/mol) '.format(V0 / eV2au, V0 / cal2au / 1000))
         print('S1/hbar {} ,S2/hbar {} ,S/hbar {}'.format(action1 / hbar, action2 / hbar, action / hbar))
         print('BN {} a.u.'.format(BN))
         print('BN/(hbar^2 * betaN)  {}  (should be same as S/hbar) '.format((BN / ((hbar**2) * betaP))))
@@ -420,7 +421,7 @@ elif case == 'instanton':
             print ('We can provied only Tetaphi which value is {} a.u. '.format(tetaphi))
         else:
             print('phi {} a.u.   Teta {} a.u. '.format(phi, tetaphi / phi))
-            print('Tunnelling splitting matrix element (h)  {} a.u ({} cm^-1)'.format((h, h / cm2au)))
+            print('Tunnelling splitting matrix element (h)  {} a.u ({} cm^-1)'.format(h, h / cm2au))
     else:
         print('We can not recongnize the mode.')
         sys.exit()

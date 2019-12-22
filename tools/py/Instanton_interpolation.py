@@ -175,8 +175,8 @@ if input_hess != 'None' or chk != 'None':
     size2 = size0 * nbeadsNew
 
     new_h = np.zeros([size0, size2])
-    # rpc = nm_rescale(nbeads, nbeadsNew, np.asarray(range(1)))  # We use open path RPC
-    rpc = nm_rescale(nbeads, nbeadsNew, instanton=True)
+    rpc = nm_rescale(nbeads, nbeadsNew, np.asarray(range(1)))  # We use open path RPC
+    #rpc = nm_rescale(nbeads, nbeadsNew, instanton=True)
     new_q = rpc.b1tob2(q)
 
     for i in range(size0):
@@ -184,9 +184,9 @@ if input_hess != 'None' or chk != 'None':
             h = np.array([])
             for n in range(nbeads):
                 h = np.append(h, hessian[i, j + size0 * n])
-#           h3 = np.concatenate((h, h, h), axis=0).reshape((h.size, 3), order='F')  # Open path expect three coordinates per atom
-#           diag = rpc.b1tob2(h3)[:, 0]
-            diag = rpc.b1tob2(h)
+            h3 = np.concatenate((h, h, h), axis=0).reshape((h.size, 3), order='F')  # Open path expect three coordinates per atom
+            diag = rpc.b1tob2(h3)[:, 0]
+#            diag = rpc.b1tob2(h)
             new_h[i, j:size2:size0] += diag
 
     #new_h_half = new_h[:, 0:size2 / 2]

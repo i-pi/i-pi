@@ -219,14 +219,14 @@ class Fix(object):
             if key == "old_u" or key == "big_step" or key == "delta" or key == "energy_shift" \
                     or key == "initial_hessian":
                 t = -1
-            elif key == "old_x" or key == "old_f":
+            elif key == "old_x" or key == "old_f" or key == 'd':
                 t = 1
             elif key == "hessian":
                 t = 2
             elif key == "qlist" or key == "glist":
                 t = 3
             else:
-                raise ValueError("@get_active_array: There is an array that we can't recognize")
+                raise ValueError("@get_active_array: There is an array that we can't recognize: {}".format(key))
 
             activearrays[key] = self.get_active_vector(arrays[key], t)
 
@@ -496,10 +496,11 @@ class FullMapper(object):
     """Creation of the multi-dimensional function to compute the physical and the spring forces.
     """
 
-    def __init__(self, im, gm):
+    def __init__(self, im, gm,esum=False):
 
         self.im = im
         self.gm = gm
+        self.esum = esum
 
     def __call__(self, x):
 
@@ -507,6 +508,10 @@ class FullMapper(object):
         e2, g2 = self.gm(x)
         e = e1 + e2
         g = np.add(g1, g2)
+
+        if self.esum:
+           e = np.sum(e)
+
         return e, g
 
 
@@ -668,7 +673,7 @@ class DummyOptimizer(dobject):
         # Print current instanton geometry
         if (self.options["save"] > 0 and np.mod(step, self.options["save"]) == 0) or self.exit:
             print_instanton_geo(self.options["prefix"], step, self.beads.nbeads, self.beads.natoms,
-                                self.beads.names, self.beads.q, self.forces.f,self.forces.pots, self.cell,
+                                self.beads.names, self.beads.q,self.forces.f,self.forces.pots, self.cell,
                                 self.optarrays["energy_shift"], self.output_maker)
 
     def pre_step(self, step=None, adaptative=False):
@@ -1020,6 +1025,7 @@ class LanczosOptimizer(HessianOptimizer):
 
 class LBFGSOptimizer(DummyOptimizer):
 
+
     def bind(self, geop):
         # call bind function from DummyOptimizer
         super(LBFGSOptimizer, self).bind(geop)
@@ -1034,7 +1040,6 @@ class LBFGSOptimizer(DummyOptimizer):
                 geop.optarrays["hessian"] = np.zeros((self.beads.natoms * 3, self.beads.q.size))
             self.optarrays["hessian"] = geop.optarrays["hessian"]
 
-        self.im.bind(self)
 
         # Specific for LBFGS
         self.options["corrections"] = geop.options["corrections"]
@@ -1066,6 +1071,8 @@ class LBFGSOptimizer(DummyOptimizer):
 
         self.optarrays["d"] = geop.optarrays["d"]
 
+        self.fm.esum=True
+
     def initialize(self, step):
 
         if step == 0:
@@ -1096,10 +1103,26 @@ class LBFGSOptimizer(DummyOptimizer):
         self.update_old_pos_for()
         self.init = True
 
+    def post_step(self,step,activearrays):
+        # Update
+        self.optarrays["qlist"][:] = self.fix.get_full_vector(activearrays["qlist"], t=3)
+        self.optarrays["glist"][:] = self.fix.get_full_vector(activearrays["glist"], t=3)
+        self.optarrays["d"][:] = self.fix.get_full_vector(activearrays["d"], t=1)
+
+        self.update_pos_for()
+
+        self.print_geo(step)
+
+        # Check Exit and only then update old arrays
+        d_x_max = np.amax(np.absolute(np.subtract(self.beads.q, self.optarrays["old_x"])))
+        self.exit = self.exitstep(d_x_max, step)
+        self.update_old_pos_for()
+
+
     def step(self, step=None):
         """ Does one simulation time step."""
 
-        activearrays = self.prestep(step)
+        activearrays = self.pre_step(step)
 
         e, g = self.fm(self.beads.q)
         fdf0 = (e, g)
@@ -1110,21 +1133,6 @@ class LBFGSOptimizer(DummyOptimizer):
                self.options["tolerances"]["energy"], self.options["ls_options"]["iter"],
                self.options["corrections"], self.options["scale"], step)
 
-        # Update
-        self.optarrays["qlist"][:] = self.fix.get_full_vector(activearrays["qlist"], t=3)
-        self.optarrays["glist"][:] = self.fix.get_full_vector(activearrays["glist"], t=3)
-        self.optarrays["d"][:] = self.fix.get_full_vector(activearrays["d"], t=1)
-        self.update_pos_for()
 
-        # Print
-        self.print_geo(step)
+        self.post_step(step,activearrays)
 
-        # Check Exit and only then update old arrays
-        d_x_max = np.amax(np.absolute(np.subtract(self.beads.q, self.optarrays["old_x"])))
-        self.exit = self.exitstep(d_x_max, step)
-        self.update_old_pos_for()
-
-        # Print current instanton geometry and hessian
-        if (self.save > 0 and np.mod(step, self.save) == 0) or self.exit:
-            print_instanton_geo(self.options["prefix"], step, self.im.dbeads.nbeads, self.im.dbeads.natoms, self.im.dbeads.names,
-                                self.im.dbeads.q, self.old_u, self.cell, self.optarrays["energy_shift"], self.output_maker)
