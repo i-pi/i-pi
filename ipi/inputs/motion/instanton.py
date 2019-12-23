@@ -67,6 +67,9 @@ class InputInst(InputDictionary):
                                             For small system sizes nichols is recomended. Lanczos is tailored for big bigger than nbeads*natoms >~38*64.
                                             NR works in both cases given that the initial guess is close to the optimized geometry. 
                                             Finally lbfgs is used for tunneling splitting calculations. """}),
+              "reduced": (InputValue, {"dtype": bool,
+                                             "default": False,
+                                             "help": "Evaluate the forces in a reduced ring polymer."}),
               "discretization": (InputArray, {"dtype": float,
                                               "default": input_default(factory=np.ones, args=(0,)),
                                               "help": "Allows to specified non uniform time discretization as proposed in J. Chem. Phys. 134, 184107 (2011)"}),
@@ -169,6 +172,7 @@ class InputInst(InputDictionary):
         self.opt.store(options["opt"])
 
         # Generic instanton
+        self.reduced.store(options["reduced"])
         self.discretization.store(options["discretization"])
         self.alt_out.store(options["save"])
         self.prefix.store(options["prefix"])

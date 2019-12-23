@@ -21,9 +21,10 @@ from ipi.utils import units
 from ipi.utils.mintools import nichols, Powell
 from ipi.engine.motion.geop import L_BFGS
 from ipi.utils.instools import banded_hessian, invmul_banded, red2comp, get_imvector, print_instanton_geo,\
-    print_instanton_hess, diag_banded
+    print_instanton_hess, diag_banded , ms_pathway
 from ipi.utils.hesstools import get_hessian, clean_hessian, get_dynmat
 from ipi.engine.beads import Beads
+from scipy.interpolate import interp1d 
 
 __all__ = ['InstantonMotion']
 
@@ -75,6 +76,7 @@ class InstantonMotion(Motion):
                  old_pot=np.zeros(0, float),
                  old_force=np.zeros(0, float),
                  opt='None',
+                 reduced=False,
                  discretization=np.zeros(0, float),
                  alt_out=1,
                  prefix="instanton",
@@ -111,6 +113,7 @@ class InstantonMotion(Motion):
         self.options["prefix"] = prefix
         self.options["hessian_final"] = hessian_final
 
+        self.options["reduced"] = reduced
         self.options["discretization"] = discretization
         self.optarrays["big_step"] = biggest_step
         self.optarrays["energy_shift"] = energy_shift
@@ -321,13 +324,14 @@ class GradientMapper(object):
         self.fcount = 0
         pass
 
-    def bind(self, dumop, discretization):
+    def bind(self, dumop, discretization,reduced):
 
         self.dbeads = dumop.beads.copy()
         self.dcell = dumop.cell.copy()
         self.dforces = dumop.forces.copy(self.dbeads, self.dcell)
         self.fix = Fix(dumop.beads.natoms, dumop.fixatoms, dumop.beads.nbeads)
         self.set_coef(discretization)
+        self.reduced = reduced
 
     def set_coef(self, coef):
         self.coef = coef.reshape(-1, 1)
@@ -337,11 +341,54 @@ class GradientMapper(object):
         self.dbeads.q = x
 
     def __call__(self, x, full=False, new_disc=True):
-        """computes energy and gradient for optimization step"""
+        """Computes energy and gradient for optimization step"""
         self.fcount += 1
-        self.dbeads.q[:] = x[:]
+        #self.dbeads.q[:] = x[:]
+        new_q = x.copy()
+
+        if self.reduced:
+            indexes = list()
+            indexes.append(0)
+            #CHECK criteria
+            indexes.append(self.dbeads.nbeads -1)
+        else:
+            indexes=np.arange(self.dbeads.nbeads)      
+        
+        indexes = list(np.arange(21))
+        indexes.append(31)
+        indexes = np.asarray(indexes)
+
+        print('The new RP has {} beads'.format(len(indexes)))
+        # Create reduced bead and force objet and evaluate forces 
+        reduced_b = Beads(self.dbeads.natoms, len(indexes))
+        reduced_b.q[:] = self.dbeads.q[indexes]
+        reduced_b.m[:] = self.dbeads.m
+        reduced_b.names[:] = self.dbeads.names
+
+
+        reduced_cell = self.dcell.copy() 
+        reduced_forces = self.dforces.copy(reduced_b, reduced_cell)
+
+        rpots = reduced_forces.pots   # reduced energy
+        rforces = reduced_forces.f    # reduced gradient
+        
+        # Interpolate 
+        new_mspath    = ms_pathway(self.dbeads.q,self.dbeads.m3)
+        red_mspath    = new_mspath[indexes]
+        spline        = interp1d(red_mspath   ,rpots.T,kind='cubic')
+        new_pot       = spline(new_mspath).T 
+
+        spline     = interp1d(red_mspath,rforces.T,kind='cubic')
+        new_forces = spline(new_mspath).T 
+
+
+        # This forces the update of the forces 
+        self.dforces.transfer_forces_manual([self.dbeads.q],[new_pot],[new_forces])  
+
         e = self.dforces.pot   # Energy
-        g = -self.dforces.f   # Gradient
+        g = -self.dforces.f    # Gradient
+
+
         if not full:
             g = self.fix.get_active_vector(g, 1)
 
@@ -582,6 +629,7 @@ class DummyOptimizer(dobject):
             else:
                 raise ValueError("Discretization coefficients  does not match system size")
 
+        self.options["reduced"] = geop.options["reduced"]
         self.options["discretization"] = geop.options["discretization"]
         self.options["tolerances"] = geop.options["tolerances"]
         self.optarrays["big_step"] = geop.optarrays["big_step"]
@@ -597,7 +645,7 @@ class DummyOptimizer(dobject):
         self.options["hessian_final"] = geop.options["hessian_final"]
         self.optarrays["energy_shift"] = geop.optarrays["energy_shift"]
 
-        self.gm.bind(self, self.options["discretization"])
+        self.gm.bind(self, self.options["discretization"],self.options["reduced"])
         self.im.bind(self, self.options["discretization"])
         self.fix = Fix(geop.beads.natoms, geop.fixatoms, geop.beads.nbeads)
 
