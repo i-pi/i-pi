@@ -343,7 +343,6 @@ class GradientMapper(object):
     def __call__(self, x, full=False, new_disc=True):
         """Computes energy and gradient for optimization step"""
         self.fcount += 1
-        #self.dbeads.q[:] = x[:]
         new_q = x.copy()
 
         if self.reduced:
@@ -358,10 +357,11 @@ class GradientMapper(object):
         indexes.append(31)
         indexes = np.asarray(indexes)
 
-        print('The new RP has {} beads'.format(len(indexes)))
+        print('The new RP for this step has {} beads.'.format(len(indexes)))
+
         # Create reduced bead and force objet and evaluate forces 
         reduced_b = Beads(self.dbeads.natoms, len(indexes))
-        reduced_b.q[:] = self.dbeads.q[indexes]
+        reduced_b.q[:] = new_q[indexes]
         reduced_b.m[:] = self.dbeads.m
         reduced_b.names[:] = self.dbeads.names
 
@@ -369,25 +369,29 @@ class GradientMapper(object):
         reduced_cell = self.dcell.copy() 
         reduced_forces = self.dforces.copy(reduced_b, reduced_cell)
 
-        rpots = reduced_forces.pots   # reduced energy
+        rpots   = reduced_forces.pots   # reduced energy
         rforces = reduced_forces.f    # reduced gradient
         
         # Interpolate 
-        new_mspath    = ms_pathway(self.dbeads.q,self.dbeads.m3)
+        new_mspath    = ms_pathway(new_q,self.dbeads.m3)
         red_mspath    = new_mspath[indexes]
         spline        = interp1d(red_mspath   ,rpots.T,kind='cubic')
         new_pot       = spline(new_mspath).T 
-
         spline     = interp1d(red_mspath,rforces.T,kind='cubic')
         new_forces = spline(new_mspath).T 
 
+        #CHECK without intepolate
+        #new_forces = rforces
+        #new_pot = rpots 
 
         # This forces the update of the forces 
-        self.dforces.transfer_forces_manual([self.dbeads.q],[new_pot],[new_forces])  
+        self.dbeads.q[:] = x[:]
+        self.dforces.transfer_forces_manual([new_q],[new_pot],[new_forces])  
 
-        e = self.dforces.pot   # Energy
-        g = -self.dforces.f    # Gradient
-
+        #e = self.dforces.pot   # Energy
+        #g = -self.dforces.f    # Gradient
+        e = np.sum(new_pot)
+        g = -new_forces    # Gradient
 
         if not full:
             g = self.fix.get_active_vector(g, 1)
@@ -708,6 +712,7 @@ class DummyOptimizer(dobject):
     def update_pos_for(self):
         """ Update positions and forces """
 
+        #self.forces.transfer_forces_manual([self.gm.dbeads.q],[self.gm.dforces.pots],[self.gm.dforces.f])  
         self.beads.q[:] = self.gm.dbeads.q[:]
         self.forces.transfer_forces(self.gm.dforces)  # This forces the update of the forces
 
