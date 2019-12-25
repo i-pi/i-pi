@@ -241,7 +241,7 @@ def ms_pathway(pos,m3):
     dx = list()
     path = np.zeros(pos.shape[0])
     for i in range(1,pos.shape[0]):
-        d_norm = np.linalg.norm( pos[i] - pos[i-1] )*m3[i]**0.5
+        d_norm = np.linalg.norm(( pos[i] - pos[i-1])  *m3[i]**0.5)
         dx.append( d_norm )
         path[i] = np.sum(dx[:i])
     return path

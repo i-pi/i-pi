@@ -76,7 +76,7 @@ class InstantonMotion(Motion):
                  old_pot=np.zeros(0, float),
                  old_force=np.zeros(0, float),
                  opt='None',
-                 reduced=False,
+                 max_ms=-1.0,
                  discretization=np.zeros(0, float),
                  alt_out=1,
                  prefix="instanton",
@@ -113,7 +113,7 @@ class InstantonMotion(Motion):
         self.options["prefix"] = prefix
         self.options["hessian_final"] = hessian_final
 
-        self.options["reduced"] = reduced
+        self.options["max_ms"] = max_ms
         self.options["discretization"] = discretization
         self.optarrays["big_step"] = biggest_step
         self.optarrays["energy_shift"] = energy_shift
@@ -324,14 +324,14 @@ class GradientMapper(object):
         self.fcount = 0
         pass
 
-    def bind(self, dumop, discretization,reduced):
+    def bind(self, dumop, discretization,max_ms):
 
         self.dbeads = dumop.beads.copy()
         self.dcell = dumop.cell.copy()
         self.dforces = dumop.forces.copy(self.dbeads, self.dcell)
         self.fix = Fix(dumop.beads.natoms, dumop.fixatoms, dumop.beads.nbeads)
         self.set_coef(discretization)
-        self.reduced = reduced
+        self.max_ms = max_ms
 
     def set_coef(self, coef):
         self.coef = coef.reshape(-1, 1)
@@ -343,25 +343,27 @@ class GradientMapper(object):
     def __call__(self, x, full=False, new_disc=True):
         """Computes energy and gradient for optimization step"""
         self.fcount += 1
-        new_q = x.copy()
+        full_q = x.copy()
+        full_mspath = ms_pathway(full_q,self.dbeads.m3)
 
-        if self.reduced:
+        if self.max_ms >0:
             indexes = list()
             indexes.append(0)
-            #CHECK criteria
-            indexes.append(self.dbeads.nbeads -1)
+            old_index=0 
+            for i in range(1,self.dbeads.nbeads):
+                if full_mspath[i] - full_mspath[old_index] >self.max_ms:
+                    indexes.append(i)
+                    old_index = i
+            if self.dbeads.nbeads -1 not in  indexes:
+                indexes.append(self.dbeads.nbeads -1)
+            info('The reduced RP for this step has {} beads.'.format(len(indexes)),verbosity.low)
         else:
             indexes=np.arange(self.dbeads.nbeads)      
         
-        indexes = list(np.arange(21))
-        indexes.append(31)
-        indexes = np.asarray(indexes)
-
-        print('The new RP for this step has {} beads.'.format(len(indexes)))
 
         # Create reduced bead and force objet and evaluate forces 
         reduced_b = Beads(self.dbeads.natoms, len(indexes))
-        reduced_b.q[:] = new_q[indexes]
+        reduced_b.q[:] = full_q[indexes]
         reduced_b.m[:] = self.dbeads.m
         reduced_b.names[:] = self.dbeads.names
 
@@ -373,25 +375,20 @@ class GradientMapper(object):
         rforces = reduced_forces.f    # reduced gradient
         
         # Interpolate 
-        new_mspath    = ms_pathway(new_q,self.dbeads.m3)
-        red_mspath    = new_mspath[indexes]
+        red_mspath    = full_mspath[indexes]
         spline        = interp1d(red_mspath   ,rpots.T,kind='cubic')
-        new_pot       = spline(new_mspath).T 
-        spline     = interp1d(red_mspath,rforces.T,kind='cubic')
-        new_forces = spline(new_mspath).T 
-
-        #CHECK without intepolate
-        #new_forces = rforces
-        #new_pot = rpots 
+        full_pot      = spline(full_mspath).T 
+        spline        = interp1d(red_mspath,rforces.T,kind='cubic')
+        full_forces   = spline(full_mspath).T 
 
         # This forces the update of the forces 
         self.dbeads.q[:] = x[:]
-        self.dforces.transfer_forces_manual([new_q],[new_pot],[new_forces])  
+        self.dforces.transfer_forces_manual([full_q],[full_pot],[full_forces])  
 
         #e = self.dforces.pot   # Energy
         #g = -self.dforces.f    # Gradient
-        e = np.sum(new_pot)
-        g = -new_forces    # Gradient
+        e = np.sum(full_pot)
+        g = -full_forces    # Gradient
 
         if not full:
             g = self.fix.get_active_vector(g, 1)
@@ -633,7 +630,7 @@ class DummyOptimizer(dobject):
             else:
                 raise ValueError("Discretization coefficients  does not match system size")
 
-        self.options["reduced"] = geop.options["reduced"]
+        self.options["max_ms"] = geop.options["max_ms"]
         self.options["discretization"] = geop.options["discretization"]
         self.options["tolerances"] = geop.options["tolerances"]
         self.optarrays["big_step"] = geop.optarrays["big_step"]
@@ -649,7 +646,7 @@ class DummyOptimizer(dobject):
         self.options["hessian_final"] = geop.options["hessian_final"]
         self.optarrays["energy_shift"] = geop.optarrays["energy_shift"]
 
-        self.gm.bind(self, self.options["discretization"],self.options["reduced"])
+        self.gm.bind(self, self.options["discretization"],self.options["max_ms"])
         self.im.bind(self, self.options["discretization"])
         self.fix = Fix(geop.beads.natoms, geop.fixatoms, geop.beads.nbeads)
 
