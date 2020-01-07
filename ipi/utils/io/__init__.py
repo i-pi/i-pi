@@ -13,6 +13,7 @@ units from the file, but it can be overridden.
 
 import sys
 import os
+import re
 import io
 import numpy as np
 
@@ -328,8 +329,6 @@ def open_backup(filename, mode='r', buffering=-1):
 
     return open(filename, mode, buffering)
 
-# def netstring_encoded_savez(ofile, compressed=True, *unnamed_objs, **named_objs):
-
 
 def netstring_encoded_savez(ofile, compressed=True, **named_objs):
     output = io.StringIO()
@@ -366,3 +365,13 @@ def netstring_encoded_loadz(ifile):
     istr.close()
 
     return rdic
+
+def extras_load_block(ifile):
+    # read string length
+    comment = ifile.readline()
+    try:
+        elen = int(re.match(".*Length: *([0-9]*)", comment).group(1))
+    except:
+        raise ValueError("Syntax error reading EXTRAS file comment line: "+comment)
+    block = ifile.read(elen)
+    return block

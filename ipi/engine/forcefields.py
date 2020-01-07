@@ -11,6 +11,7 @@ layer for a driver that gets positions and returns forces (and energy).
 
 import time
 import threading
+import json
 
 import numpy as np
 
@@ -20,7 +21,7 @@ from ipi.utils.messages import info
 from ipi.interfaces.sockets import InterfaceSocket
 from ipi.utils.depend import dobject
 from ipi.utils.depend import dstrip
-from ipi.utils.io import read_file
+from ipi.utils.io import read_file, print_file
 from ipi.utils.units import unit_to_internal, unit_to_user, UnitMap
 
 try:
@@ -101,7 +102,13 @@ class ForceField(dobject):
         self._doloop = [False]
         self._threadlock = threading.Lock()
 
-    def queue(self, atoms, cell, reqid=-1):
+    def bind(self, output_maker = None):
+        """ Binds the FF, at present just to allow for 
+        managed output """
+        
+        self.output_maker = output_maker
+        
+    def queue(self, atoms, cell, reqid=-1, append=True):
         """Adds a request.
 
         Note that the pars dictionary need to be sent as a string of a
@@ -170,8 +177,9 @@ class ForceField(dobject):
             "t_finished": 0
         })
 
-        with self._threadlock:
-            self.requests.append(newreq)
+        if append:
+            with self._threadlock:
+                self.requests.append(newreq)
 
         if not self.threaded:
             self.poll()
@@ -762,6 +770,114 @@ class FFYaff(ForceField):
         r["status"] = "Done"
         r["t_finished"] = time.time()
 
+class FFCommittee(ForceField):
+    """ Combines multiple forcefields into a single forcefield object
+        that consolidates individual components """
+        
+    def __init__(self, latency=1.0, name="", pars=None, dopbc=True, 
+            active=np.array([-1]), threaded=True, fflist=[], 
+            ffweights=[], alpha = 1.0, al_thresh = 0.0, 
+            al_out = None
+            ):
+        
+        # force threaded mode as otherwise it cannot have threaded children
+        super(FFCommittee, self).__init__(latency=latency, name=name, 
+                    pars=pars, dopbc=dopbc, active=active, threaded=True)
+        if len(fflist)==0:
+            raise ValueError("Committee forcefield cannot be initialized from an empty list")
+        self.fflist = fflist
+        self.ff_requests = {}
+        if len(ffweights)==0:
+            ffweights = np.ones(len(fflist))
+        if len(ffweights) != len(fflist):
+            raise ValueError("List of weights does not match length of committee model")
+        self.ffweights = ffweights
+        self.alpha = alpha
+        self.al_thresh = al_thresh
+        self.al_out = al_out
+        
+    def bind(self, output_maker):
+        
+        super(FFCommittee, self).bind(output_maker)
+        if self.al_thresh > 0:
+            if self.al_out is None:
+                raise ValueError("Must specify an output file if you want to save structures for active learning")
+            else:                
+                self.al_file = self.output_maker.get_output(self.al_out, 'w')
+        
+    def start(self):
+        for ff in self.fflist:
+            ff.start()
+        super(FFCommittee, self).start()
+
+    def queue(self, atoms, cell, reqid=-1):
+        
+        ffh = []
+        for ff in self.fflist:
+            ffh.append(ff.queue(atoms, cell, reqid))        
+        
+        req = super(FFCommittee, self).queue(atoms, cell, reqid, append=False)
+        req["ff_handles"] = ffh
+        with self._threadlock:
+            self.requests.append(req)
+
+        return req
+    
+    def check_finish(self, r):
+        """ Checks if all sub-requests associated with a given 
+        request are finished """
+        for ff_r in r["ff_handles"]:
+            if ff_r["status"] != "Done":
+                return False
+        return True
+        
+    def gather(self, r):
+        """ Collects results from all sub-requests """
+        ff_res = []
+        pot_uncertainty = []
+        r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]                    
+        
+        # first computes (weighted) mean
+        tw = self.ffweights.sum()
+        for i_r, ff_r in enumerate(r["ff_handles"]):
+            r["result"][0] += ff_r["result"][0]*self.ffweights[i_r]/tw
+            r["result"][1] += ff_r["result"][1]*self.ffweights[i_r]/tw
+            r["result"][2] += ff_r["result"][2]*self.ffweights[i_r]/tw
+        
+        for ff_r in r["ff_handles"]:
+            pot_rescaled = self.alpha*(ff_r["result"][0]-r["result"][0])
+            pot_uncertainty.append(pot_rescaled)
+            ff_res.append({
+            "v": r["result"][0] + pot_rescaled,
+            "f": list(r["result"][1] + self.alpha*(ff_r["result"][1]-r["result"][1])),
+            "s": list( (r["result"][2] + self.alpha*(ff_r["result"][2]-r["result"][2])).flatten() ),            
+            "x": ff_r["result"][3],
+            })
+        r["ff_results"]  = ff_res
+        r["result"][3] = json.dumps({
+                            "position"  : list(r["pos"]),
+                            "cell" : list(r["cell"][0].flatten()),
+                            "committee" : r["ff_results"] 
+                            })
+        print np.std(np.array(pot_uncertainty)), self.al_thresh
+        if np.std(np.array(pot_uncertainty)) > self.al_thresh:
+            dumps = json.dumps({
+                            "position"  : list(r["pos"]),
+                            "cell" : list(r["cell"][0].flatten()),
+                            "uncertainty" : np.std(np.array(pot_uncertainty))
+                            })
+            self.al_file.write(dumps)
+                    
+    def poll(self):
+        """Polls the forcefield object to check if it has finished."""
+
+        with self._threadlock:
+            for r in self.requests:
+                if self.check_finish(r):
+                    r["t_dispatched"] = time.time()
+                    r["t_finished"] = time.time()
+                    self.gather(r)                    
+                    r["status"] = "Done"
 
 class FFsGDML(ForceField):
 
@@ -844,4 +960,7 @@ class FFsGDML(ForceField):
 
         r["result"] = [E[0] * self.kcalmol_to_hartree, F.flatten() * self.kcalmolang_to_hartreebohr, np.zeros((3, 3), float), ""]
         r["status"] = "Done"
-        r["t_finished"] = time.time()
+        r["t_finished"] = time.time()                        
+                        
+                    
+     

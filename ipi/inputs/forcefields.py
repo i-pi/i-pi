@@ -8,14 +8,17 @@
 from copy import copy
 import numpy as np
 
-from ipi.engine.forcefields import ForceField, FFSocket, FFLennardJones, FFQUIP, FFDebye, FFPlumed, FFYaff, FFsGDML
+from ipi.engine.forcefields import (ForceField, FFSocket, FFLennardJones, 
+                                    FFQUIP, FFDebye, FFPlumed, FFYaff, FFsGDML, FFCommittee)
 from ipi.interfaces.sockets import InterfaceSocket
 import ipi.engine.initializer
 from ipi.inputs.initializer import *
 from ipi.utils.inputvalue import *
+from ipi.inputs.outputs import InputTrajectory
 
 
-__all__ = ["InputFFSocket", 'InputFFLennardJones', 'InputFFQUIP', 'InputFFDebye', 'InputFFPlumed', 'InputFFYaff', 'InputFFsGDML']
+__all__ = ["InputFFSocket", 'InputFFLennardJones', 'InputFFQUIP', 'InputFFDebye', 
+            'InputFFPlumed', 'InputFFYaff', 'InputFFCommittee', 'InputFFsGDML']
 
 
 class InputForceField(Input):
@@ -373,28 +376,4 @@ class InputFFYaff(InputForceField):
         super(InputFFYaff, self).fetch()
 
         return FFYaff(yaffpara=self.yaffpara.fetch(), yaffsys=self.yaffsys.fetch(), yafflog=self.yafflog.fetch(), rcut=self.rcut.fetch(), alpha_scale=self.alpha_scale.fetch(), gcut_scale=self.gcut_scale.fetch(), skin=self.skin.fetch(), smooth_ei=self.smooth_ei.fetch(), reci_ei=self.reci_ei.fetch(), name=self.name.fetch(), latency=self.latency.fetch(),
-        dopbc=self.pbc.fetch(), threaded=self.threaded.fetch())
-
-
-class InputFFsGDML(InputForceField):
-
-    fields = { 
-        "sGDML_model": (InputValue, {"dtype": str, "default": None, "help": "This gives the file name of the sGDML model."}),
-    }   
-
-    fields.update(InputForceField.fields)
-
-    attribs = {}
-    attribs.update(InputForceField.attribs)
-
-    default_help = """A SGDML energy calculator """
-    default_label = "FFsGDML"
-
-    def store(self, ff):
-        super(InputFFsGDML, self).store(ff)
-        self.sGDML_model.store(ff.sGDML_model)
-
-    def fetch(self):
-        super(InputFFsGDML, self).fetch()
-
-        return FFsGDML(sGDML_model=self.sGDML_model.fetch(), name=self.name.fetch(), latency=self.latency.fetch(), dopbc=self.pbc.fetch(), threaded=self.threaded.fetch())
+                      dopbc=self.pbc.fetch(), threaded=self.threaded.fetch())

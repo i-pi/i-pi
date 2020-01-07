@@ -129,7 +129,7 @@ class InputTrajectory(InputValue):
                                          format=self.format.fetch(), cell_units=self.cell_units.fetch(), ibead=self.bead.fetch())
 
     def store(self, traj):
-        """Stores a PropertyOutput object."""
+        """Stores a TrajectoryOutput object."""
 
         super(InputTrajectory, self).store(traj.what)
         self.stride.store(traj.stride)

@@ -390,7 +390,8 @@ class TrajectoryOutput(BaseOutput):
 
         key = getkey(what)
         if key in ["extras"]:
-            stream.write(" #*EXTRAS*# Step:  %10d  Bead:  %5d  \n" % (self.system.simul.step + 1, b))
+            stream.write(" #*EXTRAS*# Step:  %10d  Bead:  %5d  Length: %8d\n" % 
+                  (self.system.simul.step + 1, b, len(data[b])))
             stream.write(data[b])
             stream.write("\n")
             if flush:
