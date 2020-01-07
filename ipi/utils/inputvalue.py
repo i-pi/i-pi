@@ -806,7 +806,7 @@ class InputAttribute(Input):
         try:
             return name + "='" + write_type(self.type, self.value) + "'"
         except:
-            print "Error writing attribute ", name
+            print("Error writing attribute ", name)
             raise
 
 

@@ -859,7 +859,7 @@ class FFCommittee(ForceField):
                             "cell" : list(r["cell"][0].flatten()),
                             "committee" : r["ff_results"] 
                             })
-        print np.std(np.array(pot_uncertainty)), self.al_thresh
+        print( np.std(np.array(pot_uncertainty)), self.al_thresh )
         if np.std(np.array(pot_uncertainty)) > self.al_thresh:
             dumps = json.dumps({
                             "position"  : list(r["pos"]),
