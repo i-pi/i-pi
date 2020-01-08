@@ -3,16 +3,16 @@
     <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv ] </properties>
     <trajectory stride='1' filename='pos'>  positions{angstrom}  </trajectory>
   </output>
-  <total_steps> 10000 </total_steps>
+  <total_steps> 100 </total_steps>
   <prng>
     <seed> 32342 </seed>
   </prng>
   <ffsgdml name='sgdml' pbc='False'>
-    <sGDML_model> benzene_CCSD-T-ccpVDZ_sym.npz </sGDML_model>
+    <sGDML_model> ../sGDML_models/benzene.DFT.PBE-TS.npz </sGDML_model>
   </ffsgdml>
   <system>
     <initialize nbeads='10'>
-      <file mode='xyz' units="angstrom"> benzene.xyz </file>
+      <file mode='xyz' units="angstrom"> ../molecules/benzene.xyz </file>
       <cell  mode="manual" units="angstrom">
           [200.0, 0.0, 0.0, 0.0, 200.0, 0.0, 0.0, 0.0, 200.0 ]
       </cell>
