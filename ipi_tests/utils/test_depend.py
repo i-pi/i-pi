@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 from ipi.utils.depend import *
 import numpy as np
 import threading
