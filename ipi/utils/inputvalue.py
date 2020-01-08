@@ -448,19 +448,19 @@ class Input(object):
                {\endlist}
 \makeatother
 """
-                rstr += "\n"+r"\\begin{document}\n"
+                rstr += "\n"+r"\begin{document}"+"\n"
             if self._label != "" and not standalone:
                 # assumes that it is part of a cross-referenced document, so only
                 # starts a new section.
-                rstr += r"\\section{" + self._label + "}\n"
-                rstr += r"\\label{" + self._label + "}\n"
+                rstr += r"\section{" + self._label + "}\n"
+                rstr += r"\label{" + self._label + "}\n"
 
-            rstr += r"\\begin{ipifield}{}%\n"
+            rstr += r"\begin{ipifield}{}%"+"\n"
         else:
             if self._label != "" and not standalone:
-                rstr += r"\\begin{ipifield}{\hyperref[" + self._label + "]{" + name + "}}%\n"
+                rstr += r"\begin{ipifield}{\hyperref[" + self._label + "]{" + name + "}}%\n"
             else:
-                rstr += r"\\begin{ipifield}{" + name + "}%\n"
+                rstr += r"\begin{ipifield}{" + name + "}%\n"
 
         rstr += "{" + self._help + "}%\n"
 
@@ -476,7 +476,7 @@ class Input(object):
                 for a in self.attribs:
                     # don't print out units if not necessary
                     if not (a == "units" and self._dimension == "undefined"):
-                        rstr += "\\ipiitem{" + a + "}%\n{" + self.__dict__[a]._help + "}%\n{" + self.__dict__[a].detail_str() + "}%\n"  # !!MUST ADD OTHER STUFF
+                        rstr += r"\ipiitem{" + a + "}%\n{" + self.__dict__[a]._help + "}%\n{" + self.__dict__[a].detail_str() + "}%\n"  # !!MUST ADD OTHER STUFF
         rstr += "}\n"
 
         # As above, for the fields. Only prints out if we have not reached the
@@ -490,10 +490,10 @@ class Input(object):
                 dummy_obj = v[0](**v[1])
                 rstr += dummy_obj.help_latex(name=f, level=level + 1, stop_level=stop_level, standalone=standalone)
 
-        rstr += "\\end{ipifield}\n"
+        rstr += r"\end{ipifield}"+"\n"
         if level == 0 and standalone:
             # ends the created document if it is not part of a larger document
-            rstr += "\\end{document}"
+            rstr += r"\end{document}"
 
         # Some escape characters are necessary for the proper latex formatting
         rstr = rstr.replace('_', '\\_')
