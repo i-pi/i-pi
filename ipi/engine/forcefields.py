@@ -108,7 +108,7 @@ class ForceField(dobject):
         
         self.output_maker = output_maker
         
-    def queue(self, atoms, cell, reqid=-1, append=True):
+    def queue(self, atoms, cell, reqid=-1, template=None):
         """Adds a request.
 
         Note that the pars dictionary need to be sent as a string of a
@@ -121,15 +121,17 @@ class ForceField(dobject):
                 driver for initialisation. Defaults to {}.
             reqid: An optional integer that identifies requests of the same type,
                e.g. the bead index
+            template: a dict giving a base model for the request item -
+               e.g. to add entries that are not needed for the base class execution 
 
         Returns:
-            A list giving the status of the request of the form {'pos': An array
+            A dict giving the status of the request of the form {'pos': An array
             giving the atom positions folded back into the unit cell,
             'cell': Cell object giving the system box, 'pars': parameter string,
             'result': holds the result as a list once the computation is done,
             'status': a string labelling the status of the calculation,
             'id': the id of the request, usually the bead number, 'start':
-            the starting time for the calculation, used to check for timeouts.}.
+            the starting time for the calculation, used to check for timeouts.}.            
         """
 
         par_str = " "
@@ -163,7 +165,9 @@ class ForceField(dobject):
         if self.dopbc:
             cell.array_pbc(pbcpos)
 
-        newreq = ForceRequest({
+        if template is None:
+            template = {}
+        template.update({
             "id": reqid,
             "pos": pbcpos,
             "active": self.iactive,
@@ -176,10 +180,11 @@ class ForceField(dobject):
             "t_dispatched": 0,
             "t_finished": 0
         })
+        
+        newreq = ForceRequest(template)
 
-        if append:
-            with self._threadlock:
-                self.requests.append(newreq)
+        with self._threadlock:
+            self.requests.append(newreq)
 
         if not self.threaded:
             self.poll()
@@ -211,8 +216,8 @@ class ForceField(dobject):
                 self.poll()
 
     def release(self, request):
-        """Shuts down the client code interface thread.
-
+        """Removes a request from the evaluation queue.
+        
         Args:
             request: The id of the job to release.
         """
@@ -770,6 +775,8 @@ class FFYaff(ForceField):
         r["status"] = "Done"
         r["t_finished"] = time.time()
 
+import gc 
+
 class FFCommittee(ForceField):
     """ Combines multiple forcefields into a single forcefield object
         that consolidates individual components """
@@ -812,15 +819,16 @@ class FFCommittee(ForceField):
 
     def queue(self, atoms, cell, reqid=-1):
         
+        # launches requests for all of the committee FF objects
         ffh = []
         for ff in self.fflist:
             ffh.append(ff.queue(atoms, cell, reqid))        
         
-        req = super(FFCommittee, self).queue(atoms, cell, reqid, append=False)
-        req["ff_handles"] = ffh
-        with self._threadlock:
-            self.requests.append(req)
-
+        # creates the request with the help of the base class,
+        # making sure it already contains a handle to the list of FF
+        # requests        
+        req = super(FFCommittee, self).queue(atoms, cell, reqid, 
+                    template = dict(ff_handles = ffh))        
         return req
     
     def check_finish(self, r):
@@ -867,6 +875,11 @@ class FFCommittee(ForceField):
                             "uncertainty" : np.std(np.array(pot_uncertainty))
                             })
             self.al_file.write(dumps)
+        
+        # releases the requests from the committee FF
+        for ff, ff_r in zip(self.fflist,r["ff_handles"]):
+            ff.release(ff_r)
+        
                     
     def poll(self):
         """Polls the forcefield object to check if it has finished."""

@@ -1,11 +1,11 @@
 <simulation verbosity='high'>
   <output prefix='simulation'>
     <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potential{electronvolt}, pressure_cv{megapascal} ] </properties>
-    <trajectory filename='pos' stride='20'> positions </trajectory>
-    <trajectory filename='extra' stride='20'> extras </trajectory>
+    <trajectory filename='pos' stride='200'> positions </trajectory>
+    <trajectory filename='extra' stride='200'> extras </trajectory>
     <checkpoint stride='200'/>
   </output>
-  <total_steps>150</total_steps>
+  <total_steps>15000</total_steps>
   <prng>
     <seed>31415</seed>
   </prng>
@@ -13,11 +13,11 @@
     <weights> [ 1, 1 ] </weights>
     <alpha> 1.0 </alpha>
     <al_thresh> 0.355 </al_thresh>
-    <ffsocket name='lammps-1' mode='unix'>
-      <address>h2o-pimd.1</address>
+    <ffsocket name='lammps-1' mode='unix' matching="any">
+        <address>h2o-pimd.1</address> <latency> 2e-4 </latency>
     </ffsocket>
-    <ffsocket name='lammps-2' mode='unix'>
-      <address>h2o-pimd.2</address>
+    <ffsocket name='lammps-2' mode='unix' matching="any">
+      <address>h2o-pimd.2</address> <latency> 2e-4 </latency>
     </ffsocket>
   </ffcommittee>
   <system>
