@@ -108,7 +108,7 @@ class InputAlKMC(InputDictionary):
     dynamic = {  }
 
     default_help = "Holds all the information for the KMC dynamics, such as timestep, rates and barriers that control it."
-    default_label = "AL6XXX_KMC"
+    default_label = "AL6XXXKMC"
 
     def store(self, kmc):
         """Takes a kinetic MonteCarlo instance and stores a minimal representation of it.
