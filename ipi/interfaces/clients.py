@@ -30,17 +30,17 @@ class Client(DriverSocket):
         havedata: Boolean giving whether the client calculated the forces.
     """
 
-    def __init__(self, address="localhost", port=31415, mode="unix", _socket=True):
+    def __init__(self, address="localhost", port=31415, mode="unix", _socket=None):
         """Initialise Client.
 
         Args:
             - address: A string giving the name of the host network.
             - port: An integer giving the port the socket will be using.
             - mode: A string giving the type of socket used - 'inet' or 'unix'.
-            - _socket: If a socket should be opened. Can be False for testing purposes.
+            - _socket: If a socket should be opened. Can pass an existing socket for testing purposes
         """
 
-        if _socket:
+        if _socket is None:
             # open client socket
             if mode == "inet":
                 _socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -54,9 +54,9 @@ class Client(DriverSocket):
                     sys.exit(1)
             else:
                 raise NameError("Interface mode " + mode + " is not implemented (should be unix/inet)")
-            super(Client, self).__init__(socket=_socket)
+            super(Client, self).__init__(sock=_socket)
         else:
-            super(Client, self).__init__(socket=None)
+            super(Client, self).__init__(sock=_socket)
 
         # allocate data
         self.havedata = False

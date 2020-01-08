@@ -20,7 +20,7 @@ from ipi.interfaces.clients import Client, ClientASE
 
 def test_client():
     """Client: startup without socket."""
-    Client(_socket=False)
+    Client(_socket=None)
 
 
 def test_driver():
@@ -46,4 +46,4 @@ def test_ASE():
     atoms.get_potential_energy()
 
     # create the socket client
-    ClientASE(atoms, address='ase', _socket=False)
+    ClientASE(atoms, address='ase', _socket=None)
