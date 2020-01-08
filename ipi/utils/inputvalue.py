@@ -448,19 +448,19 @@ class Input(object):
                {\endlist}
 \makeatother
 """
-                rstr += "\n\\begin{document}\n"
+                rstr += "\n"+r"\\begin{document}\n"
             if self._label != "" and not standalone:
                 # assumes that it is part of a cross-referenced document, so only
                 # starts a new section.
-                rstr += "\\section{" + self._label + "}\n"
-                rstr += "\\label{" + self._label + "}\n"
+                rstr += r"\\section{" + self._label + "}\n"
+                rstr += r"\\label{" + self._label + "}\n"
 
-            rstr += "\\begin{ipifield}{}%\n"
+            rstr += r"\\begin{ipifield}{}%\n"
         else:
             if self._label != "" and not standalone:
-                rstr += "\\begin{ipifield}{\hyperref[" + self._label + "]{" + name + "}}%\n"
+                rstr += r"\\begin{ipifield}{\hyperref[" + self._label + "]{" + name + "}}%\n"
             else:
-                rstr += "\\begin{ipifield}{" + name + "}%\n"
+                rstr += r"\\begin{ipifield}{" + name + "}%\n"
 
         rstr += "{" + self._help + "}%\n"
 
