@@ -197,7 +197,7 @@ def print_instanton_geo(prefix, step, nbeads, natoms, names, q, f, pots, cell, s
     print(('#Bead    Energy (eV)'), file=outfile)
     for i in range(nbeads):
         print((str(i) + '     ' + str(units.unit_to_user('energy', "electronvolt", pots[i] - shift))), file=outfile)
-    outfile.close()
+    outfile.close_stream()
 
     # print_file("xyz", pos[0], cell, out, title='positions{angstrom}')
 
@@ -226,12 +226,12 @@ def print_instanton_geo(prefix, step, nbeads, natoms, names, q, f, pots, cell, s
                 str(units.unit_to_user('force', unit2, f[i, 3 * j])), \
                 str(units.unit_to_user('force', unit2, f[i, 3 * j + 1])), \
                 str(units.unit_to_user('force', unit2, f[i, 3 * j + 2])), file=outfile2)
-    outfile.close()
-    outfile2.close()
+    outfile.close_stream()
+    outfile2.close_stream()
 
 
 def print_instanton_hess(prefix, step, hessian, output_maker):
 
     outfile = output_maker.get_output(prefix + '.hess_' + str(step), 'w')
     np.savetxt(outfile, hessian.reshape(1, hessian.size))
-    outfile.close()
+    outfile.close_stream()
