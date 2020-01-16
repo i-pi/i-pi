@@ -125,21 +125,21 @@ class DynMatrixMover(Motion):
         outfile.write("# Dynamical matrix (atomic units)" + wstr + '\n')
         for i in range(activedof):
             outfile.write(' '.join(map(str, dmatx[i])) + '\n')
-        outfile.close()
+        outfile.close_stream()
 
         # prints out the Hessian for the activedof
         outfile = self.output_maker.get_output(self.prefix + '.hess', 'w')
         outfile.write("# Hessian matrix (atomic units)" + wstr + '\n')
         for i in range(activedof):
             outfile.write(' '.join(map(str, dmatx[i] / (ism[i] * ism))) + '\n')
-        outfile.close()
+        outfile.close_stream()
 
         # prints out the full Hessian (with all zeros)
         outfile = self.output_maker.get_output(self.prefix + '_full.hess', 'w')
         outfile.write("# Hessian matrix (atomic units)" + wstr + '\n')
         for i in range(3 * self.beads.natoms):
             outfile.write(' '.join(map(str, dmatx_full[i] / (ism_full[i] * ism_full))) + '\n')
-        outfile.close()
+        outfile.close_stream()
 
         eigsys = np.linalg.eigh(dmatx)
 
@@ -147,14 +147,14 @@ class DynMatrixMover(Motion):
         outfile = self.output_maker.get_output(self.prefix + '.eigval', 'w')
         outfile.write("# Eigenvalues (atomic units)" + wstr + '\n')
         outfile.write('\n'.join(map(str, eigsys[0])))
-        outfile.close()
+        outfile.close_stream()
 
         # prints eigenvectors
         outfile = self.output_maker.get_output(self.prefix + '.eigvec', 'w')
         outfile.write("# Eigenvector  matrix (normalized)" + '\n')
         for i in range(activedof):
             outfile.write(' '.join(map(str, eigsys[1][i])) + '\n')
-        outfile.close()
+        outfile.close_stream()
 
         # prints eigenmodes
         eigmode = 1.0 * eigsys[1]
@@ -167,7 +167,7 @@ class DynMatrixMover(Motion):
         outfile.write("# Phonon modes (mass-scaled)" + '\n')
         for i in range(activedof):
             outfile.write(' '.join(map(str, eigmode[i])) + '\n')
-        outfile.close()
+        outfile.close_stream()
 
     def apply_asr(self, dm):
         """
