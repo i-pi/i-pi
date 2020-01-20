@@ -375,12 +375,16 @@ class GradientMapper(object):
         rforces = reduced_forces.f    # reduced gradient
         
         # Interpolate 
-        red_mspath    = full_mspath[indexes]
-        spline        = interp1d(red_mspath   ,rpots.T,kind='cubic')
-        full_pot      = spline(full_mspath).T 
-        spline        = interp1d(red_mspath,rforces.T,kind='cubic')
-        full_forces   = spline(full_mspath).T 
-
+        if len(indexes)>1:
+           red_mspath    = full_mspath[indexes]
+           spline        = interp1d(red_mspath   ,rpots.T,kind='cubic')
+           full_pot      = spline(full_mspath).T 
+           spline        = interp1d(red_mspath,rforces.T,kind='cubic')
+           full_forces   = spline(full_mspath).T 
+        else:
+           full_pot      = rpots
+           full_forces   = rforces
+           
         # This forces the update of the forces 
         self.dbeads.q[:] = x[:]
         self.dforces.transfer_forces_manual([full_q],[full_pot],[full_forces])  
