@@ -644,7 +644,7 @@ class BaroRGB(Barostat):
        m: The mass associated with the cell degree of freedom.
        """
 
-    def __init__(self, dt=None, temp=None, tau=None, ebaro=None, thermostat=None, stressext=None, h0=None, p=None):
+    def __init__(self, dt=None, temp=None, tau=None, ebaro=None, thermostat=None, stressext=None, h0=None, hmask=None, p=None):
         """Initializes RGB barostat.
 
            Args:
@@ -687,6 +687,12 @@ class BaroRGB(Barostat):
         else:
             self.h0 = Cell()
 
+        if hmask is None:
+            hmask = np.ones(( 3, 3), float)
+
+        # mask to zero out components of the cell velocity, to implement cell-boundary constraints
+        dself.hmask = depend_array(name='hmask', value=hmask.copy())
+            
         if not stressext is None:
             self.stressext = stressext
         else:
@@ -744,7 +750,7 @@ class BaroRGB(Barostat):
         dself.ebaro = depend_value(name='ebaro', func=self.get_ebaro,
                                    dependencies=[dself.kin, dself.pot,
                                                  dself.cell_jacobian,
-                                                 dd(self.thermostat).ethermo])
+                                                 dd(self.thermostat).ethermo])                                                
 
     def get_3x3to6(self):
         rp = np.zeros(6, float)
@@ -807,6 +813,12 @@ class BaroRGB(Barostat):
             fcTonm = (fc / dstrip(self.beads.m3)[0].reshape(self.beads.natoms, 3)).T
 
             self.p += np.triu(dt2 * np.dot(fcTonm, pc) + dt3 * np.dot(fcTonm, fc)) * self.beads.nbeads
+            
+        # now apply the mask (and accumulate the associated change in conserved quantity)
+        # we use the thermostat conserved quantity accumulator, so we don't need to create a new one
+        self.thermostat.ethermo += self.kin
+        self.p *= self.hmask
+        self.thermostat.ethermo -= self.kin
 
     def qcstep(self):
         """Propagates the centroid position and momentum and the volume."""
@@ -825,6 +837,12 @@ class BaroRGB(Barostat):
         q += np.dot((p/self.beads.m3[0]).reshape((self.beads.natoms, 3)), sinh.T)
         p = np.dot(p.reshape((self.beads.natoms, 3)), expp.T)
 
+        # now apply the mask (and accumulate the associated change in conserved quantity)
+        # we use the thermostat conserved quantity accumulator, so we don't need to create a new one
+        self.thermostat.ethermo += self.kin
+        self.p *= self.hmask
+        self.thermostat.ethermo -= self.kin
+         
         self.nm.qnm[0] = q.reshape((self.beads.natoms* 3))
         self.nm.pnm[0] = p.reshape((self.beads.natoms* 3))
 
