@@ -355,7 +355,7 @@ class Driver(DriverSocket):
 
         if (self.status & Status.HasData):
             self.sendall(Message("getforce"));
-            reply = ""
+            reply = b""
             while True:
                 try:
                     reply = self.recv_msg()
@@ -369,7 +369,7 @@ class Driver(DriverSocket):
                     break
                 else:
                     warning(" @SOCKET:   Unexpected getforce reply: %s" % (reply), verbosity.low)
-                if reply == "":
+                if reply == b"":
                     raise Disconnected()
         else:
             raise InvalidStatus("Status in getforce was " + str(self.status))

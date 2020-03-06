@@ -56,10 +56,13 @@ def main(inputfile, prefix="SRT_"):
             swapfile = simul.smotion.swapfile
         else:
             for sm in simul.smotion.mlist:
-                if sm.mode == "remd":
-                    if swapfile != "":
-                        raise ValueError("I'm not equipped to deal with multiple REMD outputs, sorry")
-                    swapfile = sm.swapfile
+                try:
+                    if sm.mode == "remd":
+                        if swapfile != "":
+                            raise ValueError("I'm not equipped to deal with multiple REMD outputs, sorry")
+                        swapfile = sm.swapfile
+                except:
+                    continue
         if swapfile == "":
             raise ValueError("Could not determine the REMD swapfile name. Sorry, you'll have to look carefully at your inputs.")
 

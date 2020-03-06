@@ -46,7 +46,7 @@ class InputForceField(Input):
                "pbc": (InputAttribute, {"dtype": bool,
                                         "default": True,
                                         "help": "Applies periodic boundary conditions to the atoms coordinates before passing them on to the driver code."}),
-               "threaded": (InputValue, {"dtype": bool,
+               "threaded": (InputAttribute, {"dtype": bool,
                                          "default": False,
                                          "help": "Whether the forcefield should use a thread loop to evaluate, or work in serial"})
                }
