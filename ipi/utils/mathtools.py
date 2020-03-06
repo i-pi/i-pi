@@ -14,7 +14,7 @@ from ipi.utils.messages import verbosity, warning
 
 __all__ = ['matrix_exp', 'stab_cholesky', 'h2abc', 'h2abc_deg', 'abc2h',
            'invert_ut3x3', 'det_ut3x3', 'eigensystem_ut3x3', 'exp_ut3x3',
-           'root_herm', 'logsumlog']
+           'root_herm', 'logsumlog', 'sinch']
 
 
 def logsumlog(lasa, lbsb):
@@ -258,13 +258,19 @@ def eigensystem_ut3x3(p):
 
     for i in range(3):
         eigp[i, i] = 1
-    eigp[0, 1] = -p[0, 1] / (p[0, 0] - p[1, 1])
-    eigp[1, 2] = -p[1, 2] / (p[1, 1] - p[2, 2])
-    eigp[0, 2] = -(p[0, 1] * p[1, 2] - p[0, 2] * p[1, 1] + p[0, 2] * p[2, 2]) / ((p[0, 0] - p[2, 2]) * (p[2, 2] - p[1, 1]))
+    eigp[0, 1] = -p[0, 1]
+    if eigp[0, 1] != 0.0:  
+        eigp[0, 1] /= (p[0, 0] - p[1, 1])
+    eigp[1, 2] = -p[1, 2]
+    if eigp[1, 2] != 0.0:  
+        eigp[1, 2] /= (p[1, 1] - p[2, 2])
+    eigp[0, 2] = -(p[0, 1] * p[1, 2] - p[0, 2] * p[1, 1] + p[0, 2] * p[2, 2])
+    if eigp[1, 2] != 0.0:  
+        eigp[1, 2] /= ((p[0, 0] - p[2, 2]) * (p[2, 2] - p[1, 1]))
 
     for i in range(3):
         eigvals[i] = p[i, i]
-    return eigp, eigvals
+    return eigvals, eigp
 
 
 def det_ut3x3(h):
@@ -365,3 +371,15 @@ def root_herm(A):
         warning("Checking decomposition after negative eigenvalue: \n" + str(A - np.dot(rv, rv.T)), verbosity.low)
 
     return rv
+
+def _sinch(x):
+        """ Computes sinh(x)/x in a way that is stable for x->0 """
+        
+        x2 = x*x
+        if x2 < 1e-12:
+            return 1 + (x2/6.)*(1 + (x2/20.)*(1 + (x2/42.)))
+        else:
+            return np.sinh(x)/x
+    
+sinch = np.vectorize(_sinch)
+    

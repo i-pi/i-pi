@@ -21,7 +21,7 @@ import sys
 
 from ipi.utils.depend import *
 from ipi.utils.units import *
-from ipi.utils.mathtools import eigensystem_ut3x3, invert_ut3x3, exp_ut3x3, det_ut3x3, matrix_exp
+from ipi.utils.mathtools import eigensystem_ut3x3, invert_ut3x3, exp_ut3x3, det_ut3x3, matrix_exp, sinch
 from ipi.inputs.thermostats import InputThermo
 from ipi.engine.thermostats import Thermostat
 from ipi.engine.cell import Cell
@@ -692,6 +692,8 @@ class BaroRGB(Barostat):
 
         # mask to zero out components of the cell velocity, to implement cell-boundary constraints
         dself.hmask = depend_array(name='hmask', value=hmask.copy())
+        # number of ones in the UT part of the mask
+        self.L = np.diag([hmask[0].sum(), hmask[1,1:].sum(), hmask[2,2:].sum()])
             
         if not stressext is None:
             self.stressext = stressext
@@ -798,7 +800,7 @@ class BaroRGB(Barostat):
 
         hh0 = np.dot(self.cell.h, self.h0.ih)
         pi_ext = np.dot(hh0, np.dot(self.stressext, hh0.T)) * self.h0.V / self.cell.V
-        L = np.diag([3, 2, 1])
+        
 
         stress = dstrip(self.stress_mts(level))
         self.p += dt * (self.cell.V * np.triu(stress))
@@ -806,7 +808,7 @@ class BaroRGB(Barostat):
         # integerates the kinetic part of the stress with the force at the inner-most level.
         if(level == self.nmtslevels - 1):
 
-            self.p += dt * (self.cell.V * np.triu(-self.beads.nbeads * pi_ext) + Constants.kb * self.temp * L)
+            self.p += dt * (self.cell.V * np.triu(-self.beads.nbeads * pi_ext) + Constants.kb * self.temp * self.L)
 
             pc = dstrip(self.beads.pc).reshape(self.beads.natoms, 3)
             fc = np.sum(dstrip(self.forces.forces_mts(level)), axis=0).reshape(self.beads.natoms, 3) / self.beads.nbeads
@@ -819,16 +821,22 @@ class BaroRGB(Barostat):
         self.thermostat.ethermo += self.kin
         self.p *= self.hmask
         self.thermostat.ethermo -= self.kin
-
+    
     def qcstep(self):
         """Propagates the centroid position and momentum and the volume."""
 
         v = self.p / self.m[0]
         halfdt = self.qdt
+        
+        # compute in one go dt sinh v/v to handle zero-velocity cases
+        eigvals, eigvecs = eigensystem_ut3x3(v)
+        ieigvecs = invert_ut3x3(eigvecs)
+        #print("EVA ", eigvals, eigvecs)
+        sinh = halfdt*np.dot(eigvecs, np.dot(np.diag(sinch(halfdt*eigvals)), ieigvecs))
+        
         expq, expp = (matrix_exp(v * halfdt), matrix_exp(-v * halfdt))
-
-
-        sinh = np.dot(invert_ut3x3(v), (expq - expp) / (2.0))
+        #oldsinh = np.dot(invert_ut3x3(v), (expq - expp) / (2.0))
+        #print(sinh, oldsinh)
 
         q = dstrip(self.nm.qnm)[0].copy().reshape((self.beads.natoms, 3))
         p = dstrip(self.nm.pnm)[0].copy()

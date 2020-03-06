@@ -56,6 +56,10 @@ class InputBaro(Input):
               "h0": (InputCell, {"dtype": float,
                                  "default": input_default(factory=Cell),
                                  "help": "Reference cell for Parrinello-Rahman-like barostats.",
+                                 "dimension": "length"}),
+              "hmask": (InputArray, {"dtype": float,
+                                 "default": input_default(factory=np.ones, args=((3,3),)),
+                                 "help": "Mask to zero out velocities.",
                                  "dimension": "length"})
               }
 
@@ -85,6 +89,7 @@ class InputBaro(Input):
             self.mode.store("anisotropic")
             self.p.store(baro.p)
             self.h0.store(baro.h0)
+            self.hmask.store(baro.hmask)
         elif type(baro) is Barostat:
             self.mode.store("dummy")
         else:
@@ -109,7 +114,7 @@ class InputBaro(Input):
             baro = BaroMTK(thermostat=self.thermostat.fetch(), tau=self.tau.fetch())
             if self.p._explicit: baro.p = self.p.fetch()
         elif self.mode.fetch() == "anisotropic":
-            baro = BaroRGB(thermostat=self.thermostat.fetch(), tau=self.tau.fetch())
+            baro = BaroRGB(thermostat=self.thermostat.fetch(), tau=self.tau.fetch(), hmask = self.hmask.fetch())
             if self.p._explicit: baro.p = self.p.fetch()
             if self.h0._explicit:
                 baro.h0 = self.h0.fetch()
