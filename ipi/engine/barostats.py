@@ -644,7 +644,7 @@ class BaroRGB(Barostat):
        m: The mass associated with the cell degree of freedom.
        """
 
-    def __init__(self, dt=None, temp=None, tau=None, ebaro=None, thermostat=None, stressext=None, h0=None, hmask=None, p=None, direction=None):
+    def __init__(self, dt=None, temp=None, tau=None, ebaro=None, thermostat=None, stressext=None, h0=None, p=None, direction=None):
         """Initializes RGB barostat.
 
            Args:
@@ -686,32 +686,31 @@ class BaroRGB(Barostat):
             self.h0 = h0
         else:
             self.h0 = Cell()
-        if hmask is None:
-            hmask = np.ones(( 3, 3), float)
 
+        if not direction is None:
+            self.direction = direction
+        else:
+            self.direction = "all"
 
-        if direction is None:
-            direction = "all"
-
-        if direction == "all":
+        if self.direction == "all":
             hmask = (np.ones((3, 3), float))
         else:
             hmask = np.zeros((3,3), float)
-            if direction == "x":
+            if self.direction == "xx":
                 hmask[0][0] = 1.0
-            elif direction == "y":
+            elif self.direction == "yy":
                 hmask[1][1] = 1.0
-            elif direction == "z":
+            elif self.direction == "zz":
                 hmask[2][2] = 1.0
-            elif direction == "xy" or direction == "yx":
+            elif self.direction == "xy":
                 hmask[0][1] = 1.0
                 hmask[0][0] = 1.0
                 hmask[1][1] = 1.0
-            elif direction == "xz" or direction == "zx":
+            elif self.direction == "xz":
                 hmask[0][0] = 1.0
                 hmask[0][2] = 1.0
                 hmask[2][2] = 1.0
-            elif direction == "yz" or direction == "zy":
+            elif self.direction == "yz":
                 hmask[1][1] = 1.0
                 hmask[1][2] = 1.0
                 hmask[2][2] = 1.0

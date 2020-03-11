@@ -59,11 +59,8 @@ class InputBaro(Input):
                                  "dimension": "length"}),
               "direction": (InputValue, {"default": "all",
                                          "dtype": str,
-                                         "help": "define direction on which the barostat acts, options: all, x, y, z, xy, xz, yz. This is only valid for orthogonal cell."}),
-              "hmask": (InputArray, {"dtype": float,
-                                 "default": input_default(factory=np.zeros, args=((3,3),)),
-                                 "help": "Mask to zero out velocities.",
-                                 "dimension": "length"})
+                                         "help": "define which elements of the h matrix will change. h matrix is defined as upper triangle matrix, in which each column stands for each cell vector a, b, c, respectively. option 'all' will relax all the martrix elements, option 'xx', 'yy', 'zz' change the diagonal element 11, 22, 33 respectively. option 'xy' changes element 11, 22 and 12.  option 'xz' changes element 11, 33 and 13. option 'yz' changes element 22, 33 and 23.",
+                                         "options": ["all", "xx", "yy", "zz", "xy", "xz", "yz"]})
               }
 
     default_help = "Simulates an external pressure bath."
@@ -92,7 +89,7 @@ class InputBaro(Input):
             self.mode.store("anisotropic")
             self.p.store(baro.p)
             self.h0.store(baro.h0)
-            self.hmask.store(baro.hmask)
+            self.direction.store(baro.direction)
         elif type(baro) is Barostat:
             self.mode.store("dummy")
         else:
@@ -117,7 +114,7 @@ class InputBaro(Input):
             baro = BaroMTK(thermostat=self.thermostat.fetch(), tau=self.tau.fetch())
             if self.p._explicit: baro.p = self.p.fetch()
         elif self.mode.fetch() == "anisotropic":
-            baro = BaroRGB(thermostat=self.thermostat.fetch(), tau=self.tau.fetch(), hmask = self.hmask.fetch(), direction=self.direction.fetch())
+            baro = BaroRGB(thermostat=self.thermostat.fetch(), tau=self.tau.fetch(), direction=self.direction.fetch())
             if self.p._explicit: baro.p = self.p.fetch()
             if self.h0._explicit:
                 baro.h0 = self.h0.fetch()
