@@ -644,7 +644,7 @@ class BaroRGB(Barostat):
        m: The mass associated with the cell degree of freedom.
        """
 
-    def __init__(self, dt=None, temp=None, tau=None, ebaro=None, thermostat=None, stressext=None, h0=None, hmask=None, p=None):
+    def __init__(self, dt=None, temp=None, tau=None, ebaro=None, thermostat=None, stressext=None, h0=None, hmask=None, p=None, direction=None):
         """Initializes RGB barostat.
 
            Args:
@@ -686,9 +686,35 @@ class BaroRGB(Barostat):
             self.h0 = h0
         else:
             self.h0 = Cell()
-
         if hmask is None:
             hmask = np.ones(( 3, 3), float)
+
+
+        if direction is None:
+            direction = "all"
+
+        if direction == "all":
+            hmask = (np.ones((3, 3), float))
+        else:
+            hmask = np.zeros((3,3), float)
+            if direction == "x":
+                hmask[0][0] = 1.0
+            elif direction == "y":
+                hmask[1][1] = 1.0
+            elif direction == "z":
+                hmask[2][2] = 1.0
+            elif direction == "xy" or direction == "yx":
+                hmask[0][1] = 1.0
+                hmask[0][0] = 1.0
+                hmask[1][1] = 1.0
+            elif direction == "xz" or direction == "zx":
+                hmask[0][0] = 1.0
+                hmask[0][2] = 1.0
+                hmask[2][2] = 1.0
+            elif direction == "yz" or direction == "zy":
+                hmask[1][1] = 1.0
+                hmask[1][2] = 1.0
+                hmask[2][2] = 1.0
 
         # mask to zero out components of the cell velocity, to implement cell-boundary constraints
         dself.hmask = depend_array(name='hmask', value=hmask.copy())

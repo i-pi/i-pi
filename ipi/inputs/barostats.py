@@ -57,8 +57,11 @@ class InputBaro(Input):
                                  "default": input_default(factory=Cell),
                                  "help": "Reference cell for Parrinello-Rahman-like barostats.",
                                  "dimension": "length"}),
+              "direction": (InputValue, {"default": "all",
+                                         "dtype": str,
+                                         "help": "define direction on which the barostat acts, options: all, x, y, z, xy, xz, yz. This is only valid for orthogonal cell."}),
               "hmask": (InputArray, {"dtype": float,
-                                 "default": input_default(factory=np.ones, args=((3,3),)),
+                                 "default": input_default(factory=np.zeros, args=((3,3),)),
                                  "help": "Mask to zero out velocities.",
                                  "dimension": "length"})
               }
@@ -114,7 +117,7 @@ class InputBaro(Input):
             baro = BaroMTK(thermostat=self.thermostat.fetch(), tau=self.tau.fetch())
             if self.p._explicit: baro.p = self.p.fetch()
         elif self.mode.fetch() == "anisotropic":
-            baro = BaroRGB(thermostat=self.thermostat.fetch(), tau=self.tau.fetch(), hmask = self.hmask.fetch())
+            baro = BaroRGB(thermostat=self.thermostat.fetch(), tau=self.tau.fetch(), hmask = self.hmask.fetch(), direction=self.direction.fetch())
             if self.p._explicit: baro.p = self.p.fetch()
             if self.h0._explicit:
                 baro.h0 = self.h0.fetch()
