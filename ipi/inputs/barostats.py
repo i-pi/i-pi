@@ -59,7 +59,7 @@ class InputBaro(Input):
                                  "dimension": "length"}),
               "direction": (InputValue, {"default": "all",
                                          "dtype": str,
-                                         "help": "define which elements of the h matrix will change. h matrix is defined as upper triangle matrix, in which each column stands for each cell vector a, b, c, respectively. option 'all' will relax all the martrix elements, option 'xx', 'yy', 'zz' change the diagonal element 11, 22, 33 respectively. option 'xy' changes element 11, 22 and 12.  option 'xz' changes element 11, 33 and 13. option 'yz' changes element 22, 33 and 23.",
+                                         "help": "define which elements of the h matrix will change. h matrix is defined as upper triangle matrix, in which each column stands for each cell vector a, b, c, respectively. option 'all' will relax all the martrix elements, option 'xx', 'yy', 'zz','xy', 'xz', 'yz' change the element 11, 22, 33, 12, 13, 23 respectively.",
                                          "options": ["all", "xx", "yy", "zz", "xy", "xz", "yz"]})
               }
 
@@ -85,6 +85,7 @@ class InputBaro(Input):
         elif type(baro) is BaroMTK:
             self.mode.store("flexible")
             self.p.store(baro.p)
+            self.direction.store(baro.direction)
         elif type(baro) is BaroRGB:
             self.mode.store("anisotropic")
             self.p.store(baro.p)
@@ -111,7 +112,7 @@ class InputBaro(Input):
             baro = BaroSCBZP(thermostat=self.thermostat.fetch(), tau=self.tau.fetch())
             if self.p._explicit: baro.p = self.p.fetch()
         elif self.mode.fetch() == "flexible":
-            baro = BaroMTK(thermostat=self.thermostat.fetch(), tau=self.tau.fetch())
+            baro = BaroMTK(thermostat=self.thermostat.fetch(), tau=self.tau.fetch(), direction=self.direction.fetch())
             if self.p._explicit: baro.p = self.p.fetch()
         elif self.mode.fetch() == "anisotropic":
             baro = BaroRGB(thermostat=self.thermostat.fetch(), tau=self.tau.fetch(), direction=self.direction.fetch())

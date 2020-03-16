@@ -256,6 +256,8 @@ def eigensystem_ut3x3(p):
     eigp = np.zeros((3, 3), float)
     eigvals = np.zeros(3, float)
 
+
+
     for i in range(3):
         eigp[i, i] = 1
     eigp[0, 1] = -p[0, 1]
@@ -267,7 +269,6 @@ def eigensystem_ut3x3(p):
     eigp[0, 2] = -(p[0, 1] * p[1, 2] - p[0, 2] * p[1, 1] + p[0, 2] * p[2, 2])
     if eigp[1, 2] != 0.0:  
         eigp[1, 2] /= ((p[0, 0] - p[2, 2]) * (p[2, 2] - p[1, 1]))
-
     for i in range(3):
         eigvals[i] = p[i, i]
     return eigvals, eigp
@@ -382,4 +383,25 @@ def _sinch(x):
             return np.sinh(x)/x
     
 sinch = np.vectorize(_sinch)
+
+def mat_taylor(x, function):
+    """compute matrix function as direct taylor expansion
+    Args:
+       x: matrix
+       function: the function to be expanded
+    Return:
+       function of matrix.  
+    """
+    if function == "sinhx/x":
+        #compute sinhx/x by directly taylor
+        x2 = np.linalg.matrix_power(x, 2)
+        x4 = np.linalg.matrix_power(x, 4)
+        x6 = np.linalg.matrix_power(x, 6)
+        x8 = np.linalg.matrix_power(x, 8)
+        x10 = np.linalg.matrix_power(x, 10)
+        return 1.0 + x2/6.0 + x4/120.0 + x6/5040.0 + x8/362880.0 + x10/39916800.0 
+
+    else:
+       warning("function {} not implemented".format(function)) 
+
     
