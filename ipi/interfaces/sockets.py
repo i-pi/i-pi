@@ -38,7 +38,7 @@ def Message(mystr):
     """Returns a header of standard length HDRLEN."""
 
     # convert to bytestream since we'll be sending this over a socket
-    return bytes(str.ljust(str.upper(mystr), HDRLEN), 'ascii')
+    return str.ljust(str.upper(mystr), HDRLEN).encode()
 
 
 class Disconnected(Exception):
