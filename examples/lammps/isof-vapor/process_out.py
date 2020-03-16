@@ -20,7 +20,7 @@ equilibriumstep = 4000
 table = np.loadtxt('simulation.out')
 
 (asize, bsize) = np.shape(table)
-print asize, bsize
+print(asize, bsize)
 
 out = np.zeros((asize - equilibriumstep, 7))
 

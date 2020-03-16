@@ -77,7 +77,7 @@ class Softexit(object):
            message: The message to output to standard output.
         """
 
-        print "SOFTEXIT CALLED FROM THREAD", threading.currentThread(), message
+        print("SOFTEXIT CALLED FROM THREAD", threading.currentThread(), message)
         if not self.triggered:    # avoid double calls from different threads
             self.exiting = True
             self.triggered = True
@@ -90,7 +90,7 @@ class Softexit(object):
                 try:
                     f()
                 except RuntimeError as err:
-                    print "Error running emergency softexit, ", err
+                    print("Error running emergency softexit, ", err)
                     pass
 
             self.exiting = False  # emergency is over, signal we can be relaxed

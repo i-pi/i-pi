@@ -72,14 +72,14 @@ def main():
     try:
         os.makedirs(run_dir)
     except OSError:
-        print 'The directory %s exists. Do you want to delete its contents and continue? (y/n)' % run_dir
+        print('The directory %s exists. Do you want to delete its contents and continue? (y/n)' % run_dir)
         if answer_is_y():
             shutil.rmtree(run_dir)
             os.makedirs(run_dir)
         else:
             quit('Terminated')
     if is_in_reference_mode:
-        print 'Do you agree to replace references if they exist? (y/n)'
+        print('Do you agree to replace references if they exist? (y/n)')
         if answer_is_y():
             replace_references = True
         else:
@@ -90,20 +90,20 @@ def main():
     for test_candidate in list_of_test_candidates:
         try:
             list_of_test_cases.append(TestCase(test_candidate))
-        except TypeError, e:
-            print '--> Could not create test case:', test_candidate.name
-            print str(e)
+        except TypeError as e:
+            print('--> Could not create test case:', test_candidate.name)
+            print(str(e))
             continue
     queue_of_test_instances = deque([])
     counter = Counter()
-    print
-    print 'List of test cases to be executed:'
+    print()
+    print('List of test cases to be executed:')
     for test_case in list_of_test_cases:
         test_instance_dir = os.path.join(run_dir, test_case.name)
         queue_of_test_instances.append(TestInstance(test_case, test_instance_dir, counter))
-        print '-->', test_case.name
-    print
-    print 'Executing following test instances:'
+        print('-->', test_case.name)
+    print()
+    print('Executing following test instances:')
     while queue_of_test_instances:
         test_instance = queue_of_test_instances.popleft()
         try:
@@ -118,13 +118,13 @@ def main():
                         if not results.files_are_equal():
                             test_passed = False
                     if test_passed:
-                        print '    PASSED'
+                        print('    PASSED')
                     else:
-                        print '    FAILED'
+                        print('    FAILED')
                         for results in differences:
                             results.print_differences()
                 except ValueError as e:
-                    print >> sys.stderr, str(e)
+                    print(str(e), file=sys.stderr)
             else:
                 try:
                     test_instance.put_output_as_reference()
@@ -132,13 +132,13 @@ def main():
                     if replace_references:
                         test_instance.test_case.remove_reference()
                         test_instance.put_output_as_reference()
-                        print '    SUCCESS: References replaced'
+                        print('    SUCCESS: References replaced')
                     else:
-                        print '    SKIPPING: References not copied'
+                        print('    SKIPPING: References not copied')
 
         except (RegtestTimeout, WrongDriverCommand, IPIError, OutputCorrupted) as e:
-            print '    ERROR'
-            print >> sys.stderr, str(e), 'Test instance run directory:', test_instance.run_dir
+            print('    ERROR')
+            print(str(e), 'Test instance run directory:', test_instance.run_dir, file=sys.stderr)
 
             continue
         except WrongIPICommand as e:
@@ -402,10 +402,10 @@ class TestInstance:
                     ipi_out.write(stderr)
                 raise IPIError('I-PI Error\n' + stderr)
         except KeyboardInterrupt as e:
-            print '\nKeyboard interrupt!'
+            print('\nKeyboard interrupt!')
             traceback.print_exc(file=sys.stdout)
             if ipi_proc.poll() is None:
-                print 'Trying to shut down i-PI cleanly...'
+                print('Trying to shut down i-PI cleanly...')
                 # Let I-PI start before we terminate it, otherwise it can hang up
                 time.sleep(Parameters.ipi_starting_time)
                 ipi_proc.terminate()
@@ -413,7 +413,7 @@ class TestInstance:
                 if stderr:
                     with open(ipi_output_path, 'a') as ipi_out:
                         ipi_out.write(stderr)
-                print 'i-PI terminated'
+                print('i-PI terminated')
             for prc in driver_prcs:
                 if prc.poll() is None:
                     prc.terminate()
@@ -546,9 +546,9 @@ class ComparisonResult:
         """
         Prints differences between file1 and file2
         """
-        print 'Files:', self.file1, self.file2
+        print('Files:', self.file1, self.file2)
         for element in self.list_of_differences:
-            print 'Difference in line', element[0], 'in word', element[1]
+            print('Difference in line', element[0], 'in word', element[1])
 
     def files_are_equal(self):
         """
@@ -942,7 +942,7 @@ def answer_is_y():
 
     _yes = ['yes', 'y']
     _no = ['no', 'n']
-    answer = raw_input()
+    answer = input()
     if answer.lower() in _yes:
         return True
     elif answer.lower() in _no:

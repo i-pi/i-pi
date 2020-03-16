@@ -120,7 +120,7 @@ class AlchemyMC(Motion):
         # this would be double-counting, we already have a bail-out condition above
         # if (1.0/self.nxc < self.prng.u) : return  # tries a round of exhanges with probability 1/nmc
 
-        for x in xrange(ntries):
+        for x in range(ntries):
             i = self.prng.rng.randint(lenlist)
             j = self.prng.rng.randint(lenlist)
             while self.beads.names[axlist[i]] == self.beads.names[axlist[j]]:

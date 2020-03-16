@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 
-from __future__ import print_function
+
 
 import os
 import sys
@@ -69,7 +69,7 @@ def contract_trajectory(fns_in, fn_out_template, n_new, cell_units_in, cell_unit
     while True:
         try:
             # Get the frames for all beads.
-            frames = [trj.next() for trj in trjs_in]
+            frames = [next(trj) for trj in trjs_in]
         except StopIteration:
             # Stop when any of the trajectories runs out of frames.
             break

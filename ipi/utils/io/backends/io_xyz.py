@@ -87,11 +87,11 @@ def read_xyz(filedesc):
     """
 
     try:
-        natoms = int(filedesc.next())
+        natoms = int(next(filedesc))
     except (StopIteration, ValueError):
         raise EOFError
 
-    comment = filedesc.next()
+    comment = next(filedesc)
 
     # Extracting cell
     cell = [key.search(comment) for key in cell_re]
@@ -116,7 +116,7 @@ def read_xyz(filedesc):
     cell = h
 
     qatoms = np.zeros(3 * natoms)
-    names = np.zeros(natoms, dtype='|S4')
+    names = np.zeros(natoms, dtype='|U4')
     masses = np.zeros(natoms)
 
     # Extracting a time-frame information

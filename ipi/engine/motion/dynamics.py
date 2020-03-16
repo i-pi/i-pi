@@ -218,7 +218,7 @@ class DummyIntegrator(dobject):
 
     def get_pdt(self):
         dtl = 1.0 / self.nmts
-        for i in xrange(1, len(dtl)):
+        for i in range(1, len(dtl)):
             dtl[i] *= dtl[i - 1]
         dtl *= self.dt * 0.5
         return dtl

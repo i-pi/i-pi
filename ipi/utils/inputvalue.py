@@ -172,10 +172,10 @@ class Input(object):
         # merge instencefields with the static class fields
         self.instancefields.update(self.fields)
 
-        for f, v in self.instancefields.iteritems():
+        for f, v in self.instancefields.items():
             self.__dict__[f] = v[0](**v[1])
 
-        for a, v in self.attribs.iteritems():
+        for a, v in self.attribs.items():
             self.__dict__[a] = v[0](**v[1])
 
         self.set_default()
@@ -235,7 +235,7 @@ class Input(object):
             newfield = self.dynamic[name][0](**self.dynamic[name][1])
             newfield.parse(xml)
         except:
-            print "Error parsing " + name + " from " + str(xml)
+            print("Error parsing " + name + " from " + str(xml))
             raise
         self.extra.append((name, newfield))
 
@@ -324,7 +324,7 @@ class Input(object):
         if xml is None:
             self._text = text
         else:
-            for a, v in xml.attribs.iteritems():
+            for a, v in xml.attribs.items():
                 if a in self.attribs:
                     self.__dict__[a].parse(text=v)
                 elif a == "_text":
@@ -448,19 +448,19 @@ class Input(object):
                {\endlist}
 \makeatother
 """
-                rstr += "\n\\begin{document}\n"
+                rstr += "\n"+r"\begin{document}"+"\n"
             if self._label != "" and not standalone:
                 # assumes that it is part of a cross-referenced document, so only
                 # starts a new section.
-                rstr += "\\section{" + self._label + "}\n"
-                rstr += "\\label{" + self._label + "}\n"
+                rstr += r"\section{" + self._label + "}\n"
+                rstr += r"\label{" + self._label + "}\n"
 
-            rstr += "\\begin{ipifield}{}%\n"
+            rstr += r"\begin{ipifield}{}%"+"\n"
         else:
             if self._label != "" and not standalone:
-                rstr += "\\begin{ipifield}{\hyperref[" + self._label + "]{" + name + "}}%\n"
+                rstr += r"\begin{ipifield}{\hyperref[" + self._label + "]{" + name + "}}%\n"
             else:
-                rstr += "\\begin{ipifield}{" + name + "}%\n"
+                rstr += r"\begin{ipifield}{" + name + "}%\n"
 
         rstr += "{" + self._help + "}%\n"
 
@@ -476,7 +476,7 @@ class Input(object):
                 for a in self.attribs:
                     # don't print out units if not necessary
                     if not (a == "units" and self._dimension == "undefined"):
-                        rstr += "\\ipiitem{" + a + "}%\n{" + self.__dict__[a]._help + "}%\n{" + self.__dict__[a].detail_str() + "}%\n"  # !!MUST ADD OTHER STUFF
+                        rstr += r"\ipiitem{" + a + "}%\n{" + self.__dict__[a]._help + "}%\n{" + self.__dict__[a].detail_str() + "}%\n"  # !!MUST ADD OTHER STUFF
         rstr += "}\n"
 
         # As above, for the fields. Only prints out if we have not reached the
@@ -486,14 +486,14 @@ class Input(object):
                 rstr += self.__dict__[f].help_latex(name=f, level=level + 1, stop_level=stop_level, standalone=standalone)
 
         if len(self.dynamic) != 0 and level != stop_level:
-            for f, v in self.dynamic.iteritems():
+            for f, v in self.dynamic.items():
                 dummy_obj = v[0](**v[1])
                 rstr += dummy_obj.help_latex(name=f, level=level + 1, stop_level=stop_level, standalone=standalone)
 
-        rstr += "\\end{ipifield}\n"
+        rstr += r"\end{ipifield}"+"\n"
         if level == 0 and standalone:
             # ends the created document if it is not part of a larger document
-            rstr += "\\end{document}"
+            rstr += r"\end{document}"
 
         # Some escape characters are necessary for the proper latex formatting
         rstr = rstr.replace('_', '\\_')
@@ -647,7 +647,7 @@ class Input(object):
         if show_fields:
             for f in self.instancefields:
                 rstr += self.__dict__[f].help_xml(f, "   " + indent, level + 1, stop_level)
-            for f, v in self.dynamic.iteritems():
+            for f, v in self.dynamic.items():
                 # we must create the object manually, as dynamic objects are
                 # not automatically added to the input object's dictionary
                 dummy_obj = v[0](**v[1])
@@ -697,7 +697,7 @@ class InputDictionary(Input):
         """Base function for storing data passed as a dictionary"""
 
         self._explicit = True
-        for f, v in value.iteritems():
+        for f, v in value.items():
             self.__dict__[f].store(value[f])
 
         pass
@@ -707,7 +707,7 @@ class InputDictionary(Input):
 
         self.check()
         rdic = {}
-        for f, v in self.instancefields.iteritems():
+        for f, v in self.instancefields.items():
             rdic[f] = self.__dict__[f].fetch()
         return rdic
 
@@ -873,7 +873,8 @@ class InputValue(InputAttribute):
         super(InputValue, self).fetch()
 
         if self._dimension != "undefined":
-            print "returning ", self.value * unit_to_internal(self._dimension, self.units.fetch(), 1.0)
+            # DEBUG PRINT STATEMENT.
+            #print("returning ", self.value * unit_to_internal(self._dimension, self.units.fetch(), 1.0))
             return self.value * unit_to_internal(self._dimension, self.units.fetch(), 1.0)
         else:
             return self.value

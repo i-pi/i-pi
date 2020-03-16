@@ -29,7 +29,7 @@ class Verbosity(object):
     """
 
     lock = False
-    level = "low"
+    level = VERB_LOW
 
     def __getattr__(self, name):
         """Determines whether a certain verbosity level is
@@ -147,4 +147,4 @@ def warning(text="", show=True):
         return
     if verbosity.trace:
         traceback.print_stack(file=sys.stdout)
-    print(" !W! " + text)
+    print((" !W! " + text))

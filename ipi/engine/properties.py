@@ -125,11 +125,11 @@ def help_latex(idict, standalone=True):
 { {\hfill\raggedleft\textit{\small #3}\par} }
 }
 """
-        rstr += "\n\\begin{document}\n"
-        rstr += "The following are the different allowable ouputs:\n\\par"
+        rstr += "\n"+r"\begin{document}\n"
+        rstr += "The following are the different allowable ouputs:\n"+r"\par"
 
     for out in sorted(idict):
-        rstr += "\\ipiitem{" + out + "}"
+        rstr += r"\ipiitem{" + out + "}"
         if "longhelp" in idict[out]:
             rstr += "{" + idict[out]['longhelp'] + "}"
         else:
@@ -145,7 +145,7 @@ def help_latex(idict, standalone=True):
 
     if standalone:
         # ends the created document if it is not part of a larger document
-        rstr += "\\end{document}"
+        rstr += r"\end{document}"
 
     # Some escape characters are necessary for the proper latex formatting
     rstr = rstr.replace('_', '\\_')
@@ -835,7 +835,7 @@ class Properties(dobject):
         # subtracts centroid
         q = dstrip(self.beads.q).copy()
         qc = dstrip(self.beads.qc)
-        for b in xrange(self.beads.nbeads):
+        for b in range(self.beads.nbeads):
             q[b] -= qc
 
         # zeroes components that are not requested
@@ -933,7 +933,7 @@ class Properties(dobject):
                 if len(self.fqref) != 3 * self.beads.natoms:
                     raise ValueError("Atom number mismatch in reference file for virial_fq")
         fq = 0.0
-        for b in xrange(self.beads.nbeads):
+        for b in range(self.beads.nbeads):
             fq += np.dot(self.forces.f[b], self.beads.q[b] - self.fqref)
 
         return fq * 0.5 / self.beads.nbeads
@@ -2244,7 +2244,7 @@ class Trajectories(dobject):
         self._threadlock = system._propertylock
 
         if system.beads.nbeads >= 2:
-            self.scdbeads = system.beads.copy(system.beads.nbeads / 2)
+            self.scdbeads = system.beads.copy(system.beads.nbeads // 2)
             self.scdcell = system.cell.copy()
             self.scdforces = self.system.forces.copy(self.scdbeads, self.scdcell)
 

@@ -66,6 +66,8 @@ class BaseOutput(object):
     """Base class for outputs. Deals with flushing upon close and little more """
 
     def __init__(self, filename="out"):
+        """Initializes the class"""
+
         self.filename = filename
         self.out = None
 
@@ -75,39 +77,43 @@ class BaseOutput(object):
         self.close_stream()
 
     def close_stream(self):
-        """Closes the output stream."""
+        """Closes the output stream"""
 
         if not self.out is None:
             self.out.close()
 
     def open_stream(self, mode="w"):
-        """Opens the output stream."""
+        """Opens the output stream"""
 
         # Only open a new file if this is a new run, otherwise append.
         self.mode = mode
         self.out = open_backup(self.filename, self.mode)
 
     def bind(self, mode="w"):
-        """ Stores a reference to system and registers for exiting """
+        """Stores a reference to system and registers for exiting"""
 
         self.open_stream(mode)
         softexit.register_function(self.softexit)
 
     def force_flush(self):
-        """ Tries hard to flush the output stream """
+        """Tries hard to flush the output stream"""
 
         if self.out is not None:
             self.out.flush()
             os.fsync(self.out)
 
     def remove(self):
-        """Removes (temporary) output """
+        """Removes (temporary) output"""
+
         if self.out is not None:
             self.out.close()
             os.remove(self.filename)
 
-    def __getattr__(self, name):
-        return getattr(self.out, name)
+    def write(self, data):
+        """ Writes data to file """
+
+        if self.out is not None:
+            return self.out.write(data)
 
 
 class PropertyOutput(BaseOutput):
@@ -145,8 +151,8 @@ class PropertyOutput(BaseOutput):
         super(PropertyOutput, self).__init__(filename)
 
         if outlist is None:
-            outlist = np.zeros(0, np.dtype('|S1024'))
-        self.outlist = np.asarray(outlist, np.dtype('|S1024'))
+            outlist = np.zeros(0, np.dtype('|U1024'))
+        self.outlist = np.asarray(outlist, np.dtype('|U1024'))
         self.stride = stride
         self.flush = flush
         self.nout = 0
@@ -163,8 +169,8 @@ class PropertyOutput(BaseOutput):
         self.system = system
         for what in self.outlist:
             key = getkey(what)
-            if not key in system.properties.property_dict.keys():
-                print "Computable properties list: ", system.properties.property_dict.keys()
+            if not key in list(system.properties.property_dict.keys()):
+                print("Computable properties list: ", list(system.properties.property_dict.keys()))
                 raise KeyError(key + " is not a recognized property")
 
         super(PropertyOutput, self).bind(mode)
@@ -286,8 +292,8 @@ class TrajectoryOutput(BaseOutput):
         self.system = system
         # Checks as soon as possible if some asked-for trajs are missing or mispelled
         key = getkey(self.what)
-        if not key in self.system.trajs.traj_dict.keys():
-            print "Computable trajectories list: ", self.system.trajs.traj_dict.keys()
+        if not key in list(self.system.trajs.traj_dict.keys()):
+            print("Computable trajectories list: ", list(self.system.trajs.traj_dict.keys()))
             raise KeyError(key + " is not a recognized output trajectory")
 
         super(TrajectoryOutput, self).bind(mode)

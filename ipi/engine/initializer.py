@@ -56,7 +56,7 @@ class InitBase(dobject):
         self.mode = mode
         self.units = units
 
-        for (o, v) in others.items():
+        for (o, v) in list(others.items()):
             self.__dict__[o] = v
 
 
@@ -121,7 +121,7 @@ def init_file(mode, filename, dimension="length", units="automatic", cell_units=
     rfile = open(filename, "r")
     ratoms = []
 
-    info("Initializing from file %s. Dimension: %s, units: %s, cell_units: %s" % (filename, dimension, units, cell_units), verbosity.low)
+    info(" # Initializing from file %s. Dimension: %s, units: %s, cell_units: %s" % (filename, dimension, units, cell_units), verbosity.low)
     while True:
         # while loop, so that more than one configuration can be given
         # so multiple beads can be initialized at once.
@@ -212,7 +212,7 @@ def init_vector(iif, nbeads, momenta=False, dimension="length", units="automatic
     if mode == "manual":
         if iif.bead >= 0:  # if there is a bead specifier then we return a single bead slice
             nbeads = 1
-        natoms = len(rq) / nbeads / 3
+        natoms = len(rq) // (nbeads * 3)
         rq.shape = (nbeads, 3 * natoms)
 
     return rq
@@ -234,9 +234,9 @@ def set_vector(iif, dq, rq):
     """
 
     (nbeads, natoms) = rq.shape
-    natoms /= 3
+    natoms //= 3
     (dbeads, datoms) = dq.shape
-    datoms /= 3
+    datoms //= 3
 
     # Check that indices make sense
     if iif.index < 0 and natoms != datoms:
@@ -403,7 +403,7 @@ class Initializer(dobject):
                 rq = init_vector(v, self.nbeads, dimension="length", units=v.units)
 
                 nbeads, natoms = rq.shape
-                natoms /= 3
+                natoms //= 3
 
                 # check if we must initialize the simulation beads
                 if simul.beads.nbeads == 0:
@@ -463,7 +463,7 @@ class Initializer(dobject):
                 # read the atomic momenta as a vector
                 rp = init_vector(v, self.nbeads, momenta=True, dimension="momentum", units=v.units)
                 nbeads, natoms = rp.shape
-                natoms /= 3
+                natoms //= 3
 
                 # checks if we must initialize the simulation beads
                 if simul.beads.nbeads == 0:
@@ -480,7 +480,7 @@ class Initializer(dobject):
                 # read the atomic velocities as a vector
                 rv = init_vector(v, self.nbeads, dimension="velocity", units=v.units)
                 nbeads, natoms = rv.shape
-                natoms /= 3
+                natoms //= 3
 
                 # checks if we must initialize the simulation beads
                 if simul.beads.nbeads == 0 or not fmass:

@@ -29,7 +29,7 @@ class InputAlchemy(InputDictionary):
 
     fields = {
         "names": (InputArray, {"dtype": str,
-                               "default": input_default(factory=np.zeros, args=(0,), kwargs={'dtype': np.dtype('|S6')}),
+                               "default": input_default(factory=np.zeros, args=(0,), kwargs={'dtype': np.dtype('|U6')}),
                                "help": "The names of the atoms to be to exchanged, in the format [name1, name2, ... ]."}),
         "nxc": (InputValue, {"dtype": float,
                              "default": 1,

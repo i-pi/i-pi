@@ -114,23 +114,23 @@ class AlKMC(Motion):
         self.dcell = Cell()
         self.dcell.h = self.scell*self.ncell
 
-        print "LATTICE PARAM ", self.a0
+        print("LATTICE PARAM ", self.a0)
         # this is the list of lattice sites, in 3D coordinates
-        ix,iy,iz = np.meshgrid(range(self.ncell), range(self.ncell), range(self.ncell), indexing='ij')
+        ix,iy,iz = np.meshgrid(list(range(self.ncell)), list(range(self.ncell)), list(range(self.ncell)), indexing='ij')
         self.sites = np.dot(np.asarray([ix.flatten(),iy.flatten(),iz.flatten()]).T, self.scell.T)
-        print len(self.sites), self.nsites, "###"
+        print(len(self.sites), self.nsites, "###")
         # now we build list of nearest neighbors (fcc-lattice hardcoded!)
         self.neigh = np.zeros((self.nsites,12),int)
         nneigh = np.zeros(self.nsites,int)
         # could be done in a more analytic way but whatever, I'm too lazy
         a02 = 1.01*0.5*self.a0**2                                        # perhaps 1.01 it is not enough, must check!
-        for i in xrange(self.nsites): # determines the connectivity of the lattice
+        for i in range(self.nsites): # determines the connectivity of the lattice
             rij = self.sites.copy().flatten()
-            for j in xrange(self.nsites):
+            for j in range(self.nsites):
                 rij[3*j:3*j+3] -= self.sites[i]
             self.dcell.array_pbc(rij)
             rij.shape = (self.nsites,3)
-            for j in xrange(i):
+            for j in range(i):
                 if np.dot(rij[j],rij[j]) < a02: # found nearest neighbor
                     self.neigh[i,nneigh[i]] = j
                     self.neigh[j,nneigh[j]] = i
@@ -147,7 +147,7 @@ class AlKMC(Motion):
         # geop should not trigger exit if there is early convergence, but just carry on.
         # we hard-code this option to avoid early-termination that would be hard to debug for a user
         geop["exit_on_convergence"] = False
-        for i in xrange(self.neval):
+        for i in range(self.neval):
             # geometry optimizer should not have *any* hystory dependence
             self.geop[i] = GeopMotion(fixcom=fixcom, fixatoms=fixatoms,**geop) #mode="cg", ls_options={"tolerance": 1, "iter": 20,  "step": 1e-3, "adaptive": 0.0}, tolerances={"energy": 1e-7, "force": 1e-2, "position": 1e-4}, ) #!TODO: set the geop parameters properly
 
@@ -161,9 +161,9 @@ class AlKMC(Motion):
             ff = open(self.qcache_file, "rb")
             self.qcache = pickle.load(ff)
             ff.close()
-            print "Loaded %d cached energies" % (len(self.ecache))
+            print("Loaded %d cached energies" % (len(self.ecache)))
         except:
-            print "Couldn't load cache files "+self.ecache_file+","+self.qcache_file+" - resetting"
+            print("Couldn't load cache files "+self.ecache_file+","+self.qcache_file+" - resetting")
             self.ecache = {}
             self.qcache = {}
         self.ncache = len(self.ecache)
@@ -206,7 +206,7 @@ class AlKMC(Motion):
         f_restart = True
         if self.idx is None or len(self.idx)==0:
             f_restart = False
-            idx =np.asarray(range(self.ncell**3), int) # initialize random distribution of atoms
+            idx =np.asarray(list(range(self.ncell**3)), int) # initialize random distribution of atoms
             self.prng.rng.shuffle(idx)
             self.idx = idx
 
@@ -224,20 +224,20 @@ class AlKMC(Motion):
 
         # reverse lookup index [i.e. ridx[i] gives the index of the atoms at site i]
         self.ridx = np.zeros(self.nsites,int)
-        self.ridx[self.idx] = range(self.nsites)
+        self.ridx[self.idx] = list(range(self.nsites))
 
         self.state = np.asarray(list(state))
-        print  "".join(self.state)
+        print("".join(self.state))
 
 
-        print "CHECKING INITIAL ASSIGNMENTS"
-        for i in xrange(self.nsites):
+        print("CHECKING INITIAL ASSIGNMENTS")
+        for i in range(self.nsites):
             if self.ridx[i]<self.natoms:
-                print self.beads.names[self.ridx[i]], self.state[i]
+                print(self.beads.names[self.ridx[i]], self.state[i])
             else:
-                print "V", self.state[i]
+                print("V", self.state[i])
             if self.idx[self.ridx[i]] != i:
-                print "inconsistent site string for atom ",i, " and site ", self.ridx[i]
+                print("inconsistent site string for atom ",i, " and site ", self.ridx[i])
 
         if not f_restart:
             self.beads.q[0,:] = self.sites[self.idx].flatten() # also sets global q so we can use it further down
@@ -247,7 +247,7 @@ class AlKMC(Motion):
         self.dnm = [None] * self.neval
         self.dens = [None] * self.neval
         self.dbias = [None] * self.neval
-        for i in xrange(self.neval):
+        for i in range(self.neval):
             self.dbeads[i] = beads.copy()
             self.dforces[i] = bforce.copy(self.dbeads[i], self.dcell)
             self.dnm[i] = nm.copy()
@@ -264,7 +264,7 @@ class AlKMC(Motion):
         self.geop[ieval].reset()
         ipot = self.dforces[ieval].pot
 
-        for i in xrange(self.nstep):
+        for i in range(self.nstep):
             # print "geop ", i, self.dforces[ieval].pot
             self.geop[ieval].step(i)
             #if self.geop[ieval].converged[0]: break
@@ -289,8 +289,8 @@ class AlKMC(Motion):
             self.feval[ieval] = 1
 
         with self._threadlock:
-            print "Finished ", nstr
-            print "Energy, initial - TS - final: ", ipot, nevent[-1], newpot
+            print("Finished ", nstr)
+            print("Energy, initial - TS - final: ", ipot, nevent[-1], newpot)
 
     # threaded ts evaluation
     def ts_thread(self, ieval, ostr, nstr, nevent, setfev=1):
@@ -334,7 +334,7 @@ class AlKMC(Motion):
                     break
         with self._threadlock:
             # finds free evaluator
-            for e in xrange(self.neval):
+            for e in range(self.neval):
                 if self.feval[e] == 1:
                     ieval = e
                     self.feval[ieval] = 0
@@ -379,15 +379,15 @@ class AlKMC(Motion):
         uid_1 = self.unique_idx(state_1)
         ru1 = np.zeros(self.nsites,int)
         # this is the reverse map. what is the atom index that sits in a given site?
-        ru1[uid_1] = np.asarray(range(self.nsites),int)
+        ru1[uid_1] = np.asarray(list(range(self.nsites)),int)
 
         uid_2 = self.unique_idx(state_2)
         ru2 = np.zeros(self.nsites,int)
-        ru2[uid_2] = np.asarray(range(self.nsites),int)  # this says which atom is in a given site in u2
+        ru2[uid_2] = np.asarray(list(range(self.nsites)),int)  # this says which atom is in a given site in u2
 
         iu12 = ru2[uid_1]
         iu21 = ru1[uid_2]
-        for i in xrange(self.natoms):
+        for i in range(self.natoms):
             if iu12[i] >= self.natoms:
                 #print "found vacancy swap 1->2", i, u1[i], u2[iu12[i]], iu12[i]
                 i1vac2 = i
@@ -418,7 +418,7 @@ class AlKMC(Motion):
         levents = []
         ethreads = [None] * self.neval
         # loops over the vacancy
-        for ivac in xrange(self.natoms, self.natoms + self.nvac):
+        for ivac in range(self.natoms, self.natoms + self.nvac):
             svac = self.idx[ivac] # lattice site associated with this vacancy
             if self.state[svac] != "V":
                 raise IndexError("Something got screwed and a vacancy state is not a vacancy anymore!")
@@ -455,7 +455,7 @@ class AlKMC(Motion):
                     st.start()
                     ethreads[ieval] = st
                 else:
-                    print "Found state ", nstr, " retrieving cached energy ", self.ecache[nstr]
+                    print("Found state ", nstr, " retrieving cached energy ", self.ecache[nstr])
 
                     # fetch energy from previous calculation
                     nevent = [svac, sneigh, self.ecache[nstr], self.qcache[nstr], 0.0]
@@ -479,17 +479,17 @@ class AlKMC(Motion):
             while not st is None and st.isAlive():
                 st.join(2)
 
-        print "Computed ", len(levents), " possible reactions. Cache len ", len(self.ecache)
+        print("Computed ", len(levents), " possible reactions. Cache len ", len(self.ecache))
 
         # get list of rates
         rates = np.zeros(len(levents), float)
         crates = np.zeros(len(levents), float)
         cdf = 0.0
-        for i in xrange(len(levents)):
+        for i in range(len(levents)):
             #print ("Barrier, naive: %f, static: %f" % (0.5*(ecurr + levents[i][2]) + self.diffusion_barrier_al, levents[i][4]))
 
             ets = 0.5*(ecurr + levents[i][2]) + self.barriers[levents[i][-1]]  #naive heuristic for the ts energy
-            print "Event ", i, levents[i][-1], ecurr, ">>", ets, ">>", levents[i][2]
+            print("Event ", i, levents[i][-1], ecurr, ">>", ets, ">>", levents[i][2])
             rates[i] = self.prefactors[levents[i][-1]] * np.exp(-(ets-ecurr)/kT)
             cdf += rates[i]
             crates[i] = cdf
@@ -500,8 +500,8 @@ class AlKMC(Motion):
         while fpick > crates[isel]:
             isel += 1
         dt = -1.0/cdf*np.log(1.0-self.prng.u)
-        print ("Time spent %12.5e at %s nrg %12.5e" % (dt, ostr,ecurr))
-        print "Selected event ", isel, " with rate ", rates[isel], " / ", cdf
+        print(("Time spent %12.5e at %s nrg %12.5e" % (dt, ostr,ecurr)))
+        print("Selected event ", isel, " with rate ", rates[isel], " / ", cdf)
 
         iev = levents[isel] # levents[self.prng.randint(len(levents))]
         svac, sneigh = iev[0], iev[1]
@@ -518,21 +518,21 @@ class AlKMC(Motion):
         self.kmcfile.flush()
         self.tottime += dt
         self.ensemble.time += dt  # updates time counter
-        print  "Finishing step at ", "".join(self.state)
+        print("Finishing step at ", "".join(self.state))
 
         # updates the positions
         self.cell.h = self.dcell.h
 
         uidx = self.unique_idx(self.state)
         ruidx = np.zeros(self.nsites,int)
-        ruidx[uidx] = range(self.nsites)
+        ruidx[uidx] = list(range(self.nsites))
 
         self.sites[self.unique_idx(self.state)]
         oldq = dstrip(self.beads.q[0]).copy()
 
         newq = np.zeros(self.nsites*3, float)
         # we want continuity (modulo PBC jumps, that we'll take care of later...)
-        for i in xrange(self.nsites):
+        for i in range(self.nsites):
             # in which site sits atom i?
             isite = self.idx[i]
             # which atom sits in this site in the unique-mapped structure?

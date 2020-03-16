@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 
-from __future__ import division
+
 
 import os
 import sys
@@ -101,7 +101,7 @@ def getInput():
 
     with open("{}.xc.xyz".format(args.prefix), "r") as f:
         args.natoms = int(f.readline())
-        for i in xrange(args.natoms + 2):
+        for i in range(args.natoms + 2):
             f.readline()
         stride2 = int(f.readline().split("Step:")[1].split("Bead:")[0])
 
@@ -120,12 +120,12 @@ def getInput():
         estimators.append(mod)
 
     args.estmods = ", ".join(args.estmods)
-    print "----------------------"
-    print "DETERMINED INPUT PARAMETERS"
-    print "----------------------"
+    print("----------------------")
+    print("DETERMINED INPUT PARAMETERS")
+    print("----------------------")
     for k, v in sorted(args.__dict__.items()):
-        print "{:<30s}{}".format(k, v)
-    print "----------------------"
+        print("{:<30s}{}".format(k, v))
+    print("----------------------")
     sys.stdout.flush()
 
     return args.prefix, args.natoms, args.iseed, args.npl, args.npts, args.stride, args.dt, args.temperature, estimators
@@ -149,8 +149,8 @@ def simple_corr(A, B, **kwargs):
     npts, npl, ndim = A.shape
     tcf = np.zeros(npts)
     weights = np.arange(npts, 0, -1, dtype=float)
-    for i in xrange(npl):
-        for j in xrange(ndim):
+    for i in range(npl):
+        for j in range(ndim):
             tcf[:] += np.correlate(A[:, i, j], B[:, i, j], mode="full")[npts - 1::-1] / weights
     # for i in xrange(npl):
     #    for j in xrange(ndim):
@@ -343,7 +343,7 @@ class Planets(object):
         self.read_qcpc()
         self.matrix_setup()
 
-        for j in xrange(self.stride):
+        for j in range(self.stride):
             # Linear interpolation of frequency matrix
             self.omega_interp[:] = (j * self.omega + (self.stride - j) * self.omega_old) / self.stride
             # Velocity verlet integrator
@@ -385,7 +385,7 @@ class Planets(object):
                 # ( npl,    prod(mod.Ashape),    3*self.natoms)
                 A1q = mod.Afunc1(self.qsum)
 
-                for j in xrange(self.npl):
+                for j in range(self.npl):
                     mod.Atemp[:] = 0.0
 
                     for k, val in enumerate(A1q[j]):
@@ -400,7 +400,7 @@ class Planets(object):
                 # ( npl,    prod(mod.Ashape),    3*self.natoms,    3*self.natoms )
                 A2q = mod.Afunc2(self.qsum)
 
-                for j in xrange(self.npl):
+                for j in range(self.npl):
                     mod.Atemp[:] = 0.0
 
                     for k, val in enumerate(A2q[j]):
@@ -428,9 +428,9 @@ class Planets(object):
         for mod in self.estimators:
             if hasattr(mod, "Afunc0"):
                 np.savetxt("{}_ce_{}.dat".format(self.prefix, mod.name), np.transpose([tarr, mod.TCF_c]))
-                print "Saved {} (centroid) to {}_ce_{}.dat".format(mod.name, self.prefix, mod.name)
+                print("Saved {} (centroid) to {}_ce_{}.dat".format(mod.name, self.prefix, mod.name))
             np.savetxt("{}_pl_{}.dat".format(self.prefix, mod.name), np.transpose([tarr, mod.TCF]))
-            print "Saved {} (full) to {}_pl_{}.dat".format(mod.name, self.prefix, mod.name)
+            print("Saved {} (full) to {}_pl_{}.dat".format(mod.name, self.prefix, mod.name))
 
     def shutdown(self):
         """
@@ -466,7 +466,7 @@ class Planets(object):
                        by calling self.shutdown()
 
         """
-        print "STARTING PLANETARY SIMULATION"
+        print("STARTING PLANETARY SIMULATION")
         self.read_omega2()
         self.read_qcpc()
         self.get_masses()
@@ -478,20 +478,20 @@ class Planets(object):
         self.psum[:] = self.p + self.pc[:, np.newaxis]
         self.estimate(0)
         self.count = 0
-        for i in xrange(self.npts - 1):
+        for i in range(self.npts - 1):
             self.step()
             self.count += 1  # this might be pointless, obviously self.count = i
             self.estimate(i + 1)
-            print "Completed step {:d} of {:d}".format(self.count, self.npts - 1)
+            print("Completed step {:d} of {:d}".format(self.count, self.npts - 1))
             sys.stdout.flush()
         if correlate:
-            print "CALCULATING TCFS"
+            print("CALCULATING TCFS")
             self.correlate()
         if write:
-            print "SAVING TCFS"
+            print("SAVING TCFS")
             self.write_tcfs()
         if shutdown:
-            print "SIMULATION COMPLETE. SHUTTING DOWN."
+            print("SIMULATION COMPLETE. SHUTTING DOWN.")
             self.shutdown()
         else:
             warning("Reached end of simulation but files may remain open.")

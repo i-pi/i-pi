@@ -45,17 +45,17 @@ def effectiveTemperatures(prefix, temp, ss=0):
     nbeads = len(fns_for)
 
     # print some information
-    print 'temperature = {:f} K'.format(float(temp))
-    print
-    print 'number of beads = {:d}'.format(nbeads)
-    print
-    print 'forces file names:'
+    print('temperature = {:f} K'.format(float(temp)))
+    print()
+    print('number of beads = {:d}'.format(nbeads))
+    print()
+    print('forces file names:')
     for fn_for in fns_for:
-        print '{:s}'.format(fn_for)
-    print
-    print 'output file name:'
-    print fn_out
-    print
+        print('{:s}'.format(fn_for))
+    print()
+    print('output file name:')
+    print(fn_out)
+    print()
 
     # open input and output files
     ifor = [open(fn, "r") for fn in fns_for]
@@ -72,7 +72,7 @@ def effectiveTemperatures(prefix, temp, ss=0):
     while True:  # Reading input files and calculating PPI correction
 
         if ifr % 100 == 0:
-            print '\rProcessing frame {:d}'.format(ifr),
+            print('\rProcessing frame {:d}'.format(ifr), end=' ')
             sys.stdout.flush()
 
         try:

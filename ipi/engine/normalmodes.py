@@ -145,7 +145,7 @@ class NormalModes(dobject):
         # if ( (len(self.bosons) > 0) and (len(self.bosons) < self.natoms) ):
         #raise(IOError("@NormalModes : Currently, only full bosonic/distinguishable simulations are allowed"))
         if(len(self.bosons) > self.natoms):
-            raise(IOError("@NormalModes : number of bosons is larger than number of atoms!"))
+            raise IOError
 
         dself = dd(self)
 
@@ -528,8 +528,8 @@ class NormalModes(dobject):
 
         # dynamical masses for the open paths
         for j in self.open_paths:
-            for a in xrange(3 * j, 3 * (j + 1)):
-                for k in xrange(1, self.nbeads):
+            for a in range(3 * j, 3 * (j + 1)):
+                for k in range(1, self.nbeads):
                     dm3[k, a] = self.beads.m3[k, a] * self.o_nm_factor[k]
         return dm3
 
@@ -655,8 +655,8 @@ class NormalModes(dobject):
             # and do open path propagation
             pq = np.zeros(2)
             for j in self.open_paths:
-                for a in xrange(3 * j, 3 * (j + 1)):
-                    for k in xrange(1, self.nbeads):
+                for a in range(3 * j, 3 * (j + 1)):
+                    for k in range(1, self.nbeads):
                         pq[0] = self.pnm[k, a] / sm[k, a]
                         pq[1] = self.qnm[k, a] * sm[k, a]
                         pq = np.dot(o_prop_pq[k], pq)

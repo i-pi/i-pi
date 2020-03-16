@@ -16,7 +16,7 @@ def get_dynmat(h, m3, nbeads=1):
     # Check dimensions
 
     if h.shape != (m3.shape[1], m3.shape[1] * nbeads):
-        print h.shape, m3.shape
+        print(h.shape, m3.shape)
         raise ValueError("@get_dynmat: The provided hessian hasn't the proper dimension (3*natoms, 3*natoms*nbeads) ")
 
     ism = m3.reshape((1, -1)) ** (-0.5)
@@ -141,8 +141,8 @@ def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):
             info(" Warning @Clean hessian: We have deleted %d 'zero' frequencies " % (nzero.size), verbosity.high)
             info(" but the norm is greater than 0.01 cm^-1.  This should not happen.", verbosity.high)
 
-        d = np.delete(d, range(nneg.size, nneg.size + nzero.size))
-        w = np.delete(w, range(nneg.size, nneg.size + nzero.size), axis=1)
+        d = np.delete(d, list(range(nneg.size, nneg.size + nzero.size)))
+        w = np.delete(w, list(range(nneg.size, nneg.size + nzero.size)), axis=1)
 
     if mofi:
         if asr == 'poly':
@@ -187,7 +187,7 @@ def get_hessian(gm, x0, natoms, nbeads=1, fixatoms=[], d=0.001):
         else:
             h[:, :] = b[:, :]
             i0 = i
-            print('We have found a temporary file ( hessian_' + str(i) + '.tmp). ')
+            print(('We have found a temporary file ( hessian_' + str(i) + '.tmp). '))
             if b.shape == h.shape:  # Check that the last temporary file was properly written
                 break
             else:
