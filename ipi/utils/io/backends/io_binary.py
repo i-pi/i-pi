@@ -47,11 +47,11 @@ def read_binary(filedesc):
         nat = np.fromfile(filedesc, dtype=int, count=1)[0]
         qatoms = np.fromfile(filedesc, dtype=float, count=3 * nat)
         nat = np.fromfile(filedesc, dtype=int, count=1)[0]
-        names = np.fromfile(filedesc, dtype='|U1', count=nat)
+        names = np.fromfile(filedesc, dtype='|S1', count=nat)
         names = "".join(names)
         names = names.split('|')
         masses = np.zeros(len(names))
-        title = ''.join(np.fromfile(filedesc, dtype='|U1', count=-1))
+        title = ''.join(np.fromfile(filedesc, dtype='|S1', count=-1))
     except (StopIteration, ValueError):
         raise EOFError
     return (title, cell, qatoms, names, masses)

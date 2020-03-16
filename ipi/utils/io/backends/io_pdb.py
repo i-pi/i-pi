@@ -156,4 +156,4 @@ def read_pdb(filedesc):
 
         body = filedesc.readline()
 
-    return comment, cell, np.asarray(qatoms), np.asarray(names, dtype='|U4'), np.asarray(masses)
+    return comment, cell, np.asarray(qatoms), np.asarray(names, dtype='|S4'), np.asarray(masses)

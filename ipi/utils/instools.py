@@ -93,7 +93,7 @@ def sym_band(A):
     M = A.shape[1]
     newA = np.empty((u + l + 1, M))
     newA[:u + 1] = A
-    for i in range(1, l + 1):
+    for i in xrange(1, l + 1):
         newA[u + i, :M - i] = A[-1 - i, i:]
     return newA
 
@@ -194,9 +194,9 @@ def get_imvector(h, m3):
 def print_instanton_geo(prefix, step, nbeads, natoms, names, q, f, pots, cell, shift, output_maker):
 
     outfile = output_maker.get_output(prefix + '_' + str(step) + '.ener', 'w')
-    print('#Bead    Energy (eV)', file=outfile)
+    print >> outfile, ('#Bead    Energy (eV)')
     for i in range(nbeads):
-        print((str(i) + '     ' + str(units.unit_to_user('energy', "electronvolt", pots[i] - shift))), file=outfile)
+        print >> outfile, (str(i) + '     ' + str(units.unit_to_user('energy', "electronvolt", pots[i] - shift)))
     outfile.close()
 
     # print_file("xyz", pos[0], cell, out, title='positions{angstrom}')
@@ -208,24 +208,24 @@ def print_instanton_geo(prefix, step, nbeads, natoms, names, q, f, pots, cell, s
     outfile = output_maker.get_output(prefix + '_' + str(step) + '.xyz', 'w')
     outfile2 = output_maker.get_output(prefix + '_forces_' + str(step) + '.xyz', 'w')
     for i in range(nbeads):
-        print(natoms, file=outfile)
-        print(natoms, file=outfile2)
+        print >> outfile, natoms
+        print >> outfile2, natoms
 
-        print(('CELL(abcABC):  %f %f %f %f %f %f cell{atomic_unit}  Traj: positions{%s}   Bead:       %i' % (a, b, c, alpha, beta, gamma, unit, i)), file=outfile)
-        print(('CELL(abcABC):  %f %f %f %f %f %f cell{atomic_unit}  Traj: positions{%s}   Bead:       %i' % (a, b, c, alpha, beta, gamma, unit2, i)), file=outfile2)
+        print >> outfile, ('CELL(abcABC):  %f %f %f %f %f %f cell{atomic_unit}  Traj: positions{%s}   Bead:       %i' % (a, b, c, alpha, beta, gamma, unit, i))
+        print >> outfile2, ('CELL(abcABC):  %f %f %f %f %f %f cell{atomic_unit}  Traj: positions{%s}   Bead:       %i' % (a, b, c, alpha, beta, gamma, unit2, i))
         # print >> outfile, ('#Potential (eV):   ' + str(units.unit_to_user('energy', "electronvolt", pots[i] - shift)))
 
         for j in range(natoms):
-            print(names[j], \
+            print >> outfile, names[j], \
                 str(units.unit_to_user('length', unit, q[i, 3 * j])), \
                 str(units.unit_to_user('length', unit, q[i, 3 * j + 1])), \
-                str(units.unit_to_user('length', unit, q[i, 3 * j + 2])), file=outfile)
+                str(units.unit_to_user('length', unit, q[i, 3 * j + 2]))
 
         for j in range(natoms):
-            print(names[j], \
+            print >> outfile2, names[j], \
                 str(units.unit_to_user('force', unit2, f[i, 3 * j])), \
                 str(units.unit_to_user('force', unit2, f[i, 3 * j + 1])), \
-                str(units.unit_to_user('force', unit2, f[i, 3 * j + 2])), file=outfile2)
+                str(units.unit_to_user('force', unit2, f[i, 3 * j + 2]))
     outfile.close()
     outfile2.close()
 

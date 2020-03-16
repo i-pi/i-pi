@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2
 # pylint: disable=C0111,W0621,R0914,C0301
 # +easier to find important problems
 
@@ -66,12 +66,12 @@ def create_random_xyz_traj_to_read(request):
                                                           frames, comment)
     filedesc.seek(0)
 
-    check_comment = re.match(r'# CELL[\(\[\{]H[\)\]\}]: ([-0-9\.?Ee ]*)\s*', comment)  # pylint: disable=W1401
+    check_comment = re.match('# CELL[\(\[\{]H[\)\]\}]: ([-0-9\.?Ee ]*)\s*', comment)  # pylint: disable=W1401
 
     if check_comment:
         genh = np.array(check_comment.group(1).split()[:9], float).reshape((3, 3))
         invgenh = np.linalg.inv(genh)
-        for _ui in range(natoms * frames):
+        for _ui in xrange(natoms * frames):
             _uu = np.array([xyz[3 * _ui], xyz[3 * _ui + 1], xyz[3 * _ui + 2]])
             _us = np.dot(_uu, invgenh)
             _uu = np.dot(expected_cell, _us)
@@ -87,7 +87,7 @@ def test_read_xyz(create_random_xyz_traj_to_read):
     filedesc, xyz, atom_names, \
         natoms, frames, comment, expected_cell, precision = create_random_xyz_traj_to_read
 
-    for _fr in range(frames):
+    for _fr in xrange(frames):
 
         tcomment, tcell, tqatoms, tnames, tmasses = io_xyz.read_xyz(filedesc)
 
@@ -152,7 +152,7 @@ def create_random_xyz_traj_to_write(request):
     cell_list = []
     atoms_list = []
 
-    for _fr in range(frames):
+    for _fr in xrange(frames):
         cell = Cell(expected_cell)
         atoms = Atoms(natoms)
         atoms.q[:] = xyz[_fr * natoms * 3:(_fr + 1) * natoms * 3]
@@ -168,8 +168,8 @@ def test_print_xyz(create_random_xyz_traj_to_write):
 
     filedesc, atoms_list, cell_list, title, precision = create_random_xyz_traj_to_write
 
-    filedesc_orig = tmp.NamedTemporaryFile(mode='w', prefix='ipi_testing-tmp', delete=False)
-    filedesc_test = tmp.NamedTemporaryFile(mode='w', prefix='ipi_testing-tmp', delete=False)
+    filedesc_orig = tmp.NamedTemporaryFile(mode='wr', prefix='ipi_testing-tmp', delete=False)
+    filedesc_test = tmp.NamedTemporaryFile(mode='wr', prefix='ipi_testing-tmp', delete=False)
 
     filedesc_orig.write(filedesc.read())
     filedesc.close()

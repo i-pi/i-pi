@@ -30,17 +30,17 @@ class Client(DriverSocket):
         havedata: Boolean giving whether the client calculated the forces.
     """
 
-    def __init__(self, address="localhost", port=31415, mode="unix", _socket=None):
+    def __init__(self, address="localhost", port=31415, mode="unix", _socket=True):
         """Initialise Client.
 
         Args:
             - address: A string giving the name of the host network.
             - port: An integer giving the port the socket will be using.
             - mode: A string giving the type of socket used - 'inet' or 'unix'.
-            - _socket: If a socket should be opened. Can pass an existing socket for testing purposes
+            - _socket: If a socket should be opened. Can be False for testing purposes.
         """
 
-        if _socket is None:
+        if _socket:
             # open client socket
             if mode == "inet":
                 _socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -50,13 +50,13 @@ class Client(DriverSocket):
                     _socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                     _socket.connect("/tmp/ipi_" + address)
                 except socket.error:
-                    print('Could not connect to UNIX socket: %s' % ("/tmp/ipi_" + address))
+                    print 'Could not connect to UNIX socket: %s' % ("/tmp/ipi_" + address)
                     sys.exit(1)
             else:
                 raise NameError("Interface mode " + mode + " is not implemented (should be unix/inet)")
-            super(Client, self).__init__(sock=_socket)
+            super(Client, self).__init__(socket=_socket)
         else:
-            super(Client, self).__init__(sock=_socket)
+            super(Client, self).__init__(socket=None)
 
         # allocate data
         self.havedata = False
@@ -97,17 +97,17 @@ class Client(DriverSocket):
         fmt_step = '{0:6d} {1:10.3f} {2:10.3f}'
 
         if t_max is None:
-            print('Starting communication loop with no maximum run time.')
+            print 'Starting communication loop with no maximum run time.'
         else:
-            print('Starting communication loop with a maximum run time of {0:d} seconds.'.format(t_max))
+            print 'Starting communication loop with a maximum run time of {0:d} seconds.'.format(t_max)
             fmt_header += ' {3:>10s}'
             fmt_step += ' {3:10.1f}'
 
         if verbose:
             header = fmt_header.format('step', 'time', 'avg time', 'remaining')
-            print()
-            print(header)
-            print(len(header) * '-')
+            print
+            print header
+            print len(header) * '-'
 
         i_step = 0
         t_step_tot = 0.0
@@ -121,7 +121,7 @@ class Client(DriverSocket):
 
                 # process message and respond
                 if msg == "":
-                    print("Server shut down.")
+                    print "Server shut down."
                     break
                 elif msg == Message("status"):
                     if self.havedata:
@@ -142,7 +142,7 @@ class Client(DriverSocket):
                         t_step_avg = t_step_tot / (i_step + 1)
                         if t_max is not None:
                             t_remain = t_max - (t_now - t0)
-                        print(fmt_step.format(i_step, t_step, t_step_avg, t_remain))
+                        print fmt_step.format(i_step, t_step, t_step_avg, t_remain)
                     self.havedata = True
                     i_step += 1
                 elif msg == Message("getforce"):
@@ -154,25 +154,25 @@ class Client(DriverSocket):
                     self.sendall(np.int32(0), 4)
                     self.havedata = False
                 else:
-                    print("Client could not understand command:", msg, file=sys.stderr)
+                    print >> sys.stderr, "Client could not understand command:", msg
                     break
 
                 # check exit conditions - run time or exit file
                 if t_max is not None and time.time() - t0 > t_max:
-                    print('Maximum run time of {0:d} seconds exceeded.'.format(t_max))
+                    print 'Maximum run time of {0:d} seconds exceeded.'.format(t_max)
                     break
                 if fn_exit is not None and os.path.exists(fn_exit):
-                    print('Exit file "{0:s}" found. Removing file.'.format(fn_exit))
+                    print 'Exit file "{0:s}" found. Removing file.'.format(fn_exit)
                     os.remove(fn_exit)
                     break
 
         except socket.error as e:
-            print('Error communicating through socket: [{0}] {1}'.format(e.errno, e.strerror))
+            print 'Error communicating through socket: [{0}] {1}'.format(e.errno, e.strerror)
         except KeyboardInterrupt:
-            print(' Keyboard interrupt.')
+            print ' Keyboard interrupt.'
 
-        print('Communication loop finished.')
-        print()
+        print 'Communication loop finished.'
+        print
 
 
 class ClientASE(Client):

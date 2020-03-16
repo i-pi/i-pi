@@ -994,10 +994,10 @@ class ThermoCL(Thermostat):
 
             if self.intau != 0:
                 if mytemp != 0: self.intau /= (mytemp / self.temp)**(self.dt / self.apat)
-                print(("ThermoCL inherent noise time scale: " + str(self.intau)))
+                print("ThermoCL inherent noise time scale: " + str(self.intau))
             else:
                 self.idtau *= (mytemp / self.temp)**(self.dt / self.apat)
-                print(("ThermoCL inherent dissipation time scale: " + str(self.idtau)))
+                print("ThermoCL inherent dissipation time scale: " + str(self.idtau))
 
         self.idstep = not self.idstep
 

@@ -14,17 +14,17 @@ try:
     nthreads = int(sys.argv[1])
     dir_calc = sys.argv[2]
 except IndexError:
-    print('command line arguments: <number of Gaussian threads> <calculator directory name>')
+    print 'command line arguments: <number of Gaussian threads> <calculator directory name>'
     sys.exit(1)
 
 
 # print some info
-print('Gaussian ASE i-PI socket runner')
-print('-------------------------------')
-print()
-print('   number of threads: {:d}'.format(nthreads))
-print('calculator directory: {:s}'.format(dir_calc))
-print()
+print 'Gaussian ASE i-PI socket runner'
+print '-------------------------------'
+print
+print '   number of threads: {:d}'.format(nthreads)
+print 'calculator directory: {:s}'.format(dir_calc)
+print
 
 # fast scratch directory for Gaussian
 os.environ['GAUSS_SCRDIR'] = '/dev/shm'

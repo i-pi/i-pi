@@ -63,19 +63,19 @@ def potentialEnergy(prefix, temp, ss=0, unit=''):
     nbeads = len(fns_for)
 
     # print some information
-    print('temperature = {:f} K'.format(float(temp)))
-    print()
-    print('number of beads = {:d}'.format(nbeads))
-    print()
-    print('forces file names:')
+    print 'temperature = {:f} K'.format(float(temp))
+    print
+    print 'number of beads = {:d}'.format(nbeads)
+    print
+    print 'forces file names:'
     for fn_for in fns_for:
-        print('{:s}'.format(fn_for))
-    print()
-    print('potential energy file: {:s}'.format(fns_iU))
-    print()
-    print('output file name:')
-    print(fn_out_en)
-    print()
+        print '{:s}'.format(fn_for)
+    print
+    print 'potential energy file: {:s}'.format(fns_iU)
+    print
+    print 'output file name:'
+    print fn_out_en
+    print
 
     # open input and output files
     ifor = [open(fn, "r") for fn in fns_for]
@@ -103,7 +103,7 @@ def potentialEnergy(prefix, temp, ss=0, unit=''):
     while True:  # Reading input files and calculating PPI correction
 
         if ifr % 100 == 0:
-            print('\rProcessing frame {:d}'.format(ifr), end=' ')
+            print '\rProcessing frame {:d}'.format(ifr),
             sys.stdout.flush()
 
         try:

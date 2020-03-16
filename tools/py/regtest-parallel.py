@@ -91,7 +91,7 @@ in parallel while the tasks queued on QUEUE_COM will be run in serial.
 
 import argparse
 import os
-import queue
+import Queue
 import re
 import shutil
 import shlex
@@ -144,8 +144,8 @@ try:
 except KeyError:
     IPI_ROOT_FOLDER = os.path.abspath('../')
 
-QUEUE_ALL = queue.Queue()  # Queue to access the "run"
-QUEUE_COM = queue.Queue()  # Queue to access the "compare"
+QUEUE_ALL = Queue.Queue()  # Queue to access the "run"
+QUEUE_COM = Queue.Queue()  # Queue to access the "compare"
 
 
 def main():
@@ -174,7 +174,7 @@ def main():
         QUEUE_ALL.put(test_obj)
         index += 10
 
-    print('Starting tests')
+    print 'Starting tests'
     running_test = []
     running_com = []
     if int(_parser()['nproc']) > 1:
@@ -185,7 +185,7 @@ def main():
             if len(running_test) < _parser()['nproc']:
                 try:
                     running_test.append(QUEUE_ALL.get_nowait())
-                except queue.Empty:
+                except Queue.Empty:
                     pass
                 else:
                     running_test[-1].generate_output = True
@@ -203,7 +203,7 @@ def main():
             if len(running_com) < 1:
                 try:
                     running_com.append(QUEUE_COM.get_nowait())
-                except queue.Empty:
+                except Queue.Empty:
                     pass
                 else:
                     running_com[-1].copy_reference = _parser()['create_reference']
@@ -225,7 +225,7 @@ def main():
         for _thr in running_test:
             _thr.die = True
 
-    print()
+    print
 
 
 def _parser():
@@ -343,9 +343,9 @@ def _build_test_index(root_path, tests):
                 msg += ' > ' + str(os.path.split(root)[1]) + '\n'
 
     if len(test_list) < 1:
-        print("**No test found!**")
+        print "**No test found!**"
     else:
-        print(msg)
+        print msg
 
     return test_list
 
@@ -359,7 +359,7 @@ def _file_is_test(path_to_test):
 
     with open(path_to_test) as _file:
         _text = _file.read()
-    print(_text[:100])
+    print _text[:100]
     return len([x.group(1) for x in REGTEST_STRING_RGX.finditer(_text)]) > 0
 
 
@@ -654,7 +654,7 @@ class Test(threading.Thread):
                         remove_file(straj['old_filename'])
                         shutil.copy2(straj['new_filename'],
                                      straj['old_filename'])
-            except IOError as e:
+            except IOError, e:
                 self.test_status = 'ERROR'
                 self.msg += 'Error while copying the new reference!!\n'
                 self.msg += "Unable to copy file. %s" % e
@@ -1000,7 +1000,7 @@ def answer_is_y(msg):
     while answer.lower() not in _yes and answer not in _no:
         sys.stderr.write(msg)
 
-        answer = input()
+        answer = raw_input()
 
         if answer.lower() in _yes:
             return True

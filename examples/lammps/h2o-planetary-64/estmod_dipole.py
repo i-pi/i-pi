@@ -23,9 +23,9 @@ def Afunc0(qsum, psum):
     nmolec = natoms / 3
     ans = np.zeros((npl, 3))
     x = np.zeros((nmolec, 3, 3))
-    for i in range(npl):
+    for i in xrange(npl):
         x[:] = qsum[:, i].reshape(nmolec, 3, 3)
-        for j in range(nmolec):
+        for j in xrange(nmolec):
             ans[i] += (gam * x[j, 0, :] + 0.5 * (1.0 - gam) * (x[j, 1, :] + x[j, 2, :])) * qm + \
                 x[j, 1, :] * qh + x[j, 2, :] * qh
     return ans

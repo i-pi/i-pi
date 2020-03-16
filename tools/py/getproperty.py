@@ -47,7 +47,7 @@ def main(inputfile, propertyname="potential", skip="0"):
                 warning("Could not find " + propertyname + " in file " + inputfile)
                 raise EOFError
             line = line.split()
-            if (step >= skip): print(line[icol])
+            if (step >= skip): print line[icol]
             step += 1
         except EOFError:
             break

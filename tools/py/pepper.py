@@ -102,28 +102,28 @@ if __name__ == '__main__':
                 python_files = python_files + [filename]
             else:
                 if verbosity != 'silent':
-                    print(filename, 'is not a python file, skipping ')
+                    print filename, 'is not a python file, skipping '
         # execute autopep8 only on python files, without being recursive
         autopep8_args = autopep8_args + python_files
         if not python_files:
-            print('No python files to process.')
+            print 'No python files to process.'
             sys.exit()
         if verbosity != 'silent':
-            print('Running autopep8 on the files: ', ' '.join(python_files))
+            print 'Running autopep8 on the files: ', ' '.join(python_files)
     else:
         # perform recursive search in the given directory
         if os.path.isdir(path):
             os.chdir(path)
             autopep8_args = autopep8_args + ['-r'] + ['.']
             if verbosity != 'silent':
-                print('Running autopep8 recursively in the directory: ', os.getcwd())
+                print 'Running autopep8 recursively in the directory: ', os.getcwd()
         else:
-            print('The given directory does not exist: ', path)
+            print 'The given directory does not exist: ', path
             sys.exit()
 
     if is_in_check_mode:
         # perform check, do not change files
-        print('Performing check of PEP-8 compliance')
+        print 'Performing check of PEP-8 compliance'
         style_check = pycodestyle.StyleGuide(select=styles_to_be_corrected)
         if files is not None:
             for filename in files:
@@ -145,19 +145,19 @@ if __name__ == '__main__':
             # We must strip, otherwise we get double newline
             line = process.stdout.readline().rstrip()
             if re.match('\[Errno.*\]', line):
-                print(line)
+                print line
             else:
                 if verbosity == 'high':
-                    print(line)
+                    print line
                 elif verbosity == 'medium':
                     if re.match('\[file:.*\]', line):
                         # new file is processed. If something left unfixed, print message now
                         if issue_line_buffer is not '':
-                            print(issue_line_buffer)
+                            print issue_line_buffer
                         # Pattern: [file:filename]
                         filename_line = re.search(r'\[file:(\S+)\]', line)
                         # Print only filename
-                        print(filename_line.group(1))
+                        print filename_line.group(1)
                     elif re.match('.*0 issue.*', line):
                         # there are 0 issues left, clean the buffer
                         issue_line_buffer = ''
@@ -181,6 +181,6 @@ if __name__ == '__main__':
         if verbosity == 'medium':
             # end of processing. If something left unfixed, print the message now
             if issue_line_buffer is not '':
-                print(issue_line_buffer)
+                print issue_line_buffer
     if verbosity != 'silent':
-        print('autopep8 terminated')
+        print 'autopep8 terminated'

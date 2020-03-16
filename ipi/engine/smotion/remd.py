@@ -84,7 +84,7 @@ class ReplicaExchange(Smotion):
         super(ReplicaExchange, self).bind(syslist, prng, omaker)
 
         if self.repindex is None or len(self.repindex) == 0:
-            self.repindex = np.asarray(list(range(len(self.syslist))))
+            self.repindex = np.asarray(range(len(self.syslist)))
         else:
             if len(self.syslist) != len(self.repindex):
                 raise ValueError("Size of replica index does not match number of systems replicas")

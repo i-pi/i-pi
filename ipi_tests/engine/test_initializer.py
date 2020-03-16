@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2
 # pylint: disable=C0111,W0621,R0914,C0301
 # +easier to find important problems
 
@@ -46,7 +46,8 @@ def create_xyz_sample_file(request):
     filedesc, xyz, atoms_names = xyz_gen.xyz_traj_filedesc(natoms, frames, comment)
 
     # init_file needs to read from a real file...
-    tmp_file = tmp.NamedTemporaryFile(mode='w', prefix='ipi_testing-tmp', delete=False)
+    tmp_file = tmp.NamedTemporaryFile(mode='wr', prefix='ipi_testing-tmp', delete=False)
+    tmp_file.seek(0)
     tmp_file.write(filedesc.read())
     tmp_file.close()
     filedesc.close()
@@ -56,7 +57,7 @@ def create_xyz_sample_file(request):
         masses[_ii] = Elements.mass(_at)
 
     ratoms = []
-    for _fr in range(frames):
+    for _fr in xrange(frames):
         ratoms.append(Atoms(natoms))
         ratoms[-1].q = xyz[_fr * natoms * 3:3 * (_fr + 1) * natoms] * units_conv_at
         ratoms[-1].m = masses[_fr * natoms:(_fr + 1) * natoms]

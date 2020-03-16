@@ -10,7 +10,6 @@ import argparse
 import numpy as np
 import time
 from scipy.interpolate import RegularGridInterpolator
-from functools import reduce
 
 
 def histo3d(qdata, dqxgrid, dqygrid, dqzgrid, ns, cut, invsigma, bsize):
@@ -158,11 +157,11 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, cut, der, skip):
     if der == False:
         n_block = int(step / bsize)
         if (n_block == 0):
-            print('not enough data to build a block')
+            print 'not enough data to build a block'
             exit()
-        for x in range(n_block):
+        for x in xrange(n_block):
             dq = delta[x * bsize: (x + 1) * bsize]
-            print("# Computing 3D histogram.")
+            print "# Computing 3D histogram."
             h3d = histo3d(np.concatenate((dq, -dq)), dqxgrid, dqygrid, dqzgrid, ns, cut, np.sqrt(T * P * m), bsize)
             h3dlist.append(h3d)
 
@@ -175,7 +174,7 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, cut, der, skip):
             ygrid = dqygrid
             zgrid = dqzgrid
 
-            print("# NORM OF THE 3D HISTO:", h3d.flatten().sum() * dqxstep**3)
+            print "# NORM OF THE 3D HISTO:", h3d.flatten().sum() * dqxstep**3
 
             # Creates an interpolation function on a 3D grid
             hxyz = RegularGridInterpolator((xgrid, ygrid, zgrid), h3d)
@@ -195,7 +194,7 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, cut, der, skip):
             fth0y0 = h0y0 * 0.0
             fth00z = h00z * 0.0
 
-            print("# computing FT for block #", x)
+            print "# computing FT for block #", x
             for i in range(len(fthx00)):
                 fthx00[i] = (hx00 * np.cos(pxgrid[i] * dqxgrid)).sum() * dqxstep
                 fth0y0[i] = (h0y0 * np.cos(pygrid[i] * dqygrid)).sum() * dqystep
@@ -227,28 +226,28 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, cut, der, skip):
         np.savetxt(prefix + "_hy.data", np.c_[xgrid, h0y0])
         np.savetxt(prefix + "_hz.data", np.c_[xgrid, h00z])
 
-        print("# NORM OF npx", fthx00.sum() * pxstep)
-        print("# NORM OF npx", fth0y0.sum() * pystep)
-        print("# NORM OF npx", fth00z.sum() * pzstep)
+        print "# NORM OF npx", fthx00.sum() * pxstep
+        print "# NORM OF npx", fth0y0.sum() * pystep
+        print "# NORM OF npx", fth00z.sum() * pzstep
 
         # Calculates the average values of the second moments.
-        print("px^2:", np.sum(np.asarray(px2list), axis=0) * norm, "+/-", np.std(np.asarray(px2list)) * np.sqrt(n_block) * norm)
-        print("py^2:", np.sum(np.asarray(py2list), axis=0) * norm, "+/-", np.std(np.asarray(py2list)) * np.sqrt(n_block) * norm)
-        print("pz^2:", np.sum(np.asarray(pz2list), axis=0) * norm, "+/-", np.std(np.asarray(pz2list)) * np.sqrt(n_block) * norm)
+        print "px^2:", np.sum(np.asarray(px2list), axis=0) * norm, "+/-", np.std(np.asarray(px2list)) * np.sqrt(n_block) * norm
+        print "py^2:", np.sum(np.asarray(py2list), axis=0) * norm, "+/-", np.std(np.asarray(py2list)) * np.sqrt(n_block) * norm
+        print "pz^2:", np.sum(np.asarray(pz2list), axis=0) * norm, "+/-", np.std(np.asarray(pz2list)) * np.sqrt(n_block) * norm
 
-        print("# time taken (s)", time.clock() - start)
+        print "# time taken (s)", time.clock() - start
 
     else:
         n_block = int(step / bsize)
         if (n_block == 0):
-            print('not enough data to build a block')
+            print 'not enough data to build a block'
             exit()
-        for x in range(n_block):
+        for x in xrange(n_block):
             dq = delta[x * bsize: (x + 1) * bsize]
             dfx = fx[x * bsize: (x + 1) * bsize]
             dfy = fy[x * bsize: (x + 1) * bsize]
             dfz = fz[x * bsize: (x + 1) * bsize]
-            print("# Computing 3D histogram.")
+            print "# Computing 3D histogram."
             h3d_der = histo3d_der(dq, dfx, dqxgrid, dqygrid, dqzgrid, ns, cut, np.sqrt(T * P * m), bsize, m, P, T)
             h3dlist.append(h3d_der)
 
@@ -269,12 +268,12 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, cut, der, skip):
         h = np.cumsum((hx00 - hx00[::-1]) * 0.5) * dqxstep
         h = h / (h.sum() * dqxstep) * n_block * bsize
         hx00 = hx00 / (h.sum() * dqxstep) * n_block * bsize
-        print(h.sum() * dqxstep)
+        print h.sum() * dqxstep
         np.savetxt("hx.data", np.c_[xgrid, h])
 
-        print("# px^2 (from the 2nd derivative of the histogram)", (30.0 * avghx[(ns - 1) / 2] - 16.0 * avghx[(ns - 1) / 2 + 1] - 16.0 * avghx[(ns - 1) / 2 - 1] + avghx[(ns - 1) / 2 - 2] + avghx[(ns - 1) / 2 + 2]) / dqxstep**2 / norm_npx / 12.0)
+        print "# px^2 (from the 2nd derivative of the histogram)", (30.0 * avghx[(ns - 1) / 2] - 16.0 * avghx[(ns - 1) / 2 + 1] - 16.0 * avghx[(ns - 1) / 2 - 1] + avghx[(ns - 1) / 2 - 2] + avghx[(ns - 1) / 2 + 2]) / dqxstep**2 / norm_npx / 12.0
 
-        print((30.0 * h[(ns - 1) / 2] - 16.0 * h[(ns - 1) / 2 + 1] - 16.0 * h[(ns - 1) / 2 - 1] + h[(ns - 1) / 2 - 2] + h[(ns - 1) / 2 + 2]) / dqxstep**2 / (n_block * bsize) / 12.0)
+        print (30.0 * h[(ns - 1) / 2] - 16.0 * h[(ns - 1) / 2 + 1] - 16.0 * h[(ns - 1) / 2 - 1] + h[(ns - 1) / 2 - 2] + h[(ns - 1) / 2 + 2]) / dqxstep**2 / (n_block * bsize) / 12.0
 
 if __name__ == '__main__':
 

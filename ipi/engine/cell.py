@@ -97,7 +97,7 @@ class Cell(dobject):
         """
 
         s = dstrip(pos).copy()
-        s.shape = (len(pos) // 3, 3)
+        s.shape = (len(pos) / 3, 3)
 
         s = np.dot(dstrip(self.ih), s.T)
         s = s - np.round(s)

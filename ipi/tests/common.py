@@ -73,8 +73,8 @@ class SimulationTest(object):
 
         # Start simulation
         # TODO
-        print(subprocess.check_output("ls", shell=True))
-        print(subprocess.check_output("pwd", shell=True))
+        print subprocess.check_output("ls", shell=True)
+        print subprocess.check_output("pwd", shell=True)
 
         # wait for driver to finish
         p.wait()

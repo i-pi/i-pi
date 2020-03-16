@@ -38,7 +38,7 @@ class MySocket(object):
     def await_header(self):
         data = self.s.recv(HDRLEN * L_CHAR)
         if self.verbose:
-            print('RECV', (data,))
+            print 'RECV', (data,)
         with log.section('DRIVER'):
             log("RECV %s %s" % (data, datetime.now()))
         return data
@@ -49,21 +49,21 @@ class MySocket(object):
             stub = self.s.recv(size - len(data))
             data += stub
             if self.verbose:
-                print('RECV %i/%i' % (len(data), size))  # , hexlify(stub)
+                print 'RECV %i/%i' % (len(data), size)  # , hexlify(stub)
         return data
 
     def send_header(self, header):
         assert len(header) <= 12
         header = header.ljust(12, ' ')
         if self.verbose:
-            print('SEND', (header,))
+            print 'SEND', (header,)
         with log.section('DRIVER'):
             log("SEND %s %s" % (header, datetime.now()))
         self.s.send(header)
 
     def send_data(self, data):
         if self.verbose:
-            print('SEND', len(data))  # , hexlify(data)
+            print 'SEND', len(data)  # , hexlify(data)
         self.s.send(data)
 
 
@@ -155,4 +155,4 @@ class YAFFDriver(object):
                         log("EXIT %s" % datetime.now())
                 break
             else:
-                raise NotImplementedError("Received unknown message %s" % header)
+                raise NotImplementedError, "Received unknown message %s" % header

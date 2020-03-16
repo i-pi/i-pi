@@ -56,23 +56,23 @@ def RDF(prefix, temp, A, B, nbins, r_min, r_max, ss=0, unit='angstrom'):
     # check that we found the same number of positions and forces files
     nbeads = len(fns_pos)
     if nbeads != len(fns_for):
-        print(fns_pos)
-        print(fns_for)
+        print fns_pos
+        print fns_for
         raise ValueError("Mismatch between number of input files for forces and positions.")
 
     # print some information
-    print('temperature = {:f} K'.format(float(temp)))
-    print()
-    print('number of beads = {:d}'.format(nbeads))
-    print()
-    print('positions and forces file names:')
+    print 'temperature = {:f} K'.format(float(temp))
+    print
+    print 'number of beads = {:d}'.format(nbeads)
+    print
+    print 'positions and forces file names:'
     for fn_pos, fn_for in zip(fns_pos, fns_for):
-        print('{:s}   {:s}'.format(fn_pos, fn_for))
-    print()
-    print('output file names:')
-    print(fn_out_rdf)
-    print(fn_out_rdf_q)
-    print()
+        print '{:s}   {:s}'.format(fn_pos, fn_for)
+    print
+    print 'output file names:'
+    print fn_out_rdf
+    print fn_out_rdf_q
+    print
 
     # open input and output files
     ipos = [open(fn, "r") for fn in fns_pos]
@@ -109,7 +109,7 @@ def RDF(prefix, temp, A, B, nbins, r_min, r_max, ss=0, unit='angstrom'):
     while noteof:  # Reading input files and calculating PPI correction
 
         if ifr % 100 == 0:
-            print('\rProcessing frame {:d}'.format(ifr), end=' ')
+            print '\rProcessing frame {:d}'.format(ifr),
             sys.stdout.flush()
 
         try:

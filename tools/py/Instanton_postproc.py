@@ -180,7 +180,7 @@ def get_rp_freq(w0, nbeads, temp, mode='rate'):
 # -----END of some functions-----------------
 
 # -----READ---------------------------------
-print(('\nWe are ready to start. Reading {} ... (This can take a while)'.format(inputt)))
+print('\nWe are ready to start. Reading {} ... (This can take a while)'.format(inputt))
 
 from ipi.utils.io.inputs.io_xml import xml_parse_file
 import ipi.inputs.simulation as isimulation
@@ -203,8 +203,8 @@ if case == 'reactant':
         sys.exit()
 
 if case != 'instanton' and nbeads > 1:
-    print(('Incompatibility between case and nbeads in {}.'.format(inputt)))
-    print(('case {} , beads {}'.format(case, nbeads)))
+    print('Incompatibility between case and nbeads in {}.'.format(inputt))
+    print('case {} , beads {}'.format(case, nbeads))
     sys.exit()
 
 
@@ -262,7 +262,7 @@ elif case == 'instanton':
             print(' You can generate that file using this script in the case reactant.')
             sys.exit()
 
-        print(('Our linear polymer has  {}'.format(nbeads)))
+        print('Our linear polymer has  {}'.format(nbeads))
         pos = beads.q
         m3 = beads.m3
         omega2 = (temp * nbeads * kb / hbar) ** 2
@@ -282,18 +282,18 @@ elif case == 'instanton':
 beta = 1.0 / (kb * temp)
 betaP = 1.0 / (kb * (nbeads) * temp)
 
-print(('\nTemperature: {} K'.format(temp / K2au)))
-print(('NBEADS: {}'.format(nbeads)))
-print(('atoms:  {}'.format(natoms)))
-print(('ASR:    {}'.format(natoms)))
-print(('1/(betaP*hbar) = {:8.5f}'.format((1 / (betaP * hbar)))))
+print('\nTemperature: {} K'.format(temp / K2au))
+print('NBEADS: {}'.format(nbeads))
+print('atoms:  {}'.format(natoms))
+print('ASR:    {}'.format(natoms))
+print('1/(betaP*hbar) = {:8.5f}'.format((1 / (betaP * hbar))))
 
 if not quiet:
     print('Diagonalization ... \n\n')
     d, w, detI = clean_hessian(h, pos, natoms, nbeads, m, m3, asr, mofi=True)
     print("Final lowest 10 frequencies (cm^-1)")
     d10 = np.array2string(np.sign(d[0:10]) * np.absolute(d[0:10]) ** 0.5 / cm2au, precision=2, max_line_width=100, formatter={'float_kind': lambda x: "%.2f" % x})
-    print(('{}'.format(d10)))
+    print('{}'.format(d10))
 
 if case == 'reactant':
     Qtras = ((np.sum(m)) / (2 * np.pi * beta * hbar**2))**1.5
@@ -318,9 +318,9 @@ if case == 'reactant':
     # logQvib    = -np.sum( np.log( 2*np.sinh( (beta*hbar*np.sqrt(d)/2.0) )  ))   #Limit n->inf
     logQvib_rp = -get_rp_freq(d, nbeadsR, temp)
 
-    print(('\nWe are done. Reactants. Nbeads {}'.format(nbeadsR)))
-    print(('{:14s} | {:8s} | {:8s}'.format('Qtras(bohr^-3)', 'Qrot', 'logQvib_rp')))
-    print(('{:14.3f} | {:8.3f} |{:8.3f}\n'.format(Qtras, Qrot, logQvib_rp)))
+    print('\nWe are done. Reactants. Nbeads {}'.format(nbeadsR))
+    print('{:14s} | {:8s} | {:8s}'.format('Qtras(bohr^-3)', 'Qrot', 'logQvib_rp'))
+    print('{:14.3f} | {:8.3f} |{:8.3f}\n'.format(Qtras, Qrot, logQvib_rp))
     print('A file with the frequencies in atomic units was generated\n')
 
 elif case == 'TS':
@@ -336,11 +336,11 @@ elif case == 'TS':
     U = (pots.sum() - V0)
 
     print('\nWe are done. TS')
-    print(('Partition functions at {} K'.format(temp / K2au)))
-    print(('\nQtras: {}'.format(Qtras)))
-    print(('Qrot: {}'.format(Qrot)))
-    print(('logQvib: {}'.format(logQvib)))
-    print(('Potential energy at TS:  {} eV, V/kBT {}\n'.format(U / eV2au, U / (kb * temp))))
+    print('Partition functions at {} K'.format(temp / K2au))
+    print('\nQtras: {}'.format(Qtras))
+    print('Qrot: {}'.format(Qrot))
+    print('logQvib: {}'.format(logQvib))
+    print('Potential energy at TS:  {} eV, V/kBT {}\n'.format(U / eV2au, U / (kb * temp)))
 
 elif case == 'instanton':
 
@@ -353,11 +353,11 @@ elif case == 'instanton':
             Qrot = 1.0
 
         if not quiet:
-            print(('Deleted frequency: {:8.3f} cm^-1'.format((np.sign(d[1]) * np.absolute(d[1]) ** 0.5 / cm2au))))
+            print('Deleted frequency: {:8.3f} cm^-1'.format((np.sign(d[1]) * np.absolute(d[1]) ** 0.5 / cm2au)))
             if asr != 'poly':
                 print('WARNING asr != poly')
                 print('First 10 eigenvalues')
-                print(('{}'.format(np.sign(d[0:10]) * np.absolute(d[0:10]) ** 0.5 / cm2au)))
+                print('{}'.format(np.sign(d[0:10]) * np.absolute(d[0:10]) ** 0.5 / cm2au))
                 print("Please check that this you don't have any unwanted zero frequency")
             logQvib = -np.sum(np.log(betaP * hbar * np.sqrt(np.absolute(np.delete(d, 1))))) + 6 * np.log(nbeads) + np.log(nbeads)
         else:
@@ -368,9 +368,9 @@ elif case == 'instanton':
         action1 = (2 * pots.sum() * factor - nbeads * V0) * 1. / (temp * nbeads * kb)
         action2 = spring_pot(nbeads, pos, omega2, m3) / (temp * nbeads * kb)
 
-        print(('\nWe are done. Instanton rate. Nbeads {} (diff only {})'.format(nbeads, nbeads / 2)))
-        print(('   {:8s} {:8s}  | {:11s} | {:11s} | {:11s} | {:8s} ( {:8s},{:8s} ) |'.format('BN', '(BN*N)', 'Qt(bohr^-3)', 'Qrot', 'log(Qvib*N)', 'S/hbar', 'S1/hbar', 'S2/hbar')))
-        print(('{:8.3f} ( {:8.3f} ) | {:11.3f} | {:11.3f} | {:11.3f} | {:8.3f} ( {:8.3f} {:8.3f} ) |'.format(BN, BN * nbeads, Qtras, Qrot, logQvib, (action1 + action2), action1, action2)))
+        print('\nWe are done. Instanton rate. Nbeads {} (diff only {})'.format(nbeads, nbeads / 2))
+        print('   {:8s} {:8s}  | {:11s} | {:11s} | {:11s} | {:8s} ( {:8s},{:8s} ) |'.format('BN', '(BN*N)', 'Qt(bohr^-3)', 'Qrot', 'log(Qvib*N)', 'S/hbar', 'S1/hbar', 'S2/hbar'))
+        print('{:8.3f} ( {:8.3f} ) | {:11.3f} | {:11.3f} | {:11.3f} | {:8.3f} ( {:8.3f} {:8.3f} ) |'.format(BN, BN * nbeads, Qtras, Qrot, logQvib, (action1 + action2), action1, action2))
         print('\n\n')
 
     elif mode == 'splitting':
@@ -379,8 +379,8 @@ elif case == 'instanton':
         d_min = np.zeros(natoms * 3)
         aux = out.readline().split()
         if len(aux) != (natoms * 3):
-            print(('We are expecting {} frequencies.'.format((natoms * 3 - 6))))
-            print(('instead we have read  {}'.format(len(aux))))
+            print('We are expecting {} frequencies.'.format((natoms * 3 - 6)))
+            print('instead we have read  {}'.format(len(aux)))
         for i in range((natoms * 3)):
             d_min[i] = float(aux[i])
         d_min = d_min.reshape((natoms * 3))
@@ -408,19 +408,19 @@ elif case == 'instanton':
         # cm2au= (2 * np.pi * 3e10 * 2.4188843e-17)
 
         print('\n\nWe are done')
-        print(('Nbeads {}, betaP {} a.u.,hbar {} a.u'.format((nbeads, betaP, hbar))))
+        print('Nbeads {}, betaP {} a.u.,hbar {} a.u'.format((nbeads, betaP, hbar)))
         print('')
-        print(('V0  {} eV ( {} Kcal/mol) '.format((V0 / eV2au, V0 / cal2au / 1000))))
-        print(('S1/hbar {} ,S2/hbar {} ,S/hbar {}'.format(action1 / hbar, action2 / hbar, action / hbar)))
-        print(('BN {} a.u.'.format(BN)))
-        print(('BN/(hbar^2 * betaN)  {}  (should be same as S/hbar) '.format((BN / ((hbar**2) * betaP)))))
+        print('V0  {} eV ( {} Kcal/mol) '.format((V0 / eV2au, V0 / cal2au / 1000)))
+        print('S1/hbar {} ,S2/hbar {} ,S/hbar {}'.format(action1 / hbar, action2 / hbar, action / hbar))
+        print('BN {} a.u.'.format(BN))
+        print('BN/(hbar^2 * betaN)  {}  (should be same as S/hbar) '.format((BN / ((hbar**2) * betaP))))
         print('')
         if quiet:
             print ('phi is not computed because you specified the quiet option')
-            print(('We can provied only Tetaphi which value is {} a.u. '.format(tetaphi)))
+            print ('We can provied only Tetaphi which value is {} a.u. '.format(tetaphi))
         else:
-            print(('phi {} a.u.   Teta {} a.u. '.format(phi, tetaphi / phi)))
-            print(('Tunnelling splitting matrix element (h)  {} a.u ({} cm^-1)'.format((h, h / cm2au))))
+            print('phi {} a.u.   Teta {} a.u. '.format(phi, tetaphi / phi))
+            print('Tunnelling splitting matrix element (h)  {} a.u ({} cm^-1)'.format((h, h / cm2au)))
     else:
         print('We can not recongnize the mode.')
         sys.exit()
