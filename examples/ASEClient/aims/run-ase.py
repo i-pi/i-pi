@@ -13,8 +13,8 @@ atoms = read("molecule.in", 0, "aims")
 
 ####### Define settings for AIMS calculator  ################
 usr_settings = {
-    "aims_command":"/home/litman/Yair/Installation/OpenMpi/openmpi-4.0.1/orte/tools/orterun/orterun -np 4  /home/litman/Codes/bin/aims.x",
-    "species_dir":"/home/litman/Codes/FHIaims/species_defaults/light",
+    "aims_command": <AIMS-COMMAND>",
+    "species_dir": <SPECIES-DIR>",
     "outfilename": "aims.out",
 }
 
