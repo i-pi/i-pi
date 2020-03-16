@@ -66,7 +66,7 @@ def create_random_xyz_traj_to_read(request):
                                                           frames, comment)
     filedesc.seek(0)
 
-    check_comment = re.match('# CELL[\(\[\{]H[\)\]\}]: ([-0-9\.?Ee ]*)\s*', comment)  # pylint: disable=W1401
+    check_comment = re.match(r'# CELL[\(\[\{]H[\)\]\}]: ([-0-9\.?Ee ]*)\s*', comment)  # pylint: disable=W1401
 
     if check_comment:
         genh = np.array(check_comment.group(1).split()[:9], float).reshape((3, 3))
@@ -168,8 +168,8 @@ def test_print_xyz(create_random_xyz_traj_to_write):
 
     filedesc, atoms_list, cell_list, title, precision = create_random_xyz_traj_to_write
 
-    filedesc_orig = tmp.NamedTemporaryFile(mode='wr', prefix='ipi_testing-tmp', delete=False)
-    filedesc_test = tmp.NamedTemporaryFile(mode='wr', prefix='ipi_testing-tmp', delete=False)
+    filedesc_orig = tmp.NamedTemporaryFile(mode='w', prefix='ipi_testing-tmp', delete=False)
+    filedesc_test = tmp.NamedTemporaryFile(mode='w', prefix='ipi_testing-tmp', delete=False)
 
     filedesc_orig.write(filedesc.read())
     filedesc.close()

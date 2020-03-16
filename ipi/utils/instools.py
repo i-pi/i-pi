@@ -194,7 +194,7 @@ def get_imvector(h, m3):
 def print_instanton_geo(prefix, step, nbeads, natoms, names, q, f, pots, cell, shift, output_maker):
 
     outfile = output_maker.get_output(prefix + '_' + str(step) + '.ener', 'w')
-    print(('#Bead    Energy (eV)'), file=outfile)
+    print('#Bead    Energy (eV)', file=outfile)
     for i in range(nbeads):
         print((str(i) + '     ' + str(units.unit_to_user('energy', "electronvolt", pots[i] - shift))), file=outfile)
     outfile.close_stream()
