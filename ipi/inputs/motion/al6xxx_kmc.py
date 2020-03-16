@@ -108,7 +108,7 @@ class InputAlKMC(InputDictionary):
     dynamic = {  }
 
     default_help = "Holds all the information for the KMC dynamics, such as timestep, rates and barriers that control it."
-    default_label = "AL6XXXKMC"
+    default_label = "AL6XXX_KMC"
 
     def store(self, kmc):
         """Takes a kinetic MonteCarlo instance and stores a minimal representation of it.
@@ -146,12 +146,12 @@ class InputAlKMC(InputDictionary):
         # only stores cache after a decent amount of new structures have been found
         if kmc.ncache_stored*self.STORE_STRIDE<kmc.ncache:
             if kmc.ecache_file != "":
-                print("Storing ECACHE in ", kmc.ecache_file)
+                print "Storing ECACHE in ", kmc.ecache_file
                 ff = open(kmc.ecache_file, "wb")
                 pickle.dump(kmc.ecache, ff)
                 ff.close()
             if kmc.qcache_file != "":
-                print("Storing QCACHE in ", kmc.qcache_file)
+                print "Storing QCACHE in ", kmc.qcache_file
                 ff = open(kmc.qcache_file, "wb")
                 pickle.dump(kmc.qcache, ff)
                 ff.close()

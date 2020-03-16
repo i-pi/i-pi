@@ -66,7 +66,7 @@ def Bfunc(qsum, psum):
     """
     nndof, npl = qsum.shape
     ans = np.zeros((npl,) + Bshape)
-    for i in range(npl):
+    for i in xrange(npl):
         ans[i] = 0.0  # Change this bit
     return ans
 
@@ -82,7 +82,7 @@ def Afunc0(qsum, psum):
     """
     nndof, npl = qsum.shape
     ans = np.zeros((npl,) + Ashape)
-    for i in range(npl):
+    for i in xrange(npl):
         ans[i] = 0.0  # Change this bit
     return ans
 
@@ -95,7 +95,7 @@ def Afunc1(qsum):
     """
     nndof, npl = qsum.shape
     ans = np.zeros((npl,) + Ashape + (ndof,))
-    for i in range(npl):
+    for i in xrange(npl):
         ans[i] = 0.0  # Change this bit
     return ans
 
@@ -108,7 +108,7 @@ def Afunc2(qsum):
     """
     nndof, npl = qsum.shape
     ans = np.zeros((npl,) + Ashape + (ndof, ndof))
-    for i in range(npl):
+    for i in xrange(npl):
         ans[i] = 0.0  # Change this bit
     return ans
 
@@ -120,7 +120,7 @@ def corr(A, B, **kwargs):
     """
     npts, npl = A.shape[:2]
     tcf = np.zeros(npts)
-    for i in range(npl):
+    for i in xrange(npl):
         tcf[:] += 0.0  # Change this bit
     return tcf
 

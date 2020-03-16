@@ -1,6 +1,6 @@
 #!/usr/bin/env python2
 
-
+from __future__ import print_function
 
 import os
 import sys
@@ -63,7 +63,7 @@ def main(fns_in, fn_out, begin, end, stride, wrap, unwrap):
         try:
             # Get the frames from all trajectories...
             for idx, trj in enumerate(trjs_in):
-                frame = next(trj)
+                frame = trj.next()
 
                 # gets units from first frame
                 dimension, units, cell_units = auto_units(comment=frame["comment"])

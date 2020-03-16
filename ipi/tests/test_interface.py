@@ -18,32 +18,32 @@ from ipi.interfaces.sockets import Driver, InterfaceSocket
 from ipi.interfaces.clients import Client, ClientASE
 
 
-#def test_client():
-#    """Client: startup without socket."""
-#    Client(_socket=None)
+def test_client():
+    """Client: startup without socket."""
+    Client(_socket=False)
 
 
-#def test_driver():
-#    """Driver: startup without socket."""
-#    Driver(socket=None)
+def test_driver():
+    """Driver: startup without socket."""
+    Driver(socket=None)
 
 
-#def test_interface():
-#    """InterfaceSocket: startup."""
-#    InterfaceSocket()
+def test_interface():
+    """InterfaceSocket: startup."""
+    InterfaceSocket()
 
 
-#@pytest.mark.skipif(not has_ase, reason='ASE not installed.')
-#def test_ASE():
-#    """Socket client for ASE."""
+@pytest.mark.skipif(not has_ase, reason='ASE not installed.')
+def test_ASE():
+    """Socket client for ASE."""
 
-#    # create ASE atoms and calculator
-#    atoms = build.bulk('Ar', cubic=True)
-#    calculator = LennardJones(epsilon=0.997 * units.kJ / units.mol, sigma=3.4, rc=10.0)
-#    atoms.set_calculator(calculator)
+    # create ASE atoms and calculator
+    atoms = build.bulk('Ar', cubic=True)
+    calculator = LennardJones(epsilon=0.997 * units.kJ / units.mol, sigma=3.4, rc=10.0)
+    atoms.set_calculator(calculator)
 
     # try to get potential energy
-#    atoms.get_potential_energy()
+    atoms.get_potential_energy()
 
     # create the socket client
-#    ClientASE(atoms, address='ase', _socket=None)
+    ClientASE(atoms, address='ase', _socket=False)

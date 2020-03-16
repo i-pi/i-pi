@@ -103,12 +103,12 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, der, skip):
     n_block = int(step / bsize)
 
     if (n_block == 0):
-        print('not enough data to build a block')
+        print 'not enough data to build a block'
         exit()
 
     if der == False:
-        for x in range(n_block):
-            print("# building the histogram for block $", x + 1)
+        for x in xrange(n_block):
+            print "# building the histogram for block $", x + 1
             dq = bq[x * bsize: (x + 1) * bsize]
             hx = histo(dq[:, 0] - dq[:, 3 * (P - 1)], dqxgrid, kernel, np.sqrt(T * P * m))
             hx = ((hx + hx[::-1]) * 0.5)
@@ -124,7 +124,7 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, der, skip):
             npx = hx * 0.0
             npy = hy * 0.0
             npz = hz * 0.0
-            print("# computing FT for block #", x + 1)
+            print "# computing FT for block #", x + 1
             for i in range(len(hx)):
                 npx[i] = (hx * np.cos(pxgrid[i] * dqxgrid)).sum() * dqxstep
                 npy[i] = (hy * np.cos(pygrid[i] * dqygrid)).sum() * dqystep
@@ -134,15 +134,15 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, der, skip):
             nplisty.append(npy)
             nplistz.append(npz)
     else:
-        for x in range(n_block):
-            print("# building the histogram for block $", x + 1)
+        for x in xrange(n_block):
+            print "# building the histogram for block $", x + 1
             dq = bq[x * bsize: (x + 1) * bsize]
             df = bf[x * bsize: (x + 1) * bsize]
 
             c = 0.5 * np.asarray([-1 + 2 * float(j) / float(P - 1) for j in range(P)])
             mwp2 = m * (P * T)**2 / (P - 1)
             bp = 1.0 / (P * T)
-            for i in range(len(dq)):
+            for i in xrange(len(dq)):
                 q = dq[i]
                 f = df[i]
                 x = q[:3] - q[-3:]
@@ -154,8 +154,8 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, der, skip):
                 sc = np.asarray([(s[0::3] * c).sum(), (s[1::3] * c).sum(), (s[2::3] * c).sum()])
                 sc *= -mwp2
                 fi = -bp * (fc + sc)
-                print("@*@", x, fi)
-                print("@@@", np.sqrt((x * x).sum()), np.dot(x, fi))
+                print "@*@", x, fi
+                print "@@@", np.sqrt((x * x).sum()), np.dot(x, fi)
 
             hx = histo_der(dq[:, 0::3], df[:, 0::3], dqxgrid, kernel, np.sqrt(T * P * m), m, P, T)
             hx = np.cumsum((hx - hx[::-1]) * 0.5) * dqxstep
@@ -163,7 +163,7 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, der, skip):
             hy = np.cumsum((hy - hy[::-1]) * 0.5) * dqystep
             hz = histo_der(dq[:, 2::3], df[:, 2::3], dqzgrid, kernel, np.sqrt(T * P * m), m, P, T)
             hz = np.cumsum((hz - hz[::-1]) * 0.5) * dqzstep
-            print(hx.sum() * dqxstep, hy.sum() * dqystep, hz.sum() * dqzstep)
+            print hx.sum() * dqxstep, hy.sum() * dqystep, hz.sum() * dqzstep
             hxlist.append(hx)
             hylist.append(hy)
             hzlist.append(hz)
@@ -172,7 +172,7 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, der, skip):
             npx = hx * 0.0
             npy = hy * 0.0
             npz = hz * 0.0
-            print("# computing FT for block #", x + 1)
+            print "# computing FT for block #", x + 1
             for i in range(len(hx)):
                 npx[i] = (hx * np.cos(pxgrid[i] * dqxgrid)).sum() * dqxstep
                 npy[i] = (hy * np.cos(pygrid[i] * dqygrid)).sum() * dqystep
@@ -194,13 +194,13 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, der, skip):
     norm_npy = avghy[(ns - 1) / 2]
     norm_npz = avghz[(ns - 1) / 2]
 
-    print("# Dx^2", np.dot(dqxgrid**2, avghx) * dqxstep / (bsize * n_block))
-    print("# Dy^2", np.dot(dqygrid**2, avghy) * dqystep / (bsize * n_block))
-    print("# Dz^2", np.dot(dqzgrid**2, avghz) * dqzstep / (bsize * n_block))
+    print "# Dx^2", np.dot(dqxgrid**2, avghx) * dqxstep / (bsize * n_block)
+    print "# Dy^2", np.dot(dqygrid**2, avghy) * dqystep / (bsize * n_block)
+    print "# Dz^2", np.dot(dqzgrid**2, avghz) * dqzstep / (bsize * n_block)
 
-    print("# px^2 (from the 2nd derivative of the histogram)", (30.0 * avghx[(ns - 1) / 2] - 16.0 * avghx[(ns - 1) / 2 + 1] - 16.0 * avghx[(ns - 1) / 2 - 1] + avghx[(ns - 1) / 2 - 2] + avghx[(ns - 1) / 2 + 2]) / dqxstep**2 / norm_npx / 12.0)
-    print("# py^2 (from the 2nd derivative of the histogram)", (30.0 * avghy[(ns - 1) / 2] - 16.0 * avghy[(ns - 1) / 2 + 1] - 16.0 * avghy[(ns - 1) / 2 - 1] + avghy[(ns - 1) / 2 - 2] + avghy[(ns - 1) / 2 + 2]) / dqystep**2 / norm_npy / 12.0)
-    print("# pz^2 (from the 2nd derivative of the histogram)", (30.0 * avghz[(ns - 1) / 2] - 16.0 * avghz[(ns - 1) / 2 + 1] - 16.0 * avghz[(ns - 1) / 2 - 1] + avghz[(ns - 1) / 2 - 2] + avghz[(ns - 1) / 2 + 2]) / dqzstep**2 / norm_npz / 12.0)
+    print "# px^2 (from the 2nd derivative of the histogram)", (30.0 * avghx[(ns - 1) / 2] - 16.0 * avghx[(ns - 1) / 2 + 1] - 16.0 * avghx[(ns - 1) / 2 - 1] + avghx[(ns - 1) / 2 - 2] + avghx[(ns - 1) / 2 + 2]) / dqxstep**2 / norm_npx / 12.0
+    print "# py^2 (from the 2nd derivative of the histogram)", (30.0 * avghy[(ns - 1) / 2] - 16.0 * avghy[(ns - 1) / 2 + 1] - 16.0 * avghy[(ns - 1) / 2 - 1] + avghy[(ns - 1) / 2 - 2] + avghy[(ns - 1) / 2 + 2]) / dqystep**2 / norm_npy / 12.0
+    print "# pz^2 (from the 2nd derivative of the histogram)", (30.0 * avghz[(ns - 1) / 2] - 16.0 * avghz[(ns - 1) / 2 + 1] - 16.0 * avghz[(ns - 1) / 2 - 1] + avghz[(ns - 1) / 2 - 2] + avghz[(ns - 1) / 2 + 2]) / dqzstep**2 / norm_npz / 12.0
 
     np.savetxt("hxx.data", avghx)
     np.savetxt(str(prefix + "histo.data"), np.c_[dqxgrid, avghx / (bsize * n_block), errhx, dqygrid, avghy / (bsize * n_block), errhy, dqzgrid, avghz / (bsize * n_block), errhz])
@@ -225,13 +225,13 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, der, skip):
         py2.append(np.dot(pygrid**2, np.asarray(nplisty)[i, :]) * pystep / norm_npy / 2.0 / np.pi * n_block)
         pz2.append(np.dot(pzgrid**2, np.asarray(nplistz)[i, :]) * pzstep / norm_npz / 2.0 / np.pi * n_block)
 
-    print('# number of blocks', n_block)
-    print('# px^2', np.mean(np.asarray(px2)), 'sigmax', np.std(np.asarray(px2)) / np.sqrt(n_block))
-    print('# py^2', np.mean(np.asarray(py2)), 'sigmay', np.std(np.asarray(py2)) / np.sqrt(n_block))
-    print('# pz^2', np.mean(np.asarray(pz2)), 'sigmaz', np.std(np.asarray(pz2)) / np.sqrt(n_block))
-    print('# p^2', np.mean(np.asarray(px2) + np.asarray(py2) + np.asarray(pz2)), 'sigma', np.std(np.asarray(px2) + np.asarray(py2) + np.asarray(pz2)) / np.sqrt(n_block))
+    print '# number of blocks', n_block
+    print '# px^2', np.mean(np.asarray(px2)), 'sigmax', np.std(np.asarray(px2)) / np.sqrt(n_block)
+    print '# py^2', np.mean(np.asarray(py2)), 'sigmay', np.std(np.asarray(py2)) / np.sqrt(n_block)
+    print '# pz^2', np.mean(np.asarray(pz2)), 'sigmaz', np.std(np.asarray(pz2)) / np.sqrt(n_block)
+    print '# p^2', np.mean(np.asarray(px2) + np.asarray(py2) + np.asarray(pz2)), 'sigma', np.std(np.asarray(px2) + np.asarray(py2) + np.asarray(pz2)) / np.sqrt(n_block)
 
-    print("# time taken (s)", time.clock() - start)
+    print "# time taken (s)", time.clock() - start
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=None)

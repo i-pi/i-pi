@@ -332,7 +332,7 @@ class NMFDPhononCalculator(FDPhononCalculator):
 
         self.dm.w2, self.dm.U = np.linalg.eigh(self.dm.dynmatrix)
         self.dm.V = self.dm.U.copy()
-        for i in range(len(self.dm.V)):
+        for i in xrange(len(self.dm.V)):
             self.dm.V[:, i] *= self.dm.ism
 
     def step(self, step=None):

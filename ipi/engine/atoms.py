@@ -128,7 +128,7 @@ class Atoms(dobject):
             dself.p = depend_array(name="p", value=np.zeros(3 * natoms, float))
             dself.m = depend_array(name="m", value=np.zeros(natoms, float))
             dself.names = depend_array(name="names",
-                                       value=np.zeros(natoms, np.dtype('|U6')))
+                                       value=np.zeros(natoms, np.dtype('|S6')))
         else:
             dself.q = _prebind[0]
             dself.p = _prebind[1]

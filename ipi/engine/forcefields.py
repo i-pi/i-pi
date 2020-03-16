@@ -128,7 +128,7 @@ class ForceField(dobject):
         par_str = " "
 
         if not self.pars is None:
-            for k, v in list(self.pars.items()):
+            for k, v in self.pars.items():
                 par_str += k + " : " + str(v) + " , "
         else:
             par_str = " "
@@ -216,8 +216,8 @@ class ForceField(dobject):
                 try:
                     self.requests.remove(request)
                 except ValueError:
-                    print("failed removing request", id(request), ' ', end=' ')
-                    print([id(r) for r in self.requests], "@", threading.currentThread())
+                    print "failed removing request", id(request), ' ',
+                    print [id(r) for r in self.requests], "@", threading.currentThread()
                     raise
 
     def stop(self):
@@ -765,11 +765,7 @@ class FFYaff(ForceField):
 
 class FFsGDML(ForceField):
 
-    """ A symmetric Gradient Domain Machine Learning (sGDML) force field.
-     Chmiela et al. Sci. Adv., 3(5), e1603015, 2017; Nat. Commun., 9(1), 3887, 2018.
-     http://sgdml.org/doc/
-     https://github.com/stefanch/sGDML
-    """
+    """ A symmetric Gradient Domain Machine Learning (sGDML) force field. """
 
     def __init__(self, latency=1.0, name="", threaded=False, sGDML_model=None, pars=None, dopbc=False):
         """Initialises FFsGDML
@@ -783,14 +779,6 @@ class FFsGDML(ForceField):
         # a socket to the communication library is created or linked
         super(FFsGDML, self).__init__(latency, name, pars, dopbc, threaded=threaded)
 
-        # --- Load sGDML package ---
-        try:
-            from sgdml.predict import GDMLPredict
-            from sgdml import __version__
-            info(" @ForceField: Using sGDML version " + __version__, verbosity.low)
-        except:
-            raise ValueError("ERROR: sGDML package not located. Install it via: pip install sgdml")
-
         # A bit weird to use keyword argument for a required argument, but this
         # is also done in the code above.
         if sGDML_model is None:
@@ -801,30 +789,29 @@ class FFsGDML(ForceField):
 
         self.sGDML_model = sGDML_model
 
-        # --- Load sGDML model file. ---
+        # constants
+        self.bohr_to_ang = 1. / UnitMap["length"]['angstrom']  # bohr --> Angstrom
+        self.kcalmol_to_hartree = UnitMap["energy"]['cal/mol'] * 1000.  # 1 kcal / mol --> hartree
+        self.kcalmolang_to_hartreebohr = self.bohr_to_ang * self.kcalmol_to_hartree  # 1 kcal / mol / Ang --> hartree / bohr
+
+        # sGDML: Machine Learning Model
+        # Author: Stefan Chmiela (stefan@chmiela.com)
+
+        # --- Load model. ---
         try:
             self.model = np.load(self.sGDML_model)
-            info(" @ForceField: sGDML model " + self.sGDML_model + " loaded" , verbosity.medium)
+            info(" @ForceField: Model " + self.sGDML_model + " loaded" , verbosity.medium)
         except:
-            raise ValueError("ERROR: Reading sGDML model " + self.model + " file failed.")
+            self.model = np.load(self.sGDML_model)
+            #raise ValueError("ERROR: Reading model " + self.model + " file failed.")
 
-        if "r_unit" in self.model and "e_unit" in self.model:
-            info(" @ForceField: The units used in your sGDML model are"\
-                 + self.sGDML_model["r_unit"] + " and "+ self.sGDML_model["r_unit"], verbosity.low)
+        # Evaluate model.
+        from ipi.utils.mltools.sGDML_predictors_v030118 import GDL_Predictor
+        self.predictor = GDL_Predictor(self.model)
+        self.predictor.print_info(self.model)
 
-        info(" @ForceField: IMPORTANT: It is always assumed that the units in"\
-             + " the provided model file are in Angstroms and kcal/mol.", verbosity.low)
-
-        # --- Constants ---
-        self.bohr_to_ang = 1. / UnitMap["length"]['angstrom']
-        self.kcalmol_to_hartree = UnitMap["energy"]['cal/mol'] * 1000.
-        self.kcalmolang_to_hartreebohr = self.bohr_to_ang * self.kcalmol_to_hartree
-
-        # --- Creates predictor ---
-        self.predictor = GDMLPredict(self.model)
-
-        info(" @ForceField: Optimizing parallelization settings for sGDML FF." , verbosity.medium)
-        self.predictor.prepare_parallel(n_bulk=1)
+        # ID of the atoms
+        self.z = self.model['z']
 
     def poll(self):
         """ Polls the forcefield checking if there are requests that should
@@ -840,8 +827,8 @@ class FFsGDML(ForceField):
     def evaluate(self, r):
         """ Evaluate the energy and forces. """
 
-        E, F = self.predictor.predict(r["pos"] * self.bohr_to_ang)
+        E, F = self.predictor.predict(r["pos"].reshape(-1, 3) * self.bohr_to_ang, self.z)
 
-        r["result"] = [E[0] * self.kcalmol_to_hartree, F.flatten() * self.kcalmolang_to_hartreebohr, np.zeros((3, 3), float), ""]
+        r["result"] = [E * self.kcalmol_to_hartree, F.flatten() * self.kcalmolang_to_hartreebohr, np.zeros((3, 3), float), ""]
         r["status"] = "Done"
         r["t_finished"] = time.time()

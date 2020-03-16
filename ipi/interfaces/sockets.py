@@ -14,6 +14,7 @@ import sys
 import os
 import socket
 import select
+import string
 import time
 import threading
 
@@ -37,8 +38,7 @@ NTIMEOUT = 20
 def Message(mystr):
     """Returns a header of standard length HDRLEN."""
 
-    # convert to bytestream since we'll be sending this over a socket
-    return bytes(str.ljust(str.upper(mystr), HDRLEN), 'ascii')
+    return string.ljust(string.upper(mystr), HDRLEN)
 
 
 class Disconnected(Exception):
@@ -107,16 +107,14 @@ class DriverSocket(socket.socket):
        _buf: A string buffer to hold the reply from the other connection.
     """
 
-    def __init__(self, sock):
+    def __init__(self, socket):
         """Initialises DriverSocket.
 
         Args:
            socket: A socket through which the communication should be done.
         """
 
-        super(DriverSocket, self).__init__(sock.family, sock.type, sock.proto,
-                        fileno=socket.dup(sock.fileno()))
-        self.settimeout(sock.gettimeout())
+        super(DriverSocket, self).__init__(_sock=socket)
         self._buf = np.zeros(0, np.byte)
         if socket:
             self.peername = self.getpeername()
@@ -215,33 +213,20 @@ class Driver(DriverSocket):
        locked: Flag to mark if the client has been working consistently on one image.
     """
 
-    def __init__(self, sock):
+    def __init__(self, socket):
         """Initialises Driver.
 
         Args:
            socket: A socket through which the communication should be done.
         """
 
-        super(Driver, self).__init__(sock)
+        super(Driver, self).__init__(socket=socket)
         self.waitstatus = False
         self.status = Status.Up
         self.lastreq = None
-        self.locked = False 
+        self.locked = False
         self.exit_on_disconnect = False
-        
-    def shutdown(self, how=socket.SHUT_RDWR):
-        """Tries to send an exit message to clients to let them exit gracefully."""
 
-        if self.exit_on_disconnect:
-            trd = threading.Thread(target=softexit.trigger, kwargs={"message": "Client shutdown."})
-            trd.daemon = True
-            trd.start()
-
-        self.sendall(Message("exit"))
-        self.status = Status.Disconnected
-
-        super(DriverSocket, self).shutdown(how)                
-        
     def _getstatus(self):
         """Gets driver status.
 
@@ -265,10 +250,10 @@ class Driver(DriverSocket):
             reply = self.recv(HDRLEN)
             self.waitstatus = False  # got some kind of reply
         except socket.timeout:
-            warning(" @SOCKET:   Timeout in status recv!", verbosity.debug)
+            warning(" @SOCKET:   Timeout in status recv!", verbosity.trace)
             return Status.Up | Status.Busy | Status.Timeout
         except:
-            warning(" @SOCKET:   Other socket exception. Disconnecting client and trying to carry on.", verbosity.debug)
+            warning(" @SOCKET:   Other socket exception. Disconnecting client and trying to carry on.", verbosity.trace)
             return Status.Disconnected
 
         if not len(reply) == HDRLEN:
@@ -282,6 +267,19 @@ class Driver(DriverSocket):
         else:
             warning(" @SOCKET:    Unrecognized reply: " + str(reply), verbosity.low)
             return Status.Up
+
+    def shutdown(self, how=socket.SHUT_RDWR):
+        """Tries to send an exit message to clients to let them exit gracefully."""
+
+        if self.exit_on_disconnect:
+            trd = threading.Thread(target=softexit.trigger, kwargs={"message": "Client shutdown."})
+            trd.daemon = True
+            trd.start()
+
+        self.sendall(Message("exit"))
+        self.status = Status.Disconnected
+
+        super(DriverSocket, self).shutdown(how)
 
     def get_status(self):
         """ Sets (and returns) the client internal status. Wait for an answer if
@@ -332,11 +330,11 @@ class Driver(DriverSocket):
                 self.sendall(Message("posdata"))
                 self.sendall(h_ih[0])
                 self.sendall(h_ih[1])
-                self.sendall(np.int32(len(pos) // 3))
+                self.sendall(np.int32(len(pos) / 3))
                 self.sendall(pos)
                 self.status = Status.Up | Status.Busy
             except:
-                print("Error in sendall, resetting status")
+                print "Error in sendall, resetting status"
                 self.get_status()
                 return
         else:
@@ -393,7 +391,7 @@ class Driver(DriverSocket):
         if mlen > 0:
             mxtra = np.zeros(mlen, np.character)
             mxtra = self.recvall(mxtra)
-            mxtra = bytearray(mxtra).decode("utf-8")
+            mxtra = "".join(mxtra)
         else:
             mxtra = ""
 
@@ -509,10 +507,10 @@ class InterfaceSocket(object):
         self.slots = slots
         self.mode = mode
         self.timeout = timeout
-        self.poll_iter = UPDATEFREQ # triggers pool_update at first poll
-        self.prlist = [] # list of pending requests
-        self.match_mode = match_mode # heuristics to match jobs and active clients
-        self.requests = None # these will be linked to the request list of the FFSocket object using the interface
+        self.poll_iter = UPDATEFREQ  # triggers pool_update at first poll
+        self.prlist = []  # list of pending requests
+        self.match_mode = match_mode  # heuristics to match jobs and active clients
+        self.requests = None  # these will be linked to the request list of the FFSocket object using the interface
         self.exit_on_disconnect = exit_on_disconnect
 
     def open(self):

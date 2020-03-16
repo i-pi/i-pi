@@ -18,7 +18,7 @@ __all__ = ["auto_units", "process_units"]
 cell_unit_re = re.compile(r'cell\{([A-Za-z_]*)\}')       # cell unit pattern
 traj_dict = Traj().traj_dict                             # trajectory dictionary
 traj_re = [re.compile('%s%s' % (key, r'\{[A-Za-z_]*\}'))
-           for key in list(traj_dict.keys())]  # trajectory patterns
+           for key in traj_dict.keys()]  # trajectory patterns
 
 
 def auto_units(comment="", dimension="automatic", units="automatic", cell_units="automatic", mode="xyz"):
@@ -38,8 +38,8 @@ def auto_units(comment="", dimension="automatic", units="automatic", cell_units=
     if comment != "":  # but they can be overridden by a special comment line
         # tries to guess units from the input
         # Extracting trajectory units
-        is_comment_useful = [_f for _f in [key.search(comment.strip())
-                                          for key in traj_re] if _f]
+        is_comment_useful = filter(None, [key.search(comment.strip())
+                                          for key in traj_re])
         if len(is_comment_useful) > 0:
             traj = is_comment_useful[0].group()[:-1].split('{')
             auto_dimension, auto_units = traj_dict[traj[0]]['dimension'], traj[1]
@@ -82,7 +82,7 @@ def process_units(comment, cell, data, names, masses, natoms, dimension="automat
     """
     dimension, units, cell_units = auto_units(comment, dimension, units, cell_units, mode)
 
-    info(" # Interpreting input with dimension %s, units %s and cell units %s" % (dimension, units, cell_units), verbosity.high)
+    info("Interpreting input with dimension %s, units %s and cell units %s" % (dimension, units, cell_units), verbosity.high)
 
     # Units transformation
     cell *= unit_to_internal('length', cell_units, 1)  # cell units transformation

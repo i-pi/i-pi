@@ -56,7 +56,7 @@ class InputAtoms(Input):
                                  "help": "The masses of the atoms, in the format [m1, m2, ... ].",
                                  "dimension": "mass"}),
               "names": (InputArray, {"dtype": str,
-                                     "default": input_default(factory=np.zeros, args=(0,), kwargs={'dtype': np.dtype('|U6')}),
+                                     "default": input_default(factory=np.zeros, args=(0,), kwargs={'dtype': np.dtype('|S6')}),
                                      "help": "The names of the atoms, in the format [name1, name2, ... ]."})
               }
 

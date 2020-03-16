@@ -77,7 +77,7 @@ def get_np(path2iipi, bsize=20000, nskip=300, si=15.0, sf=-15.0, ns=10000):
     step = np.shape(delta)[0]
     n_block = int(step / bsize)
 
-    for x in range(n_block):
+    for x in xrange(n_block):
         dq = delta[x * bsize: (x + 1) * bsize]
         hx = histo(np.concatenate((dq.T[0], -dq.T[0])), dqxgrid, kernel, 0, np.sqrt(T * P * m))
         hy = histo(np.concatenate((dq.T[1], -dq.T[1])), dqygrid, kernel, 0, np.sqrt(T * P * m))
@@ -145,9 +145,9 @@ def get_np(path2iipi, bsize=20000, nskip=300, si=15.0, sf=-15.0, ns=10000):
         psqmedz = psqmedz + np.dot(pzgrid**2, np.asarray(nplistz)[i, :]) / normz
         psqmed2z = psqmed2z + (np.dot(pzgrid**2, np.asarray(nplistz)[i, :]) / normz)**2
 
-    print('number of blocks', n_block)
-    print('av_px^2', psqmedx / n_block, 'sigmax', np.sqrt((psqmed2x / n_block) - (psqmedx / n_block)**2) / np.sqrt(n_block))
-    print('av_py^2', psqmedy / n_block, 'sigmay', np.sqrt((psqmed2y / n_block) - (psqmedy / n_block)**2) / np.sqrt(n_block))
-    print('av_pz^2', psqmedz / n_block, 'sigmaz', np.sqrt((psqmed2z / n_block) - (psqmedz / n_block)**2) / np.sqrt(n_block))
+    print 'number of blocks', n_block
+    print 'av_px^2', psqmedx / n_block, 'sigmax', np.sqrt((psqmed2x / n_block) - (psqmedx / n_block)**2) / np.sqrt(n_block)
+    print 'av_py^2', psqmedy / n_block, 'sigmay', np.sqrt((psqmed2y / n_block) - (psqmedy / n_block)**2) / np.sqrt(n_block)
+    print 'av_pz^2', psqmedz / n_block, 'sigmaz', np.sqrt((psqmed2z / n_block) - (psqmedz / n_block)**2) / np.sqrt(n_block)
 
 if __name__ == '__main__': get_np(*sys.argv[1:])

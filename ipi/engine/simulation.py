@@ -96,13 +96,13 @@ class Simulation(dobject):
 
         # echo the input file if verbose enough
         if verbosity.level > 0:
-            print(" # i-PI loaded input file: ", fn_input)
+            print " # i-PI loaded input file: ", fn_input
         if verbosity.level > 1:
-            print(" --- begin input file content ---")
+            print " --- begin input file content ---"
             ifile = open(fn_input, "r")
             for line in ifile.readlines():
-                print(line, end=' ')
-            print(" ---  end input file content  ---")
+                print line,
+            print " ---  end input file content  ---"
             ifile.close()
 
         return simulation
@@ -178,7 +178,7 @@ class Simulation(dobject):
 
         # start forcefields here so we avoid having a shitload of files printed
         # out only to find the socket is busy or whatever prevented starting the threads
-        for k, f in self.fflist.items():
+        for k, f in self.fflist.iteritems():
             f.start()
 
         # Checks for repeated filenames.
@@ -273,7 +273,7 @@ class Simulation(dobject):
         #tttime = 0.0
         ttot = 0.0
         # main MD loop
-        for self.step in range(self.step, self.tsteps):
+        for self.step in xrange(self.step, self.tsteps):
             # stores the state before doing a step.
             # this is a bit time-consuming but makes sure that we can honor soft
             # exit requests without screwing the trajectory

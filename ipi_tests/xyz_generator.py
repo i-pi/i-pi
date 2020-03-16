@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2
 """ Generate fake parameters useful to test the softare.
 """
 
@@ -6,7 +6,7 @@ import tempfile as tmp
 import numpy as np
 from ipi.utils.units import Elements
 from copy import copy
-all_elem = list(Elements.mass_list.keys())
+all_elem = Elements.mass_list.keys()
 at_names = None
 
 
@@ -27,7 +27,7 @@ def xyz_rand(natoms, comment, names=None):
     if not comment.endswith('\n'):
         comment += '\n'
     output += comment
-    for i in range(natoms):
+    for i in xrange(natoms):
         output += '%8s %12.5e %12.5e %12.5e\n' % \
             (at_names[i], xyz[i, 0], xyz[i, 1], xyz[i, 2])
     return (output, xyz.flatten(), copy(at_names))
@@ -37,7 +37,7 @@ def xyz_traj(natoms, nframe, comment):
     """ Generate a fake xyz trajectory. Atoms and coordinates are random.
     """
     output, xyz, all_names = xyz_rand(natoms, comment)
-    for _ in range(nframe - 1):
+    for _ in xrange(nframe - 1):
         raw_output = xyz_rand(natoms, comment, names=True)
         output += raw_output[0]
         xyz = np.concatenate([xyz, raw_output[1]])
@@ -50,7 +50,7 @@ def xyz_traj_filedesc(natoms, nframe, comment):
     """ Generate a file descriptor containing a fake xyz trajectory.
     """
     contents, xyz, all_names = xyz_traj(natoms, nframe, comment)
-    filedesc = tmp.NamedTemporaryFile(mode='w')
+    filedesc = tmp.NamedTemporaryFile(mode='wr')
     filedesc.write(contents)
     filedesc.seek(0)
     # This works only on unix!

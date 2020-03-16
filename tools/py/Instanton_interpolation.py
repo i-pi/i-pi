@@ -70,7 +70,7 @@ if input_geo != 'None' or chk != 'None':
         if (os.path.exists(input_geo)):
             ipos = open(input_geo, "r")
         else:
-            print(("We can't find".format(input_geo)))
+            print("We can't find".format(input_geo))
             sys.exit()
 
         pos = list()
@@ -94,7 +94,7 @@ if input_geo != 'None' or chk != 'None':
         if (os.path.exists(chk)):
             simulation = Simulation.load_from_xml(chk, custom_verbosity='low', request_banner=False)
         else:
-            print(("We can't find".format(chk)))
+            print("We can't find".format(chk))
             sys.exit()
         cell = simulation.syslist[0].cell
         beads = simulation.syslist[0].motion.beads.copy()
@@ -104,8 +104,8 @@ if input_geo != 'None' or chk != 'None':
         atom = beads._blist[0]
 
     print(' ')
-    print(('We have a half ring polymer made of {} beads and {} atoms.'.format(nbeads, natoms)))
-    print(('We will expand the ring polymer to get a half polymer of {} beads.'.format(nbeadsNew)))
+    print('We have a half ring polymer made of {} beads and {} atoms.'.format(nbeads, natoms))
+    print('We will expand the ring polymer to get a half polymer of {} beads.'.format(nbeadsNew))
 
     # Make the rpc step (standar)
     # q2 = np.concatenate((q, np.flipud(q)), axis=0)   # Compose the full ring polymer.
@@ -116,7 +116,7 @@ if input_geo != 'None' or chk != 'None':
     # new_q = rpc.b1tob2(q )
 
     # Make the rpc step (open path)
-    rpc = nm_rescale(nbeads, nbeadsNew, np.asarray(list(range(natoms))))
+    rpc = nm_rescale(nbeads, nbeadsNew, np.asarray(range(natoms)))
     new_q = rpc.b1tob2(q)
 
     # Print
@@ -130,7 +130,7 @@ if input_geo != 'None' or chk != 'None':
     print('The new Instanton geometry (half polymer) was generated')
     print('Check new_instanton.xyz')
     print('')
-    print(("Don't forget to change the number of beads to the new value ({}) in your input file".format(nbeadsNew)))
+    print("Don't forget to change the number of beads to the new value ({}) in your input file".format(nbeadsNew))
     print('when starting your new simulation with an increased number of beads.')
     print('')
 
@@ -140,7 +140,7 @@ if input_hess != 'None' or chk != 'None':
         try:
             hess = open(input_hess, "r")
         except:
-            print(("We can't find".format(input_hess)))
+            print("We can't find".format(input_hess))
             sys.exit()
         h = np.zeros((natoms * 3)**2 * nbeads)
         aux = hess.readline().split()
@@ -161,7 +161,7 @@ if input_hess != 'None' or chk != 'None':
             print("We don't have a hessian so there is nothing more to do")
             sys.exit()
 
-    print(('The new hessian is {} x {}.'.format(3 * natoms, natoms * 3 * nbeadsNew)))
+    print('The new hessian is {} x {}.'.format(3 * natoms, natoms * 3 * nbeadsNew))
     out = open("new_hessian.dat", "w")
 
     print('Creating matrix... ')
@@ -199,7 +199,7 @@ if input_hess != 'None' or chk != 'None':
     print('')
     print('Remeber to adapt/add the following line in your input:')
     print('')
-    print((" <hessian mode='file' shape='({}, {})' >hessian.dat</hessian>".format(3 * natoms, natoms * 3 * nbeadsNew)))
+    print(" <hessian mode='file' shape='({}, {})' >hessian.dat</hessian>".format(3 * natoms, natoms * 3 * nbeadsNew))
     print('')
 
 sys.exit()

@@ -13,7 +13,7 @@ units from the file, but it can be overridden.
 
 import sys
 import os
-import io
+import cStringIO
 import numpy as np
 
 from ipi.utils.messages import info, verbosity
@@ -54,13 +54,13 @@ def _get_io_function(mode, io):
             mode = mode_map[mode]
         module = importlib.import_module("ipi.utils.io.backends.io_%s" % mode)
     except ImportError:
-        print("Error: mode %s is not supported." % mode)
+        print "Error: mode %s is not supported." % mode
         sys.exit()
 
     try:
         func = getattr(module, io_map[io] % mode)
     except KeyError:
-        print("Error: io %s is not supported with mode %s." % (io, mode))
+        print "Error: io %s is not supported with mode %s." % (io, mode)
         sys.exit()
 
     return func
@@ -332,7 +332,7 @@ def open_backup(filename, mode='r', buffering=-1):
 
 
 def netstring_encoded_savez(ofile, compressed=True, **named_objs):
-    output = io.StringIO()
+    output = cStringIO.StringIO()
     if compressed:
         # np.savez_compressed(output,*unnamed_objs,**named_objs)
         np.savez_compressed(output, **named_objs)
@@ -358,7 +358,7 @@ def netstring_encoded_loadz(ifile):
     if not ifile.read(1) == ",":
         raise ValueError("Invalid netstring delimiter")
 
-    istr = io.StringIO(content)
+    istr = cStringIO.StringIO(content)
     npz = np.load(istr)
     rdic = {}
     for a in npz.files:

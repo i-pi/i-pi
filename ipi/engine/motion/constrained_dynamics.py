@@ -281,7 +281,7 @@ class ConstraintSolver(ConstraintSolverBase):
             constr.q = q[ic]
 
             # iterative projection on the manifold
-            for i in range(self.maxit):
+            for i in xrange(self.maxit):
                 g = dstrip(constr.g)
                 # bailout condition
                 if self.tolerance > np.linalg.norm(g, ord=self.norm_order):
@@ -340,13 +340,13 @@ class ConstrainedIntegrator(DummyIntegrator):
             dself.nsteps_geo = depend_value(name="nsteps_geo", value=1)
         else:
             dself.nsteps_geo = depend_value(name="nsteps_geo", value=motion.nsteps_geo)
-        print(self.nsteps_geo)
+        print self.nsteps_geo
         dself.qdt.add_dependency(dself.nsteps_geo)
         if motion.nsteps_o is None:
             dself.nsteps_o = depend_value(name="nsteps_o", value=1)
         else:
             dself.nsteps_o = depend_value(name="nsteps_o", value=motion.nsteps_o)
-        print(self.nsteps_o)
+        print self.nsteps_o
         dself.tdt.add_dependency(dself.nsteps_o)
         dd(self).csolver = motion.csolver
         dpipe(dself.qdt, dd(self.csolver).dt)
@@ -485,7 +485,7 @@ class NVTConstrainedIntegrator(NVEConstrainedIntegrator):
         (e.g. in GLE) by doing a MTS splitting scheme """
 
         m3 = dstrip(self.beads.m3)
-        for i in range(self.nsteps_o):
+        for i in xrange(self.nsteps_o):
             self.thermostat.step()
 
             # accumulates conserved quantity
