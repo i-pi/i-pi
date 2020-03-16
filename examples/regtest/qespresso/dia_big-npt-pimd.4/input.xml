@@ -7,7 +7,7 @@ ENDREGTEST -->
     <properties stride='1' filename='out'>  [ step, time{femtosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv{bar}, volume ] </properties>
     <trajectory stride='1' filename='pos' cell_units='angstrom'> positions{angstrom} </trajectory>
   </output>
-  <total_steps>5</total_steps>
+  <total_steps>2</total_steps>
   <prng>
     <seed>3141</seed>
   </prng>

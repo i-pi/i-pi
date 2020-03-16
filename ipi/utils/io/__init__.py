@@ -328,27 +328,30 @@ def open_backup(filename, mode='r', buffering=-1):
 
     return open(filename, mode, buffering)
 
-#def netstring_encoded_savez(ofile, compressed=True, *unnamed_objs, **named_objs):
+# def netstring_encoded_savez(ofile, compressed=True, *unnamed_objs, **named_objs):
+
+
 def netstring_encoded_savez(ofile, compressed=True, **named_objs):
     output = cStringIO.StringIO()
     if compressed:
-        #np.savez_compressed(output,*unnamed_objs,**named_objs)
-        np.savez_compressed(output,**named_objs)
+        # np.savez_compressed(output,*unnamed_objs,**named_objs)
+        np.savez_compressed(output, **named_objs)
     else:
-        #np.savez(output,*unnamed_objs,**named_objs)
-        np.savez(output,**named_objs)
+        # np.savez(output,*unnamed_objs,**named_objs)
+        np.savez(output, **named_objs)
     content = output.getvalue()
-    ofile.write(str(len(content))+":"+content+",")
+    ofile.write(str(len(content)) + ":" + content + ",")
+
 
 def netstring_encoded_loadz(ifile):
     # read string length
-    c=ifile.read(1)
-    if c=='0':
+    c = ifile.read(1)
+    if c == '0':
         raise ValueError("Reading an empty netstring")
     length = ""
     while c in ['0', '1', '2', '3', '4', '5', '6', '7', '8', '9']:
-        length+=c
-        c=ifile.read(1)
+        length += c
+        c = ifile.read(1)
     if not c == ":":
         raise ValueError("Invalid netstring delimiter")
     content = ifile.read(int(length))

@@ -114,6 +114,28 @@ class GeopMotion(Motion):
         else:
             self.optimizer = DummyOptimizer()
 
+
+    def reset(self):  # necessary for Al6xxx-kmc
+        # zeroes out all memory of previous steps
+        self.old_x *= 0.0
+        self.old_f *= 0.0
+        self.old_u *= 0.0
+        self.d *= 0.0
+
+        if self.mode =="bfgs":
+            self.invhessian[:] = np.eye(len(self.invhessian), len(self.invhessian), 0,   float)
+        # bfgstrm
+        elif self.mode =="bfgstrm":
+            self.hessian[:] = np.eye(len(self.hessian), len(self.hessian), 0, float)
+            self.tr = self.initial_values["tr_trm"]
+        # lbfgs
+        elif self.mode =="lbfgst":
+            self.corrections *= 0.0
+            self.scale *= 0.0
+            self.qlist *= 0.0
+            self.glist *= 0.0
+
+
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         """Binds beads, cell, bforce and prng to GeopMotion
 
@@ -130,7 +152,7 @@ class GeopMotion(Motion):
         self.optimizer.bind(self)
 
         if len(self.fixatoms) == len(self.beads[0]):
-                softexit.trigger("WARNING: all atoms are fixed, geometry won't change. Exiting simulation")
+            softexit.trigger("WARNING: all atoms are fixed, geometry won't change. Exiting simulation")
 
     def step(self, step=None):
         if self.optimizer.converged:
@@ -252,7 +274,6 @@ class DummyOptimizer(dobject):
 
         self.mode = geop.mode
         self.tolerances = geop.tolerances
-        self.output_maker = geop.output_maker
 
         # Check for very tight tolerances
 
@@ -319,10 +340,10 @@ class DummyOptimizer(dobject):
 
         if (np.linalg.norm(self.forces.f.flatten() - self.old_f.flatten()) <= 1e-20):
             info("Something went wrong, the forces are not changing anymore."
-                             " This could be due to an overly small tolerance threshold "
-                             "that makes no physical sense. Please check if you are able "
-                             "to reach such accuracy with your force evaluation"
-                             " code (client).")
+                 " This could be due to an overly small tolerance threshold "
+                 "that makes no physical sense. Please check if you are able "
+                 "to reach such accuracy with your force evaluation"
+                 " code (client).")
 
         if (np.absolute((fx - u0) / self.beads.natoms) <= self.tolerances["energy"])   \
                 and (fmax <= self.tolerances["force"])  \
@@ -342,7 +363,6 @@ class BFGSOptimizer(DummyOptimizer):
                 geop.invhessian = np.eye(self.beads.q.size, self.beads.q.size, 0, float)
             else:
                 raise ValueError("Inverse Hessian size does not match system size")
-
 
         self.invhessian = geop.invhessian
         self.gm.bind(self)
@@ -425,7 +445,6 @@ class BFGSTRMOptimizer(DummyOptimizer):
                 geop.hessian = np.eye(self.beads.q.size, self.beads.q.size, 0, float)
             else:
                 raise ValueError("Hessian size does not match system size")
-
 
         self.hessian = geop.hessian
         if geop.tr.size == 0:
@@ -514,7 +533,6 @@ class LBFGSOptimizer(DummyOptimizer):
             else:
                 raise ValueError("qlist size does not match system size")
 
-
         self.qlist = geop.qlist
         self.glist = geop.glist
 
@@ -598,7 +616,6 @@ class SDOptimizer(DummyOptimizer):
         self.lm.bind(self)
         self.ls_options = geop.ls_options
 
-
     def step(self, step=None):
         """ Does one simulation time step
             Attributes:
@@ -668,7 +685,6 @@ class CGOptimizer(DummyOptimizer):
         super(CGOptimizer, self).bind(geop)
         self.lm.bind(self)
         self.ls_options = geop.ls_options
-
 
     def step(self, step=None):
         """Does one simulation time step

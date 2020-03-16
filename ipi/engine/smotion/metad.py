@@ -51,7 +51,7 @@ class MetaDyn(Smotion):
                     raise ValueError("The forcefield '%s' associated with metadynamics \
                                       does not have a mtd_update interface" % (k))
                 if s.ensemble.bweights[ik] == 0:
-                    continue # do not put metad bias on biases with zero weights (useful to do remd+metad!)
+                    continue  # do not put metad bias on biases with zero weights (useful to do remd+metad!)
                 fmtd = f.mtd_update(pos=s.beads.qc, cell=s.cell.h)
                 if fmtd:  # if metadyn has updated, then we must recompute forces.
                     # hacky but cannot think of a better way: we must manually taint *just* that component

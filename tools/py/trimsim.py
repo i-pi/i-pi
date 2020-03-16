@@ -51,9 +51,9 @@ def main(inputfile, outdir="trim"):
     ltraj = []  # list of trajectory files
     nsys = len(simul.syslist)
     for o in simul.outtemplate:
-        o = deepcopy(o) # avoids overwriting the actual filename
+        o = deepcopy(o)  # avoids overwriting the actual filename
         if simul.outtemplate.prefix != "":
-            o.filename = simul.outtemplate.prefix + "." + o.filename        
+            o.filename = simul.outtemplate.prefix + "." + o.filename
         if type(o) is CheckpointOutput:   # properties and trajectories are output per system
             pass
         elif type(o) is PropertyOutput:
