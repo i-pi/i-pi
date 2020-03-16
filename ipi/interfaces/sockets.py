@@ -38,7 +38,7 @@ def Message(mystr):
     """Returns a header of standard length HDRLEN."""
 
     # convert to bytestream since we'll be sending this over a socket
-    return bytes(str.ljust(str.upper(mystr), HDRLEN), 'ascii')
+    return str.ljust(str.upper(mystr), HDRLEN).encode()
 
 
 class Disconnected(Exception):
@@ -309,7 +309,7 @@ class Driver(DriverSocket):
                 self.sendall(Message("init"))
                 self.sendall(np.int32(rid))
                 self.sendall(np.int32(len(pars)))
-                self.sendall(pars)
+                self.sendall(pars.encode())
             except:
                 self.get_status()
                 return
