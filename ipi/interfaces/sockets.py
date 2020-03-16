@@ -309,9 +309,7 @@ class Driver(DriverSocket):
                 self.sendall(Message("init"))
                 self.sendall(np.int32(rid))
                 self.sendall(np.int32(len(pars)))
-                #self.sendall(pars)
-                buf = np.asarray(np.zeros(1),np.byte).tobytes()
-                self.sendall(buf)
+                self.sendall(pars.encode())
             except:
                 self.get_status()
                 return
