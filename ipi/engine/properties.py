@@ -125,11 +125,11 @@ def help_latex(idict, standalone=True):
 { {\hfill\raggedleft\textit{\small #3}\par} }
 }
 """
-        rstr += "\n\\begin{document}\n"
-        rstr += "The following are the different allowable ouputs:\n\\par"
+        rstr += "\n"+r"\begin{document}\n"
+        rstr += "The following are the different allowable ouputs:\n"+r"\par"
 
     for out in sorted(idict):
-        rstr += "\\ipiitem{" + out + "}"
+        rstr += r"\ipiitem{" + out + "}"
         if "longhelp" in idict[out]:
             rstr += "{" + idict[out]['longhelp'] + "}"
         else:
@@ -145,7 +145,7 @@ def help_latex(idict, standalone=True):
 
     if standalone:
         # ends the created document if it is not part of a larger document
-        rstr += "\\end{document}"
+        rstr += r"\end{document}"
 
     # Some escape characters are necessary for the proper latex formatting
     rstr = rstr.replace('_', '\\_')

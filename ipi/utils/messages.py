@@ -29,7 +29,7 @@ class Verbosity(object):
     """
 
     lock = False
-    level = "low"
+    level = VERB_LOW
 
     def __getattr__(self, name):
         """Determines whether a certain verbosity level is

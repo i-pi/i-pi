@@ -204,7 +204,7 @@ class InputConstrainedDynamics(InputDictionary):
                }
 
     default_help = "Holds all the information for the MD integrator, such as timestep, the thermostats and barostats that control it."
-    default_label = "CONSTRAINED_DYNAMICS"
+    default_label = "CONSTRAINEDDYNAMICS"
 
     def store(self, dyn):
         """Takes an ensemble instance and stores a minimal representation of it.

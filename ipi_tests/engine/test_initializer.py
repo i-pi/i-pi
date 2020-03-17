@@ -46,8 +46,7 @@ def create_xyz_sample_file(request):
     filedesc, xyz, atoms_names = xyz_gen.xyz_traj_filedesc(natoms, frames, comment)
 
     # init_file needs to read from a real file...
-    tmp_file = tmp.NamedTemporaryFile(mode='wr', prefix='ipi_testing-tmp', delete=False)
-    tmp_file.seek(0)
+    tmp_file = tmp.NamedTemporaryFile(mode='w', prefix='ipi_testing-tmp', delete=False)
     tmp_file.write(filedesc.read())
     tmp_file.close()
     filedesc.close()
