@@ -5,6 +5,7 @@ ENDREGTEST-->
 <simulation mode="static" verbosity="medium">
     <output prefix='inst'>
         <properties stride='1' filename='out'>  [ step, potential{electronvolt}] </properties>
+   <trajectory stride="1" filename="xc" format="xyz">positions{angstrom}</trajectory>
    </output>
    <total_steps>20       </total_steps>
    <ffsocket name="cbe" mode="unix" >
