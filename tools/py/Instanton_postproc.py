@@ -285,7 +285,7 @@ betaP = 1.0 / (kb * (nbeads) * temp)
 print(('\nTemperature: {} K'.format(temp / K2au)))
 print(('NBEADS: {}'.format(nbeads)))
 print(('atoms:  {}'.format(natoms)))
-print(('ASR:    {}'.format(natoms)))
+print(('ASR:    {}'.format(asr)))
 print(('1/(betaP*hbar) = {:8.5f}'.format((1 / (betaP * hbar)))))
 
 if not quiet:
