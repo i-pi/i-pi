@@ -5,4 +5,4 @@
 # See the "licenses" directory for full license information.
 
 
-__all__ = ["sockets", "clients"]
+__all__ = ["sockets"]
