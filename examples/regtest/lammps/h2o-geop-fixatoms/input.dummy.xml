@@ -1,1 +1,0 @@
-The only reason why I need this file is to make regtest.py skip this directory and proceed only in its subdirectories.
