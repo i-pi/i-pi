@@ -9,7 +9,7 @@ conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potentia
     <trajectory filename='pos' stride='20' format='pdb'> positions{angstrom} </trajectory>
     <trajectory filename='for' stride='20'> forces{piconewton} </trajectory>
   </output>
-  <total_steps>100</total_steps>
+  <total_steps>20</total_steps>
   <prng>
     <seed>32342</seed>
   </prng>
