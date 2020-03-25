@@ -1,10 +1,13 @@
+<!--REGTEST 
+COMMAND(4)    i-pi-driver -u -h REGTEST_SOCKET -m harm3d -o 1.21647924E-8
+ ENDREGTEST-->
 <simulation threading='False' verbosity='low'>
 
     <ffsocket mode='unix' name='driver'>
-	    <address> bhw_2_32b </address>
+	    <address> REGTEST_SOCKET  </address>
    </ffsocket>
    
-   <total_steps> 1000000 </total_steps>
+   <total_steps> 100 </total_steps>
 
    <output prefix="data">
       <trajectory stride="100" filename="pos" cell_units="angstrom">positions{angstrom}</trajectory>
