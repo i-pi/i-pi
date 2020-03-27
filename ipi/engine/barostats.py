@@ -21,7 +21,7 @@ import sys
 
 from ipi.utils.depend import *
 from ipi.utils.units import *
-from ipi.utils.mathtools import eigensystem_ut3x3, invert_ut3x3, exp_ut3x3, det_ut3x3, matrix_exp, sinch
+from ipi.utils.mathtools import eigensystem_ut3x3, invert_ut3x3, exp_ut3x3, det_ut3x3, matrix_exp, sinch, mat_taylor
 from ipi.inputs.thermostats import InputThermo
 from ipi.engine.thermostats import Thermostat
 from ipi.engine.cell import Cell
@@ -644,7 +644,7 @@ class BaroRGB(Barostat):
        m: The mass associated with the cell degree of freedom.
        """
 
-    def __init__(self, dt=None, temp=None, tau=None, ebaro=None, thermostat=None, stressext=None, h0=None, hmask=None, p=None):
+    def __init__(self, dt=None, temp=None, tau=None, ebaro=None, thermostat=None, stressext=None, h0=None, p=None, direction=None):
         """Initializes RGB barostat.
 
            Args:
@@ -687,8 +687,28 @@ class BaroRGB(Barostat):
         else:
             self.h0 = Cell()
 
-        if hmask is None:
-            hmask = np.ones(( 3, 3), float)
+        if not direction is None:
+            self.direction = direction
+        else:
+            self.direction = "all"
+
+        if self.direction == "all":
+            hmask = (np.ones((3, 3), float))
+        else:
+            hmask = np.zeros((3,3), float)
+            if self.direction == "xx":
+                hmask[0][0] = 1.0
+            elif self.direction == "yy":
+                hmask[1][1] = 1.0
+            elif self.direction == "zz":
+                hmask[2][2] = 1.0
+            elif self.direction == "xy":
+                hmask[0][1] = 1.0
+            elif self.direction == "xz":
+                hmask[0][2] = 1.0
+            elif self.direction == "yz":
+                hmask[1][2] = 1.0
+               
 
         # mask to zero out components of the cell velocity, to implement cell-boundary constraints
         dself.hmask = depend_array(name='hmask', value=hmask.copy())
@@ -827,12 +847,16 @@ class BaroRGB(Barostat):
 
         v = self.p / self.m[0]
         halfdt = self.qdt
-        
+        #print("this is v", v )
         # compute in one go dt sinh v/v to handle zero-velocity cases
-        eigvals, eigvecs = eigensystem_ut3x3(v)
-        ieigvecs = invert_ut3x3(eigvecs)
-        #print("EVA ", eigvals, eigvecs)
-        sinh = halfdt*np.dot(eigvecs, np.dot(np.diag(sinch(halfdt*eigvals)), ieigvecs))
+        # check eigen vector exists
+        if np.count_nonzero(v.diagonal()) == 0:
+           #compute sinhv/v by directly taylor, if eigen vector not exists
+            sinh = mat_taylor(v*halfdt, function = "sinhx/x")
+        else:
+            eigvals, eigvecs = np.linalg.eig(v)
+            ieigvecs = np.linalg.inv(eigvecs)
+            sinh = halfdt * np.dot(eigvecs, np.dot(np.diag(sinch(halfdt*eigvals)), ieigvecs))
         
         expq, expp = (matrix_exp(v * halfdt), matrix_exp(-v * halfdt))
         #oldsinh = np.dot(invert_ut3x3(v), (expq - expp) / (2.0))
@@ -868,7 +892,7 @@ class BaroMTK(Barostat):
        m: The mass associated with the cell degree of freedom.
        """
 
-    def __init__(self, dt=None, temp=None, tau=None, ebaro=None, thermostat=None, pext=None, p=None):
+    def __init__(self, dt=None, temp=None, tau=None, ebaro=None, thermostat=None, pext=None, p=None, direction=None):
         """Initializes RGB barostat.
 
            Args:
@@ -906,6 +930,34 @@ class BaroMTK(Barostat):
         else:
             self.p = 0.0
 
+        if not direction is None:
+            self.direction = direction
+        else:
+            self.direction = "all"
+
+        if self.direction == "all":
+            hmask = (np.ones((3, 3), float))
+        else:
+            hmask = np.zeros((3,3), float)
+            if self.direction == "xx":
+                hmask[0][0] = 1.0
+            elif self.direction == "yy":
+                hmask[1][1] = 1.0
+            elif self.direction == "zz":
+                hmask[2][2] = 1.0
+            elif self.direction == "xy":
+                hmask[0][1] = 1.0
+            elif self.direction == "xz":
+                hmask[0][2] = 1.0
+            elif self.direction == "yz":
+                hmask[1][2] = 1.0
+               
+
+        # mask to zero out components of the cell velocity, to implement cell-boundary constraints
+        dself.hmask = depend_array(name='hmask', value=hmask.copy())
+        # number of ones in the UT part of the mask
+        self.L = np.diag([hmask[0].sum(), hmask[1,1:].sum(), hmask[2,2:].sum()])
+ 
         if not pext is None:
             self.pext = pext
         else:
@@ -1006,7 +1058,7 @@ class BaroMTK(Barostat):
         m = dstrip(self.beads.m3)[0].reshape(self.beads.natoms, 3)
 
         pi_ext = np.eye(3)*self.pext #np.dot(hh0, np.dot(self.stressext, hh0.T)) * self.h0.V / self.cell.V
-        L = np.diag([3, 2, 1])
+#        L = np.diag([3, 2, 1])
 
         stress = dstrip(self.stress_mts(level))
         self.p += dt * (self.cell.V * np.triu(stress))
@@ -1014,7 +1066,7 @@ class BaroMTK(Barostat):
         # integerates the kinetic part of the stress with the force at the inner-most level.
         if(level == self.nmtslevels - 1):
 
-            self.p += dt * (self.cell.V * np.triu(-self.beads.nbeads * pi_ext) + Constants.kb * self.temp * L)
+            self.p += dt * (self.cell.V * np.triu(-self.beads.nbeads * pi_ext) + Constants.kb * self.temp * self.L)
 
             pc = dstrip(self.beads.pc).reshape(self.beads.natoms, 3)
             fc = np.sum(dstrip(self.forces.forces_mts(level)), axis=0).reshape(self.beads.natoms, 3) / self.beads.nbeads
@@ -1022,15 +1074,32 @@ class BaroMTK(Barostat):
 
             self.p += np.triu(dt2 * np.dot(fcTonm, pc) + dt3 * np.dot(fcTonm, fc)) * self.beads.nbeads
 
+        # now apply the mask (and accumulate the associated change in conserved quantity)
+        # we use the thermostat conserved quantity accumulator, so we don't need to create a new one
+        self.thermostat.ethermo += self.kin
+        self.p *= self.hmask
+        self.thermostat.ethermo -= self.kin
+
+
     def qcstep(self):
         """Propagates the centroid position and momentum and the volume."""
 
         v = self.p / self.m[0]
+        #print(v)
         halfdt = self.qdt
+        # compute in one go dt sinh v/v to handle zero-velocity cases
+        # check eigen vector exists
+        if np.count_nonzero(v.diagonal()) == 0:
+           #compute sinhv/v by directly taylor, if eigen vector not exists
+            sinh = mat_taylor(v*halfdt, function = "sinhx/x")
+        else:
+            eigvals, eigvecs = np.linalg.eig(v)
+            ieigvecs = np.linalg.inv(eigvecs)
+            sinh = halfdt * np.dot(eigvecs, np.dot(np.diag(sinch(halfdt*eigvals)), ieigvecs))
         expq, expp = (matrix_exp(v * halfdt), matrix_exp(-v * halfdt))
+        
 
-
-        sinh = np.dot(invert_ut3x3(v), (expq - expp) / (2.0))
+#        oldsinh = np.dot(invert_ut3x3(v), (expq - expp) / (2.0))
 
         q = dstrip(self.nm.qnm)[0].copy().reshape((self.beads.natoms, 3))
         p = dstrip(self.nm.pnm)[0].copy()
@@ -1038,6 +1107,12 @@ class BaroMTK(Barostat):
         q = np.dot(q, expq.T)
         q += np.dot((p/self.beads.m3[0]).reshape((self.beads.natoms, 3)), sinh.T)
         p = np.dot(p.reshape((self.beads.natoms, 3)), expp.T)
+
+        # now apply the mask (and accumulate the associated change in conserved quantity)
+        # we use the thermostat conserved quantity accumulator, so we don't need to create a new one
+        self.thermostat.ethermo += self.kin
+        self.p *= self.hmask
+        self.thermostat.ethermo -= self.kin
 
         self.nm.qnm[0] = q.reshape((self.beads.natoms* 3))
         self.nm.pnm[0] = p.reshape((self.beads.natoms* 3))

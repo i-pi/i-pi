@@ -17,16 +17,15 @@
     <forces><force forcefield="lammps"> </force></forces>
     <ensemble>
       <temperature units="kelvin"> 200 </temperature>
-      <stress units="megapascal"> [ 1, 0, 0, 0, 1, 0, 0, 0, 1 ] </stress>
+      <pressure units='megapascal'> 1 </pressure>
     </ensemble>
     <motion mode="dynamics">
-        <dynamics mode="nst">
-          <barostat mode="anisotropic">
+        <dynamics mode="npt">
+          <barostat mode="flexible">
           <tau units="femtosecond"> 200 </tau>
           <thermostat mode="langevin">
             <tau units="femtosecond"> 100</tau>
           </thermostat>
-          <h0> [ 25.6156, 0, 0, 0, 29.5783, 0, 0, 0, 27.8867 ]</h0>
           <direction> zz </direction>
           </barostat>
           <thermostat mode="langevin">

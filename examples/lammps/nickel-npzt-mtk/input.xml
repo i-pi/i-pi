@@ -7,33 +7,33 @@
   <total_steps> 100000</total_steps>
   <prng><seed>31415</seed></prng>
   <ffsocket name="lammps" mode="unix">
-    <address>lammps_ice</address>
+    <address>lammps_nickel</address>
   </ffsocket>
   <system>
     <initialize nbeads="1">
       <file mode="xyz"> in.xyz </file>
-      <velocities mode="thermal" units="kelvin"> 200 </velocities>
+      <velocities mode="thermal" units="kelvin"> 273 </velocities>
     </initialize>
     <forces><force forcefield="lammps"> </force></forces>
     <ensemble>
-      <temperature units="kelvin"> 200 </temperature>
-      <stress units="megapascal"> [ 1, 0, 0, 0, 1, 0, 0, 0, 1 ] </stress>
+      <temperature units="kelvin"> 273 </temperature>
+      <stress units="megapascal"> [ 0.1, 0, 0, 0, 0.1, 0, 0, 0, 0.1 ] </stress>
     </ensemble>
     <motion mode="dynamics">
         <dynamics mode="nst">
           <barostat mode="anisotropic">
-          <tau units="femtosecond"> 200 </tau>
+          <tau units="picosecond"> 1 </tau>
           <thermostat mode="langevin">
-            <tau units="femtosecond"> 100</tau>
+            <tau units="picosecond"> 1</tau>
           </thermostat>
-          <h0> [ 25.6156, 0, 0, 0, 29.5783, 0, 0, 0, 27.8867 ]</h0>
+          <h0 units="angstrom"> [ 10.01263204, 0.0, 0.0, 5.006316020000001, 8.671193705386006, 0.0, 5.006316020000001, 2.890397901795336, 8.175279826747401 ]</h0>
           <direction> zz </direction>
           </barostat>
           <thermostat mode="langevin">
-          <tau units="femtosecond"> 100 </tau>
+          <tau units="picosecond"> 1 </tau>
           <pile_lambda> 0.2 </pile_lambda>
           </thermostat>
-          <timestep units="femtosecond"> 0.25 </timestep>
+          <timestep units="picosecond"> 0.001 </timestep>
         </dynamics>
     </motion>
   </system>
