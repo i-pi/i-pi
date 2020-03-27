@@ -1,0 +1,40 @@
+<simulation>
+  <output prefix="simulation">
+    <properties stride="1" filename="out"> [ step, time{picosecond}, conserved , cell_h{angstrom}, cell_abcABC,volume ] </properties>
+    <trajectory stride="10" filename="xc" format="pdb" cell_units="angstrom"> x_centroid{angstrom}</trajectory>
+    <checkpoint stride="2000"/>
+  </output>
+  <total_steps> 100000</total_steps>
+  <prng><seed>31415</seed></prng>
+  <ffsocket name="lammps" mode="unix">
+    <address>lammps_nickel</address>
+  </ffsocket>
+  <system>
+    <initialize nbeads="1">
+      <file mode="xyz"> in.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 273 </velocities>
+    </initialize>
+    <forces><force forcefield="lammps"> </force></forces>
+    <ensemble>
+      <temperature units="kelvin"> 273 </temperature>
+      <stress units="megapascal"> [ 0.1, 0, 0, 0, 0.1, 0, 0, 0, 0.1 ] </stress>
+    </ensemble>
+    <motion mode="dynamics">
+        <dynamics mode="nst">
+          <barostat mode="anisotropic">
+          <tau units="picosecond"> 1 </tau>
+          <thermostat mode="langevin">
+            <tau units="picosecond"> 1</tau>
+          </thermostat>
+          <h0 units="angstrom"> [ 10.01263204, 0.0, 0.0, 5.006316020000001, 8.671193705386006, 0.0, 5.006316020000001, 2.890397901795336, 8.175279826747401 ]</h0>
+          <direction> zz </direction>
+          </barostat>
+          <thermostat mode="langevin">
+          <tau units="picosecond"> 1 </tau>
+          <pile_lambda> 0.2 </pile_lambda>
+          </thermostat>
+          <timestep units="picosecond"> 0.001 </timestep>
+        </dynamics>
+    </motion>
+  </system>
+</simulation>

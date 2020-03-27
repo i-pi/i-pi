@@ -1,0 +1,16 @@
+units metal
+
+atom_style   atomic
+read_data    nickel.data
+pair_style eam/alloy
+pair_coeff * * ./Ni-Al-Mishin-2009.eam.alloy Ni
+#pair_coeff * * /home/zhuang/repository/i-pi/examples/lammps/nickel-npzt-mtk/Ni-Al-Mishin-2009.eam.alloy Ni
+neighbor    0.2 bin
+timestep    0.001
+thermo 10
+thermo_style custom step temp ke pe etotal vol press density cella cellb cellc cellalpha cellbeta cellgamma
+thermo_modify flush yes
+velocity all create 273 11112 dist gaussian
+
+fix 1 all ipi lammps_nickel 32345 unix
+run       100000

@@ -851,11 +851,11 @@ class BaroRGB(Barostat):
         # compute in one go dt sinh v/v to handle zero-velocity cases
         # check eigen vector exists
         if np.count_nonzero(v.diagonal()) == 0:
-            #compute sinhv/v by directly taylor, if eigen vector not exists
+           #compute sinhv/v by directly taylor, if eigen vector not exists
             sinh = mat_taylor(v*halfdt, function = "sinhx/x")
         else:
-            eigvals, eigvecs = eigensystem_ut3x3(v)
-            ieigvecs = invert_ut3x3(eigvecs)
+            eigvals, eigvecs = np.linalg.eig(v)
+            ieigvecs = np.linalg.inv(eigvecs)
             sinh = halfdt * np.dot(eigvecs, np.dot(np.diag(sinch(halfdt*eigvals)), ieigvecs))
         
         expq, expp = (matrix_exp(v * halfdt), matrix_exp(-v * halfdt))
@@ -1085,19 +1085,19 @@ class BaroMTK(Barostat):
         """Propagates the centroid position and momentum and the volume."""
 
         v = self.p / self.m[0]
+        #print(v)
         halfdt = self.qdt
         # compute in one go dt sinh v/v to handle zero-velocity cases
         # check eigen vector exists
         if np.count_nonzero(v.diagonal()) == 0:
-            #compute sinhv/v by directly taylor, if eigen vector not exists
+           #compute sinhv/v by directly taylor, if eigen vector not exists
             sinh = mat_taylor(v*halfdt, function = "sinhx/x")
         else:
-            eigvals, eigvecs = eigensystem_ut3x3(v)
-            ieigvecs = invert_ut3x3(eigvecs)
+            eigvals, eigvecs = np.linalg.eig(v)
+            ieigvecs = np.linalg.inv(eigvecs)
             sinh = halfdt * np.dot(eigvecs, np.dot(np.diag(sinch(halfdt*eigvals)), ieigvecs))
-
         expq, expp = (matrix_exp(v * halfdt), matrix_exp(-v * halfdt))
-
+        
 
 #        oldsinh = np.dot(invert_ut3x3(v), (expq - expp) / (2.0))
 

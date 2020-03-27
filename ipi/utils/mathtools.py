@@ -392,14 +392,15 @@ def mat_taylor(x, function):
     Return:
        function of matrix.  
     """
+    if not (x.shape[0] == x.shape[1]):
+        warning("input matrix is not squared")
+        return None
+    dim = x.shape[0]
+    I = np.identity(dim)
     if function == "sinhx/x":
         #compute sinhx/x by directly taylor
         x2 = np.linalg.matrix_power(x, 2)
-        x4 = np.linalg.matrix_power(x, 4)
-        x6 = np.linalg.matrix_power(x, 6)
-        x8 = np.linalg.matrix_power(x, 8)
-        x10 = np.linalg.matrix_power(x, 10)
-        return 1.0 + x2/6.0 + x4/120.0 + x6/5040.0 + x8/362880.0 + x10/39916800.0 
+        return I + np.matmul(x2/(2.0*3.0), (I + np.matmul(x2/(4.0*5.0), (I + np.matmul(x2/(6.0*7.0), (I + x2/(8.0*9.0)))))))
 
     else:
        warning("function {} not implemented".format(function)) 
