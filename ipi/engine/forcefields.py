@@ -395,8 +395,7 @@ class FFdmd(ForceField):
 
     """Basic fully pythonic force provider.
 
-    Computes LJ interactions without minimum image convention, cutoffs or
-    neighbour lists. Parallel evaluation with threads.
+    Computes DMD forces as in Bowman, .., Brown JCP 2003. It is a time dependent potential.
 
     Attributes:
         parameters: A dictionary of the parameters used by the driver. Of the
@@ -408,8 +407,8 @@ class FFdmd(ForceField):
                          'start': starting time}.
     """
 
-    def __init__(self, latency=1.0e-3, name="", pars=None, dopbc=False, threaded=False):
-        """Initialises FFLennardJones.
+    def __init__(self, latency=1.0e-3, name="", C=None, freq=0.0, dtdmd=0.0, pars=None, dopbc=False, threaded=False):
+        """Initialises FFdmd.
 
         Args:
            pars: Optional dictionary, giving the parameters needed by the driver.
@@ -420,10 +419,20 @@ class FFdmd(ForceField):
             raise ValueError("Periodic boundary conditions are not supported by FFLennardJones.")
 
         # a socket to the communication library is created or linked
-        super(FFLennardJones, self).__init__(latency, name, pars, dopbc=dopbc, threaded=threaded)
-        self.epsfour = float(self.pars["eps"]) * 4
-        self.sixepsfour = 6 * self.epsfour
-        self.sigma2 = float(self.pars["sigma"]) * float(self.pars["sigma"])
+        super(FFdmd, self).__init__(latency, name, pars, dopbc=dopbc, threaded=threaded)
+#        self.epsfour = float(self.pars["eps"]) * 4
+#        self.sixepsfour = 6 * self.epsfour
+#        self.sigma2 = float(self.pars["sigma"]) * float(self.pars["sigma"])
+        if C is None:
+            raise ValueError("Must provide the couplings for DMD.")
+        if freq is None:
+            raise ValueError("Must provide a frequency for the periodically oscillating potential.")
+        if dtdmd is None:
+            raise ValueError("Must provide a time step for the periodically oscillating potential.")
+        self.C=C
+        self.freq=freq
+        self.dtdmd=dtdmd
+        self.tstep=0
 
     def poll(self):
         """Polls the forcefield checking if there are requests that should
@@ -436,29 +445,30 @@ class FFdmd(ForceField):
                 if r["status"] == "Queued":
                     r["status"] = "Running"
                     r["t_dispatched"] = time.time()
-                    self.evaluate(r)
-    def evaluate(self, r):
+                    self.evaluate(r, self.tstep)
+                    self.tstep+=1
+
+    def evaluate(self, r, it):
         """Just a silly function evaluating a non-cutoffed, non-pbc and
-        non-neighbour list LJ potential."""
+        non-neighbour list dmd."""
 
         q = r["pos"].reshape((-1, 3))
         nat = len(q)
 
         v = 0.0
         f = np.zeros(q.shape)
-        for i in range(1, nat):
+        #must think and check handling of time step
+        periodic=np.sin(it * self.freq * self.dtdmd)
+        # MR: the algorithm below has been benchmarked against explicit loop implementation
+        for i in range(1, natoms):
             dij = q[i] - q[:i]
-            rij2 = (dij**2).sum(axis=1)
-
-            x6 = (self.sigma2 / rij2)**3
-            x12 = x6**2
-
-            v += (x12 - x6).sum()
-            dij *= (self.sixepsfour * (2.0 * x12 - x6) / rij2)[:, np.newaxis]
-            f[i] += dij.sum(axis=0)
-            f[:i] -= dij
-
-        v *= self.epsfour
+            rij = np.sqrt((dij ** 2).sum(axis=1))
+            cij = self.C[:i]
+            prefac = np.dot(cij, rij)  # for each i it has the distances to all indexes previous
+            v += np.sum(prefac) * periodic
+            dij *= (cij / rij)[:, np.newaxis]  # magic line...
+            f[i] += dij.sum(axis=0) * periodic
+            f[:i] -= dij * periodic # everything symmetric
 
         r["result"] = [v, f.reshape(nat * 3), np.zeros((3, 3), float), ""]
         r["status"] = "Done"
