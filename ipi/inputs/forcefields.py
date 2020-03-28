@@ -227,9 +227,9 @@ class InputFFLennardJones(InputForceField):
 class InputFFdmd(InputForceField):
 
     fields = {
-        "coupling": (InputArray, {"dtype": float, "default": input_default(factory=np.zeros, args=(0,)), "help": "Specifies the coupling between atom pairs (should be size N*(N-1)/2 ordered c21, c32, c31, c43, c42, c41 etc.  -- in atomic units!)"}),
-        "freq": (InputValue, {"dtype": float, "default": 0.0, "help": "Frequency of the oscillation of the time-dependent term", "dimension": "frequency"}),
-        "dtdmd": (InputValue, {"dtype": float, "default": 0.0, "help": "Time step of the oscillating potential. Should match time step of simulation", "dimension": "time"})
+        "dmd_coupling": (InputArray, {"dtype": float, "default": input_default(factory=np.zeros, args=(0,)), "help": "Specifies the coupling between atom pairs (should be size N*(N-1)/2 ordered c21, c32, c31, c43, c42, c41 etc.  -- in atomic units!)"}),
+        "dmd_freq": (InputValue, {"dtype": float, "default": 0.0, "help": "Frequency of the oscillation of the time-dependent term", "dimension": "frequency"}),
+        "dmd_dt": (InputValue, {"dtype": float, "default": 0.0, "help": "Time step of the oscillating potential. Should match time step of simulation", "dimension": "time"})
     }
 
     fields.update(InputForceField.fields)
@@ -243,14 +243,14 @@ class InputFFdmd(InputForceField):
 
     def store(self, ff):
         super(InputFFdmd, self).store(ff)
-        self.coupling.store(ff.coupling)
-        self.freq.store(ff.freq)
-        self.dtdmd.store(ff.dtdmd)
+        self.dmd_coupling.store(ff.coupling)
+        self.dmd_freq.store(ff.freq)
+        self.dmd_dt.store(ff.dtdmd)
 
     def fetch(self):
         super(InputFFdmd, self).fetch()
 
-        return FFdmd(C=self.coupling.fetch(), freq=self.freq.fetch(), vref=self.dtdmd.fetch(), pars=self.parameters.fetch(), name=self.name.fetch(),
+        return FFdmd(coupling=self.dmd_coupling.fetch(), freq=self.dmd_freq.fetch(), dtdmd=self.dmd_dt.fetch(), pars=self.parameters.fetch(), name=self.name.fetch(),
                               latency=self.latency.fetch(), dopbc=self.pbc.fetch(), threaded=self.threaded.fetch())
 
 #        if self.slots.fetch() < 1 or self.slots.fetch() > 5:

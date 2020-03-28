@@ -401,7 +401,7 @@ class FFdmd(ForceField):
                          'start': starting time}.
     """
 
-    def __init__(self, latency=1.0e-3, name="", C=None, freq=0.0, dtdmd=0.0, pars=None, dopbc=False, threaded=False):
+    def __init__(self, latency=1.0e-3, name="", coupling=None, freq=0.0, dtdmd=0.0, pars=None, dopbc=False, threaded=False):
         """Initialises FFdmd.
 
         Args:
@@ -410,18 +410,18 @@ class FFdmd(ForceField):
 
         # check input - PBCs are not implemented here
         if dopbc:
-            raise ValueError("Periodic boundary conditions are not supported by FFLennardJones.")
+            raise ValueError("Periodic boundary conditions are not supported by FFdmd.")
 
         # a socket to the communication library is created or linked
         super(FFdmd, self).__init__(latency, name, pars, dopbc=dopbc, threaded=threaded)
 
-        if C is None:
+        if coupling is None:
             raise ValueError("Must provide the couplings for DMD.")
         if freq is None:
             raise ValueError("Must provide a frequency for the periodically oscillating potential.")
         if dtdmd is None:
             raise ValueError("Must provide a time step for the periodically oscillating potential.")
-        self.C=C
+        self.coupling=coupling
         self.freq=freq
         self.dtdmd=dtdmd
         self.dmdstep=0 # MR BAD
@@ -437,34 +437,34 @@ class FFdmd(ForceField):
                 if r["status"] == "Queued":
                     r["status"] = "Running"
                     r["t_dispatched"] = time.time()
-                    self.evaluate(r, self.dmdstep) # MR BAD
-                    self.dmdstep+=1 # MR BAD
+                    self.evaluate(r) # MR BAD
 
-    def evaluate(self, r, it):
+    def evaluate(self, r):
         """Just a silly function evaluating a non-cutoffed, non-pbc and
         non-neighbour list dmd."""
 
         q = r["pos"].reshape((-1, 3))
         nat = len(q)
 
-        if self.C.shape != (int(nat*(nat-1)/2)):
+        if len(self.coupling) != int(nat*(nat-1)/2):
             raise ValueError("Coupling matrix size mismatch")
 
         v = 0.0
         f = np.zeros(q.shape)
         # must think and check handling of time step
-        periodic=np.sin(it * self.freq * self.dtdmd)
+        periodic=np.sin(self.dmdstep * self.freq * self.dtdmd)
         # MR: the algorithm below has been benchmarked against explicit loop implementation
-        for i in range(1, natoms):
+        for i in range(1, nat):
             dij = q[i] - q[:i]
             rij = np.sqrt((dij ** 2).sum(axis=1))
-            cij = self.C[:i]
+            cij = self.coupling[:i]
             prefac = np.dot(cij, rij)  # for each i it has the distances to all indexes previous
             v += np.sum(prefac) * periodic
             dij *= (cij / rij)[:, np.newaxis]  # magic line...
             f[i] += dij.sum(axis=0) * periodic
             f[:i] -= dij * periodic # everything symmetric
 
+        self.dmdstep+=1 # BAD -- DOES NOT WORK IN MOST CASES -- NEED SMOTION
         r["result"] = [v, f.reshape(nat * 3), np.zeros((3, 3), float), ""]
         r["status"] = "Done"
 
