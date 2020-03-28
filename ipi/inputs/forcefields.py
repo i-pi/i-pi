@@ -8,14 +8,14 @@
 from copy import copy
 import numpy as np
 
-from ipi.engine.forcefields import ForceField, FFSocket, FFLennardJones, FFQUIP, FFDebye, FFPlumed, FFYaff, FFsGDML
+from ipi.engine.forcefields import ForceField, FFSocket, FFLennardJones, FFQUIP, FFDebye, FFPlumed, FFYaff, FFsGDML, FFdmd
 from ipi.interfaces.sockets import InterfaceSocket
 import ipi.engine.initializer
 from ipi.inputs.initializer import *
 from ipi.utils.inputvalue import *
 
 
-__all__ = ["InputFFSocket", 'InputFFLennardJones', 'InputFFQUIP', 'InputFFDebye', 'InputFFPlumed', 'InputFFYaff', 'InputFFsGDML']
+__all__ = ["InputFFSocket", 'InputFFLennardJones', 'InputFFQUIP', 'InputFFDebye', 'InputFFPlumed', 'InputFFYaff', 'InputFFsGDML', 'InputFFdmd']
 
 
 class InputForceField(Input):

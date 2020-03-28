@@ -430,7 +430,7 @@ class FFdmd(ForceField):
         self.C=C
         self.freq=freq
         self.dtdmd=dtdmd
-        self.tstep=0 # MR BAD
+        self.dmdstep=0 # MR BAD
 
     def poll(self):
         """Polls the forcefield checking if there are requests that should
@@ -443,8 +443,8 @@ class FFdmd(ForceField):
                 if r["status"] == "Queued":
                     r["status"] = "Running"
                     r["t_dispatched"] = time.time()
-                    self.evaluate(r, self.tstep) # MR BAD
-                    self.tstep+=1 # MR BAD
+                    self.evaluate(r, self.dmdstep) # MR BAD
+                    self.dmdstep+=1 # MR BAD
 
     def evaluate(self, r, it):
         """Just a silly function evaluating a non-cutoffed, non-pbc and
@@ -473,6 +473,12 @@ class FFdmd(ForceField):
 
         r["result"] = [v, f.reshape(nat * 3), np.zeros((3, 3), float), ""]
         r["status"] = "Done"
+
+    def updatedmd(self, r, it):
+        """ Updates time step when a full step is done. Can only be called after implementation goes into smotion mode..."""
+        self.dmdstep += 1
+#        f = np.zeros(3 * self.natoms)
+#        v=0.0
 
 class FFQUIP(ForceField):
 
