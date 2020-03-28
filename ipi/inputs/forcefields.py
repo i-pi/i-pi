@@ -224,6 +224,42 @@ class InputFFLennardJones(InputForceField):
         if self.timeout.fetch() < 0.0:
             raise ValueError("Negative timeout parameter specified.")
 
+class InputFFdmd(InputForceField):
+
+    fields = {
+        "coupling": (InputArray, {"dtype": float, "default": input_default(factory=np.zeros, args=(0,)), "help": "Specifies the coupling between atom pairs (should be size N*(N-1)/2 ordered c21, c32, c31, c43, c42, c41 etc.  -- in atomic units!)"}),
+        "freq": (InputValue, {"dtype": float, "default": 0.0, "help": "Frequency of the oscillation of the time-dependent term", "dimension": "frequency"}),
+        "dtdmd": (InputValue, {"dtype": float, "default": 0.0, "help": "Time step of the oscillating potential. Should match time step of simulation", "dimension": "time"})
+    }
+
+    fields.update(InputForceField.fields)
+
+    attribs = {}
+    attribs.update(InputForceField.attribs)
+
+    default_help = """Simple, internal DMD evaluator without cutoff, neighbour lists or minimal image convention.
+                   Expects coupling elements (n*(n-1)/2 of them), oscillating frequency and time step. """
+    default_label = "FFDMD"
+
+    def store(self, ff):
+        super(InputFFdmd, self).store(ff)
+        self.coupling.store(ff.coupling)
+        self.freq.store(ff.freq)
+        self.dtdmd.store(ff.dtdmd)
+
+    def fetch(self):
+        super(InputFFdmd, self).fetch()
+
+        return FFdmd(C=self.coupling.fetch(), freq=self.freq.fetch(), vref=self.dtdmd.fetch(), pars=self.parameters.fetch(), name=self.name.fetch(),
+                              latency=self.latency.fetch(), dopbc=self.pbc.fetch(), threaded=self.threaded.fetch())
+
+#        if self.slots.fetch() < 1 or self.slots.fetch() > 5:
+#            raise ValueError("Slot number " + str(self.slots.fetch()) + " out of acceptable range.")
+#        if self.latency.fetch() < 0:
+#            raise ValueError("Negative latency parameter specified.")
+#        if self.timeout.fetch() < 0.0:
+#            raise ValueError("Negative timeout parameter specified.")
+
 
 class InputFFQUIP(InputForceField):
 

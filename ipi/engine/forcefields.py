@@ -420,9 +420,7 @@ class FFdmd(ForceField):
 
         # a socket to the communication library is created or linked
         super(FFdmd, self).__init__(latency, name, pars, dopbc=dopbc, threaded=threaded)
-#        self.epsfour = float(self.pars["eps"]) * 4
-#        self.sixepsfour = 6 * self.epsfour
-#        self.sigma2 = float(self.pars["sigma"]) * float(self.pars["sigma"])
+
         if C is None:
             raise ValueError("Must provide the couplings for DMD.")
         if freq is None:
@@ -432,7 +430,7 @@ class FFdmd(ForceField):
         self.C=C
         self.freq=freq
         self.dtdmd=dtdmd
-        self.tstep=0
+        self.tstep=0 # MR BAD
 
     def poll(self):
         """Polls the forcefield checking if there are requests that should
@@ -445,8 +443,8 @@ class FFdmd(ForceField):
                 if r["status"] == "Queued":
                     r["status"] = "Running"
                     r["t_dispatched"] = time.time()
-                    self.evaluate(r, self.tstep)
-                    self.tstep+=1
+                    self.evaluate(r, self.tstep) # MR BAD
+                    self.tstep+=1 # MR BAD
 
     def evaluate(self, r, it):
         """Just a silly function evaluating a non-cutoffed, non-pbc and
@@ -455,9 +453,12 @@ class FFdmd(ForceField):
         q = r["pos"].reshape((-1, 3))
         nat = len(q)
 
+        if self.C.shape != (int(nat*(nat-1)/2)):
+            raise ValueError("Coupling matrix size mismatch")
+
         v = 0.0
         f = np.zeros(q.shape)
-        #must think and check handling of time step
+        # must think and check handling of time step
         periodic=np.sin(it * self.freq * self.dtdmd)
         # MR: the algorithm below has been benchmarked against explicit loop implementation
         for i in range(1, natoms):
