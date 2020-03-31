@@ -465,6 +465,7 @@ class FFdmd(ForceField):
             f[:i] -= dij * periodic # everything symmetric
 
         self.dmdstep+=1 # BAD -- DOES NOT WORK IN MOST CASES -- NEED SMOTION
+        print("Mystep ", self.dmdstep)
         r["result"] = [v, f.reshape(nat * 3), np.zeros((3, 3), float), ""]
         r["status"] = "Done"
 
