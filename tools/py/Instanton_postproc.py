@@ -398,7 +398,7 @@ elif case == 'instanton':
         BN = np.sum(beads.m3[1:, :] * (beads.q[1:, :] - beads.q[:-1, :])**2)
 
         if not quiet:
-            inst = np.sum(np.log(np.sqrt(np.delete(d, [0]))))
+            inst = np.sum(np.log(np.sqrt(np.absolute(np.delete(d, [1])))))
             phi = np.exp(inst - react)
         else:
             phi = 1
