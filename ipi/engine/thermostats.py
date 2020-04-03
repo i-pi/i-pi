@@ -492,10 +492,8 @@ class ThermoPILE_G(ThermoPILE_L):
         # centroid thermostat
         self._thermos[0] = ThermoSVR(temp=1, dt=1, tau=1)
       
-        fixdof0 = fixdof / nm.nbeads # an ugly fix to the combination of PILE_G with fixed atoms.
-         
         t = self._thermos[0]
-        t.bind(pm=(nm.pnm[0, :], nm.dynm3[0, :]), prng=self.prng, fixdof=fixdof0)
+        t.bind(pm=(nm.pnm[0, :], nm.dynm3[0, :]), prng=self.prng, fixdof=fixdof)
         dpipe(dself.temp, dd(t).temp)
         dpipe(dself.dt, dd(t).dt)
         dpipe(dself.tau, dd(t).tau)
