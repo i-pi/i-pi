@@ -5,7 +5,7 @@
   <ffdmd name='timeperiod' pbc='False' threaded='False'>
 <!--    <dmd_coupling mode='manual'> [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]  </dmd_coupling> -->
     <dmd_coupling mode='file'> coupling.dat </dmd_coupling>
-    <dmd_freq units='inversecm' > 5  </dmd_freq>
+    <dmd_freq units='inversecm' > 3500  </dmd_freq>
     <dmd_dt units='femtosecond'> 0.25 </dmd_dt>
   </ffdmd>
   <total_steps>1000</total_steps>
@@ -20,9 +20,8 @@
   <system>
     <forces>
       <force forcefield='h0'/>
-      <force forcefield='timeperiod'/>
     </forces>
-    <initialize nbeads='1'>
+    <initialize nbeads='2'>
       <file mode='xyz'>init.xyz</file>
       <cell>
          [   25.29166, 0, 0, 0, 25.29166, 0, 0, 0, 25.29166 ]
@@ -31,6 +30,9 @@
     </initialize>
     <ensemble>
       <temperature units='kelvin'> 300.0 </temperature>
+         <bias>
+            <force forcefield="timeperiod" nbeads="2"></force>
+         </bias>
     </ensemble>
     <motion mode='dynamics'>
       <dynamics mode='nve'>
@@ -38,4 +40,7 @@
       </dynamics>
     </motion>
   </system>
+  <smotion mode="dmd">
+    <dmd> <dmdff> [ timeperiod ] </dmdff> </dmd>
+  </smotion>
 </simulation>
