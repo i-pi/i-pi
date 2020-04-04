@@ -401,7 +401,7 @@ class FFdmd(ForceField):
                          'start': starting time}.
     """
 
-    def __init__(self, latency=1.0e-3, name="", coupling=None, freq=0.0, dtdmd=0.0, pars=None, dopbc=False, threaded=False):
+    def __init__(self, latency=1.0e-3, name="", coupling=None, freq=0.0, dtdmd=0.0, dmdstep=0, pars=None, dopbc=False, threaded=False):
         """Initialises FFdmd.
 
         Args:
@@ -424,7 +424,7 @@ class FFdmd(ForceField):
         self.coupling=coupling
         self.freq=freq
         self.dtdmd=dtdmd
-        self.dmdstep=0 # MR BAD
+        self.dmdstep=dmdstep
 
     def poll(self):
         """Polls the forcefield checking if there are requests that should
