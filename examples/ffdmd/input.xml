@@ -26,7 +26,7 @@
       <cell>
          [   25.29166, 0, 0, 0, 25.29166, 0, 0, 0, 25.29166 ]
         </cell>
-        <velocities mode='thermal' units='kelvin'> 300 </velocities> 
+<!--        <velocities mode='thermal' units='kelvin'> 300 </velocities> -->
     </initialize>
     <ensemble>
       <temperature units='kelvin'> 300.0 </temperature>
