@@ -21,17 +21,17 @@
     <forces>
       <force forcefield='h0'/>
     </forces>
-    <initialize nbeads='2'>
+    <initialize nbeads='4'>
       <file mode='xyz'>init.xyz</file>
       <cell>
          [   25.29166, 0, 0, 0, 25.29166, 0, 0, 0, 25.29166 ]
         </cell>
-<!--        <velocities mode='thermal' units='kelvin'> 300 </velocities> -->
+        <velocities mode='thermal' units='kelvin'> 300 </velocities> 
     </initialize>
     <ensemble>
       <temperature units='kelvin'> 300.0 </temperature>
          <bias>
-            <force forcefield="timeperiod" nbeads="2"></force>
+            <force forcefield="timeperiod" nbeads="4"></force>
          </bias>
     </ensemble>
     <motion mode='dynamics'>

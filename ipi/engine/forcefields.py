@@ -460,7 +460,7 @@ class FFdmd(ForceField):
             cij = self.coupling[:i]
             prefac = np.dot(cij, rij)  # for each i it has the distances to all indexes previous
             v += np.sum(prefac) * periodic
-            dij *= (cij / rij)[:, np.newaxis]  # magic line...
+            dij *= -(cij / rij)[:, np.newaxis]  # magic line...
             f[i] += dij.sum(axis=0) * periodic
             f[:i] -= dij * periodic # everything symmetric
 
