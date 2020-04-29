@@ -22,6 +22,7 @@ from ipi.utils.depend import dobject
 from ipi.utils.depend import dstrip
 from ipi.utils.io import read_file
 from ipi.utils.units import unit_to_internal, unit_to_user, UnitMap
+from ipi.utils.distance import vector_separation
 
 try:
     import plumed
@@ -409,8 +410,8 @@ class FFdmd(ForceField):
         """
 
         # check input - PBCs are not implemented here
-        if dopbc:
-            raise ValueError("Periodic boundary conditions are not supported by FFdmd.")
+#        if dopbc:
+#            raise ValueError("Periodic boundary conditions are not supported by FFdmd.")
 
         # a socket to the communication library is created or linked
         super(FFdmd, self).__init__(latency, name, pars, dopbc=dopbc, threaded=threaded)
@@ -440,11 +441,12 @@ class FFdmd(ForceField):
                     self.evaluate(r) # MR BAD
 
     def evaluate(self, r):
-        """Just a silly function evaluating a non-cutoffed, non-pbc and
-        non-neighbour list dmd."""
+        """Evaluating dmd: pbc: YES,
+           cutoff: NO, neighbour list: NO."""
 
         q = r["pos"].reshape((-1, 3))
         nat = len(q)
+        cell_h, cell_ih = r["cell"]
 
         if len(self.coupling) != int(nat*(nat-1)/2):
             raise ValueError("Coupling matrix size mismatch")
@@ -455,8 +457,12 @@ class FFdmd(ForceField):
         periodic=np.sin(self.dmdstep * self.freq * self.dtdmd)
         # MR: the algorithm below has been benchmarked against explicit loop implementation
         for i in range(1, nat):
-            dij = q[i] - q[:i]
-            rij = np.sqrt((dij ** 2).sum(axis=1))
+            # MR's first implementation:
+#            dij = q[i] - q[:i]
+#            rij = np.sqrt((dij ** 2).sum(axis=1))
+            # KF's implementation:
+            dij, rij = vector_separation(cell_h, cell_ih, q[i], q[:i])
+
             cij = self.coupling[:i]
             prefac = np.dot(cij, rij)  # for each i it has the distances to all indexes previous
             v += np.sum(prefac) * periodic
