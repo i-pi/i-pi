@@ -32,7 +32,8 @@ from ipi.inputs.initializer import *
 from ipi.utils.units import *
 from .geop import InputGeop
 
-__all__ = ['InputAlKMC']
+__all__ = ["InputAlKMC"]
+
 
 class InputAlKMC(InputDictionary):
     """KMC for Al-6xxx.
@@ -42,70 +43,157 @@ class InputAlKMC(InputDictionary):
 
     """
 
-    attribs={"mode"  : (InputAttribute, {"dtype"   : str, "default": "rfkmc",
-                                    "help"    : "The KMC algorithm to be used",
-                                    "options" : ['rfkmc']}) }
+    attribs = {
+        "mode": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "default": "rfkmc",
+                "help": "The KMC algorithm to be used",
+                "options": ["rfkmc"],
+            },
+        )
+    }
 
     # options of the method nstep, a0, ncell, nvac, nsi, nmg, state="",
     fields = {
-                "geop" : ( InputGeop, { "default" : {},
-                                     "help":  "Option for geometry optimization step" } ),
-                "nstep": (InputValue, {"dtype" : int,
-                              "default"  : 10,
-                              "help"     : "The number of optimization steps."}),
-                "a0": (InputValue, {"dtype" : float, "dimension": "length",
-                              "default"  : 1.0,
-                              "help"     : "FCC lattice parameter "}),
-                "diffusion_barrier_al": (InputValue, {"dtype" : float, "dimension": "energy",
-                              "default"  : 0.01,
-                              "help"     : "Barrier for vacancy diffusion in pure Al."}),
-                "diffusion_prefactor_al": (InputValue, {"dtype" : float, "dimension": "frequency",
-                              "default"  : 2.4188843e-05,
-                              "help"     : "Prefactor for vacancy diffusion in pure Al."}),
-                "diffusion_barrier_mg": (InputValue, {"dtype" : float, "dimension": "energy",
-                              "default"  : 0,
-                              "help"     : "Barrier for vacancy-assisted diffusion of Mg."}),
-                "diffusion_prefactor_mg": (InputValue, {"dtype" : float, "dimension": "frequency",
-                              "default"  : 0,
-                              "help"     : "Prefactor for vacancy-assisted diffusion of Mg."}),
-                "diffusion_barrier_si": (InputValue, {"dtype" : float, "dimension": "energy",
-                              "default"  : 0,
-                              "help"     : "Barrier for vacancy-assisted diffusion of Si."}),
-                "diffusion_prefactor_si": (InputValue, {"dtype" : float, "dimension": "frequency",
-                              "default"  : 0,
-                              "help"     : "Prefactor for vacancy-assisted diffusion of Si."}),
-                "neval": (InputValue, {"dtype" : int,
-                              "default"  : 4,
-                              "help"     : "The number of parallel force evaluators."}),
-                "ncell": (InputValue, {"dtype" : int,
-                              "default"  : 4,
-                              "help"     : "The number of repeat cells in each direction."}),
-                "nvac": (InputValue, {"dtype" : int,
-                              "default"  : 4,
-                              "help"     : "The number of vacancies."}),
-                "nsi": (InputValue, {"dtype" : int,
-                              "default"  : 4,
-                              "help"     : "The number of silicon atoms."}),
-                "nmg": (InputValue, {"dtype" : int,
-                              "default"  : 4,
-                              "help"     : "The number of magnesium atoms."}),
-                "idx": (InputArray, {"dtype" : int,
-                              "default"  :  input_default(factory=np.zeros, args=(0, int)),
-                              "help"     : "The position of the atoms on the lattice, relative to the canonical ordering."}),
-                "tottime": (InputValue, {"dtype" : float, "dimension": "time",
-                              "default"  : 0.0,
-                              "help"     : "Total KMC time elapsed "}),
-                "ecache_file": (InputValue, {"dtype" : str,
-                              "default"  : "",
-                              "help"     : "Filename for storing/loading energy cache"}),
-                "qcache_file": (InputValue, {"dtype" : str,
-                              "default"  : "",
-                              "help"     : "Filename for storing/loading positions cache"}),
-                }
+        "geop": (
+            InputGeop,
+            {"default": {}, "help": "Option for geometry optimization step"},
+        ),
+        "nstep": (
+            InputValue,
+            {"dtype": int, "default": 10, "help": "The number of optimization steps."},
+        ),
+        "a0": (
+            InputValue,
+            {
+                "dtype": float,
+                "dimension": "length",
+                "default": 1.0,
+                "help": "FCC lattice parameter ",
+            },
+        ),
+        "diffusion_barrier_al": (
+            InputValue,
+            {
+                "dtype": float,
+                "dimension": "energy",
+                "default": 0.01,
+                "help": "Barrier for vacancy diffusion in pure Al.",
+            },
+        ),
+        "diffusion_prefactor_al": (
+            InputValue,
+            {
+                "dtype": float,
+                "dimension": "frequency",
+                "default": 2.4188843e-05,
+                "help": "Prefactor for vacancy diffusion in pure Al.",
+            },
+        ),
+        "diffusion_barrier_mg": (
+            InputValue,
+            {
+                "dtype": float,
+                "dimension": "energy",
+                "default": 0,
+                "help": "Barrier for vacancy-assisted diffusion of Mg.",
+            },
+        ),
+        "diffusion_prefactor_mg": (
+            InputValue,
+            {
+                "dtype": float,
+                "dimension": "frequency",
+                "default": 0,
+                "help": "Prefactor for vacancy-assisted diffusion of Mg.",
+            },
+        ),
+        "diffusion_barrier_si": (
+            InputValue,
+            {
+                "dtype": float,
+                "dimension": "energy",
+                "default": 0,
+                "help": "Barrier for vacancy-assisted diffusion of Si.",
+            },
+        ),
+        "diffusion_prefactor_si": (
+            InputValue,
+            {
+                "dtype": float,
+                "dimension": "frequency",
+                "default": 0,
+                "help": "Prefactor for vacancy-assisted diffusion of Si.",
+            },
+        ),
+        "neval": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": 4,
+                "help": "The number of parallel force evaluators.",
+            },
+        ),
+        "ncell": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": 4,
+                "help": "The number of repeat cells in each direction.",
+            },
+        ),
+        "nvac": (
+            InputValue,
+            {"dtype": int, "default": 4, "help": "The number of vacancies."},
+        ),
+        "nsi": (
+            InputValue,
+            {"dtype": int, "default": 4, "help": "The number of silicon atoms."},
+        ),
+        "nmg": (
+            InputValue,
+            {"dtype": int, "default": 4, "help": "The number of magnesium atoms."},
+        ),
+        "idx": (
+            InputArray,
+            {
+                "dtype": int,
+                "default": input_default(factory=np.zeros, args=(0, int)),
+                "help": "The position of the atoms on the lattice, relative to the canonical ordering.",
+            },
+        ),
+        "tottime": (
+            InputValue,
+            {
+                "dtype": float,
+                "dimension": "time",
+                "default": 0.0,
+                "help": "Total KMC time elapsed ",
+            },
+        ),
+        "ecache_file": (
+            InputValue,
+            {
+                "dtype": str,
+                "default": "",
+                "help": "Filename for storing/loading energy cache",
+            },
+        ),
+        "qcache_file": (
+            InputValue,
+            {
+                "dtype": str,
+                "default": "",
+                "help": "Filename for storing/loading positions cache",
+            },
+        ),
+    }
 
     STORE_STRIDE = 1.1
 
-    dynamic = {  }
+    dynamic = {}
 
     default_help = "Holds all the information for the KMC dynamics, such as timestep, rates and barriers that control it."
     default_label = "AL6XXXKMC"
@@ -120,12 +208,12 @@ class InputAlKMC(InputDictionary):
         if kmc == {}:
             return
 
-        #"""self.state.store(kmc.state)
-        #self.cell.h.store(kmc.cell.h)
-        #self.beads.q.store(kmc.beads.q)
-        #self.dt(kmc.dt)"""
+        # """self.state.store(kmc.state)
+        # self.cell.h.store(kmc.cell.h)
+        # self.beads.q.store(kmc.beads.q)
+        # self.dt(kmc.dt)"""
 
-        #self.mode.store(kmc.mode)
+        # self.mode.store(kmc.mode)
         self.a0.store(kmc.a0)
         self.nvac.store(kmc.nvac)
         self.nmg.store(kmc.nmg)
@@ -144,7 +232,7 @@ class InputAlKMC(InputDictionary):
         self.qcache_file.store(kmc.qcache_file)
 
         # only stores cache after a decent amount of new structures have been found
-        if kmc.ncache_stored*self.STORE_STRIDE<kmc.ncache:
+        if kmc.ncache_stored * self.STORE_STRIDE < kmc.ncache:
             if kmc.ecache_file != "":
                 print("Storing ECACHE in ", kmc.ecache_file)
                 ff = open(kmc.ecache_file, "wb")
@@ -158,6 +246,6 @@ class InputAlKMC(InputDictionary):
             kmc.ncache_stored = kmc.ncache
 
     def fetch(self):
-        rv = super(InputAlKMC,self).fetch()
+        rv = super(InputAlKMC, self).fetch()
         rv["mode"] = self.mode.fetch()
         return rv

@@ -13,7 +13,7 @@ from ipi.utils.inputvalue import *
 from ipi.utils.units import *
 
 
-__all__ = ['InputEnsemble']
+__all__ = ["InputEnsemble"]
 
 
 class InputEnsemble(Input):
@@ -40,36 +40,70 @@ class InputEnsemble(Input):
     """
 
     fields = {
-        "temperature": (InputValue, {"dtype": float,
-                                     "default": -1.0,
-                                     "help": "The temperature of the system.",
-                                     "dimension": "temperature"}),
-            "pressure": (InputValue, {"dtype": float,
-                                      "default": -1.0,
-                                      "help": "The external pressure.",
-                                      "dimension": "pressure"}),
-            "stress": (InputArray, {"dtype": float,
-                                    "default": -np.identity(3, float),
-                                    "help": "The external stress.",
-                                    "dimension": "pressure"}),
-            "eens": (InputValue, {"dtype": float,
-                                  "default": 0.0,
-                                  "help": "The ensemble contribution to the conserved quantity.",
-                                          "dimension": "energy"}),
-            "bias": (InputForces, {"help": InputForces.default_help,
-                                   "default": []}),
-            "bias_weights": (InputArray, {"dtype": float,
-                                          "default": np.zeros(0),
-                                          "help": "Bias weights.",
-                                          "dimension": "undefined"}),
-            "hamiltonian_weights": (InputArray, {"dtype": float,
-                                                 "default": np.zeros(0),
-                                                 "help": "Hamiltonian weights.",
-                                                 "dimension": "undefined"}),
-            "time": (InputValue, {"dtype": float,
-                                  "default": 0.0,
-                                  "dimension": "time",
-                                  "help": "The internal time for this system"})
+        "temperature": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": -1.0,
+                "help": "The temperature of the system.",
+                "dimension": "temperature",
+            },
+        ),
+        "pressure": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": -1.0,
+                "help": "The external pressure.",
+                "dimension": "pressure",
+            },
+        ),
+        "stress": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": -np.identity(3, float),
+                "help": "The external stress.",
+                "dimension": "pressure",
+            },
+        ),
+        "eens": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 0.0,
+                "help": "The ensemble contribution to the conserved quantity.",
+                "dimension": "energy",
+            },
+        ),
+        "bias": (InputForces, {"help": InputForces.default_help, "default": []}),
+        "bias_weights": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": np.zeros(0),
+                "help": "Bias weights.",
+                "dimension": "undefined",
+            },
+        ),
+        "hamiltonian_weights": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": np.zeros(0),
+                "help": "Hamiltonian weights.",
+                "dimension": "undefined",
+            },
+        ),
+        "time": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 0.0,
+                "dimension": "time",
+                "help": "The internal time for this system",
+            },
+        ),
     }
     dynamic = {}
 
@@ -103,10 +137,15 @@ class InputEnsemble(Input):
 
         super(InputEnsemble, self).fetch()
 
-        ens = Ensemble(eens=self.eens.fetch(), temp=self.temperature.fetch(),
-                       pext=self.pressure.fetch(), stressext=self.stress.fetch(),
-                       bcomponents=self.bias.fetch(), bweights=self.bias_weights.fetch(),
-                       hweights=self.hamiltonian_weights.fetch(),
-                       time=self.time.fetch())
+        ens = Ensemble(
+            eens=self.eens.fetch(),
+            temp=self.temperature.fetch(),
+            pext=self.pressure.fetch(),
+            stressext=self.stress.fetch(),
+            bcomponents=self.bias.fetch(),
+            bweights=self.bias_weights.fetch(),
+            hweights=self.hamiltonian_weights.fetch(),
+            time=self.time.fetch(),
+        )
 
         return ens

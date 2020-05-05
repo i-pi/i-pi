@@ -3,7 +3,7 @@
 """ xyz2pdb.py
 
 Reads positions of a system in xyz format and returns a
-pdb file. Also reads the comment line and returns the 
+pdb file. Also reads the comment line and returns the
 positions and the cell in Angstrom.
 
 Assumes the input file is in a pdb format.
@@ -23,7 +23,7 @@ from ipi.utils.units import *
 def main(filename, wrap=True):
 
     ipos = open(filename, "r")
-    if(wrap == "False"):
+    if wrap == "False":
         wrap = False
 
     natoms = 0
@@ -33,7 +33,8 @@ def main(filename, wrap=True):
             ret = read_file("xyz", ipos)
             pos = ret["atoms"]
             cell = ret["cell"]
-            if(wrap): cell.array_pbc(pos.q)
+            if wrap:
+                cell.array_pbc(pos.q)
         except EOFError:  # finished reading files
             sys.exit(0)
 
@@ -41,5 +42,5 @@ def main(filename, wrap=True):
         ifr += 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(*sys.argv[1:])

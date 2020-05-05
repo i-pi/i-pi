@@ -18,7 +18,8 @@ from ipi.utils.depend import *
 from ipi.utils.units import Constants
 
 
-#__all__ = ['AlchemyMC']
+# __all__ = ['AlchemyMC']
+
 
 class AlchemyMC(Motion):
 
@@ -31,7 +32,9 @@ class AlchemyMC(Motion):
         The spring potential energy, names of the atoms.
     """
 
-    def __init__(self, fixcom=False, fixatoms=None, mode=None, names=[], nxc=1, ealc=None):
+    def __init__(
+        self, fixcom=False, fixatoms=None, mode=None, names=[], nxc=1, ealc=None
+    ):
         """Initialises a "alchemical exchange" motion object.
 
         Args:
@@ -46,10 +49,11 @@ class AlchemyMC(Motion):
         self.nxc = nxc
 
         dself = dd(self)
-        dself.ealc = depend_value(name='ealc')
-        if not ealc is None:
+        dself.ealc = depend_value(name="ealc")
+        if ealc is not None:
             self.ealc = ealc
-        else: self.ealc = 0.0
+        else:
+            self.ealc = 0.0
 
     def bind(self, ens, beads, cell, bforce, nm, prng, omaker):
         """Binds ensemble beads, cell, bforce, and prng to the dynamics.
@@ -86,11 +90,12 @@ class AlchemyMC(Motion):
 
         # picks number of attempted exchanges
         ntries = self.prng.rng.poisson(self.nxc)
-        if ntries == 0: return
+        if ntries == 0:
+            return
 
         """Does one round of alchemical exchanges."""
         # record the spring energy (divided by mass) for each atom in the exchange chain
-        q = dstrip(self.beads.q)
+        # q = dstrip(self.beads.q)
         nb = self.beads.nbeads
         axlist = self.AXlist(self.names)
         lenlist = len(axlist)
@@ -106,7 +111,7 @@ class AlchemyMC(Motion):
             # computes spring in NM representation
             spr = 0.0
             for b in range(1, nb):
-                spr += wk2[b] * (self.nm.qnm[b, na3:na3 + 3]**2).sum()
+                spr += wk2[b] * (self.nm.qnm[b, na3 : na3 + 3] ** 2).sum()
             spr *= 0.5
 
             # no mass here - just the massless spring term
@@ -127,11 +132,13 @@ class AlchemyMC(Motion):
                 j = self.prng.rng.randint(lenlist)  # makes sure we pick a real exchange
 
             # energy change due to the swap
-            difspring = (atomspring[i] - atomspring[j]) * (self.beads.m[axlist[j]] - self.beads.m[axlist[i]])
+            difspring = (atomspring[i] - atomspring[j]) * (
+                self.beads.m[axlist[j]] - self.beads.m[axlist[i]]
+            )
             pexchange = np.exp(-betaP * difspring)
 
             # attemps the exchange
-            if (pexchange > self.prng.u):
+            if pexchange > self.prng.u:
                 nexch += 1
                 # print 'exchange atom No.  ', axlist[i], '  and  ', axlist[j]
 
@@ -146,8 +153,12 @@ class AlchemyMC(Motion):
                 self.beads.m[axlist[j]] *= massratio
 
                 # adjust the (classical) momenta to conserve ke
-                self.beads.p[:, 3 * axlist[i]:3 * (axlist[i] + 1)] /= np.sqrt(massratio)
-                self.beads.p[:, 3 * axlist[j]:3 * (axlist[j] + 1)] *= np.sqrt(massratio)
+                self.beads.p[:, 3 * axlist[i] : 3 * (axlist[i] + 1)] /= np.sqrt(
+                    massratio
+                )
+                self.beads.p[:, 3 * axlist[j] : 3 * (axlist[j] + 1)] *= np.sqrt(
+                    massratio
+                )
 
                 # adjusts the conserved quantity counter based on the change in spring energy
                 self.ealc += -difspring

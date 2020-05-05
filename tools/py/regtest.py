@@ -66,20 +66,25 @@ import traceback
 
 def main():
     arguments = command_parser()
-    run_dir = os.path.join(os.path.abspath(arguments['run_directory']), Parameters.run_directory)
-    test_dir = os.path.abspath(arguments['test_cases_directory'])
-    is_in_reference_mode = arguments['is_in_reference_mode']
+    run_dir = os.path.join(
+        os.path.abspath(arguments["run_directory"]), Parameters.run_directory
+    )
+    test_dir = os.path.abspath(arguments["test_cases_directory"])
+    is_in_reference_mode = arguments["is_in_reference_mode"]
     try:
         os.makedirs(run_dir)
     except OSError:
-        print('The directory %s exists. Do you want to delete its contents and continue? (y/n)' % run_dir)
+        print(
+            "The directory %s exists. Do you want to delete its contents and continue? (y/n)"
+            % run_dir
+        )
         if answer_is_y():
             shutil.rmtree(run_dir)
             os.makedirs(run_dir)
         else:
-            quit('Terminated')
+            quit("Terminated")
     if is_in_reference_mode:
-        print('Do you agree to replace references if they exist? (y/n)')
+        print("Do you agree to replace references if they exist? (y/n)")
         if answer_is_y():
             replace_references = True
         else:
@@ -91,23 +96,25 @@ def main():
         try:
             list_of_test_cases.append(TestCase(test_candidate))
         except TypeError as e:
-            print('--> Could not create test case:', test_candidate.name)
+            print("--> Could not create test case:", test_candidate.name)
             print(str(e))
             continue
     queue_of_test_instances = deque([])
     counter = Counter()
     print()
-    print('List of test cases to be executed:')
+    print("List of test cases to be executed:")
     for test_case in list_of_test_cases:
         test_instance_dir = os.path.join(run_dir, test_case.name)
-        queue_of_test_instances.append(TestInstance(test_case, test_instance_dir, counter))
-        print('-->', test_case.name)
+        queue_of_test_instances.append(
+            TestInstance(test_case, test_instance_dir, counter)
+        )
+        print("-->", test_case.name)
     print()
-    print('Executing following test instances:')
+    print("Executing following test instances:")
     while queue_of_test_instances:
         test_instance = queue_of_test_instances.popleft()
         try:
-            sys.stdout.write('--> ' + test_instance.name)
+            sys.stdout.write("--> " + test_instance.name)
             sys.stdout.flush()
             test_instance.run()
             if not is_in_reference_mode:
@@ -118,9 +125,9 @@ def main():
                         if not results.files_are_equal():
                             test_passed = False
                     if test_passed:
-                        print('    PASSED')
+                        print("    PASSED")
                     else:
-                        print('    FAILED')
+                        print("    FAILED")
                         for results in differences:
                             results.print_differences()
                 except ValueError as e:
@@ -132,13 +139,18 @@ def main():
                     if replace_references:
                         test_instance.test_case.remove_reference()
                         test_instance.put_output_as_reference()
-                        print('    SUCCESS: References replaced')
+                        print("    SUCCESS: References replaced")
                     else:
-                        print('    SKIPPING: References not copied')
+                        print("    SKIPPING: References not copied")
 
         except (RegtestTimeout, WrongDriverCommand, IPIError, OutputCorrupted) as e:
-            print('    ERROR')
-            print(str(e), 'Test instance run directory:', test_instance.run_dir, file=sys.stderr)
+            print("    ERROR")
+            print(
+                str(e),
+                "Test instance run directory:",
+                test_instance.run_dir,
+                file=sys.stderr,
+            )
 
             continue
         except WrongIPICommand as e:
@@ -170,8 +182,12 @@ class TestCase:
         commands, dependencies = parse_regtest_string(test_candidate.input_path)
         dependencies_list = [os.path.join(dependencies_dir, x) for x in dependencies]
         if not all([os.path.exists(x) for x in dependencies_list]):
-            raise TypeError('Dependencies for file: ' + str(test_candidate.input_path) +
-                            ' absent in: ' + str(dependencies_dir))
+            raise TypeError(
+                "Dependencies for file: "
+                + str(test_candidate.input_path)
+                + " absent in: "
+                + str(dependencies_dir)
+            )
         self.input_path = test_candidate.input_path
         self.name = test_candidate.name
         self.root = os.path.dirname(test_candidate.input_path)
@@ -187,7 +203,7 @@ class TestCase:
         """
         xml = etree.parse(self.input_path)
         sockets = 0
-        for ffsocket in xml.findall('./ffsocket'):
+        for ffsocket in xml.findall("./ffsocket"):
             sockets += 1
         return sockets
 
@@ -210,6 +226,7 @@ class Counter:
     """
     Counter class for attributing socket numbers.
     """
+
     socket = 10001
 
     def attribute_socket(self):
@@ -249,7 +266,10 @@ class TestInstance:
             os.makedirs(run_dir)
         except OSError:
             if os.path.exists(run_dir):
-                raise ValueError('Directory %s exists. The dir parameter must be a path to nonexistent directory' % str(run_dir))
+                raise ValueError(
+                    "Directory %s exists. The dir parameter must be a path to nonexistent directory"
+                    % str(run_dir)
+                )
             else:
                 raise
         test_dependencies = []
@@ -259,17 +279,17 @@ class TestInstance:
 
         xml = etree.parse(test_case.input_path)
         commands, dependencies = parse_regtest_string(test_case.input_path)
-        for ffsocket in xml.findall('./ffsocket'):
+        for ffsocket in xml.findall("./ffsocket"):
             address_index = counter.attribute_socket()
-            socket_mode = ffsocket.attrib['mode']
-            if socket_mode.lower() == 'unix':
-                address = ffsocket.find('./address').text.strip()
-                new_address = ' %s%i ' % (address, address_index)
-                ffsocket.find('./address').text = new_address
+            socket_mode = ffsocket.attrib["mode"]
+            if socket_mode.lower() == "unix":
+                address = ffsocket.find("./address").text.strip()
+                new_address = " %s%i " % (address, address_index)
+                ffsocket.find("./address").text = new_address
             else:
-                address = ffsocket.find('./port').text.strip()
-                new_address = '%i' % address_index
-                ffsocket.find('./port').text = new_address
+                address = ffsocket.find("./port").text.strip()
+                new_address = "%i" % address_index
+                ffsocket.find("./port").text = new_address
 
             # Change the address used by the driver too!
             for _ii, _buffer in enumerate(commands):
@@ -283,11 +303,12 @@ class TestInstance:
                 # driver command!
                 commands[_ii] = _buffer.replace(address, new_address, 1)
 
-        xml.write(os.path.join(run_dir, 'input.xml'))
+        xml.write(os.path.join(run_dir, "input.xml"))
         driver_signatures = []  # tuple: command + dir
         for cmd in commands:
-            instance_folder = os.path.join(run_dir,
-                                           'driver-%i' % len(driver_signatures))
+            instance_folder = os.path.join(
+                run_dir, "driver-%i" % len(driver_signatures)
+            )
             os.makedirs(instance_folder)
             for _file in test_dependencies:
                 shutil.copy(_file, instance_folder)
@@ -295,13 +316,14 @@ class TestInstance:
             driver_command = shlex.split(cmd)
             driver_signatures.append((driver_command, instance_folder))
         self.test_case = test_case
-        self.path_ipi_input = os.path.join(run_dir, 'input.xml')
+        self.path_ipi_input = os.path.join(run_dir, "input.xml")
         self.name = test_case.name
         self.driver_signatures = driver_signatures
         self.run_dir = run_dir
         self.dependencies = test_dependencies
-        self.ipi_command = shlex.split('i-pi' +
-                                       ' ' + os.path.join(run_dir, 'input.xml'))
+        self.ipi_command = shlex.split(
+            "i-pi" + " " + os.path.join(run_dir, "input.xml")
+        )
 
     def run(self):
         """
@@ -312,41 +334,51 @@ class TestInstance:
         os.chdir(self.run_dir)
         driver_prcs = deque([])
         try:
-            with open(ipi_output_path, 'w') as ipi_out:
-                ipi_out.write('*REGTEST* IPI COMMAND: %s\n' % ' '.join(self.ipi_command))
+            with open(ipi_output_path, "w") as ipi_out:
+                ipi_out.write(
+                    "*REGTEST* IPI COMMAND: %s\n" % " ".join(self.ipi_command)
+                )
                 try:
-                    ipi_proc = subprocess.Popen(self.ipi_command,
-                                                bufsize=0,
-                                                stdout=ipi_out,
-                                                stderr=subprocess.PIPE)
+                    ipi_proc = subprocess.Popen(
+                        self.ipi_command,
+                        bufsize=0,
+                        stdout=ipi_out,
+                        stderr=subprocess.PIPE,
+                    )
                 except OSError as _err:
                     if _err.errno == os.errno.ENOENT:
-                        raise WrongIPICommand('i-pi command not found!', self.ipi_command)
+                        raise WrongIPICommand(
+                            "i-pi command not found!", self.ipi_command
+                        )
                     else:
                         raise
             time.sleep(Parameters.ipi_starting_time)
 
             if ipi_proc.poll() is not None:
                 stdout, stderr = ipi_proc.communicate()
-                raise IPIError('I-PI error on start\n' + stderr)
+                raise IPIError("I-PI error on start\n" + stderr)
 
             # Run the driver code
             for cmd, instance_folder in self.driver_signatures:
                 os.chdir(instance_folder)
-                driver_out_path = os.path.join(instance_folder, 'driver.out')
-                with open(driver_out_path, 'w') as driver_out:
-                    driver_out.write('*REGTEST* DRIVER COMMAND: %s\n' %
-                                     ' '.join(cmd))
+                driver_out_path = os.path.join(instance_folder, "driver.out")
+                with open(driver_out_path, "w") as driver_out:
+                    driver_out.write("*REGTEST* DRIVER COMMAND: %s\n" % " ".join(cmd))
                     try:
-                        driver_prcs.append(subprocess.Popen(cmd,
-                                                            bufsize=0,
-                                                            stdin=None,
-                                                            stdout=driver_out,
-                                                            stderr=subprocess.PIPE))
+                        driver_prcs.append(
+                            subprocess.Popen(
+                                cmd,
+                                bufsize=0,
+                                stdin=None,
+                                stdout=driver_out,
+                                stderr=subprocess.PIPE,
+                            )
+                        )
                     except OSError as _err:
                         if _err.errno == os.errno.ENOENT:
-                            raise WrongDriverCommand('driver command %s not found!\n' %
-                                                     ' ' .join(cmd))
+                            raise WrongDriverCommand(
+                                "driver command %s not found!\n" % " ".join(cmd)
+                            )
                         else:
                             raise
 
@@ -375,10 +407,10 @@ class TestInstance:
                     ipi_proc.terminate()
                     stdout, stderr = ipi_proc.communicate()
                     if stderr:
-                        with open(ipi_output_path, 'a') as ipi_out:
+                        with open(ipi_output_path, "a") as ipi_out:
                             ipi_out.write(stderr)
-                        raise IPIError('I-PI Error\n')
-                    raise RegtestTimeout('Driver timeout')
+                        raise IPIError("I-PI Error\n")
+                    raise RegtestTimeout("Driver timeout")
 
             drivers_terminated_time = time.time()
             while ipi_proc.poll() is None:
@@ -388,36 +420,41 @@ class TestInstance:
                     ipi_proc.terminate()
                     stdout, stderr = ipi_proc.communicate()
                     if stderr:
-                        with open(ipi_output_path, 'a') as ipi_out:
+                        with open(ipi_output_path, "a") as ipi_out:
                             ipi_out.write(stderr)
-                        raise IPIError('i-PI Error\n' + stderr)
-                    raise RegtestTimeout('i-PI was terminated by regtest after %f s after drivers returned\n' % Parameters.ipi_shutdown_time +
-                                         'This might be caused by error in driver(s).\n' +
-                                         'Driver return codes: ' + ', '.join(str(x) for x in driver_return_codes) + '\n'
-                                         'Driver errors:' + '\n'.join(driver_errors) + '\n')
+                        raise IPIError("i-PI Error\n" + stderr)
+                    raise RegtestTimeout(
+                        "i-PI was terminated by regtest after %f s after drivers returned\n"
+                        % Parameters.ipi_shutdown_time
+                        + "This might be caused by error in driver(s).\n"
+                        + "Driver return codes: "
+                        + ", ".join(str(x) for x in driver_return_codes)
+                        + "\n"
+                        "Driver errors:" + "\n".join(driver_errors) + "\n"
+                    )
 
             stdout, stderr = ipi_proc.communicate()
             if stderr:
-                with open(ipi_output_path, 'a') as ipi_out:
+                with open(ipi_output_path, "a") as ipi_out:
                     ipi_out.write(stderr)
-                raise IPIError('I-PI Error\n' + stderr)
+                raise IPIError("I-PI Error\n" + stderr)
         except KeyboardInterrupt as e:
-            print('\nKeyboard interrupt!')
+            print("\nKeyboard interrupt!")
             traceback.print_exc(file=sys.stdout)
             if ipi_proc.poll() is None:
-                print('Trying to shut down i-PI cleanly...')
+                print("Trying to shut down i-PI cleanly...")
                 # Let I-PI start before we terminate it, otherwise it can hang up
                 time.sleep(Parameters.ipi_starting_time)
                 ipi_proc.terminate()
                 stdout, stderr = ipi_proc.communicate()
                 if stderr:
-                    with open(ipi_output_path, 'a') as ipi_out:
+                    with open(ipi_output_path, "a") as ipi_out:
                         ipi_out.write(stderr)
-                print('i-PI terminated')
+                print("i-PI terminated")
             for prc in driver_prcs:
                 if prc.poll() is None:
                     prc.terminate()
-            sys.exit('Regtest termination due to user interruption.')
+            sys.exit("Regtest termination due to user interruption.")
 
     def get_output(self):
         """
@@ -461,13 +498,13 @@ class TestOutput:
         """
         abs_xml = os.path.abspath(xml)
         if not os.path.isfile(abs_xml):
-            raise ValueError('Input file does not exist %s' % abs_xml)
+            raise ValueError("Input file does not exist %s" % abs_xml)
         filelist = get_output_filenames(abs_xml)
         abs_files = [os.path.join(path, x) for x in filelist]
         filetuples = [(os.path.join(path, x), x) for x in filelist]
         for files in abs_files:
             if not (os.path.isfile(files)):
-                raise OutputCorrupted('Expected output file %s not exist' % files)
+                raise OutputCorrupted("Expected output file %s not exist" % files)
         self.files = abs_files
         self.fileset = set(filelist)
         self.filetuples = set(filetuples)
@@ -481,12 +518,12 @@ class TestOutput:
             report: instance of ComparisonResult
         """
         # Check if file lists are the same
-        assert(self.fileset == test_output.fileset)
+        assert self.fileset == test_output.fileset
         # Check if they all exist
         for files in self.files:
-            assert(os.path.isfile(files))
+            assert os.path.isfile(files)
         for files in test_output.files:
-            assert(os.path.isfile(files))
+            assert os.path.isfile(files)
         report = []
         for file1 in self.filetuples:
             file2 = [x for x in test_output.filetuples if x[1] == file1[1]]
@@ -505,7 +542,10 @@ class TestOutput:
             os.makedirs(path)
         except OSError:
             if os.path.exists(path):
-                raise ValueError('Directory %s exists. The dir parameter must be a path to nonexistent directory' % str(path))
+                raise ValueError(
+                    "Directory %s exists. The dir parameter must be a path to nonexistent directory"
+                    % str(path)
+                )
             else:
                 raise
         for file in self.files:
@@ -546,15 +586,15 @@ class ComparisonResult:
         """
         Prints differences between file1 and file2
         """
-        print('Files:', self.file1, self.file2)
+        print("Files:", self.file1, self.file2)
         for element in self.list_of_differences:
-            print('Difference in line', element[0], 'in word', element[1])
+            print("Difference in line", element[0], "in word", element[1])
 
     def files_are_equal(self):
         """
         Returns True if files are equal.
         """
-        return (len(self.list_of_differences) == 0)
+        return len(self.list_of_differences) == 0
 
 
 class TestCandidate:
@@ -577,7 +617,7 @@ class TestCandidate:
             self.input_path = input_abspath
             self.name = name
         else:
-            raise ValueError('Not a valid xml test')
+            raise ValueError("Not a valid xml test")
 
 
 class Parameters:
@@ -585,16 +625,17 @@ class Parameters:
     """
     Set of global parameters
     """
-    regtest_string = r'<!--\s*REGTEST\s+([\s\w\W]*)\s+ENDREGTEST\s*-->'
-    command_string = r'^COMMAND\(?(\d*)\)?\s*([ \w.\+\-\(\)\<\>\:]*)$'
-    dependencies_string = r'^DEPENDENCIES\s*([ \w.\+\-\(\)]*)$'
-    default_root_run_directory = '.'
-    run_directory = 'regtest-run'
-    test_cases_directory = '.'
-    reference_directory = 'regtest-ref'
+
+    regtest_string = r"<!--\s*REGTEST\s+([\s\w\W]*)\s+ENDREGTEST\s*-->"
+    command_string = r"^COMMAND\(?(\d*)\)?\s*([ \w.\+\-\(\)\<\>\:]*)$"
+    dependencies_string = r"^DEPENDENCIES\s*([ \w.\+\-\(\)]*)$"
+    default_root_run_directory = "."
+    run_directory = "regtest-run"
+    test_cases_directory = "."
+    reference_directory = "regtest-ref"
     precision = 4
     driver_timeout = 600
-    ipi_output_file = 'ipi_output.out'
+    ipi_output_file = "ipi_output.out"
     ipi_shutdown_time = 11
     ipi_starting_time = 5
     sleep_time = 0.1
@@ -644,29 +685,38 @@ def command_parser():
     Returns:
         A dictionary containing all the input options and argument.
     """
-    parser = argparse.ArgumentParser(description='Recursively looks for '
-                                     'i-pi regression tests in the current directory, '
-                                     'creates \'./regtest-run\' directory and runs tests there. '
-                                     'With the --create-reference flag creates the reference outputs.')
-    parser.add_argument('--test-cases-directory',
-                        action='store',
-                        type=str,
-                        default=Parameters.test_cases_directory,
-                        help='The directory which is recursively searched for regression tests',
-                        dest='test_cases_directory')
-    parser.add_argument('--run-directory',
-                        action='store',
-                        type=str,
-                        default=Parameters.default_root_run_directory,
-                        help=('Directory where the \'regtest-run\' '
-                              'directory will be created.'),
-                        dest='run_directory')
-    parser.add_argument('--create-reference',
-                        action='store_true',
-                        default=False,
-                        help=('Do not compare output and create the relevant '
-                              'reference outputs for test cases.'),
-                        dest='is_in_reference_mode')
+    parser = argparse.ArgumentParser(
+        description="Recursively looks for "
+        "i-pi regression tests in the current directory, "
+        "creates './regtest-run' directory and runs tests there. "
+        "With the --create-reference flag creates the reference outputs."
+    )
+    parser.add_argument(
+        "--test-cases-directory",
+        action="store",
+        type=str,
+        default=Parameters.test_cases_directory,
+        help="The directory which is recursively searched for regression tests",
+        dest="test_cases_directory",
+    )
+    parser.add_argument(
+        "--run-directory",
+        action="store",
+        type=str,
+        default=Parameters.default_root_run_directory,
+        help=("Directory where the 'regtest-run' " "directory will be created."),
+        dest="run_directory",
+    )
+    parser.add_argument(
+        "--create-reference",
+        action="store_true",
+        default=False,
+        help=(
+            "Do not compare output and create the relevant "
+            "reference outputs for test cases."
+        ),
+        dest="is_in_reference_mode",
+    )
 
     return vars(parser.parse_args())
 
@@ -683,7 +733,7 @@ def file_is_test(path_of_xml_file):
     with open(path_of_xml_file) as _file:
         _text = _file.read()
     regtest_string_rgx = Parameters.compile_regtest_string()
-    return (len([x.group(1) for x in regtest_string_rgx.finditer(_text)]) > 0)
+    return len([x.group(1) for x in regtest_string_rgx.finditer(_text)]) > 0
 
 
 def parse_regtest_string(xml_input_path):
@@ -714,9 +764,9 @@ def parse_regtest_string(xml_input_path):
 
     regtest_string = regtest_string_rgx.findall(_text)
 
-    for _xx in dependency_string_rgx.finditer('\n'.join(regtest_string)):
+    for _xx in dependency_string_rgx.finditer("\n".join(regtest_string)):
         dependencies += _xx.group(1).split()
-    for _xx in command_string_rgx.finditer('\n'.join(regtest_string)):
+    for _xx in command_string_rgx.finditer("\n".join(regtest_string)):
         try:
             commands += [_xx.group(2)] * int(_xx.group(1))
         except ValueError:
@@ -744,21 +794,22 @@ def find_test_candidates(root_path):
     test_list = []
 
     if not os.path.exists(abs_root_path) or not os.path.isdir(abs_root_path):
-        raise RuntimeError('Folder %s does not exist!' % abs_root_path)
+        raise RuntimeError("Folder %s does not exist!" % abs_root_path)
 
     for root, dirs, files in os.walk(abs_root_path):
         test_name = os.path.relpath(root, root_path)
-        if test_name == '.':
-            test_name = '_root_test_case_'
-        xml_files = [x for x in files if x.endswith('.xml')]
+        if test_name == ".":
+            test_name = "_root_test_case_"
+        xml_files = [x for x in files if x.endswith(".xml")]
 
         if len(xml_files) > 1:
             # if there are more xml files, it is not clear which one to use
             continue
         elif len(xml_files) == 1:
             try:
-                test_list.append(TestCandidate(test_name,
-                                               os.path.join(root, xml_files[0])))
+                test_list.append(
+                    TestCandidate(test_name, os.path.join(root, xml_files[0]))
+                )
             except ValueError:
                 continue
     return test_list
@@ -807,7 +858,7 @@ def inplace_change(filename, old_string, new_string):
             return True
 
     # Safely write the changed content, if found in the file
-    with open(filename, 'w') as _file:
+    with open(filename, "w") as _file:
         _content = _content.replace(old_string, new_string)
         _file.write(_content)
         return True
@@ -826,14 +877,14 @@ def get_output_filenames(xml_path):
     which would make potential bugs hard to detect.
     """
     # Avoid to print i-pi output
-    devnull = open('/dev/null', 'w')
+    devnull = open("/dev/null", "w")
     oldstdout_fno = os.dup(sys.stdout.fileno())
     os.dup2(devnull.fileno(), 1)
 
     xml_path = os.path.abspath(xml_path)
     os.chdir(os.path.dirname(xml_path))
     # i-pi xml file parser
-    ifile = open(xml_path, 'r')
+    ifile = open(xml_path, "r")
     xmlrestart = io_xml.xml_parse_file(ifile)
     ifile.close()
 
@@ -852,42 +903,48 @@ def get_output_filenames(xml_path):
         if isinstance(o, CheckpointOutput):
             pass
         elif isinstance(o, PropertyOutput):
-            for _ss in simul.syslist:   # create multiple copies
+            for _ss in simul.syslist:  # create multiple copies
                 filename = o.filename
                 if _ss.prefix != "":
                     filename = _ss.prefix + "_" + filename
                 lprop.append(filename)
         # trajectories are more complex, as some have per-bead output
         elif isinstance(o, TrajectoryOutput):
-            if getkey(o.what) in ['positions', 'velocities',
-                                  'forces', 'forces_sc', 'extras']:   # multiple beads
+            if getkey(o.what) in [
+                "positions",
+                "velocities",
+                "forces",
+                "forces_sc",
+                "extras",
+            ]:  # multiple beads
                 nbeads = simul.syslist[0].beads.nbeads
                 for _bi in range(nbeads):
                     # zero-padded bead number
-                    padb = (('%0' + str(int(1 +
-                                            np.floor(np.log(nbeads) /
-                                                     np.log(10)))) +
-                             'd') % (_bi))
+                    padb = (
+                        "%0" + str(int(1 + np.floor(np.log(nbeads) / np.log(10)))) + "d"
+                    ) % (_bi)
 
                     for _ss in simul.syslist:
-                        if (o.ibead < 0 and ((_bi % (-o.ibead) == 0))) or o.ibead == _bi:
+                        if (
+                            o.ibead < 0 and ((_bi % (-o.ibead) == 0))
+                        ) or o.ibead == _bi:
                             filename = o.filename
                             if _ss.prefix != "":
                                 filename = _ss.prefix + "_" + filename
-                            if getkey(o.what) == 'extras':
+                            if getkey(o.what) == "extras":
                                 filename += "_" + padb
                             else:
                                 filename += "_" + padb + "." + o.format
                             ltraj.append(filename)
             else:
-                for _ss in simul.syslist:   # create multiple copies
+                for _ss in simul.syslist:  # create multiple copies
                     filename = o.filename
                     if _ss.prefix != "":
                         filename = _ss.prefix + "_" + filename
                     filename += "." + o.format
                     ltraj.append(filename)
     os.dup2(oldstdout_fno, 1)
-    return (ltraj + lprop)
+    return ltraj + lprop
 
 
 def compare_files(file1, file2):
@@ -905,16 +962,17 @@ def compare_files(file1, file2):
     """
 
     differences = []
-    with open(file1, 'r') as content_file1:
+    with open(file1, "r") as content_file1:
         content1 = content_file1.readlines()
-    with open(file2, 'r') as content_file2:
+    with open(file2, "r") as content_file2:
         content2 = content_file2.readlines()
 
     line_count = 1
     for line_in_file1, line_in_file2 in zip(content1, content2):
         word_count = 1
-        for word_in_file1, word_in_file2 in zip(line_in_file1.split(),
-                                                line_in_file2.split()):
+        for word_in_file1, word_in_file2 in zip(
+            line_in_file1.split(), line_in_file2.split()
+        ):
             try:
                 float_in_file1 = float(word_in_file1)
                 float_in_file2 = float(word_in_file2)
@@ -940,13 +998,14 @@ def answer_is_y():
         True if the user answer yes or False if the user answer no.
     """
 
-    _yes = ['yes', 'y']
-    _no = ['no', 'n']
+    _yes = ["yes", "y"]
+    _no = ["no", "n"]
     answer = input()
     if answer.lower() in _yes:
         return True
     elif answer.lower() in _no:
         return False
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

@@ -7,12 +7,18 @@
 import numpy as np
 import ipi.engine.thermostats
 import ipi.engine.barostats
-from ipi.utils.inputvalue import InputDictionary, InputAttribute, InputValue, InputArray, input_default
+from ipi.utils.inputvalue import (
+    InputDictionary,
+    InputAttribute,
+    InputValue,
+    InputArray,
+    input_default,
+)
 from ipi.inputs.barostats import InputBaro
 from ipi.inputs.thermostats import InputThermo
 
 
-__all__ = ['InputDynamics']
+__all__ = ["InputDynamics"]
 
 
 class InputDynamics(InputDictionary):
@@ -36,28 +42,58 @@ class InputDynamics(InputDictionary):
     """
 
     attribs = {
-        "mode": (InputAttribute, {"dtype": str,
-                                  "default": 'nve',
-                                  "help": "The ensemble that will be sampled during the simulation. ",
-                                  "options": ['nve', 'nvt', 'npt', 'nst', 'sc', 'scnpt']}),
-        "splitting": (InputAttribute, {"dtype": str,
-                                       "default": 'obabo',
-                                       "help": "The Louiville splitting used for sampling the target ensemble. ",
-                                       "options": ['obabo', 'baoab']})
+        "mode": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "default": "nve",
+                "help": "The ensemble that will be sampled during the simulation. ",
+                "options": ["nve", "nvt", "npt", "nst", "sc", "scnpt"],
+            },
+        ),
+        "splitting": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "default": "obabo",
+                "help": "The Louiville splitting used for sampling the target ensemble. ",
+                "options": ["obabo", "baoab"],
+            },
+        ),
     }
 
     fields = {
-        "thermostat": (InputThermo, {"default": input_default(factory=ipi.engine.thermostats.Thermostat),
-                                     "help": "The thermostat for the atoms, keeps the atom velocity distribution at the correct temperature."}),
-        "barostat": (InputBaro, {"default": input_default(factory=ipi.engine.barostats.Barostat),
-                                 "help": InputBaro.default_help}),
-        "timestep": (InputValue, {"dtype": float,
-                                  "default": 1.0,
-                                  "help": "The time step.",
-                                  "dimension": "time"}),
-        "nmts": (InputArray, {"dtype": int,
-                              "default": np.zeros(0, int),
-                              "help": "Number of iterations for each MTS level (including the outer loop, that should in most cases have just one iteration)."})
+        "thermostat": (
+            InputThermo,
+            {
+                "default": input_default(factory=ipi.engine.thermostats.Thermostat),
+                "help": "The thermostat for the atoms, keeps the atom velocity distribution at the correct temperature.",
+            },
+        ),
+        "barostat": (
+            InputBaro,
+            {
+                "default": input_default(factory=ipi.engine.barostats.Barostat),
+                "help": InputBaro.default_help,
+            },
+        ),
+        "timestep": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 1.0,
+                "help": "The time step.",
+                "dimension": "time",
+            },
+        ),
+        "nmts": (
+            InputArray,
+            {
+                "dtype": int,
+                "default": np.zeros(0, int),
+                "help": "Number of iterations for each MTS level (including the outer loop, that should in most cases have just one iteration).",
+            },
+        ),
     }
 
     dynamic = {}

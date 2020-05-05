@@ -19,7 +19,7 @@ from ipi.engine.cell import Cell
 from ipi.utils.units import Elements
 
 
-__all__ = ['print_json_path', 'print_json', 'read_json', 'iter_json']
+__all__ = ["print_json_path", "print_json", "read_json", "iter_json"]
 
 
 def print_json_path(beads, cell, filedesc=sys.stdout):
@@ -36,7 +36,9 @@ def print_json_path(beads, cell, filedesc=sys.stdout):
     raise NotImplementedError("print_json_path is not implemented yet.")
 
 
-def print_json(atoms, cell, filedesc=sys.stdout, title="", cell_conv=1.0, atoms_conv=1.0):
+def print_json(
+    atoms, cell, filedesc=sys.stdout, title="", cell_conv=1.0, atoms_conv=1.0
+):
     """Prints an atomic configuration into an XYZ formatted file.
 
     Args:
@@ -54,11 +56,11 @@ def print_json(atoms, cell, filedesc=sys.stdout, title="", cell_conv=1.0, atoms_
     lab = dstrip(atoms.names)
 
     data = {}
-    data['natoms'] = natoms
-    data['cell'] = [a, b, c, alpha, beta, gamma]
-    data['title'] = title
-    data['q'] = qs.tolist()
-    data['labels'] = lab.tolist()
+    data["natoms"] = natoms
+    data["cell"] = [a, b, c, alpha, beta, gamma]
+    data["title"] = title
+    data["q"] = qs.tolist()
+    data["labels"] = lab.tolist()
 
     filedesc.write(json.dumps(data))
     filedesc.write(" \n")
@@ -82,16 +84,16 @@ def read_json(filedesc):
         raise EOFError("The file descriptor hit EOF.")
 
     line.strip("\n")
-    natoms = data['natoms']
-    qatoms = np.asarray(data['q'], dtype=float)
-    names = np.asarray(data['labels'], dtype='|S4')
-    title = data['title']
+    natoms = data["natoms"]
+    qatoms = np.asarray(data["q"], dtype=float)
+    names = np.asarray(data["labels"], dtype="|S4")
+    title = data["title"]
     masses = np.zeros(len(names))
 
-    a, b, c, alpha, beta, gamma = data['cell']
-    alpha *= np.pi / 180.
-    beta *= np.pi / 180.
-    gamma *= np.pi / 180.
+    a, b, c, alpha, beta, gamma = data["cell"]
+    alpha *= np.pi / 180.0
+    beta *= np.pi / 180.0
+    gamma *= np.pi / 180.0
     cell = mt.abc2h(a, b, c, alpha, beta, gamma)
 
     return (title, cell, qatoms, names, masses)

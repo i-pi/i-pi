@@ -43,50 +43,61 @@ def main(prefix, lag):
             kod = dstrip(ret["atoms"].q)
             if natoms == 0:  # initializes vectors
                 natoms = len(kin) / 3
-                ktbuf = np.zeros((cbuf, natoms, 3, 3), float)   # implement the buffer as a circular one so one doesn't need to re-allocate and storage is continuous
+                ktbuf = np.zeros(
+                    (cbuf, natoms, 3, 3), float
+                )  # implement the buffer as a circular one so one doesn't need to re-allocate and storage is continuous
                 nkt = np.zeros((natoms, 3, 3), float)
                 mkt = np.zeros((natoms, 3, 3), float)
-                akt = np.zeros((natoms, 3), float)
+                # akt = np.zeros((natoms, 3), float)
                 mea = np.zeros((natoms, 3), float)
                 mev = np.zeros((natoms, 3, 3), float)
 
-            nkt[:, 0, 0] = kin[0:natoms * 3:3]
-            nkt[:, 1, 1] = kin[1:natoms * 3:3]
-            nkt[:, 2, 2] = kin[2:natoms * 3:3]
-            nkt[:, 0, 1] = nkt[:, 1, 0] = kod[0:natoms * 3:3]
-            nkt[:, 0, 2] = nkt[:, 2, 0] = kod[1:natoms * 3:3]
-            nkt[:, 2, 1] = nkt[:, 1, 2] = kod[2:natoms * 3:3]
+            nkt[:, 0, 0] = kin[0 : natoms * 3 : 3]
+            nkt[:, 1, 1] = kin[1 : natoms * 3 : 3]
+            nkt[:, 2, 2] = kin[2 : natoms * 3 : 3]
+            nkt[:, 0, 1] = nkt[:, 1, 0] = kod[0 : natoms * 3 : 3]
+            nkt[:, 0, 2] = nkt[:, 2, 0] = kod[1 : natoms * 3 : 3]
+            nkt[:, 2, 1] = nkt[:, 1, 2] = kod[2 : natoms * 3 : 3]
         except EOFError:  # Finished reading
             sys.exit(0)
 
         ktbuf[ifr % cbuf] = nkt
         if ifr >= (2 * lag):
             # now we can compute the mean tensor, and estimate the components of the kinetic energy
-            mkt[:] = 0.0; tw = 0.0
+            mkt[:] = 0.0
+            tw = 0.0
             for j in range(cbuf):
-                w = 1.0 - np.abs(j - lag) * 1.0 / lag;
-                mkt += w * ktbuf[(ifr - j) % cbuf];
-                tw += w;
+                w = 1.0 - np.abs(j - lag) * 1.0 / lag
+                mkt += w * ktbuf[(ifr - j) % cbuf]
+                tw += w
             mkt *= 1.0 / tw
 
             # computes the eigenvalues of the TAG tensor
             for i in range(natoms):
                 [mea[i], mev[i]] = np.linalg.eigh(mkt[i])
 
-            otag.write("%d\n# TAG eigenvalues e1 e2 e3 with lag %d. Frame: %d\n" % (natoms, lag, ifr - lag))
+            otag.write(
+                "%d\n# TAG eigenvalues e1 e2 e3 with lag %d. Frame: %d\n"
+                % (natoms, lag, ifr - lag)
+            )
             for i in range(natoms):
-                otag.write("%6s  %15.7e  %15.7e  %15.7e\n" % (tk.names[i], mea[i, 0], mea[i, 1], mea[i, 2]))
+                otag.write(
+                    "%6s  %15.7e  %15.7e  %15.7e\n"
+                    % (tk.names[i], mea[i, 0], mea[i, 1], mea[i, 2])
+                )
 
         ifr += 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=description)
 
-    parser.add_argument('prefix', type=str, nargs=1,
-                        help='Prefix of the trajectories to process.')
-    parser.add_argument('lag', type=int, nargs=1,
-                        help='Time lag for the TAG, in number of time steps.')
+    parser.add_argument(
+        "prefix", type=str, nargs=1, help="Prefix of the trajectories to process."
+    )
+    parser.add_argument(
+        "lag", type=int, nargs=1, help="Time lag for the TAG, in number of time steps."
+    )
 
     args = parser.parse_args()
 

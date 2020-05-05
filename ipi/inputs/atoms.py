@@ -17,7 +17,7 @@ from ipi.utils.depend import *
 from ipi.utils.units import unit_to_internal
 
 
-__all__ = ['InputAtoms']
+__all__ = ["InputAtoms"]
 
 
 class InputAtoms(Input):
@@ -40,25 +40,49 @@ class InputAtoms(Input):
           array with no elements
     """
 
-    fields = {"natoms": (InputValue, {"dtype": int,
-                                      "default": 0,
-                                      "help": "The number of atoms."}),
-              "q": (InputArray, {"dtype": float,
-                                 "default": input_default(factory=np.zeros, args=(0,)),
-                                 "help": "The positions of the atoms, in the format [x1, y1, z1, x2, ... ].",
-                                 "dimension": "length"}),
-              "p": (InputArray, {"dtype": float,
-                                 "default": input_default(factory=np.zeros, args=(0,)),
-                                 "help": "The momenta of the atoms, in the format [px1, py1, pz1, px2, ... ].",
-                                 "dimension": "momentum"}),
-              "m": (InputArray, {"dtype": float,
-                                 "default": input_default(factory=np.zeros, args=(0,)),
-                                 "help": "The masses of the atoms, in the format [m1, m2, ... ].",
-                                 "dimension": "mass"}),
-              "names": (InputArray, {"dtype": str,
-                                     "default": input_default(factory=np.zeros, args=(0,), kwargs={'dtype': np.dtype('|U6')}),
-                                     "help": "The names of the atoms, in the format [name1, name2, ... ]."})
-              }
+    fields = {
+        "natoms": (
+            InputValue,
+            {"dtype": int, "default": 0, "help": "The number of atoms."},
+        ),
+        "q": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.zeros, args=(0,)),
+                "help": "The positions of the atoms, in the format [x1, y1, z1, x2, ... ].",
+                "dimension": "length",
+            },
+        ),
+        "p": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.zeros, args=(0,)),
+                "help": "The momenta of the atoms, in the format [px1, py1, pz1, px2, ... ].",
+                "dimension": "momentum",
+            },
+        ),
+        "m": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.zeros, args=(0,)),
+                "help": "The masses of the atoms, in the format [m1, m2, ... ].",
+                "dimension": "mass",
+            },
+        ),
+        "names": (
+            InputArray,
+            {
+                "dtype": str,
+                "default": input_default(
+                    factory=np.zeros, args=(0,), kwargs={"dtype": np.dtype("|U6")}
+                ),
+                "help": "The names of the atoms, in the format [name1, name2, ... ].",
+            },
+        ),
+    }
 
     default_help = "Deals with a single replica of the system or classical simulations."
     default_label = "ATOMS"
