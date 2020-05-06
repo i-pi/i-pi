@@ -17,7 +17,7 @@ from ipi.engine.atoms import Atoms
 from ipi.engine.cell import Cell
 
 
-import ipi_tests.xyz_generator as xyz_gen
+import ipi_tests.common.xyz_generator as xyz_gen
 
 
 # default_cell_mat = mt.abc2h(-1.0, -1.0, -1.0, np.pi/2.0, np.pi/2.0, np.pi/2.0) # After changing the input standard

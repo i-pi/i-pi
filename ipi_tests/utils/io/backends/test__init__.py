@@ -7,7 +7,7 @@ from pytest_mock import mocker
 import numpy as np
 import numpy.testing as npt
 
-import ipi_tests.xyz_generator as xyz_gen
+import ipi_tests.common.xyz_generator as xyz_gen
 
 import ipi.utils.io as io
 import ipi.utils.mathtools as mt

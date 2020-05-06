@@ -22,7 +22,7 @@ def run_command(cmd):
     """Runs `cmd` in doc directory."""
     cwd = os.getcwd()
     f_null = open(os.devnull, "w")
-    os.chdir(os.path.join(os.path.split(__file__)[0], "..", "doc"))
+    os.chdir(os.path.join(os.path.split(__file__)[0], "../..", "doc"))
     ret = subprocess.call(shlex.split(cmd), stdout=f_null, stderr=f_null)
     f_null.close()
     os.chdir(cwd)

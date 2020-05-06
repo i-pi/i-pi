@@ -11,7 +11,7 @@ import pytest
 import numpy as np
 import numpy.testing as npt
 
-import ipi_tests.xyz_generator as xyz_gen
+import ipi_tests.common.xyz_generator as xyz_gen
 import ipi.utils.io.backends.io_xyz as io_xyz
 import ipi.utils.mathtools as mt
 

@@ -10,7 +10,7 @@ import numpy as np
 import numpy.testing as npt
 
 import ipi.engine.properties
-from ipi_tests import xyz_generator as xyz_gen
+from ipi_tests.common import xyz_generator as xyz_gen
 
 
 test_Trajectories_print_traj_prms = [
