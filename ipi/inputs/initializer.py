@@ -5,7 +5,7 @@
 # See the "licenses" directory for full license information.
 
 
-from copy import copy, deepcopy
+from copy import deepcopy
 
 import numpy as np
 

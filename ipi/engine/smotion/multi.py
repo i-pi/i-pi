@@ -6,9 +6,8 @@ will be executed serially at each step.
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
-from ipi.utils.depend import depend_value, dd
 from ipi.engine.smotion import Smotion, MetaDyn
-from ipi.utils.messages import verbosity, warning, info
+from ipi.utils.messages import verbosity, warning
 
 __all__ = ["MultiSmotion"]
 

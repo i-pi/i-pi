@@ -10,12 +10,7 @@ forcefields which govern the interaction potential.
 # See the "licenses" directory for full license information.
 
 
-import os.path
-import sys
-import time
 import threading
-
-import numpy as np
 
 from ipi.utils.depend import *
 from ipi.utils.units import *
@@ -23,7 +18,6 @@ from ipi.utils.prng import *
 from ipi.utils.io import *
 from ipi.utils.io.inputs.io_xml import *
 from ipi.utils.messages import verbosity, info
-from ipi.utils.softexit import softexit
 from ipi.engine.atoms import *
 from ipi.engine.cell import *
 from ipi.engine.forces import Forces

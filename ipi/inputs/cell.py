@@ -7,11 +7,8 @@
 
 from copy import copy
 
-import numpy as np
-
 from ipi.engine.cell import *
 from ipi.utils.inputvalue import *
-from ipi.utils.messages import verbosity, warning
 
 
 __all__ = ["InputCell"]

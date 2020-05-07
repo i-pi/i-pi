@@ -10,12 +10,11 @@ and the restart files.
 
 
 import os
-import time
 
 import numpy as np
 
 from ipi.utils.messages import verbosity, info, warning
-from ipi.utils.units import Constants, unit_to_internal, unit_to_user
+from ipi.utils.units import unit_to_user
 from ipi.utils.softexit import softexit
 from ipi.utils.depend import *
 import ipi.utils.io as io

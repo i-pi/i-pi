@@ -438,7 +438,7 @@ class TestInstance:
                 with open(ipi_output_path, "a") as ipi_out:
                     ipi_out.write(stderr)
                 raise IPIError("I-PI Error\n" + stderr)
-        except KeyboardInterrupt as e:
+        except KeyboardInterrupt:
             print("\nKeyboard interrupt!")
             traceback.print_exc(file=sys.stdout)
             if ipi_proc.poll() is None:
@@ -828,7 +828,7 @@ def check_presence_of_dependencies(xml_file, path):
     """
     commands, dependencies = parse_regtest_string(xml_file)
     are_present = True
-    abs_dependencies = [os.path.join(os.path.abspath(path), x) for x in dependencies]
+#    abs_dependencies = [os.path.join(os.path.abspath(path), x) for x in dependencies]
 
     for files in dependencies:
         file_path = os.path.join(path, files)

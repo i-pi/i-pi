@@ -14,9 +14,6 @@ import numpy as np
 
 import ipi.utils.mathtools as mt
 from ipi.utils.depend import dstrip
-from ipi.engine.atoms import Atoms
-from ipi.engine.cell import Cell
-from ipi.utils.units import Elements
 
 
 __all__ = ["print_json_path", "print_json", "read_json", "iter_json"]
@@ -84,7 +81,6 @@ def read_json(filedesc):
         raise EOFError("The file descriptor hit EOF.")
 
     line.strip("\n")
-    natoms = data["natoms"]
     qatoms = np.asarray(data["q"], dtype=float)
     names = np.asarray(data["labels"], dtype="|S4")
     title = data["title"]

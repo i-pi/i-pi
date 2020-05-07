@@ -10,9 +10,6 @@ appropriate conserved energy quantity for the ensemble of choice.
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
-
-import time
-
 import numpy as np
 
 from ipi.engine.motion import Motion

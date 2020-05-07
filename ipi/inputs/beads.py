@@ -8,7 +8,6 @@
 import numpy as np
 
 from ipi.engine.beads import *
-from ipi.engine.atoms import Atoms
 from ipi.utils.inputvalue import *
 from ipi.utils.depend import *
 from ipi.utils.units import *

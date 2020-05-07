@@ -7,15 +7,8 @@ Algorithms implemented by Robert Meissner and Riccardo Petraglia, 2016
 # i-PI Copyright (C) 2014-2016 i-PI developers
 # See the "licenses" directory for full license information.
 
-
-import numpy as np
-import time
-
 from ipi.engine.smotion import Smotion
-from ipi.engine.ensembles import ensemble_swap
 from ipi.utils.depend import *
-from ipi.utils.softexit import softexit
-from ipi.utils.messages import verbosity, info
 
 
 __all__ = ["MetaDyn"]
@@ -41,6 +34,9 @@ class MetaDyn(Smotion):
         """Updates metad bias."""
 
         for s in self.syslist:
+            # Karen 07.05.2020: the line below causes the complaint "variable not used",
+            # but I'm not sure that deleting it doesn't change the behavior, because
+            # calling forces might cause their recalculation.
             oldf = dstrip(s.forces.f).copy()
             for ik, bc in enumerate(s.ensemble.bcomp):
                 k = bc.ffield

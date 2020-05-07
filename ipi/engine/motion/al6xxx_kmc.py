@@ -11,17 +11,13 @@ appropriate conserved energy quantity for the ensemble of choice.
 # See the "licenses" directory for full license information.
 
 
-import time
 import pickle
 import threading
 import numpy as np
 
 from ipi.engine.motion import Motion, GeopMotion
-from ipi.utils.depend import dstrip, depend_value, dobject, dpipe, dd
-from ipi.engine.thermostats import Thermostat
+from ipi.utils.depend import dstrip, depend_value, dd
 from ipi.engine.cell import Cell
-from ipi.engine.normalmodes import NormalModes
-from ipi.engine.barostats import Barostat
 from ipi.utils.units import Constants
 import ipi.utils.io as io
 
@@ -664,7 +660,8 @@ class AlKMC(Motion):
         # we want continuity (modulo PBC jumps, that we'll take care of later...)
         for i in range(self.nsites):
             # in which site sits atom i?
-            isite = self.idx[i]
+            # isite = self.idx[i]       # flake8 complains 'unused variable'
+
             # which atom sits in this site in the unique-mapped structure?
             iuid = ruidx[self.idx[i]]
             newq[3 * i : 3 * i + 3] = iev[3][3 * iuid : 3 * (iuid + 1)]

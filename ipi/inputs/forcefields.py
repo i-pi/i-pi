@@ -5,7 +5,6 @@
 # See the "licenses" directory for full license information.
 
 
-from copy import copy
 import numpy as np
 
 from ipi.engine.forcefields import (

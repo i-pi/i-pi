@@ -6,10 +6,9 @@ Computes the autocorrelation function from i-pi outputs. Assumes the input files
 
 
 import argparse
-import sys
 import numpy as np
 from ipi.utils.io import read_file_raw
-from ipi.utils.units import unit_to_internal, unit_to_user
+from ipi.utils.units import unit_to_internal
 from ipi.utils.messages import verbosity
 
 verbosity.level = "low"

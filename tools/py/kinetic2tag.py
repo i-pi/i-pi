@@ -1,5 +1,13 @@
 #!/usr/bin/env python2
 
+import numpy as np
+import sys
+import argparse
+from ipi.utils.io import read_file
+from ipi.utils.depend import *
+from ipi.utils.units import *
+from ipi.utils.messages import verbosity
+
 description = """Computes the Transient Anisotropic Gaussian (TAG) approximation
 of the instantaneous kinetic energy tensor, with a moving average
 triangular window of the specified lag. Needs files with
@@ -9,16 +17,6 @@ energy tensor estimator.
 Assumes the input files are in xyz format and atomic units,
 with prefix.kin.xyz and prefix.kod.xyz naming scheme.
 """
-
-
-import numpy as np
-
-import sys
-import argparse
-from ipi.utils.io import read_file
-from ipi.utils.depend import *
-from ipi.utils.units import *
-from ipi.utils.messages import verbosity
 
 
 def main(prefix, lag):

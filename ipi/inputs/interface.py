@@ -5,16 +5,6 @@
 # See the "licenses" directory for full license information.
 
 
-import socket
-import select
-import threading
-import signal
-import string
-import os
-import time
-
-import numpy as np
-
 from ipi.utils.messages import verbosity, warning
 from ipi.utils.inputvalue import *
 from ipi.interfaces.sockets import *

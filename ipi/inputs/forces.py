@@ -5,8 +5,6 @@
 # See the "licenses" directory for full license information.
 
 
-from copy import copy
-
 from ipi.engine.forces import *
 from ipi.utils.inputvalue import *
 import numpy as np

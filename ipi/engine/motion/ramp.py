@@ -8,13 +8,7 @@ Algorithms implemented by Robert Meissner and Riccardo Petraglia, 2016
 # See the "licenses" directory for full license information.
 
 
-import numpy as np
-import time
-
 from ipi.engine.motion import Motion
-from ipi.utils.depend import *
-from ipi.utils.softexit import softexit
-from ipi.utils.messages import verbosity, info
 
 
 __all__ = ["TemperatureRamp", "PressureRamp"]

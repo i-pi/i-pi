@@ -12,7 +12,7 @@ from ipi.engine.atoms import Atoms
 from ipi.utils.nmtransform import nm_rescale
 from ipi.utils.units import unit_to_internal
 from ipi.utils.io import open_backup, iter_file_name_raw, print_file
-from ipi.utils.io.io_units import auto_units, process_units
+from ipi.utils.io.io_units import auto_units
 from ipi.utils.messages import verbosity
 
 
@@ -54,7 +54,7 @@ def contract_trajectory(fns_in, fn_out_template, n_new, cell_units_in, cell_unit
 
     # Open input trajectory iterators.
     trjs_in = [iter_file_name_raw(fn) for fn in fns_in]
-    mode = os.path.splitext(fn)[-1]
+#    mode = os.path.splitext(fn)[-1]
 
     # Open output files.
     fs_out = [open_backup(fn, "w") for fn in fns_out]

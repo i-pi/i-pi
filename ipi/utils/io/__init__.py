@@ -372,7 +372,7 @@ def iter_file_name_raw(filename):
         Raw  I/O iterator
     """
 
-    return iter_file_raw(os.path.splitext(filename)[1], open(filename))
+    return iter_file_raw(mode=os.path.splitext(filename)[1], filedesc=open(filename))
 
 
 def open_backup(filename, mode="r", buffering=-1):

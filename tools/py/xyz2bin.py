@@ -15,15 +15,12 @@ Syntax:
 
 import sys
 from ipi.utils.io import read_file, print_file
-from ipi.utils.depend import *
-from ipi.utils.units import *
 
 
 def main(filename):
 
     ipos = open(filename, "r")
 
-    natoms = 0
     ifr = 0
     while True:
         try:

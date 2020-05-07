@@ -4,8 +4,6 @@ import pytest
 import ipi_tests.common.xyz_generator as xyz_gen
 import ipi.utils.mathtools as mt
 import ipi.utils.io.io_units as testing
-from ipi.engine.atoms import Atoms
-from ipi.engine.cell import Cell
 
 from ipi.utils.units import Elements
 import numpy as np

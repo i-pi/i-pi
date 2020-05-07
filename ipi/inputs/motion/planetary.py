@@ -14,7 +14,6 @@ from ipi.utils.inputvalue import (
     InputArray,
     input_default,
 )
-from ipi.inputs.barostats import InputBaro
 from ipi.inputs.thermostats import InputThermo
 
 

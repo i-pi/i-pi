@@ -1,13 +1,14 @@
 #!/usr/bin/env python2
+
+import argparse
+import numpy as np
+
 description = """
 Computes the quantum momentum distribution of a particle given the end-to-end distances.
 It computes both the three components of the momentum distribution and the spherically-averaged
 distribution of the proton momentum. It also computes <p^2> in the various directions, and the
 total contribute.
 """
-
-import argparse
-import numpy as np
 
 
 def r2_K(d, r, is2half):

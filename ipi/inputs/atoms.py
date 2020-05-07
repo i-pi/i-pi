@@ -14,7 +14,6 @@ import numpy as np
 from ipi.engine.atoms import *
 from ipi.utils.inputvalue import *
 from ipi.utils.depend import *
-from ipi.utils.units import unit_to_internal
 
 
 __all__ = ["InputAtoms"]

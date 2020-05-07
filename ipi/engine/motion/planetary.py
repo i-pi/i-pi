@@ -4,19 +4,13 @@
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
-
 import time
-import copy
-import os
-import sys
 import numpy as np
 from ipi.utils import sparse
 
 from ipi.engine.motion import Motion, Dynamics
 from ipi.utils.depend import *
 from ipi.engine.thermostats import *
-from ipi.engine.normalmodes import NormalModes
-from ipi.engine.barostats import Barostat
 from ipi.utils.units import Constants
 from ipi.utils.io import netstring_encoded_savez
 from ipi.utils.messages import verbosity, info

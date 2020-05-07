@@ -1,12 +1,13 @@
 #!/usr/bin/env python2
 
-
-import os
 import sys
 import argparse
 import importlib
 
 import numpy as np
+from numpy import matmul
+from numpy.linalg import multi_dot
+
 from ipi.utils import sparse
 from ipi.utils.io import read_file
 from ipi.utils.prng import Random
@@ -14,11 +15,6 @@ from ipi.utils.messages import warning
 from ipi.utils.depend import *
 from ipi.utils.units import *
 from ipi.utils.io import netstring_encoded_loadz
-
-matmul = np.matmul
-multi_dot = np.linalg.multi_dot
-tanh = np.tanh
-coth = lambda x: 1.0 / tanh(x)
 
 # *******************************#
 
@@ -325,7 +321,7 @@ class Planets(object):
             0.5
             * self.beta
             * self.evals_sqrt[~self.mask]
-            * coth(0.5 * self.beta * self.evals_sqrt[~self.mask])
+            / np.tanh(0.5 * self.beta * self.evals_sqrt[~self.mask])    # <=> *coth()
             - 1.0
         ) / (self.beta * self.evals[~self.mask])
         self.a[self.mask, self.mask] = self.beta / 12.0

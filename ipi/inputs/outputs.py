@@ -7,11 +7,8 @@
 
 from copy import copy
 
-import numpy as np
-
 from ipi.utils.depend import *
 from ipi.utils.inputvalue import *
-from ipi.engine.properties import getkey
 import ipi.engine.outputs as eoutputs
 
 

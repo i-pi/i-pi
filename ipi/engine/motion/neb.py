@@ -77,7 +77,7 @@ class NEBLineMover(object):
         bf = dstrip(self.dforces.f).copy()
 
         # List of bead energies
-        be = dstrip(self.dforces.pots).copy()
+        # be = dstrip(self.dforces.pots).copy()
 
         # Number of images
         nimg = self.dbeads.nbeads

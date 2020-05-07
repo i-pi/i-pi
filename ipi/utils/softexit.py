@@ -5,7 +5,6 @@
 # See the "licenses" directory for full license information.
 
 
-import traceback
 import sys
 import os
 import time

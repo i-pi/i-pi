@@ -20,14 +20,10 @@ Syntax:
 
 
 import sys
-import os
 import argparse
 import numpy as np
-from ipi.engine.outputs import *
-from ipi.engine.properties import getkey
 from ipi.inputs.simulation import InputSimulation
 from ipi.utils.io.inputs import io_xml
-from ipi.utils.units import unit_to_internal, unit_to_user
 
 
 def input_facf(path2inputfile, mrows, stride):
@@ -78,14 +74,14 @@ def Cqp(omega0, idAqp, idDqp):
     dDqp[:, 0] /= omega0
     dDqp[:, 0] /= omega0
 
-    # solve "a' la MC thesis" using just numpy
-    a, O = np.linalg.eig(dAqp)
-    O1 = np.linalg.inv(O)
-    W = np.dot(np.dot(O1, dDqp), O1.T)
+    # solve "a la MC thesis" using just numpy
+    a, omat = np.linalg.eig(dAqp)
+    oinv = np.linalg.inv(omat)
+    W = np.dot(np.dot(oinv, dDqp), oinv.T)
     for i in range(len(W)):
         for j in range(len(W)):
             W[i, j] /= a[i] + a[j]
-    nC = np.real(np.dot(O, np.dot(W, O.T)))
+    nC = np.real(np.dot(omat, np.dot(W, omat.T)))
 
     nC[:, 0] /= omega0
     nC[0, :] /= omega0
@@ -117,12 +113,12 @@ def gleKernel(omega, Ap, Dp):
 
         dAqp2 = np.dot(dAqp, dAqp)
         # diagonalizes dAqp2 to accelerate the evaluation further down in the inner loop
-        w2, O = np.linalg.eig(dAqp2)
+        w2, omat = np.linalg.eig(dAqp2)
         w = np.sqrt(w2)
-        O1 = np.linalg.inv(O)
+        oinv = np.linalg.inv(omat)
 
-        ow1 = O[1, :] * w / omega_0
-        o1cqp1 = np.dot(O1, dCqp)[:, 1]
+        ow1 = omat[1, :] * w / omega_0
+        o1cqp1 = np.dot(oinv, dCqp)[:, 1]
         x = 0
         om2om0 = om2list / omega_0 ** 2
         # keeps working in scaled coordinates at this point
@@ -135,10 +131,8 @@ def gleKernel(omega, Ap, Dp):
 
 def ISRA(omega, ker, y, dparam, oprefix):
     """Given the thermostatted facf spectrum and the range of frequencies, constructs the vibration density of states"""
-    delta_omega = abs(omega[1] - omega[0])
     steps = dparam[0]
     stride = dparam[1]
-    ngrid = len(omega)
     f = y
     CT = ker.T
     CTC = np.dot(ker.T, ker)
@@ -253,7 +247,7 @@ def gleacf(
         output_facf((ix, np.dot(iy, ker.T)), oprefix, input_facf(path2ifacf, nrows, 1))
     elif action == "deconv":
         print("# deconvoluting the input spectrum.")
-        oy = ISRA(ix, ker, iy, dparam, oprefix)
+        ISRA(ix, ker, iy, dparam, oprefix)
 
 
 if __name__ == "__main__":

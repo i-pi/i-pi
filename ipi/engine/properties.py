@@ -7,16 +7,12 @@ prepares them for output.
 # See the "licenses" directory for full license information.
 
 
-import os
-import time
-
 import numpy as np
 
 from ipi.utils.messages import verbosity, info, warning
 from ipi.utils.depend import *
-from ipi.utils.units import Constants, unit_to_internal, unit_to_user
+from ipi.utils.units import Constants, unit_to_internal
 from ipi.utils.mathtools import logsumlog, h2abc_deg
-import ipi.utils.io as io
 from ipi.utils.io.inputs import io_xml
 from ipi.engine.atoms import *
 from ipi.engine.cell import *
@@ -1938,7 +1934,7 @@ class Properties(dobject):
 
         # strips dependency control since we are not gonna change the true beads in what follows
         q = dstrip(self.beads.q)
-        f = dstrip(self.forces.f)
+#        f = dstrip(self.forces.f)
         qc = dstrip(self.beads.qc)
 
         for i in range(self.beads.natoms):
@@ -2300,8 +2296,8 @@ class Properties(dobject):
         # strips dependency control since we are not gonna change the true beads in what follows
         q = dstrip(self.beads.q)
         f = dstrip(self.forces.f)
-        m3 = dstrip(self.beads.m3)
-        pots = self.forces.pots
+#        m3 = dstrip(self.beads.m3)         # flake8 complains 'unused variable'
+#        pots = self.forces.pots            # -//-
         betaP = 1.0 / (self.beads.nbeads * Constants.kb * self.ensemble.temp)
 
         for i in range(self.beads.natoms):
@@ -2508,7 +2504,7 @@ class Properties(dobject):
 
         f = dstrip(self.forces.f)
         m3 = dstrip(self.beads.m3)
-        pots = self.forces.pots
+#        pots = self.forces.pots    # flake8 complains "unused variable"
         betaP = 1.0 / (self.beads.nbeads * Constants.kb * self.ensemble.temp)
 
         ti = 0.0
@@ -2549,8 +2545,8 @@ class Properties(dobject):
 
         f = dstrip(self.forces.f)
         m3 = dstrip(self.beads.m3)
-        pots = self.forces.pots
-        betaP = 1.0 / (self.beads.nbeads * Constants.kb * self.ensemble.temp)
+#        pots = self.forces.pots                                                # flake8 complains "unused variable"
+#        betaP = 1.0 / (self.beads.nbeads * Constants.kb * self.ensemble.temp)  # -//-
 
         ti = 0.0
 

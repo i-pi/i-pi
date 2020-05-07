@@ -1,10 +1,15 @@
 #!/usr/bin/env python2
+
 import numpy as np
 import sys
-import os
-import math
 import argparse
 from ipi.utils.messages import verbosity, info
+
+from ipi.engine.simulation import Simulation
+from ipi.utils.units import unit_to_internal, Constants
+from ipi.utils.instools import red2comp
+from ipi.utils.hesstools import clean_hessian
+from ipi.engine.motion.instanton import SpringMapper
 
 """ Reads all the information needed from a i-pi RESTART file and compute the partition functions of the reactant, transition state (TS) or
 instanton according to J. Phys. Chem. Lett. 7, 437(2016) (Instanton Rate calculations) or J. Chem. Phys. 134, 054109 (2011) (Tunneling Splitting)
@@ -44,11 +49,6 @@ main directory must be added to the PYTHONPATH environment variable.
 #    sys.exit()
 # sys.path.insert(0, ipi_path)
 
-from ipi.engine.simulation import Simulation
-from ipi.utils.units import unit_to_internal, unit_to_user, Constants, Elements
-from ipi.utils.instools import red2comp
-from ipi.utils.hesstools import clean_hessian
-from ipi.engine.motion.instanton import SpringMapper
 
 # np.set_printoptions(precision=6, suppress=True, threshold=np.nan)
 
@@ -244,9 +244,6 @@ def get_rp_freq(w0, nbeads, temp, mode="rate"):
 print(
     ("\nWe are ready to start. Reading {} ... (This can take a while)".format(inputt))
 )
-
-from ipi.utils.io.inputs.io_xml import xml_parse_file
-import ipi.inputs.simulation as isimulation
 
 simulation = Simulation.load_from_xml(
     inputt, custom_verbosity="quiet", request_banner=False, read_only=True

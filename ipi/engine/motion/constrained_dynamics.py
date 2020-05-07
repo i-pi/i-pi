@@ -11,11 +11,9 @@ constant energy and constant temperature dynamics.
 # See the "licenses" directory for full license information.
 
 
-import time
-
 import numpy as np
 
-from ipi.engine.motion import Motion, Dynamics
+from ipi.engine.motion import Dynamics
 from ipi.engine.motion.dynamics import DummyIntegrator
 
 from ipi.utils.depend import *
@@ -262,7 +260,7 @@ class ConstraintSolver(ConstraintSolverBase):
         (sparsely).
         """
 
-        m3 = dstrip(self.beads.m3[0])
+#        m3 = dstrip(self.beads.m3[0])
         p = dstrip(self.beads.p[0]).copy()
         self.beads.p.hold()
 

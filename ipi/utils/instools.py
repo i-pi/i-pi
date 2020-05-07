@@ -3,9 +3,6 @@ import numpy as np
 from ipi.utils.messages import verbosity, info
 from ipi.utils import units
 import ipi.utils.mathtools as mt
-import os.path
-import glob
-import copy
 
 
 def banded_hessian(h, im, masses=True, shift=0.001):
@@ -99,11 +96,11 @@ def banded_hessian(h, im, masses=True, shift=0.001):
 def sym_band(A):
     """Return symmetric banded matrix from just upper banded."""
     u = len(A) - 1
-    l = u
+    lu = u
     M = A.shape[1]
-    newA = np.empty((u + l + 1, M))
+    newA = np.empty((u + lu + 1, M))
     newA[: u + 1] = A
-    for i in range(1, l + 1):
+    for i in range(1, lu + 1):
         newA[u + i, : M - i] = A[-1 - i, i:]
     return newA
 
@@ -125,12 +122,12 @@ def invmul_banded(A, B, posdef=False):
         return linalg.solveh_banded(A, B)
     else:
         u = len(A) - 1
-        l = u
+        lu = u
         newA = sym_band(A)
         # np.set_printoptions(precision=6, suppress=True, threshold=np.nan, linewidth=1000)
         # print linalg.eigvals_banded(A)
         # sys.exit(0)
-        return linalg.solve_banded((l, u), newA, B)
+        return linalg.solve_banded((lu, u), newA, B)
 
 
 def diag_banded(A, n=2):

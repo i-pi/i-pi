@@ -4,16 +4,13 @@
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
-import math
-
 import numpy as np
 
 from ipi.utils.depend import *
-from ipi.utils.messages import verbosity, warning
 
 try:
     import scipy.linalg as spla
-except:
+except ImportError:
     spla = None
 
 __all__ = [
@@ -430,7 +427,6 @@ class EckartConstraint(ConstraintBase):
         Calculates the Jacobian of the constraint.
         """
 
-        q = dstrip(self.qprev)
         r = np.zeros((self.ncons, self.n_unique, 3))
         m = dstrip(self.m3).reshape((-1, 3))
         mqref_rel = dstrip(self.mqref_rel)

@@ -24,7 +24,6 @@ Classes:
 import numpy as np
 import pickle
 
-import ipi.engine.initializer
 from ipi.engine.motion import *
 from ipi.utils.inputvalue import *
 from ipi.inputs.thermostats import *

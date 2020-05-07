@@ -20,14 +20,12 @@ along with this program. If not, see <http.//www.gnu.org/licenses/>.
 __all__ = ["DynMatrixMover"]
 
 import numpy as np
-import time
 
 
 from ipi.engine.motion import Motion
 from ipi.utils.depend import *
-from ipi.utils import units
 from ipi.utils.softexit import softexit
-from ipi.utils.messages import verbosity, warning, info
+from ipi.utils.messages import verbosity, info
 
 
 class DynMatrixMover(Motion):

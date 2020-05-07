@@ -10,7 +10,6 @@ calculation.
 # See the "licenses" directory for full license information.
 
 
-import sys
 import os
 import socket
 import select
@@ -19,7 +18,6 @@ import threading
 
 import numpy as np
 
-from ipi.utils.depend import dstrip
 from ipi.utils.messages import verbosity, warning, info
 from ipi.utils.softexit import softexit
 
@@ -132,13 +130,13 @@ class DriverSocket(socket.socket):
         """
         return self.sendall(Message(msg))
 
-    def recv_msg(self, l=HDRLEN):
+    def recv_msg(self, length=HDRLEN):
         """Get the next message send through the socket.
 
         Args:
            l: Length of the accepted message. Defaults to HDRLEN.
         """
-        return self.recv(l)
+        return self.recv(length)
 
     def recvall(self, dest):
         """Gets the potential energy, force and virial from the driver.

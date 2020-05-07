@@ -9,8 +9,6 @@ appropriate conserved energy quantity.
 # See the "licenses" directory for full license information.
 
 
-import time
-
 import numpy as np
 
 from ipi.engine.motion import Motion

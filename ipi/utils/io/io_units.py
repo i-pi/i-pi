@@ -7,7 +7,7 @@
 
 
 import re
-from ipi.utils.messages import verbosity, info, warning
+from ipi.utils.messages import verbosity, info
 from ipi.engine.atoms import Atoms
 from ipi.engine.cell import Cell
 from ipi.utils.units import unit_to_internal

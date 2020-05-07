@@ -15,20 +15,14 @@ G. Martyna, A. Hughes and M. Tuckerman, J. Chem. Phys., 110, 3275.
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
-
 import numpy as np
-import sys
 
 from ipi.utils.depend import *
 from ipi.utils.units import *
 from ipi.utils.mathtools import (
-    eigensystem_ut3x3,
     invert_ut3x3,
-    exp_ut3x3,
-    det_ut3x3,
     matrix_exp,
 )
-from ipi.inputs.thermostats import InputThermo
 from ipi.engine.thermostats import Thermostat
 from ipi.engine.cell import Cell
 
@@ -962,7 +956,6 @@ class BaroRGB(Barostat):
         dt = self.pdt[level]
         dt2 = dt ** 2
         dt3 = dt ** 3 / 3.0
-        m = dstrip(self.beads.m3)[0].reshape(self.beads.natoms, 3)
 
         hh0 = np.dot(self.cell.h, self.h0.ih)
         pi_ext = np.dot(hh0, np.dot(self.stressext, hh0.T)) * self.h0.V / self.cell.V
@@ -1205,7 +1198,6 @@ class BaroMTK(Barostat):
         dt = self.pdt[level]
         dt2 = dt ** 2
         dt3 = dt ** 3 / 3.0
-        m = dstrip(self.beads.m3)[0].reshape(self.beads.natoms, 3)
 
         pi_ext = (
             np.eye(3) * self.pext

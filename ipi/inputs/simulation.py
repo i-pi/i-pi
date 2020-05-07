@@ -5,12 +5,6 @@
 # See the "licenses" directory for full license information.
 
 
-import os.path
-import sys
-import time
-
-import numpy as np
-
 from ipi.utils.depend import *
 from ipi.utils.inputvalue import *
 from ipi.utils.units import *

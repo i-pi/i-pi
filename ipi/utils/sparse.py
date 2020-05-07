@@ -16,13 +16,13 @@ import numpy as np
 
 def load_npz(file, loader="numpy"):
     if loader == "numpy":
-        l = np.load(file)
+        data = np.load(file)
     else:
-        l = loader(file)
-    if l["kind"] == "csr":
-        return csr_matrix(a=l["a"], ia=l["ia"], ja=l["ja"], m=l["m"], n=l["n"])
+        data = loader(file)
+    if data["kind"] == "csr":
+        return csr_matrix(a=data["a"], ia=data["ia"], ja=data["ja"], m=data["m"], n=data["n"])
     else:
-        return csc_matrix(a=l["a"], ia=l["ia"], ja=l["ja"], m=l["m"], n=l["n"])
+        return csc_matrix(a=data["a"], ia=data["ia"], ja=data["ja"], m=data["m"], n=data["n"])
 
 
 ##########################################################################################

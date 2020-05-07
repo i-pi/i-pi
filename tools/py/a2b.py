@@ -16,9 +16,6 @@ Syntax:
 import sys
 import re
 from ipi.utils.io import read_file, print_file, read_file_raw
-from ipi.utils.depend import *
-from ipi.utils.units import *
-from ipi.utils.io.io_units import process_units
 from ipi.engine.properties import Trajectories as Traj
 from ipi.utils.messages import verbosity
 
@@ -80,7 +77,6 @@ def get_key_dim_units(comment, mode):
 def main(filename, imode, omode):
 
     ipos = open(filename, "r")
-    natoms = 0
     ifr = 0
 
     # extracts the dimension, its units and the cell_units from the first frame

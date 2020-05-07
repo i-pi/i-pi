@@ -21,7 +21,6 @@ Classes:
       writing the checkpoints.
 """
 
-import numpy as np
 from ipi.engine.motion import *
 from ipi.utils.inputvalue import *
 from ipi.utils.units import *

@@ -20,16 +20,9 @@ Syntax:
 
 
 import sys
-import os
-import argparse
 import numpy as np
-import matplotlib.pyplot as plt
-from ipi.utils.io import read_file
-from ipi.engine.outputs import *
-from ipi.engine.properties import getkey
 from ipi.inputs.simulation import InputSimulation
 from ipi.utils.io.inputs import io_xml
-from ipi.utils.units import unit_to_internal, unit_to_user
 
 
 def kernel(x, mean=0, sigma=1):

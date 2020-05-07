@@ -15,16 +15,13 @@ A full help message can be found by running 'python help.py -h' or
 
 import sys
 from optparse import OptionParser
+from ipi.engine.properties import Properties, Trajectories, help_latex
 
 src_dir = ".."
 
 sys.path.append(src_dir)
 
-from ipi.engine.properties import Properties, Trajectories, help_latex
-
-
 __all__ = ["help_list", "list_objects"]
-
 
 list_objects = {"property_list": Properties(), "trajectory_list": Trajectories()}
 

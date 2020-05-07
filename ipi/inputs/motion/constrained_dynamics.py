@@ -9,7 +9,6 @@ from copy import copy
 import ipi.engine.thermostats
 import ipi.engine.barostats
 from ipi.utils.constrtools import (
-    ConstraintBase,
     RigidBondConstraint,
     AngleConstraint,
     EckartConstraint,
