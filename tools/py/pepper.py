@@ -188,13 +188,13 @@ if __name__ == "__main__":
         while process.poll() is None:
             # We must strip, otherwise we get double newline
             line = process.stdout.readline().rstrip()
-            if re.match(r'\[Errno.*\]', line):
+            if re.match(r"\[Errno.*\]", line):
                 print(line)
             else:
                 if verbosity == "high":
                     print(line)
                 elif verbosity == "medium":
-                    if re.match(r'\[file:.*\]', line):
+                    if re.match(r"\[file:.*\]", line):
                         # new file is processed. If something left unfixed, print message now
                         if issue_line_buffer != "":
                             print(issue_line_buffer)

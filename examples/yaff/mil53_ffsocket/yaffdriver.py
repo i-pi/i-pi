@@ -5,6 +5,7 @@ import numpy as np
 from datetime import datetime
 
 from ipi.interfaces.sockets import Message
+
 # from yaff import ForceField
 from yaff.log import log, timer
 

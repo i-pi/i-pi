@@ -266,8 +266,8 @@ def extractUnits(filedescU):
     timeUnit, potentialEnergyUnit = None, None
     time_index = 0
 
-    potential_re = re.compile(r'potential\{[a-z]*\}')
-    time_re = re.compile(r'time\{[a-z]*\}')
+    potential_re = re.compile(r"potential\{[a-z]*\}")
+    time_re = re.compile(r"time\{[a-z]*\}")
 
     line_index = 0
     for line in text:

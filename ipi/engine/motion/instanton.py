@@ -829,7 +829,9 @@ class DummyOptimizer(dobject):
         if self.exit:
             softexit.trigger("Geometry optimization converged. Exiting simulation")
 
-        func = lambda x: 2 * np.sum(x) - x[0] - x[-1] - 2 * self.im.dbeads.nbeads
+        def func(x):
+            return 2 * np.sum(x) - x[0] - x[-1] - 2 * self.im.dbeads.nbeads
+
         if not self.init:
             self.initialize(step)
             # print('old_coef',func(self.im.coef))
@@ -846,9 +848,11 @@ class DummyOptimizer(dobject):
                 options={"gtol": 1e-8, "disp": False},
             )
 
-            func = lambda x: 2 * np.sum(x) - x[0] - x[-1]
+            # func = lambda x: 2 * np.sum(x) - x[0] - x[-1]
+            def func2(x):
+                return 2 * np.sum(x) - x[0] - x[-1]
             coef = np.absolute(new_coef.x)
-            s = func(coef)
+            s = func2(coef)
             coef *= 2 * self.im.dbeads.nbeads / s
             self.im.set_coef(coef)
             self.gm.set_coef(coef)
@@ -865,7 +869,10 @@ class DummyOptimizer(dobject):
         pass
 
     def opt_coef(self, coef):
-        func = lambda x: 2 * np.sum(x) - x[0] - x[-1]
+        # func = lambda x: 2 * np.sum(x) - x[0] - x[-1]
+        def func(x):
+            return 2 * np.sum(x) - x[0] - x[-1]
+
         coef = np.absolute(coef)
         s = func(coef)
         coef *= 2 * self.im.dbeads.nbeads / s
