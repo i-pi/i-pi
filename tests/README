@@ -1,6 +1,0 @@
- -- tests directory --
-
- * This tests other integration tests not directly related to the ipi module,
-   e.g. building the manual
-
- * To run the tests, type "pytest" in the root folder of this repository.
