@@ -16,7 +16,7 @@ import threading
 import time
 from copy import deepcopy
 
-from ipi.utils.depend import depend_value, dobject, dd
+from ipi.utils.depend import depend_value, dobject, dd, dpipe
 from ipi.utils.io.inputs.io_xml import xml_parse_file
 from ipi.utils.messages import verbosity, info, warning, banner
 from ipi.utils.softexit import softexit
@@ -187,17 +187,18 @@ class Simulation(dobject):
             raise ValueError("Output filenames are not unique. Modify filename attributes.")
 
         self.outputs = []
-        for o in self.outtemplate:
-            o = deepcopy(o)  # avoids overwriting the actual filename
+        for o in self.outtemplate:            
+            dco = deepcopy(o)  # avoids overwriting the actual filename
             if self.outtemplate.prefix != "":
-                o.filename = self.outtemplate.prefix + "." + o.filename
-            if type(o) is eoutputs.CheckpointOutput:    # checkpoints are output per simulation
-                o.bind(self)
-                self.outputs.append(o)
+                dco.filename = self.outtemplate.prefix + "." + o.filename
+            if type(dco) is eoutputs.CheckpointOutput:    # checkpoints are output per simulation
+                dco.bind(self)
+                dpipe(dd(dco).step, dd(o).step) # makes sure that the checkpoint step is updated also in the template
+                self.outputs.append(dco)
             else:   # properties and trajectories are output per system
                 isys = 0
                 for s in self.syslist:   # create multiple copies
-                    no = deepcopy(o)
+                    no = deepcopy(dco)
                     if s.prefix != "":
                         no.filename = s.prefix + "_" + no.filename
                     no.bind(s, mode)
@@ -238,9 +239,6 @@ class Simulation(dobject):
         # registers the softexit routine
         softexit.register_function(self.softexit)
         softexit.start(self.ttime)
-
-#        for k, f in self.fflist.iteritems():
-#            f.run()
 
         # prints inital configuration -- only if we are not restarting
         if self.step == 0:
