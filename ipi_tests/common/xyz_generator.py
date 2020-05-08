@@ -6,6 +6,7 @@ import tempfile as tmp
 import numpy as np
 from ipi.utils.units import Elements
 from copy import copy
+
 all_elem = list(Elements.mass_list.keys())
 at_names = None
 
@@ -16,20 +17,23 @@ def xyz_rand(natoms, comment, names=None):
 
     global at_names
     xyz = np.random.random((natoms, 3))
-    xyz = (xyz * 10 - 5)  # To have both, positive and negative numbers
+    xyz = xyz * 10 - 5  # To have both, positive and negative numbers
     if not names:
         # if True:
-        at_names = [all_elem[i] for i in
-                    np.random.randint(0, len(all_elem), natoms)]
+        at_names = [all_elem[i] for i in np.random.randint(0, len(all_elem), natoms)]
 
-    output = str(natoms) + '\n'
+    output = str(natoms) + "\n"
 
-    if not comment.endswith('\n'):
-        comment += '\n'
+    if not comment.endswith("\n"):
+        comment += "\n"
     output += comment
     for i in range(natoms):
-        output += '%8s %12.5e %12.5e %12.5e\n' % \
-            (at_names[i], xyz[i, 0], xyz[i, 1], xyz[i, 2])
+        output += "%8s %12.5e %12.5e %12.5e\n" % (
+            at_names[i],
+            xyz[i, 0],
+            xyz[i, 1],
+            xyz[i, 2],
+        )
     return (output, xyz.flatten(), copy(at_names))
 
 
@@ -50,11 +54,12 @@ def xyz_traj_filedesc(natoms, nframe, comment):
     """ Generate a file descriptor containing a fake xyz trajectory.
     """
     contents, xyz, all_names = xyz_traj(natoms, nframe, comment)
-    filedesc = tmp.NamedTemporaryFile(mode='w')
+    filedesc = tmp.NamedTemporaryFile(mode="w")
     filedesc.write(contents)
     filedesc.seek(0)
     # This works only on unix!
     return (open(filedesc.name), xyz, all_names)
+
 
 # if __name__ == '__main__':
 

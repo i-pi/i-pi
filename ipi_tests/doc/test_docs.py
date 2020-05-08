@@ -12,7 +12,7 @@ from distutils.spawn import find_executable
 import pytest
 
 
-if find_executable('pdflatex') is None or find_executable('bibtex') is None:
+if find_executable("pdflatex") is None or find_executable("bibtex") is None:
     has_latex = False
 else:
     has_latex = True
@@ -21,8 +21,8 @@ else:
 def run_command(cmd):
     """Runs `cmd` in doc directory."""
     cwd = os.getcwd()
-    f_null = open(os.devnull, 'w')
-    os.chdir(os.path.join(os.path.split(__file__)[0], "..", "doc"))
+    f_null = open(os.devnull, "w")
+    os.chdir(os.path.join(os.path.split(__file__)[0], "../..", "doc"))
     ret = subprocess.call(shlex.split(cmd), stdout=f_null, stderr=f_null)
     f_null.close()
     os.chdir(cwd)
@@ -42,14 +42,14 @@ def clean():
     run_command("make clean")
 
 
-@pytest.mark.skipif(not has_latex, reason='LaTeX not installed.')
+@pytest.mark.skipif(not has_latex, reason="LaTeX not installed.")
 def test_make_aux(distclean):
     """doc: run make aux"""
     ret = run_command("make aux")
     assert ret == 0
 
 
-@pytest.mark.skipif(not has_latex, reason='LaTeX not installed.')
+@pytest.mark.skipif(not has_latex, reason="LaTeX not installed.")
 def test_make(clean):
     """doc: run make"""
     ret = run_command("make")
