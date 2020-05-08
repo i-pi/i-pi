@@ -27,6 +27,8 @@ For a more detailed discussion, see the reference manual.
 import weakref
 import threading
 
+from copy import deepcopy
+
 import numpy as np
 
 from ipi.utils.messages import verbosity, warning
@@ -158,6 +160,18 @@ class depend_base(object):
                 self.taint(taintme=False)
             else:
                 self.taint(taintme=tainted)
+
+    def __deepcopy__(self, memo):
+        """ Overrides deepcopy behavior, to avoid copying the (uncopiable) RLOCK """
+        
+        newone = type(self)(None)
+        
+        for member in newone.__dict__:            
+            if member == "_threadlock": 
+                continue
+            setattr(newone, member, deepcopy(getattr(self, member),memo) )
+            
+        return newone
 
     def hold(self):
         """ Sets depend object as on hold. """
@@ -772,6 +786,19 @@ class dobject(object):
             if issubclass(obj.__class__, depend_base):
                 return obj.__set__(self, value)
         return super(dobject, self).__setattr__(name, value)
+        
+    def __deepcopy__(self, memo):
+        """ Overrides deepcopy behavior, so that _direct is not actually copied 
+        but linked to a ddirect object """
+        
+        newone = type(self)()
+        
+        for member in newone._direct.__dict__:            
+            if member == "_direct": # do not overwrite direct accessor
+                continue
+            setattr(newone._direct, member, deepcopy(getattr(self._direct, member),memo) )
+        return newone
+
 
 
 def dd(dobj):
