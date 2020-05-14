@@ -240,31 +240,31 @@ class SCPhononator(DummyPhononator):
         # prints the force constant matrix.
         outfile = self.dm.output_maker.get_output(self.dm.prefix + ".K." + str(self.dm.isc))
         np.savetxt(outfile,  self.dm.K)
-        outfile.close()
+        outfile.close_stream()
         info(" @SCP: Saving the force constant matrix.", verbosity.medium)
 
         # prints the inverse displacement correlation matrix.
         outfile = self.dm.output_maker.get_output(self.dm.prefix + ".iD." + str(self.dm.isc))
         np.savetxt(outfile,  self.dm.iD)
-        outfile.close()
+        outfile.close_stream()
         info(" @SCP: Saving the inverse displacement correlation matrix.", verbosity.medium)
 
         # prints the mean position.
         outfile = self.dm.output_maker.get_output(self.dm.prefix + ".q." + str(self.dm.isc))
         np.savetxt(outfile,  self.dm.beads.q)
-        outfile.close()
+        outfile.close_stream()
         info(" @SCP: Saving the mean position.", verbosity.medium)
 
         # prints the frequencies. 
         outfile = self.dm.output_maker.get_output(self.dm.prefix + ".w." + str(self.dm.isc))
         np.savetxt(outfile,  self.dm.w)
-        outfile.close()
+        outfile.close_stream()
         info(" @SCP: Saving the frequencies.", verbosity.medium)
 
         # prints the potential energy at the mean position. 
         outfile = self.dm.output_maker.get_output(self.dm.prefix + ".V0." + str(self.dm.isc))
         np.savetxt(outfile,  self.dm.forces.pots)
-        outfile.close()
+        outfile.close_stream()
         info(" @SCP: Saving the minimum potential.", verbosity.medium)
 
 
@@ -332,21 +332,21 @@ class SCPhononator(DummyPhononator):
         outfile = self.dm.output_maker.get_output(self.dm.prefix + ".x." +
                    str(self.dm.isc))
         np.savetxt(outfile,  self.x[self.dm.isc])
-        outfile.close()
+        outfile.close_stream()
         info(" @SCP: Saving the sampled configurations.", verbosity.medium)
 
         # prints the potential energy of the sampled configurations.
         outfile = self.dm.output_maker.get_output(self.dm.prefix + ".v." +
                    str(self.dm.isc))
         np.savetxt(outfile,  self.v[self.dm.isc])
-        outfile.close()
+        outfile.close_stream()
         info(" @SCP: Saving the potential energy of the sampled configurations.", verbosity.medium)
 
         # prints the sampled configurations.
         outfile = self.dm.output_maker.get_output(self.dm.prefix + ".f." +
                    str(self.dm.isc))
         np.savetxt(outfile,  self.f[self.dm.isc])
-        outfile.close()
+        outfile.close_stream()
         info(" @SCP: Saving the forces of the sampled configurations.", verbosity.medium)
 
         self.dm.isc += 1
