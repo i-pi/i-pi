@@ -1,0 +1,34 @@
+<simulation mode='static' verbosity='medium' threading='false'>
+  <output prefix='simulation'>
+  </output>
+  <total_steps>50000000</total_steps>
+  <prng>
+    <seed> 19388 </seed>
+  </prng>
+  <ffsocket name='lmp' mode='unix' pbc='false'>
+    <address> driver </address>
+  </ffsocket>
+  <system>
+  <initialize nbeads='1'>
+    <file mode='xyz' > init.xyz </file>
+    <cell mode='abc'> [35.233, 35.233,35.233]   </cell>
+  </initialize>
+  <forces>
+  <force forcefield='lmp'> </force>
+  </forces>
+  <motion mode='scp'>
+    <scp mode='qn'>
+      <dynmat mode='file'> dynmat.data  </dynmat>
+      <asr> poly </asr>
+      <max_steps> 50 </max_steps>
+      <max_iter> 10 </max_iter>
+      <tau> 10 </tau>
+      <random_type> sobol </random_type>
+      <displace_mode> rnmik </displace_mode>
+    </scp>
+  </motion>
+  <ensemble>
+  <temperature units='kelvin'> 100 </temperature>
+  </ensemble>
+   </system>
+</simulation>
