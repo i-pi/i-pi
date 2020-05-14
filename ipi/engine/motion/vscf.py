@@ -803,7 +803,7 @@ class VSCF(IMF):
 
                     # Save coupling correction to file for vistualisation.
                     info(" @NM: Saving the interpolated potential energy to %s" % (self.v_coupled_grid_filename,), verbosity.medium)
-                    outfile = self.imm.output_maker.get_output(self.v_coupled_grid_filename)
+                    outfile = self.imm.output_maker.get_output(self.v_coupled_grid_filename, mode="wb")
                     np.save(outfile, vijgrid)
                     outfile.close_stream()
 
@@ -813,7 +813,7 @@ class VSCF(IMF):
                     
                     # Save coupling correction to file for vistualisation.
                     info(" @NM: Saving the interpolated potential energy to %s" % (tmpfile,), verbosity.medium)
-                    outfile = self.imm.output_maker.get_output(tmpfile)
+                    outfile = self.imm.output_maker.get_output(tmpfile, mode="wb")
                     np.save(outfile, vijgrid.T)
                     outfile.close_stream()
                 
@@ -848,7 +848,7 @@ class VSCF(IMF):
               vc[jnm] = np.load(self.imm.output_maker.prefix + '.' + fn).T
 
             info(' @NM: Saving the interpolated potentials for normal mode no. %8d in %s' % (inm, ofn), verbosity.medium)
-            outfile = self.imm.output_maker.get_output(ofn)
+            outfile = self.imm.output_maker.get_output(ofn, mode="wb")
             np.save(outfile, vc)
             outfile.close_stream()
 
@@ -919,7 +919,7 @@ class VSCF(IMF):
                 np.savetxt(outfile, self.evals_vscf)
                 outfile.close_stream()
                 info(' @NM: Saving the energy eigenvectors in %s in binary format.\n' % (self.eigenvector_filename), verbosity.low)
-                outfile = self.imm.output_maker.get_output(self.eigenvector_filename)
+                outfile = self.imm.output_maker.get_output(self.eigenvector_filename, "wb")
                 np.save(outfile, self.evecs_vscf)
                 outfile.close_stream()
                 self.terminate()
