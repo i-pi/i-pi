@@ -31,9 +31,10 @@ from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, warning, info
 from ipi.utils.mathtools import gaussian_inv
 try:
-    from ipi.utils.sobol.sobol import i4_sobol as sobol
-except ImportError as sobol_expection:
+    from pyscenarios.sobol import sobol
+except ImportError as e:
     sobol = None
+    sobol_exception = e
 
 
 class SCPhononsMover(Motion):
@@ -74,7 +75,7 @@ class SCPhononsMover(Motion):
         self.batch_weight_exponent = batch_weight_exponent
 
         if self.random_type == "sobol" and sobol == None:
-            raise (sobol_expection)
+            raise (sobol_exception)
 
         if self.prefix == "":
             self.prefix = "scphonons"
@@ -276,8 +277,8 @@ class SCPhononator(DummyPhononator):
             # Creates a list of configurations that are to be sampled.
             while self.dm.imc <= self.dm.max_steps:
 
-                irng = (self.dm.isc) * self.dm.max_steps / \
-                    2 + (self.dm.imc + 1) / 2
+                irng = (self.dm.isc) * self.dm.max_steps // \
+                    2 + (self.dm.imc + 1) // 2
                 x = self.dm.fginv(self.dm.random_sequence[irng])
 
                 # picks the elements of the vector in a random order.
