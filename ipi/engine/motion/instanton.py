@@ -357,9 +357,10 @@ class GradientMapper(object):
             if self.dbeads.nbeads -1 not in  indexes:
                 indexes.append(self.dbeads.nbeads -1)
             info('The reduced RP for this step has {} beads.'.format(len(indexes)),verbosity.low)
+            spline=True 
         else:
             indexes=np.arange(self.dbeads.nbeads)      
-        
+            spline=False 
 
         # Create reduced bead and force objet and evaluate forces 
         reduced_b = Beads(self.dbeads.natoms, len(indexes))
@@ -375,7 +376,7 @@ class GradientMapper(object):
         rforces = reduced_forces.f    # reduced gradient
         
         # Interpolate 
-        if len(indexes)>1:
+        if spline:
            red_mspath    = full_mspath[indexes]
            spline        = interp1d(red_mspath   ,rpots.T,kind='cubic')
            full_pot      = spline(full_mspath).T 
