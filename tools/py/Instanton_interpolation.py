@@ -99,7 +99,7 @@ if input_geo != "None" or chk != "None":
         if os.path.exists(input_geo):
             ipos = open(input_geo, "r")
         else:
-            print(("We can't find".format(input_geo)))
+            print("We can't find".format(input_geo))
             sys.exit()
 
         pos = list()
@@ -126,7 +126,7 @@ if input_geo != "None" or chk != "None":
                 chk, custom_verbosity="low", request_banner=False
             )
         else:
-            print(("We can't find".format(chk)))
+            print("We can't find".format(chk))
             sys.exit()
         cell = simulation.syslist[0].cell
         beads = simulation.syslist[0].motion.beads.copy()
@@ -194,7 +194,7 @@ if input_hess != "None" or chk != "None":
         try:
             hess = open(input_hess, "r")
         except NameError:
-            print(("We can't find".format(input_hess)))
+            print("We can't find".format(input_hess))
             sys.exit()
         h = np.zeros((natoms * 3) ** 2 * nbeads)
         aux = hess.readline().split()

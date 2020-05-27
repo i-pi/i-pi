@@ -552,9 +552,9 @@ elif case == "instanton":
         # cm2au= (2 * np.pi * 3e10 * 2.4188843e-17)
 
         print("\n\nWe are done")
-        print(("Nbeads {}, betaP {} a.u.,hbar {} a.u".format((nbeads, betaP, hbar))))
+        print("Nbeads {}, betaP {} a.u.,hbar {} a.u".format((nbeads, betaP, hbar)))
         print("")
-        print(("V0  {} eV ( {} Kcal/mol) ".format((V0 / eV2au, V0 / cal2au / 1000))))
+        print("V0  {} eV ( {} Kcal/mol) ".format((V0 / eV2au, V0 / cal2au / 1000)))
         print(
             (
                 "S1/hbar {} ,S2/hbar {} ,S/hbar {}".format(
@@ -578,13 +578,7 @@ elif case == "instanton":
             )
         else:
             print(("phi {} a.u.   Teta {} a.u. ".format(phi, tetaphi / phi)))
-            print(
-                (
-                    "Tunnelling splitting matrix element (h)  {} a.u ({} cm^-1)".format(
-                        (h, h / cm2au)
-                    )
-                )
-            )
+            print("Tunnelling splitting matrix element (h)  {} a.u ({} cm^-1)".format(h, h / cm2au))
     else:
         print("We can not recongnize the mode.")
         sys.exit()
