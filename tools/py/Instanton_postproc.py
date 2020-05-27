@@ -1,4 +1,3 @@
-
 import numpy as np
 import sys
 import argparse
@@ -554,9 +553,17 @@ elif case == "instanton":
         print("Nbeads {}, betaP {} a.u.,hbar {} a.u".format(nbeads, betaP, hbar))
         print("")
         print("V0  {} eV ( {} Kcal/mol) ".format(V0 / eV2au, V0 / cal2au / 1000))
-        print("S1/hbar {} ,S2/hbar {} ,S/hbar {}".format(action1 / hbar, action2 / hbar, action / hbar))
+        print(
+            "S1/hbar {} ,S2/hbar {} ,S/hbar {}".format(
+                action1 / hbar, action2 / hbar, action / hbar
+            )
+        )
         print("BN {} a.u.".format(BN))
-        print("BN/(hbar^2 * betaN)  {}  (should be same as S/hbar) ".format((BN / ((hbar ** 2) * betaP))))
+        print(
+            "BN/(hbar^2 * betaN)  {}  (should be same as S/hbar) ".format(
+                (BN / ((hbar ** 2) * betaP))
+            )
+        )
         print("")
         if quiet:
             print("phi is not computed because you specified the quiet option")
@@ -565,7 +572,11 @@ elif case == "instanton":
             )
         else:
             print(("phi {} a.u.   Teta {} a.u. ".format(phi, tetaphi / phi)))
-            print("Tunnelling splitting matrix element (h)  {} a.u ({} cm^-1)".format(h, h / cm2au))
+            print(
+                "Tunnelling splitting matrix element (h)  {} a.u ({} cm^-1)".format(
+                    h, h / cm2au
+                )
+            )
     else:
         print("We can not recongnize the mode.")
         sys.exit()

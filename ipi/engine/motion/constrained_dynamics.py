@@ -260,7 +260,7 @@ class ConstraintSolver(ConstraintSolverBase):
         (sparsely).
         """
 
-#        m3 = dstrip(self.beads.m3[0])
+        #        m3 = dstrip(self.beads.m3[0])
         p = dstrip(self.beads.p[0]).copy()
         self.beads.p.hold()
 

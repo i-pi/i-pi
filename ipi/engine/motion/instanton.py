@@ -851,6 +851,7 @@ class DummyOptimizer(dobject):
             # func = lambda x: 2 * np.sum(x) - x[0] - x[-1]
             def func2(x):
                 return 2 * np.sum(x) - x[0] - x[-1]
+
             coef = np.absolute(new_coef.x)
             s = func2(coef)
             coef *= 2 * self.im.dbeads.nbeads / s

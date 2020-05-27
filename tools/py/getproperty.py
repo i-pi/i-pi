@@ -24,7 +24,7 @@ def main(inputfile, propertyname="potential", skip="0"):
     ifile = open(inputfile, "r")
 
     reprop = re.compile(" ([0-9]*) *--> " + propertyname)
-#    reunit = re.compile("{(.*)}")
+    #    reunit = re.compile("{(.*)}")
 
     # now reads the file one frame at a time, and outputs only the required column(s)
     icol = -1

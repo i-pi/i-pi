@@ -321,7 +321,7 @@ class Planets(object):
             0.5
             * self.beta
             * self.evals_sqrt[~self.mask]
-            / np.tanh(0.5 * self.beta * self.evals_sqrt[~self.mask])    # <=> *coth()
+            / np.tanh(0.5 * self.beta * self.evals_sqrt[~self.mask])  # <=> *coth()
             - 1.0
         ) / (self.beta * self.evals[~self.mask])
         self.a[self.mask, self.mask] = self.beta / 12.0

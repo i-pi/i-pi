@@ -20,9 +20,13 @@ def load_npz(file, loader="numpy"):
     else:
         data = loader(file)
     if data["kind"] == "csr":
-        return csr_matrix(a=data["a"], ia=data["ia"], ja=data["ja"], m=data["m"], n=data["n"])
+        return csr_matrix(
+            a=data["a"], ia=data["ia"], ja=data["ja"], m=data["m"], n=data["n"]
+        )
     else:
-        return csc_matrix(a=data["a"], ia=data["ia"], ja=data["ja"], m=data["m"], n=data["n"])
+        return csc_matrix(
+            a=data["a"], ia=data["ia"], ja=data["ja"], m=data["m"], n=data["n"]
+        )
 
 
 ##########################################################################################

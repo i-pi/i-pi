@@ -54,7 +54,7 @@ def contract_trajectory(fns_in, fn_out_template, n_new, cell_units_in, cell_unit
 
     # Open input trajectory iterators.
     trjs_in = [iter_file_name_raw(fn) for fn in fns_in]
-#    mode = os.path.splitext(fn)[-1]
+    #    mode = os.path.splitext(fn)[-1]
 
     # Open output files.
     fs_out = [open_backup(fn, "w") for fn in fns_out]

@@ -250,7 +250,9 @@ class InputMotionBase(Input):
             raise ValueError("Cannot store Mover calculator of type " + str(type(sc)))
 
         if (sc.fixcom is True) and (len(sc.fixatoms) > 0):
-            softexit.trigger("Fixed atoms break translational invariance, and so should be used with <fixcom> False </fixcom>. You can disable this error if you know what you are doing.")
+            softexit.trigger(
+                "Fixed atoms break translational invariance, and so should be used with <fixcom> False </fixcom>. You can disable this error if you know what you are doing."
+            )
 
         if tsc == 0:
             self.file.store(sc.intraj)
