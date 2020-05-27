@@ -14,8 +14,34 @@ It's easy to get going!
 Installation
 ============
 
+Development version (recommended)
+----------------------------
 
-Stable release (recommended)
+(1) Clone the repository
+
+.. code-block:: console
+
+	$ git clone https://github.com/stefanch/sGDML.git
+	$ cd sGDML
+
+...or update your existing local copy with
+
+.. code-block:: console
+
+	$ git pull origin master
+
+
+(2) Install
+
+.. code-block:: console
+
+	$ pip install -e .
+
+
+Using the flag ``--user``, we can tell ``pip`` to install the package to the current users's home directory, instead of system-wide. This option might require you to update your system's ``PATH`` variable accordingly.
+
+
+Stable release
 ----------------------------
 
 Most systems come with the default package manager for Python ``pip`` already preinstalled. Installing ``sgdml`` is as simple as calling:
