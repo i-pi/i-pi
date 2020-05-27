@@ -75,7 +75,7 @@ class SCPhononsMover(Motion):
         self.batch_weight_exponent = batch_weight_exponent
 
         if self.random_type == "sobol" and sobol == None:
-            raise (sobol_exception)
+            raise ImportError("Import of pyscenarios.sobol ended with: \n" + str(sobol_exception) + "\nIf you would like to use sobol sequences, please install pyscenarios using pip install pyscenarios, otherwise use pseudo random numbers.")
 
         if self.prefix == "":
             self.prefix = "scphonons"
