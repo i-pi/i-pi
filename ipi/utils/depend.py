@@ -181,14 +181,14 @@ class depend_base(object):
 
     def __deepcopy__(self, memo):
         """ Overrides deepcopy behavior, to avoid copying the (uncopiable) RLOCK """
-        
+
         newone = type(self)(None)
-        
-        for member in newone.__dict__:            
-            if member == "_threadlock": 
+
+        for member in newone.__dict__:
+            if member == "_threadlock":
                 continue
-            setattr(newone, member, deepcopy(getattr(self, member),memo) )
-            
+            setattr(newone, member, deepcopy(getattr(self, member), memo))
+
         return newone
 
     def hold(self):
@@ -879,19 +879,20 @@ class dobject(object):
             if issubclass(obj.__class__, depend_base):
                 return obj.__set__(self, value)
         return super(dobject, self).__setattr__(name, value)
-        
-    def __deepcopy__(self, memo):
-        """ Overrides deepcopy behavior, so that _direct is not actually copied 
-        but linked to a ddirect object """
-        
-        newone = type(self)()
-        
-        for member in newone._direct.__dict__:            
-            if member == "_direct": # do not overwrite direct accessor
-                continue
-            setattr(newone._direct, member, deepcopy(getattr(self._direct, member),memo) )
-        return newone
 
+    def __deepcopy__(self, memo):
+        """ Overrides deepcopy behavior, so that _direct is not actually copied
+        but linked to a ddirect object """
+
+        newone = type(self)()
+
+        for member in newone._direct.__dict__:
+            if member == "_direct":  # do not overwrite direct accessor
+                continue
+            setattr(
+                newone._direct, member, deepcopy(getattr(self._direct, member), memo)
+            )
+        return newone
 
 
 def dd(dobj):
