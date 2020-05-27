@@ -5,7 +5,7 @@ import time
 import os
 import shutil
 import tempfile
-from ipi_tests.reg_test.runstools import Runner, get_info_test
+from ipi_tests.regression.runstools import Runner, get_info_test
 
 """ Run regression test """
 
