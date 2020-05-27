@@ -166,7 +166,6 @@ class IMF(DummyCalculator):
         # Sets 
         self.imm.w2[np.abs(self.imm.w2) < 1e-15] = 0.0
         self.imm.nz = sum(np.abs(self.imm.w2) < 1e-15)
-        print(self.imm.w2, self.imm.nz)
 
         # Calculates the normal mode frequencies.
         # TODO : Should also handle soft modes.
