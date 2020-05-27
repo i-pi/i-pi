@@ -551,24 +551,12 @@ elif case == "instanton":
         # cm2au= (2 * np.pi * 3e10 * 2.4188843e-17)
 
         print("\n\nWe are done")
-        print("Nbeads {}, betaP {} a.u.,hbar {} a.u".format((nbeads, betaP, hbar)))
+        print("Nbeads {}, betaP {} a.u.,hbar {} a.u".format(nbeads, betaP, hbar))
         print("")
-        print("V0  {} eV ( {} Kcal/mol) ".format((V0 / eV2au, V0 / cal2au / 1000)))
-        print(
-            (
-                "S1/hbar {} ,S2/hbar {} ,S/hbar {}".format(
-                    action1 / hbar, action2 / hbar, action / hbar
-                )
-            )
-        )
-        print(("BN {} a.u.".format(BN)))
-        print(
-            (
-                "BN/(hbar^2 * betaN)  {}  (should be same as S/hbar) ".format(
-                    (BN / ((hbar ** 2) * betaP))
-                )
-            )
-        )
+        print("V0  {} eV ( {} Kcal/mol) ".format(V0 / eV2au, V0 / cal2au / 1000))
+        print("S1/hbar {} ,S2/hbar {} ,S/hbar {}".format(action1 / hbar, action2 / hbar, action / hbar))
+        print("BN {} a.u.".format(BN))
+        print("BN/(hbar^2 * betaN)  {}  (should be same as S/hbar) ".format((BN / ((hbar ** 2) * betaP))))
         print("")
         if quiet:
             print("phi is not computed because you specified the quiet option")
