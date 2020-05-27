@@ -803,7 +803,7 @@ class FFsGDML(ForceField):
             self.model = np.load(self.sGDML_model)
             info(" @ForceField: sGDML model " + self.sGDML_model + " loaded" , verbosity.medium)
         except:
-            raise ValueError("ERROR: Reading sGDML model " + self.model + " file failed.")
+            raise ValueError("ERROR: Reading sGDML model " + self.sGDML_model + " file failed.")
 
         if "r_unit" in self.model and "e_unit" in self.model:
             info(" @ForceField: The units used in your sGDML model are"\
