@@ -1,4 +1,3 @@
-#!/usr/bin/env python2
 
 """ Instanton_interpolation.py
 Reads a hessian file  and/or a positions file (xyz format) and creates an interpolation
