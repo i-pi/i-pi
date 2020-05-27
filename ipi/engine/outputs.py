@@ -556,7 +556,7 @@ class CheckpointOutput(dobject):
         """
 
         self.filename = filename
-        self.step = step
+        self.step = depend_value(name="step", value=step)
         self.stride = stride
         self.overwrite = overwrite
         self._storing = False

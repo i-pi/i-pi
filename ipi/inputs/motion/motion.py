@@ -24,6 +24,7 @@ Classes:
 import numpy as np
 from copy import copy
 import ipi.engine.initializer
+from ipi.utils.softexit import softexit
 
 from ipi.engine.motion import (
     Motion,
@@ -247,6 +248,9 @@ class InputMotionBase(Input):
             tsc = 1
         else:
             raise ValueError("Cannot store Mover calculator of type " + str(type(sc)))
+
+        if (sc.fixcom is True) and (len(sc.fixatoms) > 0):
+            softexit.trigger("Fixed atoms break translational invariance, and so should be used with <fixcom> False </fixcom>. You can disable this error if you know what you are doing.")
 
         if tsc == 0:
             self.file.store(sc.intraj)
