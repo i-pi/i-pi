@@ -6,7 +6,7 @@
     <seed> 19388 </seed>
   </prng>
   <ffsocket name='lmp' mode='unix' pbc='false'>
-    <address> driver </address>
+    <address> h2o-scphonons </address>
   </ffsocket>
   <system>
   <initialize nbeads='1'>
@@ -23,7 +23,7 @@
       <max_steps> 50 </max_steps>
       <max_iter> 10 </max_iter>
       <tau> 10 </tau>
-      <random_type> sobol </random_type>
+      <random_type> pseudo </random_type>
       <displace_mode> rnmik </displace_mode>
     </scp>
   </motion>
