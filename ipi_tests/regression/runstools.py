@@ -1,4 +1,5 @@
 import subprocess as sp
+import sys
 from pathlib import Path
 import pytest
 import numpy as np
@@ -43,8 +44,10 @@ def get_info_test(parent):
 
 
 class Runner(object):
-    def __init__(self, parent):
+    def __init__(self, parent, check_errors=True, check_prop=True):
         self.parent = parent
+        self.check_error = check_errors
+        self.check_prop = check_prop
 
     def _run(self, cmd1, cmd2, cwd):
         try:
@@ -61,8 +64,10 @@ class Runner(object):
             for cmd in cmd2:
                 driver.append(sp.Popen(cmd, shell=True, stdout=sp.PIPE, stderr=sp.PIPE))
 
-            self._check_error(ipi)
-            self._check_properties(cwd)
+            if self.check_error:
+                self._check_error(ipi)
+            if self.check_prop:
+                self._check_properties(cwd)
 
         except sp.TimeoutExpired:
             raise RuntimeError(
@@ -71,9 +76,6 @@ class Runner(object):
                     str(cwd), ipi.communicate(timeout=2)[0]
                 )
             )
-
-        except AssertionError:
-            raise AssertionError("{}".format(str(cwd)))
 
         except FileNotFoundError:
             raise FileNotFoundError("{}".format(str(cwd)))
