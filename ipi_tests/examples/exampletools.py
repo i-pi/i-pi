@@ -36,7 +36,7 @@ def find_examples(parent, excluded_file="excluded_test.txt"):
         if os.path.isfile(Path(ff) / "input.xml"):
             if ff not in excluded:
                 examples.append(ff)
-    return examples 
+    return examples
 
 
 def modify_xml(
@@ -54,7 +54,7 @@ def modify_xml(
     root = tree.getroot()
     clients = list()
 
-    for s,ffsocket in enumerate(root.findall("ffsocket")):
+    for s, ffsocket in enumerate(root.findall("ffsocket")):
         name = ffsocket.attrib["name"]
         ffsocket.attrib["mode"] = socket_mode
 
@@ -94,14 +94,15 @@ class Runner_examples(object):
         self.cmd1 = cmd1
         self.cmd2 = cmd2
 
-    def _run(self, cwd,nid):
+    def _run(self, cwd, nid):
         try:
             self.tmp_dir = Path(tempfile.mkdtemp())
             files = os.listdir(self.parent / cwd)
             for f in files:
                 shutil.copy(self.parent / cwd / f, self.tmp_dir)
             clients = modify_xml(
-                self.tmp_dir / "input.xml", self.tmp_dir / "new.xml", nid )
+                self.tmp_dir / "input.xml", self.tmp_dir / "new.xml", nid
+            )
 
             ipi = sp.Popen(
                 self.cmd1,
@@ -137,4 +138,3 @@ class Runner_examples(object):
 
         except ValueError:
             raise ("{}".format(str(cwd)))
-

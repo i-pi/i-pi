@@ -22,7 +22,7 @@ print("We have found {} reg_tests".format(len(examples)))
 def test_example(ex):
     nid = examples.index(ex)
     runner = Runner_examples(Path("."))
-    runner._run(ex,nid)
+    runner._run(ex, nid)
 
 
 if __name__ == "__main__":
