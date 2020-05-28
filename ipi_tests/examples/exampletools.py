@@ -66,6 +66,9 @@ def modify_xml(
         model = ffsocket.attrib["name"]
         if model not in driver_models:
             model = "gas"
+        elif model == "harm":
+            model = " harm -o 1 "
+
         clients.append((model, address, port))
 
     element = root.find("total_steps")
@@ -107,7 +110,10 @@ class Runner_examples(object):
             driver = list()
             for client in clients:
                 cmd = self.cmd2 + " -m {} -h {} -u ".format(client[0], client[1])
-                driver.append(sp.Popen(cmd, cwd=(cwd),shell=True, stdout=sp.PIPE, stderr=sp.PIPE))
+                print("here", cmd)
+                driver.append(
+                    sp.Popen(cmd, cwd=(cwd), shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
+                )
 
             ipi_error = ipi.communicate(timeout=30)[1].decode("ascii")
             print(ipi_error)
