@@ -1,0 +1,35 @@
+<simulation mode='static' verbosity='medium' threading='false'>
+  <output prefix='simulation'>
+  </output>
+  <total_steps> 5000 </total_steps>
+  <prng>
+    <seed> 32342 </seed>
+  </prng>
+  <ffsocket name='lmp' mode='unix' pbc='true'>
+    <address> h2o-vscf </address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='xyz'> init.xyz </file>
+    </initialize>
+    <forces>
+      <force forcefield='lmp'> </force>
+    </forces>
+    <ensemble>
+      <temperature units='kelvin'> 100 </temperature>
+    </ensemble>
+    <motion mode='normalmodes'>
+      <normalmodes mode='vscf'>
+        <dynmat mode='file'> dynmat.data </dynmat>
+        <asr> poly </asr>
+        <nbasis> 10 </nbasis>
+        <nevib> 16 </nevib>
+        <athresh units='electronvolt'> 1e-4 </athresh>
+        <nint> 101 </nint>
+        <solve> True </solve>
+        <grid> True </grid>
+        <pair_range> [0,3] </pair_range>
+      </normalmodes>
+    </motion>
+  </system>
+</simulation>

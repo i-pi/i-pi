@@ -25,11 +25,10 @@ import numpy as np
 from copy import copy
 import ipi.engine.initializer
 from ipi.utils.softexit import softexit
-
 from ipi.engine.motion import Motion, Dynamics, ConstrainedDynamics, Replay, GeopMotion, NEBMover,\
     DynMatrixMover, MultiMotion, AlchemyMC, InstantonMotion,\
-    TemperatureRamp, PressureRamp, AtomSwap, Planetary, AlKMC
-
+    TemperatureRamp, PressureRamp, AtomSwap, Planetary, AlKMC,\
+    SCPhononsMover, NormalModeMover
 from ipi.utils.inputvalue import *
 from ipi.inputs.thermostats import *
 from ipi.inputs.initializer import *
@@ -37,8 +36,10 @@ from .geop import InputGeop
 from .instanton import InputInst
 from .neb import InputNEB
 from .dynamics import InputDynamics
+from .vscf import InputNormalMode
 from .constrained_dynamics import InputConstrainedDynamics
 from .phonons import InputDynMatrix
+from .scphonons import InputSCPhonons
 from .alchemy import InputAlchemy
 from .atomswap import InputAtomSwap
 from .planetary import InputPlanetary
@@ -67,7 +68,7 @@ class InputMotionBase(Input):
 
     attribs = {"mode": (InputAttribute, {"dtype": str,
                                          "help": "How atoms should be moved at each step in the simulatio. 'replay' means that a simulation is replayed from trajectories provided to i-PI.",
-                                         "options": ['vibrations', 'minimize', 'replay', 'neb', 'dynamics', 'constrained_dynamics', 't_ramp', 'p_ramp', 'alchemy', 'atomswap', 'planetary', 'instanton', 'al-kmc', 'dummy']})}
+                                         "options": ['vibrations', 'minimize', 'replay', 'neb', 'dynamics', 'constrained_dynamics', 't_ramp', 'p_ramp', 'alchemy', 'atomswap', 'planetary', 'instanton', 'al-kmc', 'dummy', 'scp', 'normalmodes' ]})}
 
     fields = {"fixcom": (InputValue, {"dtype": bool,
                                       "default": True,
@@ -87,6 +88,10 @@ class InputMotionBase(Input):
                                        "help": "This describes the location to read a trajectory file from."}),
               "vibrations": (InputDynMatrix, {"default": {},
                                               "help": "Option for phonon computation"}),
+              "normalmodes": (InputNormalMode, {"default": {},
+                                              "help": "Option for solving the vibrational Schroedinger's equations in normal mode coordinates."}),
+              "scp": (InputSCPhonons, {"default": {},
+                                              "help": "Option for self consistent phonons computation"}),
               "alchemy": (InputAlchemy, {"default": {},
                                          "help": "Option for alchemical exchanges"}),
               "atomswap": (InputAtomSwap, {"default": {},
@@ -140,6 +145,14 @@ class InputMotionBase(Input):
         elif type(sc) is DynMatrixMover:
             self.mode.store("vibrations")
             self.vibrations.store(sc)
+            tsc = 1
+        elif type(sc) is SCPhononsMover:
+            self.mode.store("scp")
+            self.scp.store(sc)
+            tsc = 1
+        elif type(sc) is NormalModeMover:
+            self.mode.store("normalmodes")
+            self.normalmodes.store(sc)
             tsc = 1
         elif type(sc) is AlchemyMC:
             self.mode.store("alchemy")
@@ -202,6 +215,10 @@ class InputMotionBase(Input):
             sc = ConstrainedDynamics(fixcom=self.fixcom.fetch(), fixatoms=self.fixatoms.fetch(), **self.constrained_dynamics.fetch())
         elif self.mode.fetch() == "vibrations":
             sc = DynMatrixMover(fixcom=self.fixcom.fetch(), fixatoms=self.fixatoms.fetch(), **self.vibrations.fetch())
+        elif self.mode.fetch() == "normalmodes":
+            sc = NormalModeMover(fixcom=self.fixcom.fetch(), fixatoms=self.fixatoms.fetch(), **self.normalmodes.fetch())
+        elif self.mode.fetch() == "scp":
+            sc = SCPhononsMover(fixcom=self.fixcom.fetch(), fixatoms=self.fixatoms.fetch(), **self.scp.fetch())
         elif self.mode.fetch() == "alchemy":
             sc = AlchemyMC(fixcom=self.fixcom.fetch(), fixatoms=self.fixatoms.fetch(), **self.alchemy.fetch())
         elif self.mode.fetch() == "atomswap":
