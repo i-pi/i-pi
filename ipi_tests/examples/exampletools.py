@@ -107,7 +107,7 @@ class Runner_examples(object):
             driver = list()
             for client in clients:
                 cmd = self.cmd2 + " -m {} -h {} -u ".format(client[0], client[1])
-                driver.append(sp.Popen(cmd, shell=True, stdout=sp.PIPE, stderr=sp.PIPE))
+                driver.append(sp.Popen(cmd, cwd=(cwd),shell=True, stdout=sp.PIPE, stderr=sp.PIPE))
 
             ipi_error = ipi.communicate(timeout=30)[1].decode("ascii")
             print(ipi_error)
