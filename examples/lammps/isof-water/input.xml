@@ -8,7 +8,7 @@
   <prng>
     <seed>32345</seed>
   </prng>
-  <ffsocket name='lmpserial' mode='unix'>
+  <ffsocket name='qtip4pf' mode='unix' pbc='false'>
     <address>isof-water</address>
   </ffsocket>
   <system>
@@ -17,7 +17,7 @@
       <velocities mode='thermal' units='kelvin'> 298 </velocities>
     </initialize>
     <forces>
-      <force forcefield='lmpserial'/>
+      <force forcefield='qtip4pf'/>
     </forces>
     <ensemble>
       <temperature units='kelvin'>298</temperature>

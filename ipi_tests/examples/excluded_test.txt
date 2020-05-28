@@ -1,4 +1,4 @@
-#To check
+# To check
 pes/qtip4pf/tun-splitting/TS
 pes/qtip4pf/tun-splitting/instanton/32-lbfgs
 pes/instanton/ch4h-cbe-rate/TS
@@ -8,46 +8,36 @@ MBPOL/splitting/instanton/32-lbfgs
 MBPOL/splitting/instanton/32 
 MBPOL/splitting/min-freq 
 MBPOL/splitting/TS 
-
 pes/geop/waterbox/bfgs
 pes/zundel-systempart 
 pes/neb 
-
 lammps/ice-nst 
-lammps/ice-npt 
-lammps/NaCl-cellopt 
-lammps/isof-vapor 
 lammps/ice-ramp-melt 
-lammps/isof-water 
-lammps/h2o-repimd 
 lammps/h2o-planetary-64 
 lammps/h2o-pimd+sc+gle.4 
-lammps/h2o-pimd+sc+rpc 
-lammps/isofsc-vapor 
-lammps/h2o-pimd+sc 
 lammps/isofsc-water 
-lammps/h2o-pimd+sc+rpc_open 
-lammps/h2o-geop 
 lammps/kmc-al6xxx 
 lammps/h2o-pimd+sc+mts 
-lammps/h2o-trpmd 
-lammps/h2o-constraints 
-
+lammps/h2o-repimd 
+lammps/h2o-pimd+sc+rpc_open 
+lammps/isof-water
 lj/nst 
-
 tools/gleacf/h2o-wn 
 tools/gleacf/h2o-gle 
 tools/getacf 
 hswfqmc/FixWF_1Bead 
 hswfqmc/WFOpt_2Bead 
 
-#Broken
+# Broken
 ffdebye/single_particle 
+lammps/h2o-constraints 
 
-#gas driver does not apply
+# no apropiate driver to use
 lammps/paracetamol-geop 
+lammps/NaCl-cellopt 
+lammps/ice-npt 
 
-#Need other dependency
+# Need other dependency
 yaff/mil53_ffyaff 
 yaff/mil53_ffsocket 
 plumed/zundel-remd-metad 

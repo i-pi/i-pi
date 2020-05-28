@@ -10,7 +10,7 @@
   <prng>
     <seed>32346</seed>
   </prng>
-  <ffsocket name='lmpserial1' mode='unix'>
+  <ffsocket name='qtip4pf' mode='unix' pbc='false'>
     <address>isofsc-vapor</address>
   </ffsocket>
   <system>
@@ -19,7 +19,7 @@
       <velocities mode='thermal' units='kelvin'> 300 </velocities>
     </initialize>
     <forces>
-      <force forcefield='lmpserial1'> </force>
+      <force forcefield='qtip4pf'> </force>
     </forces>
     <ensemble>
       <temperature units='kelvin'>300</temperature>

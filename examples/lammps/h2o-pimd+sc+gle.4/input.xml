@@ -7,7 +7,7 @@
   <prng>
     <seed>32345</seed>
   </prng>
-  <ffsocket name='lmpserial' mode='unix'>
+  <ffsocket name='qtip4pf' mode='unix'>
     <address> h2o-pimd+sc+gle.4 </address>
     <latency>1e-4</latency>
   </ffsocket>
@@ -17,7 +17,7 @@
       <velocities mode='thermal' units='kelvin'> 300 </velocities>
     </initialize>
     <forces>
-      <force forcefield='lmpserial' fd_epsilon='1e-3'> </force>
+      <force forcefield='qtip4pf' fd_epsilon='1e-3'> </force>
     </forces>
     <motion mode='dynamics'>
       <dynamics mode='sc'>
