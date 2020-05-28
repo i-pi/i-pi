@@ -786,7 +786,13 @@ class FFsGDML(ForceField):
             from sgdml import __version__
             info(" @ForceField: Using sGDML version " + __version__, verbosity.low)
         except:
-            raise ValueError("ERROR: sGDML package not located. Install it via: pip install sgdml")
+            raise ValueError("ERROR: sGDML package not located. Install it using via:\n"
+                             "$ git clone https://github.com/stefanch/sGDML.git\n$ cd sGDML\n$ pip2 install -e .")
+
+        if map(int, '0.4.4.dev1'.split('.')[:3]) > map(int, __version__.split('.')[:3]):
+            raise ValueError("ERROR: Version of sGDML not supported. Install a newer version (>= 0.4.4) or the "
+                             "latest developer version via:\n"
+                             "$ git clone https://github.com/stefanch/sGDML.git\n$ cd sGDML\n$ pip2 install -e .")
 
         # A bit weird to use keyword argument for a required argument, but this
         # is also done in the code above.
