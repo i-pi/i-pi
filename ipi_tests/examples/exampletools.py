@@ -1,5 +1,6 @@
 import subprocess as sp
 import os
+import numpy as np
 from pathlib import Path
 import xml.etree.ElementTree as ET
 import sys
@@ -35,12 +36,13 @@ def find_examples(parent, excluded_file="excluded_test.txt"):
         if os.path.isfile(Path(ff) / "input.xml"):
             if ff not in excluded:
                 examples.append(ff)
-    return examples
+    return examples 
 
 
 def modify_xml(
     input_name,
     output_name,
+    nid,
     socket_mode="unix",
     port_number=33333,
     address_name="localhost",
@@ -52,7 +54,7 @@ def modify_xml(
     root = tree.getroot()
     clients = list()
 
-    for ffsocket in root.findall("ffsocket"):
+    for s,ffsocket in enumerate(root.findall("ffsocket")):
         name = ffsocket.attrib["name"]
         ffsocket.attrib["mode"] = socket_mode
 
@@ -61,8 +63,9 @@ def modify_xml(
             if element.tag == "port":
                 element.text = str(port)
             elif element.tag == "address":
-                element.text = address_name + "_" + str(port)
-                address = address_name + "_" + str(port)
+                element.text = address_name + "_" + str(nid) + "_" + str(s)
+                address = address_name + "_" + str(nid) + "_" + str(s)
+
         model = ffsocket.attrib["name"]
         if model not in driver_models:
             if model == "lmpserial1" or model == "lmpserial2":
@@ -91,15 +94,14 @@ class Runner_examples(object):
         self.cmd1 = cmd1
         self.cmd2 = cmd2
 
-    def _run(self, cwd):
+    def _run(self, cwd,nid):
         try:
             self.tmp_dir = Path(tempfile.mkdtemp())
             files = os.listdir(self.parent / cwd)
             for f in files:
                 shutil.copy(self.parent / cwd / f, self.tmp_dir)
             clients = modify_xml(
-                self.tmp_dir / "input.xml", self.tmp_dir / "new.xml", socket_mode="unix"
-            )
+                self.tmp_dir / "input.xml", self.tmp_dir / "new.xml", nid )
 
             ipi = sp.Popen(
                 self.cmd1,
@@ -108,7 +110,7 @@ class Runner_examples(object):
                 stdout=sp.PIPE,
                 stderr=sp.PIPE,
             )
-            time.sleep(2)
+            time.sleep(3)
 
             driver = list()
             for client in clients:
@@ -136,8 +138,3 @@ class Runner_examples(object):
         except ValueError:
             raise ("{}".format(str(cwd)))
 
-
-if __name__ == "__main__":
-    name = sys.argv[1]
-    out = "output.xml"
-    modify_xml(name, out)

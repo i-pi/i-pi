@@ -18,10 +18,11 @@ examples = find_examples(examples_folder, excluded_file)
 print("We have found {} reg_tests".format(len(examples)))
 
 
-@pytest.mark.parametrize("example", examples)
-def test_example(example):
+@pytest.mark.parametrize("ex", examples)
+def test_example(ex):
+    nid = examples.index(ex)
     runner = Runner_examples(Path("."))
-    runner._run(example)
+    runner._run(ex,nid)
 
 
 if __name__ == "__main__":
