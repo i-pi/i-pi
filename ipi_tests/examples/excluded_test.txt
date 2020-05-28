@@ -1,4 +1,5 @@
 # To check
+lammps/isof-vapor
 pes/qtip4pf/tun-splitting/TS
 pes/qtip4pf/tun-splitting/instanton/32-lbfgs
 pes/instanton/ch4h-cbe-rate/TS
