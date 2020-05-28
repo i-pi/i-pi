@@ -65,13 +65,13 @@ def modify_xml(
                 address = address_name + "_" + str(port)
         model = ffsocket.attrib["name"]
         if model not in driver_models:
-           if model == "lmpserial1" or model == "lmpserial2":
-               model = 'qtip4pf'
-           else:
-               model = "gas"
+            if model == "lmpserial1" or model == "lmpserial2":
+                model = "qtip4pf"
+            else:
+                model = "gas"
         elif model == "harm":
             model = " harm -o 1 "
-        print('here',model)        
+        print("here", model)
         clients.append((model, address, port))
 
     element = root.find("total_steps")
@@ -109,11 +109,11 @@ class Runner_examples(object):
                 stderr=sp.PIPE,
             )
             time.sleep(2)
-            
+
             driver = list()
             for client in clients:
                 cmd = self.cmd2 + " -m {} -h {} -u ".format(client[0], client[1])
-                print('here',cmd)
+                print("here", cmd)
                 driver.append(
                     sp.Popen(cmd, cwd=(cwd), shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
                 )
