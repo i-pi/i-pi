@@ -1,13 +1,13 @@
 # -*- coding: utf-8 -*-
 
 """
-This assumes you want to use the planetary model to calculate 
+This assumes you want to use the planetary model to calculate
 a *standard quantum TCF* of the form
 
   <A(0) B(t)>
 
-where A and B are observables that can be expressed 
-as functions of position and momentum variables, 
+where A and B are observables that can be expressed
+as functions of position and momentum variables,
 
   A = A(q,p)
   B = B(q,p).
@@ -18,27 +18,27 @@ zero-time observable A, we define three alternative 'methods':
     0thorder_re
   ***Applicable when A is any function of q and p. Most accurate
   for linear operators.***
-  Estimate only the real part of the TCF by simply evaluating A 
+  Estimate only the real part of the TCF by simply evaluating A
   at the position of the planet. This can be derived from the
-  Wigner transform as the 0th order term following a Taylor expansion 
+  Wigner transform as the 0th order term following a Taylor expansion
   about ∆ = 0 on the locally kharmonic potential.
 
     1storder_im
   ***Applicable when A is any function of ONLY q. Most accurate
   for operators linear in q.***
-  Estimate only the imaginary part of the TCF from the gradient 
+  Estimate only the imaginary part of the TCF from the gradient
   of A at the position of the planet. Derived from a 1st order
   expansion about ∆ = 0.
- 
+
     2ndorder_re
-  ***Applicable when A is any function of ONLY q. Redundant for 
+  ***Applicable when A is any function of ONLY q. Redundant for
   linear operators.***
-  Estimate only the real part of the TCF by evaluating A and its 
+  Estimate only the real part of the TCF by evaluating A and its
   hessian at the position of the planet. Derived from a 2st order
   expansion about ∆ = 0.
 
 Written by Raz Benson
- 
+
 """
 
 import numpy as np
@@ -73,7 +73,7 @@ def Bfunc(qsum, psum):
 
 def Afunc0(qsum, psum):
     """
-    (Only required if method is 0thorder_re or 2ndorder_re BUT useful 
+    (Only required if method is 0thorder_re or 2ndorder_re BUT useful
     to include it anyway so the centroid TCF can be obtained at little
     extra cost)
     Write a function which takes the planetary phase-space coordinates
@@ -94,7 +94,7 @@ def Afunc1(qsum):
     (centroid + fluctuation) and returns the gradient of A for each planet
     """
     nndof, npl = qsum.shape
-    ans = np.zeros((npl,) + Ashape + (ndof,))
+    ans = np.zeros((npl,) + Ashape + (nndof,))
     for i in range(npl):
         ans[i] = 0.0  # Change this bit
     return ans
@@ -107,7 +107,7 @@ def Afunc2(qsum):
     (centroid + fluctuation) and returns the hessian of A for each planet
     """
     nndof, npl = qsum.shape
-    ans = np.zeros((npl,) + Ashape + (ndof, ndof))
+    ans = np.zeros((npl,) + Ashape + (nndof, nndof))
     for i in range(npl):
         ans[i] = 0.0  # Change this bit
     return ans
@@ -124,23 +124,24 @@ def corr(A, B, **kwargs):
         tcf[:] += 0.0  # Change this bit
     return tcf
 
-##########################################################################################
-#######################q-TIP4P/f dipole moment example (real part)########################
-##########################################################################################
 
-#import numpy as np
+# #########################################################################################
+# ######################q-TIP4P/f dipole moment example (real part)########################
+# #########################################################################################
+
+# import numpy as np
 #
-#name = "qTIP4P-cmumu-re"
+# name = "qTIP4P-cmumu-re"
 #
-#method = "0thorder_re"
+# method = "0thorder_re"
 #
-#Ashape = (3,)
+# Ashape = (3,)
 #
-#Bshape = (3,)
+# Bshape = (3,)
 #
-#qm = -1.1128
-#qh = -0.50*qm
-#gam = 0.73612
+# qm = -1.1128
+# qh = -0.50*qm
+# gam = 0.73612
 #
 # def Afunc0(qsum, psum):
 #    nndof, npl = qsum.shape
@@ -158,50 +159,50 @@ def corr(A, B, **kwargs):
 # def Bfunc(qsum, psum):
 #    return Afunc0(qsum, psum)
 
-##########################################################################################
-#####################q-TIP4P/f dipole moment example (imaginary part)#####################
-##########################################################################################
+# #########################################################################################
+# ####################q-TIP4P/f dipole moment example (imaginary part)#####################
+# #########################################################################################
 
-#import numpy as np
+# import numpy as np
 #
-#name = "qTIP4P-cmumu-im"
+# name = "qTIP4P-cmumu-im"
 #
-#method = "1storder_im"
+# method = "1storder_im"
 #
-#Ashape = (3,)
+# Ashape = (3,)
 #
-#Bshape = (3,)
+# Bshape = (3,)
 #
-## Change as appropriate #
-#nmolec = 128
-#natoms = nmolec*3
-#nndof = natoms*3
-#npl = 64
-##########################
+# # Change as appropriate #
+# nmolec = 128
+# natoms = nmolec*3
+# nndof = natoms*3
+# npl = 64
+# #########################
 #
-#qm = -1.1128
-#qh = -0.50*qm
-#gam = 0.73612
-#grad = np.zeros((3, nndof))
+# qm = -1.1128
+# qh = -0.50*qm
+# gam = 0.73612
+# grad = np.zeros((3, nndof))
 # x component, oxygen
-#grad[0].reshape((nmolec,3,3))[:,0,0] = gam*qm
+# grad[0].reshape((nmolec,3,3))[:,0,0] = gam*qm
 # y component, oxygen
-#grad[1].reshape((nmolec,3,3))[:,0,1] = gam*qm
+# grad[1].reshape((nmolec,3,3))[:,0,1] = gam*qm
 # z component, oxygen
-#grad[2].reshape((nmolec,3,3))[:,0,2] = gam*qm
+# grad[2].reshape((nmolec,3,3))[:,0,2] = gam*qm
 # x component, H1
-#grad[0].reshape((nmolec,3,3))[:,1,0] = 0.5*(1.0-gam)*qm + qh
+# grad[0].reshape((nmolec,3,3))[:,1,0] = 0.5*(1.0-gam)*qm + qh
 # y component, H1
-#grad[1].reshape((nmolec,3,3))[:,1,1] = 0.5*(1.0-gam)*qm + qh
+# grad[1].reshape((nmolec,3,3))[:,1,1] = 0.5*(1.0-gam)*qm + qh
 # z component, H1
-#grad[2].reshape((nmolec,3,3))[:,1,2] = 0.5*(1.0-gam)*qm + qh
+# grad[2].reshape((nmolec,3,3))[:,1,2] = 0.5*(1.0-gam)*qm + qh
 # x component, H2
-#grad[0].reshape((nmolec,3,3))[:,2,0] = 0.5*(1.0-gam)*qm + qh
+# grad[0].reshape((nmolec,3,3))[:,2,0] = 0.5*(1.0-gam)*qm + qh
 # y component, H2
-#grad[1].reshape((nmolec,3,3))[:,2,1] = 0.5*(1.0-gam)*qm + qh
+# grad[1].reshape((nmolec,3,3))[:,2,1] = 0.5*(1.0-gam)*qm + qh
 # z component, H2
-#grad[2].reshape((nmolec,3,3))[:,2,2] = 0.5*(1.0-gam)*qm + qh
-#grad = np.array([grad]*npl)
+# grad[2].reshape((nmolec,3,3))[:,2,2] = 0.5*(1.0-gam)*qm + qh
+# grad = np.array([grad]*npl)
 #
 # def Afunc1(qsum):
 #    return grad

@@ -5,10 +5,16 @@
 # See the "licenses" directory for full license information.
 
 import numpy as np
-from ipi.utils.inputvalue import InputDictionary, InputAttribute, InputValue, InputArray, input_default
+from ipi.utils.inputvalue import (
+    InputDictionary,
+    InputAttribute,
+    InputValue,
+    InputArray,
+    input_default,
+)
 
 
-__all__ = ['InputAlchemy']
+__all__ = ["InputAlchemy"]
 
 
 class InputAlchemy(InputDictionary):
@@ -22,26 +28,48 @@ class InputAlchemy(InputDictionary):
         timestep: An optional float giving the size of the timestep in atomic
             units. Defaults to 1.0.
     """
-    attribs = {"mode": (InputAttribute, {"dtype": str,
-                                         "default": 'dummy',
-                                         "help": " ",
-                                         "options": ['dummy']})}
+
+    attribs = {
+        "mode": (
+            InputAttribute,
+            {"dtype": str, "default": "dummy", "help": " ", "options": ["dummy"]},
+        )
+    }
 
     fields = {
-        "names": (InputArray, {"dtype": str,
-                               "default": input_default(factory=np.zeros, args=(0,), kwargs={'dtype': np.dtype('|U6')}),
-                               "help": "The names of the atoms to be to exchanged, in the format [name1, name2, ... ]."}),
-        "nxc": (InputValue, {"dtype": float,
-                             "default": 1,
-                             "help": "The average number of exchanges per step to be attempted "}),
-        "ealc": (InputValue, {"dtype": float,
-                              "default": 0.0,
-                              "help": "The contribution to the conserved quantity for the alchemical exchanger"})
+        "names": (
+            InputArray,
+            {
+                "dtype": str,
+                "default": input_default(
+                    factory=np.zeros, args=(0,), kwargs={"dtype": np.dtype("|U6")}
+                ),
+                "help": "The names of the atoms to be to exchanged, in the format [name1, name2, ... ].",
+            },
+        ),
+        "nxc": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 1,
+                "help": "The average number of exchanges per step to be attempted ",
+            },
+        ),
+        "ealc": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 0.0,
+                "help": "The contribution to the conserved quantity for the alchemical exchanger",
+            },
+        ),
     }
 
     dynamic = {}
 
-    default_help = "Holds all the information for doing Monte Carlo alchemical exchange moves. "
+    default_help = (
+        "Holds all the information for doing Monte Carlo alchemical exchange moves. "
+    )
     default_label = "ALCHEMY"
 
     def store(self, alc):

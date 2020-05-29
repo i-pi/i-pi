@@ -30,7 +30,7 @@ from ipi.inputs.thermostats import *
 from ipi.inputs.initializer import *
 from ipi.utils.units import *
 
-__all__ = ['InputSCPhonons']
+__all__ = ["InputSCPhonons"]
 
 
 class InputSCPhonons(InputDictionary):
@@ -40,61 +40,125 @@ class InputSCPhonons(InputDictionary):
 
     """
 
-    attribs = {"mode": (InputAttribute, {"dtype": str, "default": "qn",
-                                         "help": "The statistics to be used in the calculation of the free energy. Quantum (qn) or classical (cl) Boltzmann statistics.",
-                                         "options": ["qn", "cl"]})}
+    attribs = {
+        "mode": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "default": "qn",
+                "help": "The statistics to be used in the calculation of the free energy. Quantum (qn) or classical (cl) Boltzmann statistics.",
+                "options": ["qn", "cl"],
+            },
+        )
+    }
     fields = {
-        "prefix": (InputValue, {"dtype": str, "default": "",
-                                "help": "Prefix of the output files."
-                                }),
-        "asr": (InputValue, {"dtype": str, "default": "none",
-                             "options": ["none", "crystal", "poly" ],
-                             "help": "The method used to project out zero modes coming from continuous symmetries: crystal removes the three translational modes; molecule removes the three rotational modes in addition to the translational ones. none keeps all the modes."
-                             }),
-        "random_type": (InputValue, {"dtype": str, "default": "pseudo",
-                                     "options": ["sobol", "pseudo", "file"],
-                                     "help": "Chooses the type of random numbers."
-                                     }),
-        "displace_mode": (InputValue, {"dtype": str, "default": "nmik",
-                                       "options": ["ik", "sd", "nmik", "rnmik"],
-                                       "help": "The type of optimisation strategy for obtaining the mean position. sd stands for a steepest descent algorithm. ik stands for a Newton-Raphson scheme that requires the inverse of the force constant matrix iK. nmik stands for a Newton-Raphson scheme that only displaces along normal modes directions with statistically significant forces. rnmik same as nmik but performs several optimization steps using a reweighted sampling."
-                                       }),
-        "dynmat": (InputArray, {"dtype": float,
-                                "default": np.zeros(0, float),
-                                "help": "The dynamical matrix of the trial Hamiltonian."}),
-        "max_steps": (InputValue, {
-            "dtype": int,
-            "default": None,
-            "help": "Maximum number of Monte carlo steps per SCP iteration."}),
-        "max_iter": (InputValue, {
-            "dtype": int,
-            "default": 1,
-            "help": "Maximum number of SCP iterations."}),
-        "tau": (InputValue, {
-            "dtype": float,
-            "default": 1.,
-            "help": "Step size along the gradient for the sd displace_mode"}),
-        "wthreshold": (InputValue, {
-            "dtype": float,
-            "default": 0.90,
-            "help": "Threshold on minimum Boltzmann weights before more statistics must be accumulated."}),
-        "precheck": (InputValue, {
-            "dtype": bool,
-            "default": True,
-            "help": "Flag for checking statistical significance of forces before optimisation of mean position."}),
-        "checkweights": (InputValue, {
-            "dtype": bool,
-            "default": True,
-            "help": "Flag for checking Boltzmann weights for whether more statistics are required."}),
-        "chop": (InputValue, {"dtype": float,
-            "default": 1e-09,
-            "help": "Threshold below which frequencies are set to zero."}),
-        "nparallel": (InputValue, {"dtype": int,
-            "default": 1,
-            "help": "The number of Monte Carlo forces to be evaluated (in parallel) per i-PI step."}),
-        "batch_weight_exponent": (InputValue, {"dtype": int,
-            "default": 1,
-            "help": "The exponent used to suppress low batch weights."}),
+        "prefix": (
+            InputValue,
+            {"dtype": str, "default": "", "help": "Prefix of the output files."},
+        ),
+        "asr": (
+            InputValue,
+            {
+                "dtype": str,
+                "default": "none",
+                "options": ["none", "crystal", "poly"],
+                "help": "The method used to project out zero modes coming from continuous symmetries: crystal removes the three translational modes; molecule removes the three rotational modes in addition to the translational ones. none keeps all the modes.",
+            },
+        ),
+        "random_type": (
+            InputValue,
+            {
+                "dtype": str,
+                "default": "pseudo",
+                "options": ["sobol", "pseudo", "file"],
+                "help": "Chooses the type of random numbers.",
+            },
+        ),
+        "displace_mode": (
+            InputValue,
+            {
+                "dtype": str,
+                "default": "nmik",
+                "options": ["ik", "sd", "nmik", "rnmik"],
+                "help": "The type of optimisation strategy for obtaining the mean position. sd stands for a steepest descent algorithm. ik stands for a Newton-Raphson scheme that requires the inverse of the force constant matrix iK. nmik stands for a Newton-Raphson scheme that only displaces along normal modes directions with statistically significant forces. rnmik same as nmik but performs several optimization steps using a reweighted sampling.",
+            },
+        ),
+        "dynmat": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": np.zeros(0, float),
+                "help": "The dynamical matrix of the trial Hamiltonian.",
+            },
+        ),
+        "max_steps": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": None,
+                "help": "Maximum number of Monte carlo steps per SCP iteration.",
+            },
+        ),
+        "max_iter": (
+            InputValue,
+            {"dtype": int, "default": 1, "help": "Maximum number of SCP iterations."},
+        ),
+        "tau": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 1.0,
+                "help": "Step size along the gradient for the sd displace_mode",
+            },
+        ),
+        "wthreshold": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 0.90,
+                "help": "Threshold on minimum Boltzmann weights before more statistics must be accumulated.",
+            },
+        ),
+        "precheck": (
+            InputValue,
+            {
+                "dtype": bool,
+                "default": True,
+                "help": "Flag for checking statistical significance of forces before optimisation of mean position.",
+            },
+        ),
+        "checkweights": (
+            InputValue,
+            {
+                "dtype": bool,
+                "default": True,
+                "help": "Flag for checking Boltzmann weights for whether more statistics are required.",
+            },
+        ),
+        "chop": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 1e-09,
+                "help": "Threshold below which frequencies are set to zero.",
+            },
+        ),
+        "nparallel": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": 1,
+                "help": "The number of Monte Carlo forces to be evaluated (in parallel) per i-PI step.",
+            },
+        ),
+        "batch_weight_exponent": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": 1,
+                "help": "The exponent used to suppress low batch weights.",
+            },
+        ),
     }
 
     dynamic = {}

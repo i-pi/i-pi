@@ -622,7 +622,7 @@ class Forces(dobject):
             return lambda: rpc.b1tob2(dstrip(beads.q))
 
         # creates new force objects, possibly acting on contracted path
-        # representations. note that this new object is always created even if no contraction is required.
+        # representations
         for fc in self.fcomp:
 
             # creates an automatically-updated contracted beads object
@@ -853,19 +853,14 @@ class Forces(dobject):
 
     def transfer_forces(self, refforce):
         """Low-level function copying over the value of a second force object,
-        triggering updates but un-tainting this force depends themselves.
-
-        We have noted that in some corner cases it is necessary to copy only
-        the values of updated forces rather than the full depend object, in order to
-        avoid triggering a repeated call to the client code that is potentially
-        very costly. This happens routinely in geometry relaxation routines, for example."""
+        triggering updates but un-tainting this force depends themselves."""
 
         if len(self.mforces) != len(refforce.mforces):
             raise ValueError(
                 "Cannot copy forces between objects with different numbers of components"
             )
 
-        for k in range(len(self.mforces)):
+        for k in xrange(len(self.mforces)):
             mreff = refforce.mforces[k]
             mself = self.mforces[k]
             if mreff.nbeads != mself.nbeads:
@@ -874,22 +869,10 @@ class Forces(dobject):
                     + str(k)
                     + "th component"
                 )
-
-            # this is VERY subtle. beads in this force component are
-            # obtained as a contraction, and so are computed automatically.
-            # when we set the master q, these get marked as tainted.
-            # then we copy the force value, and set the force as untainted.
-            # next time we touch the master q, the tainting does not get
-            # propagated, because the contracted q is already marked as tainted,
-            # so the force does not get updated. we can fix this by copying
-            # the value of the contracted bead, so that it's marked as NOT
-            # tainted - it should not be as it's an internal of the force and
-            # therefore get copied
-            dd(mself.beads).q.set(mreff.beads.q, manual=False)
-            for b in range(mself.nbeads):
+            for b in xrange(mself.nbeads):
                 dfkbref = dd(mreff._forces[b])
                 dfkbself = dd(mself._forces[b])
-
+                # dd(dfkbself.atoms).q.set(deepcopy(dfkbref.atoms.q), manual=False)
                 dfkbself.ufvx.set(deepcopy(dfkbref.ufvx._value), manual=False)
                 dfkbself.ufvx.taint(taintme=False)
 
@@ -1041,7 +1024,7 @@ class Forces(dobject):
 
                 # we use an aux force evaluator with half the number of beads.
                 if self.dforces is None:
-                    self.dbeads = self.beads.copy(self.nbeads // 2)
+                    self.dbeads = self.beads.copy(self.nbeads / 2)
                     self.dcell = self.cell.copy()
                     self.dforces = self.copy(self.dbeads, self.dcell)
 
@@ -1059,7 +1042,7 @@ class Forces(dobject):
                 )
 
                 # calculates the virial.
-                vminus = np.zeros((self.nbeads // 2, 3, 3), float)
+                vminus = np.zeros((self.nbeads / 2, 3, 3), float)
                 dmvirs = dstrip(self.dforces.mforces[index].virs)
                 for i in range(3):
                     for j in range(3):
@@ -1124,10 +1107,8 @@ class Forces(dobject):
             if self.alpha == 0:
 
                 # the first half of the aux beads are fwd displaced while the second half are bkwd displaced configurations.
-                self.dbeads.q[: self.nbeads // 2] = (
-                    dstrip(self.beads.q)[1::2] + dq[1::2]
-                )
-                self.dbeads.q[-self.nbeads // 2 :] = (
+                self.dbeads.q[: self.nbeads / 2] = dstrip(self.beads.q)[1::2] + dq[1::2]
+                self.dbeads.q[-self.nbeads / 2 :] = (
                     dstrip(self.beads.q)[1::2] - dq[1::2]
                 )
 
@@ -1146,17 +1127,17 @@ class Forces(dobject):
                         )
 
                 # calculates the finite difference.
-                for k in range(self.nbeads // 2):
+                for k in range(self.nbeads / 2):
                     j = 2 * k + 1
                     f_4th_order[j] = (
                         2.0
-                        * (fplusminus[self.nbeads // 2 + k] - fplusminus[k])
+                        * (fplusminus[self.nbeads / 2 + k] - fplusminus[k])
                         / 2.0
                         / delta
                     )
                     v_4th_order[j] = (
                         2.0
-                        * (vplusminus[self.nbeads // 2 + k] - vplusminus[k])
+                        * (vplusminus[self.nbeads / 2 + k] - vplusminus[k])
                         / 2.0
                         / delta
                     )

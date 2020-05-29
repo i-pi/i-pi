@@ -9,8 +9,6 @@ appropriate conserved energy quantity.
 # See the "licenses" directory for full license information.
 
 
-import time
-
 import numpy as np
 
 from ipi.engine.motion import Motion
@@ -27,7 +25,9 @@ class AtomSwap(Motion):
         names of the species for exchanges
     """
 
-    def __init__(self, fixcom=False, fixatoms=None, mode=None, names=[], nxc=1, ealc=None):
+    def __init__(
+        self, fixcom=False, fixatoms=None, mode=None, names=[], nxc=1, ealc=None
+    ):
         """Initialises a "alchemical exchange" motion object.
 
         Args:
@@ -42,10 +42,11 @@ class AtomSwap(Motion):
         self.nxc = nxc
 
         dself = dd(self)
-        dself.ealc = depend_value(name='ealc')
-        if not ealc is None:
+        dself.ealc = depend_value(name="ealc")
+        if ealc is not None:
             self.ealc = ealc
-        else: self.ealc = 0.0
+        else:
+            self.ealc = 0.0
 
     def bind(self, ens, beads, cell, bforce, nm, prng, omaker):
         """Binds ensemble beads, cell, bforce, and prng to the dynamics.
@@ -85,12 +86,13 @@ class AtomSwap(Motion):
 
         # picks number of attempted exchanges
         ntries = self.prng.rng.poisson(self.nxc)
-        if ntries == 0: return
+        if ntries == 0:
+            return
 
         """Does one round of alchemical exchanges."""
         # record the spring energy (divided by mass) for each atom in the exchange chain
         nb = self.beads.nbeads
-        qswap = np.zeros((nb, 3))
+        # qswap = np.zeros((nb, 3))
         axlist = self.AXlist(self.names)
         lenlist = len(axlist)
         if lenlist == 0:
@@ -102,7 +104,9 @@ class AtomSwap(Motion):
 
         # this would be double-counting, we already have a bail-out condition above
         # if (1.0/self.nxc < self.prng.u) : return  # tries a round of exhanges with probability 1/nmc
-        self.dcell.h = self.cell.h  # just in case the cell gets updated in the other motion classes
+        self.dcell.h = (
+            self.cell.h
+        )  # just in case the cell gets updated in the other motion classes
         for x in range(ntries):
             i = self.prng.rng.randint(lenlist)
             j = self.prng.rng.randint(lenlist)
@@ -112,13 +116,13 @@ class AtomSwap(Motion):
             old_energy = self.forces.pot
             # swap the atom positions
             self.dbeads.q[:] = self.beads.q[:]
-            self.dbeads.q[:, 3 * i:3 * i + 3] = self.beads.q[:, 3 * j:3 * j + 3]
-            self.dbeads.q[:, 3 * j:3 * j + 3] = self.beads.q[:, 3 * i:3 * i + 3]
+            self.dbeads.q[:, 3 * i : 3 * i + 3] = self.beads.q[:, 3 * j : 3 * j + 3]
+            self.dbeads.q[:, 3 * j : 3 * j + 3] = self.beads.q[:, 3 * i : 3 * i + 3]
             new_energy = self.dforces.pot
             pexchange = np.exp(-betaP * (new_energy - old_energy))
 
             # attemps the exchange, and actually propagate the exchange if something has happened
-            if (pexchange > self.prng.u):
+            if pexchange > self.prng.u:
                 nexch += 1
 
                 # copy the exchanged beads position
