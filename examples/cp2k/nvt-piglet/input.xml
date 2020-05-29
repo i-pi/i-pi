@@ -21,7 +21,7 @@
   <system>
     <initialize nbeads='4'>
       <file mode='xyz'>init.xyz</file>
-      <momenta mode='thermal'> 750 </momenta>
+      <momenta mode='thermal' units='kelvin'> 750 </momenta>
     </initialize>
     <forces>
       <force forcefield='driver'/>

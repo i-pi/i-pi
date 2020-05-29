@@ -24,6 +24,7 @@ __all__ = [
     "exp_ut3x3",
     "root_herm",
     "logsumlog",
+    "gaussian_inv",
 ]
 
 
@@ -403,3 +404,43 @@ def root_herm(A):
         )
 
     return rv
+
+
+def gaussian_inv(x):
+    """
+    Beasley-Springer-Moro algorithm for approximating the inverse normal.
+    """
+
+    a0 = 2.50662823884
+    a1 = -18.61500062529
+    a2 = 41.39119773534
+    a3 = -25.44106049637
+
+    b0 = -8.47351093090
+    b1 = 23.08336743743
+    b2 = -21.06224101826
+    b3 = 3.13082909833
+
+    c0 = 0.3374754822726147
+    c1 = 0.9761690190917186
+    c2 = 0.1607979714918209
+    c3 = 0.0276438810333863
+    c4 = 0.0038405729373609
+    c5 = 0.0003951896511919
+    c6 = 0.0000321767881768
+    c7 = 0.0000002888167364
+    c8 = 0.0000003960315187
+
+    y = x - 0.5
+
+    if x > 0.08 and x < 0.92:
+        z = y * y
+        return y * np.polyval([a3, a2, a1, a0], z) / np.polyval([b3, b2, b1, b0, 1], z)
+
+    if x <= 0.08 or x >= 0.92:
+        if y > 0:
+            z = 1 - x
+        else:
+            z = x
+        k = np.log(-np.log(z))
+        return np.sign(y) * np.polyval([c8, c7, c6, c5, c4, c3, c2, c1, c0], k)

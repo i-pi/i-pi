@@ -42,8 +42,9 @@ from ipi.engine.motion import (
     AtomSwap,
     Planetary,
     AlKMC,
+    SCPhononsMover,
+    NormalModeMover,
 )
-
 from ipi.utils.inputvalue import *
 from ipi.inputs.thermostats import *
 from ipi.inputs.initializer import *
@@ -51,8 +52,10 @@ from .geop import InputGeop
 from .instanton import InputInst
 from .neb import InputNEB
 from .dynamics import InputDynamics
+from .vscf import InputNormalMode
 from .constrained_dynamics import InputConstrainedDynamics
 from .phonons import InputDynMatrix
+from .scphonons import InputSCPhonons
 from .alchemy import InputAlchemy
 from .atomswap import InputAtomSwap
 from .planetary import InputPlanetary
@@ -100,6 +103,8 @@ class InputMotionBase(Input):
                     "instanton",
                     "al-kmc",
                     "dummy",
+                    "scp",
+                    "normalmodes",
                 ],
             },
         )
@@ -153,6 +158,17 @@ class InputMotionBase(Input):
         "vibrations": (
             InputDynMatrix,
             {"default": {}, "help": "Option for phonon computation"},
+        ),
+        "normalmodes": (
+            InputNormalMode,
+            {
+                "default": {},
+                "help": "Option for solving the vibrational Schroedinger's equations in normal mode coordinates.",
+            },
+        ),
+        "scp": (
+            InputSCPhonons,
+            {"default": {}, "help": "Option for self consistent phonons computation"},
         ),
         "alchemy": (
             InputAlchemy,
@@ -218,6 +234,14 @@ class InputMotionBase(Input):
         elif type(sc) is DynMatrixMover:
             self.mode.store("vibrations")
             self.vibrations.store(sc)
+            tsc = 1
+        elif type(sc) is SCPhononsMover:
+            self.mode.store("scp")
+            self.scp.store(sc)
+            tsc = 1
+        elif type(sc) is NormalModeMover:
+            self.mode.store("normalmodes")
+            self.normalmodes.store(sc)
             tsc = 1
         elif type(sc) is AlchemyMC:
             self.mode.store("alchemy")
@@ -305,6 +329,18 @@ class InputMotionBase(Input):
                 fixcom=self.fixcom.fetch(),
                 fixatoms=self.fixatoms.fetch(),
                 **self.vibrations.fetch()
+            )
+        elif self.mode.fetch() == "normalmodes":
+            sc = NormalModeMover(
+                fixcom=self.fixcom.fetch(),
+                fixatoms=self.fixatoms.fetch(),
+                **self.normalmodes.fetch()
+            )
+        elif self.mode.fetch() == "scp":
+            sc = SCPhononsMover(
+                fixcom=self.fixcom.fetch(),
+                fixatoms=self.fixatoms.fetch(),
+                **self.scp.fetch()
             )
         elif self.mode.fetch() == "alchemy":
             sc = AlchemyMC(

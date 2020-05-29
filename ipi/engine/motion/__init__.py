@@ -15,8 +15,10 @@ from .geop import GeopMotion
 from .instanton import InstantonMotion
 from .neb import NEBMover
 from .phonons import DynMatrixMover
+from .scphonons import SCPhononsMover
 from .multi import MultiMotion
 from .alchemy import AlchemyMC
+from .vscf import NormalModeMover
 from .planetary import Planetary
 from .atomswap import AtomSwap
 from .ramp import TemperatureRamp, PressureRamp

@@ -1,4 +1,7 @@
 # To check
+lammps/h2o-scphonons
+lammps/h2o-imf
+lammps/h2o-vscf
 lammps/h2o-extreme-rem
 lammps/isof-vapor
 pes/qtip4pf/tun-splitting/TS
