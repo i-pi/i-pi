@@ -1,0 +1,10 @@
+
+Examples to excluded from this test should be added to 'excluded_test.txt'
+
+To run all the example-test:
+python test_examples.py
+
+
+To run the test for only one example:
+python test_examples.py  <example-folder>
+

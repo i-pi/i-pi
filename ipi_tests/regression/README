@@ -1,0 +1,5 @@
+To add a new regression test please provide:
+
+- input.xml (and all the files required by it)
+- driver.txt specifing  "<driver> <address> <port> <unix/inet> " (see existing examples)
+- a reference output with the name 'ref_simulation.out'
