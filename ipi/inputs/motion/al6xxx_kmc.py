@@ -101,7 +101,10 @@ class InputAlKMC(InputDictionary):
                 "qcache_file": (InputValue, {"dtype" : str,
                               "default"  : "",
                               "help"     : "Filename for storing/loading positions cache"}),
-                }
+                "max_cache_len": (InputValue, {"dtype": int,
+                                     "default": 1000,
+                                     "help": "Maximum cache length before oldest entry is deleted"}),
+    }
 
     STORE_STRIDE = 1.1
 
@@ -142,20 +145,23 @@ class InputAlKMC(InputDictionary):
         self.tottime.store(kmc.tottime)
         self.ecache_file.store(kmc.ecache_file)
         self.qcache_file.store(kmc.qcache_file)
+        self.max_cache_len.store(kmc.max_cache_len)
 
         # only stores cache after a decent amount of new structures have been found
-        if kmc.ncache_stored*self.STORE_STRIDE<kmc.ncache:
+        if (kmc.struct_count - kmc.ncache_stored) >= 0.1*kmc.ncache : # dump if new structures exceed 10% of current store
+        # if (kmc.struct_count - kmc.ncache_stored) >= 100 : # Basically dump only after 100 new structures.
             if kmc.ecache_file != "":
-                print("Storing ECACHE in ", kmc.ecache_file)
+                print("10%% new structures since last dump. Storing ECACHE in ", kmc.ecache_file)
                 ff = open(kmc.ecache_file, "wb")
                 pickle.dump(kmc.ecache, ff)
                 ff.close()
             if kmc.qcache_file != "":
-                print("Storing QCACHE in ", kmc.qcache_file)
+                print("10%% new structures since last dump. Storing QCACHE in ", kmc.qcache_file)
                 ff = open(kmc.qcache_file, "wb")
                 pickle.dump(kmc.qcache, ff)
                 ff.close()
-            kmc.ncache_stored = kmc.ncache
+            #kmc.ncache_stored = kmc.ncache
+            kmc.ncache_stored = kmc.struct_count
 
     def fetch(self):
         rv = super(InputAlKMC,self).fetch()
