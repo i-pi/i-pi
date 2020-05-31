@@ -1,9 +1,5 @@
-"""Contains the classes that deal with the different dynamics required in
-different types of ensembles.
-
-Holds the algorithms required for normal mode propagators, and the objects to
-do the constant temperature and pressure algorithms. Also calculates the
-appropriate conserved energy quantity for the ensemble of choice.
+"""Highly specialized Kinetic Monte Carlo class for aluminum 6xxx alloys.
+Could probably be generalized to something more general.
 """
 
 # This file is part of i-PI.
@@ -323,7 +319,7 @@ class AlKMC(Motion):
         io.print_file("xyz", self.dbeads[ieval][0], self.dcell, self.tslist, title=("TS: %s %s  Energy: %15.8e  %15.8e " % (ostr, nstr, tspot, tspot-self.forces.pot) ), key="positions", dimension="length", units="angstrom", cell_units="angstrom" )
         self.dbeads[ieval].q[0] = qend
         io.print_file("xyz", self.dbeads[ieval][0], self.dcell, self.tslist, title=("END  "  ), key="positions", dimension="length", units="angstrom", cell_units="angstrom" )
-        self.tslist.flush()
+        #self.tslist.flush()
 
         with self._threadlock:
             # sets the tscache for both FW and BW transition (uses a dictionary to be super-safe and lazy, although of course this could be just a list)
@@ -523,7 +519,7 @@ class AlKMC(Motion):
 
         # we got a new configuration but the residence time is linked to the previous configuration so we output that
         self.kmcfile.write("%12.5e  %12.5e  %18.11e  %s\n"% (self.tottime, dt, ecurr, ostr) )
-        #self.kmcfile.flush() # commenting this out; seems to be raising exception
+        self.kmcfile.force_flush() 
         self.tottime += dt
         self.ensemble.time += dt  # updates time counter
         print("Finishing step at ", "".join(self.state))
