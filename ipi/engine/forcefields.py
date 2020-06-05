@@ -463,7 +463,8 @@ class FFdmd(ForceField):
             # KF's implementation:
             dij, rij = vector_separation(cell_h, cell_ih, q[i], q[:i])
 
-            cij = self.coupling[:i]
+#            cij = self.coupling[:i]                      # KF 15.05.2020
+            cij = self.coupling[i*(i-1)//2 : i*(i+1)//2]  #
             prefac = np.dot(cij, rij)  # for each i it has the distances to all indexes previous
             v += np.sum(prefac) * periodic
             dij *= -(cij / rij)[:, np.newaxis]  # magic line...
@@ -471,7 +472,7 @@ class FFdmd(ForceField):
             f[:i] -= dij * periodic # everything symmetric
 
 #        self.dmdstep+=1 # BAD -- DOES NOT WORK IN MOST CASES -- NEED SMOTION
-        print("Mystep ", self.dmdstep)
+#        print("Mystep ", self.dmdstep)
         r["result"] = [v, f.reshape(nat * 3), np.zeros((3, 3), float), ""]
         r["status"] = "Done"
 
