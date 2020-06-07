@@ -62,7 +62,7 @@ class Replay(Motion):
                 "Replay can only read from PDB or XYZ files -- or a single frame from a CHK file"
             )
         # Posibility to read beads from separate XYZ files by a wildcard
-        if '*' in self.intraj.value:
+        if any(char in self.intraj.value for char in "*?[]"):
             infilelist = []
             for file in sorted(os.listdir('.')):
                 if fnmatch(file, self.intraj.value):
@@ -98,20 +98,23 @@ class Replay(Motion):
         self.ttime = 0.0
         self.qtime = -time.time()
 
-        while True:
-            self.rstep += 1
-            # If wildcard is used, check that it is consistent with Nbeads
-            if '*' in self.intraj.value and len(self.rfile) != len(self.beads):
+        # If wildcard is used, check that it is consistent with Nbeads
+        wildcard_used = False
+        if any(char in self.intraj.value for char in "*?[]"):
+            wildcard_used = True
+            if len(self.rfile) != len(self.beads):
                 info(
                     "Error: if a wildcard is used for replay, then "
                     "the number of files should be equal to the number of beads.",
                     verbosity.low
                 )
                 softexit.trigger(" # Error in replay input.")
+        while True:
+            self.rstep += 1
             try:
                 if self.intraj.mode == "xyz":
                     for bindex, b in enumerate(self.beads):
-                        if '*' in self.intraj.value:    # wildcarded filename
+                        if wildcard_used:
                             myframe = read_file("xyz", self.rfile[bindex])
                         else:
                             myframe = read_file("xyz", self.rfile)
@@ -123,7 +126,7 @@ class Replay(Motion):
                     self.cell.h[:] = mycell.h
                 elif self.intraj.mode == "pdb":
                     for bindex, b in enumerate(self.beads):
-                        if '*' in self.intraj.value:    # wildcarded filename
+                        if wildcard_used:
                             myatoms, mycell = read_file("pdb", self.rfile[bindex])
                         else:
                             myatoms, mycell = read_file("pdb", self.rfile)
