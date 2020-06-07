@@ -129,7 +129,7 @@ def Evaluate_VB(self):
     betaP = 1.0 / (self.beads.nbeads * units.Constants.kb * self.ensemble.temp)
 
     V = np.zeros(N + 1, float)
-    save_Ek_N = np.zeros(N * (N + 1) / 2, float)
+    save_Ek_N = np.zeros(N * (N + 1) // 2, float)
 
     count = 0
     for m in range(1, N + 1):
@@ -172,7 +172,7 @@ def Evaluate_dVB(self, E_k_N, V, l, j):
             pass  # dV[m,:] is initialized to zero vector already
         else:
 
-            count = m * (m - 1) / 2
+            count = m * (m - 1) // 2
             for k in range(m, 0, -1):
 
                 if (

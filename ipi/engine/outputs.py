@@ -237,10 +237,7 @@ class PropertyOutput(BaseOutput):
 
         self.nout += 1
         if self.flush > 0 and self.nout >= self.flush:
-            self.out.flush()
-            os.fsync(
-                self.out
-            )  # we REALLY want to print out! pretty please OS let us do it.
+            self.force_flush()
             self.nout = 0
 
 
