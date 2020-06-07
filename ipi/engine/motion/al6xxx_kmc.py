@@ -180,7 +180,7 @@ class AlKMC(Motion):
         # dictionary of previous energy evaluations - kind of tricky to use this with the omaker thingie
         self.ecache_file = ecache_file
         self.qcache_file = qcache_file
-        self.max_cache_len = max_cache_len # default 1000; user modification allowed
+        self.max_cache_len = max_cache_len  # default 1000; user modification allowed
         try:
             ff = open(self.ecache_file, "rb")
             self.ecache = pickle.load(ff)
@@ -204,7 +204,7 @@ class AlKMC(Motion):
         self.struct_count = self.ncache
 
         # no TS evaluation implemented yet
-        self.tscache = {} # collections.OrderedDict()
+        self.tscache = {}  # collections.OrderedDict()
         self.tottime = tottime
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
@@ -336,7 +336,7 @@ class AlKMC(Motion):
                 self.ncache += 1
             nevent[2] = self.ecache[nstr]
             nevent[3] = self.qcache[nstr]
-            self.struct_count+=1
+            self.struct_count += 1
 
         # launches TS calculation
         # if not ostr is None:
@@ -407,7 +407,7 @@ class AlKMC(Motion):
             units="angstrom",
             cell_units="angstrom",
         )
-        #self.tslist.flush()
+        # self.tslist.flush()
 
         with self._threadlock:
             # sets the tscache for both FW and BW transition (uses a dictionary to be super-safe and lazy, although of course this could be just a list)
