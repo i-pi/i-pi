@@ -1,9 +1,5 @@
-"""Contains the classes that deal with the different dynamics required in
-different types of ensembles.
-
-Holds the algorithms required for normal mode propagators, and the objects to
-do the constant temperature and pressure algorithms. Also calculates the
-appropriate conserved energy quantity for the ensemble of choice.
+"""Highly specialized Kinetic Monte Carlo class for aluminum 6xxx alloys.
+Could probably be generalized to something more general.
 """
 
 # This file is part of i-PI.
@@ -14,6 +10,7 @@ appropriate conserved energy quantity for the ensemble of choice.
 import pickle
 import threading
 import numpy as np
+import collections
 
 from ipi.engine.motion import Motion, GeopMotion
 from ipi.utils.depend import dstrip, depend_value, dd
@@ -73,6 +70,7 @@ class AlKMC(Motion):
         fixcom=False,
         fixatoms=None,
         nmts=None,
+        max_cache_len=1000,
     ):
         """Initialises a "dynamics" motion object.
 
@@ -182,6 +180,7 @@ class AlKMC(Motion):
         # dictionary of previous energy evaluations - kind of tricky to use this with the omaker thingie
         self.ecache_file = ecache_file
         self.qcache_file = qcache_file
+        self.max_cache_len = max_cache_len # default 1000; user modification allowed
         try:
             ff = open(self.ecache_file, "rb")
             self.ecache = pickle.load(ff)
@@ -198,13 +197,14 @@ class AlKMC(Motion):
                 + self.qcache_file
                 + " - resetting"
             )
-            self.ecache = {}
-            self.qcache = {}
+            self.ecache = collections.OrderedDict()
+            self.qcache = collections.OrderedDict()
         self.ncache = len(self.ecache)
         self.ncache_stored = self.ncache
+        self.struct_count = self.ncache
 
         # no TS evaluation implemented yet
-        self.tscache = {}
+        self.tscache = {} # collections.OrderedDict()
         self.tottime = tottime
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
@@ -329,9 +329,14 @@ class AlKMC(Motion):
         with self._threadlock:
             self.ecache[nstr] = newpot
             self.qcache[nstr] = newq
-            self.ncache += 1
+            if self.ncache == self.max_cache_len:
+                self.ecache.popitem(last=False)
+                self.qcache.popitem(last=False)
+            else:
+                self.ncache += 1
             nevent[2] = self.ecache[nstr]
             nevent[3] = self.qcache[nstr]
+            self.struct_count+=1
 
         # launches TS calculation
         # if not ostr is None:
@@ -402,7 +407,7 @@ class AlKMC(Motion):
             units="angstrom",
             cell_units="angstrom",
         )
-        self.tslist.flush()
+        #self.tslist.flush()
 
         with self._threadlock:
             # sets the tscache for both FW and BW transition (uses a dictionary to be super-safe and lazy, although of course this could be just a list)
@@ -641,7 +646,7 @@ class AlKMC(Motion):
         self.kmcfile.write(
             "%12.5e  %12.5e  %18.11e  %s\n" % (self.tottime, dt, ecurr, ostr)
         )
-        self.kmcfile.flush()
+        self.kmcfile.force_flush()
         self.tottime += dt
         self.ensemble.time += dt  # updates time counter
         print("Finishing step at ", "".join(self.state))
