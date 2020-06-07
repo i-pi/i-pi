@@ -75,7 +75,7 @@ class Replay(Motion):
                 metainfo = rr['comment'].split()
                 for i, word in enumerate(metainfo):
                     if word == 'Bead:':
-                        bead_map_list.append(int(metainfo[i+1]))
+                        bead_map_list.append(int(metainfo[i + 1]))
                 fdin.close()
             # check that beads are continuous (no files missing)
             if sorted(bead_map_list) != list(range(len(bead_map_list))):
@@ -85,7 +85,7 @@ class Replay(Motion):
                 )
             # sort the list of files according to their bead indices
             infilelist_sorted, _ = zip(*sorted(zip(infilelist, bead_map_list),
-                                       key = lambda t: t[1]))
+                                       key=lambda t: t[1]))
             self.rfile = [open(f, 'r') for f in infilelist_sorted]
         else:   # no wildcard
             self.rfile = open(self.intraj.value, "r")
