@@ -23,7 +23,8 @@
        </normal_modes>
        <motion mode='instanton'>
            <!-- <fixatoms>[3]</fixatoms>-->
-            <fixatoms>[1,2,3,4,5]</fixatoms>
+           <fixatoms>[1,2,3,4,5]</fixatoms>
+           <fixcom> False </fixcom>
            <instanton mode='rate'>
                <tolerances>
                    <energy> 1e-7 </energy>
