@@ -6,7 +6,7 @@
     </output>
     <total_steps> 100 </total_steps>
     <prng><seed>31415</seed></prng>
-    <ffsocket name="lammps" mode="unix">
+    <ffsocket name="qtip4pf" mode="unix">
         <address>lammps_ice</address>
     </ffsocket>
     <system>
@@ -14,7 +14,7 @@
             <file mode="xyz"> in.xyz </file>
             <velocities mode="thermal" units="kelvin"> 200 </velocities>
         </initialize>
-        <forces><force forcefield="lammps"> </force></forces>
+        <forces><force forcefield="qtip4pf"> </force></forces>
         <ensemble>
             <temperature units="kelvin"> 200 </temperature>
             <stress units="megapascal"> [ 5, 2, 0.1, 0, 2, 0.5, 0, 0, 1 ] </stress>

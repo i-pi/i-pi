@@ -8,7 +8,7 @@
   <prng>
     <seed>3348</seed>
   </prng>
-  <ffsocket mode='unix' name='driver'>
+  <ffsocket mode='unix' name='harm'>
     <address>harmonic</address>
   </ffsocket>
   <system>
@@ -17,7 +17,7 @@
       <velocities mode='thermal' units='kelvin'>3683.412077</velocities>
     </initialize>
     <forces>
-      <force forcefield='driver'/>
+      <force forcefield='harm'/>
     </forces>
     <ensemble>
       <temperature units='kelvin'>3683.412077</temperature>

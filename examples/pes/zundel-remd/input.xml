@@ -1,5 +1,5 @@
 <simulation threading="false">
-    <ffsocket mode='unix' name='driver'>
+    <ffsocket mode='unix' name='zundel'>
          <latency>  1.00000000e-02</latency>
          <slots>4</slots>
          <port>20614</port>
@@ -25,7 +25,7 @@
    <template>	   
    <system prefix="RE-IDX">
       <forces> 
-          <force forcefield="driver"></force>
+          <force forcefield="zundel"></force>
       </forces>
       <initialize nbeads="8">
         <file mode="xyz">./h5o2+.xyz</file>
