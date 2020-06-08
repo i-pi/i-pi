@@ -351,7 +351,8 @@ class InputFFDebye(InputForceField):
             {
                 "dtype": float,
                 "default": input_default(factory=np.zeros, args=(0,)),
-                "help": "Specifies the Hessian of the harmonic potential (atomic units!)",
+                "help": "Specifies the Hessian of the harmonic potential",
+                "dimension": "hessian",
             },
         ),
         "x_reference": (
