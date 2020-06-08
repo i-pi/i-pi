@@ -30,7 +30,6 @@ from ipi.utils.instools import (
 from ipi.utils.instools import print_instanton_hess, diag_banded, ms_pathway
 from ipi.utils.hesstools import get_hessian, clean_hessian, get_dynmat
 from ipi.engine.beads import Beads
-from scipy.interpolate import interp1d
 
 __all__ = ["InstantonMotion"]
 
@@ -384,6 +383,11 @@ class GradientMapper(object):
                 verbosity.low,
             )
             spline = True
+            try:
+                from scipy.interpolate import interp1d
+            except ImportError:
+                softexit.trigger("Scipy required to use  max_ms >0")
+
         else:
             indexes = np.arange(self.dbeads.nbeads)
             spline = False
