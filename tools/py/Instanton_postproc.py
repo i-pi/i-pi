@@ -60,16 +60,56 @@ cal2au = unit_to_internal("energy", "cal/mol", 1.0)
 cm2au = unit_to_internal("frequency", "hertz", 1.0) * 3e10
 
 # INPUT
-parser = argparse.ArgumentParser(description="""Post-processing routine in order to obtain different quantities from an instanton (or instanton related) calculation. These quantities can be used for the calculation of rates or tunneling splittings in the instanton approximation.""")
-parser.add_argument('input', help="Restart file")
-parser.add_argument('-c', '--case', default=False, help="Type of the calculation to analyse. Options: 'instanton', 'reactant' or 'TS'.")
-parser.add_argument('-t', '--temperature', type=float, default=0.0, help="Temperature in K.")
-parser.add_argument('-asr', '--asr', default='poly', help="Removes the zero frequency vibrational modes depending on the symmerty of the system")
-parser.add_argument('-e', '--energy_shift', type=float, default=0.0, help="Zero of energy in eV")
-parser.add_argument('-f', '--filter', default=[], help='List of atoms indexes to filter (i.e. eliminate its componentes in the position,mass and hessian arrays. It is 0 based.', type=int, action='append')
-parser.add_argument('-n', '--nbeadsR', default=0, help='Number of beads (full polymer) to compute the approximate partition function (only reactant case)', type=int)
-parser.add_argument('-freq', '--freq_reac', default=None, help="List of frequencies of the minimum. Required for splitting calculation.")
-parser.add_argument('-q', '--quiet', default=False, action='store_true', help="Avoid the Qvib and Qrot calculation in the instanton case.")
+parser = argparse.ArgumentParser(
+    description="""Post-processing routine in order to obtain different quantities from an instanton (or instanton related) calculation. These quantities can be used for the calculation of rates or tunneling splittings in the instanton approximation."""
+)
+parser.add_argument("input", help="Restart file")
+parser.add_argument(
+    "-c",
+    "--case",
+    default=False,
+    help="Type of the calculation to analyse. Options: 'instanton', 'reactant' or 'TS'.",
+)
+parser.add_argument(
+    "-t", "--temperature", type=float, default=0.0, help="Temperature in K."
+)
+parser.add_argument(
+    "-asr",
+    "--asr",
+    default="poly",
+    help="Removes the zero frequency vibrational modes depending on the symmerty of the system",
+)
+parser.add_argument(
+    "-e", "--energy_shift", type=float, default=0.0, help="Zero of energy in eV"
+)
+parser.add_argument(
+    "-f",
+    "--filter",
+    default=[],
+    help="List of atoms indexes to filter (i.e. eliminate its componentes in the position,mass and hessian arrays. It is 0 based.",
+    type=int,
+    action="append",
+)
+parser.add_argument(
+    "-n",
+    "--nbeadsR",
+    default=0,
+    help="Number of beads (full polymer) to compute the approximate partition function (only reactant case)",
+    type=int,
+)
+parser.add_argument(
+    "-freq",
+    "--freq_reac",
+    default=None,
+    help="List of frequencies of the minimum. Required for splitting calculation.",
+)
+parser.add_argument(
+    "-q",
+    "--quiet",
+    default=False,
+    action="store_true",
+    help="Avoid the Qvib and Qrot calculation in the instanton case.",
+)
 
 args = parser.parse_args()
 inputt = args.input
@@ -166,7 +206,15 @@ def get_rp_freq(w0, nbeads, temp, mode="rate"):
             for k in range(nbeads):
                 if w0[n] == 0 and k == 0:
                     continue
-                w += np.log(factor * np.sqrt(4. / (betaP * hbar)**2 * np.sin(np.absolute(k) * np.pi / nbeads)**2 + w0[n]))
+                w += np.log(
+                    factor
+                    * np.sqrt(
+                        4.0
+                        / (betaP * hbar) ** 2
+                        * np.sin(np.absolute(k) * np.pi / nbeads) ** 2
+                        + w0[n]
+                    )
+                )
                 # note the w0 is the eigenvalue ( the square of the frequency )
         return w
 
@@ -174,7 +222,15 @@ def get_rp_freq(w0, nbeads, temp, mode="rate"):
         for n in range(w0.size):
             for k in range(nbeads):
                 # note the w0 is the eigenvalue ( the square of the frequency )
-                ww = np.append(ww, np.sqrt(4. / (betaP * hbar)**2 * np.sin((k + 1) * np.pi / (2 * nbeads + 2))**2 + w0[n]))
+                ww = np.append(
+                    ww,
+                    np.sqrt(
+                        4.0
+                        / (betaP * hbar) ** 2
+                        * np.sin((k + 1) * np.pi / (2 * nbeads + 2)) ** 2
+                        + w0[n]
+                    ),
+                )
         return np.array(ww)
     else:
         print("We can't indentify the mode")
@@ -184,7 +240,7 @@ def get_rp_freq(w0, nbeads, temp, mode="rate"):
 # -----END of some functions-----------------
 
 # -----READ---------------------------------
-print('\nWe are ready to start. Reading {} ... (This can take a while)'.format(inputt))
+print("\nWe are ready to start. Reading {} ... (This can take a while)".format(inputt))
 
 simulation = Simulation.load_from_xml(
     inputt, custom_verbosity="quiet", request_banner=False, read_only=True
@@ -228,10 +284,10 @@ if case == "reactant":
 
 elif case == "TS":
     pos = beads.q
-    h = simulation.syslist[0].motion.hessian.copy()
+    h = simulation.syslist[0].motion.optarrays["hessian"].copy()
     m3 = beads.m3
-    pots = simulation.syslist[0].motion.old_u
-    V0 = simulation.syslist[0].motion.energy_shift
+    pots = simulation.syslist[0].motion.optarrays["old_u"]
+    V0 = simulation.syslist[0].motion.optarrays["energy_shift"]
 
     if V00 != 0.0:
         print("Overwriting energy shift with the provided values")
@@ -377,30 +433,20 @@ elif case == "instanton":
         Qtras = ((np.sum(m)) / (2 * np.pi * beta * hbar ** 2)) ** 1.5
 
         if asr == "poly" and not quiet:
-            Qrot = (8 * np.pi * detI / ((hbar) ** 6 * (betaP) ** 3)) ** 0.5 / (
-                nbeads
-            ) ** 3
+            Qrot = (8 * np.pi * detI / ((hbar) ** 6 * (betaP) ** 3)) ** 0.5
+            Qrot /= nbeads ** 3
         else:
             Qrot = 1.0
 
         if not quiet:
-            print(
-                (
-                    "Deleted frequency: {:8.3f} cm^-1".format(
-                        (np.sign(d[1]) * np.absolute(d[1]) ** 0.5 / cm2au)
-                    )
-                )
-            )
+            del_freq = np.sign(d[1]) * np.absolute(d[1]) ** 0.5 / cm2au
+            print("Deleted frequency: {:8.3f} cm^-1".format(del_freq))
+
             if asr != "poly":
                 print("WARNING asr != poly")
                 print("First 10 eigenvalues")
-                print(
-                    (
-                        "{}".format(
-                            np.sign(d[0:10]) * np.absolute(d[0:10]) ** 0.5 / cm2au
-                        )
-                    )
-                )
+                ten_eigv = np.sign(d[0:10]) * np.absolute(d[0:10]) ** 0.5 / cm2au
+                print("{}".format(ten_eigv))
                 print(
                     "Please check that this you don't have any unwanted zero frequency"
                 )
@@ -418,38 +464,32 @@ elif case == "instanton":
         action2 = spring_pot(nbeads, pos, omega2, m3) / (temp * nbeads * kb)
 
         print(
-            (
-                "\nWe are done. Instanton rate. Nbeads {} (diff only {})".format(
-                    nbeads, nbeads / 2
-                )
+            "\nWe are done. Instanton rate. Nbeads {} (diff only {})".format(
+                nbeads, nbeads / 2
             )
         )
         print(
-            (
-                "   {:8s} {:8s}  | {:11s} | {:11s} | {:11s} | {:8s} ( {:8s},{:8s} ) |".format(
-                    "BN",
-                    "(BN*N)",
-                    "Qt(bohr^-3)",
-                    "Qrot",
-                    "log(Qvib*N)",
-                    "S/hbar",
-                    "S1/hbar",
-                    "S2/hbar",
-                )
+            "   {:8s} {:8s}  | {:11s} | {:11s} | {:11s} | {:8s} ( {:8s},{:8s} ) |".format(
+                "BN",
+                "(BN*N)",
+                "Qt(bohr^-3)",
+                "Qrot",
+                "log(Qvib*N)",
+                "S/hbar",
+                "S1/hbar",
+                "S2/hbar",
             )
         )
         print(
-            (
-                "{:8.3f} ( {:8.3f} ) | {:11.3f} | {:11.3f} | {:11.3f} | {:8.3f} ( {:8.3f} {:8.3f} ) |".format(
-                    BN,
-                    BN * nbeads,
-                    Qtras,
-                    Qrot,
-                    logQvib,
-                    (action1 + action2),
-                    action1,
-                    action2,
-                )
+            "{:8.3f} ( {:8.3f} ) | {:11.3f} | {:11.3f} | {:11.3f} | {:8.3f} ( {:8.3f} {:8.3f} ) |".format(
+                BN,
+                BN * nbeads,
+                Qtras,
+                Qrot,
+                logQvib,
+                (action1 + action2),
+                action1,
+                action2,
             )
         )
         print("\n\n")
@@ -526,7 +566,9 @@ elif case == "instanton":
 
 info("\n\n", Verbosity.medium)
 info(
-    "Remember that the output obtained from this script simply gives you components that you can use in order to calculate a rate or a tunneling splitting in the instanton approximation.",
+    "Remember that the output obtained from this script simply gives you components\
+      that you can use in order to calculate a rate or a tunneling splitting in the \
+      instanton approximation.",
     verbosity.medium,
 )
 info(
