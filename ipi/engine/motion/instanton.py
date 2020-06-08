@@ -20,15 +20,8 @@ from ipi.utils.messages import verbosity, info
 from ipi.utils import units
 from ipi.utils.mintools import nichols, Powell
 from ipi.engine.motion.geop import L_BFGS
-from ipi.utils.instools import (
-    banded_hessian,
-    invmul_banded,
-    red2comp,
-    get_imvector,
-    print_instanton_geo,
-    print_instanton_hess,
-    diag_banded,
-)
+from ipi.utils.instools import banded_hessian, invmul_banded, red2comp, get_imvector, print_instanton_geo
+from ipi.utils.instools import print_instanton_hess, diag_banded , ms_pathway
 from ipi.utils.hesstools import get_hessian, clean_hessian, get_dynmat
 from ipi.engine.beads import Beads
 from scipy.interpolate import interp1d 
@@ -240,7 +233,7 @@ class Fix(object):
                 or key == "initial_hessian"
             ):
                 t = -1
-            elif key == "old_x" or key == "old_f":
+            elif key == "old_x" or key == "old_f" or key == 'd':
                 t = 1
             elif key == "hessian":
                 t = 2
@@ -344,7 +337,7 @@ class GradientMapper(object):
         self.fcount = 0
         pass
 
-    def bind(self, dumop, discretization):
+    def bind(self, dumop, discretization,max_ms):
 
         self.dbeads = dumop.beads.copy()
         self.dcell = dumop.cell.copy()
@@ -408,8 +401,13 @@ class GradientMapper(object):
            
         # This forces the update of the forces 
         self.dbeads.q[:] = x[:]
-        e = self.dforces.pot  # Energy
-        g = -self.dforces.f  # Gradient
+        self.dforces.transfer_forces_manual([full_q],[full_pot],[full_forces])
+
+        # e = self.dforces.pot   # Energy
+        # g = -self.dforces.f    # Gradient
+        e = np.sum(full_pot)
+        g = -full_forces    # Gradient
+
         if not full:
             g = self.fix.get_active_vector(g, 1)
 
@@ -610,7 +608,7 @@ class FullMapper(object):
     """Creation of the multi-dimensional function to compute the physical and the spring forces.
     """
 
-    def __init__(self, im, gm):
+    def __init__(self, im, gm,esum=False):
 
         self.im = im
         self.gm = gm

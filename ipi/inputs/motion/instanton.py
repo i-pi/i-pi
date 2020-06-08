@@ -110,6 +110,8 @@ class InputInst(InputDictionary):
                                             Finally lbfgs is used for tunneling splitting calculations. """,
             },
         ),
+        "max_ms": (InputValue, {"dtype": float, "default": -1.0,
+                                             "help": """Evaluate the forces in a reduced ring polymer such that that mass-scaled distance in a.u. between replicas is  smaller that the provided value."""}),
         "discretization": (
             InputArray,
             {

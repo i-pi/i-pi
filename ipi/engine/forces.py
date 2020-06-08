@@ -906,7 +906,7 @@ class Forces(dobject):
         assert (len(self.mforces)==len(new_v)),msg
         assert (len(self.mforces)==len(new_forces)),msg
 
-        for k in xrange(len(self.mforces)):
+        for k in range(len(self.mforces)):
             mv = new_v[k]
             mf = new_forces[k]
             mq = new_q[k]
@@ -918,7 +918,7 @@ class Forces(dobject):
             assert (mself.nbeads==mq.shape[0]),msg
 
             dd(mself.beads).q.set(mq, manual=False)
-            for b in xrange(mself.nbeads):
+            for b in range(mself.nbeads):
 
                 ufvx = [mv[b],mf[b],vir,extra]  
                 dfkbself = dd(mself._forces[b])
