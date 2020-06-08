@@ -27,7 +27,9 @@ class MultiMotion(Motion):
         self.mlist = motionlist
         for m in self.mlist:
             dd(m).dt.add_dependant(dself.dt)
-        a = self.dt  # DON'T ASK WHY BUT IF YOU DON'T DO THAT WEAKREFS TO SELF.DT WILL BE INVALIDATED
+        a = (
+            self.dt
+        )  # DON'T ASK WHY BUT IF YOU DON'T DO THAT WEAKREFS TO SELF.DT WILL BE INVALIDATED
 
         self.fixatoms = set(self.mlist[0].fixatoms)
         for m in self.mlist:

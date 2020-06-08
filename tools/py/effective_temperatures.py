@@ -1,6 +1,6 @@
 #!/usr/bin/python
 
-__author__ = 'Igor Poltavsky'
+__author__ = "Igor Poltavsky"
 
 """ effective_temperatures.py
 The script reads the forces from from standard i-PI output files and computes the effective temperatures
@@ -33,8 +33,10 @@ def effectiveTemperatures(prefix, temp, ss=0):
     Computes effective temperatures for a given (PI)MD dynamics.
     """
 
-    temperature = unit_to_internal("temperature", "kelvin", float(temp))  # simulation temperature
-    skipSteps = int(ss)                                                  # steps to skip for thermalization
+    temperature = unit_to_internal(
+        "temperature", "kelvin", float(temp)
+    )  # simulation temperature
+    skipSteps = int(ss)  # steps to skip for thermalization
 
     f2_av = None  # average square forces array
     names = None
@@ -45,26 +47,28 @@ def effectiveTemperatures(prefix, temp, ss=0):
     nbeads = len(fns_for)
 
     # print some information
-    print 'temperature = {:f} K'.format(float(temp))
-    print
-    print 'number of beads = {:d}'.format(nbeads)
-    print
-    print 'forces file names:'
+    print("temperature = {:f} K".format(float(temp)))
+    print()
+    print("number of beads = {:d}".format(nbeads))
+    print()
+    print("forces file names:")
     for fn_for in fns_for:
-        print '{:s}'.format(fn_for)
-    print
-    print 'output file name:'
-    print fn_out
-    print
+        print("{:s}".format(fn_for))
+    print()
+    print("output file name:")
+    print(fn_out)
+    print()
 
     # open input and output files
     ifor = [open(fn, "r") for fn in fns_for]
     iOut = open(fn_out, "w")
 
     # Some constants
-    const = Constants.hbar**2 / (12.0 * (nbeads * Constants.kb * temperature)**3)
+    const = Constants.hbar ** 2 / (12.0 * (nbeads * Constants.kb * temperature) ** 3)
 
-    iOut.write("# Atom, Cartesian components of the effective temperature, average effective temperature (in Kelvin)\n")
+    iOut.write(
+        "# Atom, Cartesian components of the effective temperature, average effective temperature (in Kelvin)\n"
+    )
 
     natoms = 0
     ifr = 0
@@ -72,12 +76,12 @@ def effectiveTemperatures(prefix, temp, ss=0):
     while True:  # Reading input files and calculating PPI correction
 
         if ifr % 100 == 0:
-            print '\rProcessing frame {:d}'.format(ifr),
+            print("\rProcessing frame {:d}".format(ifr), end=" ")
             sys.stdout.flush()
 
         try:
             for i in range(nbeads):
-                ret = read_file("xyz", ifor[i], dimension='force')["atoms"]
+                ret = read_file("xyz", ifor[i], dimension="force")["atoms"]
                 if natoms == 0:
                     m, natoms, names = ret.m, ret.natoms, ret.names
                     f = np.zeros((nbeads, 3 * natoms))
@@ -91,7 +95,7 @@ def effectiveTemperatures(prefix, temp, ss=0):
             f2 = np.zeros(3 * natoms)
             for i in range(natoms):
                 for j in range(nbeads):
-                    f2[i * 3:i * 3 + 3] += f[j, i * 3:i * 3 + 3]**2 / m[i]
+                    f2[i * 3 : i * 3 + 3] += f[j, i * 3 : i * 3 + 3] ** 2 / m[i]
 
             f2_av[:] += f2[:]
             ifr += 1
@@ -104,8 +108,16 @@ def effectiveTemperatures(prefix, temp, ss=0):
     temperature = unit_to_user("temperature", "kelvin", temperature)
 
     for i in range(natoms):
-        iOut.write("%s    %f     %f     %f     %f\n" % (names[i], temperature * (1 + dT[i * 3]), temperature * (1 + dT[i * 3 + 1]),
-                                                        temperature * (1 + dT[i * 3 + 2]), temperature * (1 + np.sum(dT[i * 3:i * 3 + 3]) / 3.0)))
+        iOut.write(
+            "%s    %f     %f     %f     %f\n"
+            % (
+                names[i],
+                temperature * (1 + dT[i * 3]),
+                temperature * (1 + dT[i * 3 + 1]),
+                temperature * (1 + dT[i * 3 + 2]),
+                temperature * (1 + np.sum(dT[i * 3 : i * 3 + 3]) / 3.0),
+            )
+        )
 
     for f in ifor:
         f.close()
@@ -118,6 +130,6 @@ def main(*arg):
     effectiveTemperatures(*arg)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     main(*sys.argv[1:])

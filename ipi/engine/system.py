@@ -10,12 +10,7 @@ forcefields which govern the interaction potential.
 # See the "licenses" directory for full license information.
 
 
-import os.path
-import sys
-import time
 import threading
-
-import numpy as np
 
 from ipi.utils.depend import *
 from ipi.utils.units import *
@@ -23,14 +18,13 @@ from ipi.utils.prng import *
 from ipi.utils.io import *
 from ipi.utils.io.inputs.io_xml import *
 from ipi.utils.messages import verbosity, info
-from ipi.utils.softexit import softexit
 from ipi.engine.atoms import *
 from ipi.engine.cell import *
 from ipi.engine.forces import Forces
 from ipi.engine.properties import Properties, Trajectories
 
 
-__all__ = ['System']
+__all__ = ["System"]
 
 
 class System(dobject):
@@ -54,7 +48,9 @@ class System(dobject):
        simul: The parent simulation object.
     """
 
-    def __init__(self, init, beads, nm, cell, fcomponents, ensemble=None, motion=None, prefix=""):
+    def __init__(
+        self, init, beads, nm, cell, fcomponents, ensemble=None, motion=None, prefix=""
+    ):
         """Initialises System class.
 
         Args:
@@ -93,11 +89,27 @@ class System(dobject):
         self.simul = simul  # keeps a handle to the parent simulation object
 
         # binds important computation engines
-        print "NOW BINDING THE FORCES.... "
-        self.forces.bind(self.beads, self.cell, self.fcomp, self.simul.fflist, open_paths=self.nm.open_paths)
+        info(" # Binding the forces ", verbosity.low)
+        self.forces.bind(
+            self.beads,
+            self.cell,
+            self.fcomp,
+            self.simul.fflist,
+            open_paths=self.nm.open_paths,
+        )
         self.nm.bind(self.ensemble, self.motion, beads=self.beads, forces=self.forces)
-        self.ensemble.bind(self.beads, self.nm, self.cell, self.forces, self.simul.fflist)
-        self.motion.bind(self.ensemble, self.beads, self.nm, self.cell, self.forces, self.prng, simul.output_maker)
+        self.ensemble.bind(
+            self.beads, self.nm, self.cell, self.forces, self.simul.fflist
+        )
+        self.motion.bind(
+            self.ensemble,
+            self.beads,
+            self.nm,
+            self.cell,
+            self.forces,
+            self.prng,
+            simul.output_maker,
+        )
 
         dpipe(dd(self.nm).omegan2, dd(self.forces).omegan2)
 

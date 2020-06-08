@@ -12,14 +12,10 @@ Syntax:
 """
 
 
-import numpy as np
 import sys
 import glob
 from ipi.utils.io import read_file, print_file_path
 from ipi.engine.beads import Beads
-from ipi.engine.cell import Cell
-from ipi.utils.depend import *
-from ipi.utils.units import *
 from ipi.utils.messages import verbosity
 
 verbosity.level = "low"
@@ -55,5 +51,5 @@ def main(prefix, suffix="pos", unitconv="1.0"):
         ifr += 1
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(*sys.argv[1:])

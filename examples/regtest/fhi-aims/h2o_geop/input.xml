@@ -1,0 +1,36 @@
+<!--REGTEST
+DEPENDENCIES  control.in geometry.in init.xyz
+COMMAND aims.x 
+ENDREGTEST-->
+<simulation mode='static' verbosity='medium'>
+  <output prefix='PREFIX'>
+<!--    <properties stride='1' filename='out'>  [ step, potential{kilocal/mol} ] </properties>-->
+    <trajectory stride='1' filename='pos'>  positions{angstrom}  </trajectory>
+  </output>
+  <total_steps> 1000 </total_steps>
+  <ffsocket name='aims' mode='inet' pbc='true'>
+    <address> localhost </address>
+    <latency> 1e-4</latency>
+    <port> 10001 </port>
+  </ffsocket>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='xyz'>  init.xyz </file>
+    </initialize>
+    <forces>
+      <force forcefield='aims'> </force>
+    </forces>
+    <motion mode='minimize'>
+      <optimizer mode='bfgs'>
+<!--    This ls_options tolerance is needed to make LBFGS work.-->
+<!--    The default value in inputs/ is 1., in engine/ is 1E-5-->
+        <ls_options>  <tolerance> 1e-2 </tolerance> </ls_options>
+        <tolerances>
+          <energy units='electronvolt'> 1e-3 </energy>
+          <position> 1e-4 </position>
+          <force units='ev/ang'> 1e-2 </force>
+        </tolerances>
+      </optimizer>
+    </motion>
+  </system>
+</simulation>

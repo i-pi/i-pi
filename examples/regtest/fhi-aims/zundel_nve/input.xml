@@ -1,0 +1,44 @@
+<!--REGTEST
+DEPENDENCIES  control.in geometry.in init.xyz
+COMMAND aims.x > aims.out 
+ENDREGTEST-->
+<simulation verbosity='high'>
+  <ffsocket mode='inet' name='ss'>
+    <latency>  1.00000000e-02</latency>
+    <slots>4</slots>
+    <port>10001</port>
+    <timeout>  6.00000000e+02</timeout>
+    <address>localhost</address>
+  </ffsocket>
+  <total_steps>10</total_steps>
+  <output prefix='simulation'>
+    <trajectory stride='2' filename='pos' cell_units='angstrom'>positions</trajectory>
+    <trajectory stride='2' filename='xc' format='xyz'>x_centroid{angstrom}</trajectory>
+    <trajectory stride='2' filename='vc'>v_centroid</trajectory>
+    <properties stride='2' filename='out'> [ step, time{femtosecond}, conserved, temperature, kinetic_cv,
+    potential, kinetic_cv(H), kinetic_cv(O) ] </properties>
+    <properties stride='200' filename='out-md'> [ kinetic_md ] </properties>
+    <trajectory stride='5' filename='dipole'> extras </trajectory>
+  </output>
+  <prng>
+    <seed>18885</seed>
+  </prng>
+  <system>
+    <forces>
+      <force forcefield='ss'/>
+    </forces>
+    <initialize nbeads='4'>
+      <file mode='xyz'>init.xyz</file>
+      <cell mode='abc'>	[   15., 15.0, 15.0 ]      </cell>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <ensemble>
+      <temperature units='kelvin'> 300.0 </temperature>
+    </ensemble>
+    <motion mode='dynamics'>
+      <dynamics mode='nve'>
+        <timestep units='femtosecond'> 0.25 </timestep>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>

@@ -1,0 +1,3 @@
+To analyze the output of the scphonons implementation to get the free energies and the average energy run:
+i-pi-get_Ascp -i input.xml
+

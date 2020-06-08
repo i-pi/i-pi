@@ -5,5 +5,15 @@
 # See the "licenses" directory for full license information.
 
 
-__all__ = ['depend', 'units', 'mathtools', 'prng', 'inputvalue',
-           'nmtransform', 'messages', 'softexit', 'io', 'constrtools']
+__all__ = [
+    "depend",
+    "units",
+    "mathtools",
+    "prng",
+    "inputvalue",
+    "nmtransform",
+    "messages",
+    "softexit",
+    "io",
+    "constrtools",
+]

@@ -1,3 +1,7 @@
 numpy
 pytest
 pytest-mock
+pytest-cov
+mock
+flake8
+coverage

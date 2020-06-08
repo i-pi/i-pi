@@ -11,11 +11,9 @@ constant energy and constant temperature dynamics.
 # See the "licenses" directory for full license information.
 
 
-import time
-
 import numpy as np
 
-from ipi.engine.motion import Motion, Dynamics
+from ipi.engine.motion import Dynamics
 from ipi.engine.motion.dynamics import DummyIntegrator
 
 from ipi.utils.depend import *
@@ -30,7 +28,7 @@ from ipi.utils.messages import verbosity, warning
 # but falls back on numpy if it's not there
 try:
     import scipy.linalg as spla
-except:
+except ImportError:
     spla = None
 
 
@@ -41,7 +39,7 @@ class ConstrainedDynamics(Dynamics):
 
     Attributes (on top of those inherited):
         nsteps_geo: number of geodesic integrator iterations
-        nsteps_o: number of steps for the stochastic thermostat integrator 
+        nsteps_o: number of steps for the stochastic thermostat integrator
                 (needed because O does not commute with the constraint)
         constraint_list: list of constraints that must be applied
         csolver: solver to be used for the constraining
@@ -57,10 +55,21 @@ class ConstrainedDynamics(Dynamics):
             effective classical temperature.
     """
 
-    def __init__(self, timestep, mode="nve", splitting="obabo",
-                 thermostat=None, barostat=None, fixcom=False, fixatoms=None,
-                 nmts=None, nsteps_geo=1, nsteps_o=1,
-                 constraint_list=[], csolver=None):
+    def __init__(
+        self,
+        timestep,
+        mode="nve",
+        splitting="obabo",
+        thermostat=None,
+        barostat=None,
+        fixcom=False,
+        fixatoms=None,
+        nmts=None,
+        nsteps_geo=1,
+        nsteps_o=1,
+        constraint_list=[],
+        csolver=None,
+    ):
         """Initialises a "dynamics" motion object.
 
         Args:
@@ -70,7 +79,7 @@ class ConstrainedDynamics(Dynamics):
         """
 
         super(Dynamics, self).__init__(fixcom=fixcom, fixatoms=fixatoms)
-        dd(self).dt = depend_value(name='dt', value=timestep)
+        dd(self).dt = depend_value(name="dt", value=timestep)
 
         if thermostat is None:
             self.thermostat = Thermostat()
@@ -93,10 +102,14 @@ class ConstrainedDynamics(Dynamics):
         elif self.enstype == "nvt":
             self.integrator = NVTConstrainedIntegrator()
         else:
-            ValueError("{:s} is not a valid ensemble for constrained dynamics".format(self.enstype))
+            ValueError(
+                "{:s} is not a valid ensemble for constrained dynamics".format(
+                    self.enstype
+                )
+            )
 
         # splitting mode for the integrators
-        dd(self).splitting = depend_value(name='splitting', value=splitting)
+        dd(self).splitting = depend_value(name="splitting", value=splitting)
 
         # The list of constraints coming from the input is an actual list of independent
         # constraints, and should be treated as such
@@ -122,7 +135,8 @@ class ConstrainedDynamics(Dynamics):
         # an error if fixcom is True and any of the constraints are Eckart.
         if self.fixcom and has_eckart:
             raise ValueError(
-                "Cannot simultaneously fix cell CoM and enforce Eckart constraints!")
+                "Cannot simultaneously fix cell CoM and enforce Eckart constraints!"
+            )
 
         if fixatoms is None:
             self.fixatoms = np.zeros(0, int)
@@ -132,17 +146,20 @@ class ConstrainedDynamics(Dynamics):
             raise ValueError("Cannot fix atoms together with constrained MD")
 
         if csolver is None:
-            self.csolver = ConstraintSolver(self.constraint_list, tolerance=0.0001, maxit=10000, norm_order=2)
+            self.csolver = ConstraintSolver(
+                self.constraint_list, tolerance=0.0001, maxit=10000, norm_order=2
+            )
         else:
             if csolver["norm_order"] == -1:
-                norm_order = float('inf')
+                norm_order = float("inf")
             else:
                 norm_order = csolver["norm_order"]
             self.csolver = ConstraintSolver(
                 self.constraint_list,
                 tolerance=csolver["tolerance"],
                 maxit=csolver["maxit"],
-                norm_order=norm_order)
+                norm_order=norm_order,
+            )
 
         # parameters of the geodesic integrator. will probably never need
         # to be changed dynamically, so for the moment we don't consider them depend objects
@@ -161,9 +178,11 @@ class ConstrainedDynamics(Dynamics):
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         """Binds the constrained dynamics object.
         Just passes control to the parent class, and then binds the constraints
-        and the solver. 
+        and the solver.
         """
-        super(ConstrainedDynamics, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
+        super(ConstrainedDynamics, self).bind(
+            ens, beads, nm, cell, bforce, prng, omaker
+        )
 
         # now binds the constraints
         for c in self.constraint_list:
@@ -173,7 +192,7 @@ class ConstrainedDynamics(Dynamics):
 
 class ConstraintSolverBase(dobject):
     """ Empty base class for the constraint solver. Provides the interface
-    that must be used to offer constraint functionalities to an integrator.    
+    that must be used to offer constraint functionalities to an integrator.
     """
 
     def __init__(self, constraint_list, dt=1.0):
@@ -199,7 +218,7 @@ class ConstraintSolverBase(dobject):
         raise NotImplementedError()
 
     def proj_manifold(self, beads, stepsize=None, proj_p=True):
-        """Enforce the constraints on the positions (project onto the 
+        """Enforce the constraints on the positions (project onto the
         constraint manifold using the Gramian matrix).
         """
 
@@ -209,22 +228,23 @@ class ConstraintSolverBase(dobject):
 class ConstraintSolver(ConstraintSolverBase):
     """ An implementation of a constraint solver that uses M-RATTLE to
     impose constraints onto the momenta and a quasi-Newton method
-    to impose constraints onto the positions. The constraint is applied 
-    sparsely, i.e. on each block of constraints separately. 
+    to impose constraints onto the positions. The constraint is applied
+    sparsely, i.e. on each block of constraints separately.
 
-    For implementation details of M-RATTLE see 
+    For implementation details of M-RATTLE see
         H. C. Andersen, J. Comput. Phys. 52, 24 (1983),
-    and  
+    and
         M. Tuckerman, "Statistical Mechanics: Theory and Molecular Simulation" pp 106-108 (OUP, Oxford, 2010).
 
     For the quasi-Newton method in proj_cotangent see
         ???
     """
 
-    def __init__(self, constraint_list, dt=1.0,
-                 tolerance=0.001, maxit=1000, norm_order=2):
+    def __init__(
+        self, constraint_list, dt=1.0, tolerance=0.001, maxit=1000, norm_order=2
+    ):
         """ Solver options include a tolerance for the projection on the
-        manifold, maximum number of iterations for the projection, and 
+        manifold, maximum number of iterations for the projection, and
         the order of the norm to estimate the convergence """
 
         super(ConstraintSolver, self).__init__(constraint_list, dt)
@@ -240,7 +260,7 @@ class ConstraintSolver(ConstraintSolverBase):
         (sparsely).
         """
 
-        m3 = dstrip(self.beads.m3[0])
+        #        m3 = dstrip(self.beads.m3[0])
         p = dstrip(self.beads.p[0]).copy()
         self.beads.p.hold()
 
@@ -259,7 +279,7 @@ class ConstraintSolver(ConstraintSolverBase):
         self.beads.p.resume()
 
     def proj_manifold(self):
-        """Iteratively enforce the constraints onto the positions by finding 
+        """Iteratively enforce the constraints onto the positions by finding
         the Lagrange multipliers using a quasi-Newton solver. Note
         that independent groups of constraints are treated separately
         (sparsely).
@@ -281,7 +301,7 @@ class ConstraintSolver(ConstraintSolverBase):
             constr.q = q[ic]
 
             # iterative projection on the manifold
-            for i in xrange(self.maxit):
+            for i in range(self.maxit):
                 g = dstrip(constr.g)
                 # bailout condition
                 if self.tolerance > np.linalg.norm(g, ord=self.norm_order):
@@ -297,8 +317,11 @@ class ConstraintSolver(ConstraintSolverBase):
 
                 p[ic] -= delta / self.dt
 
-            if (i == self.maxit):
-                warning("No convergence in Newton iteration for positional component", verbosity.low)
+            if i == self.maxit:
+                warning(
+                    "No convergence in Newton iteration for positional component",
+                    verbosity.low,
+                )
 
         # after all constraints have been applied, q is on the manifold and we can update the constraint positions
         for constr in self.constraint_list:
@@ -309,13 +332,13 @@ class ConstraintSolver(ConstraintSolverBase):
 
 class ConstrainedIntegrator(DummyIntegrator):
     """ No-op integrator for classical constrained propagation.
-    It also incorporates a constraint solver, so as to make the 
+    It also incorporates a constraint solver, so as to make the
     integration modular in case one wanted to implement multiple
-    solvers. 
+    solvers.
 
     Note that this and other constrained integrators inherit
-    from the non-constrained dynamics class, so the logic of 
-    the integration and multiple time stepping machinery is 
+    from the non-constrained dynamics class, so the logic of
+    the integration and multiple time stepping machinery is
     better documented in dynamics.py
     """
 
@@ -340,13 +363,13 @@ class ConstrainedIntegrator(DummyIntegrator):
             dself.nsteps_geo = depend_value(name="nsteps_geo", value=1)
         else:
             dself.nsteps_geo = depend_value(name="nsteps_geo", value=motion.nsteps_geo)
-        print self.nsteps_geo
+        print(self.nsteps_geo)
         dself.qdt.add_dependency(dself.nsteps_geo)
         if motion.nsteps_o is None:
             dself.nsteps_o = depend_value(name="nsteps_o", value=1)
         else:
             dself.nsteps_o = depend_value(name="nsteps_o", value=motion.nsteps_o)
-        print self.nsteps_o
+        print(self.nsteps_o)
         dself.tdt.add_dependency(dself.nsteps_o)
         dd(self).csolver = motion.csolver
         dpipe(dself.qdt, dd(self.csolver).dt)
@@ -359,7 +382,7 @@ class ConstrainedIntegrator(DummyIntegrator):
 
 
 class NVEConstrainedIntegrator(ConstrainedIntegrator):
-    """A propagator for constant-energy integration under a set of constraints. 
+    """A propagator for constant-energy integration under a set of constraints.
 
     Implementation details:
         B. Leimkuhler, C. Matthews Proc. R. Soc. A 472, 20160138, (2016)
@@ -381,8 +404,8 @@ class NVEConstrainedIntegrator(ConstrainedIntegrator):
 
     def step_Ag(self):
         """
-        Geodesic flow integrator. Makes one A step including manifold 
-        projection of the position and update of the momenta following 
+        Geodesic flow integrator. Makes one A step including manifold
+        projection of the position and update of the momenta following
         the orthogonalization. Can be broken down into a MTS-like fashion
         to increase the accuracy without having to recompute forces.
         """
@@ -396,7 +419,7 @@ class NVEConstrainedIntegrator(ConstrainedIntegrator):
             self.proj_cotangent()
 
     def mtsprop_ba(self, index):
-        """ Recursive MTS step -- this is adapted directly from the 
+        """ Recursive MTS step -- this is adapted directly from the
         NVEIntegrator class"""
 
         mk = int(self.nmts[index] / 2)
@@ -425,7 +448,7 @@ class NVEConstrainedIntegrator(ConstrainedIntegrator):
                 self.mtsprop_ba(index + 1)
 
     def mtsprop_ab(self, index):
-        """ Recursive MTS step -- this is adapted directly from the 
+        """ Recursive MTS step -- this is adapted directly from the
         NVEIntegrator class"""
 
         if self.nmts[index] % 2 == 1:
@@ -468,7 +491,7 @@ class NVTConstrainedIntegrator(NVEConstrainedIntegrator):
 
     """Constrained integrator object for constant temperature simulations.
 
-    Has the relevant conserved quantity for the constant temperature 
+    Has the relevant conserved quantity for the constant temperature
     ensemble. Contains a thermostat object that keeps the temperature
     constant.
 
@@ -485,7 +508,7 @@ class NVTConstrainedIntegrator(NVEConstrainedIntegrator):
         (e.g. in GLE) by doing a MTS splitting scheme """
 
         m3 = dstrip(self.beads.m3)
-        for i in xrange(self.nsteps_o):
+        for i in range(self.nsteps_o):
             self.thermostat.step()
 
             # accumulates conserved quantity

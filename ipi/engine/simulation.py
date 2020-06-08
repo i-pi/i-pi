@@ -16,7 +16,7 @@ import threading
 import time
 from copy import deepcopy
 
-from ipi.utils.depend import depend_value, dobject, dd
+from ipi.utils.depend import depend_value, dobject, dd, dpipe
 from ipi.utils.io.inputs.io_xml import xml_parse_file
 from ipi.utils.messages import verbosity, info, warning, banner
 from ipi.utils.softexit import softexit
@@ -24,7 +24,7 @@ import ipi.engine.outputs as eoutputs
 import ipi.inputs.simulation as isimulation
 
 
-__all__ = ['Simulation']
+__all__ = ["Simulation"]
 
 
 class Simulation(dobject):
@@ -58,7 +58,9 @@ class Simulation(dobject):
     """
 
     @staticmethod
-    def load_from_xml(fn_input, custom_verbosity=None, request_banner=False, read_only=False):
+    def load_from_xml(
+        fn_input, custom_verbosity=None, request_banner=False, read_only=False
+    ):
         """Load an XML input file and return a `Simulation` object.
 
         Arguments:
@@ -85,7 +87,7 @@ class Simulation(dobject):
         input_simulation.verbosity.value = custom_verbosity
 
         # print banner if not suppressed and simulation verbose enough
-        if request_banner and input_simulation.verbosity.value != 'quiet':
+        if request_banner and input_simulation.verbosity.value != "quiet":
             banner()
 
         # create the simulation object
@@ -96,18 +98,30 @@ class Simulation(dobject):
 
         # echo the input file if verbose enough
         if verbosity.level > 0:
-            print " # i-PI loaded input file: ", fn_input
+            print(" # i-PI loaded input file: ", fn_input)
         if verbosity.level > 1:
-            print " --- begin input file content ---"
+            print(" --- begin input file content ---")
             ifile = open(fn_input, "r")
             for line in ifile.readlines():
-                print line,
-            print " ---  end input file content  ---"
+                print(line, end=" ")
+            print(" ---  end input file content  ---")
             ifile.close()
 
         return simulation
 
-    def __init__(self, mode, syslist, fflist, outputs, prng, smotion=None, step=0, tsteps=1000, ttime=0, threads=False):
+    def __init__(
+        self,
+        mode,
+        syslist,
+        fflist,
+        outputs,
+        prng,
+        smotion=None,
+        step=0,
+        tsteps=1000,
+        ttime=0,
+        threads=False,
+    ):
         """Initialises Simulation class.
 
         Args:
@@ -133,12 +147,16 @@ class Simulation(dobject):
 
         self.syslist = syslist
         for s in syslist:
-            s.prng = self.prng    # bind the system's prng to self prng
+            s.prng = self.prng  # bind the system's prng to self prng
             s.init.init_stage1(s)
 
-        #! TODO - does this have any meaning now that we introduce the smotion class?
+        # TODO - does this have any meaning now that we introduce the smotion class?
         if self.mode == "md" and len(syslist) > 1:
-            warning("Multiple systems will evolve independently in a '" + self.mode + "' simulation.")
+            warning(
+                "Multiple systems will evolve independently in a '"
+                + self.mode
+                + "' simulation."
+            )
 
         self.fflist = {}
         for f in fflist:
@@ -158,11 +176,13 @@ class Simulation(dobject):
         """Calls the bind routines for all the objects in the simulation."""
 
         if self.tsteps <= self.step:
-            raise ValueError("Simulation has already run for total_steps, will not even start. "
-                             "Modify total_steps or step counter to continue.")
+            raise ValueError(
+                "Simulation has already run for total_steps, will not even start. "
+                "Modify total_steps or step counter to continue."
+            )
 
         # initializes the output maker so it can be passed around to systems
-        f_start = (self.step == 0)  # special operations if we're starting from scratch
+        f_start = self.step == 0  # special operations if we're starting from scratch
         if f_start:
             mode = "w"
         else:
@@ -178,26 +198,33 @@ class Simulation(dobject):
 
         # start forcefields here so we avoid having a shitload of files printed
         # out only to find the socket is busy or whatever prevented starting the threads
-        for k, f in self.fflist.iteritems():
+        for k, f in self.fflist.items():
             f.start()
 
         # Checks for repeated filenames.
         filename_list = [x.filename for x in self.outtemplate]
         if len(filename_list) > len(set(filename_list)):
-            raise ValueError("Output filenames are not unique. Modify filename attributes.")
+            raise ValueError(
+                "Output filenames are not unique. Modify filename attributes."
+            )
 
         self.outputs = []
         for o in self.outtemplate:
-            o = deepcopy(o)  # avoids overwriting the actual filename
+            dco = deepcopy(o)  # avoids overwriting the actual filename
             if self.outtemplate.prefix != "":
-                o.filename = self.outtemplate.prefix + "." + o.filename
-            if type(o) is eoutputs.CheckpointOutput:    # checkpoints are output per simulation
-                o.bind(self)
-                self.outputs.append(o)
-            else:   # properties and trajectories are output per system
+                dco.filename = self.outtemplate.prefix + "." + o.filename
+            if (
+                type(dco) is eoutputs.CheckpointOutput
+            ):  # checkpoints are output per simulation
+                dco.bind(self)
+                dpipe(
+                    dd(dco).step, dd(o).step
+                )  # makes sure that the checkpoint step is updated also in the template
+                self.outputs.append(dco)
+            else:  # properties and trajectories are output per system
                 isys = 0
-                for s in self.syslist:   # create multiple copies
-                    no = deepcopy(o)
+                for s in self.syslist:  # create multiple copies
+                    no = deepcopy(dco)
                     if s.prefix != "":
                         no.filename = s.prefix + "_" + no.filename
                     no.bind(s, mode)
@@ -209,7 +236,7 @@ class Simulation(dobject):
         self.chk = eoutputs.CheckpointOutput("RESTART", 1, True, 0)
         self.chk.bind(self)
 
-        if not self.smotion is None:
+        if self.smotion is not None:
             self.smotion.bind(self.syslist, self.prng, self.output_maker)
 
     def softexit(self):
@@ -239,9 +266,6 @@ class Simulation(dobject):
         softexit.register_function(self.softexit)
         softexit.start(self.ttime)
 
-#        for k, f in self.fflist.iteritems():
-#            f.run()
-
         # prints inital configuration -- only if we are not restarting
         if self.step == 0:
             self.step = -1
@@ -268,12 +292,12 @@ class Simulation(dobject):
         simtime = time.time()
 
         cstep = 0
-        #tptime = 0.0
-        #tqtime = 0.0
-        #tttime = 0.0
+        # tptime = 0.0
+        # tqtime = 0.0
+        # tttime = 0.0
         ttot = 0.0
         # main MD loop
-        for self.step in xrange(self.step, self.tsteps):
+        for self.step in range(self.step, self.tsteps):
             # stores the state before doing a step.
             # this is a bit time-consuming but makes sure that we can honor soft
             # exit requests without screwing the trajectory
@@ -289,7 +313,9 @@ class Simulation(dobject):
                 # steps through all the systems
                 for s in self.syslist:
                     # creates separate threads for the different systems
-                    st = threading.Thread(target=s.motion.step, name=s.prefix, kwargs={"step": self.step})
+                    st = threading.Thread(
+                        target=s.motion.step, name=s.prefix, kwargs={"step": self.step}
+                    )
                     st.daemon = True
                     stepthreads.append(st)
 
@@ -337,8 +363,15 @@ class Simulation(dobject):
             ttot += steptime
             cstep += 1
 
-            if (verbosity.high or (verbosity.medium and self.step % 100 == 0) or (verbosity.low and self.step % 1000 == 0)):
-                info(" # Average timings at MD step % 7d. t/step: %10.5e" % (self.step, ttot / cstep))
+            if (
+                verbosity.high
+                or (verbosity.medium and self.step % 100 == 0)
+                or (verbosity.low and self.step % 1000 == 0)
+            ):
+                info(
+                    " # Average timings at MD step % 7d. t/step: %10.5e"
+                    % (self.step, ttot / cstep)
+                )
                 cstep = 0
                 ttot = 0.0
                 # info(" # MD diagnostics: V: %10.5e    Kcv: %10.5e   Ecns: %10.5e" %

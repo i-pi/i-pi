@@ -1,13 +1,13 @@
 #!/usr/bin/env python2
 
-from __future__ import division
-
-import os
 import sys
 import argparse
 import importlib
 
 import numpy as np
+from numpy import matmul
+from numpy.linalg import multi_dot
+
 from ipi.utils import sparse
 from ipi.utils.io import read_file
 from ipi.utils.prng import Random
@@ -16,23 +16,18 @@ from ipi.utils.depend import *
 from ipi.utils.units import *
 from ipi.utils.io import netstring_encoded_loadz
 
-matmul = np.matmul
-multi_dot = np.linalg.multi_dot
-tanh = np.tanh
-coth = lambda x: 1.0 / tanh(x)
-
-#*******************************#
+# *******************************#
 
 description = """\
 ---------------
 Planetary model
 ---------------
 
-Process data from a single centroid trajectory to obtain TCFs using the 
+Process data from a single centroid trajectory to obtain TCFs using the
 planetary model.
 
 Assumes existance of the following files in the working directory:
-   
+
     <prefix>.xc.xyz
   Stores centroid configurations along trajectory
 
@@ -43,9 +38,9 @@ Assumes existance of the following files in the working directory:
   Binary file storing path-integral frequency matrices at each centroid
   configuration along trajectory
 
-User must provide a list of external modules as a command line argument, 
-which the program will use to work out how to calculate the TCFs. A 
-template for constructing a module in the required format is given in 
+User must provide a list of external modules as a command line argument,
+which the program will use to work out how to calculate the TCFs. A
+template for constructing a module in the required format is given in
 ipi/tools/py/estmod_example.py.
 
 Written by Raz Benson
@@ -70,44 +65,59 @@ def getInput():
 
     """
 
-    parser = argparse.ArgumentParser(description=description, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser = argparse.ArgumentParser(
+        description=description, formatter_class=argparse.RawDescriptionHelpFormatter
+    )
 
-    parser.add_argument("prefix", type=str,
-                        help="Filename prefix")
+    parser.add_argument("prefix", type=str, help="Filename prefix")
 
-    parser.add_argument("dt", type=float,
-                        help="Time step (fs) for planets. Does NOT have to be the same as for the centroids.")
+    parser.add_argument(
+        "dt",
+        type=float,
+        help="Time step (fs) for planets. Does NOT have to be the same as for the centroids.",
+    )
 
-    parser.add_argument("temperature", type=float,
-                        help="Simulation temperature (K). Best to make sure it is the same as the centroid temperature!")
+    parser.add_argument(
+        "temperature",
+        type=float,
+        help="Simulation temperature (K). Best to make sure it is the same as the centroid temperature!",
+    )
 
-    parser.add_argument("stride", type=int,
-                        help="""Number of steps to take between centroid updates 
-                             (so stride*dt should be the time elapsed between centroid positions being RECORDED).""")
+    parser.add_argument(
+        "stride",
+        type=int,
+        help="""Number of steps to take between centroid updates
+                             (so stride*dt should be the time elapsed between centroid positions being RECORDED).""",
+    )
 
-    parser.add_argument("npl", type=int,
-                        help="Number of planets for each centroid")
+    parser.add_argument("npl", type=int, help="Number of planets for each centroid")
 
-    parser.add_argument("npts", type=int,
-                        help="Number of points in centroid trajectory")
+    parser.add_argument(
+        "npts", type=int, help="Number of points in centroid trajectory"
+    )
 
-    parser.add_argument("iseed", type=int,
-                        help="Random number seed")
+    parser.add_argument("iseed", type=int, help="Random number seed")
 
-    parser.add_argument("estmods", type=str, nargs="+",
-                        help="External modules defining estimators in the required format")
+    parser.add_argument(
+        "estmods",
+        type=str,
+        nargs="+",
+        help="External modules defining estimators in the required format",
+    )
 
     args = parser.parse_args()
 
     with open("{}.xc.xyz".format(args.prefix), "r") as f:
         args.natoms = int(f.readline())
-        for i in xrange(args.natoms + 2):
+        for i in range(args.natoms + 2):
             f.readline()
         stride2 = int(f.readline().split("Step:")[1].split("Bead:")[0])
 
     if args.stride != stride2:
-        warning("Make sure stride*dt = time elapsed between centroid positions being recorded\n"
-                + "(this might already be true).")
+        warning(
+            "Make sure stride*dt = time elapsed between centroid positions being recorded\n"
+            + "(this might already be true)."
+        )
 
     estimators = []
     for modname in args.estmods:
@@ -120,17 +130,28 @@ def getInput():
         estimators.append(mod)
 
     args.estmods = ", ".join(args.estmods)
-    print "----------------------"
-    print "DETERMINED INPUT PARAMETERS"
-    print "----------------------"
+    print("----------------------")
+    print("DETERMINED INPUT PARAMETERS")
+    print("----------------------")
     for k, v in sorted(args.__dict__.items()):
-        print "{:<30s}{}".format(k, v)
-    print "----------------------"
+        print("{:<30s}{}".format(k, v))
+    print("----------------------")
     sys.stdout.flush()
 
-    return args.prefix, args.natoms, args.iseed, args.npl, args.npts, args.stride, args.dt, args.temperature, estimators
+    return (
+        args.prefix,
+        args.natoms,
+        args.iseed,
+        args.npl,
+        args.npts,
+        args.stride,
+        args.dt,
+        args.temperature,
+        estimators,
+    )
 
-#*******************************#
+
+# *******************************#
 
 
 def simple_corr(A, B, **kwargs):
@@ -149,9 +170,12 @@ def simple_corr(A, B, **kwargs):
     npts, npl, ndim = A.shape
     tcf = np.zeros(npts)
     weights = np.arange(npts, 0, -1, dtype=float)
-    for i in xrange(npl):
-        for j in xrange(ndim):
-            tcf[:] += np.correlate(A[:, i, j], B[:, i, j], mode="full")[npts - 1::-1] / weights
+    for i in range(npl):
+        for j in range(ndim):
+            tcf[:] += (
+                np.correlate(A[:, i, j], B[:, i, j], mode="full")[npts - 1 :: -1]
+                / weights
+            )
     # for i in xrange(npl):
     #    for j in xrange(ndim):
     #        tcf[0] += np.mean(A[:,i,j] * B[:,i,j])
@@ -160,7 +184,8 @@ def simple_corr(A, B, **kwargs):
     tcf /= float(npl)
     return tcf
 
-#*******************************#
+
+# *******************************#
 
 
 class Planets(object):
@@ -170,7 +195,9 @@ class Planets(object):
     planetary dynamics and evaluates estimators and TCFs.
     """
 
-    def __init__(self, prefix, natoms, iseed, npl, npts, stride, dt, temperature, estimators):
+    def __init__(
+        self, prefix, natoms, iseed, npl, npts, stride, dt, temperature, estimators
+    ):
         """
         Initialises planetary model simulation.
 
@@ -284,20 +311,26 @@ class Planets(object):
 
         self.evals[:], self.evecs[:] = np.linalg.eigh(self.omega2, UPLO="L")
 
-        self.mask[:] = self.beta**2 * self.evals < 1e-14
+        self.mask[:] = self.beta ** 2 * self.evals < 1e-14
         self.evals[self.mask] = 0.0
         self.evals_sqrt[:] = np.sqrt(self.evals)
         np.fill_diagonal(self.omega, self.evals_sqrt)
 
         # Calculate approximate smearing matrices
-        self.a[~self.mask, ~self.mask] =  \
-            (0.5 * self.beta * self.evals_sqrt[~self.mask] * coth(0.5 * self.beta * self.evals_sqrt[~self.mask]) - 1.0) \
-            / (self.beta * self.evals[~self.mask])
+        self.a[~self.mask, ~self.mask] = (
+            0.5
+            * self.beta
+            * self.evals_sqrt[~self.mask]
+            / np.tanh(0.5 * self.beta * self.evals_sqrt[~self.mask])  # <=> *coth()
+            - 1.0
+        ) / (self.beta * self.evals[~self.mask])
         self.a[self.mask, self.mask] = self.beta / 12.0
         np.fill_diagonal(self.a_inv, 1.0 / np.diag(self.a))
         np.fill_diagonal(self.a_sqrt, np.sqrt(np.diag(self.a)))
 
-        self.b[~self.mask, ~self.mask] = self.evals[~self.mask] * self.a[~self.mask, ~self.mask]  # *self.m[~self.mask]**2
+        self.b[~self.mask, ~self.mask] = (
+            self.evals[~self.mask] * self.a[~self.mask, ~self.mask]
+        )  # *self.m[~self.mask]**2
         self.b_inv[~self.mask, ~self.mask] = 1.0 / self.b[~self.mask, ~self.mask]
         np.fill_diagonal(self.b_sqrt, np.sqrt(np.diag(self.b)))
 
@@ -321,7 +354,7 @@ class Planets(object):
 
     def eigenbasis(self, mat, backward=False):
         """
-        Transfrom a given matrix in place to or from the eigenbasis of the 
+        Transfrom a given matrix in place to or from the eigenbasis of the
         path-integral frequency matrix.
 
         Args:
@@ -343,16 +376,22 @@ class Planets(object):
         self.read_qcpc()
         self.matrix_setup()
 
-        for j in xrange(self.stride):
+        for j in range(self.stride):
             # Linear interpolation of frequency matrix
-            self.omega_interp[:] = (j * self.omega + (self.stride - j) * self.omega_old) / self.stride
+            self.omega_interp[:] = (
+                j * self.omega + (self.stride - j) * self.omega_old
+            ) / self.stride
             # Velocity verlet integrator
             self.ptil[:] -= 0.5 * self.dt * matmul(self.omega_interp, self.qtil)
             self.qtil[:] += self.dt * matmul(self.omega_interp, self.ptil)
             self.ptil[:] -= 0.5 * self.dt * matmul(self.omega_interp, self.qtil)
 
-        self.q[:] = multi_dot([self.mmat_qrt_inv, self.a_sqrt, self.mmat_qrt, self.qtil])
-        self.p[:] = multi_dot([self.mmat_qrt, self.b_sqrt, self.mmat_qrt_inv, self.ptil])
+        self.q[:] = multi_dot(
+            [self.mmat_qrt_inv, self.a_sqrt, self.mmat_qrt, self.qtil]
+        )
+        self.p[:] = multi_dot(
+            [self.mmat_qrt, self.b_sqrt, self.mmat_qrt_inv, self.ptil]
+        )
         self.qsum[:] = self.q + self.qc[:, np.newaxis]
         self.psum[:] = self.p + self.pc[:, np.newaxis]
 
@@ -368,8 +407,12 @@ class Planets(object):
 
             if hasattr(mod, "Afunc0"):
                 # Might as well calculate centroid TCF at little extra cost
-                mod.Barr_c[i, :] += mod.Bfunc(self.qc[:, np.newaxis], self.pc[:, np.newaxis])
-                mod.Aarr_c[i, :] += mod.Afunc0(self.qc[:, np.newaxis], self.pc[:, np.newaxis])
+                mod.Barr_c[i, :] += mod.Bfunc(
+                    self.qc[:, np.newaxis], self.pc[:, np.newaxis]
+                )
+                mod.Aarr_c[i, :] += mod.Afunc0(
+                    self.qc[:, np.newaxis], self.pc[:, np.newaxis]
+                )
 
             # Deal with B(Q_0+q) first, this is easy
             mod.Barr[i, :] += mod.Bfunc(self.qsum, self.psum)
@@ -385,7 +428,7 @@ class Planets(object):
                 # ( npl,    prod(mod.Ashape),    3*self.natoms)
                 A1q = mod.Afunc1(self.qsum)
 
-                for j in xrange(self.npl):
+                for j in range(self.npl):
                     mod.Atemp[:] = 0.0
 
                     for k, val in enumerate(A1q[j]):
@@ -400,17 +443,20 @@ class Planets(object):
                 # ( npl,    prod(mod.Ashape),    3*self.natoms,    3*self.natoms )
                 A2q = mod.Afunc2(self.qsum)
 
-                for j in xrange(self.npl):
+                for j in range(self.npl):
                     mod.Atemp[:] = 0.0
 
                     for k, val in enumerate(A2q[j]):
-                        mod.Atemp[k] = np.trace(matmul(self.b_inv, val)) \
-                            - multi_dot([self.p[:, j], self.b_inv, val, self.b_inv, self.p[:, j]])
+                        mod.Atemp[k] = np.trace(matmul(self.b_inv, val)) - multi_dot(
+                            [self.p[:, j], self.b_inv, val, self.b_inv, self.p[:, j]]
+                        )
 
                     mod.Aarr[i, j, :] += mod.Atemp.reshape(mod.Ashape) / 8.0
 
             else:
-                raise ValueError("f_A approximation method '{}' not recognised".format(mod.method))
+                raise ValueError(
+                    "f_A approximation method '{}' not recognised".format(mod.method)
+                )
 
     def correlate(self):
         """
@@ -427,10 +473,24 @@ class Planets(object):
         tarr = np.arange(self.npts) * self.dt * self.stride
         for mod in self.estimators:
             if hasattr(mod, "Afunc0"):
-                np.savetxt("{}_ce_{}.dat".format(self.prefix, mod.name), np.transpose([tarr, mod.TCF_c]))
-                print "Saved {} (centroid) to {}_ce_{}.dat".format(mod.name, self.prefix, mod.name)
-            np.savetxt("{}_pl_{}.dat".format(self.prefix, mod.name), np.transpose([tarr, mod.TCF]))
-            print "Saved {} (full) to {}_pl_{}.dat".format(mod.name, self.prefix, mod.name)
+                np.savetxt(
+                    "{}_ce_{}.dat".format(self.prefix, mod.name),
+                    np.transpose([tarr, mod.TCF_c]),
+                )
+                print(
+                    "Saved {} (centroid) to {}_ce_{}.dat".format(
+                        mod.name, self.prefix, mod.name
+                    )
+                )
+            np.savetxt(
+                "{}_pl_{}.dat".format(self.prefix, mod.name),
+                np.transpose([tarr, mod.TCF]),
+            )
+            print(
+                "Saved {} (full) to {}_pl_{}.dat".format(
+                    mod.name, self.prefix, mod.name
+                )
+            )
 
     def shutdown(self):
         """
@@ -466,32 +526,36 @@ class Planets(object):
                        by calling self.shutdown()
 
         """
-        print "STARTING PLANETARY SIMULATION"
+        print("STARTING PLANETARY SIMULATION")
         self.read_omega2()
         self.read_qcpc()
         self.get_masses()
         self.matrix_setup()
         self.sample()
-        self.q[:] = multi_dot([self.mmat_qrt_inv, self.a_sqrt, self.mmat_qrt, self.qtil])
-        self.p[:] = multi_dot([self.mmat_qrt, self.b_sqrt, self.mmat_qrt_inv, self.ptil])
+        self.q[:] = multi_dot(
+            [self.mmat_qrt_inv, self.a_sqrt, self.mmat_qrt, self.qtil]
+        )
+        self.p[:] = multi_dot(
+            [self.mmat_qrt, self.b_sqrt, self.mmat_qrt_inv, self.ptil]
+        )
         self.qsum[:] = self.q + self.qc[:, np.newaxis]
         self.psum[:] = self.p + self.pc[:, np.newaxis]
         self.estimate(0)
         self.count = 0
-        for i in xrange(self.npts - 1):
+        for i in range(self.npts - 1):
             self.step()
             self.count += 1  # this might be pointless, obviously self.count = i
             self.estimate(i + 1)
-            print "Completed step {:d} of {:d}".format(self.count, self.npts - 1)
+            print("Completed step {:d} of {:d}".format(self.count, self.npts - 1))
             sys.stdout.flush()
         if correlate:
-            print "CALCULATING TCFS"
+            print("CALCULATING TCFS")
             self.correlate()
         if write:
-            print "SAVING TCFS"
+            print("SAVING TCFS")
             self.write_tcfs()
         if shutdown:
-            print "SIMULATION COMPLETE. SHUTTING DOWN."
+            print("SIMULATION COMPLETE. SHUTTING DOWN.")
             self.shutdown()
         else:
             warning("Reached end of simulation but files may remain open.")
@@ -500,6 +564,7 @@ class Planets(object):
 def main():
     P = Planets(*getInput())
     P.simulation()
+
 
 if __name__ == "__main__":
     main()

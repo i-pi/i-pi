@@ -12,7 +12,7 @@ import re
 from ipi.utils.messages import verbosity, info
 
 
-__all__ = ['Constants', 'Elements', 'unit_to_internal', 'unit_to_user']
+__all__ = ["Constants", "Elements", "unit_to_internal", "unit_to_user"]
 
 
 class Constants(object):
@@ -43,7 +43,7 @@ class Elements(dict):
     mass_list = {
         "X": 1.0000 / Constants.amu,
         "H": 1.00794,
-        "Z": 1.382943,   # an interpolated H-D atom, based on y=1/sqrt(m) scaling
+        "Z": 1.382943,  # an interpolated H-D atom, based on y=1/sqrt(m) scaling
         "D": 2.0141,
         "H2": 2.0160,
         "T": 3.016049,
@@ -169,7 +169,7 @@ class Elements(dict):
         "Uup": 288,
         "Lv": 293,
         "Uus": 294,
-        "Uuo": 294
+        "Uuo": 294,
     }
 
     @classmethod
@@ -196,11 +196,7 @@ class Elements(dict):
 
 # these are the conversion FROM the unit stated to internal (atomic) units
 UnitMap = {
-    "undefined": {
-        "": 1.00,
-        "automatic": 1.00,
-        "atomic_unit": 1.00
-    },
+    "undefined": {"": 1.00, "automatic": 1.00, "atomic_unit": 1.00},
     "energy": {
         "": 1.00,
         "automatic": 1.00,
@@ -208,41 +204,36 @@ UnitMap = {
         "electronvolt": 0.036749326,
         "j/mol": 0.00000038087989,
         "cal/mol": 0.0000015946679,
-        "kelvin": 3.1668152e-06
+        "kelvin": 3.1668152e-06,
     },
     "temperature": {
         "": 1.00,
         "automatic": 1.00,
         "atomic_unit": 1.00,
-        "kelvin": 3.1668152e-06
+        "kelvin": 3.1668152e-06,
     },
-    "time": {
-        "": 1.00,
-        "automatic": 1.00,
-        "atomic_unit": 1.00,
-        "second": 4.1341373e+16
-    },
-    "frequency": {     # NB Internally, ANGULAR frequencies are used.
+    "time": {"": 1.00, "automatic": 1.00, "atomic_unit": 1.00, "second": 4.1341373e16},
+    "frequency": {  # NB Internally, ANGULAR frequencies are used.
         "": 1.00,
         "automatic": 1.00,
         "atomic_unit": 1.00,
         "inversecm": 4.5563353e-06,
         "hertz*rad": 2.4188843e-17,
-        "hertz": 1.5198298e-16
+        "hertz": 1.5198298e-16,
     },
-    "ms-momentum": {   # TODO fill up units here (mass-scaled momentum)
+    "ms-momentum": {  # TODO fill up units here (mass-scaled momentum)
         "": 1.00,
         "automatic": 1.00,
-        "atomic_unit": 1.00
+        "atomic_unit": 1.00,
     },
     "length": {  # TODO move angles to separate entry;
         "": 1.00,
         "automatic": 1.00,
         "atomic_unit": 1.00,
         "angstrom": 1.8897261,
-        "meter": 1.8897261e+10,
+        "meter": 1.8897261e10,
         "radian": 1.00,
-        "degree": 0.017453292519943295
+        "degree": 0.017453292519943295,
     },
     "volume": {
         "": 1.00,
@@ -250,23 +241,14 @@ UnitMap = {
         "atomic_unit": 1.00,
         "angstrom3": 6.748334231,
     },
-    "velocity": {
-        "": 1.00,
-        "automatic": 1.00,
-        "atomic_unit": 1.00,
-        "m/s": 4.5710289e-7
-    },
-    "momentum": {
-        "": 1.00,
-        "automatic": 1.00,
-        "atomic_unit": 1.00
-    },
+    "velocity": {"": 1.00, "automatic": 1.00, "atomic_unit": 1.00, "m/s": 4.5710289e-7},
+    "momentum": {"": 1.00, "automatic": 1.00, "atomic_unit": 1.00},
     "mass": {
         "": 1.00,
         "automatic": 1.00,
         "atomic_unit": 1.00,
         "dalton": 1.00 * Constants.amu,
-        "electronmass": 1.00
+        "electronmass": 1.00,
     },
     "pressure": {
         "": 1.00,
@@ -274,31 +256,38 @@ UnitMap = {
         "atomic_unit": 1.00,
         "bar": 3.398827377e-9,
         "atmosphere": 3.44386184e-9,
-        "pascal": 3.398827377e-14
+        "pascal": 3.398827377e-14,
     },
-    "density": {
-        "": 1.00,
-        "automatic": 1.00,
-        "atomic_unit": 1.00,
-        "g/cm3": 162.67263
-    },
+    "density": {"": 1.00, "automatic": 1.00, "atomic_unit": 1.00, "g/cm3": 162.67263},
     "force": {
         "": 1.00,
         "automatic": 1.00,
         "atomic_unit": 1.00,
         "newton": 12137805,
         "ev/ang": 0.019446904,
-    }
+    },
 }
 
 
 # a list of magnitude prefixes
 UnitPrefix = {
     "": 1.0,
-    "yotta": 1e24, "zetta": 1e21, "exa": 1e18, "peta": 1e15,
-    "tera": 1e12, "giga": 1e9, "mega": 1e6, "kilo": 1e3,
-    "milli": 1e-3, "micro": 1e-6, "nano": 1e-9, "pico": 1e-12,
-    "femto": 1e-15, "atto": 1e-18, "zepto": 1e-21, "yocto": 1e-24
+    "yotta": 1e24,
+    "zetta": 1e21,
+    "exa": 1e18,
+    "peta": 1e15,
+    "tera": 1e12,
+    "giga": 1e9,
+    "mega": 1e6,
+    "kilo": 1e3,
+    "milli": 1e-3,
+    "micro": 1e-6,
+    "nano": 1e-9,
+    "pico": 1e-12,
+    "femto": 1e-15,
+    "atto": 1e-18,
+    "zepto": 1e-21,
+    "yocto": 1e-24,
 }
 
 
@@ -315,6 +304,7 @@ UnitPrefixRE = re.compile(UnitPrefixRE)
 # interface with any "outside" unit, we set up a simple conversion    #
 # library.                                                            #
 #
+
 
 def unit_to_internal(family, unit, number):
     """Converts a number of given dimensions and units into internal units.
@@ -347,11 +337,13 @@ def unit_to_internal(family, unit, number):
     else:
         m = UnitPrefixRE.match(unit)
         if m is None:
-            raise ValueError("Unit " + unit + " is not structured with a prefix+base syntax.")
+            raise ValueError(
+                "Unit " + unit + " is not structured with a prefix+base syntax."
+            )
         prefix = m.group(1)
         base = m.group(2)
 
-    if not prefix in UnitPrefix:
+    if prefix not in UnitPrefix:
         raise TypeError(prefix + " is not a valid unit prefix.")
     if not base.lower() in UnitMap[family]:
         raise TypeError(base + " is an undefined unit for kind " + family + ".")
