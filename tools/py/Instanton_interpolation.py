@@ -214,15 +214,14 @@ if input_hess != "None" or chk != "None":
     hessian = h
     size0 = natoms * 3
 
-
-    ## We use open path RPC
+    # # We use open path RPC
     # size1 = size0 * nbeads
     # size2 = size0 * nbeadsNew
     # new_h = np.zeros([size0, size2])
-    # rpc = nm_rescale(nbeads, nbeadsNew, np.asarray(range(1)))  
-    #new_q = rpc.b1tob2(q)
+    # rpc = nm_rescale(nbeads, nbeadsNew, np.asarray(range(1)))
+    # new_q = rpc.b1tob2(q)
 
-    ## Compose the full ring polymer.
+    # # Compose the full ring polymer.
     size1 = size0 * (2 * nbeads)
     size2 = size0 * (2 * nbeadsNew)
     new_h = np.zeros([size0, size2])
@@ -237,14 +236,16 @@ if input_hess != "None" or chk != "None":
                 h = np.append(h, hessian[i, j + size0 * n])
             #           h3 = np.concatenate((h, h, h), axis=0).reshape((h.size, 3), order='F')  # Open path expect three coordinates per atom
             #           diag = rpc.b1tob2(h3)[:, 0]
-            h2 = np.concatenate((h, np.flipud(h)), axis=0)  # Compose the full ring polymer.
+            h2 = np.concatenate(
+                (h, np.flipud(h)), axis=0
+            )  # Compose the full ring polymer.
             diag = rpc.b1tob2(h2)
             new_h[i, j:size2:size0] += diag
 
-    new_h_half = new_h[:, 0:size2 // 2]
+    new_h_half = new_h[:, 0 : size2 // 2]
     np.savetxt(out, new_h_half.reshape(1, new_h_half.size))
     #   new_h_half = new_h[:, 0:size2 / 2]
-    #np.savetxt(out, new_h.reshape(1, new_h.size))
+    # np.savetxt(out, new_h.reshape(1, new_h.size))
 
     print("The new physical Hessian (half polymer) was generated")
     print("Check new_hessian.dat")
