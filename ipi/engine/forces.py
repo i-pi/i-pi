@@ -893,18 +893,20 @@ class Forces(dobject):
                 dfkbself.ufvx.set(deepcopy(dfkbref.ufvx._value), manual=False)
                 dfkbself.ufvx.taint(taintme=False)
 
-    def transfer_forces_manual(self, new_q,new_v,new_forces,vir=np.zeros((3,3)),extra=""):
-        """Manual (and flexible) version of the transfer forces function. 
+    def transfer_forces_manual(
+        self, new_q, new_v, new_forces, vir=np.zeros((3, 3)), extra=""
+    ):
+        """Manual (and flexible) version of the transfer forces function.
            Instead of passing a force object, list with vectors are passed
-           Expected shape and sizes: 
+           Expected shape and sizes:
              - new_q list of length equal to number of force type, containing the beads positions
-             - new_v list of length equal to number of force type, containing the beads potential energy 
-             - new_f list of length equal to number of force type, containing the beads forces   
+             - new_v list of length equal to number of force type, containing the beads potential energy
+             - new_f list of length equal to number of force type, containing the beads forces
         """
-        msg= "Unconsistent dimensions inside transfer_forces_manual"
-        assert (len(self.mforces)==len(new_q)),msg 
-        assert (len(self.mforces)==len(new_v)),msg
-        assert (len(self.mforces)==len(new_forces)),msg
+        msg = "Unconsistent dimensions inside transfer_forces_manual"
+        assert len(self.mforces) == len(new_q), msg
+        assert len(self.mforces) == len(new_v), msg
+        assert len(self.mforces) == len(new_forces), msg
 
         for k in range(len(self.mforces)):
             mv = new_v[k]
@@ -912,15 +914,15 @@ class Forces(dobject):
             mq = new_q[k]
             mself = self.mforces[k]
 
-            assert (mq.shape == mf.shape),msg
-            assert (mq.shape[0]==mv.shape[0]),msg
-            assert (mself.nbeads==mv.shape[0]),msg
-            assert (mself.nbeads==mq.shape[0]),msg
+            assert mq.shape == mf.shape, msg
+            assert mq.shape[0] == mv.shape[0], msg
+            assert mself.nbeads == mv.shape[0], msg
+            assert mself.nbeads == mq.shape[0], msg
 
             dd(mself.beads).q.set(mq, manual=False)
             for b in range(mself.nbeads):
 
-                ufvx = [mv[b],mf[b],vir,extra]  
+                ufvx = [mv[b], mf[b], vir, extra]
                 dfkbself = dd(mself._forces[b])
                 dfkbself.ufvx.set(ufvx, manual=False)
                 dfkbself.ufvx.taint(taintme=False)

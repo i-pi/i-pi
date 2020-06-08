@@ -25,7 +25,7 @@ from ipi.utils.inputvalue import *
 import sys
 
 
-__all__ = ['InputInst']
+__all__ = ["InputInst"]
 
 
 class InputInst(InputDictionary):
@@ -36,9 +36,18 @@ class InputInst(InputDictionary):
     thresholds, hessian update strategy, etc.
 
     """
-    attribs = {"mode": (InputAttribute, {"dtype": str, "default": "rate",
-                                         "help": "Defines whether it is an instanton rate or instanton tunneling splitting calculaion",
-                                         "options": ['rate', 'splitting']})}
+
+    attribs = {
+        "mode": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "default": "rate",
+                "help": "Defines whether it is an instanton rate or instanton tunneling splitting calculaion",
+                "options": ["rate", "splitting"],
+            },
+        )
+    }
 
     attribs = {
         "mode": (
@@ -110,8 +119,14 @@ class InputInst(InputDictionary):
                                             Finally lbfgs is used for tunneling splitting calculations. """,
             },
         ),
-        "max_ms": (InputValue, {"dtype": float, "default": -1.0,
-                                             "help": """Evaluate the forces in a reduced ring polymer such that that mass-scaled distance in a.u. between replicas is  smaller that the provided value."""}),
+        "max_ms": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": -1.0,
+                "help": """Evaluate the forces in a reduced ring polymer such that that mass-scaled distance in a.u. between replicas is  smaller that the provided value.""",
+            },
+        ),
         "discretization": (
             InputArray,
             {

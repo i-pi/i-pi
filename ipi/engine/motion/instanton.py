@@ -20,11 +20,17 @@ from ipi.utils.messages import verbosity, info
 from ipi.utils import units
 from ipi.utils.mintools import nichols, Powell
 from ipi.engine.motion.geop import L_BFGS
-from ipi.utils.instools import banded_hessian, invmul_banded, red2comp, get_imvector, print_instanton_geo
-from ipi.utils.instools import print_instanton_hess, diag_banded , ms_pathway
+from ipi.utils.instools import (
+    banded_hessian,
+    invmul_banded,
+    red2comp,
+    get_imvector,
+    print_instanton_geo,
+)
+from ipi.utils.instools import print_instanton_hess, diag_banded, ms_pathway
 from ipi.utils.hesstools import get_hessian, clean_hessian, get_dynmat
 from ipi.engine.beads import Beads
-from scipy.interpolate import interp1d 
+from scipy.interpolate import interp1d
 
 __all__ = ["InstantonMotion"]
 
@@ -68,31 +74,35 @@ class InstantonMotion(Motion):
         energy_shift: zero of energy (usually it corresponds to reactant state)
     """
 
-    def __init__(self, fixcom=False, fixatoms=None,
-                 mode='None',
-                 tolerances={"energy": 1e-5, "force": 1e-4, "position": 1e-3},
-                 biggest_step=0.3,
-                 old_pos=np.zeros(0, float),
-                 old_pot=np.zeros(0, float),
-                 old_force=np.zeros(0, float),
-                 opt='None',
-                 max_ms=-1.0,
-                 discretization=np.zeros(0, float),
-                 alt_out=1,
-                 prefix="instanton",
-                 delta=np.zeros(0, float),
-                 hessian_init=None,
-                 hessian=np.eye(0, 0, 0, float),
-                 hessian_update=None,
-                 hessian_asr=None,
-                 qlist_lbfgs=np.zeros(0, float),
-                 glist_lbfgs=np.zeros(0, float),
-                 scale_lbfgs=1,
-                 corrections_lbfgs=5,
-                 ls_options={"tolerance": 1e-1, "iter": 100},
-                 old_direction=np.zeros(0, float),
-                 hessian_final='False',
-                 energy_shift=np.zeros(0, float)):
+    def __init__(
+        self,
+        fixcom=False,
+        fixatoms=None,
+        mode="None",
+        tolerances={"energy": 1e-5, "force": 1e-4, "position": 1e-3},
+        biggest_step=0.3,
+        old_pos=np.zeros(0, float),
+        old_pot=np.zeros(0, float),
+        old_force=np.zeros(0, float),
+        opt="None",
+        max_ms=-1.0,
+        discretization=np.zeros(0, float),
+        alt_out=1,
+        prefix="instanton",
+        delta=np.zeros(0, float),
+        hessian_init=None,
+        hessian=np.eye(0, 0, 0, float),
+        hessian_update=None,
+        hessian_asr=None,
+        qlist_lbfgs=np.zeros(0, float),
+        glist_lbfgs=np.zeros(0, float),
+        scale_lbfgs=1,
+        corrections_lbfgs=5,
+        ls_options={"tolerance": 1e-1, "iter": 100},
+        old_direction=np.zeros(0, float),
+        hessian_final="False",
+        energy_shift=np.zeros(0, float),
+    ):
         """Initialises InstantonMotion.
         """
 
@@ -233,7 +243,7 @@ class Fix(object):
                 or key == "initial_hessian"
             ):
                 t = -1
-            elif key == "old_x" or key == "old_f" or key == 'd':
+            elif key == "old_x" or key == "old_f" or key == "d":
                 t = 1
             elif key == "hessian":
                 t = 2
@@ -337,7 +347,7 @@ class GradientMapper(object):
         self.fcount = 0
         pass
 
-    def bind(self, dumop, discretization,max_ms):
+    def bind(self, dumop, discretization, max_ms):
 
         self.dbeads = dumop.beads.copy()
         self.dcell = dumop.cell.copy()
@@ -357,56 +367,58 @@ class GradientMapper(object):
         """computes energy and gradient for optimization step"""
         self.fcount += 1
         full_q = x.copy()
-        full_mspath = ms_pathway(full_q,self.dbeads.m3)
+        full_mspath = ms_pathway(full_q, self.dbeads.m3)
 
-        if self.max_ms >0:
+        if self.max_ms > 0:
             indexes = list()
             indexes.append(0)
-            old_index=0 
-            for i in range(1,self.dbeads.nbeads):
-                if full_mspath[i] - full_mspath[old_index] >self.max_ms:
+            old_index = 0
+            for i in range(1, self.dbeads.nbeads):
+                if full_mspath[i] - full_mspath[old_index] > self.max_ms:
                     indexes.append(i)
                     old_index = i
-            if self.dbeads.nbeads -1 not in  indexes:
-                indexes.append(self.dbeads.nbeads -1)
-            info('The reduced RP for this step has {} beads.'.format(len(indexes)),verbosity.low)
-            spline=True 
+            if self.dbeads.nbeads - 1 not in indexes:
+                indexes.append(self.dbeads.nbeads - 1)
+            info(
+                "The reduced RP for this step has {} beads.".format(len(indexes)),
+                verbosity.low,
+            )
+            spline = True
         else:
-            indexes=np.arange(self.dbeads.nbeads)      
-            spline=False 
+            indexes = np.arange(self.dbeads.nbeads)
+            spline = False
 
-        # Create reduced bead and force objet and evaluate forces 
+        # Create reduced bead and force objet and evaluate forces
         reduced_b = Beads(self.dbeads.natoms, len(indexes))
         reduced_b.q[:] = full_q[indexes]
         reduced_b.m[:] = self.dbeads.m
         reduced_b.names[:] = self.dbeads.names
 
-
-        reduced_cell = self.dcell.copy() 
+        reduced_cell = self.dcell.copy()
         reduced_forces = self.dforces.copy(reduced_b, reduced_cell)
 
-        rpots   = reduced_forces.pots   # reduced energy
-        rforces = reduced_forces.f    # reduced gradient
-        
-        # Interpolate 
+        rpots = reduced_forces.pots  # reduced energy
+        rforces = reduced_forces.f  # reduced gradient
+
+        # Interpolate
         if spline:
-           red_mspath    = full_mspath[indexes]
-           spline        = interp1d(red_mspath   ,rpots.T,kind='cubic')
-           full_pot      = spline(full_mspath).T 
-           spline        = interp1d(red_mspath,rforces.T,kind='cubic')
-           full_forces   = spline(full_mspath).T 
+            red_mspath = full_mspath[indexes]
+            spline = interp1d(red_mspath, rpots.T, kind="cubic")
+            full_pot = spline(full_mspath).T
+            spline = interp1d(red_mspath, rforces.T, kind="cubic")
+            full_forces = spline(full_mspath).T
         else:
-           full_pot      = rpots
-           full_forces   = rforces
-           
-        # This forces the update of the forces 
+            full_pot = rpots
+            full_forces = rforces
+
+        # This forces the update of the forces
         self.dbeads.q[:] = x[:]
-        self.dforces.transfer_forces_manual([full_q],[full_pot],[full_forces])
+        self.dforces.transfer_forces_manual([full_q], [full_pot], [full_forces])
 
         # e = self.dforces.pot   # Energy
         # g = -self.dforces.f    # Gradient
         e = np.sum(full_pot)
-        g = -full_forces    # Gradient
+        g = -full_forces  # Gradient
 
         if not full:
             g = self.fix.get_active_vector(g, 1)
@@ -608,7 +620,7 @@ class FullMapper(object):
     """Creation of the multi-dimensional function to compute the physical and the spring forces.
     """
 
-    def __init__(self, im, gm,esum=False):
+    def __init__(self, im, gm, esum=False):
 
         self.im = im
         self.gm = gm
@@ -622,7 +634,7 @@ class FullMapper(object):
         g = np.add(g1, g2)
 
         if self.esum:
-           e = np.sum(e)
+            e = np.sum(e)
 
         return e, g
 
@@ -718,7 +730,7 @@ class DummyOptimizer(dobject):
         self.options["hessian_final"] = geop.options["hessian_final"]
         self.optarrays["energy_shift"] = geop.optarrays["energy_shift"]
 
-        self.gm.bind(self, self.options["discretization"],self.options["max_ms"])
+        self.gm.bind(self, self.options["discretization"], self.options["max_ms"])
         self.im.bind(self, self.options["discretization"])
         self.fix = Fix(geop.beads.natoms, geop.fixatoms, geop.beads.nbeads)
 
@@ -841,7 +853,7 @@ class DummyOptimizer(dobject):
     def update_pos_for(self):
         """ Update positions and forces """
 
-        #self.forces.transfer_forces_manual([self.gm.dbeads.q],[self.gm.dforces.pots],[self.gm.dforces.f])  
+        # self.forces.transfer_forces_manual([self.gm.dbeads.q],[self.gm.dforces.pots],[self.gm.dforces.f])
         self.beads.q[:] = self.gm.dbeads.q[:]
         self.forces.transfer_forces(
             self.gm.dforces
@@ -889,7 +901,13 @@ class DummyOptimizer(dobject):
 
         if adaptative:
             import scipy.optimize
-            new_coef = scipy.optimize.minimize(self.opt_coef, self.im.coef, method='L-BFGS-B', options={'gtol': 1e-8, 'disp': False})
+
+            new_coef = scipy.optimize.minimize(
+                self.opt_coef,
+                self.im.coef,
+                method="L-BFGS-B",
+                options={"gtol": 1e-8, "disp": False},
+            )
 
             new_coef = scipy.optimize.minimize(
                 self.opt_coef,
@@ -1295,9 +1313,30 @@ class LanczosOptimizer(HessianOptimizer):
             )
             # CARTESIAN
             # d,w =np.linalg.eigh(h_test) #Cartesian
-        info('\n@Lanczos: 1st freq {} cm^-1'.format(units.unit_to_user('frequency', 'inversecm', np.sign(d[0]) * np.sqrt(np.absolute(d[0])))), verbosity.medium)
-        info('@Lanczos: 2nd freq {} cm^-1'.format(units.unit_to_user('frequency', 'inversecm', np.sign(d[1]) * np.sqrt(np.absolute(d[1])))), verbosity.medium)
-        info('@Lanczos: 3rd freq {} cm^-1\n'.format(units.unit_to_user('frequency', 'inversecm', np.sign(d[2]) * np.sqrt(np.absolute(d[2])))), verbosity.medium)
+        info(
+            "\n@Lanczos: 1st freq {} cm^-1".format(
+                units.unit_to_user(
+                    "frequency", "inversecm", np.sign(d[0]) * np.sqrt(np.absolute(d[0]))
+                )
+            ),
+            verbosity.medium,
+        )
+        info(
+            "@Lanczos: 2nd freq {} cm^-1".format(
+                units.unit_to_user(
+                    "frequency", "inversecm", np.sign(d[1]) * np.sqrt(np.absolute(d[1]))
+                )
+            ),
+            verbosity.medium,
+        )
+        info(
+            "@Lanczos: 3rd freq {} cm^-1\n".format(
+                units.unit_to_user(
+                    "frequency", "inversecm", np.sign(d[2]) * np.sqrt(np.absolute(d[2]))
+                )
+            ),
+            verbosity.medium,
+        )
 
         if d[0] > 0:
             if d[1] / 2 > d[0]:
@@ -1305,9 +1344,11 @@ class LanczosOptimizer(HessianOptimizer):
                 lamb = (2 * d[0] + d[1]) / 4
             else:
                 alpha = (d[1] - d[0]) / d[1]
-                lamb = (3 * d[0] + d[1]) / 4  # midpoint between b[0] and b[1]*(1-alpha/2)
+                lamb = (
+                    3 * d[0] + d[1]
+                ) / 4  # midpoint between b[0] and b[1]*(1-alpha/2)
         elif d[1] < 0:  # Jeremy Richardson
-            if (d[1] >= d[0] / 2):
+            if d[1] >= d[0] / 2:
                 alpha = 1
                 lamb = (d[0] + 2 * d[1]) / 4
             else:
@@ -1351,8 +1392,6 @@ class LanczosOptimizer(HessianOptimizer):
 
 
 class LBFGSOptimizer(DummyOptimizer):
-
-
     def bind(self, geop):
         # call bind function from DummyOptimizer
         super(LBFGSOptimizer, self).bind(geop)
@@ -1413,7 +1452,7 @@ class LBFGSOptimizer(DummyOptimizer):
 
         self.optarrays["d"] = geop.optarrays["d"]
 
-        self.fm.esum=True
+        self.fm.esum = True
 
     def initialize(self, step):
 
@@ -1453,10 +1492,14 @@ class LBFGSOptimizer(DummyOptimizer):
         self.update_old_pos_for()
         self.init = True
 
-    def post_step(self,step,activearrays):
+    def post_step(self, step, activearrays):
         # Update
-        self.optarrays["qlist"][:] = self.fix.get_full_vector(activearrays["qlist"], t=3)
-        self.optarrays["glist"][:] = self.fix.get_full_vector(activearrays["glist"], t=3)
+        self.optarrays["qlist"][:] = self.fix.get_full_vector(
+            activearrays["qlist"], t=3
+        )
+        self.optarrays["glist"][:] = self.fix.get_full_vector(
+            activearrays["glist"], t=3
+        )
         self.optarrays["d"][:] = self.fix.get_full_vector(activearrays["d"], t=1)
 
         self.update_pos_for()
@@ -1464,10 +1507,11 @@ class LBFGSOptimizer(DummyOptimizer):
         self.print_geo(step)
 
         # Check Exit and only then update old arrays
-        d_x_max = np.amax(np.absolute(np.subtract(self.beads.q, self.optarrays["old_x"])))
+        d_x_max = np.amax(
+            np.absolute(np.subtract(self.beads.q, self.optarrays["old_x"]))
+        )
         self.exit = self.exitstep(d_x_max, step)
         self.update_old_pos_for()
-
 
     def step(self, step=None):
         """ Does one simulation time step."""
@@ -1478,11 +1522,20 @@ class LBFGSOptimizer(DummyOptimizer):
         fdf0 = (e, g)
 
         # Do one step. Update the position and force inside the mapper.
-        L_BFGS(activearrays["old_x"], activearrays["d"], self.fm, activearrays["qlist"], activearrays["glist"],
-               fdf0, activearrays["big_step"], self.options["ls_options"]["tolerance"] *
-               self.options["tolerances"]["energy"], self.options["ls_options"]["iter"],
-               self.options["corrections"], self.options["scale"], step)
+        L_BFGS(
+            activearrays["old_x"],
+            activearrays["d"],
+            self.fm,
+            activearrays["qlist"],
+            activearrays["glist"],
+            fdf0,
+            activearrays["big_step"],
+            self.options["ls_options"]["tolerance"]
+            * self.options["tolerances"]["energy"],
+            self.options["ls_options"]["iter"],
+            self.options["corrections"],
+            self.options["scale"],
+            step,
+        )
 
-
-        self.post_step(step,activearrays)
-
+        self.post_step(step, activearrays)
