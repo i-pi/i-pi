@@ -119,12 +119,21 @@ class InputInst(InputDictionary):
                                             Finally lbfgs is used for tunneling splitting calculations. """,
             },
         ),
+        "max_e": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 0.0,
+                "help": """Evaluate the forces in a reduced ring polymer such that the potential energy between consecutive replicas is smaller that the provided value.""",
+                "dimension": "energy",
+            },
+        ),
         "max_ms": (
             InputValue,
             {
                 "dtype": float,
-                "default": -1.0,
-                "help": """Evaluate the forces in a reduced ring polymer such that that mass-scaled distance in a.u. between replicas is  smaller that the provided value.""",
+                "default": 0.0,
+                "help": """Evaluate the forces in a reduced ring polymer such that that mass-scaled distance in a.u. between consecutive replicas is  smaller that the provided value.""",
             },
         ),
         "discretization": (
@@ -305,6 +314,7 @@ class InputInst(InputDictionary):
         self.opt.store(options["opt"])
 
         # Generic instanton
+        self.max_e.store(options["max_e"])
         self.max_ms.store(options["max_ms"])
         self.discretization.store(options["discretization"])
         self.alt_out.store(options["save"])
