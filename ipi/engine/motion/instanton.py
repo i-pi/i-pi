@@ -899,36 +899,13 @@ class DummyOptimizer(dobject):
 
         if not self.init:
             self.initialize(step)
-            # print('old_coef',func(self.im.coef))
-            # cons = scipy.optimize.NonlinearConstraint(func,-0.1,0.1)
-            # cons=({'type':'eq','fun':lambda x: 2*np.sum(x)-x[0]-x[1]-2*self.im.dbeads.nbeads})
 
         if adaptative:
-            import scipy.optimize
-
-            new_coef = scipy.optimize.minimize(
-                self.opt_coef,
-                self.im.coef,
-                method="L-BFGS-B",
-                options={"gtol": 1e-8, "disp": False},
-            )
-
-            new_coef = scipy.optimize.minimize(
-                self.opt_coef,
-                self.im.coef,
-                method="L-BFGS-B",
-                options={"gtol": 1e-8, "disp": False},
-            )
-
-            # func = lambda x: 2 * np.sum(x) - x[0] - x[-1]
-            def func2(x):
-                return 2 * np.sum(x) - x[0] - x[-1]
-
-            coef = np.absolute(new_coef.x)
-            s = func2(coef)
-            coef *= 2 * self.im.dbeads.nbeads / s
-            self.im.set_coef(coef)
-            self.gm.set_coef(coef)
+            softexit.trigger("Adaptative discretization is not fully implemented")
+            # new_coef = <implement_here>
+            # self.im.set_coef(coef)
+            # self.gm.set_coef(coef)
+            raise NotImplementedError
 
         self.qtime = -time.time()
         info("\n Instanton optimization STEP {}".format(step), verbosity.low)

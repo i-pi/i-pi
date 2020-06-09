@@ -1,6 +1,6 @@
 !Muller Brown surface
 !Theoret. Chim. Acta (Berl.) 53, 75-93 (1979)
-!J. Chem. Theory Comput. 2019, 15, 2816\[Minus]2825 (min2: (\[Minus]0.05001, 0.46669) saddle point (\[Minus]0.822001, 0.624314), 0.19 Eh)
+!J. Chem. Theory Comput. 2018, 14, 5489−5498 Article
 !Y. Litman 2019
 
       SUBROUTINE get_MB(nat,scaling,q,pot,force)
