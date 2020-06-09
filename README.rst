@@ -88,8 +88,8 @@ Format Compliance
 i-PI code should be compliant to a minimal subset of PEP-8 recommendations.
 We require the use of black as formatter and flake8 as linter.
 Both packages can be easily installed using pip.
-Then in the main directory of the repository you should run the following lines
-and resolve any error message that may appear, BEFORE  proceeding to a pull request
+You should run the following lines in the main directory of the repository 
+and resolve any error message that may appear BEFORE  proceeding to a pull request
 
 ```
 black . 
