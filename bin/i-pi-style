@@ -1,0 +1,100 @@
+#!/usr/bin/env python3
+
+"""
+This script cleans python files in-place by calling black.
+With option --path, it searches for python files
+recursively in the given directory. With option --file
+it applies autopep8 to listed python files.
+Prior to running the script, black and flake8 must be installed.
+"""
+import subprocess as sp
+import argparse
+from argparse import RawTextHelpFormatter
+from pathlib import Path
+import sys
+
+formatter = "black"
+linter = "flake8"
+cwd_repo = Path(__file__).resolve().parents[1]
+
+
+def main(check_mode, folder_path, file_path):
+
+    if file_path is not None:
+        path = cwd_repo / file_path
+    elif folder_path is not None:
+        path = cwd_repo / folder_path
+    else:
+        path = cwd_repo
+
+    print("\nTarget: {}".format(path))
+    print("\nRun {}".format(formatter))
+    cmd1 = [formatter, path]
+    if check_mode:
+        cmd1.append("--check")
+    black = sp.Popen(cmd1, cwd=cwd_repo, stdout=sp.PIPE, stderr=sp.PIPE)
+
+    msg = black.communicate(timeout=30)[1].decode("utf-8")
+    print("{} output:\n".format(formatter))
+    print(msg)
+
+    print("\nRun {}".format(linter))
+    cmd1 = [linter, path]
+    flake8 = sp.Popen(cmd1, cwd=cwd_repo, stdout=sp.PIPE, stderr=sp.PIPE)
+    msg = flake8.communicate(timeout=30)[0].decode("utf-8")
+    if msg is "":
+        print("\nThere isn't any warning. You are ready to push this commit.\n")
+    else:
+        print("{} output:\n".format(linter))
+        print(msg)
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(
+        formatter_class=RawTextHelpFormatter,
+        description=""
+        "Script that takes care of the style guide enforcement. \n"
+        "To run this script black and flake8 must be installed: \n"
+        "https://flake8.pycqa.org/en/latest/\n"
+        "https://black.readthedocs.io/en/stable/  \n"
+        "\n"
+        "If you want to clean your i-pi repository, \n"
+        "type: i-pi-style --path <your_ipi_root> \n"
+        "\n"
+        "If you want to clean a folder and everything inside it \n"
+        "type: i-pi-style --path <folder_path> \n"
+        "example: i-pi-style -p ipi/engine/motion\n"
+        "\n"
+        "This script will recursively search for valid python files\n"
+        "If you only want to apply it to some file\n"
+        "type: i-pi-style --file <file_path>\n"
+        "example: i-pi-style -f ipi/engine/motion/motion.py\n",
+    )
+
+    parser.add_argument(
+        "-p",
+        "--path",
+        type=str,
+        default=None,
+        help="Path to directory to look for python files recursively",
+    )
+    parser.add_argument(
+        "-f",
+        "--file_path",
+        type=str,
+        default=None,
+        help="filename on which enforce styling",
+    )
+    parser.add_argument(
+        "-c",
+        "--check",
+        action="store_true",
+        help="Only checks style compliance but does not modify any file",
+    )
+
+    args = parser.parse_args()
+    folder_path = args.path
+    file_path = args.file_path
+    check_mode = args.check
+
+    main(check_mode, folder_path, file_path)
