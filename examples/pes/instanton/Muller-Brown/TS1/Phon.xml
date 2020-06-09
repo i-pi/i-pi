@@ -2,7 +2,7 @@
     <output prefix='phon'>
    </output>
    <total_steps>400       </total_steps>
-   <ffsocket name="aims" mode="unix" >
+   <ffsocket name="MB" mode="unix" >
        <address> localhost </address>  <latency> 1e-4</latency>
        <port>40057</port>
    </ffsocket>
@@ -12,7 +12,7 @@
            <cell mode='abc'> [130.18034026,  170.29206049,  240.21758034] </cell>
        </initialize>
        <forces>
-          <force forcefield="aims"> </force>
+          <force forcefield="MB"> </force>
        </forces>
       <motion mode="vibrations">
         <vibrations mode="fd">

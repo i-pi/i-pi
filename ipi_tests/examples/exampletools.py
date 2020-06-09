@@ -19,6 +19,7 @@ driver_models = [
     "pswater",
     "eckart",
     "ch4hcbe",
+    "MB",
 ]
 
 
