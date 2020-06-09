@@ -60,7 +60,7 @@
          force(i,3) = fz
         
       ENDDO
-      write(6,*) 'ALBERTO'
+      ! write(6,*) 'ALBERTO'
       return
       end
  

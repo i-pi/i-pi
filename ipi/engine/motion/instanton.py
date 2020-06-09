@@ -358,11 +358,11 @@ class GradientMapper(object):
         if max_ms > 0 or max_e > 0:
             self.spline = True
 
-            if max_ms >0:
+            if max_ms > 0:
                 self.max_ms = max_ms
             else:
                 self.max_ms = 1000000
-            if max_e >0:
+            if max_e > 0:
                 self.max_e = max_e
             else:
                 self.max_e = 10000000
@@ -407,8 +407,10 @@ class GradientMapper(object):
                 "The reduced RP for this step has {} beads.".format(len(indexes)),
                 verbosity.low,
             )
-            if len(indexes)<=2:
-                  softexit.trigger("Too few beads fulfill criteria. Please reduce max_ms or max_e")
+            if len(indexes) <= 2:
+                softexit.trigger(
+                    "Too few beads fulfill criteria. Please reduce max_ms or max_e"
+                )
         else:
             indexes = np.arange(self.dbeads.nbeads)
 
@@ -444,7 +446,7 @@ class GradientMapper(object):
         e = np.sum(full_pot)  # Energy
         g = -full_forces  # Gradient
 
-        self.save(full_pot,g)
+        self.save(full_pot, g)
 
         if not full:
             g = self.fix.get_active_vector(g, 1)
@@ -456,8 +458,8 @@ class GradientMapper(object):
             e = e * (self.coef[1:] + self.coef[:-1]) / 2
             g = g * (self.coef[1:] + self.coef[:-1]) / 2
 
-
         return e, g
+
 
 class SpringMapper(object):
     """Creation of the multi-dimensional function to compute full or half ring polymer pot
