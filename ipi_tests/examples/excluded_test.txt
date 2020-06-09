@@ -6,8 +6,6 @@ lammps/h2o-extreme-rem
 lammps/isof-vapor
 pes/qtip4pf/tun-splitting/TS
 pes/qtip4pf/tun-splitting/instanton/32-lbfgs
-pes/instanton/ch4h-cbe-rate/TS
-pes/instanton/ch4h-cbe-rate/instanton/40
 MBPOL/splitting/min 
 MBPOL/splitting/instanton/32-lbfgs 
 MBPOL/splitting/instanton/32 

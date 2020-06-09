@@ -5,6 +5,6 @@ To run all the example-test:
 python test_examples.py
 
 
-To run the test for only one example:
+To run the test for only ONE example:
 python test_examples.py  <example-folder>
 
