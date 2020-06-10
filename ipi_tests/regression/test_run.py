@@ -51,7 +51,9 @@ if __name__ == "__main__":
         "This script will recursively search for examples.\n",
     )
 
-    parser.add_argument("-p","--path", type=str, default=None, help="Folder of the example to test")
+    parser.add_argument(
+        "-p", "--path", type=str, default=None, help="Folder of the example to test"
+    )
     args = parser.parse_args()
 
     try:
