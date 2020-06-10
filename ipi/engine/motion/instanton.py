@@ -1420,7 +1420,7 @@ class LBFGSOptimizer(DummyOptimizer):
                 )
             self.optarrays["hessian"] = geop.optarrays["hessian"]
 
-        self.im.bind(self)
+        self.im.bind(self, self.options["discretization"])
 
         # Specific for LBFGS
         self.options["corrections"] = geop.options["corrections"]

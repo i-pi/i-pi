@@ -26,9 +26,13 @@ driver_models = [
 def find_examples(parent, excluded_file="excluded_test.txt"):
 
     excluded = list()
-    with open(excluded_file) as f:
-        for line in f:
-            excluded.append(" ".join(str(parent / line).split()))
+    if excluded_file is not None:
+        try:
+            with open(excluded_file) as f:
+                for line in f:
+                    excluded.append(" ".join(str(parent / line).split()))
+        except:
+            print('Excluded file not found')
 
     folders = [x[0] for x in os.walk(parent)]
     examples = list()
@@ -75,7 +79,7 @@ def modify_xml(
                 model = "gas"
         elif model == "harm":
             model = " harm -o 1 "
-        print("here", model)
+        print("driver:", model)
         clients.append((model, address, port))
 
     element = root.find("total_steps")
@@ -117,7 +121,7 @@ class Runner_examples(object):
             driver = list()
             for client in clients:
                 cmd = self.cmd2 + " -m {} -h {} -u ".format(client[0], client[1])
-                print("here", cmd)
+                print("cmd:", cmd)
                 driver.append(
                     sp.Popen(cmd, cwd=(cwd), shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
                 )

@@ -2,9 +2,12 @@
 Examples to excluded from this test should be added to 'excluded_test.txt'
 
 To run all the example-test:
-python test_examples.py
+type: python test_examples.py
 
 
-To run the test for only ONE example:
-python test_examples.py  <example-folder>
+To run the test for examples inside a folder:
+type: python test_examples.py  <example-folder>
+example: python test_examples.py examples/lammps/h2o-geop
 
+To see more information
+type: python test_examples.py -h
