@@ -21,6 +21,7 @@ reg_tests = get_info_test(main_folder)
 
 @pytest.mark.parametrize("test_info", reg_tests)
 def test_cmd(test_info):
+
     runner = Runner(Path("."))
 
     cmd2 = list()
@@ -45,22 +46,20 @@ if __name__ == "__main__":
         "type: python test_run.py \n"
         "\n"
         "To check all the regtest inside a folder\n"
-        "type: python test_run.py <folder_path> \n"
-        "example: python test_run geop \n"
+        "type: python test_run.py --path <folder_path> \n"
+        "example: python test_run -p geop \n"
         "This script will recursively search for examples.\n",
     )
 
-    parser.add_argument("folder", type=str, help="Folder of the example to test")
+    parser.add_argument("-p","--path", type=str, default=None, help="Folder of the example to test")
     args = parser.parse_args()
 
-    path = main_folder / args.folder
-    reg_tests = get_info_test(path)
-    # try:
-    #    path = main_folder / args.folder
-    #    reg_tests = get_info_test(main_folder)
-    # except:
-    #    print("We will run all the tests")
-    #    reg_tests = get_info_test(main_folder)
+    try:
+        path = main_folder / args.folder
+        reg_tests = get_info_test(main_folder)
+    except:
+        print("We will run all the tests")
+        reg_tests = get_info_test(main_folder)
 
     print("We have found {} reg_tests".format(len(reg_tests)))
     for test_info in reg_tests:

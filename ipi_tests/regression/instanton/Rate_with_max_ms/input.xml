@@ -4,7 +4,8 @@
    </output>
    <total_steps>30      </total_steps>
    <ffsocket name="MB" mode="unix" >
-       <address> localhost </address>  
+       <address> test_mx </address> 
+       <port>33337</port> 
    </ffsocket>
    <system >
        <initialize nbeads='20'> 

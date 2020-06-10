@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 import numpy as np
 import time
+import glob
 import os
 import shutil
 from tempfile import TemporaryDirectory
@@ -50,6 +51,13 @@ class Runner(object):
         self.check_prop = check_prop
 
     def _run(self, cmd1, cmd2, cwd):
+
+        try:
+            for filename in glob.glob("/tmp/ipi_*"):
+                os.remove(filename)
+        except:
+            pass
+ 
         try:
             self.tmp_dir = Path(tempfile.mkdtemp())
             files = os.listdir(self.parent / cwd)
@@ -82,6 +90,7 @@ class Runner(object):
 
         except ValueError:
             raise ValueError("{}".format(str(cwd)))
+
 
     def _check_error(self, ipi):
         ipi_error = ipi.communicate(timeout=30)[1].decode("ascii")

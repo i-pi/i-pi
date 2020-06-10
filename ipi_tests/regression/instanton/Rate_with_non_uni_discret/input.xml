@@ -5,6 +5,7 @@
    <total_steps>20       </total_steps>
    <ffsocket name="ch4hcbe" mode="unix" >
        <address> localhost </address>  
+       <port> 33340  </port>  
    </ffsocket>
    <system >
        <initialize nbeads='20'> 
