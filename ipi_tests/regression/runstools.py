@@ -111,4 +111,4 @@ class Runner(object):
 
         test_output = np.loadtxt(self.tmp_dir / "simulation.out")
 
-        np.testing.assert_array_equal(test_output, ref_output)
+        np.testing.assert_allclose(test_output, ref_output)
