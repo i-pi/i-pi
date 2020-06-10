@@ -1,11 +1,10 @@
 #!/usr/bin/env python3
 
 """
-This script cleans python files in-place by calling black.
-With option --path, it searches for python files
-recursively in the given directory. With option --file
-it applies autopep8 to listed python files.
+This script cleans python files in-place by calling black
+and checks linting by using flake8.
 Prior to running the script, black and flake8 must be installed.
+For details of usage call it with "-h" option. 
 """
 import subprocess as sp
 import argparse
@@ -59,7 +58,7 @@ if __name__ == "__main__":
         "https://black.readthedocs.io/en/stable/  \n"
         "\n"
         "If you want to clean your i-pi repository, \n"
-        "type: i-pi-style --path <your_ipi_root> \n"
+        "type: i-pi-style \n"
         "\n"
         "If you want to clean a folder and everything inside it \n"
         "type: i-pi-style --path <folder_path> \n"
