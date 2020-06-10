@@ -33,7 +33,7 @@ def get_info_test(parent):
                         raise ValueError("driver.txt is empty")
             except FileNotFoundError:
                 raise FileNotFoundError(
-                    "A driver.txt file is needed for each reg_text to be executed"
+                    "({}) An input.xml file was found but a driver.txt not".format(ff)
                 )
             except ValueError:
                 raise ValueError(

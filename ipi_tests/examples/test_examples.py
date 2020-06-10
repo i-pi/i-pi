@@ -37,7 +37,7 @@ if __name__ == "__main__":
         "inclueded in the 'excluded_test.txt' file\n"
         "type: python test_examples.py \n"
         "\n"
-        "To check all the examples inside folder  \n"
+        "To check all the examples inside a folder  \n"
         "type: python test_examples.py <folder_path> \n"
         "example: python test_examples.py examples/lammps/h2o-geop\n"
         "This script will recursively search for examples.\n",
