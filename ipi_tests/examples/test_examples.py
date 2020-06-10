@@ -2,7 +2,7 @@ import subprocess as sp
 from pathlib import Path
 import pytest
 import argparse
-from  argparse import RawTextHelpFormatter
+from argparse import RawTextHelpFormatter
 import sys
 from ipi_tests.examples.exampletools import find_examples, Runner_examples
 
@@ -40,11 +40,11 @@ if __name__ == "__main__":
         "To check all the examples inside folder  \n"
         "type: python test_examples.py <folder_path> \n"
         "example: python test_examples.py examples/lammps/h2o-geop\n"
-        "This script will recursively search for examples.\n"
+        "This script will recursively search for examples.\n",
     )
 
-    parser.add_argument('folder', type=str,help="Folder of the example to test")
-    args   = parser.parse_args()
+    parser.add_argument("folder", type=str, help="Folder of the example to test")
+    args = parser.parse_args()
     try:
         path = Path(__file__).resolve().parents[2] / args.folder
         examples = find_examples(path, excluded_file=None)
