@@ -7,7 +7,7 @@
         <properties stride="1" filename="vac"> [ step, time{picosecond}, atom_x{angstrom}(123), atom_x{angstrom}(124) ] </properties>
         <trajectory filename="pos" stride="1" cell_units="angstrom" format="xyz" bead="0"> positions{angstrom} </trajectory>
     </output>
-    <total_steps> 5 </total_steps>
+    <total_steps> 100 </total_steps>
     <prng> <seed> 1 </seed> </prng>
     <ffsocket name="lmpserial" mode="unix">
         <address> fidis </address> <latency> 1e-3 </latency>
@@ -34,11 +34,12 @@
                <nmg> 6 </nmg>
                <nvac> 2 </nvac>
                <neval> 8 </neval>
-	       <diffusion_barrier_al units="electronvolt"> 0.52  </diffusion_barrier_al> <!-- Mantina2009 dHm -->
-           <diffusion_prefactor_al units="terahertz"> 16.6 </diffusion_prefactor_al> <!-- Mantina2009 v*  -->
-	       <ecache_file> KMC_ECACHE </ecache_file>
-               <qcache_file> KMC_QCACHE </qcache_file>	
-            </al6xxx_kmc>
+	           <diffusion_barrier_al units="electronvolt"> 0.52  </diffusion_barrier_al> <!-- Mantina2009 dHm -->
+               <diffusion_prefactor_al units="terahertz"> 16.6 </diffusion_prefactor_al> <!-- Mantina2009 v*  -->
+	           <ecache_file> KMC_ECACHE </ecache_file>
+               <qcache_file> KMC_QCACHE </qcache_file>
+               <max_cache_len> 100 </max_cache_len>   
+           </al6xxx_kmc>    
         </motion>
         <ensemble>
             <temperature units="kelvin">300</temperature>

@@ -4,15 +4,6 @@ lammps/h2o-imf
 lammps/h2o-vscf
 lammps/h2o-extreme-rem
 lammps/isof-vapor
-pes/qtip4pf/tun-splitting/TS
-pes/qtip4pf/tun-splitting/instanton/32-lbfgs
-pes/instanton/ch4h-cbe-rate/TS
-pes/instanton/ch4h-cbe-rate/instanton/40
-MBPOL/splitting/min 
-MBPOL/splitting/instanton/32-lbfgs 
-MBPOL/splitting/instanton/32 
-MBPOL/splitting/min-freq 
-MBPOL/splitting/TS 
 pes/geop/waterbox/bfgs
 pes/zundel-systempart 
 pes/neb 
@@ -56,7 +47,7 @@ ASEClient/CP2K
 
 
 
-#Regtest are beyond the scope of this test 
+#REGTEST are beyond the scope of this test 
 regtest/bosons/3p_3D_HO_bhw_2_Dist 
 regtest/bosons/3p_3D_HO_bhw_2 
 regtest/bosons/3p_2B_3D_HO_bhw_2 

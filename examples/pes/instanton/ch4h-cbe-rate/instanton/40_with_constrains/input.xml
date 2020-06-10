@@ -3,7 +3,7 @@
         <properties stride='1' filename='out'>  [ step, potential{electronvolt}] </properties>
    </output>
    <total_steps>100       </total_steps>
-   <ffsocket name="cbe" mode="unix" >
+   <ffsocket name="ch4hcbe" mode="unix" >
        <address> localhost </address>  <latency> 1e-4</latency>
        <port>40052</port>
    </ffsocket>
@@ -13,7 +13,7 @@
            <cell mode='abc'> [130.18034026,  170.29206049,  240.21758034] </cell>
        </initialize>
        <forces>
-          <force forcefield="cbe"> </force>
+          <force forcefield="ch4hcbe"> </force>
        </forces>
        <ensemble>
            <temperature units="kelvin">250</temperature>
@@ -23,7 +23,8 @@
        </normal_modes>
        <motion mode='instanton'>
            <!-- <fixatoms>[3]</fixatoms>-->
-            <fixatoms>[1,2,3,4,5]</fixatoms>
+           <fixatoms>[1,2,3,4,5]</fixatoms>
+           <fixcom> False </fixcom>
            <instanton mode='rate'>
                <tolerances>
                    <energy> 1e-7 </energy>

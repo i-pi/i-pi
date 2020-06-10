@@ -4,6 +4,7 @@ from pathlib import Path
 import pytest
 import numpy as np
 import time
+import glob
 import os
 import shutil
 from tempfile import TemporaryDirectory
@@ -33,7 +34,7 @@ def get_info_test(parent):
                         raise ValueError("driver.txt is empty")
             except FileNotFoundError:
                 raise FileNotFoundError(
-                    "A driver.txt file is needed for each reg_text to be executed"
+                    "({}) An input.xml file was found but a driver.txt not".format(ff)
                 )
             except ValueError:
                 raise ValueError(
@@ -50,6 +51,13 @@ class Runner(object):
         self.check_prop = check_prop
 
     def _run(self, cmd1, cmd2, cwd):
+
+        try:
+            for filename in glob.glob("/tmp/ipi_*"):
+                os.remove(filename)
+        except:
+            pass
+
         try:
             self.tmp_dir = Path(tempfile.mkdtemp())
             files = os.listdir(self.parent / cwd)
@@ -89,10 +97,11 @@ class Runner(object):
         assert "" == ipi_error
 
     def _check_properties(self, cwd):
+
         try:
             ref_output = np.loadtxt(Path(cwd) / "ref_simulation.out")
         except IOError:
-            raise (
+            raise IOError(
                 'Please provide a refence properties output named "ref_simulation.out"'
             )
         except ValueError:
@@ -102,4 +111,4 @@ class Runner(object):
 
         test_output = np.loadtxt(self.tmp_dir / "simulation.out")
 
-        np.testing.assert_array_equal(test_output, ref_output)
+        np.testing.assert_allclose(test_output, ref_output)
