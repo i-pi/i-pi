@@ -55,13 +55,12 @@ if __name__ == "__main__":
 
     path = main_folder / args.folder
     reg_tests = get_info_test(path)
-    #try:
+    # try:
     #    path = main_folder / args.folder
     #    reg_tests = get_info_test(main_folder)
-    #except:
+    # except:
     #    print("We will run all the tests")
     #    reg_tests = get_info_test(main_folder)
-
 
     print("We have found {} reg_tests".format(len(reg_tests)))
     for test_info in reg_tests:

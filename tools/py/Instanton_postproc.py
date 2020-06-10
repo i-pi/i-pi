@@ -128,6 +128,10 @@ if case not in list(["reactant", "TS", "instanton"]):
     raise ValueError(
         "We can not indentify the case. The valid cases are: 'reactant', 'TS' and 'instanton'"
     )
+if asr not in list(["poly", "crystal", "none"]):
+    raise ValueError(
+        "We can not indentify asr case. The valid cases are: 'poly', 'crystal' and 'none'")
+
 if args.temperature == 0.0:
     raise ValueError("The temperature must be specified.'")
 

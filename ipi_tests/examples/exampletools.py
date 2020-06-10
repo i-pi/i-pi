@@ -32,7 +32,7 @@ def find_examples(parent, excluded_file="excluded_test.txt"):
                 for line in f:
                     excluded.append(" ".join(str(parent / line).split()))
         except:
-            print('Excluded file not found')
+            print("Excluded file not found")
 
     folders = [x[0] for x in os.walk(parent)]
     examples = list()

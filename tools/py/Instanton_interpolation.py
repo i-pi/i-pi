@@ -234,8 +234,8 @@ if input_hess != "None" or chk != "None":
             h = np.array([])
             for n in range(nbeads):
                 h = np.append(h, hessian[i, j + size0 * n])
-            #           h3 = np.concatenate((h, h, h), axis=0).reshape((h.size, 3), order='F')  # Open path expect three coordinates per atom
-            #           diag = rpc.b1tob2(h3)[:, 0]
+            #           h3 = np.concatenate((h, h, h), axis=0).reshape((h.size, 3), order='F') # Open path expect three coordinates per atom
+            #           diag = rpc.b1tob2(h3)[:, 0] # Open path
             h2 = np.concatenate(
                 (h, np.flipud(h)), axis=0
             )  # Compose the full ring polymer.
@@ -244,7 +244,7 @@ if input_hess != "None" or chk != "None":
 
     new_h_half = new_h[:, 0 : size2 // 2]
     np.savetxt(out, new_h_half.reshape(1, new_h_half.size))
-    #   new_h_half = new_h[:, 0:size2 / 2]
+    # new_h_half = new_h[:, 0:size2 / 2]
     # np.savetxt(out, new_h.reshape(1, new_h.size))
 
     print("The new physical Hessian (half polymer) was generated")
