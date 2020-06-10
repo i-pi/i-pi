@@ -97,10 +97,11 @@ class Runner(object):
         assert "" == ipi_error
 
     def _check_properties(self, cwd):
+
         try:
             ref_output = np.loadtxt(Path(cwd) / "ref_simulation.out")
         except IOError:
-            raise (
+            raise IOError(
                 'Please provide a refence properties output named "ref_simulation.out"'
             )
         except ValueError:
