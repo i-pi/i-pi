@@ -15,7 +15,7 @@ it had not been stopped.
 import numpy as np
 
 
-__all__ = ['Random']
+__all__ = ["Random"]
 
 
 class Random(object):

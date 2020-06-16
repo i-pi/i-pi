@@ -11,10 +11,12 @@ import sys
 import numpy as np
 
 
-__all__ = ['print_binary', 'read_binary']
+__all__ = ["print_binary", "read_binary"]
 
 
-def print_binary(atoms, cell, filedesc=sys.stdout, title="", cell_conv=1.0, atoms_conv=1.0):
+def print_binary(
+    atoms, cell, filedesc=sys.stdout, title="", cell_conv=1.0, atoms_conv=1.0
+):
     """Prints an atomic configuration into a binary file.
 
     Args:
@@ -47,11 +49,11 @@ def read_binary(filedesc):
         nat = np.fromfile(filedesc, dtype=int, count=1)[0]
         qatoms = np.fromfile(filedesc, dtype=float, count=3 * nat)
         nat = np.fromfile(filedesc, dtype=int, count=1)[0]
-        names = np.fromfile(filedesc, dtype='|U1', count=nat)
+        names = np.fromfile(filedesc, dtype="|U1", count=nat)
         names = "".join(names)
-        names = names.split('|')
+        names = names.split("|")
         masses = np.zeros(len(names))
-        title = ''.join(np.fromfile(filedesc, dtype='|U1', count=-1))
+        title = "".join(np.fromfile(filedesc, dtype="|U1", count=-1))
     except (StopIteration, ValueError):
         raise EOFError
     return (title, cell, qatoms, names, masses)

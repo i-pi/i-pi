@@ -82,13 +82,28 @@ root directory of the i-PI project.
   $ pytest -v
 
 
-PEP-8 Compliance
+Format Compliance
 ================
 
 i-PI code should be compliant to a minimal subset of PEP-8 recommendations.
-Before proceeding to a pull request, or to the merging of a large commit, you
-can use the following script to automatically prettify the code
+Currently, we require the use of `black` as formatter and `flake8` as linter.
+In most systems, both packages can be easily installed using `pip`.
+BEFORE proceeding to a pull request, the minimal requirement is that you run
 
-```
-i-pi-pepper -p $IPI_ROOT 
-```
+::
+
+  $ make -f Makefile.style lint
+  $ make -f Makefile.style pretty 
+
+This will ensure the formatting and linting requirement are applied in the whole 
+directory tree. Please resolve any warnings or errors that may appear. Your
+commit will not pass the CI tests otherwise.
+
+For a more flexible setup, we also provide the script `i-pi-style`, for
+which instructions can be obtained by typing 
+
+::
+
+  $ i-pi-style -h 
+
+
