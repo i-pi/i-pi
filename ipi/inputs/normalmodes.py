@@ -14,7 +14,7 @@ from ipi.utils.inputvalue import *
 from ipi.utils.units import *
 
 
-__all__ = ["InputNormalModes", "InputNMFrequencies"]
+__all__ = ['InputNormalModes', 'InputNMFrequencies']
 
 
 class InputNMFrequencies(InputArray):
@@ -22,21 +22,16 @@ class InputNMFrequencies(InputArray):
     """ Storage class for NormalModes engine. """
 
     attribs = copy(InputArray.attribs)
-    attribs["style"] = (
-        InputAttribute,
-        {
-            "dtype": str,
-            "default": "rpmd",
-            "help": """Specifies the technique to be used to calculate the dynamical masses.
+    attribs["style"] = (InputAttribute, {"dtype": str,
+                                         "default": "rpmd",
+                                         "help": """Specifies the technique to be used to calculate the dynamical masses.
                                                 'rpmd' simply assigns the bead masses the physical mass.
                                                 'manual' sets all the normal mode frequencies except the centroid normal mode manually.
                                                 'pa-cmd' takes an argument giving the frequency to set all the non-centroid normal modes to.
                                                 'wmax-cmd' is similar to 'pa-cmd', except instead of taking one argument it takes two
                                                       ([wmax,wtarget]). The lowest-lying normal mode will be set to wtarget for a
                                                       free particle, and all the normal modes will coincide at frequency wmax. """,
-            "options": ["pa-cmd", "wmax-cmd", "manual", "rpmd"],
-        },
-    )
+                                         "options": ['pa-cmd', 'wmax-cmd', 'manual', 'rpmd']})
 
     default_label = "NMFREQUENCIES"
     default_help = "Provides a compact way of specifying the ring polymer frequencies"
@@ -47,9 +42,7 @@ class InputNMFrequencies(InputArray):
         Just calls the parent initialization function with appropriate arguments.
         """
 
-        super(InputNMFrequencies, self).__init__(
-            help=help, default=default, dtype=float, dimension="frequency"
-        )
+        super(InputNMFrequencies, self).__init__(help=help, default=default, dtype=float, dimension="frequency")
 
     def store(self, mf):
         """Takes a modes and frequencies ans store them
@@ -88,59 +81,31 @@ class InputNormalModes(Input):
     """
 
     attribs = {
-        "transform": (
-            InputAttribute,
-            {
-                "dtype": str,
-                "default": "fft",
-                "help": "Specifies whether to calculate the normal mode transform using a fast Fourier transform or a matrix multiplication. For small numbers of beads the matrix multiplication may be faster.",
-                "options": ["fft", "matrix"],
-            },
-        ),
-        "propagator": (
-            InputAttribute,
-            {
-                "dtype": str,
-                "default": "exact",
-                "help": "How to propagate the free ring polymer dynamics. Cayley transform is not exact but is strongly stable and avoid potential resonance issues. A bab scheme performs numerical verlet type propagation. All three options work for distinguishable particles. Only the bab propagator can be used with bosonic particles.",
-                "options": ["exact", "cayley", "bab"],
-            },
-        ),
+        "transform": (InputAttribute, {"dtype": str,
+                                       "default": "fft",
+                                       "help": "Specifies whether to calculate the normal mode transform using a fast Fourier transform or a matrix multiplication. For small numbers of beads the matrix multiplication may be faster.",
+                                       "options": ['fft', 'matrix']}),
+        "propagator": (InputAttribute, {"dtype": str,
+                                        "default": "exact",
+                                        "help": "How to propagate the free ring polymer dynamics. Cayley transform is not exact but is strongly stable and avoid potential resonance issues. A bab scheme performs numerical verlet type propagation. All three options work for distinguishable particles. Only the bab propagator can be used with bosonic particles.",
+                                        "options": ['exact', 'cayley', 'bab']})
     }
 
     fields = {
-        "frequencies": (
-            InputNMFrequencies,
-            {
-                "default": ("rpmd", np.zeros(0)),
-                "help": "Specifies normal mode frequencies for a (closed path) calculation",
-            },
-        ),
-        "open_paths": (
-            InputArray,
-            {
-                "dtype": int,
-                "default": np.zeros(0, int),
-                "help": "Indices of the atoms whose path should be opened (zero-based).",
-            },
-        ),
-        "bosons": (
-            InputArray,
-            {
-                "dtype": int,
-                "default": np.zeros(0, int),
-                "help": "Indices of the atoms that are bosons (zero-based).",
-            },
-        ),
-        "nmts": (
-            InputValue,
-            {
-                "dtype": int,
-                "default": 10,
-                "help": "The number of iterations to perform one bab step.",
-                "dimension": None,
-            },
-        ),
+        "frequencies": (InputNMFrequencies, {
+            "default": ("rpmd", np.zeros(0)),
+                     "help": "Specifies normal mode frequencies for a (closed path) calculation"
+        }),
+        "open_paths": (InputArray, {"dtype": int,
+                                    "default": np.zeros(0, int),
+                                    "help": "Indices of the atoms whose path should be opened (zero-based)."}),
+        "bosons": (InputArray, {"dtype": int,
+                                "default": np.zeros(0, int),
+                                "help": "Indices of the atoms that are bosons (zero-based)."}),
+        "nmts": (InputValue, {"dtype": int,
+                              "default": 10,
+                              "help": "The number of iterations to perform one bab step.",
+                              "dimension": None})
     }
 
     default_label = "NORMALMODES"
@@ -156,12 +121,5 @@ class InputNormalModes(Input):
 
     def fetch(self):
         mode, freqs = self.frequencies.fetch()
-        return NormalModes(
-            mode,
-            self.transform.fetch(),
-            self.propagator.fetch(),
-            freqs,
-            open_paths=self.open_paths.fetch(),
-            bosons=self.bosons.fetch(),
-            nmts=self.nmts.fetch(),
-        )
+        return NormalModes(mode, self.transform.fetch(), self.propagator.fetch(),
+                           freqs, open_paths=self.open_paths.fetch(), bosons=self.bosons.fetch(), nmts=self.nmts.fetch())

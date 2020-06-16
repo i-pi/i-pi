@@ -9,7 +9,7 @@ import traceback
 import sys
 
 
-__all__ = ["Verbosity", "verbosity", "banner", "info", "warning"]
+__all__ = ['Verbosity', 'verbosity', 'banner', 'info', 'warning']
 
 
 VERB_QUIET = 0
@@ -43,17 +43,17 @@ class Verbosity(object):
                 will be output.
         """
 
-        if name == "quiet":
+        if name is "quiet":
             return self.level >= VERB_QUIET
-        elif name == "low":
+        elif name is "low":
             return self.level >= VERB_LOW
-        elif name == "medium":
+        elif name is "medium":
             return self.level >= VERB_MEDIUM
-        elif name == "high":
+        elif name is "high":
             return self.level >= VERB_HIGH
-        elif name == "debug":
+        elif name is "debug":
             return self.level >= VERB_DEBUG
-        elif name == "trace":
+        elif name is "trace":
             return self.level >= VERB_TRACE
         else:
             return super(Verbosity, self).__getattr__(name)
@@ -87,9 +87,7 @@ class Verbosity(object):
             elif value == "trace":
                 level = VERB_TRACE
             else:
-                raise ValueError(
-                    "Invalid verbosity level " + str(value) + " specified."
-                )
+                raise ValueError("Invalid verbosity level " + str(value) + " specified.")
             super(Verbosity, self).__setattr__("level", level)
         else:
             super(Verbosity, self).__setattr__(name, value)
@@ -101,25 +99,23 @@ verbosity = Verbosity()
 def banner():
     """Prints out a banner."""
 
-    print(
-        r"""
+    print("""
  ____       ____       ____       ____
-/    \     /    \     /    \     /    \
+/    \     /    \     /    \     /    \ 
 |  #################################  |
 \__#_/     \____/     \____/     \_#__/
    #    _        _______  _____    #
    #   (_)      |_   __ \|_   _|   #      -*-     v 2.0    -*-
    #   __  ______ | |__) | | |     #
    Y  [  ||______||  ___/  | |     #      A Universal Force Engine
-  0 0  | |       _| |_    _| |_    #
+  0 0  | |       _| |_    _| |_    #      
    #  [___]     |_____|  |_____|   #
  __#_       ____       ____       _#__
-/  # \     /    \     /    \     / #  \
+/  # \     /    \     /    \     / #  \ 
 |  #################################  |
 \____/     \____/     \____/     \____/
 
-    """
-    )
+    """)
 
 
 def info(text="", show=True):

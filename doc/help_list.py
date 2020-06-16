@@ -15,46 +15,32 @@ A full help message can be found by running 'python help.py -h' or
 
 import sys
 from optparse import OptionParser
-from ipi.engine.properties import Properties, Trajectories, help_latex
 
 src_dir = ".."
 
 sys.path.append(src_dir)
 
-__all__ = ["help_list", "list_objects"]
+from ipi.engine.properties import Properties, Trajectories, help_latex
 
-list_objects = {"property_list": Properties(), "trajectory_list": Trajectories()}
+
+__all__ = ['help_list', 'list_objects']
+
+
+list_objects = {'property_list': Properties(),
+                'trajectory_list': Trajectories()}
 
 usage = "usage: python %prog [options]"
 parser = OptionParser(usage=usage)
-parser.add_option(
-    "-o",
-    action="store",
-    dest="prefix",
-    help="Prefix for the output files",
-    default="help",
-)
-parser.add_option(
-    "-i",
-    action="store",
-    dest="opt",
-    help="Root object for the help files. Options: ['property_list', 'trajectory_list']",
-    default="property_list",
-)
-parser.add_option(
-    "-r",
-    action="store_true",
-    dest="ref",
-    default=False,
-    help="If false, this creates a stand-alone document.",
-)
+parser.add_option("-o", action="store", dest="prefix", help="Prefix for the output files", default="help")
+parser.add_option("-i", action="store", dest="opt", help="Root object for the help files. Options: ['property_list', 'trajectory_list']", default='property_list')
+parser.add_option("-r", action="store_true", dest="ref", default=False, help="If false, this creates a stand-alone document.")
 (options, args) = parser.parse_args()
 
 if options.opt not in list_objects:
     raise ValueError("Option " + options.opt + " is not a viable tag name")
 
 
-def help_list(option="property_list", prefix="help", standalone=True):
+def help_list(option='property_list', prefix="help", standalone=True):
     """Writes the help file.
 
     Will write a latex file 'prefix.tex'. Can also print out
@@ -82,6 +68,5 @@ def help_list(option="property_list", prefix="help", standalone=True):
     latex_output = open(prefix + ".tex", "w")
     latex_output.write(help_latex(idict, standalone=standalone))
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     help_list(options.opt, options.prefix, not options.ref)

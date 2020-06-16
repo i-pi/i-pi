@@ -16,7 +16,7 @@ from ipi.utils.io.inputs.io_xml import xml_parse_file
 from ipi.utils.units import unit_to_internal
 
 
-__all__ = ["Replay"]
+__all__ = ['Replay']
 
 
 class Replay(Motion):
@@ -50,14 +50,10 @@ class Replay(Motion):
 
         super(Replay, self).__init__(fixcom=fixcom, fixatoms=fixatoms)
         if intraj is None:
-            raise ValueError(
-                "Must provide an initialized InitFile object to read trajectory from"
-            )
+            raise ValueError("Must provide an initialized InitFile object to read trajectory from")
         self.intraj = intraj
         if intraj.mode == "manual":
-            raise ValueError(
-                "Replay can only read from PDB or XYZ files -- or a single frame from a CHK file"
-            )
+            raise ValueError("Replay can only read from PDB or XYZ files -- or a single frame from a CHK file")
         self.rfile = open(self.intraj.value, "r")
         self.rstep = 0
 
@@ -74,8 +70,8 @@ class Replay(Motion):
                 if self.intraj.mode == "xyz":
                     for b in self.beads:
                         myframe = read_file("xyz", self.rfile)
-                        myatoms = myframe["atoms"]
-                        mycell = myframe["cell"]
+                        myatoms = myframe['atoms']
+                        mycell = myframe['cell']
                         myatoms.q *= unit_to_internal("length", self.intraj.units, 1.0)
                         mycell.h *= unit_to_internal("length", self.intraj.units, 1.0)
                         b.q[:] = myatoms.q
@@ -92,10 +88,9 @@ class Replay(Motion):
                     # TODO: Adapt the new `Simulation.load_from_xml`?
 
                     # reads configuration from a checkpoint file
-                    xmlchk = xml_parse_file(self.rfile)  # Parses the file.
+                    xmlchk = xml_parse_file(self.rfile)   # Parses the file.
 
                     from ipi.inputs.simulation import InputSimulation
-
                     simchk = InputSimulation()
                     simchk.parse(xmlchk.fields[0][1])
                     mycell = simchk.cell.fetch()

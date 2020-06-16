@@ -12,20 +12,9 @@ import numpy as np
 from ipi.utils.messages import verbosity, warning
 
 
-__all__ = [
-    "matrix_exp",
-    "stab_cholesky",
-    "h2abc",
-    "h2abc_deg",
-    "abc2h",
-    "invert_ut3x3",
-    "det_ut3x3",
-    "eigensystem_ut3x3",
-    "exp_ut3x3",
-    "root_herm",
-    "logsumlog",
-    "gaussian_inv",
-]
+__all__ = ['matrix_exp', 'stab_cholesky', 'h2abc', 'h2abc_deg', 'abc2h',
+           'invert_ut3x3', 'det_ut3x3', 'eigensystem_ut3x3', 'exp_ut3x3',
+           'root_herm', 'logsumlog', 'gaussian_inv']
 
 
 def logsumlog(lasa, lbsb):
@@ -43,7 +32,7 @@ def logsumlog(lasa, lbsb):
     (la, sa) = lasa
     (lb, sb) = lbsb
 
-    if la > lb:
+    if (la > lb):
         sr = sa
         lr = la + np.log(1.0 + sb * np.exp(lb - la))
     else:
@@ -76,7 +65,7 @@ def matrix_exp(M, ntaylor=20, nsquare=10):
     for i in range(ntaylor):
         tc[i + 1] = tc[i] / (i + 1)
 
-    SM = np.copy(M) / 2.0 ** nsquare
+    SM = np.copy(M) / 2.0**nsquare
 
     EM = np.identity(n, float) * tc[ntaylor]
     for i in range(ntaylor - 1, -1, -1):
@@ -110,12 +99,12 @@ def stab_cholesky(M):
     D = np.zeros(n, float)
     L = np.zeros(M.shape, float)
     for i in range(n):
-        L[i, i] = 1.0
+        L[i, i] = 1.
         for j in range(i):
             L[i, j] = M[i, j]
             for k in range(j):
                 L[i, j] -= L[i, k] * L[j, k] * D[k]
-            if not D[j] == 0.0:
+            if (not D[j] == 0.0):
                 L[i, j] = L[i, j] / D[j]
         D[i] = M[i, i]
         for k in range(i):
@@ -124,24 +113,17 @@ def stab_cholesky(M):
     negev = False
     S = np.zeros(M.shape, float)
     for i in range(n):
-        if D[i] > 0:
+        if (D[i] > 0):
             D[i] = math.sqrt(D[i])
         else:
-            warning(
-                "Zeroing negative element in stab-cholesky decomposition: " + str(D[i]),
-                verbosity.low,
-            )
+            warning("Zeroing negative element in stab-cholesky decomposition: " + str(D[i]), verbosity.low)
             negev = True
             D[i] = 0
         for j in range(i + 1):
             S[i, j] += L[i, j] * D[j]
 
     if negev:
-        warning(
-            "Checking decomposition after negative eigenvalue: \n"
-            + str(M - np.dot(S, S.T)),
-            verbosity.low,
-        )
+        warning("Checking decomposition after negative eigenvalue: \n" + str(M - np.dot(S, S.T)), verbosity.low)
 
     return S
 
@@ -162,8 +144,8 @@ def h2abc(h):
     """
 
     a = float(h[0, 0])
-    b = math.sqrt(h[0, 1] ** 2 + h[1, 1] ** 2)
-    c = math.sqrt(h[0, 2] ** 2 + h[1, 2] ** 2 + h[2, 2] ** 2)
+    b = math.sqrt(h[0, 1]**2 + h[1, 1]**2)
+    c = math.sqrt(h[0, 2]**2 + h[1, 2]**2 + h[2, 2]**2)
     gamma = math.acos(h[0, 1] / b)
     beta = math.acos(h[0, 2] / c)
     alpha = math.acos(np.dot(h[:, 1], h[:, 2]) / (b * c))
@@ -238,7 +220,7 @@ def abc2h(a, b, c, alpha, beta, gamma):
     h[0, 2] = c * math.cos(beta)
     h[1, 1] = b * math.sin(gamma)
     h[1, 2] = (b * c * math.cos(alpha) - h[0, 1] * h[0, 2]) / h[1, 1]
-    h[2, 2] = math.sqrt(c ** 2 - h[0, 2] ** 2 - h[1, 2] ** 2)
+    h[2, 2] = math.sqrt(c**2 - h[0, 2]**2 - h[1, 2]**2)
     return h
 
 
@@ -278,9 +260,7 @@ def eigensystem_ut3x3(p):
         eigp[i, i] = 1
     eigp[0, 1] = -p[0, 1] / (p[0, 0] - p[1, 1])
     eigp[1, 2] = -p[1, 2] / (p[1, 1] - p[2, 2])
-    eigp[0, 2] = -(p[0, 1] * p[1, 2] - p[0, 2] * p[1, 1] + p[0, 2] * p[2, 2]) / (
-        (p[0, 0] - p[2, 2]) * (p[2, 2] - p[1, 1])
-    )
+    eigp[0, 2] = -(p[0, 1] * p[1, 2] - p[0, 2] * p[1, 1] + p[0, 2] * p[2, 2]) / ((p[0, 0] - p[2, 2]) * (p[2, 2] - p[1, 1]))
 
     for i in range(3):
         eigvals[i] = p[i, i]
@@ -302,7 +282,6 @@ def det_ut3x3(h):
     """
 
     return h[0, 0] * h[1, 1] * h[2, 2]
-
 
 MINSERIES = 1e-8
 
@@ -328,15 +307,15 @@ def exp_ut3x3(h):
     eh[1, 1] = e11
     eh[2, 2] = e22
 
-    if abs((h[0, 0] - h[1, 1]) / h[0, 0]) > MINSERIES:
+    if (abs((h[0, 0] - h[1, 1]) / h[0, 0]) > MINSERIES):
         r01 = (e00 - e11) / (h[0, 0] - h[1, 1])
     else:
         r01 = e00 * (1 + (h[0, 0] - h[1, 1]) * (0.5 + (h[0, 0] - h[1, 1]) / 6.0))
-    if abs((h[1, 1] - h[2, 2]) / h[1, 1]) > MINSERIES:
+    if (abs((h[1, 1] - h[2, 2]) / h[1, 1]) > MINSERIES):
         r12 = (e11 - e22) / (h[1, 1] - h[2, 2])
     else:
         r12 = e11 * (1 + (h[1, 1] - h[2, 2]) * (0.5 + (h[1, 1] - h[2, 2]) / 6.0))
-    if abs((h[2, 2] - h[0, 0]) / h[2, 2]) > MINSERIES:
+    if (abs((h[2, 2] - h[0, 0]) / h[2, 2]) > MINSERIES):
         r02 = (e22 - e00) / (h[2, 2] - h[0, 0])
     else:
         r02 = e22 * (1 + (h[2, 2] - h[0, 0]) * (0.5 + (h[2, 2] - h[0, 0]) / 6.0))
@@ -345,24 +324,14 @@ def exp_ut3x3(h):
     eh[1, 2] = h[1, 2] * r12
 
     eh[0, 2] = h[0, 2] * r02
-    if abs((h[2, 2] - h[0, 0]) / h[2, 2]) > MINSERIES:
+    if (abs((h[2, 2] - h[0, 0]) / h[2, 2]) > MINSERIES):
         eh[0, 2] += h[0, 1] * h[0, 2] * (r01 - r12) / (h[0, 0] - h[2, 2])
-    elif abs((h[1, 1] - h[0, 0]) / h[1, 1]) > MINSERIES:
+    elif (abs((h[1, 1] - h[0, 0]) / h[1, 1]) > MINSERIES):
         eh[0, 2] += h[0, 1] * h[0, 2] * (r12 - r02) / (h[1, 1] - h[0, 0])
-    elif abs((h[1, 1] - h[2, 2]) / h[1, 1]) > MINSERIES:
+    elif (abs((h[1, 1] - h[2, 2]) / h[1, 1]) > MINSERIES):
         eh[0, 2] += h[0, 1] * h[0, 2] * (r02 - r01) / (h[2, 2] - h[1, 1])
     else:
-        eh[0, 2] += (
-            h[0, 1]
-            * h[0, 2]
-            * e00
-            / 24.0
-            * (
-                12.0
-                + 4 * (h[1, 1] + h[2, 2] - 2 * h[0, 0])
-                + (h[1, 1] - h[0, 0]) * (h[2, 2] - h[0, 0])
-            )
-        )
+        eh[0, 2] += h[0, 1] * h[0, 2] * e00 / 24.0 * (12.0 + 4 * (h[1, 1] + h[2, 2] - 2 * h[0, 0]) + (h[1, 1] - h[0, 0]) * (h[2, 2] - h[0, 0]))
 
     return eh
 
@@ -388,20 +357,12 @@ def root_herm(A):
         if eigvals[i] >= 0:
             diag[i, i] = math.sqrt(eigvals[i])
         else:
-            warning(
-                "Zeroing negative %d-th element in matrix square root: %e"
-                % (i, eigvals[i]),
-                verbosity.low,
-            )
+            warning("Zeroing negative %d-th element in matrix square root: %e" % (i, eigvals[i]), verbosity.low)
             diag[i, i] = 0
             negev = True
     rv = np.dot(eigvecs, np.dot(diag, eigvecs.T))
     if negev:
-        warning(
-            "Checking decomposition after negative eigenvalue: \n"
-            + str(A - np.dot(rv, rv.T)),
-            verbosity.low,
-        )
+        warning("Checking decomposition after negative eigenvalue: \n" + str(A - np.dot(rv, rv.T)), verbosity.low)
 
     return rv
 
@@ -433,14 +394,14 @@ def gaussian_inv(x):
 
     y = x - 0.5
 
-    if x > 0.08 and x < 0.92:
-        z = y * y
-        return y * np.polyval([a3, a2, a1, a0], z) / np.polyval([b3, b2, b1, b0, 1], z)
+    if(x > 0.08 and  x < 0.92):
+        z = y*y
+        return y * np.polyval([a3,a2,a1,a0],z) / np.polyval([b3,b2,b1,b0,1],z)
 
-    if x <= 0.08 or x >= 0.92:
-        if y > 0:
+    if(x <= 0.08 or x >= 0.92):
+        if( y > 0 ):
             z = 1 - x
         else:
             z = x
         k = np.log(-np.log(z))
-        return np.sign(y) * np.polyval([c8, c7, c6, c5, c4, c3, c2, c1, c0], k)
+        return np.sign(y) * np.polyval([c8,c7,c6,c5,c4,c3,c2,c1,c0],k)

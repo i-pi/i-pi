@@ -28,6 +28,7 @@ from ipi.utils.messages import verbosity
 from ipi.engine.outputs import *
 from ipi.engine.properties import getkey
 from ipi.inputs.simulation import InputSimulation
+from ipi.engine.smotion import ReplicaExchange
 from ipi.utils.io.inputs import io_xml
 
 
@@ -48,9 +49,7 @@ def main(inputfile, prefix="SRT_"):
 
     simul = isimul.fetch()
     swapfile = ""
-    if simul.smotion is None or (
-        simul.smotion.mode != "remd" and simul.smotion.mode != "multi"
-    ):
+    if simul.smotion is None or (simul.smotion.mode != "remd" and simul.smotion.mode != "multi"):
         raise ValueError("Simulation does not look like a parallel tempering one.")
     else:
         if simul.smotion.mode == "remd":
@@ -59,15 +58,10 @@ def main(inputfile, prefix="SRT_"):
             for sm in simul.smotion.mlist:
                 if sm.mode == "remd":
                     if swapfile != "":
-                        raise ValueError(
-                            "I'm not equipped to deal with multiple REMD outputs, sorry"
-                        )
+                        raise ValueError("I'm not equipped to deal with multiple REMD outputs, sorry")
                     swapfile = sm.swapfile
         if swapfile == "":
-            raise ValueError(
-                "Could not determine the REMD swapfile name. \
-                 Sorry, you'll have to look carefully at your inputs."
-            )
+            raise ValueError("Could not determine the REMD swapfile name. Sorry, you'll have to look carefully at your inputs.")
 
     # reconstructs the list of the property and trajectory files that have been output
     # and that should be re-ordered
@@ -78,70 +72,45 @@ def main(inputfile, prefix="SRT_"):
         o = deepcopy(o)  # avoids overwriting the actual filename
         if simul.outtemplate.prefix != "":
             o.filename = simul.outtemplate.prefix + "." + o.filename
-        if (
-            type(o) is CheckpointOutput
-        ):  # properties and trajectories are output per system
+        if type(o) is CheckpointOutput:   # properties and trajectories are output per system
             pass
         elif type(o) is PropertyOutput:
             nprop = []
             isys = 0
-            for s in simul.syslist:  # create multiple copies
+            for s in simul.syslist:   # create multiple copies
                 if s.prefix != "":
                     filename = s.prefix + "_" + o.filename
-                else:
-                    filename = o.filename
+                else: filename = o.filename
                 ofilename = prefix + filename
-                nprop.append(
-                    {
-                        "filename": filename,
-                        "ofilename": ofilename,
-                        "stride": o.stride,
-                        "ifile": open(filename, "r"),
-                        "ofile": open(ofilename, "w"),
-                    }
-                )
+                nprop.append({"filename": filename, "ofilename": ofilename, "stride": o.stride,
+                              "ifile": open(filename, "r"), "ofile": open(ofilename, "w")
+                              })
                 isys += 1
             lprop.append(nprop)
-        elif (
-            type(o) is TrajectoryOutput
-        ):  # trajectories are more complex, as some have per-bead output
-            if getkey(o.what) in [
-                "positions",
-                "velocities",
-                "forces",
-                "extras",
-            ]:  # multiple beads
+        elif type(o) is TrajectoryOutput:   # trajectories are more complex, as some have per-bead output
+            if getkey(o.what) in ["positions", "velocities", "forces", "extras"]:   # multiple beads
                 nbeads = simul.syslist[0].beads.nbeads
                 for b in range(nbeads):
                     ntraj = []
                     isys = 0
                     # zero-padded bead number
-                    padb = (
-                        "%0" + str(int(1 + np.floor(np.log(nbeads) / np.log(10)))) + "d"
-                    ) % (b)
+                    padb = (("%0" + str(int(1 + np.floor(np.log(nbeads) / np.log(10)))) + "d") % (b))
                     for s in simul.syslist:
                         if s.prefix != "":
                             filename = s.prefix + "_" + o.filename
-                        else:
-                            filename = o.filename
+                        else: filename = o.filename
                         ofilename = prefix + filename
-                        if o.ibead < 0 or o.ibead == b:
+                        if (o.ibead < 0 or o.ibead == b):
                             if getkey(o.what) == "extras":
                                 filename = filename + "_" + padb
                                 ofilename = ofilename + "_" + padb
                             else:
                                 filename = filename + "_" + padb + "." + o.format
                                 ofilename = ofilename + "_" + padb + "." + o.format
-                                ntraj.append(
-                                    {
-                                        "filename": filename,
-                                        "format": o.format,
-                                        "ofilename": ofilename,
-                                        "stride": o.stride,
-                                        "ifile": open(filename, "r"),
-                                        "ofile": open(ofilename, "w"),
-                                    }
-                                )
+                                ntraj.append({"filename": filename, "format": o.format,
+                                              "ofilename": ofilename, "stride": o.stride,
+                                              "ifile": open(filename, "r"), "ofile": open(ofilename, "w")
+                                              })
                         isys += 1
                     if ntraj != []:
                         ltraj.append(ntraj)
@@ -149,31 +118,23 @@ def main(inputfile, prefix="SRT_"):
             else:
                 ntraj = []
                 isys = 0
-                for s in simul.syslist:  # create multiple copies
+                for s in simul.syslist:   # create multiple copies
                     if s.prefix != "":
                         filename = s.prefix + "_" + o.filename
-                    else:
-                        filename = o.filename
+                    else: filename = o.filename
                     filename = filename + "." + o.format
                     ofilename = prefix + filename
-                    ntraj.append(
-                        {
-                            "filename": filename,
-                            "format": o.format,
-                            "ofilename": ofilename,
-                            "stride": o.stride,
-                            "ifile": open(filename, "r"),
-                            "ofile": open(ofilename, "w"),
-                        }
-                    )
+                    ntraj.append({"filename": filename, "format": o.format,
+                                  "ofilename": ofilename, "stride": o.stride,
+                                  "ifile": open(filename, "r"), "ofile": open(ofilename, "w")
+                                  })
 
                     isys += 1
                 ltraj.append(ntraj)
 
     ptfile = open(simul.outtemplate.prefix + "." + swapfile, "r")
 
-    # now reads files one frame at a time,
-    # and re-direct output to the appropriate location
+    # now reads files one frame at a time, and re-direct output to the appropriate location
 
     line = ptfile.readline().split()
     irep = list(range(nsys))  # Could this be harmful?
@@ -187,8 +148,7 @@ def main(inputfile, prefix="SRT_"):
                     sprop = prop[isys]
                     if step % sprop["stride"] == 0:  # property transfer
                         iline = sprop["ifile"].readline()
-                        if len(iline) == 0:
-                            raise EOFError  # useful if line is blank
+                        if len(iline) == 0: raise EOFError  # useful if line is blank
                         while iline[0] == "#":  # fast forward if line is a comment
                             prop[irep[isys]]["ofile"].write(iline)
                             iline = sprop["ifile"].readline()
@@ -207,14 +167,14 @@ def main(inputfile, prefix="SRT_"):
                             ibuffer.append(straj["ifile"].readline())
                             for i in range(nat):
                                 ibuffer.append(straj["ifile"].readline())
-                            traj[irep[isys]]["ofile"].write("".join(ibuffer))
+                            traj[irep[isys]]["ofile"].write(''.join(ibuffer))
                         elif straj["format"] == "pdb":
                             iline = straj["ifile"].readline()
-                            while iline.strip() != "" and iline.strip() != "END":
+                            while (iline.strip() != "" and iline.strip() != "END"):
                                 ibuffer.append(iline)
                                 iline = straj["ifile"].readline()
                             ibuffer.append(iline)
-                            traj[irep[isys]]["ofile"].write("".join(ibuffer))
+                            traj[irep[isys]]["ofile"].write(''.join(ibuffer))
         except EOFError:
             break
 
@@ -225,6 +185,5 @@ def main(inputfile, prefix="SRT_"):
 
         step += 1
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main(*sys.argv[1:])

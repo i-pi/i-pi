@@ -6,10 +6,11 @@ will be executed serially at each step.
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
+from ipi.utils.depend import depend_value, dd
 from ipi.engine.smotion import Smotion, MetaDyn
-from ipi.utils.messages import verbosity, warning
+from ipi.utils.messages import verbosity, warning, info
 
-__all__ = ["MultiSmotion"]
+__all__ = ['MultiSmotion']
 
 
 class MultiSmotion(Smotion):
@@ -52,12 +53,5 @@ class MultiSmotion(Smotion):
         super(MultiSmotion, self).bind(syslist, prng, omaker)
         for k, m in enumerate(self.mlist):
             m.bind(syslist, prng, omaker)
-            if (
-                type(m) is MetaDyn
-                and k != len(self.mlist) - 1
-                and type(self.mlist[k + 1]) != MetaDyn
-            ):
-                warning(
-                    "MetaD Smotion should come last in a multi Smotion to avoid a discrepancy between i-PI and PLUMED outputs",
-                    verbosity.low,
-                )
+            if type(m) is MetaDyn and k != len(self.mlist) - 1 and type(self.mlist[k + 1]) != MetaDyn:
+                warning("MetaD Smotion should come last in a multi Smotion to avoid a discrepancy between i-PI and PLUMED outputs", verbosity.low)

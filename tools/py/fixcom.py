@@ -17,6 +17,8 @@ import sys
 import glob
 from ipi.utils.io import *
 from ipi.engine.atoms import Atoms
+from ipi.engine.beads import Beads
+from ipi.engine.cell import Cell
 from ipi.utils.depend import *
 from ipi.utils.units import *
 
@@ -36,13 +38,8 @@ def main(prefix, suffix="pos", outprefix="fixcom"):
     lout = []
     for b in range(nbeads):
         # zero-padded bead number
-        padb = ("%0" + str(int(1 + np.floor(np.log(nbeads) / np.log(10)))) + "d") % (b)
-        lout.append(
-            open(
-                prefix + "." + outprefix + "." + suffix + "_" + padb + "." + imode[b],
-                "a",
-            )
-        )
+        padb = (("%0" + str(int(1 + np.floor(np.log(nbeads) / np.log(10)))) + "d") % (b))
+        lout.append(open(prefix + "." + outprefix + "." + suffix + "_" + padb + "." + imode[b], "a"))
 
     while True:
         allbeads = []
@@ -69,17 +66,16 @@ def main(prefix, suffix="pos", outprefix="fixcom"):
         com = np.zeros(3)
         tm = 0
         for i in range(atoms.natoms):
-            com += atoms.m[i] * atoms.q[3 * i : 3 * (i + 1)]
+            com += atoms.m[i] * atoms.q[3 * i:3 * (i + 1)]
             tm += atoms.m[i]
         com /= tm
         for ib in range(nbeads):
             for i in range(allbeads[ib].natoms):
-                allbeads[ib].q[3 * i : 3 * (i + 1)] -= com
+                allbeads[ib].q[3 * i:3 * (i + 1)] -= com
             print_file(imode[ib], allbeads[ib], cell, filedesc=lout[ib])
         atoms.q[:] = 0.0
         atoms.m[:] = 0.0
         ifr += 1
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
     main(*sys.argv[1:])

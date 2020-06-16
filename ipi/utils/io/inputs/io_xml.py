@@ -13,27 +13,10 @@ from xml.sax.handler import ContentHandler
 import numpy as np
 
 
-__all__ = [
-    "xml_node",
-    "xml_handler",
-    "xml_parse_string",
-    "xml_parse_file",
-    "xml_write",
-    "read_type",
-    "read_float",
-    "read_int",
-    "read_bool",
-    "read_list",
-    "read_array",
-    "read_tuple",
-    "read_dict",
-    "write_type",
-    "write_list",
-    "write_tuple",
-    "write_float",
-    "write_bool",
-    "write_dict",
-]
+__all__ = ['xml_node', 'xml_handler', 'xml_parse_string', 'xml_parse_file', 'xml_write',
+           'read_type', 'read_float', 'read_int', 'read_bool', 'read_list',
+           'read_array', 'read_tuple', 'read_dict', 'write_type', 'write_list',
+           'write_tuple', 'write_float', 'write_bool', 'write_dict']
 
 
 class xml_node(object):
@@ -117,11 +100,7 @@ class xml_handler(ContentHandler):
         """
 
         # creates a new node
-        newnode = xml_node(
-            attribs=dict((k, attrs[k]) for k in list(attrs.keys())),
-            name=name,
-            fields=[],
-        )
+        newnode = xml_node(attribs=dict((k, attrs[k]) for k in list(attrs.keys())), name=name, fields=[])
         # adds it to the list of open nodes
         self.open.append(newnode)
         # adds it to the list of fields of the parent tag
@@ -155,7 +134,7 @@ class xml_handler(ContentHandler):
 
         # all the text found between the tags stored in the appropriate xml_node
         # object
-        self.buffer[self.level] = "".join(self.buffer[self.level])
+        self.buffer[self.level] = ''.join(self.buffer[self.level])
         self.open[self.level].fields.append(("_text", self.buffer[self.level]))
         # 'closes' the xml_node object, as we are no longer within its tags, so
         # there is no more data to be added to it.
@@ -221,7 +200,7 @@ def xml_write(xml, name="", indent="", text=""):
 
     rstr = ""
     if not name == "":
-        rstr = indent + "<" + name
+        rstr = indent + "<" + name;
         for a, v in xml.attribs.items():
             rstr += " " + a + "='" + v + "'"
         rstr += ">"
@@ -232,8 +211,7 @@ def xml_write(xml, name="", indent="", text=""):
     for a, v in xml.fields:
         if a == "_text":
             rstr += v.strip()
-            if v.strip() != "":
-                inline = True
+            if v.strip() != "": inline = True
         else:
             rstr += "\n" + xml_write(v, indent="  " + indent, name=a, text="\n")
 
@@ -260,7 +238,7 @@ def read_type(type, data):
         An object of type type.
     """
 
-    if type not in readtype_funcs:
+    if not type in readtype_funcs:
         raise TypeError("Conversion not available for given type")
     return type(readtype_funcs[type](data))
 
@@ -353,7 +331,7 @@ def read_list(data, delims="[]", split=",", strip=" \n\t'"):
     except ValueError:
         raise ValueError("Error in list syntax: could not locate delimiters")
 
-    rlist = data[begin + 1 : end].split(split)
+    rlist = data[begin + 1:end].split(split)
     for i in range(len(rlist)):
         rlist[i] = rlist[i].strip(strip)
 
@@ -463,7 +441,7 @@ readtype_funcs = {
     bool: read_bool,
     str: str.strip,
     tuple: read_tuple,
-    np.uint: read_int,
+    np.uint: read_int
 }
 
 
@@ -482,7 +460,7 @@ def write_type(type, data):
         A formatted string.
     """
 
-    if type not in writetype_funcs:
+    if not type in writetype_funcs:
         raise TypeError("Conversion not available for given type")
     return writetype_funcs[type](data)
 
@@ -595,5 +573,5 @@ writetype_funcs = {
     bool: write_bool,
     str: str.strip,
     tuple: write_tuple,
-    np.uint: str,
+    np.uint: str
 }

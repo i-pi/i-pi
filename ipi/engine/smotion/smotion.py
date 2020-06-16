@@ -6,7 +6,10 @@
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
-from ipi.utils.depend import dobject
+
+import numpy as np
+
+from ipi.utils.depend import depend_value, dobject
 
 
 class Smotion(dobject):

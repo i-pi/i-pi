@@ -25,26 +25,10 @@ import numpy as np
 from copy import copy
 import ipi.engine.initializer
 from ipi.utils.softexit import softexit
-
-from ipi.engine.motion import (
-    Motion,
-    Dynamics,
-    ConstrainedDynamics,
-    Replay,
-    GeopMotion,
-    NEBMover,
-    DynMatrixMover,
-    MultiMotion,
-    AlchemyMC,
-    InstantonMotion,
-    TemperatureRamp,
-    PressureRamp,
-    AtomSwap,
-    Planetary,
-    AlKMC,
-    SCPhononsMover,
-    NormalModeMover,
-)
+from ipi.engine.motion import Motion, Dynamics, ConstrainedDynamics, Replay, GeopMotion, NEBMover,\
+    DynMatrixMover, MultiMotion, AlchemyMC, InstantonMotion,\
+    TemperatureRamp, PressureRamp, AtomSwap, Planetary, AlKMC,\
+    SCPhononsMover, NormalModeMover
 from ipi.utils.inputvalue import *
 from ipi.inputs.thermostats import *
 from ipi.inputs.initializer import *
@@ -63,7 +47,7 @@ from .ramp import InputTemperatureRamp, InputPressureRamp
 from .al6xxx_kmc import InputAlKMC
 from ipi.utils.units import *
 
-__all__ = ["InputMotion"]
+__all__ = ['InputMotion']
 
 
 class InputMotionBase(Input):
@@ -82,120 +66,47 @@ class InputMotionBase(Input):
 
     """
 
-    attribs = {
-        "mode": (
-            InputAttribute,
-            {
-                "dtype": str,
-                "help": "How atoms should be moved at each step in the simulatio. 'replay' means that a simulation is replayed from trajectories provided to i-PI.",
-                "options": [
-                    "vibrations",
-                    "minimize",
-                    "replay",
-                    "neb",
-                    "dynamics",
-                    "constrained_dynamics",
-                    "t_ramp",
-                    "p_ramp",
-                    "alchemy",
-                    "atomswap",
-                    "planetary",
-                    "instanton",
-                    "al-kmc",
-                    "dummy",
-                    "scp",
-                    "normalmodes",
-                ],
-            },
-        )
-    }
+    attribs = {"mode": (InputAttribute, {"dtype": str,
+                                         "help": "How atoms should be moved at each step in the simulatio. 'replay' means that a simulation is replayed from trajectories provided to i-PI.",
+                                         "options": ['vibrations', 'minimize', 'replay', 'neb', 'dynamics', 'constrained_dynamics', 't_ramp', 'p_ramp', 'alchemy', 'atomswap', 'planetary', 'instanton', 'al-kmc', 'dummy', 'scp', 'normalmodes' ]})}
 
-    fields = {
-        "fixcom": (
-            InputValue,
-            {
-                "dtype": bool,
-                "default": True,
-                "help": "This describes whether the centre of mass of the particles is fixed.",
-            },
-        ),
-        "fixatoms": (
-            InputArray,
-            {
-                "dtype": int,
-                "default": np.zeros(0, int),
-                "help": "Indices of the atmoms that should be held fixed.",
-            },
-        ),
-        "optimizer": (
-            InputGeop,
-            {"default": {}, "help": "Option for geometry optimization"},
-        ),
-        "neb_optimizer": (
-            InputNEB,
-            {"default": {}, "help": "Option for geometry optimization"},
-        ),
-        "dynamics": (
-            InputDynamics,
-            {"default": {}, "help": "Option for (path integral) molecular dynamics"},
-        ),
-        "constrained_dynamics": (
-            InputConstrainedDynamics,
-            {
-                "default": {},
-                "help": "Option for constrained classical molecular dynamics",
-            },
-        ),
-        "file": (
-            InputInitFile,
-            {
-                "default": input_default(
-                    factory=ipi.engine.initializer.InitFile, kwargs={"mode": "xyz"}
-                ),
-                "help": "This describes the location to read a trajectory file from.",
-            },
-        ),
-        "vibrations": (
-            InputDynMatrix,
-            {"default": {}, "help": "Option for phonon computation"},
-        ),
-        "normalmodes": (
-            InputNormalMode,
-            {
-                "default": {},
-                "help": "Option for solving the vibrational Schroedinger's equations in normal mode coordinates.",
-            },
-        ),
-        "scp": (
-            InputSCPhonons,
-            {"default": {}, "help": "Option for self consistent phonons computation"},
-        ),
-        "alchemy": (
-            InputAlchemy,
-            {"default": {}, "help": "Option for alchemical exchanges"},
-        ),
-        "atomswap": (
-            InputAtomSwap,
-            {"default": {}, "help": "Option for Monte Carlo atom swap"},
-        ),
-        "t_ramp": (
-            InputTemperatureRamp,
-            {"default": {}, "help": "Option for temperature ramp"},
-        ),
-        "p_ramp": (
-            InputPressureRamp,
-            {"default": {}, "help": "Option for pressure ramp"},
-        ),
-        "instanton": (
-            InputInst,
-            {"default": {}, "help": "Option for Instanton optimization"},
-        ),
-        "al6xxx_kmc": (InputAlKMC, {"default": {}, "help": "Option for Al-6xxx KMC"}),
-        "planetary": (
-            InputPlanetary,
-            {"default": {}, "help": "Option for planetary model calculator"},
-        ),
-    }
+    fields = {"fixcom": (InputValue, {"dtype": bool,
+                                      "default": True,
+                                      "help": "This describes whether the centre of mass of the particles is fixed."}),
+              "fixatoms": (InputArray, {"dtype": int,
+                                        "default": np.zeros(0, int),
+                                        "help": "Indices of the atmoms that should be held fixed."}),
+              "optimizer": (InputGeop, {"default": {},
+                                        "help": "Option for geometry optimization"}),
+              "neb_optimizer": (InputNEB, {"default": {},
+                                           "help": "Option for geometry optimization"}),
+              "dynamics": (InputDynamics, {"default": {},
+                                           "help": "Option for (path integral) molecular dynamics"}),
+              "constrained_dynamics": (InputConstrainedDynamics, {"default": {},
+                                                                  "help": "Option for constrained classical molecular dynamics"}),
+              "file": (InputInitFile, {"default": input_default(factory=ipi.engine.initializer.InitFile, kwargs={"mode": "xyz"}),
+                                       "help": "This describes the location to read a trajectory file from."}),
+              "vibrations": (InputDynMatrix, {"default": {},
+                                              "help": "Option for phonon computation"}),
+              "normalmodes": (InputNormalMode, {"default": {},
+                                              "help": "Option for solving the vibrational Schroedinger's equations in normal mode coordinates."}),
+              "scp": (InputSCPhonons, {"default": {},
+                                              "help": "Option for self consistent phonons computation"}),
+              "alchemy": (InputAlchemy, {"default": {},
+                                         "help": "Option for alchemical exchanges"}),
+              "atomswap": (InputAtomSwap, {"default": {},
+                                           "help": "Option for Monte Carlo atom swap"}),
+              "t_ramp": (InputTemperatureRamp, {"default": {},
+                                                "help": "Option for temperature ramp"}),
+              "p_ramp": (InputPressureRamp, {"default": {},
+                                             "help": "Option for pressure ramp"}),
+              "instanton": (InputInst, {"default": {},
+                                        "help": "Option for Instanton optimization"}),
+              "al6xxx_kmc" : ( InputAlKMC, { "default" : {},
+                                             "help":  "Option for Al-6xxx KMC" } ),
+              "planetary": (InputPlanetary, {"default": {},
+                                             "help": "Option for planetary model calculator"})
+              }
     dynamic = {}
 
     default_help = "Allow chosing the type of calculation to be performed. Holds all the information that is calculation specific, such as geometry optimization parameters, etc."
@@ -274,9 +185,7 @@ class InputMotionBase(Input):
             raise ValueError("Cannot store Mover calculator of type " + str(type(sc)))
 
         if (sc.fixcom is True) and (len(sc.fixatoms) > 0):
-            softexit.trigger(
-                "Fixed atoms break translational invariance, and so should be used with <fixcom> False </fixcom>. You can disable this error if you know what you are doing."
-            )
+            softexit.trigger("Fixed atoms break translational invariance, and so should be used with <fixcom> False </fixcom>. You can disable this error if you know what you are doing.")
 
         if tsc == 0:
             self.file.store(sc.intraj)
@@ -295,87 +204,35 @@ class InputMotionBase(Input):
         super(InputMotionBase, self).fetch()
 
         if self.mode.fetch() == "replay":
-            sc = Replay(
-                fixcom=self.fixcom.fetch(),
-                fixatoms=self.fixatoms.fetch(),
-                intraj=self.file.fetch(),
-            )
+            sc = Replay(fixcom=self.fixcom.fetch(), fixatoms=self.fixatoms.fetch(), intraj=self.file.fetch())
         elif self.mode.fetch() == "minimize":
-            sc = GeopMotion(
-                fixcom=self.fixcom.fetch(),
-                fixatoms=self.fixatoms.fetch(),
-                **self.optimizer.fetch()
-            )
+            sc = GeopMotion(fixcom=self.fixcom.fetch(), fixatoms=self.fixatoms.fetch(), **self.optimizer.fetch())
         elif self.mode.fetch() == "neb":
-            sc = NEBMover(
-                fixcom=self.fixcom.fetch(),
-                fixatoms=self.fixatoms.fetch(),
-                **self.neb_optimizer.fetch()
-            )
+            sc = NEBMover(fixcom=self.fixcom.fetch(), fixatoms=self.fixatoms.fetch(), **self.neb_optimizer.fetch())
         elif self.mode.fetch() == "dynamics":
-            sc = Dynamics(
-                fixcom=self.fixcom.fetch(),
-                fixatoms=self.fixatoms.fetch(),
-                **self.dynamics.fetch()
-            )
+            sc = Dynamics(fixcom=self.fixcom.fetch(), fixatoms=self.fixatoms.fetch(), **self.dynamics.fetch())
         elif self.mode.fetch() == "constrained_dynamics":
-            sc = ConstrainedDynamics(
-                fixcom=self.fixcom.fetch(),
-                fixatoms=self.fixatoms.fetch(),
-                **self.constrained_dynamics.fetch()
-            )
+            sc = ConstrainedDynamics(fixcom=self.fixcom.fetch(), fixatoms=self.fixatoms.fetch(), **self.constrained_dynamics.fetch())
         elif self.mode.fetch() == "vibrations":
-            sc = DynMatrixMover(
-                fixcom=self.fixcom.fetch(),
-                fixatoms=self.fixatoms.fetch(),
-                **self.vibrations.fetch()
-            )
+            sc = DynMatrixMover(fixcom=self.fixcom.fetch(), fixatoms=self.fixatoms.fetch(), **self.vibrations.fetch())
         elif self.mode.fetch() == "normalmodes":
-            sc = NormalModeMover(
-                fixcom=self.fixcom.fetch(),
-                fixatoms=self.fixatoms.fetch(),
-                **self.normalmodes.fetch()
-            )
+            sc = NormalModeMover(fixcom=self.fixcom.fetch(), fixatoms=self.fixatoms.fetch(), **self.normalmodes.fetch())
         elif self.mode.fetch() == "scp":
-            sc = SCPhononsMover(
-                fixcom=self.fixcom.fetch(),
-                fixatoms=self.fixatoms.fetch(),
-                **self.scp.fetch()
-            )
+            sc = SCPhononsMover(fixcom=self.fixcom.fetch(), fixatoms=self.fixatoms.fetch(), **self.scp.fetch())
         elif self.mode.fetch() == "alchemy":
-            sc = AlchemyMC(
-                fixcom=self.fixcom.fetch(),
-                fixatoms=self.fixatoms.fetch(),
-                **self.alchemy.fetch()
-            )
+            sc = AlchemyMC(fixcom=self.fixcom.fetch(), fixatoms=self.fixatoms.fetch(), **self.alchemy.fetch())
         elif self.mode.fetch() == "atomswap":
-            sc = AtomSwap(
-                fixcom=self.fixcom.fetch(),
-                fixatoms=self.fixatoms.fetch(),
-                **self.atomswap.fetch()
-            )
+            sc = AtomSwap(fixcom=self.fixcom.fetch(), fixatoms=self.fixatoms.fetch(), **self.atomswap.fetch())
         elif self.mode.fetch() == "instanton":
-            sc = InstantonMotion(
-                fixcom=self.fixcom.fetch(),
-                fixatoms=self.fixatoms.fetch(),
-                **self.instanton.fetch()
-            )
+            sc = InstantonMotion(fixcom=self.fixcom.fetch(), fixatoms=self.fixatoms.fetch(), **self.instanton.fetch())
         elif self.mode.fetch() == "planetary":
-            sc = Planetary(
-                fixcom=self.fixcom.fetch(),
-                fixatoms=self.fixatoms.fetch(),
-                **self.planetary.fetch()
-            )
+            sc = Planetary(fixcom=self.fixcom.fetch(), fixatoms=self.fixatoms.fetch(), **self.planetary.fetch())
         elif self.mode.fetch() == "t_ramp":
             sc = TemperatureRamp(**self.t_ramp.fetch())
         elif self.mode.fetch() == "p_ramp":
             sc = PressureRamp(**self.p_ramp.fetch())
         elif self.mode.fetch() == "al-kmc":
-            sc = AlKMC(
-                fixcom=self.fixcom.fetch(),
-                fixatoms=self.fixatoms.fetch(),
-                **self.al6xxx_kmc.fetch()
-            )
+            sc = AlKMC(fixcom=self.fixcom.fetch(), fixatoms=self.fixatoms.fetch(), **self.al6xxx_kmc.fetch() )
         else:
             sc = Motion()
             # raise ValueError("'" + self.mode.fetch() + "' is not a supported motion calculation mode.")
@@ -391,15 +248,9 @@ class InputMotion(InputMotionBase):
 
     attribs["mode"][1]["options"].append("multi")
 
-    dynamic = {
-        "motion": (
-            InputMotionBase,
-            {
-                "default": input_default(factory=Motion),
-                "help": "A motion class that can be included as a member of a 'multi' integrator.",
-            },
-        )
-    }
+    dynamic = {"motion": (InputMotionBase, {"default": input_default(factory=Motion),
+                                            "help": "A motion class that can be included as a member of a 'multi' integrator."})
+               }
 
     def store(self, motion):
 

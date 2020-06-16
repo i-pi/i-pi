@@ -23,6 +23,7 @@ Classes:
 """
 
 import numpy as np
+import ipi.engine.initializer
 from ipi.engine.motion import *
 from ipi.utils.inputvalue import *
 from ipi.inputs.thermostats import *
@@ -40,71 +41,31 @@ class InputDynMatrix(InputDictionary):
 
     """
 
-    attribs = {
-        "mode": (
-            InputAttribute,
-            {
-                "dtype": str,
-                "default": "fd",
-                "help": "The algorithm to be used: finite differences (fd), normal modes finite differences (nmfd), and energy-scaled normal mode finite differences (enmfd).",
-                "options": ["fd", "nmfd", "enmfd"],
-            },
-        )
-    }
+    attribs = {"mode": (InputAttribute, {"dtype": str, "default": "fd",
+                                         "help": "The algorithm to be used: finite differences (fd), normal modes finite differences (nmfd), and energy-scaled normal mode finite differences (enmfd).",
+                                         "options": ["fd", "nmfd", "enmfd"]})}
     fields = {
-        "pos_shift": (
-            InputValue,
-            {
-                "dtype": float,
-                "default": 0.01,
-                "help": "The finite displacement in position used to compute derivative of force.",
-            },
-        ),
-        "energy_shift": (
-            InputValue,
-            {
-                "dtype": float,
-                "default": 0.000,
-                "help": "The finite displacement in energy used to compute derivative of force.",
-            },
-        ),
-        "output_shift": (
-            InputValue,
-            {
-                "dtype": float,
-                "default": 0.000,
-                "help": "Shift by the dynamical matrix diagonally before outputting.",
-            },
-        ),
-        "prefix": (
-            InputValue,
-            {"dtype": str, "default": "phonons", "help": "Prefix of the output files."},
-        ),
-        "asr": (
-            InputValue,
-            {
-                "dtype": str,
-                "default": "none",
-                "options": ["none", "poly", "lin", "crystal"],
-                "help": "Removes the zero frequency vibrational modes depending on the symmerty of the system.",
-            },
-        ),
-        "dynmat": (
-            InputArray,
-            {
-                "dtype": float,
-                "default": np.zeros(0, float),
-                "help": "Portion of the dynamical matrix known up to now.",
-            },
-        ),
-        "refdynmat": (
-            InputArray,
-            {
-                "dtype": float,
-                "default": np.zeros(0, float),
-                "help": "Portion of the refined dynamical matrix known up to now.",
-            },
-        ),
+        "pos_shift": (InputValue, {"dtype": float, "default": 0.01,
+                                   "help": "The finite displacement in position used to compute derivative of force."
+                                   }),
+                "energy_shift": (InputValue, {"dtype": float, "default": 0.000,
+                                              "help": "The finite displacement in energy used to compute derivative of force."
+                                              }),
+                "output_shift": (InputValue, {"dtype": float, "default": 0.000,
+                                              "help": "Shift by the dynamical matrix diagonally before outputting."
+                                              }),
+                "prefix": (InputValue, {"dtype": str, "default": "phonons",
+                                        "help": "Prefix of the output files."
+                                        }),
+                "asr": (InputValue, {"dtype": str, "default": "none", "options": ["none", "poly", "lin", "crystal"],
+                                     "help": "Removes the zero frequency vibrational modes depending on the symmerty of the system."
+                                     }),
+                "dynmat": (InputArray, {"dtype": float,
+                                        "default": np.zeros(0, float),
+                                        "help": "Portion of the dynamical matrix known up to now."}),
+                "refdynmat": (InputArray, {"dtype": float,
+                                           "default": np.zeros(0, float),
+                                           "help": "Portion of the refined dynamical matrix known up to now."})
     }
 
     dynamic = {}
@@ -113,8 +74,7 @@ class InputDynMatrix(InputDictionary):
     default_label = "PHONONS"
 
     def store(self, phonons):
-        if phonons == {}:
-            return
+        if phonons == {}: return
         self.mode.store(phonons.mode)
         self.pos_shift.store(phonons.deltax)
         self.energy_shift.store(phonons.deltae)

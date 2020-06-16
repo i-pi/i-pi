@@ -11,18 +11,23 @@ appropriate conserved energy quantity for the ensemble of choice.
 # See the "licenses" directory for full license information.
 
 
+import time
+
 import numpy as np
 
-from ipi.utils.messages import warning
+from ipi.utils.messages import verbosity, info, warning
 from ipi.utils.depend import *
-from ipi.utils.units import Constants
+from ipi.utils.softexit import softexit
+from ipi.utils.io import read_file
+from ipi.utils.io.inputs.io_xml import xml_parse_file
+from ipi.utils.units import unit_to_internal, Constants
 from ipi.engine.thermostats import *
 from ipi.engine.barostats import *
 from ipi.engine.motion.alchemy import *
 from ipi.engine.forces import Forces, ScaledForceComponent
 
 
-__all__ = ["Ensemble", "ensemble_swap"]
+__all__ = ['Ensemble', 'ensemble_swap']
 
 # IMPORTANT - THIS MUST BE KEPT UP-TO-DATE WHEN THE ENSEMBLE CLASS IS CHANGED
 
@@ -35,28 +40,18 @@ def ensemble_swap(ens1, ens2):
         ens1.temp, ens2.temp = ens2.temp, ens1.temp
     if ens1.pext != ens2.pext:
         ens1.pext, ens2.pext = ens2.pext, ens1.pext
-    if np.linalg.norm(ens1.stressext - ens2.stressext) > 1e-10:
+    if np.linalg.norm(ens1.stressext-ens2.stressext) > 1e-10:
         tmp = dstrip(ens1.stressext).copy()
         ens1.stressext[:] = ens2.stressext
         ens2.stressext[:] = tmp
     if len(ens1.bweights) != len(ens2.bweights):
-        raise ValueError(
-            "Cannot exchange ensembles that have different numbers of bias components"
-        )
+        raise ValueError("Cannot exchange ensembles that have different numbers of bias components")
     if len(ens1.hweights) != len(ens2.hweights):
-        raise ValueError(
-            "Cannot exchange ensembles that are described by different forces"
-        )
+        raise ValueError("Cannot exchange ensembles that are described by different forces")
     if not np.array_equal(ens1.bweights, ens2.bweights):
-        ens1.bweights, ens2.bweights = (
-            dstrip(ens2.bweights).copy(),
-            dstrip(ens1.bweights).copy(),
-        )
+        ens1.bweights, ens2.bweights = dstrip(ens2.bweights).copy(), dstrip(ens1.bweights).copy()
     if not np.array_equal(ens1.hweights, ens2.hweights):
-        ens1.hweights, ens2.hweights = (
-            dstrip(ens2.hweights).copy(),
-            dstrip(ens1.hweights).copy(),
-        )
+        ens1.hweights, ens2.hweights = dstrip(ens2.hweights).copy(), dstrip(ens1.hweights).copy()
 
 
 class Ensemble(dobject):
@@ -72,18 +67,7 @@ class Ensemble(dobject):
         bias: Explicit bias forces
     """
 
-    def __init__(
-        self,
-        eens=0.0,
-        econs=0.0,
-        temp=None,
-        pext=None,
-        stressext=None,
-        bcomponents=None,
-        bweights=None,
-        hweights=None,
-        time=0.0,
-    ):
+    def __init__(self, eens=0.0, econs=0.0, temp=None, pext=None, stressext=None, bcomponents=None, bweights=None, hweights=None, time=0.0):
         """Initialises Ensemble.
 
         Args:
@@ -93,25 +77,26 @@ class Ensemble(dobject):
         """
         dself = dd(self)
 
-        dself.temp = depend_value(name="temp")
+        dself.temp = depend_value(name='temp')
         if temp is not None:
             self.temp = temp
         else:
             self.temp = -1.0
 
-        dself.stressext = depend_array(name="stressext", value=np.zeros((3, 3), float))
+        dself.stressext = depend_array(name='stressext',
+                                       value=np.zeros((3, 3), float))
         if stressext is not None:
             self.stressext = np.reshape(np.asarray(stressext), (3, 3))
         else:
             self.stressext = -1.0
 
-        dself.pext = depend_value(name="pext")
+        dself.pext = depend_value(name='pext')
         if pext is not None:
             self.pext = pext
         else:
             self.pext = -1.0
 
-        dself.eens = depend_value(name="eens")
+        dself.eens = depend_value(name='eens')
         if eens is not None:
             self.eens = eens
         else:
@@ -139,21 +124,15 @@ class Ensemble(dobject):
         self.hweights = np.asarray(hweights)
 
         # Internal time counter
-        dd(self).time = depend_value(name="time")
+        dd(self).time = depend_value(name='time')
         self.time = time
 
     def copy(self):
-        return Ensemble(
-            eens=self.eens,
-            econs=0.0,
-            temp=self.temp,
-            pext=self.pext,
-            stressext=dstrip(self.stressext).copy(),
-            bcomponents=self.bcomp,
-            bweights=dstrip(self.bweights).copy(),
-            hweights=dstrip(self.hweights).copy(),
-            time=self.time,
-        )
+        return Ensemble(eens = self.eens, econs = 0.0, temp=self.temp,
+                        pext=self.pext, stressext =dstrip(self.stressext).copy(),
+                        bcomponents = self.bcomp, bweights = dstrip(self.bweights).copy(),
+                        hweights = dstrip(self.hweights).copy(),
+                        time = self.time)
 
     def bind(self, beads, nm, cell, bforce, fflist, elist=[], xlpot=[], xlkin=[]):
         self.beads = beads
@@ -163,11 +142,9 @@ class Ensemble(dobject):
         dself = dd(self)
 
         # this binds just the explicit bias forces
-        self.bias.bind(
-            self.beads, self.cell, self.bcomp, fflist, open_paths=nm.open_paths
-        )
+        self.bias.bind(self.beads, self.cell, self.bcomp, fflist, open_paths=nm.open_paths)
 
-        dself.econs = depend_value(name="econs", func=self.get_econs)
+        dself.econs = depend_value(name='econs', func=self.get_econs)
         # dependencies of the conserved quantity
         dself.econs.add_dependency(dd(self.nm).kin)
         dself.econs.add_dependency(dd(self.forces).pot)
@@ -179,9 +156,7 @@ class Ensemble(dobject):
         i = 0
         for fc in self.bias.mforces:
             if fc.weight != 1:
-                warning(
-                    "The weight given to forces used in an ensemble bias are given a weight determined by bias_weight"
-                )
+                warning("The weight given to forces used in an ensemble bias are given a weight determined by bias_weight")
             dpipe(dself.bweights, dd(fc).weight, i)
             i += 1
 
@@ -203,9 +178,8 @@ class Ensemble(dobject):
         for e in elist:
             self.add_econs(e)
 
-        dself.lpens = depend_value(
-            name="lpens", func=self.get_lpens, dependencies=[dself.temp]
-        )
+        dself.lpens = depend_value(name='lpens', func=self.get_lpens,
+                                   dependencies=[dself.temp])
         dself.lpens.add_dependency(dd(self.nm).kin)
         dself.lpens.add_dependency(dd(self.forces).pot)
         dself.lpens.add_dependency(dd(self.bias).pot)
@@ -239,7 +213,7 @@ class Ensemble(dobject):
 
         eham = self.nm.vspring + self.nm.kin + self.forces.pot
 
-        eham += self.bias.pot  # bias
+        eham += self.bias.pot   # bias
 
         for e in self._elist:
             eham += e.get()
@@ -251,7 +225,7 @@ class Ensemble(dobject):
         for the ensemble.
         """
 
-        lpens = self.forces.pot + self.bias.pot + self.nm.kin + self.nm.vspring
+        lpens = (self.forces.pot + self.bias.pot + self.nm.kin + self.nm.vspring);
 
         # inlcude terms associated with an extended Lagrangian integrator of some sort
         for p in self._xlpot:

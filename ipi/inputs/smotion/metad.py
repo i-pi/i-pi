@@ -26,7 +26,7 @@ from ipi.engine.motion import *
 from ipi.utils.inputvalue import *
 from ipi.utils.units import *
 
-__all__ = ["InputMetaDyn"]
+__all__ = ['InputMetaDyn']
 
 
 class InputMetaDyn(InputDictionary):
@@ -37,22 +37,16 @@ class InputMetaDyn(InputDictionary):
     """
 
     fields = {
-        "metaff": (
-            InputArray,
-            {
-                "dtype": str,
-                "default": input_default(factory=np.zeros, args=(0,)),
-                "help": "List of names of forcefields that should do metadynamics.",
-            },
-        )
+        "metaff": (InputArray, {"dtype": str, "default": input_default(factory=np.zeros, args=(0,)),
+                                "help": "List of names of forcefields that should do metadynamics."
+                                })
     }
 
     default_help = "MetaDynamics"
     default_label = "META"
 
     def store(self, meta):
-        if meta == {}:
-            return
+        if meta == {}: return
         self.metaff.store(meta.metaff)
 
     def fetch(self):

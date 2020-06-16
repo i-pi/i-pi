@@ -1,12 +1,14 @@
 #!/usr/bin/env python2
 
 
+
 import os
 import sys
 import numpy as np
 import argparse
 from ipi.utils.messages import verbosity
 from ipi.utils.io.io_units import auto_units, process_units
+import copy
 
 from ipi.utils.io import open_backup, iter_file_name_raw, print_file
 
@@ -23,15 +25,15 @@ of beads is given by the number of input files.
 def main(fns_in, fn_out, begin, end, stride, wrap, unwrap):
 
     verbosity.level = "low"
-    print("Multiplexing {:d} beads into one trajectory.".format(len(fns_in)))
+    print('Multiplexing {:d} beads into one trajectory.'.format(len(fns_in)))
     print()
 
-    print("input file names:")
+    print('input file names:')
     for fn in fns_in:
         print(fn)
     print()
 
-    print("output file name:", fn_out)
+    print('output file name:', fn_out)
     print()
 
     # Open input trajectory iterators.
@@ -39,7 +41,7 @@ def main(fns_in, fn_out, begin, end, stride, wrap, unwrap):
     mode = os.path.splitext(fns_in[0])[-1]
 
     # Open output file.
-    f_out = open_backup(fn_out, "w")
+    f_out = open_backup(fn_out, 'w')
     mode_out = os.path.splitext(fn_out)[-1]
 
     # Loop over all frames.
@@ -65,13 +67,7 @@ def main(fns_in, fn_out, begin, end, stride, wrap, unwrap):
 
                 # gets units from first frame
                 dimension, units, cell_units = auto_units(comment=frame["comment"])
-                frame = process_units(
-                    dimension=dimension,
-                    units=units,
-                    cell_units=cell_units,
-                    mode=mode,
-                    **frame
-                )
+                frame = process_units(dimension=dimension, units=units, cell_units=cell_units, mode=mode, **frame)
 
                 if wrap:
                     frame = wrap_positions(frame)
@@ -82,15 +78,7 @@ def main(fns_in, fn_out, begin, end, stride, wrap, unwrap):
 
                 # ... and possibly save them in the output trajectory.
                 if do_output:
-                    print_file(
-                        mode_out,
-                        frame["atoms"],
-                        frame["cell"],
-                        f_out,
-                        dimension=dimension,
-                        units=units,
-                        cell_units=cell_units,
-                    )
+                    print_file(mode_out, frame['atoms'], frame['cell'], f_out, dimension=dimension, units=units, cell_units=cell_units)
             if do_output:
                 i_frame_saved += 1
         except StopIteration:
@@ -100,25 +88,25 @@ def main(fns_in, fn_out, begin, end, stride, wrap, unwrap):
         # Count frames and print information on progress.
         i_frame += 1
         if i_frame % 100 == 0:
-            print("\rframe {:d}".format(i_frame), end="")
+            print('\rframe {:d}'.format(i_frame), end='')
         sys.stdout.flush()
 
     f_out.close()
 
     print()
     print()
-    print("Loaded {:d} frames.".format(i_frame))
-    print("Saved {:d} frames.".format(i_frame_saved))
+    print('Loaded {:d} frames.'.format(i_frame))
+    print('Saved {:d} frames.'.format(i_frame_saved))
 
 
 def wrap_positions(frame):
-    pos = frame["atoms"].q.copy()
+    pos = frame['atoms'].q.copy()
     pos.shape = (len(pos) / 3, 3)
-    cell = frame["cell"].h
+    cell = frame['cell'].h
     cell_inv = np.linalg.inv(cell)
     s = np.dot(cell_inv, pos.T)
     s -= np.round(s)
-    frame["atoms"].q = np.dot(cell, s).T.flatten()
+    frame['atoms'].q = np.dot(cell, s).T.flatten()
     return frame
 
 
@@ -126,50 +114,42 @@ def unwrap_positions(frame, framelast):
     if framelast is None:
         return frame
 
-    poslast_uwr = framelast["atoms"].q.copy()
+    poslast_uwr = framelast['atoms'].q.copy()
     poslast_uwr.shape = (len(poslast_uwr) / 3, 3)
 
-    pos = frame["atoms"].q.copy()
+    pos = frame['atoms'].q.copy()
     pos.shape = (len(pos) / 3, 3)
 
     d = pos - poslast_uwr
 
-    cell = frame["cell"].h
+    cell = frame['cell'].h
     cell_inv = np.linalg.inv(cell)
     s = np.dot(cell_inv, d.T)
     s -= np.round(s)
     d = np.dot(cell, s).T
-    frame["atoms"].q = (poslast_uwr + d).flatten()
+    frame['atoms'].q = (poslast_uwr + d).flatten()
     return frame
 
-
-if __name__ == "__main__":
+if __name__ == '__main__':
 
     parser = argparse.ArgumentParser(description=description)
 
-    parser.add_argument(
-        "filenames", type=str, nargs="+", help="Bead trajectories to process."
-    )
-    parser.add_argument("--filename-out", type=str, help="Output file name.")
-    parser.add_argument("--begin", type=int, default=0, help="Step to begin.")
-    parser.add_argument("--end", type=int, default=-1, help="Step to end.")
-    parser.add_argument("--stride", type=int, default=1, help="Stride in steps.")
-    parser.add_argument(
-        "--wrap", action="store_true", default=False, help="Wrap atomic positions."
-    )
-    parser.add_argument(
-        "--unwrap", action="store_true", default=False, help="Unwrap atomic positions."
-    )
+    parser.add_argument('filenames', type=str, nargs='+',
+                        help='Bead trajectories to process.')
+    parser.add_argument('--filename-out', type=str,
+                        help='Output file name.')
+    parser.add_argument('--begin', type=int, default=0,
+                        help='Step to begin.')
+    parser.add_argument('--end', type=int, default=-1,
+                        help='Step to end.')
+    parser.add_argument('--stride', type=int, default=1,
+                        help='Stride in steps.')
+    parser.add_argument('--wrap', action='store_true', default=False,
+                        help='Wrap atomic positions.')
+    parser.add_argument('--unwrap', action='store_true', default=False,
+                        help='Unwrap atomic positions.')
 
     args = parser.parse_args()
 
     # Process everything.
-    main(
-        args.filenames,
-        args.filename_out,
-        args.begin,
-        args.end,
-        args.stride,
-        args.wrap,
-        args.unwrap,
-    )
+    main(args.filenames, args.filename_out, args.begin, args.end, args.stride, args.wrap, args.unwrap)

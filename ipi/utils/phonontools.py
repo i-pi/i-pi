@@ -1,12 +1,11 @@
 import numpy as np
 
-
 def apply_asr(asr, dm, beads, return_trans_matrix=False):
     """
     Removes the translations and/or rotations depending on the asr mode.
     """
 
-    if asr == "none":
+    if(asr == "none"):
         return dm
 
     ism = 1 / np.sqrt(beads.m3[-1])
@@ -18,18 +17,12 @@ def apply_asr(asr, dm, beads, return_trans_matrix=False):
     # Computes the moment of inertia tensor.
     moi = np.zeros((3, 3), float)
     for k in range(beads.natoms):
-        moi -= (
-            np.dot(
-                np.cross(qminuscom[k], np.identity(3)),
-                np.cross(qminuscom[k], np.identity(3)),
-            )
-            * m[k]
-        )
+        moi -= np.dot(np.cross(qminuscom[k], np.identity(3)), np.cross(qminuscom[k], np.identity(3))) * m[k]
 
     U = (np.linalg.eig(moi))[1]
     R = np.dot(qminuscom, U)
 
-    if asr == "crystal":
+    if(asr == "crystal"):
 
         D = np.zeros((3, 3 * beads.natoms), float)
 
@@ -42,7 +35,7 @@ def apply_asr(asr, dm, beads, return_trans_matrix=False):
         for k in range(3):
             D[k] = D[k] / np.linalg.norm(D[k])
 
-    elif asr == "poly":
+    elif(asr == "poly"):
 
         D = np.zeros((6, 3 * beads.natoms), float)
 

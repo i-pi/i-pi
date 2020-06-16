@@ -21,11 +21,12 @@ Classes:
       writing the checkpoints.
 """
 
+import numpy as np
 from ipi.engine.motion import *
 from ipi.utils.inputvalue import *
 from ipi.utils.units import *
 
-__all__ = ["InputTemperatureRamp", "InputPressureRamp"]
+__all__ = ['InputTemperatureRamp', 'InputPressureRamp']
 
 
 class InputTemperatureRamp(InputDictionary):
@@ -36,40 +37,25 @@ class InputTemperatureRamp(InputDictionary):
     """
 
     fields = {
-        "t_start": (
-            InputValue,
-            {
-                "dtype": float,
-                "dimension": "energy",
-                "default": 1.0,
-                "help": "Initial temperature",
-            },
-        ),
-        "t_end": (
-            InputValue,
-            {
-                "dtype": float,
-                "dimension": "energy",
-                "default": 1.0,
-                "help": "Final temperature",
-            },
-        ),
-        "logscale": (
-            InputValue,
-            {
-                "dtype": bool,
-                "default": False,
-                "help": "Change temperature on a logarihthmic scale.",
-            },
-        ),
-        "total_steps": (
-            InputValue,
-            {"dtype": int, "default": 0, "help": "Total number of steps for the ramp"},
-        ),
-        "current_step": (
-            InputValue,
-            {"dtype": int, "default": 0, "help": "Current step along the ramp"},
-        ),
+        "t_start": (InputValue, {"dtype": float,
+                                 "dimension": "energy",
+                                 "default": 1.0,
+                                 "help": "Initial temperature"
+                                 }),
+        "t_end": (InputValue, {"dtype": float,
+                               "dimension": "energy",
+                               "default": 1.0,
+                               "help": "Final temperature"
+                               }),
+        "logscale": (InputValue, {"dtype": bool,
+                                  "default": False,
+                                  "help": "Change temperature on a logarihthmic scale."}),
+         "total_steps": (InputValue, {"dtype": int,
+                                      "default": 0,
+                                      "help": "Total number of steps for the ramp"}),
+         "current_step": (InputValue, {"dtype": int,
+                                       "default": 0,
+                                       "help": "Current step along the ramp"})
     }
 
     default_help = """TemperatureRamp Motion class. It just updates the ensemble
@@ -79,8 +65,7 @@ class InputTemperatureRamp(InputDictionary):
     default_label = "TRAMP"
 
     def store(self, ramp):
-        if ramp == {}:
-            return
+        if ramp == {}: return
         self.t_start.store(ramp.t_start)
         self.t_end.store(ramp.t_end)
         self.logscale.store(ramp.logscale)
@@ -100,40 +85,25 @@ class InputPressureRamp(InputDictionary):
     """
 
     fields = {
-        "p_start": (
-            InputValue,
-            {
-                "dtype": float,
-                "dimension": "pressure",
-                "default": 1.0,
-                "help": "Initial pressure",
-            },
-        ),
-        "p_end": (
-            InputValue,
-            {
-                "dtype": float,
-                "dimension": "pressure",
-                "default": 1.0,
-                "help": "Final pressure",
-            },
-        ),
-        "logscale": (
-            InputValue,
-            {
-                "dtype": bool,
-                "default": False,
-                "help": "Change pressure on a logarihthmic scale.",
-            },
-        ),
-        "total_steps": (
-            InputValue,
-            {"dtype": int, "default": 0, "help": "Total number of steps for the ramp"},
-        ),
-        "current_step": (
-            InputValue,
-            {"dtype": int, "default": 0, "help": "Current step along the ramp"},
-        ),
+        "p_start": (InputValue, {"dtype": float,
+                                 "dimension": "pressure",
+                                 "default": 1.0,
+                                 "help": "Initial pressure"
+                                 }),
+        "p_end": (InputValue, {"dtype": float,
+                               "dimension": "pressure",
+                               "default": 1.0,
+                               "help": "Final pressure"
+                               }),
+        "logscale": (InputValue, {"dtype": bool,
+                                  "default": False,
+                                  "help": "Change pressure on a logarihthmic scale."}),
+         "total_steps": (InputValue, {"dtype": int,
+                                      "default": 0,
+                                      "help": "Total number of steps for the ramp"}),
+         "current_step": (InputValue, {"dtype": int,
+                                       "default": 0,
+                                       "help": "Current step along the ramp"})
     }
 
     default_help = """PressureRamp Motion class. It just updates the ensemble
@@ -144,8 +114,7 @@ class InputPressureRamp(InputDictionary):
     default_label = "PRAMP"
 
     def store(self, ramp):
-        if ramp == {}:
-            return
+        if ramp == {}: return
         self.p_start.store(ramp.p_start)
         self.p_end.store(ramp.p_end)
         self.logscale.store(ramp.logscale)
