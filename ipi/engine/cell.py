@@ -15,7 +15,7 @@ from ipi.utils.mathtools import *
 from ipi.utils import units
 
 
-__all__ = ['Cell']
+__all__ = ["Cell"]
 
 
 class Cell(dobject):
@@ -46,11 +46,14 @@ class Cell(dobject):
 
         dself = dd(self)  # gets a direct-access view to self
 
-        dself.h = depend_array(name='h', value=h)
-        dself.ih = depend_array(name="ih", value=np.zeros((3, 3), float),
-                                func=self.get_ih, dependencies=[dself.h])
-        dself.V = depend_value(name='V', func=self.get_volume,
-                               dependencies=[dself.h])
+        dself.h = depend_array(name="h", value=h)
+        dself.ih = depend_array(
+            name="ih",
+            value=np.zeros((3, 3), float),
+            func=self.get_ih,
+            dependencies=[dself.h],
+        )
+        dself.V = depend_value(name="V", func=self.get_volume, dependencies=[dself.h])
 
     def copy(self):
         return Cell(dstrip(self.h).copy())

@@ -1,7 +1,7 @@
 import numpy as np
 
-table1 = np.loadtxt('accumulated.out.w')
-table2 = np.loadtxt('accumulated.out.v')
+table1 = np.loadtxt("accumulated.out.w")
+table2 = np.loadtxt("accumulated.out.v")
 
 
 (asize1, bsize) = np.shape(table1)
@@ -22,4 +22,4 @@ for a in range(asize):
     out[a][2] = table1[a][6] - table2[a][6]
 
 
-np.savetxt('1000loga.out', out)
+np.savetxt("1000loga.out", out)

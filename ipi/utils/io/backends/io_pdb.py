@@ -17,7 +17,7 @@ from ipi.utils.depend import dstrip
 from ipi.utils.units import Elements
 
 
-__all__ = ['print_pdb_path', 'print_pdb', 'read_pdb']
+__all__ = ["print_pdb_path", "print_pdb", "read_pdb"]
 
 
 def print_pdb_path(beads, cell, filedesc=sys.stdout, cell_conv=1.0, atoms_conv=1.0):
@@ -34,12 +34,14 @@ def print_pdb_path(beads, cell, filedesc=sys.stdout, cell_conv=1.0, atoms_conv=1
     """
 
     fmt_cryst = "CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f%s%4i\n"
-    fmt_atom = "ATOM  %5i %4s%1s%3s %1s%4i%1s  %8.3f%8.3f%8.3f%6.2f%6.2f          %2s%2i\n"
+    fmt_atom = (
+        "ATOM  %5i %4s%1s%3s %1s%4i%1s  %8.3f%8.3f%8.3f%6.2f%6.2f          %2s%2i\n"
+    )
     fmt_conect = "CONECT%5i%5i\n"
 
     a, b, c, alpha, beta, gamma = mt.h2abc_deg(cell.h * cell_conv)
 
-    z = 1   # What even is this parameter?
+    z = 1  # What even is this parameter?
     filedesc.write(fmt_cryst % (a, b, c, alpha, beta, gamma, " P 1        ", z))
 
     natoms = beads.natoms
@@ -48,8 +50,22 @@ def print_pdb_path(beads, cell, filedesc=sys.stdout, cell_conv=1.0, atoms_conv=1
         for i in range(natoms):
             qs = dstrip(beads.q) * atoms_conv
             lab = dstrip(beads.names)
-            data = (j * natoms + i + 1, lab[i], ' ', '  1', ' ', 1, ' ',
-                    qs[j][3 * i], qs[j][3 * i + 1], qs[j][3 * i + 2], 0.0, 0.0, '  ', 0)
+            data = (
+                j * natoms + i + 1,
+                lab[i],
+                " ",
+                "  1",
+                " ",
+                1,
+                " ",
+                qs[j][3 * i],
+                qs[j][3 * i + 1],
+                qs[j][3 * i + 2],
+                0.0,
+                0.0,
+                "  ",
+                0,
+            )
             filedesc.write(fmt_atom % data)
 
     if nbeads > 1:
@@ -57,12 +73,16 @@ def print_pdb_path(beads, cell, filedesc=sys.stdout, cell_conv=1.0, atoms_conv=1
             filedesc.write(fmt_conect % (i + 1, (nbeads - 1) * natoms + i + 1))
         for j in range(nbeads - 1):
             for i in range(natoms):
-                filedesc.write(fmt_conect % (j * natoms + i + 1, (j + 1) * natoms + i + 1))
+                filedesc.write(
+                    fmt_conect % (j * natoms + i + 1, (j + 1) * natoms + i + 1)
+                )
 
     filedesc.write("END\n")
 
 
-def print_pdb(atoms, cell, filedesc=sys.stdout, title="", cell_conv=1.0, atoms_conv=1.0):
+def print_pdb(
+    atoms, cell, filedesc=sys.stdout, title="", cell_conv=1.0, atoms_conv=1.0
+):
     """Prints an atomic configuration into a pdb formatted file.
 
     Also prints the cell parameters in standard pdb form. Note
@@ -76,7 +96,9 @@ def print_pdb(atoms, cell, filedesc=sys.stdout, title="", cell_conv=1.0, atoms_c
     """
 
     fmt_cryst = "CRYST1%9.3f%9.3f%9.3f%7.2f%7.2f%7.2f%s%4i\n"
-    fmt_atom = "ATOM  %5i %4s%1s%3s %1s%4i%1s   %8.3f%8.3f%8.3f%6.2f%6.2f          %2s%2i\n"
+    fmt_atom = (
+        "ATOM  %5i %4s%1s%3s %1s%4i%1s   %8.3f%8.3f%8.3f%6.2f%6.2f          %2s%2i\n"
+    )
 
     if title != "":
         filedesc.write("TITLE   %70s\n" % (title))
@@ -90,8 +112,22 @@ def print_pdb(atoms, cell, filedesc=sys.stdout, title="", cell_conv=1.0, atoms_c
     qs = dstrip(atoms.q) * atoms_conv
     lab = dstrip(atoms.names)
     for i in range(natoms):
-        data = (i + 1, lab[i], ' ', '  1', ' ', 1, ' ',
-                qs[3 * i], qs[3 * i + 1], qs[3 * i + 2], 0.0, 0.0, '  ', 0)
+        data = (
+            i + 1,
+            lab[i],
+            " ",
+            "  1",
+            " ",
+            1,
+            " ",
+            qs[3 * i],
+            qs[3 * i + 1],
+            qs[3 * i + 2],
+            0.0,
+            0.0,
+            "  ",
+            0,
+        )
         filedesc.write(fmt_atom % data)
 
     filedesc.write("END\n")
@@ -116,12 +152,12 @@ def read_pdb(filedesc):
         comment = copy.copy(header)
         header = filedesc.readline()
     # PDB defaults to Angstrom, because so says the standard
-    if 'positions{' not in comment:
+    if "positions{" not in comment:
         comment = comment.strip()
-        comment += ' positions{angstrom}\n'
-    if 'cell{' not in comment:
+        comment += " positions{angstrom}\n"
+    if "cell{" not in comment:
         comment = comment.strip()
-        comment += ' cell{angstrom}\n'
+        comment += " cell{angstrom}\n"
     if header == "":
         raise EOFError("End of file or empty header in PDB file")
 
@@ -142,7 +178,7 @@ def read_pdb(filedesc):
     qatoms = []
     names = []
     masses = []
-    while (body.strip() != "" and body.strip() != "END"):
+    while body.strip() != "" and body.strip() != "END":
         natoms += 1
         name = body[12:16].strip()
         names.append(name)
@@ -156,4 +192,10 @@ def read_pdb(filedesc):
 
         body = filedesc.readline()
 
-    return comment, cell, np.asarray(qatoms), np.asarray(names, dtype='|U4'), np.asarray(masses)
+    return (
+        comment,
+        cell,
+        np.asarray(qatoms),
+        np.asarray(names, dtype="|U4"),
+        np.asarray(masses),
+    )

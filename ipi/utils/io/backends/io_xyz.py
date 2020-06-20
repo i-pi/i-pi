@@ -17,7 +17,7 @@ from ipi.utils.depend import dstrip
 from ipi.utils.units import Elements
 
 
-__all__ = ['print_xyz_path', 'print_xyz', 'read_xyz', 'iter_xyz']
+__all__ = ["print_xyz_path", "print_xyz", "read_xyz", "iter_xyz"]
 
 deg2rad = np.pi / 180.0
 
@@ -36,7 +36,9 @@ def print_xyz_path(beads, cell, filedesc=sys.stdout, cell_conv=1.0, atoms_conv=1
 
     a, b, c, alpha, beta, gamma = mt.h2abc_deg(cell.h * cell_conv)
 
-    fmt_header = "%d\n# bead: %d CELL(abcABC): %10.5f  %10.5f  %10.5f  %10.5f  %10.5f  %10.5f \n"
+    fmt_header = (
+        "%d\n# bead: %d CELL(abcABC): %10.5f  %10.5f  %10.5f  %10.5f  %10.5f  %10.5f \n"
+    )
     natoms = beads.natoms
     nbeads = beads.nbeads
     for j in range(nbeads):
@@ -44,10 +46,15 @@ def print_xyz_path(beads, cell, filedesc=sys.stdout, cell_conv=1.0, atoms_conv=1
         for i in range(natoms):
             qs = dstrip(beads.q) * atoms_conv
             lab = dstrip(beads.names)
-            filedesc.write("%8s %12.5e %12.5e %12.5e\n" % (lab[i], qs[j][3 * i], qs[j][3 * i + 1], qs[j][3 * i + 2]))
+            filedesc.write(
+                "%8s %12.5e %12.5e %12.5e\n"
+                % (lab[i], qs[j][3 * i], qs[j][3 * i + 1], qs[j][3 * i + 2])
+            )
 
 
-def print_xyz(atoms, cell, filedesc=sys.stdout, title="", cell_conv=1.0, atoms_conv=1.0):
+def print_xyz(
+    atoms, cell, filedesc=sys.stdout, title="", cell_conv=1.0, atoms_conv=1.0
+):
     """Prints an atomic configuration into an XYZ formatted file.
 
     Args:
@@ -60,19 +67,26 @@ def print_xyz(atoms, cell, filedesc=sys.stdout, title="", cell_conv=1.0, atoms_c
     a, b, c, alpha, beta, gamma = mt.h2abc_deg(cell.h * cell_conv)
 
     natoms = atoms.natoms
-    fmt_header = "%d\n# CELL(abcABC): %10.5f  %10.5f  %10.5f  %10.5f  %10.5f  %10.5f  %s\n"
+    fmt_header = (
+        "%d\n# CELL(abcABC): %10.5f  %10.5f  %10.5f  %10.5f  %10.5f  %10.5f  %s\n"
+    )
     filedesc.write(fmt_header % (natoms, a, b, c, alpha, beta, gamma, title))
     # direct access to avoid unnecessary slow-down
     qs = dstrip(atoms.q) * atoms_conv
     lab = dstrip(atoms.names)
     for i in range(natoms):
-        filedesc.write("%8s %12.5e %12.5e %12.5e\n" % (lab[i], qs[3 * i], qs[3 * i + 1], qs[3 * i + 2]))
+        filedesc.write(
+            "%8s %12.5e %12.5e %12.5e\n"
+            % (lab[i], qs[3 * i], qs[3 * i + 1], qs[3 * i + 2])
+        )
 
 
 # Cell type patterns
-cell_re = [re.compile('CELL[\(\[\{]abcABC[\)\]\}]: ([-+0-9\.Ee ]*)\s*'),
-           re.compile('CELL[\(\[\{]H[\)\]\}]: ([-+0-9\.?Ee ]*)\s*'),
-           re.compile('CELL[\(\[\{]GENH[\)\]\}]: ([-+0-9\.?Ee ]*)\s*')]
+cell_re = [
+    re.compile("CELL[\(\[\{]abcABC[\)\]\}]: ([-+0-9\.Ee ]*)\s*"),
+    re.compile("CELL[\(\[\{]H[\)\]\}]: ([-+0-9\.?Ee ]*)\s*"),
+    re.compile("CELL[\(\[\{]GENH[\)\]\}]: ([-+0-9\.?Ee ]*)\s*"),
+]
 
 
 def read_xyz(filedesc):
@@ -96,10 +110,9 @@ def read_xyz(filedesc):
     # Extracting cell
     cell = [key.search(comment) for key in cell_re]
     usegenh = False
-    if cell[0] is not None:    # abcABC
+    if cell[0] is not None:  # abcABC
         a, b, c = [float(x) for x in cell[0].group(1).split()[:3]]
-        alpha, beta, gamma = [float(x) * deg2rad
-                              for x in cell[0].group(1).split()[3:6]]
+        alpha, beta, gamma = [float(x) * deg2rad for x in cell[0].group(1).split()[3:6]]
         h = mt.abc2h(a, b, c, alpha, beta, gamma)
     elif cell[1] is not None:  # H
         h = np.array(cell[1].group(1).split()[:9], float)
@@ -111,12 +124,12 @@ def read_xyz(filedesc):
         # convert back & forth from abcABC representation to get an upper triangular h
         h = mt.abc2h(*mt.genh2abc(genh))
         usegenh = True
-    else:                     # defaults to unit box
+    else:  # defaults to unit box
         h = np.array([[-1.0, 0.0, 0.0], [0.0, -1.0, 0.0], [0.0, 0.0, -1.0]])
     cell = h
 
     qatoms = np.zeros(3 * natoms)
-    names = np.zeros(natoms, dtype='|U4')
+    names = np.zeros(natoms, dtype="|U4")
     masses = np.zeros(natoms)
 
     # Extracting a time-frame information
@@ -139,5 +152,7 @@ def read_xyz(filedesc):
             break
 
     if natoms != len(names):
-        raise ValueError("The number of atom records does not match the header of the xyz file.")
+        raise ValueError(
+            "The number of atom records does not match the header of the xyz file."
+        )
     return comment, cell, qatoms, names, masses

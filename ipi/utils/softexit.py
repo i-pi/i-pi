@@ -15,10 +15,10 @@ import signal
 from ipi.utils.messages import verbosity, warning
 
 
-__all__ = ['Softexit', 'softexit']
+__all__ = ["Softexit", "softexit"]
 
 
-SOFTEXITLATENCY = 10.0   # seconds to sleep between checking for soft exit
+SOFTEXITLATENCY = 10.0  # seconds to sleep between checking for soft exit
 
 
 class Softexit(object):
@@ -78,12 +78,17 @@ class Softexit(object):
         """
 
         print("SOFTEXIT CALLED FROM THREAD", threading.currentThread(), message)
-        if not self.triggered:    # avoid double calls from different threads
+        if not self.triggered:  # avoid double calls from different threads
             self.exiting = True
             self.triggered = True
 
             if message != "":
-                warning("Soft exit has been requested with message: '" + message + "'. Cleaning up.", verbosity.low)
+                warning(
+                    "Soft exit has been requested with message: '"
+                    + message
+                    + "'. Cleaning up.",
+                    verbosity.low,
+                )
 
             # calls all the registered emergency softexit procedures
             for f in self.flist:
@@ -100,8 +105,10 @@ class Softexit(object):
 
         # wait for all (other) threads to finish
         for (t, dl) in self.tlist:
-            if not (threading.currentThread() is self._thread or
-                    threading.currentThread() is t):
+            if not (
+                threading.currentThread() is self._thread
+                or threading.currentThread() is t
+            ):
                 t.join()
 
         sys.exit()
@@ -115,7 +122,7 @@ class Softexit(object):
 
         self._main = threading.currentThread()
         self.timeout = -1.0
-        if (timeout > 0.0):
+        if timeout > 0.0:
             self.timeout = time.time() + timeout
 
         self._thread = threading.Thread(target=self._softexit_monitor, name="softexit")
@@ -138,7 +145,9 @@ class Softexit(object):
            frame: Current stack frame.
         """
 
-        warning(" @SOFTEXIT:   Kill signal. Trying to make a clean exit.", verbosity.low)
+        warning(
+            " @SOFTEXIT:   Kill signal. Trying to make a clean exit.", verbosity.low
+        )
 
         self.trigger(" @SOFTEXIT: Kill signal received")
 
@@ -158,7 +167,7 @@ class Softexit(object):
                 self.trigger(" @SOFTEXIT: EXIT file detected.")
                 break
 
-            if (self.timeout > 0 and self.timeout < time.time()):
+            if self.timeout > 0 and self.timeout < time.time():
                 self.trigger(" @SOFTEXIT: Maximum wallclock time elapsed.")
                 break
 

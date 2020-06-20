@@ -57,10 +57,21 @@ class ConstrainedDynamics(Dynamics):
             effective classical temperature.
     """
 
-    def __init__(self, timestep, mode="nve", splitting="obabo",
-                 thermostat=None, barostat=None, fixcom=False, fixatoms=None,
-                 nmts=None, nsteps_geo=1, nsteps_o=1,
-                 constraint_list=[], csolver=None):
+    def __init__(
+        self,
+        timestep,
+        mode="nve",
+        splitting="obabo",
+        thermostat=None,
+        barostat=None,
+        fixcom=False,
+        fixatoms=None,
+        nmts=None,
+        nsteps_geo=1,
+        nsteps_o=1,
+        constraint_list=[],
+        csolver=None,
+    ):
         """Initialises a "dynamics" motion object.
 
         Args:
@@ -70,7 +81,7 @@ class ConstrainedDynamics(Dynamics):
         """
 
         super(Dynamics, self).__init__(fixcom=fixcom, fixatoms=fixatoms)
-        dd(self).dt = depend_value(name='dt', value=timestep)
+        dd(self).dt = depend_value(name="dt", value=timestep)
 
         if thermostat is None:
             self.thermostat = Thermostat()
@@ -93,10 +104,14 @@ class ConstrainedDynamics(Dynamics):
         elif self.enstype == "nvt":
             self.integrator = NVTConstrainedIntegrator()
         else:
-            ValueError("{:s} is not a valid ensemble for constrained dynamics".format(self.enstype))
+            ValueError(
+                "{:s} is not a valid ensemble for constrained dynamics".format(
+                    self.enstype
+                )
+            )
 
         # splitting mode for the integrators
-        dd(self).splitting = depend_value(name='splitting', value=splitting)
+        dd(self).splitting = depend_value(name="splitting", value=splitting)
 
         # The list of constraints coming from the input is an actual list of independent
         # constraints, and should be treated as such
@@ -122,7 +137,8 @@ class ConstrainedDynamics(Dynamics):
         # an error if fixcom is True and any of the constraints are Eckart.
         if self.fixcom and has_eckart:
             raise ValueError(
-                "Cannot simultaneously fix cell CoM and enforce Eckart constraints!")
+                "Cannot simultaneously fix cell CoM and enforce Eckart constraints!"
+            )
 
         if fixatoms is None:
             self.fixatoms = np.zeros(0, int)
@@ -132,17 +148,20 @@ class ConstrainedDynamics(Dynamics):
             raise ValueError("Cannot fix atoms together with constrained MD")
 
         if csolver is None:
-            self.csolver = ConstraintSolver(self.constraint_list, tolerance=0.0001, maxit=10000, norm_order=2)
+            self.csolver = ConstraintSolver(
+                self.constraint_list, tolerance=0.0001, maxit=10000, norm_order=2
+            )
         else:
             if csolver["norm_order"] == -1:
-                norm_order = float('inf')
+                norm_order = float("inf")
             else:
                 norm_order = csolver["norm_order"]
             self.csolver = ConstraintSolver(
                 self.constraint_list,
                 tolerance=csolver["tolerance"],
                 maxit=csolver["maxit"],
-                norm_order=norm_order)
+                norm_order=norm_order,
+            )
 
         # parameters of the geodesic integrator. will probably never need
         # to be changed dynamically, so for the moment we don't consider them depend objects
@@ -163,7 +182,9 @@ class ConstrainedDynamics(Dynamics):
         Just passes control to the parent class, and then binds the constraints
         and the solver. 
         """
-        super(ConstrainedDynamics, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
+        super(ConstrainedDynamics, self).bind(
+            ens, beads, nm, cell, bforce, prng, omaker
+        )
 
         # now binds the constraints
         for c in self.constraint_list:
@@ -221,8 +242,9 @@ class ConstraintSolver(ConstraintSolverBase):
         ???
     """
 
-    def __init__(self, constraint_list, dt=1.0,
-                 tolerance=0.001, maxit=1000, norm_order=2):
+    def __init__(
+        self, constraint_list, dt=1.0, tolerance=0.001, maxit=1000, norm_order=2
+    ):
         """ Solver options include a tolerance for the projection on the
         manifold, maximum number of iterations for the projection, and 
         the order of the norm to estimate the convergence """
@@ -297,8 +319,11 @@ class ConstraintSolver(ConstraintSolverBase):
 
                 p[ic] -= delta / self.dt
 
-            if (i == self.maxit):
-                warning("No convergence in Newton iteration for positional component", verbosity.low)
+            if i == self.maxit:
+                warning(
+                    "No convergence in Newton iteration for positional component",
+                    verbosity.low,
+                )
 
         # after all constraints have been applied, q is on the manifold and we can update the constraint positions
         for constr in self.constraint_list:

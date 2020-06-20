@@ -18,14 +18,13 @@ L_CHAR = 1
 
 
 class MySocket(object):
-
-    def __init__(self, servername, mode='unix', port=31415, verbose=False):
-        if mode == 'unix':
+    def __init__(self, servername, mode="unix", port=31415, verbose=False):
+        if mode == "unix":
             # Create a client socket
             self.s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             # Connect to i-PI server
-            self.s.connect('/tmp/ipi_%s' % servername)
-        elif mode == 'inet':
+            self.s.connect("/tmp/ipi_%s" % servername)
+        elif mode == "inet":
             # Create a client socket
             self.s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
             # Connect to i-PI server
@@ -38,41 +37,42 @@ class MySocket(object):
     def await_header(self):
         data = self.s.recv(HDRLEN * L_CHAR)
         if self.verbose:
-            print('RECV', (data,))
-        with log.section('DRIVER'):
+            print("RECV", (data,))
+        with log.section("DRIVER"):
             log("RECV %s %s" % (data, datetime.now()))
         return data
 
     def await_data(self, size):
-        data = ''
+        data = ""
         while len(data) < size:
             stub = self.s.recv(size - len(data))
             data += stub
             if self.verbose:
-                print('RECV %i/%i' % (len(data), size))  # , hexlify(stub)
+                print("RECV %i/%i" % (len(data), size))  # , hexlify(stub)
         return data
 
     def send_header(self, header):
         assert len(header) <= 12
-        header = header.ljust(12, ' ')
+        header = header.ljust(12, " ")
         if self.verbose:
-            print('SEND', (header,))
-        with log.section('DRIVER'):
+            print("SEND", (header,))
+        with log.section("DRIVER"):
             log("SEND %s %s" % (header, datetime.now()))
         self.s.send(header)
 
     def send_data(self, data):
         if self.verbose:
-            print('SEND', len(data))  # , hexlify(data)
+            print("SEND", len(data))  # , hexlify(data)
         self.s.send(data)
 
 
 class YAFFDriver(object):
 
-    '''
+    """
     Use Yaff as a driver that calculates forces for i-PI
-    '''
-    log_name = 'DRIVER'
+    """
+
+    log_name = "DRIVER"
 
     def __init__(self, socket, ff):
         self.ff = ff
@@ -84,15 +84,21 @@ class YAFFDriver(object):
         self.gvecs = np.zeros((3, 3))
 
     def receive_pos(self):
-        self.rvecs[:] = np.fromstring(self.s.await_data(L_FLOAT * 9), np.float64).reshape((3, 3)).T
-        self.gvecs[:] = np.fromstring(self.s.await_data(L_FLOAT * 9), np.float64).reshape((3, 3))
+        self.rvecs[:] = (
+            np.fromstring(self.s.await_data(L_FLOAT * 9), np.float64).reshape((3, 3)).T
+        )
+        self.gvecs[:] = np.fromstring(
+            self.s.await_data(L_FLOAT * 9), np.float64
+        ).reshape((3, 3))
         natom = np.fromstring(self.s.await_data(L_INT), np.int32)[0]
         if self.natom < 0:
             self.natom = natom
             self.pos = np.zeros((self.natom, 3))
             self.gpos = np.zeros((self.natom, 3))
             self.vtens = np.zeros((3, 3))
-        self.pos[:] = np.fromstring(self.s.await_data(L_FLOAT * 3 * self.natom), np.float64).reshape((natom, 3))
+        self.pos[:] = np.fromstring(
+            self.s.await_data(L_FLOAT * 3 * self.natom), np.float64
+        ).reshape((natom, 3))
 
     def compute(self):
         self.ff.update_rvecs(self.rvecs)
@@ -128,7 +134,8 @@ class YAFFDriver(object):
                     self.s.send_header(Message("needinit"))
                 elif self.hasdata:
                     self.s.send_header(Message("havedata"))
-                else: self.s.send_header(Message("ready"))
+                else:
+                    self.s.send_header(Message("ready"))
             elif header == Message("init"):
                 ibead = np.fromstring(self.s.await_data(L_INT), np.int32)[0]
                 len_init = np.fromstring(self.s.await_data(L_INT), np.int32)[0]

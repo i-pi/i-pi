@@ -10,5 +10,5 @@ from ipi.utils import units
 
 def test_case_insensitive():
 
-    angstrom = units.unit_to_internal('length', 'angstrom', 1.0)
-    Angstrom = units.unit_to_internal('length', 'Angstrom', 1.0)
+    angstrom = units.unit_to_internal("length", "angstrom", 1.0)
+    Angstrom = units.unit_to_internal("length", "Angstrom", 1.0)

@@ -72,7 +72,15 @@ class ForceField(dobject):
         _threadlock: Python handle used to lock the thread held in _thread.
     """
 
-    def __init__(self, latency=1.0, name="", pars=None, dopbc=True, active=np.array([-1]), threaded=False):
+    def __init__(
+        self,
+        latency=1.0,
+        name="",
+        pars=None,
+        dopbc=True,
+        active=np.array([-1]),
+        threaded=False,
+    ):
         """Initialises ForceField.
 
         Args:
@@ -102,12 +110,12 @@ class ForceField(dobject):
         self._doloop = [False]
         self._threadlock = threading.Lock()
 
-    def bind(self, output_maker = None):
+    def bind(self, output_maker=None):
         """ Binds the FF, at present just to allow for 
         managed output """
-        
+
         self.output_maker = output_maker
-        
+
     def queue(self, atoms, cell, reqid=-1, template=None):
         """Adds a request.
 
@@ -151,13 +159,15 @@ class ForceField(dobject):
             if self.active[0] == -1:
                 activehere = np.arange(len(pbcpos))
             else:
-                activehere = np.array([[3 * n, 3 * n + 1, 3 * n + 2] for n in self.active])
+                activehere = np.array(
+                    [[3 * n, 3 * n + 1, 3 * n + 2] for n in self.active]
+                )
 
             # Reassign active indexes in order to use them
             activehere = activehere.flatten()
 
             # Perform sanity check for active atoms
-            if (len(activehere) > len(pbcpos) or activehere[-1] > (len(pbcpos) - 1)):
+            if len(activehere) > len(pbcpos) or activehere[-1] > (len(pbcpos) - 1):
                 raise ValueError("There are more active atoms than atoms!")
 
             self.iactive = activehere
@@ -167,20 +177,22 @@ class ForceField(dobject):
 
         if template is None:
             template = {}
-        template.update({
-            "id": reqid,
-            "pos": pbcpos,
-            "active": self.iactive,
-            "cell": (dstrip(cell.h).copy(), dstrip(cell.ih).copy()),
-            "pars": par_str,
-            "result": None,
-            "status": "Queued",
-            "start": -1,
-            "t_queued": time.time(),
-            "t_dispatched": 0,
-            "t_finished": 0
-        })
-        
+        template.update(
+            {
+                "id": reqid,
+                "pos": pbcpos,
+                "active": self.iactive,
+                "cell": (dstrip(cell.h).copy(), dstrip(cell.ih).copy()),
+                "pars": par_str,
+                "result": None,
+                "status": "Queued",
+                "start": -1,
+                "t_queued": time.time(),
+                "t_dispatched": 0,
+                "t_finished": 0,
+            }
+        )
+
         newreq = ForceRequest(template)
 
         with self._threadlock:
@@ -198,7 +210,12 @@ class ForceField(dobject):
             for r in self.requests:
                 if r["status"] == "Queued":
                     r["t_dispatched"] = time.time()
-                    r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]
+                    r["result"] = [
+                        0.0,
+                        np.zeros(len(r["pos"]), float),
+                        np.zeros((3, 3), float),
+                        "",
+                    ]
                     r["status"] = "Done"
                     r["t_finished"] = time.time()
 
@@ -229,8 +246,10 @@ class ForceField(dobject):
                 try:
                     self.requests.remove(request)
                 except ValueError:
-                    print("failed removing request", id(request), ' ', end=' ')
-                    print([id(r) for r in self.requests], "@", threading.currentThread())
+                    print("failed removing request", id(request), " ", end=" ")
+                    print(
+                        [id(r) for r in self.requests], "@", threading.currentThread()
+                    )
                     raise
 
     def stop(self):
@@ -255,7 +274,9 @@ class ForceField(dobject):
 
         if self.threaded:
             self._doloop[0] = True
-            self._thread = threading.Thread(target=self._poll_loop, name="poll_" + self.name)
+            self._thread = threading.Thread(
+                target=self._poll_loop, name="poll_" + self.name
+            )
             self._thread.daemon = True
             self._thread.start()
             softexit.register_thread(self._thread, self._doloop)
@@ -286,8 +307,16 @@ class FFSocket(ForceField):
             communication between the forcefield and the driver is done.
     """
 
-    def __init__(self, latency=1.0, name="", pars=None, dopbc=True,
-                 active=np.array([-1]), threaded=True, interface=None):
+    def __init__(
+        self,
+        latency=1.0,
+        name="",
+        pars=None,
+        dopbc=True,
+        active=np.array([-1]),
+        threaded=True,
+        interface=None,
+    ):
         """Initialises FFSocket.
 
         Args:
@@ -357,10 +386,14 @@ class FFLennardJones(ForceField):
 
         # check input - PBCs are not implemented here
         if dopbc:
-            raise ValueError("Periodic boundary conditions are not supported by FFLennardJones.")
+            raise ValueError(
+                "Periodic boundary conditions are not supported by FFLennardJones."
+            )
 
         # a socket to the communication library is created or linked
-        super(FFLennardJones, self).__init__(latency, name, pars, dopbc=dopbc, threaded=threaded)
+        super(FFLennardJones, self).__init__(
+            latency, name, pars, dopbc=dopbc, threaded=threaded
+        )
         self.epsfour = float(self.pars["eps"]) * 4
         self.sixepsfour = 6 * self.epsfour
         self.sigma2 = float(self.pars["sigma"]) * float(self.pars["sigma"])
@@ -389,10 +422,10 @@ class FFLennardJones(ForceField):
         f = np.zeros(q.shape)
         for i in range(1, nat):
             dij = q[i] - q[:i]
-            rij2 = (dij**2).sum(axis=1)
+            rij2 = (dij ** 2).sum(axis=1)
 
-            x6 = (self.sigma2 / rij2)**3
-            x12 = x6**2
+            x6 = (self.sigma2 / rij2) ** 3
+            x12 = x6 ** 2
 
             v += (x12 - x6).sum()
             dij *= (self.sixepsfour * (2.0 * x12 - x6) / rij2)[:, np.newaxis]
@@ -422,7 +455,17 @@ class FFQUIP(ForceField):
                          'start': starting time}.
     """
 
-    def __init__(self, init_file, args_str, param_file, latency=1.0e-3, name="", pars=None, dopbc=True, threaded=False):
+    def __init__(
+        self,
+        init_file,
+        args_str,
+        param_file,
+        latency=1.0e-3,
+        name="",
+        pars=None,
+        dopbc=True,
+        threaded=False,
+    ):
         """Initialises QUIP.
 
         Args:
@@ -506,7 +549,17 @@ class FFDebye(ForceField):
                        'start': starting time}.
     """
 
-    def __init__(self, latency=1.0, name="", H=None, xref=None, vref=0.0, pars=None, dopbc=False, threaded=False):
+    def __init__(
+        self,
+        latency=1.0,
+        name="",
+        H=None,
+        xref=None,
+        vref=0.0,
+        pars=None,
+        dopbc=False,
+        threaded=False,
+    ):
         """Initialises FFDebye.
 
         Args:
@@ -520,14 +573,19 @@ class FFDebye(ForceField):
         if H is None:
             raise ValueError("Must provide the Hessian for the Debye crystal.")
         if xref is None:
-            raise ValueError("Must provide a reference configuration for the Debye crystal.")
+            raise ValueError(
+                "Must provide a reference configuration for the Debye crystal."
+            )
 
         self.H = H
         self.xref = xref
         self.vref = vref
 
         eigsys = np.linalg.eigh(self.H)
-        info(" @ForceField: Hamiltonian eigenvalues: " + ' '.join(map(str, eigsys[0])), verbosity.medium)
+        info(
+            " @ForceField: Hamiltonian eigenvalues: " + " ".join(map(str, eigsys[0])),
+            verbosity.medium,
+        )
 
     def poll(self):
         """ Polls the forcefield checking if there are requests that should
@@ -553,7 +611,12 @@ class FFDebye(ForceField):
         d = q - self.xref
         mf = np.dot(self.H, d)
 
-        r["result"] = [self.vref + 0.5 * np.dot(d, mf), -mf, np.zeros((3, 3), float), ""]
+        r["result"] = [
+            self.vref + 0.5 * np.dot(d, mf),
+            -mf,
+            np.zeros((3, 3), float),
+            "",
+        ]
         r["status"] = "Done"
         r["t_finished"] = time.time()
 
@@ -573,7 +636,17 @@ class FFPlumed(ForceField):
                       'start': starting time}.
     """
 
-    def __init__(self, latency=1.0e-3, name="", pars=None, dopbc=False, threaded=False, init_file="", plumeddat="", plumedstep=0):
+    def __init__(
+        self,
+        latency=1.0e-3,
+        name="",
+        pars=None,
+        dopbc=False,
+        threaded=False,
+        init_file="",
+        plumeddat="",
+        plumedstep=0,
+    ):
         """Initialises FFPlumed.
 
         Args:
@@ -582,8 +655,12 @@ class FFPlumed(ForceField):
 
         # a socket to the communication library is created or linked
         if plumed is None:
-            raise ImportError("Cannot find plumed libraries to link to a FFPlumed object/")
-        super(FFPlumed, self).__init__(latency, name, pars, dopbc=False, threaded=threaded)
+            raise ImportError(
+                "Cannot find plumed libraries to link to a FFPlumed object/"
+            )
+        super(FFPlumed, self).__init__(
+            latency, name, pars, dopbc=False, threaded=threaded
+        )
         self.plumed = plumed.Plumed()
         self.plumeddat = plumeddat
         self.plumedstep = plumedstep
@@ -592,17 +669,21 @@ class FFPlumed(ForceField):
         if self.init_file.mode == "xyz":
             infile = open(self.init_file.value, "r")
             myframe = read_file(self.init_file.mode, infile)
-            myatoms = myframe['atoms']
-            mycell = myframe['cell']
+            myatoms = myframe["atoms"]
+            mycell = myframe["cell"]
             myatoms.q *= unit_to_internal("length", self.init_file.units, 1.0)
             mycell.h *= unit_to_internal("length", self.init_file.units, 1.0)
 
         self.natoms = myatoms.natoms
         self.plumed.cmd("setNatoms", self.natoms)
         self.plumed.cmd("setPlumedDat", self.plumeddat)
-        self.plumed.cmd("setTimestep", 1.)
-        self.plumed.cmd("setMDEnergyUnits", 2625.4996)        # Pass a pointer to the conversion factor between the energy unit used in your code and kJ mol-1
-        self.plumed.cmd("setMDLengthUnits", 0.052917721)        # Pass a pointer to the conversion factor between the length unit used in your code and nm
+        self.plumed.cmd("setTimestep", 1.0)
+        self.plumed.cmd(
+            "setMDEnergyUnits", 2625.4996
+        )  # Pass a pointer to the conversion factor between the energy unit used in your code and kJ mol-1
+        self.plumed.cmd(
+            "setMDLengthUnits", 0.052917721
+        )  # Pass a pointer to the conversion factor between the length unit used in your code and nm
         self.plumed.cmd("setMDTimeUnits", 2.4188843e-05)
         self.plumedrestart = False
         if self.plumedstep > 0:
@@ -633,7 +714,9 @@ class FFPlumed(ForceField):
         and return forces."""
 
         if self.natoms != len(r["pos"]) / 3:
-            raise ValueError("Size of atom array changed after initialization of FFPlumed")
+            raise ValueError(
+                "Size of atom array changed after initialization of FFPlumed"
+            )
 
         v = 0.0
         f = np.zeros(3 * self.natoms)
@@ -653,8 +736,8 @@ class FFPlumed(ForceField):
         self.plumed.cmd("setPositions", r["pos"])
         self.plumed.cmd("setForces", f)
         self.plumed.cmd("setVirial", vir)
-        self.plumed.cmd("prepareCalc");
-        self.plumed.cmd("performCalcNoUpdate");
+        self.plumed.cmd("prepareCalc")
+        self.plumed.cmd("performCalcNoUpdate")
 
         bias = np.zeros(1, float)
         self.plumed.cmd("getBias", bias)
@@ -679,8 +762,8 @@ class FFPlumed(ForceField):
         self.plumed.cmd("setBox", cell)
         self.plumed.cmd("setForces", f)
         self.plumed.cmd("setVirial", vir)
-        self.plumed.cmd("prepareCalc");
-        self.plumed.cmd("performCalcNoUpdate");
+        self.plumed.cmd("prepareCalc")
+        self.plumed.cmd("performCalcNoUpdate")
         self.plumed.cmd("update")
 
         return True
@@ -690,7 +773,23 @@ class FFYaff(ForceField):
 
     """ Use Yaff as a library to construct a force field """
 
-    def __init__(self, latency=1.0, name="", threaded=False, yaffpara=None, yaffsys=None, yafflog='yaff.log', rcut=18.89726133921252, alpha_scale=3.5, gcut_scale=1.1, skin=0, smooth_ei=False, reci_ei='ewald', pars=None, dopbc=False):
+    def __init__(
+        self,
+        latency=1.0,
+        name="",
+        threaded=False,
+        yaffpara=None,
+        yaffsys=None,
+        yafflog="yaff.log",
+        rcut=18.89726133921252,
+        alpha_scale=3.5,
+        gcut_scale=1.1,
+        skin=0,
+        smooth_ei=False,
+        reci_ei="ewald",
+        pars=None,
+        dopbc=False,
+    ):
         """Initialises FFYaff and enables a basic Yaff force field.
 
         Args:
@@ -735,7 +834,7 @@ class FFYaff(ForceField):
         self.yafflog = yafflog
 
         # Open log file
-        logf = open(yafflog, 'w')
+        logf = open(yafflog, "w")
         # Tell Python to close the file when the script exits
         atexit.register(logf.close)
 
@@ -743,7 +842,16 @@ class FFYaff(ForceField):
         log._file = codecs.getwriter(locale.getpreferredencoding())(logf)
 
         self.system = System.from_file(self.yaffsys)
-        self.ff = ForceField.generate(self.system, self.yaffpara, rcut=self.rcut, alpha_scale=self.alpha_scale, gcut_scale=self.gcut_scale, skin=self.skin, smooth_ei=self.smooth_ei, reci_ei=self.reci_ei)
+        self.ff = ForceField.generate(
+            self.system,
+            self.yaffpara,
+            rcut=self.rcut,
+            alpha_scale=self.alpha_scale,
+            gcut_scale=self.gcut_scale,
+            skin=self.skin,
+            smooth_ei=self.smooth_ei,
+            reci_ei=self.reci_ei,
+        )
 
         log._active = False
 
@@ -775,26 +883,45 @@ class FFYaff(ForceField):
         r["status"] = "Done"
         r["t_finished"] = time.time()
 
-import gc 
+
+import gc
+
 
 class FFCommittee(ForceField):
     """ Combines multiple forcefields into a single forcefield object
         that consolidates individual components """
-        
-    def __init__(self, latency=1.0, name="", pars=None, dopbc=True, 
-            active=np.array([-1]), threaded=True, fflist=[], 
-            ffweights=[], alpha = 1.0, al_thresh = 0.0, 
-            al_out = None
-            ):
-        
+
+    def __init__(
+        self,
+        latency=1.0,
+        name="",
+        pars=None,
+        dopbc=True,
+        active=np.array([-1]),
+        threaded=True,
+        fflist=[],
+        ffweights=[],
+        alpha=1.0,
+        al_thresh=0.0,
+        al_out=None,
+    ):
+
         # force threaded mode as otherwise it cannot have threaded children
-        super(FFCommittee, self).__init__(latency=latency, name=name, 
-                    pars=pars, dopbc=dopbc, active=active, threaded=True)
-        if len(fflist)==0:
-            raise ValueError("Committee forcefield cannot be initialized from an empty list")
+        super(FFCommittee, self).__init__(
+            latency=latency,
+            name=name,
+            pars=pars,
+            dopbc=dopbc,
+            active=active,
+            threaded=True,
+        )
+        if len(fflist) == 0:
+            raise ValueError(
+                "Committee forcefield cannot be initialized from an empty list"
+            )
         self.fflist = fflist
         self.ff_requests = {}
-        if len(ffweights)==0:
+        if len(ffweights) == 0:
             ffweights = np.ones(len(fflist))
         if len(ffweights) != len(fflist):
             raise ValueError("List of weights does not match length of committee model")
@@ -802,35 +929,38 @@ class FFCommittee(ForceField):
         self.alpha = alpha
         self.al_thresh = al_thresh
         self.al_out = al_out
-        
+
     def bind(self, output_maker):
-        
+
         super(FFCommittee, self).bind(output_maker)
         if self.al_thresh > 0:
             if self.al_out is None:
-                raise ValueError("Must specify an output file if you want to save structures for active learning")
-            else:                
-                self.al_file = self.output_maker.get_output(self.al_out, 'w')
-        
+                raise ValueError(
+                    "Must specify an output file if you want to save structures for active learning"
+                )
+            else:
+                self.al_file = self.output_maker.get_output(self.al_out, "w")
+
     def start(self):
         for ff in self.fflist:
             ff.start()
         super(FFCommittee, self).start()
 
     def queue(self, atoms, cell, reqid=-1):
-        
+
         # launches requests for all of the committee FF objects
         ffh = []
         for ff in self.fflist:
-            ffh.append(ff.queue(atoms, cell, reqid))        
-        
+            ffh.append(ff.queue(atoms, cell, reqid))
+
         # creates the request with the help of the base class,
         # making sure it already contains a handle to the list of FF
-        # requests        
-        req = super(FFCommittee, self).queue(atoms, cell, reqid, 
-                    template = dict(ff_handles = ffh))        
+        # requests
+        req = super(FFCommittee, self).queue(
+            atoms, cell, reqid, template=dict(ff_handles=ffh)
+        )
         return req
-    
+
     def check_finish(self, r):
         """ Checks if all sub-requests associated with a given 
         request are finished """
@@ -838,49 +968,62 @@ class FFCommittee(ForceField):
             if ff_r["status"] != "Done":
                 return False
         return True
-        
+
     def gather(self, r):
         """ Collects results from all sub-requests """
         ff_res = []
         pot_uncertainty = []
-        r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]                    
-        
+        r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]
+
         # first computes (weighted) mean
         tw = self.ffweights.sum()
         for i_r, ff_r in enumerate(r["ff_handles"]):
-            r["result"][0] += ff_r["result"][0]*self.ffweights[i_r]/tw
-            r["result"][1] += ff_r["result"][1]*self.ffweights[i_r]/tw
-            r["result"][2] += ff_r["result"][2]*self.ffweights[i_r]/tw
-        
+            r["result"][0] += ff_r["result"][0] * self.ffweights[i_r] / tw
+            r["result"][1] += ff_r["result"][1] * self.ffweights[i_r] / tw
+            r["result"][2] += ff_r["result"][2] * self.ffweights[i_r] / tw
+
         for ff_r in r["ff_handles"]:
-            pot_rescaled = self.alpha*(ff_r["result"][0]-r["result"][0])
+            pot_rescaled = self.alpha * (ff_r["result"][0] - r["result"][0])
             pot_uncertainty.append(pot_rescaled)
-            ff_res.append({
-            "v": r["result"][0] + pot_rescaled,
-            "f": list(r["result"][1] + self.alpha*(ff_r["result"][1]-r["result"][1])),
-            "s": list( (r["result"][2] + self.alpha*(ff_r["result"][2]-r["result"][2])).flatten() ),            
-            "x": ff_r["result"][3],
-            })
-        r["ff_results"]  = ff_res
-        r["result"][3] = json.dumps({
-                            "position"  : list(r["pos"]),
-                            "cell" : list(r["cell"][0].flatten()),
-                            "committee" : r["ff_results"] 
-                            })
-        #print( np.std(np.array(pot_uncertainty)), self.al_thresh )
+            ff_res.append(
+                {
+                    "v": r["result"][0] + pot_rescaled,
+                    "f": list(
+                        r["result"][1]
+                        + self.alpha * (ff_r["result"][1] - r["result"][1])
+                    ),
+                    "s": list(
+                        (
+                            r["result"][2]
+                            + self.alpha * (ff_r["result"][2] - r["result"][2])
+                        ).flatten()
+                    ),
+                    "x": ff_r["result"][3],
+                }
+            )
+        r["ff_results"] = ff_res
+        r["result"][3] = json.dumps(
+            {
+                "position": list(r["pos"]),
+                "cell": list(r["cell"][0].flatten()),
+                "committee": r["ff_results"],
+            }
+        )
+        # print( np.std(np.array(pot_uncertainty)), self.al_thresh )
         if np.std(np.array(pot_uncertainty)) > self.al_thresh:
-            dumps = json.dumps({
-                            "position"  : list(r["pos"]),
-                            "cell" : list(r["cell"][0].flatten()),
-                            "uncertainty" : np.std(np.array(pot_uncertainty))
-                            })
+            dumps = json.dumps(
+                {
+                    "position": list(r["pos"]),
+                    "cell": list(r["cell"][0].flatten()),
+                    "uncertainty": np.std(np.array(pot_uncertainty)),
+                }
+            )
             self.al_file.write(dumps)
-        
+
         # releases the requests from the committee FF
-        for ff, ff_r in zip(self.fflist,r["ff_handles"]):
+        for ff, ff_r in zip(self.fflist, r["ff_handles"]):
             ff.release(ff_r)
-        
-                    
+
     def poll(self):
         """Polls the forcefield object to check if it has finished."""
 
@@ -889,8 +1032,9 @@ class FFCommittee(ForceField):
                 if self.check_finish(r):
                     r["t_dispatched"] = time.time()
                     r["t_finished"] = time.time()
-                    self.gather(r)                    
+                    self.gather(r)
                     r["status"] = "Done"
+
 
 class FFsGDML(ForceField):
 
@@ -900,7 +1044,15 @@ class FFsGDML(ForceField):
      https://github.com/stefanch/sGDML
     """
 
-    def __init__(self, latency=1.0, name="", threaded=False, sGDML_model=None, pars=None, dopbc=False):
+    def __init__(
+        self,
+        latency=1.0,
+        name="",
+        threaded=False,
+        sGDML_model=None,
+        pars=None,
+        dopbc=False,
+    ):
         """Initialises FFsGDML
 
         Args:
@@ -916,9 +1068,12 @@ class FFsGDML(ForceField):
         try:
             from sgdml.predict import GDMLPredict
             from sgdml import __version__
+
             info(" @ForceField: Using sGDML version " + __version__, verbosity.low)
         except:
-            raise ValueError("ERROR: sGDML package not located. Install it via: pip install sgdml")
+            raise ValueError(
+                "ERROR: sGDML package not located. Install it via: pip install sgdml"
+            )
 
         # A bit weird to use keyword argument for a required argument, but this
         # is also done in the code above.
@@ -933,26 +1088,42 @@ class FFsGDML(ForceField):
         # --- Load sGDML model file. ---
         try:
             self.model = np.load(self.sGDML_model)
-            info(" @ForceField: sGDML model " + self.sGDML_model + " loaded" , verbosity.medium)
+            info(
+                " @ForceField: sGDML model " + self.sGDML_model + " loaded",
+                verbosity.medium,
+            )
         except:
-            raise ValueError("ERROR: Reading sGDML model " + self.model + " file failed.")
+            raise ValueError(
+                "ERROR: Reading sGDML model " + self.model + " file failed."
+            )
 
         if "r_unit" in self.model and "e_unit" in self.model:
-            info(" @ForceField: The units used in your sGDML model are"\
-                 + self.sGDML_model["r_unit"] + " and "+ self.sGDML_model["r_unit"], verbosity.low)
+            info(
+                " @ForceField: The units used in your sGDML model are"
+                + self.sGDML_model["r_unit"]
+                + " and "
+                + self.sGDML_model["r_unit"],
+                verbosity.low,
+            )
 
-        info(" @ForceField: IMPORTANT: It is always assumed that the units in"\
-             + " the provided model file are in Angstroms and kcal/mol.", verbosity.low)
+        info(
+            " @ForceField: IMPORTANT: It is always assumed that the units in"
+            + " the provided model file are in Angstroms and kcal/mol.",
+            verbosity.low,
+        )
 
         # --- Constants ---
-        self.bohr_to_ang = 1. / UnitMap["length"]['angstrom']
-        self.kcalmol_to_hartree = UnitMap["energy"]['cal/mol'] * 1000.
+        self.bohr_to_ang = 1.0 / UnitMap["length"]["angstrom"]
+        self.kcalmol_to_hartree = UnitMap["energy"]["cal/mol"] * 1000.0
         self.kcalmolang_to_hartreebohr = self.bohr_to_ang * self.kcalmol_to_hartree
 
         # --- Creates predictor ---
         self.predictor = GDMLPredict(self.model)
 
-        info(" @ForceField: Optimizing parallelization settings for sGDML FF." , verbosity.medium)
+        info(
+            " @ForceField: Optimizing parallelization settings for sGDML FF.",
+            verbosity.medium,
+        )
         self.predictor.prepare_parallel(n_bulk=1)
 
     def poll(self):
@@ -971,9 +1142,11 @@ class FFsGDML(ForceField):
 
         E, F = self.predictor.predict(r["pos"] * self.bohr_to_ang)
 
-        r["result"] = [E[0] * self.kcalmol_to_hartree, F.flatten() * self.kcalmolang_to_hartreebohr, np.zeros((3, 3), float), ""]
+        r["result"] = [
+            E[0] * self.kcalmol_to_hartree,
+            F.flatten() * self.kcalmolang_to_hartreebohr,
+            np.zeros((3, 3), float),
+            "",
+        ]
         r["status"] = "Done"
-        r["t_finished"] = time.time()                        
-                        
-                    
-     
+        r["t_finished"] = time.time()

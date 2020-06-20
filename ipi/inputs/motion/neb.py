@@ -29,7 +29,7 @@ from ipi.inputs.thermostats import *
 from ipi.inputs.initializer import *
 from ipi.utils.units import *
 
-__all__ = ['InputNEB']
+__all__ = ["InputNEB"]
 
 
 class InputNEB(InputDictionary):
@@ -44,12 +44,24 @@ class InputNEB(InputDictionary):
 
     """
 
-    attribs = {"mode": (InputAttribute, {"dtype": str, "default": "lbfgs",
-                                         "help": "The geometry optimization algorithm to be used",
-                                         "options": ['sd', 'cg', 'bfgs', 'lbfgs']})}
+    attribs = {
+        "mode": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "default": "lbfgs",
+                "help": "The geometry optimization algorithm to be used",
+                "options": ["sd", "cg", "bfgs", "lbfgs"],
+            },
+        )
+    }
 
-    fields = {"ls_options": (InputDictionary, {"dtype": [float, int, float, float],
-                                               "help": """Options for line search methods. Includes:
+    fields = {
+        "ls_options": (
+            InputDictionary,
+            {
+                "dtype": [float, int, float, float],
+                "help": """Options for line search methods. Includes:
                               tolerance: stopping tolerance for the search,
                               grad_tolerance: stopping tolerance on gradient for
                               BFGS line search,
@@ -57,53 +69,111 @@ class InputNEB(InputDictionary):
                               step: initial step for bracketing,
                               adaptive: whether to update initial step.
                               """,
-                                               "options": ["tolerance", "iter", "step", "adaptive"],
-                                               "default": [1e-6, 100, 1e-3, 1.0],
-                                               "dimension": ["energy", "undefined", "length", "undefined"]}),
-              "tolerances": (InputDictionary, {"dtype": float,
-                                               "options": ["energy", "force", "position"],
-                                               "default": [1e-8, 1e-8, 1e-8],
-                                               "dimension": ["energy", "force", "length"]}),
-              "old_force": (InputArray, {"dtype": float,
-                                         "default": input_default(factory=np.zeros, args=(0,)),
-                                         "help": "The previous force in an optimization step.",
-                                         "dimension": "force"}),
-              "old_direction": (InputArray, {"dtype": float,
-                                             "default": input_default(factory=np.zeros, args=(0,)),
-                                             "help": "The previous direction."}),
-              "biggest_step": (InputValue, {"dtype": float,
-                                            "default": 100.0,
-                                            "help": "The maximum step size for (L)-BFGS line minimizations."}),
-              "scale_lbfgs": (InputValue, {"dtype": int,
-                                           "default": 2,
-                                           "help": """Scale choice for the initial hessian.
+                "options": ["tolerance", "iter", "step", "adaptive"],
+                "default": [1e-6, 100, 1e-3, 1.0],
+                "dimension": ["energy", "undefined", "length", "undefined"],
+            },
+        ),
+        "tolerances": (
+            InputDictionary,
+            {
+                "dtype": float,
+                "options": ["energy", "force", "position"],
+                "default": [1e-8, 1e-8, 1e-8],
+                "dimension": ["energy", "force", "length"],
+            },
+        ),
+        "old_force": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.zeros, args=(0,)),
+                "help": "The previous force in an optimization step.",
+                "dimension": "force",
+            },
+        ),
+        "old_direction": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.zeros, args=(0,)),
+                "help": "The previous direction.",
+            },
+        ),
+        "biggest_step": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 100.0,
+                "help": "The maximum step size for (L)-BFGS line minimizations.",
+            },
+        ),
+        "scale_lbfgs": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": 2,
+                "help": """Scale choice for the initial hessian.
                                             0 identity.
                                             1 Use first member of position/gradient list.
-                                            2 Use last  member of position/gradient list."""}),
-              "invhessian_bfgs": (InputArray, {"dtype": float,
-                                               "default": input_default(factory=np.eye, args=(0,)),
-                                               "help": "Approximate inverse Hessian for BFGS, if known."}),
-              "qlist_lbfgs": (InputArray, {"dtype": float,
-                                           "default": input_default(factory=np.zeros, args=(0,)),
-                                           "help": "List of previous position differences for L-BFGS, if known."}),
-              "glist_lbfgs": (InputArray, {"dtype": float,
-                                           "default": input_default(factory=np.zeros, args=(0,)),
-                                           "help": "List of previous gradient differences for L-BFGS, if known."}),
-              "corrections_lbfgs": (InputValue, {"dtype": int,
-                                                 "default": 5,
-                                                 "help": "The number of past vectors to store for L-BFGS."}),
-              "endpoints": (InputDictionary, {"dtype": [bool, str],
-                                              "options": ['optimize', 'algorithm'],
-                                              "default": [True, "bfgs"],
-                                              "help": "Geometry optimization of endpoints"}),
-              "spring": (InputDictionary, {"dtype": [bool, float, float, float],
-                                           "options": ["varsprings", "kappa", "kappamax", "kappamin"],
-                                           "default": [False, 1.0, 1.5, 0.5],
-                                           "help": "Uniform or variable spring constants along the elastic band"}),
-              "climb": (InputValue, {"dtype": bool,
-                                     "default": False,
-                                     "help": "Use climbing image NEB"})
-              }
+                                            2 Use last  member of position/gradient list.""",
+            },
+        ),
+        "invhessian_bfgs": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.eye, args=(0,)),
+                "help": "Approximate inverse Hessian for BFGS, if known.",
+            },
+        ),
+        "qlist_lbfgs": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.zeros, args=(0,)),
+                "help": "List of previous position differences for L-BFGS, if known.",
+            },
+        ),
+        "glist_lbfgs": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.zeros, args=(0,)),
+                "help": "List of previous gradient differences for L-BFGS, if known.",
+            },
+        ),
+        "corrections_lbfgs": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": 5,
+                "help": "The number of past vectors to store for L-BFGS.",
+            },
+        ),
+        "endpoints": (
+            InputDictionary,
+            {
+                "dtype": [bool, str],
+                "options": ["optimize", "algorithm"],
+                "default": [True, "bfgs"],
+                "help": "Geometry optimization of endpoints",
+            },
+        ),
+        "spring": (
+            InputDictionary,
+            {
+                "dtype": [bool, float, float, float],
+                "options": ["varsprings", "kappa", "kappamax", "kappamin"],
+                "default": [False, 1.0, 1.5, 0.5],
+                "help": "Uniform or variable spring constants along the elastic band",
+            },
+        ),
+        "climb": (
+            InputValue,
+            {"dtype": bool, "default": False, "help": "Use climbing image NEB"},
+        ),
+    }
 
     dynamic = {}
 
@@ -111,7 +181,8 @@ class InputNEB(InputDictionary):
     default_label = "NEB"
 
     def store(self, neb):
-        if neb == {}: return
+        if neb == {}:
+            return
         self.ls_options.store(neb.ls_options)
         self.tolerances.store(neb.tolerances)
         self.mode.store(neb.mode)

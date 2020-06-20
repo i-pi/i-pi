@@ -21,13 +21,19 @@ import sys
 
 from ipi.utils.depend import *
 from ipi.utils.units import *
-from ipi.utils.mathtools import eigensystem_ut3x3, invert_ut3x3, exp_ut3x3, det_ut3x3, matrix_exp
+from ipi.utils.mathtools import (
+    eigensystem_ut3x3,
+    invert_ut3x3,
+    exp_ut3x3,
+    det_ut3x3,
+    matrix_exp,
+)
 from ipi.inputs.thermostats import InputThermo
 from ipi.engine.thermostats import Thermostat
 from ipi.engine.cell import Cell
 
 
-__all__ = ['Barostat', 'BaroBZP', 'BaroRGB', 'BaroSCBZP', 'BaroMTK']
+__all__ = ["Barostat", "BaroBZP", "BaroRGB", "BaroSCBZP", "BaroMTK"]
 
 
 class Barostat(dobject):
@@ -58,7 +64,9 @@ class Barostat(dobject):
        press: The system pressure.
     """
 
-    def __init__(self, dt=None, temp=None, tau=None, ebaro=None, thermostat=None, nmts=None):
+    def __init__(
+        self, dt=None, temp=None, tau=None, ebaro=None, thermostat=None, nmts=None
+    ):
         """Initialises base barostat class.
 
         Note that the external stress and the external pressure are synchronized.
@@ -77,25 +85,29 @@ class Barostat(dobject):
         """
 
         dself = dd(self)
-        dself.dt = depend_value(name='dt')
+        dself.dt = depend_value(name="dt")
         if not dt is None:
             self.dt = dt
-        else: self.dt = 1.0
+        else:
+            self.dt = 1.0
 
         dself.temp = depend_value(name="temp")
         if not temp is None:
             self.temp = temp
-        else: self.temp = 1.0
+        else:
+            self.temp = 1.0
 
-        dself.tau = depend_value(name='tau')
+        dself.tau = depend_value(name="tau")
         if not tau is None:
             self.tau = tau
-        else: self.tau = 1.0
+        else:
+            self.tau = 1.0
 
-        dself.ebaro = depend_value(name='ebaro')
+        dself.ebaro = depend_value(name="ebaro")
         if not ebaro is None:
             self.ebaro = ebaro
-        else: self.ebaro = 0.0
+        else:
+            self.ebaro = 0.0
 
         if thermostat is None:
             thermostat = Thermostat()
@@ -103,8 +115,8 @@ class Barostat(dobject):
 
         # temperature to the thermostat
         dpipe(dself.temp, dd(self.thermostat).temp)
-        dself.pext = depend_value(name='pext', value=-1.0)
-        dself.stressext = depend_array(name='stressext', value=-np.ones((3, 3), float))
+        dself.pext = depend_value(name="pext", value=-1.0)
+        dself.stressext = depend_array(name="stressext", value=-np.ones((3, 3), float))
 
     def bind(self, beads, nm, cell, forces, bias=None, prng=None, fixdof=None, nmts=1):
         """Binds beads, cell and forces to the barostat.
@@ -133,33 +145,33 @@ class Barostat(dobject):
         dself = dd(self)
 
         # ~ dself.kstress = depend_value(name='kstress', func=self.get_kstress,
-                                     # ~ dependencies=[dd(beads).q,
-                                                   # ~ dd(beads).qc,
-                                                   # ~ dd(beads).pc,
-                                                   # ~ dd(forces).f])
+        # ~ dependencies=[dd(beads).q,
+        # ~ dd(beads).qc,
+        # ~ dd(beads).pc,
+        # ~ dd(forces).f])
         # ~ dself.stress = depend_value(name='stress', func=self.get_stress,
-                                    # ~ dependencies=[dself.kstress,
-                                                  # ~ dd(cell).V,
-                                                  # ~ dd(forces).vir])
+        # ~ dependencies=[dself.kstress,
+        # ~ dd(cell).V,
+        # ~ dd(forces).vir])
 
-        dself.pot = depend_value(name='pot', value=0.0)
+        dself.pot = depend_value(name="pot", value=0.0)
 
-        dself.kin = depend_value(name='kin', value=0.0)
+        dself.kin = depend_value(name="kin", value=0.0)
 
-        dself.cell_jacobian = depend_value(name='kin', value=0.0)
+        dself.cell_jacobian = depend_value(name="kin", value=0.0)
 
         # ~ if bias != None:
-            # ~ dself.kstress.add_dependency(dd(bias).f)
-            # ~ dself.stress.add_dependency(dd(bias).vir)
+        # ~ dself.kstress.add_dependency(dd(bias).f)
+        # ~ dself.stress.add_dependency(dd(bias).vir)
 
         # Stress depend objects for Suzuki-Chin PIMD
         # ~ dself.kstress_sc = depend_value(name='kstress_sc', func=self.get_kstress_sc,
-                                        # ~ dependencies=[dd(beads).q, dd(beads).qc,
-                                                      # ~ dd(forces).fsc_part_2, dd(forces).f])
+        # ~ dependencies=[dd(beads).q, dd(beads).qc,
+        # ~ dd(forces).fsc_part_2, dd(forces).f])
 
         # ~ dself.stress_sc = depend_value(name='stress_sc', func=self.get_stress_sc,
-                                       # ~ dependencies=[dself.kstress_sc, dd(self.cell).V,
-                                                     # ~ dd(forces).vir, dd(forces).virssc_part_2])
+        # ~ dependencies=[dself.kstress_sc, dd(self.cell).V,
+        # ~ dd(forces).vir, dd(forces).virssc_part_2])
 
         if fixdof is None:
             self.mdof = float(self.beads.natoms) * 3.0
@@ -175,34 +187,34 @@ class Barostat(dobject):
 
     # THESE SHOULD NOT BE USED ANYMORE
     # ~ def get_kstress(self):
-        # ~ """Calculates the quantum centroid virial kinetic stress tensor
-        # ~ estimator.
-        # ~ """
+    # ~ """Calculates the quantum centroid virial kinetic stress tensor
+    # ~ estimator.
+    # ~ """
 
-        # ~ kst = np.zeros((3, 3), float)
-        # ~ q = dstrip(self.beads.q)
-        # ~ qc = dstrip(self.beads.qc)
-        # ~ pc = dstrip(self.beads.pc)
-        # ~ m = dstrip(self.beads.m)
-        # ~ na3 = 3 * self.beads.natoms
-        # ~ fall = dstrip(self.forces.f)
-        # ~ if self.bias == None:
-            # ~ ball = fall * 0.00
-        # ~ else:
-            # ~ ball = dstrip(self.bias.f)
+    # ~ kst = np.zeros((3, 3), float)
+    # ~ q = dstrip(self.beads.q)
+    # ~ qc = dstrip(self.beads.qc)
+    # ~ pc = dstrip(self.beads.pc)
+    # ~ m = dstrip(self.beads.m)
+    # ~ na3 = 3 * self.beads.natoms
+    # ~ fall = dstrip(self.forces.f)
+    # ~ if self.bias == None:
+    # ~ ball = fall * 0.00
+    # ~ else:
+    # ~ ball = dstrip(self.bias.f)
 
-        # ~ for b in range(self.beads.nbeads):
-            # ~ for i in range(3):
-                # ~ for j in range(i, 3):
-                    # ~ kst[i, j] -= np.dot(q[b, i:na3:3] - qc[i:na3:3],
-                                        # ~ fall[b, j:na3:3] + ball[b, j:na3:3])
+    # ~ for b in range(self.beads.nbeads):
+    # ~ for i in range(3):
+    # ~ for j in range(i, 3):
+    # ~ kst[i, j] -= np.dot(q[b, i:na3:3] - qc[i:na3:3],
+    # ~ fall[b, j:na3:3] + ball[b, j:na3:3])
 
-        # ~ # NOTE: In order to have a well-defined conserved quantity, the Nf kT term in the
-        # ~ # diagonal stress estimator must be taken from the centroid kinetic energy.
-        # ~ for i in range(3):
-            # ~ kst[i, i] += np.dot(pc[i:na3:3], pc[i:na3:3] / m) * self.beads.nbeads
+    # ~ # NOTE: In order to have a well-defined conserved quantity, the Nf kT term in the
+    # ~ # diagonal stress estimator must be taken from the centroid kinetic energy.
+    # ~ for i in range(3):
+    # ~ kst[i, i] += np.dot(pc[i:na3:3], pc[i:na3:3] / m) * self.beads.nbeads
 
-        # ~ return kst
+    # ~ return kst
 
     def kstress_mts_sc(self, level):
         """Calculates the Suzuki-Chin quantum centroid virial kinetic stress tensor
@@ -216,7 +228,7 @@ class Barostat(dobject):
         m = dstrip(self.beads.m)
         na3 = 3 * self.beads.natoms
         fall = dstrip(self.forces.forces_mts(level)) * (1 + self.forces.coeffsc_part_1)
-        if (self.bias == None or level != 0):
+        if self.bias == None or level != 0:
             ball = fall * 0.00
         else:
             ball = dstrip(self.bias.f)
@@ -224,10 +236,11 @@ class Barostat(dobject):
         for b in range(self.beads.nbeads):
             for i in range(3):
                 for j in range(i, 3):
-                    kst[i, j] -= np.dot(q[b, i:na3:3] - qc[i:na3:3],
-                                        fall[b, j:na3:3] + ball[b, j:na3:3])
+                    kst[i, j] -= np.dot(
+                        q[b, i:na3:3] - qc[i:na3:3], fall[b, j:na3:3] + ball[b, j:na3:3]
+                    )
 
-        if(level == self.nmtslevels - 1):
+        if level == self.nmtslevels - 1:
             for i in range(3):
                 kst[i, i] += np.dot(pc[i:na3:3], pc[i:na3:3] / m) * self.beads.nbeads
 
@@ -245,7 +258,7 @@ class Barostat(dobject):
         m = dstrip(self.beads.m)
         na3 = 3 * self.beads.natoms
         fall = dstrip(self.forces.forces_mts(level))
-        if (self.bias == None or level != 0):
+        if self.bias == None or level != 0:
             ball = fall * 0.00
         else:
             ball = dstrip(self.bias.f)
@@ -253,48 +266,49 @@ class Barostat(dobject):
         for b in range(self.beads.nbeads):
             for i in range(3):
                 for j in range(i, 3):
-                    kst[i, j] -= np.dot(q[b, i:na3:3] - qc[i:na3:3],
-                                        fall[b, j:na3:3] + ball[b, j:na3:3])
+                    kst[i, j] -= np.dot(
+                        q[b, i:na3:3] - qc[i:na3:3], fall[b, j:na3:3] + ball[b, j:na3:3]
+                    )
 
-        if(level == self.nmtslevels - 1):
+        if level == self.nmtslevels - 1:
             for i in range(3):
                 kst[i, i] += np.dot(pc[i:na3:3], pc[i:na3:3] / m) * self.beads.nbeads
 
         return kst
 
     # ~ def get_kstress_sc(self):
-        # ~ """Calculates the high order part of the Suzuki-Chin
-        # ~ quantum centroid virial kinetic stress tensor
-        # ~ associated with the forces at a MTS level.
-        # ~ """
+    # ~ """Calculates the high order part of the Suzuki-Chin
+    # ~ quantum centroid virial kinetic stress tensor
+    # ~ associated with the forces at a MTS level.
+    # ~ """
 
-        # ~ kst = np.zeros((3, 3), float)
-        # ~ q = dstrip(self.beads.q)
-        # ~ qc = dstrip(self.beads.qc)
-        # ~ pc = dstrip(self.beads.pc)
-        # ~ m = dstrip(self.beads.m)
-        # ~ na3 = 3 * self.beads.natoms
-        # ~ fall = dstrip(self.forces.fsc_part_2)
+    # ~ kst = np.zeros((3, 3), float)
+    # ~ q = dstrip(self.beads.q)
+    # ~ qc = dstrip(self.beads.qc)
+    # ~ pc = dstrip(self.beads.pc)
+    # ~ m = dstrip(self.beads.m)
+    # ~ na3 = 3 * self.beads.natoms
+    # ~ fall = dstrip(self.forces.fsc_part_2)
 
-        # ~ for b in range(self.beads.nbeads):
-            # ~ for i in range(3):
-                # ~ for j in range(i, 3):
-                    # ~ kst[i, j] -= np.dot(q[b, i:na3:3] - qc[i:na3:3],
-                                        # ~ fall[b, j:na3:3])
-        # ~ return kst
+    # ~ for b in range(self.beads.nbeads):
+    # ~ for i in range(3):
+    # ~ for j in range(i, 3):
+    # ~ kst[i, j] -= np.dot(q[b, i:na3:3] - qc[i:na3:3],
+    # ~ fall[b, j:na3:3])
+    # ~ return kst
 
     # ~ def get_stress(self):
-        # ~ """Calculates the internal stress tensor."""
+    # ~ """Calculates the internal stress tensor."""
 
-        # ~ bvir = np.zeros((3, 3), float)
-        # ~ if self.bias != None:
-            # ~ bvir[:] = self.bias.vir
+    # ~ bvir = np.zeros((3, 3), float)
+    # ~ if self.bias != None:
+    # ~ bvir[:] = self.bias.vir
 
-        # ~ return (self.kstress + self.forces.virs + bvir) / self.cell.V
+    # ~ return (self.kstress + self.forces.virs + bvir) / self.cell.V
 
     # ~ def get_stress_sc(self):
-        # ~ """Calculates the high order part of the Suzuki-Chin internal stress tensor."""
-        # ~ return (self.kstress_sc + np.sum(dstrip(self.forces.virssc_part_2), axis=0)) / self.cell.V
+    # ~ """Calculates the high order part of the Suzuki-Chin internal stress tensor."""
+    # ~ return (self.kstress_sc + np.sum(dstrip(self.forces.virssc_part_2), axis=0)) / self.cell.V
 
     def stress_mts_sc(self, level):
         """Calculates the internal Suzuki-Chin stress tensor
@@ -302,10 +316,18 @@ class Barostat(dobject):
         """
 
         bvir = np.zeros((3, 3), float)
-        if (self.bias != None and level == 0):
+        if self.bias != None and level == 0:
             bvir[:] = self.bias.vir
 
-        return (self.kstress_mts_sc(level) + np.sum(self.forces.virs_mts(level) * (1 + self.forces.coeffsc_part_1).reshape((self.beads.nbeads, 1, 1)), axis=0) + bvir) / self.cell.V
+        return (
+            self.kstress_mts_sc(level)
+            + np.sum(
+                self.forces.virs_mts(level)
+                * (1 + self.forces.coeffsc_part_1).reshape((self.beads.nbeads, 1, 1)),
+                axis=0,
+            )
+            + bvir
+        ) / self.cell.V
 
     def stress_mts(self, level):
         """Calculates the internal stress tensor
@@ -313,10 +335,12 @@ class Barostat(dobject):
         """
 
         bvir = np.zeros((3, 3), float)
-        if (self.bias != None and level == 0):
+        if self.bias != None and level == 0:
             bvir[:] = self.bias.vir
 
-        return (self.kstress_mts(level) + self.forces.vir_mts(level) + bvir) / self.cell.V
+        return (
+            self.kstress_mts(level) + self.forces.vir_mts(level) + bvir
+        ) / self.cell.V
 
     def pstep(self, level=0):
         """Dummy momenta propagator step."""
@@ -343,7 +367,16 @@ class BaroBZP(Barostat):
        m: The mass associated with the volume degree of freedom.
     """
 
-    def __init__(self, dt=None, temp=None, tau=None, ebaro=None, thermostat=None, pext=None, p=None):
+    def __init__(
+        self,
+        dt=None,
+        temp=None,
+        tau=None,
+        ebaro=None,
+        thermostat=None,
+        pext=None,
+        p=None,
+    ):
         """Initializes BZP barostat.
 
         Args:
@@ -362,7 +395,7 @@ class BaroBZP(Barostat):
         super(BaroBZP, self).__init__(dt, temp, tau, ebaro, thermostat)
 
         dself = dd(self)  # direct access
-        dself.p = depend_array(name='p', value=np.atleast_1d(0.0))
+        dself.p = depend_array(name="p", value=np.atleast_1d(0.0))
 
         if not p is None:
             self.p = np.asarray([p])
@@ -397,30 +430,50 @@ class BaroBZP(Barostat):
 
         # obtain the thermostat mass from the given time constant
         # note that the barostat temperature is nbeads times the physical T
-        dself.m = depend_array(name='m', value=np.atleast_1d(0.0),
-                               func=(lambda: np.asarray([self.tau**2 * 3 * self.beads.natoms * Constants.kb * self.temp])),
-                               dependencies=[dself.tau, dself.temp])
+        dself.m = depend_array(
+            name="m",
+            value=np.atleast_1d(0.0),
+            func=(
+                lambda: np.asarray(
+                    [self.tau ** 2 * 3 * self.beads.natoms * Constants.kb * self.temp]
+                )
+            ),
+            dependencies=[dself.tau, dself.temp],
+        )
 
         # binds the thermostat to the piston degrees of freedom
         self.thermostat.bind(pm=[self.p, self.m], prng=prng)
 
         # barostat elastic energy
-        dself.pot = depend_value(name='pot', func=self.get_pot,
-                                 dependencies=[dd(cell).V, dself.pext])
+        dself.pot = depend_value(
+            name="pot", func=self.get_pot, dependencies=[dd(cell).V, dself.pext]
+        )
 
-        dself.kin = depend_value(name='kin',
-                                 func=(lambda: 0.5 * self.p[0]**2 / self.m[0]),
-                                 dependencies=[dself.p, dself.m])
+        dself.kin = depend_value(
+            name="kin",
+            func=(lambda: 0.5 * self.p[0] ** 2 / self.m[0]),
+            dependencies=[dself.p, dself.m],
+        )
 
         # defines the term that accounts for the explicit dependence of the volume on the ensemble
-        dself.cell_jacobian = depend_value(name='cell_jacobian', func=self.get_cell_jacobian,
-                                           dependencies=[dd(self.cell).V, dself.temp])
+        dself.cell_jacobian = depend_value(
+            name="cell_jacobian",
+            func=self.get_cell_jacobian,
+            dependencies=[dd(self.cell).V, dself.temp],
+        )
 
         # the barostat energy must be computed from bits & pieces (overwrite the default)
-        dself.ebaro = depend_value(name='ebaro', func=self.get_ebaro,
-                                   dependencies=[dself.kin, dself.pot,
-                                                 dd(self.cell).V, dself.temp,
-                                                 dd(self.thermostat).ethermo])
+        dself.ebaro = depend_value(
+            name="ebaro",
+            func=self.get_ebaro,
+            dependencies=[
+                dself.kin,
+                dself.pot,
+                dd(self.cell).V,
+                dself.temp,
+                dd(self.thermostat).ethermo,
+            ],
+        )
 
     def get_pot(self):
         """Calculates the elastic strain energy of the cell."""
@@ -442,36 +495,54 @@ class BaroBZP(Barostat):
         """Propagates the momentum of the barostat."""
 
         # we are assuming then that p the coupling between p^2 and dp/dt only involves the fast force
-        dt = self.pdt[level]  # this is already set to be half a time step at the specified MTS depth
-        dt2 = dt**2
-        dt3 = dt**3 / 3.0
+        dt = self.pdt[
+            level
+        ]  # this is already set to be half a time step at the specified MTS depth
+        dt2 = dt ** 2
+        dt3 = dt ** 3 / 3.0
 
         # computes the pressure associated with the forces at each MTS level.
         press = np.trace(self.stress_mts(level)) / 3.0
         self.p += dt * 3.0 * (self.cell.V * press)
 
         # integerates the kinetic part of the pressure with the force at the inner-most level.
-        if(level == self.nmtslevels - 1):
+        if level == self.nmtslevels - 1:
             press = 0
-            self.p += dt * 3.0 * (self.cell.V * (press - self.beads.nbeads * self.pext) + Constants.kb * self.temp)
+            self.p += (
+                dt
+                * 3.0
+                * (
+                    self.cell.V * (press - self.beads.nbeads * self.pext)
+                    + Constants.kb * self.temp
+                )
+            )
 
             pc = dstrip(self.beads.pc)
-            fc = np.sum(dstrip(self.forces.forces_mts(level)), axis=0) / self.beads.nbeads
+            fc = (
+                np.sum(dstrip(self.forces.forces_mts(level)), axis=0)
+                / self.beads.nbeads
+            )
             m = dstrip(self.beads.m3)[0]
 
-            self.p += (dt2 * np.dot(pc, fc / m) + dt3 * np.dot(fc, fc / m)) * self.beads.nbeads
+            self.p += (
+                dt2 * np.dot(pc, fc / m) + dt3 * np.dot(fc, fc / m)
+            ) * self.beads.nbeads
 
     def qcstep(self):
         """Propagates the centroid position and momentum and the volume."""
 
         v = self.p[0] / self.m[0]
-        halfdt = self.qdt  # this is set to half the inner loop in all integrators that use a barostat
+        halfdt = (
+            self.qdt
+        )  # this is set to half the inner loop in all integrators that use a barostat
         expq, expp = (np.exp(v * halfdt), np.exp(-v * halfdt))
 
         m = dstrip(self.beads.m3)[0]
 
         self.nm.qnm[0, :] *= expq
-        self.nm.qnm[0, :] += ((expq - expp) / (2.0 * v)) * (dstrip(self.nm.pnm)[0, :] / m)
+        self.nm.qnm[0, :] += ((expq - expp) / (2.0 * v)) * (
+            dstrip(self.nm.pnm)[0, :] / m
+        )
         self.nm.pnm[0, :] *= expp
 
         self.cell.h *= expq
@@ -491,7 +562,16 @@ class BaroSCBZP(Barostat):
        m: The mass associated with the volume degree of freedom.
     """
 
-    def __init__(self, dt=None, temp=None, tau=None, ebaro=None, thermostat=None, pext=None, p=None):
+    def __init__(
+        self,
+        dt=None,
+        temp=None,
+        tau=None,
+        ebaro=None,
+        thermostat=None,
+        pext=None,
+        p=None,
+    ):
         """Initializes SC barostat.
 
         Args:
@@ -510,7 +590,7 @@ class BaroSCBZP(Barostat):
         super(BaroSCBZP, self).__init__(dt, temp, tau, ebaro, thermostat)
         dself = dd(self)
 
-        dself.p = depend_array(name='p', value=np.atleast_1d(0.0))
+        dself.p = depend_array(name="p", value=np.atleast_1d(0.0))
 
         if not p is None:
             self.p = np.asarray([p])
@@ -544,30 +624,49 @@ class BaroSCBZP(Barostat):
         dself = dd(self)
 
         # obtain the thermostat mass from the given time constant
-        dself.m = depend_array(name='m', value=np.atleast_1d(0.0),
-                               func=(lambda: np.asarray([self.tau**2 * 3 * self.beads.natoms * Constants.kb * self.temp])),
-                               dependencies=[dself.tau, dself.temp])
+        dself.m = depend_array(
+            name="m",
+            value=np.atleast_1d(0.0),
+            func=(
+                lambda: np.asarray(
+                    [self.tau ** 2 * 3 * self.beads.natoms * Constants.kb * self.temp]
+                )
+            ),
+            dependencies=[dself.tau, dself.temp],
+        )
 
         # binds the thermostat to the piston degrees of freedom
         self.thermostat.bind(pm=[self.p, self.m], prng=prng)
 
         # barostat elastic energy
-        dself.pot = depend_value(name='pot', func=self.get_pot,
-                                 dependencies=[dd(cell).V, dself.pext])
+        dself.pot = depend_value(
+            name="pot", func=self.get_pot, dependencies=[dd(cell).V, dself.pext]
+        )
 
-        dself.kin = depend_value(name='kin',
-                                 func=(lambda: 0.5 * self.p[0]**2 / self.m[0]),
-                                 dependencies=[dself.p, dself.m])
+        dself.kin = depend_value(
+            name="kin",
+            func=(lambda: 0.5 * self.p[0] ** 2 / self.m[0]),
+            dependencies=[dself.p, dself.m],
+        )
 
         # defines the term that accounts for the explicit dependence of the ensemble probability on the volume
-        dself.cell_jacobian = depend_value(name='cell_jacobian', func=self.get_cell_jacobian,
-                                           dependencies=[dd(self.cell).V, dself.temp])
+        dself.cell_jacobian = depend_value(
+            name="cell_jacobian",
+            func=self.get_cell_jacobian,
+            dependencies=[dd(self.cell).V, dself.temp],
+        )
 
         # the barostat energy must be computed from bits & pieces (overwrite the default)
-        dself.ebaro = depend_value(name='ebaro', func=self.get_ebaro,
-                                   dependencies=[dself.kin, dself.pot,
-                                                 dself.cell_jacobian,
-                                                 dd(self.thermostat).ethermo])
+        dself.ebaro = depend_value(
+            name="ebaro",
+            func=self.get_ebaro,
+            dependencies=[
+                dself.kin,
+                dself.pot,
+                dself.cell_jacobian,
+                dd(self.thermostat).ethermo,
+            ],
+        )
 
     def get_pot(self):
         """Calculates the elastic strain energy of the cell."""
@@ -599,35 +698,57 @@ class BaroSCBZP(Barostat):
         # self.pscstep()
 
         # we are assuming then that p the coupling between p^2 and dp/dt only involves the fast force
-        dt = self.pdt[level]  # this is already set to be half a time step at the specified MTS depth
-        dt2 = dt**2
-        dt3 = dt**3 / 3.0
+        dt = self.pdt[
+            level
+        ]  # this is already set to be half a time step at the specified MTS depth
+        dt2 = dt ** 2
+        dt3 = dt ** 3 / 3.0
 
         # computes the pressure associated with the forces at each MTS level and adds the +- 1/3 SC correction.
         press = np.trace(self.stress_mts_sc(level)) / 3.0
         self.p += dt * 3.0 * (self.cell.V * press)
 
         # integerates the kinetic part of the pressure with the force at the inner-most level.
-        if (level == self.nmtslevels - 1):
+        if level == self.nmtslevels - 1:
             press = 0
-            self.p += dt * 3.0 * (self.cell.V * (press - self.beads.nbeads * self.pext) + Constants.kb * self.temp)
+            self.p += (
+                dt
+                * 3.0
+                * (
+                    self.cell.V * (press - self.beads.nbeads * self.pext)
+                    + Constants.kb * self.temp
+                )
+            )
             pc = dstrip(self.beads.pc)
-            fc = np.sum(dstrip(self.forces.forces_mts(level)) * (1 + self.forces.coeffsc_part_1), axis=0) / self.beads.nbeads
+            fc = (
+                np.sum(
+                    dstrip(self.forces.forces_mts(level))
+                    * (1 + self.forces.coeffsc_part_1),
+                    axis=0,
+                )
+                / self.beads.nbeads
+            )
             m = dstrip(self.beads.m3)[0]
 
-            self.p += (dt2 * np.dot(pc, fc / m) + dt3 * np.dot(fc, fc / m)) * self.beads.nbeads
+            self.p += (
+                dt2 * np.dot(pc, fc / m) + dt3 * np.dot(fc, fc / m)
+            ) * self.beads.nbeads
 
     def qcstep(self):
         """Propagates the centroid position and momentum and the volume."""
 
         v = self.p[0] / self.m[0]
-        halfdt = self.qdt  # this is set to half the inner loop in all integrators that use a barostat
+        halfdt = (
+            self.qdt
+        )  # this is set to half the inner loop in all integrators that use a barostat
         expq, expp = (np.exp(v * halfdt), np.exp(-v * halfdt))
 
         m = dstrip(self.beads.m3)[0]
 
         self.nm.qnm[0, :] *= expq
-        self.nm.qnm[0, :] += ((expq - expp) / (2.0 * v)) * (dstrip(self.nm.pnm)[0, :] / m)
+        self.nm.qnm[0, :] += ((expq - expp) / (2.0 * v)) * (
+            dstrip(self.nm.pnm)[0, :] / m
+        )
         self.nm.pnm[0, :] *= expp
 
         self.cell.h *= expq
@@ -644,7 +765,17 @@ class BaroRGB(Barostat):
        m: The mass associated with the cell degree of freedom.
        """
 
-    def __init__(self, dt=None, temp=None, tau=None, ebaro=None, thermostat=None, stressext=None, h0=None, p=None):
+    def __init__(
+        self,
+        dt=None,
+        temp=None,
+        tau=None,
+        ebaro=None,
+        thermostat=None,
+        stressext=None,
+        h0=None,
+        p=None,
+    ):
         """Initializes RGB barostat.
 
            Args:
@@ -670,12 +801,18 @@ class BaroRGB(Barostat):
         dself = dd(self)
 
         sync_baro = synchronizer()
-        dself.p6 = depend_array(name='p6', value=np.zeros(6, float),
-                                synchro=sync_baro, func={"p": self.get_3x3to6}
-                                )
-        dself.p = depend_array(name='p', value=np.zeros((3, 3), float),
-                               synchro=sync_baro, func={"p6": self.get_6to3x3}
-                               )
+        dself.p6 = depend_array(
+            name="p6",
+            value=np.zeros(6, float),
+            synchro=sync_baro,
+            func={"p": self.get_3x3to6},
+        )
+        dself.p = depend_array(
+            name="p",
+            value=np.zeros((3, 3), float),
+            synchro=sync_baro,
+            func={"p6": self.get_6to3x3},
+        )
 
         if not p is None:
             self.p = p
@@ -716,46 +853,83 @@ class BaroRGB(Barostat):
         # note that the barostat temperature is nbeads times the physical T
         dself = dd(self)
 
-        dself.m = depend_array(name='m', value=np.atleast_1d(0.0),
-                               func=(lambda: np.asarray([self.tau**2 * self.beads.natoms * Constants.kb * self.temp])),
-                               dependencies=[dself.tau, dself.temp])
+        dself.m = depend_array(
+            name="m",
+            value=np.atleast_1d(0.0),
+            func=(
+                lambda: np.asarray(
+                    [self.tau ** 2 * self.beads.natoms * Constants.kb * self.temp]
+                )
+            ),
+            dependencies=[dself.tau, dself.temp],
+        )
 
-        dself.m6 = depend_array(name='m6', value=np.zeros(6, float),
-                                func=(lambda: np.asarray([1, 1, 1, 1, 1, 1]) * self.m[0]),
-                                dependencies=[dself.m])
+        dself.m6 = depend_array(
+            name="m6",
+            value=np.zeros(6, float),
+            func=(lambda: np.asarray([1, 1, 1, 1, 1, 1]) * self.m[0]),
+            dependencies=[dself.m],
+        )
 
         # overrides definition of pot to depend on the many things it depends on for anisotropic cell
-        dself.pot = depend_value(name='pot', func=self.get_pot,
-                                 dependencies=[dd(self.cell).h, dd(self.h0).h,
-                                               dd(self.h0).V, dd(self.h0).ih, dself.stressext])
+        dself.pot = depend_value(
+            name="pot",
+            func=self.get_pot,
+            dependencies=[
+                dd(self.cell).h,
+                dd(self.h0).h,
+                dd(self.h0).V,
+                dd(self.h0).ih,
+                dself.stressext,
+            ],
+        )
 
         # binds the thermostat to the piston degrees of freedom
         self.thermostat.bind(pm=[self.p6, self.m6], prng=prng)
 
-        dself.kin = depend_value(name='kin',
-                                 func=(lambda: 0.5 * np.trace(np.dot(self.p.T, self.p)) / self.m[0]),
-                                 dependencies=[dself.p, dself.m])
+        dself.kin = depend_value(
+            name="kin",
+            func=(lambda: 0.5 * np.trace(np.dot(self.p.T, self.p)) / self.m[0]),
+            dependencies=[dself.p, dself.m],
+        )
 
         # defines the term that accounts for the explicit dependence of the ensemble on the cell
-        dself.cell_jacobian = depend_value(name='cell_jacobian', func=self.get_cell_jacobian,
-                                           dependencies=[dd(self.cell).h, dself.temp])
+        dself.cell_jacobian = depend_value(
+            name="cell_jacobian",
+            func=self.get_cell_jacobian,
+            dependencies=[dd(self.cell).h, dself.temp],
+        )
 
         # the barostat energy must be computed from bits & pieces (overwrite the default)
-        dself.ebaro = depend_value(name='ebaro', func=self.get_ebaro,
-                                   dependencies=[dself.kin, dself.pot,
-                                                 dself.cell_jacobian,
-                                                 dd(self.thermostat).ethermo])
+        dself.ebaro = depend_value(
+            name="ebaro",
+            func=self.get_ebaro,
+            dependencies=[
+                dself.kin,
+                dself.pot,
+                dself.cell_jacobian,
+                dd(self.thermostat).ethermo,
+            ],
+        )
 
     def get_3x3to6(self):
         rp = np.zeros(6, float)
-        rp[0] = self.p[0, 0]; rp[1] = self.p[1, 1]; rp[2] = self.p[2, 2];
-        rp[3] = self.p[0, 1]; rp[4] = self.p[0, 2]; rp[5] = self.p[1, 2];
+        rp[0] = self.p[0, 0]
+        rp[1] = self.p[1, 1]
+        rp[2] = self.p[2, 2]
+        rp[3] = self.p[0, 1]
+        rp[4] = self.p[0, 2]
+        rp[5] = self.p[1, 2]
         return rp
 
     def get_6to3x3(self):
         rp = np.zeros((3, 3), float)
-        rp[0, 0] = self.p6[0]; rp[1, 1] = self.p6[1]; rp[2, 2] = self.p6[2];
-        rp[0, 1] = self.p6[3]; rp[0, 2] = self.p6[4]; rp[1, 2] = self.p6[5];
+        rp[0, 0] = self.p6[0]
+        rp[1, 1] = self.p6[1]
+        rp[2, 2] = self.p6[2]
+        rp[0, 1] = self.p6[3]
+        rp[0, 2] = self.p6[4]
+        rp[1, 2] = self.p6[5]
         return rp
 
     def get_pot(self):
@@ -767,8 +941,8 @@ class BaroRGB(Barostat):
         eps = 0.5 * (eps - np.identity(3))
 
         return self.h0.V * np.trace(np.dot(self.stressext, eps)) * self.beads.nbeads
-        #p = np.trace(self.stressext)/3
-        #return (p*(self.cell.V-self.h0.V) +
+        # p = np.trace(self.stressext)/3
+        # return (p*(self.cell.V-self.h0.V) +
         #    self.h0.V * np.trace(np.dot(self.stressext-np.eye(3)*p, eps)) ) * self.beads.nbeads
 
     def get_cell_jacobian(self):
@@ -786,8 +960,8 @@ class BaroRGB(Barostat):
         """Propagates the momenta for half a time step."""
 
         dt = self.pdt[level]
-        dt2 = dt**2
-        dt3 = dt**3 / 3.0
+        dt2 = dt ** 2
+        dt3 = dt ** 3 / 3.0
         m = dstrip(self.beads.m3)[0].reshape(self.beads.natoms, 3)
 
         hh0 = np.dot(self.cell.h, self.h0.ih)
@@ -798,15 +972,26 @@ class BaroRGB(Barostat):
         self.p += dt * (self.cell.V * np.triu(stress))
 
         # integerates the kinetic part of the stress with the force at the inner-most level.
-        if(level == self.nmtslevels - 1):
+        if level == self.nmtslevels - 1:
 
-            self.p += dt * (self.cell.V * np.triu(-self.beads.nbeads * pi_ext) + Constants.kb * self.temp * L)
+            self.p += dt * (
+                self.cell.V * np.triu(-self.beads.nbeads * pi_ext)
+                + Constants.kb * self.temp * L
+            )
 
             pc = dstrip(self.beads.pc).reshape(self.beads.natoms, 3)
-            fc = np.sum(dstrip(self.forces.forces_mts(level)), axis=0).reshape(self.beads.natoms, 3) / self.beads.nbeads
+            fc = (
+                np.sum(dstrip(self.forces.forces_mts(level)), axis=0).reshape(
+                    self.beads.natoms, 3
+                )
+                / self.beads.nbeads
+            )
             fcTonm = (fc / dstrip(self.beads.m3)[0].reshape(self.beads.natoms, 3)).T
 
-            self.p += np.triu(dt2 * np.dot(fcTonm, pc) + dt3 * np.dot(fcTonm, fc)) * self.beads.nbeads
+            self.p += (
+                np.triu(dt2 * np.dot(fcTonm, pc) + dt3 * np.dot(fcTonm, fc))
+                * self.beads.nbeads
+            )
 
     def qcstep(self):
         """Propagates the centroid position and momentum and the volume."""
@@ -815,18 +1000,17 @@ class BaroRGB(Barostat):
         halfdt = self.qdt
         expq, expp = (matrix_exp(v * halfdt), matrix_exp(-v * halfdt))
 
-
         sinh = np.dot(invert_ut3x3(v), (expq - expp) / (2.0))
 
         q = dstrip(self.nm.qnm)[0].copy().reshape((self.beads.natoms, 3))
         p = dstrip(self.nm.pnm)[0].copy()
 
         q = np.dot(q, expq.T)
-        q += np.dot((p/self.beads.m3[0]).reshape((self.beads.natoms, 3)), sinh.T)
+        q += np.dot((p / self.beads.m3[0]).reshape((self.beads.natoms, 3)), sinh.T)
         p = np.dot(p.reshape((self.beads.natoms, 3)), expp.T)
 
-        self.nm.qnm[0] = q.reshape((self.beads.natoms* 3))
-        self.nm.pnm[0] = p.reshape((self.beads.natoms* 3))
+        self.nm.qnm[0] = q.reshape((self.beads.natoms * 3))
+        self.nm.pnm[0] = p.reshape((self.beads.natoms * 3))
 
         self.cell.h = np.dot(expq, self.cell.h)
 
@@ -842,7 +1026,16 @@ class BaroMTK(Barostat):
        m: The mass associated with the cell degree of freedom.
        """
 
-    def __init__(self, dt=None, temp=None, tau=None, ebaro=None, thermostat=None, pext=None, p=None):
+    def __init__(
+        self,
+        dt=None,
+        temp=None,
+        tau=None,
+        ebaro=None,
+        thermostat=None,
+        pext=None,
+        p=None,
+    ):
         """Initializes RGB barostat.
 
            Args:
@@ -868,12 +1061,18 @@ class BaroMTK(Barostat):
         dself = dd(self)
 
         sync_baro = synchronizer()
-        dself.p6 = depend_array(name='p6', value=np.zeros(6, float),
-                                synchro=sync_baro, func={"p": self.get_3x3to6}
-                                )
-        dself.p = depend_array(name='p', value=np.zeros((3, 3), float),
-                               synchro=sync_baro, func={"p6": self.get_6to3x3}
-                               )
+        dself.p6 = depend_array(
+            name="p6",
+            value=np.zeros(6, float),
+            synchro=sync_baro,
+            func={"p": self.get_3x3to6},
+        )
+        dself.p = depend_array(
+            name="p",
+            value=np.zeros((3, 3), float),
+            synchro=sync_baro,
+            func={"p6": self.get_6to3x3},
+        )
 
         if not p is None:
             self.p = p
@@ -883,7 +1082,7 @@ class BaroMTK(Barostat):
         if not pext is None:
             self.pext = pext
         else:
-            self.pext = -1.
+            self.pext = -1.0
 
     def bind(self, beads, nm, cell, forces, bias=None, prng=None, fixdof=None, nmts=1):
         """Binds beads, cell and forces to the barostat.
@@ -909,55 +1108,84 @@ class BaroMTK(Barostat):
         # note that the barostat temperature is nbeads times the physical T
         dself = dd(self)
 
-        dself.m = depend_array(name='m', value=np.atleast_1d(0.0),
-                               func=(lambda: np.asarray([self.tau**2 * self.beads.natoms * Constants.kb * self.temp])),
-                               dependencies=[dself.tau, dself.temp])
+        dself.m = depend_array(
+            name="m",
+            value=np.atleast_1d(0.0),
+            func=(
+                lambda: np.asarray(
+                    [self.tau ** 2 * self.beads.natoms * Constants.kb * self.temp]
+                )
+            ),
+            dependencies=[dself.tau, dself.temp],
+        )
 
-        dself.m6 = depend_array(name='m6', value=np.zeros(6, float),
-                                func=(lambda: np.asarray([1, 1, 1, 1, 1, 1]) * self.m[0]),
-                                dependencies=[dself.m])
+        dself.m6 = depend_array(
+            name="m6",
+            value=np.zeros(6, float),
+            func=(lambda: np.asarray([1, 1, 1, 1, 1, 1]) * self.m[0]),
+            dependencies=[dself.m],
+        )
 
         # overrides definition of pot to depend on the many things it depends on for anisotropic cell
-        dself.pot = depend_value(name='pot', func=self.get_pot,
-                                 dependencies=[dd(self.cell).h, dself.pext])
+        dself.pot = depend_value(
+            name="pot", func=self.get_pot, dependencies=[dd(self.cell).h, dself.pext]
+        )
 
         # binds the thermostat to the piston degrees of freedom
         self.thermostat.bind(pm=[self.p6, self.m6], prng=prng)
 
-        dself.kin = depend_value(name='kin',
-                                 func=(lambda: 0.5 * np.trace(np.dot(self.p.T, self.p)) / self.m[0]),
-                                 dependencies=[dself.p, dself.m])
+        dself.kin = depend_value(
+            name="kin",
+            func=(lambda: 0.5 * np.trace(np.dot(self.p.T, self.p)) / self.m[0]),
+            dependencies=[dself.p, dself.m],
+        )
 
         # defines the term that accounts for the explicit dependence of the ensemble on the cell
-        dself.cell_jacobian = depend_value(name='cell_jacobian', func=self.get_cell_jacobian,
-                                           dependencies=[dd(self.cell).h, dself.temp])
+        dself.cell_jacobian = depend_value(
+            name="cell_jacobian",
+            func=self.get_cell_jacobian,
+            dependencies=[dd(self.cell).h, dself.temp],
+        )
 
         # the barostat energy must be computed from bits & pieces (overwrite the default)
-        dself.ebaro = depend_value(name='ebaro', func=self.get_ebaro,
-                                   dependencies=[dself.kin, dself.pot,
-                                                 dself.cell_jacobian,
-                                                 dd(self.thermostat).ethermo])
+        dself.ebaro = depend_value(
+            name="ebaro",
+            func=self.get_ebaro,
+            dependencies=[
+                dself.kin,
+                dself.pot,
+                dself.cell_jacobian,
+                dd(self.thermostat).ethermo,
+            ],
+        )
 
     def get_3x3to6(self):
         rp = np.zeros(6, float)
-        rp[0] = self.p[0, 0]; rp[1] = self.p[1, 1]; rp[2] = self.p[2, 2];
-        rp[3] = self.p[0, 1]; rp[4] = self.p[0, 2]; rp[5] = self.p[1, 2];
+        rp[0] = self.p[0, 0]
+        rp[1] = self.p[1, 1]
+        rp[2] = self.p[2, 2]
+        rp[3] = self.p[0, 1]
+        rp[4] = self.p[0, 2]
+        rp[5] = self.p[1, 2]
         return rp
 
     def get_6to3x3(self):
         rp = np.zeros((3, 3), float)
-        rp[0, 0] = self.p6[0]; rp[1, 1] = self.p6[1]; rp[2, 2] = self.p6[2];
-        rp[0, 1] = self.p6[3]; rp[0, 2] = self.p6[4]; rp[1, 2] = self.p6[5];
+        rp[0, 0] = self.p6[0]
+        rp[1, 1] = self.p6[1]
+        rp[2, 2] = self.p6[2]
+        rp[0, 1] = self.p6[3]
+        rp[0, 2] = self.p6[4]
+        rp[1, 2] = self.p6[5]
         return rp
 
     def get_pot(self):
         """Calculates the elastic strain energy of the cell."""
 
-
-        #return self.h0.V * np.trace(np.dot(self.stressext, eps)) * self.beads.nbeads
+        # return self.h0.V * np.trace(np.dot(self.stressext, eps)) * self.beads.nbeads
         return self.cell.V * self.pext * self.beads.nbeads
-        #p = np.trace(self.stressext)/3
-        #return (p*(self.cell.V-self.h0.V) +
+        # p = np.trace(self.stressext)/3
+        # return (p*(self.cell.V-self.h0.V) +
         #    self.h0.V * np.trace(np.dot(self.stressext-np.eye(3)*p, eps)) ) * self.beads.nbeads
 
     def get_cell_jacobian(self):
@@ -975,26 +1203,39 @@ class BaroMTK(Barostat):
         """Propagates the momenta for half a time step."""
 
         dt = self.pdt[level]
-        dt2 = dt**2
-        dt3 = dt**3 / 3.0
+        dt2 = dt ** 2
+        dt3 = dt ** 3 / 3.0
         m = dstrip(self.beads.m3)[0].reshape(self.beads.natoms, 3)
 
-        pi_ext = np.eye(3)*self.pext #np.dot(hh0, np.dot(self.stressext, hh0.T)) * self.h0.V / self.cell.V
+        pi_ext = (
+            np.eye(3) * self.pext
+        )  # np.dot(hh0, np.dot(self.stressext, hh0.T)) * self.h0.V / self.cell.V
         L = np.diag([3, 2, 1])
 
         stress = dstrip(self.stress_mts(level))
         self.p += dt * (self.cell.V * np.triu(stress))
 
         # integerates the kinetic part of the stress with the force at the inner-most level.
-        if(level == self.nmtslevels - 1):
+        if level == self.nmtslevels - 1:
 
-            self.p += dt * (self.cell.V * np.triu(-self.beads.nbeads * pi_ext) + Constants.kb * self.temp * L)
+            self.p += dt * (
+                self.cell.V * np.triu(-self.beads.nbeads * pi_ext)
+                + Constants.kb * self.temp * L
+            )
 
             pc = dstrip(self.beads.pc).reshape(self.beads.natoms, 3)
-            fc = np.sum(dstrip(self.forces.forces_mts(level)), axis=0).reshape(self.beads.natoms, 3) / self.beads.nbeads
+            fc = (
+                np.sum(dstrip(self.forces.forces_mts(level)), axis=0).reshape(
+                    self.beads.natoms, 3
+                )
+                / self.beads.nbeads
+            )
             fcTonm = (fc / dstrip(self.beads.m3)[0].reshape(self.beads.natoms, 3)).T
 
-            self.p += np.triu(dt2 * np.dot(fcTonm, pc) + dt3 * np.dot(fcTonm, fc)) * self.beads.nbeads
+            self.p += (
+                np.triu(dt2 * np.dot(fcTonm, pc) + dt3 * np.dot(fcTonm, fc))
+                * self.beads.nbeads
+            )
 
     def qcstep(self):
         """Propagates the centroid position and momentum and the volume."""
@@ -1003,17 +1244,16 @@ class BaroMTK(Barostat):
         halfdt = self.qdt
         expq, expp = (matrix_exp(v * halfdt), matrix_exp(-v * halfdt))
 
-
         sinh = np.dot(invert_ut3x3(v), (expq - expp) / (2.0))
 
         q = dstrip(self.nm.qnm)[0].copy().reshape((self.beads.natoms, 3))
         p = dstrip(self.nm.pnm)[0].copy()
 
         q = np.dot(q, expq.T)
-        q += np.dot((p/self.beads.m3[0]).reshape((self.beads.natoms, 3)), sinh.T)
+        q += np.dot((p / self.beads.m3[0]).reshape((self.beads.natoms, 3)), sinh.T)
         p = np.dot(p.reshape((self.beads.natoms, 3)), expp.T)
 
-        self.nm.qnm[0] = q.reshape((self.beads.natoms* 3))
-        self.nm.pnm[0] = p.reshape((self.beads.natoms* 3))
+        self.nm.qnm[0] = q.reshape((self.beads.natoms * 3))
+        self.nm.pnm[0] = p.reshape((self.beads.natoms * 3))
 
         self.cell.h = np.dot(expq, self.cell.h)

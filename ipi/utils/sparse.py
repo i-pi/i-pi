@@ -14,15 +14,16 @@ import numpy as np
 # Pass a function capable of loading the file to avoid np.load (loader='numpy')
 
 
-def load_npz(file, loader='numpy'):
-    if loader == 'numpy':
+def load_npz(file, loader="numpy"):
+    if loader == "numpy":
         l = np.load(file)
     else:
         l = loader(file)
-    if l['kind'] == 'csr':
-        return csr_matrix(a=l['a'], ia=l['ia'], ja=l['ja'], m=l['m'], n=l['n'])
+    if l["kind"] == "csr":
+        return csr_matrix(a=l["a"], ia=l["ia"], ja=l["ja"], m=l["m"], n=l["n"])
     else:
-        return csc_matrix(a=l['a'], ia=l['ia'], ja=l['ja'], m=l['m'], n=l['n'])
+        return csc_matrix(a=l["a"], ia=l["ia"], ja=l["ja"], m=l["m"], n=l["n"])
+
 
 ##########################################################################################
 
@@ -30,14 +31,14 @@ def load_npz(file, loader='numpy'):
 # Pass a function capable of saving the file to avoid np.savez (saver='numpy')
 
 
-def save_npz(file, matrix, saver='numpy', compressed=True):
+def save_npz(file, matrix, saver="numpy", compressed=True):
     a = matrix.a
     ia = matrix.ia
     ja = matrix.ja
     m = matrix.m
     n = matrix.n
     kind = matrix.kind
-    if saver == 'numpy':
+    if saver == "numpy":
         if compressed == True:
             np.savez_compressed(file, a=a, ia=ia, ja=ja, m=m, n=n, kind=kind)
         else:
@@ -45,13 +46,13 @@ def save_npz(file, matrix, saver='numpy', compressed=True):
     else:
         saver(file, compressed=compressed, a=a, ia=ia, ja=ja, m=m, n=n, kind=kind)
 
+
 ##########################################################################################
 
 # Generic base class
 
 
 class sparse_matrix(object):
-
     def __add__(self, b):
         densea = self.toarray()
         denseb = b.toarray()
@@ -77,17 +78,17 @@ class sparse_matrix(object):
     def density(self):
         return float(len(self.a)) / float(self.m * self.n)
 
+
 ##########################################################################################
 
 # Compressed sparse row format
 
 
 class csr_matrix(sparse_matrix):
-
     def __init__(self, nparray=None, **kwargs):
-        self.kind = 'csr'
+        self.kind = "csr"
         # Construct by converting a numpy array to csr
-        if 'a' not in kwargs:
+        if "a" not in kwargs:
             self.m = nparray.shape[0]
             self.n = nparray.shape[1]
             nonzeroids = np.where(nparray != 0)
@@ -99,19 +100,21 @@ class csr_matrix(sparse_matrix):
             self.ja = nonzeroids[1]
         # Construct from sparse format arrays
         else:
-            self.a = kwargs['a']
-            self.ia = kwargs['ia']
-            self.ja = kwargs['ja']
-            self.m = kwargs['m']
-            self.n = kwargs['n']
+            self.a = kwargs["a"]
+            self.ia = kwargs["ia"]
+            self.ja = kwargs["ja"]
+            self.m = kwargs["m"]
+            self.n = kwargs["n"]
 
     # Convert to dense format
     def toarray(self):
         nparray = np.zeros((self.m, self.n), dtype=self.a.dtype)
         for row in range(self.m):
-            nparray[row, self.ja[self.ia[row]:self.ia[row + 1]]] = \
-                self.a[self.ia[row]:self.ia[row + 1]]
+            nparray[row, self.ja[self.ia[row] : self.ia[row + 1]]] = self.a[
+                self.ia[row] : self.ia[row + 1]
+            ]
         return nparray
+
 
 ##########################################################################################
 
@@ -119,11 +122,10 @@ class csr_matrix(sparse_matrix):
 
 
 class csc_matrix(sparse_matrix):
-
     def __init__(self, nparray=None, **kwargs):
-        self.kind = 'csc'
+        self.kind = "csc"
         # Construct by converting a numpy array to csr
-        if 'a' not in kwargs:
+        if "a" not in kwargs:
             self.m = nparray.shape[0]
             self.n = nparray.shape[1]
             nonzeroids = np.where(nparray.T != 0)
@@ -135,18 +137,20 @@ class csc_matrix(sparse_matrix):
             self.ja = nonzeroids[1]
         # Construct from sparse format arrays
         else:
-            self.a = kwargs['a']
-            self.ia = kwargs['ia']
-            self.ja = kwargs['ja']
-            self.m = kwargs['m']
-            self.n = kwargs['n']
+            self.a = kwargs["a"]
+            self.ia = kwargs["ia"]
+            self.ja = kwargs["ja"]
+            self.m = kwargs["m"]
+            self.n = kwargs["n"]
 
     # Convert to dense format
     def toarray(self):
         nparray = np.zeros((self.m, self.n), dtype=self.a.dtype)
         for col in range(self.n):
-            nparray[self.ja[self.ia[col]:self.ia[col + 1]], col] = \
-                self.a[self.ia[col]:self.ia[col + 1]]
+            nparray[self.ja[self.ia[col] : self.ia[col + 1]], col] = self.a[
+                self.ia[col] : self.ia[col + 1]
+            ]
         return nparray
+
 
 ##########################################################################################

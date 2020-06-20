@@ -9,7 +9,7 @@ import traceback
 import sys
 
 
-__all__ = ['Verbosity', 'verbosity', 'banner', 'info', 'warning']
+__all__ = ["Verbosity", "verbosity", "banner", "info", "warning"]
 
 
 VERB_QUIET = 0
@@ -87,7 +87,9 @@ class Verbosity(object):
             elif value == "trace":
                 level = VERB_TRACE
             else:
-                raise ValueError("Invalid verbosity level " + str(value) + " specified.")
+                raise ValueError(
+                    "Invalid verbosity level " + str(value) + " specified."
+                )
             super(Verbosity, self).__setattr__("level", level)
         else:
             super(Verbosity, self).__setattr__(name, value)
@@ -99,7 +101,8 @@ verbosity = Verbosity()
 def banner():
     """Prints out a banner."""
 
-    print("""
+    print(
+        """
  ____       ____       ____       ____
 /    \     /    \     /    \     /    \ 
 |  #################################  |
@@ -115,7 +118,8 @@ def banner():
 |  #################################  |
 \____/     \____/     \____/     \____/
 
-    """)
+    """
+    )
 
 
 def info(text="", show=True):

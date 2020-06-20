@@ -50,10 +50,16 @@ class Client(DriverSocket):
                     _socket = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
                     _socket.connect("/tmp/ipi_" + address)
                 except socket.error:
-                    print('Could not connect to UNIX socket: %s' % ("/tmp/ipi_" + address))
+                    print(
+                        "Could not connect to UNIX socket: %s" % ("/tmp/ipi_" + address)
+                    )
                     sys.exit(1)
             else:
-                raise NameError("Interface mode " + mode + " is not implemented (should be unix/inet)")
+                raise NameError(
+                    "Interface mode "
+                    + mode
+                    + " is not implemented (should be unix/inet)"
+                )
             super(Client, self).__init__(socket=_socket)
         else:
             super(Client, self).__init__(socket=None)
@@ -77,9 +83,11 @@ class Client(DriverSocket):
         if self._callback is not None:
             self._force, self._potential = self._callback(self._positions)
         else:
-            raise NotImplementedError("_getforce must be implemented by providing a self.callback function or overwritten.")
+            raise NotImplementedError(
+                "_getforce must be implemented by providing a self.callback function or overwritten."
+            )
 
-    def run(self, verbose=True, t_max=None, fn_exit='EXIT'):
+    def run(self, verbose=True, t_max=None, fn_exit="EXIT"):
         """Serve forces until asked to finish or socket disconnects.
 
         Serve forces and potential that are calculated in the user provided
@@ -93,21 +101,25 @@ class Client(DriverSocket):
 
         t0 = time.time()
 
-        fmt_header = '{0:>6s} {1:>10s} {2:>10s}'
-        fmt_step = '{0:6d} {1:10.3f} {2:10.3f}'
+        fmt_header = "{0:>6s} {1:>10s} {2:>10s}"
+        fmt_step = "{0:6d} {1:10.3f} {2:10.3f}"
 
         if t_max is None:
-            print('Starting communication loop with no maximum run time.')
+            print("Starting communication loop with no maximum run time.")
         else:
-            print('Starting communication loop with a maximum run time of {0:d} seconds.'.format(t_max))
-            fmt_header += ' {3:>10s}'
-            fmt_step += ' {3:10.1f}'
+            print(
+                "Starting communication loop with a maximum run time of {0:d} seconds.".format(
+                    t_max
+                )
+            )
+            fmt_header += " {3:>10s}"
+            fmt_step += " {3:10.1f}"
 
         if verbose:
-            header = fmt_header.format('step', 'time', 'avg time', 'remaining')
+            header = fmt_header.format("step", "time", "avg time", "remaining")
             print()
             print(header)
-            print(len(header) * '-')
+            print(len(header) * "-")
 
         i_step = 0
         t_step_tot = 0.0
@@ -159,7 +171,7 @@ class Client(DriverSocket):
 
                 # check exit conditions - run time or exit file
                 if t_max is not None and time.time() - t0 > t_max:
-                    print('Maximum run time of {0:d} seconds exceeded.'.format(t_max))
+                    print("Maximum run time of {0:d} seconds exceeded.".format(t_max))
                     break
                 if fn_exit is not None and os.path.exists(fn_exit):
                     print('Exit file "{0:s}" found. Removing file.'.format(fn_exit))
@@ -167,11 +179,15 @@ class Client(DriverSocket):
                     break
 
         except socket.error as e:
-            print('Error communicating through socket: [{0}] {1}'.format(e.errno, e.strerror))
+            print(
+                "Error communicating through socket: [{0}] {1}".format(
+                    e.errno, e.strerror
+                )
+            )
         except KeyboardInterrupt:
-            print(' Keyboard interrupt.')
+            print(" Keyboard interrupt.")
 
-        print('Communication loop finished.')
+        print("Communication loop finished.")
         print()
 
 
@@ -183,7 +199,9 @@ class ClientASE(Client):
     https://wiki.fysik.dtu.dk/ase/
     """
 
-    def __init__(self, atoms, address='localhost', port=31415, mode='unix', _socket=True):
+    def __init__(
+        self, atoms, address="localhost", port=31415, mode="unix", _socket=True
+    ):
         """Store provided data and initialize the base class.
 
         Arguments:
@@ -196,8 +214,8 @@ class ClientASE(Client):
 
         # prepare unit conversions
         # (ASE uses Angstrom and eV)
-        self.eV = units.unit_to_internal('energy', 'electronvolt', 1.0)
-        self.Angstrom = units.unit_to_internal('length', 'angstrom', 1.0)
+        self.eV = units.unit_to_internal("energy", "electronvolt", 1.0)
+        self.Angstrom = units.unit_to_internal("length", "angstrom", 1.0)
 
         # prepare arrays
         self._positions = np.zeros_like(atoms.get_positions())

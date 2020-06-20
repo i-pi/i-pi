@@ -15,15 +15,21 @@ from ipi.engine.properties import Trajectories as Traj
 
 __all__ = ["auto_units", "process_units"]
 # Regular expressions initialization for read_xyz function
-cell_unit_re = re.compile(r'cell\{([A-Za-z_]*)\}')       # cell unit pattern
-traj_dict = Traj().traj_dict                             # trajectory dictionary
-traj_re = [re.compile('%s%s' % (key, r'\{[A-Za-z_]*\}'))
-           for key in list(traj_dict.keys())]  # trajectory patterns
+cell_unit_re = re.compile(r"cell\{([A-Za-z_]*)\}")  # cell unit pattern
+traj_dict = Traj().traj_dict  # trajectory dictionary
+traj_re = [
+    re.compile("%s%s" % (key, r"\{[A-Za-z_]*\}")) for key in list(traj_dict.keys())
+]  # trajectory patterns
 
 
-def auto_units(comment="", dimension="automatic", units="automatic", cell_units="automatic", mode="xyz"):
-    """ Processes comment line and requested units to determine how to interpret the I/O conversion. """\
-
+def auto_units(
+    comment="",
+    dimension="automatic",
+    units="automatic",
+    cell_units="automatic",
+    mode="xyz",
+):
+    """ Processes comment line and requested units to determine how to interpret the I/O conversion. """
     # heuristics to detect units
     if mode == "pdb":  # these are the default units
         auto_cell = "angstrom"
@@ -38,11 +44,12 @@ def auto_units(comment="", dimension="automatic", units="automatic", cell_units=
     if comment != "":  # but they can be overridden by a special comment line
         # tries to guess units from the input
         # Extracting trajectory units
-        is_comment_useful = [_f for _f in [key.search(comment.strip())
-                                          for key in traj_re] if _f]
+        is_comment_useful = [
+            _f for _f in [key.search(comment.strip()) for key in traj_re] if _f
+        ]
         if len(is_comment_useful) > 0:
-            traj = is_comment_useful[0].group()[:-1].split('{')
-            auto_dimension, auto_units = traj_dict[traj[0]]['dimension'], traj[1]
+            traj = is_comment_useful[0].group()[:-1].split("{")
+            auto_dimension, auto_units = traj_dict[traj[0]]["dimension"], traj[1]
 
         # Extracting cell units
         tmp = cell_unit_re.search(comment)
@@ -51,22 +58,39 @@ def auto_units(comment="", dimension="automatic", units="automatic", cell_units=
     if dimension == "automatic":
         dimension = auto_dimension
     elif dimension != auto_dimension and len(is_comment_useful) > 0:
-        raise ValueError("Requested dimension mismatch with property indicated in the comment string")
+        raise ValueError(
+            "Requested dimension mismatch with property indicated in the comment string"
+        )
 
     if units == "automatic":
         units = auto_units
     elif units != auto_units and len(is_comment_useful) > 0:
-        raise ValueError("Requested units mismatch with units indicated in the comment string")
+        raise ValueError(
+            "Requested units mismatch with units indicated in the comment string"
+        )
 
     if cell_units == "automatic":
         cell_units = auto_cell
     elif cell_units != auto_cell and len(is_comment_useful) > 0:
-        raise ValueError("Requested cell units mismatch with units indicated in the comment string")
+        raise ValueError(
+            "Requested cell units mismatch with units indicated in the comment string"
+        )
 
     return dimension, units, cell_units
 
 
-def process_units(comment, cell, data, names, masses, natoms, dimension="automatic", units="automatic", cell_units="automatic", mode="xyz"):
+def process_units(
+    comment,
+    cell,
+    data,
+    names,
+    masses,
+    natoms,
+    dimension="automatic",
+    units="automatic",
+    cell_units="automatic",
+    mode="xyz",
+):
     """Convert the data in the file according to the units written in the i-PI format.
 
     Args:
@@ -80,12 +104,18 @@ def process_units(comment, cell, data, names, masses, natoms, dimension="automat
     Returns:
 
     """
-    dimension, units, cell_units = auto_units(comment, dimension, units, cell_units, mode)
+    dimension, units, cell_units = auto_units(
+        comment, dimension, units, cell_units, mode
+    )
 
-    info(" # Interpreting input with dimension %s, units %s and cell units %s" % (dimension, units, cell_units), verbosity.high)
+    info(
+        " # Interpreting input with dimension %s, units %s and cell units %s"
+        % (dimension, units, cell_units),
+        verbosity.high,
+    )
 
     # Units transformation
-    cell *= unit_to_internal('length', cell_units, 1)  # cell units transformation
+    cell *= unit_to_internal("length", cell_units, 1)  # cell units transformation
     data *= unit_to_internal(dimension, units, 1)  # units transformation
 
     # Return data as i-PI structures
@@ -97,5 +127,5 @@ def process_units(comment, cell, data, names, masses, natoms, dimension="automat
 
     return {
         "atoms": atoms,
-      "cell": cell,
+        "cell": cell,
     }

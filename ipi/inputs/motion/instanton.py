@@ -25,7 +25,7 @@ from ipi.utils.inputvalue import *
 import sys
 
 
-__all__ = ['InputInst']
+__all__ = ["InputInst"]
 
 
 class InputInst(InputDictionary):
@@ -36,43 +36,91 @@ class InputInst(InputDictionary):
     thresholds, hessian update strategy, etc.
 
     """
-    attribs = {"mode": (InputAttribute, {"dtype": str, "default": "rate",
-                                         "help": "Defines whether it is an instanton rate or instanton tunneling splitting calculaion",
-                                         "options": ['rate', 'splitting']})}
 
-    fields = {"tolerances": (InputDictionary, {"dtype": float,
-                                               "options": ["energy", "force", "position"],
-                                               "default": [1e-5, 1e-4, 1e-3],
-                                               "help": "Convergence criteria for optimization.",
-                                               "dimension": ["energy", "force", "length"]}),
-              "biggest_step": (InputValue, {"dtype": float,
-                                            "default": 0.4,
-                                            "help": "The maximum step size during the optimization."}),
-              "old_pos": (InputArray, {"dtype": float,
-                                       "default": input_default(factory=np.zeros, args=(0,)),
-                                       "help": "The previous step positions during the optimization. ",
-                                       "dimension": "length"}),
-              "old_pot": (InputArray, {"dtype": float,
-                                       "default": input_default(factory=np.zeros, args=(0,)),
-                                       "help": "The previous step potential energy during the optimization",
-                                       "dimension": "energy"}),
-              "old_force": (InputArray, {"dtype": float,
-                                         "default": input_default(factory=np.zeros, args=(0,)),
-                                         "help": "The previous step force during the optimization",
-                                         "dimension": "force"}),
-              "opt": (InputValue, {"dtype": str,
-                                   "default": 'None',
-                                   "options": ["nichols", "NR", "lbfgs", "lanczos", "None"],
-                                   "help": """The geometry optimization algorithm to be used.
+    attribs = {
+        "mode": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "default": "rate",
+                "help": "Defines whether it is an instanton rate or instanton tunneling splitting calculaion",
+                "options": ["rate", "splitting"],
+            },
+        )
+    }
+
+    fields = {
+        "tolerances": (
+            InputDictionary,
+            {
+                "dtype": float,
+                "options": ["energy", "force", "position"],
+                "default": [1e-5, 1e-4, 1e-3],
+                "help": "Convergence criteria for optimization.",
+                "dimension": ["energy", "force", "length"],
+            },
+        ),
+        "biggest_step": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 0.4,
+                "help": "The maximum step size during the optimization.",
+            },
+        ),
+        "old_pos": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.zeros, args=(0,)),
+                "help": "The previous step positions during the optimization. ",
+                "dimension": "length",
+            },
+        ),
+        "old_pot": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.zeros, args=(0,)),
+                "help": "The previous step potential energy during the optimization",
+                "dimension": "energy",
+            },
+        ),
+        "old_force": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.zeros, args=(0,)),
+                "help": "The previous step force during the optimization",
+                "dimension": "force",
+            },
+        ),
+        "opt": (
+            InputValue,
+            {
+                "dtype": str,
+                "default": "None",
+                "options": ["nichols", "NR", "lbfgs", "lanczos", "None"],
+                "help": """The geometry optimization algorithm to be used.
                                             For small system sizes nichols is recomended. Lanczos is tailored for big bigger than nbeads*natoms >~38*64.
                                             NR works in both cases given that the initial guess is close to the optimized geometry. 
-                                            Finally lbfgs is used for tunneling splitting calculations. """}),
-              "discretization": (InputArray, {"dtype": float,
-                                              "default": input_default(factory=np.ones, args=(0,)),
-                                              "help": "Allows to specified non uniform time discretization as proposed in J. Chem. Phys. 134, 184107 (2011)"}),
-              "alt_out": (InputValue, {"dtype": int,
-                                       "default": 1,
-                                       "help": """Alternative output:Prints different formatting of outputs for geometry, hessian and bead potential energies.
+                                            Finally lbfgs is used for tunneling splitting calculations. """,
+            },
+        ),
+        "discretization": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.ones, args=(0,)),
+                "help": "Allows to specified non uniform time discretization as proposed in J. Chem. Phys. 134, 184107 (2011)",
+            },
+        ),
+        "alt_out": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": 1,
+                "help": """Alternative output:Prints different formatting of outputs for geometry, hessian and bead potential energies.
                                                All quantities are also accessible from typical i-pi output infrastructure. 
                                                Default to 1, which prints every step. -1 will suppress the output (except the last one). 
                                                Any other positive number will set the frequency (in steps) with which the quantities are 
@@ -85,68 +133,136 @@ class InputInst(InputDictionary):
                                                The physical hessian uses a convention according to the positions convention used in  i-pi. 
                                                Example of 2 particles, the first two rows of the physical hessian reads:
                                                'H_x1_x1, H_x1_y1, H_x1_z1, H_x1_x2, H_x1_y2,H_x1_z2'
-                                               'H_x2_x1, H_x2_y1, H_x2_z1, H_x2_x2, H_x2_y2,H_x2_z2' """}),
-              "prefix": (InputValue, {"dtype": str,
-                                      "default": "instanton",
-                                      "help": "Prefix of the output files."}),
-              "delta": (InputValue, {"dtype": float,
-                                     "default": 0.1,
-                                     "help": "Initial stretch amplitude."}),
-              # Hessian
-              "hessian_init": (InputValue, {"dtype": str,
-                                            "default": 'false',
-                                            "options": ["true", 'false'],
-                                            "help": "How to initialize the hessian if it is not fully provided."}),
-              "hessian": (InputArray, {"dtype": float,
-                                       "default": input_default(factory=np.eye, args=(0,)),
-                                       "help": "(Approximate) Hessian."}),
-              "hessian_update": (InputValue, {"dtype": str,
-                                              "default": "powell",
-                                              "options": ["powell", "recompute"],
-                                              "help": "How to update the hessian after each step."}),
-              "hessian_asr": (InputValue, {"dtype": str,
-                                           "default": "none",
-                                           "options": ["none", "poly", "crystal"],
-                                           "help": "Removes the zero frequency vibrational modes depending on the symmerty of the system."}),
-              # L-BFGS
-              "qlist_lbfgs": (InputArray, {"dtype": float,
-                                           "default": input_default(factory=np.zeros, args=(0,)),
-                                           "help": "List of previous position differences for L-BFGS, if known."}),
-              "glist_lbfgs": (InputArray, {"dtype": float,
-                                           "default": input_default(factory=np.zeros, args=(0,)),
-                                           "help": "List of previous gradient differences for L-BFGS, if known."}),
-              "old_direction": (InputArray, {"dtype": float,
-                                             "default": input_default(factory=np.zeros, args=(0,)),
-                                             "help": "The previous direction in a CG or SD optimization."}),
-              "scale_lbfgs": (InputValue, {"dtype": int,
-                                           "default": 2,
-                                           "help": """Scale choice for the initial hessian.
+                                               'H_x2_x1, H_x2_y1, H_x2_z1, H_x2_x2, H_x2_y2,H_x2_z2' """,
+            },
+        ),
+        "prefix": (
+            InputValue,
+            {
+                "dtype": str,
+                "default": "instanton",
+                "help": "Prefix of the output files.",
+            },
+        ),
+        "delta": (
+            InputValue,
+            {"dtype": float, "default": 0.1, "help": "Initial stretch amplitude."},
+        ),
+        # Hessian
+        "hessian_init": (
+            InputValue,
+            {
+                "dtype": str,
+                "default": "false",
+                "options": ["true", "false"],
+                "help": "How to initialize the hessian if it is not fully provided.",
+            },
+        ),
+        "hessian": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.eye, args=(0,)),
+                "help": "(Approximate) Hessian.",
+            },
+        ),
+        "hessian_update": (
+            InputValue,
+            {
+                "dtype": str,
+                "default": "powell",
+                "options": ["powell", "recompute"],
+                "help": "How to update the hessian after each step.",
+            },
+        ),
+        "hessian_asr": (
+            InputValue,
+            {
+                "dtype": str,
+                "default": "none",
+                "options": ["none", "poly", "crystal"],
+                "help": "Removes the zero frequency vibrational modes depending on the symmerty of the system.",
+            },
+        ),
+        # L-BFGS
+        "qlist_lbfgs": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.zeros, args=(0,)),
+                "help": "List of previous position differences for L-BFGS, if known.",
+            },
+        ),
+        "glist_lbfgs": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.zeros, args=(0,)),
+                "help": "List of previous gradient differences for L-BFGS, if known.",
+            },
+        ),
+        "old_direction": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.zeros, args=(0,)),
+                "help": "The previous direction in a CG or SD optimization.",
+            },
+        ),
+        "scale_lbfgs": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": 2,
+                "help": """Scale choice for the initial hessian.
                                                        0 identity.
                                                        1 Use first member of position/gradient list.
-                                                       2 Use last  member of position/gradient list."""}),
-              "corrections_lbfgs": (InputValue, {"dtype": int,
-                                                 "default": 20,
-                                                 "help": "The number of past vectors to store for L-BFGS."}),
-              "ls_options": (InputDictionary, {"dtype": [float, int],
-                                               "help": """"Options for line search methods. Includes:
+                                                       2 Use last  member of position/gradient list.""",
+            },
+        ),
+        "corrections_lbfgs": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": 20,
+                "help": "The number of past vectors to store for L-BFGS.",
+            },
+        ),
+        "ls_options": (
+            InputDictionary,
+            {
+                "dtype": [float, int],
+                "help": """"Options for line search methods. Includes:
                                   tolerance: stopping tolerance for the search,
                                   iter: the maximum number of iterations,
                                   step: initial step for bracketing,
                                   adaptive: whether to update initial step.
                                   """,
-                                               "options": ["tolerance", "iter"],
-                                               "default": [0.2, 100],
-                                               "dimension": ["energy", "undefined"]}),
-              # Final calculations
-              "energy_shift": (InputValue, {"dtype": float, "default": 0.000,
-                                            "help": "Set the zero of energy.",
-                                            "dimension": "energy"
-                                            }),
-              "hessian_final": (InputValue, {"dtype": str,
-                                             "default": "false",
-                                             "options": ["false", "true"],
-                                             "help": "Decide if we are going to compute the final big-hessian by finite difference."})
-              }
+                "options": ["tolerance", "iter"],
+                "default": [0.2, 100],
+                "dimension": ["energy", "undefined"],
+            },
+        ),
+        # Final calculations
+        "energy_shift": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 0.000,
+                "help": "Set the zero of energy.",
+                "dimension": "energy",
+            },
+        ),
+        "hessian_final": (
+            InputValue,
+            {
+                "dtype": str,
+                "default": "false",
+                "options": ["false", "true"],
+                "help": "Decide if we are going to compute the final big-hessian by finite difference.",
+            },
+        ),
+    }
 
     dynamic = {}
 
@@ -179,11 +295,15 @@ class InputInst(InputDictionary):
         self.energy_shift.store(optarrays["energy_shift"])
 
         # Now we decide what to store depending on optimization algorithm
-        if geop.options["opt"] == 'nichols' or geop.options["opt"] == 'NR' or geop.options["opt"] == 'lanczos':
+        if (
+            geop.options["opt"] == "nichols"
+            or geop.options["opt"] == "NR"
+            or geop.options["opt"] == "lanczos"
+        ):
             self.hessian.store(optarrays["hessian"])
             self.hessian_update.store(options["hessian_update"])
             self.hessian_asr.store(options["hessian_asr"])
-        elif geop.options["opt"] == 'lbfgs':
+        elif geop.options["opt"] == "lbfgs":
             self.qlist_lbfgs.store(optarrays["qlist"])
             self.glist_lbfgs.store(optarrays["glist"])
             self.old_direction.store(optarrays["d"])
@@ -191,7 +311,7 @@ class InputInst(InputDictionary):
             self.corrections_lbfgs.store(options["corrections"])
             self.ls_options.store(options["ls_options"])
             self.hessian_final.store(options["hessian_final"])
-            if options["hessian_final"] == 'true':
+            if options["hessian_final"] == "true":
                 self.hessian.store(optarrays["hessian"])
 
     def fetch(self):

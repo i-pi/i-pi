@@ -18,7 +18,7 @@ from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, info
 
 
-__all__ = ['MetaDyn']
+__all__ = ["MetaDyn"]
 
 
 class MetaDyn(Smotion):
@@ -47,9 +47,14 @@ class MetaDyn(Smotion):
                 if not k in self.metaff:
                     continue  # only does metad for the indicated forcefield
                 f = s.ensemble.bias.ff[k]
-                if not hasattr(f, "mtd_update"):  # forcefield does not expose mtd_update interface
-                    raise ValueError("The forcefield '%s' associated with metadynamics \
-                                      does not have a mtd_update interface" % (k))
+                if not hasattr(
+                    f, "mtd_update"
+                ):  # forcefield does not expose mtd_update interface
+                    raise ValueError(
+                        "The forcefield '%s' associated with metadynamics \
+                                      does not have a mtd_update interface"
+                        % (k)
+                    )
                 if s.ensemble.bweights[ik] == 0:
                     continue  # do not put metad bias on biases with zero weights (useful to do remd+metad!)
                 fmtd = f.mtd_update(pos=s.beads.qc, cell=s.cell.h)

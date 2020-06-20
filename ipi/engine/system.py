@@ -30,7 +30,7 @@ from ipi.engine.forces import Forces
 from ipi.engine.properties import Properties, Trajectories
 
 
-__all__ = ['System']
+__all__ = ["System"]
 
 
 class System(dobject):
@@ -54,7 +54,9 @@ class System(dobject):
        simul: The parent simulation object.
     """
 
-    def __init__(self, init, beads, nm, cell, fcomponents, ensemble=None, motion=None, prefix=""):
+    def __init__(
+        self, init, beads, nm, cell, fcomponents, ensemble=None, motion=None, prefix=""
+    ):
         """Initialises System class.
 
         Args:
@@ -94,10 +96,26 @@ class System(dobject):
 
         # binds important computation engines
         info(" # Binding the forces ", verbosity.low)
-        self.forces.bind(self.beads, self.cell, self.fcomp, self.simul.fflist, open_paths=self.nm.open_paths)
+        self.forces.bind(
+            self.beads,
+            self.cell,
+            self.fcomp,
+            self.simul.fflist,
+            open_paths=self.nm.open_paths,
+        )
         self.nm.bind(self.ensemble, self.motion, beads=self.beads, forces=self.forces)
-        self.ensemble.bind(self.beads, self.nm, self.cell, self.forces, self.simul.fflist)
-        self.motion.bind(self.ensemble, self.beads, self.nm, self.cell, self.forces, self.prng, simul.output_maker)
+        self.ensemble.bind(
+            self.beads, self.nm, self.cell, self.forces, self.simul.fflist
+        )
+        self.motion.bind(
+            self.ensemble,
+            self.beads,
+            self.nm,
+            self.cell,
+            self.forces,
+            self.prng,
+            simul.output_maker,
+        )
 
         dpipe(dd(self.nm).omegan2, dd(self.forces).omegan2)
 

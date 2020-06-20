@@ -22,9 +22,11 @@ from ipi.utils.io.io_units import process_units
 from ipi.engine.properties import Trajectories as Traj
 from ipi.utils.messages import verbosity
 
-cell_unit_re = re.compile(r'cell\{([A-Za-z_]*)\}')       # cell unit pattern
-traj_dict = Traj().traj_dict                             # trajectory dictionary
-traj_re = [re.compile('%s%s' % (key, r'\{[A-Za-z_]*\}')) for key in list(traj_dict.keys())]  # trajectory patterns
+cell_unit_re = re.compile(r"cell\{([A-Za-z_]*)\}")  # cell unit pattern
+traj_dict = Traj().traj_dict  # trajectory dictionary
+traj_re = [
+    re.compile("%s%s" % (key, r"\{[A-Za-z_]*\}")) for key in list(traj_dict.keys())
+]  # trajectory patterns
 verbosity.level = "low"
 
 
@@ -56,13 +58,21 @@ def get_key_dim_units(comment, mode):
 
     is_comment_useful = []
     if comment != "":
-        is_comment_useful = [_f for _f in [key.search(comment.strip()) for key in traj_re] if _f]
+        is_comment_useful = [
+            _f for _f in [key.search(comment.strip()) for key in traj_re] if _f
+        ]
         if len(is_comment_useful) > 0:
-            traj = is_comment_useful[0].group()[:-1].split('{')
-            key, auto_dimension, auto_units = traj[0], traj_dict[traj[0]]['dimension'], traj[1]
+            traj = is_comment_useful[0].group()[:-1].split("{")
+            key, auto_dimension, auto_units = (
+                traj[0],
+                traj_dict[traj[0]]["dimension"],
+                traj[1],
+            )
 
     if mode == "pdb" and auto_dimension != "length":
-        raise ValueError("PDB Standard is only designed for atomic positions with units in Angstroms")
+        raise ValueError(
+            "PDB Standard is only designed for atomic positions with units in Angstroms"
+        )
 
     return key, auto_dimension, auto_units
 
@@ -76,7 +86,7 @@ def main(filename, imode, omode):
     # extracts the dimension, its units and the cell_units from the first frame
     ret = read_file_raw(imode, ipos)
     ipos.close()
-    comment = ret['comment']
+    comment = ret["comment"]
     cell_units = get_cell_units(comment, imode)
     key, dim, dim_units = get_key_dim_units(comment, imode)
 
@@ -89,8 +99,19 @@ def main(filename, imode, omode):
 
         except EOFError:  # finished reading files
             sys.exit(0)
-        print_file(omode, pos, cell, filedesc=sys.stdout, title="", key=key, dimension=dim, units=dim_units, cell_units=cell_units)
+        print_file(
+            omode,
+            pos,
+            cell,
+            filedesc=sys.stdout,
+            title="",
+            key=key,
+            dimension=dim,
+            units=dim_units,
+            cell_units=cell_units,
+        )
         ifr += 1
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main(*sys.argv[1:])

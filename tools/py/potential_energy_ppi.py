@@ -1,7 +1,7 @@
 #!/usr/bin/python
 
-__author__ = 'Igor Poltavsky'
-__version__ = '1.0'
+__author__ = "Igor Poltavsky"
+__version__ = "1.0"
 
 """ potential_energy_ppi.py
 Reads simulation time, potential energy, and forces from
@@ -35,23 +35,27 @@ from ipi.utils.units import unit_to_internal, unit_to_user, Constants
 from ipi.utils.io import read_file
 
 
-def potentialEnergy(prefix, temp, ss=0, unit=''):
+def potentialEnergy(prefix, temp, ss=0, unit=""):
     """
     Computes the estimator for the potential energy and PPI correction.
     """
 
     # Adding fortran functions (when exist)
-    sys.path.append(os.path.abspath(os.path.dirname(sys.argv[0]))[:-2] + 'f90')
+    sys.path.append(os.path.abspath(os.path.dirname(sys.argv[0]))[:-2] + "f90")
     fast_code = True
     try:
         import fortran
     except:
         fast_code = False
-        print('WARNING: No compiled fortran module for fast calculations have been found.\n'
-              'Calculations will use a slower python script.')
+        print(
+            "WARNING: No compiled fortran module for fast calculations have been found.\n"
+            "Calculations will use a slower python script."
+        )
 
-    temperature = unit_to_internal("temperature", "kelvin", float(temp))  # simulation temperature
-    skipSteps = int(ss)                                                  # steps to skip for thermalization
+    temperature = unit_to_internal(
+        "temperature", "kelvin", float(temp)
+    )  # simulation temperature
+    skipSteps = int(ss)  # steps to skip for thermalization
 
     f2_av, U_av, f2U_av = 0.0, 0.0, 0.0  # some required sums
 
@@ -63,17 +67,17 @@ def potentialEnergy(prefix, temp, ss=0, unit=''):
     nbeads = len(fns_for)
 
     # print some information
-    print('temperature = {:f} K'.format(float(temp)))
+    print("temperature = {:f} K".format(float(temp)))
     print()
-    print('number of beads = {:d}'.format(nbeads))
+    print("number of beads = {:d}".format(nbeads))
     print()
-    print('forces file names:')
+    print("forces file names:")
     for fn_for in fns_for:
-        print('{:s}'.format(fn_for))
+        print("{:s}".format(fn_for))
     print()
-    print('potential energy file: {:s}'.format(fns_iU))
+    print("potential energy file: {:s}".format(fns_iU))
     print()
-    print('output file name:')
+    print("output file name:")
     print(fn_out_en)
     print()
 
@@ -84,17 +88,21 @@ def potentialEnergy(prefix, temp, ss=0, unit=''):
 
     # Some constants
     beta = 1.0 / (Constants.kb * temperature)
-    const = Constants.hbar**2 * beta**2 / (24.0 * nbeads**3)
+    const = Constants.hbar ** 2 * beta ** 2 / (24.0 * nbeads ** 3)
 
-    timeUnit, potentialEnergyUnit, potentialEnergy_index, time_index = extractUnits(iU)  # extracting simulation time
+    timeUnit, potentialEnergyUnit, potentialEnergy_index, time_index = extractUnits(
+        iU
+    )  # extracting simulation time
     # and potential energy units
 
     # Defining the output energy unit
-    if unit == '':
+    if unit == "":
         unit = potentialEnergyUnit
 
-    iE.write("# Simulation time (in %s), potential energy and PPI potential energy corrections (in %s)\n" %
-             (timeUnit, unit))
+    iE.write(
+        "# Simulation time (in %s), potential energy and PPI potential energy corrections (in %s)\n"
+        % (timeUnit, unit)
+    )
 
     natoms = 0
     ifr = 0
@@ -103,12 +111,12 @@ def potentialEnergy(prefix, temp, ss=0, unit=''):
     while True:  # Reading input files and calculating PPI correction
 
         if ifr % 100 == 0:
-            print('\rProcessing frame {:d}'.format(ifr), end=' ')
+            print("\rProcessing frame {:d}".format(ifr), end=" ")
             sys.stdout.flush()
 
         try:
             for i in range(nbeads):
-                ret = read_file("xyz", ifor[i], output='arrays')
+                ret = read_file("xyz", ifor[i], output="arrays")
                 if natoms == 0:
                     m, natoms = ret["masses"], ret["natoms"]
                     f = np.zeros((nbeads, 3 * natoms))
@@ -131,10 +139,15 @@ def potentialEnergy(prefix, temp, ss=0, unit=''):
 
                 for j in range(nbeads):
                     for i in range(natoms):
-                        f2 += np.dot(f[j, i * 3:i * 3 + 3], f[j, i * 3:i * 3 + 3]) / m[i]
+                        f2 += (
+                            np.dot(f[j, i * 3 : i * 3 + 3], f[j, i * 3 : i * 3 + 3])
+                            / m[i]
+                        )
 
             else:
-                f2 = fortran.f2divm(np.array(f, order='F'), np.array(m, order='F'), natoms, nbeads)
+                f2 = fortran.f2divm(
+                    np.array(f, order="F"), np.array(m, order="F"), natoms, nbeads
+                )
 
             U_av += U
             f2_av += f2
@@ -143,7 +156,7 @@ def potentialEnergy(prefix, temp, ss=0, unit=''):
 
             norm = float(ifr - skipSteps)
 
-            dU = 2.0 * f2_av / norm - beta * (f2U_av / norm - f2_av * U_av / norm**2)
+            dU = 2.0 * f2_av / norm - beta * (f2U_av / norm - f2_av * U_av / norm ** 2)
             dU *= const
 
             dU = unit_to_user("energy", unit, dU)
@@ -172,12 +185,12 @@ def extractUnits(filedescU):
 
     text = []
     read = True
-    while read:   # the loop reads all lines which have # as a first word
+    while read:  # the loop reads all lines which have # as a first word
         position = filedescU.tell()
         line = filedescU.readline()
         if line == "":
             raise EOFError("The file descriptor hit EOF.")
-        elif line.split()[0] == '#':
+        elif line.split()[0] == "#":
             text.append(line)
         else:
             filedescU.seek(position)
@@ -186,18 +199,18 @@ def extractUnits(filedescU):
     timeUnit, potentialEnergyUnit = None, None
     potentialEnergy_index, time_index = 0, 0
 
-    potential_re = re.compile('potential\{[a-z]*\}')
-    time_re = re.compile('time\{[a-z]*\}')
+    potential_re = re.compile("potential\{[a-z]*\}")
+    time_re = re.compile("time\{[a-z]*\}")
 
     line_index = 0
     for line in text:
         pot = potential_re.search(line)
         time = time_re.search(line)
         if pot is not None:
-            potentialEnergyUnit = pot.group()[:-1].split('{')[1]
+            potentialEnergyUnit = pot.group()[:-1].split("{")[1]
             potentialEnergy_index = line_index
         if time is not None:
-            timeUnit = time.group()[:-1].split('{')[1]
+            timeUnit = time.group()[:-1].split("{")[1]
             time_index = line_index
         line_index += 1
 
@@ -236,6 +249,6 @@ def main(*arg):
     potentialEnergy(*arg)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
 
     main(*sys.argv[1:])

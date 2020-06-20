@@ -18,7 +18,7 @@ from ipi.engine.atoms import Atoms
 from ipi.utils import units
 
 
-__all__ = ['Beads']
+__all__ = ["Beads"]
 
 
 class Beads(dobject):
@@ -92,44 +92,83 @@ class Beads(dobject):
 
         dself = dd(self)
 
-        dself.names = depend_array(name="names", value=np.zeros(natoms, np.dtype('|U6')))
+        dself.names = depend_array(
+            name="names", value=np.zeros(natoms, np.dtype("|U6"))
+        )
 
         # atom masses, and mass-related arrays
-        dself.m = depend_array(name="m", value=np.zeros(natoms, float))   # this is the prototype mass array (just one independent of bead n)
-        dself.m3 = depend_array(name="m3", value=np.zeros((nbeads, 3 * natoms), float),    # this is m conveniently replicated to be (nb,3*nat)
-                                func=self.mtom3, dependencies=[dself.m])
-        dself.sm3 = depend_array(name="sm3", value=np.zeros((nbeads, 3 * natoms), float),   # this is just the square root of m3
-                                 func=self.m3tosm3, dependencies=[dself.m3])
+        dself.m = depend_array(
+            name="m", value=np.zeros(natoms, float)
+        )  # this is the prototype mass array (just one independent of bead n)
+        dself.m3 = depend_array(
+            name="m3",
+            value=np.zeros(
+                (nbeads, 3 * natoms), float
+            ),  # this is m conveniently replicated to be (nb,3*nat)
+            func=self.mtom3,
+            dependencies=[dself.m],
+        )
+        dself.sm3 = depend_array(
+            name="sm3",
+            value=np.zeros(
+                (nbeads, 3 * natoms), float
+            ),  # this is just the square root of m3
+            func=self.m3tosm3,
+            dependencies=[dself.m3],
+        )
 
         # positions and momenta. bead representation, base storage used everywhere
         dself.q = depend_array(name="q", value=np.zeros((nbeads, 3 * natoms), float))
         dself.p = depend_array(name="p", value=np.zeros((nbeads, 3 * natoms), float))
 
         # position and momentum of the centroid
-        dself.qc = depend_array(name="qc", value=np.zeros(3 * natoms, float),
-                                func=self.get_qc, dependencies=[dself.q])
-        dself.pc = depend_array(name="pc", value=np.zeros(3 * natoms, float),
-                                func=self.get_pc, dependencies=[dself.p])
+        dself.qc = depend_array(
+            name="qc",
+            value=np.zeros(3 * natoms, float),
+            func=self.get_qc,
+            dependencies=[dself.q],
+        )
+        dself.pc = depend_array(
+            name="pc",
+            value=np.zeros(3 * natoms, float),
+            func=self.get_pc,
+            dependencies=[dself.p],
+        )
 
         # path springs potential and force
-        dself.vpath = depend_value(name="vpath", func=self.get_vpath,
-                                   dependencies=[dself.q, dself.m3])
-        dself.fpath = depend_array(name="fpath", value=np.zeros((nbeads, 3 * natoms), float),
-                                   func=self.get_fpath, dependencies=[dself.q])
+        dself.vpath = depend_value(
+            name="vpath", func=self.get_vpath, dependencies=[dself.q, dself.m3]
+        )
+        dself.fpath = depend_array(
+            name="fpath",
+            value=np.zeros((nbeads, 3 * natoms), float),
+            func=self.get_fpath,
+            dependencies=[dself.q],
+        )
 
         # create proxies to access the individual beads as Atoms objects
         # TODO: ACTUALLY THIS IS ONLY USED HERE METHINK, SO PERHAPS WE COULD REMOVE IT TO DECLUTTER THE CODE.
-        self._blist = [Atoms(natoms, _prebind=(self.q[i, :], self.p[i, :], self.m, self.names)) for i in range(nbeads)]
+        self._blist = [
+            Atoms(natoms, _prebind=(self.q[i, :], self.p[i, :], self.m, self.names))
+            for i in range(nbeads)
+        ]
 
         # kinetic energies of thhe beads, and total (classical) kinetic stress tensor
-        dself.kins = depend_array(name="kins", value=np.zeros(nbeads, float),
-                                  func=self.kin_gather,
-                                  dependencies=[dd(b).kin for b in self._blist])
-        dself.kin = depend_value(name="kin", func=self.get_kin,
-                                 dependencies=[dself.kins])
-        dself.kstress = depend_array(name="kstress", value=np.zeros((3, 3), float),
-                                     func=self.get_kstress,
-                                     dependencies=[dd(b).kstress for b in self._blist])
+        dself.kins = depend_array(
+            name="kins",
+            value=np.zeros(nbeads, float),
+            func=self.kin_gather,
+            dependencies=[dd(b).kin for b in self._blist],
+        )
+        dself.kin = depend_value(
+            name="kin", func=self.get_kin, dependencies=[dself.kins]
+        )
+        dself.kstress = depend_array(
+            name="kstress",
+            value=np.zeros((3, 3), float),
+            func=self.get_kstress,
+            dependencies=[dd(b).kstress for b in self._blist],
+        )
 
     def copy(self, nbeads=-1):
         """Creates a new beads object with newP <= P beads from the original.
@@ -165,9 +204,9 @@ class Beads(dobject):
         """
 
         m3 = np.zeros((self.nbeads, 3 * self.natoms), float)
-        m3[:, 0:3 * self.natoms:3] = self.m
-        m3[:, 1:3 * self.natoms:3] = m3[:, 0:3 * self.natoms:3]
-        m3[:, 2:3 * self.natoms:3] = m3[:, 0:3 * self.natoms:3]
+        m3[:, 0 : 3 * self.natoms : 3] = self.m
+        m3[:, 1 : 3 * self.natoms : 3] = m3[:, 0 : 3 * self.natoms : 3]
+        m3[:, 2 : 3 * self.natoms : 3] = m3[:, 0 : 3 * self.natoms : 3]
         return m3
 
     def get_qc(self):
@@ -233,7 +272,9 @@ class Beads(dobject):
             else:
                 dq = q[b, :] - q[self.nbeads - 1, :]
             epath += np.dot(dq, m * dq)
-        print("WARNING: RETURNS AN INCORRECT RESULT IF OPEN PATHS ARE BEING USED. CALL NM.VSPRING INSTEAD!!")
+        print(
+            "WARNING: RETURNS AN INCORRECT RESULT IF OPEN PATHS ARE BEING USED. CALL NM.VSPRING INSTEAD!!"
+        )
         return epath * 0.5
 
     def get_fpath(self):

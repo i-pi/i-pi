@@ -16,7 +16,7 @@ from ipi.utils.depend import *
 from ipi.utils import units
 
 
-__all__ = ['Atoms', 'Atom']
+__all__ = ["Atoms", "Atom"]
 
 
 class Atom(dobject):
@@ -49,11 +49,11 @@ class Atom(dobject):
         """
         dself = dd(self)  # direct access
 
-        dself.p = system.p[3 * index:3 * index + 3]
-        dself.q = system.q[3 * index:3 * index + 3]
-        dself.m = system.m[index:index + 1]
-        dself.name = system.names[index:index + 1]
-        dself.m3 = system.m3[3 * index:3 * index + 3]
+        dself.p = system.p[3 * index : 3 * index + 3]
+        dself.q = system.q[3 * index : 3 * index + 3]
+        dself.m = system.m[index : index + 1]
+        dself.name = system.names[index : index + 1]
+        dself.m3 = system.m3[3 * index : 3 * index + 3]
 
     @property
     def kin(self):
@@ -127,23 +127,29 @@ class Atoms(dobject):
             dself.q = depend_array(name="q", value=np.zeros(3 * natoms, float))
             dself.p = depend_array(name="p", value=np.zeros(3 * natoms, float))
             dself.m = depend_array(name="m", value=np.zeros(natoms, float))
-            dself.names = depend_array(name="names",
-                                       value=np.zeros(natoms, np.dtype('|U6')))
+            dself.names = depend_array(
+                name="names", value=np.zeros(natoms, np.dtype("|U6"))
+            )
         else:
             dself.q = _prebind[0]
             dself.p = _prebind[1]
             dself.m = _prebind[2]
             dself.names = _prebind[3]
 
-        dself.m3 = depend_array(name="m3", value=np.zeros(3 * natoms, float),
-                                func=self.mtom3, dependencies=[dself.m])
+        dself.m3 = depend_array(
+            name="m3",
+            value=np.zeros(3 * natoms, float),
+            func=self.mtom3,
+            dependencies=[dself.m],
+        )
 
-        dself.M = depend_value(name="M", func=self.get_msum,
-                               dependencies=[dself.m])
-        dself.kin = depend_value(name="kin", func=self.get_kin,
-                                 dependencies=[dself.p, dself.m3])
-        dself.kstress = depend_value(name="kstress", func=self.get_kstress,
-                                     dependencies=[dself.p, dself.m])
+        dself.M = depend_value(name="M", func=self.get_msum, dependencies=[dself.m])
+        dself.kin = depend_value(
+            name="kin", func=self.get_kin, dependencies=[dself.p, dself.m3]
+        )
+        dself.kstress = depend_value(
+            name="kstress", func=self.get_kstress, dependencies=[dself.p, dself.m]
+        )
 
     def copy(self):
         """Creates a new Atoms object.
@@ -236,9 +242,9 @@ class Atoms(dobject):
         """
 
         m3 = np.zeros(3 * self.natoms, float)
-        m3[0:3 * self.natoms:3] = self.m
-        m3[1:3 * self.natoms:3] = m3[0:3 * self.natoms:3]
-        m3[2:3 * self.natoms:3] = m3[0:3 * self.natoms:3]
+        m3[0 : 3 * self.natoms : 3] = self.m
+        m3[1 : 3 * self.natoms : 3] = m3[0 : 3 * self.natoms : 3]
+        m3[2 : 3 * self.natoms : 3] = m3[0 : 3 * self.natoms : 3]
         return m3
 
     def get_kin(self):
