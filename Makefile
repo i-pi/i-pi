@@ -1,0 +1,7 @@
+.PHONY: lint, pretty
+
+lint:
+	black ./
+
+pretty:
+	flake8 ./
