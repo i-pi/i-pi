@@ -23,42 +23,46 @@ driver_models = [
 ]
 
 
-def get_driver_info(example_folder,
-    driver_info_file = '.driver_info',
+def get_driver_info(
+    example_folder,
+    driver_info_file=".driver_info",
     driver="gas",
     socket_mode="unix",
     port_number=33333,
-    address_name="localhost"
+    address_name="localhost",
 ):
-    """ This function looks for the existence of .driver_info file 
+    """ This function looks for the existence of .driver_info file
         to run the example with a meaningfull driver. If the file doesn't
         exist, the driver gas is assigned. """
     try:
-       with open(Path(example_folder) / driver_info_file) as f:
-           while True:
-               line = f.readline()
-               if not line:
-                   break
-               elif "driver" in line:
-                   driver = line.split()[1]
-               elif "socket_mode" in line:
-                   socket_mode = line.split()[1]
-               elif "port" in line:
-                   port_number = line.split()[1]
-               elif "address" in line:
-                   address_name = line.split()[1]
+        with open(Path(example_folder) / driver_info_file) as f:
+            while True:
+                line = f.readline()
+                if not line:
+                    break
+                elif "driver" in line:
+                    driver = line.split()[1]
+                elif "socket_mode" in line:
+                    socket_mode = line.split()[1]
+                elif "port" in line:
+                    port_number = line.split()[1]
+                elif "address" in line:
+                    address_name = line.split()[1]
     except:
         pass
 
     if driver not in driver_models:
-        driver ="gas"
+        driver = "gas"
 
-    driver_info ={ "model": driver,
-    "socket_mode": socket_mode,
-    "port_number": port_number,
-    "address_name":address_name}
+    driver_info = {
+        "model": driver,
+        "socket_mode": socket_mode,
+        "port_number": port_number,
+        "address_name": address_name,
+    }
 
     return driver_info
+
 
 def find_examples(parent, excluded_file="excluded_test.txt"):
     """ This function looks for iteratively for examples and includes
@@ -84,11 +88,7 @@ def find_examples(parent, excluded_file="excluded_test.txt"):
 
 
 def modify_xml(
-    input_name,
-    output_name,
-    nid,
-    driver_info,
-    nsteps=2,
+    input_name, output_name, nid, driver_info, nsteps=2,
 ):
     """ Modify xml to run dummy tests """
 
@@ -107,7 +107,7 @@ def modify_xml(
             elif element.tag == "address":
                 dd = driver_info["address_name"] + "_" + str(nid) + "_" + str(s)
                 element.text = dd
-                address = dd 
+                address = dd
 
         model = driver_info["model"]
         print("driver:", model)
@@ -125,7 +125,6 @@ def modify_xml(
 
 
 class Runner_examples(object):
-
     def __init__(self, parent, cmd1="i-pi new.xml", cmd2="i-pi-driver"):
         self.parent = parent
         self.cmd1 = cmd1
@@ -135,16 +134,17 @@ class Runner_examples(object):
         try:
             # Create temp file and copy files
             self.tmp_dir = Path(tempfile.mkdtemp())
-            print('temp folder: {}'.format(self.tmp_dir))
+            print("temp folder: {}".format(self.tmp_dir))
 
             files = os.listdir(self.parent / cwd)
             for f in files:
                 shutil.copy(self.parent / cwd / f, self.tmp_dir)
             driver_info = get_driver_info(self.tmp_dir)
 
-            # Modify xml            
+            # Modify xml
             clients = modify_xml(
-                self.tmp_dir / "input.xml", self.tmp_dir / "new.xml", nid, driver_info )
+                self.tmp_dir / "input.xml", self.tmp_dir / "new.xml", nid, driver_info
+            )
 
             # Run i-pi
             ipi = sp.Popen(
@@ -166,8 +166,9 @@ class Runner_examples(object):
                 )
 
             # Check errors
-            ipi_error = ipi.communicate(timeout=30)[1].decode("ascii")
-            print(ipi_error)
+            ipi_error = ipi.communicate(timeout=45)[1].decode("ascii")
+            if ipi_error != "":
+                print(ipi_error)
             assert "" == ipi_error
 
         except sp.TimeoutExpired:
