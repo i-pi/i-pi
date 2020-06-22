@@ -29,6 +29,7 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r requirements.txt
         pip install .
+        pip install scipy
         echo "::add-path::${GITHUB_WORKSPACE}/bin"
 
 
