@@ -15,6 +15,7 @@ from ipi.engine.forcefields import (
     FFPlumed,
     FFYaff,
     FFsGDML,
+    FFCommittee,
 )
 from ipi.interfaces.sockets import InterfaceSocket
 import ipi.engine.initializer
@@ -29,6 +30,7 @@ __all__ = [
     "InputFFPlumed",
     "InputFFYaff",
     "InputFFsGDML",
+    "InputFFCommittee",
 ]
 
 
@@ -611,3 +613,96 @@ class InputFFsGDML(InputForceField):
             dopbc=self.pbc.fetch(),
             threaded=self.threaded.fetch(),
         )
+
+
+class InputFFCommittee(InputForceField):
+    default_help = """A class to consolidate multiple FF inputs in a single XML field.
+                      Also contains options to use it for uncertainty estimation and for
+                      active learning in a ML context, based on a committee model."""
+    default_label = "FFCOMMITTEE"    
+    
+    dynamic = {
+          "ffsocket": (InputFFSocket, {"help": InputFFSocket.default_help}),
+          "fflj": (InputFFLennardJones, {"help": InputFFLennardJones.default_help}),
+          "ffquip": (InputFFQUIP, {"help": InputFFQUIP.default_help}),
+          "ffdebye": (InputFFDebye, {"help": InputFFDebye.default_help}),
+          "ffplumed": (InputFFPlumed, {"help": InputFFPlumed.default_help}),
+          "ffyaff": (InputFFYaff, {"help": InputFFYaff.default_help})
+    }
+
+    fields = copy(InputForceField.fields)
+
+    fields["weights"] =  (InputArray, {"dtype": float,
+                                       "default": np.array([]),
+                                       "help": "List of weights to be given to the forcefields. Defaults to 1 for each FF. Note that the components are divided by the number of FF, and so the default corresponds to an average."})
+    fields["alpha"] =  (InputValue, {"dtype": float,
+                                     "default": 1.0,
+                                     "help": "Scaling of the variance of the model, corresponding to a calibration of the error "} )
+    fields["al_thresh"] =  (InputValue, {"dtype": float,
+                                       "default": 0.0,
+                                       "help": "The uncertainty threshold. Structure with an uncertainty above this value are printed in the specified output file so they can be used for active learning."})
+    fields["al_output"] =  (InputValue, {"dtype": str,
+                "default": "al_output",
+                "help": "Output filename for structures that exceed the accuracy threshold of the model."})
+    
+    def store(self, ff):
+        """ Store all the sub-forcefields """
+        
+        super(InputFFCommittee, self).store(ff)
+        _fflist = ff.fflist        
+        if len(self.extra) != len(_fflist):
+            self.extra = [0] * len(_fflist)
+        self.weights.store(ff.ffweights)
+        self.alpha.store(ff.alpha)
+        self.al_thresh.store(ff.al_thresh)
+        self.al_output.store(ff.al_out)
+
+        for _ii, _obj, in enumerate(_fflist):
+            if self.extra[_ii] == 0:
+                if isinstance(_obj, FFSocket):
+                    _iobj = InputFFSocket()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffsocket", _iobj)
+                elif isinstance(_obj, FFLennardJones):
+                    _iobj = InputFFLennardJones()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("fflj", _iobj)
+                elif isinstance(_obj, FFQUIP):
+                    _iobj = InputFFQUIP()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffquip", _iobj)
+                elif isinstance(_obj, FFDebye):
+                    _iobj = InputFFDebye()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffdebye", _iobj)
+                elif isinstance(_obj, FFPlumed):
+                    _iobj = InputFFPlumed()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffplumed", _iobj)
+                elif isinstance(_obj, FFYaff):
+                    _iobj = InputFFYaff()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffyaff", _iobj)
+                elif isinstance(_obj, FFsGDML):
+                    _iobj = InputFFsGDML()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffsgdml", _iobj)
+            else:
+                self.extra[_ii][1].store(_obj)
+
+    def fetch(self):
+        """ Fetches all of the FF objects """
+
+        super(InputFFCommittee, self).fetch()
+
+        fflist = []
+        for (k, v) in self.extra:
+            fflist.append(v.fetch())
+
+        # TODO: will actually need to create a FF object here!
+        return FFCommittee(pars=self.parameters.fetch(), name=self.name.fetch(),
+                       latency=self.latency.fetch(), dopbc=self.pbc.fetch(),
+                       fflist = fflist, ffweights = self.weights.fetch(),
+                       alpha = self.alpha.fetch(), al_thresh = self.al_thresh.fetch(),
+                       al_out = self.al_output.fetch()
+                       )
