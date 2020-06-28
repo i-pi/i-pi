@@ -21,7 +21,7 @@ from ipi.interfaces.sockets import InterfaceSocket
 import ipi.engine.initializer
 from ipi.inputs.initializer import *
 from ipi.utils.inputvalue import *
-
+from copy import copy
 
 __all__ = [
     "InputFFSocket",
@@ -624,10 +624,10 @@ class InputFFCommittee(InputForceField):
     dynamic = {
           "ffsocket": (InputFFSocket, {"help": InputFFSocket.default_help}),
           "fflj": (InputFFLennardJones, {"help": InputFFLennardJones.default_help}),
-          "ffquip": (InputFFQUIP, {"help": InputFFQUIP.default_help}),
           "ffdebye": (InputFFDebye, {"help": InputFFDebye.default_help}),
           "ffplumed": (InputFFPlumed, {"help": InputFFPlumed.default_help}),
-          "ffyaff": (InputFFYaff, {"help": InputFFYaff.default_help})
+          "ffyaff": (InputFFYaff, {"help": InputFFYaff.default_help}),
+          "ffysgdml": (InputFFsGDML, {"help": InputFFsGDML.default_help})
     }
 
     fields = copy(InputForceField.fields)
