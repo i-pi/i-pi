@@ -151,7 +151,7 @@ class InputSimulation(Input):
         ),
         "ffcommittee": (
             iforcefields.InputFFCommittee,
-            {"help": iforcefields.InputFFCommittee.default_help}
+            {"help": iforcefields.InputFFCommittee.default_help},
         ),
         "ffsgdml": (
             iforcefields.InputFFsGDML,
@@ -272,7 +272,7 @@ class InputSimulation(Input):
                 or k == "ffplumed"
                 or k == "ffsgdml"
                 or k == "ffyaff"
-                or k == "committee"
+                or k == "ffcommittee"
             ):
                 info(" # @simulation: Fetching" + k, verbosity.low)
                 fflist.append(v.fetch())

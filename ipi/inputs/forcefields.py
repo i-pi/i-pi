@@ -5,6 +5,7 @@
 # See the "licenses" directory for full license information.
 
 
+from copy import copy
 import numpy as np
 
 from ipi.engine.forcefields import (
@@ -21,7 +22,6 @@ from ipi.interfaces.sockets import InterfaceSocket
 import ipi.engine.initializer
 from ipi.inputs.initializer import *
 from ipi.utils.inputvalue import *
-from copy import copy
 
 __all__ = [
     "InputFFSocket",
@@ -71,7 +71,7 @@ class InputForceField(Input):
             },
         ),
         "threaded": (
-            InputValue,
+            InputAttribute,
             {
                 "dtype": bool,
                 "default": False,
@@ -619,37 +619,57 @@ class InputFFCommittee(InputForceField):
     default_help = """A class to consolidate multiple FF inputs in a single XML field.
                       Also contains options to use it for uncertainty estimation and for
                       active learning in a ML context, based on a committee model."""
-    default_label = "FFCOMMITTEE"    
-    
+    default_label = "FFCOMMITTEE"
+
     dynamic = {
-          "ffsocket": (InputFFSocket, {"help": InputFFSocket.default_help}),
-          "fflj": (InputFFLennardJones, {"help": InputFFLennardJones.default_help}),
-          "ffdebye": (InputFFDebye, {"help": InputFFDebye.default_help}),
-          "ffplumed": (InputFFPlumed, {"help": InputFFPlumed.default_help}),
-          "ffyaff": (InputFFYaff, {"help": InputFFYaff.default_help}),
-          "ffysgdml": (InputFFsGDML, {"help": InputFFsGDML.default_help})
+        "ffsocket": (InputFFSocket, {"help": InputFFSocket.default_help}),
+        "fflj": (InputFFLennardJones, {"help": InputFFLennardJones.default_help}),
+        "ffdebye": (InputFFDebye, {"help": InputFFDebye.default_help}),
+        "ffplumed": (InputFFPlumed, {"help": InputFFPlumed.default_help}),
+        "ffyaff": (InputFFYaff, {"help": InputFFYaff.default_help}),
+        "ffsgdml": (InputFFsGDML, {"help": InputFFsGDML.default_help}),
     }
 
     fields = copy(InputForceField.fields)
 
-    fields["weights"] =  (InputArray, {"dtype": float,
-                                       "default": np.array([]),
-                                       "help": "List of weights to be given to the forcefields. Defaults to 1 for each FF. Note that the components are divided by the number of FF, and so the default corresponds to an average."})
-    fields["alpha"] =  (InputValue, {"dtype": float,
-                                     "default": 1.0,
-                                     "help": "Scaling of the variance of the model, corresponding to a calibration of the error "} )
-    fields["al_thresh"] =  (InputValue, {"dtype": float,
-                                       "default": 0.0,
-                                       "help": "The uncertainty threshold. Structure with an uncertainty above this value are printed in the specified output file so they can be used for active learning."})
-    fields["al_output"] =  (InputValue, {"dtype": str,
-                "default": "al_output",
-                "help": "Output filename for structures that exceed the accuracy threshold of the model."})
-    
+    fields["weights"] = (
+        InputArray,
+        {
+            "dtype": float,
+            "default": np.array([]),
+            "help": "List of weights to be given to the forcefields. Defaults to 1 for each FF. Note that the components are divided by the number of FF, and so the default corresponds to an average.",
+        },
+    )
+    fields["alpha"] = (
+        InputValue,
+        {
+            "dtype": float,
+            "default": 1.0,
+            "help": "Scaling of the variance of the model, corresponding to a calibration of the error ",
+        },
+    )
+    fields["al_thresh"] = (
+        InputValue,
+        {
+            "dtype": float,
+            "default": 0.0,
+            "help": "The uncertainty threshold. Structure with an uncertainty above this value are printed in the specified output file so they can be used for active learning.",
+        },
+    )
+    fields["al_output"] = (
+        InputValue,
+        {
+            "dtype": str,
+            "default": "al_output",
+            "help": "Output filename for structures that exceed the accuracy threshold of the model.",
+        },
+    )
+
     def store(self, ff):
         """ Store all the sub-forcefields """
-        
+
         super(InputFFCommittee, self).store(ff)
-        _fflist = ff.fflist        
+        _fflist = ff.fflist
         if len(self.extra) != len(_fflist):
             self.extra = [0] * len(_fflist)
         self.weights.store(ff.ffweights)
@@ -700,9 +720,14 @@ class InputFFCommittee(InputForceField):
             fflist.append(v.fetch())
 
         # TODO: will actually need to create a FF object here!
-        return FFCommittee(pars=self.parameters.fetch(), name=self.name.fetch(),
-                       latency=self.latency.fetch(), dopbc=self.pbc.fetch(),
-                       fflist = fflist, ffweights = self.weights.fetch(),
-                       alpha = self.alpha.fetch(), al_thresh = self.al_thresh.fetch(),
-                       al_out = self.al_output.fetch()
-                       )
+        return FFCommittee(
+            pars=self.parameters.fetch(),
+            name=self.name.fetch(),
+            latency=self.latency.fetch(),
+            dopbc=self.pbc.fetch(),
+            fflist=fflist,
+            ffweights=self.weights.fetch(),
+            alpha=self.alpha.fetch(),
+            al_thresh=self.al_thresh.fetch(),
+            al_out=self.al_output.fetch(),
+        )
