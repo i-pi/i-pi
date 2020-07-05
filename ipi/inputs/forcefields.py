@@ -648,6 +648,14 @@ class InputFFCommittee(InputForceField):
             "help": "Scaling of the variance of the model, corresponding to a calibration of the error ",
         },
     )
+    fields["baseline_uncertainty"] = (
+        InputValue,
+        {
+            "dtype": float,
+            "default": -1.0,
+            "help": "Corresponds to the systematic error of the baseline model. In case it is defined the first forcefield defined within is assumed to the baseline model, while the rest are treated as a committee of delta models trained on the difference between the reference and the baseline model.",
+        },
+    )
     fields["al_thresh"] = (
         InputValue,
         {
@@ -674,6 +682,7 @@ class InputFFCommittee(InputForceField):
             self.extra = [0] * len(_fflist)
         self.weights.store(ff.ffweights)
         self.alpha.store(ff.alpha)
+        self.baseline_uncertainty.store(ff.baseline_uncertainty)
         self.al_thresh.store(ff.al_thresh)
         self.al_output.store(ff.al_out)
 
@@ -728,6 +737,7 @@ class InputFFCommittee(InputForceField):
             fflist=fflist,
             ffweights=self.weights.fetch(),
             alpha=self.alpha.fetch(),
+            baseline_uncertainty=self.baseline_uncertainty.fetch(),
             al_thresh=self.al_thresh.fetch(),
             al_out=self.al_output.fetch(),
         )

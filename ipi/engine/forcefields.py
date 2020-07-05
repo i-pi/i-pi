@@ -915,6 +915,7 @@ class FFCommittee(ForceField):
         fflist=[],
         ffweights=[],
         alpha=1.0,
+        baseline_uncertainty=-1.0,
         al_thresh=0.0,
         al_out=None,
     ):
@@ -940,6 +941,7 @@ class FFCommittee(ForceField):
             raise ValueError("List of weights does not match length of committee model")
         self.ffweights = ffweights
         self.alpha = alpha
+        self.baseline_uncertainty = baseline_uncertainty
         self.al_thresh = al_thresh
         self.al_out = al_out
 
@@ -986,34 +988,54 @@ class FFCommittee(ForceField):
         """ Collects results from all sub-requests """
         ff_res = []
         pot_uncertainty = []
+        pots = []
+        forces = []
+        virials = []
+        ncommittee = len(r["ff_handles"])
         r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]
 
-        # first computes (weighted) mean
-        tw = self.ffweights.sum()
-        for i_r, ff_r in enumerate(r["ff_handles"]):
-            r["result"][0] += ff_r["result"][0] * self.ffweights[i_r] / tw
-            r["result"][1] += ff_r["result"][1] * self.ffweights[i_r] / tw
-            r["result"][2] += ff_r["result"][2] * self.ffweights[i_r] / tw
+        pots = [ff_r["result"][0] for ff_r in r["ff_handles"]]
+        frcs = [ff_r["result"][1] for ff_r in r["ff_handles"]]
+        virs = [ff_r["result"][2] for ff_r in r["ff_handles"]]
+        xtrs = [ff_r["result"][3] for ff_r in r["ff_handles"]]
 
-        for ff_r in r["ff_handles"]:
-            pot_rescaled = self.alpha * (ff_r["result"][0] - r["result"][0])
-            pot_uncertainty.append(pot_rescaled)
+
+        mean_pot = np.mean(pots, axis=0)
+        mean_frc = np.mean(frcs, axis=0)
+        mean_vir = np.mean(virs, axis=0)
+
+        # Rescales the committee values so that their standard deviation corresponds to the error
+        rescaled_pot = [pot + self.alpha * (pot - mean_pot) for pot in pots]
+        rescaled_frc = [frc + self.alpha * (frc - mean_frc) for frc in frcs]
+        rescaled_vir = [vir + self.alpha * (vir - mean_vir) for vir in virs]
+       
+        # Calculates the error associated with the committee 
+        var_pot = np.var(rescaled_pot, ddof=1)
+        std_pot = np.sqrt(var_pot)
+
+        # Sets the output of the committee model.
+        r["result"][0] = mean_pot 
+        r["result"][1] = mean_frc 
+        r["result"][2] = mean_vir 
+        
+        #tw = self.ffweights.sum()
+        #for i_r, ff_r in enumerate(r["ff_handles"]):
+        #    r["result"][0] += ff_r["result"][0] * self.ffweights[i_r] / tw
+        #    r["result"][1] += ff_r["result"][1] * self.ffweights[i_r] / tw
+        #    r["result"][2] += ff_r["result"][2] * self.ffweights[i_r] / tw
+
+        for i_r in range(ncommittee):
+            #pot_rescaled = self.alpha * (ff_r["result"][0] - r["result"][0])
+            #pot_uncertainty.append(pot_rescaled)
             ff_res.append(
                 {
-                    "v": r["result"][0] + pot_rescaled,
-                    "f": list(
-                        r["result"][1]
-                        + self.alpha * (ff_r["result"][1] - r["result"][1])
-                    ),
-                    "s": list(
-                        (
-                            r["result"][2]
-                            + self.alpha * (ff_r["result"][2] - r["result"][2])
-                        ).flatten()
-                    ),
-                    "x": ff_r["result"][3],
+                    "v": rescaled_pot[i_r],
+                    "f": list(rescaled_frc[i_r]),
+                    "s": list(rescaled_vir[i_r].flatten()),
+                    "x": xtrs[i_r],
                 }
             )
+
         r["ff_results"] = ff_res
         r["result"][3] = json.dumps(
             {
@@ -1023,7 +1045,7 @@ class FFCommittee(ForceField):
             }
         )
         # print( np.std(np.array(pot_uncertainty)), self.al_thresh )
-        if np.std(np.array(pot_uncertainty)) > self.al_thresh and self.al_thresh > 0.0:
+        if std_pot > self.al_thresh and self.al_thresh > 0.0:
             dumps = json.dumps(
                 {
                     "position": list(r["pos"]),
