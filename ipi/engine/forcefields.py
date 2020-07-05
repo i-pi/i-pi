@@ -1005,12 +1005,12 @@ class FFCommittee(ForceField):
         mean_vir = np.mean(virs, axis=0)
 
         # Rescales the committee values so that their standard deviation corresponds to the error
-        rescaled_pot = [pot + self.alpha * (pot - mean_pot) for pot in pots]
-        rescaled_frc = [frc + self.alpha * (frc - mean_frc) for frc in frcs]
-        rescaled_vir = [vir + self.alpha * (vir - mean_vir) for vir in virs]
+        rescaled_pots = [mean_pot + self.alpha * (pot - mean_pot) for pot in pots]
+        rescaled_frcs = [mean_frc + self.alpha * (frc - mean_frc) for frc in frcs]
+        rescaled_virs = [mean_vir + self.alpha * (vir - mean_vir) for vir in virs]
        
         # Calculates the error associated with the committee 
-        var_pot = np.var(rescaled_pot, ddof=1)
+        var_pot = np.var(rescaled_pots, ddof=1)
         std_pot = np.sqrt(var_pot)
 
         # Sets the output of the committee model.
@@ -1029,9 +1029,9 @@ class FFCommittee(ForceField):
             #pot_uncertainty.append(pot_rescaled)
             ff_res.append(
                 {
-                    "v": rescaled_pot[i_r],
-                    "f": list(rescaled_frc[i_r]),
-                    "s": list(rescaled_vir[i_r].flatten()),
+                    "v": rescaled_pots[i_r],
+                    "f": list(rescaled_frcs[i_r]),
+                    "s": list(rescaled_virs[i_r].flatten()),
                     "x": xtrs[i_r],
                 }
             )
