@@ -1023,7 +1023,7 @@ class FFCommittee(ForceField):
             }
         )
         # print( np.std(np.array(pot_uncertainty)), self.al_thresh )
-        if np.std(np.array(pot_uncertainty)) > self.al_thresh:
+        if np.std(np.array(pot_uncertainty)) > self.al_thresh and self.al_thresh > 0.0:
             dumps = json.dumps(
                 {
                     "position": list(r["pos"]),
