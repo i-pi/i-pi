@@ -147,10 +147,10 @@ class Client(DriverSocket):
                     i_step += 1
                 elif msg == Message("getforce"):
                     self.sendall(Message("forceready"))
-                    self.sendall(self._potential, 8)
+                    self.sendall(self._potential)
                     self.sendall(self._nat, 4)
-                    self.sendall(self._force, 8 * self._force.size)
-                    self.sendall(self._vir, 9 * 8)
+                    self.sendall(self._force)
+                    self.sendall(self._vir)
                     self.sendall(np.int32(0), 4)
                     self.havedata = False
                 else:
