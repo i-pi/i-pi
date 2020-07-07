@@ -1036,6 +1036,7 @@ class FFCommittee(ForceField):
             baseline_pot = pots[0]
             baseline_frc = frcs[0]
             baseline_vir = virs[0]
+            baseline_xtr = xtrs[0]
             pots = pots[1:]
             frcs = frcs[1:]
             virs = virs[1:]
@@ -1061,15 +1062,15 @@ class FFCommittee(ForceField):
             uncertain_vir = self.alpha**2 * np.mean([(pot - mean_pot) * (vir - mean_vir) for pot, vir in zip(pots, virs)], axis=0)
             
             # Computes the final average energetics
-            final_pot = baseline_pot + mean_pot * (self.baseline_uncertainty / (self.baseline_uncertainty + var_pot)) - 2.0 * mean_pot * (self.baseline_uncertainty / (self.baseline_uncertainty + var_pot)**2) * uncertain_pot
-            final_frc = baseline_frc + mean_frc * (self.baseline_uncertainty / (self.baseline_uncertainty + var_pot)) - 2.0 * mean_pot * (self.baseline_uncertainty / (self.baseline_uncertainty + var_pot)**2) * uncertain_frc
-            final_vir = baseline_vir + mean_vir * (self.baseline_uncertainty / (self.baseline_uncertainty + var_pot)) - 2.0 * mean_pot * (self.baseline_uncertainty / (self.baseline_uncertainty + var_pot)**2) * uncertain_vir
+            final_pot = baseline_pot + mean_pot * (self.baseline_uncertainty**2 / (self.baseline_uncertainty**2 + var_pot)) - 2.0 * mean_pot * (self.baseline_uncertainty**2 / (self.baseline_uncertainty**2 + var_pot)**2) * uncertain_pot
+            final_frc = baseline_frc + mean_frc * (self.baseline_uncertainty**2 / (self.baseline_uncertainty**2 + var_pot)) - 2.0 * mean_pot * (self.baseline_uncertainty**2 / (self.baseline_uncertainty**2 + var_pot)**2) * uncertain_frc
+            final_vir = baseline_vir + mean_vir * (self.baseline_uncertainty**2 / (self.baseline_uncertainty**2 + var_pot)) - 2.0 * mean_pot * (self.baseline_uncertainty**2 / (self.baseline_uncertainty**2 + var_pot)**2) * uncertain_vir
         
             # Sets the output of the committee model.
             r["result"][0] = final_pot 
             r["result"][1] = final_frc 
             r["result"][2] = final_vir
-             
+ 
         for i_r in range(ncommittee):
             ff_res.append(
                 {
@@ -1081,20 +1082,37 @@ class FFCommittee(ForceField):
             )
 
         r["ff_results"] = ff_res
-        r["result"][3] = json.dumps(
-            {
-                "position": list(r["pos"]),
-                "cell": list(r["cell"][0].flatten()),
-                "committee": r["ff_results"],
-            }
-        )
+        if self.baseline_uncertainty > 0:
+            bs_res =  { 
+                        "v": baseline_pot,
+                        "f": list(baseline_frc),
+                        "s": list(baseline_vir.flatten()),
+                        "x": baseline_xtr
+                      }
+
+            r["result"][3] = json.dumps(
+                {
+                    "position": list(r["pos"]),
+                    "cell": list(r["cell"][0].flatten()),
+                    "committee": r["ff_results"],
+                    "baseline": bs_res
+                }
+            )
+        else:
+            r["result"][3] = json.dumps(
+                {
+                    "position": list(r["pos"]),
+                    "cell": list(r["cell"][0].flatten()),
+                    "committee": r["ff_results"],
+                }
+            )
         # print( np.std(np.array(pot_uncertainty)), self.al_thresh )
         if std_pot > self.al_thresh and self.al_thresh > 0.0:
             dumps = json.dumps(
                 {
                     "position": list(r["pos"]),
                     "cell": list(r["cell"][0].flatten()),
-                    "uncertainty": np.std(np.array(pot_uncertainty)),
+                    "uncertainty": std_pot
                 }
             )
             self.al_file.write(dumps)
