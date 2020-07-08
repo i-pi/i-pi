@@ -210,7 +210,7 @@ def main(inputfile, prefix="SRT_"):
                     if step % straj["stride"] == 0:  # property transfer
                         # reads one frame from the input file
                         ibuffer = []
-                        if straj["format"] == None:
+                        if straj["format"] is None:
                             ibuffer.append(straj["ifile"].readline())
                             ibuffer.append(straj["ifile"].readline())
                             traj[irep[isys]]["ofile"].write("".join(ibuffer))
