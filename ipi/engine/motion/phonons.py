@@ -221,7 +221,7 @@ class DynMatrixMover(Motion):
             D[1] = np.tile([0, 1, 0], self.beads.natoms) / self.ism
             D[2] = np.tile([0, 0, 1], self.beads.natoms) / self.ism
             for i in range(3 * self.beads.natoms):
-                iatom = i / 3
+                iatom = i // 3
                 idof = np.mod(i, 3)
                 D[3, i] = (R[iatom, 1] * U[idof, 2] - R[iatom, 2] * U[idof, 1]) / self.ism[i]
                 D[4, i] = (R[iatom, 2] * U[idof, 0] - R[iatom, 0] * U[idof, 2]) / self.ism[i]
