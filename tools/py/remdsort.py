@@ -129,6 +129,17 @@ def main(inputfile, prefix="SRT_"):
                             if getkey(o.what) == "extras":
                                 filename = filename + "_" + padb
                                 ofilename = ofilename + "_" + padb
+                                # Sets format of extras as None
+                                ntraj.append(
+                                    {
+                                        "filename": filename,
+                                        "format": None,
+                                        "ofilename": ofilename,
+                                        "stride": o.stride,
+                                        "ifile": open(filename, "r"),
+                                        "ofile": open(ofilename, "w"),
+                                    }
+                                )
                             else:
                                 filename = filename + "_" + padb + "." + o.format
                                 ofilename = ofilename + "_" + padb + "." + o.format
@@ -193,13 +204,16 @@ def main(inputfile, prefix="SRT_"):
                             prop[irep[isys]]["ofile"].write(iline)
                             iline = sprop["ifile"].readline()
                         prop[irep[isys]]["ofile"].write(iline)
-
             for traj in ltraj:
                 for isys in range(nsys):
                     straj = traj[isys]
                     if step % straj["stride"] == 0:  # property transfer
                         # reads one frame from the input file
                         ibuffer = []
+                        if straj["format"] is None:
+                            ibuffer.append(straj["ifile"].readline())
+                            ibuffer.append(straj["ifile"].readline())
+                            traj[irep[isys]]["ofile"].write("".join(ibuffer))
                         if straj["format"] == "xyz":
                             iline = straj["ifile"].readline()
                             nat = int(iline)
