@@ -1,14 +1,17 @@
-<simulation verbosity='low'>
-   <output prefix='simulation'>
-      <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv, volume, ensemble_temperature ] </properties>
-      <trajectory filename='xc' stride='1'> x_centroid </trajectory>
-      <trajectory filename='xtr' stride='1'> extras </trajectory>
-      <checkpoint stride='10'/>
+<simulation verbosity="low">
+   <output prefix="simulation">
+      <properties stride="40" filename="out">  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv, volume, ensemble_temperature ] </properties>
+      <trajectory filename="xc" stride="400"> x_centroid </trajectory>
+      <trajectory filename="pos1" stride="400" bead="0"> positions </trajectory>
+      <trajectory filename="pos2" stride="400" bead="8"> positions </trajectory>
+      <trajectory filename="pos3" stride="400" bead="16"> positions </trajectory>
+      <trajectory filename="pos4" stride="400" bead="24"> positions </trajectory>
+      <checkpoint stride="4000"/>
    </output>
    <total_steps> 400000 </total_steps>
    <total_time> 3400 </total_time>
    <prng><seed>31415</seed></prng>
-   <ffsocket name='qtip4pf' mode='unix' matching='any'>
+   <ffsocket name="qtip4pf" mode="unix" matching="any">
        <address> f1 </address>
        <latency> 1e-3 </latency> 
    </ffsocket>
@@ -24,7 +27,7 @@
        <instance> [ 7,  320, 1.0, 7_init.xyz ]  </instance>
        <instance> [ 8,  330, 1.0, 8_init.xyz ] </instance>
        <instance> [ 9,  340, 1.0, 9_init.xyz ] </instance>
-       <!--instance> [ 10, 250, 100, 0_init.xyz ] </instance>
+       <instance> [ 10, 250, 100, 0_init.xyz ] </instance>
        <instance> [ 11, 260, 100, 11_init.xyz ] </instance>
        <instance> [ 12, 270, 100, 12_init.xyz ] </instance>
        <instance> [ 13, 280, 100, 13_init.xyz ] </instance>
@@ -33,41 +36,41 @@
        <instance> [ 16, 310, 100, 16_init.xyz ] </instance>
        <instance> [ 17, 320, 100, 17_init.xyz ]  </instance>
        <instance> [ 18, 330, 100, 18_init.xyz ] </instance>
-       <instance> [ 19, 340, 100, 19_init.xyz ] </instance-->
+       <instance> [ 19, 340, 100, 19_init.xyz ] </instance>
        <template>
-           <system prefix='IDX'>
-              <initialize nbeads='1'>
-                 <file mode='xyz'> INITFILE </file>
-                 <velocities mode='thermal' units='kelvin'> TEMP </velocities>
+           <system prefix="IDX">
+              <initialize nbeads="32">
+                 <file mode="xyz"> INITFILE </file>
+                 <velocities mode="thermal" units="kelvin"> TEMP </velocities>
               </initialize>
               <forces>
-                 <force forcefield ='qtip4pf' nbeads='1'> </force>
+                 <force forcefield ="qtip4pf" nbeads="32"> </force>
               </forces> 
-              <motion mode='dynamics'>
-                 <dynamics mode='npt'>
-                    <barostat mode='isotropic'>
-                        <tau units='femtosecond'> 1189.3531 </tau>
-                        <thermostat mode='langevin'>
-                            <tau units='femtosecond'> 100 </tau>
+              <motion mode="dynamics">
+                 <dynamics mode="npt">
+                    <barostat mode="isotropic">
+                        <tau units="femtosecond"> 1189.3531 </tau>
+                        <thermostat mode="langevin">
+                            <tau units="femtosecond"> 100 </tau>
                         </thermostat>
                     </barostat>
-                    <timestep units='femtosecond'> 0.25 </timestep>
-                    <thermostat mode='pile_g'>
-                        <tau units='femtosecond'> 100 </tau>
+                    <timestep units="femtosecond"> 0.25 </timestep>
+                    <thermostat mode="pile_g">
+                        <tau units="femtosecond"> 100 </tau>
                     </thermostat>
                  </dynamics>
               </motion>
               <ensemble>
-                 <temperature units='kelvin'> TEMP </temperature>
-                 <pressure units='bar'> PRESSURE </pressure>
+                 <temperature units="kelvin"> TEMP </temperature>
+                 <pressure units="bar"> PRESSURE </pressure>
               </ensemble>
            </system>
        </template>
    </system_template>
 
-   <smotion mode='remd'>
+   <smotion mode="remd">
       <remd>
-         <stride> 100 </stride>
+         <stride> 1 </stride>
       </remd>
    </smotion>   
 </simulation>
