@@ -158,9 +158,10 @@ def main(inputfile, outdir="trim"):
 
     ptfile = None
     wtefile = None
-    if os.path.isfile("PARATEMP"):
-        ptfile = open("PARATEMP", "r")
-        optfile = open(outdir + "/PARATEMP", "w")
+    if os.path.isfile(simul.outtemplate.prefix + '.' + simul.smotion.swapfile):
+        ptfile = open(simul.outtemplate.prefix + '.' + simul.smotion.swapfile, "r")
+        optfile = open(outdir + "/" + simul.outtemplate.prefix + '.' + simul.smotion.swapfile, "w")
+    # do not know if this is redudant
     if os.path.isfile("PARAWTE"):
         wtefile = open("PARAWTE", "r")
         owtefile = open(outdir + "/PARAWTE", "w")
