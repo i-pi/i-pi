@@ -158,15 +158,17 @@ def main(inputfile, outdir="trim"):
 
     ptfile = None
     wtefile = None
-    if os.path.isfile(simul.outtemplate.prefix + '.' + simul.smotion.swapfile):
-        ptfile = open(simul.outtemplate.prefix + '.' + simul.smotion.swapfile, "r")
-        optfile = open(outdir + "/" + simul.outtemplate.prefix + '.' + simul.smotion.swapfile, "w")
+    if os.path.isfile(simul.outtemplate.prefix + "." + simul.smotion.swapfile):
+        ptfile = open(simul.outtemplate.prefix + "." + simul.smotion.swapfile, "r")
+        optfile = open(
+            outdir + "/" + simul.outtemplate.prefix + "." + simul.smotion.swapfile, "w"
+        )
     # do not know if this is redudant, please uncomment if it is not
-    #if os.path.isfile("PARAWTE"):
+    # if os.path.isfile("PARAWTE"):
     #    wtefile = open("PARAWTE", "r")
     #    owtefile = open(outdir + "/PARAWTE", "w")
 
-   # First reads the swap file 
+    # First reads the swap file
     while True:
         if ptfile is not None:
             try:
@@ -175,7 +177,7 @@ def main(inputfile, outdir="trim"):
                 if step <= trimstep:
                     optfile.write(line)
                 else:
-                     break
+                    break
             except IndexError:
                 break
 
