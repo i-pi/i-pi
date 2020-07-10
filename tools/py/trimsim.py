@@ -105,6 +105,16 @@ def main(inputfile, outdir="trim"):
                             if getkey(o.what) == "extras":
                                 filename = filename + "_" + padb
                                 ofilename = ofilename + "_" + padb
+                                ntraj.append(
+                                    {
+                                        "filename": filename,
+                                        "format": None,
+                                        "ofilename": ofilename,
+                                        "stride": o.stride,
+                                        "ifile": open(filename, "r"),
+                                        "ofile": open(ofilename, "w"),
+                                    }
+                                )
                             else:
                                 filename = filename + "_" + padb + "." + o.format
                                 ofilename = ofilename + "_" + padb + "." + o.format
@@ -184,6 +194,10 @@ def main(inputfile, outdir="trim"):
                     if step % straj["stride"] == 0:  # property transfer
                         # reads one frame from the input file
                         ibuffer = []
+                        if straj["format"] is None:
+                            ibuffer.append(straj["ifile"].readline())
+                            ibuffer.append(straj["ifile"].readline())
+                            traj[isys]["ofile"].write("".join(ibuffer))
                         if straj["format"] == "xyz":
                             iline = straj["ifile"].readline()
                             nat = int(iline)
