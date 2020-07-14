@@ -174,7 +174,7 @@ def main(inputfile, outdir="trim"):
             try:
                 line = ptfile.readline()
                 step = int(line.split()[0])
-                if step <= trimstep:
+                if step < trimstep:
                     optfile.write(line)
                 else:
                     break
