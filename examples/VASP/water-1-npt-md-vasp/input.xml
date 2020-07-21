@@ -11,18 +11,17 @@
   </output>
   <prng><seed> 3924</seed></prng>
   <total_steps>100</total_steps>
-    <ffsocket mode='inet' name='aaa'>
+    <ffsocket mode='inet' name='vasp'>
          <port> 23333 </port>
          <address> localhost </address>
    </ffsocket>  
 <system>
     <initialize nbeads="1">
-      <file mode="xyz" units="angstrom"> init.xyz </file>
-      <cell mode="manual" units="angstrom"> [ 8,0.5,0.2, 0.0,9,0.6, 0.0,0.0,7 ] </cell>
+      <file mode="xyz"> init.xyz </file>
       <velocities mode="thermal" units="kelvin"> 300  </velocities>
     </initialize>
     <forces>
-      <force forcefield="aaa"> </force>
+      <force forcefield="vasp"> </force>
     </forces>
     <ensemble>
       <temperature units="kelvin"> 300 </temperature>
