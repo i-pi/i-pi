@@ -32,7 +32,7 @@ $ make clean
  
  * In the main example directory run 
 
-$ python ipi-root/bin/i-pi ipi-vasp.xml
+$ python ipi-root/bin/i-pi input.xml
  
  * In another terminal, create up to 4 temporary directories to run vasp_std,
  and launch it from within:
@@ -47,7 +47,7 @@ $ $VASP
  * To run VASP remotely, you should:
     1. make sure that the machine you run i-pi on has a port accessible 
        from outside
-    2. change the <interface> option in ipi-vasp.xml so that <address> points 
+    2. change the <interface> option in input.xml so that <address> points 
        to the external network interface (i.e. give a fully-qualified domain 
        name or IP address rather than localhost) and that the <port>
        selected is accessible from outside
