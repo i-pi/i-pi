@@ -18,8 +18,7 @@
       <force forcefield='pw'/>
     </forces>
     <initialize nbeads='4'>
-      <file mode='xyz' units='angstrom'> init.xyz </file>
-      <cell units='angstrom'>[3.567, 0, 0, 0, 3.567, 0, 0, 0, 3.567] </cell>
+      <file mode='xyz'> init.xyz </file>
       <velocities mode='thermal' units='kelvin'> 150 </velocities>
     </initialize>
     <ensemble>

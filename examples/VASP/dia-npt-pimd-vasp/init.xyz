@@ -1,5 +1,5 @@
 8
-diamond.pdb
+# CELL(abcABC): 3.567 3.567 3.567 90.0 90.0 90.0 positions{angstrom} cell{angstrom}
 C          0.00000        0.00000        0.00000
 C          0.00000        1.78400        1.78400
 C          1.78400        1.78400        0.00000
