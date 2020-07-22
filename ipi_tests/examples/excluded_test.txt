@@ -15,7 +15,8 @@ pes/neb
 qtip4pf/tun-splitting
 pes/qtip4pf/tun-splitting
 pes/qtip4pf/tun-splitting/TS
-lammps/ice-nst 
+lammps/ice-npt+sc 
+lammps/ice-npt-nst 
 lammps/ice-ramp-melt 
 lammps/h2o-planetary-64 
 lammps/h2o-pimd+sc+gle.4 
