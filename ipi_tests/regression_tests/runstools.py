@@ -54,11 +54,12 @@ class Runner(object):
     it checks that the generated outputs are the expected ones.
     """
 
-    def __init__(self, parent, check_errors=True, check_prop=True):
+    def __init__(self, parent, check_errors=True, check_main_output=True,check_xyz_output=False):
         """ Store parent directory and commands to call i-pi and driver """
         self.parent = parent
         self.check_error = check_errors
-        self.check_prop = check_prop
+        self.check_main_output = check_main_output
+        self.check_xyz_output = check_xyz_output
 
     def _run(self, cmd1, cmd2, cwd):
         """ This function tries to run the example in a tmp folder and
@@ -92,8 +93,10 @@ class Runner(object):
 
             if self.check_error:
                 self._check_error(ipi)
-            if self.check_prop:
-                self._check_properties(cwd)
+            if self.check_main_output:
+                self._check_main_output(cwd)
+            if self.check_xyz_output:
+                self._check_xyz_output(cwd)
 
         except sp.TimeoutExpired:
             raise RuntimeError(
@@ -115,15 +118,14 @@ class Runner(object):
         print(ipi_error)
         assert "" == ipi_error
 
-    def _check_properties(self, cwd):
+    def _check_main_output(self, cwd):
         """ This function checks if the simulation.out is 'all_close' to the reference file provided"""
 
-        # TODO: Extend this to other types of checks
         try:
             ref_output = np.loadtxt(Path(cwd) / "ref_simulation.out")
         except IOError:
             raise IOError(
-                'Please provide a refence properties output named "ref_simulation.out"'
+                'Please provide a reference properties output named "ref_simulation.out"'
             )
         except ValueError:
             raise ValueError(
@@ -131,5 +133,8 @@ class Runner(object):
             )
 
         test_output = np.loadtxt(self.tmp_dir / "simulation.out")
-
         np.testing.assert_allclose(test_output, ref_output)
+
+    def _check_xyz_output(self,cwd):
+        
+        raise NotImplementedError
