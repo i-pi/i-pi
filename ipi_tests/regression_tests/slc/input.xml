@@ -1,17 +1,17 @@
 <simulation verbosity="high">
-  <ffsocket mode='unix' name='wat1beads' pbc='true'>
-    <port> 33330 </port>
-    <address> wat1beads </address>
+  <ffsocket  name='wat1beads' pbc='true'>
+    <port> 33340 </port>
+    <address> localhost </address>
     <activelist>[0,1,2] </activelist>
   </ffsocket>
-  <ffsocket mode='unix' name='wat1cent' pbc='true'>
-    <port> 33331 </port>
-    <address> wat1cent </address>
+  <ffsocket  name='wat1cent' pbc='true'>
+    <port> 33341 </port>
+    <address> localhost </address>
     <activelist>[0,1,2]</activelist>
   </ffsocket>
-  <ffsocket mode='unix' name='full' pbc='true'>
-    <port> 33332 </port>
-    <address> full </address>
+  <ffsocket name='full' pbc='true'>
+    <port> 33342 </port>
+    <address> localhost </address>
   </ffsocket>
   <total_steps>10</total_steps>
   <output prefix='simulation'>

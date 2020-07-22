@@ -21,7 +21,9 @@ reg_tests = get_info_test(main_folder)
 
 @pytest.mark.parametrize("test_info", reg_tests)
 def test_cmd(test_info):
-
+    """ Intermediate function to run the regression test (by calling Runner) and makes
+    possible to parametrize the arguments
+    """
     runner = Runner(Path("."))
 
     cmd2 = list()
@@ -57,8 +59,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     try:
-        path = main_folder / args.folder
-        reg_tests = get_info_test(main_folder)
+        path = main_folder / args.path
+        reg_tests = get_info_test(path)
     except:
         print("We will run all the tests")
         reg_tests = get_info_test(main_folder)

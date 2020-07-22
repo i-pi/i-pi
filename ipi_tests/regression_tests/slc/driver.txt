@@ -1,3 +1,3 @@
-qtip4pf wat1beads 33330 unix
-qtip4pf wat1cent  33331 unix
-qtip4pf full      33332 unix
+qtip4pf localhost  33340 inet
+qtip4pf localhost  33341 inet
+qtip4pf localhost  33342 inet
