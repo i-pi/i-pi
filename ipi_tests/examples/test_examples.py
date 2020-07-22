@@ -19,6 +19,9 @@ print("We have found {} reg_tests".format(len(examples)))
 
 @pytest.mark.parametrize("ex", examples)
 def test_example(ex):
+    """ Intermediate function to run the examples (by calling Runner_examples) which makes
+    possible to parametrize the arguments
+    """ 
     t0 = time.time()
     nid = examples.index(ex)
     runner = Runner_examples(Path("."))

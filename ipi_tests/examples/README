@@ -1,5 +1,5 @@
 
-Examples to excluded from this test should be added to 'excluded_test.txt'
+Examples to be excluded from this test should be added to 'excluded_test.txt'
 
 To run all the example-test:
 type: python test_examples.py

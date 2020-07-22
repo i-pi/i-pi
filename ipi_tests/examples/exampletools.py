@@ -87,7 +87,7 @@ def find_examples(parent, excluded_file="excluded_test.txt"):
     return examples
 
 
-def modify_xml(
+def modify_xml_2_dummy_test(
     input_name, output_name, nid, driver_info, nsteps=2,
 ):
     """ Modify xml to run dummy tests """
@@ -125,12 +125,23 @@ def modify_xml(
 
 
 class Runner_examples(object):
+    """ This class 
+
+    """
+
     def __init__(self, parent, cmd1="i-pi new.xml", cmd2="i-pi-driver"):
+        """ Store parent directory and commands to call i-pi and driver """
         self.parent = parent
         self.cmd1 = cmd1
         self.cmd2 = cmd2
 
     def run(self, cwd, nid):
+        """ This function tries to run the example in a tmp folder 
+        and afterwards check if ipi has ended without error.
+        arguments:
+            cwd: folder where all the original examples files are stored
+            nid: identification number to avoid repetitions of addresses"""
+
         try:
             # Create temp file and copy files
             self.tmp_dir = Path(tempfile.mkdtemp())
@@ -142,7 +153,7 @@ class Runner_examples(object):
             driver_info = get_driver_info(self.tmp_dir)
 
             # Modify xml
-            clients = modify_xml(
+            clients = modify_xml_2_dummy_test(
                 self.tmp_dir / "input.xml", self.tmp_dir / "new.xml", nid, driver_info
             )
 
