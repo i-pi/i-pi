@@ -125,8 +125,9 @@ def modify_xml_2_dummy_test(
 
 
 class Runner_examples(object):
-    """ This class 
-
+    """ This class handles the modification of the examples inputs,
+    the creation of tmp directories, the i-pi call, the driver call, and finally
+    it checks if i-pi ended without error.
     """
 
     def __init__(self, parent, cmd1="i-pi new.xml", cmd2="i-pi-driver"):
@@ -136,8 +137,8 @@ class Runner_examples(object):
         self.cmd2 = cmd2
 
     def run(self, cwd, nid):
-        """ This function tries to run the example in a tmp folder 
-        and afterwards check if ipi has ended without error.
+        """ This function tries to run the example in a tmp folder and
+        afterwards checks if ipi has ended without error.
         arguments:
             cwd: folder where all the original examples files are stored
             nid: identification number to avoid repetitions of addresses"""
