@@ -1,4 +1,3 @@
-
 See documentaion of how to run the regression tests by running:
 
    "python test_run.py -h"
