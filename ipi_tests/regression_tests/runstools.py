@@ -54,7 +54,9 @@ class Runner(object):
     it checks that the generated outputs are the expected ones.
     """
 
-    def __init__(self, parent, check_errors=True, check_main_output=True,check_xyz_output=False):
+    def __init__(
+        self, parent, check_errors=True, check_main_output=True, check_xyz_output=False
+    ):
         """ Store parent directory and commands to call i-pi and driver """
         self.parent = parent
         self.check_error = check_errors
@@ -135,6 +137,6 @@ class Runner(object):
         test_output = np.loadtxt(self.tmp_dir / "simulation.out")
         np.testing.assert_allclose(test_output, ref_output)
 
-    def _check_xyz_output(self,cwd):
-        
+    def _check_xyz_output(self, cwd):
+
         raise NotImplementedError
