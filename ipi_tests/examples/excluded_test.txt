@@ -1,9 +1,4 @@
 # To check
-MBPOL/splitting/min
-MBPOL/splitting/instanton/32-lbfgs
-MBPOL/splitting/TS
-pes/qtip4pf/tun-splitting/min
-pes/qtip4pf/tun-splitting/instanton/32-lbfgs
 lammps/h2o-scphonons
 lammps/h2o-imf
 lammps/h2o-vscf
