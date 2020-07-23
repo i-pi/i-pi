@@ -3,6 +3,9 @@ import numpy as np
 from ipi.utils.messages import verbosity, info
 from ipi.utils import units
 import ipi.utils.mathtools as mt
+import os.path
+import glob
+import copy
 
 
 def banded_hessian(h, im, masses=True, shift=0.001):
@@ -285,3 +288,14 @@ def print_instanton_hess(prefix, step, hessian, output_maker):
     outfile = output_maker.get_output(prefix + ".hess_" + str(step), "w")
     np.savetxt(outfile, hessian.reshape(1, hessian.size))
     outfile.close_stream()
+
+
+def ms_pathway(pos, m3):
+
+    dx = list()
+    path = np.zeros(pos.shape[0])
+    for i in range(1, pos.shape[0]):
+        d_norm = np.linalg.norm((pos[i] - pos[i - 1]) * m3[i] ** 0.5)
+        dx.append(d_norm)
+        path[i] = np.sum(dx[:i])
+    return path
