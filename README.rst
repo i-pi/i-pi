@@ -1,12 +1,4 @@
 ====
-Temporary announcement
-====
-1) We have added a new branch in this repository which is a rewrite of i-PI master in Python3.
-2) New developments should start being based in that branch and we will make sure any updates to master made up to October 31st, 2019, in python2 are translated into that branch in python3.
-3) Any pull requests based on the python2 implementation that are not accepted before October 31st will not be accepted afterwards. We will not accept any further pull requests that are not based on the new python3 rewrite. If you have ongoing developments, think about what you want to merge before and what you can transfer to the python3 version.
-4) In the python3 branch, we will also update some unit conversions, notably the Hartree to eV conversion for example, which is not accurate at the moment, as far as the NIST value goes. So be aware that when you start using the Python3 version of i-PI, numbers you output in eV might be a bit different than the ones you were outputting with the Python2 version before. We will keep the old values as legacy in the code in case you need to convert between both.
-
-====
 i-PI: a Universal Force Engine
 ====
 
@@ -107,3 +99,22 @@ which instructions can be obtained by typing
   $ i-pi-style -h 
 
 
+Contributing
+================
+
+i-PI is an open source project, and everyone is welcome to contribute 
+with bug fixes, documentation, examples, new features, regression tests, etc.
+
+Your contribution should be based on the master branch. We kindly ask you to first fork the project, 
+make your changes, have a look at the checklist (see below), and finally create a pull request (PR). 
+
+Checklist before creating a pull request:
+
+- Make sure that follow our format compliance (see section above)
+- Check that the new classes and the functions have the corresponding docstrings
+(In case the PR adds a new functionally please fulfill the next two requirements as well)
+- Add a working example to the examples folders to showcase the new functionality
+- Add a regression test to the i-pi/ipi_tests/regression_tests folder (see the corresponding Readme file for further details)
+- Make sure that all the automatic checks pass without any error
+
+We are looking forward to your contribution!
