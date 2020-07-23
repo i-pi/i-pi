@@ -111,7 +111,7 @@ make your changes, have a look at the checklist (see below), and finally create 
 Checklist before creating a pull request:
 
 - Make sure that follow our format compliance (see section above)
-- Check that the new classes and the functions have the corresponding docstrings
+- Check that  new classes and functions have the corresponding docstrings
 (In case the PR adds a new functionally please fulfill the next two requirements as well)
 - Add a working example to the examples folders to showcase the new functionality
 - Add a regression test to the i-pi/ipi_tests/regression_tests folder (see the corresponding Readme file for further details)
