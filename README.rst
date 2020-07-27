@@ -106,15 +106,15 @@ i-PI is an open source project, and everyone is welcome to contribute
 with bug fixes, documentation, examples, new features, regression tests, etc.
 
 Your contribution should be based on the master branch. We kindly ask you to first fork the project, 
-make your changes, have a look at the checklist (see below), and finally create a pull request (PR). 
+make your changes, make sure you comply with all items in our checklist below, and finally create a pull request (PR). 
 
-Checklist before creating a pull request:
+Checklist to create a pull request:
 
-- Make sure that follow our format compliance (see section above)
-- Check that  new classes and functions have the corresponding docstrings
-(In case the PR adds a new functionally please fulfill the next two requirements as well)
-- Add a working example to the examples folders to showcase the new functionality
-- Add a regression test to the i-pi/ipi_tests/regression_tests folder (see the corresponding Readme file for further details)
+- Code follows our format compliance (`black` and `flake8` as explained above)
+- All classes and functions include corresponding docstrings
+(If the PR adds a new functionally, please fulfill the next two requirements as well)
+- Add a working example to the `examples` foldes to showcase the new functionality
+- Add a regression test to the `i-pi/ipi_tests/regression_tests` folder (see the corresponding README file for further details)
 - Make sure that all the automatic checks pass without any error
 
 We are looking forward to your contribution!
