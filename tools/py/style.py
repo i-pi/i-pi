@@ -41,7 +41,7 @@ def main(check_mode, folder_path, file_path):
     cmd1 = [linter, path]
     flake8 = sp.Popen(cmd1, cwd=cwd_repo, stdout=sp.PIPE, stderr=sp.PIPE)
     msg = flake8.communicate(timeout=30)[0].decode("utf-8")
-    if msg is "":
+    if msg=="":
         print("\nThere isn't any warning. You are ready to push this commit.\n")
     else:
         print("{} output:\n".format(linter))
