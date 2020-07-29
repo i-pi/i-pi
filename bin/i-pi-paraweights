@@ -56,7 +56,9 @@ def main(inputfile, prefix="PTW-", ttemp="300.0", skip="2000"):
     isimul.parse(xmlrestart.fields[0][1])
     verbosity.level = "quiet"
     banner()
-    print("# Printing out temperature re-weighing factors for a parallel tempering simulation")
+    print(
+        "# Printing out temperature re-weighing factors for a parallel tempering simulation"
+    )
     simul = isimul.fetch()
 
     if simul.mode != "paratemp":
@@ -69,19 +71,45 @@ def main(inputfile, prefix="PTW-", ttemp="300.0", skip="2000"):
     tlist = simul.paratemp.temp_list
     nsys = len(simul.syslist)
     for o in simul.outtemplate:
-        if type(o) is CheckpointOutput:   # properties and trajectories are output per system
+        if (
+            type(o) is CheckpointOutput
+        ):  # properties and trajectories are output per system
             pass
         elif type(o) is PropertyOutput:
             nprop = []
             isys = 0
-            for s in simul.syslist:   # create multiple copies
+            for s in simul.syslist:  # create multiple copies
                 if s.prefix != "":
                     filename = s.prefix + "_" + o.filename
-                else: filename = o.filename
-                ofilename = prefix + (("%0" + str(int(1 + np.floor(np.log(len(simul.syslist)) / np.log(10)))) + "d") % (isys)) + "_" + o.filename
-                nprop.append({"filename": filename, "ofilename": ofilename, "stride": o.stride,
-                              "ifile": open(filename, "r"), "ofile": None
-                              })
+                else:
+                    filename = o.filename
+                ofilename = (
+                    prefix
+                    + (
+                        (
+                            "%0"
+                            + str(
+                                int(
+                                    1
+                                    + np.floor(np.log(len(simul.syslist)) / np.log(10))
+                                )
+                            )
+                            + "d"
+                        )
+                        % (isys)
+                    )
+                    + "_"
+                    + o.filename
+                )
+                nprop.append(
+                    {
+                        "filename": filename,
+                        "ofilename": ofilename,
+                        "stride": o.stride,
+                        "ifile": open(filename, "r"),
+                        "ofile": None,
+                    }
+                )
                 isys += 1
             lprop.append(nprop)
 
@@ -96,8 +124,8 @@ def main(inputfile, prefix="PTW-", ttemp="300.0", skip="2000"):
     tw = []
     tw2 = []
 
-    repot = re.compile(' ([0-9]*) *--> potential')
-    reunit = re.compile('{(.*)}')
+    repot = re.compile(" ([0-9]*) *--> potential")
+    reunit = re.compile("{(.*)}")
 
     # now reads files one frame at a time, and re-direct output to the appropriate location
     irep = np.zeros(nsys, int)
@@ -107,7 +135,8 @@ def main(inputfile, prefix="PTW-", ttemp="300.0", skip="2000"):
         line = line.split()
 
         try:
-            if len(line) == 0: raise EOFError
+            if len(line) == 0:
+                raise EOFError
 
             step = int(line[0])
             irep[:] = line[1:]
@@ -118,7 +147,8 @@ def main(inputfile, prefix="PTW-", ttemp="300.0", skip="2000"):
                     sprop = prop[isys]
                     if step % sprop["stride"] == 0:  # property transfer
                         iline = sprop["ifile"].readline()
-                        if len(iline) == 0: raise EOFError
+                        if len(iline) == 0:
+                            raise EOFError
                         while iline[0] == "#":  # fast forward if line is a comment
                             # checks if we have one single file with potential energies
                             rm = repot.search(iline)
@@ -126,48 +156,71 @@ def main(inputfile, prefix="PTW-", ttemp="300.0", skip="2000"):
                                 tprops.append(prop)
                                 for p in prop:
                                     p["ofile"] = open(p["ofilename"], "w")
-                                    p["ofile"].write("# column   1     --> ptlogweight: ln of re-weighing factor with target temperature %s K\n" % (txtemp))
+                                    p["ofile"].write(
+                                        "# column   1     --> ptlogweight: ln of re-weighing factor with target temperature %s K\n"
+                                        % (txtemp)
+                                    )
                                 vfields.append(int(rm.group(1)) - 1)
                                 refpots.append(np.zeros(nsys))
                                 nw.append(np.zeros(nsys))
                                 tw.append(np.zeros(nsys))
                                 tw2.append(np.zeros(nsys))
                                 rm = reunit.search(iline)
-                                if rm: vunits.append(rm.group(1))
-                                else: vunits.append("atomic_unit")
+                                if rm:
+                                    vunits.append(rm.group(1))
+                                else:
+                                    vunits.append("atomic_unit")
                             iline = sprop["ifile"].readline()
                         if prop in tprops:  # do temperature weighing
-                            pot = unit_to_internal("energy", vunits[wk], float(iline.split()[vfields[wk]]))
+                            pot = unit_to_internal(
+                                "energy", vunits[wk], float(iline.split()[vfields[wk]])
+                            )
                             ir = irep[isys]
-                            if (nw[wk][ir] == 0):
-                                refpots[wk][ir] = pot  # picks the first value as a reference potential to avoid insane absolute values of the logweight
+                            if nw[wk][ir] == 0:
+                                refpots[wk][
+                                    ir
+                                ] = pot  # picks the first value as a reference potential to avoid insane absolute values of the logweight
                             temp = tlist[ir]
                             lw = (pot - refpots[wk][ir]) * (1 / temp - 1 / ttemp)
-                            if step > skip:  # computes trajectory weights avoiding the initial - possibly insane - values
+                            if (
+                                step > skip
+                            ):  # computes trajectory weights avoiding the initial - possibly insane - values
                                 if nw[wk][ir] == 0:
                                     tw[wk][ir] = lw
                                     tw2[wk][ir] = lw
                                 else:
                                     tw[wk][ir] = logsumlog((tw[wk][ir], 1), (lw, 1))[0]
-                                    tw2[wk][ir] = logsumlog((tw2[wk][ir], 1), (2 * lw, 1))[0]
+                                    tw2[wk][ir] = logsumlog(
+                                        (tw2[wk][ir], 1), (2 * lw, 1)
+                                    )[0]
                                 nw[wk][ir] += 1
                             prop[ir]["ofile"].write("%15.7e\n" % (lw))
-                            if isys == nsys - 1: wk += 1
+                            if isys == nsys - 1:
+                                wk += 1
         except EOFError:
             # print out trajectory weights based on PRSA 2011, assuming that observables and weights are weakly correlated
             wk = 0
             fpw = open(prefix + "WEIGHTS", "w")
             fpw.write("# Global trajectory weights for temperature %s K\n" % (txtemp))
-            fpw.write("# Please cite M. Ceriotti, G. A. Brain, O. Riordan, D.E. Manolopoulos, " +
-                      "The inefficiency of re-weighted sampling and the curse of system size in high-order path integration. " +
-                      "Proceedings of the Royal Society A, 468(2137), 2-17  (2011) \n")
+            fpw.write(
+                "# Please cite M. Ceriotti, G. A. Brain, O. Riordan, D.E. Manolopoulos, "
+                + "The inefficiency of re-weighted sampling and the curse of system size in high-order path integration. "
+                + "Proceedings of the Royal Society A, 468(2137), 2-17  (2011) \n"
+            )
             for prop in lprop:
                 if prop in tprops:
                     for ir in range(nsys):
-                        fpw.write("%s   %15.7e \n" % (prop[ir]["ofilename"], 1.0 / (np.exp(tw2[wk][ir] - 2 * tw[wk][ir]) * nw[wk][ir])))
+                        fpw.write(
+                            "%s   %15.7e \n"
+                            % (
+                                prop[ir]["ofilename"],
+                                1.0
+                                / (np.exp(tw2[wk][ir] - 2 * tw[wk][ir]) * nw[wk][ir]),
+                            )
+                        )
                     wk += 1
             break
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(*sys.argv[1:])

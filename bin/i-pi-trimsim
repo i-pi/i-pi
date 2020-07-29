@@ -54,45 +54,70 @@ def main(inputfile, outdir="trim"):
         o = deepcopy(o)  # avoids overwriting the actual filename
         if simul.outtemplate.prefix != "":
             o.filename = simul.outtemplate.prefix + "." + o.filename
-        if type(o) is CheckpointOutput:   # properties and trajectories are output per system
+        if (
+            type(o) is CheckpointOutput
+        ):  # properties and trajectories are output per system
             pass
         elif type(o) is PropertyOutput:
             nprop = []
             isys = 0
-            for s in simul.syslist:   # create multiple copies
+            for s in simul.syslist:  # create multiple copies
                 if s.prefix != "":
                     filename = s.prefix + "_" + o.filename
-                else: filename = o.filename
+                else:
+                    filename = o.filename
                 ofilename = outdir + "/" + filename
-                nprop.append({"filename": filename, "ofilename": ofilename, "stride": o.stride,
-                              "ifile": open(filename, "r"), "ofile": open(ofilename, "w")
-                              })
+                nprop.append(
+                    {
+                        "filename": filename,
+                        "ofilename": ofilename,
+                        "stride": o.stride,
+                        "ifile": open(filename, "r"),
+                        "ofile": open(ofilename, "w"),
+                    }
+                )
                 isys += 1
             lprop.append(nprop)
-        elif type(o) is TrajectoryOutput:   # trajectories are more complex, as some have per-bead output
-            if getkey(o.what) in ["positions", "velocities", "forces", "extras"]:   # multiple beads
+        elif (
+            type(o) is TrajectoryOutput
+        ):  # trajectories are more complex, as some have per-bead output
+            if getkey(o.what) in [
+                "positions",
+                "velocities",
+                "forces",
+                "extras",
+            ]:  # multiple beads
                 nbeads = simul.syslist[0].beads.nbeads
                 for b in range(nbeads):
                     ntraj = []
                     isys = 0
                     # zero-padded bead number
-                    padb = (("%0" + str(int(1 + np.floor(np.log(nbeads) / np.log(10)))) + "d") % (b))
+                    padb = (
+                        "%0" + str(int(1 + np.floor(np.log(nbeads) / np.log(10)))) + "d"
+                    ) % (b)
                     for s in simul.syslist:
                         if s.prefix != "":
                             filename = s.prefix + "_" + o.filename
-                        else: filename = o.filename
+                        else:
+                            filename = o.filename
                         ofilename = outdir + "/" + filename
-                        if (o.ibead < 0 or o.ibead == b):
+                        if o.ibead < 0 or o.ibead == b:
                             if getkey(o.what) == "extras":
                                 filename = filename + "_" + padb
                                 ofilename = ofilename + "_" + padb
                             else:
                                 filename = filename + "_" + padb + "." + o.format
                                 ofilename = ofilename + "_" + padb + "." + o.format
-                                ntraj.append({"filename": filename, "format": o.format,
-                                              "ofilename": ofilename, "stride": o.stride,
-                                              "ifile": open(filename, "r"), "ofile": open(ofilename, "w")
-                                              })
+                                ntraj.append(
+                                    {
+                                        "filename": filename,
+                                        "format": o.format,
+                                        "ofilename": ofilename,
+                                        "stride": o.stride,
+                                        "ifile": open(filename, "r"),
+                                        "ofile": open(ofilename, "w"),
+                                    }
+                                )
                         isys += 1
                     if ntraj != []:
                         ltraj.append(ntraj)
@@ -100,16 +125,23 @@ def main(inputfile, outdir="trim"):
             else:
                 ntraj = []
                 isys = 0
-                for s in simul.syslist:   # create multiple copies
+                for s in simul.syslist:  # create multiple copies
                     if s.prefix != "":
                         filename = s.prefix + "_" + o.filename
-                    else: filename = o.filename
+                    else:
+                        filename = o.filename
                     filename = filename + "." + o.format
                     ofilename = outdir + "/" + filename
-                    ntraj.append({"filename": filename, "format": o.format,
-                                  "ofilename": ofilename, "stride": o.stride,
-                                  "ifile": open(filename, "r"), "ofile": open(ofilename, "w")
-                                  })
+                    ntraj.append(
+                        {
+                            "filename": filename,
+                            "format": o.format,
+                            "ofilename": ofilename,
+                            "stride": o.stride,
+                            "ifile": open(filename, "r"),
+                            "ofile": open(ofilename, "w"),
+                        }
+                    )
 
                     isys += 1
                 ltraj.append(ntraj)
@@ -159,17 +191,17 @@ def main(inputfile, outdir="trim"):
                             ibuffer.append(straj["ifile"].readline())
                             for i in range(nat):
                                 ibuffer.append(straj["ifile"].readline())
-                            traj[isys]["ofile"].write(''.join(ibuffer))
+                            traj[isys]["ofile"].write("".join(ibuffer))
                         elif straj["format"] == "pdb":
                             iline = straj["ifile"].readline()
-                            while (iline.strip() != "" and iline.strip() != "END"):
+                            while iline.strip() != "" and iline.strip() != "END":
                                 ibuffer.append(iline)
                                 iline = straj["ifile"].readline()
                             ibuffer.append(iline)
-                            traj[isys]["ofile"].write(''.join(ibuffer))
+                            traj[isys]["ofile"].write("".join(ibuffer))
         except EOFError:
             break
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(*sys.argv[1:])

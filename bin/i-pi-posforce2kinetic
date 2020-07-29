@@ -23,6 +23,7 @@ from ipi.engine.beads import Beads
 from ipi.utils.depend import dstrip
 from ipi.utils.units import unit_to_internal, Constants
 from ipi.utils.messages import verbosity
+
 verbosity.level = "low"
 
 
@@ -39,18 +40,20 @@ def main(prefix, temp):
     if nbeads != len(fns_for):
         print(fns_pos)
         print(fns_for)
-        raise ValueError("Mismatch between number of input files for forces and positions.")
+        raise ValueError(
+            "Mismatch between number of input files for forces and positions."
+        )
 
     # print some information
-    print('temperature = {:f} K'.format(T))
+    print("temperature = {:f} K".format(T))
     print()
-    print('number of beads = {:d}'.format(nbeads))
+    print("number of beads = {:d}".format(nbeads))
     print()
-    print('positions and forces file names:')
+    print("positions and forces file names:")
     for fn_pos, fn_for in zip(fns_pos, fns_for):
-        print('{:s}   {:s}'.format(fn_pos, fn_for))
+        print("{:s}   {:s}".format(fn_pos, fn_for))
     print()
-    print('output file names:')
+    print("output file names:")
     print(fn_out_kin)
     print(fn_out_kod)
     print()
@@ -69,7 +72,7 @@ def main(prefix, temp):
 
         # print progress
         if ifr % 100 == 0:
-            print('\rProcessing frame {:d}'.format(ifr), end=' ')
+            print("\rProcessing frame {:d}".format(ifr), end=" ")
             sys.stdout.flush()
 
         # load one frame
@@ -100,27 +103,45 @@ def main(prefix, temp):
                 kcv[i, 0] += (q[j, i * 3 + 0] - qc[i * 3 + 0]) * f[j, i * 3 + 0]
                 kcv[i, 1] += (q[j, i * 3 + 1] - qc[i * 3 + 1]) * f[j, i * 3 + 1]
                 kcv[i, 2] += (q[j, i * 3 + 2] - qc[i * 3 + 2]) * f[j, i * 3 + 2]
-                kcv[i, 3] += (q[j, i * 3 + 0] - qc[i * 3 + 0]) * f[j, i * 3 + 1] + (q[j, i * 3 + 1] - qc[i * 3 + 1]) * f[j, i * 3 + 0]
-                kcv[i, 4] += (q[j, i * 3 + 0] - qc[i * 3 + 0]) * f[j, i * 3 + 2] + (q[j, i * 3 + 2] - qc[i * 3 + 2]) * f[j, i * 3 + 0]
-                kcv[i, 5] += (q[j, i * 3 + 1] - qc[i * 3 + 1]) * f[j, i * 3 + 2] + (q[j, i * 3 + 2] - qc[i * 3 + 2]) * f[j, i * 3 + 1]
+                kcv[i, 3] += (q[j, i * 3 + 0] - qc[i * 3 + 0]) * f[j, i * 3 + 1] + (
+                    q[j, i * 3 + 1] - qc[i * 3 + 1]
+                ) * f[j, i * 3 + 0]
+                kcv[i, 4] += (q[j, i * 3 + 0] - qc[i * 3 + 0]) * f[j, i * 3 + 2] + (
+                    q[j, i * 3 + 2] - qc[i * 3 + 2]
+                ) * f[j, i * 3 + 0]
+                kcv[i, 5] += (q[j, i * 3 + 1] - qc[i * 3 + 1]) * f[j, i * 3 + 2] + (
+                    q[j, i * 3 + 2] - qc[i * 3 + 2]
+                ) * f[j, i * 3 + 1]
         kcv *= -0.5 / nbeads
         kcv[:, 0:3] += 0.5 * Constants.kb * temp
         kcv[:, 3:6] *= 0.5
 
         # write output
-        ikin.write("%d\n# Centroid-virial kinetic energy estimator [a.u.] - diagonal terms: xx yy zz\n" % natoms)
-        ikod.write("%d\n# Centroid-virial kinetic energy estimator [a.u.] - off-diag terms: xy xz yz\n" % natoms)
+        ikin.write(
+            "%d\n# Centroid-virial kinetic energy estimator [a.u.] - diagonal terms: xx yy zz\n"
+            % natoms
+        )
+        ikod.write(
+            "%d\n# Centroid-virial kinetic energy estimator [a.u.] - off-diag terms: xy xz yz\n"
+            % natoms
+        )
         for i in range(natoms):
-            ikin.write("%8s %12.5e %12.5e %12.5e\n" % (pos.names[i], kcv[i, 0], kcv[i, 1], kcv[i, 2]))
-            ikod.write("%8s %12.5e %12.5e %12.5e\n" % (pos.names[i], kcv[i, 3], kcv[i, 4], kcv[i, 5]))
+            ikin.write(
+                "%8s %12.5e %12.5e %12.5e\n"
+                % (pos.names[i], kcv[i, 0], kcv[i, 1], kcv[i, 2])
+            )
+            ikod.write(
+                "%8s %12.5e %12.5e %12.5e\n"
+                % (pos.names[i], kcv[i, 3], kcv[i, 4], kcv[i, 5])
+            )
 
         ifr += 1
 
-    print('\rProcessed {:d} frames.'.format(ifr))
+    print("\rProcessed {:d} frames.".format(ifr))
 
     ikin.close()
     ikod.close()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main(*sys.argv[1:])
