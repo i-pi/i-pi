@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 """
 This script cleans python files in-place by calling autopep8 tool.
@@ -188,15 +188,15 @@ if __name__ == "__main__":
         while process.poll() is None:
             # We must strip, otherwise we get double newline
             line = process.stdout.readline().rstrip()
-            if re.match(r"\[Errno.*\]", line):
+            if re.match("\[Errno.*\]", line):
                 print(line)
             else:
                 if verbosity == "high":
                     print(line)
                 elif verbosity == "medium":
-                    if re.match(r"\[file:.*\]", line):
+                    if re.match("\[file:.*\]", line):
                         # new file is processed. If something left unfixed, print message now
-                        if issue_line_buffer != "":
+                        if issue_line_buffer is not "":
                             print(issue_line_buffer)
                         # Pattern: [file:filename]
                         filename_line = re.search(r"\[file:(\S+)\]", line)
@@ -226,7 +226,7 @@ if __name__ == "__main__":
                 # if verbosity is silent or low, do not print output from autopep8
         if verbosity == "medium":
             # end of processing. If something left unfixed, print the message now
-            if issue_line_buffer != "":
+            if issue_line_buffer is not "":
                 print(issue_line_buffer)
     if verbosity != "silent":
         print("autopep8 terminated")
