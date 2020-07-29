@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 """
 
 Relies on the infrastructure of i-pi, so the ipi package should
