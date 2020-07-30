@@ -3,7 +3,7 @@ name: Python application
 on:
   push:
   pull_request:
-    branches: [ master-py3 ]
+    branches: [ master ]
 
 jobs:
   build:
