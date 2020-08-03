@@ -118,8 +118,8 @@ make your changes, make sure you comply with all items in our checklist below, a
 
 Checklist to create a pull request:
 
-- Code follows our format compliance (`black` and `flake8` as explained above)
-- All classes and functions include corresponding docstrings
+- The PR follows our format compliance (`black` and `flake8` as explained above)
+- All the new classes and functions include the corresponding docstrings
 
 (If the PR adds a new functionally, please fulfill the next two requirements as well)
 
