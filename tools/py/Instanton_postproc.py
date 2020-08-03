@@ -128,13 +128,13 @@ if case not in list(["reactant", "TS", "instanton"]):
     raise ValueError(
         "We can not indentify the case. The valid cases are: 'reactant', 'TS' and 'instanton'"
     )
-if asr not in list(["poly","linear", "crystal","none"]):
+if asr not in list(["poly", "linear", "crystal", "none"]):
     raise ValueError(
         "We can not indentify asr case. The valid cases are: 'poly', 'crystal' , 'linear' and 'none'"
     )
 
 if asr == "linear":
-    raise NotImplementedError('Sum rules for linear molecules is not implemented')
+    raise NotImplementedError("Sum rules for linear molecules is not implemented")
 
 if args.temperature == 0.0:
     raise ValueError("The temperature must be specified.'")
