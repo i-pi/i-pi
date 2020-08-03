@@ -232,6 +232,8 @@ class Fix(object):
             raise ValueError("Mask number not valid")
 
     def get_active_array(self, arrays):
+        """ Functions that gets the subarray corresponding to the active degrees-of-freedom of the 
+            full dimensional array """
 
         activearrays = {}
         for key in arrays:
@@ -514,9 +516,11 @@ class SpringMapper(object):
             )
 
     def set_coef(self, coef):
+        """ Sets coeficients for non-uniform instanton calculation """
         self.coef = coef.reshape(-1, 1)
 
     def save(self, e, g):
+        """ Stores potential and forces in this class for convenience """
         self.pot = e
         self.f = -g
 
@@ -918,7 +922,7 @@ class DummyOptimizer(dobject):
             )
 
     def pre_step(self, step=None, adaptative=False):
-        """ Todo before actual step"""
+        """ General tasks that have to be performed before actual step"""
 
         if self.exit:
             softexit.trigger("Geometry optimization converged. Exiting simulation")
@@ -1095,6 +1099,7 @@ class HessianOptimizer(DummyOptimizer):
             )
 
     def post_step(self, step, new_x, d_x, activearrays):
+        """ General tasks that have to be performed after the  actual step"""
 
         d_x_max = np.amax(np.absolute(d_x))
         info("Current step norm = {}".format(d_x_max), verbosity.medium)
@@ -1503,6 +1508,9 @@ class LBFGSOptimizer(DummyOptimizer):
         self.init = True
 
     def post_step(self, step, activearrays):
+
+        """ General tasks that have to be performed after the  actual step"""
+
         # Update
         self.optarrays["qlist"][:] = self.fix.get_full_vector(
             activearrays["qlist"], t=3
