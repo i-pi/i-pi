@@ -232,7 +232,7 @@ class Fix(object):
             raise ValueError("Mask number not valid")
 
     def get_active_array(self, arrays):
-        """ Functions that gets the subarray corresponding to the active degrees-of-freedom of the 
+        """ Functions that gets the subarray corresponding to the active degrees-of-freedom of the
             full dimensional array """
 
         activearrays = {}
