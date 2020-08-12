@@ -1,31 +1,18 @@
 # To check
-MBPOL/splitting/min
-MBPOL/splitting/instanton/32-lbfgs
-MBPOL/splitting/TS
-pes/qtip4pf/tun-splitting/min
-pes/qtip4pf/tun-splitting/instanton/32-lbfgs
+MBPOL/splitting/instanton/32-lbfgs                                          # bind() missing 1 required positional argument: 'discretization' 
+pes/qtip4pf/tun-splitting/instanton/32-lbfgs                                # bind() missing 1 required positional argument: 'discretization'
 lammps/h2o-scphonons
-lammps/h2o-imf
-lammps/h2o-vscf
-lammps/h2o-extreme-rem
+lammps/h2o-extreme-rem                              #                       # 
 lammps/isof-vapor
 pes/geop/waterbox/bfgs
-pes/zundel-systempart 
-pes/neb 
-qtip4pf/tun-splitting
-pes/qtip4pf/tun-splitting
-pes/qtip4pf/tun-splitting/TS
-lammps/ice-npt+sc 
-lammps/ice-npt-nst 
-lammps/ice-ramp-melt 
-lammps/h2o-planetary-64 
-lammps/h2o-pimd+sc+gle.4 
-lammps/isofsc-water 
-lammps/kmc-al6xxx 
-lammps/h2o-pimd+sc+mts 
-lammps/h2o-repimd 
-lammps/h2o-pimd+sc+rpc_open 
-lammps/isof-water
+pes/zundel-systempart                                                       # The number of mts levels for the integrator does not agree with the mts_weights of the force components.
+lammps/ice-npt+sc                                                           # error
+lammps/ice-npt-nst                                                          # no such directory
+lammps/h2o-planetary-64                                                     # TypeError: string argument expected, got 'bytes' 
+lammps/kmc-al6xxx                                                           # Error immediately: maybe because not copying the directory?? 
+lammps/h2o-repimd                                                           # some weird error, it doesn't start the simulation, maybe wrong seed number for communication channel? 
+lammps/h2o-pimd+sc+rpc_open                                                 # RuntimeWarning: overflow encountered in multiply
+lammps/isof-water                          
 lj/nst 
 tools/gleacf/h2o-wn 
 tools/gleacf/h2o-gle 

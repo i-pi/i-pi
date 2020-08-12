@@ -91,8 +91,10 @@ def modify_xml_2_dummy_test(
     input_name, output_name, nid, driver_info, nsteps=2,
 ):
     """ Modify xml to run dummy tests """
-
-    tree = ET.parse(input_name)
+    try:
+        tree = ET.parse(input_name)
+    except:
+        print('The error is in the format or the tags of the xml!')
     root = tree.getroot()
     clients = list()
 
@@ -157,7 +159,6 @@ class Runner_examples(object):
             clients = modify_xml_2_dummy_test(
                 self.tmp_dir / "input.xml", self.tmp_dir / "new.xml", nid, driver_info
             )
-
             # Run i-pi
             ipi = sp.Popen(
                 self.cmd1,
