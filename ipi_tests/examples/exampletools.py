@@ -94,7 +94,7 @@ def modify_xml_2_dummy_test(
     try:
         tree = ET.parse(input_name)
     except:
-        print('The error is in the format or the tags of the xml!')
+        print("The error is in the format or the tags of the xml!")
     root = tree.getroot()
     clients = list()
 
