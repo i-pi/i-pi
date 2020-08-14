@@ -83,8 +83,11 @@ def find_examples(parent, excluded_file="excluded_test.txt"):
     if excluded_file is not None:
         try:
             with open(excluded_file) as f:
-                for line in f:
-                    excluded.append(" ".join(str(parent / line).split()))
+                flines = [line for line in f.readlines() if line.strip()]
+                for line in flines:
+                    fname = "".join(str(parent / line).split()[0])
+                    if line.split()[0] != "#":
+                        excluded.append(fname)
         except:
             print("Excluded file not found")
 
@@ -95,6 +98,10 @@ def find_examples(parent, excluded_file="excluded_test.txt"):
         if os.path.isfile(Path(ff) / "input.xml"):
             if ff not in excluded:
                 examples.append(ff)
+                print(u"\u2713", " ", ff)
+            else:
+                print("X", " ", ff)
+
     return examples
 
 

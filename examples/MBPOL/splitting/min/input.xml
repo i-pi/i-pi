@@ -5,9 +5,9 @@
         <trajectory stride='1' filename='pos'>  positions{angstrom}  </trajectory>
    </output>
    <total_steps>400       </total_steps>
-   <prng2>
+   <prng>
      <seed> 32342 </seed>
-   </prng2>
+   </prng>
    <ffsocket name="aims" mode="unix" >
        <address> localhost </address>  
    </ffsocket>
