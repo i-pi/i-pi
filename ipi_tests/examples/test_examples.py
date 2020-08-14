@@ -86,7 +86,7 @@ if __name__ == "__main__":
             errors.append(ex)
 
     if len(errors) > 0:
-        print("The following examples have exist with errors")
+        print("The following examples have exited with errors")
         for er in errors:
             print(er)
         print("")

@@ -1,1 +1,2 @@
-driver lj
+driver lj 
+flags -o 5.0 0.1 12.0

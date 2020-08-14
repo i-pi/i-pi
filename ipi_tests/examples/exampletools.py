@@ -2,6 +2,7 @@ import subprocess as sp
 import os
 import numpy as np
 from pathlib import Path
+from distutils.dir_util import copy_tree
 import xml.etree.ElementTree as ET
 import sys
 import tempfile
@@ -30,6 +31,9 @@ def get_driver_info(
     socket_mode="unix",
     port_number=33333,
     address_name="localhost",
+    flags1=0.0,
+    flags2=0.0,
+    flags3=0.0,
 ):
     """ This function looks for the existence of .driver_info file
         to run the example with a meaningfull driver. If the file doesn't
@@ -48,6 +52,10 @@ def get_driver_info(
                     port_number = line.split()[1]
                 elif "address" in line:
                     address_name = line.split()[1]
+                elif "flags" in line:
+                    flags1 = line.split()[2]
+                    flags2 = line.split()[3]
+                    flags3 = line.split()[4]
     except:
         pass
 
@@ -59,6 +67,9 @@ def get_driver_info(
         "socket_mode": socket_mode,
         "port_number": port_number,
         "address_name": address_name,
+        "LJ_flags1": flags1,
+        "LJ_flags2": flags2,
+        "LJ_flags3": flags3,
     }
 
     return driver_info
@@ -110,10 +121,13 @@ def modify_xml_2_dummy_test(
                 dd = driver_info["address_name"] + "_" + str(nid) + "_" + str(s)
                 element.text = dd
                 address = dd
+            flags1 = driver_info["LJ_flags1"]
+            flags2 = driver_info["LJ_flags2"]
+            flags3 = driver_info["LJ_flags3"]
 
         model = driver_info["model"]
         print("driver:", model)
-        clients.append((model, address, port))
+        clients.append((model, address, port, flags1, flags2, flags3))
 
     element = root.find("total_steps")
     if element is not None:
@@ -150,9 +164,7 @@ class Runner_examples(object):
             self.tmp_dir = Path(tempfile.mkdtemp())
             print("temp folder: {}".format(self.tmp_dir))
 
-            files = os.listdir(self.parent / cwd)
-            for f in files:
-                shutil.copy(self.parent / cwd / f, self.tmp_dir)
+            copy_tree(str(cwd), str(self.tmp_dir))
             driver_info = get_driver_info(self.tmp_dir)
 
             # Modify xml
@@ -172,14 +184,19 @@ class Runner_examples(object):
             # Run drivers
             driver = list()
             for client in clients:
-                cmd = self.cmd2 + " -m {} -h {} -u ".format(client[0], client[1])
+                if client[0] == "lj":
+                    cmd = self.cmd2 + " -m {} -u -h {} -o {},{},{}".format(
+                        client[0], client[1], client[3], client[4], client[5]
+                    )
+                else:
+                    cmd = self.cmd2 + " -m {} -u -h {}".format(client[0], client[1])
                 print("cmd:", cmd)
                 driver.append(
                     sp.Popen(cmd, cwd=(cwd), shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
                 )
 
             # Check errors
-            ipi_error = ipi.communicate(timeout=45)[1].decode("ascii")
+            ipi_error = ipi.communicate(timeout=120)[1].decode("ascii")
             if ipi_error != "":
                 print(ipi_error)
             assert "" == ipi_error
