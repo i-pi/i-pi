@@ -31,9 +31,8 @@ def get_driver_info(
     socket_mode="unix",
     port_number=33333,
     address_name="localhost",
-    flags1=0.0,
-    flags2=0.0,
-    flags3=0.0,
+    flags=[],
+
 ):
     """ This function looks for the existence of .driver_info file
         to run the example with a meaningfull driver. If the file doesn't
@@ -53,9 +52,7 @@ def get_driver_info(
                 elif "address" in line:
                     address_name = line.split()[1]
                 elif "flags" in line:
-                    flags1 = line.split()[2]
-                    flags2 = line.split()[3]
-                    flags3 = line.split()[4]
+                    flags.append({line.split()[1]: line.split()[2:]})
     except:
         pass
 
@@ -67,9 +64,7 @@ def get_driver_info(
         "socket_mode": socket_mode,
         "port_number": port_number,
         "address_name": address_name,
-        "LJ_flags1": flags1,
-        "LJ_flags2": flags2,
-        "LJ_flags3": flags3,
+        "flag": flags,
     }
 
     return driver_info
@@ -128,14 +123,16 @@ def modify_xml_2_dummy_test(
                 dd = driver_info["address_name"] + "_" + str(nid) + "_" + str(s)
                 element.text = dd
                 address = dd
-            flags1 = driver_info["LJ_flags1"]
-            flags2 = driver_info["LJ_flags2"]
-            flags3 = driver_info["LJ_flags3"]
 
         model = driver_info["model"]
         print("driver:", model)
-        clients.append((model, address, port, flags1, flags2, flags3))
+        clients.append([model, address, port])
 
+        for flag in driver_info["flag"]:
+            for k, v in flag.items():
+                clients[s].append(k)
+                clients[s].extend(v)
+       
     element = root.find("total_steps")
     if element is not None:
         element.text = str(nsteps)
@@ -191,12 +188,14 @@ class Runner_examples(object):
             # Run drivers
             driver = list()
             for client in clients:
-                if client[0] == "lj":
-                    cmd = self.cmd2 + " -m {} -u -h {} -o {},{},{}".format(
-                        client[0], client[1], client[3], client[4], client[5]
-                    )
-                else:
-                    cmd = self.cmd2 + " -m {} -u -h {}".format(client[0], client[1])
+                cmd = self.cmd2 + " -m {} -u -h {}".format(client[0], client[1])
+                if any("-" in str(s) for s in client):
+                    flag_indeces = [i for i, elem in enumerate(client) if "-" in str(elem)] 
+                    for i, ll in enumerate(flag_indeces): 
+                        if(i<len(flag_indeces)-1):
+                            cmd += ' {} {}'.format(client[ll], ','.join(client[ll+1:flag_indeces[i+1]][:]))
+                        else:
+                            cmd += ' {} {}'.format(client[ll], ','.join(client[ll+1:][:]))
                 print("cmd:", cmd)
                 driver.append(
                     sp.Popen(cmd, cwd=(cwd), shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
