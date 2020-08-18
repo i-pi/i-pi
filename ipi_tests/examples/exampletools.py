@@ -38,6 +38,7 @@ def get_driver_info(
         exist, the driver gas is assigned. """
     try:
         with open(Path(example_folder) / driver_info_file) as f:
+            flags = list()
             while True:
                 line = f.readline()
                 if not line:
@@ -69,7 +70,7 @@ def get_driver_info(
     return driver_info
 
 
-def find_examples(parent, excluded_file="excluded_test.txt"):
+def find_examples(parent, excluded_file="excluded_test.txt", examples=[]):
     """ This function looks for iteratively for examples and includes
         them if they don't appear in the excluded_file """
 
@@ -86,15 +87,11 @@ def find_examples(parent, excluded_file="excluded_test.txt"):
             print("Excluded file not found")
 
     folders = [x[0] for x in os.walk(parent)]
-    examples = list()
 
     for ff in folders:
         if os.path.isfile(Path(ff) / "input.xml"):
             if ff not in excluded:
                 examples.append(ff)
-                print(u"\u2713", " ", ff)
-            else:
-                print("X", " ", ff)
 
     return examples
 
@@ -186,6 +183,7 @@ class Runner_examples(object):
 
             # Run drivers
             driver = list()
+            flag_indeces = list()
             for client in clients:
                 cmd = self.cmd2 + " -m {} -u -h {}".format(client[0], client[1])
                 if any("-" in str(s) for s in client):

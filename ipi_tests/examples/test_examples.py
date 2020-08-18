@@ -13,8 +13,9 @@ from ipi_tests.examples.exampletools import find_examples, Runner_examples
 examples_folder = Path(__file__).resolve().parents[2] / "examples"
 excluded_file = Path(__file__).resolve().parent / "excluded_test.txt"
 
-examples = find_examples(examples_folder, excluded_file)
-print("We have found {} reg_tests".format(len(examples)))
+examples = []
+examples = find_examples(examples_folder, excluded_file, examples)
+print("We have found {} examples".format(len(examples)))
 
 
 @pytest.mark.parametrize("ex", examples)
@@ -53,7 +54,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "-f", "--folder", type=str, help="Folder of the example to test"
+        "-f", "--folder", type=str, nargs='+', help="Folder(s) of the example to test"
     )
     parser.add_argument(
         "--test_all", action="store_true", help="Folder of the example to test"
@@ -65,16 +66,18 @@ if __name__ == "__main__":
     else:
         excluded_file = Path(__file__).resolve().parent / "excluded_test.txt"
 
+    examples = list()
     try:
-        path = Path(__file__).resolve().parents[2] / args.folder
-        examples = find_examples(path, excluded_file)
-        print("We will run only:")
+        for folder in args.folder:
+            path = Path(__file__).resolve().parents[2] / folder
+            examples = find_examples(path, excluded_file, examples)
+        print("We will run tests in:")
         for i in examples:
             print(i)
         print("")
     except:
         print("We will run all tests\n")
-        examples = find_examples(examples_folder, excluded_file)
+        examples = find_examples(examples_folder, excluded_file, examples)
 
     errors = list()
     for ex in examples:
