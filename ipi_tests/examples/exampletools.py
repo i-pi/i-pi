@@ -32,7 +32,6 @@ def get_driver_info(
     port_number=33333,
     address_name="localhost",
     flags=[],
-
 ):
     """ This function looks for the existence of .driver_info file
         to run the example with a meaningfull driver. If the file doesn't
@@ -132,7 +131,7 @@ def modify_xml_2_dummy_test(
             for k, v in flag.items():
                 clients[s].append(k)
                 clients[s].extend(v)
-       
+
     element = root.find("total_steps")
     if element is not None:
         element.text = str(nsteps)
@@ -190,12 +189,19 @@ class Runner_examples(object):
             for client in clients:
                 cmd = self.cmd2 + " -m {} -u -h {}".format(client[0], client[1])
                 if any("-" in str(s) for s in client):
-                    flag_indeces = [i for i, elem in enumerate(client) if "-" in str(elem)] 
-                    for i, ll in enumerate(flag_indeces): 
-                        if(i<len(flag_indeces)-1):
-                            cmd += ' {} {}'.format(client[ll], ','.join(client[ll+1:flag_indeces[i+1]][:]))
+                    flag_indeces = [
+                        i for i, elem in enumerate(client) if "-" in str(elem)
+                    ]
+                    for i, ll in enumerate(flag_indeces):
+                        if i < len(flag_indeces) - 1:
+                            cmd += " {} {}".format(
+                                client[ll],
+                                ",".join(client[ll + 1 : flag_indeces[i + 1]][:]),
+                            )
                         else:
-                            cmd += ' {} {}'.format(client[ll], ','.join(client[ll+1:][:]))
+                            cmd += " {} {}".format(
+                                client[ll], ",".join(client[ll + 1 :][:])
+                            )
                 print("cmd:", cmd)
                 driver.append(
                     sp.Popen(cmd, cwd=(cwd), shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
