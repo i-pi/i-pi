@@ -1,3 +1,4 @@
+Disabled circleCI
 RefactoringTool: Skipping optional fixer: buffer
 RefactoringTool: Skipping optional fixer: idioms
 RefactoringTool: Skipping optional fixer: set_literal

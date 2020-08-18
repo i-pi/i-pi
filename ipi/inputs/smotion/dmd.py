@@ -26,7 +26,7 @@ from ipi.engine.motion import *
 from ipi.utils.inputvalue import *
 from ipi.utils.units import *
 
-__all__ = ['InputDMD']
+__all__ = ["InputDMD"]
 
 
 class InputDMD(InputDictionary):
@@ -37,16 +37,22 @@ class InputDMD(InputDictionary):
     """
 
     fields = {
-        "dmdff": (InputArray, {"dtype": str, "default": input_default(factory=np.zeros, args=(0,)),
-                                "help": "List of names of forcefields that should do driven MD. Currently only accepts something of ffdmd type."
-                                })
+        "dmdff": (
+            InputArray,
+            {
+                "dtype": str,
+                "default": input_default(factory=np.zeros, args=(0,)),
+                "help": "List of names of forcefields that should do driven MD. Currently only accepts something of ffdmd type.",
+            },
+        )
     }
 
     default_help = "DrivenMD"
     default_label = "DMD"
 
     def store(self, drivenmd):
-        if drivenmd == {}: return
+        if drivenmd == {}:
+            return
         self.dmdff.store(drivenmd.dmdff)
 
     def fetch(self):

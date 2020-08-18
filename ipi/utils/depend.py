@@ -34,8 +34,17 @@ import numpy as np
 from ipi.utils.messages import verbosity, warning
 
 
-__all__ = ['depend_value', 'depend_array', 'synchronizer', 'dobject', 'dd',
-           'dpipe', 'dcopy', 'dstrip', 'depraise']
+__all__ = [
+    "depend_value",
+    "depend_array",
+    "synchronizer",
+    "dobject",
+    "dd",
+    "dpipe",
+    "dcopy",
+    "dstrip",
+    "depraise",
+]
 
 
 class synchronizer(object):
@@ -93,7 +102,16 @@ class depend_base(object):
         _dependants: A list containing all objects dependent on the self.
     """
 
-    def __init__(self, name, synchro=None, func=None, dependants=None, dependencies=None, tainted=None, active=None):
+    def __init__(
+        self,
+        name,
+        synchro=None,
+        func=None,
+        dependants=None,
+        dependencies=None,
+        tainted=None,
+        active=None,
+    ):
         """Initialises depend_base.
 
         An unusual initialisation routine, as it has to be able to deal with
@@ -163,14 +181,14 @@ class depend_base(object):
 
     def __deepcopy__(self, memo):
         """ Overrides deepcopy behavior, to avoid copying the (uncopiable) RLOCK """
-        
+
         newone = type(self)(None)
-        
-        for member in newone.__dict__:            
-            if member == "_threadlock": 
+
+        for member in newone.__dict__:
+            if member == "_threadlock":
                 continue
-            setattr(newone, member, deepcopy(getattr(self, member),memo) )
-            
+            setattr(newone, member, deepcopy(getattr(self, member), memo))
+
         return newone
 
     def hold(self):
@@ -188,7 +206,9 @@ class depend_base(object):
     def add_synchro(self, synchro=None):
         """ Links depend object to a synchronizer. """
 
-        assert self._synchro is None, "This object must not have a previous synchronizer!"
+        assert (
+            self._synchro is None
+        ), "This object must not have a previous synchronizer!"
 
         self._synchro = synchro
         if self._synchro is not None and self._name not in self._synchro.synced:
@@ -242,13 +262,13 @@ class depend_base(object):
 
         self._tainted[:] = True
         for item in self._dependants:
-            if (not item()._tainted[0]):
+            if not item()._tainted[0]:
                 item().taint()
         if self._synchro is not None:
             for v in list(self._synchro.synced.values()):
                 if (not v._tainted[0]) and (v is not self):
                     v.taint(taintme=True)
-            self._tainted[:] = (taintme and (not self._name == self._synchro.manual))
+            self._tainted[:] = taintme and (not self._name == self._synchro.manual)
         else:
             self._tainted[:] = taintme
 
@@ -264,16 +284,19 @@ class depend_base(object):
         """
 
         if self._synchro is not None:
-            if (not self._name == self._synchro.manual):
+            if not self._name == self._synchro.manual:
                 self.set(self._func[self._synchro.manual](), manual=False)
             else:
-                warning(self._name + " probably shouldn't be tainted (synchro)",
-                        verbosity.low)
+                warning(
+                    self._name + " probably shouldn't be tainted (synchro)",
+                    verbosity.low,
+                )
         elif self._func is not None:
             self.set(self._func(), manual=False)
         else:
-            warning(self._name + " probably shouldn't be tainted (value)",
-                    verbosity.low)
+            warning(
+                self._name + " probably shouldn't be tainted (value)", verbosity.low
+            )
 
     def update_man(self):
         """Manual update routine.
@@ -289,7 +312,11 @@ class depend_base(object):
         if self._synchro is not None:
             self._synchro.manual = self._name
         elif self._func is not None:
-            raise NameError("Cannot set manually the value of the automatically-computed property <" + self._name + ">")
+            raise NameError(
+                "Cannot set manually the value of the automatically-computed property <"
+                + self._name
+                + ">"
+            )
         self.taint(taintme=False)
 
     def set(self, value, manual=False):
@@ -311,7 +338,17 @@ class depend_value(depend_base):
         _value: The value associated with self.
     """
 
-    def __init__(self, name, value=None, synchro=None, func=None, dependants=None, dependencies=None, tainted=None, active=None):
+    def __init__(
+        self,
+        name,
+        value=None,
+        synchro=None,
+        func=None,
+        dependants=None,
+        dependencies=None,
+        tainted=None,
+        active=None,
+    ):
         """Initialises depend_value.
 
         Args:
@@ -330,7 +367,9 @@ class depend_value(depend_base):
         """
 
         self._value = value
-        super(depend_value, self).__init__(name, synchro, func, dependants, dependencies, tainted, active)
+        super(depend_value, self).__init__(
+            name, synchro, func, dependants, dependencies, tainted, active
+        )
 
     def get(self):
         """Returns value, after recalculating if necessary.
@@ -384,7 +423,18 @@ class depend_array(np.ndarray, depend_base):
             self is a slice.
     """
 
-    def __new__(cls, value, name, synchro=None, func=None, dependants=None, dependencies=None, tainted=None, base=None, active=None):
+    def __new__(
+        cls,
+        value,
+        name,
+        synchro=None,
+        func=None,
+        dependants=None,
+        dependencies=None,
+        tainted=None,
+        base=None,
+        active=None,
+    ):
         """Creates a new array from a template.
 
         Called whenever a new instance of depend_array is created. Casts the
@@ -398,7 +448,18 @@ class depend_array(np.ndarray, depend_base):
         obj = np.asarray(value).view(cls)
         return obj
 
-    def __init__(self, value, name, synchro=None, func=None, dependants=None, dependencies=None, tainted=None, base=None, active=None):
+    def __init__(
+        self,
+        value,
+        name,
+        synchro=None,
+        func=None,
+        dependants=None,
+        dependencies=None,
+        tainted=None,
+        base=None,
+        active=None,
+    ):
         """Initialises depend_array.
 
         Note that this is only called when a new array is created by an
@@ -419,14 +480,16 @@ class depend_array(np.ndarray, depend_base):
                 depends upon.
         """
 
-        super(depend_array, self).__init__(name, synchro, func, dependants, dependencies, tainted, active)
+        super(depend_array, self).__init__(
+            name, synchro, func, dependants, dependencies, tainted, active
+        )
 
         if base is None:
             self._bval = value
         else:
             self._bval = base
 
-    def copy(self, order='C', maskna=None):
+    def copy(self, order="C", maskna=None):
         """Wrapper for numpy copy mechanism."""
 
         # Sets a flag and hands control to the numpy copy
@@ -451,13 +514,21 @@ class depend_array(np.ndarray, depend_base):
             # there is no sure way to tell (or so it seems). Hence we need to
             # handle special cases, and hope we are in a view cast otherwise.
             if hasattr(obj, "_fcopy"):
-                del(obj._fcopy)   # removes the "copy flag"
+                del obj._fcopy  # removes the "copy flag"
                 self._bval = dstrip(self)
             else:
                 # Assumes we are in view cast, so copy over the attributes from the
                 # parent object. Typical case: when transpose is performed as a
                 # view.
-                super(depend_array, self).__init__(obj._name, obj._synchro, obj._func, obj._dependants, None, obj._tainted, obj._active)
+                super(depend_array, self).__init__(
+                    obj._name,
+                    obj._synchro,
+                    obj._func,
+                    obj._dependants,
+                    None,
+                    obj._tainted,
+                    obj._active,
+                )
                 self._bval = obj._bval
         else:
             # Most likely we came here on the way to init.
@@ -476,7 +547,9 @@ class depend_array(np.ndarray, depend_base):
 
         if context is None or len(context) < 2 or not type(context[0]) is np.ufunc:
             # It is not clear what we should do. If in doubt, strip dependencies.
-            return np.ndarray.__array_prepare__(self.view(np.ndarray), arr.view(np.ndarray), context)
+            return np.ndarray.__array_prepare__(
+                self.view(np.ndarray), arr.view(np.ndarray), context
+            )
         elif len(context[1]) > context[0].nin and context[0].nout > 0:
             # We are being called by a ufunc with a output argument, which is being
             # actually used. Most likely, something like an increment,
@@ -486,7 +559,9 @@ class depend_array(np.ndarray, depend_base):
             # Apparently we are generating a new array.
             # We have no way of knowing its
             # dependencies, so we'd better return a ndarray view!
-            return np.ndarray.__array_prepare__(self.view(np.ndarray), arr.view(np.ndarray), context)
+            return np.ndarray.__array_prepare__(
+                self.view(np.ndarray), arr.view(np.ndarray), context
+            )
 
     def __array_wrap__(self, arr, context=None):
         """ Wraps up output array from ufunc.
@@ -495,11 +570,15 @@ class depend_array(np.ndarray, depend_base):
         """
 
         if context is None or len(context) < 2 or not type(context[0]) is np.ufunc:
-            return np.ndarray.__array_wrap__(self.view(np.ndarray), arr.view(np.ndarray), context)
+            return np.ndarray.__array_wrap__(
+                self.view(np.ndarray), arr.view(np.ndarray), context
+            )
         elif len(context[1]) > context[0].nin and context[0].nout > 0:
             return super(depend_array, self).__array_wrap__(arr, context)
         else:
-            return np.ndarray.__array_wrap__(self.view(np.ndarray), arr.view(np.ndarray), context)
+            return np.ndarray.__array_wrap__(
+                self.view(np.ndarray), arr.view(np.ndarray), context
+            )
 
     # whenever possible in compound operations just return a regular ndarray
     __array_priority__ = -1.0
@@ -514,10 +593,16 @@ class depend_array(np.ndarray, depend_base):
            A depend_array with the dimensions given by newshape.
         """
 
-        return depend_array(dstrip(self).reshape(newshape), name=self._name,
-                            synchro=self._synchro, func=self._func,
-                            dependants=self._dependants, tainted=self._tainted,
-                            base=self._bval, active=self._active)
+        return depend_array(
+            dstrip(self).reshape(newshape),
+            name=self._name,
+            synchro=self._synchro,
+            func=self._func,
+            dependants=self._dependants,
+            tainted=self._tainted,
+            base=self._bval,
+            active=self._active,
+        )
 
     def flatten(self):
         """Makes the base array one dimensional.
@@ -547,9 +632,9 @@ class depend_array(np.ndarray, depend_base):
             on index would return a scalar.
         """
 
-        if (np.isscalar(index) and depth <= 1):
+        if np.isscalar(index) and depth <= 1:
             return True
-        elif (isinstance(index, tuple) and len(index) == depth):
+        elif isinstance(index, tuple) and len(index) == depth:
             # if the index is a tuple check it does not contain slices
             for i in index:
                 if not np.isscalar(i):
@@ -577,11 +662,16 @@ class depend_array(np.ndarray, depend_base):
         if self.__scalarindex(index, self.ndim):
             return dstrip(self)[index]
         else:
-            return depend_array(dstrip(self)[index], name=self._name,
-                                synchro=self._synchro, func=self._func,
-                                dependants=self._dependants,
-                                tainted=self._tainted, base=self._bval,
-                                active=self._active)
+            return depend_array(
+                dstrip(self)[index],
+                name=self._name,
+                synchro=self._synchro,
+                func=self._func,
+                dependants=self._dependants,
+                tainted=self._tainted,
+                base=self._bval,
+                active=self._active,
+            )
 
     def __getslice__(self, i, j):
         """Overwrites standard get function."""
@@ -628,7 +718,9 @@ class depend_array(np.ndarray, depend_base):
                 self._bval[index] = value
                 self.taint(taintme=False)
             else:
-                raise IndexError("Automatically computed arrays should span the whole parent")
+                raise IndexError(
+                    "Automatically computed arrays should span the whole parent"
+                )
 
     def __setslice__(self, i, j, value):
         """Overwrites standard set function."""
@@ -666,6 +758,7 @@ def dep_dot(da, db):
     b = dstrip(db)
 
     return __dp_dot(a, b)
+
 
 np.dot = dep_dot
 
@@ -786,24 +879,27 @@ class dobject(object):
             if issubclass(obj.__class__, depend_base):
                 return obj.__set__(self, value)
         return super(dobject, self).__setattr__(name, value)
-        
-    def __deepcopy__(self, memo):
-        """ Overrides deepcopy behavior, so that _direct is not actually copied 
-        but linked to a ddirect object """
-        
-        newone = type(self)()
-        
-        for member in newone._direct.__dict__:            
-            if member == "_direct": # do not overwrite direct accessor
-                continue
-            setattr(newone._direct, member, deepcopy(getattr(self._direct, member),memo) )
-        return newone
 
+    def __deepcopy__(self, memo):
+        """ Overrides deepcopy behavior, so that _direct is not actually copied
+        but linked to a ddirect object """
+
+        newone = type(self)()
+
+        for member in newone._direct.__dict__:
+            if member == "_direct":  # do not overwrite direct accessor
+                continue
+            setattr(
+                newone._direct, member, deepcopy(getattr(self._direct, member), memo)
+            )
+        return newone
 
 
 def dd(dobj):
     if not issubclass(dobj.__class__, dobject):
-        raise ValueError("Cannot access a ddirect view of an object which is not a subclass of dobject")
+        raise ValueError(
+            "Cannot access a ddirect view of an object which is not a subclass of dobject"
+        )
     return dobj._direct
 
 

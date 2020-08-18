@@ -10,7 +10,16 @@ import numpy as np
 from ipi.utils.messages import verbosity, info
 
 
-__all__ = ['nm_noop', 'nm_trans', 'nm_rescale', 'nm_fft', 'mk_nm_matrix', 'mk_o_nm_matrix', 'nm_eva', 'o_nm_eva']
+__all__ = [
+    "nm_noop",
+    "nm_trans",
+    "nm_rescale",
+    "nm_fft",
+    "mk_nm_matrix",
+    "mk_o_nm_matrix",
+    "nm_eva",
+    "o_nm_eva",
+]
 
 
 def mk_nm_matrix(nbeads):
@@ -71,9 +80,9 @@ def mk_rs_matrix(nb1, nb2):
        nb2: The final number of beads.
     """
 
-    if (nb1 == nb2):
+    if nb1 == nb2:
         return np.identity(nb1, float)
-    elif (nb1 > nb2):
+    elif nb1 > nb2:
         b1_nm = mk_nm_matrix(nb1)
         nm_b2 = mk_nm_matrix(nb2).T
 
@@ -83,7 +92,7 @@ def mk_rs_matrix(nb1, nb2):
         for i in range(1, nb2 // 2 + 1):
             b1_b2[i, i] = 1.0
             b1_b2[nb2 - i, nb1 - i] = 1.0
-        if (nb2 % 2 == 0):
+        if nb2 % 2 == 0:
             # if we are contracting down to an even number of beads, then we have to
             # pick just one of the last degenerate modes to match onto the single
             # stiffest mode in the new path
@@ -106,9 +115,9 @@ def mk_o_rs_matrix(nb1, nb2):
        nb2: The final number of beads.
     """
 
-    if (nb1 == nb2):
+    if nb1 == nb2:
         return np.identity(nb1, float)
-    elif (nb1 > nb2):
+    elif nb1 > nb2:
         b1_nm = mk_o_nm_matrix(nb1)
         nm_b2 = mk_o_nm_matrix(nb2).T
 
@@ -118,7 +127,7 @@ def mk_o_rs_matrix(nb1, nb2):
         for i in range(1, nb2 // 2 + 1):
             b1_b2[i, i] = 1.0
             b1_b2[nb2 - i, nb1 - i] = 1.0
-        if (nb2 % 2 == 0):
+        if nb2 % 2 == 0:
             # if we are contracting down to an even number of beads, then we have to
             # pick just one of the last degenerate modes to match onto the single
             # stiffest mode in the new path
@@ -136,7 +145,9 @@ class nm_noop(object):
     def __init__(self, nbeads, open_paths=None):
         """Initializes nm_noop. """
         if nbeads > 1:
-            raise ValueError("Shouldn't use a noop transformation for ring-polymer systems ")
+            raise ValueError(
+                "Shouldn't use a noop transformation for ring-polymer systems "
+            )
 
     def b2nm(self, q):
         return q
@@ -181,7 +192,11 @@ class nm_trans(object):
 
         qnm = np.dot(self._b2nm, q)
         if len(self._open) > 0:
-            for io in self._open:  # does separately the transformation for the atom that are marked as open paths
+            for (
+                io
+            ) in (
+                self._open
+            ):  # does separately the transformation for the atom that are marked as open paths
                 qnm[:, 3 * io] = np.dot(self._b2o_nm, q[:, 3 * io])
                 qnm[:, 3 * io + 1] = np.dot(self._b2o_nm, q[:, 3 * io + 1])
                 qnm[:, 3 * io + 2] = np.dot(self._b2o_nm, q[:, 3 * io + 2])
@@ -292,7 +307,9 @@ class nm_rescale(object):
         return q_scal
 
 
-class nm_fft(object):  # ! TODO add (matrix-version) of the open path transformation here
+class nm_fft(
+    object
+):  # ! TODO add (matrix-version) of the open path transformation here
 
     """Uses Fast Fourier transforms to do normal mode transformations.
 
@@ -327,22 +344,33 @@ class nm_fft(object):  # ! TODO add (matrix-version) of the open path transforma
         self._o_nm2b = self._b2o_nm.T
         try:
             import pyfftw
+
             info("Import of PyFFTW successful", verbosity.medium)
-            self.qdummy = pyfftw.n_byte_align_empty((nbeads, 3 * natoms), 16, 'float32')
-            self.qnmdummy = pyfftw.n_byte_align_empty((nbeads // 2 + 1, 3 * natoms), 16, 'complex64')
-            self.fft = pyfftw.FFTW(self.qdummy, self.qnmdummy, axes=(0,), direction='FFTW_FORWARD')
-            self.ifft = pyfftw.FFTW(self.qnmdummy, self.qdummy, axes=(0,), direction='FFTW_BACKWARD')
+            self.qdummy = pyfftw.n_byte_align_empty((nbeads, 3 * natoms), 16, "float32")
+            self.qnmdummy = pyfftw.n_byte_align_empty(
+                (nbeads // 2 + 1, 3 * natoms), 16, "complex64"
+            )
+            self.fft = pyfftw.FFTW(
+                self.qdummy, self.qnmdummy, axes=(0,), direction="FFTW_FORWARD"
+            )
+            self.ifft = pyfftw.FFTW(
+                self.qnmdummy, self.qdummy, axes=(0,), direction="FFTW_BACKWARD"
+            )
         except ImportError:  # Uses standard numpy fft library if nothing better
-                            # is available
-            info("Import of PyFFTW unsuccessful, using NumPy library instead", verbosity.medium)
-            self.qdummy = np.zeros((nbeads, 3 * natoms), dtype='float32')
-            self.qnmdummy = np.zeros((nbeads // 2 + 1, 3 * natoms), dtype='complex64')
+            # is available
+            info(
+                "Import of PyFFTW unsuccessful, using NumPy library instead",
+                verbosity.medium,
+            )
+            self.qdummy = np.zeros((nbeads, 3 * natoms), dtype="float32")
+            self.qnmdummy = np.zeros((nbeads // 2 + 1, 3 * natoms), dtype="complex64")
 
             def dummy_fft(self):
                 self.qnmdummy = np.fft.rfft(self.qdummy, axis=0)
 
             def dummy_ifft(self):
                 self.qdummy = np.fft.irfft(self.qnmdummy, n=self.nbeads, axis=0)
+
             self.fft = lambda: dummy_fft(self)
             self.ifft = lambda: dummy_ifft(self)
 
@@ -369,13 +397,23 @@ class nm_fft(object):  # ! TODO add (matrix-version) of the open path transforma
 
         if self.nbeads % 2 == 0:
             self.qnmdummy[1:-1, :] *= np.sqrt(2)
-            (qnm[1:nmodes, :], qnm[self.nbeads:nmodes:-1, :]) = (self.qnmdummy[1:-1, :].real, self.qnmdummy[1:-1, :].imag)
+            (qnm[1:nmodes, :], qnm[self.nbeads : nmodes : -1, :]) = (
+                self.qnmdummy[1:-1, :].real,
+                self.qnmdummy[1:-1, :].imag,
+            )
             qnm[nmodes, :] = self.qnmdummy[nmodes, :].real
         else:
             self.qnmdummy[1:, :] *= np.sqrt(2)
-            (qnm[1:nmodes + 1, :], qnm[self.nbeads:nmodes:-1, :]) = (self.qnmdummy[1:, :].real, self.qnmdummy[1:, :].imag)
+            (qnm[1 : nmodes + 1, :], qnm[self.nbeads : nmodes : -1, :]) = (
+                self.qnmdummy[1:, :].real,
+                self.qnmdummy[1:, :].imag,
+            )
 
-        for io in self._open:  # does separately the transformation for the atom that are marked as open paths
+        for (
+            io
+        ) in (
+            self._open
+        ):  # does separately the transformation for the atom that are marked as open paths
             qnm[:, 3 * io] = np.dot(self._b2o_nm, q[:, 3 * io])
             qnm[:, 3 * io + 1] = np.dot(self._b2o_nm, q[:, 3 * io + 1])
             qnm[:, 3 * io + 2] = np.dot(self._b2o_nm, q[:, 3 * io + 2])
@@ -402,18 +440,28 @@ class nm_fft(object):  # ! TODO add (matrix-version) of the open path transforma
         qnm_complex = np.zeros((nmodes + 1, len(qnm[0, :])), complex)
         qnm_complex[0, :] = qnm[0, :]
         if not odd:
-            (qnm_complex[1:-1, :].real, qnm_complex[1:-1, :].imag) = (qnm[1:nmodes, :], qnm[self.nbeads:nmodes:-1, :])
+            (qnm_complex[1:-1, :].real, qnm_complex[1:-1, :].imag) = (
+                qnm[1:nmodes, :],
+                qnm[self.nbeads : nmodes : -1, :],
+            )
             qnm_complex[1:-1, :] /= np.sqrt(2)
             qnm_complex[nmodes, :] = qnm[nmodes, :]
         else:
-            (qnm_complex[1:, :].real, qnm_complex[1:, :].imag) = (qnm[1:nmodes + 1, :], qnm[self.nbeads:nmodes:-1, :])
+            (qnm_complex[1:, :].real, qnm_complex[1:, :].imag) = (
+                qnm[1 : nmodes + 1, :],
+                qnm[self.nbeads : nmodes : -1, :],
+            )
             qnm_complex[1:, :] /= np.sqrt(2)
 
         self.qnmdummy[:] = qnm_complex
         self.ifft()
         q = np.zeros(qnm.shape)
         q = self.qdummy * np.sqrt(self.nbeads)
-        for io in self._open:  # does separately the transformation for the atom that are marked as open paths
+        for (
+            io
+        ) in (
+            self._open
+        ):  # does separately the transformation for the atom that are marked as open paths
             q[:, 3 * io] = np.dot(self._o_nm2b, qnm[:, 3 * io])
             q[:, 3 * io + 1] = np.dot(self._o_nm2b, qnm[:, 3 * io + 1])
             q[:, 3 * io + 2] = np.dot(self._o_nm2b, qnm[:, 3 * io + 2])

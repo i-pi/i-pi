@@ -1,0 +1,18 @@
+
+Examples to be excluded from this test should be added to 'excluded_test.txt'
+
+To run all the example-test type: 
+
+python test_examples.py
+
+To run the test for examples inside a folder type:
+
+python test_examples.py  -f <example-folder>
+
+For example: 
+
+python test_examples.py -f  examples/lammps/h2o-geop
+
+To see more information type: 
+
+python test_examples.py -h

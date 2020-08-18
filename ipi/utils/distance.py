@@ -6,7 +6,8 @@
 
 import numpy as np
 
-__all__ = ['vector_separation']
+__all__ = ["vector_separation"]
+
 
 def vector_separation(cell_h, cell_ih, qi, qj):
     """Calculates the vector separating two atoms.
@@ -35,7 +36,7 @@ def vector_separation(cell_h, cell_ih, qi, qj):
     sij = np.dot(cell_ih, (qi - qj).T)  # column vectors needed
     sij -= np.rint(sij)
 
-    dij = np.dot(cell_h, sij).T         # back to i-pi shape
+    dij = np.dot(cell_h, sij).T  # back to i-pi shape
     rij = np.linalg.norm(dij, axis=1)
 
     return dij, rij

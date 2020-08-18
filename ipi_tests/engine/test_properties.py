@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 
 import mock
 import tempfile
@@ -10,8 +9,7 @@ import numpy as np
 import numpy.testing as npt
 
 import ipi.engine.properties
-from ipi_tests import xyz_generator as xyz_gen
-
+from ipi_tests.common import xyz_generator as xyz_gen
 
 test_Trajectories_print_traj_prms = [
     # natoms, nbeads, bead, cell, cell_units, property_, property_units, format_, units_conversion

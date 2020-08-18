@@ -31,7 +31,6 @@
           <force> 1.0e-3 </force>
           <position> 1.0e-7 </position>
         </tolerances>
-        <maximum_step> 150.0 </maximum_step>
       </optimizer>
     </motion>
   </system>

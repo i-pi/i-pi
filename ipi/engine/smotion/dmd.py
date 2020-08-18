@@ -18,7 +18,7 @@ from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, info
 
 
-__all__ = ['DMD']
+__all__ = ["DMD"]
 
 
 class DMD(Smotion):
@@ -41,18 +41,25 @@ class DMD(Smotion):
         """Updates driven md time step."""
 
         for s in self.syslist:
-#            oldf = dstrip(s.forces.f).copy()
+            #            oldf = dstrip(s.forces.f).copy()
             for ik, bc in enumerate(s.ensemble.bcomp):
                 k = bc.ffield
-                if not k in self.dmdff:
+                if k not in self.dmdff:
                     continue  # only does dmd for the indicated forcefield
-                f = s.ensemble.bias.ff[k] #dmd is sort of a bias...
-                if not hasattr(f, "dmd_update"):  # forcefield does not expose dmd_update interface
-                    raise ValueError("The forcefield '%s' associated with driven MD \
-                                      does not have a dmd_update interface" % (k))
-#                if s.ensemble.bweights[ik] == 0:
-#                    continue  # do not put metad bias on biases with zero weights (useful to do remd+metad!)
-                f.dmd_update() #updates the time step
+                f = s.ensemble.bias.ff[k]  # dmd is sort of a bias...
+                if not hasattr(
+                    f, "dmd_update"
+                ):  # forcefield does not expose dmd_update interface
+                    raise ValueError(
+                        "The forcefield '%s' associated with driven MD \
+                                      does not have a dmd_update interface"
+                        % (k)
+                    )
+                #                if s.ensemble.bweights[ik] == 0:
+                #                    continue  # do not put metad bias on biases with zero weights (useful to do remd+metad!)
+                f.dmd_update()  # updates the time step
+
+
 #                if fmtd:  # if metadyn has updated, then we must recompute forces.
 #                    # hacky but cannot think of a better way: we must manually taint *just* that component
 #                    for fc in s.ensemble.bias.mforces:
