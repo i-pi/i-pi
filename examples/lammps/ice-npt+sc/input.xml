@@ -4,7 +4,7 @@
     <trajectory stride='100' filename='xc' format='pdb' cell_units='angstrom'> x_centroid{angstrom}</trajectory>
     <checkpoint stride='2000'/>
   </output>
-  <total_steps>100000</total_steps>
+  <total_steps>10</total_steps>
   <prng>
     <seed>31415</seed>
   </prng>
