@@ -1,6 +1,4 @@
 # To check
-MBPOL/splitting/instanton/32-lbfgs                                          # Solved with PR #123
-pes/qtip4pf/tun-splitting/instanton/32-lbfgs                                # Solved with PR #123
 lammps/h2o-planetary-64                                                     # TypeError: string argument expected, got 'bytes' 
 
 # Broken
