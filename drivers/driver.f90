@@ -146,11 +146,13 @@
                   vstyle = 21
                ELSEIF (trim(cmdbuffer) == "ljpolymer") THEN
                   vstyle = 22
+               ELSEIF (trim(cmdbuffer) == "MB") THEN
+                  vstyle = 23
                ELSEIF (trim(cmdbuffer) == "gas") THEN
                   vstyle = 0  ! ideal gas
                ELSE
                   WRITE(*,*) " Unrecognized potential type ", trim(cmdbuffer)
-                  WRITE(*,*) " Use -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer] "
+                  WRITE(*,*) " Use -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB] "
                   STOP "ENDED"
                ENDIF
             ELSEIF (ccmd == 4) THEN
@@ -230,6 +232,16 @@
          ELSEIF ( 4/= par_count) THEN
             WRITE(*,*) "Error: parameters not initialized correctly."
             WRITE(*,*) "For ekart potential use  AA,A,B,k" 
+            STOP "ENDED"
+         ENDIF
+         isinit = .true.
+
+      ELSEIF (23 == vstyle) THEN !MB
+         IF (par_count == 0) THEN ! defaults values 
+            vpars(1) = 0.004737803248674678
+         ELSEIF ( 1/= par_count) THEN
+            WRITE(*,*) "Error: parameters not initialized correctly."
+            WRITE(*,*) "For MB potential up to 1 param can be specified"
             STOP "ENDED"
          ENDIF
          isinit = .true.
@@ -546,6 +558,14 @@
                
             ELSEIF (vstyle == 20) THEN ! eckart potential.
                CALL geteckart(nat,vpars(1), vpars(2), vpars(3),vpars(4), atoms, pot, forces)
+
+            ELSEIF (vstyle == 23) THEN ! MB.
+               IF (nat/=1) THEN
+                  WRITE(*,*) "Expecting 1 atom for MB"
+                  STOP "ENDED"
+               ENDIF
+               !atoms = atoms*0.52917721d0  !Change to angstrom
+               CALL get_MB(nat,vpars(1), atoms, pot, forces)
             ELSE
                IF ((allocated(n_list) .neqv. .true.)) THEN
                   IF (verbose > 0) WRITE(*,*) " Allocating neighbour lists."
@@ -628,7 +648,7 @@
     CONTAINS
       SUBROUTINE helpmessage
          ! Help banner
-         WRITE(*,*) " SYNTAX: driver.x [-u] -h hostname -p port -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe] "
+         WRITE(*,*) " SYNTAX: driver.x [-u] -h hostname -p port -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB] "
          WRITE(*,*) "         -o 'comma_separated_parameters' [-v] "
          WRITE(*,*) ""
          WRITE(*,*) " For LJ potential use -o sigma,epsilon,cutoff "
