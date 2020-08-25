@@ -3,7 +3,6 @@ from pathlib import Path
 import pytest
 import argparse
 from argparse import RawTextHelpFormatter
-import sys
 import time
 from ipi_tests.examples.exampletools import find_examples, Runner_examples
 

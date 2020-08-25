@@ -146,11 +146,13 @@
                   vstyle = 21
                ELSEIF (trim(cmdbuffer) == "ljpolymer") THEN
                   vstyle = 22
+               ELSEIF (trim(cmdbuffer) == "doublewell") THEN
+                  vstyle = 23
                ELSEIF (trim(cmdbuffer) == "gas") THEN
                   vstyle = 0  ! ideal gas
                ELSE
                   WRITE(*,*) " Unrecognized potential type ", trim(cmdbuffer)
-                  WRITE(*,*) " Use -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer] "
+                  WRITE(*,*) " Use -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|doublewell] "
                   STOP "ENDED"
                ENDIF
             ELSEIF (ccmd == 4) THEN
@@ -171,18 +173,21 @@
          WRITE(*,*) " Error, type of potential not specified."
          CALL helpmessage
          STOP "ENDED"
+
       ELSEIF (0 == vstyle) THEN
          IF (par_count /= 0) THEN
             WRITE(*,*) "Error: no initialization string needed for ideal gas."
             STOP "ENDED"
          ENDIF
          isinit = .true.
+
       ELSEIF (6 == vstyle) THEN
          IF (par_count /= 0) THEN
             WRITE(*,*) "Error:  no initialization string needed for qtip4pf."
             STOP "ENDED"
          ENDIF
          isinit = .true.
+
       ELSEIF (11== vstyle) THEN
          IF (par_count .ne. 3) THEN
             WRITE(*,*) "Error:  incorrect initialization string included for qtip4pf-efield. &
@@ -195,6 +200,7 @@
             enddo
          ENDIF
          isinit = .true.
+
       ELSEIF (5 == vstyle) THEN
          IF (par_count /= 0) THEN
             WRITE(*,*) "Error: no initialization string needed for zundel."
@@ -203,6 +209,7 @@
          CALL prezundelpot()
          CALL prezundeldip()
          isinit = .true.
+
       ELSEIF (21 == vstyle) THEN
          IF (par_count /= 0) THEN
             WRITE(*,*) "Error: no initialization string needed for CH4+H CBE potential."
@@ -210,6 +217,7 @@
          ENDIF
          CALL prepot()
          isinit = .true.
+
       ELSEIF (4 == vstyle) THEN
          IF (par_count == 0) THEN ! defaults (OH stretch)
             vpars(1) = 1.8323926 ! r0
@@ -221,6 +229,7 @@
             STOP "ENDED"
          ENDIF
          isinit = .true.
+
       ELSEIF (20 == vstyle) THEN !eckart
          IF (par_count == 0) THEN ! defaults values 
             vpars(1) = 0.0d0
@@ -233,6 +242,7 @@
             STOP "ENDED"
          ENDIF
          isinit = .true.
+
       ELSEIF (22 == vstyle) THEN !ljpolymer
          IF (4/= par_count) THEN
             WRITE(*,*) "Error: parameters not initialized correctly."
@@ -247,28 +257,32 @@
             stiffness = 36.d0 * (2.d0 ** (2.d0/3.d0))*eps
             isinit = .true.
          ENDIF
+
       ELSEIF (vstyle == 8) THEN
          IF (par_count /= 0) THEN
             WRITE(*,*) "Error: no initialization string needed for Partridge-Schwenke H2O potential."
             STOP "ENDED"
          END IF
+
       ELSEIF (vstyle == 9) THEN
          IF (par_count /= 0) THEN
             WRITE(*,*) "Error: no initialization string needed for LEPSM1."
             STOP "ENDED"
          END IF
+
       ELSEIF (vstyle == 10) THEN
          IF (par_count /= 0) THEN
             WRITE(*,*) "Error: no initialization string needed for LEPSM2."
             STOP "ENDED" 
          ENDIF   
          isinit = .true.
+
       ELSEIF (vstyle == 11) THEN
          IF (par_count .ne. 3) THEN
             WRITE(*,*) "Error:  incorrect initialization string included for qtip4pf-efield. &
      &    Provide the three components of the electric field in V/nm"
             STOP "ENDED"
-      ELSE
+         ELSE
             ! We take in an electric field in volts / nm.This must be converted 
             ! to Eh / (e a0).
             do i=1,3
@@ -276,6 +290,7 @@
             enddo
          ENDIF
          isinit = .true.
+
       ELSEIF (vstyle == 1) THEN
          IF (par_count /= 3) THEN
             WRITE(*,*) "Error: parameters not initialized correctly."
@@ -287,6 +302,7 @@
          rc = vpars(3)
          rn = rc*1.2
          isinit = .true.
+         
       ELSEIF (vstyle == 2) THEN
          IF (par_count /= 1) THEN
             WRITE(*,*) "Error: parameters not initialized correctly."
@@ -296,6 +312,7 @@
          rc = vpars(1)
          rn = rc*1.2
          isinit = .true.
+
       ELSEIF (vstyle == 3) THEN
          IF (par_count /= 1) THEN
             WRITE(*,*) "Error: parameters not initialized correctly."
@@ -304,6 +321,7 @@
          ENDIF
          ks = vpars(1)
          isinit = .true.
+
       ELSEIF (vstyle == 30) THEN
          IF (par_count /= 1) THEN
             WRITE(*,*) "Error: parameters not initialized correctly."
@@ -312,6 +330,7 @@
          ENDIF
          ks = vpars(1)  !è la k dell'ho, unica chiaramente perché in 1D
          isinit = .true.
+
       ELSEIF (vstyle == 7) THEN
          IF (par_count /= 1) THEN
             WRITE(*,*) "Error: parameters not initialized correctly."
@@ -319,6 +338,13 @@
             STOP "ENDED" ! Note that if initialization from the wrapper is implemented this exit should be removed.
          ENDIF
          ks = vpars(1)
+         isinit = .true.
+
+      ELSEIF (23 == vstyle) THEN !doublewell
+         IF ( par_count /= 0 ) THEN
+                 WRITE(*,*) "Error: no initialization string needed for doublewell."
+            STOP "ENDED" 
+         ENDIF   
          isinit = .true.
       ENDIF
 
@@ -546,6 +572,10 @@
                
             ELSEIF (vstyle == 20) THEN ! eckart potential.
                CALL geteckart(nat,vpars(1), vpars(2), vpars(3),vpars(4), atoms, pot, forces)
+
+            ELSEIF (vstyle == 23) THEN ! qQ
+               CALL getdoublewell(nat, atoms, pot, forces)
+
             ELSE
                IF ((allocated(n_list) .neqv. .true.)) THEN
                   IF (verbose > 0) WRITE(*,*) " Allocating neighbour lists."
@@ -628,7 +658,7 @@
     CONTAINS
       SUBROUTINE helpmessage
          ! Help banner
-         WRITE(*,*) " SYNTAX: driver.x [-u] -h hostname -p port -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe] "
+         WRITE(*,*) " SYNTAX: driver.x [-u] -h hostname -p port -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|doublewell] "
          WRITE(*,*) "         -o 'comma_separated_parameters' [-v] "
          WRITE(*,*) ""
          WRITE(*,*) " For LJ potential use -o sigma,epsilon,cutoff "

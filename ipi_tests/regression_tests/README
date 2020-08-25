@@ -1,4 +1,4 @@
-See documentaion of how to run the regression tests by running:
+See the documentaion of how to run the regression tests by running:
 
    "python test_run.py -h"
 
@@ -10,6 +10,12 @@ To add a new regression test please provide:
 
    - a reference output with the name 'ref_simulation.out'
 
+   - a set of reference trajectory files
+	-  ref_simulation.pos_c.xyz : the position of the centroid with stride=1 
+	-  ref_simulation.pos_0.xyz : the position of the 1st bead with stride=1 if nbeads>1 (use the tag: bead=0!)
+	-  ref_simulation.frc_c.xyz : the force on the centroid with stride=1 
+	-  ref_simulation.frc_0.xyz : the force on the 1st bead with stride=1 if nbeads>1 (use the tag: bead=0!)
+	
 Important: 
 
    The extension *.out appears in the .gitignore  file
