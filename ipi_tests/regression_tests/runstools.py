@@ -64,7 +64,9 @@ def get_driver_info(
                 raise ValueError("driver.txt is empty")
     except FileNotFoundError:
         raise FileNotFoundError(
-            "({}) An input.xml file was found but a driver.txt not".format(ff)
+            "({}) An input.xml file was found but a driver.txt not".format(
+                example_folder
+            )
         )
     except:
         pass
@@ -82,13 +84,14 @@ def get_driver_info(
 
     return driver_info
 
+
 def get_info_test(parent):
     """ This function recursively searches for examples
     and checks for the presence of the required additional info
     required (i.e. driver.txt)
     """
     folders = [x[0] for x in os.walk(parent)]
-    print('folders: {}\n'.format(*folders))
+    print("folders: {}\n".format(*folders))
     reg_tests = list()
 
     for ff in folders:
@@ -96,7 +99,7 @@ def get_info_test(parent):
             try:
                 driver_info = get_driver_info(ff)
                 reg_tests.append([ff, driver_info])
-         #       reg_tests.append(ff)
+            #       reg_tests.append(ff)
             except FileNotFoundError:
                 raise FileNotFoundError(
                     "({}) An input.xml file was found but a driver.txt not".format(ff)
@@ -116,8 +119,16 @@ class Runner(object):
     it checks that the generated outputs are the expected ones.
     """
 
-    def __init__(self, parent, call_ipi="i-pi input.xml", call_driver="i-pi-driver", check_errors=True, check_main_output=True, check_xyz_output=True):
-        """ Store parent directory and commands to call i-pi and driver 
+    def __init__(
+        self,
+        parent,
+        call_ipi="i-pi input.xml",
+        call_driver="i-pi-driver",
+        check_errors=True,
+        check_main_output=True,
+        check_xyz_output=True,
+    ):
+        """ Store parent directory and commands to call i-pi and driver
             call_ipi: command to call i-pi
             call_driver: list of commands to call drivers
         """
@@ -149,7 +160,7 @@ class Runner(object):
             files = os.listdir(self.parent / cwd)
             for f in files:
                 shutil.copy(self.parent / cwd / f, self.tmp_dir)
-            #copy_tree(str(cwd), str(self.tmp_dir))
+            # copy_tree(str(cwd), str(self.tmp_dir))
             driver_info = get_driver_info(self.tmp_dir)
 
             # Run i-pi
@@ -176,7 +187,7 @@ class Runner(object):
             for s, ffsocket in enumerate(root.findall("ffsocket")):
                 name = ffsocket.attrib["name"]
                 mode = driver_info["socket_mode"]
-                ffsocket.attrib["mode"] = mode 
+                ffsocket.attrib["mode"] = mode
 
                 for element in ffsocket:
                     port = driver_info["port_number"]
@@ -188,7 +199,7 @@ class Runner(object):
                         address = dd
 
                 model = driver_info["model"]
-                #print("driver:", model)
+                # print("driver:", model)
                 clients.append([model, address, port, mode])
 
                 for flag in driver_info["flag"]:
@@ -209,10 +220,10 @@ class Runner(object):
 
             for output in root.findall("output"):
                 for kid in output:
-                    if(kid.tag == "trajectory"):
+                    if kid.tag == "trajectory":
                         fname = kid.attrib["filename"]
-                        if(fname in ['frc', 'pos', 'vel', 'mom']):
-                            fname += '_0'
+                        if fname in ["frc", "pos", "vel", "mom"]:
+                            fname += "_0"
                         self.options.append(fname)
 
             # Checking the input that the minimally required files are calculated
@@ -222,11 +233,11 @@ class Runner(object):
                     missing.append(elem)
                     raise IOError(
                         "Please calculate and provide a reference at least for the following quantities in {}:\n {}".format(
-                            str(self.parent / cwd), '\n'.join(missing[:])
+                            str(self.parent / cwd), "\n".join(missing[:])
                         )
                     )
 
-            #print(self.options)
+            # print(self.options)
 
             # Run drivers by defining cmd2 which will be called, eventually
             flag_indeces = list()
@@ -234,19 +245,24 @@ class Runner(object):
             driver = list()
             cmd2 = list()
             for client in clients:
-                #print('client:',client)
+                # print('client:',client)
                 if client[3] == "unix":
                     if client[0] == "harm3d" or client[0] == "doublewell":
                         clientcall = self.call_driver + " -m {} -u ".format(client[0])
                     else:
-                        clientcall = self.call_driver + " -m {} -h {} -u ".format(client[0], client[1])
+                        clientcall = self.call_driver + " -m {} -h {} -u ".format(
+                            client[0], client[1]
+                        )
                     cmd2.append(clientcall)
                 elif client[3] == "inet":
-                    cmd2.append(self.call_driver + " -m {} -h {} -p {}".format(client[0], client[1], client[2]))
+                    cmd2.append(
+                        self.call_driver
+                        + " -m {} -h {} -p {}".format(client[0], client[1], client[2])
+                    )
                 else:
                     raise ValueError("Driver mode has to be either unix or inet")
 
-                cmd=cmd2[0]
+                cmd = cmd2[0]
                 if any("-" in str(s) for s in client):
                     flag_indeces = [
                         i for i, elem in enumerate(client) if "-" in str(elem)
@@ -258,11 +274,13 @@ class Runner(object):
                                 ",".join(client[ll + 1 : flag_indeces[i + 1]][:]),
                             )
                         else:
-                            #print(client[ll],client[ll+1:])
-                            cmd2.append(  " {} {}".format(
-                                client[ll], ",".join(client[ll + 1 :][:])
-                            ))
-                    print("cmd:", cmd2[0]+cmd2[1])
+                            # print(client[ll],client[ll+1:])
+                            cmd2.append(
+                                " {} {}".format(
+                                    client[ll], ",".join(client[ll + 1 :][:])
+                                )
+                            )
+                    print("cmd:", cmd2[0] + cmd2[1])
                     cmd += cmd2[1]
                 driver.append(
                     sp.Popen(cmd, cwd=(cwd), shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
@@ -293,7 +311,6 @@ class Runner(object):
         except:
             pass
 
-
         try:
             input_name = self.tmp_dir / "input.xml"
             try:
@@ -312,10 +329,10 @@ class Runner(object):
 
             for output in root.findall("output"):
                 for kid in output:
-                    if(kid.tag == "trajectory"):
+                    if kid.tag == "trajectory":
                         fname = kid.attrib["filename"]
-                        if(fname in ['frc', 'pos', 'vel', 'mom']):
-                            fname += '_0'
+                        if fname in ["frc", "pos", "vel", "mom"]:
+                            fname += "_0"
                         self.options.append(fname)
 
             missing = []
@@ -324,11 +341,11 @@ class Runner(object):
                     missing.append(elem)
                     raise IOError(
                         "Please calculate and provide a reference at least for the following quantities in {}:\n {}".format(
-                            str(self.parent / cwd), '\n'.join(missing[:])
+                            str(self.parent / cwd), "\n".join(missing[:])
                         )
                     )
 
-            #print('options:', self.options)
+            # print('options:', self.options)
 
             if self.check_error:
                 self._check_error(ipi)
@@ -408,14 +425,16 @@ class Runner(object):
                 with open(Path(cwd) / refname) as ref:
                     ref_natoms = int(ref.readline())
                     for s, ll in enumerate(ref.readlines()):
-                        if((s+1)%(ref_natoms+2) != 0 and (s+1)%(ref_natoms+2) != 1): 
+                        if (s + 1) % (ref_natoms + 2) != 0 and (s + 1) % (
+                            ref_natoms + 2
+                        ) != 1:
                             ref_structs.append(ll.split()[1:])
                 reff = [[float(v) for v in r] for r in ref_structs]
                 ref_xyz = np.array(reff)
             except IOError:
                 raise IOError(
                     "Please provide a reference file named {} in {}".format(
-                        fname, str(self.parent / cwd)
+                        refname, str(self.parent / cwd)
                     )
                 )
 
@@ -431,7 +450,7 @@ class Runner(object):
             with open(self.tmp_dir / fname) as f:
                 natoms = int(f.readline())
                 for s, ll in enumerate(f.readlines()):
-                    if((s+1)%(natoms+2) != 0 and (s+1)%(natoms+2) != 1): 
+                    if (s + 1) % (natoms + 2) != 0 and (s + 1) % (natoms + 2) != 1:
                         structs.append(ll.split()[1:])
                 testt = [[float(v) for v in r] for r in structs]
                 test_xyz = np.array(testt)
