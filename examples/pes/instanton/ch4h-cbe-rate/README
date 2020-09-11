@@ -3,7 +3,7 @@ TODO: Update with detailed instructions
 Folders
 TS: Finds classical transition state 
 reactant: minimizes and calculates phonons for the reactant, necessary for the final calculation of the rate
-instanton: finds instanton geometries with 80 and 40 beads at 300 K.
+instanton: finds instanton geometries using different implemented features 
 
 
 Necessary command to run driver.x in all folders:

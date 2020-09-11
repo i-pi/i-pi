@@ -16,6 +16,6 @@ pair_coeff * * 11.0
 timestep 0.001   # timestep (ps)
 velocity all create 300 4928459
 thermo 1   # screen output interval (timesteps)
-fix 1 all ipi fidis 12345 unix
+fix 1 all ipi localhost_0_0 12345 unix
 
 run 66000000

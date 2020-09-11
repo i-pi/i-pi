@@ -18,6 +18,7 @@ pair_coeff  * * 0 0
 pair_coeff  1  1  0.000295147 5.96946
 neighbor	2.0 bin
 timestep	0.00025
-fix 1 all ipi f1 32345 unix
+#fix 1 all ipi f1 32345 unix
+fix 1 all ipi f1 31415 unix
 
 run		100000000

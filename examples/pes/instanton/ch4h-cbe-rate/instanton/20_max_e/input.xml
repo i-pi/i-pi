@@ -1,0 +1,40 @@
+<simulation mode="static" verbosity="low">
+    <output prefix='inst'>
+        <properties stride='1' filename='out'>  [ step, potential{electronvolt}] </properties>
+   </output>
+   <total_steps>20       </total_steps>
+   <ffsocket name="ch4hcbe" mode="unix" >
+       <address> localhost </address>  
+   </ffsocket>
+   <system >
+       <initialize nbeads='20'> 
+           <file mode='xyz' >  init.xyz </file>
+           <cell mode='abc'> [200.0,  200.0,  200.0  ] </cell>
+       </initialize>
+       <forces>
+          <force forcefield="ch4hcbe"> </force>
+       </forces>
+       <ensemble>
+           <temperature units="kelvin">300</temperature>
+       </ensemble>
+       <motion mode='instanton'>
+           <instanton mode='rate'>
+               <alt_out>10</alt_out>
+               <tolerances>
+                   <energy> 5e-6 </energy>
+	           <force> 5e-6 </force>
+	           <position> 1e-3 </position>
+               </tolerances>
+               <delta> 0.2 </delta>
+               <max_e units="millielectronvolt">7</max_e>
+               <max_ms>-2</max_ms> 
+               <opt>nichols</opt>
+               <hessian_update>powell</hessian_update>
+               <hessian_asr>poly</hessian_asr>
+               <hessian_final>true</hessian_final>
+	       <biggest_step>0.3</biggest_step>
+               <hessian mode='file' shape='(18, 18)' >hessian.dat</hessian>
+           </instanton>
+       </motion>
+   </system>
+</simulation>
