@@ -603,9 +603,14 @@ class NPTIntegrator(NVTIntegrator):
     """
 
     # should be enough to redefine these functions, and the step() from NVTIntegrator should do the trick
+
     def pstep(self, level=0):
         """Velocity Verlet monemtum propagator."""
 
+        if np.all(self.forces.vir == 0):
+            raise ValueError(
+                "Seems like no stress tensor was computed by the client. Stopping barostat!"
+            )
         self.barostat.pstep(level)
         super(NPTIntegrator, self).pstep(level)
         # self.pconstraints()
@@ -739,6 +744,11 @@ class SCNPTIntegrator(SCIntegrator):
     # should be enough to redefine these functions, and the step() from NVTIntegrator should do the trick
     def pstep(self, level=0):
         """Velocity Verlet monemtum propagator."""
+
+        if np.all(self.forces.vir == 0):
+            raise ValueError(
+                "Seems like no stress tensor was computed by the client. Stopping barostat!"
+            )
 
         self.barostat.pstep(level)
         super(SCNPTIntegrator, self).pstep(level)
