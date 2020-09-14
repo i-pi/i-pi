@@ -11,6 +11,7 @@ import glob
 from tempfile import TemporaryDirectory
 from distutils.dir_util import copy_tree
 import pytest
+import re
 
 driver_models = [
     "lj",
@@ -25,6 +26,7 @@ driver_models = [
     "ch4hcbe",
     "ljpolymer",
     "doublewell",
+    "doublewell_1D",
     "MB",
 ]
 
@@ -109,7 +111,6 @@ def get_info_test(parent):
                     'Please specify "model address      port mode" inside driver.txt'
                 )
 
-    print(reg_tests)
     return reg_tests
 
 
@@ -125,7 +126,7 @@ class Runner(object):
         call_ipi="i-pi input.xml",
         call_driver="i-pi-driver",
         check_errors=True,
-        check_main_output=True,
+        check_numpy_output=True,
         check_xyz_output=True,
     ):
         """ Store parent directory and commands to call i-pi and driver
@@ -137,21 +138,20 @@ class Runner(object):
         self.call_ipi = call_ipi
         self.call_driver = call_driver
         self.check_error = check_errors
-        self.check_main_output = check_main_output
+        self.check_numpy_output = check_numpy_output
         self.check_xyz_output = check_xyz_output
 
-    def _run(self, cwd, nid, nbead=1, options=[]):
+    def _run(self, cwd, nid, options=[]):
         """ This function tries to run the example in a tmp folder and
         checks if ipi has ended without error.
         After that the output is checked against a reference
         arguments:
             cwd: folder where all the original regression tests are stored
-            nbead: the number of beads in the simulation
             options: a list that contains which trajectory files are  checked in the regression test
         """
 
-        self.options = []
-        min_req = ["pos_c", "frc_c"]
+        self.files = []
+        self.forms = []
         try:
             # Create temp file and copy files
             self.tmp_dir = Path(tempfile.mkdtemp())
@@ -199,7 +199,6 @@ class Runner(object):
                         address = dd
 
                 model = driver_info["model"]
-                # print("driver:", model)
                 clients.append([model, address, port, mode])
 
                 for flag in driver_info["flag"]:
@@ -209,35 +208,23 @@ class Runner(object):
 
             tree.write(open(output_name, "wb"))
 
-            for system in root.findall("system"):
-                for kid in system:
-                    if kid.tag == "initialize":
-                        self.nbead = int(kid.attrib["nbeads"])
+            with open(self.tmp_dir / 'files_to_check.txt') as f:
+                lines = f.readlines()
+            for nl, line in enumerate(lines):
+                if nl>1:
+                    self.files.append(line.split()[0])
+                    self.forms.append(line.split()[1])
 
-            # Extending the list of minimally required files to check if the simulation is multi_bead
-            if self.nbead > 1:
-                min_req += ["pos_0", "frc_0"]
-
-            for output in root.findall("output"):
-                for kid in output:
-                    if kid.tag == "trajectory":
-                        fname = kid.attrib["filename"]
-                        if fname in ["frc", "pos", "vel", "mom"]:
-                            fname += "_0"
-                        self.options.append(fname)
+            #print(self.files)
+            #print(self.forms)
 
             # Checking the input that the minimally required files are calculated
-            missing = []
-            for elem in min_req:
-                if elem not in self.options:
-                    missing.append(elem)
-                    raise IOError(
-                        "Please calculate and provide a reference at least for the following quantities in {}:\n {}".format(
-                            str(self.parent / cwd), "\n".join(missing[:])
-                        )
-                    )
-
-            # print(self.options)
+#
+#                    raise IOError(
+#                        "Please calculate and provide a reference at least for the following quantities in {}:\n {}".format(
+#                            str(self.parent / cwd), "\n".join(missing[:])
+#                        )
+#                    )
 
             # Run drivers by defining cmd2 which will be called, eventually
             flag_indeces = list()
@@ -245,9 +232,8 @@ class Runner(object):
             driver = list()
             cmd2 = list()
             for client in clients:
-                # print('client:',client)
                 if client[3] == "unix":
-                    if client[0] == "harm3d" or client[0] == "doublewell":
+                    if client[0] == "harm3d" or client[0] == "doublewell" or client[0] == "doublewell_1D" or client[0] == "zundel":
                         clientcall = self.call_driver + " -m {} -u ".format(client[0])
                     else:
                         clientcall = self.call_driver + " -m {} -h {} -u ".format(
@@ -274,18 +260,19 @@ class Runner(object):
                                 ",".join(client[ll + 1 : flag_indeces[i + 1]][:]),
                             )
                         else:
-                            # print(client[ll],client[ll+1:])
                             cmd2.append(
                                 " {} {}".format(
                                     client[ll], ",".join(client[ll + 1 :][:])
                                 )
                             )
-                    print("cmd:", cmd2[0] + cmd2[1])
+                    #print("cmd:", cmd2[0] + cmd2[1])
                     cmd += cmd2[1]
+
                 driver.append(
                     sp.Popen(cmd, cwd=(cwd), shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
                 )
 
+                #print("cmd:", cmd)
             # Check errors
             ipi_error = ipi.communicate(timeout=120)[1].decode("ascii")
             if ipi_error != "":
@@ -311,95 +298,49 @@ class Runner(object):
         except:
             pass
 
-        try:
-            input_name = self.tmp_dir / "input.xml"
-            try:
-                tree = ET.parse(input_name)
-            except:
-                print("The error is in the format or the tags of the xml!")
-            root = tree.getroot()
-
-            for system in root.findall("system"):
-                for kid in system:
-                    if kid.tag == "initialize":
-                        self.nbead = int(kid.attrib["nbeads"])
-
-            if self.nbead > 1:
-                min_req += ["pos_0", "frc_0"]
-
-            for output in root.findall("output"):
-                for kid in output:
-                    if kid.tag == "trajectory":
-                        fname = kid.attrib["filename"]
-                        if fname in ["frc", "pos", "vel", "mom"]:
-                            fname += "_0"
-                        self.options.append(fname)
-
-            missing = []
-            for elem in min_req:
-                if elem not in self.options:
-                    missing.append(elem)
-                    raise IOError(
-                        "Please calculate and provide a reference at least for the following quantities in {}:\n {}".format(
-                            str(self.parent / cwd), "\n".join(missing[:])
-                        )
-                    )
-
-            # print('options:', self.options)
-
-            if self.check_error:
-                self._check_error(ipi)
-            if self.check_main_output:
-                self._check_main_output(cwd)
-            if self.check_xyz_output:
-                self._check_xyz_output(cwd)
-
-        except sp.TimeoutExpired:
-            raise RuntimeError(
-                "Time is out. Aborted during {} test. \
-              Error {}".format(
-                    str(cwd), ipi.communicate(timeout=2)[0]
-                )
-            )
-
-        except FileNotFoundError:
-            raise FileNotFoundError("{}".format(str(cwd)))
-
-        except ValueError:
-            raise ValueError("{}".format(str(cwd)))
+        if self.check_error:
+            self._check_error(ipi)
+        if self.check_numpy_output:
+            self._check_numpy_output(cwd)
+        if self.check_xyz_output:
+            self._check_xyz_output(cwd)
 
     def _check_error(self, ipi):
         """ This function checks if ipi has exited with errors"""
 
-        ipi_error = ipi.communicate(timeout=30)[1].decode("ascii")
+        ipi_error = ipi.communicate(timeout=60)[1].decode("ascii")
         print(ipi_error)
         assert "" == ipi_error
 
-    def _check_main_output(self, cwd):
+    def _check_numpy_output(self, cwd):
         """ This function checks if the simulation.out is 'all_close' to the reference file provided"""
 
-        try:
-            ref_output = np.loadtxt(Path(cwd) / "ref_simulation.out")
-        except IOError:
-            raise IOError(
-                'Please provide a reference properties output named "ref_simulation.out"'
-            )
-        except ValueError:
-            raise ValueError(
-                "Please check ref_simulation.out in {}".format(str(self.parent))
-            )
+        for ii,refname in enumerate(self.files):
+            if(self.forms[ii] == 'numpy'):
+                try:
+                    ref_output = np.loadtxt(Path(cwd) / refname)
+                except IOError:
+                    raise IOError(
+                        'Please provide a reference properties output named "{}"'.format(
+                            refname)
+                    )
+                except ValueError:
+                    raise ValueError(
+                        "Please check ref_simulation.out in {}".format(str(self.parent))
+                    )
 
-        test_output = np.loadtxt(self.tmp_dir / "simulation.out")
+                fname = refname[4:]
+                test_output = np.loadtxt(self.tmp_dir / fname)
 
-        try:
-            np.testing.assert_allclose(test_output, ref_output)
-            print("No anomaly during the regtest for .out")
-        except AssertionError:
-            raise AssertionError(
-                "Disagreement between provided reference and simulation.out in {}".format(
-                    str(self.parent)
-                )
-            )
+                try:
+                    np.testing.assert_allclose(test_output, ref_output)
+                    print("No anomaly during the regtest for {}".format(refname))
+                except AssertionError:
+                    raise AssertionError(
+                        "Anomaly: Disagreement between reference and {} in {}".format(
+                            fname, str(self.parent)
+                        )
+                    )
 
     def _check_xyz_output(self, cwd):
         """ This function checks if the ref_simulation.XXXXX.xyz files are 'all_close'
@@ -410,57 +351,97 @@ class Runner(object):
             frc_c = <trajectory filename='frc_c' stride='1' > f_centroid </trajectory>
             vel_c = <trajectory filename='vel_c' stride='1' > v_centroid </trajectory>
             mom_c = <trajectory filename='mom_c' stride='1' > p_centroid </trajectory>
+
         In case of a multi-bead simulations, we require the check of the positions and
         forces on the first bead, too.
             pos_0 = <trajectory filename='pos' stride='1' bead='0'> positions </trajectory>
             frc_0 = <trajectory filename='frc' stride='1' bead='0'> forces </trajectory>
             vel_0 = <trajectory filename='vel' stride='1' bead='0'> velocities </trajectory>
             mom_0 = <trajectory filename='mom' stride='1' bead='0'> momenta </trajectory>
+
+        In case of an instanton simulation, the following options do not hold. The checked 
+        .xyz files in such case are automatically generated by setting <motion mode='instanton'>
+
         """
 
-        for var in self.options:
-            ref_structs = []
-            try:
-                refname = "ref_simulation." + var + ".xyz"
-                with open(Path(cwd) / refname) as ref:
-                    ref_natoms = int(ref.readline())
-                    for s, ll in enumerate(ref.readlines()):
-                        if (s + 1) % (ref_natoms + 2) != 0 and (s + 1) % (
-                            ref_natoms + 2
-                        ) != 1:
-                            ref_structs.append(ll.split()[1:])
-                reff = [[float(v) for v in r] for r in ref_structs]
-                ref_xyz = np.array(reff)
-            except IOError:
-                raise IOError(
-                    "Please provide a reference file named {} in {}".format(
-                        refname, str(self.parent / cwd)
+        for ii,refname in enumerate(self.files):
+            if(self.forms[ii] == 'xyz'):
+                ref_structs = []
+                try:
+                    with open(Path(cwd) / refname) as ref:
+                        ref_natoms = int(ref.readline())
+                        for s, ll in enumerate(ref.readlines()):
+                            if (s + 1) % (ref_natoms + 2) != 0 and (s + 1) % (
+                                ref_natoms + 2
+                            ) != 1:
+                                ref_structs.append(ll.split()[1:])
+                    reff = [[float(v) for v in r] for r in ref_structs]
+                    ref_xyz = np.array(reff)
+                except IOError:
+                    raise IOError(
+                        "Please provide a reference file named {} in {}".format(
+                            refname, str(self.parent / cwd)
+                        )
                     )
-                )
 
-            except ValueError:
-                raise ValueError(
-                    "Please check the values for the file named {} in {}".format(
-                        refname, str(self.parent / cwd)
+                except ValueError:
+                    raise ValueError(
+                        "Please check the values for the file named {} in {}".format(
+                            refname, str(self.parent / cwd)
+                        )
                     )
-                )
 
-            structs = []
-            fname = "simulation." + var + ".xyz"
-            with open(self.tmp_dir / fname) as f:
-                natoms = int(f.readline())
-                for s, ll in enumerate(f.readlines()):
-                    if (s + 1) % (natoms + 2) != 0 and (s + 1) % (natoms + 2) != 1:
-                        structs.append(ll.split()[1:])
-                testt = [[float(v) for v in r] for r in structs]
-                test_xyz = np.array(testt)
+                fname = refname[4:]
+                structs = []
+                with open(self.tmp_dir / fname) as f:
+                    natoms = int(f.readline())
+                    for s, ll in enumerate(f.readlines()):
+                        if (s + 1) % (natoms + 2) != 0 and (s + 1) % (natoms + 2) != 1:
+                            structs.append(ll.split()[1:])
+                    testt = [[float(v) for v in r] for r in structs]
+                    test_xyz = np.array(testt)
 
-            try:
-                np.testing.assert_allclose(test_xyz, ref_xyz)
-                print("No anomaly during the regtest for {}".format(var))
-            except AssertionError:
-                raise AssertionError(
-                    "Anomaly: Disagreement between reference and {} in {}".format(
-                        fname, str(self.parent / cwd)
+                try:
+                    np.testing.assert_allclose(test_xyz, ref_xyz)
+                    print("No anomaly during the regtest for {}".format(refname))
+                except AssertionError:
+                    raise AssertionError(
+                        "Anomaly: Disagreement between reference and {} in {}".format(
+                            fname, str(self.parent / cwd)
+                        )
                     )
-                )
+
+#    def _check_extra_output(self, cwd):
+#        """ This function checks if the ref_simulation.XXXXX files are 'all_close'
+#        to the reference file provided.
+#
+#        Options for XXXXX and the tags they can be generated with:
+#            instanton_FINAL.hess_[0-9]+
+#            instanton_FINAL_[0-9]+.ener
+#        """
+#        extras = [r'instanton_FINAL.hess_[0-9]+',r'instanton_FINAL_[0-9]+.ener']              # possible extras for reference checks
+#        extras_present=[]
+#        skip_rows = [0,1]
+#
+#        for var in extras:
+#            for filename in os.listdir(Path(cwd)):
+#                match = re.search(var,filename)
+#                if match is not None: 
+#                    refname = 'ref_simulation.'+match.group(0)
+#                    extras_present.append(refname)
+#
+#        for ii, refname in enumerate(extras_present):
+#            fname = refname.replace("ref_","")
+#            ref_extra = np.loadtxt(Path(cwd)/refname,unpack = True,skiprows = skip_rows[ii])
+#            f_extra = np.loadtxt(self.tmp_dir/fname,unpack = True,skiprows = skip_rows[ii])
+#
+#            try:
+#                np.testing.assert_allclose(f_extra, ref_extra)
+#                print("No anomaly during the regtest for {}".format(fname))
+#            except AssertionError:
+#                raise AssertionError(
+#                    "Anomaly: Disagreement between reference and {} in {}".format(
+#                        fname, str(self.parent / cwd)
+#                    )
+#                )
+
