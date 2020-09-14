@@ -208,23 +208,23 @@ class Runner(object):
 
             tree.write(open(output_name, "wb"))
 
-            with open(self.tmp_dir / 'files_to_check.txt') as f:
+            with open(self.tmp_dir / "files_to_check.txt") as f:
                 lines = f.readlines()
             for nl, line in enumerate(lines):
-                if nl>1:
+                if nl > 1:
                     self.files.append(line.split()[0])
                     self.forms.append(line.split()[1])
 
-            #print(self.files)
-            #print(self.forms)
+            # print(self.files)
+            # print(self.forms)
 
             # Checking the input that the minimally required files are calculated
-#
-#                    raise IOError(
-#                        "Please calculate and provide a reference at least for the following quantities in {}:\n {}".format(
-#                            str(self.parent / cwd), "\n".join(missing[:])
-#                        )
-#                    )
+            #
+            #                    raise IOError(
+            #                        "Please calculate and provide a reference at least for the following quantities in {}:\n {}".format(
+            #                            str(self.parent / cwd), "\n".join(missing[:])
+            #                        )
+            #                    )
 
             # Run drivers by defining cmd2 which will be called, eventually
             flag_indeces = list()
@@ -233,7 +233,12 @@ class Runner(object):
             cmd2 = list()
             for client in clients:
                 if client[3] == "unix":
-                    if client[0] == "harm3d" or client[0] == "doublewell" or client[0] == "doublewell_1D" or client[0] == "zundel":
+                    if (
+                        client[0] == "harm3d"
+                        or client[0] == "doublewell"
+                        or client[0] == "doublewell_1D"
+                        or client[0] == "zundel"
+                    ):
                         clientcall = self.call_driver + " -m {} -u ".format(client[0])
                     else:
                         clientcall = self.call_driver + " -m {} -h {} -u ".format(
@@ -265,14 +270,14 @@ class Runner(object):
                                     client[ll], ",".join(client[ll + 1 :][:])
                                 )
                             )
-                    #print("cmd:", cmd2[0] + cmd2[1])
+                    # print("cmd:", cmd2[0] + cmd2[1])
                     cmd += cmd2[1]
 
                 driver.append(
                     sp.Popen(cmd, cwd=(cwd), shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
                 )
 
-                #print("cmd:", cmd)
+                # print("cmd:", cmd)
             # Check errors
             ipi_error = ipi.communicate(timeout=120)[1].decode("ascii")
             if ipi_error != "":
@@ -313,16 +318,22 @@ class Runner(object):
         assert "" == ipi_error
 
     def _check_numpy_output(self, cwd):
-        """ This function checks if the simulation.out is 'all_close' to the reference file provided"""
+        """ This function checks if the numpy-accessible datafiles are 'all_close' to the
+        reference file provided
 
-        for ii,refname in enumerate(self.files):
-            if(self.forms[ii] == 'numpy'):
+        The checked 'numpy-accessible' files are collected in the files_to_check.txt
+        where there filetype is also specified.
+        """
+
+        for ii, refname in enumerate(self.files):
+            if self.forms[ii] == "numpy":
                 try:
                     ref_output = np.loadtxt(Path(cwd) / refname)
                 except IOError:
                     raise IOError(
                         'Please provide a reference properties output named "{}"'.format(
-                            refname)
+                            refname
+                        )
                     )
                 except ValueError:
                     raise ValueError(
@@ -346,26 +357,26 @@ class Runner(object):
         """ This function checks if the ref_simulation.XXXXX.xyz files are 'all_close'
         to the reference file provided.
 
-        Options for XXXXX and the tags they can be generated with:
+        The checked .xyz files are collected in the files_to_check.txt where there filetype is
+        also specified.
+
+        Common options for XXXXX and the tags they can be generated with:
             pos_c = <trajectory filename='pos_c' stride='1' > x_centroid </trajectory>
             frc_c = <trajectory filename='frc_c' stride='1' > f_centroid </trajectory>
             vel_c = <trajectory filename='vel_c' stride='1' > v_centroid </trajectory>
             mom_c = <trajectory filename='mom_c' stride='1' > p_centroid </trajectory>
 
-        In case of a multi-bead simulations, we require the check of the positions and
+        In case of a multi-bead simulations, please check of the positions and
         forces on the first bead, too.
             pos_0 = <trajectory filename='pos' stride='1' bead='0'> positions </trajectory>
             frc_0 = <trajectory filename='frc' stride='1' bead='0'> forces </trajectory>
             vel_0 = <trajectory filename='vel' stride='1' bead='0'> velocities </trajectory>
             mom_0 = <trajectory filename='mom' stride='1' bead='0'> momenta </trajectory>
 
-        In case of an instanton simulation, the following options do not hold. The checked 
-        .xyz files in such case are automatically generated by setting <motion mode='instanton'>
-
         """
 
-        for ii,refname in enumerate(self.files):
-            if(self.forms[ii] == 'xyz'):
+        for ii, refname in enumerate(self.files):
+            if self.forms[ii] == "xyz":
                 ref_structs = []
                 try:
                     with open(Path(cwd) / refname) as ref:
@@ -411,6 +422,7 @@ class Runner(object):
                         )
                     )
 
+
 #    def _check_extra_output(self, cwd):
 #        """ This function checks if the ref_simulation.XXXXX files are 'all_close'
 #        to the reference file provided.
@@ -426,7 +438,7 @@ class Runner(object):
 #        for var in extras:
 #            for filename in os.listdir(Path(cwd)):
 #                match = re.search(var,filename)
-#                if match is not None: 
+#                if match is not None:
 #                    refname = 'ref_simulation.'+match.group(0)
 #                    extras_present.append(refname)
 #
@@ -444,4 +456,3 @@ class Runner(object):
 #                        fname, str(self.parent / cwd)
 #                    )
 #                )
-
