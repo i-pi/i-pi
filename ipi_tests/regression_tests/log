@@ -1,0 +1,4196 @@
+commit cb2315e4244b4edc0105c4a9e5c6b278d172e5cf
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Oct 1 15:39:32 2020 +0200
+
+    remove notready_tests and keep them on regtest_with_flakytests branch
+
+commit 735e509b6622d2f065e04e9ffbfada5b32a8cc17
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Oct 1 15:13:58 2020 +0200
+
+    removing flaky tests -> keeping them for the future in notready_tests
+
+commit 6f8cf5f2be2262d207c30f509c346c0079675ad4
+Merge: 2db28aa 754a0e8
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Oct 1 10:08:38 2020 +0200
+
+    Merge branch 'regtest_infrastructure' of https://github.com/sabia-group/i-pi into regtest_infrastructure
+    
+    Changes were done on the github platform front.
+
+commit 2db28aa4698b113699fb7a563f1682679641c57d
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Oct 1 10:07:51 2020 +0200
+
+    Corrections to README
+
+commit 754a0e81508ce86058420aa7cf63c3990e7f37c0
+Merge: 78f032e fb3c4d6
+Author: eszterpos <35307137+eszterpos@users.noreply.github.com>
+Date:   Wed Sep 30 09:14:25 2020 +0200
+
+    Merge branch 'master' into regtest_infrastructure
+
+commit 78f032e028250e88688b83bd64207b3bcee8b9e5
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Tue Sep 29 18:00:06 2020 +0200
+
+    remove spaces
+
+commit c1911c994d5f2661e4abe9d3aa66f41dfde0bcbb
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Tue Sep 29 17:54:39 2020 +0200
+
+    attempt to resolve conflicts2
+
+commit a3c4c0f798cb7f651b5c6e364984761745e2a3db
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Tue Sep 29 16:34:58 2020 +0200
+
+    resolve conflicts
+
+commit cd95594a34dde912c6ee961b09873d7de7db20b8
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Tue Sep 29 16:17:43 2020 +0200
+
+    changed drivers to compile with debugging flags
+
+commit fb3c4d67fa2af884cdf68e6e91d42c3e79a57026
+Merge: 2080b76 02e9226
+Author: litman90 <yairlitman@gmail.com>
+Date:   Tue Sep 29 14:58:52 2020 +0200
+
+    Merge pull request #133 from sabia-group/workflow-update
+    
+    This PR makes prettier and more pythonic the workflow without altering any functionality. I proceed to merge it.
+
+commit 02e9226a1e0e2cb60a943c9c3030d0e30a75d615
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Tue Sep 29 14:00:17 2020 +0200
+
+    dummy change to trigger workflow again
+
+commit 7116dae55e3f32c5f0a29821dce551f9c7f5b753
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Mon Sep 28 15:16:06 2020 +0200
+
+    test if it breaks again on the i-pi branch
+
+commit d705e58ea1a8c8a68b4027559f670adf0dfb7c4f
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Mon Sep 28 13:03:31 2020 +0200
+
+    workflow
+
+commit 61f9ddc31ad2a5dbbd90c1985a1065aee52eff89
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Mon Sep 28 11:56:34 2020 +0200
+
+    new workflows added
+
+commit dc91b9ead6dd96bb601c94c6175345e2cb4177a5
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Mon Sep 28 11:47:19 2020 +0200
+
+    removing testing comments
+
+commit 892a8e8df4d38002189d5170aabc7567d15b7f0e
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Mon Sep 28 09:51:05 2020 +0200
+
+    checks if i-pi is installed properly
+
+commit d2ec85246a7bc467751cb55b2569fa1eb5654a6b
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Sun Sep 27 09:13:55 2020 +0200
+
+    i-pi path to workflow file
+
+commit b83e18c2200321601077c5aa3e50b5be70ca4fb2
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Sun Sep 27 09:11:34 2020 +0200
+
+    i-pi path to workflow file
+
+commit d8baf5a8a2944c0d8a3e31aa430aa18ac66a771b
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Sun Sep 27 09:05:05 2020 +0200
+
+    i-pi path to workflow file
+
+commit 5795f92bb3c9280ce0aecd831fd8e9b6bcb73468
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Sun Sep 27 08:21:17 2020 +0200
+
+    i-pi path to workflow file
+
+commit c533e07a9e6dd09b02c6b6bb907596af1d272c69
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Fri Sep 25 14:41:47 2020 +0200
+
+    requirements.txt changed
+
+commit 15468244cba69fdbef2207f33d3bde7c113abb8e
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Fri Sep 25 14:29:55 2020 +0200
+
+    pip install . & scipy taken out of requirements.txt
+
+commit 12049351accedaef9304e6d3756e4f05f0a0f8d6
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Sep 24 19:48:28 2020 +0200
+
+    final (hopefully) workflow file
+
+commit 5e1e300e43226152e69e1b7bcc6f8920edfd15eb
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Sep 24 19:46:17 2020 +0200
+
+    final (hopefully) workflow file
+
+commit 53392d9cac73939215201e056d05e729a2516f34
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Sep 24 19:13:03 2020 +0200
+
+    checking the new matrix workflow file for different python versions.
+
+commit 00cba12746bb11f64cc3e1138b6b1dbc6f6259f1
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Sep 24 19:09:59 2020 +0200
+
+    checking the new matrix workflow file for different python versions.
+
+commit 5615d1dad55ab404d0334abaf9e85eb4684e79bd
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Sep 24 19:03:05 2020 +0200
+
+    checking the new matrix workflow file for different python versions.
+
+commit 5159a1e2de4397ee602ef2680fc6b71a55e11253
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Sep 24 18:59:57 2020 +0200
+
+    checking the new matrix workflow file for different python versions.
+
+commit 8dc0fb9725da13730a31daeebe6587ece7395479
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Sep 24 18:52:07 2020 +0200
+
+    checking the new matrix workflow file for different python versions.
+
+commit a782622e7cfd02121a6a9fcc1550cb7669a68d6b
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Sep 24 18:16:33 2020 +0200
+
+    checking the new matrix workflow file for different python versions.
+
+commit 83509188e9665305cd61fd6fd7404d7d7b337cd5
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Sep 24 17:28:06 2020 +0200
+
+    checking the new matrix workflow file for different python versions.
+
+commit 2d8258f1da41671c34f87f81797717527a4789db
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Sep 24 16:49:55 2020 +0200
+
+    new matrix workflow checks
+
+commit ea964b443eac67dd7085e9e7d93101e5206f06cf
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Sep 24 16:47:57 2020 +0200
+
+    new matrix workflow checks
+
+commit 76e06a21c3af2695708542bdfc08385489f531dd
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Sep 24 16:44:32 2020 +0200
+
+    only test python3.7
+
+commit cf55dc3384a5e183f9c44345d94e99c7bdb3a6cb
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Sep 24 16:11:55 2020 +0200
+
+    only test python3.7
+
+commit d7af50444506d7adf9ad5d4618bb7ae82e5c4f7c
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Sep 24 16:03:31 2020 +0200
+
+    only test python3.7
+
+commit fc2d9ed59b82c108a389012f198dfd6162ec8022
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Sep 24 16:01:29 2020 +0200
+
+    only test python3.7
+
+commit c64cb5d510643f725bf3ca27e1c0b85141d21bd4
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Sep 24 15:56:25 2020 +0200
+
+    testing python3.7 workflow file
+
+commit aeee8acecb394519a28213a40d2dc3f594d12646
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Sep 24 15:46:47 2020 +0200
+
+    remove python=3.8.3 workflow file as it is not available for github
+
+commit 201ab78f222532e263d7864eb4d1ab037596aca4
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Sep 24 15:17:22 2020 +0200
+
+    excluding the NEB example from the tested examples as the NEB feature has been disabled temporarily with this PR.
+
+commit e9725691956f2b83b4fa472398ef6df73c0a4232
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Sep 24 14:35:36 2020 +0200
+
+    requirements.txt updated
+
+commit 03da132827ecfabd2d5873f627697e89b265d581
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Sep 24 14:33:58 2020 +0200
+
+    workflowfile-changed
+
+commit ca1d49aadc5dac8acd6b05b645a3858fff2f90e0
+Merge: f8d41ca 00611e8
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Sep 24 14:20:52 2020 +0200
+
+    Merge branch 'regtest_infrastructure' of https://github.com/sabia-group/i-pi into regtest_infrastructure
+
+commit f8d41ca3e4d35f868b680f319839d762abe83a9d
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Sep 24 14:19:32 2020 +0200
+
+    pytest python = 3.8.5
+
+commit 00611e8dd9dd928264769440fbadb76a7f594748
+Merge: 42e5e8f 2080b76
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Thu Sep 24 13:49:24 2020 +0200
+
+    resolve conflicts in driver
+
+commit 42e5e8f33e05d5453e90a69adc330295e49480a8
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Sep 24 12:32:55 2020 +0200
+
+    pytest python=3.7 version
+
+commit aafc1ea912f6cfa614130d44f15904cc31669436
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Sep 24 11:17:12 2020 +0200
+
+    tidy up the conda installation2
+
+commit 80669754722777c65f7c03eea0856d1fe4339134
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Sep 24 11:11:53 2020 +0200
+
+    tidy up the conda installation
+
+commit c31f8a3b20eb764644de7cb89f71156a92197f39
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Wed Sep 23 21:00:56 2020 +0200
+
+    activate conda for pytest 6
+
+commit 369b82c9be062adbcc7567f3b3d2a9c6c2c6e917
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Wed Sep 23 20:57:39 2020 +0200
+
+    activate conda for pytest 5
+
+commit fdbda49dbb3868336375716407e8d63374b7ea6f
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Wed Sep 23 20:18:16 2020 +0200
+
+    activate conda for pytest 4
+
+commit bcbc2d2d89044727a6768a8da50699bedd6e6be6
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Wed Sep 23 20:11:22 2020 +0200
+
+    activate conda for pytest 3
+
+commit 0942ab5e0e53186ebe7a6a9132f40cf10a39df3b
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Wed Sep 23 20:07:45 2020 +0200
+
+    activate conda for pytest 2
+
+commit 59b8e1680827b55ea91a0503a9445579c9c4a494
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Wed Sep 23 20:01:58 2020 +0200
+
+    activate conda for pytest
+
+commit 34e6ea04de554f9be4362195316de3551b55a515
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Wed Sep 23 19:02:54 2020 +0200
+
+    conda numpy testing
+
+commit 28bba34381487968a48289397f7c4e49e8e7e08d
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Wed Sep 23 18:45:55 2020 +0200
+
+    python 3.8.5 version specified for pytest
+
+commit 86398a50e594d806a31bd2d7b5fbba2e3ab3a1cf
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Wed Sep 23 18:43:50 2020 +0200
+
+    setup stable github conda environment for pytest & add new regtests for pswater-geop
+
+commit 3adb2788d7a91f44def027a67adfa76f7fc93e3c
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Sep 17 16:13:15 2020 +0200
+
+    further python version specs
+
+commit bd10e00747321ed01c325fd338fdbd734a1784f6
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Sep 17 13:31:18 2020 +0200
+
+    added zundel GEOP tests
+
+commit 0ae642b359af7663982508930699f8f2a930b04b
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Thu Sep 17 12:21:33 2020 +0200
+
+    github workflow changed to python 3.8, test_run.py tidied up a bit
+
+commit 2080b761ac61b99678c4c53009abe008840aa9c7
+Merge: 7d947d8 8610ba3
+Author: litman90 <yairlitman@gmail.com>
+Date:   Thu Sep 17 08:56:44 2020 +0200
+
+    Merge pull request #129 from sabia-group/enh-stopnostr
+    
+    The modifications proposed in this PR are only safety measures and all the tests pass without error.
+    I proceed to merge it.
+
+commit 8610ba3e05e518eca02fef2cf2d181ee2829b512
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Wed Sep 16 18:20:06 2020 +0200
+
+    Add flags to driver_info
+
+commit b181fcea847185e20bca73a61cc1a99f3f531354
+Author: Mariana Rossi <mariana.rossi@mpsd.mpg.de>
+Date:   Wed Sep 16 14:52:17 2020 +0200
+
+      Getting the condition to be np.allclose instead of np.all
+
+commit 42f4f9f675d748072d2f512b3928be564c66e009
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Wed Sep 16 10:42:11 2020 +0200
+
+    different potential for geometry optimization regtests
+
+commit 5518c624571051b40a3b08bfcfa18d9b2d6e0dcd
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Tue Sep 15 17:38:21 2020 +0200
+
+    flake
+
+commit 122365d725376308796b487769dcd8819976c2ed
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Tue Sep 15 17:33:37 2020 +0200
+
+    all_close routine update for tolerances
+
+commit 6947bed175b670be5b79b7bb90999472d80ed6d2
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Tue Sep 15 15:06:35 2020 +0200
+
+    flake
+
+commit fd5b531c5462ec9d2b91249e64a0464a06a3a7f1
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Tue Sep 15 15:00:44 2020 +0200
+
+    added ref_simulation.out files instead of .gitignore
+
+commit 172d115f80a27b5a477bb75e62dc0d8f5d87c65c
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Tue Sep 15 13:12:03 2020 +0200
+
+    flake8
+
+commit 1fe9f5bfc2b179dfe200f7f4c570b85e528dd4a7
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Tue Sep 15 12:58:17 2020 +0200
+
+    dummy commit to run pytest
+
+commit 04d0031f5bfbf40bf28c2ca5c71cf3246b1aeae1
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Mon Sep 14 20:02:52 2020 +0200
+
+    Disabling NEB simulations until further bugfixes.
+
+commit 54d68289fdc50f6671f34bffabc34994e74e73b3
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Mon Sep 14 18:51:39 2020 +0200
+
+    regression test infrastructure and restructuring for GEOP,NVE,NVT and INSTANTON
+
+commit 2197a04c7661d0c950fed68a4e389d2ecb052454
+Author: Mariana Rossi <mariana.rossi@mpsd.mpg.de>
+Date:   Mon Sep 14 15:02:16 2020 +0200
+
+      Started the modification but flag for driver still needs to be passed.
+      Ran out of time for today, will try to pick it up another day.
+
+commit 52c73931de5f2c744b38a70953181768bc200ffd
+Author: Mariana Rossi <mariana.rossi@mpsd.mpg.de>
+Date:   Mon Sep 14 14:51:44 2020 +0200
+
+      Adding new info files
+
+commit f1d074c1ba8e1bf715a4a46dea0f54cec3250782
+Merge: 81655df 7d947d8
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Fri Sep 11 23:29:15 2020 +0200
+
+    Merge branch 'master' into enh-stopnostr
+
+commit 81655df1f57e97b949357dca3b5ea8527aa5faf5
+Author: Mariana Rossi <mariana.rossi@mpsd.mpg.de>
+Date:   Fri Sep 11 23:22:38 2020 +0200
+
+      Adding stop if stress tensor is completely zero.
+      Presumably if someone really wants to do some simulation like this
+      they can disable this.
+    
+      As a note, also found that the ValueError call in
+      my computer repeats itself "infinitely" in the loop, apparently
+      this is related to the threads. Could not find an immediate solutions.
+      Anyone knows? It affects all ValueError calls in i-PI in the py3
+      version, it seems. At least in my mac.
+
+commit 69146dd9969b049fc24718c873950dfd6f0fa8bb
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Tue Aug 25 14:32:12 2020 +0200
+
+    flake8 and black
+
+commit 208444523a86a4a7011eedc9e8b60f40468b01a3
+Author: Eszter Sarolta Pos <eszter.pos@gmail.com>
+Date:   Tue Aug 25 14:30:04 2020 +0200
+
+    regression test infrastructure setup and the first working regression tests.
+
+commit 7d947d8e2563eee21ef931a9f8422fda6a2836cf
+Merge: 7e2c953 84070ee
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Mon Aug 24 10:33:03 2020 +0200
+
+    Merge pull request #123 from litman90/only_instanton3.0
+    
+    Only instanton3.0
+
+commit 84070ee7cc5cdbdf0a8a60b1f106ea223fdc666e
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Wed Aug 19 09:17:34 2020 +0200
+
+    Add tests for the instanton splitting examples
+
+commit 96c550eb5b58ce511290d1d7db08e5fa3e0d19a6
+Merge: 2442f2d 7e2c953
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Wed Aug 19 09:16:20 2020 +0200
+
+    resolve conflicts
+
+commit 7e2c9538bfbdb330ccda8e8ae0dc02d02447d84e
+Merge: 850c9fe d3deabf
+Author: litman90 <yairlitman@gmail.com>
+Date:   Wed Aug 19 09:05:12 2020 +0200
+
+    Merge pull request #127 from eszterpos/examples_repair
+    
+    This PR extends a bit the infrastructure to test the examples provided with the code.
+    Additionally, it fixed some tests which were excluded before.
+    Since it does not touch any core functionality, I proceed to merge into master.
+
+commit d3deabf7675e5c56c0eb00cf6aa83a8d4f5ca303
+Author: Eszter Sarolta Pos <epos@coriander>
+Date:   Tue Aug 18 15:32:51 2020 +0200
+
+    multiple folders can be manually added after test_examples.py -f to run examples from, flags fixed, initial printing removed.
+
+commit 6ee23e38da0f4602179abcf1b2a6c31236e716ab
+Author: Eszter Sarolta Pos <epos@coriander>
+Date:   Tue Aug 18 12:10:06 2020 +0200
+
+    black
+
+commit 9809dbf27be325096278e98432f5a989884406cd
+Author: Eszter Sarolta Pos <epos@coriander>
+Date:   Tue Aug 18 12:08:40 2020 +0200
+
+    flexible flags-handling functionality added to exampletools.py
+
+commit a63bc140e663d3723feddc9baf75cb384a61b375
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Tue Aug 18 10:16:20 2020 +0200
+
+    oops. Instanton was not actually merge in the master branch. Taking the examples back.
+
+commit 2442f2da520a0668606737719a3dc0316debd6dd
+Merge: 7fb010f 850c9fe
+Author: litman90 <yairlitman@gmail.com>
+Date:   Tue Aug 18 09:44:03 2020 +0200
+
+    Merge branch 'master' into only_instanton3.0
+
+commit 0cecb050d51653132851784f8814bb8df7d9c695
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Mon Aug 17 18:04:46 2020 +0200
+
+    Add test for the instanton splitting examples
+
+commit f65e3d39b25bb13aa4cdb2c81893c4041e51cd09
+Merge: 9e802cf 850c9fe
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Mon Aug 17 17:59:13 2020 +0200
+
+    'Merge instanton update'
+    Merge branch 'master' of https://github.com/i-pi/i-pi into examples_repair
+
+commit 850c9fec0d61a53e2378acf5e3331f61073c3f0d
+Merge: fda8a22 9eaaa90
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Mon Aug 17 09:46:44 2020 +0200
+
+    Merge pull request #126 from litman90/update_README
+    
+    Update readme
+
+commit 9e802cf511c33f16d0c10d7993533ab48b6900a8
+Author: Eszter Sarolta Pos <epos@coriander>
+Date:   Fri Aug 14 20:22:17 2020 +0200
+
+    all examples fixed
+
+commit c502da3dbec0477850bcc89a72e74db456fe5926
+Author: Eszter Sarolta Pos <epos@coriander>
+Date:   Fri Aug 14 12:14:51 2020 +0200
+
+    exampletools.py changed to copy directories; an option for extra flags for the LJ driver is added to be read in from .driver_info; black applied; dev_tests moved out from examples
+
+commit 46d44189abe8423262789b30cb0f70d7be370cc4
+Author: Eszter Sarolta Pos <epos@coriander>
+Date:   Wed Aug 12 15:44:34 2020 +0200
+
+    apply black
+
+commit 5be10fc45235facb48c3440314a7a6bde97f6f61
+Author: Eszter Sarolta Pos <epos@coriander>
+Date:   Wed Aug 12 15:38:36 2020 +0200
+
+    Fix some example tests
+
+commit a95337a85d086b112857da0d389b18c081b8eefb
+Author: Eszter Sarolta Pos <epos@coriander>
+Date:   Wed Aug 5 15:46:05 2020 +0200
+
+    Dummy test2
+
+commit e0fec2606c6b126b92b36b67cee2763205b873e9
+Author: Eszter Sarolta Pos <epos@coriander>
+Date:   Wed Aug 5 15:45:14 2020 +0200
+
+    Dummy test
+
+commit 9eaaa909a970e6b1818d9e5277d246eb6561c057
+Merge: f05d490 fda8a22
+Author: litman90 <yairlitman@gmail.com>
+Date:   Wed Aug 5 13:35:50 2020 +0200
+
+    Merge branch 'master' into update_README
+
+commit 7fb010fd365fc08829e716ce520f317eff9c3c6b
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Mon Aug 3 16:06:53 2020 +0200
+
+    add refernce for regresion tests
+
+commit 1b6a9121c5199739bc67eddd5894a8667c347218
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Mon Aug 3 15:18:48 2020 +0200
+
+    flake it
+
+commit e697ddc23f317c1a3f7b0f573b9046bcd8a17b45
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Mon Aug 3 15:16:33 2020 +0200
+
+    Add linear option in instanton post-proc. script
+
+commit 90d8119b7110655d9b22d09a9fc0a7a519aa433c
+Merge: 6bc2968 fda8a22
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Mon Aug 3 15:05:58 2020 +0200
+
+    Merge branch 'master' of https://github.com/i-pi/i-pi into only_instanton3.0
+
+commit fda8a226fbcf75f9015be1e4b11999a3388e44d5
+Merge: bdab6a0 22a0c64
+Author: litman90 <yairlitman@gmail.com>
+Date:   Mon Aug 3 15:04:44 2020 +0200
+
+    Merge pull request #122 from mahrossi/master
+    
+      Deleted "garbage" files that got erroneously merged in the past.
+
+commit 6bc296828007b54c9257f50e5bf6af628859fbfa
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Mon Aug 3 14:43:26 2020 +0200
+
+    Format compliance
+
+commit 46406e3894f2e3b1c5a00200ac099d1579659361
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Mon Aug 3 13:27:56 2020 +0200
+
+    Add docstrings and rename some instanton folders inside regression tests
+
+commit f05d490876fa27df6a0d554ef7a1b08714fbdedb
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Mon Aug 3 13:13:35 2020 +0200
+
+    Change some wording in Readme.rst
+
+commit 2c9955b0101b5c47a76fe4389a0411aedb788a04
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Mon Aug 3 13:10:30 2020 +0200
+
+    Add contributing section to the Readme.rst
+
+commit 030e46dd61e4ce73bd7c062193fdb056d46145a6
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Fri Jul 31 16:50:16 2020 +0200
+
+    Update README
+
+commit 22a0c64aa147120927a609bceccfa211de7a1bc5
+Author: Mariana Rossi <mariana.rossi@chem.ox.ac.uk>
+Date:   Fri Jul 31 16:42:29 2020 +0200
+
+      Deleting spurious files in tests folder.
+      They were the same as the actual input there.
+
+commit 81424295d643c1d3b7dc55eb5bff83902faebfbc
+Merge: e5209b7 bdab6a0
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Thu Jul 30 17:30:39 2020 +0200
+
+    Merge branch 'master' into only_instanton3.0
+
+commit 23d455a9022fb59b15fa73f7d01515341b64d166
+Author: Mariana Rossi <mariana.rossi@chem.ox.ac.uk>
+Date:   Thu Jul 30 10:33:45 2020 +0200
+
+      Now updating the names I changed
+
+commit 7e3b823b63b6c32dc456077947d181f53cfdb483
+Merge: ca234c6 12a81f0
+Author: Mariana Rossi <mariana.rossi@chem.ox.ac.uk>
+Date:   Thu Jul 30 10:18:56 2020 +0200
+
+    Merge branch 'master' of https://github.com/mahrossi/i-pi
+
+commit ca234c631b0785330a2f99678b61f728be1edad8
+Author: Mariana Rossi <mariana.rossi@chem.ox.ac.uk>
+Date:   Thu Jul 30 10:18:18 2020 +0200
+
+     Updating pytest, otherwise it stalls
+
+commit 12a81f061cc76ae587fc6ef21b1ae873bb07f534
+Merge: 9e5b42f bdab6a0
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Wed Jul 29 21:03:53 2020 +0200
+
+    Merge branch 'master' into master
+
+commit bdab6a049b08e66e6a35421dba464443bfec6e9f
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Wed Jul 29 19:25:00 2020 +0200
+
+    Update README.rst
+
+commit 9e5b42fc3d536eb0a0e59d48642e1b9204d110ad
+Author: Mariana Rossi <mariana.rossi@chem.ox.ac.uk>
+Date:   Tue Jul 28 17:59:09 2020 +0200
+
+      Now, really, stop complaining flake8
+
+commit 3c6e3d7dd742933990e3beb8c74f8b74b404fda2
+Author: Mariana Rossi <mariana.rossi@chem.ox.ac.uk>
+Date:   Tue Jul 28 17:56:04 2020 +0200
+
+      Fixing flake8 complaint.
+
+commit 9af7ee1195e0297214e2b2360b87a6b5ba1af168
+Author: Mariana Rossi <mariana.rossi@chem.ox.ac.uk>
+Date:   Tue Jul 28 17:26:55 2020 +0200
+
+      Cleaning more files, erasing outdated scripts, and starting to re-create the symlinks.
+      Moved examples/regtest folder into examples/dev_tests to make the name clearer and avoid confusion.
+
+commit 0fe783b80869609aba2ee27450f341dd7a695578
+Author: Mariana Rossi <mariana.rossi@chem.ox.ac.uk>
+Date:   Tue Jul 28 16:41:18 2020 +0200
+
+      Deleted "garbage" files that got erroneously merged in the past.
+
+commit e5209b7c2fcfd393caaf46eec5a361cc768c8901
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Thu Jul 23 15:21:45 2020 +0200
+
+    dummy commit
+
+commit 1bfa9cdb54085bb4c906078d4b94b1d3e1d77b0e
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Thu Jul 23 14:00:05 2020 +0200
+
+    Add ref_simulation.out
+
+commit 6f6ce564e8101cfa12d129dcbd48f9fab56a8701
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Thu Jul 23 13:36:11 2020 +0200
+
+    Add driver info for instanton examples
+
+commit 085dd8fd219dd3c792c7e851db6db784a4f02f09
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Thu Jul 23 11:46:28 2020 +0200
+
+    Add transfer_forces_manual function
+
+commit 985d3c7441920dc609383dff28cab9423ab0e099
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Thu Jul 23 11:42:34 2020 +0200
+
+    update instools.py
+
+commit 6e266e91bead34546c0f3f45599388530ba800fe
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Thu Jul 23 11:39:38 2020 +0200
+
+    Add MB potential to the driver
+
+commit e63ea7a1042eaf07f898ee2838a8d3177d9c454e
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Thu Jul 23 11:35:32 2020 +0200
+
+    Add instanton reg tests
+
+commit cbc358124fa0a691d0e62a9c131609a795a59358
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Thu Jul 23 11:33:06 2020 +0200
+
+    update instanton tools
+
+commit c9190f9eab7e60b38b22d79456e37a50b3cfcb26
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Thu Jul 23 11:31:41 2020 +0200
+
+    update instanton core functionality
+
+commit dd9bace39d0833a9dcc66d9cecc62a6dcef1e28f
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Thu Jul 23 11:20:16 2020 +0200
+
+    add examples 2
+
+commit 9f8b16a2da6d2f299099f74347d439d430607f1e
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Thu Jul 23 11:18:04 2020 +0200
+
+    Add examples 1
+
+commit 7251a161b5c9e7e3477bdf9668e209aaa04d2907
+Merge: 28b0499 bbed41b
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Thu Jul 23 09:16:16 2020 +0200
+
+    Merge pull request #114 from i-pi/debug/trimsim
+    
+    bugfix in trimsim for swap file
+
+commit 28b0499b8c5e7d82525037accc0893aac4bf9c2d
+Merge: db752d2 176b47b
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Thu Jul 23 09:14:01 2020 +0200
+
+    Merge pull request #106 from litman90/only_regtest
+    
+    Only regression test
+
+commit db752d2e9fbe710688de452d0843f0e8a502a5a1
+Merge: 4231c73 043297b
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Thu Jul 23 09:13:41 2020 +0200
+
+    Merge pull request #105 from litman90/only_examples
+    
+    Only examples
+
+commit 176b47b23c8a1030eba97edfd664d40546814f8a
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Wed Jul 22 14:07:15 2020 +0200
+
+    test
+
+commit ebda976401b735348d0e3cf6a7cbb9484caf135d
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Wed Jul 22 13:55:20 2020 +0200
+
+    flake8 compilant
+
+commit dc820944b0bba755fc06201ba08a190cf376c35f
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Wed Jul 22 13:49:09 2020 +0200
+
+    add dummy check_xyz_output function
+
+commit 4231c73d8e8ff7c395c4d7944219ee8dddf55296
+Merge: 02d87d6 68b5ecb
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Wed Jul 22 12:32:32 2020 +0200
+
+    Merge pull request #115 from i-pi/feat/example-vasp
+    
+    Feat/example vasp
+
+commit 6a9102de4273132f6a7cbc74cea0f1388412ccd2
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Wed Jul 22 12:23:10 2020 +0200
+
+    Add more docstrings and update README
+
+commit 043297bdc9bebe4fb64c2d2379c7f6ac884419b4
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Wed Jul 22 11:34:45 2020 +0200
+
+    update excluded_test list
+
+commit ff228ef77b745a73ec669ccbfff7bf1bcc8c1e4a
+Merge: 69dca52 02d87d6
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Wed Jul 22 11:31:10 2020 +0200
+
+    "update this branch so new examples can be also considered"
+    
+    Merge remote-tracking branch 'upstream/master-py3' into only_examples
+
+commit 114634a89b19856def2d97a027d398f02d5cb3f4
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Wed Jul 22 11:24:54 2020 +0200
+
+    Change slc examples and
+
+commit 69dca52c44a0b7c5640f8a72b590c17e131826e1
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Wed Jul 22 10:36:12 2020 +0200
+
+    one docstring more and flake8
+
+commit c611bc3ff92056b45cab78ba83ff5cf7c553766b
+Merge: 64b93da d47ea6a
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Wed Jul 22 10:31:17 2020 +0200
+
+    Merge branch 'only_examples' of https://github.com/litman90/i-pi into only_examples
+
+commit 64b93dab96bf29b2d245f0ea5b7dde5ce421628b
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Wed Jul 22 10:30:52 2020 +0200
+
+    Add the missing  docstrings and delete modify_xml since it creates more confusion than what it may help to new developers
+
+commit 68b5ecb4cccef699684897230a4e0eaebbf253f9
+Author: venkatkapil24 <venkat.kapil@gmail.com>
+Date:   Tue Jul 21 22:00:32 2020 +0200
+
+    updated the Makefile and the README
+
+commit ab777b39037c7a9658a7d6dfdb63289eedd38dca
+Author: venkatkapil24 <venkat.kapil@gmail.com>
+Date:   Tue Jul 21 21:57:15 2020 +0200
+
+    added the KPOINTS file which went MIA
+
+commit d08c26564b744dc89beac0cee224b1fd4be702bd
+Author: venkatkapil24 <venkat.kapil@gmail.com>
+Date:   Tue Jul 21 21:55:33 2020 +0200
+
+    specified units in the init file for the other example
+
+commit 166b9917c139c41132a45a4f13715ae431e95794
+Author: venkatkapil24 <venkat.kapil@gmail.com>
+Date:   Tue Jul 21 21:49:39 2020 +0200
+
+    added units in the init file
+
+commit e76235583957f18dd13e298d44b97e417d2b49b6
+Author: venkatkapil24 <venkat.kapil@gmail.com>
+Date:   Tue Jul 21 21:46:39 2020 +0200
+
+    added example for h2o and c
+
+commit bbed41b5938caa94eff8748edacd1309ff35e5b8
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Tue Jul 14 19:46:38 2020 +0200
+
+    bugfix in trimsim for swap file
+
+commit 02d87d6f6a5a5d2e3bdab94bb45da1cf3c614a61
+Merge: 12ab512 eedfa36
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Sat Jul 11 18:09:58 2020 +0200
+
+    Merge pull request #113 from i-pi/debug/trimsim
+    
+    Debug/trimsim
+
+commit eedfa364460b93e72b3d1df659870a9b77f72901
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Fri Jul 10 16:16:58 2020 +0200
+
+    applied i-pi-style
+
+commit 8e240d1363072d3a5f6352607e343f85c7505738
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Fri Jul 10 16:11:12 2020 +0200
+
+    reverted changes to example
+
+commit 3716d18c1d7f863b156e99114f550d4281910ef4
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Fri Jul 10 15:03:45 2020 +0200
+
+    bugfix in remdsort for REMD swap file
+
+commit 55945f43c8faf4b258d2c746e5ddd9c1f32d9e27
+Merge: 0544456 12ab512
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Fri Jul 10 12:10:45 2020 +0200
+
+    Merge branch 'master-py3' of https://github.com/i-pi/i-pi into debug/trimsim
+
+commit 0544456cc95a86b4e6293de71475dfb986a76077
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Fri Jul 10 12:10:06 2020 +0200
+
+    i-pi-trimsim is a symlink
+
+commit 47232b78cbe86965be182c07b3e83d6e4615af7f
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Fri Jul 10 12:08:28 2020 +0200
+
+    Also enabled trimsim for the REMD swap file
+
+commit dfc05aa7b9ffba91493cd286e56ee0c2c8a14d37
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Fri Jul 10 11:52:08 2020 +0200
+
+    trimsim should work for extras as well
+
+commit 12ab5123d4177675c745d6a096596e8acdbe04c9
+Merge: e0d1d03 33e546c
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Thu Jul 9 12:29:34 2020 +0200
+
+    Merge pull request #112 from i-pi/bugfix/asr
+    
+    Fix again on the actual py3 branch....
+
+commit 33e546cde024e647379fd3fc892f991274b2fb83
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Thu Jul 9 12:28:07 2020 +0200
+
+    Fix again on the actual py3 branch....
+
+commit e0d1d0324eab1922ca33f430a1454600b80e7566
+Merge: 580e382 dbeeea6
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Wed Jul 8 17:33:57 2020 +0200
+
+    Merge pull request #111 from i-pi/debug/scpimd
+    
+    Uncommented lines that enable constant pressure SC PIMD
+
+commit 580e38253110ff47ccb1e187e0c63ea2abd9955e
+Merge: 72e3e8f c1b00c0
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Wed Jul 8 17:33:36 2020 +0200
+
+    Merge pull request #110 from i-pi/debug/remdsort
+    
+    The remdsort scipt now also sorts extras
+
+commit dbeeea63082ac917ce14f558112e2e04114e91b0
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Wed Jul 8 17:17:03 2020 +0200
+
+    applied i-pi-style
+
+commit a3890dac3b217bfd73348d3b56bcc31e1b0bac0f
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Wed Jul 8 17:11:19 2020 +0200
+
+    Uncommented lines that enable constant pressure SC PIMD
+
+commit c1b00c0680def9a786d86de53292a0e9ea384b35
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Wed Jul 8 16:59:16 2020 +0200
+
+    Added remdsort as symlink
+
+commit ed45f5b920b88a8084c42a2fabb54511bb0fe306
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Wed Jul 8 16:56:51 2020 +0200
+
+    Replaced == None by is None
+
+commit 7adfd31449976d63678036b8076dc2b7995fcece
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Wed Jul 8 16:52:07 2020 +0200
+
+    The remdsort scipt now also sorts extras
+
+commit d47ea6aaa3557a4efb0dc7da7dcc66eca75d5757
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Tue Jun 23 07:43:29 2020 +0200
+
+    Update README
+
+commit 75a47bd1dd2848facb1cdcdcd973d8c073442520
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Mon Jun 22 15:36:35 2020 +0200
+
+    Add showcase for regresion tests
+
+commit 69ff4525d8921b8624da874ada7d3171495e21ae
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Mon Jun 22 15:30:27 2020 +0200
+
+    rm reg_test old
+
+commit b297e31589ef5b86c66e2c629d3e7a96aaf98fdf
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Mon Jun 22 15:29:16 2020 +0200
+
+    Remove init.xyz from examples folder
+
+commit 810cacf8b221b4dfd6401054d7d58b4d6ad3ac48
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Mon Jun 22 14:20:31 2020 +0200
+
+    update pytest
+
+commit 40f4929723bab6269547b0f03aaf4fbbb2c2e6fc
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Mon Jun 22 13:48:43 2020 +0200
+
+    rm old reg_test
+
+commit 7e6aa663338198cbabdf86f7f4e25b9004a270ad
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Mon Jun 22 13:46:57 2020 +0200
+
+    Add more .driver_info, update excluded file, improve test_example when it is called locally
+
+commit 14c8c63e38f3b5a0fdd3d3475ef3c444b21942b6
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Mon Jun 22 11:26:55 2020 +0200
+
+    Add examples testing and some .driver_info files
+
+commit 72e3e8f2394893ee916a1010233cf5abc41a8cbd
+Merge: 5645a78 e573407
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Tue Jun 16 07:44:04 2020 +0200
+
+    Merge pull request #98 from mahrossi/master-py3
+    
+    Black and flake8
+
+commit e57340739466035ec8515695b0f5c7bca011e1e7
+Author: Mariana Rossi <mariana.rossi@gmail.com>
+Date:   Sun Jun 14 10:29:40 2020 +0200
+
+      Adding Makefile and adjusting README
+
+commit 28535f4d7d829c6969dae3eaaf2928d3e81c968d
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Wed Jun 10 09:15:01 2020 +0200
+
+    Correct i-pi-style file description
+
+commit a89d6d59380e5de30713f3c7b27f20a44a2db56a
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Tue Jun 9 18:21:02 2020 +0200
+
+    Add i-pi-style to run black and flake8
+
+commit c5547af709357fae31d0000ac7a6736685209d97
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Tue Jun 9 16:41:45 2020 +0200
+
+    update README
+
+commit 85f6b2c51fa1c4c801d509941a8cdcbe7d26400f
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Tue Jun 9 16:38:43 2020 +0200
+
+    update README
+
+commit aa0a1fadc80ab85a0b2f5d59ed3ca506a74c4692
+Author: Mariana Rossi <mariana.rossi@chem.ox.ac.uk>
+Date:   Sun Jun 7 13:54:51 2020 +0200
+
+      Passing black and flake8 on the stuff I solved in merge conflict.
+
+commit d31746a86809aad0d88265efe7152e06fb33f06e
+Merge: 2a0638a 5645a78
+Author: Mariana Rossi <mariana.rossi@chem.ox.ac.uk>
+Date:   Sun Jun 7 13:06:04 2020 +0200
+
+    Resolved merge conflict, hoping I did it right in the al6xxx part...
+
+commit 5645a786f530aff4043b7cda900f89270038b818
+Merge: 161974b 3e0137d
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Fri Jun 5 11:16:59 2020 +0200
+
+    Merge pull request #96 from cosmo-epfl/bugfix/bosons
+    
+    Fixed Py3 integer division errors in bosons code
+
+commit 161974b44d7065771edc220ee291a31800c1e274
+Merge: 783a818 8cdbe02
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Mon Jun 1 01:10:34 2020 +0200
+
+    Merge pull request #99 from i-pi/bugfix/pr94
+    
+    Fixed a couple of little things from last merge. Couldn't push to the…
+
+commit 8cdbe02a59fea6b40bff30a74921332b578b0827
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Mon Jun 1 00:09:05 2020 +0200
+
+    Fixed a couple of little things from last merge. Couldn't push to the PR. Not clean but will do
+
+commit 783a81868faa42dec8a7f18b2156f0ec233bc1ae
+Merge: 2749496 fb806f4
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Sun May 31 22:52:45 2020 +0200
+
+    Merge pull request #94 from abj77/master-py3
+    
+    Implemented ordered dictionary for storing cached configurations. The maximum cache length can be controlled by the user.
+
+commit 2a0638aa114a4b8bfbe7fdb93246b797a294dfd6
+Merge: 2749496 95d98b3
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Fri May 29 12:39:40 2020 +0200
+
+    Merge pull request #4 from litman90/workflows
+    
+    Workflows
+
+commit 95d98b3aa1ff55d6fdaf253af59cd0c8f0267e75
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Fri May 29 09:45:44 2020 +0200
+
+    Formatting
+
+commit ab77c7d1a31933698c027e54641cb87ca8e6bfa5
+Merge: d6f6cb7 2749496
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Fri May 29 09:36:20 2020 +0200
+
+    Resolve conflicts
+
+commit 2749496a25d99064d6736113da301ecf6f67cb55
+Merge: aa78fe9 6b0a714
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Thu May 28 13:56:48 2020 +0200
+
+    Merge pull request #90 from i-pi/feat/anharmonic
+    
+    Feat/anharmonic
+
+commit 3e0137d687f54e0f49f870e661785aae571f2fad
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Thu May 28 00:56:18 2020 +0200
+
+    Fixed Py3 integer division errors
+
+commit d6f6cb754aec0e658d68ddcb0ea1a750cf1d7487
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Wed May 27 18:21:22 2020 +0200
+
+    add pyproject.toml
+
+commit 7ea450c0cc1c336eeda48d6c592185ec6b14bd47
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Wed May 27 18:02:35 2020 +0200
+
+    Fixing ../engine/test_properties.py
+
+commit fb447b7de99d1e976f16e01bd51eeefc749f4319
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Wed May 27 14:19:09 2020 +0200
+
+    This should do the job
+
+commit 20f6368f907d256f91a5e318f0f94bfc991e7bd9
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Wed May 27 14:08:56 2020 +0200
+
+    Resolving some flake8 complains2
+
+commit 1040453f96b22b8ea0499a2933425393872a3558
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Wed May 27 14:04:53 2020 +0200
+
+    Resolving some flake8 complains
+
+commit f300a0b93ccb91dea6217c03f890086af9d0b986
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Wed May 27 12:48:38 2020 +0200
+
+    Activate flake8
+
+commit 1b80de973de0803cfea88665504cc6979c48afc9
+Merge: 4f23414 ec8f086
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Wed May 27 12:42:02 2020 +0200
+
+    'Update'
+    Merge branch 'master-py3' of https://github.com/mahrossi/i-pi into workflows
+
+commit 4f2341499dc87aa49790c4c1699b5026066d1967
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Wed May 27 12:41:01 2020 +0200
+
+    Solve conflicts manually
+
+commit 6b0a714ff9a955cb69b24ebc4fedf427a39c9686
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Wed May 27 10:56:47 2020 +0200
+
+    Changed the name of the driver, reverted back to pseudo random numbers, and added a README for scphonons.
+
+commit 54f9678d2e43dcb9e3cb55f1f6ea6d4aacde1622
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Wed May 27 10:49:18 2020 +0200
+
+    Included a verbose message when import of sobol fails.
+
+commit d22108fad1f829c00c6fc810a183513b5f47aa89
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Wed May 27 10:29:16 2020 +0200
+
+    removed debug print statement
+
+commit aa78fe96363a1bf5281a0e1f69118b30467701dd
+Merge: cb110fe ec8f086
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Wed May 27 10:03:37 2020 +0200
+
+    Merge pull request #89 from mahrossi/master-py3
+    
+    Improvements
+
+commit ec8f0863eb194efada2c72e0157cf45b50ef7432
+Author: Mariana Rossi <mariana.rossi@chem.ox.ac.uk>
+Date:   Wed May 27 10:02:17 2020 +0200
+
+      Just a dummy commit to check the disabling
+
+commit cb110fedd793b72a7f6b380a2d5d6cc0e49c177a
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Wed May 27 08:21:51 2020 +0200
+
+    Added units specifications for several CP2K examples (#95)
+    
+    These were crashing because temperature was read in atomic units!
+
+commit fb806f438c6b54bbca798e05f50f1ee94af062a1
+Author: abj77 <abhinavjain77@gmail.com>
+Date:   Mon May 25 12:50:29 2020 +0200
+
+    Implemented ordered dictionary for storing cached configurations. The maximum cache length can be controlled by the user.
+
+commit 96abc04650543f98293c857e1ef968ec24702215
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Thu May 21 17:25:42 2020 +0200
+
+    Avoid sobol import in stock example, link to the SCP post-processing
+
+commit 3c7c0829513d745b22df647d86976b857ea86363
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Fri May 15 09:42:07 2020 +0200
+
+    Added tool to perform free energy analysis for SCP
+
+commit 256dfe770d7a2790a3ab5aa31ee31da79031914e
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Thu May 14 19:17:41 2020 +0200
+
+    added an example for SCP
+
+commit a1b484b0658edc0056d48fb8a5fc6d879d36373e
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Thu May 14 19:17:00 2020 +0200
+
+    uses pyscenarios for sobol sequences, and fixed a inter division bug
+
+commit caed04f8c9385a34101a21d9b9ef88e0b357a23e
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Thu May 14 18:38:44 2020 +0200
+
+    used the right closing functionality of base output
+
+commit 48afa5985a41025c4a53e0627531cb8510eeddef
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Thu May 14 18:37:45 2020 +0200
+
+     Added an example for VSCF
+
+commit 563c5a39aac7428399d3bf0c5311f34fa1a42566
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Thu May 14 18:35:55 2020 +0200
+
+    makes sure that the output files for np binaries are opened with "wb" mode
+
+commit 4301a61e6a985991d1871c57136f5c74ede28d83
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Thu May 14 18:14:37 2020 +0200
+
+    Added example for IMF
+
+commit 0a63c32c83db7c59e04f02acee9d3b6c6d9ee45d
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Thu May 14 18:13:01 2020 +0200
+
+    Added modules for vscf and scphonons. So far tested IMF.
+
+commit 540e17db4a7dec1e432068810ab285788e4959b3
+Merge: d64c482 049b32d
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Fri May 8 16:46:14 2020 +0200
+
+    Merge pull request #5 from litman90/onlyWorkflow
+    
+    Only workflow
+
+commit 049b32d15bf617fa28d31d44dbbf1d1a4425b944
+Merge: ce7826f d64c482
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Fri May 8 16:32:26 2020 +0200
+
+    Resolving conflict
+
+commit ce7826ff322f429caa353cb423782625dedad21f
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Fri May 8 16:24:23 2020 +0200
+
+    update setup.cfg
+
+commit 46d1dd55177cfb2826fb711ed24ea35d99382149
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Fri May 8 16:22:12 2020 +0200
+
+    Test to ignore flake8
+
+commit 46ffcb81d2d4614a8029c4e03e1979cf793a62f2
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Fri May 8 16:17:53 2020 +0200
+
+    update requirements.txt
+
+commit b707b21bfa2096f51677cc6f5240ce6d65f1e21f
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Fri May 8 16:15:55 2020 +0200
+
+    Add workflow
+
+commit 6448a914e6ea17867be7282d8a4847ceac34543f
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Fri May 8 16:14:16 2020 +0200
+
+    fixing manual compilation
+
+commit e1dbc93c390a67b3c24ed42f815bc9f53e54f2fd
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Fri May 8 16:02:47 2020 +0200
+
+    Starting again ...
+
+commit d64c482f14fcbcc0dc957171ef3565b66adf0de4
+Merge: c5deae2 177cc90
+Author: Mariana Rossi <mariana.rossi@chem.ox.ac.uk>
+Date:   Fri May 8 15:54:59 2020 +0200
+
+    Merge remote-tracking branch 'upstream/master-py3' into master-py3
+
+commit 177cc90876355b9b1e200ea9ed26a5e5ee33a616
+Merge: ee0905f c916495
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Fri May 8 15:53:09 2020 +0200
+
+    Merge pull request #84 from mahrossi/fixdof-py3
+    
+      Same PR as in the py2 version:
+
+commit ee0905f9e86a6b23669657b21b726a710f1e4dd6
+Merge: 8edb9a7 16535af
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Fri May 8 15:48:39 2020 +0200
+
+    Merge pull request #87 from cosmo-epfl/bugfix/checkpoint_step
+    
+    Makes sure checkpoint step is output correctly in RESTART files
+
+commit c5deae29a9c03bae64323a066ec840c6a6312e35
+Merge: a8bfb2d 8edb9a7
+Author: Mariana Rossi <mariana.rossi@chem.ox.ac.uk>
+Date:   Fri May 8 14:55:15 2020 +0200
+
+    Merge remote-tracking branch 'upstream/master-py3' into master-py3
+
+commit 2001655dd0a240cf504d00d5b3409d710eb41faa
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Fri May 8 00:08:49 2020 +0200
+
+    Fix current errors
+
+commit 6b53f472314c0b342e02fc78f4b554fe204e58f8
+Author: Karen Fidanyan <fidanyan@fhi-berlin.mpg.de>
+Date:   Thu May 7 19:48:43 2020 +0200
+
+    Some work on flake8 complaints
+
+commit 724754842006170e9b66c02e186ef5f582aac74a
+Author: Karen Fidanyan <fidanyan@fhi-berlin.mpg.de>
+Date:   Thu May 7 14:49:17 2020 +0200
+
+    test of push ability
+
+commit 68aa3490ab6e41210797adda40351ba25d76a9e1
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Wed May 6 23:47:49 2020 +0200
+
+    delete circelci
+
+commit c36d889f824444afde5afca5d79f05e50cdd70ec
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Wed May 6 23:32:49 2020 +0200
+
+    add examples geop
+
+commit e61497a33eb78242bc59f57b29d94b6ae48c47c8
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Tue May 5 18:06:31 2020 +0200
+
+    Test automatic test
+
+commit cda445557deba0ecdd0ba97fe8305311a80323fa
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Tue May 5 16:48:28 2020 +0200
+
+    Black and flake8 format. Only 2 files do not pass
+
+commit a8bfb2d0db2ea7773cfab0f1d02e3decfa0242a2
+Merge: ab01afa 301a4f7
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Tue May 5 12:07:24 2020 +0200
+
+    Merge pull request #1 from mahrossi/doc-fix
+    
+    Delete ffquip from documentation
+
+commit 301a4f708ac564290b06d61144e8f6acc8203ffd
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Mon May 4 20:42:31 2020 +0200
+
+    Delete ffquip from documentation
+
+commit 16535afda2916fcffc14f3399455331b3287a536
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Fri Apr 24 16:48:58 2020 +0200
+
+    Makes sure checkpoint step is output correctly in RESTART files
+    
+    Not as a trivial fix as one would expect. Nice side effect is that dobjects should now deepcopy() correctly
+
+commit c916495b6c201c320aa009fbf3a9f3335d2dd004
+Author: Mariana Rossi <rossi@theomac15.fritz.box>
+Date:   Sat Apr 4 17:11:34 2020 +0200
+
+      Disabling for now the ability to use global thermostats on the centroid and fixed atoms at the same time.
+      Simple fixes are not general enough to cover all cases (non-trivial constraints on the system, fixed center of mass, etc.)
+      Need separate work to handle fixdof separately. Make it an array, add it to the constraint class. etc.
+
+commit 8edb9a702d2627e71347cae540da7b2abf17ca11
+Merge: ab01afa 7d61170
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Sat Apr 4 14:44:06 2020 +0200
+
+    Merge pull request #86 from litman90/ASE_double_server
+    
+    Example to use ASE as middle man without killing the client-code
+
+commit 7d61170a44446e3731c3be93d0f4f43e8e672455
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Fri Apr 3 14:55:50 2020 +0200
+
+    Add Readme.txt
+
+commit 5eaf38666ae830f9ab7ae66c84d6a7c263edc826
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Fri Apr 3 14:52:38 2020 +0200
+
+     Add an example with ASE working as a client and as a server in order to keep   FHIAIMS alive
+
+commit a8548bd13a413efc4b10577ea467271a252e24d0
+Author: Mariana Rossi <rossi@vpn-64-185.fhi-berlin.mpg.de>
+Date:   Wed Apr 1 17:43:31 2020 +0200
+
+      Same PR as in the py2 version:
+      Fixing bug in the combination of fixed atoms and pile_g
+      and issuing a warning/stop that fixed atoms and fixcom should
+      not be used together.
+
+commit ab01afa41244426ff716878ed8b491feb4a51a2e
+Merge: e12eed3 5d4592e
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Fri Mar 27 16:21:19 2020 +0100
+
+    Merge pull request #83 from i-pi/feat/remove-ffquip
+    
+    1. Removed ffquip and the associated examples.
+
+commit 5d4592ee731e56661b00b3ced3777a4de9683e86
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Wed Mar 25 11:26:06 2020 +0100
+
+    1. Removed ffquip and the associated examples.
+
+commit e12eed377e3f3137b8c8d3a96abac6f41df7a895
+Merge: c151879 2f7dd9d
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Wed Mar 25 10:15:11 2020 +0100
+
+    Merge pull request #82 from i-pi/tests/regtests
+    
+    Tests/regtests
+
+commit c15187917bb44f5e0a7f855d4176022b40315e6f
+Merge: 6540eeb 03f89a5
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Tue Mar 24 16:49:26 2020 +0100
+
+    Merge pull request #81 from fidanyan/fix-regtest-clean
+    
+    Regtests for constrained optimization as they were proposed for py2.
+
+commit 03f89a51ed2715a5dd231523fc4bcf6ecf9abfde
+Author: Karen Fidanyan <fidanyan@fhi-berlin.mpg.de>
+Date:   Sat Mar 21 13:33:01 2020 +0100
+
+    Regtests for constrained optimization as they were proposed for py2.
+    Unnecessary scripts are removed,
+    examples/regtest/lammps/h2o-geop-fixatoms/README changed accordingly.
+
+commit 2f7dd9dabbffcff02b4fe3fb4f5b113c590fc88a
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Sat Mar 21 13:27:54 2020 +0100
+
+    Reduced the size of GTH basis set and PP files
+
+commit 6540eeb889fde28a780a8d519c6a8ddf82ad611f
+Merge: f93dfdc 0a0ef0a
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Sat Mar 21 12:33:12 2020 +0100
+
+    Merge pull request #79 from litman90/FHI-RegTests
+    
+    Instanton py3 + more FHI-aims Regtest
+
+commit f93dfdcf6afd6af0ee41d2248f78c7c655024295
+Merge: 1938933 b9ec963
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Sat Mar 21 12:32:11 2020 +0100
+
+    Merge pull request #76 from litman90/ASEClient
+    
+    ASEClient
+
+commit 0a0ef0a223ed2baf9b8e11127c3bd5994f837286
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Thu Mar 19 11:09:46 2020 +0100
+
+    Typo in Instanton_postproc
+
+commit 6b6b95c4c331b8c0c5b1bf2092f4602aebe1ba5d
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Thu Mar 19 11:04:07 2020 +0100
+
+    One regtest more
+
+commit 2ec7b6461e58632d2e3342081b5d2b53ae06b6b0
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Thu Mar 19 09:42:23 2020 +0100
+
+    Add more regtest
+
+commit 28315dc2a03676edb098a95e02218e512356488f
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Wed Mar 18 10:27:27 2020 +0100
+
+    Fix instanton py3 and rename few fhi-aims examples
+
+commit b9ec9632ce8edf5aa0744bfd0e5ae24aa0be4eda
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Tue Mar 17 16:53:34 2020 +0100
+
+    Minor change to make compatible with the last ASE version
+
+commit a93e4b4f2d371357ab82ff19c5b77b305c1dafb3
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Tue Mar 17 15:13:16 2020 +0100
+
+    Add CP2K example with ASEClient
+
+commit caa26d3dfebe96d1185260eb1c7fec0c3de1c2d4
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Tue Mar 17 13:41:01 2020 +0100
+
+    Delete not suported ASEClient coded in i-PI
+
+commit 36ddb799dd40d8ac09001db5bf64b77c11f34fc5
+Merge: a65b326 da6df54
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Tue Mar 17 13:22:16 2020 +0100
+
+    "Updating this branch with latest updates"
+    Merge branch 'master-py3' into ASEClient
+
+commit 193893389a6787b29130ed8c0627c4b72dfee879
+Author: litman90 <yairlitman@gmail.com>
+Date:   Mon Mar 16 22:47:53 2020 +0100
+
+    Adds fhi-aims regtest examples and corrects README in i-pi/test (#75)
+    
+    * Trying to fix circleci build
+    
+    * Some progress in fixing tests
+    
+    * Fixed errors with the manual and commented out offending ASE test lines
+    
+    * Add fhi-aims regtest example and correct README in i-pi/test
+    
+    * Solve socket issue, at least for FHI-aims
+    
+    * Modification that preserves functionality, is more py3onic
+      and works in preliminary tests. Following advice from Jan Hermann.
+    
+    * Uniformizing the string passing.
+    
+    Co-authored-by: Michele Ceriotti <michele.ceriott@epfl.ch>
+    Co-authored-by: Mariana Rossi <mariana.rossi@chem.ox.ac.uk>
+    Co-authored-by: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+
+commit da6df54e1a660075eb4200c3d9bfca632e3fcc02
+Merge: f49f809 b7b9dc5
+Author: Mariana Rossi <mariana.rossi@chem.ox.ac.uk>
+Date:   Mon Mar 16 22:41:19 2020 +0100
+
+    Merge branch 'master-py3' of https://github.com/i-pi/i-pi into master-py3
+
+commit b7b9dc545e231ec596c8f2a023773818101f10ff
+Author: Michele Ceriotti <michele.ceriott@epfl.ch>
+Date:   Wed Jan 8 12:54:47 2020 +0100
+
+    Fixed errors with the manual and commented out offending ASE test lines
+
+commit 81f89ae43fa7aefed3d378f01ab7092f84d5bf7a
+Author: Michele Ceriotti <michele.ceriott@epfl.ch>
+Date:   Wed Jan 8 10:59:09 2020 +0100
+
+    Some progress in fixing tests
+
+commit cd58623febc7c596b94957f7b262dfb42aa15512
+Author: Michele Ceriotti <michele.ceriott@epfl.ch>
+Date:   Wed Jan 8 10:00:57 2020 +0100
+
+    Trying to fix circleci build
+
+commit f49f809324433103ba1284339143618474cb9ed5
+Author: Mariana Rossi <mariana.rossi@chem.ox.ac.uk>
+Date:   Mon Mar 16 21:32:05 2020 +0100
+
+      Uniformizing the string passing.
+
+commit c7d1701f3897fb33cbbb3b667bc2389068fadd36
+Merge: 21d8662 05b4999
+Author: Mariana Rossi <mariana.rossi@chem.ox.ac.uk>
+Date:   Mon Mar 16 21:23:49 2020 +0100
+
+    Merging so that circle-ci passes
+    
+    Merge branch 'master' of https://github.com/i-pi/i-pi into master-py3
+
+commit 05b4999b3e17f16375a987a3bab2b9137bbd9df0
+Merge: 2fe3025 3c561ee
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Mon Mar 16 21:17:38 2020 +0100
+
+    Merge pull request #73 from i-pi/bugfix/circleci
+    
+    Fixing tests in the py3 branch
+
+commit a65b3265d982b04ea2b64ef091c7639d22e07587
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Mon Mar 16 20:06:56 2020 +0100
+
+    Taking my name out of the example
+
+commit da259892ae9896eb7e16748429b6581c3a62f812
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Mon Mar 16 19:55:46 2020 +0100
+
+    Add example using  AseClient from ASE
+
+commit 21d8662d905532d5603d53379c8f1fe15c2811bd
+Author: Mariana Rossi <mariana.rossi@chem.ox.ac.uk>
+Date:   Mon Mar 16 17:26:02 2020 +0100
+
+      Modification that preserves functionality, is more py3onic
+      and works in preliminary tests. Following advice from Jan Hermann.
+
+commit b22d00fabcee70b0f94aa94ecd80921b2ddb93e7
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Mon Mar 16 11:44:42 2020 +0100
+
+    Solve socket issue, at least for FHI-aims
+
+commit 789ec92c4eff6bb44842e1e136d8f6b77b242c9e
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Mon Mar 16 09:22:11 2020 +0100
+
+    Add fhi-aims regtest example and correct README in i-pi/test
+
+commit 21f9310f8b866891c700c799f5c8da3ab68e6eb0
+Author: Mariana Rossi <mariana.rossi@chem.ox.ac.uk>
+Date:   Sat Mar 14 16:50:55 2020 +0100
+
+      Just updating FHI-aims example to contain an initial structure that makes sense...
+
+commit e0177bc294f8f250c28509a498431e14ee45caa1
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Sat Mar 14 14:10:15 2020 +0100
+
+    modified the regtests for bosons, and added a new test for CP2K.
+
+commit 2b86677687d1a8e733af0ded153d0156c95d2607
+Author: Mariana Rossi <rossi@eduroam-1852.desy.de>
+Date:   Thu Jan 16 17:41:59 2020 +0100
+
+      Fixing other calls of .close() from output_maker -- this restores instanton functionalities
+
+commit 0b181604ec76173d986d60afb48d2d5821fec218
+Author: Mariana Rossi <rossi@eduroam-1852.desy.de>
+Date:   Thu Jan 16 17:30:59 2020 +0100
+
+      Updating output options in phonons.py to conform with closing stream.
+
+commit 3c561ee4b436b6da617c9b71a3ae0dc8b1dd7c00
+Author: Michele Ceriotti <michele.ceriott@epfl.ch>
+Date:   Wed Jan 8 12:54:47 2020 +0100
+
+    Fixed errors with the manual and commented out offending ASE test lines
+
+commit 090b3e08253591e219a1ededb5cbb3295930f264
+Author: Michele Ceriotti <michele.ceriott@epfl.ch>
+Date:   Wed Jan 8 10:59:09 2020 +0100
+
+    Some progress in fixing tests
+
+commit db1b4acf92fc2a15b305963524adffde4ea5e90c
+Author: Michele Ceriotti <michele.ceriott@epfl.ch>
+Date:   Wed Jan 8 10:00:57 2020 +0100
+
+    Trying to fix circleci build
+
+commit 199ac894c1e4c2f7dbe6bc42bceacba399672dff
+Author: Michele Ceriotti <michele.ceriott@epfl.ch>
+Date:   Wed Jan 8 09:56:53 2020 +0100
+
+    Trying to find an image with all the required deps
+
+commit dc06697564c098970ccb9505bd97b87ee878f23e
+Merge: bcf66f5 70a03cb
+Author: Michele Ceriotti <michele.ceriott@epfl.ch>
+Date:   Wed Jan 8 09:54:10 2020 +0100
+
+    Merge branch 'master-py3' of github.com:i-pi/i-pi into master-py3
+
+commit bcf66f5cb71a60f1dd17f6b31343f71525b27839
+Author: Michele Ceriotti <michele.ceriott@epfl.ch>
+Date:   Wed Jan 8 09:53:36 2020 +0100
+
+    Updating tests and CircleCI to run python 3
+
+commit 70a03cb7fdd028bc463469d593ac58bb2a39f793
+Merge: d15aa1c 2a2c0df
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Thu Nov 28 18:44:38 2019 +0100
+
+    Merge pull request #72 from sauceda/master
+    
+    Update sGDML dependencies, README, and examples
+
+commit 2a2c0dfc2a12a03c094e5b1e8570413f5e31e7fd
+Merge: 2fe3025 2b62c81
+Author: Huziel E. Sauceda <sauceda.he@gmail.com>
+Date:   Thu Nov 28 16:52:12 2019 +0100
+
+    Merge pull request #1 from sauceda/sauceda-sgdml-1
+    
+    Update sGDML dependencies, README, and examples
+
+commit 2b62c819d6c88000f055b055eecc74d9724becc4
+Author: Huziel <sauceda.he@gmail.com>
+Date:   Thu Nov 28 16:43:09 2019 +0100
+
+    Update sGDML dependencies, README, and examples
+    
+    Update sGDML dependencies, add some useful flags regarding the units, and parallelization of the predictor function.
+    Also, the ffsgdml example section was restructured and a README file was added. The previous models were updated since they were from an outdated sGDML version.
+
+commit 9f90e0d66cd4699e9e174c89e355a7e6a6a7fe1a
+Author: Huziel E. Sauceda <sauceda.he@gmail.com>
+Date:   Thu Nov 28 13:26:53 2019 +0100
+
+    Update sGDML dependencies in forcefields.py
+    
+    Update sGDML dependencies, add some useful flags regarding the units, and parallelization of the predictor function.
+
+commit 395bf4df1cbdb88cc0153e8ff55c8bbd1037afe2
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Wed Nov 27 23:08:03 2019 +0100
+
+    reduced the total steps for a regtest
+
+commit 345fdbee1c60a1e26458a7c548775d4305f785b9
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Wed Nov 27 22:45:57 2019 +0100
+
+    typo in input of regtest
+
+commit d15aa1c2ce53a17ebcc46a394d6519a12b281efe
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Wed Nov 27 16:09:55 2019 +0100
+
+    One remaining  division operator in scforces
+
+commit df98793840b6d70e3d2eb579355082f3f79ed6d8
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Wed Nov 27 16:06:49 2019 +0100
+
+    added a nht regtest
+
+commit 6e7636614f3b6ca372872b93180bd134375845c9
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Wed Nov 27 15:58:49 2019 +0100
+
+    added a new regtest for NPT without thermostats i.e. NHT
+
+commit c6a755223bc2a7d90c893799cdd58344c0c4aa7f
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Wed Nov 27 15:55:15 2019 +0100
+
+    replaced divisions by floor divisions in scforces
+
+commit cfefe23fb712963c4b51bfc70c29e791b26dacdf
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Wed Nov 27 15:51:43 2019 +0100
+
+    Converts the stdout/err from i-pi to string within the regtest tool
+
+commit 3a7a0e4ca693dba298bb5e207fcb65b414bf10ea
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Wed Nov 27 15:36:14 2019 +0100
+
+    Forgot to add list of changes, for future reference
+
+commit 019d8f7080cdf1ee3ac3672701fd197f60ae0aa4
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Wed Nov 27 15:35:40 2019 +0100
+
+    Little thing forgotten in sockets.py, now it runs, somehow
+
+commit 8416157002e8dc7585258530e8edfcc674726c86
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Wed Nov 27 15:32:55 2019 +0100
+
+    Started adapting the socket interface to deal with bytestream<->utf8 conversion
+
+commit 0589cc12a1adcc08628f5bd982f4d81b6096f885
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Wed Nov 27 15:15:44 2019 +0100
+
+    Converted all numpy bytestream strings to unicode
+
+commit e5fe2af54ba8b2664e6b4704c1c5c706a02461da
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Wed Nov 27 11:03:05 2019 +0100
+
+    Created a new write function for the BaseOutput class
+
+commit ff65d12e78606bd1f0842ed708c7ac8a77bbf60a
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Wed Nov 27 10:47:20 2019 +0100
+
+    Replaced print statements with infos
+
+commit b19161eda0b50112c5785317b110697e3bb1b425
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Wed Nov 27 10:37:54 2019 +0100
+
+    Marked and commented out a debug print statement.
+
+commit b982a26fa21f3610e518d955d0bfc6fad31df61b
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Wed Nov 27 10:35:45 2019 +0100
+
+    all executables use py3 by default
+
+commit 73e3a4aeef5191b1e0a20b9dc67870a96ca8c7c7
+Author: Michele Ceriotti <michele.ceriott@epfl.ch>
+Date:   Tue Nov 26 16:55:43 2019 +0100
+
+    First of many integer division bugs...
+
+commit 0fb528323f094dac08a6e8fd7f7976744b876afc
+Author: Michele Ceriotti <michele.ceriott@epfl.ch>
+Date:   Tue Nov 26 16:52:34 2019 +0100
+
+    String.strip is not needed anymore
+
+commit 88bf1c74233931d91a69e9601a0423305534fa3a
+Author: Michele Ceriotti <michele.ceriott@epfl.ch>
+Date:   Tue Nov 26 16:48:43 2019 +0100
+
+    i-PI is now python3, and nothing works.
+
+commit 2fe30259f1f0ce684429788262f04240cc6f7f4f
+Merge: cc16af4 cc57c5a
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Tue Nov 26 16:43:29 2019 +0100
+
+    Merge pull request #70 from i-pi/master-py3
+    
+    Master py3
+
+commit cc57c5a83e7f39774dc82e67e13ffc4428b1a1e2
+Merge: 1d1129c cc16af4
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Tue Nov 26 16:36:58 2019 +0100
+
+    Merge pull request #69 from i-pi/master
+    
+    sync up master-py3 after wrong merge by MC
+
+commit cc16af4831dc5f013378a5699d266d4b4331cf0b
+Merge: 8e816d3 a72b377
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Tue Nov 26 16:34:11 2019 +0100
+
+    Merge pull request #67 from venkatkapil24/feat/ffsgdml
+    
+    Feat/ffsgdml
+
+commit a72b37737ea0e0ad369bb68ee06b78d6b5396b9a
+Merge: 463e25c 8e816d3
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Fri Nov 15 21:16:41 2019 +0100
+
+    Merge branch 'master' into feat/ffsgdml
+
+commit 463e25cf97d97cb9962702195b67ca56a6994a7a
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Fri Nov 15 21:09:57 2019 +0100
+
+    added a SC PIMD example for benzene using ffsgdml
+
+commit 90aa1d43ad58d6ab2deb1f1019a1949ae84074fd
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Fri Nov 15 21:04:45 2019 +0100
+
+    Cleaned up the sGDML implementation sent by Igor and added an example.
+
+commit 1d1129ca455ef95a196418c5def49c70ffccf143
+Merge: 0513f78 8e816d3
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Sat Nov 2 18:02:53 2019 +0100
+
+    Merge pull request #64 from i-pi/master
+    
+    Sync master-py3 with a couple of extra PR before we start Py3 conversion
+
+commit 8e816d3cf8ede075525f40aba690f927274dcd28
+Merge: 253a600 7dc4356
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Sat Nov 2 18:01:15 2019 +0100
+
+    Merge pull request #63 from cosmo-epfl/feat/kmc
+    
+    Feat/kmc
+
+commit 7dc4356f76cffed2a23b2ed7970008006d1971d8
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Sat Nov 2 17:58:34 2019 +0100
+
+    Error in nm.copy, side-effect of boson merge
+
+commit 4eb55f87cfd8d45da255dc7717a618594d0f82a9
+Merge: 9a2a3d7 253a600
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Sat Nov 2 16:04:14 2019 +0100
+
+    Merge branch 'master' into feat/kmc
+
+commit 253a6009bd68613a2e19e58f2081c99d1c24e45b
+Merge: 74fdeac ad6e9ec
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Sat Nov 2 15:59:37 2019 +0100
+
+    Merge pull request #15 from cosmo-epfl/feat/remd_aniso
+    
+    Feat/remd aniso
+
+commit ad6e9ec9959b74bd43684af8fda9339ed4f8f137
+Merge: d8d222b 74fdeac
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Sat Nov 2 15:59:26 2019 +0100
+
+    Merge branch 'master' into feat/remd_aniso
+
+commit 74fdeacf692b2052980d188294d36054e3b1b1fc
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Fri Nov 1 21:17:40 2019 +0100
+
+    Update README.rst
+
+commit 0513f7835738393a232c45586246750f10b3213e
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Fri Nov 1 21:17:02 2019 +0100
+
+    Update README.rst
+
+commit 4ca231af346002c15c512520b4e7938dfc38a139
+Merge: d4956ab 4ee17ba
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Fri Nov 1 20:51:47 2019 +0100
+
+    Merge pull request #62 from mahrossi/add_example_inst
+    
+    Add example instanton optimization with constrains
+
+commit 4ee17ba4010395c65cc5de8ab11277cee695b5ff
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Fri Nov 1 10:51:52 2019 +0100
+
+    Add example for instanton optimization with constrains
+
+commit 21b590cd6ad5bd5fb4bc10fcf4d9abe607c71a9c
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Fri Nov 1 10:32:13 2019 +0100
+
+    Add forces ouput when alt_out is triggered
+
+commit d4956ab2815a77bcd710e473d683a8dc7d1ca159
+Merge: d504fca f4f3468
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Fri Nov 1 00:07:46 2019 +0100
+
+    Merge pull request #59 from mahrossi/instanton2.0
+    
+    Update instanton. It handles fixatoms type constrains and non-uniform…
+
+commit f4f3468c5e305f6741ed4c9b0c902e044661351f
+Merge: aa7897d d504fca
+Author: Mariana Rossi <rossi@vpn-64-197.fhi-berlin.mpg.de>
+Date:   Fri Nov 1 00:01:56 2019 +0100
+
+    Resolving clashes
+    Merge branch 'master' of https://github.com/mahrossi/i-pi into instanton2.0
+
+commit d504fcad736b1a981dfedb9d4002b449af5372da
+Merge: f41c860 5d48d59
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Thu Oct 31 17:54:46 2019 +0100
+
+    Merge pull request #58 from cosmo-epfl/feat/classical_constraints
+    
+    Feat/classical constraints
+
+commit 5d48d59321285fc3fee09d93c06ab517348a2c28
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Thu Oct 31 17:48:29 2019 +0100
+
+    made branch pep8 compliant
+
+commit aa7897d6daffa06ba045a401acd7e849790900cc
+Author: Mariana Rossi <mariana.rossi@chem.ox.ac.uk>
+Date:   Thu Oct 31 16:56:15 2019 +0100
+
+      the last
+
+commit 3e2254d37ac0bd775cd2f616787b6f4d7103bd50
+Author: Mariana Rossi <mariana.rossi@chem.ox.ac.uk>
+Date:   Thu Oct 31 16:55:44 2019 +0100
+
+      another pep8
+
+commit ec51593ef08b97c40d20d3f76d9a4ccf9bf03c60
+Author: Mariana Rossi <mariana.rossi@chem.ox.ac.uk>
+Date:   Thu Oct 31 16:52:15 2019 +0100
+
+      pep8 stuff
+
+commit 15d83c0c4c08e12a4ba33b79c684efb3be06d0c2
+Merge: df5b73c f41c860
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Thu Oct 31 16:31:55 2019 +0100
+
+    Merge branch 'master' into instanton2.0
+
+commit 1cda1c365335c5e04c7c7043dc6d8f067bd99ce5
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Thu Oct 31 13:28:20 2019 +0100
+
+    Last merge conflict fixed
+
+commit dfaa4e988585c95cc9a21bda62fe7177f4c62b88
+Merge: 4150419 f41c860
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Thu Oct 31 13:27:45 2019 +0100
+
+    Merge branch 'master' into feat/classical_constraints
+
+commit df5b73c46d29142f8efb3b6f4a3c1084a238bbe5
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Thu Oct 31 11:42:05 2019 +0100
+
+    correcting a typo
+
+commit 6289be5c9d00f6a3e3a2c850a785c9027c5e5afe
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Thu Oct 31 11:34:22 2019 +0100
+
+    Extending docs part II
+
+commit 3fa83abefb738080567171166c47e8a82ef503ba
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Thu Oct 31 10:11:46 2019 +0100
+
+    Extending docs as requested
+
+commit f41c860ac740af002b4930e2ec8b38815f61e7da
+Merge: 7552aee b665d7e
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Thu Oct 31 08:21:10 2019 +0100
+
+    Merge pull request #57 from cosmo-epfl/feat/sutdown_on_disconnect
+    
+    Feat/shutdown on disconnect. Should be harmless, and is a required feature. Fixes #55
+
+commit b665d7e00a5e0132eb8fd5b00d9fba7b18723b90
+Merge: 910a348 7552aee
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Thu Oct 31 08:19:39 2019 +0100
+
+    Merge branch 'master' into feat/sutdown_on_disconnect
+
+commit 6512e9a7cf586a3feb2b1bddf18d20bcea2106c9
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Tue Oct 29 18:26:07 2019 +0100
+
+    Print also final physical forces
+
+commit d8d222bea57b0059218c1bd8733ba98adb67e840
+Merge: 7b55acc 7552aee
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Mon Oct 28 15:50:02 2019 +0100
+
+    Merge branch 'master' into feat/remd_aniso
+
+commit 18af9ce99b614ce6b2f3507293259230ac45588c
+Merge: 952fcb6 7552aee
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Mon Oct 28 15:43:00 2019 +0100
+
+    Merge branch 'master' into instanton2.0
+
+commit 7552aee5cc3b9d51d8e4210925c52e29f38d0680
+Merge: 0e69ef0 2db9ef3
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Mon Oct 28 15:40:41 2019 +0100
+
+    Merge pull request #50 from BarakHirshberg/PIMD-B
+    
+    PIMD-B
+
+commit 2db9ef34f1fa9e7257aa642dfe0cc6816970b9ef
+Merge: 72d9753 0e69ef0
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Mon Oct 28 15:22:38 2019 +0100
+
+    Merge branch 'master' into PIMD-B
+
+commit 952fcb6aa5df78bcb09e7927a64b729cf4a66f76
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Mon Oct 28 14:18:19 2019 +0100
+
+    Erase some debug comments
+
+commit e0f9056f924bde112e0a4b510efc1a6c0e705850
+Merge: 87e9ae0 0e69ef0
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Wed Oct 23 14:58:11 2019 +0200
+
+    "Fix transfer forces"
+    
+    Merge branch 'master' into instanton2.0
+
+commit 0e69ef056ea2292105e0ca83c25471bb3109d0e2
+Merge: aa9a57c 8e581ee
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Wed Oct 23 14:52:58 2019 +0200
+
+    Merge pull request #61 from cosmo-epfl/bugfix/transfer_forces
+    
+    Hopefully this is the time this is fixed for good....
+
+commit 8e581eef33ff6e92e07cd2016fe8323d32d91bb9
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Wed Oct 23 00:43:40 2019 +0200
+
+    Just shortened a very slow regtest
+
+commit dcc35b9bfb545f01509f64b348cb9cdf5c1d5c9e
+Author: Mariana Rossi <rossi@vpn-64-66.fhi-berlin.mpg.de>
+Date:   Tue Oct 22 23:52:28 2019 +0200
+
+      Just documentation and trying to clarify some more stuff.
+
+commit 41504195089479d4538a57f3bf7389da3234645c
+Author: George Trenins <gt317@cam.ac.uk>
+Date:   Tue Oct 22 11:06:39 2019 +0100
+
+    Remove old constrained_dynamics code and add further comments
+
+commit d7c3ad32207cdc018b2546ab3ceb6fa01c802573
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Tue Oct 22 11:26:57 2019 +0200
+
+    Implemented no-op contraction
+
+commit 72d97536b55c0f97dd4c349ab64ec045359a88f0
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Tue Oct 22 10:55:31 2019 +0200
+
+    Moved functions Evaluate_VB and Evaluate_dVB and other functions related to evaluation
+    of potential and forces for indistinguishable particles to ipi.utils.exchange
+
+commit 28a2a45abfeaac365faa756f2956e2176629a117
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Tue Oct 22 10:23:15 2019 +0200
+
+    Removed import of Constants from ipi.utils.units as Venkat suggested.
+    Instead kb is available through units.Constants.kb
+
+commit c597b0384544371e70bd7ae3f2e7cf558f3e9be3
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Tue Oct 22 02:27:50 2019 +0200
+
+    Hopefully this is the time this is fixed for good....
+
+commit da6573e54bc313b3e6610812ad2e722354123f08
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Mon Oct 21 09:32:52 2019 +0200
+
+    applied pep8 style
+
+commit 87e9ae000b671eb04fac6971f627feafef60a354
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Fri Oct 18 15:55:27 2019 +0200
+
+    Small things. Trying to find the transfer forces bug
+
+commit 4a016d95ea3f8c395342732371833b7523476318
+Author: George Trenins <gt317@cam.ac.uk>
+Date:   Thu Oct 17 12:05:00 2019 +0100
+
+    Added appropriate references
+    
+    Missing source for quasi-Newton method in proj_manifold
+
+commit a729c7bb99a2987d5ba6b23c4b4476f53b269b0d
+Author: George Trenins <gt317@cam.ac.uk>
+Date:   Thu Oct 17 11:11:28 2019 +0100
+
+    Added check for clashes between Eckart and CoM constraints
+
+commit 167831ffd510085a546ba47c72ff6a459ae3ab85
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Wed Oct 16 23:06:46 2019 +0200
+
+    Implemented cholesky solver (no actual speedup, on the contrary....)
+
+commit c3cf852f3be64e2534cbd0703c9aca1a41b6c5e6
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Wed Oct 16 17:55:45 2019 +0200
+
+    A few additional comments
+
+commit f4f0b0ad732f734da551170893f031a09210a83d
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Wed Oct 16 17:33:32 2019 +0200
+
+    Simplified the logic of constraint definitions by creating a "with-values" constraint base class
+
+commit cc6590ffcfda2f7b92cc20076ba20db43be35f3e
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Wed Oct 16 16:42:14 2019 +0200
+
+    Implementing a Gram matrix calculator - triggers a bug
+
+commit 3ef688a83bd0c0f8ca83bed7977225b44c805ca2
+Author: George Trenins <gt317@cam.ac.uk>
+Date:   Wed Oct 16 13:15:24 2019 +0100
+
+    Tidied up constrained integrators
+
+commit 64f1804769b8f690811361226dfa482015bd5d82
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Wed Oct 16 09:55:27 2019 +0200
+
+    Further commenting and cleaning up.
+    
+    Not done with this file, but submitting to minimize commit clashes
+
+commit b3cb8dd2753c65aa8d9accd2eeb93725b7d8a0ce
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Wed Oct 16 09:04:37 2019 +0200
+
+    Documented constraint classes
+
+commit 51294b88954a8a7ce63ba97305f85045a0abbc8c
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Tue Oct 15 18:01:36 2019 +0200
+
+    Update instanton. It handles fixatoms type constrains and non-uniform discretization. It also contains a new optimization algorithm that works really well for big systems (lanczos)
+
+commit 981e704ff2484c399cb899a020866981126f9fe7
+Author: George Trenins <gt317@cam.ac.uk>
+Date:   Mon Oct 14 18:54:59 2019 +0100
+
+    Fix example input for constrained MTS integrator
+
+commit a59f1213ba28fa00274ca09f9a02a5f131d8d9d3
+Merge: 0b8e81f ad88b4b
+Author: George Trenins <gt317@cam.ac.uk>
+Date:   Mon Oct 14 18:36:28 2019 +0100
+
+    Merge changes from constraint reorganisation
+
+commit 0b8e81f5188317f67b8d1e4f31f8f2c141e19c34
+Author: George Trenins <gt317@cam.ac.uk>
+Date:   Mon Oct 14 18:33:30 2019 +0100
+
+    Clean up examples for constrained dynamics
+
+commit ad88b4b71406b673e2f43161c9e92716455dd786
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Mon Oct 14 18:36:22 2019 +0200
+
+    Moved constraints definitions to a separate utils file
+
+commit 6f12d8324d0d6a2b9fe54aacf46d63269f021e5f
+Merge: 86230de aa9a57c
+Author: Michele Ceriotti <michele.ceriott@epfl.ch>
+Date:   Mon Oct 14 15:57:25 2019 +0200
+
+    Merge branch 'master' into feat/classical_constraints
+
+commit 86230de3795a7a874b763b1160aad7febff474bb
+Author: Michele Ceriotti <michele.ceriott@epfl.ch>
+Date:   Mon Oct 14 15:56:34 2019 +0200
+
+    Just removed a few commented lines
+
+commit 027ede39449d8624bae9e64d2c0faca4c3a33a4f
+Merge: f215335 8bd595d
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Mon Oct 14 09:36:05 2019 +0200
+
+    Merge branch 'master' into feat/classical_constraints
+
+commit 910a348b8464d484528e82e537bf7826b11dae98
+Merge: a00ec62 aa9a57c
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Sun Oct 13 09:42:22 2019 +0200
+
+    Merge branch 'master' into feat/sutdown_on_disconnect
+
+commit d7a58045fcabc23b95bf91c88403bbd6f32dc824
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Sun Oct 13 08:55:02 2019 +0200
+
+    Added more comment describing the bab propagator.
+    In particular, that only bab should be used with bosons.
+
+commit a00ec6216246fbe08ceccef73810fc49b003644c
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Sat Oct 12 16:59:10 2019 +0200
+
+    Implemented input option for exit_on_disconnect
+
+commit 1160d8cc6f5b135b1fa9e8610be21b3c964aca7e
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Sat Oct 12 16:37:02 2019 +0200
+
+    Implements soft exit on client disconnect
+
+commit aa9a57c183912534732be66ac9673511f28e3203
+Merge: 863005a 84fbe47
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Sat Oct 12 13:38:09 2019 +0200
+
+    Merge pull request #53 from afonari/patch_1
+    
+    Make ipi/tests/test_depend.py pass in Python 3
+
+commit 84fbe47357b1b71e5f12a3818c454e6b656c5978
+Merge: b0d0a84 863005a
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Sat Oct 12 13:36:44 2019 +0200
+
+    Merge branch 'master' into patch_1
+
+commit 863005a2a723d6fc25746421862924cfd110d534
+Merge: e2f1bb1 eb1f85a
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Sat Oct 12 13:33:47 2019 +0200
+
+    Merge pull request #49 from mahrossi/rpc-open_paths
+    
+    RPC for open paths
+
+commit b0d0a845d80023908f17015fe59fb93bf966957f
+Author: Sasha Fonari <alexandr.fonari@gmail.com>
+Date:   Sat Oct 5 06:25:06 2019 -0400
+
+    Make ipi/tests/test_depend.py pass in Python 3
+
+commit 02984f8597b5fd95c4388019dbd5132e7fc807c4
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Mon Sep 30 12:22:25 2019 +0200
+
+    fixed two typos
+
+commit b3d6f40612cfbf8d4eee01077f505f9322edc0cd
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Mon Sep 30 12:07:46 2019 +0200
+
+    Merged my old driver with changes in it with the latest i-pi driver
+
+commit e96efbcac56828ccd782afdc6b32cb281d54ced3
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Mon Sep 30 11:21:25 2019 +0200
+
+    added how to run in readme of regtest bosons
+
+commit 354576334422cc8c7c97af77292295a0a5813831
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Mon Sep 30 11:17:15 2019 +0200
+
+    Added a few example files for comparing bosons with distinguishable particles and for a mixture.
+
+commit 8f46b93f3c68a2824e65a5a6ff9e5f298baf8da7
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Mon Sep 30 10:55:58 2019 +0200
+
+    Cleaned up comments and notes before creating pull request
+
+commit 483d9f18a8872147374f19f98fdb94838e574ff9
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Mon Sep 30 10:44:40 2019 +0200
+
+    Changed the calculation of vspring in get_vspring() and f_distinguish in get_fspring()
+    for the case of mixtures of bosons and distinguishable particles.
+
+commit f12a89f39b0ba980cb4ebc0720bbfcb82e21bdc5
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Fri Sep 27 15:57:44 2019 +0200
+
+    Fixed a bug in get_vspring_and_fspring_B() I passed to get_dVB l instead on ind.
+
+commit 85e56d1d5775b7a1f1b5995181c3edd84cd408d5
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Thu Sep 26 18:31:26 2019 +0200
+
+    IMPORTANT CHANGE
+    Made the changes necessary to simulate mixtures of bosons and distinguishable particles.
+    It seems to work and the conserved quantity is fine. More tests are needed.
+
+commit 5ac4ce6e70cf6a2c520c04fc6095e55f1c1ffb8b
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Wed Sep 25 17:11:12 2019 +0200
+
+    changed get_vspring_and_fpsring_B() behaviour for len(self.bosons) is 0.
+    Now it uses pass, instead of returning zero.
+
+commit 8c3725ec9645664837ccb3485fef3d573262601f
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Wed Sep 25 17:03:17 2019 +0200
+
+    Added dself.vspring_and_fspring_B which is a list containing at [0] the N-th spring potential for Bosons and at [1]
+    a numpy array containing the forces on each atom of each replica. Essentially, [1] holds fspring from before and [0] now has V[N]
+    from self.evaluate_VB(). Need to check that this is working.
+
+commit a4ec2db72b73cfccd53bc367dd0b619068353739
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Mon Sep 23 18:48:59 2019 +0200
+
+    Fixed a bug for distinguishable particles. Also for them I need to revert qcstep() in each free_babstep()
+    since babstep integrates in Cartesian coordinates, including the centroid.
+
+commit 6a9e215911a2ec80b88cda800b49130f2188af7b
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Mon Sep 23 17:17:54 2019 +0200
+
+    Added an error message when not all particles are bosons for now
+
+commit fad36c7e9f8ae964b0d3a4de5639e8a5fa4ec298
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Mon Sep 23 16:12:30 2019 +0200
+
+    Instead of commenting out qcstep in motion/dynamics.py, I simply added a step to free_babstep that reverts
+    the effect of qcstep if the particles are bosons. This way, one can use free babstep with the nvt integrator as is.
+
+commit aea105345bedc5d383f0e171d6cdb4f7961d5e90
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Mon Sep 23 14:35:12 2019 +0200
+
+    Commented out qcstep() within NVEIntegrator, which is called by NVTIntegrator.
+    The reason is that I think that when I propagate Bosons in Cartesian, I am also moving the centroid.
+    Need to find a better solution for this because this breaks normal NVT dynamcis done in NM representation in i-PI.
+
+commit eb1f85ae3c2e3f4069b92d0ace0ef2f26054adbc
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Fri Sep 20 14:26:50 2019 +0200
+
+    Removing modification in nm_trans to make it consistent with nm_fft.
+
+commit e5d32720ab2d3555f2c723d7561775bb3552e501
+Merge: e175f37 1ee0b31
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Fri Sep 20 14:17:34 2019 +0200
+
+    Merge MC changes
+
+commit e175f37ab183fb8c4ac7828278b4bf1ee34e229a
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Fri Sep 20 13:53:13 2019 +0200
+
+    Removing modification in nm_trans to make it consistent with nm_fft
+
+commit 1ee0b31e5d5884d8be94a038b20c3b1a8f99931b
+Merge: 412b8f7 4ae1085
+Author: Michele Ceriotti <michele.ceriott@epfl.ch>
+Date:   Fri Sep 20 11:49:59 2019 +0200
+
+    Merge branch 'rpc-open_paths' of git://github.com/mahrossi/i-pi into rpc-open_paths
+
+commit 412b8f71cc09def3cacb5c55346621ccbd2d8eeb
+Author: Michele Ceriotti <michele.ceriott@epfl.ch>
+Date:   Fri Sep 20 10:41:42 2019 +0200
+
+    Added an example, and cleaned up the open RPC code
+
+commit c2b28d6c0863cf5deb9f466a16187d8bd58fed46
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Thu Sep 19 22:28:32 2019 +0200
+
+    Found bug. dE_N^k was set to 0.0 instead of np.zeros(1,3)
+
+commit 7a8b74990b0a3b0d85ce6b7ab679bd89d93b410e
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Thu Sep 19 22:06:35 2019 +0200
+
+    Found bug in Evalute dV. count was not progressing according to plan.
+
+commit 072e97b245bb4f536cfed66366c1200347772266
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Thu Sep 19 19:40:48 2019 +0200
+
+    Found a bug in dE_N^k calculation. First atom had anf if statement if (l==0). change to if (l==N-k).
+
+commit 4ae10856f18692b4d83d5a3aadb82d82d7f6fa56
+Merge: eb18705 e2f1bb1
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Thu Sep 19 16:48:32 2019 +0200
+
+    Merge branch 'master' into rpc-open_paths
+
+commit e2f1bb15485a665167a3be34424a51baf011a234
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Thu Sep 19 15:01:19 2019 +0200
+
+    Update README.rst
+
+commit 1ad05071958c549452fff3a9b72e86ae04b174a7
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Thu Sep 19 14:59:39 2019 +0200
+
+    Update README.rst
+
+commit 9a2a3d74cc9cbd00453519858d3137af116d8e91
+Merge: f79ced2 8bd595d
+Author: Michele Ceriotti <michele.ceriott@epfl.ch>
+Date:   Thu Sep 19 14:46:35 2019 +0200
+
+    Mixed clean-ups, most importantly KMC_AL6XXX is now restartable
+    
+    Merge branch 'master' into feat/kmc
+
+commit 4fc2dcf5a268ae5f680773db5348ee5617b1df5a
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Wed Sep 18 12:25:21 2019 +0200
+
+    Changes the descriptions of all functions I added to be clearer
+
+commit c5f80df001f49bba8e243e65ee84b463b65b02d6
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Wed Sep 18 11:51:18 2019 +0200
+
+    Added a few comments regarding the reversed order is summation in Evalaute_VB() and Evaluate_dVB()
+
+commit 5c9b51478e31eb1c2e4ecff883b9f33e61a1bb78
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Wed Sep 18 11:15:35 2019 +0200
+
+    Fixed two bugs that resulted in V and dV not being calculated properly.
+    Now it should work.
+
+commit 97e3bfc422ef09d22c4bbd8c637d13fb6915e5e9
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Mon Sep 16 14:16:26 2019 +0200
+
+    Worked with Venkat on incorporating the PIMD-B propagation into i-pi.
+    Added progator mode "bab" which is the numerical velocity verlet time step.
+    Fixed a few bugs in the force evaluation for Bosons.
+    Added error messages to exit if bab propagator is requested with open paths or if exact/cayley propagator is asked with bosons.
+
+commit 8be1ad84247ba042e2e1bb4283129b8455e10dc2
+Merge: ca5f586 0c19742
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Sun Sep 15 10:25:11 2019 +0200
+
+    Merge pull request #38 from mahrossi/geop-fixatoms-Karen
+    
+    Geometry optimization with fixed atoms
+
+commit 0c197428d02313b73944bfa008d7dd8c8ed173a8
+Merge: 468adb8 ca5f586
+Author: Karen Fidanyan <fidanyan@fhi-berlin.mpg.de>
+Date:   Wed Sep 11 17:54:55 2019 +0200
+
+    Merge branch 'master' into geop-fixatoms-Karen
+
+commit 468adb87f4a3c32415069f4da2c4d812f65213a2
+Author: Karen Fidanyan <fidanyan@fhi-berlin.mpg.de>
+Date:   Wed Sep 11 09:45:59 2019 +0200
+
+    Cleanup in examples/fhi-aims/h2o-geop-fixatoms
+    and in examples/lammps/h2o-geop-fixatoms.
+    Test results with explanations are moved to examples/regtest/.
+
+commit 39c5c2225d2b886c3dcb92d53ae26415235eaa77
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Fri Sep 6 18:33:28 2019 +0200
+
+    Similar to what I did in LAMMPS, I added Elong to help calculate
+    the potentials without getting infs when the sum is too small.
+
+commit 7e1e6ad9a318599c776dcc06d5ade8fd2221c7b2
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Fri Sep 6 17:30:08 2019 +0200
+
+    debug comments
+
+commit ce15a33d80201fe3cff0cc8d5e516bdbcb67dcbd
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Fri Sep 6 17:02:43 2019 +0200
+
+    More debugging comments
+
+commit bd236f6144363aa31039548f43097bd6965021c8
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Fri Sep 6 15:00:44 2019 +0200
+
+    started dubegging, entered printing statements for now...
+
+commit e05eae259fea8aeef693d6d17341f8ac434adfee
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Fri Sep 6 14:36:29 2019 +0200
+
+    Did some commenting
+
+commit a053829752cde12ba7419db80bed12cbace6e78d
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Fri Sep 6 13:24:43 2019 +0200
+
+    Fixed free_qstep so that all beads of all atoms are propagates at once.
+
+commit cb210e4a9962ee4eb0ea6d8935a2bdb026b4084d
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Fri Sep 6 13:00:32 2019 +0200
+
+    Main change to include PIMD for Bosons.
+    free_qstep() now calls get_spring_forces() for evaluation of bosonic spring forces.
+    Defined get_spring_forces() which returns F which holds forces on all atoms for all replicas.
+    To do so, it calls Evaluate_VB() which returns VB_j; j=1,...,N and all E_N^{(k)} needed.
+    Then, get_spring_forces() loops over all beads of all atoms and calculate the force acting
+    on each one. To do so, it calls Evaluate_dVB().
+
+commit 7887dab622d599514632a19a064a8d48c0a371ab
+Author: Barak Hirshberg <hirshb@carasso.usilu.net>
+Date:   Thu Sep 5 12:01:59 2019 +0200
+
+    I have made changes to free_qstep() in normalmodes.py
+    For bosons, the Hamiltonian can still be separated into a free ring polymer (RP) part
+    and a potential part.
+    However, due to exchange symmtery, the free RP part contains more than one
+    configuration and cannot be integrated analytically, as done usually for distinguishable
+    particles.
+    Therefore, I implemented a simple velocity verlet integrator instead.
+    The bosonic forces are currently set to zero and need to be calculated still.
+    
+    Also, we will probably want to add the possibility to treat only some atoms as bosons
+    and other as distinguishable, which is not done now.
+
+commit ca5f586fefb1fe6332f48f01b4832dc8da76d9c8
+Merge: 9248c7c e7078c1
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Fri Aug 30 06:20:46 2019 -0600
+
+    Merge pull request #46 from mahrossi/phonon_fixatoms
+    
+    This commit makes it possible to exclude the fixed atoms (fixatoms) from the hessian evaluation
+
+commit e7078c15fa9841bfa34b8451ad9fa656b816fab2
+Merge: 7931661 9248c7c
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Fri Aug 30 06:19:40 2019 -0600
+
+    Merge branch 'master' into phonon_fixatoms
+
+commit eb18705e8383fe73bc28d811839eef9d73dd81ff
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Fri Aug 30 12:43:05 2019 +0200
+
+    Use of the open_path variable when binds the Forces objet. This allows to have RPC with open paths. If the paths are not all open or all close, the individual physical potential energy in the expanded RP are not well define, even though its sum and forces are
+
+commit 9248c7c745330950a219c421917504fdcdc6ca87
+Merge: 32a5e28 4efa738
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Tue Aug 27 14:11:48 2019 +0200
+
+    Merge pull request #43 from korolrom/master
+    
+    Cayley integrator for normal modes
+
+commit 4efa738fe20406f66c604a6289bd48fdcf853cbc
+Merge: 2ab71ef 32a5e28
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Tue Aug 27 14:08:40 2019 +0200
+
+    Merge branch 'master' into master
+
+commit 32a5e2851a4eab41a759573bb304a3343f497c59
+Merge: 8bd595d 8c66e29
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Tue Aug 27 14:07:38 2019 +0200
+
+    Merge pull request #48 from weifang2321/fix-doc
+    
+    fixed doc strings for cell and mode
+
+commit 8c66e292a0b1e7debc781793dac0104a90b15d8f
+Author: Wei <weifang2321@gmail.com>
+Date:   Mon Aug 26 18:44:56 2019 +0200
+
+    fixed doc strings for cell and mode
+
+commit 79316613b5f269fc03663190a854387265125579
+Merge: 2b75961 8bd595d
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Mon Aug 19 09:18:04 2019 -0600
+
+    Merge branch 'master' into phonon_fixatoms
+
+commit 2b75961492c3b8abb322f200918bbc96249c826c
+Author: Yair Litman <yairlitman@gmail.com>
+Date:   Tue Aug 6 15:56:16 2019 +0200
+
+    It excludes the fixatoms from the hessian evaluation
+
+commit f215335d9e0adb59ca7e2f4baa21a4de07f16df7
+Author: George Trenins <gt317@cam.ac.uk>
+Date:   Fri Aug 2 11:47:18 2019 +0100
+
+    add Eckart conditions to the constraint classes
+
+commit ce7439bcff8bb149757343ad74b5551a8862e64b
+Author: George Trenins <gt317@cam.ac.uk>
+Date:   Thu Aug 1 16:48:23 2019 +0100
+
+    add angle constraint and fix bug in ConstraintList
+
+commit fd0941ddf2c5c5086cb7bc91cddaf3310878b96a
+Author: George Trenins <gt317@cam.ac.uk>
+Date:   Thu Aug 1 14:06:40 2019 +0100
+
+    Add option to calculate constraint values from initial configuration
+
+commit 2ab71eff909a07f2f99bd5868d6564f19ec64c30
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Wed Jul 31 15:40:35 2019 -0600
+
+    Bug in the attributes of normalmodes.py.
+
+commit 53feedaf522fe91508733175f785105b7cdee29b
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Wed Jul 31 15:25:31 2019 -0600
+
+    Fixed sign bug
+
+commit 28c871d1a90dc3e01ad16971aef49dfb1e3b484a
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Wed Jul 31 15:09:03 2019 -0600
+
+    Implemented input and example for the Cayley integrator of the free RP.
+
+commit a04f90239c13ba41436d35d615714b160d5fd4ca
+Author: George Trenins <gt317@cam.ac.uk>
+Date:   Wed Jul 31 20:18:06 2019 +0100
+
+    Revert "OK now it is ...?" and fix integrator
+    
+    This reverts commit 4c74de1bab19fb18a309a183bd2a57cb7d1ca96c.
+
+commit 73fda8b8a4cf047fb14f4a7d048bca1acb5f4864
+Author: Roman <20392116+korolrom@users.noreply.github.com>
+Date:   Tue Jul 30 23:04:01 2019 -0600
+
+    Realized cay option inside prop_pq and o_prop_pq
+
+commit b7badb9eaf63948f5da10abb240b9b03abdf7fdb
+Author: Matthias Ernst Sachs <matthias.sachs@duke.edu>
+Date:   Sun Jul 28 22:39:40 2019 +0200
+
+    Revert "Tried to implement a depend mechanism based constraint object"
+    
+    This reverts commit a45be08a84898459b63fe896902e00c5ebcca593.
+
+commit 0932098f8c314401e932ffae661bf3d117598155
+Author: Matthias Ernst Sachs <matthias.sachs@duke.edu>
+Date:   Sun Jul 28 22:39:35 2019 +0200
+
+    Revert "Move towards depend_ified constraints, but broke something..."
+    
+    This reverts commit 453ceb641ae4905539c99da49c59a92a92d29426.
+
+commit b52a415518cf0476d3f70bc575f7851c40b75de4
+Author: Matthias Ernst Sachs <matthias.sachs@duke.edu>
+Date:   Sun Jul 28 22:39:30 2019 +0200
+
+    Revert "OK now it is all officially messed up. Roll back?"
+    
+    This reverts commit 4c74de1bab19fb18a309a183bd2a57cb7d1ca96c.
+
+commit e27dc940f9a47ed5898e16f59d5390cfa6a1982b
+Author: Matthias Ernst Sachs <matthias.sachs@duke.edu>
+Date:   Sun Jul 28 22:39:25 2019 +0200
+
+    Revert "Made it possible to call gfunc(q) on demand"
+    
+    This reverts commit 21a5d664d493dcc148db860945ca1679b131e3f6.
+
+commit 100b7c9f2d3d9c12881da2e58e56b14b2b279623
+Author: Matthias Ernst Sachs <matthias.sachs@duke.edu>
+Date:   Sun Jul 28 22:39:14 2019 +0200
+
+    Revert "single water molecule is working"
+    
+    This reverts commit 8182029cb7ffc4f644cef8ad6352fe7193d3dff3.
+
+commit dfbb8c131f2e0dcd5342f43bb43967521948c794
+Author: Matthias Ernst Sachs <matthias.sachs@duke.edu>
+Date:   Sun Jul 28 22:39:07 2019 +0200
+
+    Revert "removed multi tag from input file"
+    
+    This reverts commit 0e38c6854670dc59baca12ec57eb5297e3097a27.
+
+commit 0e38c6854670dc59baca12ec57eb5297e3097a27
+Author: Matthias Ernst Sachs <matthias.sachs@duke.edu>
+Date:   Sun Jul 28 22:32:35 2019 +0200
+
+    removed multi tag from input file
+
+commit 8182029cb7ffc4f644cef8ad6352fe7193d3dff3
+Author: Matthias Ernst Sachs <matthias.sachs@duke.edu>
+Date:   Sun Jul 28 22:19:23 2019 +0200
+
+    single water molecule is working
+
+commit b5c846f4e5530facf653ae22dbc44fa3e28c91be
+Author: Roman <20392116+korolrom@users.noreply.github.com>
+Date:   Thu Jul 25 10:51:22 2019 -0700
+
+    Update normalmodes.py
+
+commit 017cdac66bde623d27fe650813d268e6a5da7373
+Merge: 94fd670 8bd595d
+Author: korolrom <roman@caltech.edu>
+Date:   Wed Jul 24 11:05:21 2019 -0700
+
+    Added the Cayley integrator cay_prop_pq in normalmodes.py alongside the prop_pq
+    Merge branch 'master' of https://github.com/i-pi/i-pi
+
+commit 94fd670d03fabbf24784fbaed0bf4ff3533db0c4
+Author: korolrom <roman@caltech.edu>
+Date:   Wed Jul 24 10:21:24 2019 -0700
+
+    Added the Cayley integrator cay_prop_pq
+
+commit 31f2722c657c5b76574bbcc376c9266cd50cce6b
+Author: Karen Fidanyan <fidanyan@fhi-berlin.mpg.de>
+Date:   Wed Jul 24 18:23:39 2019 +0200
+
+    Changed default ls_options["tolerance"] to 1e-4
+    
+    Added examples/lammps/h2o-geop-fixatoms
+
+commit 8bd595d60d48350e88ea305dc00e1ed0b17a2831
+Merge: d1a082c 32984d8
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Wed Jul 24 15:37:03 2019 +0200
+
+    Merge pull request #32 from cosmo-epfl/feat/planetary
+    
+    Feat/planetary
+
+commit 32984d8ad1482da91cb9eff356c4ab7502b3f896
+Merge: 57f781e d1a082c
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Wed Jul 24 14:27:03 2019 +0200
+
+    Merge branch 'master' into feat/planetary
+
+commit d1a082ca5186b88133a969657b24384e6d212cca
+Merge: c107532 6a708af
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Wed Jul 24 13:44:46 2019 +0200
+
+    Merge pull request #42 from cosmo-epfl/feat/mc_swaps
+    
+    Created an atom-swap motion class - merging as this is quite harmless and also fixes a couple of bugs.
+
+commit 6a708afc23a75664768cbb5eb3d68dfeb7ec5296
+Merge: 1d18f47 c107532
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Wed Jul 24 13:44:19 2019 +0200
+
+    Merge branch 'master' into feat/mc_swaps
+
+commit 57f781e967062b38c3d83feecbc1340159b21c74
+Author: Michael Willatt <michael.willatt@epfl.ch>
+Date:   Mon Jul 22 15:39:38 2019 +0200
+
+    Changed the netstring saver slightly (default arguments and *args is
+    misleading). Also slightly modified the planetary model README.
+
+commit 6743446493898dfcbddf8adffdcd4a928bbfa7cf
+Author: Karen Fidanyan <fidanyan@fhi-berlin.mpg.de>
+Date:   Fri Jul 19 21:05:46 2019 +0200
+
+    Added fixatoms to L-BFGS. Changed default ls_options["tolerance"] to 1e-2,
+    because 1 caused problems for L-BFGS.
+    Added LAMMPS example/test 'h2o-geop-fixatoms'
+
+commit f070a5fe330e44992d0690becd17fe9cbe347e0d
+Author: Michele Ceriotti <michele.ceriott@epfl.ch>
+Date:   Fri Jul 19 17:04:33 2019 +0200
+
+    Cleaned up an example of the planetary model application
+
+commit 526e83874139370b8ebb162fe12c313aadd2f2e7
+Merge: bb59767 1bb47d3
+Author: Michele Ceriotti <michele.ceriott@epfl.ch>
+Date:   Fri Jul 19 16:07:42 2019 +0200
+
+    Merge remote-tracking branch 'refs/remotes/origin/feat/planetary' into feat/planetary
+
+commit bb59767d7bff455e08bea156e45b4ad547e870e9
+Author: Michele Ceriotti <michele.ceriott@epfl.ch>
+Date:   Fri Jul 19 16:07:26 2019 +0200
+
+    Added to init string
+
+commit 1bb47d3cba8d4747df77302c1c4298a36d10f3f5
+Author: Michael Willatt <michael.willatt@epfl.ch>
+Date:   Fri Jul 19 14:20:13 2019 +0200
+
+    The netstring saver and loader are now used to save and load the sparse
+    planetary model frequency matrices.
+
+commit a05da3f4b855987b396327148960423b30531e25
+Author: Michele Ceriotti <michele.ceriott@epfl.ch>
+Date:   Fri Jul 19 11:37:20 2019 +0200
+
+    Added netstring encoded I/O
+
+commit 1d18f476b16bd57fe564584bf7f16cbc2d439af7
+Author: Michele Ceriotti <michele.ceriott@epfl.ch>
+Date:   Thu Jul 18 16:46:39 2019 +0200
+
+    A file was left behind. Poor little thing.
+
+commit 58a5a11c1aac72e11ea3c898cb59f5d37950e3cf
+Merge: 8c7c98d c107532
+Author: Michele Ceriotti <michele.ceriott@epfl.ch>
+Date:   Thu Jul 18 12:29:28 2019 +0200
+
+    Merge branch 'master' into feat/planetary
+
+commit c107532a433923894ec5e58bcbaba9c9c9af77f8
+Merge: 7467827 fa67fe4
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Thu Jul 18 09:25:51 2019 +0200
+
+    Merge pull request #35 from cosmo-epfl/bufgfix/mts_queue
+    
+    Bufgfix/mts queue
+
+commit fa67fe41166e07f1b285f62c76a0df24114f0e8d
+Merge: 6454192 7467827
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Thu Jul 18 09:25:08 2019 +0200
+
+    Merge branch 'master' into bufgfix/mts_queue
+
+commit f40fe3d7a02058274ff4405202d913fb244a7f7c
+Merge: 3b27dd9 7467827
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Wed Jul 17 18:21:03 2019 +0200
+
+    Merge branch 'master' into feat/mc_swaps
+
+commit 746782742a5da23e4aeb84dd7200e9b8341e8501
+Merge: 81f747d 68111cc
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Wed Jul 17 18:19:51 2019 +0200
+
+    Merge pull request #41 from cosmo-epfl/feat/isofrac
+    
+    Feat/isofrac
+
+commit 3b27dd9f4faf2db087b3aa97d90bafae11e580fc
+Author: Michele Ceriotti <michele.ceriott@epfl.ch>
+Date:   Wed Jul 17 17:36:11 2019 +0200
+
+    Created an atom-swap motion class
+    
+    Also corrected very subtle, painful bug in transfer_forces. To be merged with master ASAP.
+
+commit 21a5d664d493dcc148db860945ca1679b131e3f6
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Mon Jul 15 19:24:39 2019 +0200
+
+    Made it possible to call gfunc(q) on demand
+
+commit 4c74de1bab19fb18a309a183bd2a57cb7d1ca96c
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Mon Jul 15 18:25:16 2019 +0200
+
+    OK now it is all officially messed up. Roll back?
+
+commit 453ceb641ae4905539c99da49c59a92a92d29426
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Mon Jul 15 15:00:16 2019 +0200
+
+    Move towards depend_ified constraints, but broke something...
+
+commit a45be08a84898459b63fe896902e00c5ebcca593
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Sun Jul 14 23:58:28 2019 +0200
+
+    Tried to implement a depend mechanism based constraint object
+
+commit c385dfbb12818285af48f70b0b113549b6c77382
+Author: Matthias Sachs <msachs@math.duke.edu>
+Date:   Sun Jul 14 15:31:00 2019 -0400
+
+    Delete input-no-constraint.xml
+
+commit d1821f8a9771c28ba4db38030bfdb84380b87424
+Author: Matthias Sachs <msachs@math.duke.edu>
+Date:   Sun Jul 14 15:30:41 2019 -0400
+
+    Delete input-grouped.xml
+
+commit ecfab6ff298110e48876cdf8e6df4b49fd1c03bc
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Sun Jul 14 11:14:59 2019 +0200
+
+    Basic tracking of conserved quantity when thermo is projected out
+
+commit dd4e8fcdd05e2e7a2dff0c4a6a2a9cb15851a44b
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Sun Jul 14 10:35:45 2019 +0200
+
+    Renamed constraints example folder
+    
+    No PIMD in sight!
+
+commit 9983b08f3981ff27943229788166ff23f39fae22
+Author: Matthias Ernst Sachs <matthias.sachs@duke.edu>
+Date:   Sat Jul 13 21:24:21 2019 -0400
+
+     constraint solver class added and input changed
+    
+    issues:
+    1) for nvt ensembles the conserved energy is monotonically decreasing
+    2) the norm_order does not appear in RESTART file
+
+commit 4c5b910c394a01d39f49f5262ed18fd5f707cde1
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Fri Jul 12 11:50:35 2019 +0200
+
+    Added the remaining files for example
+
+commit 64541923fc28406a24e6d59966e9efb69295f68a
+Merge: 4d4ff77 81f747d
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Tue Jul 9 14:06:34 2019 -0400
+
+    Merge branch 'master' into bufgfix/mts_queue
+
+commit 68111cc202e25beea5b32f4f70b407c52982eafb
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Tue Jul 9 12:09:10 2019 +0200
+
+    bugfix : removed extra comma
+
+commit 8e96630862adf3073d5ade99c43fa1ab0e5c905f
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Tue Jul 9 12:07:17 2019 +0200
+
+    Removed some incomplete SC isofrac estimators
+
+commit 15bdf727aee54009df0a864251d06655c3bb22ab
+Merge: 998e5bf 76694ea
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Tue Jul 9 12:03:43 2019 +0200
+
+    Merge branch 'feat/isofrac' of https://github.com/cosmo-epfl/i-pi into feat/isofrac
+
+commit 998e5bf69f846197eb50d7294878f5068d3b15e5
+Merge: 795c6a1 81f747d
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Tue Jul 9 10:48:28 2019 +0200
+
+    Merge branch 'master' of https://github.com/cosmo-epfl/i-pi into feat/isofrac
+
+commit 6349c844500c4dcea04af8068c2b4ebdbb648a2b
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Sun Jul 7 14:43:15 2019 +0200
+
+    Nested constraints input
+
+commit f109bd62d0896a6f8bd93db4472758001ad730c3
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Fri Jul 5 17:39:22 2019 +0200
+
+    Added the remaining LAMMPS files for the example
+
+commit 85fe977c75cd6ee12e2d5a2fe1f5bdc4031021db
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Fri Jul 5 17:03:14 2019 +0200
+
+    updated the example for MTS + CONSTRAINTS
+
+commit 09f18034adfa7317102dfe8e3555e2a9c2098ef8
+Author: Matthias Ernst Sachs <matthias.sachs@duke.edu>
+Date:   Fri Jul 5 11:47:10 2019 +0200
+
+    32 water molecules with constraints example added
+
+commit d7bd2872fb6c9b8f129b8f06b4cef37b3fc11c73
+Merge: 8c27fa3 c1e9490
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Fri Jul 5 11:39:44 2019 +0200
+
+    Merge branch 'feat/classical_constraints' of https://github.com/cosmo-epfl/i-pi into feat/classical_constraints
+
+commit 8c27fa35ec5722f98e96f8838a5fbc33232cde5d
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Fri Jul 5 11:36:37 2019 +0200
+
+    reverted changes to h2o-pimd.1 example
+
+commit c1e9490c095f42bf3997d1340bdd09b94df59fc5
+Author: Matthias Ernst Sachs <matthias.sachs@duke.edu>
+Date:   Thu Jul 4 21:07:28 2019 +0200
+
+    multiple small bugs and new input options for newton iteration
+    
+    New input, RESPA and gRESPA working
+
+commit 31b90c6f4b0b678760828c36b1c043adac1a3e42
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Thu Jul 4 12:36:29 2019 +0200
+
+    Apparently working input for constraints
+    
+    Algorithm still needs debugging
+
+commit 4d9b40dbb170fa308632ec34e9138a4e2ee70026
+Author: Matthias Ernst Sachs <matthias.sachs@duke.edu>
+Date:   Thu Jul 4 11:41:00 2019 +0200
+
+    latest version
+
+commit 0129ae828980e74d69a39dd6b3be48c027aa97d7
+Author: Matthias Ernst Sachs <matthias.sachs@duke.edu>
+Date:   Wed Jul 3 16:24:05 2019 +0200
+
+    multiple time stepping for constrained added
+
+commit cc84ec41ec491e260d68b2584acf6d16c1415323
+Merge: 0bfd7d9 dec3686
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Wed Jul 3 16:17:02 2019 +0200
+
+    Merge branch 'feat/classical_constraints' of github.com:cosmo-epfl/i-pi into feat/classical_constraints
+
+commit 0bfd7d91837f2602bda998618fd825305d953b06
+Merge: 0aac04e 81f747d
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Wed Jul 3 16:16:56 2019 +0200
+
+    Merge branch 'master' into feat/classical_constraints
+
+commit 81f747d8834bcc17e078dd864063ac300de5fab7
+Merge: b259865 2ce40fc
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Wed Jul 3 16:16:03 2019 +0200
+
+    Merge pull request #40 from cosmo-epfl/bugfix/trimsim
+    
+    Actually, didn't properly merge!
+
+commit 2ce40fc9a44edcd0a55f7f57f4421daef4b1a3c8
+Merge: 3bba27e b259865
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Wed Jul 3 16:15:49 2019 +0200
+
+    Merge branch 'master' into bugfix/trimsim
+
+commit 3bba27ea9ae6426087217c4ecb03ff597541f57e
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Wed Jul 3 16:13:47 2019 +0200
+
+    Actually, didn't properly merge!
+
+commit b259865536d9e2997f3035904b275e54ae60bee4
+Merge: c95d082 0e813a4
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Wed Jul 3 16:03:13 2019 +0200
+
+    Merge pull request #39 from cosmo-epfl/bugfix/trimsim
+    
+    Bugfix/trimsim
+
+commit c30869b27102b1f40eac903c02841c4b128e9251
+Merge: 1fd7318 c95d082
+Author: Karen Fidanyan <fidanyan@fhi-berlin.mpg.de>
+Date:   Wed Jul 3 10:35:19 2019 +0200
+
+    Merge branch 'master' into geop-fixatoms-Karen
+
+commit 4d4ff777ec2e3567894fa19affcf7097b2dcae3d
+Merge: 2229dd6 c95d082
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Wed Jul 3 15:38:22 2019 +0200
+
+    Merge branch 'master' into bufgfix/mts_queue
+
+commit 1fd731864d50bb993b8e7fd4245f5a5c4ea984b3
+Author: Karen Fidanyan <fidanyan@fhi-berlin.mpg.de>
+Date:   Wed Jul 3 10:33:49 2019 +0200
+
+    Fixed the bug that (inv)hessian was not updated after the BFGS(TRM) step.
+
+commit 0e813a4bf36e7a9467fe96708432f83c852aadec
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Mon Jul 1 00:11:39 2019 +0200
+
+    Trying to fix the NEB code
+
+commit dec3686a662d44fc96eee6fc410d793b41dbe32a
+Author: Matthias Ernst Sachs <matthias.sachs@duke.edu>
+Date:   Sun Jun 30 13:12:27 2019 +0200
+
+    class ConstraintList added
+
+commit 291cfb75b43bcb67983efb2589725f1b73ecfe69
+Author: Karen Fidanyan <fidanyan@fhi-berlin.mpg.de>
+Date:   Fri Jun 28 10:34:28 2019 +0200
+
+    'fixatoms' works for BFGS, BFGSTRM, CG, SD. Added example case fhi-aims/h2o-geop-fixatoms.
+
+commit 891b9775a3918d6bf7a3eb2f3fcc407b81441404
+Merge: 00a5cd2 2ed1328
+Author: Karen Fidanyan <fidanyan@fhi-berlin.mpg.de>
+Date:   Thu Jun 27 17:27:35 2019 +0200
+
+    Merge branch 'fix-geop-forcecalls' into geop-fixatoms-Karen
+
+commit c95d082ed2a4ff28e0163f00ca216f5ee8dbc920
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Thu Jun 27 17:19:35 2019 +0200
+
+      Explicitly untainting forces the transfer_force routine so that (#37)
+    
+    the behavior is back to where it should be. Seems that it was wrong
+      since December 22, 2017. This is the commit that caused it:
+    
+      "commit 67eb6b1e3a9c034069a0014f50168f1033e3a7af
+      Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+      Date:   Sat Aug 26 09:00:01 2017 +0200
+    
+       Added threadlocks to depend object to avoid concurrent tampering of depend chains by different threads
+    
+      diff --git a/ipi/utils/depend.py b/ipi/utils/depend.py
+      --- a/ipi/utils/depend.py
+      +++ b/ipi/utils/depend.py
+      @@ -336,4 +342,1 @@
+      -        self._value = value
+      -        self.taint(taintme=False)
+      -        if manual:
+      -            self.update_man()
+      +            #self.taint(taintme=False)"
+    
+      Because this had a purpose for the threading infrastructure we decided for now not to revert these lines.
+      What we do now could break threading with geop, but we hope this is never used...
+
+commit 2ed1328c40bcd1ac38011594bdbad58f2b7e1866
+Author: Mariana Rossi <mariana.rossi@chem.ox.ac.uk>
+Date:   Thu Jun 27 16:55:26 2019 +0200
+
+      Explicitly untainting forces the transfer_force routine so that
+      the behavior is back to where it should be. Seems that it was wrong
+      since December 22, 2017. This is the commit that caused it:
+    
+      "commit 67eb6b1e3a9c034069a0014f50168f1033e3a7af
+      Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+      Date:   Sat Aug 26 09:00:01 2017 +0200
+    
+       Added threadlocks to depend object to avoid concurrent tampering of depend chains by different threads
+    
+      diff --git a/ipi/utils/depend.py b/ipi/utils/depend.py
+      --- a/ipi/utils/depend.py
+      +++ b/ipi/utils/depend.py
+      @@ -336,4 +342,1 @@
+      -        self._value = value
+      -        self.taint(taintme=False)
+      -        if manual:
+      -            self.update_man()
+      +            #self.taint(taintme=False)"
+    
+      Because this had a purpose for the threading infrastructure we decided for now not to revert these lines.
+      What we do now could break threading with geop, but we hope this is never used...
+
+commit 0aac04efbff9fdbb7d33a0a29d4e3f45845cc40b
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Sat Jun 22 22:20:18 2019 +0200
+
+    Created a stub of a better way of dealing with constraints inputs
+
+commit bf96ef3cb06e9f6ca288e047de4d4fce2052d2cc
+Author: msachs <e.matthias.sachs@gmail.com>
+Date:   Fri Jun 21 15:48:35 2019 +0200
+
+    first working version
+    
+    - Hamiltonian dynamics: energy preservation checked for Rattle and
+    Verlet + geoflow
+    - LD and GLD thermostats appear to work fine (no systematics testing yet
+
+commit 00a5cd27ac1f1880ea386fa4d34b3857bda6f111
+Merge: 83128cd aa25d28
+Author: Karen Fidanyan <fidanyan@fhi-berlin.mpg.de>
+Date:   Wed Jun 19 18:28:46 2019 +0200
+
+    Merge branch 'master' into geop-fixatoms-Karen
+
+commit adabc8a09386f9e1a9597213904b7ae1dc6a1d99
+Merge: 899bd98 ea93ce7
+Author: msachs <e.matthias.sachs@gmail.com>
+Date:   Mon Jun 17 15:55:34 2019 +0200
+
+    Merge remote-tracking branch 'i-pi/master' into feat/classical_constraints
+
+commit 899bd9817410c9d7ba3534e250dc5884692d12ae
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Mon Jun 17 15:38:23 2019 +0200
+
+    1) Added a basic Constraint class,
+    2) and and example on H2O
+
+commit 2229dd60b07584f3537c740e57dce40e9d0558e4
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Sat Jun 15 20:13:15 2019 +0200
+
+    Parentheses!
+
+commit 1926f8909a5b4812f0c5659a6eb208d33ac48373
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Sat Jun 15 20:08:52 2019 +0200
+
+    Added a queue_mts function to make sure all components
+    at a given MTS  level are computed simultaneously
+
+commit e4c7eb764ffbcc6a462969fc3fb2911bd38a6bd4
+Merge: d574325 ea93ce7
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Fri Jun 14 18:26:35 2019 +0200
+
+    Merge remote-tracking branch 'upstream/master'
+
+commit ea93ce74418af6a650b284573caeaad0b7dc1bce
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Fri Jun 14 18:25:24 2019 +0200
+
+    Bugfix/slc example (#34)
+    
+    * added wrap/unwrap possibility to mux-positions
+    
+    * reverting unintentional commit to master for which I actually wanted to make a pull request
+    
+    * Implement holonomic constraints for quasi-centroid constrained
+    propagation of water (Eckart as yet untested)
+    
+    * Revert "Implement holonomic constraints for quasi-centroid constrained"
+    
+    This reverts commit 1582e1868483f76eb2140fd1ad5c866b052e7a03.
+    
+    * Sanitized this example not to use MTS - as that's an advanced feature of SLC
+
+commit efffdd78481ae781df8401a5ef6fd1785d9e4b41
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Fri Jun 14 15:50:35 2019 +0200
+
+    bugfix in timesteps
+
+commit f987c46088328fae59ee150d519cfd24177f39d1
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Fri Jun 14 15:20:01 2019 +0200
+
+    created a barebones class for classical constrained dynamics
+
+commit 8c7c98d9346c58c48744c81a9289fa9970b92d7e
+Author: Michael Willatt <michael.willatt@epfl.ch>
+Date:   Mon May 27 12:39:11 2019 +0200
+
+    Modified planetary.py to reflect the name change of the file that stores
+    the frequency matrix.
+
+commit 109e88d4dc3dc3f679bfdce81a52cf00fcbb5672
+Author: Michael Willatt <michael.willatt@epfl.ch>
+Date:   Wed May 22 15:31:55 2019 +0200
+
+    Given OutputMaker control of saving the frequency matrix, so the
+    simulation can be easily restarted.
+
+commit b79e4f1d616bc5f92327db381c51bd2c0d35d87c
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Wed May 8 19:29:26 2019 +0200
+
+    A few comments and a couple of TODOs
+
+commit d5743252ee64a3e1335a702c3bf57c71c57c7c28
+Author: George Trenins <gt317@cam.ac.uk>
+Date:   Mon Apr 29 19:25:57 2019 +0100
+
+    Revert "Implement holonomic constraints for quasi-centroid constrained"
+    
+    This reverts commit 1582e1868483f76eb2140fd1ad5c866b052e7a03.
+
+commit 1582e1868483f76eb2140fd1ad5c866b052e7a03
+Author: George Trenins <gt317@cam.ac.uk>
+Date:   Mon Apr 29 19:23:11 2019 +0100
+
+    Implement holonomic constraints for quasi-centroid constrained
+    propagation of water (Eckart as yet untested)
+
+commit 8fa777c9a8efb410355985879c6586009030d5fb
+Author: Michael Willatt <michael.willatt@epfl.ch>
+Date:   Thu Apr 25 16:49:54 2019 +0200
+
+    Added a csr and csc sparse matrix implementation for use when scipy is
+    not available. Also added a planetary model README in engine/motion.
+
+commit f79ced237905baf7aacabe3b949f3b66d0fe0949
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Thu Apr 18 16:09:09 2019 +0100
+
+    Inconsequential change to an input file
+
+commit aa25d2879c694ed1993b6687ccfab6f38037f3a2
+Author: Bernat Font Garcia <bernatfontgarcia@gmail.com>
+Date:   Thu Apr 4 18:54:59 2019 +0800
+
+    Fixed minor bug in socket.py (#33)
+
+commit 2c5fb5f96094251cd35fd8d60d4ad8b23abde4e9
+Author: Michael Willatt <michael.willatt@epfl.ch>
+Date:   Thu Mar 28 18:26:36 2019 +0100
+
+    Added Raz Benson's planetary model code
+
+commit 4d3587e536847b08da082cfa13a359facf81e745
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Sat Mar 23 20:31:00 2019 +0100
+
+    Fixed some side-effects of the merge.
+
+commit 98862b6270919511f4efa4996fb69a500a244c89
+Merge: ffaacb9 1aeba98
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Sat Mar 23 20:22:35 2019 +0100
+
+    Merge branch 'master' into feat/kmc
+
+commit e97592d53c3882bef8381fa75af4744ac5718f8e
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Fri Mar 22 11:24:09 2019 +0100
+
+    Improvedoc (#27)
+    
+    *   Very necessary changes to the front-matter of the manual.
+    
+    *   Adding references to the i-PI v2 paper in the manual also.
+    
+    *   more verbose explanation of replay
+    
+    *   File with more bibliography that can be added manually.
+
+commit 1aeba98a24fd9bf5f3cb287b3110fcd67ecef9c6
+Merge: b5b4509 2ace753
+Author: Michele Ceriotti <michele.ceriott@epfl.ch>
+Date:   Thu Mar 21 11:58:27 2019 +0100
+
+    Merge remote-tracking branch 'upstream/master'
+
+commit 2ace75344cf29e8ad541a0cad8a553c8847aa26d
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Thu Mar 21 11:58:08 2019 +0100
+
+    Feat/wraptools (#29)
+    
+    * Implemented coordinate wrapping in mux-positions.py
+
+commit 0cc6d85e335a7722deba15fde597182c3002c667
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Thu Mar 21 10:11:57 2019 +0100
+
+    Bugfix/input pdb (#28)
+    
+    * added wrap/unwrap possibility to mux-positions
+    
+    * reverting unintentional commit to master for which I actually wanted to make a pull request
+    
+    * PDB file missing the units header
+    
+    * Fixed also the regtest init.pdb
+
+commit b5b4509213de8bb51337e400c79bf3db82a2f59a
+Author: glensk <albert.glensk@gmail.com>
+Date:   Thu Mar 14 13:16:50 2019 +0100
+
+    reverting unintentional commit to master for which I actually wanted to make a pull request
+
+commit b469bce029bec85ff3e57ab88f054a25bdddff8d
+Author: glensk <albert.glensk@gmail.com>
+Date:   Thu Mar 14 12:44:33 2019 +0100
+
+    added wrap/unwrap possibility to mux-positions
+
+commit f26051ddf325dc35346619d492e4ae755cea2bc6
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Tue Mar 12 09:33:04 2019 +0100
+
+    Minimal mechanism to handle "unstructured outputs" from motion classes
+    
+    In short, the idea is to have a very simple class to create and manage output files that don't fall within the trajectory/property/checkpoint classification. The same prefix is applied, and closing and flushing is handled by a softexit trigger.
+    
+    * Start by sanitizing the absurd output prefix mechanism.
+    No debug statements not to hurt the sensitivity of future contributors
+    
+    * Cleaned up code, working prefix encapsulation from the outputs I/O
+    
+    * Work in progress
+    
+    * Proof of principle for a distributed floating output mechanism.
+    
+    Also cleaned up a bit output infrastructure. One still needs to see how to deal with multiple systems, if needed.
+    
+    * Delegation for BaseOutput, and a first go at revamping the phonons example
+    
+    *   Starting to bring instanton branch up to date for outputs
+    
+    *   Just relabelling the example in order to make it understandable...
+    
+    *   Clean implementation. Should be safe, was tested for one example and behaves
+      correctly. I left the intermediate temporary files out of this treatment since they are
+      erased by the end of the simulation.
+    
+    * the phonons prefix is now an "infix".
+    
+    * Just minor tweaks - keep default lowercase for output files
+    
+    *   Making paths relative to folder in order to run examples.
+    
+    *   Lower cases default.
+    
+    *   Draft of a README file for the instanton example
+    
+    *   Further cleaning. Still needs to get removal of files from BaseOutput class.
+      Too late today, something odd happening (gave up).
+    
+    * os.remove expects the filename
+    
+    * Quick-fix for using BaseOutput remove() in the instanton tools
+
+commit ffaacb90ba85a55fbb23f93b5bccda50e6191b7c
+Author: Albert <albert.glensk@gmail.com>
+Date:   Tue Mar 12 09:25:34 2019 +0100
+
+    mixed tweaks to kmc branch, and added an example based on n2p2
+    
+    * added an example for the kmc branch which uses n2p2
+    
+    * added an example for the kmc branch which uses n2p2; filenames are similar to other examples
+    
+    * adapted geop tolerances in al6xxx_kmc.py to avid premature softexists
+    
+    * geop now considers verbosity levels of for "Current energy" and "Number of force calls"
+    
+    * merged micheles conv_exit in geop with my includes of verbosity level in geop
+    
+    * adapted al6xxx to use conv_exit of geopt
+    
+    * Update al6xxx_kmc.py
+
+commit 7f511b66846c421a60a55b4efb6173636593666c
+Merge: 027068b 9128fde
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Sun Mar 10 10:21:22 2019 +0100
+
+    Merge branch 'master' into feat/kmc
+
+commit 9128fdec42e06c9bce8147cffd34cc6e59fcbd01
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Sun Mar 10 10:20:15 2019 +0100
+
+    Bugfix/geop exit (#24)
+    
+    * Better implementation of the geop exit_on_convergence mechanism
+    * Verbosity check on continuation info
+    
+    Exiting from geop on convergence is now optional. Otherwise this turns post-convergence geop steps into a no-op
+
+commit 027068b13488e99238175473af2edc7e27dbbdde
+Merge: f7d725d ad3ae62
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Fri Mar 8 13:36:17 2019 +0100
+
+    Merge branch 'master' into feat/kmc
+
+commit ad3ae6282329af5179e3be1605558dc804de2499
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Fri Mar 8 13:32:07 2019 +0100
+
+    the ACF tool now also prints out the error (block avg) in the ACF. (#23)
+    
+    * the ACF tool now also prints out the error (block avg) in the ACF.
+    
+    * accumulates square of the random variable to compute the error.
+    
+    * In case incorrect arguments are provided, the long help is not printed out as it makes it hard to read the error.
+
+commit 8adfa8a6a0bd94264abd0e7a5388df6fa74d8c96
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Mon Mar 4 23:04:29 2019 +0100
+
+    Improve documentation (#20)
+    
+    *   Very necessary changes to the front-matter of the manual.
+    
+    *   Adding references to the i-PI v2 paper in the manual also.
+    
+    *   more verbose explanation of replay
+
+commit f7d725d5fa7ae8298197555828513458f5d29974
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Sun Mar 3 11:28:49 2019 +0100
+
+    Variable time output. All seems to work
+
+commit 32a3cd3ed6d02baffe6c6eeb64399660e9ecf1ef
+Merge: 8a3ee20 79d08eb
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Sun Mar 3 10:52:45 2019 +0100
+
+    Merge branch 'master' into feat/kmc-al6xxx
+
+commit 79d08eb3ae39e5f36c6517c261a4491bfab444c2
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Sun Mar 3 10:48:26 2019 +0100
+
+    use a dobject within ensemble to store the current time (#21)
+    
+    Makes it possible to have non-constant time step recorded.
+    Merging without review because it's minimal and because I need this on another devel branch, hope no unexpected mess happens
+
+commit 8a3ee20b72565ff3427d8d4626fbf94969f65d83
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Sun Mar 3 10:08:05 2019 +0100
+
+    Prints out unwrapped coordinates.
+    
+    Also better heuristics to print out cache files
+
+commit a8c416807c013f31a471c56ba5dd4238f98afe86
+Merge: 4182184 285a8d9
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Sun Mar 3 00:07:04 2019 +0100
+
+    Merge branch 'feat/kmc-al6xxx' of github.com:cosmo-epfl/i-pi into feat/kmc-al6xxx
+
+commit 41821840f95bcc9bd7ba7707d09dff5d35f0b3d0
+Merge: 7f67efd e4922bb
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Sun Mar 3 00:05:27 2019 +0100
+
+    Merge branch 'master' into feat/kmc-al6xxx
+
+commit 285a8d9c9b45a3db29194a888da4099a68e309f8
+Merge: 7f67efd e4922bb
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Fri Mar 1 16:26:06 2019 +0100
+
+    Merge branch 'master' into feat/kmc-al6xxx
+
+commit 7f67efd362b03ddb860520f91f6c31e0e9684c64
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Fri Mar 1 16:23:19 2019 +0100
+
+    Cleaned up comments and a few other little things.
+    
+    Should try and "unwrap" the coordinates
+
+commit 9bdc1de9252e53d874adae531fe4276ac92d0148
+Merge: e4922bb a1a1f46
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Tue Feb 26 11:57:09 2019 +0100
+
+    Merge pull request #19 from mahrossi/tempfix
+    
+    This fix the output of the temperature when len(fixatoms)>0
+
+commit a1a1f46f863bddb0bcea6e5a2f7c1f0c31ef81e2
+Merge: d53545e e4922bb
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Tue Feb 26 11:56:03 2019 +0100
+
+    Merge branch 'master' into tempfix
+
+commit 83128cd7254df9fe2307bc2651dc74c9edf14d0b
+Merge: cac1e9f 9dffd0d
+Author: Karen Fidanyan <fidanyan@fhi-berlin.mpg.de>
+Date:   Wed Feb 20 15:23:49 2019 +0100
+
+    Merge branch 'master' into geop-fixatoms-Karen
+
+commit d53545e8a7e46c81727f4976ed3c1e89e73a67e1
+Author: Yair Litman <litman@thc12.rz-berlin.mpg.de>
+Date:   Wed Feb 13 15:33:38 2019 +0100
+
+    This fix the output of the temperature when len(fixatoms)>0
+
+commit e4922bbe740352f80ff4d9121b4d56b67bd63919
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Wed Feb 13 11:33:46 2019 +0100
+
+      Fixing inputs of examples that still had deprecated motion modes. (#18)
+
+commit 9dffd0de955e535308b9f038dd4e0abb9311d78e
+Author: Jan Hermann <dev@jan.hermann.name>
+Date:   Thu Jan 31 09:10:18 2019 +0100
+
+    streamline installation (#17)
+
+commit 7b55acc74d67fe37a2a354171928d5c10a2010ba
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Sat Jan 26 18:18:20 2019 +0100
+
+    Fixed a bug in the return sign of PLUMED virial.
+
+commit 202a82d1471270e143e5da3a0451a17dfedccd02
+Merge: 85bea10 d7ca53c
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Sat Jan 26 16:40:07 2019 +0100
+
+    Merge branch 'master' into feat/remd_aniso
+
+commit d7ca53cc7e4062a6f57edd5d59b69ddcb4ee6321
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Sat Jan 26 16:38:13 2019 +0100
+
+    Implementation of a temperature ramp. (#14)
+    
+    * Implementation of a temperature ramp.
+    
+    * Added pressure ramp and a bunch of cleanups
+    
+    Also updated manual to contain some docs
+
+commit 85bea10b709828c25b1c0fedec73f9ee1776655c
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Sat Jan 26 15:15:39 2019 +0100
+
+    Added a tentative MTK implementation
+
+commit 96b925207a2e46a7673a61f97e8024902804e78a
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Sat Jan 26 15:10:43 2019 +0100
+
+    Implemented a rudimentary MTK barostat class
+
+commit cac1e9f8ff4e5ffc4620302ed3f956613891ab01
+Author: Karen Fidanyan <fidanyan@fhi-berlin.mpg.de>
+Date:   Tue Jan 22 17:34:23 2019 +0100
+
+    Added exception when all atoms are fixed in BFGS, CG and SD.
+
+commit 2c11c7485bdf1ba7ee022b05c084fff1e25cf569
+Author: Michele Ceriotti <michele.ceriott@epfl.ch>
+Date:   Tue Jan 22 16:10:51 2019 +0100
+
+    Pythonized the NST integrator achieving a speed-up of three!
+    
+    When you do massive REMD simulations, it actually makes a huge difference!
+
+commit 0060691972f757b8d4301d89ae275ced2fc01ed0
+Author: Michele Ceriotti <michele.ceriott@epfl.ch>
+Date:   Tue Jan 22 12:46:28 2019 +0100
+
+    Incorporate stress exchanges into REMD, for variable box
+    
+    Also found a *nasty* bug in the input units convertion for matrices. Nasty.
+
+commit 744d4a0198baf6db13e3e74e4dead2fbb49eb968
+Merge: e273a25 52bf99d
+Author: Karen Fidanyan <fidanyan@fhi-berlin.mpg.de>
+Date:   Thu Jan 17 21:21:36 2019 +0100
+
+    Merge branch 'master' into geop-fixatoms-Karen
+
+commit 6aae65cb818b3ba6d43ae7f13d51017200b97563
+Merge: ef84fca 52bf99d
+Author: Michele Ceriotti <michele.ceriott@epfl.ch>
+Date:   Mon Jan 14 13:48:51 2019 +0100
+
+    Merge branch 'master' into feat/kmc-al6xxx
+
+commit 52bf99dc72dab052ff642711719f3503eb38eadf
+Merge: 66a3551 885db8d
+Author: Mariana Rossi <rossi@fhi-berlin.mpg.de>
+Date:   Wed Jan 9 12:31:42 2019 +0100
+
+    Merge pull request #12 from cosmo-epfl/bugfix/slow_socket
+    
+    Changed some aspects of the distribute heuristics
+
+commit 885db8d937e4ebd238623420771e7a91e8de860d
+Author: Michele Ceriotti <michele.ceriotti@gmail.com>
+Date:   Tue Jan 8 16:02:51 2019 +0100
+
+    Changed some aspects of the distribute heuristics that should fix some problems
+
+commit 66a355197950ef5e68d0550816b2f62a5a2b886b
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Fri Jan 4 09:37:30 2019 +0100
+
+    A faster evaluation for library ff by avoiding threading on serial execution (#8)
+    
+    * A faster evaluation for library ff by avoiding threading on serial execution
+    * Resuscitated the "matching" attrib for ffsocket, that had been lost!
+    * A number of (attempted) optimizations. Most important 80% faster checkpoint store
+    * Removed some more debugging code
+    * Fixed typo in examples
+    * Fixed a bug in softexit registration for non-threaded forcefields
+    * Updated PLUMED interface to the latest GBussi edits
+    * adapted ffquip.wq
+    * REMDSORT gets simpler naming scheme that reflects whatever is chosen for the replicas
+    
+    * MASSIVE RESTRUCTURING OF SOCKETS!
+    
+    This is soooo much easier now. Still have to benchmark if and how much it makes things faster, but it's definitely easier tu understand and maintain
+    
+    * Removed some threadlocks that are now (probably) useless
+    * Some review code merged from elsewhere, Co-Authored-By: ceriottm <ceriottm@users.noreply.github.com>
+    
+    * Makes default timeout for a socket interface be one hour rather than no timeout
+    There can be corner cases in which a calculator gets stuck and it's probably better
+    for i-PI to try and carry on rather than get stuck forever
+    
+    * A bit of additional cleanups. The code seems to pass all regtests.
+    * Implemented here some changes that were suggested on a dead branch
+
+commit 3033908fdd618c130dbc319c6d9b8dc2b6111dd7
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Sun Dec 23 22:27:30 2018 +0100
+
+    Eliminated outdated references to patches and to the original contributors list. (#11)
+    
+    The docs badly needs a revamp! Merge quickly as people keep asking about the obsolete patches
+
+commit e273a254b4d9950ca15a5592d4c99b9611ea3eeb
+Merge: 2d8d9fe 8f5ae2c
+Author: Karen Fidanyan <fidanyan@fhi-berlin.mpg.de>
+Date:   Fri Dec 7 12:02:51 2018 +0100
+
+    Merge branch 'master' of https://github.com/mahrossi/i-pi into geop-fixatoms-Karen
+
+commit 2d8d9fe873cd6d87e3256993ffec30ab04c415e4
+Author: Karen Fidanyan <fidanyan@fhi-berlin.mpg.de>
+Date:   Fri Dec 7 11:56:26 2018 +0100
+
+    BFGS works with fixatoms
+
+commit 8f5ae2c846e7a58ed3105a71f604e66f4eb98148
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Tue Dec 4 14:48:05 2018 +0100
+
+    Feat/gleacf (#10)
+    
+    * Generalizes the deconvolution process to NMGLEs as well.
+    * Also changed a rather confusing option for the time step to a scaling factor of time.
+    * Changed the names of the options and their descriptions in argparse
+    * Cleaned up the gleacf tool. Increased the verbosity of the arg parse options. Also allows one to manually provide A and C matrices. And updated the example and their READMEs.
+    * raises an exception if neither the i-pi xml not the A matrix is provided.
+    
+    * Tested the manual version of providing the A matrix with a white noise thermostat. Also provided instructions in the README.
+    * 1) States that in case of a NM_GLE only the centroid thermostat is used for the deconv as the input spectrum is assumed to come from the dynamics of the centroid.
+    2) the case of langevin thermostat was extended to pile_l.
+    3) throws an exception if an appropriate GLE thermostat is not found.
+    
+    * changed the font of command line options from big caps to small caps.
+
+commit 5f0cf1da92c43a47b23cfb59e4d8648fe6555add
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Sun Dec 2 22:40:16 2018 +0100
+
+    Feat/ffquip (#9)
+    
+    A fully pythonic FFQUIP which gives access to arbitrary interaction potentials that are implemented in QUIP. Requires ASE and QUIPPY.
+    
+    * added an example for OH morse potential
+    
+    * Passes QUIP parameters as separate fields, updated the examples.
+    
+    * uses the unit conversion defined in i-pi to change between internal and QUIP units. Also defined a new one for forces.
+
+commit 76694ead155b26bee9e5e06119878023abaeb5eb
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Fri Nov 23 10:27:39 2018 +0100
+
+    added ests for SC ratio of partition function estimators
+
+commit 795c6a16c35cdeacac6779ffe0f1709a2fba4607
+Author: Venkat Kapil <venkat.kapil@gmail.com>
+Date:   Thu Nov 22 11:46:21 2018 +0100
+
+    added the masses of isotopes of common atomic species to units. They can now be read directly from xyz files.
+
+commit ef84fca6f36687c27d650c2ba063831c74c8ab8c
+Author: glensk <albert.glensk@gmail.com>
+Date:   Wed Nov 21 16:20:50 2018 +0100
+
+    added files for al6xxx_kmc in ipi/engine and ipi/motion and adapted geop.py and motion.py to be used with kmc version of ipi
+
+commit bcd7ffa7d433229c2dffaa32386b87b6ca918567
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Fri Nov 9 09:15:47 2018 +0100
+
+    Replica exchange + metadynamics (#3)
+    
+    REMD+METAD implementation.
+    =========================
+    This requires a rather complicated input and combination with multiple PLUMED inputs, but this is not dissimilar to other implementations. It's just a technically complex methodology.
+    Examples are given that should make it clear how this is set up, but probably this is one good candidate for an "advanced tutorial" in a future better_docs effort
+    
+    * Removed some stray calls to beads.vpath
+    * Created an example with GLE thermostat
+    * Rescale GLE DOFs. Should fix a bug in main
+    * Added examples of different REMD scenarios
+    * Include GLE and open paths
+    * Use symlinks rather than copies for the (rather heavy) zundel data files
+    * First implementation of selective metad execution, to implement REMD+METAD
+    * Fixed a silly error in plumed input throwing uninformative segfault Should liaise with PLUMED devs to make sure errors are propagated meaningfully
+    * Added a MultiSmotion so we can combine REMD and MetaD.
+    * Fixed a bug that would output more and more smotion items in the multi restart
+    * A simple change to the poll routine can reduce latency by a factor of 2!!!
+    * Trying to speed up REMD overhead.
+    * Removed some debug code. REMD is now faster with reduced latency
+    * Applied style corrections addressing Ondrej's comments
+    * Fixed a sync problem between i-PI an PLUMED
+
+commit 9f915416f04acf1bac9569a528e6e3f14e2f30ba
+Author: Ondrej Marsalek <ondrej.marsalek@gmail.com>
+Date:   Wed Nov 7 10:34:05 2018 +0100
+
+    Remove .bak file we seem to have missed (#6)
+
+commit f5ad53306d7cf1b335ca87e3bb370185b11d0443
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Tue Nov 6 22:16:38 2018 +0100
+
+    A simple change to the poll routine can reduce latency by 2x (#4)
+    
+    * A simple change to the poll routine can reduce latency by a factor of 2!!!
+    
+    * Removed trailing whitespace (just to trigger a rebuild...)
+    
+    * Use context managers to use threadlocks in forcefields.py
+
+commit a33a1f279927ba28e60ba86f80343bef8d523ed5
+Merge: 9ea9619 266b7d4
+Author: Michele Ceriotti <ceriottm@users.noreply.github.com>
+Date:   Tue Nov 6 20:25:14 2018 +0100
+
+    Merge pull request #5 from OndrejMarsalek/pepper
+    
+    One pepper pass
+
+commit 266b7d4cdb7700693566ed0cc40361248f47407b
+Author: Ondrej Marsalek <ondrej.marsalek@gmail.com>
+Date:   Tue Nov 6 15:33:20 2018 +0100
+
+    One pepper pass
+
+commit 9ea96199e1b93baaf5bc4ec4563cec367d434be3
+Merge: 94456a2 03c99f2
+Author: Ondrej Marsalek <ondrej.marsalek@gmail.com>
+Date:   Sun Nov 4 17:21:38 2018 +0100
+
+    Merge pull request #2 from OndrejMarsalek/circleci
+    
+    Add continuous integration using CircleCI
+
+commit 03c99f251a3f3b3feaaaa1e42666d376c6eb8afd
+Author: Ondrej Marsalek <ondrej.marsalek@gmail.com>
+Date:   Fri Nov 2 23:47:59 2018 +0100
+
+    Replace yield tests with parametrization
+    
+    Pytest warns that yield tests are deprecated, so here I replaced them
+    with parametrized tests, which is the pytest way of doing it. As a
+    bonus, this also apparently got rid of a bunch of warnings from inside
+    pytest itself.
+
+commit 051eb9ff587d2f893246d450b775a3e857b2ec7e
+Author: Karen Fidanyan <fidanyan@fhi-berlin.mpg.de>
+Date:   Fri Nov 2 16:37:25 2018 +0100
+
+    The first commit: CG works, BFGS does not.
+
+commit 22499236fb7d3e88ce516212457e61d65081d110
+Author: Ondrej Marsalek <ondrej.marsalek@gmail.com>
+Date:   Fri Nov 2 14:30:17 2018 +0100
+
+    Set up basic CircleCI
+
+commit b50206298b6339d1130b362497c7d2cbde0c6907
+Author: Ondrej Marsalek <ondrej.marsalek@gmail.com>
+Date:   Fri Nov 2 14:28:07 2018 +0100
+
+    Skip manual build tests if LaTeX is not available
+
+commit f5b4be783246e93a1cc001e6d0328f3b37dc9216
+Author: Ondrej Marsalek <ondrej.marsalek@gmail.com>
+Date:   Fri Nov 2 14:19:47 2018 +0100
+
+    Get rid of dependence on nose
+
+commit 94456a20d4c3c63d2d0e3e7932fd34201a7a4496
+Author: Ondrej Marsalek <ondrej.marsalek@gmail.com>
+Date:   Thu Nov 1 20:09:59 2018 +0100
+
+    i-PI version 2.0.0
+    
+    As archived with the publication: https://doi.org/10.1016/j.cpc.2018.09.020
+
+commit 7e9661dd90bccbe1554978d736f069983473ec56
+Author: Ondrej Marsalek <ondrej.marsalek@gmail.com>
+Date:   Thu Nov 1 14:30:06 2018 +0100
+
+    Changes from the v1 branch of the original repo
+
+commit 465422f86d77a99f457df4d562ef7b87b7b87915
+Author: Ondrej Marsalek <ondrej.marsalek@gmail.com>
+Date:   Thu Nov 1 14:27:22 2018 +0100
+
+    i-PI version 1.0.0
+    
+    As archived with the publication: http://dx.doi.org/10.1016/j.cpc.2013.10.027

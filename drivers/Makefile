@@ -25,7 +25,7 @@ FLAGS=-g -O3 -Wall
 CFLAGS=$(FLAGS)
 FFLAGS=$(FLAGS) -ffree-line-length-none -ffixed-line-length-none -Wno-maybe-uninitialized
 
-MODULES=distance.f90 LJ.f90 SG.f90 pes/pswater.f90 pes/LEPS.f90 LJPolymer.f90 pes/efield.f90 pes/eckart.f90 pes/MB.f90
+MODULES=distance.f90 LJ.f90 SG.f90 pes/pswater.f90 pes/LEPS.f90 LJPolymer.f90 pes/efield.f90 pes/eckart.f90 pes/doublewell.f90 pes/doublewell_1D.f90 pes/MB.f90
 PES=pes/zundel.f pes/morse.f pes/qtip4pf.f pes/utility.f pes/ch52008.f
 OBJECTS=$(MODULES:%.f90=%.o) $(PES:%.f=%.o)
 FC=gfortran

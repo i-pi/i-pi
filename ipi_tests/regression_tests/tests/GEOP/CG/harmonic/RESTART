@@ -1,0 +1,49 @@
+<simulation verbosity='medium' mode='static'>
+   <output prefix='simulation'>
+      <properties shape='(2)'> [ step, potential{electronvolt} ] </properties>
+      <trajectory filename='pos_c'>x_centroid</trajectory>
+      <trajectory filename='frc_c'>f_centroid</trajectory>
+   </output>
+   <step>2</step>
+   <total_steps>10</total_steps>
+   <ffsocket mode='unix' name='harm3d'>
+   </ffsocket>
+   <system>
+      <forces>
+         <force forcefield='harm3d'>
+         </force>
+      </forces>
+      <ensemble>
+         <temperature>  1.00000000e+00</temperature>
+         <stress shape='(3, 3)'>
+          [  -1.00000000e+00,  -1.00000000e+00,  -1.00000000e+00,  -1.00000000e+00,  -1.00000000e+00, 
+             -1.00000000e+00,  -1.00000000e+00,  -1.00000000e+00,  -1.00000000e+00 ]
+         </stress>
+         <hamiltonian_weights shape='(1)'> [   1.00000000e+00 ] </hamiltonian_weights>
+      </ensemble>
+      <motion mode='minimize'>
+         <optimizer mode='cg'>
+            <ls_options>
+               <step>  0.00000000e+00</step>
+            </ls_options>
+            <tolerances>
+               <energy>  5.00000000e-06</energy>
+               <force>  5.00000000e-06</force>
+               <position>  5.00000000e-06</position>
+            </tolerances>
+            <old_force shape='(1, 3)'> [  -1.06274557e-12,   5.31386505e-13,  -1.06277301e-12 ] </old_force>
+            <old_direction shape='(1, 3)'> [  -1.06274557e-12,   5.31386505e-13,  -1.06277301e-12 ] </old_direction>
+         </optimizer>
+      </motion>
+      <beads natoms='1' nbeads='1'>
+         <q shape='(1, 3)'> [   8.60089777e-12,  -4.30055991e-12,   8.60111982e-12 ] </q>
+         <p shape='(1, 3)'> [   0.00000000e+00,   0.00000000e+00,   0.00000000e+00 ] </p>
+         <m shape='(1)'> [   1.83736223e+03 ] </m>
+         <names shape='(1)'> [ H ] </names>
+      </beads>
+      <cell shape='(3, 3)'>
+       [   1.88972610e+02,   1.15712351e-14,   1.15712351e-14,   0.00000000e+00,   1.88972610e+02, 
+           1.15712351e-14,   0.00000000e+00,   0.00000000e+00,   1.88972610e+02 ]
+      </cell>
+   </system>
+</simulation>

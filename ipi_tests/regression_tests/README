@@ -1,4 +1,11 @@
-See documentaion of how to run the regression tests by running:
+----------------------------------------------------------------------------------
+                   R E G R E S S I O N   T E S T S
+----------------------------------------------------------------------------------
+
+INFORMATION ON CREATING NEW REGRESSION TESTS
+----------------------------------------------------------------------------------
+
+See the documentaion of how to run the regression tests by running:
 
    "python test_run.py -h"
 
@@ -7,8 +14,19 @@ To add a new regression test please provide:
    - input.xml (and all the files required by it)
 
    - driver.txt specifing  "<driver> <address> <port> <unix/inet> " (see existing examples)
+	you should run the driver with the command
+ 
+	"i-pi-driver -m <driver> -h <address> -u -o <possible options>" if unix 
 
    - a reference output with the name 'ref_simulation.out'
+
+   - a set of reference trajectory files
+	-  ref_simulation.pos_c.xyz : the position of the centroid with stride=1 
+	-  ref_simulation.pos_0.xyz : the position of the 1st bead with stride=1 if nbeads>1 (use the tag: bead=0!)
+	-  ref_simulation.frc_c.xyz : the force on the centroid with stride=1 
+	-  ref_simulation.frc_0.xyz : the force on the 1st bead with stride=1 if nbeads>1 (use the tag: bead=0!)
+
+
 
 Important: 
 
@@ -18,3 +36,75 @@ Important:
 
     "git add -f ref_simulation.out"
 
+
+
+---------------------------------------------------------------------------
+INFORMATION ABOUT THE CURRENTLY INCLUDED FEATURES IN THE REGRESSION TESTS
+---------------------------------------------------------------------------
+
+
+Thermostats and NVT dynamics  
+----------------------------------------------------------------------
+The following thermostats have been tested against an in-house independent
+code by Yair Litman (2020) and hence have been included in the regression 
+test analysis of i-pi. 
+	- Langevin 
+	- PILE-local (pile_l)
+	- PILE-global (pile_g)
+	- Stochastic Velocity Rescaling (SVR)
+	 
+Note, that these thermostats are tested with single bead and multiple bead
+system settings, too. 
+
+
+NVE dynamics 
+---------------------------------------------------------------------- 
+The classical and multibead NVE dynamics have been tested against the independent
+implementation of Yair Litman (2020).
+
+
+
+Geometry optimizations with FHI-aims against ASE:
+----------------------------------------------------------------------
+Note, that the results and accuracy of the geometry optimization routines have 
+been tested against the ASE using FHI-aims and hartree fock with a strict 
+convergence criteria. 
+
+The following routines are tested and give perfect agreement:
+	- BFGS
+	- L-BFGS
+	- BFGS-TRM
+	- CG: there is an issue about the line search of the CG routine, the
+	      function needs to be evaluated ~100 times, while with ASE , the routine
+	      converges after 7 steps. Needs to be checked further. Final geometry agrees
+	      well enough with the ASE geometry, but the linesearch needs to be checked and
+	      optimized. 
+
+Partially tested, but problematic routines with FHI-aims against ASE:
+	- SD: could not be tested against ASE, however, it gives the same final
+optimized geometry as the BFGS routines. (takes a very long time becasue of
+the line search.)
+	
+
+
+
+Tested Thermostats and NVT dynamics  
+----------------------------------------------------------------------
+The following thermostats have been tested against an in-house independent
+code by Yair Litman (2020) and hence have been included in the regression 
+test analysis of i-pi. 
+	- Langevin 
+	- PILE-local (pile_l)
+	- PILE-global (pile_g)
+	- Stochastic Velocity Rescaling (SVR)
+	 
+
+Tested Instanton geometries and Hessian matrices
+----------------------------------------------------------------------
+The instanton functionalities are tested through the keyword 'extra' in the
+regression tests. With this option being activated pytest is looking for the
+existing ref_simulation files and if it finds a Hessian it is going to test
+the new simulation results against the refrence file.
+
+The instanton geometries and Hessians have been tested against Yair Litman's
+in-the-house independent implementation (2020).

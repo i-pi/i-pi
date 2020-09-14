@@ -148,11 +148,15 @@
                   vstyle = 22
                ELSEIF (trim(cmdbuffer) == "MB") THEN
                   vstyle = 23
+               ELSEIF (trim(cmdbuffer) == "doublewell") THEN
+                  vstyle = 25
+               ELSEIF (trim(cmdbuffer) == "doublewell_1D") THEN
+                  vstyle = 24
                ELSEIF (trim(cmdbuffer) == "gas") THEN
                   vstyle = 0  ! ideal gas
                ELSE
                   WRITE(*,*) " Unrecognized potential type ", trim(cmdbuffer)
-                  WRITE(*,*) " Use -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB] "
+                  WRITE(*,*) " Use -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D] "
                   STOP "ENDED"
                ENDIF
             ELSEIF (ccmd == 4) THEN
@@ -280,7 +284,7 @@
             WRITE(*,*) "Error:  incorrect initialization string included for qtip4pf-efield. &
      &    Provide the three components of the electric field in V/nm"
             STOP "ENDED"
-      ELSE
+         ELSE
             ! We take in an electric field in volts / nm.This must be converted 
             ! to Eh / (e a0).
             do i=1,3
@@ -331,6 +335,20 @@
             STOP "ENDED" ! Note that if initialization from the wrapper is implemented this exit should be removed.
          ENDIF
          ks = vpars(1)
+         isinit = .true.
+
+      ELSEIF (25 == vstyle) THEN !doublewell
+         IF ( par_count /= 0 ) THEN
+                 WRITE(*,*) "Error: no initialization string needed for doublewell."
+            STOP "ENDED" 
+         ENDIF   
+         isinit = .true.
+
+      ELSEIF (24 == vstyle) THEN !doublewell_1D
+         IF ( par_count /= 0 ) THEN
+                 WRITE(*,*) "Error: no initialization string needed for 1-dimensional doublewell."
+            STOP "ENDED" 
+         ENDIF   
          isinit = .true.
       ENDIF
 
@@ -566,6 +584,12 @@
                ENDIF
                !atoms = atoms*0.52917721d0  !Change to angstrom
                CALL get_MB(nat,vpars(1), atoms, pot, forces)
+            ELSEIF (vstyle == 25) THEN ! qQ
+               CALL getdoublewell(nat, atoms, pot, forces)
+
+            ELSEIF (vstyle == 24) THEN ! qQ
+               CALL getdoublewell_1D(nat, atoms, pot, forces)
+
             ELSE
                IF ((allocated(n_list) .neqv. .true.)) THEN
                   IF (verbose > 0) WRITE(*,*) " Allocating neighbour lists."
@@ -648,7 +672,7 @@
     CONTAINS
       SUBROUTINE helpmessage
          ! Help banner
-         WRITE(*,*) " SYNTAX: driver.x [-u] -h hostname -p port -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB] "
+         WRITE(*,*) " SYNTAX: driver.x [-u] -h hostname -p port -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D] "
          WRITE(*,*) "         -o 'comma_separated_parameters' [-v] "
          WRITE(*,*) ""
          WRITE(*,*) " For LJ potential use -o sigma,epsilon,cutoff "

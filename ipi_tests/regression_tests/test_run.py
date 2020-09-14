@@ -1,40 +1,52 @@
 import subprocess as sp
 from pathlib import Path
 import pytest
-import time
-import os
-import shutil
-import tempfile
-from ipi_tests.regression_tests.runstools import Runner, get_info_test
 import argparse
 from argparse import RawTextHelpFormatter
+import time
+from ipi_tests.regression_tests.runstools import Runner, get_info_test
 
 
 """ Run regression test """
 
-main_folder = Path(__file__).parent
+regtests_folder = Path(__file__).resolve().parent / "tests"
 call_ipi = "i-pi input.xml"
 call_driver = "i-pi-driver"
 
-reg_tests = get_info_test(main_folder)
+reg_tests = get_info_test(regtests_folder)
 
 
-@pytest.mark.parametrize("test_info", reg_tests)
-def test_cmd(test_info):
+@pytest.mark.parametrize("regtest", reg_tests)
+def test_regtest(regtest):
     """ Intermediate function to run the regression test (by calling Runner) and makes
     possible to parametrize the arguments
     """
+    t0 = time.time()
+    nid = reg_tests.index(regtest)
+    # print('nid=',nid)
     runner = Runner(Path("."))
 
     cmd2 = list()
-    for t in test_info[1]:
-        if t[3] == "unix":
-            cmd2.append(call_driver + " -m {} -h {} -u ".format(t[0], t[1]))
-        elif t[3] == "inet":
-            cmd2.append(call_driver + " -m {} -h {} -p {}".format(t[0], t[1], t[2]))
-        else:
-            raise ValueError("Driver mode has to be either unix or inet")
-    runner._run(call_ipi, cmd2, test_info[0])
+    # for t in regtest[1]:
+    if regtest[1]["socket_mode"] == "unix":
+        cmd2.append(
+            call_driver
+            + " -m {} -h {} -u ".format(regtest[1]["model"], regtest[1]["address_name"])
+        )
+    elif regtest[1]["socket_mode"] == "inet":
+        cmd2.append(
+            call_driver
+            + " -m {} -h {} -p {}".format(
+                regtest[1]["model"],
+                regtest[1]["address_name"],
+                regtest[1]["port_number"],
+            )
+        )
+    else:
+        raise ValueError("Driver mode has to be either unix or inet")
+
+    runner._run(test_info[0], nid)
+    print("Time for this regtest: {:4.1f} s \n".format(time.time() - t0))
 
 
 if __name__ == "__main__":
@@ -54,18 +66,31 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "-p", "--path", type=str, default=None, help="Folder of the example to test"
+        "-f",
+        "--folder",
+        type=str,
+        default=None,
+        help="Folder of the regressions to test",
+    )
+    parser.add_argument(
+        "--test_all",
+        action="store_true",
+        help="Shall we test all of the regression-examples ?",
     )
     args = parser.parse_args()
 
     try:
-        path = main_folder / args.path
+        path = regtests_folder / args.folder
         reg_tests = get_info_test(path)
+        print("We will run only:")
+        for i in reg_tests:
+            print(i[0])
+        print("")
     except:
-        print("We will run all the tests")
-        reg_tests = get_info_test(main_folder)
+        print("We will run all available regression tests")
+        reg_tests = get_info_test(regtests_folder)
 
     print("We have found {} reg_tests".format(len(reg_tests)))
     for test_info in reg_tests:
         print("Running {} ".format(test_info[0]))
-        test_cmd(test_info)
+        test_regtest(test_info)
