@@ -307,11 +307,13 @@ class InputMotionBase(Input):
                 **self.optimizer.fetch()
             )
         elif self.mode.fetch() == "neb":
-            sc = NEBMover(
-                fixcom=self.fixcom.fetch(),
-                fixatoms=self.fixatoms.fetch(),
-                **self.neb_optimizer.fetch()
-            )
+
+            raise ValueError("The nudged elastic band calculation has been temporarily disabled until further bug-fixes.")
+            #sc = NEBMover(
+            #    fixcom=self.fixcom.fetch(),
+            #    fixatoms=self.fixatoms.fetch(),
+            #    **self.neb_optimizer.fetch()
+            #)
         elif self.mode.fetch() == "dynamics":
             sc = Dynamics(
                 fixcom=self.fixcom.fetch(),
