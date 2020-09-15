@@ -322,7 +322,7 @@ class Runner(object):
         reference file provided
 
         The checked 'numpy-accessible' files are collected in the files_to_check.txt
-        where there filetype is also specified.
+        where there filetype is specified, too.
         """
 
         for ii, refname in enumerate(self.files):
