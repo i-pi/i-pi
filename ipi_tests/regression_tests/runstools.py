@@ -148,11 +148,11 @@ class Runner(object):
             cwd: folder where all the original regression tests are stored
             options: a list that contains which trajectory files are  checked in the regression test
         """
+
         cwd = info[0]
-
-
         self.files = []
         self.forms = []
+
         try:
             # Create temp file and copy files
             self.tmp_dir = Path(tempfile.mkdtemp())
