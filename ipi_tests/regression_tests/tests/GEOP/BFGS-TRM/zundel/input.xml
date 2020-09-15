@@ -7,7 +7,7 @@
    <prng>
 	<seed> 32342 </seed>
    </prng>
-   <total_steps> 100 </total_steps>
+   <total_steps> 10 </total_steps>
    <ffsocket name="zundel" mode="unix">
        <address> localhost </address> 
    </ffsocket>

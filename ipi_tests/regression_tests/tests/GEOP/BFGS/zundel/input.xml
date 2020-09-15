@@ -4,7 +4,7 @@
     <trajectory stride="1" filename="pos_c" format="xyz"> x_centroid </trajectory>
     <trajectory stride="1" filename="frc_c" format="xyz"> f_centroid </trajectory>
    </output>
-   <total_steps> 100 </total_steps>
+   <total_steps> 10 </total_steps>
    <ffsocket name="zundel" mode="unix">
        <address> localhost </address> 
    </ffsocket>
