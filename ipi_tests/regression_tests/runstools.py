@@ -101,7 +101,6 @@ def get_info_test(parent):
             try:
                 driver_info = get_driver_info(ff)
                 reg_tests.append([ff, driver_info])
-            #       reg_tests.append(ff)
             except FileNotFoundError:
                 raise FileNotFoundError(
                     "({}) An input.xml file was found but a driver.txt not".format(ff)
@@ -141,7 +140,7 @@ class Runner(object):
         self.check_numpy_output = check_numpy_output
         self.check_xyz_output = check_xyz_output
 
-    def _run(self, cwd, nid, options=[]):
+    def _run(self, info, nid, options=[]):
         """ This function tries to run the example in a tmp folder and
         checks if ipi has ended without error.
         After that the output is checked against a reference
@@ -149,6 +148,8 @@ class Runner(object):
             cwd: folder where all the original regression tests are stored
             options: a list that contains which trajectory files are  checked in the regression test
         """
+        cwd = info[0]
+
 
         self.files = []
         self.forms = []
@@ -160,7 +161,6 @@ class Runner(object):
             files = os.listdir(self.parent / cwd)
             for f in files:
                 shutil.copy(self.parent / cwd / f, self.tmp_dir)
-            # copy_tree(str(cwd), str(self.tmp_dir))
             driver_info = get_driver_info(self.tmp_dir)
 
             # Run i-pi
@@ -215,17 +215,6 @@ class Runner(object):
                     self.files.append(line.split()[0])
                     self.forms.append(line.split()[1])
 
-            # print(self.files)
-            # print(self.forms)
-
-            # Checking the input that the minimally required files are calculated
-            #
-            #                    raise IOError(
-            #                        "Please calculate and provide a reference at least for the following quantities in {}:\n {}".format(
-            #                            str(self.parent / cwd), "\n".join(missing[:])
-            #                        )
-            #                    )
-
             # Run drivers by defining cmd2 which will be called, eventually
             flag_indeces = list()
 
@@ -270,14 +259,12 @@ class Runner(object):
                                     client[ll], ",".join(client[ll + 1 :][:])
                                 )
                             )
-                    # print("cmd:", cmd2[0] + cmd2[1])
                     cmd += cmd2[1]
 
                 driver.append(
                     sp.Popen(cmd, cwd=(cwd), shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
                 )
 
-                # print("cmd:", cmd)
             # Check errors
             ipi_error = ipi.communicate(timeout=120)[1].decode("ascii")
             if ipi_error != "":
