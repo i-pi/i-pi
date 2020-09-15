@@ -331,7 +331,7 @@ class Runner(object):
                 test_output = np.loadtxt(self.tmp_dir / fname)
 
                 try:
-                    np.testing.assert_allclose(test_output, ref_output)
+                    np.testing.assert_allclose(test_output, ref_output, rtol = 1.0e-7, atol = 1.0e-20)
                     print("No anomaly during the regtest for {}".format(refname))
                 except AssertionError:
                     raise AssertionError(
@@ -400,7 +400,7 @@ class Runner(object):
                     test_xyz = np.array(testt)
 
                 try:
-                    np.testing.assert_allclose(test_xyz, ref_xyz)
+                    np.testing.assert_allclose(test_xyz, ref_xyz, rtol = 1.0e-7, atol = 1.0e-20)
                     print("No anomaly during the regtest for {}".format(refname))
                 except AssertionError:
                     raise AssertionError(
