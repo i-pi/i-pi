@@ -74,7 +74,7 @@ The following routines are tested and give perfect agreement:
 	- BFGS
 	- L-BFGS
 	- BFGS-TRM
-	- CG: there is an issue about the line search of the CG routine, the
+	- CG: there is an issue about the line-search of the CG routine, the
 	      function needs to be evaluated ~100 times, while with ASE , the routine
 	      converges after 7 steps. Needs to be checked further. Final geometry agrees
 	      well enough with the ASE geometry, but the linesearch needs to be checked and
