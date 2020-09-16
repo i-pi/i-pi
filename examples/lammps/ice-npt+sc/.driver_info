@@ -1,1 +1,2 @@
-driver harm3d 
+driver harm3d
+flags -o 2
