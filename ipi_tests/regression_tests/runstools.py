@@ -256,12 +256,6 @@ class Runner(object):
                     sp.Popen(cmd, cwd=(cwd), shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
                 )
 
-            # Check errors
-            ipi_error = ipi.communicate(timeout=180)[1].decode("ascii")
-            if ipi_error != "":
-                print(ipi_error)
-            assert "" == ipi_error
-
         except sp.TimeoutExpired:
             raise RuntimeError(
                 "Time is out. Aborted during {} test. \
@@ -281,8 +275,14 @@ class Runner(object):
         except:
             pass
 
+        error = False
+        # Check for ipi errors
         if self.check_error:
-            self._check_error(ipi)
+            error = self._check_error(ipi)
+        if error:
+            self.check_numpy_output = False
+            self.check_xyz_output = False
+
         if self.check_numpy_output:
             self._check_numpy_output(cwd)
         if self.check_xyz_output:
@@ -291,9 +291,13 @@ class Runner(object):
     def _check_error(self, ipi):
         """ This function checks if ipi has exited with errors"""
 
+        error = False
         ipi_error = ipi.communicate(timeout=60)[1].decode("ascii")
-        print(ipi_error)
+        if ipi_error != "":
+            print("IPI ERROR OCCURED: {}".format(ipi_error))
+            error = True
         assert "" == ipi_error
+        return error
 
     def _check_numpy_output(self, cwd):
         """ This function checks if the numpy-accessible datafiles are 'all_close' to the
@@ -328,10 +332,15 @@ class Runner(object):
                     print("No anomaly during the regtest for {}".format(refname))
                 except AssertionError:
                     raise AssertionError(
-                        "Anomaly: Disagreement between reference and {} in {}".format(
+                        "ANOMALY: Disagreement between reference and {} in {}".format(
                             fname, str(self.parent)
                         )
                     )
+
+    #                    print("ANOMALY: Disagreement between reference and {} in {}".format(
+    #                            fname, str(self.parent)
+    #                        )
+    #                    )
 
     def _check_xyz_output(self, cwd):
         """ This function checks if the ref_simulation.XXXXX.xyz files are 'all_close'
@@ -394,15 +403,21 @@ class Runner(object):
 
                 try:
                     np.testing.assert_allclose(
-                        test_xyz, ref_xyz, rtol=1.0e-7, atol=1.0e-15
+                        test_xyz, ref_xyz, rtol=1.0e-7, atol=1.0e-8
                     )
                     print("No anomaly during the regtest for {}".format(refname))
                 except AssertionError:
                     raise AssertionError(
-                        "Anomaly: Disagreement between reference and {} in {}".format(
+                        "ANOMALY: Disagreement between reference and {} in {}".format(
                             fname, str(self.parent / cwd)
                         )
                     )
+
+
+#                    print("ANOMALY: Disagreement between reference and {} in {}".format(
+#                            fname, str(self.parent / cwd)
+#                        )
+#                    )
 
 
 #    def _check_extra_output(self, cwd):
