@@ -24,25 +24,6 @@ def test_regtest(regtest):
     t0 = time.time()
     nid = reg_tests.index(regtest)
     runner = Runner(Path("."))
-
-    cmd2 = list()
-    if regtest[1]["socket_mode"] == "unix":
-        cmd2.append(
-            call_driver
-            + " -m {} -h {} -u ".format(regtest[1]["model"], regtest[1]["address_name"])
-        )
-    elif regtest[1]["socket_mode"] == "inet":
-        cmd2.append(
-            call_driver
-            + " -m {} -h {} -p {}".format(
-                regtest[1]["model"],
-                regtest[1]["address_name"],
-                regtest[1]["port_number"],
-            )
-        )
-    else:
-        raise ValueError("Driver mode has to be either unix or inet")
-
     runner._run(regtest, nid)
     print("Time for this regtest: {:4.1f} s \n".format(time.time() - t0))
 

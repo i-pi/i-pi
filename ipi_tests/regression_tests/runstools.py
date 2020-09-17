@@ -122,7 +122,7 @@ class Runner(object):
     def __init__(
         self,
         parent,
-        call_ipi="i-pi input.xml",
+        call_ipi="i-pi input.xml > ipi.log",
         call_driver="i-pi-driver",
         check_errors=True,
         check_numpy_output=True,
@@ -140,13 +140,12 @@ class Runner(object):
         self.check_numpy_output = check_numpy_output
         self.check_xyz_output = check_xyz_output
 
-    def _run(self, info, nid, options=[]):
+    def _run(self, info, nid):
         """ This function tries to run the example in a tmp folder and
         checks if ipi has ended without error.
         After that the output is checked against a reference
         arguments:
             cwd: folder where all the original regression tests are stored
-            options: a list that contains which trajectory files are  checked in the regression test
         """
 
         cwd = info[0]
@@ -162,16 +161,6 @@ class Runner(object):
             for f in files:
                 shutil.copy(self.parent / cwd / f, self.tmp_dir)
             driver_info = get_driver_info(self.tmp_dir)
-
-            # Run i-pi
-            ipi = sp.Popen(
-                self.call_ipi,
-                cwd=(self.tmp_dir),
-                shell=True,
-                stdout=sp.PIPE,
-                stderr=sp.PIPE,
-            )
-            time.sleep(2)
 
             # Creating the clients list
             input_name = self.tmp_dir / "input.xml"
@@ -207,6 +196,17 @@ class Runner(object):
                         clients[s].extend(v)
 
             tree.write(open(output_name, "wb"))
+            time.sleep(2)
+
+            # Run i-pi
+            ipi = sp.Popen(
+                self.call_ipi,
+                cwd=(self.tmp_dir),
+                shell=True,
+                stdout=sp.PIPE,
+                stderr=sp.PIPE,
+            )
+            time.sleep(2)
 
             with open(self.tmp_dir / "files_to_check.txt") as f:
                 lines = f.readlines()
@@ -222,17 +222,9 @@ class Runner(object):
             cmd2 = list()
             for client in clients:
                 if client[3] == "unix":
-                    if (
-                        client[0] == "harm3d"
-                        or client[0] == "doublewell"
-                        or client[0] == "doublewell_1D"
-                        or client[0] == "zundel"
-                    ):
-                        clientcall = self.call_driver + " -m {} -u ".format(client[0])
-                    else:
-                        clientcall = self.call_driver + " -m {} -h {} -u ".format(
-                            client[0], client[1]
-                        )
+                    clientcall = self.call_driver + " -m {} -h {} -u ".format(
+                        client[0], client[1]
+                    )
                     cmd2.append(clientcall)
                 elif client[3] == "inet":
                     cmd2.append(
@@ -249,7 +241,7 @@ class Runner(object):
                     ]
                     for i, ll in enumerate(flag_indeces):
                         if i < len(flag_indeces) - 1:
-                            cmd2 += " {} {}".format(
+                            cmd2 += "{} {}".format(
                                 client[ll],
                                 ",".join(client[ll + 1 : flag_indeces[i + 1]][:]),
                             )
@@ -260,13 +252,12 @@ class Runner(object):
                                 )
                             )
                     cmd += cmd2[1]
-
                 driver.append(
                     sp.Popen(cmd, cwd=(cwd), shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
                 )
 
             # Check errors
-            ipi_error = ipi.communicate(timeout=120)[1].decode("ascii")
+            ipi_error = ipi.communicate(timeout=180)[1].decode("ascii")
             if ipi_error != "":
                 print(ipi_error)
             assert "" == ipi_error
@@ -332,7 +323,7 @@ class Runner(object):
 
                 try:
                     np.testing.assert_allclose(
-                        test_output, ref_output, rtol=1.0e-7, atol=1.0e-20
+                        test_output, ref_output, rtol=1.0e-7, atol=1.0e-15
                     )
                     print("No anomaly during the regtest for {}".format(refname))
                 except AssertionError:
@@ -403,7 +394,7 @@ class Runner(object):
 
                 try:
                     np.testing.assert_allclose(
-                        test_xyz, ref_xyz, rtol=1.0e-7, atol=1.0e-20
+                        test_xyz, ref_xyz, rtol=1.0e-7, atol=1.0e-15
                     )
                     print("No anomaly during the regtest for {}".format(refname))
                 except AssertionError:
