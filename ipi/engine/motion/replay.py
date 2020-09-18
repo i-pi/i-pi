@@ -99,8 +99,8 @@ class Replay(Motion):
                     self.beads.q[:] = mybeads.q
                     softexit.trigger(" # Read single checkpoint")
                 # do not assign cell if it contains an invalid value (typically missing cell in the input)
-                if mycell.V > 0:  
-                    self.cell.h[:] = mycell.h 
+                if mycell.V > 0:
+                    self.cell.h[:] = mycell.h
             except EOFError:
                 softexit.trigger(" # Finished reading re-run trajectory")
             if (step is None) or (self.rstep > step):
