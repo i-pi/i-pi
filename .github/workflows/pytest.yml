@@ -23,8 +23,10 @@ jobs:
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v1
       with:
-        python-version: ${{ matrix.python-version }}
+         activate-conda: true
+#        python-version: ${{ matrix.python-version }}
     - run: conda --version
+    - run: which python
     - name: Install dependencies
       run: |
          conda install mkl blas=*=mkl scipy numpy pytest pytest-mock pytest-cov mock flake8 coverage
