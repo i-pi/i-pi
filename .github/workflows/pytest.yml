@@ -19,7 +19,16 @@ jobs:
     name: Python version ${{ matrix.python-version }} 
     steps:
     - uses: actions/checkout@v2
+<<<<<<< HEAD
     - name: Set up Conda
+=======
+
+    - name: Set up Python ${{ matrix.python-version }}
+      uses: actions/setup-python@v1
+         python-version: ${{ matrix.python-version }}
+
+    - name: Setup Conda
+>>>>>>> 0942ab5... activate conda for pytest 2
       uses: s-weigand/setup-conda@v1
       with:
 <<<<<<< HEAD
@@ -30,7 +39,6 @@ jobs:
     - name: Install dependencies with conda
 =======
          activate-conda: true
-#        python-version: ${{ matrix.python-version }}
     - run: conda --version
     - run: which python
     - name: Install dependencies
