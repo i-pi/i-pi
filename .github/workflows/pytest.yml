@@ -36,6 +36,10 @@ jobs:
          echo "::add-path::${GITHUB_WORKSPACE}/bin"
     - run: which python
 
+    - name: Test Conda 
+      run: python 'import numpy; print(numpy.__version__)'
+
+
 #    - name: Install dependencies
 #      run: |
 #        python -m pip install --upgrade pip
@@ -45,18 +49,18 @@ jobs:
 #        echo "::add-path::${GITHUB_WORKSPACE}/bin"
 
 
-    - name: Lint with flake8
-      run: |
-        flake8 . --config=setup.cfg --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 . --config=setup.cfg --count  --statistics
-        #flake8 . --config=setup.cfg --count  --statistics --exit-zero
-
-
-    - name: Install GFortran Linux
-      if: contains(matrix.os, 'ubuntu')
-      run: |
-        sudo apt-get update
-        sudo apt-get install gfortran
+#    - name: Lint with flake8
+#      run: |
+#        flake8 . --config=setup.cfg --count --select=E9,F63,F7,F82 --show-source --statistics
+#        flake8 . --config=setup.cfg --count  --statistics
+#        #flake8 . --config=setup.cfg --count  --statistics --exit-zero
+#
+#
+#    - name: Install GFortran Linux
+#      if: contains(matrix.os, 'ubuntu')
+#      run: |
+#        sudo apt-get update
+#        sudo apt-get install gfortran
 
 #    - name: Install GFortran macOS
 #      if: contains(matrix.os, 'macos')
@@ -68,10 +72,6 @@ jobs:
       run: |
          cd drivers
          make
-
-    - name: Test Conda 
-      shell: bash
-      run: python 'import numpy; print(numpy.__version__)'
 
          #    - name: Pytest
          #      shell: bash
