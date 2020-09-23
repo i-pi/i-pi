@@ -22,11 +22,19 @@ jobs:
     - name: Set up Conda
       uses: s-weigand/setup-conda@v1
       with:
+<<<<<<< HEAD
          activate-conda: true 
     - run: conda --version
     - run: conda install python=${{matrix.python-version}}
 
     - name: Install dependencies with conda
+=======
+         activate-conda: true
+#        python-version: ${{ matrix.python-version }}
+    - run: conda --version
+    - run: which python
+    - name: Install dependencies
+>>>>>>> 59b8e16... activate conda for pytest
       run: |
          conda install --file requirements.txt 
          conda install scipy
