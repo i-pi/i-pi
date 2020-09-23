@@ -64,11 +64,15 @@ jobs:
          cd drivers
          make
 
-    - name: Pytest
+    - name: Test Conda 
       shell: bash
-      run: |
-        pwd
-        pytest 
+      run: python 'import numpy; print(numpy.__version__)'
+
+         #    - name: Pytest
+         #      shell: bash
+         #      run: |
+         #        pwd
+         #        pytest 
         #pytest --cov=./ --cov-report=xml
 
     #- name: Upload coverage
