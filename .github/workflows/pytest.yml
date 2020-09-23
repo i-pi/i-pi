@@ -79,11 +79,22 @@ jobs:
         #flake8 .  --config=setup.cfg --count  --statistics --exit-zero
 
 
+<<<<<<< HEAD
+=======
+    - name: Lint with flake8
+      run: |
+        flake8 . --config=setup.cfg --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --config=setup.cfg --count  --statistics
+        #flake8 . --config=setup.cfg --count  --statistics --exit-zero
+
+
+>>>>>>> c31f8a3... activate conda for pytest 6
     - name: Install GFortran Linux
       if: contains(matrix.os, 'ubuntu')
       run: |
         sudo apt-get update
         sudo apt-get install gfortran
+<<<<<<< HEAD
 =======
 #    - name: Lint with flake8
 #      run: |
@@ -98,6 +109,8 @@ jobs:
 #        sudo apt-get update
 #        sudo apt-get install gfortran
 >>>>>>> fdbda49... activate conda for pytest 4
+=======
+>>>>>>> c31f8a3... activate conda for pytest 6
 
   #    - name: Install GFortran macOS
   #      if: contains(matrix.os, 'macos')
@@ -109,6 +122,7 @@ jobs:
          cd drivers
          make
 
+<<<<<<< HEAD
 <<<<<<< HEAD
     - name: Test Conda 
       shell: bash
@@ -127,6 +141,13 @@ jobs:
          #        pwd
          #        pytest 
 >>>>>>> 34e6ea0... conda numpy testing
+=======
+    - name: Pytest
+      shell: bash
+      run: |
+        pwd
+        pytest 
+>>>>>>> c31f8a3... activate conda for pytest 6
         #pytest --cov=./ --cov-report=xml
 
     #- name: Upload coverage
