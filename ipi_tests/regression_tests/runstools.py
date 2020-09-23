@@ -93,7 +93,6 @@ def get_info_test(parent):
     required (i.e. driver.txt)
     """
     folders = [x[0] for x in os.walk(parent)]
-    print("folders: {}\n".format(*folders))
     reg_tests = list()
 
     for ff in folders:
@@ -122,7 +121,7 @@ class Runner(object):
     def __init__(
         self,
         parent,
-        call_ipi="i-pi input.xml > ipi.log",
+        call_ipi="i-pi input.xml",
         call_driver="i-pi-driver",
         check_errors=True,
         check_numpy_output=True,
@@ -196,7 +195,6 @@ class Runner(object):
                         clients[s].extend(v)
 
             tree.write(open(output_name, "wb"))
-            time.sleep(2)
 
             # Run i-pi
             ipi = sp.Popen(
@@ -253,7 +251,7 @@ class Runner(object):
                             )
                     cmd += cmd2[1]
                 driver.append(
-                    sp.Popen(cmd, cwd=(cwd), shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
+                    sp.call(cmd, cwd=(cwd), shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
                 )
 
         except sp.TimeoutExpired:
@@ -275,14 +273,8 @@ class Runner(object):
         except:
             pass
 
-        error = False
-        # Check for ipi errors
         if self.check_error:
-            error = self._check_error(ipi)
-        if error:
-            self.check_numpy_output = False
-            self.check_xyz_output = False
-
+            self._check_error(ipi)
         if self.check_numpy_output:
             self._check_numpy_output(cwd)
         if self.check_xyz_output:
@@ -291,13 +283,10 @@ class Runner(object):
     def _check_error(self, ipi):
         """ This function checks if ipi has exited with errors"""
 
-        error = False
-        ipi_error = ipi.communicate(timeout=60)[1].decode("ascii")
+        ipi_error = ipi.communicate(timeout=120)[1].decode("ascii")
         if ipi_error != "":
             print("IPI ERROR OCCURED: {}".format(ipi_error))
-            error = True
         assert "" == ipi_error
-        return error
 
     def _check_numpy_output(self, cwd):
         """ This function checks if the numpy-accessible datafiles are 'all_close' to the
