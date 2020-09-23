@@ -3,7 +3,7 @@
         <properties stride='1' filename='out'>  [ step, potential{electronvolt}] </properties>
    </output>
    <total_steps>100       </total_steps>
-   <ffsocket name="doublewell" mode="unix" >
+   <ffsocket name="doublewell_1D" mode="unix" >
        <address> localhost </address> 
        <port>33330</port> 
    </ffsocket>
@@ -13,10 +13,10 @@
            <cell mode='abc'> [300.0,  300.0,  300.0  ] </cell>
        </initialize>
        <forces>
-          <force forcefield="doublewell"> </force>
+          <force forcefield="doublewell_1D"> </force>
        </forces>
        <ensemble>
-           <temperature units="kelvin">100</temperature>
+           <temperature units="kelvin">200</temperature>
        </ensemble>
        <motion mode='instanton'>
            <instanton mode='rate'>

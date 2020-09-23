@@ -59,7 +59,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     try:
-        path = regtests_folder / args.folder
+        path = str(regtests_folder / args.folder)
         reg_tests = get_info_test(path)
         print("We will run only:")
         for i in reg_tests:

@@ -156,7 +156,7 @@
                   vstyle = 0  ! ideal gas
                ELSE
                   WRITE(*,*) " Unrecognized potential type ", trim(cmdbuffer)
-                  WRITE(*,*) " Use -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D] "
+                  WRITE(*,*) " Use -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D] "
                   STOP "ENDED"
                ENDIF
             ELSEIF (ccmd == 4) THEN
@@ -386,7 +386,7 @@
             CALL readbuffer(socket, rid)
             IF (verbose > 1) WRITE(*,*) "    !read!=> RID: ", rid
             CALL readbuffer(socket, cbuf)
-            IF (verbose > 1) WRITE(*,*) "    !read!=> init_lenght: ", cbuf
+            IF (verbose > 1) WRITE(*,*) "    !read!=> init_length: ", cbuf
             CALL readbuffer(socket, initbuffer, cbuf)
             IF (verbose > 1) WRITE(*,*) "    !read!=> init_string: ", cbuf
             IF (verbose > 0) WRITE(*,*) " Initializing system from wrapper, using ", trim(initbuffer)
