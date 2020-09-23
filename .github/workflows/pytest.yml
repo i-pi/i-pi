@@ -55,7 +55,7 @@ jobs:
     - run: which python
 
     - name: Test Conda 
-      run: python 'import numpy; print(numpy.__version__)'
+      run: python -c 'import numpy; print(numpy.__version__)'
 
 
 #    - name: Install dependencies
