@@ -28,6 +28,7 @@ jobs:
       uses: s-weigand/setup-conda@v1
       with:
          activate-conda: true
+         python-version: ${{ matrix.python-version }}
     - run: conda --version
 
     - name: Test Conda 
