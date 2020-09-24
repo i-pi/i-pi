@@ -1,6 +1,7 @@
 mkl
 blas=*=mkl
 numpy
+scipy
 pytest
 pytest-mock
 pytest-cov

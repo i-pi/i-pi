@@ -10,77 +10,43 @@ jobs:
 
     strategy:
       matrix:
-        python-version: [3.7.9, 3.8.5]
+        python-version: [3.8.5]
         #os: ["ubuntu-latest", "macos-latest"]
         os: ["ubuntu-latest"]
 
     runs-on: "${{ matrix.os }}"
 
-    name: Python version ${{ matrix.python-version }} 
     steps:
     - uses: actions/checkout@v2
-<<<<<<< HEAD
-    - name: Set up Conda
-=======
 
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v1
       with:
          python-version: ${{ matrix.python-version }}
 
-    - name: Setup Conda
->>>>>>> 0942ab5... activate conda for pytest 2
+    - name: Set up Conda
       uses: s-weigand/setup-conda@v1
       with:
-<<<<<<< HEAD
-         activate-conda: true 
-    - run: conda --version
-    - run: conda install python=${{matrix.python-version}}
-
-    - name: Install dependencies with conda
-=======
          activate-conda: true
     - run: conda --version
-    - run: which python
-    - name: Install dependencies
->>>>>>> 59b8e16... activate conda for pytest
+
+    - name: Install dependencies with conda
       run: |
-         conda install --file requirements.txt 
-         conda install scipy
-         conda install pip
-         pip install .
+         conda install -f requirements.txt 
          echo "::add-path::${GITHUB_WORKSPACE}/bin"
-<<<<<<< HEAD
-=======
-    - run: which python
 
     - name: Test Conda 
       run: python -c 'import numpy; print(numpy.__version__)'
 
-
-#    - name: Install dependencies
+#    - name: Install dependencies with pip
 #      run: |
 #        python -m pip install --upgrade pip
 #        pip install -r requirements.txt
 #        pip install .
 #        pip install scipy
 #        echo "::add-path::${GITHUB_WORKSPACE}/bin"
->>>>>>> fdbda49... activate conda for pytest 4
-
-    - run: which python
-    - name: Test Conda 
-      run: python -c 'import numpy; import sys; print(sys.version); print(numpy.__version__)'
-
-<<<<<<< HEAD
-    - name: Lint with flake8
-      run: |
-        flake8 . --config=setup.cfg --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 . --config=setup.cfg --count  --statistics
-        #flake8 .  --config=setup.cfg --count  --statistics --exit-zero
 
 
-<<<<<<< HEAD
-=======
     - name: Lint with flake8
       run: |
         flake8 . --config=setup.cfg --count --select=E9,F63,F7,F82 --show-source --statistics
@@ -88,33 +54,16 @@ jobs:
         #flake8 . --config=setup.cfg --count  --statistics --exit-zero
 
 
->>>>>>> c31f8a3... activate conda for pytest 6
     - name: Install GFortran Linux
       if: contains(matrix.os, 'ubuntu')
       run: |
         sudo apt-get update
         sudo apt-get install gfortran
-<<<<<<< HEAD
-=======
-#    - name: Lint with flake8
-#      run: |
-#        flake8 . --config=setup.cfg --count --select=E9,F63,F7,F82 --show-source --statistics
-#        flake8 . --config=setup.cfg --count  --statistics
-#        #flake8 . --config=setup.cfg --count  --statistics --exit-zero
-#
-#
-#    - name: Install GFortran Linux
-#      if: contains(matrix.os, 'ubuntu')
-#      run: |
-#        sudo apt-get update
-#        sudo apt-get install gfortran
->>>>>>> fdbda49... activate conda for pytest 4
-=======
->>>>>>> c31f8a3... activate conda for pytest 6
 
-  #    - name: Install GFortran macOS
-  #      if: contains(matrix.os, 'macos')
-  #      run: brew install gcc || brew upgrade gcc || true
+#    - name: Install GFortran macOS
+#      if: contains(matrix.os, 'macos')
+#      run: brew install gcc || brew upgrade gcc || true
+
 
     - name: Compile Driver
       shell: bash
@@ -122,32 +71,11 @@ jobs:
          cd drivers
          make
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-    - name: Test Conda 
-      shell: bash
-<<<<<<< HEAD
-      run: |
-         pwd
-         pytest 
-=======
-      run: python 'import numpy; print(numpy.__version__)'
-
-=======
->>>>>>> fdbda49... activate conda for pytest 4
-         #    - name: Pytest
-         #      shell: bash
-         #      run: |
-         #        pwd
-         #        pytest 
->>>>>>> 34e6ea0... conda numpy testing
-=======
     - name: Pytest
       shell: bash
       run: |
         pwd
         pytest 
->>>>>>> c31f8a3... activate conda for pytest 6
         #pytest --cov=./ --cov-report=xml
 
     #- name: Upload coverage
