@@ -30,6 +30,9 @@ jobs:
          activate-conda: true
     - run: conda --version
 
+    - name: Test Conda 
+      run: python -c 'import numpy; import sys; print(sys.version); print(numpy.__version__)'
+
     - name: Install dependencies with conda
       run: |
          conda install --file requirements.txt 
