@@ -26,7 +26,7 @@ jobs:
     - name: Set up Conda
       uses: s-weigand/setup-conda@v1
       with:
-         activate-conda: true
+         activate-conda: false
     - run: conda --version
     - run: which python
 
