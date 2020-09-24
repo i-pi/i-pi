@@ -10,7 +10,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: [3.7]
+        python-version: [3.8.5]
         #os: ["ubuntu-latest", "macos-latest"]
         os: ["ubuntu-latest"]
 
@@ -22,15 +22,29 @@ jobs:
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v1
       with:
-        python-version: ${{ matrix.python-version }}
+         python-version: ${{ matrix.python-version }}
 
-    - name: Install dependencies
+    - name: Set up Conda
+      uses: s-weigand/setup-conda@v1
+      with:
+         activate-conda: true
+    - run: conda --version
+
+    - name: Install dependencies with conda
       run: |
-        python -m pip install --upgrade pip
-        pip install -r requirements.txt
-        pip install .
-        pip install scipy
-        echo "::add-path::${GITHUB_WORKSPACE}/bin"
+         conda install --file requirements.txt 
+         echo "::add-path::${GITHUB_WORKSPACE}/bin"
+
+    - name: Test Conda 
+      run: python -c 'import numpy; import sys; print(sys.version) ;print(numpy.__version__)'
+
+#    - name: Install dependencies with pip
+#      run: |
+#        python -m pip install --upgrade pip
+#        pip install -r requirements.txt
+#        pip install .
+#        pip install scipy
+#        echo "::add-path::${GITHUB_WORKSPACE}/bin"
 
 
     - name: Lint with flake8
