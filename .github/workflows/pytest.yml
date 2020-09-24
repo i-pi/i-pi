@@ -24,23 +24,21 @@ jobs:
       with:
          python-version: ${{ matrix.python-version }}
 
-    - name: Setup Conda
+    - name: Set up Conda
       uses: s-weigand/setup-conda@v1
       with:
          activate-conda: true
     - run: conda --version
-    - run: which python
-    - name: Install dependencies
+
+    - name: Install dependencies with conda
       run: |
-         conda install mkl blas=*=mkl scipy numpy pytest pytest-mock pytest-cov mock flake8 coverage
+         conda install -f requirements.txt 
          echo "::add-path::${GITHUB_WORKSPACE}/bin"
-    - run: which python
 
     - name: Test Conda 
       run: python -c 'import numpy; print(numpy.__version__)'
 
-
-#    - name: Install dependencies
+#    - name: Install dependencies with pip
 #      run: |
 #        python -m pip install --upgrade pip
 #        pip install -r requirements.txt
