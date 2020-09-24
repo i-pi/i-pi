@@ -10,19 +10,15 @@ jobs:
 
     strategy:
       matrix:
-        python-version: [3.7]
+        python-version: [3.7, 3.8.5]
         #os: ["ubuntu-latest", "macos-latest"]
         os: ["ubuntu-latest"]
 
     runs-on: "${{ matrix.os }}"
-
+    
+    name: Python ${{ matrix.python-version }} example
     steps:
     - uses: actions/checkout@v2
-
-    - name: Set up Python ${{ matrix.python-version }}
-      uses: actions/setup-python@v1
-      with:
-         python-version: ${{ matrix.python-version }}
 
     - name: Set up Conda
       uses: s-weigand/setup-conda@v1
@@ -30,9 +26,6 @@ jobs:
          activate-conda: true
          python-version: ${{ matrix.python-version }}
     - run: conda --version
-
-    - name: Test Conda 
-      run: python -c 'import sys; print(sys.version)'
 
     - name: Install dependencies with conda
       run: |
@@ -51,35 +44,35 @@ jobs:
 #        echo "::add-path::${GITHUB_WORKSPACE}/bin"
 
 
-#    - name: Lint with flake8
-#      run: |
-#        flake8 . --config=setup.cfg --count --select=E9,F63,F7,F82 --show-source --statistics
-#        flake8 . --config=setup.cfg --count  --statistics
-#        #flake8 . --config=setup.cfg --count  --statistics --exit-zero
-#
-#
-#    - name: Install GFortran Linux
-#      if: contains(matrix.os, 'ubuntu')
-#      run: |
-#        sudo apt-get update
-#        sudo apt-get install gfortran
-
-#    - name: Install GFortran macOS
-#      if: contains(matrix.os, 'macos')
-#      run: brew install gcc || brew upgrade gcc || true
+      #    - name: Lint with flake8
+      #      run: |
+      #        flake8 . --config=setup.cfg --count --select=E9,F63,F7,F82 --show-source --statistics
+      #        flake8 . --config=setup.cfg --count  --statistics
+      #        #flake8 . --config=setup.cfg --count  --statistics --exit-zero
 
 
-    - name: Compile Driver
-      shell: bash
-      run: |
-         cd drivers
-         make
+      #    - name: Install GFortran Linux
+      #      if: contains(matrix.os, 'ubuntu')
+      #      run: |
+      #        sudo apt-get update
+      #        sudo apt-get install gfortran
 
-#    - name: Pytest
-#      shell: bash
-#      run: |
-#        pwd
-#        pytest 
+        #    - name: Install GFortran macOS
+        #      if: contains(matrix.os, 'macos')
+        #      run: brew install gcc || brew upgrade gcc || true
+
+
+      #    - name: Compile Driver
+      #      shell: bash
+      #      run: |
+      #         cd drivers
+      #         make
+      #
+      #    - name: Pytest
+      #      shell: bash
+      #      run: |
+      #        pwd
+      #        pytest 
         #pytest --cov=./ --cov-report=xml
 
     #- name: Upload coverage
