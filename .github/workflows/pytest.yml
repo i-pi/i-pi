@@ -32,7 +32,7 @@ jobs:
 
     - name: Install dependencies with conda
       run: |
-         conda install -f requirements.txt 
+         conda install --file requirements.txt 
          echo "::add-path::${GITHUB_WORKSPACE}/bin"
 
     - name: Test Conda 
