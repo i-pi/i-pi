@@ -1,0 +1,30 @@
+<simulation mode="static" verbosity="medium">
+    <output prefix='min'>
+        <properties stride='1' filename='out'>  [ step, potential] </properties>
+        <trajectory stride="1" filename="xc" format="xyz">x_centroid</trajectory>
+   </output>
+   <total_steps>300        </total_steps>
+   <ffsocket name="MB" mode="unix" >
+       <address> localhost </address> 
+       <latency> 1e-4</latency>
+       <port>40093</port>
+   </ffsocket>
+   <system >
+       <initialize nbeads='1'> 
+           <file mode='xyz' >  init.xyz </file>
+           <cell mode='abc'> [100,  100, 100] </cell>
+       </initialize>
+       <forces>
+          <force forcefield="MB"> </force>
+       </forces>
+       <motion mode="minimize">
+            <optimizer mode="bfgstrm">
+                <tolerances>
+                    <energy> 5e-5 </energy>
+                    <force> 5e-5</force>
+                    <position> 1e-6 </position>
+                </tolerances>
+           </optimizer>
+       </motion>
+   </system>
+</simulation>

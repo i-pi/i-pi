@@ -5,7 +5,7 @@
         <trajectory stride='1' filename='pos'>  positions{angstrom}  </trajectory>
    </output>
    <total_steps>400       </total_steps>
-   <ffsocket name="aims" mode="unix" >
+   <ffsocket name="qtip4pf" mode="unix" >
        <address> localhost </address>  
    </ffsocket>
    <system >
@@ -14,7 +14,7 @@
            <cell mode='abc'> [200.0,  200.0,  200.0  ] </cell>
        </initialize>
        <forces>
-          <force forcefield="aims"> </force>
+          <force forcefield="qtip4pf"> </force>
        </forces>
        <ensemble>
            <temperature units="kelvin">35</temperature>

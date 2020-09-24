@@ -1,46 +1,20 @@
 # To check
-MBPOL/splitting/min
-MBPOL/splitting/instanton/32-lbfgs
-MBPOL/splitting/TS
-pes/qtip4pf/tun-splitting/min
-pes/qtip4pf/tun-splitting/instanton/32-lbfgs
-lammps/h2o-scphonons
-lammps/h2o-imf
-lammps/h2o-vscf
-lammps/h2o-extreme-rem
-lammps/isof-vapor
-pes/geop/waterbox/bfgs
-pes/zundel-systempart 
-pes/neb 
-qtip4pf/tun-splitting
-pes/qtip4pf/tun-splitting
-pes/qtip4pf/tun-splitting/TS
-lammps/ice-npt+sc 
-lammps/ice-npt-nst 
-lammps/ice-ramp-melt 
-lammps/h2o-planetary-64 
-lammps/h2o-pimd+sc+gle.4 
-lammps/isofsc-water 
-lammps/kmc-al6xxx 
-lammps/h2o-pimd+sc+mts 
-lammps/h2o-repimd 
-lammps/h2o-pimd+sc+rpc_open 
-lammps/isof-water
-lj/nst 
-tools/gleacf/h2o-wn 
-tools/gleacf/h2o-gle 
-tools/getacf 
-hswfqmc/FixWF_1Bead 
-hswfqmc/WFOpt_2Bead 
+lammps/h2o-planetary-64                                                     # TypeError: string argument expected, got 'bytes' 
 
 # Broken
 ffdebye/single_particle 
 lammps/h2o-constraints 
+lammps/isof-vapor                                                           # Isotope-zeta-sc is stopping the termination of the run
+lammps/isof-water                                                           # Isotope-zeta-sc is stopping the termination of the run
+lammps/h2o-pimd+sc+rpc_open                                                 # RuntimeWarning: overflow encountered in multiply
 
 # no apropiate driver to use
-lammps/paracetamol-geop 
-lammps/NaCl-cellopt 
-lammps/ice-npt 
+lammps/paracetamol-geop                             # no appropriate driver 
+lammps/NaCl-cellopt                                 # lack of stress tensor 
+lammps/h2o-extreme-rem                              # lack of stress tensor
+lammps/ice-npt+sc                                   # lack of stress tensor
+lammps/ice-npt                                      # qtip4pf PES only works for orthorombic cells
+lammps/h2o-repimd                                   # lack of stress tensor 
 
 # Need other dependency
 yaff/mil53_ffyaff 
@@ -53,97 +27,3 @@ ASEClient/aims
 ASEClient/aims_double_server 
 ASEClient/CP2K 
 
-
-
-
-#REGTEST are beyond the scope of this test 
-dev_tests/bosons/3p_3D_HO_bhw_2_Dist 
-dev_tests/bosons/3p_3D_HO_bhw_2 
-dev_tests/bosons/3p_2B_3D_HO_bhw_2 
-dev_tests/pes/zundel-bab 
-dev_tests/pes/pswater 
-dev_tests/pes/neb 
-dev_tests/pes/qtip4pf/tun-splitting 
-dev_tests/pes/qtip4pf/h2o-piglet 
-dev_tests/pes/io-units 
-dev_tests/pes/zundel 
-dev_tests/pes/CH4_H/instanton_rate 
-dev_tests/lammps/ice-nst 
-dev_tests/lammps/ice-npt 
-dev_tests/lammps/h2o-fixcom 
-dev_tests/lammps/h2o-alchemical 
-dev_tests/lammps/h2o-pimd+sc+rpc 
-dev_tests/lammps/h2o-piglet.8 
-dev_tests/lammps/h2o-pimd+sc 
-dev_tests/lammps/h2o-piglet.2 
-dev_tests/lammps/benz-graph-slc 
-dev_tests/lammps/h2o-pimd.1 
-dev_tests/lammps/h2o-geop-fixatoms/cg-0fixed 
-dev_tests/lammps/h2o-geop-fixatoms/lbfgs-far-away-0fixed 
-dev_tests/lammps/h2o-geop-fixatoms/lbfgs-0fixed 
-dev_tests/lammps/h2o-geop-fixatoms/sd-1fixed 
-dev_tests/lammps/h2o-geop-fixatoms/cg-2fixed 
-dev_tests/lammps/h2o-geop-fixatoms/sd-far-away-1fixed 
-dev_tests/lammps/h2o-geop-fixatoms/cg-1fixed 
-dev_tests/lammps/h2o-geop-fixatoms/bfgstrm-0fixed 
-dev_tests/lammps/h2o-geop-fixatoms/bfgs-2fixed 
-dev_tests/lammps/h2o-geop-fixatoms/sd-far-away-0fixed 
-dev_tests/lammps/h2o-geop-fixatoms/lbfgs-2fixed 
-dev_tests/lammps/h2o-geop-fixatoms/bfgs-1fixed 
-dev_tests/lammps/h2o-geop-fixatoms/bfgs-far-away-0fixed 
-dev_tests/lammps/h2o-geop-fixatoms/bfgstrm-far-away-1fixed 
-dev_tests/lammps/h2o-geop-fixatoms/cg-far-away-1fixed 
-dev_tests/lammps/h2o-geop-fixatoms/cg-far-away-0fixed 
-dev_tests/lammps/h2o-geop-fixatoms/bfgstrm-1fixed 
-dev_tests/lammps/h2o-geop-fixatoms/bfgstrm-far-away-0fixed 
-dev_tests/lammps/h2o-geop-fixatoms/bfgstrm-2fixed 
-dev_tests/lammps/h2o-geop-fixatoms/sd-2fixed 
-dev_tests/lammps/h2o-geop-fixatoms/sd-0fixed 
-dev_tests/lammps/h2o-geop-fixatoms/bfgs-0fixed 
-dev_tests/lammps/h2o-geop-fixatoms/lbfgs-1fixed 
-dev_tests/lammps/h2o-geop-fixatoms/lbfgs-far-away-1fixed 
-dev_tests/lammps/h2o-geop-fixatoms/bfgs-far-away-1fixed 
-dev_tests/lammps/h2o-fixatoms 
-dev_tests/lammps/h2o-pimd+sc+mts 
-dev_tests/lammps/h2o-pimd+rpc 
-dev_tests/lammps/h2o-pimd+mts.4 
-dev_tests/ph2/mht-25K 
-dev_tests/ph2/mht-14K 
-dev_tests/ph2/mht-20K 
-dev_tests/ph2/mht-17K 
-dev_tests/integrators/h2o-rescpimd_nvt 
-dev_tests/integrators/h2o-md_nvt_mts 
-dev_tests/integrators/h2o-pimd_nvt_mts 
-dev_tests/integrators/h2o-pimd_nvt 
-dev_tests/integrators/h2o-md_nst 
-dev_tests/integrators/h2o-scpimd_nvt 
-dev_tests/integrators/h2o-md_nvt 
-dev_tests/integrators/h2o-md_nht 
-dev_tests/integrators/h2o-repimd_npt 
-dev_tests/integrators/h2o-pimd_nst 
-dev_tests/integrators/h2o-md_npt 
-dev_tests/integrators/h2o-pimd_npt 
-dev_tests/cp2k/h2o-mol-nvt-cl 
-dev_tests/qespresso/li4 
-dev_tests/qespresso/dia_big-npt-pimd.4 
-dev_tests/qespresso/h2o 
-dev_tests/qespresso/dia-npt-classical 
-dev_tests/qespresso/dia-npt-pimd.4 
-dev_tests/fhi-aims/h2o_phon 
-dev_tests/fhi-aims/zundel_nve 
-dev_tests/fhi-aims/zundel_nvt 
-dev_tests/fhi-aims/h2o_geop 
-dev_tests/fhi-aims/malon_rate 
-pes-regtest/split-baoab-nvt 
-pes-regtest/split-baoab-npt 
-pes-regtest/split-obabo-sc-mts 
-pes-regtest/split-obabo-npt 
-pes-regtest/split-baoab-nvt-mts 
-pes-regtest/split-obabo-npt-mts 
-pes-regtest/split-obabo-nve 
-pes-regtest/split-obabo-nve-mts 
-pes-regtest/io-units 
-pes-regtest/split-obabo-nvt-mts 
-pes-regtest/split-obabo-nst 
-pes-regtest/split-obabo-nvt 
-pes-regtest/zundel
