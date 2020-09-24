@@ -31,7 +31,7 @@ jobs:
     - run: conda --version
 
     - name: Test Conda 
-      run: python -c 'import numpy; import sys; print(sys.version); print(numpy.__version__)'
+      run: python -c 'import sys; print(sys.version)'
 
     - name: Install dependencies with conda
       run: |
