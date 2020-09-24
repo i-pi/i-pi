@@ -31,7 +31,7 @@ jobs:
          conda install --file requirements.txt 
          echo "::add-path::${GITHUB_WORKSPACE}/bin"
 
-    - run: Which python?
+    - run: which python
     - name: Test Conda 
       run: python -c 'import numpy; import sys; print(sys.version); print(numpy.__version__)'
 
