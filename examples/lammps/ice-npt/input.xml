@@ -1,10 +1,10 @@
 <simulation verbosity='high'>
   <output prefix='simulation'>
-    <properties stride='10' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv{megapascal}, volume, cell_h] </properties>
+    <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv{megapascal}, volume, cell_h] </properties>
     <trajectory stride='100' filename='xc' format='pdb' cell_units='angstrom'> x_centroid{angstrom}</trajectory>
     <checkpoint stride='2000'/>
   </output>
-  <total_steps>100000</total_steps>
+  <total_steps>1000000</total_steps>
   <prng>
     <seed>31415</seed>
   </prng>
