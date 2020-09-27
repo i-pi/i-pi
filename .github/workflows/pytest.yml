@@ -35,7 +35,6 @@ jobs:
          pip list
          conda list
          which i-pi
-         which i-pi-driver
          echo "::add-path::${GITHUB_WORKSPACE}/bin"
          which i-pi
          which i-pi-driver
