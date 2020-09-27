@@ -31,8 +31,8 @@ jobs:
          conda install --file requirements.txt 
          conda install scipy
          conda install pip
-         pip install .
-         pip list
+         #pip install .
+         #pip list
          conda list
          which i-pi
          echo "::add-path::${GITHUB_WORKSPACE}/bin"
