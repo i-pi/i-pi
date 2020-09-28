@@ -32,6 +32,8 @@ jobs:
          conda install scipy
          conda install pip
          pip install .
+         conda list
+         pip list
          echo "::add-path::${GITHUB_WORKSPACE}/bin"
 
     - run: which python
