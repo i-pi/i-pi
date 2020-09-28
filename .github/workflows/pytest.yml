@@ -32,8 +32,6 @@ jobs:
          conda install scipy
          conda install pip
          pip install .
-         pip list
-         conda list
          echo "::add-path::${GITHUB_WORKSPACE}/bin"
 
     - run: which python
@@ -62,8 +60,6 @@ jobs:
       run: |
          cd drivers
          make
-         which i-pi
-         which i-pi-driver
 
     - name: Pytest
       shell: bash
