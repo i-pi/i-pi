@@ -33,8 +33,8 @@ jobs:
          conda install pip
          pip install .
          echo "::add-path::${GITHUB_WORKSPACE}/bin"
-    - run: which python
 
+    - run: which python
     - name: Test Conda 
       run: python -c 'import numpy; import sys; print(sys.version); print(numpy.__version__)'
 
@@ -43,7 +43,7 @@ jobs:
         flake8 . --config=setup.cfg --count --select=E9,F63,F7,F82 --show-source --statistics
         flake8 . --config=setup.cfg --count  --statistics
         #flake8 .  --config=setup.cfg --count  --statistics --exit-zero
- 
+
 
     - name: Install GFortran Linux
       if: contains(matrix.os, 'ubuntu')
