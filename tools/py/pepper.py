@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 """
 This script cleans python files in-place by calling autopep8 tool.
@@ -226,7 +226,7 @@ if __name__ == "__main__":
                 # if verbosity is silent or low, do not print output from autopep8
         if verbosity == "medium":
             # end of processing. If something left unfixed, print the message now
-            if issue_line_buffer != "":
+            if issue_line_buffer == "":
                 print(issue_line_buffer)
     if verbosity != "silent":
         print("autopep8 terminated")

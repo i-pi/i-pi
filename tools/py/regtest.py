@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 """
 This script runs i-PI regression tests.
@@ -356,6 +356,10 @@ class TestInstance:
 
             if ipi_proc.poll() is not None:
                 stdout, stderr = ipi_proc.communicate()
+                if stdout is not None:
+                    stdout = stdout.decode("ascii")
+                if stderr is not None:
+                    stderr = stderr.decode("ascii")
                 raise IPIError("I-PI error on start\n" + stderr)
 
             # Run the driver code
@@ -397,6 +401,10 @@ class TestInstance:
                 else:
                     driver_return_codes.append(prc.returncode)
                     stdout, stderr = prc.communicate()
+                    if stdout is not None:
+                        stdout = stdout.decode("ascii")
+                    if stderr is not None:
+                        stderr = stderr.decode("ascii")
                     if stderr:
                         driver_errors.append(stderr)
                 time_elapsed = time.time() - driver_init_time
@@ -406,6 +414,10 @@ class TestInstance:
                             prc.terminate()
                     ipi_proc.terminate()
                     stdout, stderr = ipi_proc.communicate()
+                    if stdout is not None:
+                        stdout = stdout.decode("ascii")
+                    if stderr is not None:
+                        stderr = stderr.decode("ascii")
                     if stderr:
                         with open(ipi_output_path, "a") as ipi_out:
                             ipi_out.write(stderr)
@@ -419,6 +431,10 @@ class TestInstance:
                 if time_elapsed_after_drivers > Parameters.ipi_shutdown_time:
                     ipi_proc.terminate()
                     stdout, stderr = ipi_proc.communicate()
+                    if stdout is not None:
+                        stdout = stdout.decode("ascii")
+                    if stderr is not None:
+                        stderr = stderr.decode("ascii")
                     if stderr:
                         with open(ipi_output_path, "a") as ipi_out:
                             ipi_out.write(stderr)
@@ -434,11 +450,15 @@ class TestInstance:
                     )
 
             stdout, stderr = ipi_proc.communicate()
+            if stdout is not None:
+                stdout = stdout.decode("ascii")
+            if stderr is not None:
+                stderr = stderr.decode("ascii")
             if stderr:
                 with open(ipi_output_path, "a") as ipi_out:
                     ipi_out.write(stderr)
                 raise IPIError("I-PI Error\n" + stderr)
-        except KeyboardInterrupt:
+        except KeyboardInterrupt as e:
             print("\nKeyboard interrupt!")
             traceback.print_exc(file=sys.stdout)
             if ipi_proc.poll() is None:
@@ -447,6 +467,10 @@ class TestInstance:
                 time.sleep(Parameters.ipi_starting_time)
                 ipi_proc.terminate()
                 stdout, stderr = ipi_proc.communicate()
+                if stdout is not None:
+                    stdout = stdout.decode("ascii")
+                if stderr is not None:
+                    stderr = stderr.decode("ascii")
                 if stderr:
                     with open(ipi_output_path, "a") as ipi_out:
                         ipi_out.write(stderr)
@@ -828,7 +852,7 @@ def check_presence_of_dependencies(xml_file, path):
     """
     commands, dependencies = parse_regtest_string(xml_file)
     are_present = True
-    #    abs_dependencies = [os.path.join(os.path.abspath(path), x) for x in dependencies]
+    abs_dependencies = [os.path.join(os.path.abspath(path), x) for x in dependencies]
 
     for files in dependencies:
         file_path = os.path.join(path, files)
