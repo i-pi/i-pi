@@ -34,6 +34,7 @@ jobs:
          pip install .
          echo "::add-path::${GITHUB_WORKSPACE}/bin"
     - run: which python
+
     - name: Test Conda 
       run: python -c 'import numpy; import sys; print(sys.version); print(numpy.__version__)'
 
@@ -42,11 +43,14 @@ jobs:
         flake8 . --config=setup.cfg --count --select=E9,F63,F7,F82 --show-source --statistics
         flake8 . --config=setup.cfg --count  --statistics
         #flake8 .  --config=setup.cfg --count  --statistics --exit-zero
+ 
+
     - name: Install GFortran Linux
       if: contains(matrix.os, 'ubuntu')
       run: |
         sudo apt-get update
         sudo apt-get install gfortran
+
   #    - name: Install GFortran macOS
   #      if: contains(matrix.os, 'macos')
   #      run: brew install gcc || brew upgrade gcc || true
@@ -56,12 +60,14 @@ jobs:
       run: |
          cd drivers
          make
+
     - name: Pytest
       shell: bash
       run: |
          pwd
          pytest 
         #pytest --cov=./ --cov-report=xml
+
     #- name: Upload coverage
     #  uses: codecov/codecov-action@v1
     #  with:
