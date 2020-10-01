@@ -148,15 +148,11 @@
                   vstyle = 22
                ELSEIF (trim(cmdbuffer) == "MB") THEN
                   vstyle = 23
-               ELSEIF (trim(cmdbuffer) == "doublewell_1D") THEN
-                  vstyle = 24
-              ELSEIF (trim(cmdbuffer) == "doublewell") THEN
-                  vstyle = 25
                ELSEIF (trim(cmdbuffer) == "gas") THEN
                   vstyle = 0  ! ideal gas
                ELSE
                   WRITE(*,*) " Unrecognized potential type ", trim(cmdbuffer)
-                  WRITE(*,*) " Use -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D] "
+                  WRITE(*,*) " Use -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB] "
                   STOP "ENDED"
                ENDIF
             ELSEIF (ccmd == 4) THEN
@@ -336,20 +332,6 @@
          ENDIF
          ks = vpars(1)
          isinit = .true.
-
-      ELSEIF (25 == vstyle) THEN !doublewell
-         IF ( par_count /= 0 ) THEN
-                 WRITE(*,*) "Error: no initialization string needed for doublewell."
-            STOP "ENDED" 
-         ENDIF   
-         isinit = .true.
-
-      ELSEIF (24 == vstyle) THEN !doublewell_1D
-         IF ( par_count /= 0 ) THEN
-                 WRITE(*,*) "Error: no initialization string needed for 1-dimensional doublewell."
-            STOP "ENDED" 
-         ENDIF   
-         isinit = .true.
       ENDIF
 
       IF (verbose > 0) THEN
@@ -386,7 +368,7 @@
             CALL readbuffer(socket, rid)
             IF (verbose > 1) WRITE(*,*) "    !read!=> RID: ", rid
             CALL readbuffer(socket, cbuf)
-            IF (verbose > 1) WRITE(*,*) "    !read!=> init_length: ", cbuf
+            IF (verbose > 1) WRITE(*,*) "    !read!=> init_lenght: ", cbuf
             CALL readbuffer(socket, initbuffer, cbuf)
             IF (verbose > 1) WRITE(*,*) "    !read!=> init_string: ", cbuf
             IF (verbose > 0) WRITE(*,*) " Initializing system from wrapper, using ", trim(initbuffer)
@@ -584,12 +566,6 @@
                ENDIF
                !atoms = atoms*0.52917721d0  !Change to angstrom
                CALL get_MB(nat,vpars(1), atoms, pot, forces)
-
-            ELSEIF (vstyle == 25) THEN ! qQ
-               CALL getdoublewell(nat, atoms, pot, forces)
-
-            ELSEIF (vstyle == 24) THEN ! qQ
-               CALL getdoublewell_1D(nat, atoms, pot, forces)
             ELSE
                IF ((allocated(n_list) .neqv. .true.)) THEN
                   IF (verbose > 0) WRITE(*,*) " Allocating neighbour lists."
@@ -672,7 +648,7 @@
     CONTAINS
       SUBROUTINE helpmessage
          ! Help banner
-         WRITE(*,*) " SYNTAX: driver.x [-u] -h hostname -p port -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D] "
+         WRITE(*,*) " SYNTAX: driver.x [-u] -h hostname -p port -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB] "
          WRITE(*,*) "         -o 'comma_separated_parameters' [-v] "
          WRITE(*,*) ""
          WRITE(*,*) " For LJ potential use -o sigma,epsilon,cutoff "
@@ -681,7 +657,7 @@
          WRITE(*,*) " For 1D morse oscillator use -o r0,D,a"
          WRITE(*,*) " For qtip4pf-efield use -o Ex,Ey,Ez with Ei in V/nm"         
          WRITE(*,*) " For ljpolymer use -o n_monomer,sigma,epsilon,cutoff "
-         WRITE(*,*) " For the ideal gas, qtip4pf, zundel, ch4hcbe, nasa, MB, doublewell or doublewell_1D no options are needed! "
+         WRITE(*,*) " For the ideal gas, qtip4pf, zundel, ch4hcbe or nasa no options needed! "
        END SUBROUTINE helpmessage
 
    END PROGRAM

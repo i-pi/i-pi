@@ -39,9 +39,9 @@ C                           incorrectly returned as zero.
 C
 C***********************************************************************
 
-      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      IMPLICIT REAL*8 (A-H,O-Z)
 C
-      CHARACTER(75) REF(5)
+      CHARACTER*75 REF(5)
 C
       PARAMETER (N3ATOM=75)
       PARAMETER (NATOM=25)
@@ -235,10 +235,10 @@ C
 C
 C***********************************
 C                                  *
-C   WRITTEN BY: R. J. DUCHOVIC     *
+C   WRITTEN BY:	R. J. DUCHOVIC	   *
 C               A. F. WAGNER       *
-C                                  *
-C   DATE:               99-10-15   *
+C			           *     	
+C   DATE:		99-10-15   *
 C                       99-11-09   *
 C                       99-11-10   *
 C                       99-11-15   *
@@ -251,21 +251,21 @@ C                       01-07-18   *
 C                                  *
 C***********************************
 C
-      IMPLICIT DOUBLE PRECISION (A-H,O-Z)
+      IMPLICIT REAL*8 (A-H,O-Z)
 C
-      CHARACTER(75) REF(5)
-      CHARACTER(3) PERIODIC_1(7,32)
+      CHARACTER*75 REF(5)
+      CHARACTER*3 PERIODIC_1(7,32)
 C
       PARAMETER (N3ATOM=75)
       PARAMETER (NATOM=25)
       PARAMETER (ISURF = 5)
       PARAMETER (JSURF = ISURF*(ISURF+1)/2)
 C
-      CHARACTER(2) NAME1(NATOM)
-      CHARACTER(2) NAME2(NATOM)
-      CHARACTER(1) IBLANK
-      CHARACTER(20) DISTANCE
-      CHARACTER(20) UNITS
+      CHARACTER*2 NAME1(NATOM)
+      CHARACTER*2 NAME2(NATOM)
+      CHARACTER*1 IBLANK
+      CHARACTER*20 DISTANCE
+      CHARACTER*20 UNITS
 C
       COMMON /PT1CM/  R(N3ATOM), ENGYGS, DEGSDR(N3ATOM)
       COMMON /PT3CM/  EZERO(ISURF+1)
@@ -292,21 +292,21 @@ C
       DIMENSION ISAVE(NATOM),JSAVE(NATOM)
 C
 C***********************************************************************
-C                                                                      *
-C  PI:                          3.141592653589793                      *
-C                                                                      *
+C			                                               *
+C  PI:				3.141592653589793		       *
+C			                                               *
 C  FUNDAMENTAL  CONSTANTS (1998 CODATA values)                         *
-C                                                                      *
-C  SPPED OF LIGHT:              2.99792458 x 10**8   ms**-1            *
-C  PERMEABILITY  OF VACUUM:     4.0D0*PI*1.0 x 10**-07  NA**-2         *
-C  PERMITIVITY  OF VACUUM:      1.0/(CMU_0*CLIGHT**2) Fm**-1           *
-C  ELEMENTARY  CHARGE:          1.602176462 x 10**-19  C               *
-C  PLANCK'S CONSTANT            6.62606876 x 10**-34  Js               *
-C  ELECTRON MASS:               9.10938188 x 10**-31  kg               * 
-C  ANGSTROM:                    1.0 X 10**-10 m                        *
-C  AVOGADRO'S CONSTANT:         6.02214199 x 10**23 mol**-1            *
-C  KILOCALORIE:                 4.184  x 10**10 ergs                   *
-C                                                                      *
+C								       *
+C  SPPED OF LIGHT:		2.99792458 x 10**8   ms**-1	       *
+C  PERMEABILITY  OF VACUUM:	4.0D0*PI*1.0 x 10**-07  NA**-2	       *
+C  PERMITIVITY  OF VACUUM:	1.0/(CMU_0*CLIGHT**2) Fm**-1	       *
+C  ELEMENTARY  CHARGE:	        1.602176462 x 10**-19  C	       *
+C  PLANCK'S CONSTANT		6.62606876 x 10**-34  Js	       *
+C  ELECTRON MASS:		9.10938188 x 10**-31  kg	       *   	
+C  ANGSTROM:			1.0 X 10**-10 m			       *
+C  AVOGADRO'S CONSTANT:	        6.02214199 x 10**23 mol**-1	       *
+C  KILOCALORIE:		        4.184  x 10**10 ergs		       *
+C								       *
 C  BOHR     = 2.0D0*CPLANCK**2/(2.0D0*PI*CM_E*CLIGHT**2*CMU_0*CE**2)   *
 C           = 5.291772083 x 10**-11 m                                  *
 C  HTOMILLH = 1000 milliHartree                                        *
@@ -318,7 +318,7 @@ C  HTOWAVE  = (CE**2)/(4.0D0*PI*CEPSILON_0*BOHR*CPLANCK*CLIGHT)        *
 C           = 219474.631 Hartree                                       *
 C  HTOKJ    = HTOKCAL*4.184                                            *
 C           = 2625.49962                                               *
-C                                                                      *
+C								       *
 C***********************************************************************
 C
       PARAMETER(        PI = 3.141592653589793D0)
@@ -635,15 +635,15 @@ C                                            *
 C*********************************************
 C
 C*****************************************************************
-C                                                                *
+C					                         *
 C   NFLAG(1) = 1    => UNITS IN BOHR, NO CONVERSION REQUIRED     *
 C   NFLAG(1) = 2    => UNITS IN ANGSTROMS, CONVERSION REQUIRED   *
-C                                                                *
+C					                         *
 C   NFLAG(2) = 1 => UNITS IN HARTREE, NO CONVERSION REQUIRED     *
-C            = 2 => UNITS IN MILLIHARTREE, CONVERSION REQUIRED   *
-C            = 3 => UNITS IN EV, CONVERSION REQUIRED             *
-C            = 4 => UNITS IN KCLAL, CONVERSION REQUIRED          *
-C            = 5 => UNITS IN WAVENUMBER, CONVERSION REQUIRED     *
+C	     = 2 => UNITS IN MILLIHARTREE, CONVERSION REQUIRED	 *
+C	     = 3 => UNITS IN EV, CONVERSION REQUIRED             *
+C	     = 4 => UNITS IN KCLAL, CONVERSION REQUIRED          *
+C	     = 5 => UNITS IN WAVENUMBER, CONVERSION REQUIRED     *
 C            = 6 => UNITS IN KILOJOULES/MOLE, CONVERSION REQUIRED*
 C                                                                *
 C*****************************************************************
@@ -705,23 +705,23 @@ C
       SUBROUTINE CARTOU
 C
 C********************************************************
-C                                                       *
-C   WRITTEN BY: R. J. DUCHOVIC,A. F. WAGNER             *
-C                                                       *
-C   DATE:               00-01-22                        *
+C							*
+C   WRITTEN BY:	R. J. DUCHOVIC,A. F. WAGNER   	        *
+C							*
+C   DATE:		00-01-22			*
 C                       01-07-18                        *
 C                                                       *
-C   THIS SUBROUTINE IS DESIGNED TO CONVERT              *
+C   THIS SUBROUTINE IS DESIGNED TO CONVERT 		*
 C   POSITIONS CART IN USER ORDER AND UNITS INTO         *
 C   POSITIONS CARTNU IN DEVELOPER ORDER AND UNITS       *
 C   (DEVELOPER UNITS ARE FIXED AT BOHR).                *
 C   CONVERSION FACTOR DONE IN ANCVRT.F                  *
-C                                                       *
+C							*
 C********************************************************
 C
-      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      IMPLICIT REAL*8(A-H,O-Z)
 C
-      CHARACTER(75) REF(5)
+      CHARACTER*75 REF(5)
 C
       PARAMETER (N3ATOM=75)
       PARAMETER (NATOM=25)
@@ -784,15 +784,15 @@ C
       SUBROUTINE CARTTOR
 C
 C*****************************************************************
-C                                                                *
-C   WRITTEN BY: R. J. DUCHOVIC, A. F. WAGNER                     *
-C                                                                *
-C   DATE:               00-01-22                                 *
+C							         *
+C   WRITTEN BY:	R. J. DUCHOVIC, A. F. WAGNER                     *
+C							         *
+C   DATE:		00-01-22			         *
 C                       00-08-03                                 *
 C                       00-08-11                                 *
 C                       01-07-18                                 * 
-C                                                                *
-C   THIS SUBROUTINE IS DESIGNED TO CONVERT FROM                  *
+C							         *
+C   THIS SUBROUTINE IS DESIGNED TO CONVERT FROM		         *
 C   POSITIONS CARTNU IN DEVELOPER UNITS AND ORDER                *
 C   TO DIFFERENT SETS OF INTERNAL COORDINATES R                  *
 C   AS CONTROLLED BY ICARTR                                      *
@@ -842,13 +842,13 @@ C      R(4) .................... Theta one angle                 *
 C      R(5) .................... Theta two angle                 *
 C      R(6) .................... Dihedral Tau angle              *
 C                                                                *
-C   NATOMS  =>  NUMBER OF ATOMS                                  *
-C                                                                *
+C   NATOMS  =>  NUMBER OF ATOMS       			         *
+C							         *
 C*****************************************************************
 C
-      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      IMPLICIT REAL*8(A-H,O-Z)
 C
-      CHARACTER(75) REF(5)
+      CHARACTER*75 REF(5)
 C
       PARAMETER (N3ATOM=75)
       PARAMETER (NATOM=25)
@@ -1084,7 +1084,7 @@ C      RCM=SQRT(XCM3**2+YCM3**2+ZCM3**2)
 C      R1=(SQRT(XRM1**2+YRM1**2+ZRM1**2))*(FLM+HYM)/FLM
 C      R2=(SQRT(XRM2**2+YRM2**2+ZRM2**2))*(FLM+HYM)/FLM
 C     WRITE(6,2001)RCM,R1,R2,THETA1,THETA2,PHI
-C 2001 FORMAT(6F12.8)
+ 2001 FORMAT(6F12.8)
 C
 C************************************************************
 C                                                           *
@@ -1118,20 +1118,20 @@ C
 C
 C************************************************************
 C                                                           *
-C   WRITTEN BY: R. J. DUCHOVIC, A. F. WAGNER                *
-C                                                           *
-C   DATE:               00-01-23                            *
+C   WRITTEN BY:	R. J. DUCHOVIC, A. F. WAGNER     	    *
+C							    *
+C   DATE:		00-01-23                            *
 C                       01-07-18                            *
-C                                                           *
+C						            *
 C   THIS PROGRAM CONVERTS OUTPUT ENERGIES FROM              *
 C   DEVELOPER UNITS (NAMELY, ATOMIC UNITS) TO USER UNITS.   *
 C   CONVERSION CALCULATED IN ANCVRT.F.                      *
-C                                                           *
+C							    *
 C************************************************************
 C
-      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      IMPLICIT REAL*8(A-H,O-Z)
 C
-C      CHARACTER(75) REF(5)
+      CHARACTER*75 REF(5)
 C
       PARAMETER (N3ATOM=75)
       PARAMETER (NATOM=25)
@@ -1176,26 +1176,26 @@ C
 C
 C************************************************************
 C                                                           *
-C   WRITTEN BY: R. J. DUCHOVIC, A. F. WAGNER                *
-C                                                           *
-C   DATE:               00-01-23                            *
+C   WRITTEN BY:	R. J. DUCHOVIC, A. F. WAGNER     	    *
+C							    *
+C   DATE:		00-01-23                            *
 C                       00-08-04                            *
 C                       00-08-11                            *
 C                       00-08-14                            *
 C                       01-07-18                            *
-C                                                           *
+C						            *
 C   THIS PROGRAM IS DESIGNED TO CONVERT                     *
 C   DEGSDR,DEESDR,DEIJDR IN INTERNAL COORDINATES R INTO     *
 C   DGSCARTNU,DESCARTNU,DIJCARTNU IN DEVELOPER UNITS AND    *
-C   ORDER.                                                  *
+C   ORDER.                                		    *
 C   THIS CODE IS ONLY CALLED IF DERIVATIVES ARE REQUIRED.   *
 C   THIS CODE IS THE INVERSE OF CARTTOR.                    *
-C                                                           *
+C							    *
 C************************************************************
 C
-      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      IMPLICIT REAL*8(A-H,O-Z)
 C
-      CHARACTER(75) REF(5)
+      CHARACTER*75 REF(5)
 C
       PARAMETER (N3ATOM=75)
       PARAMETER (NATOM=25)
@@ -1266,8 +1266,8 @@ C   R(1)=1-2 DIST.,R(2)=1-3 DIST.,...,R(NATOMS) 2-3 DIST.,... *
 C   Do in order Ground State, Excited State, Coupling         *
 C                                                             *
 C**************************************************************
-C JC05132003
-         DO I = 1, NATOMS 
+
+         DO I = 1, NATOMS                                               JC05132003
             DGSCARTNU(I,1) = 0.D0
             DGSCARTNU(I,2) = 0.D0
             DGSCARTNU(I,3) = 0.D0
@@ -1475,22 +1475,22 @@ C
 C
 C********************************************************************
 C                                                                   *
-C   WRITTEN BY: R. J. DUCHOVIC, A. F. WAGNER                        *
-C                                                                   *
-C   DATE:               00-01-23                                    *
+C   WRITTEN BY:	R. J. DUCHOVIC, A. F. WAGNER     	            *
+C							            *
+C   DATE:		00-01-23                                    *
 C                       01-07-18                                    * 
-C                                                                   * 
+C						                    *
 C   THIS PROGRAM CONVERTS DERIVATIVES                               *
 C   DGSCARTNU,DESCARTNU,DIJCARTNU IN DEVELOPER ORDER AND UNITS INTO *
 C   DCSCART,DESCART,DIJCART IN USER ODER AND UNITS                  *
 C   (DEVELOPER UNITS ARE ATOMIC UNITS)                              *
 C   CONVERSION CALCULATED IN ANCVRT.F                               *
-C                                                                   * 
+C							            *
 C********************************************************************
 C
-      IMPLICIT DOUBLE PRECISION(A-H,O-Z)
+      IMPLICIT REAL*8(A-H,O-Z)
 C
-      CHARACTER(75) REF(5)
+      CHARACTER*75 REF(5)
 C
       PARAMETER (N3ATOM=75)
       PARAMETER (NATOM=25)
