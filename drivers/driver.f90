@@ -627,13 +627,13 @@
                WRITE(initbuffer,*) dip(1:3)
                cbuf = LEN_TRIM(initbuffer)
                CALL writebuffer(socket,cbuf) ! Writes back the molecular dipole
-               IF (verbose > 1) WRITE(*,*) "    !write!=> extra_lenght: ", cbuf
+               IF (verbose > 1) WRITE(*,*) "    !write!=> extra_length: ", cbuf
                CALL writebuffer(socket,initbuffer,cbuf)
                IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ", initbuffer
             ELSE
                cbuf = 7 ! Size of the "extras" string
                CALL writebuffer(socket,cbuf) ! This would write out the "extras" string, but in this case we only use a dummy string.
-               IF (verbose > 1) WRITE(*,*) "    !write!=> extra_lenght: ", cbuf
+               IF (verbose > 1) WRITE(*,*) "    !write!=> extra_length: ", cbuf
                CALL writebuffer(socket,"nothing",7)
                IF (verbose > 1) WRITE(*,*) "    !write!=> extra: nothing"
             ENDIF
