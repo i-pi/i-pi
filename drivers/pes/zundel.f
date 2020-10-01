@@ -1388,16 +1388,16 @@
         double precision d2(0:nk-1,0:nk-1), d3(0:nk-1,0:nk-1), 
      $  d4(0:nk-1,0:nk-1), d5(0:nk-1,0:nk-1), d6(0:nk-1,0:nk-1), 
      $  d7(0:nk-1,0:nk-1)                    
-        double precision t0                                                            
-        double precision her2, her3, her4, her5, her6, her7                            
-        her2(t0) = (4*t0**2-2)/dsqrt(dble(8*2))                               
-        her3(t0) = (8*t0**2-12)*t0/dsqrt(dble(16*6))                          
-        her4(t0) = ((16*t0**2-48)*t0**2+12)/dsqrt(dble(32*24))                
-        her5(t0) = ((32*t0**2-160)*t0**2+120)*t0/dsqrt(dble(64*120))          
-        her6(t0) = (((64*t0**2-480)*t0**2+720)*t0**2-120)/                          
-     $     dsqrt(dble(128*720))                                                
-        her7(t0) = (((128*t0**2-1344)*t0**2+3360)*t0**2-1680)*t0/                   
-     $     dsqrt(dble(256*5040))                                               
+        double precision t0                                            
+        double precision her2, her3, her4, her5, her6, her7 
+!        her2(t0) = (4*t0**2-2)/sqrt(dble(8*2))
+!        her3(t0) = (8*t0**2-12)*t0/sqrt(dble(16*6))
+!        her4(t0) = ((16*t0**2-48)*t0**2+12)/sqrt(dble(32*24))
+!        her5(t0) = ((32*t0**2-160)*t0**2+120)*t0/sqrt(dble(64*120))
+!        her6(t0) = (((64*t0**2-480)*t0**2+720)*t0**2-120)/
+!     $  sqrt(dble(128*720))
+!        her7(t0) = (((128*t0**2-1344)*t0**2+3360)*t0**2-1680)*t0/
+!     $  sqrt(dble(256*5040))
 !-----------------------------------------------------------------------     
 !! We don't have the secondaries at degrees 5 and up yet.                    
 !-----------------------------------------------------------------------     
@@ -1868,14 +1868,14 @@
      $ 0:nk-1), d5(0:nk-1,0:nk-1), d6(0:nk-1,0:nk-1), d7(0:nk-1,0:nk-1)                    
         double precision t0                                                            
         double precision her2, her3, her4, her5, her6, her7                            
-        her2(t0) = (4*t0**2-2)/dsqrt(dble(8*2))                               
-        her3(t0) = (8*t0**2-12)*t0/dsqrt(dble(16*6))                          
-        her4(t0) = ((16*t0**2-48)*t0**2+12)/dsqrt(dble(32*24))                
-        her5(t0) = ((32*t0**2-160)*t0**2+120)*t0/dsqrt(dble(64*120))          
-        her6(t0) = (((64*t0**2-480)*t0**2+720)*t0**2-120)/                          
-     $     dsqrt(dble(128*720))                                                
-        her7(t0) = (((128*t0**2-1344)*t0**2+3360)*t0**2-1680)*t0/                   
-     $     dsqrt(dble(256*5040))                                               
+!        her2(t0) = (4*t0**2-2)/dsqrt(dble(8*2))                               
+!        her3(t0) = (8*t0**2-12)*t0/dsqrt(dble(16*6))                          
+!        her4(t0) = ((16*t0**2-48)*t0**2+12)/dsqrt(dble(32*24))                
+!        her5(t0) = ((32*t0**2-160)*t0**2+120)*t0/dsqrt(dble(64*120))          
+!        her6(t0) = (((64*t0**2-480)*t0**2+720)*t0**2-120)/                          
+!     $     dsqrt(dble(128*720))                                                
+!        her7(t0) = (((128*t0**2-1344)*t0**2+3360)*t0**2-1680)*t0/                   
+!     $     dsqrt(dble(256*5040))                                               
 !-----------------------------------------------------------------------     
 !! We don't have the secondaries at degree 6 yet.                            
 !-----------------------------------------------------------------------     
@@ -2401,7 +2401,7 @@
         implicit none
         
         double precision   t0,her2
-        her2 = (4*t0**2-2)/dsqrt(dble(8*2 ))
+        her2 = (4*t0**2-2)/sqrt(dble(8*2 ))
         return
         end
         
@@ -2409,7 +2409,7 @@
         implicit none
         
         double precision   t0,her3
-        her3 = (8*t0**2-12)*t0/dsqrt(dble(16*6 ))
+        her3 = (8*t0**2-12)*t0/sqrt(dble(16*6 ))
         return
         end
         
@@ -2417,7 +2417,7 @@
         implicit none
         
         double precision   t0,her4
-        her4 = ((16*t0**2-48)*t0**2+12)/dsqrt(dble(32*24 ))
+        her4 = ((16*t0**2-48)*t0**2+12)/sqrt(dble(32*24 ))
         return
         end
         
@@ -2425,7 +2425,7 @@
         implicit none
         
         double precision   t0,her5
-        her5 = ((32*t0**2-160)*t0**2+120)*t0/dsqrt(dble(64*120 ))
+        her5 = ((32*t0**2-160)*t0**2+120)*t0/sqrt(dble(64*120 ))
         return
         end
         
@@ -2433,7 +2433,7 @@
         implicit none
         
         double precision   t0,her6
-        her6=(((64*t0**2-480)*t0**2+720)*t0**2-120)/dsqrt(dble(128*720))
+        her6=(((64*t0**2-480)*t0**2+720)*t0**2-120)/sqrt(dble(128*720))
         return
         end
         
@@ -2441,7 +2441,7 @@
         implicit none
         
         double precision   t0,her7
-        her7 = (((128*t0**2-1344)*t0**2+3360)*t0**2-1680)*t0/dsqrt(dble(
+        her7 = (((128*t0**2-1344)*t0**2+3360)*t0**2-1680)*t0/sqrt(dble(
      $ 256*5040 ))
         return
         end

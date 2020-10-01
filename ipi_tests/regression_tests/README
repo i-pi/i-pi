@@ -1,4 +1,11 @@
-See documentaion of how to run the regression tests by running:
+----------------------------------------------------------------------------------
+                   R E G R E S S I O N   T E S T S
+----------------------------------------------------------------------------------
+
+INFORMATION ON CREATING NEW REGRESSION TESTS
+----------------------------------------------------------------------------------
+
+See the documentaion of how to run the regression tests by running:
 
    "python test_run.py -h"
 
@@ -6,10 +13,31 @@ To add a new regression test please provide:
 
    - input.xml (and all the files required by it)
 
-   - driver.txt specifing  "<driver> <address> <port> <unix/inet> " (see existing examples)
+   - driver.txt specifying  "<driver> <address> <port> <unix/inet> <-o possible
+     options> " (see existing examples)
+	The driver will be run using the following syntax*: 
+ 
+	"i-pi-driver -m <driver> -h <address> -u -o <possible options>" if unix 
+     
+     for an existing example including the usage of option flags, please see:
+	tests/GEOP/BFGS/harmonic/driver.txt
 
-   - a reference output with the name 'ref_simulation.out'
+     *Please note that the driver can be run with the same syntax when one
+     creates the reference files for the regression tests.
 
+   
+   - file_to_check.txt specifying the files serving as reference with their
+     respective filenames
+
+     for an existing example, please see:
+	tests/INSTANTON/100K/files_to_check.txt
+
+   - reference files that are listed in the files_to_check.txt file. Currently,
+     the available formats are .xyz and numpy-accessible which should be
+     specified with the keywords 'xyz' and 'numpy'.
+
+
+	
 Important: 
 
    The extension *.out appears in the .gitignore  file
@@ -18,3 +46,73 @@ Important:
 
     "git add -f ref_simulation.out"
 
+
+
+---------------------------------------------------------------------------
+INFORMATION ABOUT THE CURRENTLY INCLUDED FEATURES IN THE REGRESSION TESTS
+---------------------------------------------------------------------------
+
+
+Thermostats and NVT dynamics  
+----------------------------------------------------------------------
+The following thermostats have been tested against an in-house independent
+code by Yair Litman (2020) and hence have been included in the regression 
+test analysis of i-pi. 
+	- Langevin 
+	- PILE-local (pile_l)
+	- PILE-global (pile_g)
+	- Stochastic Velocity Rescaling (SVR)
+	 
+Note, that these thermostats are tested with single bead and multiple bead
+system settings, too. 
+
+
+NVE dynamics 
+---------------------------------------------------------------------- 
+The classical and multibead NVE dynamics have been tested against the independent
+implementation of Yair Litman (2020).
+
+
+
+Geometry optimizations with FHI-aims against ASE:
+----------------------------------------------------------------------
+Note, that the results and accuracy of the geometry optimization routines have 
+been tested against the ASE using FHI-aims and hartree fock with a strict 
+convergence criteria. The tests have been conducted by Eszter Pos (2020) 
+
+The following routines are tested and give perfect agreement:
+	- BFGS
+	- L-BFGS
+	- BFGS-TRM
+	- CG: there is an issue about the line-search of the CG routine, the
+	      function needs to be evaluated ~100 times, while with ASE , the routine
+	      converges after 7 steps. Needs to be checked further. Final geometry agrees
+	      well enough with the ASE geometry, but the linesearch needs to be checked and
+	      optimized. 
+
+Partially tested, but problematic routines with FHI-aims against ASE:
+	- SD: could not be tested against ASE, however, it gives the same final
+optimized geometry as the BFGS routines. (takes a very long time becasue of
+the line search.)
+        - NEB: the Nudged Elastic Band routine is disabled until further
+               debugging is conducted on the routine and its spring constants. 
+	
+
+
+Tested Thermostats and NVT dynamics  
+----------------------------------------------------------------------
+The following thermostats have been tested against an in-house independent
+code by Yair Litman (2020) and hence have been included in the regression 
+test analysis of i-pi. 
+	- Langevin 
+	- PILE-local (pile_l)
+	- PILE-global (pile_g)
+	- Stochastic Velocity Rescaling (SVR)
+	 
+
+Tested Instanton geometries and Hessian matrices
+----------------------------------------------------------------------
+For the instanton geometries and Hessian matrix, we rely on the
+numpy-accessible outputs. 
+
+These have been tested against Yair Litman's in-the-house independent implementation (2020).
