@@ -1,0 +1,30 @@
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           0  Bead:       0 forces{atomic_unit}  cell{atomic_unit}
+       H  0.00000e+00  0.00000e+00  0.00000e+00
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           1  Bead:       0 forces{atomic_unit}  cell{atomic_unit}
+       H -6.73537e-05  1.14118e-05  4.06483e-06
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           2  Bead:       0 forces{atomic_unit}  cell{atomic_unit}
+       H -1.43725e-04  2.78527e-05  2.48697e-05
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           3  Bead:       0 forces{atomic_unit}  cell{atomic_unit}
+       H -2.00275e-04  7.83006e-05  7.41879e-05
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           4  Bead:       0 forces{atomic_unit}  cell{atomic_unit}
+       H -2.56744e-04  1.59492e-04  1.07580e-04
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           5  Bead:       0 forces{atomic_unit}  cell{atomic_unit}
+       H -2.76826e-04  1.94281e-04  1.19598e-04
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           6  Bead:       0 forces{atomic_unit}  cell{atomic_unit}
+       H -3.01775e-04  2.32171e-04  1.17098e-04
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           7  Bead:       0 forces{atomic_unit}  cell{atomic_unit}
+       H -2.85058e-04  2.70425e-04  1.39878e-04
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           8  Bead:       0 forces{atomic_unit}  cell{atomic_unit}
+       H -2.26984e-04  3.10517e-04  1.42558e-04
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           9  Bead:       0 forces{atomic_unit}  cell{atomic_unit}
+       H -1.78906e-04  3.08735e-04  9.84961e-05

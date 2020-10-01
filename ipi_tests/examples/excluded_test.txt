@@ -7,6 +7,7 @@ lammps/h2o-constraints
 lammps/isof-vapor                                                           # Isotope-zeta-sc is stopping the termination of the run
 lammps/isof-water                                                           # Isotope-zeta-sc is stopping the termination of the run
 lammps/h2o-pimd+sc+rpc_open                                                 # RuntimeWarning: overflow encountered in multiply
+pes/neb                                                                     # The nudged elastic band calculations have been temporarily disabled  
 
 # no apropiate driver to use
 lammps/paracetamol-geop                             # no appropriate driver 
