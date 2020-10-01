@@ -115,7 +115,7 @@ def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):
             transfmatrix = np.eye(3 * ii) - np.dot(D.T, D)
             hm = np.dot(transfmatrix.T, np.dot(dynmat, transfmatrix))
 
-    # Symmetrize to use linalg.eigh
+    # Simmetrize to use linalg.eigh
     hmT = hm.T
     hm = (hmT + hm) / 2.0
 
@@ -125,6 +125,7 @@ def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):
     dd = (
         np.sign(d) * np.absolute(d) ** 0.5 / (2 * np.pi * 3e10 * 2.4188843e-17)
     )  # convert to cm^-1
+    # print "ALBERTO", dd[0:10]
 
     # Zeros
     cut0 = 0.01  # Note that dd[] units are cm^1

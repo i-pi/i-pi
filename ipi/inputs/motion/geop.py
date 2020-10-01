@@ -67,7 +67,7 @@ class InputGeop(InputDictionary):
                               """,
                 "options": ["tolerance", "iter", "step", "adaptive"],
                 "default": [1e-4, 100, 1e-3, 1.0],
-                "dimension": ["energy", "undefined", "length", "undefined"],
+                "dimension": ["undefined", "undefined", "length", "undefined"],
             },
         ),
         "exit_on_convergence": (

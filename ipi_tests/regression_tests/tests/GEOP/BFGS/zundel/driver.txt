@@ -1,4 +1,0 @@
-driver zundel  
-address localhost
-port 32342 
-socket_mode unix
