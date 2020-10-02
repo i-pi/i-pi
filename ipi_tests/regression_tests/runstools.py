@@ -326,11 +326,6 @@ class Runner(object):
                         )
                     )
 
-    #                    print("ANOMALY: Disagreement between reference and {} in {}".format(
-    #                            fname, str(self.parent)
-    #                        )
-    #                    )
-
     def _check_xyz_output(self, cwd):
         """ This function checks if the ref_simulation.XXXXX.xyz files are 'all_close'
         to the reference file provided.
@@ -402,43 +397,3 @@ class Runner(object):
                         )
                     )
 
-
-#                    print("ANOMALY: Disagreement between reference and {} in {}".format(
-#                            fname, str(self.parent / cwd)
-#                        )
-#                    )
-
-
-#    def _check_extra_output(self, cwd):
-#        """ This function checks if the ref_simulation.XXXXX files are 'all_close'
-#        to the reference file provided.
-#
-#        Options for XXXXX and the tags they can be generated with:
-#            instanton_FINAL.hess_[0-9]+
-#            instanton_FINAL_[0-9]+.ener
-#        """
-#        extras = [r'instanton_FINAL.hess_[0-9]+',r'instanton_FINAL_[0-9]+.ener']              # possible extras for reference checks
-#        extras_present=[]
-#        skip_rows = [0,1]
-#
-#        for var in extras:
-#            for filename in os.listdir(Path(cwd)):
-#                match = re.search(var,filename)
-#                if match is not None:
-#                    refname = 'ref_simulation.'+match.group(0)
-#                    extras_present.append(refname)
-#
-#        for ii, refname in enumerate(extras_present):
-#            fname = refname.replace("ref_","")
-#            ref_extra = np.loadtxt(Path(cwd)/refname,unpack = True,skiprows = skip_rows[ii])
-#            f_extra = np.loadtxt(self.tmp_dir/fname,unpack = True,skiprows = skip_rows[ii])
-#
-#            try:
-#                np.testing.assert_allclose(f_extra, ref_extra)
-#                print("No anomaly during the regtest for {}".format(fname))
-#            except AssertionError:
-#                raise AssertionError(
-#                    "Anomaly: Disagreement between reference and {} in {}".format(
-#                        fname, str(self.parent / cwd)
-#                    )
-#                )
