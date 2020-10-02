@@ -105,6 +105,16 @@ def main(inputfile, outdir="trim"):
                             if getkey(o.what) == "extras":
                                 filename = filename + "_" + padb
                                 ofilename = ofilename + "_" + padb
+                                ntraj.append(
+                                    {
+                                        "filename": filename,
+                                        "format": None,
+                                        "ofilename": ofilename,
+                                        "stride": o.stride,
+                                        "ifile": open(filename, "r"),
+                                        "ofile": open(ofilename, "w"),
+                                    }
+                                )
                             else:
                                 filename = filename + "_" + padb + "." + o.format
                                 ofilename = ofilename + "_" + padb + "." + o.format
@@ -148,24 +158,31 @@ def main(inputfile, outdir="trim"):
 
     ptfile = None
     wtefile = None
-    if os.path.isfile("PARATEMP"):
-        ptfile = open("PARATEMP", "r")
-        optfile = open(outdir + "/PARATEMP", "w")
-    if os.path.isfile("PARAWTE"):
-        wtefile = open("PARAWTE", "r")
-        owtefile = open(outdir + "/PARAWTE", "w")
+    if os.path.isfile(simul.outtemplate.prefix + "." + simul.smotion.swapfile):
+        ptfile = open(simul.outtemplate.prefix + "." + simul.smotion.swapfile, "r")
+        optfile = open(
+            outdir + "/" + simul.outtemplate.prefix + "." + simul.smotion.swapfile, "w"
+        )
+    # do not know if this is redudant, please uncomment if it is not
+    # if os.path.isfile("PARAWTE"):
+    #    wtefile = open("PARAWTE", "r")
+    #    owtefile = open(outdir + "/PARAWTE", "w")
+
+    # First reads the swap file
+    while True:
+        if ptfile is not None:
+            try:
+                line = ptfile.readline()
+                step = int(line.split()[0])
+                if step < trimstep:
+                    optfile.write(line)
+                else:
+                    break
+            except IndexError:
+                break
 
     # now reads files one frame at a time, and re-direct output to the appropriate location
     for step in range(trimstep + 1):
-        # reads one line from PARATEMP index file
-        if ptfile is not None:
-            line = ptfile.readline()
-            optfile.write(line)
-
-        if wtefile is not None:
-            line = wtefile.readline()
-            owtefile.write(line)
-
         try:
 
             for prop in lprop:
@@ -184,6 +201,10 @@ def main(inputfile, outdir="trim"):
                     if step % straj["stride"] == 0:  # property transfer
                         # reads one frame from the input file
                         ibuffer = []
+                        if straj["format"] is None:
+                            ibuffer.append(straj["ifile"].readline())
+                            ibuffer.append(straj["ifile"].readline())
+                            traj[isys]["ofile"].write("".join(ibuffer))
                         if straj["format"] == "xyz":
                             iline = straj["ifile"].readline()
                             nat = int(iline)

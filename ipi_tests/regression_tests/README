@@ -1,0 +1,20 @@
+See documentaion of how to run the regression tests by running:
+
+   "python test_run.py -h"
+
+To add a new regression test please provide:
+
+   - input.xml (and all the files required by it)
+
+   - driver.txt specifing  "<driver> <address> <port> <unix/inet> " (see existing examples)
+
+   - a reference output with the name 'ref_simulation.out'
+
+Important: 
+
+   The extension *.out appears in the .gitignore  file
+   This means that the 'ref_simulation.out' file has to be added manually to your commit.
+   You can do that by typing:
+
+    "git add -f ref_simulation.out"
+

@@ -121,7 +121,7 @@ if input_geo != "None" or chk != "None":
 
         if os.path.exists(chk):
             simulation = Simulation.load_from_xml(
-                chk, custom_verbosity="low", request_banner=False
+                chk, custom_verbosity="low", request_banner=False, read_only=True
             )
         else:
             print("We can't find {}".format(chk))
@@ -135,31 +135,24 @@ if input_geo != "None" or chk != "None":
 
     print(" ")
     print(
-        (
-            "We have a half ring polymer made of {} beads and {} atoms.".format(
-                nbeads, natoms
-            )
+        "We have a half ring polymer made of {} beads and {} atoms.".format(
+            nbeads, natoms
         )
     )
     print(
-        (
-            "We will expand the ring polymer to get a half polymer of {} beads.".format(
-                nbeadsNew
-            )
+        "We will expand the ring polymer to get a half polymer of {} beads.".format(
+            nbeadsNew
         )
     )
 
-    # Make the rpc step (standar)
-    # q2 = np.concatenate((q, np.flipud(q)), axis=0)   # Compose the full ring polymer.
-    # rpc = nm_rescale(2 * nbeads, 2 * nbeadsNew)
-    # new_q = rpc.b1tob2(q2)[0:nbeadsNew]
-    # Make the rpc step (instanton)
-    # rpc = nm_rescale(nbeads, nbeadsNew,instanton=True)
-    # new_q = rpc.b1tob2(q )
+    # Make the rpc step (standard). It is better that open path in some corner cases.
+    q2 = np.concatenate((q, np.flipud(q)), axis=0)  # Compose the full ring polymer.
+    rpc = nm_rescale(2 * nbeads, 2 * nbeadsNew)
+    new_q = rpc.b1tob2(q2)[0:nbeadsNew]
 
     # Make the rpc step (open path)
-    rpc = nm_rescale(nbeads, nbeadsNew, np.asarray(list(range(natoms))))
-    new_q = rpc.b1tob2(q)
+    # rpc = nm_rescale(nbeads, nbeadsNew, np.asarray(range(natoms)))
+    # new_q = rpc.b1tob2(q)
 
     # Print
     out = open("new_instanton.xyz", "w")
@@ -177,10 +170,8 @@ if input_geo != "None" or chk != "None":
     print("Check new_instanton.xyz")
     print("")
     print(
-        (
-            "Don't forget to change the number of beads to the new value ({}) in your input file".format(
-                nbeadsNew
-            )
+        "Don't forget to change the number of beads to the new value ({}) in your input file".format(
+            nbeadsNew
         )
     )
     print("when starting your new simulation with an increased number of beads.")
@@ -191,7 +182,7 @@ if input_hess != "None" or chk != "None":
     if manual:
         try:
             hess = open(input_hess, "r")
-        except NameError:
+        except:
             print("We can't find {}".format(input_hess))
             sys.exit()
         h = np.zeros((natoms * 3) ** 2 * nbeads)
@@ -206,15 +197,15 @@ if input_hess != "None" or chk != "None":
         from ipi.engine.simulation import Simulation
 
         try:
-            h = simulation.syslist[0].motion.hessian.copy()
-        except ValueError:
+            h = simulation.syslist[0].motion.optarrays["hessian"].copy()
+        except:
             print("We don't have a hessian so there is nothing more to do")
             sys.exit()
         if np.linalg.norm(h) < 1e-13:
             print("We don't have a hessian so there is nothing more to do")
             sys.exit()
 
-    print(("The new hessian is {} x {}.".format(3 * natoms, natoms * 3 * nbeadsNew)))
+    print("The new hessian is {} x {}.".format(3 * natoms, natoms * 3 * nbeadsNew))
     out = open("new_hessian.dat", "w")
 
     print("Creating matrix... ")
@@ -222,41 +213,48 @@ if input_hess != "None" or chk != "None":
 
     hessian = h
     size0 = natoms * 3
-    # size1 = size0 * (2 * nbeads)
-    # size2 = size0 * (2 * nbeadsNew)
-    size1 = size0 * nbeads
-    size2 = size0 * nbeadsNew
 
+    # # We use open path RPC
+    # size1 = size0 * nbeads
+    # size2 = size0 * nbeadsNew
+    # new_h = np.zeros([size0, size2])
+    # rpc = nm_rescale(nbeads, nbeadsNew, np.asarray(range(1)))
+    # new_q = rpc.b1tob2(q)
+
+    # # Compose the full ring polymer.
+    size1 = size0 * (2 * nbeads)
+    size2 = size0 * (2 * nbeadsNew)
     new_h = np.zeros([size0, size2])
-    # rpc = nm_rescale(nbeads, nbeadsNew, np.asarray(range(1)))  # We use open path RPC
-    rpc = nm_rescale(nbeads, nbeadsNew, instanton=True)
-    new_q = rpc.b1tob2(q)
+    q2 = np.concatenate((q, np.flipud(q)), axis=0)  # Compose the full ring polymer.
+    rpc = nm_rescale(2 * nbeads, 2 * nbeadsNew)
+    new_q = rpc.b1tob2(q2)[0:nbeadsNew]
 
     for i in range(size0):
         for j in range(size0):
             h = np.array([])
             for n in range(nbeads):
                 h = np.append(h, hessian[i, j + size0 * n])
-            #           h3 = np.concatenate((h, h, h), axis=0).reshape((h.size, 3), order='F')  # Open path expect three coordinates per atom
-            #           diag = rpc.b1tob2(h3)[:, 0]
-            diag = rpc.b1tob2(h)
+            #           h3 = np.concatenate((h, h, h), axis=0).reshape((h.size, 3), order='F') # Open path expect three coordinates per atom
+            #           diag = rpc.b1tob2(h3)[:, 0] # Open path
+            h2 = np.concatenate(
+                (h, np.flipud(h)), axis=0
+            )  # Compose the full ring polymer.
+            diag = rpc.b1tob2(h2)
             new_h[i, j:size2:size0] += diag
 
+    new_h_half = new_h[:, 0 : size2 // 2]
+    np.savetxt(out, new_h_half.reshape(1, new_h_half.size))
     # new_h_half = new_h[:, 0:size2 / 2]
-    # np.savetxt(out, new_h_half.reshape(1, new_h_half.size))
-    #   new_h_half = new_h[:, 0:size2 / 2]
-    np.savetxt(out, new_h.reshape(1, new_h.size))
+    # np.savetxt(out, new_h.reshape(1, new_h.size))
 
     print("The new physical Hessian (half polymer) was generated")
     print("Check new_hessian.dat")
     print("")
-    print("Remeber to adapt/add the following line in your input:")
+    print("Remeber to adapt/add the following line in your input file:")
     print("")
     print(
-        (
-            " <hessian mode='file' shape='({}, {})' >hessian.dat</hessian>".format(
-                3 * natoms, natoms * 3 * nbeadsNew
-            )
+        " <hessian mode='file' shape='({}, {})' >hessian.dat</hessian>".format(
+            3 * natoms, natoms * 3 * nbeadsNew
         )
     )
     print("")
