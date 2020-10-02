@@ -40,9 +40,9 @@ def get_driver_info(
     address_name="localhost",
     flags=[],
 ):
-    """ This function looks for the existence of .driver_info file
-        to run the example with a meaningfull driver. If the file doesn't
-        exist, the driver gas is assigned. """
+    """This function looks for the existence of .driver_info file
+    to run the example with a meaningfull driver. If the file doesn't
+    exist, the driver gas is assigned."""
     try:
         with open(Path(example_folder) / driver_info_file) as f:
             flags = list()
@@ -88,7 +88,7 @@ def get_driver_info(
 
 
 def get_info_test(parent):
-    """ This function recursively searches for examples
+    """This function recursively searches for examples
     and checks for the presence of the required additional info
     required (i.e. driver.txt)
     """
@@ -113,7 +113,7 @@ def get_info_test(parent):
 
 
 class Runner(object):
-    """ This class handles the creation of tmp directories,
+    """This class handles the creation of tmp directories,
     the i-pi call, the driver call, and finally
     it checks that the generated outputs are the expected ones.
     """
@@ -127,9 +127,9 @@ class Runner(object):
         check_numpy_output=True,
         check_xyz_output=True,
     ):
-        """ Store parent directory and commands to call i-pi and driver
-            call_ipi: command to call i-pi
-            call_driver: list of commands to call drivers
+        """Store parent directory and commands to call i-pi and driver
+        call_ipi: command to call i-pi
+        call_driver: list of commands to call drivers
         """
 
         self.parent = parent
@@ -140,7 +140,7 @@ class Runner(object):
         self.check_xyz_output = check_xyz_output
 
     def _run(self, info, nid):
-        """ This function tries to run the example in a tmp folder and
+        """This function tries to run the example in a tmp folder and
         checks if ipi has ended without error.
         After that the output is checked against a reference
         arguments:
@@ -289,7 +289,7 @@ class Runner(object):
         assert "" == ipi_error
 
     def _check_numpy_output(self, cwd):
-        """ This function checks if the numpy-accessible datafiles are 'all_close' to the
+        """This function checks if the numpy-accessible datafiles are 'all_close' to the
         reference file provided
 
         The checked 'numpy-accessible' files are collected in the files_to_check.txt
@@ -327,7 +327,7 @@ class Runner(object):
                     )
 
     def _check_xyz_output(self, cwd):
-        """ This function checks if the ref_simulation.XXXXX.xyz files are 'all_close'
+        """This function checks if the ref_simulation.XXXXX.xyz files are 'all_close'
         to the reference file provided.
 
         The checked .xyz files are collected in the files_to_check.txt where there filetype is
@@ -396,4 +396,3 @@ class Runner(object):
                             fname, str(self.parent / cwd)
                         )
                     )
-

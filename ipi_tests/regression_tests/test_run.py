@@ -18,7 +18,7 @@ reg_tests = get_info_test(regtests_folder)
 
 @pytest.mark.parametrize("regtest", reg_tests)
 def test_regtest(regtest):
-    """ Intermediate function to run the regression test (by calling Runner) and makes
+    """Intermediate function to run the regression test (by calling Runner) and makes
     possible to parametrize the arguments
     """
     t0 = time.time()
