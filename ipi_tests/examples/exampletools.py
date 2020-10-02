@@ -20,8 +20,6 @@ driver_models = [
     "pswater",
     "eckart",
     "ch4hcbe",
-    "ljpolymer",
-    "doublewell",
     "MB",
 ]
 
@@ -131,7 +129,6 @@ def modify_xml_2_dummy_test(
                 clients[s].append(k)
                 clients[s].extend(v)
 
-    # Setting the number of steps for the simulation
     element = root.find("total_steps")
     if element is not None:
         element.text = str(nsteps)

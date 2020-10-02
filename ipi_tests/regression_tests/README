@@ -37,7 +37,7 @@ To add a new regression test please provide:
      specified with the keywords 'xyz' and 'numpy'.
 
 
-	
+
 Important: 
 
    The extension *.out appears in the .gitignore  file
