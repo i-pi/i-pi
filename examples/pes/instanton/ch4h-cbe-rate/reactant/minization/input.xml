@@ -4,16 +4,16 @@
         <trajectory stride="1" filename="xc" format="xyz">x_centroid{angstrom}</trajectory>
    </output>
    <total_steps>400       </total_steps>
-   <ffsocket name="cbe" mode="unix" >
+   <ffsocket name="ch4hcbe" mode="unix" >
        <address> localhost </address> 
    </ffsocket>
    <system >
        <initialize nbeads='1'> 
-           <file mode='xyz' >  init.xyz </file>
-           <cell mode='abc'> [200.0,  200.0,  200.0  ] </cell>
+           <file mode='xyz'>  init.xyz </file>
+           <cell mode='abc'> [200.0,  200.0,  200.0] </cell>
        </initialize>
        <forces>
-          <force forcefield="cbe"> </force>
+          <force forcefield="ch4hcbe"> </force>
        </forces>
        <motion mode="minimize">
             <optimizer mode="sd">

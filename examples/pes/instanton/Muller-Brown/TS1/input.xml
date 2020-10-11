@@ -1,0 +1,34 @@
+<simulation mode="static" verbosity="medium">
+    <output prefix='inst'>
+       <trajectory filename='pos' stride='1' format='xyz'> positions </trajectory>
+        <properties stride='1' filename='out'>  [ step, potential] </properties>
+   </output>
+   <total_steps>100       </total_steps>
+   <ffsocket name="MB" mode="unix" >
+       <address> localhost </address>  
+   </ffsocket>
+   <system >
+       <initialize nbeads='1'> 
+           <file mode='xyz' >  init.xyz </file>
+           <cell mode='abc'> [200.0,  200.0,  200.0  ] </cell>
+       </initialize>
+       <forces>
+          <force forcefield="MB"> </force>
+       </forces>
+       <motion mode='instanton'>
+           <instanton mode='rate'>
+               <alt_out>-1</alt_out>
+               <tolerances>
+                   <energy> 5e-6 </energy>
+	           <force> 5e-6 </force>
+	           <position> 1e-8 </position>
+               </tolerances>
+               <hessian_update>recompute</hessian_update>
+               <hessian_asr>none</hessian_asr>
+               <hessian_init>true</hessian_init>
+               <hessian_final>true</hessian_final>
+	       <biggest_step>0.1</biggest_step>
+           </instanton>
+       </motion>
+   </system>
+</simulation>

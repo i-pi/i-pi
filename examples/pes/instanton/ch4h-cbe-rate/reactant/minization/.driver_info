@@ -1,4 +1,1 @@
 driver  ch4hcbe
-address localhost
-port  33333
-socket_mode unix 

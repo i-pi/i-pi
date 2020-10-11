@@ -1,0 +1,25 @@
+<simulation mode="static" verbosity="medium">
+    <output prefix='phon'>
+   </output>
+   <total_steps>400       </total_steps>
+   <ffsocket name="MB" mode="unix" >
+       <address> localhost </address>  <latency> 1e-4</latency>
+       <port>40057</port>
+   </ffsocket>
+   <system >
+       <initialize nbeads='1'> 
+           <file mode='xyz' >  max.xyz </file>
+           <cell mode='abc'> [130.18034026,  170.29206049,  240.21758034] </cell>
+       </initialize>
+       <forces>
+          <force forcefield="MB"> </force>
+       </forces>
+      <motion mode="vibrations">
+        <vibrations mode="fd">
+            <pos_shift> 0.01  </pos_shift>
+            <prefix> phonons </prefix>
+            <asr> none </asr>
+         </vibrations>
+      </motion>
+   </system>
+</simulation>
