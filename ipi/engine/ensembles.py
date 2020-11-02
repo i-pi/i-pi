@@ -28,8 +28,8 @@ __all__ = ["Ensemble", "ensemble_swap"]
 
 
 def ensemble_swap(ens1, ens2):
-    """ Swaps the definitions of the two ensembles, by
-    exchanging all of the inner properties. """
+    """Swaps the definitions of the two ensembles, by
+    exchanging all of the inner properties."""
 
     if ens1.temp != ens2.temp:
         ens1.temp, ens2.temp = ens2.temp, ens1.temp

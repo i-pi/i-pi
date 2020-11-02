@@ -142,7 +142,7 @@ class Dynamics(Motion):
         conserved quantity the dependencies are defined in bind.
 
         Args:
-            beads: The beads object from whcih the bead positions are taken.
+            beads: The beads object from which the bead positions are taken.
             nm: A normal modes object used to do the normal modes transformation.
             cell: The cell object from which the system box is taken.
             bforce: The forcefield object from which the force and virial are
@@ -180,7 +180,7 @@ class Dynamics(Motion):
         # depending on the kind, the thermostat might work in the normal mode or the bead representation.
         self.thermostat.bind(beads=self.beads, nm=self.nm, prng=prng, fixdof=fixdof)
 
-        # first makes sure that the barostat has the correct stress andf timestep, then proceeds with binding it.
+        # first makes sure that the barostat has the correct stress and timestep, then proceeds with binding it.
         dpipe(dself.ntemp, dbaro.temp)
         dpipe(dens.pext, dbaro.pext)
         dpipe(dens.stressext, dbaro.stressext)
@@ -201,7 +201,7 @@ class Dynamics(Motion):
         self.ensemble.add_econs(dthrm.ethermo)
         self.ensemble.add_econs(dbaro.ebaro)
 
-        # adds the potential, kinetic enrgy and the cell jacobian to the ensemble
+        # adds the potential, kinetic energy and the cell Jacobian to the ensemble
         self.ensemble.add_xlpot(dbaro.pot)
         self.ensemble.add_xlpot(dbaro.cell_jacobian)
         self.ensemble.add_xlkin(dbaro.kin)
@@ -393,7 +393,7 @@ class DummyIntegrator(dobject):
 
 class NVEIntegrator(DummyIntegrator):
 
-    """ Integrator object for constant energy simulations.
+    """Integrator object for constant energy simulations.
 
     Has the relevant conserved quantity and normal mode propagator for the
     constant energy ensemble. Note that a temperature of some kind must be
@@ -410,7 +410,7 @@ class NVEIntegrator(DummyIntegrator):
     """
 
     def pstep(self, level=0):
-        """Velocity Verlet monemtum propagator."""
+        """Velocity Verlet momentum propagator."""
 
         # halfdt/alpha
         self.beads.p += self.forces.forces_mts(level) * self.pdt[level]

@@ -150,9 +150,7 @@ QUEUE_COM = queue.Queue()  # Queue to access the "compare"
 
 
 def main():
-    """ Manage the main process.
-
-    """
+    """Manage the main process."""
 
     root_test_folder = _parser()["root_test_folder"]
     tests_list = _parser()["tests"]
@@ -238,7 +236,7 @@ def main():
 
 
 def _parser():
-    """ Parse the argument lists given as input.
+    """Parse the argument lists given as input.
 
     Return:
         A dictionary containing all the input options and argument.
@@ -329,7 +327,7 @@ def _parser():
 
 
 def _build_test_index(root_path, tests):
-    """ Look for a valid xml in all the specified directories.
+    """Look for a valid xml in all the specified directories.
 
     Check if there are valid xml in all the specified folders. In case append
     the test to a list. If a folder contains more than a single xml, that folder
@@ -383,7 +381,7 @@ def _build_test_index(root_path, tests):
 
 
 def _file_is_test(path_to_test):
-    """ Check if an xml file can be used as regtest.
+    """Check if an xml file can be used as regtest.
 
     To be a valid regtest the xml file must contain the line to specify which
     is the command to be executed as a driver.
@@ -397,7 +395,7 @@ def _file_is_test(path_to_test):
 
 class Test(threading.Thread):
 
-    """ Contains all the methods used to create, run and compare a test.
+    """Contains all the methods used to create, run and compare a test.
 
     Args:
         index: An integer used to ensure no-overlap between sockets.
@@ -432,7 +430,7 @@ class Test(threading.Thread):
         self.die = False
 
     def copy(self):
-        """ Useful to create a copy of the actual state of the class.
+        """Useful to create a copy of the actual state of the class.
 
         Returns:
             A complete copy of the class in his actual state.
@@ -451,7 +449,7 @@ class Test(threading.Thread):
 
     @property
     def test_status(self):
-        """ Status of the test: always print the most important status!
+        """Status of the test: always print the most important status!
 
         An error has always the precedence, then a failure and, only if nothing
         bad happen, print PASSED.
@@ -466,7 +464,7 @@ class Test(threading.Thread):
             self._test_status = status
 
     def init_env(self):
-        """ Prepare the test run.
+        """Prepare the test run.
 
         Do the following thing:
         * Create the necessary folders.
@@ -662,8 +660,7 @@ class Test(threading.Thread):
         return
 
     def create_reference(self):
-        """ Determines and passes the reference files to a reference folder.
-        """
+        """Determines and passes the reference files to a reference folder."""
         if self.test_status == "PASSED":
             reference_dir = os.path.join(self.ref_path, "regtest-ref")
             create_dir(reference_dir)
@@ -690,7 +687,7 @@ class Test(threading.Thread):
             self.msg += "Errors occured: using this run as reference " "is not safe!\n"
 
     def print_report(self):
-        """ This function prints information about the test on stdout.
+        """This function prints information about the test on stdout.
 
         The test can have 3 results:
         - PASSED: The computed values match the reference.
@@ -731,7 +728,7 @@ class Test(threading.Thread):
         # print msg
 
     def compare_property_files(self, lprop):
-        """ Comparing property files.
+        """Comparing property files.
 
         The files are loaded with np.loadtxt and all the intestation are
         ignored: only the actual values are compared. Thus, the ipi input must
@@ -767,7 +764,7 @@ class Test(threading.Thread):
                     continue
 
     def compare_trajectory_files(self, ltraj):
-        """ Function to compare trajectory files.
+        """Function to compare trajectory files.
 
         The idea is to store all the numbers in the file in a list and then using
         numpy to compare the two lists. The numbers are recognized exploiting the
@@ -832,7 +829,7 @@ class Test(threading.Thread):
         return err
 
     def _compare(self):
-        """ This is the function that compares all the ipi output.
+        """This is the function that compares all the ipi output.
 
         The name of the files to compare come from ltraj and lprop.
         """
@@ -845,7 +842,7 @@ class Test(threading.Thread):
         self.compare_trajectory_files(ltraj)
 
     def get_filesname(self, xml_path, olddir, newdir):
-        """ The test results should be analyzed number by numbers.
+        """The test results should be analyzed number by numbers.
 
         The idea is that the testing input should never change, then the files
         should be always the same. It would probably be better, anyway, to use
@@ -985,15 +982,13 @@ class Test(threading.Thread):
 
 
 def remove_file(path):
-    """ Remove a path only if it exists and is a file!
-
-    """
+    """Remove a path only if it exists and is a file!"""
     if os.path.exists(path) and os.path.isfile(path):
         os.remove(path)
 
 
 def create_dir(folder_path, ignore=False):
-    """ Create a folder after user consense.
+    """Create a folder after user consense.
 
     If the path asked by the user is not existing, just create that folder
     otherwise asks the user his opinion on deleting the existing folder/file.
@@ -1030,7 +1025,7 @@ def create_dir(folder_path, ignore=False):
 
 
 def answer_is_y(msg):
-    """ A simple function to interrogate the user on y/n questions.
+    """A simple function to interrogate the user on y/n questions.
 
     Only 'yes' and 'y' are counted as yes answer and only 'n' and 'no' are
     valied negative answer. All the answer are case insensitive. The function
@@ -1063,7 +1058,7 @@ def answer_is_y(msg):
 
 
 def parse_regtest_string(test_path):
-    """ Retrieve the commands and the dependecies from the xml input.
+    """Retrieve the commands and the dependecies from the xml input.
 
     To run the test, the command of the driver and the necessary files must be
     known. These information are enclosed in a comment into the xml file. This
@@ -1106,7 +1101,7 @@ def parse_regtest_string(test_path):
 
 
 def inplace_change(filename, old_string, new_string):
-    """ Replace a string in a file.
+    """Replace a string in a file.
 
     Replace 'old_string' with 'new_string' into 'filename'.
 

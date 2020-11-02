@@ -71,8 +71,7 @@ class AtomSwap(Motion):
         self.dforces = self.forces.copy(self.dbeads, self.dcell)
 
     def AXlist(self, atomtype):
-        """This compile a list of atoms ready for exchanges.
-        """
+        """This compile a list of atoms ready for exchanges."""
 
         # selects the types of atoms for exchange
         atomexchangelist = []

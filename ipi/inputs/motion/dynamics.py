@@ -31,7 +31,9 @@ class InputDynamics(InputDictionary):
 
     Attributes:
         mode: An optional string giving the mode (ensemble) to be simulated.
-            Defaults to 'unknown'.
+            Defaults to 'nve'.
+        splitting: An optional string giving the Louiville splitting used for
+            sampling the target ensemble. Defaults to 'obabo'.
 
     Fields:
         thermostat: The thermostat to be used for constant temperature dynamics.
@@ -39,6 +41,7 @@ class InputDynamics(InputDictionary):
             dynamics.
         timestep: An optional float giving the size of the timestep in atomic
             units. Defaults to 1.0.
+        nmts: Number of iterations for each MTS level
     """
 
     attribs = {

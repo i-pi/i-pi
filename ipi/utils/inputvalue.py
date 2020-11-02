@@ -229,7 +229,7 @@ class Input(object):
             raise ValueError("Uninitialized Input value of type " + type(self).__name__)
 
     def extend(self, name, xml):
-        """ Dynamically add elements to the 'extra' list.
+        """Dynamically add elements to the 'extra' list.
 
         Picks from one of the templates in the self.dynamic dictionary, then
         parses.
@@ -388,7 +388,7 @@ class Input(object):
         """Prints out the supplementary information about a particular input class.
 
         Used to print out the dimensions, default value, possible options and data
-        type of an input value to the LaTeX helf file.
+        type of an input value to the LaTeX help file.
         """
 
         xstr = ""
@@ -763,8 +763,7 @@ class Input(object):
 
 class InputDictionary(Input):
 
-    """Class that returns the value of all the fields as a dictionary.
-    """
+    """Class that returns the value of all the fields as a dictionary."""
 
     def __init__(
         self, help=None, default=None, dtype=str, options=None, dimension=None
@@ -1054,11 +1053,11 @@ class InputValue(InputAttribute):
 class InputRaw(InputValue):
     """Reads the data for a single value from an xml file.
 
-        Args:
-           xml: An xml_node object containing the all the data for the parent
-              tag.
-           text: The data held between the start and end tags.
-        """
+    Args:
+       xml: An xml_node object containing the all the data for the parent
+          tag.
+       text: The data held between the start and end tags.
+    """
 
     def parse(self, xml=None, text=""):
         # transforms back to xml and returns a string

@@ -17,6 +17,7 @@ import time
 import threading
 
 import numpy as np
+import json
 
 from ipi.utils.messages import verbosity, warning, info
 from ipi.utils.softexit import softexit
@@ -292,8 +293,8 @@ class Driver(DriverSocket):
             return Status.Up
 
     def get_status(self):
-        """ Sets (and returns) the client internal status. Wait for an answer if
-            the client is busy. """
+        """Sets (and returns) the client internal status. Wait for an answer if
+        the client is busy."""
         status = self._getstatus()
         while status & Status.Busy:
             status = self._getstatus()
@@ -412,14 +413,14 @@ class Driver(DriverSocket):
             mxtra = bytearray(mxtra).decode("utf-8")
         else:
             mxtra = ""
-
-        return [mu, mf, mvir, mxtra]
+        mxtradict = json.loads(mxtra)
+        return [mu, mf, mvir, mxtradict]
 
     def dispatch(self, r):
-        """ Dispatches a request r and looks after it setting results
-            once it has been evaluated. This is meant to be launched as a
-            separate thread, and takes clear of all the communication related to
-            the request.
+        """Dispatches a request r and looks after it setting results
+        once it has been evaluated. This is meant to be launched as a
+        separate thread, and takes care of all the communication related to
+        the request.
         """
 
         if not self.status & Status.Up:
@@ -476,6 +477,56 @@ class Driver(DriverSocket):
         # marks the request as done as the very last thing
         r["status"] = "Done"
 
+    def getjson(self):
+        """Gets the json string from the driver and parses it into a dictionary.
+
+        Raises:
+           InvalidStatus: Raised if the status is not HasData.
+           Disconnected: Raised if the driver has disconnected.
+
+        Returns:
+           A dictionary of the form { 'keyword': [values] }.
+        """
+
+        if self.status & Status.HasData:
+            self.sendall(Message("getjson"))
+            reply = ""
+            while True:
+                try:
+                    reply = self.recv_msg()
+                except socket.timeout:
+                    warning(
+                        " @SOCKET:   Timeout in getjson, trying again!", verbosity.low
+                    )
+                    continue
+                except:
+                    warning(
+                        " @SOCKET:   Error while receiving message: %s" % (reply),
+                        verbosity.low,
+                    )
+                    raise Disconnected()
+                if reply == Message("jsonready"):
+                    break
+                else:
+                    warning(
+                        " @SOCKET:   Unexpected getjson reply: %s" % (reply),
+                        verbosity.low,
+                    )
+                if reply == "":
+                    raise Disconnected()
+        else:
+            raise InvalidStatus("Status in getjson was " + str(self.status))
+
+        mlen = np.int32()
+        mlen = self.recvall(mlen)
+        if mlen > 0:
+            jsonstring = np.zeros(mlen, np.character)
+            jsonstring = self.recvall(jsonstring)
+            # parsing the json file into a dictionary
+            jsondict = json.loads(jsonstring)
+            print(jsondict)
+        return jsondict
+
 
 class InterfaceSocket(object):
 
@@ -495,7 +546,7 @@ class InterfaceSocket(object):
           before updating the client list.
        timeout: A float giving a timeout limit for considering a calculation dead
           and dropping the connection.
-       server: The socket used for data transmition.
+       server: The socket used for data transmission.
        clients: A list of the driver clients connected to the server.
        requests: A list of all the jobs required in the current PIMD step.
        jobs: A list of all the jobs currently running.
@@ -793,7 +844,7 @@ class InterfaceSocket(object):
 
     def dispatch_free_client(self, fc, match_ids="any", send_threads=[]):
         """
-           Tries to find a request to match a free client.
+        Tries to find a request to match a free client.
         """
 
         # first, makes sure that the client is REALLY free
@@ -849,7 +900,7 @@ class InterfaceSocket(object):
 
     def check_job_finished(self, r, c, ct):
         """
-            Checks if a job has been completed, and retrieves the results
+        Checks if a job has been completed, and retrieves the results
         """
 
         if r["status"] == "Done":

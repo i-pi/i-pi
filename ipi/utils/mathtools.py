@@ -89,7 +89,7 @@ def matrix_exp(M, ntaylor=20, nsquare=10):
 
 
 def stab_cholesky(M):
-    """ A numerically stable version of the Cholesky decomposition.
+    """A numerically stable version of the Cholesky decomposition.
 
     Used in the GLE implementation. Since many of the matrices used in this
     algorithm have very large and very small numbers in at once, to handle a
@@ -172,7 +172,7 @@ def h2abc(h):
 
 
 def genh2abc(h):
-    """ Returns a description of the cell in terms of the length of the
+    """Returns a description of the cell in terms of the length of the
        lattice vectors and the angles between them in radians.
 
     Takes the representation of the system box in terms of a full matrix

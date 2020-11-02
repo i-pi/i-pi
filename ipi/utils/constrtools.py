@@ -23,12 +23,12 @@ __all__ = [
 
 
 class ConstraintBase(dobject):
-    """ Base constraint class for MD. Takes care of indexing of
+    """Base constraint class for MD. Takes care of indexing of
     the atoms that are affected by the constraint, and creates
     depend objects to store the constraint function and gradient."""
 
     def __init__(self, constrained_indices, ncons=0):
-        """ Initialize the constraint.
+        """Initialize the constraint.
 
         constrained_indices: Indices of the atoms that are involved in the constraint
         """
@@ -43,8 +43,8 @@ class ConstraintBase(dobject):
         self.mk_idmaps()
 
     def mk_idmaps(self):
-        """ Creates arrays of indices that can be used for bookkeeping
-        and quickly accessing elements and positions """
+        """Creates arrays of indices that can be used for bookkeeping
+        and quickly accessing elements and positions"""
 
         # position of the UID associated with each index (i_reverse[atom_id]
         # gives the position in the list of unique atoms of atom_id
@@ -66,8 +66,8 @@ class ConstraintBase(dobject):
             self.i3_indirect[ri] = [3 * rri, 3 * rri + 1, 3 * rri + 2]
 
     def bind(self, beads):
-        """ Binds the constraint to a beads object - so that all of the
-        necessary quantities are easily and depend-ably accessable """
+        """Binds the constraint to a beads object - so that all of the
+        necessary quantities are easily and depend-ably accessable"""
 
         self.beads = beads
         dself = dd(self)
@@ -134,8 +134,8 @@ class ConstraintBase(dobject):
         raise NotImplementedError()
 
     def Gfunc(self):
-        """ Computes a cholesky decomposition of the mass-scaled Jacobian,
-        used in a few places """
+        """Computes a cholesky decomposition of the mass-scaled Jacobian,
+        used in a few places"""
 
         dg = dstrip(self.Dg).copy()
         dgm = dg / self.m3
@@ -144,16 +144,16 @@ class ConstraintBase(dobject):
     if spla is None:
 
         def GCfunc(self):
-            """ Computes a cholesky decomposition of the mass-scaled Jacobian,
-            used in a few places """
+            """Computes a cholesky decomposition of the mass-scaled Jacobian,
+            used in a few places"""
 
             return np.linalg.cholesky(self.Gram)
 
     else:
 
         def GCfunc(self):
-            """ Computes a cholesky decomposition of the mass-scaled Jacobian,
-            used in a few places """
+            """Computes a cholesky decomposition of the mass-scaled Jacobian,
+            used in a few places"""
 
             return spla.cho_factor(self.Gram)
 
@@ -162,7 +162,7 @@ class ValueConstraintBase(ConstraintBase):
     """ Base class for a constraint that contains target values. """
 
     def __init__(self, constrained_indices, constraint_values, ncons):
-        """ Initialize the constraint.
+        """Initialize the constraint.
 
         constrained_indices: Indices of the atoms that are involved in the constraint
         constraint_values: Value or values associated with the constraint
@@ -199,10 +199,10 @@ class ValueConstraintBase(ConstraintBase):
 
 
 class RigidBondConstraint(ValueConstraintBase):
-    """ Constraint class for MD.
-        Specialized for rigid bonds. This can actually hold a *list*
-        of rigid bonds, i.e. there will be a list of pairs of atoms and
-        a list of bond lengths. """
+    """Constraint class for MD.
+    Specialized for rigid bonds. This can actually hold a *list*
+    of rigid bonds, i.e. there will be a list of pairs of atoms and
+    a list of bond lengths."""
 
     def __init__(self, constrained_indices, constraint_values):
 
@@ -262,10 +262,10 @@ class RigidBondConstraint(ValueConstraintBase):
 
 
 class AngleConstraint(ValueConstraintBase):
-    """ Constraint class for MD specialized for angles.
-        This can hold a list of angles, i.e. a list of triples of atoms
-        and the corresponding values. We adopt the convention that the
-        middle atom appears first in the list.
+    """Constraint class for MD specialized for angles.
+    This can hold a list of angles, i.e. a list of triples of atoms
+    and the corresponding values. We adopt the convention that the
+    middle atom appears first in the list.
     """
 
     def __init__(self, constrained_indices, constraint_values):
@@ -329,10 +329,10 @@ class AngleConstraint(ValueConstraintBase):
 
 
 class EckartConstraint(ConstraintBase):
-    """ Constraint class for MD specialized for enforcing the Eckart conditions
-        (see E. Bright Wilson et al. 'Molecular Vibrations')
-        Unlike the constraints above, a single instance of this class can only
-        describe one set of Eckart conditions.
+    """Constraint class for MD specialized for enforcing the Eckart conditions
+    (see E. Bright Wilson et al. 'Molecular Vibrations')
+    Unlike the constraints above, a single instance of this class can only
+    describe one set of Eckart conditions.
     """
 
     def __init__(self, constrained_indices, constraint_values):
@@ -447,14 +447,14 @@ class EckartConstraint(ConstraintBase):
 
 
 class ConstraintList(ConstraintBase):
-    """ Class to hold a list of constraints to be treated
+    """Class to hold a list of constraints to be treated
     simultaneously by the solver."""
 
     def __init__(self, constraint_list):
-        """ Initialize the constraint list.
+        """Initialize the constraint list.
         Contains a list of constraint objects, that will
         be stored and used to compute the different blocks
-        of the constraint values and Jacobian """
+        of the constraint values and Jacobian"""
 
         self.constraint_list = constraint_list
         self.ncons = sum([constr.ncons for constr in constraint_list])

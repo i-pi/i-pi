@@ -55,7 +55,7 @@ class ForceBead(dobject):
           been called.
 
     Depend objects:
-       ufvx: A list of the form [pot, f, vir]. These quantities are calculated
+       ufvx: A list of the form [pot, f, vir, extra]. These quantities are calculated
           all at one time by the driver, so are collected together. Each separate
           object is then taken from the list. Depends on the atom positions and
           the system box.
@@ -102,11 +102,11 @@ class ForceBead(dobject):
         self.ff = ff
         dself = dd(self)
 
-        # ufv depends on the atomic positions and on the cell
+        # ufvx depends on the atomic positions and on the cell
         dself.ufvx.add_dependency(dd(self.atoms).q)
         dself.ufvx.add_dependency(dd(self.cell).h)
 
-        # potential and virial are to be extracted very simply from ufv
+        # potential and virial are to be extracted very simply from ufvx
         dself.pot = depend_value(
             name="pot", func=self.get_pot, dependencies=[dself.ufvx]
         )
@@ -197,6 +197,7 @@ class ForceBead(dobject):
         # data has been collected, so the request can be released and a slot
         # freed up for new calculations
         result = self.request["result"]
+        # print('RESULTS HERE 1',result)
 
         # reduce the reservation count (and wait for all calls to return)
         with self._threadlock:
@@ -362,7 +363,7 @@ class ForceComponent(dobject):
             dependencies=[dd(self._forces[b]).f for b in range(self.nbeads)],
         )
 
-        # collection of pots and virs from individual beads
+        # collection of pots, virs and extras from individual beads
         dself.pots = depend_array(
             name="pots",
             value=np.zeros(self.nbeads, float),
@@ -413,10 +414,10 @@ class ForceComponent(dobject):
         return np.array([b.pot for b in self._forces], float)
 
     def extra_gather(self):
-        """Obtains the potential energy for each replica.
+        """Obtains the extra string information for each replica.
 
         Returns:
-           A list of the potential energy of each replica of the system.
+           A list of the extra strings of each replica of the system.
         """
 
         self.queue()
@@ -827,7 +828,7 @@ class Forces(dobject):
             dself.virs.add_dependency(dd(fc).weight)
 
     def copy(self, beads=None, cell=None):
-        """ Returns a copy of this force object that can be used to compute forces,
+        """Returns a copy of this force object that can be used to compute forces,
         e.g. for use in internal loops of geometry optimizers, or for property
         calculation.
 
@@ -894,35 +895,40 @@ class Forces(dobject):
                 dfkbself.ufvx.taint(taintme=False)
 
     def transfer_forces_manual(
-        self, new_q, new_v, new_forces, vir=np.zeros((3, 3)), extra=""
+        self, new_q, new_v, new_forces, new_x, vir=np.zeros((3, 3))
     ):
         """Manual (and flexible) version of the transfer forces function.
-           Instead of passing a force object, list with vectors are passed
-           Expected shape and sizes:
-             - new_q list of length equal to number of force type, containing the beads positions
-             - new_v list of length equal to number of force type, containing the beads potential energy
-             - new_f list of length equal to number of force type, containing the beads forces
+        Instead of passing a force object, list with vectors are passed
+        Expected shape and sizes:
+          - new_q list of length equal to number of force type, containing the beads positions
+          - new_v list of length equal to number of force type, containing the beads potential energy
+          - new_f list of length equal to number of force type, containing the beads forces
+          - new_x list of length equal to number of force type, containing the beads extras
         """
         msg = "Unconsistent dimensions inside transfer_forces_manual"
         assert len(self.mforces) == len(new_q), msg
         assert len(self.mforces) == len(new_v), msg
         assert len(self.mforces) == len(new_forces), msg
+        assert len(self.mforces) == len(new_x), msg
 
         for k in range(len(self.mforces)):
             mv = new_v[k]
             mf = new_forces[k]
             mq = new_q[k]
+            mextra = new_x[k]
             mself = self.mforces[k]
 
             assert mq.shape == mf.shape, msg
             assert mq.shape[0] == mv.shape[0], msg
             assert mself.nbeads == mv.shape[0], msg
             assert mself.nbeads == mq.shape[0], msg
+            mxlist = list()
+            for b in range(mself.nbeads):
+                mxlist.append(mextra[b][0])
 
             dd(mself.beads).q.set(mq, manual=False)
             for b in range(mself.nbeads):
-
-                ufvx = [mv[b], mf[b], vir, extra]
+                ufvx = [mv[b], mf[b], vir, mxlist[b]]
                 dfkbself = dd(mself._forces[b])
                 dfkbself.ufvx.set(ufvx, manual=False)
                 dfkbself.ufvx.taint(taintme=False)
@@ -1323,15 +1329,15 @@ class Forces(dobject):
         return rp
 
     def extra_combine(self):
-        """Obtains the potential energy for each forcefield."""
+        """Obtains the extra string for each forcefield for each bead."""
 
         self.queue()
-        rp = ["" for b in range(self.nbeads)]
+        rp = [list() for b in range(self.nbeads)]
         for k in range(self.nforces):
             # "expand" to the total number of beads the potentials from the
             # contracted one
             for b in range(self.nbeads):
-                rp[b] += self.mforces[k].extras[b]
+                rp[b].append(self.mforces[k].extras[b])
         return rp
 
     def vir_combine(self):

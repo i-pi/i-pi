@@ -49,18 +49,6 @@ class InputInst(InputDictionary):
         )
     }
 
-    attribs = {
-        "mode": (
-            InputAttribute,
-            {
-                "dtype": str,
-                "default": "rate",
-                "help": "Defines whether it is an instanton rate or instanton tunneling splitting calculaion",
-                "options": ["rate", "splitting"],
-            },
-        )
-    }
-
     fields = {
         "tolerances": (
             InputDictionary,
@@ -261,7 +249,7 @@ class InputInst(InputDictionary):
             InputDictionary,
             {
                 "dtype": [float, int],
-                "help": """"Options for line search methods. Includes:
+                "help": """Options for line search methods. Includes:
                                   tolerance: stopping tolerance for the search,
                                   iter: the maximum number of iterations,
                                   step: initial step for bracketing,
@@ -272,6 +260,16 @@ class InputInst(InputDictionary):
                 "dimension": ["energy", "undefined"],
             },
         ),
+        # Friction
+        # "friction": (
+        #     InputDictionary,
+        #     {
+        #         "dtype": float,
+        #         "default": [],
+        #         "help": """The electronic friction tensor""",
+        #         "dimension": ["undefined"]
+        #     }
+        # ),
         # Final calculations
         "energy_shift": (
             InputValue,

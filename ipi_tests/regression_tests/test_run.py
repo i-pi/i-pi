@@ -21,7 +21,7 @@ reg_tests = get_info_test(main_folder)
 
 @pytest.mark.parametrize("test_info", reg_tests)
 def test_cmd(test_info):
-    """ Intermediate function to run the regression test (by calling Runner) and makes
+    """Intermediate function to run the regression test (by calling Runner) and makes
     possible to parametrize the arguments
     """
     runner = Runner(Path("."))

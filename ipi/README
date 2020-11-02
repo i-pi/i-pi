@@ -1,0 +1,22 @@
+This branch contains the implementation of the .JSON extra files. 
+What we expect from this feature is that we read in the 6 distinct components
+of the symmetric friction tensor for each atom and for each bead.
+This means that as an output of the driver, we get back a JSON formatted string
+that contains the friction at each atom, each bead.
+
+so it looks like
+{'friction': [nbeads, natoms, 6]}
+
+If the values of the friction tensor has changed between steps we want to access
+them again, their dependence should get tainted. The read-in of the friction tensor should be
+automatic, however, the get_friction() function should refresh these values
+only if the dependency has changed. 
+
+TO DO before commit:
+    - we need to test what happens to the dipole string (Is it still functioning?)
+
+    - we need to test what happens in case the JSON string contains both "friction" and "dipole"
+
+    - we need to see how the situation in case of multiple drivers behave (forcefield class)
+
+

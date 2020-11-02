@@ -50,7 +50,8 @@
       CHARACTER(LEN=12) :: header
       LOGICAL :: isinit=.false., hasdata=.false.
       INTEGER cbuf, rid
-      CHARACTER(LEN=2048) :: initbuffer      ! it's unlikely a string this large will ever be passed...
+      CHARACTER(LEN=4096) :: initbuffer      ! it's unlikely a string this large will ever be passed...
+      CHARACTER(LEN=4096) :: string,string2  ! it's unlikely a string this large will ever be passed...
       DOUBLE PRECISION, ALLOCATABLE :: msgbuffer(:)
       
       ! PARAMETERS OF THE SYSTEM (CELL, ATOM POSITIONS, ...)
@@ -61,6 +62,7 @@
       DOUBLE PRECISION pot, dpot, dist
       DOUBLE PRECISION, ALLOCATABLE :: atoms(:,:), forces(:,:), datoms(:,:)
       DOUBLE PRECISION cell_h(3,3), cell_ih(3,3), virial(3,3), mtxbuf(9), dip(3), charges(3), dummy(3,3,3), vecdiff(3)
+      DOUBLE PRECISION, ALLOCATABLE :: friction(:,:)
       DOUBLE PRECISION volume
       DOUBLE PRECISION, PARAMETER :: fddx = 1.0d-5
       
@@ -148,11 +150,15 @@
                   vstyle = 22
                ELSEIF (trim(cmdbuffer) == "MB") THEN
                   vstyle = 23
+               ELSEIF (trim(cmdbuffer) == "doublewell") THEN
+                  vstyle = 25
+               ELSEIF (trim(cmdbuffer) == "doublewell_1D") THEN
+                  vstyle = 24
                ELSEIF (trim(cmdbuffer) == "gas") THEN
                   vstyle = 0  ! ideal gas
                ELSE
                   WRITE(*,*) " Unrecognized potential type ", trim(cmdbuffer)
-                  WRITE(*,*) " Use -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB] "
+                  WRITE(*,*) " Use -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D] "
                   STOP "ENDED"
                ENDIF
             ELSEIF (ccmd == 4) THEN
@@ -231,7 +237,7 @@
             vpars(4) = 1836*(3800.0d0/219323d0)**2
          ELSEIF ( 4/= par_count) THEN
             WRITE(*,*) "Error: parameters not initialized correctly."
-            WRITE(*,*) "For ekart potential use  AA,A,B,k" 
+            WRITE(*,*) "For eckart potential use  AA,A,B,k"
             STOP "ENDED"
          ENDIF
          isinit = .true.
@@ -280,7 +286,7 @@
             WRITE(*,*) "Error:  incorrect initialization string included for qtip4pf-efield. &
      &    Provide the three components of the electric field in V/nm"
             STOP "ENDED"
-      ELSE
+         ELSE
             ! We take in an electric field in volts / nm.This must be converted 
             ! to Eh / (e a0).
             do i=1,3
@@ -332,6 +338,20 @@
          ENDIF
          ks = vpars(1)
          isinit = .true.
+
+      ELSEIF (25 == vstyle) THEN !doublewell
+         IF ( par_count /= 0 ) THEN
+                 WRITE(*,*) "Error: no initialization string needed for doublewell."
+            STOP "ENDED" 
+         ENDIF   
+         isinit = .true.
+
+      ELSEIF (24 == vstyle) THEN !doublewell_1D
+         IF ( par_count /= 0 ) THEN
+                 WRITE(*,*) "Error: no initialization string needed for 1-dimensional doublewell."
+            STOP "ENDED" 
+         ENDIF   
+         isinit = .true.
       ENDIF
 
       IF (verbose > 0) THEN
@@ -342,6 +362,8 @@
             WRITE(*,*) " using an UNIX socket."
          ENDIF
       ENDIF
+      
+      OPEN(UNIT=32, FILE="extras.json", ACTION="write")
 
       ! Calls the interface to the POSIX sockets library to open a communication channel
       CALL open_socket(socket, inet, port, host)
@@ -368,7 +390,7 @@
             CALL readbuffer(socket, rid)
             IF (verbose > 1) WRITE(*,*) "    !read!=> RID: ", rid
             CALL readbuffer(socket, cbuf)
-            IF (verbose > 1) WRITE(*,*) "    !read!=> init_lenght: ", cbuf
+            IF (verbose > 1) WRITE(*,*) "    !read!=> init_length: ", cbuf
             CALL readbuffer(socket, initbuffer, cbuf)
             IF (verbose > 1) WRITE(*,*) "    !read!=> init_string: ", cbuf
             IF (verbose > 0) WRITE(*,*) " Initializing system from wrapper, using ", trim(initbuffer)
@@ -399,9 +421,11 @@
                ALLOCATE(msgbuffer(3*nat))
                ALLOCATE(atoms(nat,3), datoms(nat,3))
                ALLOCATE(forces(nat,3))
+               ALLOCATE(friction(nat,6))
                atoms = 0.0d0
                datoms = 0.0d0
                forces = 0.0d0
+               friction = 0.0d0
                msgbuffer = 0.0d0
             ENDIF
 
@@ -566,6 +590,15 @@
                ENDIF
                !atoms = atoms*0.52917721d0  !Change to angstrom
                CALL get_MB(nat,vpars(1), atoms, pot, forces)
+            ELSEIF (vstyle == 25) THEN ! qQ
+               CALL getdoublewell(nat, atoms, pot, forces)
+               CALL dw_friction(nat, atoms, friction)
+
+            ELSEIF (vstyle == 24) THEN ! qQ
+               CALL getdoublewell_1D(nat, atoms, pot, forces)
+               CALL dw1d_friction(nat, atoms, friction)
+               CALL dw1d_dipole(nat, atoms, dip)
+
             ELSE
                IF ((allocated(n_list) .neqv. .true.)) THEN
                   IF (verbose > 0) WRITE(*,*) " Allocating neighbour lists."
@@ -621,14 +654,56 @@
             IF (verbose > 1) WRITE(*,*) "    !write!=> forces:", msgbuffer
             CALL writebuffer(socket,reshape(virial,(/9/)),9)  ! Writing the virial tensor, NOT divided by the volume
             IF (verbose > 1) WRITE(*,*) "    !write!=> strss: ", reshape(virial,(/9/))
-            
-            IF (vstyle==5 .or. vstyle==6 .or. vstyle==8) THEN ! returns the dipole
+
+
+            IF (vstyle==24 .or. vstyle==25) THEN ! returns fantasy friction
+                initbuffer = "{"
+                WRITE(string, '(a,3x,es11.2e3,a,es11.2e3,a,es11.2e3,3x,a)') '"dipole": [',dip(1),",",dip(2),",",dip(3),"],"
+                string2 = TRIM(initbuffer) // TRIM(string)
+                initbuffer = TRIM(string2)
+                WRITE(32,'(a)') "{"
+                WRITE(32,'(a,3x,es11.2e3,a,es11.2e3,a,es11.2e3,3x,a)') '"dipole": [',dip(1),",",dip(2),",",dip(3),"] , "
+
+                WRITE(string,'(a)') '"friction": ['
+                string2 = TRIM(initbuffer) // TRIM(string)
+                initbuffer = TRIM(string2)
+                DO i=1,nat
+                    IF(i/=nat) THEN
+                        WRITE(string,'(es11.2e3,a,es11.2e3,a,es11.2e3,a,es11.2e3,a,es11.2e3,a,es11.2e3,a)') friction(i,1),",",friction(i,2),",",friction(i,3),",",friction(i,4),",",friction(i,5),",",friction(i,6),","
+                    ELSE
+                        WRITE(string,'(es11.2e3,a,es11.2e3,a,es11.2e3,a,es11.2e3,a,es11.2e3,a,es11.2e3)') friction(i,1),",",friction(i,2),",",friction(i,3),",",friction(i,4),",",friction(i,5),",",friction(i,6)
+                    ENDIF
+                    string2 = TRIM(initbuffer) // TRIM(string)
+                    initbuffer = TRIM(string2)
+                END DO
+                string =  TRIM(initbuffer) // "]}"
+                initbuffer = TRIM(string)
+                !WRITE(*,'(a)') TRIM(initbuffer)
+                cbuf = LEN_TRIM(initbuffer)
+                CALL writebuffer(socket,cbuf) ! Writes back the fantasy friction
+                IF (verbose > 1) WRITE(*,*) "    !write!=> extra_length: ", cbuf
+                CALL writebuffer(socket,initbuffer,cbuf)
+                WRITE(32,'(a)') '"friction": ['
+                DO i=1,nat
+                    IF(i/=nat) THEN
+                        WRITE(32,'(es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a)') friction(i,1),",",friction(i,2),",",friction(i,3),",",friction(i,4),",",friction(i,5),",",friction(i,6),","
+                    ELSE
+                        WRITE(32,'(es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14)') friction(i,1),",",friction(i,2),",",friction(i,3),",",friction(i,4),",",friction(i,5),",",friction(i,6)
+                    ENDIF
+                END DO
+                WRITE(32,'(a)') "]"
+                WRITE(32,'(a)') "}"
+                IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ", initbuffer
+            ELSEIF (vstyle==5 .or. vstyle==6 .or. vstyle==8) THEN ! returns the dipole through initbuffer
                initbuffer = " "
-               WRITE(initbuffer,*) dip(1:3)
+               WRITE(initbuffer, '(a,3x,es21.14,a,es21.14,a,es21.14,3x,a)') '{"dipole": [',dip(1),",",dip(2),",",dip(3),"]}"
                cbuf = LEN_TRIM(initbuffer)
                CALL writebuffer(socket,cbuf) ! Writes back the molecular dipole
                IF (verbose > 1) WRITE(*,*) "    !write!=> extra_length: ", cbuf
                CALL writebuffer(socket,initbuffer,cbuf)
+               WRITE(32,'(a)') "{"
+               WRITE(32,'(a,3x,es21.14,a,es21.14,a,es21.14,3x,a)') '"dipole": [',dip(1),",",dip(2),",",dip(3),"]"
+               WRITE(32,'(a)') "}"
                IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ", initbuffer
             ELSE
                cbuf = 7 ! Size of the "extras" string
@@ -643,12 +718,13 @@
             STOP "ENDED"
          ENDIF
       ENDDO
-      IF (nat > 0) DEALLOCATE(atoms, forces, msgbuffer)
+      CLOSE(32)
+      IF (nat > 0) DEALLOCATE(atoms, forces, msgbuffer, friction)
  
     CONTAINS
       SUBROUTINE helpmessage
          ! Help banner
-         WRITE(*,*) " SYNTAX: driver.x [-u] -h hostname -p port -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB] "
+         WRITE(*,*) " SYNTAX: driver.x [-u] -h hostname -p port -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D] "
          WRITE(*,*) "         -o 'comma_separated_parameters' [-v] "
          WRITE(*,*) ""
          WRITE(*,*) " For LJ potential use -o sigma,epsilon,cutoff "
@@ -657,7 +733,7 @@
          WRITE(*,*) " For 1D morse oscillator use -o r0,D,a"
          WRITE(*,*) " For qtip4pf-efield use -o Ex,Ey,Ez with Ei in V/nm"         
          WRITE(*,*) " For ljpolymer use -o n_monomer,sigma,epsilon,cutoff "
-         WRITE(*,*) " For the ideal gas, qtip4pf, zundel, ch4hcbe or nasa no options needed! "
+         WRITE(*,*) " For the ideal gas, qtip4pf, zundel, ch4hcbe, nasa, doublewell or doublewell_1D no options are needed! "
        END SUBROUTINE helpmessage
 
    END PROGRAM

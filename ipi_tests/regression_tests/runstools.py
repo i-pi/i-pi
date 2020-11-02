@@ -12,7 +12,7 @@ import tempfile
 
 
 def get_info_test(parent):
-    """ This function recursively searches for examples
+    """This function recursively searches for examples
     and check for the presence of the required additional info
     required (i.e. driver.txt)
     """
@@ -49,7 +49,7 @@ def get_info_test(parent):
 
 
 class Runner(object):
-    """ This class handles the modification the creation of tmp directories,
+    """This class handles the modification the creation of tmp directories,
     the i-pi call, the driver call, and finally
     it checks that the generated outputs are the expected ones.
     """
@@ -64,7 +64,7 @@ class Runner(object):
         self.check_xyz_output = check_xyz_output
 
     def _run(self, cmd1, cmd2, cwd):
-        """ This function tries to run the example in a tmp folder and
+        """This function tries to run the example in a tmp folder and
         checks if ipi has ended without error.
         After that the output is checked against a reference
         arguments:
