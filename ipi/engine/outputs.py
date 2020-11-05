@@ -23,6 +23,7 @@ from ipi.utils.io import open_backup
 from ipi.engine.properties import getkey
 from ipi.engine.atoms import *
 from ipi.engine.cell import *
+import json
 
 __all__ = [
     "PropertyOutput",
@@ -477,7 +478,8 @@ class TrajectoryOutput(BaseOutput):
                 " #*EXTRAS*# Step:  %10d  Bead:  %5d  \n"
                 % (self.system.simul.step + 1, b)
             )
-            stream.write(data[b])
+            print('hello:', data[b])
+            stream.write(json.dumps(data[b]))
             stream.write("\n")
             if flush:
                 stream.flush()

@@ -33,9 +33,9 @@ def get_driver_info(
     address_name="localhost",
     flags=[],
 ):
-    """This function looks for the existence of .driver_info file
-    to run the example with a meaningfull driver. If the file doesn't
-    exist, the driver gas is assigned."""
+    """ This function looks for the existence of .driver_info file
+        to run the example with a meaningfull driver. If the file doesn't
+        exist, the driver gas is assigned. """
     try:
         with open(Path(example_folder) / driver_info_file) as f:
             flags = list()
@@ -71,8 +71,8 @@ def get_driver_info(
 
 
 def find_examples(parent, excluded_file="excluded_test.txt", examples=[]):
-    """This function looks for iteratively for examples and includes
-    them if they don't appear in the excluded_file"""
+    """ This function looks for iteratively for examples and includes
+        them if they don't appear in the excluded_file """
 
     excluded = list()
     if excluded_file is not None:
@@ -97,11 +97,7 @@ def find_examples(parent, excluded_file="excluded_test.txt", examples=[]):
 
 
 def modify_xml_2_dummy_test(
-    input_name,
-    output_name,
-    nid,
-    driver_info,
-    nsteps=2,
+    input_name, output_name, nid, driver_info, nsteps=2,
 ):
     """ Modify xml to run dummy tests """
     try:
@@ -145,7 +141,7 @@ def modify_xml_2_dummy_test(
 
 
 class Runner_examples(object):
-    """This class handles the modification of the examples inputs,
+    """ This class handles the modification of the examples inputs,
     the creation of tmp directories, the i-pi call, the driver call, and finally
     it checks if i-pi ended without error.
     """
@@ -157,7 +153,7 @@ class Runner_examples(object):
         self.cmd2 = cmd2
 
     def run(self, cwd, nid):
-        """This function tries to run the example in a tmp folder and
+        """ This function tries to run the example in a tmp folder and
         afterwards checks if ipi has ended without error.
         arguments:
             cwd: folder where all the original examples files are stored

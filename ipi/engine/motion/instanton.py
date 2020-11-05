@@ -429,7 +429,13 @@ class GradientMapper(object):
 
         rpots = reduced_forces.pots  # reduced energy
         rforces = reduced_forces.f  # reduced gradient
-        rextras = reduced_forces.extras  # reduced extras
+        # rextras = reduced_forces.extras  # reduced extras
+        rextras = []
+        for i in range(len(reduced_forces.extras)):
+            rextras.append(reduced_forces.extras[i][0]['friction'])  # reduced extras
+        print(rextras)
+
+        rextras = np.array(rextras)
 
         # Interpolate if necessary to get full pot and forces
         if self.spline:

@@ -706,10 +706,10 @@
                WRITE(32,'(a)') "}"
                IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ", initbuffer
             ELSE
-               cbuf = 7 ! Size of the "extras" string
+               cbuf = 16 ! Size of the "extras" string
                CALL writebuffer(socket,cbuf) ! This would write out the "extras" string, but in this case we only use a dummy string.
                IF (verbose > 1) WRITE(*,*) "    !write!=> extra_length: ", cbuf
-               CALL writebuffer(socket,"nothing",7)
+               CALL writebuffer(socket,'{"nothing": [] }',16)
                IF (verbose > 1) WRITE(*,*) "    !write!=> extra: nothing"
             ENDIF
             hasdata = .false.
