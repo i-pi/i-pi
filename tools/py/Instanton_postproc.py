@@ -1,13 +1,9 @@
 import numpy as np
 import sys
+import os
+import math
 import argparse
 from ipi.utils.messages import verbosity, info
-
-from ipi.engine.simulation import Simulation
-from ipi.utils.units import unit_to_internal, Constants
-from ipi.utils.instools import red2comp
-from ipi.utils.hesstools import clean_hessian
-from ipi.engine.motion.instanton import SpringMapper
 
 """ Reads all the information needed from a i-pi RESTART file and compute the partition functions of the reactant, transition state (TS) or
 instanton according to J. Phys. Chem. Lett. 7, 437(2016) (Instanton Rate calculations) or J. Chem. Phys. 134, 054109 (2011) (Tunneling Splitting)
@@ -47,6 +43,11 @@ main directory must be added to the PYTHONPATH environment variable.
 #    sys.exit()
 # sys.path.insert(0, ipi_path)
 
+from ipi.engine.simulation import Simulation
+from ipi.utils.units import unit_to_internal, unit_to_user, Constants, Elements
+from ipi.utils.instools import red2comp
+from ipi.utils.hesstools import clean_hessian
+from ipi.engine.motion.instanton import SpringMapper
 
 # np.set_printoptions(precision=6, suppress=True, threshold=np.nan)
 
@@ -127,6 +128,14 @@ if case not in list(["reactant", "TS", "instanton"]):
     raise ValueError(
         "We can not indentify the case. The valid cases are: 'reactant', 'TS' and 'instanton'"
     )
+if asr not in list(["poly", "linear", "crystal", "none"]):
+    raise ValueError(
+        "We can not indentify asr case. The valid cases are: 'poly', 'crystal' , 'linear' and 'none'"
+    )
+
+if asr == "linear":
+    raise NotImplementedError("Sum rules for linear molecules is not implemented")
+
 if args.temperature == 0.0:
     raise ValueError("The temperature must be specified.'")
 
@@ -239,9 +248,7 @@ def get_rp_freq(w0, nbeads, temp, mode="rate"):
 # -----END of some functions-----------------
 
 # -----READ---------------------------------
-print(
-    ("\nWe are ready to start. Reading {} ... (This can take a while)".format(inputt))
-)
+print("\nWe are ready to start. Reading {} ... (This can take a while)".format(inputt))
 
 simulation = Simulation.load_from_xml(
     inputt, custom_verbosity="quiet", request_banner=False, read_only=True
@@ -285,10 +292,10 @@ if case == "reactant":
 
 elif case == "TS":
     pos = beads.q
-    h = simulation.syslist[0].motion.hessian.copy()
+    h = simulation.syslist[0].motion.optarrays["hessian"].copy()
     m3 = beads.m3
-    pots = simulation.syslist[0].motion.old_u
-    V0 = simulation.syslist[0].motion.energy_shift
+    pots = simulation.syslist[0].motion.optarrays["old_u"]
+    V0 = simulation.syslist[0].motion.optarrays["energy_shift"]
 
     if V00 != 0.0:
         print("Overwriting energy shift with the provided values")
@@ -434,30 +441,20 @@ elif case == "instanton":
         Qtras = ((np.sum(m)) / (2 * np.pi * beta * hbar ** 2)) ** 1.5
 
         if asr == "poly" and not quiet:
-            Qrot = (8 * np.pi * detI / ((hbar) ** 6 * (betaP) ** 3)) ** 0.5 / (
-                nbeads
-            ) ** 3
+            Qrot = (8 * np.pi * detI / ((hbar) ** 6 * (betaP) ** 3)) ** 0.5
+            Qrot /= nbeads ** 3
         else:
             Qrot = 1.0
 
         if not quiet:
-            print(
-                (
-                    "Deleted frequency: {:8.3f} cm^-1".format(
-                        (np.sign(d[1]) * np.absolute(d[1]) ** 0.5 / cm2au)
-                    )
-                )
-            )
+            del_freq = np.sign(d[1]) * np.absolute(d[1]) ** 0.5 / cm2au
+            print("Deleted frequency: {:8.3f} cm^-1".format(del_freq))
+
             if asr != "poly":
                 print("WARNING asr != poly")
                 print("First 10 eigenvalues")
-                print(
-                    (
-                        "{}".format(
-                            np.sign(d[0:10]) * np.absolute(d[0:10]) ** 0.5 / cm2au
-                        )
-                    )
-                )
+                ten_eigv = np.sign(d[0:10]) * np.absolute(d[0:10]) ** 0.5 / cm2au
+                print("{}".format(ten_eigv))
                 print(
                     "Please check that this you don't have any unwanted zero frequency"
                 )
@@ -475,38 +472,32 @@ elif case == "instanton":
         action2 = spring_pot(nbeads, pos, omega2, m3) / (temp * nbeads * kb)
 
         print(
-            (
-                "\nWe are done. Instanton rate. Nbeads {} (diff only {})".format(
-                    nbeads, nbeads / 2
-                )
+            "\nWe are done. Instanton rate. Nbeads {} (diff only {})".format(
+                nbeads, nbeads / 2
             )
         )
         print(
-            (
-                "   {:8s} {:8s}  | {:11s} | {:11s} | {:11s} | {:8s} ( {:8s},{:8s} ) |".format(
-                    "BN",
-                    "(BN*N)",
-                    "Qt(bohr^-3)",
-                    "Qrot",
-                    "log(Qvib*N)",
-                    "S/hbar",
-                    "S1/hbar",
-                    "S2/hbar",
-                )
+            "   {:8s} {:8s}  | {:11s} | {:11s} | {:11s} | {:8s} ( {:8s},{:8s} ) |".format(
+                "BN",
+                "(BN*N)",
+                "Qt(bohr^-3)",
+                "Qrot",
+                "log(Qvib*N)",
+                "S/hbar",
+                "S1/hbar",
+                "S2/hbar",
             )
         )
         print(
-            (
-                "{:8.3f} ( {:8.3f} ) | {:11.3f} | {:11.3f} | {:11.3f} | {:8.3f} ( {:8.3f} {:8.3f} ) |".format(
-                    BN,
-                    BN * nbeads,
-                    Qtras,
-                    Qrot,
-                    logQvib,
-                    (action1 + action2),
-                    action1,
-                    action2,
-                )
+            "{:8.3f} ( {:8.3f} ) | {:11.3f} | {:11.3f} | {:11.3f} | {:8.3f} ( {:8.3f} {:8.3f} ) |".format(
+                BN,
+                BN * nbeads,
+                Qtras,
+                Qrot,
+                logQvib,
+                (action1 + action2),
+                action1,
+                action2,
             )
         )
         print("\n\n")
@@ -537,7 +528,7 @@ elif case == "instanton":
         BN = np.sum(beads.m3[1:, :] * (beads.q[1:, :] - beads.q[:-1, :]) ** 2)
 
         if not quiet:
-            inst = np.sum(np.log(np.sqrt(np.delete(d, [0]))))
+            inst = np.sum(np.log(np.sqrt(np.absolute(np.delete(d, [1])))))
             phi = np.exp(inst - react)
         else:
             phi = 1
@@ -583,7 +574,9 @@ elif case == "instanton":
 
 info("\n\n", Verbosity.medium)
 info(
-    "Remember that the output obtained from this script simply gives you components that you can use in order to calculate a rate or a tunneling splitting in the instanton approximation.",
+    "Remember that the output obtained from this script simply gives you components\
+      that you can use in order to calculate a rate or a tunneling splitting in the \
+      instanton approximation.",
     verbosity.medium,
 )
 info(

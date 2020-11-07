@@ -22,6 +22,7 @@ Classes:
 
 import numpy as np
 from ipi.utils.inputvalue import *
+import sys
 
 
 __all__ = ["InputInst"]
@@ -35,6 +36,18 @@ class InputInst(InputDictionary):
     thresholds, hessian update strategy, etc.
 
     """
+
+    attribs = {
+        "mode": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "default": "rate",
+                "help": "Defines whether it is an instanton rate or instanton tunneling splitting calculaion",
+                "options": ["rate", "splitting"],
+            },
+        )
+    }
 
     attribs = {
         "mode": (
@@ -104,6 +117,23 @@ class InputInst(InputDictionary):
                                             For small system sizes nichols is recomended. Lanczos is tailored for big bigger than nbeads*natoms >~38*64.
                                             NR works in both cases given that the initial guess is close to the optimized geometry.
                                             Finally lbfgs is used for tunneling splitting calculations. """,
+            },
+        ),
+        "max_e": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 0.0,
+                "help": """Evaluate the forces in a reduced ring polymer such that the potential energy between consecutive replicas is smaller that the provided value.""",
+                "dimension": "energy",
+            },
+        ),
+        "max_ms": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 0.0,
+                "help": """Evaluate the forces in a reduced ring polymer such that that mass-scaled distance in a.u. between consecutive replicas is  smaller that the provided value.""",
             },
         ),
         "discretization": (
@@ -284,6 +314,8 @@ class InputInst(InputDictionary):
         self.opt.store(options["opt"])
 
         # Generic instanton
+        self.max_e.store(options["max_e"])
+        self.max_ms.store(options["max_ms"])
         self.discretization.store(options["discretization"])
         self.alt_out.store(options["save"])
         self.prefix.store(options["prefix"])
