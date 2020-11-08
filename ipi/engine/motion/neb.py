@@ -35,7 +35,6 @@ __all__ = ["NEBMover"]
 
 
 class NEBLineMover(object):
-
     """Creation of the one-dimensional function that will be minimized
 
     Attributes:
@@ -186,8 +185,8 @@ class NEBLineMover(object):
 
 
 class NEBBFGSMover(object):
-
-    """Creation of the multi-dimensional function that will be minimized
+    """Creation of the multi-dimensional function that will be minimized.
+       Functional analog of a GradientMapper in geop.py
 
     Attributes:
         x0: initial position
@@ -227,7 +226,7 @@ class NEBBFGSMover(object):
         # Array for spring constants
         kappa = np.zeros(nimg)
 
-        # get tangents, end images are distinct, fixed, pre-relaxed configurations
+        # Get tangents. End images are distinct, fixed, pre-relaxed configurations
         btau = np.zeros((nimg, 3 * nat), float)
         for ii in range(1, nimg - 1):
             d1 = bq[ii] - bq[ii - 1]  # tau minus
@@ -237,6 +236,8 @@ class NEBBFGSMover(object):
             # btau[ii] = d1 / np.linalg.norm(d1) + d2 / np.linalg.norm(d2)
             # btau[ii] *= 1.0 / np.linalg.norm(btau)
 
+            # Improved tangent estimate
+            # J. Chem. Phys. 113, 9978 (2000) https://doi.org/10.1063/1.1323224
             # Energy of images: (ii+1) < (ii) < (ii-1)
             if (be[ii + 1] < be[ii]) and (be[ii] < be[ii - 1]):
                 btau[ii] = d1
@@ -256,10 +257,11 @@ class NEBBFGSMover(object):
                 elif be[ii - 1] < be[ii + 1]:
                     btau[ii] = d2 * maxpot + d1 * minpot
 
-                else:
-                    print("Error in NEB tangents: Energy of images are equal")
+                else:   # KF: do we actually need to treat this specially?
+                    print("Warning in NEB tangents: Energies of images are equal.")
+                    btau[ii] = d2 * minpot + d1 * maxpot
 
-            btau[ii] *= 1.0 / np.linalg.norm(btau)
+            btau[ii] /= np.linalg.norm(btau)
 
         # if mode == "variablesprings":
 
@@ -300,6 +302,8 @@ class NEBBFGSMover(object):
 
             # Old implementation
             # bf[ii] += kappa[ii] * btau[ii] * np.dot(btau[ii], (bq[ii + 1] + bq[ii - 1] - 2 * bq[ii]))
+
+            # Eq. 12 in J. Chem. Phys. 113, 9978 (2000):
             bf[ii] += (
                 kappa[ii]
                 * (
@@ -309,14 +313,13 @@ class NEBBFGSMover(object):
                 * btau[ii]
             )
 
-        # Return forces and modulus of gradient
+        # Return forces and modulus of gradient (why??)
         g = -bf
         e = np.linalg.norm(g)  # self.dforces.pot # 0.0
         return e, g
 
 
 class NEBMover(Motion):
-
     """Nudged elastic band routine.
 
     Attributes:
@@ -436,12 +439,9 @@ class NEBMover(Motion):
         self.qtime = -time.time()
 
         if self.mode == "lbfgs":
-
             # L-BFGS Minimization
             # Initialize direction to the steepest descent direction
-            if (
-                step == 0
-            ):  # or np.sqrt(np.dot(self.bfgsm.d, self.bfgsm.d)) == 0.0: <-- this part for restarting at claimed minimum
+            if step == 0:  # or np.sqrt(np.dot(self.bfgsm.d, self.bfgsm.d)) == 0.0: <-- this part for restarting at claimed minimum
                 info(" @NEB: Initializing L-BFGS", verbosity.debug)
                 fx, nebgrad = self.nebbfgsm(self.beads.q)
 
@@ -495,11 +495,13 @@ class NEBMover(Motion):
 
             info(" @NEB: Updated bead positions", verbosity.debug)
 
+        elif self.mode == "bfgs":
+            softexit.trigger("ERROR: BFGS for NEB is not implemented.")
+
         # Routine for steepest descent and conjugate gradient
         # TODO: CURRENTLY DOES NOT WORK. MUST BE ELIMINATED OR DEBUGGED
         else:
             if self.mode == "sd" or step == 0:
-
                 # Steepest descent minimization
                 # gradf1 = force at current atom position
                 # dq1 = direction of steepest descent
@@ -512,7 +514,6 @@ class NEBMover(Motion):
                 info(" @NEB: Determined SD direction", verbosity.debug)
 
             else:
-
                 # Conjugate gradient, Polak-Ribiere
                 # gradf1: force at current atom position
                 # gradf0: force at previous atom position
