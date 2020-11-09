@@ -1,13 +1,4 @@
 ====
-Temporary announcement
-====
-As of July 28, 2020, the master branch of this repository has been substituted by the python3 version that we have written. The latest state of master as written in python2 until July 27, 2020 can be found in the branch legacy/python2.
-
-We have also improved considerably the continuous integration infrastructure to ensure a more stable code in the future.
-
-New bug fixes and implementations will go only into the new master, and i-PI has finally come into the python3 age. If you find any bugs we are happy to hear and will solve them promptly, please post them here!
-
-====
 i-PI: a Universal Force Engine
 ====
 
@@ -129,3 +120,22 @@ Checklist to create a pull request:
 
 We are looking forward to your contribution!
 
+Contributing
+================
+
+i-PI is an open source project, and everyone is welcome to contribute 
+with bug fixes, documentation, examples, new features, regression tests, etc.
+
+Your contribution should be based on the master branch. We kindly ask you to first fork the project, 
+make your changes, make sure you comply with all items in our checklist below, and finally create a pull request (PR). 
+
+Checklist to create a pull request:
+
+- Code follows our format compliance (`black` and `flake8` as explained above)
+- All classes and functions include corresponding docstrings
+(If the PR adds a new functionally, please fulfill the next two requirements as well)
+- Add a working example to the `examples` foldes to showcase the new functionality
+- Add a regression test to the `i-pi/ipi_tests/regression_tests` folder (see the corresponding README file for further details)
+- Make sure that all the automatic checks pass without any error
+
+We are looking forward to your contribution!
