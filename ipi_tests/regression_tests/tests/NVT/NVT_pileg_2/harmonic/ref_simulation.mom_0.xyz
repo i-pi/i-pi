@@ -1,0 +1,30 @@
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           0  Bead:       0 momenta{atomic_unit}  cell{atomic_unit}
+       H -1.81067e+00  2.41073e-01 -1.26140e-01
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           1  Bead:       0 momenta{atomic_unit}  cell{atomic_unit}
+       H -1.29642e+00  3.92144e-01  4.15929e-01
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           2  Bead:       0 momenta{atomic_unit}  cell{atomic_unit}
+       H -1.67152e+00  1.01387e+00  5.29719e-01
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           3  Bead:       0 momenta{atomic_unit}  cell{atomic_unit}
+       H -2.16219e+00  9.89428e-01  3.53493e-01
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           4  Bead:       0 momenta{atomic_unit}  cell{atomic_unit}
+       H -2.16090e+00  7.14381e-01 -2.06392e-01
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           5  Bead:       0 momenta{atomic_unit}  cell{atomic_unit}
+       H -2.16820e+00  1.25734e+00 -1.61289e-01
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           6  Bead:       0 momenta{atomic_unit}  cell{atomic_unit}
+       H -1.94060e+00  1.37048e+00 -7.80603e-01
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           7  Bead:       0 momenta{atomic_unit}  cell{atomic_unit}
+       H -2.19680e+00  1.38968e+00 -9.53524e-01
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           8  Bead:       0 momenta{atomic_unit}  cell{atomic_unit}
+       H -1.79115e+00  1.29741e+00 -6.27050e-01
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           9  Bead:       0 momenta{atomic_unit}  cell{atomic_unit}
+       H -1.79407e+00  1.80332e+00 -7.46496e-01
