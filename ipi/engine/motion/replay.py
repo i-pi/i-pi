@@ -79,9 +79,12 @@ class Replay(Motion):
                 fdin.close()
             # check that beads are continuous (no files missing)
             if sorted(bead_map_list) != list(range(len(bead_map_list))):
-                raise ValueError(
-                    "Provided trajectory files have non-continuous "
-                    "range of bead indices."
+                info(
+                    "ATTENTION: Provided trajectory files have non-sequential "
+                    "range of bead indices.\n"
+                    "\tIndices found: %s\n"
+                    "\tMake sure that the wildcard does what it's supposed to do." % str(bead_map_list),
+                    verbosity.low
                 )
             # sort the list of files according to their bead indices
             infilelist_sorted, _ = zip(*sorted(zip(infilelist, bead_map_list),

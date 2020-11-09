@@ -1,5 +1,5 @@
 <simulation verbosity='medium'>
-  <output prefix='debye'>
+  <output prefix='simulation'>
     <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved, potential ] </properties>
     <trajectory stride='1' cell_units='angstrom' filename='for'> forces </trajectory>
   </output>
@@ -22,7 +22,7 @@
            of trajectory files. If symbols *?[] are found in a filename,
            the code expects to find exactly nbeads files that match 
            the provided pattern. Bead indices will be read from the files. -->
-      <file mode='xyz'> simulation.pos_*.xyz </file>
+      <file mode='xyz'> traj.pos_*.xyz </file>
     </motion>
   </system>
 </simulation>
