@@ -20,7 +20,7 @@ from ipi.utils.depend import *
 import ipi.utils.io as io
 from ipi.utils.io.inputs.io_xml import *
 from ipi.utils.io import open_backup
-from ipi.engine.properties import getkey
+from ipi.engine.properties import getkey, getall
 from ipi.engine.atoms import *
 from ipi.engine.cell import *
 import json
@@ -273,6 +273,7 @@ class TrajectoryOutput(BaseOutput):
         format="xyz",
         cell_units="atomic_unit",
         ibead=-1,
+        xtratype='info'
     ):
         """Initializes a property output stream opening the corresponding
         file name.
@@ -300,6 +301,7 @@ class TrajectoryOutput(BaseOutput):
         self.cell_units = cell_units
         self.out = None
         self.nout = 0
+        self.xtratype = xtratype
 
     def bind(self, system, mode="w"):
         """Binds output proxy to System object.
@@ -328,7 +330,7 @@ class TrajectoryOutput(BaseOutput):
         """Opens the output stream(s)."""
 
         # prepare format string for zero-padded number of beads,
-        # including underscpre
+        # including underscore
         fmt_bead = (
             "{0:0"
             + str(int(1 + np.floor(np.log(self.system.beads.nbeads) / np.log(10))))
@@ -345,7 +347,6 @@ class TrajectoryOutput(BaseOutput):
         ]:
 
             # must write out trajectories for each bead, so must create b streams
-
             # prepare format string for file name
             if getkey(self.what) == "extras":
                 fmt_fn = self.filename + "_" + fmt_bead
@@ -362,7 +363,6 @@ class TrajectoryOutput(BaseOutput):
                     self.out.append(None)
 
         else:
-
             # open one file
             filename = self.filename + "." + self.format
             self.out = open_backup(filename, mode)
@@ -478,7 +478,6 @@ class TrajectoryOutput(BaseOutput):
                 " #*EXTRAS*# Step:  %10d  Bead:  %5d  \n"
                 % (self.system.simul.step + 1, b)
             )
-            print('hello:', data[b])
             stream.write(json.dumps(data[b]))
             stream.write("\n")
             if flush:

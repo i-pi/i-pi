@@ -413,8 +413,12 @@ class Driver(DriverSocket):
             mxtra = bytearray(mxtra).decode("utf-8")
         else:
             mxtra = ""
+        mxtradict = {}
         if mxtra:
-            mxtradict = json.loads(mxtra)
+            try:
+                mxtradict = json.loads(mxtra)
+            except:
+                mxtradict["info"] = mxtra
         return [mu, mf, mvir, mxtradict]
 
     def dispatch(self, r):

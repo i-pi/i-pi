@@ -198,7 +198,7 @@ class InputInst(InputDictionary):
                 "dtype": str,
                 "default": "none",
                 "options": ["none", "poly", "crystal"],
-                "help": "Removes the zero frequency vibrational modes depending on the symmerty of the system.",
+                "help": "Removes the zero frequency vibrational modes depending on the symmetry of the system.",
             },
         ),
         # L-BFGS

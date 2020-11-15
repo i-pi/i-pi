@@ -300,7 +300,7 @@ class DummyPhononCalculator(dobject):
 
 class FDPhononCalculator(DummyPhononCalculator):
 
-    """Finite dinnerence phonon evaluator."""
+    """Finite difference phonon evaluator."""
 
     def bind(self, dm):
         """ Reference all the variables for simpler access."""
@@ -356,7 +356,7 @@ class FDPhononCalculator(DummyPhononCalculator):
             self.dm.dynmatrix[step] = dmrow
             self.dm.refdynmatrix[step] = dmrow
         else:
-            info(" We have skiped the dof # {}.".format(step), verbosity.low)
+            info(" We have skipped the dof # {}.".format(step), verbosity.low)
 
     def transform(self):
         dm = self.dm.dynmatrix.copy()
