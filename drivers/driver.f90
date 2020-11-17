@@ -152,11 +152,13 @@
                   vstyle = 25
                ELSEIF (trim(cmdbuffer) == "doublewell_1D") THEN
                   vstyle = 24
+               ELSEIF (trim(cmdbuffer) == "harmonic_bath") THEN
+                  vstyle = 26
                ELSEIF (trim(cmdbuffer) == "gas") THEN
                   vstyle = 0  ! ideal gas
                ELSE
                   WRITE(*,*) " Unrecognized potential type ", trim(cmdbuffer)
-                  WRITE(*,*) " Use -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D] "
+                  WRITE(*,*) " Use -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|harmonic_bath] "
                   STOP "ENDED"
                ENDIF
             ELSEIF (ccmd == 4) THEN
@@ -248,6 +250,20 @@
             WRITE(*,*) "For MB potential up to 1 param can be specified"
             STOP "ENDED"
          ENDIF
+         isinit = .true.
+      ELSEIF (26 == vstyle) THEN !harmonic_bath
+         IF (par_count /= 3) THEN ! defaults values 
+            WRITE(*,*) "Error: parameters not initialized correctly."
+            WRITE(*,*) "For harmonic bath use <bath_type> <friction (atomic units)> <omega_c (invcm)> "
+            WRITE(*,*) "Available bath_type are: "
+            WRITE(*,*) "1 = Ohmic "
+            STOP "ENDED"
+         ENDIF
+         IF (vpars(1) /= 1) THEN
+             WRITE(*,*) "Only Ohmic bath implemented"
+             STOP "ENDED"
+         END IF
+         vpars(3) = vpars(3) * 4.5563353e-06 !Change omega_c from invcm to a.u.
          isinit = .true.
       ELSEIF (22 == vstyle) THEN !ljpolymer
          IF (4/= par_count) THEN
@@ -576,7 +592,8 @@
                
             ELSEIF (vstyle == 20) THEN ! eckart potential.
                CALL geteckart(nat,vpars(1), vpars(2), vpars(3),vpars(4), atoms, pot, forces)
-
+            ELSEIF (vstyle == 26) THEN ! harmonic_bath.
+               CALL get_harmonic_bath(nat,vpars(1),vpars(2),vpars(3),atoms, pot, forces)
             ELSEIF (vstyle == 23) THEN ! MB.
                IF (nat/=1) THEN
                   WRITE(*,*) "Expecting 1 atom for MB"

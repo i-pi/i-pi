@@ -1,0 +1,12 @@
+TODO: Update with detailed instructions
+
+Folders
+TS: Finds classical transition state 
+reactant: minimizes and calculates phonons for the reactant, necessary for the final calculation of the rate
+instanton: finds instanton geometries using different implemented features 
+
+
+Necessary command to run driver.x in all folders:
+
+./driver.x -u -m harmonic_bath -o 1,2.0929095,500
+

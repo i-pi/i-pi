@@ -1,0 +1,36 @@
+<simulation mode='static' verbosity='medium'>
+  <output prefix='simulation_BFGS'>
+    <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potential{electronvolt}, pressure_cv{megapascal}] </properties>
+    <trajectory filename='pos' stride='1'> positions{angstrom} </trajectory>
+  </output>
+  <total_steps> 1000 </total_steps>
+  <prng>
+    <seed> 32342 </seed>
+  </prng>
+  <ffsocket name='bath' mode='unix' pbc='false'>
+    <address> localhost </address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='xyz'> init.xyz </file>
+    </initialize>
+    <forces>
+      <force forcefield='bath'> </force>
+    </forces>
+    <motion mode='minimize'>
+      <optimizer mode='bfgstrm'>
+        <ls_options>
+          <step> 1.0e-2 </step>
+          <tolerance> 1.0e-8 </tolerance>
+          <iter> 250 </iter>
+        </ls_options>
+        <tolerances>
+          <energy> 1.0e-7 </energy>
+          <force> 1.0e-3 </force>
+          <position> 1.0e-7 </position>
+        </tolerances>
+        <biggest_step> 150.0 </biggest_step>
+      </optimizer>
+    </motion>
+  </system>
+</simulation>
