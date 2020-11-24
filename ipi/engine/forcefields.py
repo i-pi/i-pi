@@ -11,6 +11,7 @@ layer for a driver that gets positions and returns forces (and energy).
 
 import time
 import threading
+import json
 
 import numpy as np
 
@@ -20,8 +21,8 @@ from ipi.utils.messages import info
 from ipi.interfaces.sockets import InterfaceSocket
 from ipi.utils.depend import dobject
 from ipi.utils.depend import dstrip
-from ipi.utils.io import read_file
-from ipi.utils.units import unit_to_internal, UnitMap
+from ipi.utils.io import read_file, print_file
+from ipi.utils.units import unit_to_internal, unit_to_user, UnitMap
 
 try:
     import plumed
@@ -104,7 +105,13 @@ class ForceField(dobject):
         self._doloop = [False]
         self._threadlock = threading.Lock()
 
-    def queue(self, atoms, cell, reqid=-1):
+    def bind(self, output_maker=None):
+        """ Binds the FF, at present just to allow for
+        managed output """
+
+        self.output_maker = output_maker
+
+    def queue(self, atoms, cell, reqid=-1, template=None):
         """Adds a request.
 
         Note that the pars dictionary need to be sent as a string of a
@@ -117,9 +124,11 @@ class ForceField(dobject):
                 driver for initialisation. Defaults to {}.
             reqid: An optional integer that identifies requests of the same type,
                e.g. the bead index
+            template: a dict giving a base model for the request item -
+               e.g. to add entries that are not needed for the base class execution
 
         Returns:
-            A list giving the status of the request of the form {'pos': An array
+            A dict giving the status of the request of the form {'pos': An array
             giving the atom positions folded back into the unit cell,
             'cell': Cell object giving the system box, 'pars': parameter string,
             'result': holds the result as a list once the computation is done,
@@ -161,7 +170,9 @@ class ForceField(dobject):
         if self.dopbc:
             cell.array_pbc(pbcpos)
 
-        newreq = ForceRequest(
+        if template is None:
+            template = {}
+        template.update(
             {
                 "id": reqid,
                 "pos": pbcpos,
@@ -176,6 +187,8 @@ class ForceField(dobject):
                 "t_finished": 0,
             }
         )
+
+        newreq = ForceRequest(template)
 
         with self._threadlock:
             self.requests.append(newreq)
@@ -215,7 +228,7 @@ class ForceField(dobject):
                 self.poll()
 
     def release(self, request):
-        """Shuts down the client code interface thread.
+        """Removes a request from the evaluation queue.
 
         Args:
             request: The id of the job to release.
@@ -885,3 +898,246 @@ class FFsGDML(ForceField):
         ]
         r["status"] = "Done"
         r["t_finished"] = time.time()
+
+
+class FFCommittee(ForceField):
+    """ Combines multiple forcefields into a single forcefield object
+        that consolidates individual components """
+
+    def __init__(
+        self,
+        latency=1.0,
+        name="",
+        pars=None,
+        dopbc=True,
+        active=np.array([-1]),
+        threaded=True,
+        fflist=[],
+        ffweights=[],
+        alpha=1.0,
+        baseline_uncertainty=-1.0,
+        baseline_offset=0.0,
+        is_committee_delta=True,
+        al_thresh=0.0,
+        al_out=None,
+    ):
+
+        # force threaded mode as otherwise it cannot have threaded children
+        super(FFCommittee, self).__init__(
+            latency=latency,
+            name=name,
+            pars=pars,
+            dopbc=dopbc,
+            active=active,
+            threaded=True,
+        )
+        if len(fflist) == 0:
+            raise ValueError(
+                "Committee forcefield cannot be initialized from an empty list"
+            )
+        self.fflist = fflist
+        self.ff_requests = {}
+        self.baseline_uncertainty = baseline_uncertainty
+        self.baseline_offset = baseline_offset
+        self.is_committee_delta = is_committee_delta
+        if len(ffweights) == 0 and self.baseline_uncertainty < 0:
+            ffweights = np.ones(len(fflist))
+        elif len(ffweights) == 0 and self.baseline_uncertainty > 0:
+            ffweights = np.ones(len(fflist) -1)
+        if len(ffweights) != len(fflist) and self.baseline_uncertainty < 0:
+            raise ValueError("List of weights does not match length of committee model")
+        elif len(ffweights) != len(fflist) -1 and self.baseline_uncertainty > 0:
+            raise ValueError("List of weights does not match length of committee model")
+        self.ffweights = ffweights
+        self.alpha = alpha
+        self.al_thresh = al_thresh
+        self.al_out = al_out
+
+    def bind(self, output_maker):
+
+        super(FFCommittee, self).bind(output_maker)
+        if self.al_thresh > 0:
+            if self.al_out is None:
+                raise ValueError(
+                    "Must specify an output file if you want to save structures for active learning"
+                )
+            else:
+                self.al_file = self.output_maker.get_output(self.al_out, "w")
+
+    def start(self):
+        for ff in self.fflist:
+            ff.start()
+        super(FFCommittee, self).start()
+
+    def queue(self, atoms, cell, reqid=-1):
+
+        # launches requests for all of the committee FF objects
+        ffh = []
+        for ff in self.fflist:
+            ffh.append(ff.queue(atoms, cell, reqid))
+
+        # creates the request with the help of the base class,
+        # making sure it already contains a handle to the list of FF
+        # requests
+        req = super(FFCommittee, self).queue(
+            atoms, cell, reqid, template=dict(ff_handles=ffh)
+        )
+        return req
+
+    def check_finish(self, r):
+        """ Checks if all sub-requests associated with a given
+        request are finished """
+        for ff_r in r["ff_handles"]:
+            if ff_r["status"] != "Done":
+                return False
+        return True
+
+    def gather(self, r):
+        """ Collects results from all sub-requests """
+        ff_res = []
+        pot_uncertainty = []
+        pots = []
+        forces = []
+        virials = []
+        r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]
+
+        if self.baseline_uncertainty < 0: 
+            # Gathers the forcefield energetics and extras
+            ncommittee = len(r["ff_handles"])
+            pots = [ff_r["result"][0] for ff_r in r["ff_handles"]]
+            frcs = [ff_r["result"][1] for ff_r in r["ff_handles"]]
+            virs = [ff_r["result"][2] for ff_r in r["ff_handles"]]
+            xtrs = [ff_r["result"][3] for ff_r in r["ff_handles"]]
+
+            # Computes the mean energetics
+            mean_pot = np.mean(pots, axis=0)
+            mean_frc = np.mean(frcs, axis=0)
+            mean_vir = np.mean(virs, axis=0)
+
+            # Rescales the committee energetics so that their standard deviation corresponds to the error
+            rescaled_pots = [mean_pot + self.alpha * (pot - mean_pot) for pot in pots]
+            rescaled_frcs = [mean_frc + self.alpha * (frc - mean_frc) for frc in frcs]
+            rescaled_virs = [mean_vir + self.alpha * (vir - mean_vir) for vir in virs]
+           
+            # Calculates the error associated with the committee 
+            var_pot = np.var(rescaled_pots, ddof=1)
+            std_pot = np.sqrt(var_pot)
+
+            # Sets the output of the committee model.
+            r["result"][0] = mean_pot 
+            r["result"][1] = mean_frc 
+            r["result"][2] = mean_vir 
+
+        elif self.baseline_uncertainty > 0:
+
+            # Gathers the forcefield energetics and extras
+            ncommittee = len(r["ff_handles"]) - 1
+            pots = [ff_r["result"][0] for ff_r in r["ff_handles"]]
+            frcs = [ff_r["result"][1] for ff_r in r["ff_handles"]]
+            virs = [ff_r["result"][2] for ff_r in r["ff_handles"]]
+            xtrs = [ff_r["result"][3] for ff_r in r["ff_handles"]]
+            # The first model is assumed to be the baseline
+            baseline_pot = pots[0] + self.baseline_offset
+            baseline_frc = frcs[0]
+            baseline_vir = virs[0]
+            baseline_xtr = xtrs[0]
+            pots = pots[1:]
+            frcs = frcs[1:]
+            virs = virs[1:]
+            xtrs = xtrs[1:]
+        
+            # Computes the mean energetics
+            mean_pot = np.mean(pots, axis=0)
+            mean_frc = np.mean(frcs, axis=0)
+            mean_vir = np.mean(virs, axis=0)
+
+            # Rescales the committee energetics so that their standard deviation corresponds to the error
+            rescaled_pots = [mean_pot + self.alpha * (pot - mean_pot) for pot in pots]
+            rescaled_frcs = [mean_frc + self.alpha * (frc - mean_frc) for frc in frcs]
+            rescaled_virs = [mean_vir + self.alpha * (vir - mean_vir) for vir in virs]
+ 
+            # Calculates the error associated with the committee 
+            var_pot = np.var(rescaled_pots, ddof=1)
+            std_pot = np.sqrt(var_pot)
+
+            # Computes the additional component of the energetics due to a position dependent weight
+            uncertain_pot = 0.0
+            uncertain_frc = self.alpha**2 * np.mean([(pot - mean_pot) * (frc - mean_frc) for pot, frc in zip(pots, frcs)], axis=0)
+            uncertain_vir = self.alpha**2 * np.mean([(pot - mean_pot) * (vir - mean_vir) for pot, vir in zip(pots, virs)], axis=0)
+            
+            if self.is_committee_delta  == True:
+                # Computes the final average energetics
+                final_pot = baseline_pot + mean_pot * (self.baseline_uncertainty**2 / (self.baseline_uncertainty**2 + var_pot)) - 2.0 * mean_pot * (self.baseline_uncertainty**2 / (self.baseline_uncertainty**2 + var_pot)**2) * uncertain_pot
+                final_frc = baseline_frc + mean_frc * (self.baseline_uncertainty**2 / (self.baseline_uncertainty**2 + var_pot)) - 2.0 * mean_pot * (self.baseline_uncertainty**2 / (self.baseline_uncertainty**2 + var_pot)**2) * uncertain_frc
+                final_vir = baseline_vir + mean_vir * (self.baseline_uncertainty**2 / (self.baseline_uncertainty**2 + var_pot)) - 2.0 * mean_pot * (self.baseline_uncertainty**2 / (self.baseline_uncertainty**2 + var_pot)**2) * uncertain_vir
+            else:
+                # Computes the final average energetics
+                final_pot = baseline_pot + (mean_pot - baseline_pot) * (self.baseline_uncertainty**2 / (self.baseline_uncertainty**2 + var_pot)) - 2.0 * (mean_pot - baseline_pot) * (self.baseline_uncertainty**2 / (self.baseline_uncertainty**2 + var_pot)**2) * uncertain_pot
+                final_frc = baseline_frc + (mean_frc - baseline_frc) * (self.baseline_uncertainty**2 / (self.baseline_uncertainty**2 + var_pot)) - 2.0 * (mean_pot - baseline_pot)* (self.baseline_uncertainty**2 / (self.baseline_uncertainty**2 + var_pot)**2) * uncertain_frc
+                final_vir = baseline_vir + (mean_vir - baseline_vir) * (self.baseline_uncertainty**2 / (self.baseline_uncertainty**2 + var_pot)) - 2.0 * (mean_pot - baseline_pot) * (self.baseline_uncertainty**2 / (self.baseline_uncertainty**2 + var_pot)**2) * uncertain_vir
+               
+            # Sets the output of the committee model.
+            r["result"][0] = final_pot 
+            r["result"][1] = final_frc 
+            r["result"][2] = final_vir
+ 
+        for i_r in range(ncommittee):
+            ff_res.append(
+                {
+                    "v": rescaled_pots[i_r],
+                    "f": list(rescaled_frcs[i_r]),
+                    "s": list(rescaled_virs[i_r].flatten()),
+                    "x": xtrs[i_r],
+                }
+            )
+
+        r["ff_results"] = ff_res
+        if self.baseline_uncertainty > 0:
+            bs_res =  { 
+                        "v": baseline_pot,
+                        "f": list(baseline_frc),
+                        "s": list(baseline_vir.flatten()),
+                        "x": baseline_xtr
+                      }
+
+            r["result"][3] = json.dumps(
+                {
+                    "position": list(r["pos"]),
+                    "cell": list(r["cell"][0].flatten()),
+                    "committee": r["ff_results"],
+                    "baseline": bs_res
+                }
+            )
+        else:
+            r["result"][3] = json.dumps(
+                {
+                    "position": list(r["pos"]),
+                    "cell": list(r["cell"][0].flatten()),
+                    "committee": r["ff_results"],
+                }
+            )
+        # print( np.std(np.array(pot_uncertainty)), self.al_thresh )
+        if std_pot > self.al_thresh and self.al_thresh > 0.0:
+            dumps = json.dumps(
+                {
+                    "position": list(r["pos"]),
+                    "cell": list(r["cell"][0].flatten()),
+                    "uncertainty": std_pot
+                }
+            )
+            self.al_file.write(dumps)
+
+        # releases the requests from the committee FF
+        for ff, ff_r in zip(self.fflist, r["ff_handles"]):
+            ff.release(ff_r)
+
+    def poll(self):
+        """Polls the forcefield object to check if it has finished."""
+
+        with self._threadlock:
+            for r in self.requests:
+                if self.check_finish(r):
+                    r["t_dispatched"] = time.time()
+                    r["t_finished"] = time.time()
+                    self.gather(r)
+                    r["status"] = "Done"
