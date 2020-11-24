@@ -1,3 +1,5 @@
+mkl
+blas=*=mkl
 numpy
 pytest
 pytest-mock
