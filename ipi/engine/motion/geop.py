@@ -911,97 +911,97 @@ class CGOptimizer(DummyOptimizer):
         self.exitstep(self.forces.pot, u0, d_x_max)
 
 
-class FIREOptimizer(DummyOptimizer):
-    """
-    FIRE optimizer as described in
-    https://doi.org/10.1103/PhysRevLett.97.170201
-
-    But unlike it's proposed in the paper,
-    I decided not to bind it to an external MD integrator
-    and to do everything here, like it's done in aimsChain.
-    I take fhi-aims/src/aimsChain/aimsChain/optimizer/newfire.py
-    as an exapmle.
-
-    """
-
-    def __init__():
-        # Parameters are named as in the PRL 97,170201 (2006)
-        # The defaults are copied from the aimsChain implementation
-        self.dt=0.0005,
-        self.biggest_step=0.04,
-        self.dtmax=0.048,
-        self.Nmin=6,
-        self.finc=1.05,
-        self.fdec=0.5,
-        self.alpha_start=0.00,
-        self.f_alpha=1.0,
-        self.alpha=0.00
-
-        # Lines from GeopMotion.init():
-        # old_pos=np.zeros(0, float),
-        # old_pot=np.zeros(0, float),
-        # old_force=np.zeros(0, float),
-        # old_direction=np.zeros(0, float),
-
-
-    def bind(self, geop):
-        # call bind function from DummyOptimizer
-        super(FIREOptimizer, self).bind(geop)
-
-        # I'm not sure whether it's a good idea to use
-        # original velocities in geop, but let's see.
-        self.beads.v[:] = dstrip(self.forces.f)
-
-        self.old_vel = dstrip(self.beads.v)
-        self.old_pos = dstrip(self.beads.q)
-        self.old_force = dstrip(self.forces.f)
-        self.old_pot = dstrip(self.forces.pot)
-
-        # It's recommended to have equal masses for all atoms
-        self.m = np.min(self.beads.m)
-
-        info(" @GEOP: FIRE bind() done.", verbosity.debug)
-
-    def step(self, step=None):
-        """ Does one FIRE step.
-
-            MD: calculate x, F(x), and v using velocity Verlet:
-                1. x(t+dt) = x(t) + v(t)dt + 1/2 a(t) dt^2
-                2. a(t+dt) = f(x(t + dt)) / m
-                3. v(t+dt) = v(t) + dt/2 (a(t) + a(t+dt))
-
-            F1: calculate P = F * v
-            F2: set v -> (1-alpha)v + alpha F/|F|*|v|.
-            F3: if P > 0 and the number of steps since P was negative
-                is larger than Nmin,
-                increase the time step dt -> min(dt*finc, dtmax)
-                and decrease alpha -> alpha*f_alpha.
-            F4: if P <= 0, decrease time step dt -> dt* fdec,
-            freeze the system v -> 0,
-            and set alpha back to alpha_start.
-            F5: return to MD.
-        """
-        info("\n @GEOP: FIRE STEP %d" % step, verbosity.debug)
-
-        # Velocity Verlet step:
-        self.beads.q[:] += self.beads.v * self.dt \
-                           + self.old_force / self.m *self.dt * self.dt
-        f = dstrip(self.forces.f)  # F(t+dt)
-        self.beads.v[:] += .5 * self.dt * (self.old_force + f) / self.m
-
-        # FIRE step:
-        vf = np.vdot(self.beads.v, self.forces.f)
-        v *= (1 - alpha)
-        v += alpha *
-
-        info(" @GEOP: FIRE did <...>", verbosity.debug)
-
-        if len(self.fixatoms) > 0:
-            for dqb in dq1_unit:
-                dqb[self.fixatoms * 3] = 0.0
-                dqb[self.fixatoms * 3 + 1] = 0.0
-                dqb[self.fixatoms * 3 + 2] = 0.0
-
-        # Exit simulation step
-        d_x_max = np.amax(np.absolute(d_x))
-        self.exitstep(self.forces.pot, u0, d_x_max)
+#class FIREOptimizer(DummyOptimizer):
+#    """
+#    FIRE optimizer as described in
+#    https://doi.org/10.1103/PhysRevLett.97.170201
+#
+#    But unlike it's proposed in the paper,
+#    I decided not to bind it to an external MD integrator
+#    and to do everything here, like it's done in aimsChain.
+#    I take fhi-aims/src/aimsChain/aimsChain/optimizer/newfire.py
+#    as an exapmle.
+#
+#    """
+#
+#    def __init__():
+#        # Parameters are named as in the PRL 97,170201 (2006)
+#        # The defaults are copied from the aimsChain implementation
+#        self.dt=0.0005,
+#        self.biggest_step=0.04,
+#        self.dtmax=0.048,
+#        self.Nmin=6,
+#        self.finc=1.05,
+#        self.fdec=0.5,
+#        self.alpha_start=0.00,
+#        self.f_alpha=1.0,
+#        self.alpha=0.00
+#
+#        # Lines from GeopMotion.init():
+#        # old_pos=np.zeros(0, float),
+#        # old_pot=np.zeros(0, float),
+#        # old_force=np.zeros(0, float),
+#        # old_direction=np.zeros(0, float),
+#
+#
+#    def bind(self, geop):
+#        # call bind function from DummyOptimizer
+#        super(FIREOptimizer, self).bind(geop)
+#
+#        # I'm not sure whether it's a good idea to use
+#        # original velocities in geop, but let's see.
+#        self.beads.v[:] = dstrip(self.forces.f)
+#
+#        self.old_vel = dstrip(self.beads.v)
+#        self.old_pos = dstrip(self.beads.q)
+#        self.old_force = dstrip(self.forces.f)
+#        self.old_pot = dstrip(self.forces.pot)
+#
+#        # It's recommended to have equal masses for all atoms
+#        self.m = np.min(self.beads.m)
+#
+#        info(" @GEOP: FIRE bind() done.", verbosity.debug)
+#
+#    def step(self, step=None):
+#        """ Does one FIRE step.
+#
+#            MD: calculate x, F(x), and v using velocity Verlet:
+#                1. x(t+dt) = x(t) + v(t)dt + 1/2 a(t) dt^2
+#                2. a(t+dt) = f(x(t + dt)) / m
+#                3. v(t+dt) = v(t) + dt/2 (a(t) + a(t+dt))
+#
+#            F1: calculate P = F * v
+#            F2: set v -> (1-alpha)v + alpha F/|F|*|v|.
+#            F3: if P > 0 and the number of steps since P was negative
+#                is larger than Nmin,
+#                increase the time step dt -> min(dt*finc, dtmax)
+#                and decrease alpha -> alpha*f_alpha.
+#            F4: if P <= 0, decrease time step dt -> dt* fdec,
+#            freeze the system v -> 0,
+#            and set alpha back to alpha_start.
+#            F5: return to MD.
+#        """
+#        info("\n @GEOP: FIRE STEP %d" % step, verbosity.debug)
+#
+#        # Velocity Verlet step:
+#        self.beads.q[:] += self.beads.v * self.dt \
+#                           + self.old_force / self.m *self.dt * self.dt
+#        f = dstrip(self.forces.f)  # F(t+dt)
+#        self.beads.v[:] += .5 * self.dt * (self.old_force + f) / self.m
+#
+#        # FIRE step:
+#        vf = np.vdot(self.beads.v, self.forces.f)
+#        v *= (1 - alpha)
+#        v += alpha *
+#
+#        info(" @GEOP: FIRE did <...>", verbosity.debug)
+#
+#        if len(self.fixatoms) > 0:
+#            for dqb in dq1_unit:
+#                dqb[self.fixatoms * 3] = 0.0
+#                dqb[self.fixatoms * 3 + 1] = 0.0
+#                dqb[self.fixatoms * 3 + 2] = 0.0
+#
+#        # Exit simulation step
+#        d_x_max = np.amax(np.absolute(d_x))
+#        self.exitstep(self.forces.pot, u0, d_x_max)

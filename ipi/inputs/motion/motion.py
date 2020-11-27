@@ -133,7 +133,7 @@ class InputMotionBase(Input):
         ),
         "neb_optimizer": (
             InputNEB,
-            {"default": {}, "help": "Option for geometry optimization"},
+            {"default": {}, "help": "Option for NEB optimization"},
         ),
         "dynamics": (
             InputDynamics,

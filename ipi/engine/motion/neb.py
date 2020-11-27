@@ -14,7 +14,7 @@ import time
 from ipi.engine.motion import Motion
 from ipi.utils.depend import *
 from ipi.utils.softexit import softexit
-from ipi.utils.mintools import L_BFGS, min_brent_neb
+from ipi.utils.mintools import L_BFGS, BFGS, min_brent_neb
 from ipi.utils.messages import verbosity, info
 
 
@@ -258,7 +258,7 @@ class NEBBFGSMover(object):
                     btau[ii] = d2 * maxpot + d1 * minpot
 
                 else:   # KF: do we actually need to treat this specially?
-                    print("Warning in NEB tangents: Energies of images are equal.")
+                    info(" @NEB: Warning in tangents: Energies of both neighboring images are equal.", verbosity.high)
                     btau[ii] = d2 * minpot + d1 * maxpot
 
             btau[ii] /= np.linalg.norm(btau)
@@ -297,6 +297,12 @@ class NEBBFGSMover(object):
         for ii in range(1, nimg - 1):
             bf[ii] = bf[ii] - np.dot(bf[ii], btau[ii]) * btau[ii]
 
+        # tmp printout
+        # iii = 0
+        for ii in range(1, nimg):
+            print("Bead %2i, distance to previous:   %f"
+                % (ii, np.linalg.norm(bq[ii] - bq[ii - 1])))
+
         # Adds the spring forces
         for ii in range(1, nimg - 1):
 
@@ -313,7 +319,7 @@ class NEBBFGSMover(object):
                 * btau[ii]
             )
 
-        # Return forces and modulus of gradient (why??)
+        # Return forces and modulus of gradient
         g = -bf
         e = np.linalg.norm(g)  # self.dforces.pot # 0.0
         return e, g
@@ -404,14 +410,14 @@ class NEBMover(Motion):
                 self.old_f = np.zeros(beads.q.shape, float)
             else:
                 raise ValueError(
-                    "Conjugate gradient force size does not match system size"
+                    "Force size does not match system size."
                 )
         if self.old_d.shape != beads.q.shape:
             if self.old_d.shape == (0,):
                 self.old_d = np.zeros(beads.q.shape, float)
             else:
                 raise ValueError(
-                    "Conjugate gradient direction size does not match system size"
+                    "Direction size does not match system size."
                 )
         if self.mode == "bfgs" and self.invhessian.size != (
             beads.q.size * beads.q.size
@@ -421,7 +427,7 @@ class NEBMover(Motion):
                     beads.q.flatten().size, beads.q.flatten().size, 0, float
                 )
             else:
-                raise ValueError("Inverse Hessian size does not match system size")
+                raise ValueError("Inverse Hessian size does not match system size.")
 
         self.neblm.bind(self)
         self.nebbfgsm.bind(self)
@@ -438,20 +444,27 @@ class NEBMover(Motion):
         self.ptime = self.ttime = 0
         self.qtime = -time.time()
 
-        if self.mode == "lbfgs":
-            # L-BFGS Minimization
+        if self.mode in ["bfgs", "lbfgs"]:
+            # L-BFGS/BFGS minimization
             # Initialize direction to the steepest descent direction
             if step == 0:  # or np.sqrt(np.dot(self.bfgsm.d, self.bfgsm.d)) == 0.0: <-- this part for restarting at claimed minimum
-                info(" @NEB: Initializing L-BFGS", verbosity.debug)
+                info(" @NEB: Initializing (L)BFGS", verbosity.debug)
                 fx, nebgrad = self.nebbfgsm(self.beads.q)
 
                 # Set direction to direction of NEB forces
                 self.nebbfgsm.d = -nebgrad
                 self.nebbfgsm.xold = self.beads.q.copy()
 
-                # Initialize lists of previous positions and gradients
-                self.qlist = np.zeros((self.corrections, len(self.beads.q.flatten())))
-                self.glist = np.zeros((self.corrections, len(self.beads.q.flatten())))
+                if self.mode == "lbfgs":
+                    # Initialize lists of previous positions and gradients
+                    self.qlist = np.zeros(
+                        (self.corrections, len(self.beads.q.flatten()))
+                    )
+                    self.glist = np.zeros(
+                        (self.corrections, len(self.beads.q.flatten()))
+                    )
+                # else: pass
+                # Inverse Hessian for BFGS is initialized in bind()
 
             else:
                 fx, nebgrad = self.nebbfgsm(self.beads.q)
@@ -465,22 +478,37 @@ class NEBMover(Motion):
             # Do one iteration of L-BFGS and return positions, gradient modulus,
             # direction, list of positions, list of gradients
             # self.beads.q, fx, self.nebbfgsm.d, self.qlist, self.glist = L_BFGS(self.beads.q,
-            info(" @NEB: Entering L-BFGS", verbosity.debug)
 
-            L_BFGS(
-                self.beads.q,
-                self.nebbfgsm.d,
-                self.nebbfgsm,
-                self.qlist,
-                self.glist,
-                fdf0=(u0, du0),
-                big_step=self.big_step,
-                tol=self.ls_options["tolerance"],
-                itmax=self.ls_options["iter"],
-                m=self.corrections,
-                scale=self.scale,
-                k=step,
-            )
+            if self.mode == "lbfgs":
+                info(" @NEB: Entering L_BFGS", verbosity.debug)
+
+                L_BFGS(
+                    self.beads.q,
+                    self.nebbfgsm.d,
+                    self.nebbfgsm,
+                    self.qlist,
+                    self.glist,
+                    fdf0=(u0, du0),
+                    big_step=self.big_step,
+                    tol=self.ls_options["tolerance"],
+                    itmax=self.ls_options["iter"],
+                    m=self.corrections,
+                    scale=self.scale,
+                    k=step,
+                )
+            elif self.mode == "bfgs":
+                info(" @NEB: Entering BFGS", verbosity.debug)
+
+                BFGS(
+                    x0=self.beads.q,
+                    d0=self.nebbfgsm.d,
+                    fdf=self.nebbfgsm,
+                    fdf0=(u0, du0),
+                    invhessian=self.invhessian,
+                    big_step=self.big_step,
+                    tol=self.ls_options["tolerance"],
+                    itmax=self.ls_options["iter"],
+                )
 
             info(" @NEB: Updated position list", verbosity.debug)
             info(" @NEB: Updated gradient list", verbosity.debug)
@@ -494,9 +522,6 @@ class NEBMover(Motion):
             self.forces.transfer_forces(self.nebbfgsm.dforces)
 
             info(" @NEB: Updated bead positions", verbosity.debug)
-
-        elif self.mode == "bfgs":
-            softexit.trigger("ERROR: BFGS for NEB is not implemented.")
 
         # Routine for steepest descent and conjugate gradient
         # TODO: CURRENTLY DOES NOT WORK. MUST BE ELIMINATED OR DEBUGGED
