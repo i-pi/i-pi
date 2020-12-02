@@ -1180,7 +1180,7 @@ class FFCommittee(ForceField):
                         "v": rescaled_pots[i_r],
                     }
                 )
-            elif self.extras_mode == "heavy": 
+            elif self.extras_mode == "heavy":
                 ff_res.append(
                     {
                         "v": rescaled_pots[i_r],

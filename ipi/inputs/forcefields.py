@@ -689,13 +689,13 @@ class InputFFCommittee(InputForceField):
         },
     )
     fields["extras_mode"] = (
-            InputValue,
-            {
-                "dtype": str,
-                "options": ["light", "heavy"],
-                "default": "light",
-                "help": "In the light mode, only the potential energies of the committee members are printed out, while in the heavy mode the potential energies, forces and virials of the committee members are printed out.",
-            },
+        InputValue,
+        {
+            "dtype": str,
+            "options": ["light", "heavy"],
+            "default": "light",
+            "help": "In the light mode, only the potential energies of the committee members are printed out, while in the heavy mode the potential energies, forces and virials of the committee members are printed out.",
+        },
     )
 
     def store(self, ff):
