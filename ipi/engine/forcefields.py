@@ -920,6 +920,7 @@ class FFCommittee(ForceField):
         is_committee_delta=True,
         al_thresh=0.0,
         al_out=None,
+        extras_mode="light",
     ):
 
         # force threaded mode as otherwise it cannot have threaded children
@@ -952,6 +953,7 @@ class FFCommittee(ForceField):
         self.alpha = alpha
         self.al_thresh = al_thresh
         self.al_out = al_out
+        self.extras_mode = extras_mode
 
     def bind(self, output_maker):
 
@@ -1172,14 +1174,21 @@ class FFCommittee(ForceField):
             r["result"][2] = final_vir
 
         for i_r in range(ncommittee):
-            ff_res.append(
-                {
-                    "v": rescaled_pots[i_r],
-                    "f": list(rescaled_frcs[i_r]),
-                    "s": list(rescaled_virs[i_r].flatten()),
-                    "x": xtrs[i_r],
-                }
-            )
+            if self.extras_mode == "light":
+                ff_res.append(
+                    {
+                        "v": rescaled_pots[i_r],
+                    }
+                )
+            elif self.extras_mode == "heavy": 
+                ff_res.append(
+                    {
+                        "v": rescaled_pots[i_r],
+                        "f": list(rescaled_frcs[i_r]),
+                        "s": list(rescaled_virs[i_r].flatten()),
+                        "x": xtrs[i_r],
+                    }
+                )
 
         r["ff_results"] = ff_res
         if self.baseline_uncertainty > 0:

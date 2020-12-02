@@ -688,6 +688,15 @@ class InputFFCommittee(InputForceField):
             "help": "Output filename for structures that exceed the accuracy threshold of the model.",
         },
     )
+    fields["extras_mode"] = (
+            InputValue,
+            {
+                "dtype": str,
+                "options": ["light", "heavy"],
+                "default": "light",
+                "help": "In the light mode, only the potential energies of the committee members are printed out, while in the heavy mode the potential energies, forces and virials of the committee members are printed out.",
+            },
+    )
 
     def store(self, ff):
         """ Store all the sub-forcefields """
@@ -703,6 +712,7 @@ class InputFFCommittee(InputForceField):
         self.is_committee_delta.store(ff.is_committee_delta)
         self.al_thresh.store(ff.al_thresh)
         self.al_output.store(ff.al_out)
+        self.extras_mode.store(ff.extras_mode)
 
         for (
             _ii,
@@ -763,4 +773,5 @@ class InputFFCommittee(InputForceField):
             is_committee_delta=self.is_committee_delta.fetch(),
             al_thresh=self.al_thresh.fetch(),
             al_out=self.al_output.fetch(),
+            extras_mode=self.extras_mode.fetch(),
         )
