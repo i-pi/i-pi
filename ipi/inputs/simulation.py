@@ -200,7 +200,10 @@ class InputSimulation(Input):
         if len(self.extra) != len(_fflist) + len(simul.syslist):
             self.extra = [0] * (len(_fflist) + len(simul.syslist))
 
-        for _ii, _obj, in enumerate(_fflist + simul.syslist):
+        for (
+            _ii,
+            _obj,
+        ) in enumerate(_fflist + simul.syslist):
             if self.extra[_ii] == 0:
                 if isinstance(_obj, eforcefields.FFSocket):
                     _iobj = iforcefields.InputFFSocket()

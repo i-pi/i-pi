@@ -704,7 +704,10 @@ class InputFFCommittee(InputForceField):
         self.al_thresh.store(ff.al_thresh)
         self.al_output.store(ff.al_out)
 
-        for _ii, _obj, in enumerate(_fflist):
+        for (
+            _ii,
+            _obj,
+        ) in enumerate(_fflist):
             if self.extra[_ii] == 0:
                 if isinstance(_obj, FFSocket):
                     _iobj = InputFFSocket()

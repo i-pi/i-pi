@@ -51,8 +51,7 @@ test_init_file_prms = [
 
 @pytest.fixture(params=test_init_file_prms)
 def create_xyz_sample_file(request):
-    """ Create a fake xyz file and build the atoms and cell object from it.
-    """
+    """Create a fake xyz file and build the atoms and cell object from it."""
 
     (
         natoms,

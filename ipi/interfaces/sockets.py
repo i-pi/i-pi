@@ -292,8 +292,8 @@ class Driver(DriverSocket):
             return Status.Up
 
     def get_status(self):
-        """ Sets (and returns) the client internal status. Wait for an answer if
-            the client is busy. """
+        """Sets (and returns) the client internal status. Wait for an answer if
+        the client is busy."""
         status = self._getstatus()
         while status & Status.Busy:
             status = self._getstatus()
@@ -416,10 +416,10 @@ class Driver(DriverSocket):
         return [mu, mf, mvir, mxtra]
 
     def dispatch(self, r):
-        """ Dispatches a request r and looks after it setting results
-            once it has been evaluated. This is meant to be launched as a
-            separate thread, and takes clear of all the communication related to
-            the request.
+        """Dispatches a request r and looks after it setting results
+        once it has been evaluated. This is meant to be launched as a
+        separate thread, and takes clear of all the communication related to
+        the request.
         """
 
         if not self.status & Status.Up:
@@ -793,7 +793,7 @@ class InterfaceSocket(object):
 
     def dispatch_free_client(self, fc, match_ids="any", send_threads=[]):
         """
-           Tries to find a request to match a free client.
+        Tries to find a request to match a free client.
         """
 
         # first, makes sure that the client is REALLY free
@@ -849,7 +849,7 @@ class InterfaceSocket(object):
 
     def check_job_finished(self, r, c, ct):
         """
-            Checks if a job has been completed, and retrieves the results
+        Checks if a job has been completed, and retrieves the results
         """
 
         if r["status"] == "Done":
