@@ -10,7 +10,7 @@
     <seed>31415</seed>
   </prng>
   <ffcommittee name="committee">
-    <extras_mode> heavy </extras_mode>
+    <extras_mode> light </extras_mode>
     <weights> [ 1, 1 ] </weights>
     <alpha> 1.0 </alpha>
     <al_thresh> 0.355 </al_thresh>
