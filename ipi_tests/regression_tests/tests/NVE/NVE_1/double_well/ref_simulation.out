@@ -1,0 +1,16 @@
+# column   1     --> step : The current simulation time step.
+# column   2     --> conserved : The value of the conserved energy quantity per bead.
+# column   3     --> temperature{kelvin} : The current temperature, as obtained from the MD kinetic energy.
+# column   4     --> potential{electronvolt} : The physical system potential energy.
+# column   5     --> kinetic_md : The kinetic energy of the (extended) classical system.
+    0.00000000e+00     4.56161415e-04     9.60294779e+01     0.00000000e+00     4.56161415e-04   
+    1.00000000e+00     4.56161950e-04     9.62424970e+01    -2.75203301e-05     4.57173304e-04   
+    2.00000000e+00     4.56163558e-04     9.68833789e+01    -1.10317058e-04     4.60217636e-04   
+    3.00000000e+00     4.56166251e-04     9.79576102e+01    -2.49099074e-04     4.65320474e-04   
+    4.00000000e+00     4.56170046e-04     9.94743785e+01    -4.45053460e-04     4.72525461e-04   
+    5.00000000e+00     4.56174970e-04     1.01446637e+02    -6.99853871e-04     4.81894128e-04   
+    6.00000000e+00     4.56181057e-04     1.03891196e+02    -1.01567228e-03     4.93506329e-04   
+    7.00000000e+00     4.56188346e-04     1.06828839e+02    -1.39519407e-03     5.07460787e-04   
+    8.00000000e+00     4.56196885e-04     1.10284465e+02    -1.84163638e-03     5.23875780e-04   
+    9.00000000e+00     4.56206728e-04     1.14287256e+02    -2.35876987e-03     5.42889931e-04   
+    1.00000000e+01     4.56217937e-04     1.18870871e+02    -2.95094352e-03     5.64663123e-04   
