@@ -46,26 +46,61 @@ class InputBaro(Input):
                                     ideas from the Bussi-Zykova-Parrinello barostat for classical MD with ideas from the
                                     Martyna-Hughes-Tuckerman centroid barostat for PIMD; see Ceriotti, More, Manolopoulos, Comp. Phys. Comm. 2013 for
                                     implementation details.""",
-                                         "options": ["dummy", "isotropic", "flexible", "anisotropic", "sc-isotropic"]})}
-    fields = {"thermostat": (InputThermo, {"default": input_default(factory=ipi.engine.thermostats.Thermostat),
-                                           "help": "The thermostat for the cell. Keeps the cell velocity distribution at the correct temperature. Note that the 'pile_l', 'pile_g', 'nm_gle' and 'nm_gle_g' options will not work for this thermostat."}),
-              "tau": (InputValue, {"default": 1.0,
-                                   "dtype": float,
-                                   "dimension": "time",
-                                   "help": "The time constant associated with the dynamics of the piston."}),
-              "p": (InputArray, {"dtype": float,
-                                 "default": input_default(factory=np.zeros, args=(0,)),
-                                 "help": "Momentum (or momenta) of the piston.",
-                                 "dimension": "momentum"}),
-              "h0": (InputCell, {"dtype": float,
-                                 "default": input_default(factory=Cell),
-                                 "help": "Reference cell for Parrinello-Rahman-like barostats.",
-                                 "dimension": "length"}),
-              "direction": (InputValue, {"default": "all",
-                                         "dtype": str,
-                                         "help": "define which elements of the h matrix will change. h matrix is defined as upper triangle matrix, in which each column stands for each cell vector a, b, c, respectively. option 'all' will relax all the martrix elements, option 'xx', 'yy', 'zz','xy', 'xz' and 'yz' change the element 11, 22, 33, 12, 13, 23 respectively.",
-                                         "options": ["all", "xx", "yy", "zz", "xy", "xz", "yz"]})
-              }
+                "options": [
+                    "dummy",
+                    "isotropic",
+                    "flexible",
+                    "anisotropic",
+                    "sc-isotropic",
+                ],
+            },
+        )
+    }
+    fields = {
+        "thermostat": (
+            InputThermo,
+            {
+                "default": input_default(factory=ipi.engine.thermostats.Thermostat),
+                "help": "The thermostat for the cell. Keeps the cell velocity distribution at the correct temperature. Note that the 'pile_l', 'pile_g', 'nm_gle' and 'nm_gle_g' options will not work for this thermostat.",
+            },
+        ),
+        "tau": (
+            InputValue,
+            {
+                "default": 1.0,
+                "dtype": float,
+                "dimension": "time",
+                "help": "The time constant associated with the dynamics of the piston.",
+            },
+        ),
+        "p": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.zeros, args=(0,)),
+                "help": "Momentum (or momenta) of the piston.",
+                "dimension": "momentum",
+            },
+        ),
+        "h0": (
+            InputCell,
+            {
+                "dtype": float,
+                "default": input_default(factory=Cell),
+                "help": "Reference cell for Parrinello-Rahman-like barostats.",
+                "dimension": "length",
+            },
+        ),
+        "direction": (
+            InputValue,
+            {
+                "default": "all",
+                "dtype": str,
+                "help": "define which elements of the h matrix will change. h matrix is defined as upper triangle matrix, in which each column stands for each cell vector a, b, c, respectively. option 'all' will relax all the martrix elements, option 'xx', 'yy', 'zz','xy', 'xz' and 'yz' change the element 11, 22, 33, 12, 13, 23 respectively.",
+                "options": ["all", "xx", "yy", "zz", "xy", "xz", "yz"],
+            },
+        ),
+    }
 
     default_help = "Simulates an external pressure bath."
     default_label = "BAROSTAT"
@@ -113,20 +148,34 @@ class InputBaro(Input):
         super(InputBaro, self).fetch()
         if self.mode.fetch() == "isotropic":
             baro = BaroBZP(thermostat=self.thermostat.fetch(), tau=self.tau.fetch())
-            if self.p._explicit: baro.p = self.p.fetch()
+            if self.p._explicit:
+                baro.p = self.p.fetch()
         elif self.mode.fetch() == "sc-isotropic":
             baro = BaroSCBZP(thermostat=self.thermostat.fetch(), tau=self.tau.fetch())
-            if self.p._explicit: baro.p = self.p.fetch()
+            if self.p._explicit:
+                baro.p = self.p.fetch()
         elif self.mode.fetch() == "flexible":
-            baro = BaroMTK(thermostat=self.thermostat.fetch(), tau=self.tau.fetch(), direction=self.direction.fetch())
-            if self.p._explicit: baro.p = self.p.fetch()
+            baro = BaroMTK(
+                thermostat=self.thermostat.fetch(),
+                tau=self.tau.fetch(),
+                direction=self.direction.fetch(),
+            )
+            if self.p._explicit:
+                baro.p = self.p.fetch()
         elif self.mode.fetch() == "anisotropic":
-            baro = BaroRGB(thermostat=self.thermostat.fetch(), tau=self.tau.fetch(), direction=self.direction.fetch())
-            if self.p._explicit: baro.p = self.p.fetch()
+            baro = BaroRGB(
+                thermostat=self.thermostat.fetch(),
+                tau=self.tau.fetch(),
+                direction=self.direction.fetch(),
+            )
+            if self.p._explicit:
+                baro.p = self.p.fetch()
             if self.h0._explicit:
                 baro.h0 = self.h0.fetch()
             else:
-                raise ValueError("Reference cell MUST be specified for an anisotropic barostat")
+                raise ValueError(
+                    "Reference cell MUST be specified for an anisotropic barostat"
+                )
         elif self.mode.fetch() == "dummy":
             baro = Barostat(thermostat=self.thermostat.fetch(), tau=self.tau.fetch())
         else:

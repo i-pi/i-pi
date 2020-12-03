@@ -30,8 +30,7 @@ from ipi.utils.messages import verbosity, info
 
 class DynMatrixMover(Motion):
 
-    """Dynamic matrix calculation routine by finite difference.
-    """
+    """Dynamic matrix calculation routine by finite difference."""
 
     def __init__(
         self,
@@ -301,8 +300,7 @@ class DummyPhononCalculator(dobject):
 
 class FDPhononCalculator(DummyPhononCalculator):
 
-    """ Finite dinnerence phonon evaluator.
-    """
+    """Finite dinnerence phonon evaluator."""
 
     def bind(self, dm):
         """ Reference all the variables for simpler access."""
@@ -369,8 +367,7 @@ class FDPhononCalculator(DummyPhononCalculator):
 
 class NMFDPhononCalculator(FDPhononCalculator):
 
-    """ Normal mode finite difference phonon evaluator.
-    """
+    """Normal mode finite difference phonon evaluator."""
 
     def bind(self, dm):
         """ Reference all the variables for simpler access."""
@@ -423,8 +420,7 @@ class NMFDPhononCalculator(FDPhononCalculator):
 
 class ENMFDPhononCalculator(NMFDPhononCalculator):
 
-    """ Energy scaled normal mode finite difference phonon evaluator.
-    """
+    """Energy scaled normal mode finite difference phonon evaluator."""
 
     def step(self, step=None):
         """Computes one row of the dynamic matrix."""

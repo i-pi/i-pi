@@ -12,8 +12,7 @@ at_names = None
 
 
 def xyz_rand(natoms, comment, names=None):
-    """ Generate a fake xyz file. Atoms and coordinates are random.
-    """
+    """Generate a fake xyz file. Atoms and coordinates are random."""
 
     global at_names
     xyz = np.random.random((natoms, 3))
@@ -38,8 +37,7 @@ def xyz_rand(natoms, comment, names=None):
 
 
 def xyz_traj(natoms, nframe, comment):
-    """ Generate a fake xyz trajectory. Atoms and coordinates are random.
-    """
+    """Generate a fake xyz trajectory. Atoms and coordinates are random."""
     output, xyz, all_names = xyz_rand(natoms, comment)
     for _ in range(nframe - 1):
         raw_output = xyz_rand(natoms, comment, names=True)
@@ -51,8 +49,7 @@ def xyz_traj(natoms, nframe, comment):
 
 
 def xyz_traj_filedesc(natoms, nframe, comment):
-    """ Generate a file descriptor containing a fake xyz trajectory.
-    """
+    """Generate a file descriptor containing a fake xyz trajectory."""
     contents, xyz, all_names = xyz_traj(natoms, nframe, comment)
     filedesc = tmp.NamedTemporaryFile(mode="w")
     filedesc.write(contents)

@@ -36,7 +36,7 @@ __all__ = ["InputSCPhonons"]
 class InputSCPhonons(InputDictionary):
     """Calculation options for self-consistent phonons algorithm.
 
-       Contains options related to self consistent phonons method.
+    Contains options related to self consistent phonons method.
 
     """
 

@@ -1274,8 +1274,7 @@ class Properties(dobject):
         return atd
 
     def get_sckinpr(self):
-        """Calculates the quantum centroid virial kinetic energy estimator.
-        """
+        """Calculates the quantum centroid virial kinetic energy estimator."""
 
         spring = self.beads.vpath * self.nm.omegan2 / self.beads.nbeads
         PkT32 = (
@@ -2716,7 +2715,7 @@ class Trajectories(dobject):
         }
 
     def bind(self, system):
-        """ Binds to a system object to fetch atomic and force data.
+        """Binds to a system object to fetch atomic and force data.
 
         Args:
            system: The system object that will be managed by this Trajectories.
