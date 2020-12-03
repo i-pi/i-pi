@@ -410,6 +410,8 @@ def _sinch(x):
     
 sinch = np.vectorize(_sinch)
 
+
+
 def mat_taylor(x, function):
     """compute matrix function as direct taylor expansion
     Args:
@@ -418,11 +420,19 @@ def mat_taylor(x, function):
     Return:
        function of matrix.  
     """
-    Beasley-Springer-Moro algorithm for approximating the inverse normal.
-    """
+    if not (x.shape[0] == x.shape[1]):
+        warning("input matrix is not squared")
+        return None
+    dim = x.shape[0]
+    I = np.identity(dim)
+    if function == "sinhx/x":
+        #compute sinhx/x by directly taylor
+        x2 = np.linalg.matrix_power(x, 2)
+        return I + np.matmul(x2/(2.0*3.0), (I + np.matmul(x2/(4.0*5.0), (I + np.matmul(x2/(6.0*7.0), (I + x2/(8.0*9.0)))))))
 
     else:
        warning("function {} not implemented".format(function)) 
+
 
 
 def gaussian_inv(x):
