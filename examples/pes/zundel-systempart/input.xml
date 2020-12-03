@@ -29,8 +29,8 @@
      </dynamics>
    </motion>
       <forces> 
-           <force forcefield="driver" nbeads="1" > <mts_weights> [1,0] </mts_weights> </force>
-           <force forcefield="driver2" nbeads="4" > <mts_weights> [0,1] </mts_weights> </force> 
+           <force forcefield="driver" nbeads="1" > </force>
+           <force forcefield="driver2" nbeads="4"> </force> 
       </forces>
       <initialize nbeads="4">
         <file mode="xyz">./double.xyz</file>

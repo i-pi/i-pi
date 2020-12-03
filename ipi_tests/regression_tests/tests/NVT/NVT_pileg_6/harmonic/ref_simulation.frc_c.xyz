@@ -1,0 +1,30 @@
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           0  Bead:       0 f_centroid{atomic_unit}  cell{atomic_unit}
+       H  0.00000e+00  0.00000e+00  0.00000e+00
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           1  Bead:       0 f_centroid{atomic_unit}  cell{atomic_unit}
+       H  5.69734e-04 -1.50272e-04  1.93714e-04
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           2  Bead:       0 f_centroid{atomic_unit}  cell{atomic_unit}
+       H  1.12902e-03 -2.97789e-04  3.83877e-04
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           3  Bead:       0 f_centroid{atomic_unit}  cell{atomic_unit}
+       H  1.69444e-03 -4.46922e-04  5.76124e-04
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           4  Bead:       0 f_centroid{atomic_unit}  cell{atomic_unit}
+       H  2.26984e-03 -5.98688e-04  7.71764e-04
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           5  Bead:       0 f_centroid{atomic_unit}  cell{atomic_unit}
+       H  2.83898e-03 -7.48803e-04  9.65277e-04
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           6  Bead:       0 f_centroid{atomic_unit}  cell{atomic_unit}
+       H  3.41061e-03 -8.99574e-04  1.15963e-03
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           7  Bead:       0 f_centroid{atomic_unit}  cell{atomic_unit}
+       H  3.95960e-03 -1.04438e-03  1.34630e-03
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           8  Bead:       0 f_centroid{atomic_unit}  cell{atomic_unit}
+       H  4.49411e-03 -1.18536e-03  1.52803e-03
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           9  Bead:       0 f_centroid{atomic_unit}  cell{atomic_unit}
+       H  5.02455e-03 -1.32526e-03  1.70839e-03

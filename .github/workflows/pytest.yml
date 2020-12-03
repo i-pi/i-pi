@@ -1,0 +1,79 @@
+name: Python application
+
+on:
+  push:
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    strategy:
+      matrix:
+        python-version: [3.7.9, 3.8.5]
+        #os: ["ubuntu-latest", "macos-latest"]
+        os: ["ubuntu-latest"]
+
+    runs-on: "${{ matrix.os }}"
+    
+    name: Python version ${{ matrix.python-version }} 
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set up Conda
+      uses: s-weigand/setup-conda@v1
+      with:
+         activate-conda: true
+    - run: conda --version
+    - run: conda install python=${{matrix.python-version}}
+
+    - name: Install dependencies with conda
+      run: |
+         conda install --file requirements.txt 
+         conda install scipy
+         conda install pip
+         pip install .
+         echo "${GITHUB_WORKSPACE}/bin" >> $GITHUB_PATH
+         #echo "::add-path::${GITHUB_WORKSPACE}/bin"
+    - run: which python
+
+    - name: Test Conda 
+      run: python -c 'import numpy; import sys; print(sys.version); print(numpy.__version__)'
+
+    - name: Lint with flake8
+      run: |
+        flake8 . --config=setup.cfg --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 . --config=setup.cfg --count  --statistics
+        #flake8 . --config=setup.cfg --count  --statistics --exit-zero
+
+
+    - name: Install GFortran Linux
+      if: contains(matrix.os, 'ubuntu')
+      run: |
+        sudo apt-get update
+        sudo apt-get install gfortran
+
+  #    - name: Install GFortran macOS
+  #      if: contains(matrix.os, 'macos')
+  #      run: brew install gcc || brew upgrade gcc || true
+
+    - name: Compile Driver
+      shell: bash
+      run: |
+         cd drivers
+         make
+
+    - name: Pytest
+      shell: bash
+      run: |
+         pwd
+         pytest 
+        #pytest --cov=./ --cov-report=xml
+
+    #- name: Upload coverage
+    #  uses: codecov/codecov-action@v1
+    #  with:
+    #    token: ${{ secrets.CODECOV_TOKEN }}
+    #    file: ./coverage.xml
+    #    flags: tests
+    #    name: codecov-umbrella
+    #    fail_ci_if_error: true

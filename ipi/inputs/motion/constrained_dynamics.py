@@ -8,31 +8,57 @@ import numpy as np
 from copy import copy
 import ipi.engine.thermostats
 import ipi.engine.barostats
-from ipi.utils.constrtools import ConstraintBase, RigidBondConstraint, AngleConstraint, EckartConstraint, ConstraintList
-from ipi.utils.inputvalue import InputDictionary, InputAttribute, InputValue, InputArray, Input, input_default
+from ipi.utils.constrtools import (
+    RigidBondConstraint,
+    AngleConstraint,
+    EckartConstraint,
+    ConstraintList,
+)
+from ipi.utils.inputvalue import (
+    InputDictionary,
+    InputAttribute,
+    InputValue,
+    InputArray,
+    Input,
+    input_default,
+)
 from ipi.inputs.barostats import InputBaro
 from ipi.inputs.thermostats import InputThermo
 
-__all__ = ['InputConstrainedDynamics', 'InputConstraint', 'InputConstraintSolver']
+__all__ = ["InputConstrainedDynamics", "InputConstraint", "InputConstraintSolver"]
 
 
 class InputConstraintSolver(InputDictionary):
 
     fields = {
-        "tolerance": (InputValue, {"dtype": float,
-                                   "default": .0001,
-                                   "help": "Tolerance value used in the Quasi-Newton iteration scheme."
-                                   }),
-        "maxit": (InputValue, {"dtype": int,
-                               "default": 1000,
-                               "help": "Maximum number of steps used in the Quasi-Newton iteration scheme."
-                               }),
-        "norm_order": (InputValue, {"dtype": int,
-                                    "default": 2,
-                                    "help": "Order of norm used to determine termination of the Quasi-newton iteration."
-                                    }),
+        "tolerance": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 0.0001,
+                "help": "Tolerance value used in the Quasi-Newton iteration scheme.",
+            },
+        ),
+        "maxit": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": 1000,
+                "help": "Maximum number of steps used in the Quasi-Newton iteration scheme.",
+            },
+        ),
+        "norm_order": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": 2,
+                "help": "Order of norm used to determine termination of the Quasi-newton iteration.",
+            },
+        ),
     }
-    default_help = "Holds all parameters for the numerical method used to solve the contraint."
+    default_help = (
+        "Holds all parameters for the numerical method used to solve the contraint."
+    )
     default_label = "CSOLVER"
 
     def store(self, csolver):
@@ -52,21 +78,37 @@ class InputConstraintBase(Input):
         mode that makes it possible to define a set of constraints that
         are coupled and should hence be handled simultaneously.
     """
+
     attribs = {
-        "mode": (InputAttribute, {"dtype": str,
-                                  "default": 'distance',
-                                  "help": "The type of constraint. ",
-                                  "options": ['distance', 'angle', 'eckart', 'multi']})
+        "mode": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "default": "distance",
+                "help": "The type of constraint. ",
+                "options": ["distance", "angle", "eckart", "multi"],
+            },
+        )
     }
 
     fields = {
-        "atoms": (InputArray, {"dtype": int,
-                               "default": np.zeros(0, int),
-                               "help": "List of atoms indices that are to be constrained."}),
-        "values": (InputArray, {"dtype": float,
-                                "default": np.zeros(0, int),
-                                "dimension": "length",
-                                "help": "List of constraint lengths."})
+        "atoms": (
+            InputArray,
+            {
+                "dtype": int,
+                "default": np.zeros(0, int),
+                "help": "List of atoms indices that are to be constrained.",
+            },
+        ),
+        "values": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": np.zeros(0, int),
+                "dimension": "length",
+                "help": "List of constraint lengths.",
+            },
+        ),
     }
 
     def store(self, cnstr):
@@ -92,7 +134,9 @@ class InputConstraintBase(Input):
             if len(alist.shape) == 1:
                 alist.shape = (alist.shape[0] / 2, 2)
             if len(dlist) != len(alist) and len(dlist) != 0:
-                raise ValueError("Length of atom indices and of distance list do not match")
+                raise ValueError(
+                    "Length of atom indices and of distance list do not match"
+                )
             robj = RigidBondConstraint(alist, dlist)
         elif self.mode.fetch() == "angle":
             alist = self.atoms.fetch()
@@ -100,14 +144,18 @@ class InputConstraintBase(Input):
             if len(alist.shape) == 1:
                 alist.shape = (alist.shape[0] / 3, 3)
             if len(dlist) != len(alist) and len(dlist) != 0:
-                raise ValueError("Length of atom indices and of distance list do not match")
+                raise ValueError(
+                    "Length of atom indices and of distance list do not match"
+                )
             robj = AngleConstraint(alist, dlist)
         elif self.mode.fetch() == "eckart":
             alist = self.atoms.fetch()
             dlist = self.values.fetch()
             alist.shape = -1
             if len(dlist) != 3 * len(alist) and len(dlist) != 0:
-                raise ValueError("Length of atom indices and of list of coordinates do not match")
+                raise ValueError(
+                    "Length of atom indices and of list of coordinates do not match"
+                )
             robj = EckartConstraint(alist, dlist)
 
         return robj
@@ -118,8 +166,11 @@ class InputConstraint(InputConstraintBase):
 
     attribs["mode"][1]["options"].append("multi")
 
-    dynamic = {"constraint": (InputConstraintBase, {
-        "help": "One or more constraints that have to be considered coupled"})
+    dynamic = {
+        "constraint": (
+            InputConstraintBase,
+            {"help": "One or more constraints that have to be considered coupled"},
+        )
     }
 
     def store(self, cnstr):
@@ -168,43 +219,91 @@ class InputConstrainedDynamics(InputDictionary):
     """
 
     attribs = {
-        "mode": (InputAttribute, {"dtype": str,
-                                  "default": 'nve',
-                                  "help": "The ensemble that will be sampled during the simulation. ",
-                                  "options": ['nve', 'nvt']}),
-        "splitting": (InputAttribute, {"dtype": str,
-                                       "default": 'baoab',
-                                       "help": "The integrator used for sampling the target ensemble. ",
-                                       "options": ['obabo', 'baoab']})
+        "mode": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "default": "nve",
+                "help": "The ensemble that will be sampled during the simulation. ",
+                "options": ["nve", "nvt"],
+            },
+        ),
+        "splitting": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "default": "baoab",
+                "help": "The integrator used for sampling the target ensemble. ",
+                "options": ["obabo", "baoab"],
+            },
+        ),
     }
 
     fields = {
-        "thermostat": (InputThermo, {"default": input_default(factory=ipi.engine.thermostats.Thermostat),
-                                     "help": "The thermostat for the atoms, keeps the atom velocity distribution at the correct temperature."}),
-        "barostat": (InputBaro, {"default": input_default(factory=ipi.engine.barostats.Barostat),
-                                 "help": InputBaro.default_help}),
-        "timestep": (InputValue, {"dtype": float,
-                                  "default": 1.0,
-                                  "help": "The time step.",
-                                  "dimension": "time"}),
-        "nmts": (InputArray, {"dtype": int,
-                              "default": np.zeros(0, int),
-                              "help": "Number of iterations for each MTS level (including the outer loop, that should in most cases have just one iteration)."}),
-        "nsteps_o": (InputValue, {"dtype": int,
-                                  "default": 1,
-                                  "help": "The number of sub steps used in the evolution of the thermostat (used in function step_Oc). Relevant only for GLE thermostats"}),
-        "nsteps_geo": (InputValue, {"dtype": int,
-                                    "default": 1,
-                                    "help": "The number of sub steps used in the evolution of the geodesic flow (used in function step_Ag)."}),
-
-        "csolver": (InputConstraintSolver, {"help": "Define a numerical method for computing the projection operators associated with the constraint."})
+        "thermostat": (
+            InputThermo,
+            {
+                "default": input_default(factory=ipi.engine.thermostats.Thermostat),
+                "help": "The thermostat for the atoms, keeps the atom velocity distribution at the correct temperature.",
+            },
+        ),
+        "barostat": (
+            InputBaro,
+            {
+                "default": input_default(factory=ipi.engine.barostats.Barostat),
+                "help": InputBaro.default_help,
+            },
+        ),
+        "timestep": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 1.0,
+                "help": "The time step.",
+                "dimension": "time",
+            },
+        ),
+        "nmts": (
+            InputArray,
+            {
+                "dtype": int,
+                "default": np.zeros(0, int),
+                "help": "Number of iterations for each MTS level (including the outer loop, that should in most cases have just one iteration).",
+            },
+        ),
+        "nsteps_o": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": 1,
+                "help": "The number of sub steps used in the evolution of the thermostat (used in function step_Oc). Relevant only for GLE thermostats",
+            },
+        ),
+        "nsteps_geo": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": 1,
+                "help": "The number of sub steps used in the evolution of the geodesic flow (used in function step_Ag).",
+            },
+        ),
+        "csolver": (
+            InputConstraintSolver,
+            {
+                "help": "Define a numerical method for computing the projection operators associated with the constraint."
+            },
+        ),
     }
 
-    dynamic = {"constraint": (InputConstraint, {"help": "Define a constraint to be applied onto atoms"})
-               }
+    dynamic = {
+        "constraint": (
+            InputConstraint,
+            {"help": "Define a constraint to be applied onto atoms"},
+        )
+    }
 
     default_help = "Holds all the information for the MD integrator, such as timestep, the thermostats and barostats that control it."
-    default_label = "CONSTRAINED_DYNAMICS"
+    default_label = "CONSTRAINEDDYNAMICS"
 
     def store(self, dyn):
         """Takes an ensemble instance and stores a minimal representation of it.

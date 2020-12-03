@@ -1,3 +1,4 @@
+Disabled circleCI
 RefactoringTool: Skipping optional fixer: buffer
 RefactoringTool: Skipping optional fixer: idioms
 RefactoringTool: Skipping optional fixer: set_literal
@@ -16,8 +17,8 @@ RefactoringTool: Refactored ./examples/lammps/isof-water/process_out.py
 RefactoringTool: No changes to ./examples/lammps/isofsc-vapor/process_dif.py
 RefactoringTool: Refactored ./examples/lammps/isofsc-vapor/process_out.py
 RefactoringTool: Refactored ./examples/lammps/isofsc-water/process_out.py
---- ./examples/ASE/W2-PIMD-MP2/run-ase.py	(original)
-+++ ./examples/ASE/W2-PIMD-MP2/run-ase.py	(refactored)
+--- ./examples/ASE/W2-PIMD-MP2/run-ase.py 	(original)
++++ ./examples/ASE/W2-PIMD-MP2/run-ase.py 	(refactored)
 @@ -14,17 +14,17 @@
      nthreads = int(sys.argv[1])
      dir_calc = sys.argv[2]

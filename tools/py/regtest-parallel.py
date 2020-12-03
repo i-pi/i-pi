@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 """ Run or create reference for regtest i-pi.
 
 Todo:
@@ -105,16 +105,17 @@ import numpy as np
 import numpy.testing as npt
 
 # pylint: disable=import-error
-from ipi.engine.outputs import CheckpointOutput, PropertyOutput, \
-    TrajectoryOutput
+from ipi.engine.outputs import CheckpointOutput, PropertyOutput, TrajectoryOutput
 from ipi.engine.properties import getkey
 from ipi.inputs.simulation import InputSimulation
 from ipi.utils.io.inputs import io_xml
+
 # pylint: enable=import-error
 
-RED = YELLOW = GREEN = RESET = ''
+RED = YELLOW = GREEN = RESET = ""
 try:
     from colorama import Fore  # pylint: disable=wrong-import-position
+
     RED = Fore.RED
     YELLOW = Fore.YELLOW
     GREEN = Fore.GREEN
@@ -129,20 +130,20 @@ except ImportError:
 
 
 # Hardcoded settings ####
-TIMEOUT_DRIVER = 600    # Maximum time the driver are allowded to run
-TIMEOUT_IPI = 30        # Maximum time to wait after the driver are done
-IPI_WAITING_TIME = 5    # Time to wait after i-pi has been started
+TIMEOUT_DRIVER = 600  # Maximum time the driver are allowded to run
+TIMEOUT_IPI = 30  # Maximum time to wait after the driver are done
+IPI_WAITING_TIME = 5  # Time to wait after i-pi has been started
 #
 
 
 # Compile them only once! pylint: disable=anomalous-backslash-in-string
-REGTEST_STRING_RGX = re.compile(r'<!--\s*REGTEST\s+([\s\w\W]*)\s+ENDREGTEST\s*-->')
+REGTEST_STRING_RGX = re.compile(r"<!--\s*REGTEST\s+([\s\w\W]*)\s+ENDREGTEST\s*-->")
 # pylint: enable=anomalous-backslash-in-string
 
 try:
-    IPI_ROOT_FOLDER = os.environ['IPI_ROOT']
+    IPI_ROOT_FOLDER = os.environ["IPI_ROOT"]
 except KeyError:
-    IPI_ROOT_FOLDER = os.path.abspath('../')
+    IPI_ROOT_FOLDER = os.path.abspath("../")
 
 QUEUE_ALL = queue.Queue()  # Queue to access the "run"
 QUEUE_COM = queue.Queue()  # Queue to access the "compare"
@@ -153,36 +154,40 @@ def main():
 
     """
 
-    root_test_folder = _parser()['root_test_folder']
-    tests_list = _parser()['tests']
+    root_test_folder = _parser()["root_test_folder"]
+    tests_list = _parser()["tests"]
 
     # Create the root folder of the run
-    root_run = _parser()['root_run_folder']
+    root_run = _parser()["root_run_folder"]
     create_dir(root_run)
 
     # If no --add-test has been specified, search for tests in all directories
     # +within the root_test_folder.
     if len(tests_list) == 0:
-        tests_list = ['']
+        tests_list = [""]
 
     # Retrieve the test list and build the QUEUE_ALL
     test_list = _build_test_index(root_test_folder, tests_list)
-    index = _parser()['index']
+    index = _parser()["index"]
     for test in test_list:
-        test_obj = Test(index=index, name=test[0],
-                        path=test[1], root_run=root_run)
+        test_obj = Test(index=index, name=test[0], path=test[1], root_run=root_run)
         QUEUE_ALL.put(test_obj)
         index += 10
 
-    print('Starting tests')
+    print("Starting tests")
     running_test = []
     running_com = []
-    if int(_parser()['nproc']) > 1:
-        if answer_is_y('"!W! REGTEST is not thread-safe. Some tests could crash. Do you want to continue (y/n)?') == False:
+    if int(_parser()["nproc"]) > 1:
+        if (
+            answer_is_y(
+                '"!W! REGTEST is not thread-safe. Some tests could crash. Do you want to continue (y/n)?'
+            )
+            is False
+        ):
             sys.exit()
     try:
         while True:
-            if len(running_test) < _parser()['nproc']:
+            if len(running_test) < _parser()["nproc"]:
                 try:
                     running_test.append(QUEUE_ALL.get_nowait())
                 except queue.Empty:
@@ -206,8 +211,8 @@ def main():
                 except queue.Empty:
                     pass
                 else:
-                    running_com[-1].copy_reference = _parser()['create_reference']
-                    running_com[-1].compare_output = (not _parser()['create_reference'])
+                    running_com[-1].copy_reference = _parser()["create_reference"]
+                    running_com[-1].compare_output = not _parser()["create_reference"]
                     running_com[-1].start()
 
             else:
@@ -217,8 +222,12 @@ def main():
                     del running_com[-1]
 
             # print running_test, QUEUE_ALL.qsize(), QUEUE_COM.qsize(), running_com
-            if len(running_test) == 0 and QUEUE_ALL.empty() and \
-               QUEUE_COM.empty() and len(running_com) == 0:
+            if (
+                len(running_test) == 0
+                and QUEUE_ALL.empty()
+                and QUEUE_COM.empty()
+                and len(running_com) == 0
+            ):
                 break
 
     except KeyboardInterrupt:
@@ -234,64 +243,87 @@ def _parser():
     Return:
         A dictionary containing all the input options and argument.
     """
-    parser = argparse.ArgumentParser(description='Regtests for i-PI.')
-    parser.add_argument('--maxtime',
-                        action='store',
-                        type=int,
-                        help=('Wall time for the driver: this is useful when'
-                              'the driver is stuck. The default value is chosen'
-                              'based on the provided regtests.'),
-                        default=TIMEOUT_DRIVER,
-                        dest='maxtime')
-    parser.add_argument('--add-test',
-                        action='append',
-                        type=str,
-                        help=('Mark a test to be ran. A single test can be '
-                              'specified with "group:test". This option can be '
-                              'used as many times as you want.'),
-                        default=[],
-                        dest='tests')
-    parser.add_argument('--tests-folder',
-                        action='store',
-                        type=str,
-                        default=os.path.join(IPI_ROOT_FOLDER, 'examples'),
-                        help=('The folder where to search for tests.'),
-                        dest='root_test_folder')
-    parser.add_argument('--folder-run',
-                        action='store',
-                        type=str,
-                        default='regtest-run',
-                        help=('Parent folder where the test will be run. '
-                              'If already existing all the content will '
-                              'be lost!'),
-                        dest='root_run_folder')
-    parser.add_argument('--starting-address',
-                        action='store',
-                        type=int,
-                        default=10000,
-                        help=('Number of the first port in case of inet '
-                              'socket.'),
-                        dest='index')
-    parser.add_argument('-np', '--nproc',
-                        action='store',
-                        type=int,
-                        default=1,
-                        help=('Number of concurrent test run at once.'),
-                        dest='nproc')
-    parser.add_argument('--create-reference',
-                        action='store_true',
-                        default=False,
-                        help=('Only run the test, do not compare and at the '
-                              'end ask if you want to copy the output files '
-                              'in the reference test folder.'),
-                        dest='create_reference')
-    parser.add_argument('--precision',
-                        action='store',
-                        default=7,
-                        type=int,
-                        help=('Define the number of decimal used in comparing'
-                              'float.'),
-                        dest='precision')
+    parser = argparse.ArgumentParser(description="Regtests for i-PI.")
+    parser.add_argument(
+        "--maxtime",
+        action="store",
+        type=int,
+        help=(
+            "Wall time for the driver: this is useful when"
+            "the driver is stuck. The default value is chosen"
+            "based on the provided regtests."
+        ),
+        default=TIMEOUT_DRIVER,
+        dest="maxtime",
+    )
+    parser.add_argument(
+        "--add-test",
+        action="append",
+        type=str,
+        help=(
+            "Mark a test to be ran. A single test can be "
+            'specified with "group:test". This option can be '
+            "used as many times as you want."
+        ),
+        default=[],
+        dest="tests",
+    )
+    parser.add_argument(
+        "--tests-folder",
+        action="store",
+        type=str,
+        default=os.path.join(IPI_ROOT_FOLDER, "examples"),
+        help=("The folder where to search for tests."),
+        dest="root_test_folder",
+    )
+    parser.add_argument(
+        "--folder-run",
+        action="store",
+        type=str,
+        default="regtest-run",
+        help=(
+            "Parent folder where the test will be run. "
+            "If already existing all the content will "
+            "be lost!"
+        ),
+        dest="root_run_folder",
+    )
+    parser.add_argument(
+        "--starting-address",
+        action="store",
+        type=int,
+        default=10000,
+        help=("Number of the first port in case of inet " "socket."),
+        dest="index",
+    )
+    parser.add_argument(
+        "-np",
+        "--nproc",
+        action="store",
+        type=int,
+        default=1,
+        help=("Number of concurrent test run at once."),
+        dest="nproc",
+    )
+    parser.add_argument(
+        "--create-reference",
+        action="store_true",
+        default=False,
+        help=(
+            "Only run the test, do not compare and at the "
+            "end ask if you want to copy the output files "
+            "in the reference test folder."
+        ),
+        dest="create_reference",
+    )
+    parser.add_argument(
+        "--precision",
+        action="store",
+        default=7,
+        type=int,
+        help=("Define the number of decimal used in comparing" "float."),
+        dest="precision",
+    )
 
     return vars(parser.parse_args())
 
@@ -322,25 +354,25 @@ def _build_test_index(root_path, tests):
     root_path = os.path.abspath(root_path)
     tests_folder = [os.path.join(root_path, test) for test in tests]
     test_list = []
-    msg = '**Tests that will be executed:**\n'
+    msg = "**Tests that will be executed:**\n"
 
     for test in tests_folder:
         if not os.path.exists(test) or not os.path.isdir(test):
-            raise RuntimeError('Folder %s does not exist!' % test)
+            raise RuntimeError("Folder %s does not exist!" % test)
         for root, junk, files in os.walk(test):  # pylint: disable=unused-variable
             test_name = os.path.relpath(root, root_path)
-            xml_files = [x for x in files if x.endswith('.xml')]
+            xml_files = [x for x in files if x.endswith(".xml")]
             if len(xml_files) > 1:
-                sys.stderr.write('!W! Skipping test %s: too many xml files!\n'
-                                 % test_name)
+                sys.stderr.write(
+                    "!W! Skipping test %s: too many xml files!\n" % test_name
+                )
                 continue
             elif len(xml_files) < 1:
                 continue
 
             if _file_is_test(os.path.join(root, xml_files[0])):
-                test_list.append((test_name,
-                                  os.path.join(root, xml_files[0])))
-                msg += ' > ' + str(os.path.split(root)[1]) + '\n'
+                test_list.append((test_name, os.path.join(root, xml_files[0])))
+                msg += " > " + str(os.path.split(root)[1]) + "\n"
 
     if len(test_list) < 1:
         print("**No test found!**")
@@ -380,18 +412,18 @@ class Test(threading.Thread):
 
         self.save_args = kwds
 
-        self.index = kwds['index']
-        self.test_path = kwds['path']
-        self.name = kwds['name']
-        self.run_path = os.path.abspath(kwds['root_run'])
+        self.index = kwds["index"]
+        self.test_path = kwds["path"]
+        self.name = kwds["name"]
+        self.run_path = os.path.abspath(kwds["root_run"])
 
         self.ref_path = os.path.dirname(self.test_path)
         self.filename = os.path.basename(self.test_path)
-        self.msg = ''
+        self.msg = ""
         self.driver_command = None
         self.input_dir = None
         self.io_dir = None
-        self._test_status = 'PASSED'
+        self._test_status = "PASSED"
         self.needed_files = None
 
         self.generate_output = False
@@ -428,10 +460,7 @@ class Test(threading.Thread):
 
     @test_status.setter
     def test_status(self, status):
-        status_priority = {'ERROR': 10,
-                           'FAILED': 5,
-                           'COPIED': 2,
-                           'PASSED': 1}
+        status_priority = {"ERROR": 10, "FAILED": 5, "COPIED": 2, "PASSED": 1}
 
         if status_priority[status] > status_priority[self._test_status]:
             self._test_status = status
@@ -459,18 +488,17 @@ class Test(threading.Thread):
 
         # Create the necessary folders
         path = self.run_path
-        for folder in self.name.split('/'):
+        for folder in self.name.split("/"):
             path = os.path.join(path, folder)
             create_dir(path, ignore=True)
         self.run_path = path
 
-        self.io_dir = os.path.join(self.run_path, 'io')
-        self.input_dir = os.path.join(self.run_path, 'input')
+        self.io_dir = os.path.join(self.run_path, "io")
+        self.input_dir = os.path.join(self.run_path, "input")
         create_dir(self.io_dir, ignore=True)
 
         # Retrieve the command to run the driver and the needed files
-        self.driver_command, self.needed_files = \
-            parse_regtest_string(self.test_path)
+        self.driver_command, self.needed_files = parse_regtest_string(self.test_path)
 
         # Copy all the reference files to the 'input' folder
         shutil.copytree(self.ref_path, self.input_dir)
@@ -481,8 +509,8 @@ class Test(threading.Thread):
                 shutil.copy2(os.path.join(self.input_dir, _buffer), self.io_dir)
             except IOError as _err:
                 if _err.errno == os.errno.ENOENT:
-                    self.test_status = 'ERROR'
-                    self.msg += 'Needed file %s not found!\n' % _buffer
+                    self.test_status = "ERROR"
+                    self.msg += "Needed file %s not found!\n" % _buffer
 
         # Make sure to do not change the reference
         self.test_path = os.path.join(self.io_dir, self.filename)
@@ -490,16 +518,16 @@ class Test(threading.Thread):
         # Change the address of the socket to be unique
         xml = etree.parse(self.test_path)
         address_index = self.index
-        for ffsocket in xml.findall('./ffsocket'):
-            socket_mode = ffsocket.attrib['mode']
-            if socket_mode.lower() == 'unix':
-                address = ffsocket.find('./address').text.strip()
-                new_address = ' %s%i ' % (address, address_index)
-                ffsocket.find('./address').text = new_address
+        for ffsocket in xml.findall("./ffsocket"):
+            socket_mode = ffsocket.attrib["mode"]
+            if socket_mode.lower() == "unix":
+                address = ffsocket.find("./address").text.strip()
+                new_address = " %s%i " % (address, address_index)
+                ffsocket.find("./address").text = new_address
             else:
-                address = ffsocket.find('./port').text.strip()
-                new_address = '%i' % address_index
-                ffsocket.find('./port').text = new_address
+                address = ffsocket.find("./port").text.strip()
+                new_address = "%i" % address_index
+                ffsocket.find("./port").text = new_address
 
             # Change the address used by the driver too!
             for _ii, _buffer in enumerate(self.driver_command):
@@ -511,9 +539,7 @@ class Test(threading.Thread):
 
                 # Replace only the first occurrence of 'address' in the
                 # +driver command!
-                self.driver_command[_ii] = _buffer.replace(address,
-                                                           new_address,
-                                                           1)
+                self.driver_command[_ii] = _buffer.replace(address, new_address, 1)
 
             # Since there could be more than a single socket used within a
             # +single simulation, it is important to have a different address for
@@ -542,26 +568,24 @@ class Test(threading.Thread):
     def _run_ipi(self):
         # Move to the right directory
 
-        driver_out_path = os.path.join(self.io_dir, 'driver_output.out')
+        driver_out_path = os.path.join(self.io_dir, "driver_output.out")
 
-        timeout_driver = _parser()['maxtime']
+        timeout_driver = _parser()["maxtime"]
         timeout_ipi = TIMEOUT_IPI
-        ipi_command = 'i-pi'
+        ipi_command = "i-pi"
 
         # Run the i-pi code
-        ipi_command = shlex.split(ipi_command +
-                                  ' ' + self.test_path)
-        with open(os.path.join(self.io_dir, 'ipi_output.out'), 'w') as ipi_out:
-            ipi_out.write('*REGTEST* IPI COMMAND: %s\n' % ' '.join(ipi_command))
+        ipi_command = shlex.split(ipi_command + " " + self.test_path)
+        with open(os.path.join(self.io_dir, "ipi_output.out"), "w") as ipi_out:
+            ipi_out.write("*REGTEST* IPI COMMAND: %s\n" % " ".join(ipi_command))
             try:
-                ipi_proc = sbps.Popen(ipi_command,
-                                      bufsize=0,
-                                      stdout=ipi_out,
-                                      stderr=sbps.PIPE)
+                ipi_proc = sbps.Popen(
+                    ipi_command, bufsize=0, stdout=ipi_out, stderr=sbps.PIPE
+                )
             except OSError as _err:
                 if _err.errno == os.errno.ENOENT:
-                    self.msg += 'i-pi command not found!\n'
-                    self.test_status = 'ERROR'
+                    self.msg += "i-pi command not found!\n"
+                    self.test_status = "ERROR"
 
         # Sleep few seconds waiting for the ipi server start
         time.sleep(IPI_WAITING_TIME)
@@ -570,8 +594,7 @@ class Test(threading.Thread):
         driver_prcs = []
         oldpwd = os.getcwd()
         for cmd in self.driver_command:
-            instance_folder = os.path.join(self.io_dir,
-                                           'driver-%i' % len(driver_prcs))
+            instance_folder = os.path.join(self.io_dir, "driver-%i" % len(driver_prcs))
             create_dir(instance_folder, ignore=True)
             for _file in self.needed_files:
                 _src = os.path.join(self.io_dir, _file)
@@ -579,20 +602,22 @@ class Test(threading.Thread):
 
             os.chdir(instance_folder)
             cmd = shlex.split(cmd)
-            with open(driver_out_path, 'w') as driver_out:
-                driver_out.write('*REGTEST* DRIVER COMMAND: %s\n' %
-                                 ' '.join(cmd))
+            with open(driver_out_path, "w") as driver_out:
+                driver_out.write("*REGTEST* DRIVER COMMAND: %s\n" % " ".join(cmd))
                 try:
-                    driver_prcs.append(sbps.Popen(cmd,
-                                                  bufsize=0,
-                                                  stdin=None,
-                                                  stdout=driver_out,
-                                                  stderr=sbps.STDOUT))
+                    driver_prcs.append(
+                        sbps.Popen(
+                            cmd,
+                            bufsize=0,
+                            stdin=None,
+                            stdout=driver_out,
+                            stderr=sbps.STDOUT,
+                        )
+                    )
                 except OSError as _err:
                     if _err.errno == os.errno.ENOENT:
-                        self.msg += ('driver command %s not found!\n' %
-                                     ' ' .join(cmd))
-                        self.test_status = 'ERROR'
+                        self.msg += "driver command %s not found!\n" % " ".join(cmd)
+                        self.test_status = "ERROR"
             os.chdir(oldpwd)
 
         init_time = time.time()
@@ -603,66 +628,66 @@ class Test(threading.Thread):
             for prc in driver_prcs:
                 if prc.poll() is not None:
                     finished += 1
-            time.sleep(.5)
+            time.sleep(0.5)
             time_to_stop = timeout_driver + init_time - time.time()
             if time_to_stop < -0.5:
                 for prc in driver_prcs:
                     if prc.poll() is None:
                         prc.terminate()
                     finished += 1
-                self.test_status = 'ERROR'
-                self.msg += 'The drivers took too long:\n {:d}s > {:d}s\n'.format(int(TIMEOUT_DRIVER - time_to_stop), int(TIMEOUT_DRIVER))
+                self.test_status = "ERROR"
+                self.msg += "The drivers took too long:\n {:d}s > {:d}s\n".format(
+                    int(TIMEOUT_DRIVER - time_to_stop), int(TIMEOUT_DRIVER)
+                )
 
         init_time = time.time()
         while ipi_proc.poll() is None:
             if self.die:
                 timeout_ipi = -1000
-            time.sleep(.5)
+            time.sleep(0.5)
             time_to_stop = timeout_ipi + init_time - time.time()
             if time_to_stop < -0.5:
                 ipi_proc.terminate()
-                self.test_status = 'ERROR'
-                self.msg += 'i-PI took too long after the driver finished!\n'
+                self.test_status = "ERROR"
+                self.msg += "i-PI took too long after the driver finished!\n"
                 time.sleep(11)  # i-pi took approximately 10 sec to exit
 
         stdout, stderr = ipi_proc.communicate()  # pylint: disable=unused-variable
         if len(stderr) != 0:
-            self.test_status = 'ERROR'
-            self.msg += '\ni-PI produced the following error:\n'
+            self.test_status = "ERROR"
+            self.msg += "\ni-PI produced the following error:\n"
             self.msg += stderr
-            self.msg += '\n'
+            self.msg += "\n"
 
         return
 
     def create_reference(self):
         """ Determines and passes the reference files to a reference folder.
         """
-        if self.test_status == 'PASSED':
-            reference_dir = os.path.join(self.ref_path, 'regtest-ref')
+        if self.test_status == "PASSED":
+            reference_dir = os.path.join(self.ref_path, "regtest-ref")
             create_dir(reference_dir)
-            ltraj, lprop = self.get_filesname(self.test_path,
-                                              reference_dir, self.io_dir)
+            ltraj, lprop = self.get_filesname(
+                self.test_path, reference_dir, self.io_dir
+            )
 
             try:
                 for prop in lprop:
                     for sprop in prop:
-                        remove_file(sprop['old_filename'])
-                        shutil.copy2(sprop['new_filename'],
-                                     sprop['old_filename'])
+                        remove_file(sprop["old_filename"])
+                        shutil.copy2(sprop["new_filename"], sprop["old_filename"])
                 for traj in ltraj:
                     for straj in traj:
-                        remove_file(straj['old_filename'])
-                        shutil.copy2(straj['new_filename'],
-                                     straj['old_filename'])
+                        remove_file(straj["old_filename"])
+                        shutil.copy2(straj["new_filename"], straj["old_filename"])
             except IOError as e:
-                self.test_status = 'ERROR'
-                self.msg += 'Error while copying the new reference!!\n'
+                self.test_status = "ERROR"
+                self.msg += "Error while copying the new reference!!\n"
                 self.msg += "Unable to copy file. %s" % e
             else:
-                self.test_status = 'COPIED'
+                self.test_status = "COPIED"
         else:
-            self.msg += ('Errors occured: using this run as reference '
-                         'is not safe!\n')
+            self.msg += "Errors occured: using this run as reference " "is not safe!\n"
 
     def print_report(self):
         """ This function prints information about the test on stdout.
@@ -680,27 +705,27 @@ class Test(threading.Thread):
         also printed.
         """
 
-        if self.test_status == 'ERROR':
-            _format = RESET + '%-30s --> ' + RED + '%15s' +\
-                INFO + ' Info: %s' + RESET
-        elif self.test_status == 'FAILED':
-            _format = RESET + '-%30s --> ' + YELLOW + '%15s' +\
-                INFO + ' Info: %s' + RESET
-        elif self.test_status == 'PASSED':
-            _format = RESET + '-%30s --> ' + GREEN + '%15s' + RESET
-        elif self.test_status == 'COPIED':
-            _format = RESET + '-%30s --> ' + GREEN + '%15s' + RESET
+        if self.test_status == "ERROR":
+            _format = RESET + "%-30s --> " + RED + "%15s" + INFO + " Info: %s" + RESET
+        elif self.test_status == "FAILED":
+            _format = (
+                RESET + "-%30s --> " + YELLOW + "%15s" + INFO + " Info: %s" + RESET
+            )
+        elif self.test_status == "PASSED":
+            _format = RESET + "-%30s --> " + GREEN + "%15s" + RESET
+        elif self.test_status == "COPIED":
+            _format = RESET + "-%30s --> " + GREEN + "%15s" + RESET
 
         if len(self.msg) > 0:
-            lines = self.msg.split('\n')
+            lines = self.msg.split("\n")
             for _ii, _buffer in enumerate(lines):
                 if _ii == 0:
                     continue
-                lines[_ii] = ' ' * 57 + _buffer
-            _msg = '\n'.join(lines)
+                lines[_ii] = " " * 57 + _buffer
+            _msg = "\n".join(lines)
             msg = _format % (self.name, self.test_status, _msg)
         else:
-            _format = '%30s -->  %15s\n'
+            _format = "%30s -->  %15s\n"
             msg = _format % (self.name, self.test_status)
         sys.stdout.write(msg)
         # print msg
@@ -716,30 +741,29 @@ class Test(threading.Thread):
         for prop in lprop:
             for sprop in prop:
                 try:
-                    old_content = np.loadtxt(sprop['old_filename'])
+                    old_content = np.loadtxt(sprop["old_filename"])
                 except IOError as _err:
                     if _err.errno == os.errno.ENOENT:
-                        self.msg += 'File %s not found!\n' %\
-                                    sprop['old_filename']
-                        self.test_status = 'ERROR'
+                        self.msg += "File %s not found!\n" % sprop["old_filename"]
+                        self.test_status = "ERROR"
                         continue
 
                 try:
-                    new_content = np.loadtxt(sprop['new_filename'])
+                    new_content = np.loadtxt(sprop["new_filename"])
                 except IOError as _err:
                     if _err.errno == os.errno.ENOENT:
-                        self.msg += 'File %s not found!\n' %\
-                                    sprop['old_filename']
-                        self.test_status = 'ERROR'
+                        self.msg += "File %s not found!\n" % sprop["old_filename"]
+                        self.test_status = "ERROR"
                         continue
 
                 try:
-                    npt.assert_array_almost_equal(old_content, new_content,
-                                                  _parser()['precision'])
+                    npt.assert_array_almost_equal(
+                        old_content, new_content, _parser()["precision"]
+                    )
                 except AssertionError:
-                    name = os.path.basename(sprop['old_filename'])
-                    self.msg += 'Differences in the %s file\n' % name
-                    self.test_status = 'FAILED'
+                    name = os.path.basename(sprop["old_filename"])
+                    self.msg += "Differences in the %s file\n" % name
+                    self.test_status = "FAILED"
                     continue
 
     def compare_trajectory_files(self, ltraj):
@@ -757,28 +781,27 @@ class Test(threading.Thread):
             for straj in traj:
                 new_w_list = []
                 old_w_list = []
-                name = os.path.basename(straj['old_filename'])
+                name = os.path.basename(straj["old_filename"])
                 try:
-                    old_content = open(straj['old_filename'])
+                    old_content = open(straj["old_filename"])
                 except IOError as _err:
                     if _err.errno == os.errno.ENOENT:
-                        self.msg += 'File %s not found!\n' % straj['old_filename']
-                        self.test_status = 'ERROR'
+                        self.msg += "File %s not found!\n" % straj["old_filename"]
+                        self.test_status = "ERROR"
                         continue
 
                 try:
-                    new_content = open(straj['new_filename'])
+                    new_content = open(straj["new_filename"])
                 except IOError as _err:
                     if _err.errno == os.errno.ENOENT:
-                        self.msg += 'File %s not found!\n' % straj['new_filename']
-                        self.test_status = 'ERROR'
+                        self.msg += "File %s not found!\n" % straj["new_filename"]
+                        self.test_status = "ERROR"
                         continue
 
                 line_c = 1
                 for old_line, new_line in zip(old_content, new_content):
                     word_c = 1
-                    for old_w, new_w in zip(old_line.split(),
-                                            new_line.split()):
+                    for old_w, new_w in zip(old_line.split(), new_line.split()):
                         try:
                             old_w_list.append(float(old_w))
                             new_w_list.append(float(new_w))
@@ -786,19 +809,24 @@ class Test(threading.Thread):
                             try:
                                 assert old_w == new_w
                             except AssertionError:
-                                self.msg += 'Differences at line %d word %d of file  %s' % (line_c, word_c, name)
-                                self.test_status = 'FAILED'
+                                self.msg += (
+                                    "Differences at line %d word %d of file  %s"
+                                    % (line_c, word_c, name)
+                                )
+                                self.test_status = "FAILED"
 
                         word_c += 1
                     line_c += 1
 
                 try:
-                    npt.assert_array_almost_equal(np.array(new_w_list),
-                                                  np.array(old_w_list),
-                                                  _parser()['precision'])
+                    npt.assert_array_almost_equal(
+                        np.array(new_w_list),
+                        np.array(old_w_list),
+                        _parser()["precision"],
+                    )
                 except AssertionError:
-                    self.msg += 'Differences in the %s file\n' % name
-                    self.test_status = 'FAILED'
+                    self.msg += "Differences in the %s file\n" % name
+                    self.test_status = "FAILED"
                     continue
 
         return err
@@ -808,7 +836,9 @@ class Test(threading.Thread):
 
         The name of the files to compare come from ltraj and lprop.
         """
-        ltraj, lprop = self.get_filesname(self.test_path, os.path.join(self.input_dir, 'regtest-ref'), self.io_dir)
+        ltraj, lprop = self.get_filesname(
+            self.test_path, os.path.join(self.input_dir, "regtest-ref"), self.io_dir
+        )
 
         self.compare_property_files(lprop)
 
@@ -833,7 +863,7 @@ class Test(threading.Thread):
             nprop
         """
         # Avoid to print i-pi output
-        devnull = open('/dev/null', 'w')
+        devnull = open("/dev/null", "w")
         oldstdout_fno = os.dup(sys.stdout.fileno())
         os.dup2(devnull.fileno(), 1)
 
@@ -868,43 +898,61 @@ class Test(threading.Thread):
             elif isinstance(o, PropertyOutput):
                 nprop = []
                 isys = 0
-                for _ss in simul.syslist:   # create multiple copies
+                for _ss in simul.syslist:  # create multiple copies
                     filename = _ss.prefix + o.filename
-                    nprop.append({"old_filename": os.path.join(olddir,
-                                                               filename),
-                                  "new_filename": os.path.join(newdir,
-                                                               filename),
-                                  "stride": o.stride,
-                                  "properties": o.outlist, })
+                    nprop.append(
+                        {
+                            "old_filename": os.path.join(olddir, filename),
+                            "new_filename": os.path.join(newdir, filename),
+                            "stride": o.stride,
+                            "properties": o.outlist,
+                        }
+                    )
                     isys += 1
                 lprop.append(nprop)
 
             # trajectories are more complex, as some have per-bead output
             elif isinstance(o, TrajectoryOutput):
-                if getkey(o.what) in ["positions", "velocities",
-                                      "forces", "forces_sc", "extras"]:   # multiple beads
+                if getkey(o.what) in [
+                    "positions",
+                    "velocities",
+                    "forces",
+                    "forces_sc",
+                    "extras",
+                ]:  # multiple beads
                     nbeads = simul.syslist[0].beads.nbeads
                     for _bi in range(nbeads):
                         ntraj = []
                         isys = 0
                         # zero-padded bead number
-                        padb = (("%0" + str(int(1 +
-                                                np.floor(np.log(nbeads) /
-                                                         np.log(10)))) +
-                                 "d") % (_bi))
+                        padb = (
+                            "%0"
+                            + str(int(1 + np.floor(np.log(nbeads) / np.log(10))))
+                            + "d"
+                        ) % (_bi)
 
                         for _ss in simul.syslist:
                             if o.ibead < 0 or o.ibead == _bi:
                                 if getkey(o.what) == "extras":
                                     filename = _ss.prefix + o.filename + "_" + padb
                                 else:
-                                    filename = _ss.prefix + o.filename + "_" + padb + \
-                                        "." + o.format
-                                ntraj.append({"old_filename": os.path.join(olddir, filename),
-                                              "format": o.format,
-                                              "new_filename": os.path.join(newdir, filename),
-                                              "stride": o.stride,
-                                              "what": o.what, })
+                                    filename = (
+                                        _ss.prefix
+                                        + o.filename
+                                        + "_"
+                                        + padb
+                                        + "."
+                                        + o.format
+                                    )
+                                ntraj.append(
+                                    {
+                                        "old_filename": os.path.join(olddir, filename),
+                                        "format": o.format,
+                                        "new_filename": os.path.join(newdir, filename),
+                                        "stride": o.stride,
+                                        "what": o.what,
+                                    }
+                                )
                             isys += 1
                         if ntraj != []:
                             ltraj.append(ntraj)
@@ -912,15 +960,17 @@ class Test(threading.Thread):
                 else:
                     ntraj = []
                     isys = 0
-                    for _ss in simul.syslist:   # create multiple copies
+                    for _ss in simul.syslist:  # create multiple copies
                         filename = _ss.prefix + o.filename
                         filename = filename + "." + o.format
-                        ntraj.append({"old_filename": os.path.join(olddir,
-                                                                   filename),
-                                      "new_filename": os.path.join(newdir,
-                                                                   filename),
-                                      "format": o.format,
-                                      "stride": o.stride, })
+                        ntraj.append(
+                            {
+                                "old_filename": os.path.join(olddir, filename),
+                                "new_filename": os.path.join(newdir, filename),
+                                "format": o.format,
+                                "stride": o.stride,
+                            }
+                        )
 
                         isys += 1
                     ltraj.append(ntraj)
@@ -932,6 +982,7 @@ class Test(threading.Thread):
 #
 # Tools Functions ###
 #
+
 
 def remove_file(path):
     """ Remove a path only if it exists and is a file!
@@ -955,8 +1006,10 @@ def create_dir(folder_path, ignore=False):
     if os.path.exists(folder_path):
         if ignore:
             return True
-        if answer_is_y('!W! %s already exists!\n    Do you want to delete it and '
-                       'proceed?[y/n]\n' % folder_path):
+        if answer_is_y(
+            "!W! %s already exists!\n    Do you want to delete it and "
+            "proceed?[y/n]\n" % folder_path
+        ):
             try:
                 if os.path.isdir(folder_path):
                     shutil.rmtree(folder_path)
@@ -964,11 +1017,12 @@ def create_dir(folder_path, ignore=False):
                     os.remove(folder_path)
                 else:
                     raise RuntimeError
-            except:
-                raise RuntimeError('I cannot remove the file. '
-                                   'Try manually and restart this script!')
+            except OSError:
+                raise RuntimeError(
+                    "I cannot remove the file. " "Try manually and restart this script!"
+                )
         else:
-            raise SystemExit('User rules!')
+            raise SystemExit("User rules!")
 
     os.mkdir(folder_path)
 
@@ -989,14 +1043,14 @@ def answer_is_y(msg):
         True if the user answer yes or False if the user answer no.
     """
 
-    _yes = ['yes', 'y']
-    _no = ['no', 'n']
-    if not msg.endswith('\n'):
-        msg += '\n'
-    if not msg.startswith('\n'):
-        msg = '\n' + msg
+    _yes = ["yes", "y"]
+    _no = ["no", "n"]
+    if not msg.endswith("\n"):
+        msg += "\n"
+    if not msg.startswith("\n"):
+        msg = "\n" + msg
 
-    answer = ''
+    answer = ""
     while answer.lower() not in _yes and answer not in _no:
         sys.stderr.write(msg)
 
@@ -1024,10 +1078,12 @@ def parse_regtest_string(test_path):
         dependencies: list of file needed to run the test (the xml file is
             already obviuous).
     """
-    command_string_rgx = re.compile(r'^COMMAND\(?(\d*)\)?\s*([ \w.\+\-\(\)\<\>\:]*)$',
-                                    re.MULTILINE)
-    dependency_string_rgx = re.compile(r'^DEPENDENCIES\s*([ \w.\+\-\(\)]*)$',
-                                       re.MULTILINE)
+    command_string_rgx = re.compile(
+        r"^COMMAND\(?(\d*)\)?\s*([ \w.\+\-\(\)\<\>\:]*)$", re.MULTILINE
+    )
+    dependency_string_rgx = re.compile(
+        r"^DEPENDENCIES\s*([ \w.\+\-\(\)]*)$", re.MULTILINE
+    )
 
     with open(test_path) as _buffer:
         _text = _buffer.read()
@@ -1038,9 +1094,9 @@ def parse_regtest_string(test_path):
 
     regtest_string = REGTEST_STRING_RGX.findall(_text)
 
-    for _xx in dependency_string_rgx.finditer('\n'.join(regtest_string)):
+    for _xx in dependency_string_rgx.finditer("\n".join(regtest_string)):
         dependencies += _xx.group(1).split()
-    for _xx in command_string_rgx.finditer('\n'.join(regtest_string)):
+    for _xx in command_string_rgx.finditer("\n".join(regtest_string)):
         try:
             commands += [_xx.group(2)] * int(_xx.group(1))
         except ValueError:
@@ -1071,11 +1127,11 @@ def inplace_change(filename, old_string, new_string):
             return True
 
     # Safely write the changed content, if found in the file
-    with open(filename, 'w') as _file:
+    with open(filename, "w") as _file:
         _content = _content.replace(old_string, new_string)
         _file.write(_content)
         return True
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

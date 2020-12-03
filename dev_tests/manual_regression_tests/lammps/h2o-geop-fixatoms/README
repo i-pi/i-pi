@@ -1,0 +1,29 @@
+# 29.10.2019 Karen Fidanyan
+This regtest deals with geometry optimization with fixed atoms.
+
+1.  Geometry optimization test: 1 water molecule in vacuum
+    with different numbers of freezed atoms.
+
+    resulting files are 
+    sim-[0-2]fixed.<mode>.out - contains energies at each optimizaton step
+    sim-[0-2]fixed.<mode>.pos_0.xyz
+
+    0-2 means the number of atoms fixed in a water molecule.
+        0 and 1 are expected to give the same energy, 
+        2 should give higher energy.
+
+2.  'far-away' test gives the comparison of optimization with and without constraints 
+    for the system, where constraint doesn't matter: 
+    1 very distant atom (far beyond the interaction range) in addition to distorted water molecule.
+    Here relaxation WITH and WITHOUT fixatom should give equal result and completely equal relaxation trajectory.
+
+RESULTS:
+All optimizers pass this test successfully and give the same energies and structures (wrt defined tolerances).
+But CG and SD have HUGE problems with convergence. It is unrelated to fixatoms.
+
+#         Energy-0-fixed  Energy-1-fixed  Energy-2-fixed  Force calls
+BFGS            -0.00384        -0.00381      0.05363918           22
+LBFGS           -0.00384        -0.00381      0.05363917           15
+BFGSTRM         -0.00384        -0.00381      0.05363918           16
+CG              -0.00384        -0.00381      0.05363918          434
+SD              -0.00384        -0.00381      0.05363916         1107

@@ -1,4 +1,4 @@
-<simulation verbosity='high'>
+<simulation verbosity='debug'>
   <ffsocket mode='inet' name='aims'>
     <latency>  1.00000000e-02</latency>
     <slots>4</slots>
@@ -24,8 +24,7 @@
       <force forcefield='aims'/>
     </forces>
     <initialize nbeads='6'>
-      <file mode='pdb'>init.pdb</file>
-      <!-- The following will override the cell definition into the pdb -->
+      <file mode='xyz'>init.xyz</file>
       <cell mode='abc'>
 	[   15., 15.0, 15.0 ]
       </cell>

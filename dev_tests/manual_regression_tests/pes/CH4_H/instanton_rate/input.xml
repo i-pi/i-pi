@@ -1,0 +1,47 @@
+<!--REGTEST
+DEPENDENCIES  init.xyz hessian.dat
+COMMAND(8)    i-pi-driver -u -h localhost -m ch4hcbe
+ENDREGTEST-->
+<simulation mode="static" verbosity="medium">
+    <output prefix='inst'>
+        <properties stride='1' filename='out'>  [ step, potential{electronvolt}] </properties>
+   <trajectory stride="1" filename="xc" format="xyz">positions{angstrom}</trajectory>
+   </output>
+   <total_steps>20       </total_steps>
+   <ffsocket name="cbe" mode="unix" >
+       <address> localhost </address>  
+   </ffsocket>
+   <system >
+       <initialize nbeads='40'> 
+           <file mode='xyz' >  init.xyz </file>
+           <cell mode='abc'> [200.0,  200.0,  200.0  ] </cell>
+       </initialize>
+       <forces>
+          <force forcefield="cbe"> </force>
+       </forces>
+       <ensemble>
+           <temperature units="kelvin">300</temperature>
+       </ensemble>
+       <!-- This is not actually used since we comptue all the replicas -->
+       <normal_modes>
+       <open_paths> [ 0,1,2,3,4,5 ] </open_paths>
+       </normal_modes>
+       <motion mode='instanton'>
+           <instanton mode='rate'>
+               <alt_out>10</alt_out>
+               <tolerances>
+                   <energy> 5e-6 </energy>
+	           <force> 5e-6 </force>
+	           <position> 1e-3 </position>
+               </tolerances>
+               <delta> 0.1 </delta> 
+               <opt>nichols</opt>
+               <hessian_update>powell</hessian_update>
+               <hessian_asr>poly</hessian_asr>
+               <hessian_final>true</hessian_final>
+	       <biggest_step>0.3</biggest_step>
+               <hessian mode='file' shape='(18, 18)' >hessian.dat</hessian>
+           </instanton>
+       </motion>
+   </system>
+</simulation>

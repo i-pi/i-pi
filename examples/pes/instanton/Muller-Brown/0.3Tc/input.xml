@@ -1,0 +1,37 @@
+<simulation mode="static" verbosity="medium">
+    <output prefix='inst'>
+        <properties stride='1' filename='out'>  [ step, potential] </properties>
+   </output>
+   <total_steps>50       </total_steps>
+   <ffsocket name="MB" mode="unix" >
+       <address> localhost </address>  
+   </ffsocket>
+   <system >
+       <initialize nbeads='20'> 
+           <file mode='xyz' >  init.xyz </file>
+           <cell mode='abc'> [200.0,  200.0,  200.0  ] </cell>
+       </initialize>
+       <forces>
+          <force forcefield="MB"> </force>
+       </forces>
+       <ensemble>
+           <temperature units="kelvin">660</temperature>
+       </ensemble>
+       <motion mode='instanton'>
+           <instanton mode='rate'>
+               <tolerances>
+                   <energy> 1e-6 </energy>
+	           <force> 1e-6 </force>
+	           <position> 1e-6 </position>
+               </tolerances>
+               <alt_out>-1</alt_out>
+               <hessian_update>powell</hessian_update>
+               <delta>0.1</delta>
+               <hessian_asr>none</hessian_asr>
+               <hessian_init>true</hessian_init>
+               <hessian_final>true</hessian_final>
+	       <biggest_step>0.05</biggest_step>
+           </instanton>
+       </motion>
+   </system>
+</simulation>

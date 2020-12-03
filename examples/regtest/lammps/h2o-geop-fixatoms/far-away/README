@@ -1,5 +1,0 @@
-In this folder I compare version with fixed atoms to work equally 
-to the older version, even if constraints are present.
-
-If we constrain one distant atom (far beyond any interaction cutoff), 
-all the other atoms should relax in the same way as before.

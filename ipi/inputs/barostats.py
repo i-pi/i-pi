@@ -15,7 +15,7 @@ from ipi.engine.cell import Cell
 from ipi.inputs.cell import *
 
 
-__all__ = ['InputBaro']
+__all__ = ["InputBaro"]
 
 
 class InputBaro(Input):
@@ -36,9 +36,13 @@ class InputBaro(Input):
        p: The conjugate momentum to the volume degree of freedom.
     """
 
-    attribs = {"mode": (InputAttribute, {"dtype": str,
-                                         "default": "dummy",
-                                         "help": """The type of barostat.  Currently, only a 'isotropic' barostat is implemented, that combines
+    attribs = {
+        "mode": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "default": "dummy",
+                "help": """The type of barostat.  Currently, only a 'isotropic' barostat is implemented, that combines
                                     ideas from the Bussi-Zykova-Parrinello barostat for classical MD with ideas from the
                                     Martyna-Hughes-Tuckerman centroid barostat for PIMD; see Ceriotti, More, Manolopoulos, Comp. Phys. Comm. 2013 for
                                     implementation details.""",
@@ -94,7 +98,9 @@ class InputBaro(Input):
         elif type(baro) is Barostat:
             self.mode.store("dummy")
         else:
-            raise TypeError("The type " + type(baro).__name__ + " is not a valid barostat type")
+            raise TypeError(
+                "The type " + type(baro).__name__ + " is not a valid barostat type"
+            )
 
     def fetch(self):
         """Creates a barostat object.

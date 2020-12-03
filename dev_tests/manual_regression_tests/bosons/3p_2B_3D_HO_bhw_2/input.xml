@@ -1,0 +1,61 @@
+<!--REGTEST 
+COMMAND(4)    i-pi-driver -u -h REGTEST_SOCKET -m harm3d -o 1.21647924E-8
+ ENDREGTEST-->
+<simulation threading='False' verbosity='low'>
+
+    <ffsocket mode='unix' name='driver'>
+	    <address> REGTEST_SOCKET </address>
+   </ffsocket>
+   
+   <total_steps> 100 </total_steps>
+
+   <output prefix="data">
+      <trajectory stride="100" filename="pos" cell_units="angstrom">positions{angstrom}</trajectory>
+      <!--<trajectory stride="1" filename="xc" format="xyz">x_centroid{angstrom}</trajectory>-->
+      <properties stride="100"> [ step, time{femtosecond}, conserved, temperature{kelvin}, kinetic_cv, 
+            potential, virial_fq ] </properties>
+   </output>
+
+   <prng>
+      <seed> 18885 </seed>
+   </prng>
+
+   <system>
+
+      <forces> 
+          <force forcefield="driver"></force>
+      </forces>
+
+      <initialize nbeads="32">
+        <positions mode="manual" bead="0"> [-25, -14, -24, 41, 97, -4, 68, 64, 21] </positions>
+	<masses mode="manual"> [1.0, 1.0, 1.0] </masses>
+	<labels mode="manual"> ['E', 'E', 'E'] </labels>
+        <cell>
+         [   2500, 0, 0, 0, 2500, 0, 0, 0, 2500 ]
+        </cell>
+	<velocities mode='thermal' units='kelvin'> 17.4 </velocities>
+      </initialize>
+
+      <normal_modes propagator='bab'>
+	      <nmts> 10 </nmts>
+	      <bosons> [0, 1] </bosons>
+      </normal_modes>
+
+      <ensemble>
+         <temperature units="kelvin"> 17.4 </temperature>
+      </ensemble>
+
+      <motion mode="dynamics">
+	<fixcom> False </fixcom>
+        <dynamics mode="nvt">
+         <timestep units="femtosecond"> 1 </timestep>
+  	  <thermostat mode='pile_l'>
+		<tau units='femtosecond'>100</tau>
+	  </thermostat>
+
+        </dynamics>
+      </motion>
+
+  </system>
+
+</simulation>

@@ -1,0 +1,29 @@
+<simulation mode='static' verbosity='medium'>
+  <output prefix='PREFIX'>
+<!--    <properties stride='1' filename='out'>  [ step, potential{kilocal/mol} ] </properties>-->
+    <trajectory stride='1' filename='pos'>  positions{angstrom}  </trajectory>
+  </output>
+  <total_steps> 1000 </total_steps>
+  <ffsocket mode='inet' name='cp2k' pbc='False'>
+    <address>localhost</address>
+    <port>10200</port>
+  </ffsocket>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='xyz'>  init.xyz </file>
+    </initialize>
+    <forces>
+      <force forcefield='cp2k'> </force>
+    </forces>
+    <motion mode='minimize'>
+      <optimizer mode='lbfgs'>
+        <ls_options>  <tolerance> 1e-3 </tolerance> </ls_options>
+        <tolerances>
+          <energy > 1e-3 </energy>
+          <position> 1e-5 </position>
+          <force > 1e-3 </force>
+        </tolerances>
+      </optimizer>
+    </motion>
+  </system>
+</simulation>

@@ -1,0 +1,53 @@
+<simulation verbosity="high">
+  <output prefix="simulation">
+      <properties stride='1' filename='out'>
+        [ step, time{picosecond}, conserved, temperature{kelvin}, potential{electronvolt}, pressure_md{gigapascal} ]
+      </properties>
+      <trajectory filename='fc' stride='1'>f_centroid</trajectory>
+      <trajectory filename='xc' stride='1'>x_centroid{angstrom}</trajectory>
+      <properties filename='cell' stride='1'>[cell_h{angstrom}]</properties>
+      <properties filename='stress' stride='1'>[virial_md{bar}]</properties>
+<checkpoint filename="chk" stride="2" overwrite="true"/>
+  </output>
+  <prng><seed> 3924</seed></prng>
+  <total_steps>100</total_steps>
+    <ffsocket mode='inet' name='vasp'>
+         <port> 23333 </port>
+         <address> localhost </address>
+   </ffsocket>  
+<system>
+    <initialize nbeads="1">
+      <file mode="xyz"> init.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 300  </velocities>
+    </initialize>
+    <forces>
+      <force forcefield="vasp"> </force>
+    </forces>
+    <ensemble>
+      <temperature units="kelvin"> 300 </temperature>
+      <pressure units="gigapascal" > 1 </pressure>
+    </ensemble>
+    <motion mode="dynamics">
+      <fixcom>True</fixcom>
+      <dynamics mode="npt">
+        <barostat mode="isotropic"> <!-- an isotropic-pressure barostat is used for simplicity -->
+          <tau units="femtosecond"> 100 </tau>
+          <thermostat mode='gle'> <!-- use a GLE to avoid picking a tau -->
+    <A shape='(5,5)'>
+      [   4.498098855452e-3,    6.594810718477e-6,    2.788030342989e-4,   -8.808265165053e-4,    5.605371493938e-3, 
+  -6.726802271646e-6,    2.079069559861e-9,    1.746169548818e-5,   -4.800164465960e-6,    1.025830873432e-5, 
+  -3.586191452340e-4,   -1.746169548818e-5,    3.287481976399e-5,    1.245698716799e-4,   -2.417657162526e-4, 
+  -2.508912543565e-4,    4.800164465960e-6,   -1.245698716799e-4,    6.449207766266e-4,    2.783583234046e-4, 
+   5.273493443008e-3,   -1.025830873432e-5,    2.417657162526e-4,   -2.783583234046e-4,    7.488477456790e-3
+     ]
+    </A>
+          </thermostat>
+        </barostat>
+        <timestep units="femtosecond"> 0.25 </timestep>
+        <thermostat mode="langevin">
+        <tau units="femtosecond">50</tau> 
+        </thermostat>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>

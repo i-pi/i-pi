@@ -21,16 +21,14 @@ Classes:
       writing the checkpoints.
 """
 
-import numpy as np
 from copy import copy
-import ipi.engine.initializer
 from ipi.engine.smotion import Smotion, ReplicaExchange, MetaDyn, MultiSmotion
 from ipi.utils.inputvalue import *
 from .remd import InputReplicaExchange
 from .metad import InputMetaDyn
 from ipi.utils.units import *
 
-__all__ = ['InputSmotion']
+__all__ = ["InputSmotion"]
 
 
 class InputSmotionBase(Input):
@@ -45,13 +43,23 @@ class InputSmotionBase(Input):
 
     """
 
-    attribs = {"mode": (InputAttribute, {"dtype": str,
-                                         "help": "Kind of smotion which should be performed.",
-                                         "options": ['dummy', 'remd', 'metad']})}
-    fields = {"remd": (InputReplicaExchange, {"default": {},
-                                              "help": "Option for REMD simulation"}),
-              "metad": (InputMetaDyn, {"default": {},
-                                       "help": "Option for REMD simulation"})}
+    attribs = {
+        "mode": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "help": "Kind of smotion which should be performed.",
+                "options": ["dummy", "remd", "metad"],
+            },
+        )
+    }
+    fields = {
+        "remd": (
+            InputReplicaExchange,
+            {"default": {}, "help": "Option for REMD simulation"},
+        ),
+        "metad": (InputMetaDyn, {"default": {}, "help": "Option for REMD simulation"}),
+    }
 
     dynamic = {}
 
@@ -94,7 +102,7 @@ class InputSmotionBase(Input):
             sc = MetaDyn(**self.metad.fetch())
         else:
             sc = Smotion()
-            #raise ValueError("'" + self.mode.fetch() + "' is not a supported motion calculation mode.")
+            # raise ValueError("'" + self.mode.fetch() + "' is not a supported motion calculation mode.")
 
         return sc
 
@@ -106,9 +114,15 @@ class InputSmotion(InputSmotionBase):
 
     attribs["mode"][1]["options"].append("multi")
 
-    dynamic = {"smotion": (InputSmotionBase, {"default": input_default(factory=Smotion),
-                                              "help": "A smotion class that can be included as a member of a 'multi' Smotion."})
-               }
+    dynamic = {
+        "smotion": (
+            InputSmotionBase,
+            {
+                "default": input_default(factory=Smotion),
+                "help": "A smotion class that can be included as a member of a 'multi' Smotion.",
+            },
+        )
+    }
 
     def store(self, smotion):
 

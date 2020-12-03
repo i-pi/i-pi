@@ -3,7 +3,7 @@
         <properties stride='1' filename='out'>  [ step, potential{electronvolt}] </properties>
    </output>
    <total_steps>160         </total_steps>
-   <ffsocket name="aims" mode="unix" >
+   <ffsocket name="qtip4pf" mode="unix" >
        <address> localhost </address>  <latency> 1e-4</latency>
        <port>40051</port>
    </ffsocket>
@@ -13,7 +13,7 @@
            <cell mode='abc'> [130.18034026,  170.29206049,  240.21758034] </cell>
        </initialize>
        <forces>
-          <force forcefield="aims"> </force>
+          <force forcefield="qtip4pf"> </force>
        </forces>
        <ensemble>
            <temperature units="kelvin">15.85</temperature>

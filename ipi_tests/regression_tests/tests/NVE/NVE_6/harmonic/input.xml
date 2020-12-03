@@ -1,0 +1,51 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'>  [ step, conserved, temperature{kelvin}, potential, kinetic_md, kinetic_cv, spring] </properties>
+    <trajectory filename='pos_c' stride='1'> x_centroid </trajectory>
+    <trajectory filename='frc_c' stride='1'> f_centroid </trajectory>
+    <trajectory filename='vel_c' stride='1'> v_centroid </trajectory>
+    <trajectory filename='mom_c' stride='1'> p_centroid </trajectory>
+    <trajectory filename='pos' stride='1' bead='0'> positions </trajectory>
+    <trajectory filename='frc' stride='1' bead='0'> forces </trajectory>
+    <trajectory filename='vel' stride='1' bead='0'> velocities </trajectory>
+    <trajectory filename='mom' stride='1' bead='0'> momenta </trajectory>
+  </output>
+  <total_steps>9</total_steps>
+  <prng>
+    <seed>31415</seed>
+  </prng>
+  <ffsocket name='lammps' mode='unix' pbc='false'>
+    <address>localhost</address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='6'>
+<cell mode='abc' units='angstrom'> [100, 100, 100] </cell>
+    </initialize>
+    <forces>
+      <force forcefield='lammps'> </force>
+    </forces>
+    <motion mode='dynamics'>
+      <fixcom> False </fixcom>
+      <dynamics mode='nve'>
+        <timestep units='femtosecond'> 0.1 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units='kelvin'> 300 </temperature>
+    </ensemble>
+      <beads natoms='1' nbeads='6'>
+         <q shape='(6, 3)'>
+          [                0,                0,                0,                0,                0,
+                           0,                0,                0,                0,                0,
+                           0,                0,                0,                0,                0,
+                           0,                0,                0 ]
+         </q>
+         <p shape='(6, 3)'>
+          [ -3.13616382 ,0.41754984,-0.21848039,-1.42731025, 4.52135485 ,0.92356654,-6.78133177, -1.51514656, -3.55902132,
+ -1.96508045, -3.7661323 , -0.52972274,-2.24775799,  3.14173608, -0.44601442, 3.48849926,  0.38396854, -0.2739336 ]
+         </p>
+         <m shape='(1)'> [   1837.36223469  ] </m>
+         <names shape='(1)'> [ H ] </names>
+      </beads>
+  </system>
+</simulation>

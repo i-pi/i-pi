@@ -1,0 +1,44 @@
+<!--REGTEST
+DEPENDENCIES  init.xyz hessian.dat
+COMMAND(8)    i-pi-driver -u -h localhost -m qtip4pf
+ENDREGTEST-->
+<simulation mode="static" verbosity="medium">
+    <output prefix='inst'>
+        <properties stride='1' filename='out'>  [ step, potential{electronvolt}] </properties>
+        <trajectory stride="1" filename="xc" format="xyz">positions{angstrom}</trajectory>
+   </output>
+   <total_steps>200         </total_steps>
+   <ffsocket name="aims" mode="unix" >
+       <address> localhost </address>  <latency> 1e-4</latency>
+       <port>40051</port>
+   </ffsocket>
+   <system >
+       <initialize nbeads='32'> 
+           <file mode='xyz' >  init.xyz </file>
+           <cell mode='abc'> [130.18034026,  170.29206049,  240.21758034] </cell>
+       </initialize>
+       <forces>
+          <force forcefield="aims"> </force>
+       </forces>
+       <ensemble>
+           <temperature units="kelvin">15.85</temperature>
+       </ensemble>
+       <motion mode='instanton'>
+           <instanton mode='splitting'>
+               <alt_out>10</alt_out>
+               <tolerances>
+                   <energy> 1e-5 </energy>
+	           <force> 1e-4 </force>
+	           <position> 3e-3</position>
+               </tolerances>
+               <delta>0.5</delta>
+               <hessian_final>true</hessian_final>
+               <hessian_asr>none</hessian_asr>
+	       <biggest_step>0.3</biggest_step>
+               <hessian mode='file' shape='(18, 18)'>hessian.dat</hessian>
+               <energy_shift units='electronvolt'>-2.83973681e-01</energy_shift>
+            <opt>nichols</opt>
+           </instanton>
+       </motion>
+   </system>
+</simulation>

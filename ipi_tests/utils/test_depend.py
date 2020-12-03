@@ -6,7 +6,6 @@ import time
 
 
 class A(dobject):
-
     def __init__(self):
 
         dself = dd(self)
@@ -14,8 +13,14 @@ class A(dobject):
         dself.scalar = depend_value(name="a_scalar", value=1)
         dself.vector = depend_array(name="a_vector", value=np.zeros(10))
 
-        dself.dscalar = depend_value(name="d_scalar", func=self.get_scalar, dependencies=[dself.scalar])
-        dself.dvector = depend_value(name="d_vector", func=self.get_vector, dependencies=[dself.dscalar, self.vector])
+        dself.dscalar = depend_value(
+            name="d_scalar", func=self.get_scalar, dependencies=[dself.scalar]
+        )
+        dself.dvector = depend_value(
+            name="d_vector",
+            func=self.get_vector,
+            dependencies=[dself.dscalar, self.vector],
+        )
 
     def get_scalar(self):
         return self.scalar * 2
@@ -25,7 +30,6 @@ class A(dobject):
 
 
 class B(dobject):
-
     def __init__(self):
 
         dself = dd(self)
@@ -37,14 +41,23 @@ class B(dobject):
 
         self.A = A
         dself = dd(self)
-        dself.dscalar = depend_value(name="db_scalar", func=self.get_scalar, dependencies=[dself.scalar, dd(A).dscalar])
-        dself.dvector = depend_value(name="db_vector", func=self.get_vector, dependencies=[dself.dscalar, self.vector])
+        dself.dscalar = depend_value(
+            name="db_scalar",
+            func=self.get_scalar,
+            dependencies=[dself.scalar, dd(A).dscalar],
+        )
+        dself.dvector = depend_value(
+            name="db_vector",
+            func=self.get_vector,
+            dependencies=[dself.dscalar, self.vector],
+        )
 
     def get_scalar(self):
         return self.scalar - self.A.scalar
 
     def get_vector(self):
         return self.vector * self.dscalar
+
 
 myA = A()
 
