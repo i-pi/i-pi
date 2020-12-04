@@ -1021,7 +1021,7 @@ class BaroRGB(Barostat):
 
             self.p += dt * (
                 self.cell.V * np.triu(-self.beads.nbeads * pi_ext)
-                + Constants.kb * self.temp * L
+                + Constants.kb * self.temp * self.L
             )
 
             pc = dstrip(self.beads.pc).reshape(self.beads.natoms, 3)
