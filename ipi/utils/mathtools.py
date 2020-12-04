@@ -12,9 +12,21 @@ import numpy as np
 from ipi.utils.messages import verbosity, warning
 
 
-__all__ = ['matrix_exp', 'stab_cholesky', 'h2abc', 'h2abc_deg', 'abc2h',
-           'invert_ut3x3', 'det_ut3x3', 'eigensystem_ut3x3', 'exp_ut3x3',
-           'root_herm', 'logsumlog', 'sinch', 'gaussian_inv']
+__all__ = [
+    "matrix_exp",
+    "stab_cholesky",
+    "h2abc",
+    "h2abc_deg",
+    "abc2h",
+    "invert_ut3x3",
+    "det_ut3x3",
+    "eigensystem_ut3x3",
+    "exp_ut3x3",
+    "root_herm",
+    "logsumlog",
+    "sinch",
+    "gaussian_inv",
+]
 
 
 def logsumlog(lasa, lbsb):
@@ -78,7 +90,7 @@ def matrix_exp(M, ntaylor=20, nsquare=10):
 
 
 def stab_cholesky(M):
-    """ A numerically stable version of the Cholesky decomposition.
+    """A numerically stable version of the Cholesky decomposition.
 
     Used in the GLE implementation. Since many of the matrices used in this
     algorithm have very large and very small numbers in at once, to handle a
@@ -161,7 +173,7 @@ def h2abc(h):
 
 
 def genh2abc(h):
-    """ Returns a description of the cell in terms of the length of the
+    """Returns a description of the cell in terms of the length of the
        lattice vectors and the angles between them in radians.
 
     Takes the representation of the system box in terms of a full matrix
@@ -263,19 +275,17 @@ def eigensystem_ut3x3(p):
     eigp = np.zeros((3, 3), float)
     eigvals = np.zeros(3, float)
 
-
-
     for i in range(3):
         eigp[i, i] = 1
     eigp[0, 1] = -p[0, 1]
-    if eigp[0, 1] != 0.0:  
-        eigp[0, 1] /= (p[0, 0] - p[1, 1])
+    if eigp[0, 1] != 0.0:
+        eigp[0, 1] /= p[0, 0] - p[1, 1]
     eigp[1, 2] = -p[1, 2]
-    if eigp[1, 2] != 0.0:  
-        eigp[1, 2] /= (p[1, 1] - p[2, 2])
+    if eigp[1, 2] != 0.0:
+        eigp[1, 2] /= p[1, 1] - p[2, 2]
     eigp[0, 2] = -(p[0, 1] * p[1, 2] - p[0, 2] * p[1, 1] + p[0, 2] * p[2, 2])
-    if eigp[1, 2] != 0.0:  
-        eigp[1, 2] /= ((p[0, 0] - p[2, 2]) * (p[2, 2] - p[1, 1]))
+    if eigp[1, 2] != 0.0:
+        eigp[1, 2] /= (p[0, 0] - p[2, 2]) * (p[2, 2] - p[1, 1])
     for i in range(3):
         eigvals[i] = p[i, i]
     return eigvals, eigp
@@ -399,17 +409,18 @@ def root_herm(A):
 
     return rv
 
-def _sinch(x):
-        """ Computes sinh(x)/x in a way that is stable for x->0 """
-        
-        x2 = x*x
-        if x2 < 1e-12:
-            return 1 + (x2/6.)*(1 + (x2/20.)*(1 + (x2/42.)))
-        else:
-            return np.sinh(x)/x
-    
-sinch = np.vectorize(_sinch)
 
+def _sinch(x):
+    """ Computes sinh(x)/x in a way that is stable for x->0 """
+
+    x2 = x * x
+    if x2 < 1e-12:
+        return 1 + (x2 / 6.0) * (1 + (x2 / 20.0) * (1 + (x2 / 42.0)))
+    else:
+        return np.sinh(x) / x
+
+
+sinch = np.vectorize(_sinch)
 
 
 def mat_taylor(x, function):
@@ -418,7 +429,7 @@ def mat_taylor(x, function):
        x: matrix
        function: the function to be expanded
     Return:
-       function of matrix.  
+       function of matrix.
     """
     if not (x.shape[0] == x.shape[1]):
         warning("input matrix is not squared")
@@ -426,13 +437,21 @@ def mat_taylor(x, function):
     dim = x.shape[0]
     I = np.identity(dim)
     if function == "sinhx/x":
-        #compute sinhx/x by directly taylor
+        # compute sinhx/x by directly taylor
         x2 = np.linalg.matrix_power(x, 2)
-        return I + np.matmul(x2/(2.0*3.0), (I + np.matmul(x2/(4.0*5.0), (I + np.matmul(x2/(6.0*7.0), (I + x2/(8.0*9.0)))))))
+        return I + np.matmul(
+            x2 / (2.0 * 3.0),
+            (
+                I
+                + np.matmul(
+                    x2 / (4.0 * 5.0),
+                    (I + np.matmul(x2 / (6.0 * 7.0), (I + x2 / (8.0 * 9.0)))),
+                )
+            ),
+        )
 
     else:
-       warning("function {} not implemented".format(function)) 
-
+        warning("function {} not implemented".format(function))
 
 
 def gaussian_inv(x):

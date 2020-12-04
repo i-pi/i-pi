@@ -215,7 +215,7 @@ class Barostat(dobject):
         m = dstrip(self.beads.m)
         na3 = 3 * self.beads.natoms
         fall = dstrip(self.forces.f)
-        if self.bias == None:
+        if self.bias is None:
             ball = fall * 0.00
         else:
             ball = dstrip(self.bias.f)
@@ -318,7 +318,7 @@ class Barostat(dobject):
         """Calculates the internal stress tensor."""
 
         bvir = np.zeros((3, 3), float)
-        if self.bias != None:
+        if self.bias is not None:
             bvir[:] = self.bias.vir
 
         return (self.kstress + self.forces.virs + bvir) / self.cell.V
@@ -844,7 +844,7 @@ class BaroRGB(Barostat):
         else:
             self.h0 = Cell()
 
-        if not direction is None:
+        if direction is not None:
             self.direction = direction
         else:
             self.direction = "all"
@@ -871,7 +871,7 @@ class BaroRGB(Barostat):
         # number of ones in the UT part of the mask
         self.L = np.diag([hmask[0].sum(), hmask[1, 1:].sum(), hmask[2, 2:].sum()])
 
-        if not stressext is None:
+        if stressext is not None:
             self.stressext = stressext
         else:
             self.stressext[:] = -1.0
@@ -1150,7 +1150,7 @@ class BaroMTK(Barostat):
         else:
             self.p = 0.0
 
-        if not direction is None:
+        if direction is not None:
             self.direction = direction
         else:
             self.direction = "all"
@@ -1177,7 +1177,7 @@ class BaroMTK(Barostat):
         # number of ones in the UT part of the mask
         self.L = np.diag([hmask[0].sum(), hmask[1, 1:].sum(), hmask[2, 2:].sum()])
 
-        if not pext is None:
+        if pext is not None:
             self.pext = pext
         else:
             self.pext = -1.0
