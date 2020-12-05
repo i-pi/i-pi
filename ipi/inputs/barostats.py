@@ -96,7 +96,7 @@ class InputBaro(Input):
             {
                 "default": "all",
                 "dtype": str,
-                "help": "define which elements of the h matrix will change. h matrix is defined as upper triangle matrix, in which each column stands for each cell vector a, b, c, respectively. option 'all' will relax all the martrix elements, option 'xx', 'yy', 'zz','xy', 'xz' and 'yz' change the element 11, 22, 33, 12, 13, 23 respectively.",
+                "help": "define which elements of the h matrix will change. h matrix is defined as upper triangle matrix, in which each column stands for each cell vector a, b, c, respectively. option 'all' will relax all the martrix elements, options 'xx', 'yy', 'zz' change the elements 11, 22, respectively of the cell, while options 'xy', 'xz', 'yz' change all elements except those along z,y, and x respectively.",
                 "options": ["all", "xx", "yy", "zz", "xy", "xz", "yz"],
             },
         ),

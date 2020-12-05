@@ -860,10 +860,16 @@ class BaroRGB(Barostat):
             elif self.direction == "zz":
                 hmask[2][2] = 1.0
             elif self.direction == "xy":
+                hmask[0][0] = 1.0
+                hmask[1][1] = 1.0
                 hmask[0][1] = 1.0
             elif self.direction == "xz":
+                hmask[0][0] = 1.0
+                hmask[2][2] = 1.0
                 hmask[0][2] = 1.0
             elif self.direction == "yz":
+                hmask[1][1] = 1.0
+                hmask[2][2] = 1.0
                 hmask[1][2] = 1.0
 
         # mask to zero out components of the cell velocity, to implement cell-boundary constraints
@@ -1166,10 +1172,16 @@ class BaroMTK(Barostat):
             elif self.direction == "zz":
                 hmask[2][2] = 1.0
             elif self.direction == "xy":
+                hmask[0][0] = 1.0
+                hmask[1][1] = 1.0
                 hmask[0][1] = 1.0
             elif self.direction == "xz":
+                hmask[0][0] = 1.0
+                hmask[2][2] = 1.0
                 hmask[0][2] = 1.0
             elif self.direction == "yz":
+                hmask[1][1] = 1.0
+                hmask[2][2] = 1.0
                 hmask[1][2] = 1.0
 
         # mask to zero out components of the cell velocity, to implement cell-boundary constraints
