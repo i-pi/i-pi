@@ -1,10 +1,10 @@
 units metal
 
 atom_style   atomic
+box tilt large
 read_data    nickel.data
 pair_style eam/alloy
 pair_coeff * * ./Ni-Al-Mishin-2009.eam.alloy Ni
-#pair_coeff * * /home/zhuang/repository/i-pi/examples/lammps/nickel-npzt-mtk/Ni-Al-Mishin-2009.eam.alloy Ni
 neighbor    0.2 bin
 timestep    0.001
 thermo 10
