@@ -15,6 +15,7 @@ from ipi.engine.forcefields import (
     FFPlumed,
     FFYaff,
     FFsGDML,
+    FFrascal, 
 )
 from ipi.interfaces.sockets import InterfaceSocket
 import ipi.engine.initializer
@@ -29,6 +30,7 @@ __all__ = [
     "InputFFPlumed",
     "InputFFYaff",
     "InputFFsGDML",
+    "InputFFrascal",
 ]
 
 
@@ -606,6 +608,52 @@ class InputFFsGDML(InputForceField):
 
         return FFsGDML(
             sGDML_model=self.sGDML_model.fetch(),
+            name=self.name.fetch(),
+            latency=self.latency.fetch(),
+            dopbc=self.pbc.fetch(),
+            threaded=self.threaded.fetch(),
+        )
+
+class InputFFrascal(InputForceField):
+
+    fields = {
+        "model_json": (
+            InputValue,
+            {
+                "dtype": str,
+                "default": None,
+                "help": "The filename of the librascal-formatted potential.",
+            },
+        ),
+        "structure_template": (
+            InputValue,
+            {
+                "dtype": str,
+                "default": None,
+                "help": "Filename of a structure to be read by librascal defining number and kinds of atoms.",
+            },
+        ),
+    }
+
+    fields.update(InputForceField.fields)
+
+    attribs = {}
+    attribs.update(InputForceField.attribs)
+
+    default_help = """A librascal calculator """
+    default_label = "FFrascal"
+
+    def store(self, ff):
+        super(InputFFrascal, self).store(ff)
+        self.model_json.store(ff.model_json)
+        self.structure_template.store(ff.structure_template)
+
+    def fetch(self):
+        super(InputFFrascal, self).fetch()
+
+        return FFsrascal(
+            model_json=self.model_json.fetch(),
+            structure_template=self.structure_template.fetch(),
             name=self.name.fetch(),
             latency=self.latency.fetch(),
             dopbc=self.pbc.fetch(),

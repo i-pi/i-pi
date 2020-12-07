@@ -829,7 +829,7 @@ class FFsGDML(ForceField):
             )
         except ValueError:
             raise ValueError(
-                "ERROR: Reading sGDML model " + self.model + " file failed."
+                "ERROR: Reading sGDML model " + self.sGDML_model + " file failed."
             )
 
         if "r_unit" in self.model and "e_unit" in self.model:
@@ -882,6 +882,78 @@ class FFsGDML(ForceField):
             F.flatten() * self.kcalmolang_to_hartreebohr,
             np.zeros((3, 3), float),
             "",
+        ]
+        r["status"] = "Done"
+        r["t_finished"] = time.time()
+
+
+class FFrascal(ForceField):
+
+    """ An interface to compute potentials using librascal
+    """
+
+    def __init__(
+        self,
+        latency=1.0,
+        name="",
+        threaded=False,
+        model_json=None,
+        structure_template=None,
+        pars=None,
+        dopbc=False,
+    ):
+        """Initialises the librascal calculator
+
+        Args:
+
+           model_json: JSON file containing the librascal-formatted potential
+
+        """
+
+        # a socket to the communication library is created or linked
+        super(FFrascal, self).__init__(latency, name, pars, dopbc, threaded=threaded)
+
+        # --- Load librascal ---
+        try:
+            from rascal.models.IP_ipi_interface import IPICalculator            
+        except ImportError:
+            raise ValueError(
+                "ERROR: librascal package not located."
+            )
+
+        # A bit weird to use keyword argument for a required argument, but this
+        # is also done in the code above.
+        if model_json is None:
+            raise ValueError("Must provide a model file.")
+
+        self.model_json = model_json
+        self.structure_template = structure_template
+
+        try:
+            self.model = IPICalculator(model_json, structure_template)            
+        except ValueError:
+            raise ValueError(
+                "ERROR: Reading librascal model " + self.model_json + " file failed."
+            )
+
+    def poll(self):
+        """ Polls the forcefield checking if there are requests that should
+        be answered, and if necessary evaluates the associated forces and energy. """
+
+        # we have to be thread-safe, as in multi-system mode this might get called by many threads at once
+        with self._threadlock:
+            for r in self.requests:
+                if r["status"] == "Queued":
+                    r["status"] = "Running"
+                    self.evaluate(r)
+
+    def evaluate(self, r):
+        """ Evaluate the energy and forces. """
+
+        energy, forces, stress = self.model.calculate(r["pos"], r["cell"])
+
+        r["result"] = [
+            energy, forces, stress, "",
         ]
         r["status"] = "Done"
         r["t_finished"] = time.time()
