@@ -1182,7 +1182,7 @@ class BaroMTK(Barostat):
                 hmask[1][1] = 1.0
                 iso_array.append(0)
                 iso_array.append(1)
-                
+
             elif self.direction == "xz":
                 hmask[0][0] = 1.0
                 hmask[2][2] = 1.0
@@ -1323,11 +1323,10 @@ class BaroMTK(Barostat):
         Makes the matrix isotropic along two directions.
         """
         tr = np.trace(p)
-        r = np.zeros((3,3))
+        r = np.zeros((3, 3))
         r[a] = tr / 2
         r[b] = tr / 2
         return r
-        
 
     def pstep(self, level=0):
         """Propagates the momenta for half a time step."""

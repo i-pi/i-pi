@@ -97,7 +97,11 @@ def find_examples(parent, excluded_file="excluded_test.txt", examples=[]):
 
 
 def modify_xml_2_dummy_test(
-    input_name, output_name, nid, driver_info, nsteps=2,
+    input_name,
+    output_name,
+    nid,
+    driver_info,
+    nsteps=2,
 ):
     """ Modify xml to run dummy tests """
     try:
