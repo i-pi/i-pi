@@ -153,6 +153,10 @@ class InputSimulation(Input):
             iforcefields.InputFFsGDML,
             {"help": iforcefields.InputFFsGDML.default_help},
         ),
+        "ffrascal": (
+            iforcefields.InputFFrascal,
+            {"help": iforcefields.InputFFrascal.default_help},
+        ),
     }
 
     default_help = "This is the top level class that deals with the running of the simulation, including holding the simulation specific properties such as the time step and outputting the data."
@@ -222,6 +226,10 @@ class InputSimulation(Input):
                     _iobj = iforcefields.InputFFsGDML()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("ffsgdml", _iobj)
+                elif isinstance(_obj, eforcefields.FFrascal):
+                    _iobj = iforcefields.InputFFrascal()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffrascal", _iobj)
                 elif isinstance(_obj, System):
                     _iobj = InputSystem()
                     _iobj.store(_obj)
@@ -264,6 +272,7 @@ class InputSimulation(Input):
                 or k == "ffplumed"
                 or k == "ffsgdml"
                 or k == "ffyaff"
+                or k == "ffrascal"
             ):
                 info(" # @simulation: Fetching" + k, verbosity.low)
                 fflist.append(v.fetch())

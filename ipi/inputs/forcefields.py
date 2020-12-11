@@ -630,7 +630,7 @@ class InputFFrascal(InputForceField):
             {
                 "dtype": str,
                 "default": None,
-                "help": "Filename of a structure to be read by librascal defining number and kinds of atoms.",
+                "help": "ASE-compatible structure file to be read by librascal to infer number and kinds of atoms.",
             },
         ),
     }
@@ -651,7 +651,7 @@ class InputFFrascal(InputForceField):
     def fetch(self):
         super(InputFFrascal, self).fetch()
 
-        return FFsrascal(
+        return FFrascal(
             model_json=self.model_json.fetch(),
             structure_template=self.structure_template.fetch(),
             name=self.name.fetch(),
