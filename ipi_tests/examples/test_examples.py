@@ -54,7 +54,7 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "-f", "--folder", type=str, nargs='+', help="Folder(s) of the example to test"
+        "-f", "--folder", type=str, nargs="+", help="Folder(s) of the example to test"
     )
     parser.add_argument(
         "--test_all", action="store_true", help="Folder of the example to test"
