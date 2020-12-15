@@ -1121,7 +1121,7 @@ class HessianOptimizer(DummyOptimizer):
 
         elif update == "recompute":
             active_hessian = get_hessian(
-                self.gm, new_x, self.beads.natoms, self.beads.nbeads, self.fixatoms
+                self.fm.gm, new_x, self.beads.natoms, self.beads.nbeads, self.fixatoms
             )
 
         self.optarrays["hessian"][:] = self.fm.fix.get_full_vector(active_hessian, 2)
