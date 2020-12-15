@@ -79,18 +79,14 @@ class Replay(Motion):
                         myatoms.q *= unit_to_internal("length", self.intraj.units, 1.0)
                         mycell.h *= unit_to_internal("length", self.intraj.units, 1.0)
                         b.q[:] = myatoms.q
-                    self.cell.h[:] = mycell.h
                 elif self.intraj.mode == "pdb":
                     for b in self.beads:
                         myatoms, mycell = read_file("pdb", self.rfile)
                         myatoms.q *= unit_to_internal("length", self.intraj.units, 1.0)
                         mycell.h *= unit_to_internal("length", self.intraj.units, 1.0)
                         b.q[:] = myatoms.q
-                    self.cell.h[:] = mycell.h
                 elif self.intraj.mode == "chk" or self.intraj.mode == "checkpoint":
-
                     # TODO: Adapt the new `Simulation.load_from_xml`?
-
                     # reads configuration from a checkpoint file
                     xmlchk = xml_parse_file(self.rfile)  # Parses the file.
 
@@ -100,9 +96,11 @@ class Replay(Motion):
                     simchk.parse(xmlchk.fields[0][1])
                     mycell = simchk.cell.fetch()
                     mybeads = simchk.beads.fetch()
-                    self.cell.h[:] = mycell.h
                     self.beads.q[:] = mybeads.q
                     softexit.trigger(" # Read single checkpoint")
+                # do not assign cell if it contains an invalid value (typically missing cell in the input)
+                if mycell.V > 0:
+                    self.cell.h[:] = mycell.h
             except EOFError:
                 softexit.trigger(" # Finished reading re-run trajectory")
             if (step is None) or (self.rstep > step):
