@@ -35,7 +35,6 @@ __all__ = ["InstantonMotion"]
 
 
 # ALBERTO:
-# -test friction file, establish format,create spline function
 # -test old instantons
 # -code equations,including spline of g function
 # -resolve hessian problem
@@ -137,7 +136,6 @@ class InstantonMotion(Motion):
         self.options["discretization"] = discretization
         self.options["friction"] = friction
         self.options["z_friction"] = z_friction
-
         self.optarrays["big_step"] = biggest_step
         self.optarrays["energy_shift"] = energy_shift
         self.optarrays["delta"] = delta
@@ -704,7 +702,7 @@ class Mapper(object):
         self.esum = esum
 
     def initialize(self, q, forces):
-        # ALBERTO get friction from forces object
+        print('\n\n ALBERTO get friction from forces object\n\n')
         eta = np.zeros((q.shape[0], q.shape[1] ** 2))
 
         self.gm.save(forces.pots, -forces.f, eta)
@@ -749,12 +747,14 @@ class Mapper(object):
 
     def set_z_friction(self, z_friction):
         """Sets the scaling factors corresponding to frequency dependence of the friction """
-
-        print("ALBERTO")
-        print("Here we have to specify format somewhere and perform spline")
-        print("Also add zeros with a warning msg")
-        # self.z_friction[:] = z_fricition
-        self.z_friction = np.zeros(self.beads.nbeads).reshape(-1, 1)
+        try:
+                from scipy.interpolate import interp1d
+        except ImportError:
+                softexit.trigger("Scipy required to use friction in a instanton calculation")
+ 
+        freq = units.unit_to_internal("frequency", "inversecm", z_friction[:,0])
+        spline = interp1d(freq,z_friction[:,1],kind="cubic")
+        self.z_friction = spline(self.nm.get_omegak())
 
     def __call__(self, x, mode="all", apply_fix=True, new_disc=True, ret=True):
 
@@ -864,6 +864,11 @@ class DummyOptimizer(dobject):
         self.options["discretization"] = geop.options["discretization"]
         self.options["friction"] = geop.options["friction"]
 
+        if self.options["friction"]:
+            if len(geop.options["z_friction"]) ==0:
+                 geop.options["z_friction"] = np.ones((11,2))*3 #ALBERTO
+            self.options["z_friction"] = geop.options["z_friction"]
+
         self.options["tolerances"] = geop.options["tolerances"]
         self.optarrays["big_step"] = geop.optarrays["big_step"]
         self.optarrays["old_x"] = geop.optarrays["old_x"]
@@ -963,7 +968,7 @@ class DummyOptimizer(dobject):
                 self.optarrays["energy_shift"],
                 self.output_maker,
             )
-            if self.options["hessian_final"] != "true":
+            if not self.options["hessian_final"]:
                 info("We are not going to compute the final hessian.", verbosity.low)
                 info(
                     "Warning, The current hessian is not the real hessian is only an approximation .",
@@ -1095,10 +1100,7 @@ class HessianOptimizer(DummyOptimizer):
                     (self.beads.natoms * 3, self.beads.q.size), float
                 )
 
-            elif (
-                geop.optarrays["hessian"].size == 0
-                and geop.options["hessian_init"] == "true"
-            ):
+            elif geop.optarrays["hessian"].size == 0 and geop.options["hessian_init"]:
                 info(
                     " Initial hessian is not provided. We are going to compute it.",
                     verbosity.low,
@@ -1137,7 +1139,7 @@ class HessianOptimizer(DummyOptimizer):
                 if ((self.beads.q - self.beads.q[0]) == 0).all():
 
                     self.initial_geo()
-                    self.options["hessian_init"] = "true"
+                    self.options["hessian_init"] = True
 
                 else:
 
@@ -1156,7 +1158,7 @@ class HessianOptimizer(DummyOptimizer):
         # self.mapper.sm(self.beads.q, ret=False)  # Init instanton mapper
         self.mapper.initialize(self.beads.q, self.forces)
 
-        if self.options["hessian_init"] == "true":
+        if self.options["hessian_init"]:
             self.optarrays["hessian"][:] = get_hessian(
                 self.mapper.gm,
                 self.beads.q.copy(),
@@ -1507,7 +1509,7 @@ class LBFGSOptimizer(DummyOptimizer):
                 (self.beads.natoms * 3, self.beads.q.size)
             )
 
-        if geop.options["hessian_final"] == "true":
+        if geop.options["hessian_final"]:
             self.options["hessian_asr"] = geop.options["hessian_asr"]
             if geop.optarrays["hessian"].size == 0:
                 geop.optarrays["hessian"] = np.zeros(

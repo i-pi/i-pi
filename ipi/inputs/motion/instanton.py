@@ -153,7 +153,7 @@ class InputInst(InputDictionary):
             {
                 "dtype": float,
                 "default": input_default(factory=np.ones, args=(0,)),
-                "help": "Normalized frequency dependence of the friction tensor ",
+                "help": "Normalized frequency dependence of the friction tensor (z). A two column data is expected. First column: omega (cm^-1). Second column: z(omega). ",
             },
         ),
         "alt_out": (
@@ -193,9 +193,7 @@ class InputInst(InputDictionary):
         "hessian_init": (
             InputValue,
             {
-                "dtype": str,
-                "default": "false",
-                "options": ["true", "false"],
+                "dtype": bool, "default": False,
                 "help": "How to initialize the hessian if it is not fully provided.",
             },
         ),
@@ -297,9 +295,8 @@ class InputInst(InputDictionary):
         "hessian_final": (
             InputValue,
             {
-                "dtype": str,
-                "default": "false",
-                "options": ["false", "true"],
+                "dtype": bool,
+                "default": False,
                 "help": "Decide if we are going to compute the final big-hessian by finite difference.",
             },
         ),
@@ -330,8 +327,9 @@ class InputInst(InputDictionary):
         self.max_ms.store(options["max_ms"])
         self.discretization.store(options["discretization"])
         self.friction.store(options["friction"])
+        print('inside store',options["friction"])
         if options["friction"]:
-            self.friction.store(options["z_friction"])
+            self.z_friction.store(options["z_friction"])
         self.alt_out.store(options["save"])
         self.prefix.store(options["prefix"])
         self.delta.store(optarrays["delta"])
