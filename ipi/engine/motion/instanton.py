@@ -37,7 +37,7 @@ __all__ = ["InstantonMotion"]
 # ALBERTO:
 # -test old instantons
 # -code equations,including spline of g function
-# -resolve hessian problem
+# -resolve hessian problem, needed to code?
 
 
 class InstantonMotion(Motion):
@@ -702,7 +702,7 @@ class Mapper(object):
         self.esum = esum
 
     def initialize(self, q, forces):
-        print('\n\n ALBERTO get friction from forces object\n\n')
+        print("\n\n ALBERTO get friction from forces object\n\n")
         eta = np.zeros((q.shape[0], q.shape[1] ** 2))
 
         self.gm.save(forces.pots, -forces.f, eta)
@@ -748,12 +748,14 @@ class Mapper(object):
     def set_z_friction(self, z_friction):
         """Sets the scaling factors corresponding to frequency dependence of the friction """
         try:
-                from scipy.interpolate import interp1d
+            from scipy.interpolate import interp1d
         except ImportError:
-                softexit.trigger("Scipy required to use friction in a instanton calculation")
- 
-        freq = units.unit_to_internal("frequency", "inversecm", z_friction[:,0])
-        spline = interp1d(freq,z_friction[:,1],kind="cubic")
+            softexit.trigger(
+                "Scipy required to use friction in a instanton calculation"
+            )
+
+        freq = units.unit_to_internal("frequency", "inversecm", z_friction[:, 0])
+        spline = interp1d(freq, z_friction[:, 1], kind="cubic")
         self.z_friction = spline(self.nm.get_omegak())
 
     def __call__(self, x, mode="all", apply_fix=True, new_disc=True, ret=True):
@@ -865,8 +867,8 @@ class DummyOptimizer(dobject):
         self.options["friction"] = geop.options["friction"]
 
         if self.options["friction"]:
-            if len(geop.options["z_friction"]) ==0:
-                 geop.options["z_friction"] = np.ones((11,2))*3 #ALBERTO
+            if len(geop.options["z_friction"]) == 0:
+                geop.options["z_friction"] = np.ones((11, 2)) * 3  # ALBERTO
             self.options["z_friction"] = geop.options["z_friction"]
 
         self.options["tolerances"] = geop.options["tolerances"]
