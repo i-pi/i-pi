@@ -170,7 +170,7 @@ class InstantonMotion(Motion):
             if self.options["opt"] == "nichols":
                 self.optimizer = NicholsOptimizer()
             elif self.options["opt"] == "NR":
-                self.optimizer = NROptsmizer()
+                self.optimizer = NROptimizer()
             else:
                 self.optimizer = LanczosOptimizer()
 
@@ -417,11 +417,12 @@ class PesMapper(object):
         # self.eta
 
         # WRITE FORMULAS HERE ALBERTO
-
+        e = 0
+        g = 0
         return e, g
 
     def __call__(self, x, new_disc=True):
-        """computes energy and gradient for optimization step"""
+        """ Computes energy and gradient for optimization step"""
         self.fcount += 1
         full_q = x.copy()
         full_mspath = ms_pathway(full_q, self.dbeads.m3)
@@ -487,7 +488,7 @@ class PesMapper(object):
         if self.friction:
             # ALBERTO: The following has to be joined to the json implementation for the
             # communication of the extras strings
-            red_eta = np.zeros(nbeads, (self.dbeads.natoms * 3) ** 2)
+            red_eta = np.zeros(self.dbeads.nbeads, (self.dbeads.natoms * 3) ** 2)
 
             # Interpolate if necessary to get full pot and forces
             if self.spline:

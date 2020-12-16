@@ -146,7 +146,7 @@ class InputInst(InputDictionary):
         ),
         "friction": (
             InputValue,
-            {"dtype": bool, "default": False, "help": "Activates Friction",},
+            {"dtype": bool, "default": False, "help": "Activates Friction."},
         ),
         "z_friction": (
             InputArray,
