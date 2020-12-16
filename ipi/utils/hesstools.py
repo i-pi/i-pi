@@ -175,7 +175,7 @@ def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):
         return d, w
 
 
-def get_hessian(gm, x0, natoms, nbeads=1, fixatoms=[], d=0.001):
+def get_hessian(gm, x0, natoms, nbeads=1, fixatoms=[], d=0.001, new_disc=False):
     """Compute the physical hessian given a function to evaluate energy and forces (gm).
        The intermediate steps are written as a temporary files so the full hessian calculations is only ONE step.
 
@@ -189,10 +189,12 @@ def get_hessian(gm, x0, natoms, nbeads=1, fixatoms=[], d=0.001):
        OUT    h       = physical hessian ( (natoms-len(fixatoms) )*3 , nbeads*( natoms-len(fixatoms) )*3)
     """
 
-    # TODO What about the case you have numerical gradients?
-
     info(" @get_hessian: Computing hessian", verbosity.low)
-    ii = (natoms - len(fixatoms)) * 3
+    fixdofs = list()
+    for i in fixatoms:
+        fixdofs.extend([3 * i, 3 * i + 1, 3 * i + 2])
+
+    ii = natoms * 3
     if x0.size != natoms * 3 * nbeads:
         raise ValueError(
             "The position vector is not consistent with the number of atoms/beads."
@@ -221,22 +223,26 @@ def get_hessian(gm, x0, natoms, nbeads=1, fixatoms=[], d=0.001):
 
     # Start calculation:
     for j in range(i0 + 1, ii):
-        info(
-            " @get_hessian: Computing hessian: %d of %d" % ((j + 1), ii), verbosity.low
-        )
-        x = x0.copy()
+        if j in fixdofs:
+            continue
+        else:
+            info(
+                " @get_hessian: Computing hessian: %d of %d" % ((j + 1), ii),
+                verbosity.low,
+            )
+            x = x0.copy()
 
-        x[:, j] = x0[:, j] + d
-        e, f1 = gm(x, new_disc=False)
-        x[:, j] = x0[:, j] - d
-        e, f2 = gm(x, new_disc=False)
-        g = (f1 - f2) / (2 * d)
+            x[:, j] = x0[:, j] + d
+            e, f1 = gm(x, new_disc)
+            x[:, j] = x0[:, j] - d
+            e, f2 = gm(x, new_disc)
+            g = (f1 - f2) / (2 * d)
 
-        h[j, :] = g.flatten()
+            h[j, :] = g.flatten()
 
-        f = open("hessian_" + str(j) + ".tmp", "w")
-        np.savetxt(f, h)
-        f.close()
+            f = open("hessian_" + str(j) + ".tmp", "w")
+            np.savetxt(f, h)
+            f.close()
 
     u, g = gm(x0)  # Keep the mapper updated
 

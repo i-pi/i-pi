@@ -144,6 +144,18 @@ class InputInst(InputDictionary):
                 "help": "Allows to specified non uniform time discretization as proposed in J. Chem. Phys. 134, 184107 (2011)",
             },
         ),
+        "friction": (
+            InputValue,
+            {"dtype": bool, "default": False, "help": "Activates Friction",},
+        ),
+        "z_friction": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.ones, args=(0,)),
+                "help": "Normalized frequency dependence of the friction tensor ",
+            },
+        ),
         "alt_out": (
             InputValue,
             {
@@ -317,6 +329,9 @@ class InputInst(InputDictionary):
         self.max_e.store(options["max_e"])
         self.max_ms.store(options["max_ms"])
         self.discretization.store(options["discretization"])
+        self.friction.store(options["friction"])
+        if options["friction"]:
+            self.friction.store(options["z_friction"])
         self.alt_out.store(options["save"])
         self.prefix.store(options["prefix"])
         self.delta.store(optarrays["delta"])

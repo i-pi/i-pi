@@ -8,14 +8,16 @@ import glob
 import copy
 
 
-def banded_hessian(h, im, masses=True, shift=0.001):
+def banded_hessian(h, sm, masses=True, shift=0.001):
     """Given Hessian in the reduced format (h), construct
     the upper band hessian including the RP terms.
     If masses is True returns hessian otherwise it returns dynmat
     shift is value that is added to the diagonal to avoid numerical problems with close to 0 frequencies"""
-    nbeads = im.dbeads.nbeads
-    natoms = im.dbeads.natoms
-    coef = im.coef  # new_disc
+    nbeads = sm.fix.fixbeads.nbeads
+    natoms = sm.fix.fixbeads.natoms
+    coef = sm.coef  # new_disc
+    m3 = sm.fix.fixbeads.m3
+    omega2 = sm.omega2
 
     ii = natoms * 3 * nbeads
     ndiag = natoms * 3 + 1  # only upper diagonal form
@@ -36,17 +38,17 @@ def banded_hessian(h, im, masses=True, shift=0.001):
     if nbeads > 1:
         # Diagonal
         if masses:
-            d_corner = im.dbeads.m3[0] * im.omega2
+            d_corner = m3[0] * omega2
         else:
-            d_corner = np.ones(im.dbeads.m3[0].shape) * im.omega2
+            d_corner = np.ones(m3[0].shape) * omega2
 
-        d_0 = np.array([[d_corner * 2]]).repeat(im.dbeads.nbeads - 2, axis=0).flatten()
+        d_0 = np.array([[d_corner * 2]]).repeat(nbeads - 2, axis=0).flatten()
         diag_sp = np.concatenate((d_corner, d_0, d_corner))
         href[-1, :] += diag_sp
 
         # Non-Diagonal
         d_out = -d_corner
-        ndiag_sp = np.array([[d_out]]).repeat(im.dbeads.nbeads - 1, axis=0).flatten()
+        ndiag_sp = np.array([[d_out]]).repeat(nbeads - 1, axis=0).flatten()
         href[0, :] = np.concatenate((np.zeros(natoms * 3), ndiag_sp))
 
     # Add safety shift value
@@ -68,15 +70,15 @@ def banded_hessian(h, im, masses=True, shift=0.001):
     if nbeads > 1:
         # Diagonal
         if masses:
-            d_corner = im.dbeads.m3[0] * im.omega2
+            d_corner = m3[0] * omega2
         else:
-            d_corner = np.ones(im.dbeads.m3[0].shape) * im.omega2
+            d_corner = np.ones(m3[0].shape) * omega2
 
         d_init = d_corner / coef[1]
         d_fin = d_corner / coef[-2]
 
         d_mid = d_corner * (1.0 / coef[1] + 1.0 / coef[2])
-        for i in range(2, im.dbeads.nbeads - 1):
+        for i in range(2, nbeads - 1):
             d_mid = np.concatenate(
                 (d_mid, d_corner * (1.0 / coef[i] + 1.0 / coef[i + 1]))
             )
@@ -86,7 +88,7 @@ def banded_hessian(h, im, masses=True, shift=0.001):
 
         # Non-Diagonal
         d_mid = -d_corner * (1.0 / coef[1])
-        for i in range(2, im.dbeads.nbeads):
+        for i in range(2, nbeads):
             d_mid = np.concatenate((d_mid, -d_corner * (1.0 / coef[i])))
         hnew[0, :] = np.concatenate((np.zeros(natoms * 3), d_mid))
 

@@ -34,6 +34,13 @@ from ipi.engine.beads import Beads
 __all__ = ["InstantonMotion"]
 
 
+# ALBERTO:
+# -test friction file, establish format,create spline function
+# -test old instantons
+# -code equations,including spline of g function
+# -resolve hessian problem
+
+
 class InstantonMotion(Motion):
     """Instanton motion class.
 
@@ -102,6 +109,8 @@ class InstantonMotion(Motion):
         old_direction=np.zeros(0, float),
         hessian_final="False",
         energy_shift=np.zeros(0, float),
+        friction=False,
+        z_friction=np.zeros(0, float),
     ):
         """Initialises InstantonMotion.
         """
@@ -126,6 +135,9 @@ class InstantonMotion(Motion):
         self.options["max_e"] = max_e
         self.options["max_ms"] = max_ms
         self.options["discretization"] = discretization
+        self.options["friction"] = friction
+        self.options["z_friction"] = z_friction
+
         self.optarrays["big_step"] = biggest_step
         self.optarrays["energy_shift"] = energy_shift
         self.optarrays["delta"] = delta
@@ -158,7 +170,7 @@ class InstantonMotion(Motion):
             if self.options["opt"] == "nichols":
                 self.optimizer = NicholsOptimizer()
             elif self.options["opt"] == "NR":
-                self.optimizer = NROptimizer()
+                self.optimizer = NROptsmizer()
             else:
                 self.optimizer = LanczosOptimizer()
 
@@ -205,10 +217,14 @@ class InstantonMotion(Motion):
 class Fix(object):
     """Class that applies a fixatoms type constrain"""
 
-    def __init__(self, fixatoms, beads, nbeads=1):
+    def __init__(self, fixatoms, beads, nbeads=None):
 
         self.natoms = beads.natoms
-        self.nbeads = beads.nbeads
+        if nbeads is None:
+            self.nbeads = beads.nbeads
+        else:
+            self.nbeads = nbeads
+
         self.fixatoms = fixatoms
 
         self.mask0 = np.delete(np.arange(self.natoms), self.fixatoms)
@@ -254,7 +270,7 @@ class Fix(object):
                 t = -1
             elif key == "old_x" or key == "old_f" or key == "d":
                 t = 1
-            elif key == "hessian":
+            elif key == "hessian" or key == "eta":
                 t = 2
             elif key == "qlist" or key == "glist":
                 t = 3
@@ -342,9 +358,9 @@ class Fix(object):
             raise ValueError("@apply_fix_atoms: type number is not valid")
 
 
-class GradientMapper(object):
+class PesMapper(object):
 
-    """Creation of the multi-dimensional function to compute the physical potential and forces
+    """Creation of the multi-dimennsional function to compute the physical potential and forces
 
     Attributes:
         dbeads:  copy of the bead object
@@ -356,13 +372,19 @@ class GradientMapper(object):
         self.fcount = 0
         pass
 
-    def bind(self, fm, max_ms, max_e):
+    def bind(self, mapper):
 
-        self.dbeads = fm.beads.copy()
-        self.dcell = fm.cell.copy()
-        self.dforces = fm.forces.copy(self.dbeads, self.dcell)
-        self.fix = fm.fix
-        self.coef = fm.coef
+        self.dbeads = mapper.beads.copy()
+        self.dcell = mapper.cell.copy()
+        self.dforces = mapper.forces.copy(self.dbeads, self.dcell)
+        self.fix = mapper.fix
+        self.coef = mapper.coef
+        self.friction = mapper.friction
+        if self.friction:
+            self.z_friction = mapper.z_friction
+
+        max_ms = mapper.options["max_ms"]
+        max_e = mapper.options["max_e"]
 
         if max_ms > 0 or max_e > 0:
             self.spline = True
@@ -382,9 +404,21 @@ class GradientMapper(object):
         """Set the positions """
         self.dbeads.q = x
 
-    def save(self, e, g):
+    def save(self, e, g, eta=None):
+        """ Stores potential and forces in this class for convenience """
         self.pot = e
         self.f = -g
+        self.eta = eta
+
+    def compute_friction_terms():
+        """ Computes friction component of the energy and gradient """
+
+        # self.z_friction
+        # self.eta
+
+        # WRITE FORMULAS HERE ALBERTO
+
+        return e, g
 
     def __call__(self, x, new_disc=True):
         """computes energy and gradient for optimization step"""
@@ -429,11 +463,10 @@ class GradientMapper(object):
         reduced_cell = self.dcell.copy()
         reduced_forces = self.dforces.copy(reduced_b, reduced_cell)
 
-        # Evaluate forces
+        # Evaluate energy and forces (and maybe friction)
         rpots = reduced_forces.pots  # reduced energy
         rforces = reduced_forces.f  # reduced gradient
 
-        # Interpolate if necessary to get full pot and forces
         if self.spline:
             red_mspath = full_mspath[indexes]
             spline = interp1d(red_mspath, rpots.T, kind="cubic")
@@ -448,55 +481,69 @@ class GradientMapper(object):
         self.dbeads.q[:] = x[:]
         self.dforces.transfer_forces_manual([full_q], [full_pot], [full_forces])
 
-        # e = self.dforces.pot   # Energy
-        # g = -self.dforces.f    # Gradient
         e = np.sum(full_pot)  # Energy
         g = -full_forces  # Gradient
 
-        self.save(full_pot, g)
+        if self.friction:
+            # ALBERTO: The following has to be joined to the json implementation for the
+            # communication of the extras strings
+            red_eta = np.zeros(nbeads, (self.dbeads.natoms * 3) ** 2)
 
-        # if not full:
-        #    g = self.fix.get_active_vector(g, 1)
+            # Interpolate if necessary to get full pot and forces
+            if self.spline:
+                red_mspath = full_mspath[indexes]
+                spline = interp1d(red_mspath, red_eta.T, kind="cubic")
+                full_eta = spline(full_mspath).T
+            else:
+                full_eta = red_eta
 
-        # Discretization
-        if new_disc:
-            e = e * (self.coef[1:] + self.coef[:-1]) / 2
-            g = g * (self.coef[1:] + self.coef[:-1]) / 2
+        else:
+            full_eta = None
+
+        self.save(full_pot, g, full_eta)
+
+        return self.evaluate()
+
+    def evaluate(self):
+        """ Evaluate the energy and forces including:
+                - non uniform discretization
+                - friction term (if required)
+            """
+        e = self.pot * (self.coef[1:] + self.coef[:-1]) / 2
+        g = -self.f * (self.coef[1:] + self.coef[:-1]) / 2
+
+        if self.friction:
+            e_friction, g_friction = self.compute_friction_terms()
+            e += e_friction
+            g += g_friction
 
         return e, g
 
 
 class SpringMapper(object):
-    """Creation of the multi-dimensional function to compute full or half ring polymer pot
+    """Creation of the multi-dimensional function to compute full or half ring polymer potential
        and forces.
     """
 
     def __init__(self):
-
         pass
 
-    def bind(self, fm):
+    def bind(self, mapper):
 
-        self.temp = fm.temp
-        self.fix = fm.fix
-        self.coef = fm.coef
+        self.temp = mapper.temp
+        self.fix = mapper.fix
+        self.coef = mapper.coef
+        self.dbeads = mapper.beads.copy()
 
-        self.dbeads = fm.beads.copy()
-        # self.dbeads = Beads(
-        #     fm.beads.natoms - len(fm.fixatoms), fm.beads.nbeads
-        # )
-        # self.dbeads.q[:] = self.fix.get_active_vector(fm.beads.copy().q, 1)
-        # self.dbeads.m[:] = self.fix.get_active_vector(fm.beads.copy().m, 0)
-        # self.dbeads.names[:] = self.fix.get_active_vector(fm.beads.copy().names, 0)
-
-        if fm.options["mode"] == "rate":
+        # Set omega2 depending of the case
+        if mapper.options["mode"] == "rate":
             self.omega2 = (
                 self.temp
                 * (2 * self.dbeads.nbeads)
                 * units.Constants.kb
                 / units.Constants.hbar
             ) ** 2
-        elif fm.options["mode"] == "splitting":
+        elif mapper.options["mode"] == "splitting":
             self.omega2 = (
                 self.temp
                 * self.dbeads.nbeads
@@ -504,10 +551,11 @@ class SpringMapper(object):
                 / units.Constants.hbar
             ) ** 2
 
+        # Computes the spring hessian if the optimization modes requires it
         if (
-            fm.options["opt"] == "nichols"
-            or fm.options["opt"] == "NR"
-            or fm.options["opt"] == "lanczos"
+            mapper.options["opt"] == "nichols"
+            or mapper.options["opt"] == "NR"
+            or mapper.options["opt"] == "lanczos"
         ):
             self.h = self.spring_hessian(
                 natoms=self.fix.fixbeads.natoms,
@@ -521,6 +569,66 @@ class SpringMapper(object):
         """ Stores potential and forces in this class for convenience """
         self.pot = e
         self.f = -g
+
+    def __call__(self, x, ret=True, new_disc=True):
+        """Computes spring energy and gradient for instanton optimization step"""
+
+        if new_disc:
+            coef = self.coef
+        elif new_disc == "one":
+            coef = np.ones(self.coef.shape)
+        else:
+            coef = new_disc.reshape(self.coef.shape)
+
+        if x.shape[0] == 1:  # only one bead
+            self.dbeads.q = x
+            e = 0.0
+            g = np.zeros(x.shape[1])
+            self.save(e, g)
+
+        else:
+            self.dbeads.q = x
+            e = 0.00
+            g = np.zeros(self.dbeads.q.shape, float)
+
+            # OLD reference
+            # for i in range(self.dbeads.nbeads - 1):
+            #    dq = self.dbeads.q[i + 1, :] - self.dbeads.q[i, :]
+            #    e += self.omega2 * 0.5 * np.dot(self.dbeads.m3[0] * dq, dq)
+            # for i in range(0, self.dbeads.nbeads - 1):
+            #    g[i, :] += self.dbeads.m3[i, :] * self.omega2 * (self.dbeads.q[i, :] - self.dbeads.q[i + 1, :])
+            # for i in range(1, self.dbeads.nbeads):
+            #    g[i, :] += self.dbeads.m3[i, :] * self.omega2 * (self.dbeads.q[i, :] - self.dbeads.q[i - 1, :])
+
+            # With new discretization
+            for i in range(self.dbeads.nbeads - 1):
+                dq = (self.dbeads.q[i + 1, :] - self.dbeads.q[i, :]) / np.sqrt(
+                    coef[i + 1]
+                )  # coef[0] and coef[-1] do not enter
+                e += self.omega2 * 0.5 * np.dot(self.dbeads.m3[0] * dq, dq)
+            for i in range(0, self.dbeads.nbeads - 1):
+                g[i, :] += (
+                    self.dbeads.m3[i, :]
+                    * self.omega2
+                    * (
+                        self.dbeads.q[i, :] / coef[i + 1]
+                        - self.dbeads.q[i + 1, :] / coef[i + 1]
+                    )
+                )
+            for i in range(1, self.dbeads.nbeads):
+                g[i, :] += (
+                    self.dbeads.m3[i, :]
+                    * self.omega2
+                    * (
+                        self.dbeads.q[i, :] / coef[i]
+                        - self.dbeads.q[i - 1, :] / coef[i]
+                    )
+                )
+
+            self.save(e, g)
+
+        if ret:
+            return e, g
 
     @staticmethod
     def spring_hessian(natoms, nbeads, m3, omega2, mode="half", coef=None):
@@ -583,78 +691,29 @@ class SpringMapper(object):
 
         return h
 
-    def __call__(self, x, ret=True, new_disc=True):
-        """Computes spring energy and gradient for instanton optimization step"""
 
-        # x = self.fix.get_active_vector(x, 1).copy()
-
-        if new_disc:
-            coef = self.coef
-        elif new_disc == "one":
-            coef = np.ones(self.coef.shape)
-        else:
-            coef = new_disc.reshape(self.coef.shape)
-
-        if x.shape[0] == 1:  # only one bead
-            self.dbeads.q = x
-            e = 0.0
-            g = np.zeros(x.shape[1])
-            self.save(e, g)
-
-        else:
-            self.dbeads.q = x
-            e = 0.00
-            g = np.zeros(self.dbeads.q.shape, float)
-
-            # OLD reference
-            # for i in range(self.dbeads.nbeads - 1):
-            #    dq = self.dbeads.q[i + 1, :] - self.dbeads.q[i, :]
-            #    e += self.omega2 * 0.5 * np.dot(self.dbeads.m3[0] * dq, dq)
-            # for i in range(0, self.dbeads.nbeads - 1):
-            #    g[i, :] += self.dbeads.m3[i, :] * self.omega2 * (self.dbeads.q[i, :] - self.dbeads.q[i + 1, :])
-            # for i in range(1, self.dbeads.nbeads):
-            #    g[i, :] += self.dbeads.m3[i, :] * self.omega2 * (self.dbeads.q[i, :] - self.dbeads.q[i - 1, :])
-
-            # With new discretization
-            for i in range(self.dbeads.nbeads - 1):
-                dq = (self.dbeads.q[i + 1, :] - self.dbeads.q[i, :]) / np.sqrt(
-                    coef[i + 1]
-                )  # coef[0] and coef[-1] do not enter
-                e += self.omega2 * 0.5 * np.dot(self.dbeads.m3[0] * dq, dq)
-            for i in range(0, self.dbeads.nbeads - 1):
-                g[i, :] += (
-                    self.dbeads.m3[i, :]
-                    * self.omega2
-                    * (
-                        self.dbeads.q[i, :] / coef[i + 1]
-                        - self.dbeads.q[i + 1, :] / coef[i + 1]
-                    )
-                )
-            for i in range(1, self.dbeads.nbeads):
-                g[i, :] += (
-                    self.dbeads.m3[i, :]
-                    * self.omega2
-                    * (
-                        self.dbeads.q[i, :] / coef[i]
-                        - self.dbeads.q[i - 1, :] / coef[i]
-                    )
-                )
-
-            self.save(e, g)
-
-        if ret:
-            return e, g
-
-
-class FullMapper(object):
+class Mapper(object):
     """Creation of the multi-dimensional function that is the proxy between all the energy and force components and the optimization algorithm.
     It also handles fixatoms  """
 
-    def __init__(self, im, gm, esum=False):
+    def __init__(self, esum=False):
 
-        self.im = im
-        self.gm = gm
+        self.sm = SpringMapper()
+        self.gm = PesMapper()
         self.esum = esum
+
+    def initialize(self, q, forces):
+        # ALBERTO get friction from forces object
+        eta = np.zeros((q.shape[0], q.shape[1] ** 2))
+
+        self.gm.save(forces.pots, -forces.f, eta)
+        e1, g1 = self.gm.evaluate()
+        e2, g2 = self.sm(q)
+
+        g = self.fix.get_active_vector(g1 + g2, 1)
+        e = np.sum(e1) + np.sum(e2)
+
+        self.save(e, g)
 
     def save(self, e, g):
         self.pot = e
@@ -668,29 +727,38 @@ class FullMapper(object):
         self.cell = dumop.cell
         self.nm = dumop.nm
 
-        self.options = dumop.options
         self.fixatoms = dumop.fixatoms
-        self.fix = Fix(self.fixatoms, self.beads, self.beads.nbeads)
+        self.fix = dumop.fix
         self.fixbeads = self.fix.fixbeads
 
+        self.options = dumop.options
         self.coef = np.ones(self.beads.nbeads + 1).reshape(-1, 1)
         self.set_coef(self.options["discretization"])
 
-        self.gm.bind(
-            self, self.options["max_ms"], self.options["max_e"],
-        )
+        self.friction = self.options["friction"]
+        if self.friction:
+            self.set_z_friction(self.options["z_friction"])
 
-        self.im.bind(self)
+        self.sm.bind(self)
+        self.gm.bind(self)
 
     def set_coef(self, coef):
         """ Sets coeficients for non-uniform instanton calculation """
         self.coef[:] = coef.reshape(-1, 1)
 
+    def set_z_friction(self, z_friction):
+        """Sets the scaling factors corresponding to frequency dependence of the friction """
+
+        print("ALBERTO")
+        print("Here we have to specify format somewhere and perform spline")
+        print("Also add zeros with a warning msg")
+        # self.z_friction[:] = z_fricition
+        self.z_friction = np.zeros(self.beads.nbeads).reshape(-1, 1)
+
     def __call__(self, x, mode="all", apply_fix=True, new_disc=True, ret=True):
 
-        print("HEEEEEERE")
         if mode == "all":
-            e1, g1 = self.im(x, new_disc)
+            e1, g1 = self.sm(x, new_disc)
             e2, g2 = self.gm(x, new_disc)
             e = e1 + e2
             g = np.add(g1, g2)
@@ -698,7 +766,7 @@ class FullMapper(object):
         elif mode == "physical":
             e, g = self.gm(x, new_disc)
         elif mode == "springs":
-            e, g = self.im(x, new_disc)
+            e, g = self.sm(x, new_disc)
         else:
             softexit.trigger("Mode not recognized when calling  FullMapper")
 
@@ -719,13 +787,13 @@ class DummyOptimizer(dobject):
     """ Dummy class for all optimization classes """
 
     def __init__(self):
-        """Initializes object for GradientMapper (physical potential, forces and hessian)
+        """Initializes object for PesMapper (physical potential, forces and hessian)
         and SpringMapper ( spring potential,forces and hessian) """
 
         self.options = {}  # Optimization options
         self.optarrays = {}  # Optimization arrays
 
-        self.fm = FullMapper(SpringMapper(), GradientMapper())
+        self.mapper = Mapper()
 
         self.exit = False
         self.init = False
@@ -741,6 +809,8 @@ class DummyOptimizer(dobject):
         self.forces = geop.forces
         self.fixcom = geop.fixcom
         self.fixatoms = geop.fixatoms
+
+        self.fix = Fix(self.fixatoms, self.beads, self.beads.nbeads)
         self.nm = geop.nm
 
         self.output_maker = geop.output_maker
@@ -791,6 +861,8 @@ class DummyOptimizer(dobject):
         self.options["max_ms"] = geop.options["max_ms"]
         self.options["max_e"] = geop.options["max_e"]
         self.options["discretization"] = geop.options["discretization"]
+        self.options["friction"] = geop.options["friction"]
+
         self.options["tolerances"] = geop.options["tolerances"]
         self.optarrays["big_step"] = geop.optarrays["big_step"]
         self.optarrays["old_x"] = geop.optarrays["old_x"]
@@ -807,7 +879,7 @@ class DummyOptimizer(dobject):
 
         # self.fix = Fix(geop.beads.natoms, geop.fixatoms, geop.beads.nbeads)
 
-        self.fm.bind(self)
+        self.mapper.bind(self)
 
     def initial_geo(self):
         """ Generates the initial instanton geometry by stretching the transitions-state geometry along the mode with imaginary frequency """
@@ -842,19 +914,11 @@ class DummyOptimizer(dobject):
         tolerances = self.options["tolerances"]
         d_u = self.forces.pot - self.optarrays["old_u"].sum()
 
-        # fff = (
-        #    self.fm.fix.get_active_vector(self.forces.f, 1)
-        #    * (self.fm.coef[1:] + self.fm.coef[:-1])
-        #    / 2
-        # )
-        # active_force = fff + self.fm.im.f
-
-        active_force = self.fm.f
-        print("HERE")
+        active_force = self.mapper.f
 
         info(
             " @Exit step: Energy difference: {:4.2e}, (condition: {:4.2e})".format(
-                np.absolute(d_u / self.fm.fix.fixbeads.natoms), tolerances["energy"]
+                np.absolute(d_u / self.fix.fixbeads.natoms), tolerances["energy"]
             ),
             verbosity.low,
         )
@@ -872,7 +936,7 @@ class DummyOptimizer(dobject):
         )
 
         if (
-            (np.absolute(d_u / self.fm.im.dbeads.natoms) <= tolerances["energy"])
+            (np.absolute(d_u / self.mapper.sm.dbeads.natoms) <= tolerances["energy"])
             and (
                 (np.amax(np.absolute(active_force)) <= tolerances["force"])
                 or (
@@ -907,16 +971,14 @@ class DummyOptimizer(dobject):
 
             else:
                 info("We are going to compute the final hessian", verbosity.low)
-                active_hessian = get_hessian(
-                    self.fm.gm,
+                self.optarrays["hessian"][:] = get_hessian(
+                    self.mapper.gm,
                     self.beads.q.copy(),
                     self.beads.natoms,
                     self.beads.nbeads,
                     self.fixatoms,
                 )
-                self.optarrays["hessian"][:] = self.fm.fix.get_full_vector(
-                    active_hessian, 2
-                )
+
                 print_instanton_hess(
                     self.options["prefix"] + "_FINAL",
                     step,
@@ -932,19 +994,21 @@ class DummyOptimizer(dobject):
     def update_pos_for(self):
         """ Update positions and forces """
 
-        self.beads.q[:] = self.fm.gm.dbeads.q[:]
+        self.beads.q[:] = self.mapper.gm.dbeads.q[:]
 
         # This forces the update of the forces
-        self.forces.transfer_forces(self.fm.gm.dforces)
+        self.forces.transfer_forces(self.mapper.gm.dforces)
 
     def update_old_pos_for(self):
-        # Update "old" positions and forces
+        """ Update 'old' positions and forces arrays """
+
         self.optarrays["old_x"][:] = self.beads.q
         self.optarrays["old_u"][:] = self.forces.pots
         self.optarrays["old_f"][:] = self.forces.f
 
     def print_geo(self, step):
-        # Print current instanton geometry
+        """ Small interface to call the function that prints thet instanton geometry """
+
         if (
             self.options["save"] > 0 and np.mod(step, self.options["save"]) == 0
         ) or self.exit:
@@ -966,7 +1030,7 @@ class DummyOptimizer(dobject):
         """ General tasks that have to be performed before actual step"""
 
         if self.exit:
-            softexit.trigger("Geometry optimization converged. Exiting simulation")
+            softexit.trigger("Geometry optimzation converged. Exiting simulation")
 
         if not self.init:
             self.initialize(step)
@@ -974,18 +1038,18 @@ class DummyOptimizer(dobject):
         if adaptative:
             softexit.trigger("Adaptative discretization is not fully implemented")
             # new_coef = <implement_here>
-            # self.fm.set_coef(coef)
+            # self.mapper.set_coef(coef)
             raise NotImplementedError
 
         self.qtime = -time.time()
         info("\n Instanton optimization STEP {}".format(step), verbosity.low)
 
-        activearrays = self.fm.fix.get_active_array(self.optarrays)
+        activearrays = self.fix.get_active_array(self.optarrays)
 
         return activearrays
 
     def step(self, step=None):
-        """Dummy simulation time step which does nothing."""
+        """Dummy simulationt step which does nothing."""
         pass
 
     def opt_coef(self, coef):
@@ -995,12 +1059,12 @@ class DummyOptimizer(dobject):
 
         coef = np.absolute(coef)
         s = func(coef)
-        coef *= 2 * self.im.dbeads.nbeads / s
-        # c0   = 2*self.im.dbeads.nbeads - 2*np.sum(coef)
+        coef *= 2 * self.sm.dbeads.nbeads / s
+        # c0   = 2*self.sm.dbeads.nbeads - 2*np.sum(coef)
         # coef = np.insert(coef,0,c0)
 
         fphys = self.gm.dforces.f * ((coef[1:] + coef[:-1]) / 2).reshape(-1, 1)
-        e, gspring = self.im(self.im.dbeads.q)
+        e, gspring = self.sm(self.sm.dbeads.q)
         return np.amax(np.absolute(-gspring + fphys))
 
 
@@ -1086,24 +1150,23 @@ class HessianOptimizer(DummyOptimizer):
                             " the extended phase space (nbeads>1). Please check the inputs\n"
                         )
 
-        # self.fm.gm.save(self.forces.pots, self.forces.f)
+        # Initialize all the mappers
+        # self.mapper.gm.save(self.forces.pots, self.forces.f)
+        # self.mapper.sm(self.beads.q, ret=False)  # Init instanton mapper
+        self.mapper.initialize(self.beads.q, self.forces)
 
         if self.options["hessian_init"] == "true":
-            active_hessian = get_hessian(
-                self.fm.gm,
+            self.optarrays["hessian"][:] = get_hessian(
+                self.mapper.gm,
                 self.beads.q.copy(),
                 self.beads.natoms,
                 self.beads.nbeads,
                 self.fixatoms,
             )
-            self.optarrays["hessian"][:] = self.fm.fix.get_full_vector(
-                active_hessian, 2
-            )
+            # active_hessian = self.mapper.fix.get_active_vector( self.optarrays["hessian"],t=2 )
 
-        self.fm.im(self.beads.q, ret=False)  # Init instanton mapper
-
-        self.fm.gm.save(self.forces.pots, self.forces.f)
-        self.update_old_pos_for()
+            self.update_pos_for()
+            self.update_old_pos_for()
 
         self.init = True
 
@@ -1112,8 +1175,8 @@ class HessianOptimizer(DummyOptimizer):
 
         if update == "powell":
 
-            i = self.fm.im.dbeads.natoms * 3
-            for j in range(self.fm.fixbeads.nbeads):
+            i = self.fix.fixbeads.natoms * 3
+            for j in range(self.fix.fixbeads.nbeads):
                 aux = active_hessian[:, j * i : (j + 1) * i]
                 dg = d_g[j, :]
                 dx = d_x[j, :]
@@ -1121,10 +1184,14 @@ class HessianOptimizer(DummyOptimizer):
 
         elif update == "recompute":
             active_hessian = get_hessian(
-                self.fm.gm, new_x, self.beads.natoms, self.beads.nbeads, self.fixatoms
+                self.mapper.gm,
+                new_x,
+                self.beads.natoms,
+                self.beads.nbeads,
+                self.fixatoms,
             )
 
-        self.optarrays["hessian"][:] = self.fm.fix.get_full_vector(active_hessian, 2)
+        self.optarrays["hessian"][:] = self.fix.get_full_vector(active_hessian, 2)
 
     def print_hess(self, step):
         if (
@@ -1138,16 +1205,18 @@ class HessianOptimizer(DummyOptimizer):
             )
 
     def post_step(self, step, new_x, d_x, activearrays):
-        """ General tasks that have to be performed after the  actual step"""
+        """ General tasks that have to be performed after finding the new step"""
 
         d_x_max = np.amax(np.absolute(d_x))
         info("Current step norm = {}".format(d_x_max), verbosity.medium)
 
         # Get energy and forces(f) for the new position
-        self.fm(new_x, ret=False)
+        self.mapper(new_x, ret=False)
 
         # Update
-        d_g = np.subtract(activearrays["old_f"], self.fm.gm.f)
+        f = self.fix.get_active_vector(self.mapper.gm.f, t=1)
+        d_g = np.subtract(activearrays["old_f"], f)
+
         self.update_hessian(
             self.options["hessian_update"], activearrays["hessian"], new_x, d_x, d_g
         )
@@ -1164,32 +1233,32 @@ class HessianOptimizer(DummyOptimizer):
 
 
 class NicholsOptimizer(HessianOptimizer):
-    """ Class that implements a nichols optimizations. It can find first order saddle points or minimum"""
+    """ Class that implements a nichols optimization. It can find first order saddle points or minimum"""
 
     def step(self, step=None):
-        """ Does one simulation time step."""
+        """ Does one simulation step."""
 
         activearrays = self.pre_step(step)
 
         # First construct complete hessian from reduced
         h0 = red2comp(
             activearrays["hessian"],
-            self.fm.fix.fixbeads.nbeads,
-            self.fm.fix.fixbeads.natoms,
-            self.fm.coef,
+            self.fix.fixbeads.nbeads,
+            self.fix.fixbeads.natoms,
+            self.mapper.coef,
         )
 
         # Add spring terms to the physical hessian
-        h1 = np.add(self.fm.im.h, h0)
+        h1 = np.add(self.mapper.sm.h, h0)
 
         # Get eigenvalues and eigenvector.
         d, w = clean_hessian(
             h1,
-            self.fm.fix.fixbeads.q,
-            self.fm.fix.fixbeads.natoms,
-            self.fm.fix.fixbeads.nbeads,
-            self.fm.fix.fixbeads.m,
-            self.fm.fix.fixbeads.m3,
+            self.fix.fixbeads.q,
+            self.fix.fixbeads.natoms,
+            self.fix.fixbeads.nbeads,
+            self.fix.fixbeads.m,
+            self.fix.fixbeads.m3,
             self.options["hessian_asr"],
         )
 
@@ -1221,17 +1290,26 @@ class NicholsOptimizer(HessianOptimizer):
 
         # Find new movement direction
         if self.options["mode"] == "rate":
-            f = activearrays["old_f"] * (self.fm.coef[1:] + self.fm.coef[:-1]) / 2
+            f = (
+                activearrays["old_f"]
+                * (self.mapper.coef[1:] + self.mapper.coef[:-1])
+                / 2
+            )
             d_x = nichols(
-                f, self.fm.im.f, d, w, self.fm.fixbeads.m3, activearrays["big_step"]
+                f,
+                self.mapper.sm.f,
+                d,
+                w,
+                self.fix.fixbeads.m3,
+                activearrays["big_step"],
             )
         elif self.options["mode"] == "splitting":
             d_x = nichols(
                 activearrays["old_f"],
-                self.im.f,
+                self.sm.f,
                 d,
                 w,
-                self.im.dbeads.m3,
+                self.sm.dbeads.m3,
                 activearrays["big_step"],
                 mode=0,
             )
@@ -1245,34 +1323,34 @@ class NicholsOptimizer(HessianOptimizer):
             d_x *= activearrays["big_step"] / np.amax(np.absolute(d_x))
 
         # Get the new full-position
-        d_x_full = self.fm.fix.get_full_vector(d_x, t=1)
+        d_x_full = self.fix.get_full_vector(d_x, t=1)
         new_x = self.optarrays["old_x"].copy() + d_x_full
 
         self.post_step(step, new_x, d_x, activearrays)
 
 
 class NROptimizer(HessianOptimizer):
-    """ Class that implements a Newton-Raphson optimizations. It can find first order saddle points or minima"""
+    """ Class that implements a Newton-Raphson optsmization. It can find first order saddle points or minimum"""
 
     def step(self, step=None):
-        """ Does one simulation time step."""
+        """ Does one simulaion step."""
         activearrays = self.pre_step(step)
 
         dyn_mat = get_dynmat(
-            activearrays["hessian"], self.im.dbeads.m3, self.im.dbeads.nbeads
+            activearrays["hessian"], self.sm.dbeads.m3, self.sm.dbeads.nbeads
         )
         h_up_band = banded_hessian(
-            dyn_mat, self.im, masses=False, shift=0.0000001
+            dyn_mat, self.sm, masses=False, shift=0.0000001
         )  # create upper band matrix
 
-        fff = activearrays["old_f"] * (self.fm.coef[1:] + self.fm.coef[:-1]) / 2
-        f = (fff + self.im.f).reshape(
-            self.im.dbeads.natoms * 3 * self.im.dbeads.nbeads, 1
+        fff = activearrays["old_f"] * (self.mapper.coef[1:] + self.mapper.coef[:-1]) / 2
+        f = (fff + self.sm.f).reshape(
+            self.sm.dbeads.natoms * 3 * self.sm.dbeads.nbeads, 1
         )
-        f = np.multiply(f, self.im.dbeads.m3.reshape(f.shape) ** -0.5)
+        f = np.multiply(f, self.sm.dbeads.m3.reshape(f.shape) ** -0.5)
 
-        d_x = invmul_banded(h_up_band, f).reshape(self.im.dbeads.q.shape)
-        d_x = np.multiply(d_x, self.im.dbeads.m3 ** -0.5)
+        d_x = invmul_banded(h_up_band, f).reshape(self.sm.dbeads.q.shape)
+        d_x = np.multiply(d_x, self.sm.dbeads.m3 ** -0.5)
 
         # Rescale step if necessary
         if np.amax(np.absolute(d_x)) > activearrays["big_step"]:
@@ -1294,13 +1372,12 @@ class LanczosOptimizer(HessianOptimizer):
         the full (3*natoms*nbeads)^2 matrix """
 
     def step(self, step=None):
-        """ Does one simulation time step."""
+        """ Does one simulation step."""
 
         activearrays = self.pre_step(step)
 
-        fff = activearrays["old_f"] * (self.fm.coef[1:] + self.fm.coef[:-1]) / 2
-        f = (fff + self.im.f).reshape(
-            self.im.dbeads.natoms * 3 * self.im.dbeads.nbeads, 1
+        f = self.mapper.f.reshape(
+            self.fix.fixbeads.natoms * 3 * self.fix.fixbeads.nbeads, 1
         )
 
         banded = False
@@ -1309,32 +1386,33 @@ class LanczosOptimizer(HessianOptimizer):
             # BANDED Version
             # MASS-scaled
             dyn_mat = get_dynmat(
-                activearrays["hessian"], self.im.dbeads.m3, self.im.dbeads.nbeads
+                activearrays["hessian"], self.fix.fixbeads.m3, self.fix.fixbeads.nbeads
             )
+
             h_up_band = banded_hessian(
-                dyn_mat, self.im, masses=False, shift=0.000000001
+                dyn_mat, self.mapper.sm, masses=False, shift=0.000000001
             )  # create upper band matrix
-            f = np.multiply(f, self.im.dbeads.m3.reshape(f.shape) ** -0.5)
+            f = np.multiply(f, self.fix.fixbeads.m3.reshape(f.shape) ** -0.5)
             # CARTESIAN
-            # h_up_band = banded_hessian(activearrays["hessian"], self.im,masses=True)  # create upper band matrix
+            # h_up_band = banded_hessian(activearrays["hessian"], self.sm.masses=True)  # create upper band matrix
 
             d = diag_banded(h_up_band)
         else:
-            # FULL dimensions version
+            # FULL dimensional version
             h_0 = red2comp(
                 activearrays["hessian"],
-                self.im.dbeads.nbeads,
-                self.im.dbeads.natoms,
-                self.fm.coef,
+                self.sm.dbeads.nbeads,
+                self.sm.dbeads.natoms,
+                self.mapper.coef,
             )
-            h_test = np.add(self.im.h, h_0)  # add spring terms to the physical hessian
+            h_test = np.add(self.sm.h, h_0)  # add spring terms to the physical hessian
             d, w = clean_hessian(
                 h_test,
-                self.im.dbeads.q,
-                self.im.dbeads.natoms,
-                self.im.dbeads.nbeads,
-                self.im.dbeads.m,
-                self.im.dbeads.m3,
+                self.sm.dbeads.q,
+                self.sm.dbeads.natoms,
+                self.sm.dbeads.nbeads,
+                self.sm.dbeads.m,
+                self.sm.dbeads.m3,
                 None,
             )
             # CARTESIAN
@@ -1397,10 +1475,10 @@ class LanczosOptimizer(HessianOptimizer):
             h_test = alpha * (h_test - np.eye(h_test.shape[0]) * lamb)
             d_x = np.linalg.solve(h_test, f)
 
-        d_x.shape = self.im.dbeads.q.shape
+        d_x.shape = self.fix.fixbeads.q.shape
 
         # MASS-scaled
-        d_x = np.multiply(d_x, self.im.dbeads.m3 ** -0.5)
+        d_x = np.multiply(d_x, self.fix.fixbeads.m3 ** -0.5)
 
         # Rescale step if necessary
         if np.amax(np.absolute(d_x)) > activearrays["big_step"]:
@@ -1436,7 +1514,7 @@ class LBFGSOptimizer(DummyOptimizer):
                 )
             self.optarrays["hessian"] = geop.optarrays["hessian"]
 
-        self.im.bind(self, self.options["discretization"])
+        self.sm.bind(self, self.options["discretization"])
 
         # Specific for LBFGS
         self.options["corrections"] = geop.options["corrections"]
@@ -1478,7 +1556,7 @@ class LBFGSOptimizer(DummyOptimizer):
 
         self.optarrays["d"] = geop.optarrays["d"]
 
-        self.fm.esum = True
+        self.mapper.esum = True
 
     def initialize(self, step):
 
@@ -1501,8 +1579,8 @@ class LBFGSOptimizer(DummyOptimizer):
                     )
 
         # This must be done after the stretching and before the self.d.
-        if self.im.f is None:
-            self.im(self.beads.q, ret=False)  # Init instanton mapper
+        if self.sm.f is None:
+            self.sm(self.beads.q, ret=False)  # Init instanton mapper
 
         if (
             self.optarrays["old_x"]
@@ -1512,7 +1590,7 @@ class LBFGSOptimizer(DummyOptimizer):
 
         # Specific for LBFGS
         if np.linalg.norm(self.optarrays["d"]) == 0.0:
-            f = self.forces.f + self.im.f
+            f = self.forces.f + self.sm.f
             self.optarrays["d"] += dstrip(f) / np.sqrt(np.dot(f.flatten(), f.flatten()))
 
         self.update_old_pos_for()
@@ -1543,18 +1621,18 @@ class LBFGSOptimizer(DummyOptimizer):
         self.update_old_pos_for()
 
     def step(self, step=None):
-        """ Does one simulation time step."""
+        """ Does one simulation step."""
 
         activearrays = self.pre_step(step)
 
-        e, g = self.fm(self.beads.q)
+        e, g = self.mapper(self.beads.q)
         fdf0 = (e, g)
 
         # Do one step. Update the position and force inside the mapper.
         L_BFGS(
             activearrays["old_x"],
             activearrays["d"],
-            self.fm,
+            self.mapper,
             activearrays["qlist"],
             activearrays["glist"],
             fdf0,
