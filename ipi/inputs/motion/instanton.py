@@ -328,7 +328,6 @@ class InputInst(InputDictionary):
         self.max_ms.store(options["max_ms"])
         self.discretization.store(options["discretization"])
         self.friction.store(options["friction"])
-        print("inside store", options["friction"])
         if options["friction"]:
             self.z_friction.store(options["z_friction"])
         self.alt_out.store(options["save"])

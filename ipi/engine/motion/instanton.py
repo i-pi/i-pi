@@ -17,9 +17,8 @@ from ipi.engine.motion import Motion
 from ipi.utils.depend import dstrip, dobject
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, info
-from ipi.utils import units
-from ipi.utils.mintools import nichols, Powell
-from ipi.engine.motion.geop import L_BFGS
+from ipi.utils import units, nmtransform
+from ipi.utils.mintools import nichols, Powell, L_BFGS
 from ipi.utils.instools import (
     banded_hessian,
     invmul_banded,
@@ -35,9 +34,12 @@ __all__ = ["InstantonMotion"]
 
 
 # ALBERTO:
-# -test old instantons
-# -code equations,including spline of g function
-# -resolve hessian problem, needed to code?
+# - fix LBFGS example
+# - Add bath-driver to this branch
+# - finish equations (search CONTINUE HERE)
+# - code spline and integration to obtain g
+# - resolve hessian problem, implement sparse and dense spring hessian
+# - fix omegak and normal mode transformation (the fact that we are using half RP)
 
 
 class InstantonMotion(Motion):
@@ -375,6 +377,8 @@ class PesMapper(object):
         self.dbeads = mapper.beads.copy()
         self.dcell = mapper.cell.copy()
         self.dforces = mapper.forces.copy(self.dbeads, self.dcell)
+        self.nm = mapper.nm
+        self.nm_trans = nmtransform.nm_trans(self.dbeads.nbeads)
         self.fix = mapper.fix
         self.coef = mapper.coef
         self.friction = mapper.friction
@@ -408,13 +412,26 @@ class PesMapper(object):
         self.f = -g
         self.eta = eta
 
-    def compute_friction_terms():
+    def compute_friction_terms(self):
         """ Computes friction component of the energy and gradient """
 
-        # self.z_friction
-        # self.eta
+        z = self.z_friction / self.z_friction[1]
+        s = self.eta
+        zk = np.multiply(2 * self.nm.get_omegak(), self.z_friction)
 
-        # WRITE FORMULAS HERE ALBERTO
+        # g   = obtain_g(self.dbeads, self.eta)
+        # s   = obtain_s(self.dbeads, self.eta)
+
+        gq = self.dbeads.q
+        e = 0.5 * np.dot(zk, self.nm_trans.b2nm(gq) ** 2)
+
+        print("CONTINUE HERE")
+        print(zk.shape, self.nm_trans.b2nm(gq).shape)
+        aux = np.multiply(zk, self.nm_trans.b2nm(gq))
+        print(aux.shape)
+        g = self.nm_trans.nm2b(aux.reshape(1, -1))
+        print(g.shape, s.shape)
+
         e = 0
         g = 0
         return e, g
@@ -424,7 +441,6 @@ class PesMapper(object):
         self.fcount += 1
         full_q = x.copy()
         full_mspath = ms_pathway(full_q, self.dbeads.m3)
-
         if self.spline:
             try:
                 from scipy.interpolate import interp1d
@@ -480,13 +496,14 @@ class PesMapper(object):
         self.dbeads.q[:] = x[:]
         self.dforces.transfer_forces_manual([full_q], [full_pot], [full_forces])
 
-        e = np.sum(full_pot)  # Energy
-        g = -full_forces  # Gradient
-
         if self.friction:
             # ALBERTO: The following has to be joined to the json implementation for the
             # communication of the extras strings
-            red_eta = np.zeros(self.dbeads.nbeads, (self.dbeads.natoms * 3) ** 2)
+            print("\n ALBERTO2 get friction from forces object\n")
+            print("\n pick only the tensor corresponding to the first RP frequency")
+            red_eta = np.zeros(
+                (self.dbeads.nbeads, self.dbeads.natoms * 3, self.dbeads.natoms * 3)
+            )
 
             # Interpolate if necessary to get full pot and forces
             if self.spline:
@@ -499,8 +516,7 @@ class PesMapper(object):
         else:
             full_eta = None
 
-        self.save(full_pot, g, full_eta)
-
+        self.save(full_pot, -full_forces, full_eta)
         return self.evaluate()
 
     def evaluate(self):
@@ -525,6 +541,8 @@ class SpringMapper(object):
     """
 
     def __init__(self):
+        self.pot = None
+        self.f = None
         pass
 
     def bind(self, mapper):
@@ -702,7 +720,8 @@ class Mapper(object):
         self.esum = esum
 
     def initialize(self, q, forces):
-        print("\n\n ALBERTO get friction from forces object\n\n")
+
+        print("\nALBERTO1 get friction from forces object\n")
         eta = np.zeros((q.shape[0], q.shape[1] ** 2))
 
         self.gm.save(forces.pots, -forces.f, eta)
@@ -710,7 +729,7 @@ class Mapper(object):
         e2, g2 = self.sm(q)
 
         g = self.fix.get_active_vector(g1 + g2, 1)
-        e = np.sum(e1) + np.sum(e2)
+        e = np.sum(e1+e2)
 
         self.save(e, g)
 
@@ -755,8 +774,11 @@ class Mapper(object):
             )
 
         freq = units.unit_to_internal("frequency", "inversecm", z_friction[:, 0])
-        spline = interp1d(freq, z_friction[:, 1], kind="cubic")
-        self.z_friction = spline(self.nm.get_omegak())
+        spline = interp1d(
+            freq, z_friction[:, 1], kind="cubic", fill_value=0.0, bounds_error=False
+        )
+        self.z_friction = spline(2 * self.nm.get_omegak())
+        print(self.z_friction)
 
     def __call__(self, x, mode="all", apply_fix=True, new_disc=True, ret=True):
 
@@ -776,11 +798,11 @@ class Mapper(object):
         if apply_fix:
             g = self.fix.get_active_vector(g, 1)
 
+        if mode == "all":
+            self.save(np.sum(e), g)
+
         if self.esum:
             e = np.sum(e)
-
-        if mode == "all":
-            self.save(e, g)
 
         if ret:
             return e, g
@@ -1156,8 +1178,6 @@ class HessianOptimizer(DummyOptimizer):
                         )
 
         # Initialize all the mappers
-        # self.mapper.gm.save(self.forces.pots, self.forces.f)
-        # self.mapper.sm(self.beads.q, ret=False)  # Init instanton mapper
         self.mapper.initialize(self.beads.q, self.forces)
 
         if self.options["hessian_init"]:
@@ -1170,8 +1190,7 @@ class HessianOptimizer(DummyOptimizer):
             )
             # active_hessian = self.mapper.fix.get_active_vector( self.optarrays["hessian"],t=2 )
 
-            self.update_pos_for()
-            self.update_old_pos_for()
+        self.update_old_pos_for()
 
         self.init = True
 
@@ -1311,10 +1330,10 @@ class NicholsOptimizer(HessianOptimizer):
         elif self.options["mode"] == "splitting":
             d_x = nichols(
                 activearrays["old_f"],
-                self.sm.f,
+                self.mapper.sm.f,
                 d,
                 w,
-                self.sm.dbeads.m3,
+                self.mapper.sm.dbeads.m3,
                 activearrays["big_step"],
                 mode=0,
             )
@@ -1330,7 +1349,6 @@ class NicholsOptimizer(HessianOptimizer):
         # Get the new full-position
         d_x_full = self.fix.get_full_vector(d_x, t=1)
         new_x = self.optarrays["old_x"].copy() + d_x_full
-
         self.post_step(step, new_x, d_x, activearrays)
 
 
@@ -1519,7 +1537,7 @@ class LBFGSOptimizer(DummyOptimizer):
                 )
             self.optarrays["hessian"] = geop.optarrays["hessian"]
 
-        self.sm.bind(self, self.options["discretization"])
+        # self.sm.bind(self, self.options["discretization"])
 
         # Specific for LBFGS
         self.options["corrections"] = geop.options["corrections"]
@@ -1584,8 +1602,10 @@ class LBFGSOptimizer(DummyOptimizer):
                     )
 
         # This must be done after the stretching and before the self.d.
-        if self.sm.f is None:
-            self.sm(self.beads.q, ret=False)  # Init instanton mapper
+        # Initialize all the mapper
+        self.mapper.initialize(self.beads.q, self.forces)
+        # if self.mapper.sm.f is None:
+        #    self.mapper.sm(self.beads.q, ret=False)  # Init instanton mapper
 
         if (
             self.optarrays["old_x"]
@@ -1595,7 +1615,8 @@ class LBFGSOptimizer(DummyOptimizer):
 
         # Specific for LBFGS
         if np.linalg.norm(self.optarrays["d"]) == 0.0:
-            f = self.forces.f + self.sm.f
+            # f = self.forces.f + self.mapper.sm.f
+            f = self.mapper.f
             self.optarrays["d"] += dstrip(f) / np.sqrt(np.dot(f.flatten(), f.flatten()))
 
         self.update_old_pos_for()
@@ -1634,6 +1655,16 @@ class LBFGSOptimizer(DummyOptimizer):
         fdf0 = (e, g)
 
         # Do one step. Update the position and force inside the mapper.
+        print(
+            activearrays["big_step"],
+            self.options["ls_options"]["tolerance"],
+            self.options["tolerances"]["energy"],
+            self.options["ls_options"]["iter"],
+            self.options["corrections"],
+            self.options["scale"],
+            step,
+        )
+
         L_BFGS(
             activearrays["old_x"],
             activearrays["d"],

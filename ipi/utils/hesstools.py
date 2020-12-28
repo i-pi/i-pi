@@ -193,8 +193,8 @@ def get_hessian(gm, x0, natoms, nbeads=1, fixatoms=[], d=0.001, new_disc=False):
     fixdofs = list()
     for i in fixatoms:
         fixdofs.extend([3 * i, 3 * i + 1, 3 * i + 2])
-
     ii = natoms * 3
+    ncalc = ii - len(fixdofs)
     if x0.size != natoms * 3 * nbeads:
         raise ValueError(
             "The position vector is not consistent with the number of atoms/beads."
@@ -227,7 +227,7 @@ def get_hessian(gm, x0, natoms, nbeads=1, fixatoms=[], d=0.001, new_disc=False):
             continue
         else:
             info(
-                " @get_hessian: Computing hessian: %d of %d" % ((j + 1), ii),
+                " @get_hessian: Computing hessian: %d of %d" % ((j + 1), ncalc),
                 verbosity.low,
             )
             x = x0.copy()
