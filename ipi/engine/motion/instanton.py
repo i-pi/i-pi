@@ -729,7 +729,7 @@ class Mapper(object):
         e2, g2 = self.sm(q)
 
         g = self.fix.get_active_vector(g1 + g2, 1)
-        e = np.sum(e1+e2)
+        e = np.sum(e1 + e2)
 
         self.save(e, g)
 
