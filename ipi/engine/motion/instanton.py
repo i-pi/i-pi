@@ -35,7 +35,6 @@ __all__ = ["InstantonMotion"]
 
 # ALBERTO:
 # - fix LBFGS example
-# - Add bath-driver to this branch
 # - finish equations (search CONTINUE HERE)
 # - code spline and integration to obtain g
 # - resolve hessian problem, implement sparse and dense spring hessian
