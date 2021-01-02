@@ -38,6 +38,39 @@ from ipi.engine.cell import Cell
 __all__ = ["Barostat", "BaroBZP", "BaroRGB", "BaroSCBZP", "BaroMTK"]
 
 
+def get_hmask(direction):
+    """ Computes a mask to restrict the cell fluctuations along the specified directions """
+
+    hmask = np.zeros((3, 3), float)
+    if direction == "all":
+        hmask[:] = 1.0
+    elif direction == "x":
+        hmask[0][0] = 1.0
+    elif direction == "y":
+        hmask[1][1] = 1.0
+    elif direction == "z":
+        hmask[2][2] = 1.0
+    elif direction == "xy":
+        hmask[0][0] = 1.0
+        hmask[1][1] = 1.0
+        hmask[0][1] = 1.0
+    elif direction == "xz":
+        hmask[0][0] = 1.0
+        hmask[2][2] = 1.0
+        hmask[0][2] = 1.0
+    elif direction == "yz":
+        hmask[1][1] = 1.0
+        hmask[2][2] = 1.0
+        hmask[1][2] = 1.0
+    elif direction == "ortho":
+        hmask[0][0] = 1.0
+        hmask[1][1] = 1.0
+        hmask[2][2] = 1.0
+    else:
+        raise ValueError("Invalid direction for barostat constraint")
+    return hmask
+
+
 class Barostat(dobject):
     """Base barostat class.
 
@@ -849,28 +882,7 @@ class BaroRGB(Barostat):
         else:
             self.direction = "all"
 
-        if self.direction == "all":
-            hmask = np.ones((3, 3), float)
-        else:
-            hmask = np.zeros((3, 3), float)
-            if self.direction == "xx":
-                hmask[0][0] = 1.0
-            elif self.direction == "yy":
-                hmask[1][1] = 1.0
-            elif self.direction == "zz":
-                hmask[2][2] = 1.0
-            elif self.direction == "xy":
-                hmask[0][0] = 1.0
-                hmask[1][1] = 1.0
-                hmask[0][1] = 1.0
-            elif self.direction == "xz":
-                hmask[0][0] = 1.0
-                hmask[2][2] = 1.0
-                hmask[0][2] = 1.0
-            elif self.direction == "yz":
-                hmask[1][1] = 1.0
-                hmask[2][2] = 1.0
-                hmask[1][2] = 1.0
+        hmask = get_hmask(self.direction)
 
         # mask to zero out components of the cell velocity, to implement cell-boundary constraints
         dself.hmask = depend_array(name="hmask", value=hmask.copy())
@@ -1156,44 +1168,14 @@ class BaroMTK(Barostat):
         else:
             self.p = 0.0
 
-        iso_array = []
-
         if direction is not None:
             self.direction = direction
         else:
             self.direction = "all"
 
-        if self.direction == "all":
-            hmask = np.ones((3, 3), float)
-        else:
-            hmask = np.zeros((3, 3), float)
-            if self.direction == "xx":
-                hmask[0][0] = 1.0
-            elif self.direction == "yy":
-                hmask[1][1] = 1.0
-            elif self.direction == "zz":
-                hmask[2][2] = 1.0
-            elif self.direction == "xy":
-                hmask[0][0] = 1.0
-                hmask[1][1] = 1.0
-                hmask[0][1] = 1.0
-            elif self.direction == "iso-xy":
-                hmask[0][0] = 1.0
-                hmask[1][1] = 1.0
-                iso_array.append(0)
-                iso_array.append(1)
-
-            elif self.direction == "xz":
-                hmask[0][0] = 1.0
-                hmask[2][2] = 1.0
-                hmask[0][2] = 1.0
-            elif self.direction == "yz":
-                hmask[1][1] = 1.0
-                hmask[2][2] = 1.0
-                hmask[1][2] = 1.0
+        hmask = get_hmask(self.direction)
 
         # mask to zero out components of the cell velocity, to implement cell-boundary constraints
-        dself.iso_array = depend_array(name="iso_array", value=iso_array.copy())
         dself.hmask = depend_array(name="hmask", value=hmask.copy())
         # number of ones in the UT part of the mask
         self.L = np.diag([hmask[0].sum(), hmask[1, 1:].sum(), hmask[2, 2:].sum()])
@@ -1318,16 +1300,6 @@ class BaroMTK(Barostat):
 
         return self.thermostat.ethermo + self.kin + self.pot + self.cell_jacobian
 
-    def iso_ab(self, p, a, b):
-        """
-        Makes the matrix isotropic along two directions.
-        """
-        tr = np.trace(p)
-        r = np.zeros((3, 3))
-        r[a] = tr / 2
-        r[b] = tr / 2
-        return r
-
     def pstep(self, level=0):
         """Propagates the momenta for half a time step."""
 
@@ -1368,8 +1340,6 @@ class BaroMTK(Barostat):
         # now apply the mask (and accumulate the associated change in conserved quantity)
         # we use the thermostat conserved quantity accumulator, so we don't need to create a new one
         self.thermostat.ethermo += self.kin
-        if self.iso_array is not None:
-            self.p = self.iso_ab(self.p, self.iso_array[0], self.iso_array[1])
         self.p *= self.hmask
         self.thermostat.ethermo -= self.kin
 
@@ -1404,8 +1374,6 @@ class BaroMTK(Barostat):
         # now apply the mask (and accumulate the associated change in conserved quantity)
         # we use the thermostat conserved quantity accumulator, so we don't need to create a new one
         self.thermostat.ethermo += self.kin
-        if self.iso_array is not None:
-            self.p = self.iso_ab(self.p, self.iso_array[0], self.iso_array[1])
         self.p *= self.hmask
         self.thermostat.ethermo -= self.kin
 
