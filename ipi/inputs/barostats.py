@@ -94,7 +94,7 @@ class InputBaro(Input):
         "hmask": (
             InputArray,
             {
-                "default": input_default(factory=np.zeros, args=(0,)),
+                "default": np.ones((3,3)),
                 "dtype": float,
                 "help": "a matrix of 0s and 1s used to specify which components of the cell are allowed to fluctuate.",
             },
