@@ -845,10 +845,10 @@ class BaroRGB(Barostat):
             self.h0 = Cell()
 
         if hmask is None:
-            hmask = np.ones((3,3))
+            hmask = np.ones((3, 3))
         else:
-            hmask = hmask.reshape((3,3))
-        print ("HMASK", hmask)
+            hmask = hmask.reshape((3, 3))
+        print("HMASK", hmask)
 
         # mask to zero out components of the cell velocity, to implement cell-boundary constraints
         dself.hmask = depend_array(name="hmask", value=hmask.copy())
@@ -1135,9 +1135,9 @@ class BaroMTK(Barostat):
             self.p = 0.0
 
         if hmask is None:
-            self.hmask = np.ones((3,3))
+            self.hmask = np.ones((3, 3))
         else:
-            hmask = hmask.reshape((3,3))
+            hmask = hmask.reshape((3, 3))
 
         # mask to zero out components of the cell velocity, to implement cell-boundary constraints
         dself.hmask = depend_array(name="hmask", value=hmask.copy())
