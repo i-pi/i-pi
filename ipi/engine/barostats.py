@@ -38,39 +38,6 @@ from ipi.engine.cell import Cell
 __all__ = ["Barostat", "BaroBZP", "BaroRGB", "BaroSCBZP", "BaroMTK"]
 
 
-def get_hmask(direction):
-    """ Computes a mask to restrict the cell fluctuations along the specified directions """
-
-    hmask = np.zeros((3, 3), float)
-    if direction == "all":
-        hmask[:] = 1.0
-    elif direction == "x":
-        hmask[0][0] = 1.0
-    elif direction == "y":
-        hmask[1][1] = 1.0
-    elif direction == "z":
-        hmask[2][2] = 1.0
-    elif direction == "xy":
-        hmask[0][0] = 1.0
-        hmask[1][1] = 1.0
-        hmask[0][1] = 1.0
-    elif direction == "xz":
-        hmask[0][0] = 1.0
-        hmask[2][2] = 1.0
-        hmask[0][2] = 1.0
-    elif direction == "yz":
-        hmask[1][1] = 1.0
-        hmask[2][2] = 1.0
-        hmask[1][2] = 1.0
-    elif direction == "ortho":
-        hmask[0][0] = 1.0
-        hmask[1][1] = 1.0
-        hmask[2][2] = 1.0
-    else:
-        raise ValueError("Invalid direction for barostat constraint")
-    return hmask
-
-
 class Barostat(dobject):
     """Base barostat class.
 
@@ -827,7 +794,7 @@ class BaroRGB(Barostat):
         stressext=None,
         h0=None,
         p=None,
-        direction=None,
+        hmask=None,
     ):
         """Initializes RGB barostat.
 
@@ -877,12 +844,11 @@ class BaroRGB(Barostat):
         else:
             self.h0 = Cell()
 
-        if direction is not None:
-            self.direction = direction
+        if hmask is None:
+            hmask = np.ones((3,3))
         else:
-            self.direction = "all"
-
-        hmask = get_hmask(self.direction)
+            hmask = hmask.reshape((3,3))
+        print ("HMASK", hmask)
 
         # mask to zero out components of the cell velocity, to implement cell-boundary constraints
         dself.hmask = depend_array(name="hmask", value=hmask.copy())
@@ -1123,7 +1089,7 @@ class BaroMTK(Barostat):
         thermostat=None,
         pext=None,
         p=None,
-        direction=None,
+        hmask=None,
     ):
         """Initializes RGB barostat.
 
@@ -1168,12 +1134,10 @@ class BaroMTK(Barostat):
         else:
             self.p = 0.0
 
-        if direction is not None:
-            self.direction = direction
+        if hmask is None:
+            self.hmask = np.ones((3,3))
         else:
-            self.direction = "all"
-
-        hmask = get_hmask(self.direction)
+            hmask = hmask.reshape((3,3))
 
         # mask to zero out components of the cell velocity, to implement cell-boundary constraints
         dself.hmask = depend_array(name="hmask", value=hmask.copy())

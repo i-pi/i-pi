@@ -26,7 +26,7 @@
           <thermostat mode="langevin">
             <tau units="femtosecond"> 100</tau>
           </thermostat>
-          <direction> z </direction>
+          <hmask> [0, 0, 0, 0, 0, 0, 0, 0, 1] </hmask>
           </barostat>
           <thermostat mode="langevin">
           <tau units="femtosecond"> 100 </tau>

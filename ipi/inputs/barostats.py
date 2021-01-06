@@ -91,13 +91,12 @@ class InputBaro(Input):
                 "dimension": "length",
             },
         ),
-        "direction": (
-            InputValue,
+        "hmask": (
+            InputArray,
             {
-                "default": "all",
-                "dtype": str,
-                "help": "define which elements of the h matrix will change. h matrix is defined as upper triangle matrix, in which each column stands for each cell vector a, b, c, respectively. option 'all' will relax all the martrix elements, options 'xx', 'yy', 'zz' change the elements 11, 22, respectively of the cell, while options 'xy', 'xz', 'yz' change all elements except those along z,y, and x respectively.",
-                "options": ["all", "x", "y", "z", "xy", "xz", "yz", "ortho"],
+                "default": input_default(factory=np.zeros, args=(0,)),
+                "dtype": float,
+                "help": "a matrix of 0s and 1s used to specify which components of the cell are allowed to fluctuate.",
             },
         ),
     }
@@ -124,12 +123,12 @@ class InputBaro(Input):
         elif type(baro) is BaroMTK:
             self.mode.store("flexible")
             self.p.store(baro.p)
-            self.direction.store(baro.direction)
+            self.hmask.store(baro.hmask)
         elif type(baro) is BaroRGB:
             self.mode.store("anisotropic")
             self.p.store(baro.p)
             self.h0.store(baro.h0)
-            self.direction.store(baro.direction)
+            self.hmask.store(baro.hmask)
         elif type(baro) is Barostat:
             self.mode.store("dummy")
         else:
@@ -158,7 +157,7 @@ class InputBaro(Input):
             baro = BaroMTK(
                 thermostat=self.thermostat.fetch(),
                 tau=self.tau.fetch(),
-                direction=self.direction.fetch(),
+                hmask=self.hmask.fetch(),
             )
             if self.p._explicit:
                 baro.p = self.p.fetch()
@@ -166,7 +165,7 @@ class InputBaro(Input):
             baro = BaroRGB(
                 thermostat=self.thermostat.fetch(),
                 tau=self.tau.fetch(),
-                direction=self.direction.fetch(),
+                hmask=self.hmask.fetch(),
             )
             if self.p._explicit:
                 baro.p = self.p.fetch()
