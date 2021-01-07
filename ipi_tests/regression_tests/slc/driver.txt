@@ -1,3 +1,0 @@
-qtip4pf localhost  33340 inet
-qtip4pf localhost  33341 inet
-qtip4pf localhost  33342 inet

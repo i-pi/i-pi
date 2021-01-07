@@ -1,0 +1,30 @@
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           0  Bead:       0 velocities{atomic_unit}  cell{atomic_unit}
+       H -9.85470e-04  1.31206e-04 -6.86526e-05
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           1  Bead:       0 velocities{atomic_unit}  cell{atomic_unit}
+       H -7.05587e-04  2.13427e-04  2.26373e-04
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           2  Bead:       0 velocities{atomic_unit}  cell{atomic_unit}
+       H -9.09740e-04  5.51809e-04  2.88304e-04
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           3  Bead:       0 velocities{atomic_unit}  cell{atomic_unit}
+       H -1.17679e-03  5.38505e-04  1.92391e-04
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           4  Bead:       0 velocities{atomic_unit}  cell{atomic_unit}
+       H -1.17609e-03  3.88808e-04 -1.12330e-04
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           5  Bead:       0 velocities{atomic_unit}  cell{atomic_unit}
+       H -1.18006e-03  6.84316e-04 -8.77827e-05
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           6  Bead:       0 velocities{atomic_unit}  cell{atomic_unit}
+       H -1.05619e-03  7.45894e-04 -4.24850e-04
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           7  Bead:       0 velocities{atomic_unit}  cell{atomic_unit}
+       H -1.19563e-03  7.56345e-04 -5.18964e-04
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           8  Bead:       0 velocities{atomic_unit}  cell{atomic_unit}
+       H -9.74849e-04  7.06128e-04 -3.41277e-04
+1
+# CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           9  Bead:       0 velocities{atomic_unit}  cell{atomic_unit}
+       H -9.76439e-04  9.81472e-04 -4.06287e-04

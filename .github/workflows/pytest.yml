@@ -22,7 +22,7 @@ jobs:
     - name: Set up Conda
       uses: s-weigand/setup-conda@v1
       with:
-         activate-conda: true 
+         activate-conda: true
     - run: conda --version
     - run: conda install python=${{matrix.python-version}}
 
@@ -32,9 +32,10 @@ jobs:
          conda install scipy
          conda install pip
          pip install .
-         echo "::add-path::${GITHUB_WORKSPACE}/bin"
-
+         echo "${GITHUB_WORKSPACE}/bin" >> $GITHUB_PATH
+         #echo "::add-path::${GITHUB_WORKSPACE}/bin"
     - run: which python
+
     - name: Test Conda 
       run: python -c 'import numpy; import sys; print(sys.version); print(numpy.__version__)'
 
@@ -42,7 +43,7 @@ jobs:
       run: |
         flake8 . --config=setup.cfg --count --select=E9,F63,F7,F82 --show-source --statistics
         flake8 . --config=setup.cfg --count  --statistics
-        #flake8 .  --config=setup.cfg --count  --statistics --exit-zero
+        #flake8 . --config=setup.cfg --count  --statistics --exit-zero
 
 
     - name: Install GFortran Linux
