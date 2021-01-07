@@ -1,0 +1,28 @@
+<simulation verbosity='medium'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved, potential ] </properties>
+    <trajectory stride='1' cell_units='angstrom' filename='for'> forces </trajectory>
+  </output>
+  <total_steps> 10 </total_steps>
+  <ffdebye name='debye'>
+    <!-- Default units for a Hessian are 'atomic_unit', 
+         another option is 'ev/ang^2' -->
+    <hessian shape='(9,9)' mode='file' units='atomic_unit'> data.hessian </hessian>
+    <x_reference mode='file' units='angstrom'> data.ref </x_reference>
+  </ffdebye>
+  <system>
+    <initialize nbeads='6'>
+      <file mode='xyz'> init.xyz </file>
+    </initialize>
+    <forces>
+      <force forcefield='debye'> </force>
+    </forces>
+    <motion mode='replay'>
+      <!-- Replay syntax allows using some POSIX wildcards in the filename 
+           of trajectory files. If symbols *?[] are found in a filename,
+           the code expects to find exactly nbeads files that match 
+           the provided pattern. Bead indices will be read from the files. -->
+      <file mode='xyz'> traj.pos_*.xyz </file>
+    </motion>
+  </system>
+</simulation>
