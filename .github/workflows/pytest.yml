@@ -26,12 +26,14 @@ jobs:
     - run: conda --version
     - run: conda install python=${{matrix.python-version}}
 
-    - name: Install dependencies with conda
+    - name: Install dependencies and project
       run: |
-         conda install --file requirements.txt 
-         conda install scipy
          conda install pip
+         #conda install --file requirements.txt 
+         pip install scipy
+         pip install -r requirements.txt 
          pip install .
+
          echo "${GITHUB_WORKSPACE}/bin" >> $GITHUB_PATH
          #echo "::add-path::${GITHUB_WORKSPACE}/bin"
     - run: which python
