@@ -126,6 +126,7 @@ class DynMatrixMover(Motion):
 
         # get active arrays:
         activedof = 3 * self.beads.natoms - fixdof.size
+        print('here', fixdof)
         mask = np.delete(np.arange(3 * self.beads.natoms), fixdof)
         dmatx_full = dmatx.copy()
         ism_full = self.ism.copy()
