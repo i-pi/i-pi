@@ -36,7 +36,7 @@ __all__ = ["InputNormalMode"]
 class InputNormalMode(InputDictionary):
     """Vibrational self-consistent phonons calculation options.
 
-       Contains options related with finite difference computation of force constats.
+    Contains options related with finite difference computation of force constats.
 
     """
 

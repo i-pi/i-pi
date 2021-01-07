@@ -67,11 +67,11 @@ from ipi.utils.messages import verbosity, info
 
 def bracket(fdf, fdf0=None, x0=0.0, init_step=1.0e-3):
     """Given an initial point, determines the initial bracket for the minimum
-     Arguments:
-            fdf: function to minimize, derivative of function to minimize
-            x0: initial point
-            fdf0: value of function and its derivative at x0
-            init_step: intial step size
+    Arguments:
+           fdf: function to minimize, derivative of function to minimize
+           x0: initial point
+           fdf0: value of function and its derivative at x0
+           init_step: intial step size
     """
 
     # Constants
@@ -219,14 +219,14 @@ def bracket(fdf, fdf0=None, x0=0.0, init_step=1.0e-3):
 
 def min_brent(fdf, fdf0, x0, tol, itmax, init_step):
     """Given a maximum number of iterations and a convergence tolerance,
-     minimizes the specified function
-     Arguments:
-            x0: initial x-value
-            fdf: function to minimize
-            fdf0: initial function value
-            tol: convergence tolerance
-            itmax: maximum allowed iterations
-            init_step: initial step size
+    minimizes the specified function
+    Arguments:
+           x0: initial x-value
+           fdf: function to minimize
+           fdf0: initial function value
+           tol: convergence tolerance
+           itmax: maximum allowed iterations
+           init_step: initial step size
     """
 
     # Initializations and constants
@@ -598,13 +598,13 @@ def BFGS(x0, d0, fdf, fdf0, invhessian, big_step, tol, itmax):
 
 # BFGS algorithm trust radius method
 def BFGSTRM(x0, u0, f0, h0, tr, mapper, big_step):
-    """ Input: x0 = previous accepted positions
-               u0 = previous accepted energy
-               f0 = previous accepted forces
-               h0 = previous accepted hessian
-               tr = trust radius
-           mapper = function to evaluate energy and forces
-         big_step = limit on step length"""
+    """Input: x0 = previous accepted positions
+          u0 = previous accepted energy
+          f0 = previous accepted forces
+          h0 = previous accepted hessian
+          tr = trust radius
+      mapper = function to evaluate energy and forces
+    big_step = limit on step length"""
 
     # Make one movement, evaluate if it has to be accepted or not.
     # If accepted, update tr and Hessian.
@@ -654,11 +654,11 @@ def BFGSTRM(x0, u0, f0, h0, tr, mapper, big_step):
 
 
 def TRM_UPDATE(dx, df, h):
-    """ Input: DX = X -X_old
-               DF = F -F_old
-               DG = -DF
-               H  = hessian
-        Task: updated hessian"""
+    """Input: DX = X -X_old
+           DF = F -F_old
+           DG = -DF
+           H  = hessian
+    Task: updated hessian"""
 
     dx = dx[:, np.newaxis]  # dimension nx1
     dx_t = dx.T  # dimension 1xn
@@ -677,7 +677,7 @@ def TRM_UPDATE(dx, df, h):
 
 
 def min_trm(f, h, tr):
-    """ Return the minimum of
+    """Return the minimum of
     E(dx) = -(F * dx + 0.5 * ( dx * H * dx ),
     whithin dx**2 <tr
 
@@ -892,11 +892,11 @@ def L_BFGS(x0, d0, fdf, qlist, glist, fdf0, big_step, tol, itmax, m, scale, k):
 # Bracketing for NEB, TODO: DEBUG THIS IF USING SD OR CG OPTIONS FOR NEB
 def bracket_neb(fdf, fdf0=None, x0=0.0, init_step=1.0e-3):
     """Given an initial point, determines the initial bracket for the minimum
-     Arguments:
-            fdf: function to minimize
-            x0: initial point
-            fdf0: value of function at x0
-            init_step: initial step size
+    Arguments:
+           fdf: function to minimize
+           x0: initial point
+           fdf0: value of function at x0
+           init_step: initial step size
     """
 
     # Constants
@@ -1028,14 +1028,14 @@ def bracket_neb(fdf, fdf0=None, x0=0.0, init_step=1.0e-3):
 # Minimize using only forces; for NEB
 def min_brent_neb(fdf, fdf0=None, x0=0.0, tol=1.0e-6, itmax=100, init_step=1.0e-3):
     """Given a maximum number of iterations and a convergence tolerance,
-     minimizes the specified function
-     Arguments:
-            x0: initial x-value
-            fdf: function to minimize
-            fdf0: initial function value
-            tol: convergence tolerance
-            itmax: maximum allowed iterations
-            init_step: initial step size
+    minimizes the specified function
+    Arguments:
+           x0: initial x-value
+           fdf: function to minimize
+           fdf0: initial function value
+           tol: convergence tolerance
+           itmax: maximum allowed iterations
+           init_step: initial step size
     """
 
     # Initializations and constants
@@ -1316,7 +1316,7 @@ def L_BFGS_nls(
 
 
 def nichols(f0, f1, d, dynmax, m3, big_step, mode=1):
-    """ Find new movement direction. JCP 92,340 (1990)
+    """Find new movement direction. JCP 92,340 (1990)
     IN    f0      = physical forces        (n,)
           f1      = spring forces
           d       = dynmax eigenvalues
