@@ -1,0 +1,4 @@
+driver ch4hcbe
+address localhost
+port 32343
+socket_mode unix
