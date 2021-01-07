@@ -1,5 +1,5 @@
 mkl
-blas=*=mkl
+black>=20.8
 numpy
 pytest
 pytest-mock
