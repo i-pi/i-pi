@@ -75,14 +75,14 @@ if __name__ == "__main__":
         "--path",
         type=str,
         default=None,
-        help="Path to directory to look for python files recursively. Relative to the repository root unless called with an absolute path.",
+        help="Path to directory to look for python files recursively. Relative to the current path unless called with an absolute path.",
     )
     parser.add_argument(
         "-f",
         "--file_path",
         type=str,
         default=None,
-        help="Filename on which enforce styling. Relative to the repository root unless called with an absolute path. ",
+        help="Filename on which enforce styling. Relative to the current path unless called with an absolute path. ",
     )
     parser.add_argument(
         "-c",
