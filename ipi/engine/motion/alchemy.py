@@ -73,8 +73,7 @@ class AlchemyMC(Motion):
         self.ensemble.add_econs(dd(self).ealc)
 
     def AXlist(self, atomtype):
-        """This compile a list of atoms ready for exchanges.
-        """
+        """This compile a list of atoms ready for exchanges."""
 
         # selects the types of atoms for exchange
         atomexchangelist = []

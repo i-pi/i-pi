@@ -32,19 +32,19 @@ def get_dynmat(h, m3, nbeads=1):
 
 def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):
     """
-        Removes the translations and rotations modes.
-        IN  h      = hessian (3*natoms*nbeads, 3*natoms*nbeads)
-            q      = positions
-            natoms = number of atoms
-            nbeads = number of beads
-            m      = mass vector, one value for each atom
-            m3     = mass vector, one value for each degree of freedom
-            mofi   = An optional boolean which decides whether the det(M_of_I)
-                     is returned or not
-        OUT d      = non zero eigenvalues of the dynmatrix
-            w      = eigenvectors without external modes
+    Removes the translations and rotations modes.
+    IN  h      = hessian (3*natoms*nbeads, 3*natoms*nbeads)
+        q      = positions
+        natoms = number of atoms
+        nbeads = number of beads
+        m      = mass vector, one value for each atom
+        m3     = mass vector, one value for each degree of freedom
+        mofi   = An optional boolean which decides whether the det(M_of_I)
+                 is returned or not
+    OUT d      = non zero eigenvalues of the dynmatrix
+        w      = eigenvectors without external modes
 
-        #Adapted from ipi/engine/motion/phonons.py apply_asr    """
+    #Adapted from ipi/engine/motion/phonons.py apply_asr"""
 
     info(" @clean_hessian: asr = %s " % asr, verbosity.medium)
     # Set some useful things
@@ -177,16 +177,16 @@ def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):
 
 def get_hessian(gm, x0, natoms, nbeads=1, fixatoms=[], d=0.001):
     """Compute the physical hessian given a function to evaluate energy and forces (gm).
-       The intermediate steps are written as a temporary files so the full hessian calculations is only ONE step.
+    The intermediate steps are written as a temporary files so the full hessian calculations is only ONE step.
 
-       IN     gm       = gradient mapper
-              x0       = position vector
-              natoms   = number of atoms
-              nbeads   = number of beads
-              fixatoms = indexes of fixed atoms
-              d        = displacement
+    IN     gm       = gradient mapper
+           x0       = position vector
+           natoms   = number of atoms
+           nbeads   = number of beads
+           fixatoms = indexes of fixed atoms
+           d        = displacement
 
-       OUT    h       = physical hessian ( (natoms-len(fixatoms) )*3 , nbeads*( natoms-len(fixatoms) )*3)
+    OUT    h       = physical hessian ( (natoms-len(fixatoms) )*3 , nbeads*( natoms-len(fixatoms) )*3)
     """
 
     # TODO What about the case you have numerical gradients?

@@ -757,13 +757,13 @@ class BaroSCBZP(Barostat):
 class BaroRGB(Barostat):
     """Raiteri-Gale-Bussi constant stress barostat class (JPCM 23, 334213, 2011).
 
-       Just extends the standard class adding finite-dt propagators for the barostat
-       velocities, positions, piston.
+    Just extends the standard class adding finite-dt propagators for the barostat
+    velocities, positions, piston.
 
-       Depend objects:
-       p: The momentum matrix associated with the cell degrees of freedom.
-       m: The mass associated with the cell degree of freedom.
-       """
+    Depend objects:
+    p: The momentum matrix associated with the cell degrees of freedom.
+    m: The mass associated with the cell degree of freedom.
+    """
 
     def __init__(
         self,
@@ -778,18 +778,18 @@ class BaroRGB(Barostat):
     ):
         """Initializes RGB barostat.
 
-           Args:
-           dt: Optional float giving the time step for the algorithms. Defaults
-           to the simulation dt.
-           temp: Optional float giving the temperature for the thermostat.
-           Defaults to the simulation temp.
-           stressext: Optional float giving the external pressure.
-           tau: Optional float giving the time scale associated with the barostat.
-           ebaro: Optional float giving the conserved quantity already stored
-           in the barostat initially. Used on restart.
-           thermostat: The thermostat connected to the barostat degree of freedom.
-           p: Optional initial volume conjugate momentum. Defaults to 0.
-           """
+        Args:
+        dt: Optional float giving the time step for the algorithms. Defaults
+        to the simulation dt.
+        temp: Optional float giving the temperature for the thermostat.
+        Defaults to the simulation temp.
+        stressext: Optional float giving the external pressure.
+        tau: Optional float giving the time scale associated with the barostat.
+        ebaro: Optional float giving the conserved quantity already stored
+        in the barostat initially. Used on restart.
+        thermostat: The thermostat connected to the barostat degree of freedom.
+        p: Optional initial volume conjugate momentum. Defaults to 0.
+        """
 
         super(BaroRGB, self).__init__(dt, temp, tau, ebaro, thermostat)
 
@@ -832,20 +832,20 @@ class BaroRGB(Barostat):
     def bind(self, beads, nm, cell, forces, bias=None, prng=None, fixdof=None, nmts=1):
         """Binds beads, cell and forces to the barostat.
 
-           This takes a beads object, a cell object and a forcefield object and
-           makes them members of the barostat. It also then creates the objects that
-           will hold the data needed in the barostat algorithms and the dependency
-           network.
+        This takes a beads object, a cell object and a forcefield object and
+        makes them members of the barostat. It also then creates the objects that
+        will hold the data needed in the barostat algorithms and the dependency
+        network.
 
-           Args:
-           beads: The beads object from which the bead positions are taken.
-           nm: The normal modes propagator object
-           cell: The cell object from which the system box is taken.
-           forces: The forcefield object from which the force and virial are
-           taken.
-           prng: The parent PRNG to bind the thermostat to
-           fixdof: The number of blocked degrees of freedom.
-           """
+        Args:
+        beads: The beads object from which the bead positions are taken.
+        nm: The normal modes propagator object
+        cell: The cell object from which the system box is taken.
+        forces: The forcefield object from which the force and virial are
+        taken.
+        prng: The parent PRNG to bind the thermostat to
+        fixdof: The number of blocked degrees of freedom.
+        """
 
         super(BaroRGB, self).bind(beads, nm, cell, forces, bias, prng, fixdof, nmts)
 
@@ -1017,13 +1017,13 @@ class BaroRGB(Barostat):
 class BaroMTK(Barostat):
     """Martyna-Tobias-Klein flexible cell, constant pressure barostat class (JCP 101, 1994).
 
-       Just extends the standard class adding finite-dt propagators for the barostat
-       velocities, positions, piston.
+    Just extends the standard class adding finite-dt propagators for the barostat
+    velocities, positions, piston.
 
-       Depend objects:
-       p: The momentum matrix associated with the cell degrees of freedom.
-       m: The mass associated with the cell degree of freedom.
-       """
+    Depend objects:
+    p: The momentum matrix associated with the cell degrees of freedom.
+    m: The mass associated with the cell degree of freedom.
+    """
 
     def __init__(
         self,
@@ -1037,18 +1037,18 @@ class BaroMTK(Barostat):
     ):
         """Initializes RGB barostat.
 
-           Args:
-           dt: Optional float giving the time step for the algorithms. Defaults
-           to the simulation dt.
-           temp: Optional float giving the temperature for the thermostat.
-           Defaults to the simulation temp.
-           stressext: Optional float giving the external pressure.
-           tau: Optional float giving the time scale associated with the barostat.
-           ebaro: Optional float giving the conserved quantity already stored
-           in the barostat initially. Used on restart.
-           thermostat: The thermostat connected to the barostat degree of freedom.
-           p: Optional initial volume conjugate momentum. Defaults to 0.
-           """
+        Args:
+        dt: Optional float giving the time step for the algorithms. Defaults
+        to the simulation dt.
+        temp: Optional float giving the temperature for the thermostat.
+        Defaults to the simulation temp.
+        stressext: Optional float giving the external pressure.
+        tau: Optional float giving the time scale associated with the barostat.
+        ebaro: Optional float giving the conserved quantity already stored
+        in the barostat initially. Used on restart.
+        thermostat: The thermostat connected to the barostat degree of freedom.
+        p: Optional initial volume conjugate momentum. Defaults to 0.
+        """
 
         super(BaroMTK, self).__init__(dt, temp, tau, ebaro, thermostat)
 
@@ -1086,20 +1086,20 @@ class BaroMTK(Barostat):
     def bind(self, beads, nm, cell, forces, bias=None, prng=None, fixdof=None, nmts=1):
         """Binds beads, cell and forces to the barostat.
 
-           This takes a beads object, a cell object and a forcefield object and
-           makes them members of the barostat. It also then creates the objects that
-           will hold the data needed in the barostat algorithms and the dependency
-           network.
+        This takes a beads object, a cell object and a forcefield object and
+        makes them members of the barostat. It also then creates the objects that
+        will hold the data needed in the barostat algorithms and the dependency
+        network.
 
-           Args:
-           beads: The beads object from which the bead positions are taken.
-           nm: The normal modes propagator object
-           cell: The cell object from which the system box is taken.
-           forces: The forcefield object from which the force and virial are
-           taken.
-           prng: The parent PRNG to bind the thermostat to
-           fixdof: The number of blocked degrees of freedom.
-           """
+        Args:
+        beads: The beads object from which the bead positions are taken.
+        nm: The normal modes propagator object
+        cell: The cell object from which the system box is taken.
+        forces: The forcefield object from which the force and virial are
+        taken.
+        prng: The parent PRNG to bind the thermostat to
+        fixdof: The number of blocked degrees of freedom.
+        """
 
         super(BaroMTK, self).bind(beads, nm, cell, forces, bias, prng, fixdof, nmts)
 
