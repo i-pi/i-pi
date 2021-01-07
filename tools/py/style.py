@@ -14,7 +14,7 @@ import sys
 
 formatter = "black"
 linter = "flake8"
-cwd_repo = Path(__file__).resolve().parents[2]
+cwd_repo = Path('./').resolve()
 
 
 def main(check_mode, folder_path, file_path):
