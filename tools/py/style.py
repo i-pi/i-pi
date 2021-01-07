@@ -14,7 +14,7 @@ import sys
 
 formatter = "black"
 linter = "flake8"
-cwd_repo = Path(__file__).resolve().parents[1]
+cwd_repo = Path(__file__).resolve().parents[2]
 
 
 def main(check_mode, folder_path, file_path):
@@ -75,14 +75,14 @@ if __name__ == "__main__":
         "--path",
         type=str,
         default=None,
-        help="Path to directory to look for python files recursively",
+        help="Path to directory to look for python files recursively. Relative to the repository root unless called with an absolute path.",
     )
     parser.add_argument(
         "-f",
         "--file_path",
         type=str,
         default=None,
-        help="filename on which enforce styling",
+        help="Filename on which enforce styling. Relative to the repository root unless called with an absolute path. ",
     )
     parser.add_argument(
         "-c",
