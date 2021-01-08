@@ -21,6 +21,7 @@ import json
 
 from ipi.utils.messages import verbosity, warning, info
 from ipi.utils.softexit import softexit
+from ipi.utils.xtratools import listDict
 
 
 __all__ = ["InterfaceSocket"]
@@ -417,8 +418,10 @@ class Driver(DriverSocket):
         if mxtra:
             try:
                 mxtradict = json.loads(mxtra)
+                info('mxtradict JSON has been loaded.', verbosity.debug)
             except:
                 mxtradict["info"] = mxtra
+                info('mxtradict traditional string has been loaded.', verbosity.debug)
         return [mu, mf, mvir, mxtradict]
 
     def dispatch(self, r):

@@ -23,6 +23,7 @@ from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, warning, info
 from ipi.utils.depend import *
 from ipi.utils.nmtransform import nm_rescale
+from ipi.utils.xtratools import listDict
 from ipi.engine.beads import Beads
 
 
@@ -126,7 +127,7 @@ class ForceBead(dobject):
         )
 
         dself.extra = depend_value(
-            name="extra", func=self.get_extra, dependencies=[dself.ufvx]
+            name = "extra", func = self.get_extra, dependencies = [dself.ufvx]
         )
 
         dself.fx = depend_array(name="fx", value=fbase[0 : 3 * atoms.natoms : 3])
@@ -197,7 +198,6 @@ class ForceBead(dobject):
         # data has been collected, so the request can be released and a slot
         # freed up for new calculations
         result = self.request["result"]
-        # print('RESULTS HERE 1',result)
 
         # reduce the reservation count (and wait for all calls to return)
         with self._threadlock:
@@ -922,9 +922,7 @@ class Forces(dobject):
             assert mq.shape[0] == mv.shape[0], msg
             assert mself.nbeads == mv.shape[0], msg
             assert mself.nbeads == mq.shape[0], msg
-            mxlist = list()
-            for b in range(mself.nbeads):
-                mxlist.append(mextra[b][0])
+            mxlist = mextra[:]
 
             dd(mself.beads).q.set(mq, manual=False)
             for b in range(mself.nbeads):
@@ -1332,12 +1330,12 @@ class Forces(dobject):
         """Obtains the extra string for each forcefield for each bead."""
 
         self.queue()
-        rp = [list() for b in range(self.nbeads)]
+        rp = [listDict() for k in range(self.nforces)]
         for k in range(self.nforces):
             # "expand" to the total number of beads the potentials from the
             # contracted one
             for b in range(self.nbeads):
-                rp[b].append(self.mforces[k].extras[b])
+                rp[k].append(self.mforces[k].extras[b])
         return rp
 
     def vir_combine(self):

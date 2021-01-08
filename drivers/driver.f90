@@ -363,7 +363,7 @@
          ENDIF
       ENDIF
       
-      OPEN(UNIT=32, FILE="extras.json", ACTION="write")
+      OPEN(UNIT=32, FILE="driver_extras.json", ACTION="write")
 
       ! Calls the interface to the POSIX sockets library to open a communication channel
       CALL open_socket(socket, inet, port, host)
@@ -657,60 +657,82 @@
 
 
             IF (vstyle==24 .or. vstyle==25) THEN ! returns fantasy friction
-                initbuffer = "{"
-                WRITE(string, '(a,3x,es11.2e3,a,es11.2e3,a,es11.2e3,3x,a)') '"dipole": [',dip(1),",",dip(2),",",dip(3),"],"
+                WRITE(initbuffer,'(a)') "{"
+                WRITE(string, '(a,3x,es11.2e3,a,es11.2e3,a,es11.2e3,&
+     &          3x,a)') '"dipole": [',dip(1),",",dip(2),",",dip(3),"],"
                 string2 = TRIM(initbuffer) // TRIM(string)
                 initbuffer = TRIM(string2)
-                WRITE(32,'(a)') "{"
-                WRITE(32,'(a,3x,es11.2e3,a,es11.2e3,a,es11.2e3,3x,a)') '"dipole": [',dip(1),",",dip(2),",",dip(3),"] , "
+                WRITE(32,'(a)') '{'
+                WRITE(32,'(a,3x,es11.2e3,a,es11.2e3,a,es11.2e3,3x,a)') &
+     &                 '"dipole": [',dip(1),",",dip(2),",",dip(3),"] , "
 
                 WRITE(string,'(a)') '"friction": ['
                 string2 = TRIM(initbuffer) // TRIM(string)
                 initbuffer = TRIM(string2)
                 DO i=1,nat
                     IF(i/=nat) THEN
-                        WRITE(string,'(es11.2e3,a,es11.2e3,a,es11.2e3,a,es11.2e3,a,es11.2e3,a,es11.2e3,a)') friction(i,1),",",friction(i,2),",",friction(i,3),",",friction(i,4),",",friction(i,5),",",friction(i,6),","
+                        WRITE(string,'(es11.2e3,a,es11.2e3,a,es11.2e3, &
+     &          a,es11.2e3,a,es11.2e3,a,es11.2e3,a)') friction(i,1), &
+     &          ",",friction(i,2),",",friction(i,3),",",friction(i,4), &
+     &          ",",friction(i,5),",",friction(i,6),","
                     ELSE
-                        WRITE(string,'(es11.2e3,a,es11.2e3,a,es11.2e3,a,es11.2e3,a,es11.2e3,a,es11.2e3)') friction(i,1),",",friction(i,2),",",friction(i,3),",",friction(i,4),",",friction(i,5),",",friction(i,6)
+                        WRITE(string,'(es11.2e3,a,es11.2e3,a,es11.2e3, &
+     &          a,es11.2e3,a,es11.2e3,a,es11.2e3)') friction(i,1),",", &
+     &          friction(i,2),",",friction(i,3),",",friction(i,4),",", &
+     &          friction(i,5),",",friction(i,6)
                     ENDIF
                     string2 = TRIM(initbuffer) // TRIM(string)
                     initbuffer = TRIM(string2)
                 END DO
-                string =  TRIM(initbuffer) // "]}"
+                string =  TRIM(initbuffer) // ']}'
                 initbuffer = TRIM(string)
                 !WRITE(*,'(a)') TRIM(initbuffer)
                 cbuf = LEN_TRIM(initbuffer)
                 CALL writebuffer(socket,cbuf) ! Writes back the fantasy friction
-                IF (verbose > 1) WRITE(*,*) "    !write!=> extra_length: ", cbuf
+                IF (verbose > 1) WRITE(*,*) "!write!=> extra_length:", &
+     &          cbuf
                 CALL writebuffer(socket,initbuffer,cbuf)
                 WRITE(32,'(a)') '"friction": ['
                 DO i=1,nat
                     IF(i/=nat) THEN
-                        WRITE(32,'(es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a)') friction(i,1),",",friction(i,2),",",friction(i,3),",",friction(i,4),",",friction(i,5),",",friction(i,6),","
+                        WRITE(32,'(es21.14,a,es21.14,a,es21.14,a, &
+     &          es21.14,a,es21.14,a,es21.14,a)') friction(i,1),",", &
+     &          friction(i,2),",",friction(i,3),",",friction(i,4),",", &
+     &          friction(i,5),",",friction(i,6),","
                     ELSE
-                        WRITE(32,'(es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14)') friction(i,1),",",friction(i,2),",",friction(i,3),",",friction(i,4),",",friction(i,5),",",friction(i,6)
+                        WRITE(32,'(es21.14,a,es21.14,a,es21.14,a, &
+     &          es21.14,a,es21.14,a,es21.14)') friction(i,1),",", &
+     &          friction(i,2),",",friction(i,3),",",friction(i,4),",", &
+     &          friction(i,5),",",friction(i,6)
                     ENDIF
                 END DO
                 WRITE(32,'(a)') "]"
                 WRITE(32,'(a)') "}"
-                IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ", initbuffer
+                IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ",  &
+     &          initbuffer
             ELSEIF (vstyle==5 .or. vstyle==6 .or. vstyle==8) THEN ! returns the dipole through initbuffer
                initbuffer = " "
-               WRITE(initbuffer, '(a,3x,es21.14,a,es21.14,a,es21.14,3x,a)') '{"dipole": [',dip(1),",",dip(2),",",dip(3),"]}"
+               WRITE(initbuffer, '(a,3x,es21.14,a,es21.14,a,es21.14, &
+     &         3x,a)') '{"dipole": [',dip(1),",",dip(2),",",dip(3),"]}"
                cbuf = LEN_TRIM(initbuffer)
                CALL writebuffer(socket,cbuf) ! Writes back the molecular dipole
-               IF (verbose > 1) WRITE(*,*) "    !write!=> extra_length: ", cbuf
+               IF (verbose > 1) WRITE(*,*)  &
+     &         "    !write!=> extra_length: ", cbuf
                CALL writebuffer(socket,initbuffer,cbuf)
                WRITE(32,'(a)') "{"
-               WRITE(32,'(a,3x,es21.14,a,es21.14,a,es21.14,3x,a)') '"dipole": [',dip(1),",",dip(2),",",dip(3),"]"
+               WRITE(32,'(a,3x,es21.14,a,es21.14,a,es21.14,3x,a)') &
+     &         '"dipole": [',dip(1),",",dip(2),",",dip(3),"]"
                WRITE(32,'(a)') "}"
-               IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ", initbuffer
+               IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ", &
+     &         initbuffer
             ELSE
                cbuf = 16 ! Size of the "extras" string
                CALL writebuffer(socket,cbuf) ! This would write out the "extras" string, but in this case we only use a dummy string.
-               IF (verbose > 1) WRITE(*,*) "    !write!=> extra_length: ", cbuf
+               IF (verbose > 1) WRITE(*,*)  &
+     &         "    !write!=> extra_length: ", cbuf
                CALL writebuffer(socket,'{"nothing": [] }',16)
-               IF (verbose > 1) WRITE(*,*) "    !write!=> extra: nothing"
+               IF (verbose > 1) WRITE(*,*)  &
+     &         "    !write!=> extra: nothing"
             ENDIF
             hasdata = .false.
          ELSE

@@ -17,7 +17,7 @@
           <force forcefield="qtip4pf"> </force>
        </forces>
        <ensemble>
-           <temperature units="kelvin">35</temperature>
+           <temperature units="kelvin">50</temperature>
        </ensemble>
        <motion mode='instanton'>
            <instanton mode='rate'>

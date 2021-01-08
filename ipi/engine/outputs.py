@@ -273,9 +273,9 @@ class TrajectoryOutput(BaseOutput):
         format="xyz",
         cell_units="atomic_unit",
         ibead=-1,
-        xtratype='info'
+        xtratype="info"
     ):
-        """Initializes a property output stream opening the corresponding
+        """Initializes a trajectory output stream opening the corresponding
         file name.
 
         Also writes out headers.
@@ -290,6 +290,7 @@ class TrajectoryOutput(BaseOutput):
            cell_units: A string specifying the units that the cell parameters are
               given in.
            ibead: If positive, prints out only the selected bead. If negative, prints out one file per bead.
+           xtratype: Specifies the type of extras string that is printed in the file
         """
 
         self.filename = filename
@@ -478,7 +479,28 @@ class TrajectoryOutput(BaseOutput):
                 " #*EXTRAS*# Step:  %10d  Bead:  %5d  \n"
                 % (self.system.simul.step + 1, b)
             )
-            stream.write(json.dumps(data[b]))
+            try:
+                index = 0
+                for el, item in enumerate(data):
+                    if self.xtratype in item[b].keys():
+                        index = el
+                    try:
+                        if(self.xtratype == 'friction'):
+                            fatom = Atoms(self.system.beads.natoms)
+                            fatom.names[:] = self.system.beads.names
+                            stream.write("      %s\n"%"      ".join("%15s"% el for el in ['xx', 'yy', 'zz', 'xy=yx', 'xz=zx', 'yz=zy']))
+                            for na in range(self.system.beads.natoms):
+                                stream.write("%3s      %s\n"%(fatom.names[na], "      ".join("%15.8f"% el for el in data[index][b][self.xtratype][na*6:(na+1)*6])))
+                        else:
+                            stream.write("      ".join("%15.8f"% el for el in data[index][b][self.xtratype]))
+                    except:
+                        stream.write(json.dumps(data[index][b][self.xtratype]))
+            except:
+                info(
+                    "Sorry, your specified xtratype %s is not among the available options. \n"
+                    "The available keys are the following: %s "%(self.xtratype, ','.join('%s'%key for key in data[0][b].keys())),
+                     verbosity.low
+                )
             stream.write("\n")
             if flush:
                 stream.flush()

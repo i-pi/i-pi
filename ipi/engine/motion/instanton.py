@@ -30,6 +30,7 @@ from ipi.utils.instools import (
 from ipi.utils.instools import print_instanton_hess, diag_banded, ms_pathway
 from ipi.utils.hesstools import get_hessian, clean_hessian, get_dynmat
 from ipi.engine.beads import Beads
+from ipi.utils.xtratools import listDict
 
 __all__ = ["InstantonMotion"]
 
@@ -429,27 +430,31 @@ class GradientMapper(object):
 
         rpots = reduced_forces.pots  # reduced energy
         rforces = reduced_forces.f  # reduced gradient
-        # rextras = reduced_forces.extras  # reduced extras
-        rextras = []
-        for i in range(len(reduced_forces.extras)):
-            rextras.append(reduced_forces.extras[i][0]['friction'])  # reduced extras
-        print(rextras)
+        rfriction = np.array(reduced_forces.extras[0]['friction'])
+        rdipole = np.array(reduced_forces.extras[0]['dipole'])
 
-        rextras = np.array(rextras)
-
-        # Interpolate if necessary to get full pot and forces
+        # Interpolate if necessary to get full pot and forces and frictions
         if self.spline:
             red_mspath = full_mspath[indexes]
             spline = interp1d(red_mspath, rpots.T, kind="cubic")
             full_pot = spline(full_mspath).T
             spline = interp1d(red_mspath, rforces.T, kind="cubic")
             full_forces = spline(full_mspath).T
-            spline = interp1d(red_mspath, rextras.T, kind="cubic")
-            full_extras = spline(full_mspath).T
+            spline = interp1d(red_mspath, rdipole.T, kind="cubic")
+            full_dipole = spline(full_mspath).T
+            spline = interp1d(red_mspath, rfriction.T, kind="cubic")
+            full_friction = spline(full_mspath).T
         else:
             full_pot = rpots
             full_forces = rforces
-            full_extras = rextras
+            full_friction = rfriction
+            full_dipole = rdipole
+
+
+        diction = {}
+        diction['friction'] = full_friction
+        diction['dipole'] = full_dipole
+        full_extras = listDict.fromDict(diction)
 
         # This forces the update of the forces and the extras
         self.dbeads.q[:] = x[:]
@@ -955,20 +960,29 @@ class DummyOptimizer(dobject):
         self.qtime = -time.time()
         info("\n Instanton optimization STEP {}".format(step), verbosity.low)
 
-        extras = self.forces.mforces[0].extras
+        # Checking if the forcefiled has returned friction and using the forcefield that has returned friction in the following
+        if "friction" in self.forces.mforces[:].extras.keys():
+            k =
+        else:
+            info(
+                " Friction keyword hasn't been detected in extras. \n Will find the instanton without friction present.",
+                verbosity.low,
+            )
+
+        extras = self.forces.mforces[k].extras
         self.friction = np.zeros((self.beads.nbeads, self.beads.natoms, 6))
         for b in range(self.beads.nbeads):
             if "friction" in extras[b].keys():
-                for k in range(self.beads.natoms):
-                    self.friction[b, k, :] = extras[b]["friction"][6 * k : 6 * (k + 1)]
+                for at in range(self.beads.natoms):
+                    self.friction[b, at, :] = extras[b]["friction"][6 * at : 6 * (at + 1)]
                     info(
                         "FRICTION: {} {} {} {} {} {}".format(
-                            self.friction[b, k, 0],
-                            self.friction[b, k, 1],
-                            self.friction[b, k, 2],
-                            self.friction[b, k, 3],
-                            self.friction[b, k, 4],
-                            self.friction[b, k, 5],
+                            self.friction[b, at, 0],
+                            self.friction[b, at, 1],
+                            self.friction[b, at, 2],
+                            self.friction[b, at, 3],
+                            self.friction[b, at, 4],
+                            self.friction[b, at, 5],
                         ),
                         verbosity.debug,
                     )

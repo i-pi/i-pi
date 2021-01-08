@@ -166,6 +166,15 @@ class InputTrajectory(InputValue):
             "help": "How often should streams be flushed. 1 means each time, zero means never.",
         },
     )
+    attribs["xtratype"] = (
+        InputAttribute,
+        {
+            "dtype": str,
+            "default": "info",
+            "help": "What extra to print from the different extra strings.",
+            "options": ["info", "dipole", "friction", "hirshfeld", "workfunction"],
+        },
+    )
 
     def __init__(self, help=None, default=None, dtype=None, dimension=None):
         """Initializes InputTrajectory.
@@ -188,10 +197,11 @@ class InputTrajectory(InputValue):
             format=self.format.fetch(),
             cell_units=self.cell_units.fetch(),
             ibead=self.bead.fetch(),
+            xtratype=self.xtratype.fetch(),
         )
 
     def store(self, traj):
-        """Stores a PropertyOutput object."""
+        """Stores a TrajectoryOutput object."""
 
         super(InputTrajectory, self).store(traj.what)
         self.stride.store(traj.stride)
@@ -200,6 +210,7 @@ class InputTrajectory(InputValue):
         self.format.store(traj.format)
         self.cell_units.store(traj.cell_units)
         self.bead.store(traj.ibead)
+        self.xtratype.store(traj.xtratype)
 
     def check(self):
         """Checks for optional parameters."""
@@ -434,6 +445,7 @@ class InputOutputs(Input):
         if len(self.extra) != len(plist):
             self.extra = [0] * len(plist)
 
+        #print('len(plist)', len(plist))
         for ii, el in enumerate(plist):
             if isinstance(el, eoutputs.PropertyOutput):
                 if isinstance(self.extra[ii], InputProperties):
@@ -443,6 +455,8 @@ class InputOutputs(Input):
                     ip.store(el)
                     self.extra[ii] = ("properties", ip)
             elif isinstance(el, eoutputs.TrajectoryOutput):
+                #print('self.extra in store', self.extra[ii])
+                #print('el in store', el, 'el.what:', el.what)
                 if isinstance(self.extra[ii], InputTrajectory):
                     self.extra[ii][1].store(el)
                 else:

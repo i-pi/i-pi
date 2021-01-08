@@ -3,6 +3,7 @@
     <properties stride='1' filename='out'>  [ step, potential{electronvolt}] </properties>
     <trajectory stride="1" filename="pos_c" format="xyz"> x_centroid </trajectory>
     <trajectory stride="1" filename="frc_c" format="xyz"> f_centroid </trajectory>
+    <trajectory stride="1" filename="dip" xtratype="dipole"> extras </trajectory>
    </output>
    <prng>
 	<seed> 32342 </seed>
@@ -12,7 +13,7 @@
        <address> localhost </address> 
    </ffsocket>
    <system >
-       <initialize nbeads='1'> 
+       <initialize nbeads='2'> 
            <file mode='xyz' units='angstrom'>init.xyz</file>
            <cell> [   25.29166, 0, 0, 0, 25.29166, 0, 0, 0, 25.29166 ] </cell>
        </initialize>
