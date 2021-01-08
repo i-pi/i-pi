@@ -28,12 +28,12 @@ jobs:
 
     - name: Install dependencies and project
       run: |
-         conda install --file requirements.txt 
          conda config --add channels conda-forge
          conda config --set channel_priority strict
-         conda install -c conda-forge black
+         conda install -c conda-forge --file requirements.txt 
+         conda install scipy
          conda install pip
-         pip install scipy
+         #pip install scipy
          #pip install -r requirements.txt 
          pip install .
 
