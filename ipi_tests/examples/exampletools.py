@@ -112,14 +112,14 @@ def modify_xml_2_dummy_test(
     clients = list()
 
     if len(root.findall("ffcommittee")) > 0:
-       ff_roots = root.findall("ffcommittee")
+        ff_roots = root.findall("ffcommittee")
     else:
-      ff_roots = [root]
+        ff_roots = [root]
 
     ff_sockets = []
     for ff_root in ff_roots:
         for ff_socket in ff_root.findall("ffsocket"):
-          ff_sockets.append(ff_socket)
+            ff_sockets.append(ff_socket)
 
     for s, ffsocket in enumerate(ff_sockets):
         name = ffsocket.attrib["name"]
