@@ -145,7 +145,7 @@ if args.temperature == 0.0:
 
 def get_double(q0, nbeads0, natoms, h0):
     """Takes nbeads, positions and hessian (only the 'physcal part') of the half polymer and
-       returns the equivalent for the full ringpolymer."""
+    returns the equivalent for the full ringpolymer."""
     q = np.concatenate((q0, np.flipud(q0)), axis=0)
     nbeads = 2 * nbeads0
     ii = 3 * natoms
@@ -190,8 +190,8 @@ def Filter(pos, h, natoms, m, m3, filt):
 
 
 def get_rp_freq(w0, nbeads, temp, mode="rate"):
-    """ Compute the ring polymer frequencies for multidimensional harmonic potential
-        defined by the frequencies w0. """
+    """Compute the ring polymer frequencies for multidimensional harmonic potential
+    defined by the frequencies w0."""
     hbar = 1.0
     kb = 1
     betaP = 1 / (kb * nbeads * temp)

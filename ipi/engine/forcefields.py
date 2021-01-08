@@ -270,8 +270,8 @@ class ForceField(dobject):
         self.stop()
 
     def update(self):
-        """ Makes updates to the potential that only need to be triggered
-        upon completion of a time step. """
+        """Makes updates to the potential that only need to be triggered
+        upon completion of a time step."""
 
         pass
 
@@ -475,8 +475,8 @@ class FFDebye(ForceField):
         )
 
     def poll(self):
-        """ Polls the forcefield checking if there are requests that should
-        be answered, and if necessary evaluates the associated forces and energy. """
+        """Polls the forcefield checking if there are requests that should
+        be answered, and if necessary evaluates the associated forces and energy."""
 
         # we have to be thread-safe, as in multi-system mode this might get called by many threads at once
         with self._threadlock:
@@ -635,8 +635,8 @@ class FFPlumed(ForceField):
         r["status"] = "Done"
 
     def mtd_update(self, pos, cell):
-        """ Makes updates to the potential that only need to be triggered
-        upon completion of a time step. """
+        """Makes updates to the potential that only need to be triggered
+        upon completion of a time step."""
 
         self.plumedstep += 1
         f = np.zeros(3 * self.natoms)
@@ -743,8 +743,8 @@ class FFYaff(ForceField):
         log._active = False
 
     def poll(self):
-        """ Polls the forcefield checking if there are requests that should
-        be answered, and if necessary evaluates the associated forces and energy. """
+        """Polls the forcefield checking if there are requests that should
+        be answered, and if necessary evaluates the associated forces and energy."""
 
         # we have to be thread-safe, as in multi-system mode this might get called by many threads at once
         with self._threadlock:
@@ -773,10 +773,10 @@ class FFYaff(ForceField):
 
 class FFsGDML(ForceField):
 
-    """ A symmetric Gradient Domain Machine Learning (sGDML) force field.
-     Chmiela et al. Sci. Adv., 3(5), e1603015, 2017; Nat. Commun., 9(1), 3887, 2018.
-     http://sgdml.org/doc/
-     https://github.com/stefanch/sGDML
+    """A symmetric Gradient Domain Machine Learning (sGDML) force field.
+    Chmiela et al. Sci. Adv., 3(5), e1603015, 2017; Nat. Commun., 9(1), 3887, 2018.
+    http://sgdml.org/doc/
+    https://github.com/stefanch/sGDML
     """
 
     def __init__(
@@ -862,8 +862,8 @@ class FFsGDML(ForceField):
         self.predictor.prepare_parallel(n_bulk=1)
 
     def poll(self):
-        """ Polls the forcefield checking if there are requests that should
-        be answered, and if necessary evaluates the associated forces and energy. """
+        """Polls the forcefield checking if there are requests that should
+        be answered, and if necessary evaluates the associated forces and energy."""
 
         # we have to be thread-safe, as in multi-system mode this might get called by many threads at once
         with self._threadlock:

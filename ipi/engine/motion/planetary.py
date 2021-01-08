@@ -180,9 +180,9 @@ class Planetary(Motion):
         self.omega2 -= qffq
 
     def matrix_screen(self):
-        """ Computes a screening matrix to avoid the impact of
+        """Computes a screening matrix to avoid the impact of
         noisy elements of the covariance and frequency matrices for
-        far-away atoms """
+        far-away atoms"""
 
         q = np.array(self.dbeads[0].q).reshape(self.natoms, 3)
         sij = q[:, np.newaxis, :] - q

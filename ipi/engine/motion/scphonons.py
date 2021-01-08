@@ -228,8 +228,7 @@ class DummyPhononator(dobject):
 
 
 class SCPhononator(DummyPhononator):
-    """ Self consistent phonon evaluator.
-    """
+    """Self consistent phonon evaluator."""
 
     def bind(self, dm):
         """
