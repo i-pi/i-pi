@@ -266,6 +266,13 @@ UnitMap = {
         "newton": 12137805,
         "ev/ang": 0.019446904,
     },
+    "hessian": {
+        "": 1.00,
+        "automatic": 1.00,
+        "atomic_unit": 1.00,
+        "ev/ang^2": 0.010290858,
+    },
+
 }
 
 
