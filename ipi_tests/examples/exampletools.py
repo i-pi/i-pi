@@ -27,7 +27,7 @@ driver_models = [
 def get_driver_info(
     example_folder,
     driver_info_file=".driver_info",
-    driver="gas",
+    driver="dummy",
     socket_mode="unix",
     port_number=33333,
     address_name="localhost",
@@ -35,7 +35,7 @@ def get_driver_info(
 ):
     """This function looks for the existence of .driver_info file
     to run the example with a meaningfull driver. If the file doesn't
-    exist, the driver gas is assigned."""
+    exist, the dummy driver is assigned."""
     try:
         with open(Path(example_folder) / driver_info_file) as f:
             flags = list()
@@ -57,7 +57,7 @@ def get_driver_info(
         pass
 
     if driver not in driver_models:
-        driver = "gas"
+        driver = "dummy"
 
     driver_info = {
         "model": driver,
