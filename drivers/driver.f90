@@ -432,7 +432,11 @@
             IF (vstyle == 0) THEN   ! ideal gas, so no calculation done
                pot = 0
                forces = 0.0d0
-               virial = 0.0d0
+               virial = 1.0d-200   
+               ! returns a tiny but non-zero stress, so it can
+               ! bypass the check for zero virial that is used
+               ! to avoid running constant-pressure simulations
+               ! with a code that cannot compute the virial
             ELSEIF (vstyle == 3) THEN ! 1D harmonic potential, so only uses the first position variable
                pot = 0.5*ks*atoms(1,1)**2
                forces = 0.0d0
