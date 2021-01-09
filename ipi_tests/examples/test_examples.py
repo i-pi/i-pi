@@ -85,6 +85,7 @@ if __name__ == "__main__":
         try:
             test_example(ex)
         except:
+            raise
             print("Error ...\n")
             errors.append(ex)
 
