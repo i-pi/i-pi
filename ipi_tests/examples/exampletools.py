@@ -183,10 +183,10 @@ class Runner_examples(object):
                 stdout=sp.PIPE,
                 stderr=sp.PIPE,
             )
-           
+
             f_connected = False
             for i in range(50):
-                if os.path.exists('/tmp/ipi_'+clients[0][1]):
+                if os.path.exists("/tmp/ipi_" + clients[0][1]):
                     f_connected = True
                     break
                 else:
