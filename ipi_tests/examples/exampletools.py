@@ -184,15 +184,16 @@ class Runner_examples(object):
                 stderr=sp.PIPE,
             )
 
-            f_connected = False
-            for i in range(50):
-                if os.path.exists("/tmp/ipi_" + clients[0][1]):
-                    f_connected = True
-                    break
-                else:
-                    time.sleep(0.1)
-            if not f_connected:
-                raise RuntimeError("Couldn't find the i-PI UNIX socket")
+            if len(clients)>0:
+                f_connected = False
+                for i in range(50):
+                    if os.path.exists("/tmp/ipi_" + clients[0][1]):
+                        f_connected = True
+                        break
+                    else:
+                        time.sleep(0.1)
+                if not f_connected:
+                    raise RuntimeError("Couldn't find the i-PI UNIX socket")
 
             # Run drivers
             driver = list()
