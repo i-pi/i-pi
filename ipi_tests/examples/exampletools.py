@@ -184,7 +184,7 @@ class Runner_examples(object):
                 stderr=sp.PIPE,
             )
 
-            if len(clients)>0:
+            if len(clients) > 0:
                 f_connected = False
                 for i in range(50):
                     if os.path.exists("/tmp/ipi_" + clients[0][1]):
