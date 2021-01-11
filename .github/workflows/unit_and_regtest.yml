@@ -2,8 +2,6 @@ name: Python application
 
 on:
   push:
-  pull_request:
-    branches: [ master ]
 
 jobs:
   build:
@@ -67,18 +65,20 @@ jobs:
          cd drivers
          make
 
-    - name: Pytest
+    - name: unit-tests
       shell: bash
       run: |
          pwd
-         pytest 
-        #pytest --cov=./ --cov-report=xml
+         i-pi-tests -t unit
 
-    #- name: Upload coverage
-    #  uses: codecov/codecov-action@v1
-    #  with:
-    #    token: ${{ secrets.CODECOV_TOKEN }}
-    #    file: ./coverage.xml
-    #    flags: tests
-    #    name: codecov-umbrella
-    #    fail_ci_if_error: true
+    - name: regtests
+      shell: bash
+      run: |
+         pwd
+         i-pi-tests -t regtests
+
+    - name: pytests
+      shell: bash
+      run: |
+         pwd
+         i-pi-tests -t all
