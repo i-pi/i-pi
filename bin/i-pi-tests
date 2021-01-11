@@ -11,6 +11,7 @@ import sys
 import pytest
 
 main_folder = Path("./").resolve().parents[0]/"ipi_tests"
+main_folder = Path("./").resolve()/"ipi_tests"
 test_folder ={
 "all":main_folder,
 "example":main_folder/"examples",
