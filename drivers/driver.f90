@@ -41,7 +41,8 @@
       
       ! COMMAND LINE PARSING
       CHARACTER(LEN=1024) :: cmdbuffer
-      INTEGER ccmd, vstyle
+      INTEGER ccmd, vstyle, vseed
+      INTEGER, ALLOCATABLE :: seed(:)
       INTEGER verbose
       INTEGER commas(4), par_count      ! stores the index of commas in the parameter string
       DOUBLE PRECISION vpars(4)         ! array to store the parameters of the potential
@@ -190,6 +191,10 @@
             WRITE(*,*) "Error: no initialization string needed for dummy output."
             STOP "ENDED"
          ENDIF
+         CALL RANDOM_SEED(size=vseed)
+         ALLOCATE(seed(vseed))
+         seed = 12345
+         CALL RANDOM_SEED(put=seed)
          isinit = .true.         
       ELSEIF (6 == vstyle) THEN
          IF (par_count /= 0) THEN
