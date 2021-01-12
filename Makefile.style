@@ -1,5 +1,5 @@
 .PHONY: lint, pretty
 lint:
-	black ./
+	black --check ./
 pretty:
-	flake8 ./
+	black ./
