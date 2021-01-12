@@ -76,9 +76,3 @@ jobs:
       run: |
          pwd
          i-pi-tests -t regtests
-
-    - name: pytests
-      shell: bash
-      run: |
-         pwd
-         i-pi-tests -t all
