@@ -227,6 +227,7 @@ class InstantonMotion(Motion):
             )
 
         # Binds optimizer
+
         self.optimizer.bind(self)
 
     def step(self, step=None):
@@ -460,6 +461,7 @@ class PesMapper(object):
         self.fcount += 1
         full_q = x.copy()
         full_mspath = ms_pathway(full_q, self.dbeads.m3)
+
         if self.spline:
             try:
                 from scipy.interpolate import interp1d
@@ -564,6 +566,7 @@ class SpringMapper(object):
     """
 
     def __init__(self):
+
         self.pot = None
         self.f = None
         pass
@@ -1359,6 +1362,7 @@ class NicholsOptimizer(HessianOptimizer):
         # Get the new full-position
         d_x_full = self.fix.get_full_vector(d_x, t=1)
         new_x = self.optarrays["old_x"].copy() + d_x_full
+
         self.post_step(step, new_x, d_x, activearrays)
 
 

@@ -20,7 +20,7 @@ print("We have found {} examples".format(len(examples)))
 
 @pytest.mark.parametrize("ex", examples)
 def test_example(ex):
-    """ Intermediate function to run the examples (by calling Runner_examples) which makes
+    """Intermediate function to run the examples (by calling Runner_examples) which makes
     possible to parametrize the arguments
     """
     t0 = time.time()
