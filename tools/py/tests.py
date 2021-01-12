@@ -6,24 +6,25 @@ For details of usage call it with "-h" option.
 """
 import sys
 import os
-
-# Check that we have the import path for this i-PI set and if not, add it.
-dir_root = os.path.realpath(
-    os.path.join(os.path.dirname(os.path.realpath(__file__)), '..'))
-if not dir_root in sys.path:
-    sys.path.insert(0, dir_root)
-
 import argparse
 from argparse import RawTextHelpFormatter
 from pathlib import Path
 import pytest
 
-main_folder = Path(__file__).resolve().parents[1]/"ipi_tests"
-test_folder ={
-"all":main_folder,
-"example":main_folder/"examples",
-"regtests":main_folder/"regression_tests",
-"unit":main_folder/"unit_tests"
+# Check that we have the import path for this i-PI set and if not, add it.
+dir_root = os.path.realpath(
+    os.path.join(os.path.dirname(os.path.realpath(__file__)), "..")
+)
+if dir_root not in sys.path:
+    sys.path.insert(0, dir_root)
+
+
+main_folder = Path(__file__).resolve().parents[1] / "ipi_tests"
+test_folder = {
+    "all": main_folder,
+    "example": main_folder / "examples",
+    "regtests": main_folder / "regression_tests",
+    "unit": main_folder / "unit_tests",
 }
 
 if __name__ == "__main__":
@@ -42,7 +43,7 @@ if __name__ == "__main__":
         "type: i-pi-style -t regtests \n"
         "\n"
         "and for running the unitary tests  \n"
-        "type: i-pi-style -t unit \n"
+        "type: i-pi-style -t unit \n",
     )
 
     parser.add_argument(
@@ -50,11 +51,11 @@ if __name__ == "__main__":
         "--tests",
         type=str,
         default="all",
-        choices=['all', 'example','regtests','unit'],
-        help="Specifies which tests are going to be called."
+        choices=["all", "example", "regtests", "unit"],
+        help="Specifies which tests are going to be called.",
     )
 
     args = parser.parse_args()
     tests = args.tests
     print(test_folder[args.tests])
-    pytest.main(["-x",str(test_folder[args.tests])])
+    pytest.main(["-x", str(test_folder[args.tests])])
