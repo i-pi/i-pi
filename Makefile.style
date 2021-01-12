@@ -2,4 +2,4 @@
 lint:
 	black ./
 pretty:
-	flake8 ./
+	black --check ./
