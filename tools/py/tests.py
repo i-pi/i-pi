@@ -4,22 +4,12 @@
 This script runs calls pytest to run of the tests that are provided with i-pi.
 For details of usage call it with "-h" option.
 """
-import sys
-import os
 import argparse
 from argparse import RawTextHelpFormatter
 from pathlib import Path
 import pytest
 
-# Check that we have the import path for this i-PI set and if not, add it.
-dir_root = os.path.realpath(
-    os.path.join(os.path.dirname(os.path.realpath(__file__)), "..")
-)
-if dir_root not in sys.path:
-    sys.path.insert(0, dir_root)
-
-
-main_folder = Path(__file__).resolve().parents[1] / "ipi_tests"
+main_folder = Path(__file__).resolve().parents[2] / "ipi_tests"
 test_folder = {
     "all": main_folder,
     "example": main_folder / "examples",
