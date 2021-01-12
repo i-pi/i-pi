@@ -12,4 +12,4 @@ jobs:
            python-version: '3.x'
       - uses: psf/black@stable
         with:
-          black_args: ". --check"
+          args: ". --check"
