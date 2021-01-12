@@ -29,3 +29,6 @@ class listDict(list):
                     diction[key] = dict[key][nn]
                 lista.append(diction)
         return lista
+
+    def listofKeys(self):
+        return list(self[0])

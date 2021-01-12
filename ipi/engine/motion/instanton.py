@@ -430,10 +430,6 @@ class GradientMapper(object):
 
         rpots = reduced_forces.pots  # reduced energy
         rforces = reduced_forces.f  # reduced gradient
-        if reduced_forces.extras[0]["friction"]:
-            rfriction = np.array(reduced_forces.extras[0]["friction"])
-        if reduced_forces.extras[0]["dipole"]:
-            rdipole = np.array(reduced_forces.extras[0]["dipole"])
 
         # Interpolate if necessary to get full pot and forces and frictions
         if self.spline:
@@ -442,29 +438,26 @@ class GradientMapper(object):
             full_pot = spline(full_mspath).T
             spline = interp1d(red_mspath, rforces.T, kind="cubic")
             full_forces = spline(full_mspath).T
-            if reduced_forces.extras[0]["dipole"]:
-                spline = interp1d(red_mspath, rdipole.T, kind="cubic")
-                full_dipole = spline(full_mspath).T
-            if reduced_forces.extras[0]["friction"]:
-                spline = interp1d(red_mspath, rfriction.T, kind="cubic")
-                full_friction = spline(full_mspath).T
         else:
             full_pot = rpots
             full_forces = rforces
-            if reduced_forces.extras[0]["friction"]:
-                full_friction = rfriction
-            if reduced_forces.extras[0]["dipole"]:
-                full_dipole = rdipole
 
         diction = {}
-        if reduced_forces.extras[0]["dipole"]:
-            diction["dipole"] = full_dipole
-        if reduced_forces.extras[0]["friction"]:
-            diction["friction"] = full_friction
+        for key in reduced_forces.extras[0].listofKeys():
+            if str(key) != 'nothing':
+                rkey = np.array(reduced_forces.extras[0][key])
+                if self.spline:
+                    red_mspath = full_mspath[indexes]
+                    spline = interp1d(red_mspath, rkey.T, kind="cubic")
+                    full_key = spline(full_mspath).T
+                else:
+                    full_key = rkey
+                if reduced_forces.extras[0][key]:
+                    diction[key] = full_key
 
         full_extras = listDict.fromDict(diction)
         if not full_extras:
-            full_extras = [[] for i in range(self.dbeads.nbeads)]
+            full_extras = [[] for b in range(self.dbeads.nbeads)]
 
         # This forces the update of the forces and the extras
         self.dbeads.q[:] = x[:]
