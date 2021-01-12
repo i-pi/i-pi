@@ -9,6 +9,15 @@ from argparse import RawTextHelpFormatter
 from pathlib import Path
 import pytest
 
+import sys
+import os
+
+# Check that we have the import path for this i-PI set and if not, add it.
+dir_root = os.path.realpath(
+    os.path.join(os.path.dirname(os.path.realpath(__file__)), '../..'))
+if not dir_root in sys.path:
+    sys.path.insert(0, dir_root)
+
 main_folder = Path(__file__).resolve().parents[2] / "ipi_tests"
 test_folder = {
     "all": main_folder,
@@ -48,4 +57,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
     tests = args.tests
     print(test_folder[args.tests])
-    pytest.main(["-x", str(test_folder[args.tests])])
+    exit_code=pytest.main(["--tb=line", "-ra", str(test_folder[args.tests])])
+
+    if exit_code != 0:
+       raise RuntimeError ("pytest exit code is {}".format(exit_code))
