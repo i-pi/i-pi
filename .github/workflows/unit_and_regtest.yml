@@ -24,7 +24,7 @@ jobs:
            conda --version
            conda install python=${{matrix.python-version}}
 
-    - name: Install dependencies, Gfortran and Project
+    - name: Install dependencies and Project
       run: |
          conda config --add channels conda-forge
          conda config --set channel_priority strict
@@ -36,6 +36,7 @@ jobs:
          echo "${GITHUB_WORKSPACE}/bin" >> $GITHUB_PATH
 
     - name: Install Gfortran and Compile Driver
+      shell: bash
       run: |
          sudo apt-get update
          sudo apt-get install gfortran
