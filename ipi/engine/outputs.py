@@ -35,8 +35,8 @@ __all__ = [
 
 
 class OutputList(list):
-    """ A simple decorated list to save the output prefix and bring it
-    back to the initialization phase of the simulation """
+    """A simple decorated list to save the output prefix and bring it
+    back to the initialization phase of the simulation"""
 
     def __init__(self, prefix, olist):
         super(OutputList, self).__init__(olist)
@@ -273,7 +273,7 @@ class TrajectoryOutput(BaseOutput):
         cell_units="atomic_unit",
         ibead=-1,
     ):
-        """ Initializes a property output stream opening the corresponding
+        """Initializes a property output stream opening the corresponding
         file name.
 
         Also writes out headers.

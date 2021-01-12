@@ -73,10 +73,10 @@ class InputConstraintSolver(InputDictionary):
 
 class InputConstraintBase(Input):
     """
-        An input class to define constraints. ATM built just for bonds,
-        but general enough to be extended. Also incorporate a "multi"
-        mode that makes it possible to define a set of constraints that
-        are coupled and should hence be handled simultaneously.
+    An input class to define constraints. ATM built just for bonds,
+    but general enough to be extended. Also incorporate a "multi"
+    mode that makes it possible to define a set of constraints that
+    are coupled and should hence be handled simultaneously.
     """
 
     attribs = {

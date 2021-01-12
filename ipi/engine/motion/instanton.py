@@ -13,6 +13,8 @@ import numpy as np
 import time
 import sys
 
+from ipi.engine.beads import Beads
+from ipi.engine.normalmodes import NormalModes
 from ipi.engine.motion import Motion
 from ipi.utils.depend import dstrip, dobject
 from ipi.utils.softexit import softexit
@@ -34,11 +36,19 @@ __all__ = ["InstantonMotion"]
 
 
 # ALBERTO:
-# - fix LBFGS example
-# - finish equations (search CONTINUE HERE)
-# - code spline and integration to obtain g
 # - resolve hessian problem, implement sparse and dense spring hessian
-# - fix omegak and normal mode transformation (the fact that we are using half RP)
+# add boolean option hessian mode:
+# add boolean option sparse in:
+#    get_hessian
+#    update_hessian
+#    print_hessian
+#    red2comp
+# test ch4hcbe with dense hessian
+# test 1D double well with Ohmic
+# test 1D double well with Ohmic +SD
+
+# - code spline and integration to obtain g
+# test 2x*1D double well with Ohmic +SD
 
 
 class InstantonMotion(Motion):
@@ -112,8 +122,7 @@ class InstantonMotion(Motion):
         friction=False,
         z_friction=np.zeros(0, float),
     ):
-        """Initialises InstantonMotion.
-        """
+        """Initialises InstantonMotion."""
 
         super(InstantonMotion, self).__init__(fixcom=fixcom, fixatoms=fixatoms)
 
@@ -196,17 +205,28 @@ class InstantonMotion(Motion):
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         """Binds beads, cell, bforce and prng to InstantonMotion
 
-            Args:
-            beads: The beads object from whcih the bead positions are taken.
-            nm: A normal modes object used to do the normal modes transformation.
-            cell: The cell object from which the system box is taken.
-            bforce: The forcefield object from which the force and virial are taken.
-            prng: The random number generator object which controls random number generation.
+        Args:
+        beads: The beads object from whcih the bead positions are taken.
+        nm: A normal modes object used to do the normal modes transformation.
+        cell: The cell object from which the system box is taken.
+        bforce: The forcefield object from which the force and virial are taken.
+        prng: The random number generator object which controls random number generation.
         """
 
         super(InstantonMotion, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
-        # Binds optimizer
 
+        # Redefine normal modes
+        self.nm = NormalModes()
+        if self.options["mode"] == "rate":
+            self.nm.bind(
+                self.ensemble, self, Beads(self.beads.natoms, self.beads.nbeads * 2)
+            )
+        elif self.options["mode"] == "splitting":
+            self.nm.bind(
+                self.ensemble, self, Beads(self.beads.natoms, self.beads.nbeads)
+            )
+
+        # Binds optimizer
         self.optimizer.bind(self)
 
     def step(self, step=None):
@@ -253,8 +273,8 @@ class Fix(object):
             raise ValueError("Mask number not valid")
 
     def get_active_array(self, arrays):
-        """ Functions that gets the subarray corresponding to the active degrees-of-freedom of the
-            full dimensional array """
+        """Functions that gets the subarray corresponding to the active degrees-of-freedom of the
+        full dimensional array"""
 
         activearrays = {}
         for key in arrays:
@@ -284,18 +304,18 @@ class Fix(object):
 
     def get_full_vector(self, vector, t):
         """Set 0 the degrees of freedom (dof) corresponding to the fix atoms
-                    IN:
-                        fixatoms   indexes of the fixed atoms
-                        vector     vector to be reduced
-                        t          type of array:
-                            type=-1 : do nothing
-                            type=0 : names (natoms )
-                            type=1 : pos , force or m3 (nbeads,dof)
-                            type=2 : hessian (dof, nbeads*dof)
-                            type=3 : qlist or glist (corrections, nbeads*dof)
-                    OUT:
-                        clean_vector  reduced vector
-                """
+        IN:
+            fixatoms   indexes of the fixed atoms
+            vector     vector to be reduced
+            t          type of array:
+                type=-1 : do nothing
+                type=0 : names (natoms )
+                type=1 : pos , force or m3 (nbeads,dof)
+                type=2 : hessian (dof, nbeads*dof)
+                type=3 : qlist or glist (corrections, nbeads*dof)
+        OUT:
+            clean_vector  reduced vector
+        """
         if len(self.fixatoms) == 0 or t == -1:
             return vector
 
@@ -330,17 +350,17 @@ class Fix(object):
 
     def get_active_vector(self, vector, t):
         """Delete the degrees of freedom (dof) corresponding to the fix atoms
-            IN:
-                fixatoms   indexes of the fixed atoms
-                vector     vector to be reduced
-                t          type of array:
-                    type=-1 : do nothing
-                    type=0 : names (natoms )
-                    type=1 : pos , force or m3 (nbeads,dof)
-                    type=2 : hessian (dof, nbeads*dof)
-                    type=3 : qlist or glist (corrections, nbeads*dof)
-            OUT:
-                clean_vector  reduced vector
+        IN:
+            fixatoms   indexes of the fixed atoms
+            vector     vector to be reduced
+            t          type of array:
+                type=-1 : do nothing
+                type=0 : names (natoms )
+                type=1 : pos , force or m3 (nbeads,dof)
+                type=2 : hessian (dof, nbeads*dof)
+                type=3 : qlist or glist (corrections, nbeads*dof)
+        OUT:
+            clean_vector  reduced vector
         """
         if len(self.fixatoms) == 0 or t == -1:
             return vector
@@ -377,7 +397,6 @@ class PesMapper(object):
         self.dcell = mapper.cell.copy()
         self.dforces = mapper.forces.copy(self.dbeads, self.dcell)
         self.nm = mapper.nm
-        self.nm_trans = nmtransform.nm_trans(self.dbeads.nbeads)
         self.fix = mapper.fix
         self.coef = mapper.coef
         self.friction = mapper.friction
@@ -416,23 +435,24 @@ class PesMapper(object):
 
         z = self.z_friction / self.z_friction[1]
         s = self.eta
-        zk = np.multiply(2 * self.nm.get_omegak(), self.z_friction)
 
-        # g   = obtain_g(self.dbeads, self.eta)
-        # s   = obtain_s(self.dbeads, self.eta)
+        # g   = obtain_g(self.dbeads, self.eta) #Implement This
+        # s   = obtain_s(self.dbeads, self.eta) #Implement THIS
+        gq = self.dbeads.q  # For now
+        gq = np.concatenate((gq, np.flipud(gq)), axis=0)
+        gq_k = self.nm.transform.b2nm(gq)
 
-        gq = self.dbeads.q
-        e = 0.5 * np.dot(zk, self.nm_trans.b2nm(gq) ** 2)
+        z_k = np.multiply(self.nm.get_omegak(), self.z_friction).reshape(-1, 1)
 
-        print("CONTINUE HERE")
-        print(zk.shape, self.nm_trans.b2nm(gq).shape)
-        aux = np.multiply(zk, self.nm_trans.b2nm(gq))
-        print(aux.shape)
-        g = self.nm_trans.nm2b(aux.reshape(1, -1))
-        print(g.shape, s.shape)
+        e_f = (0.5 * z_k * gq_k ** 2).sum()
+        e = np.zeros(self.dbeads.nbeads)
+        e[0] = e_f  # We can't do a meaningfull bead assigment
 
-        e = 0
-        g = 0
+        f = self.nm.transform.nm2b(z_k * gq_k)[: self.dbeads.nbeads, :]
+
+        g = np.zeros(f.shape)
+        for i in range(self.dbeads.nbeads):
+            g[i, :] = np.dot(s[i], f[i])
         return e, g
 
     def __call__(self, x, new_disc=True):
@@ -499,7 +519,7 @@ class PesMapper(object):
             # ALBERTO: The following has to be joined to the json implementation for the
             # communication of the extras strings
             print("\n ALBERTO2 get friction from forces object\n")
-            print("\n pick only the tensor corresponding to the first RP frequency")
+            # print("\n pick only the tensor corresponding to the  RP frequencies")
             red_eta = np.zeros(
                 (self.dbeads.nbeads, self.dbeads.natoms * 3, self.dbeads.natoms * 3)
             )
@@ -519,24 +539,28 @@ class PesMapper(object):
         return self.evaluate()
 
     def evaluate(self):
-        """ Evaluate the energy and forces including:
-                - non uniform discretization
-                - friction term (if required)
-            """
-        e = self.pot * (self.coef[1:] + self.coef[:-1]) / 2
-        g = -self.f * (self.coef[1:] + self.coef[:-1]) / 2
+        """Evaluate the energy and forces including:
+        - non uniform discretization
+        - friction term (if required)
+        """
+
+        e = self.pot.copy()
+        g = -self.f.copy()
 
         if self.friction:
             e_friction, g_friction = self.compute_friction_terms()
             e += e_friction
             g += g_friction
 
+        e = e * (self.coef[1:] + self.coef[:-1]) / 2
+        g = g * (self.coef[1:] + self.coef[:-1]) / 2
+
         return e, g
 
 
 class SpringMapper(object):
     """Creation of the multi-dimensional function to compute full or half ring polymer potential
-       and forces.
+    and forces.
     """
 
     def __init__(self):
@@ -550,22 +574,9 @@ class SpringMapper(object):
         self.fix = mapper.fix
         self.coef = mapper.coef
         self.dbeads = mapper.beads.copy()
+        self.nm = mapper.nm
 
-        # Set omega2 depending of the case
-        if mapper.options["mode"] == "rate":
-            self.omega2 = (
-                self.temp
-                * (2 * self.dbeads.nbeads)
-                * units.Constants.kb
-                / units.Constants.hbar
-            ) ** 2
-        elif mapper.options["mode"] == "splitting":
-            self.omega2 = (
-                self.temp
-                * self.dbeads.nbeads
-                * units.Constants.kb
-                / units.Constants.hbar
-            ) ** 2
+        self.omega2 = self.nm.omegan2
 
         # Computes the spring hessian if the optimization modes requires it
         if (
@@ -650,8 +661,8 @@ class SpringMapper(object):
     def spring_hessian(natoms, nbeads, m3, omega2, mode="half", coef=None):
         """Compute the 'spring hessian'
 
-           OUT    h       = hessian with only the spring terms ('spring hessian')
-            """
+        OUT    h       = hessian with only the spring terms ('spring hessian')
+        """
         if coef is None:
             coef = np.ones(nbeads + 1).reshape(-1, 1)
 
@@ -710,7 +721,7 @@ class SpringMapper(object):
 
 class Mapper(object):
     """Creation of the multi-dimensional function that is the proxy between all the energy and force components and the optimization algorithm.
-    It also handles fixatoms  """
+    It also handles fixatoms"""
 
     def __init__(self, esum=False):
 
@@ -721,7 +732,7 @@ class Mapper(object):
     def initialize(self, q, forces):
 
         print("\nALBERTO1 get friction from forces object\n")
-        eta = np.zeros((q.shape[0], q.shape[1] ** 2))
+        eta = np.zeros((q.shape[0], q.shape[1], q.shape[1]))
 
         self.gm.save(forces.pots, -forces.f, eta)
         e1, g1 = self.gm.evaluate()
@@ -749,6 +760,7 @@ class Mapper(object):
         self.fixbeads = self.fix.fixbeads
 
         self.options = dumop.options
+
         self.coef = np.ones(self.beads.nbeads + 1).reshape(-1, 1)
         self.set_coef(self.options["discretization"])
 
@@ -777,7 +789,6 @@ class Mapper(object):
             freq, z_friction[:, 1], kind="cubic", fill_value=0.0, bounds_error=False
         )
         self.z_friction = spline(2 * self.nm.get_omegak())
-        print(self.z_friction)
 
     def __call__(self, x, mode="all", apply_fix=True, new_disc=True, ret=True):
 
@@ -812,7 +823,7 @@ class DummyOptimizer(dobject):
 
     def __init__(self):
         """Initializes object for PesMapper (physical potential, forces and hessian)
-        and SpringMapper ( spring potential,forces and hessian) """
+        and SpringMapper ( spring potential,forces and hessian)"""
 
         self.options = {}  # Optimization options
         self.optarrays = {}  # Optimization arrays
@@ -1390,8 +1401,8 @@ class NROptimizer(HessianOptimizer):
 
 
 class LanczosOptimizer(HessianOptimizer):
-    """ Class that implements a modified Nichols algorithm based on Lanczos diagonalization to avoid constructing and diagonalizing
-        the full (3*natoms*nbeads)^2 matrix """
+    """Class that implements a modified Nichols algorithm based on Lanczos diagonalization to avoid constructing and diagonalizing
+    the full (3*natoms*nbeads)^2 matrix"""
 
     def step(self, step=None):
         """ Does one simulation step."""

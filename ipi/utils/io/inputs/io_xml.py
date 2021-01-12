@@ -199,24 +199,24 @@ def xml_parse_file(stream):
 def xml_write(xml, name="", indent="", text=""):
     """Writes data in xml file format.
 
-      Writes the tag, attributes, data and closing tag appropriate to the
-      particular fields and attribs data. Writes in a recursive manner, so
-      that objects contained in the fields dictionary have their write function
-      called, so that their tags are written between the start and end tags
-      of this object, as is required for the xml format.
+    Writes the tag, attributes, data and closing tag appropriate to the
+    particular fields and attribs data. Writes in a recursive manner, so
+    that objects contained in the fields dictionary have their write function
+    called, so that their tags are written between the start and end tags
+    of this object, as is required for the xml format.
 
-      This also adds an indent to the lower levels of the xml heirarchy,
-      so that it is easy to see which tags contain other tags.
+    This also adds an indent to the lower levels of the xml heirarchy,
+    so that it is easy to see which tags contain other tags.
 
-      Args:
-         name: An optional string giving the tag name. Defaults to "".
-         indent: An optional string giving the string to be added to the start
-            of the line, so usually a number of tabs. Defaults to "".
-         text: Additional text to be output between the tags.
+    Args:
+       name: An optional string giving the tag name. Defaults to "".
+       indent: An optional string giving the string to be added to the start
+          of the line, so usually a number of tabs. Defaults to "".
+       text: Additional text to be output between the tags.
 
-      Returns:
-         A string giving all the data contained in the fields and attribs
-         dictionaries, in the appropriate xml format.
+    Returns:
+       A string giving all the data contained in the fields and attribs
+       dictionaries, in the appropriate xml format.
     """
 
     rstr = ""

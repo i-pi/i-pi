@@ -140,7 +140,7 @@ class NormalModes(dobject):
         return newnm
 
     def bind(self, ensemble, motion, beads=None, forces=None):
-        """ Initializes the normal modes object and binds to beads and ensemble.
+        """Initializes the normal modes object and binds to beads and ensemble.
 
         Do all the work down here as we need a full-formed necklace and ensemble
         to know how this should be done.
@@ -387,9 +387,9 @@ class NormalModes(dobject):
         return -self.beads.m3 * self.omegak[:, np.newaxis] ** 2 * self.qnm
 
     def get_vspring(self):
-        """ Returns the spring energy calculated in NM representation for distinguishable particles.
-            For bosons, get the first element of vspring_and_fspring_B[0]
-            For a mixture of both, calculate separately and combine.
+        """Returns the spring energy calculated in NM representation for distinguishable particles.
+        For bosons, get the first element of vspring_and_fspring_B[0]
+        For a mixture of both, calculate separately and combine.
         """
 
         if self.nbeads == 1:

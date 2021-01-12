@@ -827,7 +827,7 @@ class Forces(dobject):
             dself.virs.add_dependency(dd(fc).weight)
 
     def copy(self, beads=None, cell=None):
-        """ Returns a copy of this force object that can be used to compute forces,
+        """Returns a copy of this force object that can be used to compute forces,
         e.g. for use in internal loops of geometry optimizers, or for property
         calculation.
 
@@ -897,11 +897,11 @@ class Forces(dobject):
         self, new_q, new_v, new_forces, vir=np.zeros((3, 3)), extra=""
     ):
         """Manual (and flexible) version of the transfer forces function.
-           Instead of passing a force object, list with vectors are passed
-           Expected shape and sizes:
-             - new_q list of length equal to number of force type, containing the beads positions
-             - new_v list of length equal to number of force type, containing the beads potential energy
-             - new_f list of length equal to number of force type, containing the beads forces
+        Instead of passing a force object, list with vectors are passed
+        Expected shape and sizes:
+          - new_q list of length equal to number of force type, containing the beads positions
+          - new_v list of length equal to number of force type, containing the beads potential energy
+          - new_f list of length equal to number of force type, containing the beads forces
         """
         msg = "Unconsistent dimensions inside transfer_forces_manual"
         assert len(self.mforces) == len(new_q), msg

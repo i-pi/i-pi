@@ -314,7 +314,7 @@ class InputCheckpoint(InputValue):
 
 class InputOutputs(Input):
 
-    """ List of outputs input class.
+    """List of outputs input class.
 
     An example of a dynamic input class: a variable number of tags might be
     present, corresponding to different output requests. This allows for
@@ -418,7 +418,7 @@ class InputOutputs(Input):
         return outlist
 
     def store(self, plist):
-        """ Stores a list of the output objects, creating a sequence of
+        """Stores a list of the output objects, creating a sequence of
         dynamic containers.
 
         Args:
