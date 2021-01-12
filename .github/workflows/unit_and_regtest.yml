@@ -13,15 +13,16 @@ jobs:
 
     runs-on: "${{ matrix.os }}"
     
-    name: Python version ${{ matrix.python-version }} 
+    name: Set up conda and install Python ${{ matrix.python-version }}         
     steps:
     - uses: actions/checkout@v2
     - name: Set up Conda
       uses: s-weigand/setup-conda@v1
       with:
          activate-conda: true
-    - run: conda --version
-    - run: conda install python=${{matrix.python-version}}
+    - run: |
+           conda --version
+           conda install python=${{matrix.python-version}}
 
     - name: Install dependencies, Gfortran and Project
       run: |
