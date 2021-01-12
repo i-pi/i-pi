@@ -1,6 +1,7 @@
 <simulation verbosity='high'>
-  <ffsocket mode='unix' name='h0' pbc='False'>
-    <address>zundel</address>
+  <ffsocket  name='h0' pbc='False'>
+    <address>localhost</address>
+    <port>14195</port>
   </ffsocket>
   <ffdmd name='timeperiod' pbc='False' threaded='False'>
 <!--    <dmd_coupling mode='manual'> [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]  </dmd_coupling> -->
@@ -8,7 +9,8 @@
     <dmd_freq units='inversecm' > 3500  </dmd_freq>
     <dmd_dt units='femtosecond'> 0.25 </dmd_dt>
   </ffdmd>
-  <total_steps>1000</total_steps>
+  <total_steps>10000</total_steps>
+  <total_time>6</total_time>
   <output prefix='data-10'>
     <trajectory stride='2' filename='pos' cell_units='angstrom'>positions{angstrom}</trajectory>
     <trajectory stride='2' filename='vel'>velocities</trajectory>
