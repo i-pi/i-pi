@@ -393,7 +393,7 @@ class DummyIntegrator(dobject):
 
 class NVEIntegrator(DummyIntegrator):
 
-    """ Integrator object for constant energy simulations.
+    """Integrator object for constant energy simulations.
 
     Has the relevant conserved quantity and normal mode propagator for the
     constant energy ensemble. Note that a temperature of some kind must be

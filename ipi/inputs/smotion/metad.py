@@ -30,7 +30,7 @@ __all__ = ["InputMetaDyn"]
 
 
 class InputMetaDyn(InputDictionary):
-    """ Metadynamics Options
+    """Metadynamics Options
 
     Contains options related with MetaDynamics
 
