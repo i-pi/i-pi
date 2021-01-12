@@ -8,7 +8,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: [3.7.9, 3.8.5]
+        python-version: [3.8.5]
         os: ["ubuntu-latest"]
 
     runs-on: "${{ matrix.os }}"
@@ -35,6 +35,8 @@ jobs:
          pip install .
          echo "${GITHUB_WORKSPACE}/bin" >> $GITHUB_PATH
 
+    - name: Install Gfortran and Compile Driver
+      run: |
          sudo apt-get update
          sudo apt-get install gfortran
          cd drivers
