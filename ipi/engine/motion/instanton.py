@@ -1013,13 +1013,15 @@ class DummyOptimizer(dobject):
 
             else:
                 info("We are going to compute the final hessian", verbosity.low)
-                self.optarrays["hessian"][:] = get_hessian(
+                active_hessian = get_hessian(
                     self.mapper.gm,
                     self.beads.q.copy(),
                     self.beads.natoms,
                     self.beads.nbeads,
                     self.fixatoms,
                 )
+
+                self.optarrays["hessian"][:] = self.fix.get_full_vector(active_hessian, 2)
 
                 print_instanton_hess(
                     self.options["prefix"] + "_FINAL",
@@ -1193,14 +1195,14 @@ class HessianOptimizer(DummyOptimizer):
         self.mapper.initialize(self.beads.q, self.forces)
 
         if self.options["hessian_init"]:
-            self.optarrays["hessian"][:] = get_hessian(
+            active_hessian = get_hessian(
                 self.mapper.gm,
                 self.beads.q.copy(),
                 self.beads.natoms,
                 self.beads.nbeads,
                 self.fixatoms,
             )
-            # active_hessian = self.mapper.fix.get_active_vector( self.optarrays["hessian"],t=2 )
+            self.optarrays["hessian"][:] = self.fix.get_full_vector(active_hessian, 2)
 
         self.update_old_pos_for()
 
