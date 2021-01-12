@@ -179,7 +179,7 @@ class Input(object):
 
         # merge instancefields with the static class fields
         self.instancefields.update(self.fields)
-        #print(self.attribs.keys())
+        # print(self.attribs.keys())
 
         for f, v in self.instancefields.items():
             self.__dict__[f] = v[0](**v[1])
@@ -247,7 +247,7 @@ class Input(object):
             print("Error parsing " + name + " from " + str(xml))
             raise
         self.extra.append((name, newfield))
-        #print(self.extra)
+        # print(self.extra)
 
     def write(self, name="", indent="", text="\n"):
         """Writes data in xml file format.

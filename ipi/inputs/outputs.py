@@ -172,7 +172,14 @@ class InputTrajectory(InputValue):
             "dtype": str,
             "default": "info",
             "help": "What extra to print from the different extra strings.",
-            "options": ["info", "dipole", "friction", "hirshfeld", "workfunction"],
+            "options": [
+                "info",
+                "dipole",
+                "friction",
+                "hirshfeld",
+                "workfunction",
+                "atomic_stress",
+            ],
         },
     )
 
@@ -445,7 +452,7 @@ class InputOutputs(Input):
         if len(self.extra) != len(plist):
             self.extra = [0] * len(plist)
 
-        #print('len(plist)', len(plist))
+        # print('len(plist)', len(plist))
         for ii, el in enumerate(plist):
             if isinstance(el, eoutputs.PropertyOutput):
                 if isinstance(self.extra[ii], InputProperties):
@@ -455,8 +462,8 @@ class InputOutputs(Input):
                     ip.store(el)
                     self.extra[ii] = ("properties", ip)
             elif isinstance(el, eoutputs.TrajectoryOutput):
-                #print('self.extra in store', self.extra[ii])
-                #print('el in store', el, 'el.what:', el.what)
+                # print('self.extra in store', self.extra[ii])
+                # print('el in store', el, 'el.what:', el.what)
                 if isinstance(self.extra[ii], InputTrajectory):
                     self.extra[ii][1].store(el)
                 else:

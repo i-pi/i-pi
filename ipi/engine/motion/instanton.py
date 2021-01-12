@@ -430,8 +430,10 @@ class GradientMapper(object):
 
         rpots = reduced_forces.pots  # reduced energy
         rforces = reduced_forces.f  # reduced gradient
-        rfriction = np.array(reduced_forces.extras[0]['friction'])
-        rdipole = np.array(reduced_forces.extras[0]['dipole'])
+        if reduced_forces.extras[0]["friction"]:
+            rfriction = np.array(reduced_forces.extras[0]["friction"])
+        if reduced_forces.extras[0]["dipole"]:
+            rdipole = np.array(reduced_forces.extras[0]["dipole"])
 
         # Interpolate if necessary to get full pot and forces and frictions
         if self.spline:
@@ -440,21 +442,29 @@ class GradientMapper(object):
             full_pot = spline(full_mspath).T
             spline = interp1d(red_mspath, rforces.T, kind="cubic")
             full_forces = spline(full_mspath).T
-            spline = interp1d(red_mspath, rdipole.T, kind="cubic")
-            full_dipole = spline(full_mspath).T
-            spline = interp1d(red_mspath, rfriction.T, kind="cubic")
-            full_friction = spline(full_mspath).T
+            if reduced_forces.extras[0]["dipole"]:
+                spline = interp1d(red_mspath, rdipole.T, kind="cubic")
+                full_dipole = spline(full_mspath).T
+            if reduced_forces.extras[0]["friction"]:
+                spline = interp1d(red_mspath, rfriction.T, kind="cubic")
+                full_friction = spline(full_mspath).T
         else:
             full_pot = rpots
             full_forces = rforces
-            full_friction = rfriction
-            full_dipole = rdipole
-
+            if reduced_forces.extras[0]["friction"]:
+                full_friction = rfriction
+            if reduced_forces.extras[0]["dipole"]:
+                full_dipole = rdipole
 
         diction = {}
-        diction['friction'] = full_friction
-        diction['dipole'] = full_dipole
+        if reduced_forces.extras[0]["dipole"]:
+            diction["dipole"] = full_dipole
+        if reduced_forces.extras[0]["friction"]:
+            diction["friction"] = full_friction
+
         full_extras = listDict.fromDict(diction)
+        if not full_extras:
+            full_extras = [[] for i in range(self.dbeads.nbeads)]
 
         # This forces the update of the forces and the extras
         self.dbeads.q[:] = x[:]
@@ -960,36 +970,38 @@ class DummyOptimizer(dobject):
         self.qtime = -time.time()
         info("\n Instanton optimization STEP {}".format(step), verbosity.low)
 
-        # Checking if the forcefiled has returned friction and using the forcefield that has returned friction in the following
-        if "friction" in self.forces.mforces[:].extras.keys():
-            k =
-        else:
-            info(
-                " Friction keyword hasn't been detected in extras. \n Will find the instanton without friction present.",
-                verbosity.low,
-            )
-
-        extras = self.forces.mforces[k].extras
-        self.friction = np.zeros((self.beads.nbeads, self.beads.natoms, 6))
-        for b in range(self.beads.nbeads):
-            if "friction" in extras[b].keys():
-                for at in range(self.beads.natoms):
-                    self.friction[b, at, :] = extras[b]["friction"][6 * at : 6 * (at + 1)]
+        # Choosing the forcefield that has returned friction tensor in extras
+        for k in range(self.forces.nforces):
+            if self.forces.mforces[k].extras[0]:
+                if "friction" in self.forces.mforces[k].extras[0].keys():
+                    extras = self.forces.mforces[k].extras
+                    self.friction = np.zeros((self.beads.nbeads, self.beads.natoms, 6))
+                    for b in range(self.beads.nbeads):
+                        if "friction" in extras[b].keys():
+                            for at in range(self.beads.natoms):
+                                self.friction[b, at, :] = extras[b]["friction"][
+                                    6 * at : 6 * (at + 1)
+                                ]
+                                info(
+                                    "FRICTION: {} {} {} {} {} {}".format(
+                                        self.friction[b, at, 0],
+                                        self.friction[b, at, 1],
+                                        self.friction[b, at, 2],
+                                        self.friction[b, at, 3],
+                                        self.friction[b, at, 4],
+                                        self.friction[b, at, 5],
+                                    ),
+                                    verbosity.debug,
+                                )
                     info(
-                        "FRICTION: {} {} {} {} {} {}".format(
-                            self.friction[b, at, 0],
-                            self.friction[b, at, 1],
-                            self.friction[b, at, 2],
-                            self.friction[b, at, 3],
-                            self.friction[b, at, 4],
-                            self.friction[b, at, 5],
-                        ),
-                        verbosity.debug,
+                        " Friction keyword detected in extras. \n Will find the instanton with friction.",
+                        verbosity.low,
                     )
-        info(
-            " Friction keyword detected in extras. \n Will find the instanton with friction present.",
-            verbosity.low,
-        )
+                else:
+                    info(
+                        " Friction keyword hasn't been detected in extras. \n Will find the instanton without friction.",
+                        verbosity.low,
+                    )
 
         activearrays = self.fix.get_active_array(self.optarrays)
 
@@ -1093,9 +1105,15 @@ class HessianOptimizer(DummyOptimizer):
                         " @GEOP: Starting from the provided geometry in the extended phase space",
                         verbosity.low,
                     )
-                    if not (self.optarrays["initial_hessian"] is None):
+                    if not (
+                        (self.optarrays["initial_hessian"] is None)
+                        or (
+                            self.optarrays["initial_hessian"].size
+                            == (self.beads.natoms * 3) ** 2
+                        )
+                    ):
                         raise ValueError(
-                            " You have to provided a hessian with size (3 x natoms)^2 but also geometry in"
+                            " You have to provide a hessian with size (3 x natoms)^2 but also geometry in"
                             " the extended phase space (nbeads>1). Please check the inputs\n"
                         )
 

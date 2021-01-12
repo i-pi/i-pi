@@ -418,10 +418,10 @@ class Driver(DriverSocket):
         if mxtra:
             try:
                 mxtradict = json.loads(mxtra)
-                info('mxtradict JSON has been loaded.', verbosity.debug)
+                info("mxtradict JSON has been loaded.", verbosity.debug)
             except:
                 mxtradict["info"] = mxtra
-                info('mxtradict traditional string has been loaded.', verbosity.debug)
+                info("mxtradict traditional string has been loaded.", verbosity.debug)
         return [mu, mf, mvir, mxtradict]
 
     def dispatch(self, r):

@@ -1,9 +1,9 @@
 <simulation mode="static" verbosity="medium">
     <output prefix='inst'>
        <trajectory filename='pos' stride='1' format='xyz' cell_units='angstrom'> positions{angstrom} </trajectory>
-        <properties stride='1' filename='out'>  [ step, potential{electronvolt}] </properties>
+       <properties stride='1' filename='out'>  [ step, potential{electronvolt}] </properties>
    </output>
-   <total_steps>20       </total_steps>
+   <total_steps>40       </total_steps>
    <ffsocket name="ch4hcbe" mode="unix" >
        <address> localhost </address>  
    </ffsocket>

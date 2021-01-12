@@ -127,7 +127,7 @@ class ForceBead(dobject):
         )
 
         dself.extra = depend_value(
-            name = "extra", func = self.get_extra, dependencies = [dself.ufvx]
+            name="extra", func=self.get_extra, dependencies=[dself.ufvx]
         )
 
         dself.fx = depend_array(name="fx", value=fbase[0 : 3 * atoms.natoms : 3])
