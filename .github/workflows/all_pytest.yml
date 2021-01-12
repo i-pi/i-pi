@@ -1,4 +1,4 @@
-name: Python application
+name: all i-pi-tests
 
 on:
   pull_request:
