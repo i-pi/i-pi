@@ -1,4 +1,4 @@
-name: Python application
+name: Regression and unitary tests
 
 on:
   push:
@@ -42,4 +42,4 @@ jobs:
     - name: pytests
       shell: bash
       run: |
-         i-pi-tests -t all
+         i-pi-tests -t 
