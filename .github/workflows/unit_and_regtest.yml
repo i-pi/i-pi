@@ -39,7 +39,15 @@ jobs:
          cd drivers
          make
 
-    - name: pytests
+    - name: unit-tests
       shell: bash
       run: |
-         i-pi-tests -t 
+         pwd
+         i-pi-tests -t unit
+
+    - name: regtests
+      shell: bash
+      run: |
+         pwd
+         i-pi-tests -t regtests
+
