@@ -16,8 +16,7 @@ jobs:
     name: Set up conda and install Python ${{ matrix.python-version }}         
     steps:
     - uses: actions/checkout@v2
-    - name: Set up Conda
-      uses: s-weigand/setup-conda@v1
+    - uses: s-weigand/setup-conda@v1
       with:
          activate-conda: true
     - run: |
