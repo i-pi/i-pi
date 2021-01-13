@@ -37,7 +37,7 @@ __all__ = ["InstantonMotion"]
 
 # ALBERTO:
 # 1) code spline and integration to obtain g
-# 2) red2comp
+# 2) red2comp for friction
 
 # TEST
 # test ch4hcbe with dense hessian
@@ -373,6 +373,10 @@ class PesMapper(object):
 
 
 class FrictionMapper(PesMapper):
+
+    """ Creation of the multi-dimensional function to compute the physical potential and forces,
+        as well as the friction terms """
+
     def bind(self, mapper):
 
         self.z_friction = mapper.z_friction
