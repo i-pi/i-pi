@@ -486,55 +486,6 @@ class Driver(DriverSocket):
         # marks the request as done as the very last thing
         r["status"] = "Done"
 
-    # def getjson(self):
-    #    """Gets the json string from the driver and parses it into a dictionary.
-
-    #    Raises:
-    #       InvalidStatus: Raised if the status is not HasData.
-    #       Disconnected: Raised if the driver has disconnected.
-
-    #    Returns:
-    #       A dictionary of the form { 'keyword': [values] }.
-    #    """
-
-    #    if self.status & Status.HasData:
-    #        self.sendall(Message("getjson"))
-    #        reply = ""
-    #        while True:
-    #            try:
-    #                reply = self.recv_msg()
-    #            except socket.timeout:
-    #                warning(
-    #                    " @SOCKET:   Timeout in getjson, trying again!", verbosity.low
-    #                )
-    #                continue
-    #            except:
-    #                warning(
-    #                    " @SOCKET:   Error while receiving message: %s" % (reply),
-    #                    verbosity.low,
-    #                )
-    #                raise Disconnected()
-    #            if reply == Message("jsonready"):
-    #                break
-    #            else:
-    #                warning(
-    #                    " @SOCKET:   Unexpected getjson reply: %s" % (reply),
-    #                    verbosity.low,
-    #                )
-    #            if reply == "":
-    #                raise Disconnected()
-    #    else:
-    #        raise InvalidStatus("Status in getjson was " + str(self.status))
-
-    #    mlen = np.int32()
-    #    mlen = self.recvall(mlen)
-    #    if mlen > 0:
-    #        jsonstring = np.zeros(mlen, np.character)
-    #        jsonstring = self.recvall(jsonstring)
-    #        # parsing the json file into a dictionary
-    #        jsondict = json.loads(jsonstring)
-    #    return jsondict
-
 
 class InterfaceSocket(object):
 
