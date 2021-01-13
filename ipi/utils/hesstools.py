@@ -175,7 +175,9 @@ def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):
         return d, w
 
 
-def get_hessian(gm, x0, natoms, nbeads=1, fixatoms=[], d=0.001, new_disc=False):
+def get_hessian(
+    gm, x0, natoms, nbeads=1, fixatoms=[], d=0.001, new_disc=False, friction=False
+):
     """Compute the physical hessian given a function to evaluate energy and forces (gm).
     The intermediate steps are written as a temporary files so the full hessian calculations is only ONE step.
 
@@ -201,6 +203,7 @@ def get_hessian(gm, x0, natoms, nbeads=1, fixatoms=[], d=0.001, new_disc=False):
         )
 
     h = np.zeros((ii, ii * nbeads), float)
+    eta_h = np.zeros((ii * 3, ii * 3 * nbeads), float)
 
     # Check if there is a temporary file:
     i0 = -1
@@ -220,6 +223,28 @@ def get_hessian(gm, x0, natoms, nbeads=1, fixatoms=[], d=0.001, new_disc=False):
                 break
             else:
                 continue
+    if friction:
+        for i in range(ii, -1, -1):
+            try:
+                b = np.loadtxt("hessianEta_" + str(i) + ".tmp")
+            except IOError:
+                pass
+            else:
+                eta_h[:] = b[:]
+                i0 = i
+                print(
+                    (
+                        "We have found a temporary file ( hessianEta_"
+                        + str(i)
+                        + ".tmp). "
+                    )
+                )
+                if (
+                    b.shape == h.shape
+                ):  # Check that the last temporary file was properly written
+                    break
+                else:
+                    continue
 
     # Start calculation:
     for j in range(i0 + 1, ii):
@@ -234,22 +259,36 @@ def get_hessian(gm, x0, natoms, nbeads=1, fixatoms=[], d=0.001, new_disc=False):
 
             x[:, j] = x0[:, j] + d
             e, f1 = gm(x, new_disc)
+            if friction:
+                eta1 = gm.eta
             x[:, j] = x0[:, j] - d
+            if friction:
+                eta2 = gm.eta
             e, f2 = gm(x, new_disc)
             g = (f1 - f2) / (2 * d)
 
+            if friction:
+                eta_h[j, :] = (eta1 - eta2).flatten() / (2 * d)
             h[j, :] = g.flatten()
 
             f = open("hessian_" + str(j) + ".tmp", "w")
             np.savetxt(f, h)
             f.close()
+            if friction:
+                f = open("hessianEta_" + str(j) + ".tmp", "w")
+                np.savetxt(f, eta_h)
+                f.close()
 
     u, g = gm(x0)  # Keep the mapper updated
 
     for i in range(ii):
         try:
+            os.remove("hessianEta_" + str(i) + ".tmp")
             os.remove("hessian_" + str(i) + ".tmp")
         except OSError:
             pass
 
-    return h
+    if not friction:
+        return h
+    else:
+        return h, eta_h

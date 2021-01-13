@@ -27,6 +27,7 @@ from ipi.utils.instools import (
     red2comp,
     get_imvector,
     print_instanton_geo,
+    Fix,
 )
 from ipi.utils.instools import print_instanton_hess, diag_banded, ms_pathway
 from ipi.utils.hesstools import get_hessian, clean_hessian, get_dynmat
@@ -35,18 +36,14 @@ __all__ = ["InstantonMotion"]
 
 
 # ALBERTO:
-# - resolve hessian problem, implement sparse and dense spring hessian
-# add boolean option hessian mode:
-# add boolean option sparse in:
-#    get_hessian
-#    update_hessian
-#    print_hessian
-#    red2comp
+# 1) code spline and integration to obtain g
+# 2) red2comp
+
+# TEST
 # test ch4hcbe with dense hessian
 # test 1D double well with Ohmic
 # test 1D double well with Ohmic +SD
 
-# - code spline and integration to obtain g
 # test 2x*1D double well with Ohmic +SD
 
 
@@ -108,6 +105,7 @@ class InstantonMotion(Motion):
         delta=np.zeros(0, float),
         hessian_init=None,
         hessian=np.eye(0, 0, 0, float),
+        fric_hessian=np.eye(0, 0, 0, float),
         hessian_update=None,
         hessian_asr=None,
         qlist_lbfgs=np.zeros(0, float),
@@ -173,13 +171,19 @@ class InstantonMotion(Motion):
             self.options["hessian_asr"] = hessian_asr
             self.options["hessian_init"] = hessian_init
             self.optarrays["hessian"] = hessian
+            self.optarrays["fric_hessian"] = fric_hessian
 
             if self.options["opt"] == "nichols":
                 self.optimizer = NicholsOptimizer()
-            elif self.options["opt"] == "NR":
-                self.optimizer = NROptimizer()
             else:
-                self.optimizer = LanczosOptimizer()
+                if self.options["friction"]:
+                    raise ValueError(
+                        "\nPlease select nichols opt algorithm for an instanton calculation with friction\n"
+                    )
+                if self.options["opt"] == "NR":
+                    self.optimizer = NROptimizer()
+                else:
+                    self.optimizer = LanczosOptimizer()
 
         elif self.options["opt"] == "lbfgs":
             self.optimizer = LBFGSOptimizer()
@@ -233,153 +237,9 @@ class InstantonMotion(Motion):
         self.optimizer.step(step)
 
 
-class Fix(object):
-    """Class that applies a fixatoms type constrain"""
-
-    def __init__(self, fixatoms, beads, nbeads=None):
-
-        self.natoms = beads.natoms
-        if nbeads is None:
-            self.nbeads = beads.nbeads
-        else:
-            self.nbeads = nbeads
-
-        self.fixatoms = fixatoms
-
-        self.mask0 = np.delete(np.arange(self.natoms), self.fixatoms)
-
-        mask1 = np.ones(3 * self.natoms, dtype=bool)
-        for i in range(3):
-            mask1[3 * self.fixatoms + i] = False
-        self.mask1 = np.arange(3 * self.natoms)[mask1]
-
-        mask2 = np.tile(mask1, self.nbeads)
-        self.mask2 = np.arange(3 * self.natoms * self.nbeads)[mask2]
-
-        self.fixbeads = Beads(beads.natoms - len(fixatoms), beads.nbeads)
-        self.fixbeads.q[:] = self.get_active_vector(beads.copy().q, 1)
-        self.fixbeads.m[:] = self.get_active_vector(beads.copy().m, 0)
-        self.fixbeads.names[:] = self.get_active_vector(beads.copy().names, 0)
-
-    def get_mask(self, m):
-
-        if m == 0:
-            return self.mask0
-        elif m == 1:
-            return self.mask1
-        elif m == 2:
-            return self.mask2
-        else:
-            raise ValueError("Mask number not valid")
-
-    def get_active_array(self, arrays):
-        """Functions that gets the subarray corresponding to the active degrees-of-freedom of the
-        full dimensional array"""
-
-        activearrays = {}
-        for key in arrays:
-
-            if (
-                key == "old_u"
-                or key == "big_step"
-                or key == "delta"
-                or key == "energy_shift"
-                or key == "initial_hessian"
-            ):
-                t = -1
-            elif key == "old_x" or key == "old_f" or key == "d":
-                t = 1
-            elif key == "hessian" or key == "eta":
-                t = 2
-            elif key == "qlist" or key == "glist":
-                t = 3
-            else:
-                raise ValueError(
-                    "@get_active_array: There is an array that we can't recognize"
-                )
-
-            activearrays[key] = self.get_active_vector(arrays[key], t)
-
-        return activearrays
-
-    def get_full_vector(self, vector, t):
-        """Set 0 the degrees of freedom (dof) corresponding to the fix atoms
-        IN:
-            fixatoms   indexes of the fixed atoms
-            vector     vector to be reduced
-            t          type of array:
-                type=-1 : do nothing
-                type=0 : names (natoms )
-                type=1 : pos , force or m3 (nbeads,dof)
-                type=2 : hessian (dof, nbeads*dof)
-                type=3 : qlist or glist (corrections, nbeads*dof)
-        OUT:
-            clean_vector  reduced vector
-        """
-        if len(self.fixatoms) == 0 or t == -1:
-            return vector
-
-        if t == 1:
-
-            full_vector = np.zeros((self.nbeads, 3 * self.natoms))
-            full_vector[:, self.get_mask(1)] = vector
-
-            return full_vector
-
-        elif t == 2:
-
-            full_vector = np.zeros((3 * self.natoms, 3 * self.natoms * self.nbeads))
-
-            ii = 0
-            for i in self.get_mask(1):
-                full_vector[i, self.get_mask(2)] = vector[ii]
-                ii += 1
-
-            return full_vector
-
-        elif t == 3:
-
-            full_vector = np.zeros((vector.shape[0], 3 * self.natoms * self.nbeads))
-            full_vector[:, self.fix.get_mask(2)] = vector
-
-            return full_vector
-
-        else:
-
-            raise ValueError("@apply_fix_atoms: type number is not valid")
-
-    def get_active_vector(self, vector, t):
-        """Delete the degrees of freedom (dof) corresponding to the fix atoms
-        IN:
-            fixatoms   indexes of the fixed atoms
-            vector     vector to be reduced
-            t          type of array:
-                type=-1 : do nothing
-                type=0 : names (natoms )
-                type=1 : pos , force or m3 (nbeads,dof)
-                type=2 : hessian (dof, nbeads*dof)
-                type=3 : qlist or glist (corrections, nbeads*dof)
-        OUT:
-            clean_vector  reduced vector
-        """
-        if len(self.fixatoms) == 0 or t == -1:
-            return vector
-        if t == 0:
-            return vector[self.mask0]
-        elif t == 1:
-            return vector[:, self.mask1]
-        elif t == 2:
-            aux = vector[self.mask1]
-            return aux[:, self.mask2]
-        elif t == 3:
-            return vector[:, self.mask2]
-        else:
-            raise ValueError("@apply_fix_atoms: type number is not valid")
-
-
 class PesMapper(object):
 
-    """Creation of the multi-dimennsional function to compute the physical potential and forces
+    """Creation of the multi-dimensional function to compute the physical potential and forces
 
     Attributes:
         dbeads:  copy of the bead object
@@ -399,9 +259,6 @@ class PesMapper(object):
         self.nm = mapper.nm
         self.fix = mapper.fix
         self.coef = mapper.coef
-        self.friction = mapper.friction
-        if self.friction:
-            self.z_friction = mapper.z_friction
 
         max_ms = mapper.options["max_ms"]
         max_e = mapper.options["max_e"]
@@ -424,43 +281,15 @@ class PesMapper(object):
         """Set the positions """
         self.dbeads.q = x
 
-    def save(self, e, g, eta=None):
+    def save(self, e, g):
         """ Stores potential and forces in this class for convenience """
         self.pot = e
         self.f = -g
-        self.eta = eta
 
-    def compute_friction_terms(self):
-        """ Computes friction component of the energy and gradient """
-
-        z = self.z_friction / self.z_friction[1]
-        s = self.eta
-
-        # g   = obtain_g(self.dbeads, self.eta) #Implement This
-        # s   = obtain_s(self.dbeads, self.eta) #Implement THIS
-        gq = self.dbeads.q  # For now
-        gq = np.concatenate((gq, np.flipud(gq)), axis=0)
-        gq_k = self.nm.transform.b2nm(gq)
-
-        z_k = np.multiply(self.nm.get_omegak(), self.z_friction).reshape(-1, 1)
-
-        e_f = (0.5 * z_k * gq_k ** 2).sum()
-        e = np.zeros(self.dbeads.nbeads)
-        e[0] = e_f  # We can't do a meaningfull bead assigment
-
-        f = self.nm.transform.nm2b(z_k * gq_k)[: self.dbeads.nbeads, :]
-
-        g = np.zeros(f.shape)
-        for i in range(self.dbeads.nbeads):
-            g[i, :] = np.dot(s[i], f[i])
-        return e, g
-
-    def __call__(self, x, new_disc=True):
-        """ Computes energy and gradient for optimization step"""
-        self.fcount += 1
-        full_q = x.copy()
-        full_mspath = ms_pathway(full_q, self.dbeads.m3)
-
+    def interpolation(self, full_q, full_mspath):
+        """Creates the reduced bead object from which energy and forces will be
+        computed and interpolates the results to the full size
+        """
         if self.spline:
             try:
                 from scipy.interpolate import interp1d
@@ -512,31 +341,20 @@ class PesMapper(object):
             full_pot = rpots
             full_forces = rforces
 
+        return full_pot, full_forces
+
+    def __call__(self, x, new_disc=True):
+        """ Computes energy and gradient for optimization step"""
+        self.fcount += 1
+        full_q = x.copy()
+        full_mspath = ms_pathway(full_q, self.dbeads.m3)
+        full_pot, full_force = self.interpolation(full_q, full_mspath)
+
         # This forces the update of the forces
         self.dbeads.q[:] = x[:]
         self.dforces.transfer_forces_manual([full_q], [full_pot], [full_forces])
 
-        if self.friction:
-            # ALBERTO: The following has to be joined to the json implementation for the
-            # communication of the extras strings
-            print("\n ALBERTO2 get friction from forces object\n")
-            # print("\n pick only the tensor corresponding to the  RP frequencies")
-            red_eta = np.zeros(
-                (self.dbeads.nbeads, self.dbeads.natoms * 3, self.dbeads.natoms * 3)
-            )
-
-            # Interpolate if necessary to get full pot and forces
-            if self.spline:
-                red_mspath = full_mspath[indexes]
-                spline = interp1d(red_mspath, red_eta.T, kind="cubic")
-                full_eta = spline(full_mspath).T
-            else:
-                full_eta = red_eta
-
-        else:
-            full_eta = None
-
-        self.save(full_pot, -full_forces, full_eta)
+        self.save(full_pot, -full_forces)
         return self.evaluate()
 
     def evaluate(self):
@@ -548,10 +366,95 @@ class PesMapper(object):
         e = self.pot.copy()
         g = -self.f.copy()
 
-        if self.friction:
-            e_friction, g_friction = self.compute_friction_terms()
-            e += e_friction
-            g += g_friction
+        e = e * (self.coef[1:] + self.coef[:-1]) / 2
+        g = g * (self.coef[1:] + self.coef[:-1]) / 2
+
+        return e, g
+
+
+class FrictionMapper(PesMapper):
+    def bind(self, mapper):
+
+        self.z_friction = mapper.z_friction
+        super(FrictionMapper, self).bind(mapper)
+
+    def save(self, e, g, eta=None):
+        """ Stores potential and forces in this class for convenience """
+        super(FrictionMapper, self).save(e, g)
+        self.eta = eta
+
+    def obtain_g(self, s):
+        """ Computes g from s """
+        ss = s ** 0.5
+
+        return self.dbeads.q.copy()
+
+    def compute_friction_terms(self):
+        """ Computes friction component of the energy and gradient """
+
+        z = self.z_friction / self.z_friction[1]
+        s = self.eta
+
+        gq = self.obtain_g(s)
+        if gq.shape != self.dbeads.q.shape:
+            raise ValueError("\nproblem here\n")
+        gq = np.concatenate((gq, np.flipud(gq)), axis=0)
+        gq_k = self.nm.transform.b2nm(gq)
+
+        z_k = np.multiply(self.nm.get_omegak(), self.z_friction).reshape(-1, 1)
+
+        e_f = (0.5 * z_k * gq_k ** 2).sum()
+        e = np.zeros(self.dbeads.nbeads)
+        e[0] = e_f  # We can't do a meaningfull bead assigment so we just do one
+
+        f = self.nm.transform.nm2b(z_k * gq_k)[: self.dbeads.nbeads, :]
+
+        g = np.zeros(f.shape)
+        for i in range(self.dbeads.nbeads):
+            g[i, :] = np.dot(s[i] ** 0.5, f[i])
+        return e, g
+
+    def __call__(self, x, new_disc=True):
+        """ Computes energy and gradient for optimization step"""
+        self.fcount += 1
+        full_q = x.copy()
+        full_mspath = ms_pathway(full_q, self.dbeads.m3)
+        full_pot, full_forces = self.interpolation(full_q, full_mspath)
+
+        # ALBERTO: The following has to be joined to the json implementation
+        print("\n ALBERTO2 get friction from forces object\n")
+        print("pick only the tensor corresponding to the first RP frequencies")
+        red_eta = 0.0001 * np.ones(
+            (self.dbeads.nbeads, self.dbeads.natoms * 3, self.dbeads.natoms * 3)
+        )
+
+        # Interpolate if necessary to get full pot and forces
+        if self.spline:
+            red_mspath = full_mspath[indexes]
+            spline = interp1d(red_mspath, red_eta.T, kind="cubic")
+            full_eta = spline(full_mspath).T
+        else:
+            full_eta = red_eta
+
+        # This forces the update of the forces
+        self.dbeads.q[:] = x[:]
+        self.dforces.transfer_forces_manual([full_q], [full_pot], [full_forces])
+
+        self.save(full_pot, -full_forces, full_eta)
+        return self.evaluate()
+
+    def evaluate(self):
+        """Evaluate the energy and forces including:
+        - non uniform discretization
+        - friction term
+        """
+
+        e = self.pot.copy()
+        g = -self.f.copy()
+
+        e_friction, g_friction = self.compute_friction_terms()
+        e += e_friction
+        g += g_friction
 
         e = e * (self.coef[1:] + self.coef[:-1]) / 2
         g = g * (self.coef[1:] + self.coef[:-1]) / 2
@@ -728,7 +631,7 @@ class Mapper(object):
     def __init__(self, esum=False):
 
         self.sm = SpringMapper()
-        self.gm = PesMapper()
+        # self.gm = PesMapper() ALBERTO
         self.esum = esum
 
     def initialize(self, q, forces):
@@ -769,6 +672,7 @@ class Mapper(object):
         self.friction = self.options["friction"]
         if self.friction:
             self.set_z_friction(self.options["z_friction"])
+            self.gm = FrictionMapper()
 
         self.sm.bind(self)
         self.gm.bind(self)
@@ -790,7 +694,7 @@ class Mapper(object):
         spline = interp1d(
             freq, z_friction[:, 1], kind="cubic", fill_value=0.0, bounds_error=False
         )
-        self.z_friction = spline(2 * self.nm.get_omegak())
+        self.z_friction = spline(self.nm.get_omegak())  # ALBERTO checck frequencies
 
     def __call__(self, x, mode="all", apply_fix=True, new_disc=True, ret=True):
 
@@ -902,7 +806,8 @@ class DummyOptimizer(dobject):
 
         if self.options["friction"]:
             if len(geop.options["z_friction"]) == 0:
-                geop.options["z_friction"] = np.ones((11, 2)) * 3  # ALBERTO
+                geop.options["z_friction"] = np.ones((1000, 2))
+                geop.options["z_friction"][:, 0] = np.arange(1000)
             self.options["z_friction"] = geop.options["z_friction"]
 
         self.options["tolerances"] = geop.options["tolerances"]
@@ -1013,15 +918,30 @@ class DummyOptimizer(dobject):
 
             else:
                 info("We are going to compute the final hessian", verbosity.low)
-                active_hessian = get_hessian(
-                    self.mapper.gm,
-                    self.beads.q.copy(),
-                    self.beads.natoms,
-                    self.beads.nbeads,
-                    self.fixatoms,
+                current_hessian = get_hessian(
+                    gm=self.mapper.gm,
+                    x0=self.beads.q.copy(),
+                    natoms=self.beads.natoms,
+                    nbeads=self.beads.nbeads,
+                    fixatoms=self.fixatoms,
+                    friction=self.options["friction"],
                 )
 
-                self.optarrays["hessian"][:] = self.fix.get_full_vector(active_hessian, 2)
+                if self.options["friction"]:
+                    friction_hessian = current_hessian[1]
+                    phys_hessian = current_hessian[0]
+
+                    print_instanton_hess(
+                        self.options["prefix"] + "fric_FINAL",
+                        step,
+                        self.optarrays["fric_hessian"],
+                        self.output_maker,
+                    )
+
+                else:
+                    phys_hessian = active_hessian
+
+                self.optarrays["hessian"][:] = self.fix.get_full_vector(phys_hessian, 2)
 
                 print_instanton_hess(
                     self.options["prefix"] + "_FINAL",
@@ -1161,6 +1081,22 @@ class HessianOptimizer(DummyOptimizer):
                 )
 
         self.optarrays["hessian"] = geop.optarrays["hessian"]
+        if self.options["friction"]:
+
+            if geop.optarrays["fric_hessian"].size != (
+                self.beads.natoms * 9 * self.beads.q.size
+            ):
+                if geop.options["hessian_init"]:
+                    geop.optarrays["fric_hessian"] = np.zeros(
+                        (self.beads.natoms * 9, self.beads.q.size)
+                    )
+                else:
+                    raise ValueError(
+                        """
+              'Hessian_init' is false, 'friction' is true so an initial fric_hessian (of the proper size) must be provided.
+                    """
+                    )
+        self.optarrays["fric_hessian"] = geop.optarrays["fric_hessian"]
 
     def initialize(self, step):
 
@@ -1196,13 +1132,20 @@ class HessianOptimizer(DummyOptimizer):
 
         if self.options["hessian_init"]:
             active_hessian = get_hessian(
-                self.mapper.gm,
-                self.beads.q.copy(),
-                self.beads.natoms,
-                self.beads.nbeads,
-                self.fixatoms,
+                gm=self.mapper.gm,
+                x0=self.beads.q.copy(),
+                natoms=self.beads.natoms,
+                nbeads=self.beads.nbeads,
+                fixatoms=self.fixatoms,
+                friction=self.options["friction"],
             )
-            self.optarrays["hessian"][:] = self.fix.get_full_vector(active_hessian, 2)
+            if self.options["friction"]:
+                friction_hessian = active_hessian[1]
+                phys_hessian = active_hessian[0]
+            else:
+                phys_hessian = active_hessian
+
+            self.optarrays["hessian"][:] = self.fix.get_full_vector(phys_hessian, 2)
 
         self.update_old_pos_for()
 
@@ -1219,17 +1162,29 @@ class HessianOptimizer(DummyOptimizer):
                 dg = d_g[j, :]
                 dx = d_x[j, :]
                 Powell(dx, dg, aux)
+            if self.options["friction"]:
+                info(
+                    "powell update for friction hessian is not implemented",
+                    verbosity.medium,
+                )
 
         elif update == "recompute":
             active_hessian = get_hessian(
-                self.mapper.gm,
-                new_x,
-                self.beads.natoms,
-                self.beads.nbeads,
-                self.fixatoms,
+                gm=self.mapper.gm,
+                x0=new_x,
+                natoms=self.beads.natoms,
+                nbeads=self.beads.nbeads,
+                fixatoms=self.fixatoms,
+                friction=self.options["friction"],
             )
 
-        self.optarrays["hessian"][:] = self.fix.get_full_vector(active_hessian, 2)
+            if self.options["friction"]:
+                friction_hessian = active_hessian[1]
+                phys_hessian = active_hessian[0]
+            else:
+                phys_hessian = active_hessian
+
+            self.optarrays["hessian"][:] = self.fix.get_full_vector(phys_hessian, 2)
 
     def print_hess(self, step):
         if (
@@ -1287,11 +1242,17 @@ class NicholsOptimizer(HessianOptimizer):
         )
 
         # Add spring terms to the physical hessian
-        h1 = np.add(self.mapper.sm.h, h0)
+        h = np.add(self.mapper.sm.h, h0)
+
+        # Add friction terms to the hessian
+        if self.options["friction"]:
+            # ALBERTO
+            h_fric = np.zeros(h.shape)
+            h = np.add(h, h_fric)
 
         # Get eigenvalues and eigenvector.
         d, w = clean_hessian(
-            h1,
+            h,
             self.fix.fixbeads.q,
             self.fix.fixbeads.natoms,
             self.fix.fixbeads.nbeads,

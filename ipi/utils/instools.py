@@ -1,5 +1,6 @@
 import numpy as np
 
+from ipi.engine.beads import Beads
 from ipi.utils.messages import verbosity, info
 from ipi.utils import units
 import ipi.utils.mathtools as mt
@@ -302,3 +303,167 @@ def ms_pathway(pos, m3):
         dx.append(d_norm)
         path[i] = np.sum(dx[:i])
     return path
+
+
+class Fix(object):
+    """Class that applies a fixatoms type constrain"""
+
+    def __init__(self, fixatoms, beads, nbeads=None):
+
+        self.natoms = beads.natoms
+        if nbeads is None:
+            self.nbeads = beads.nbeads
+        else:
+            self.nbeads = nbeads
+
+        self.fixatoms = fixatoms
+
+        self.mask0 = np.delete(np.arange(self.natoms), self.fixatoms)
+
+        mask1 = np.ones(3 * self.natoms, dtype=bool)
+        for i in range(3):
+            mask1[3 * self.fixatoms + i] = False
+        self.mask1 = np.arange(3 * self.natoms)[mask1]
+
+        mask2 = np.tile(mask1, self.nbeads)
+        self.mask2 = np.arange(3 * self.natoms * self.nbeads)[mask2]
+
+        self.fixbeads = Beads(beads.natoms - len(fixatoms), beads.nbeads)
+        self.fixbeads.q[:] = self.get_active_vector(beads.copy().q, 1)
+        self.fixbeads.m[:] = self.get_active_vector(beads.copy().m, 0)
+        self.fixbeads.names[:] = self.get_active_vector(beads.copy().names, 0)
+
+        mask3a = np.ones(9 * self.natoms, dtype=bool)
+        for i in range(9):
+            mask3a[9 * self.fixatoms + i] = False
+        mask3b = np.tile(mask3a, self.nbeads)
+        self.mask3 = np.arange(9 * self.natoms * self.nbeads)[mask3b]
+
+    def get_mask(self, m):
+
+        if m == 0:
+            return self.mask0
+        elif m == 1:
+            return self.mask1
+        elif m == 2:
+            return self.mask2
+        elif m == 3:
+            return self.mask3
+        else:
+            raise ValueError("Mask number not valid")
+
+    def get_active_array(self, arrays):
+        """Functions that gets the subarray corresponding to the active degrees-of-freedom of the
+        full dimensional array"""
+
+        activearrays = {}
+        for key in arrays:
+
+            if (
+                key == "old_u"
+                or key == "big_step"
+                or key == "delta"
+                or key == "energy_shift"
+                or key == "initial_hessian"
+            ):
+                t = -1
+            elif key == "old_x" or key == "old_f" or key == "d":
+                t = 1
+            elif key == "hessian" or key == "eta":
+                t = 2
+            elif key == "qlist" or key == "glist":
+                t = 3
+            elif key == "fric_hessian":
+                t = 4
+            else:
+                raise ValueError(
+                    "@get_active_array: We can't recognize the key '{}' ".format(key)
+                )
+
+            activearrays[key] = self.get_active_vector(arrays[key], t)
+
+        return activearrays
+
+    def get_full_vector(self, vector, t):
+        """Set 0 the degrees of freedom (dof) corresponding to the fix atoms
+        IN:
+            fixatoms   indexes of the fixed atoms
+            vector     vector to be reduced
+            t          type of array:
+                type=-1 : do nothing
+                type=0 : names (natoms )
+                type=1 : pos , force or m3 (nbeads,dof)
+                type=2 : hessian (dof, nbeads*dof)
+                type=3 : qlist or glist (corrections, nbeads*dof)
+                type=4 : fric_hessian
+        OUT:
+            clean_vector  reduced vector
+        """
+        if len(self.fixatoms) == 0 or t == -1:
+            return vector
+
+        if t == 1:
+
+            full_vector = np.zeros((self.nbeads, 3 * self.natoms))
+            full_vector[:, self.get_mask(1)] = vector
+
+            return full_vector
+
+        elif t == 2:
+
+            full_vector = np.zeros((3 * self.natoms, 3 * self.natoms * self.nbeads))
+
+            ii = 0
+            for i in self.get_mask(1):
+                full_vector[i, self.get_mask(2)] = vector[ii]
+                ii += 1
+
+            return full_vector
+
+        elif t == 3:
+
+            full_vector = np.zeros((vector.shape[0], 3 * self.natoms * self.nbeads))
+            full_vector[:, self.fix.get_mask(2)] = vector
+
+            return full_vector
+        elif t == 4:
+
+            full_vector = np.zeros((9 * self.natoms, 9 * self.natoms * self.nbeads))
+            ii = 0
+            for i in self.get_mask(1):
+                full_vector[i, self.get_mask(3)] = vector[ii]
+                ii += 1
+
+            return full_vector
+
+        else:
+
+            raise ValueError("@apply_fix_atoms: type number is not valid")
+
+    def get_active_vector(self, vector, t):
+        """Delete the degrees of freedom (dof) corresponding to the fix atoms
+        IN:
+            fixatoms   indexes of the fixed atoms
+            vector     vector to be reduced
+            t          type of array:
+                type=-1 : do nothing
+                type=0 : names (natoms )
+                type=1 : pos , force or m3 (nbeads,dof)
+                type=2 : hessian (dof, nbeads*dof)
+                type=3 : qlist or glist (corrections, nbeads*dof)
+        OUT:
+            clean_vector  reduced vector
+        """
+        if len(self.fixatoms) == 0 or t == -1:
+            return vector
+        if t == 0:
+            return vector[self.mask0]
+        elif t == 1:
+            return vector[:, self.mask1]
+        elif t == 2:
+            aux = vector[self.mask1]
+            return aux[:, self.mask2]
+        elif t == 3:
+            return vector[:, self.mask2]
+        else:
+            raise ValueError("@apply_fix_atoms: type number is not valid")

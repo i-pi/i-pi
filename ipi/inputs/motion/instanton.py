@@ -224,6 +224,14 @@ class InputInst(InputDictionary):
                 "help": "Removes the zero frequency vibrational modes depending on the symmerty of the system.",
             },
         ),
+        "fric_hessian": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.eye, args=(0,)),
+                "help": "(Approximate) friction second derivative from which a friction Hessian can be built.",
+            },
+        ),
         # L-BFGS
         "qlist_lbfgs": (
             InputArray,
@@ -347,6 +355,8 @@ class InputInst(InputDictionary):
             self.hessian.store(optarrays["hessian"])
             self.hessian_update.store(options["hessian_update"])
             self.hessian_asr.store(options["hessian_asr"])
+            if options["friction"]:
+                self.fric_hessian.store(optarrays["fric_hessian"])
         elif geop.options["opt"] == "lbfgs":
             self.qlist_lbfgs.store(optarrays["qlist"])
             self.glist_lbfgs.store(optarrays["glist"])
