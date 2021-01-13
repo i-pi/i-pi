@@ -486,7 +486,7 @@ class Driver(DriverSocket):
         # marks the request as done as the very last thing
         r["status"] = "Done"
 
-    #def getjson(self):
+    # def getjson(self):
     #    """Gets the json string from the driver and parses it into a dictionary.
 
     #    Raises:

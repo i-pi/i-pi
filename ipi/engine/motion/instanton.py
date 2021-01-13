@@ -443,7 +443,7 @@ class GradientMapper(object):
 
         diction = {}
         for key in reduced_forces.extras[0].listofKeys():
-            if str(key) != 'nothing':
+            if str(key) != "nothing":
                 rkey = np.array(reduced_forces.extras[0][key])
                 if self.spline:
                     red_mspath = full_mspath[indexes]
@@ -763,9 +763,7 @@ class DummyOptimizer(dobject):
             if geop.options["discretization"].size == 0:
                 geop.options["discretization"] = np.ones(self.beads.nbeads + 1, float)
             else:
-                raise ValueError(
-                    "Discretization coefficients do not match system size"
-                )
+                raise ValueError("Discretization coefficients do not match system size")
 
         self.options["max_ms"] = geop.options["max_ms"]
         self.options["max_e"] = geop.options["max_e"]
