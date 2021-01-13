@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 
 import os
@@ -82,7 +82,7 @@ def contract_trajectory(fns_in, fn_out_template, n_new, cell_units_in, cell_unit
 
         # Consistency check.
         h = frames[0]["cell"]
-        natoms = len(frames[0]["data"]) / 3
+        natoms = len(frames[0]["data"]) // 3
         for i in range(n):
 
             # Check that all the cells are the same.

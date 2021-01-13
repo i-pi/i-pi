@@ -199,7 +199,6 @@ class InstantonMotion(Motion):
         # Binds optimizer
 
         self.optimizer.bind(self)
-        info("BOUND OPTIMIZER", verbosity.low)
 
     def step(self, step=None):
         self.optimizer.step(step)
@@ -272,7 +271,7 @@ class Fix(object):
             t          type of array:
                 type=-1 : do nothing
                 type=0 : names (natoms )
-                type=1 : pos , force or m3 (nbeads, dof)
+                type=1 : pos , force or m3 (nbeads,dof)
                 type=2 : hessian (dof, nbeads*dof)
                 type=3 : qlist or glist (corrections, nbeads*dof)
         OUT:
@@ -765,7 +764,7 @@ class DummyOptimizer(dobject):
                 geop.options["discretization"] = np.ones(self.beads.nbeads + 1, float)
             else:
                 raise ValueError(
-                    "Discretization coefficients does not match system size"
+                    "Discretization coefficients do not match system size"
                 )
 
         self.options["max_ms"] = geop.options["max_ms"]
@@ -951,7 +950,6 @@ class DummyOptimizer(dobject):
 
         if not self.init:
             self.initialize(step)
-            info("initialised for step {}".format(step), verbosity.low)
 
         if adaptative:
             softexit.trigger("Adaptative discretization is not fully implemented")

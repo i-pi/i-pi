@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 
 """
 Computes the autocorrelation function from i-pi outputs. Assumes the input files are in xyz format and atomic units.

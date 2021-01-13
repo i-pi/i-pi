@@ -422,6 +422,7 @@ class Driver(DriverSocket):
             except:
                 mxtradict["info"] = mxtra
                 info("mxtradict traditional string has been loaded.", verbosity.debug)
+
         return [mu, mf, mvir, mxtradict]
 
     def dispatch(self, r):
