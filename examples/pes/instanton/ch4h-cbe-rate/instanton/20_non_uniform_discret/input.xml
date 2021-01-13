@@ -8,7 +8,7 @@
    </ffsocket>
    <system >
        <initialize nbeads='20'> 
-           <file mode='xyz' >  in.xyz </file>
+           <file mode='xyz' >  init.xyz </file>
            <cell mode='abc'> [200.0,  200.0,  200.0  ] </cell>
        </initialize>
        <forces>
