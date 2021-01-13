@@ -35,16 +35,11 @@ from ipi.utils.hesstools import get_hessian, clean_hessian, get_dynmat
 __all__ = ["InstantonMotion"]
 
 
-# ALBERTO:
-# 1) code spline and integration to obtain g
-# 2) red2comp for friction
-
 # TEST
-# test ch4hcbe with dense hessian
 # test 1D double well with Ohmic
 # test 1D double well with Ohmic +SD
-
 # test 2x*1D double well with Ohmic +SD
+
 
 
 class InstantonMotion(Motion):
@@ -204,6 +199,14 @@ class InstantonMotion(Motion):
                 "problem use nichols even though it may not be as efficient.",
                 verbosity.low,
             )
+        if self.options["friction"]:
+            try:
+             from scipy.interpolate import interp1d
+            except ImportError:
+             softexit.trigger(
+                "Scipy required to use friction in a instanton calculation"
+             )
+ 
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         """Binds beads, cell, bforce and prng to InstantonMotion
@@ -392,8 +395,19 @@ class FrictionMapper(PesMapper):
     def obtain_g(self, s):
         """ Computes g from s """
         ss = s ** 0.5
-
-        return self.dbeads.q.copy()
+        from scipy.interpolate import interp1d
+        from scipy.integrate import quad
+        q = self.dbeads.q.copy()
+        gq = np.zeros(self.dbeads.q.copy().shape)
+        for nd in range(1,3*self.dbeads.natoms):
+          try:
+            spline = interp1d(q[:,nd], np.diag(s[:,nd,nd], kind="cubic")) #spline for each dof
+            for nb in range(self.dbeads.nbeads):
+               gq[nb,nd] = quad(spline,q[0,nd],q[nb,nd]) #Cumulative integral along the path for each dof
+          except: 
+            gq[:,nd] =  0 
+             
+        return gq
 
     def compute_friction_terms(self):
         """ Computes friction component of the energy and gradient """
@@ -432,15 +446,12 @@ class FrictionMapper(PesMapper):
         # ALBERTO: The following has to be joined to the json implementation
         print("\n ALBERTO2 get friction from forces object\n")
         print("pick only the tensor corresponding to the first RP frequencies")
-        red_eta = 0.0001 * np.ones(
+        red_eta = 0.01 * np.ones(
             (self.dbeads.nbeads, self.dbeads.natoms * 3, self.dbeads.natoms * 3)
         )
 
         # Interpolate if necessary to get full pot and forces
         if self.spline:
-            from scipy.interpolate import (
-                interp1d,
-            )  # If we reach this point, we already know we have scipy
 
             red_mspath = full_mspath[indexes]
             spline = interp1d(red_mspath, red_eta.T, kind="cubic")
@@ -451,7 +462,6 @@ class FrictionMapper(PesMapper):
         # This forces the update of the forces
         self.dbeads.q[:] = x[:]
         self.dforces.transfer_forces_manual([full_q], [full_pot], [full_forces])
-
         self.save(full_pot, -full_forces, full_eta)
         return self.evaluate()
 
@@ -643,14 +653,16 @@ class Mapper(object):
     def __init__(self, esum=False):
 
         self.sm = SpringMapper()
-        # self.gm = PesMapper() ALBERTO
+        self.gm = PesMapper() 
         self.esum = esum
 
     def initialize(self, q, forces):
 
         print("\nALBERTO1 get friction from forces object\n")
         eta = np.zeros((q.shape[0], q.shape[1], q.shape[1]))
-
+        for i in range(q.shape[0]):
+         for ii in range(q.shape[1]):
+            eta[i,ii,ii] = q[i,ii]+2
         self.gm.save(forces.pots, -forces.f, eta)
         e1, g1 = self.gm.evaluate()
         e2, g2 = self.sm(q)
@@ -695,12 +707,8 @@ class Mapper(object):
 
     def set_z_friction(self, z_friction):
         """Sets the scaling factors corresponding to frequency dependence of the friction """
-        try:
-            from scipy.interpolate import interp1d
-        except ImportError:
-            softexit.trigger(
-                "Scipy required to use friction in a instanton calculation"
-            )
+
+        from scipy.interpolate import interp1d
 
         freq = units.unit_to_internal("frequency", "inversecm", z_friction[:, 0])
         spline = interp1d(
@@ -1273,7 +1281,6 @@ class NicholsOptimizer(HessianOptimizer):
             self.options["hessian_asr"],
         )
 
-        # d,w =np.linalg.eigh(h1) #Cartesian
         info(
             "\n@Nichols: 1st freq {} cm^-1".format(
                 units.unit_to_user(
