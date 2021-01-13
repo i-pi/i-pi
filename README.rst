@@ -114,7 +114,7 @@ Checklist to create a pull request:
 
 (If the PR adds a new functionally, please fulfill the next two requirements as well)
 
-- Add a working example to the `examples` foldes to showcase the new functionality
+- Add a working example to the `examples` folder to showcase the new functionality
 - Add a regression test to the `i-pi/ipi_tests/regression_tests` folder (see the corresponding README file for further details)
 - Make sure that all the automatic checks pass without any error
 

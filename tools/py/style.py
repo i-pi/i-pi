@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 
 """
-This script cleans python files in-place by calling black
-and checks linting by using flake8.
-Prior to running the script, black and flake8 must be installed.
+This script cleans python files in-place by calling "formatter" variable
+and checks linting by using "linter" variable.
+Prior to running the script, black >20.8b1  must be installed.
 For details of usage call it with "-h" option.
 """
 import subprocess as sp
@@ -13,7 +13,7 @@ from pathlib import Path
 import sys
 
 formatter = "black"
-linter = "flake8"
+linter = "black --check"
 cwd_repo = Path("./").resolve()
 
 
@@ -26,21 +26,21 @@ def main(check_mode, folder_path, file_path):
     else:
         path = cwd_repo
 
-    print("\nTarget: {}".format(path))
-    print("\nRun {}".format(formatter))
-    cmd1 = [formatter, path]
-    if check_mode:
-        cmd1.append("--check")
-    black = sp.Popen(cmd1, cwd=cwd_repo, stdout=sp.PIPE, stderr=sp.PIPE)
+    if not check_mode:
+        print("\nTarget: {}".format(path))
+        cmd1 = [formatter, path]
+        print("\nRun {}".format(cmd1))
+        formatt = sp.Popen(cmd1, cwd=cwd_repo, stdout=sp.PIPE, stderr=sp.PIPE)
 
-    msg = black.communicate(timeout=30)[1].decode("utf-8")
-    print("{} output:\n".format(formatter))
-    print(msg)
+        msg = formatt.communicate(timeout=30)[1].decode("utf-8")
+        print("{} output:\n".format(formatter))
+        print(msg)
 
     print("\nRun {}".format(linter))
-    cmd1 = [linter, path]
-    flake8 = sp.Popen(cmd1, cwd=cwd_repo, stdout=sp.PIPE, stderr=sp.PIPE)
-    msg = flake8.communicate(timeout=30)[0].decode("utf-8")
+    cmd1 = linter.split()
+    cmd1.append(path)
+    lint = sp.Popen(cmd1, cwd=cwd_repo, stdout=sp.PIPE, stderr=sp.PIPE)
+    msg = lint.communicate(timeout=30)[0].decode("utf-8")
     if msg == "":
         print("\nThere isn't any warning. You are ready to push this commit.\n")
     else:
@@ -53,8 +53,7 @@ if __name__ == "__main__":
         formatter_class=RawTextHelpFormatter,
         description=""
         "Script that takes care of the style guide enforcement. \n"
-        "To run this script black and flake8 must be installed: \n"
-        "https://flake8.pycqa.org/en/latest/\n"
+        "To run this script black >20.8b1 must be installed: \n"
         "https://black.readthedocs.io/en/stable/  \n"
         "\n"
         "If you want to clean your i-pi repository, \n"
