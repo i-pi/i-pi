@@ -29,8 +29,8 @@
                <opt>nichols</opt>
                <hessian_update>powell</hessian_update>
                <hessian_asr>poly</hessian_asr>
-               <hessian_init>false</hessian_init>
-               <hessian_final>false</hessian_final>
+               <hessian_init>true</hessian_init>
+               <hessian_final>true</hessian_final>
 	           <biggest_step>0.3</biggest_step>
                <hessian mode='file' shape='(18, 18)' >hessian.dat</hessian>
 	           <discretization mode='file'> coefficients.dat </discretization>
