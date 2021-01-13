@@ -286,7 +286,7 @@ class PesMapper(object):
         self.pot = e
         self.f = -g
 
-    def interpolation(self, full_q, full_mspath):
+    def interpolation(self, full_q, full_mspath, get_index=False):
         """Creates the reduced bead object from which energy and forces will be
         computed and interpolates the results to the full size
         """
@@ -340,15 +340,17 @@ class PesMapper(object):
         else:
             full_pot = rpots
             full_forces = rforces
-
-        return full_pot, full_forces
+        if get_index:
+            return full_pot, full_forces, indexes
+        else:
+            return full_pot, full_forces
 
     def __call__(self, x, new_disc=True):
         """ Computes energy and gradient for optimization step"""
         self.fcount += 1
         full_q = x.copy()
         full_mspath = ms_pathway(full_q, self.dbeads.m3)
-        full_pot, full_force = self.interpolation(full_q, full_mspath)
+        full_pot, full_forces = self.interpolation(full_q, full_mspath)
 
         # This forces the update of the forces
         self.dbeads.q[:] = x[:]
@@ -374,8 +376,8 @@ class PesMapper(object):
 
 class FrictionMapper(PesMapper):
 
-    """ Creation of the multi-dimensional function to compute the physical potential and forces,
-        as well as the friction terms """
+    """Creation of the multi-dimensional function to compute the physical potential and forces,
+    as well as the friction terms"""
 
     def bind(self, mapper):
 
@@ -423,7 +425,9 @@ class FrictionMapper(PesMapper):
         self.fcount += 1
         full_q = x.copy()
         full_mspath = ms_pathway(full_q, self.dbeads.m3)
-        full_pot, full_forces = self.interpolation(full_q, full_mspath)
+        full_pot, full_forces, indexes = self.interpolation(
+            full_q, full_mspath, get_index=True
+        )
 
         # ALBERTO: The following has to be joined to the json implementation
         print("\n ALBERTO2 get friction from forces object\n")
@@ -434,6 +438,10 @@ class FrictionMapper(PesMapper):
 
         # Interpolate if necessary to get full pot and forces
         if self.spline:
+            from scipy.interpolate import (
+                interp1d,
+            )  # If we reach this point, we already know we have scipy
+
             red_mspath = full_mspath[indexes]
             spline = interp1d(red_mspath, red_eta.T, kind="cubic")
             full_eta = spline(full_mspath).T
@@ -943,7 +951,7 @@ class DummyOptimizer(dobject):
                     )
 
                 else:
-                    phys_hessian = active_hessian
+                    phys_hessian = current_hessian
 
                 self.optarrays["hessian"][:] = self.fix.get_full_vector(phys_hessian, 2)
 
