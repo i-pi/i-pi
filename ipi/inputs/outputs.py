@@ -177,7 +177,7 @@ class InputTrajectory(InputValue):
                 "dipole",
                 "friction",
                 "hirshfeld",
-                "workfunction",
+                "work_function",
                 "atomic_stress",
             ],
         },
