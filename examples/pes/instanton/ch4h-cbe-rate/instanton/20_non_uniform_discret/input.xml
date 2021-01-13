@@ -1,8 +1,8 @@
-<simulation mode="static" verbosity="medium">
+<simulation mode="static" verbosity="low">
     <output prefix='inst'>
         <properties stride='1' filename='out'>  [ step, potential{electronvolt}] </properties>
    </output>
-   <total_steps> 100</total_steps>
+   <total_steps>20       </total_steps>
    <ffsocket name="ch4hcbe" mode="unix" >
        <address> localhost </address>  
    </ffsocket>
@@ -31,10 +31,9 @@
                <hessian_asr>poly</hessian_asr>
                <hessian_init>false</hessian_init>
                <hessian_final>false</hessian_final>
-	       <biggest_step>0.3</biggest_step>
+	           <biggest_step>0.3</biggest_step>
                <hessian mode='file' shape='(18, 18)' >hessian.dat</hessian>
-
-	       <discretization mode='file'> coefficients.dat </discretization> 
+	           <discretization mode='file'> coefficients.dat </discretization>
            </instanton>
        </motion>
    </system>

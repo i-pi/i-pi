@@ -653,7 +653,6 @@
             CALL writebuffer(socket,reshape(virial,(/9/)),9)  ! Writing the virial tensor, NOT divided by the volume
             IF (verbose > 1) WRITE(*,*) "    !write!=> strss: ", reshape(virial,(/9/))
 
-
             IF (vstyle==24 .or. vstyle==25) THEN ! returns fantasy friction
                 WRITE(initbuffer,'(a)') "{"
                 WRITE(string, '(a,3x,es11.2e3,a,es11.2e3,a,es11.2e3,&

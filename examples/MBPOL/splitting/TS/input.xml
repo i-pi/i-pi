@@ -4,7 +4,7 @@
         <trajectory stride="1" filename="xc" format="xyz">x_centroid{angstrom}</trajectory>
         <trajectory stride='1' filename='pos'>  positions{angstrom}  </trajectory>
    </output>
-   <total_steps> 2    </total_steps>
+   <total_steps>400       </total_steps>
    <ffsocket name="qtip4pf" mode="unix" >
        <address> localhost </address>  
    </ffsocket>
@@ -17,7 +17,7 @@
           <force forcefield="qtip4pf"> </force>
        </forces>
        <ensemble>
-           <temperature units="kelvin">50</temperature>
+           <temperature units="kelvin">35</temperature>
        </ensemble>
        <motion mode='instanton'>
            <instanton mode='rate'>

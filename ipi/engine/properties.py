@@ -2926,7 +2926,6 @@ class Trajectories(dobject):
 
         (key, unit, arglist, kwarglist) = getall(key)
         pkey = self.traj_dict[key]
-        # print('pkey', pkey)
 
         # pkey["func"](*arglist,**kwarglist) gives the value of the trajectory
         # in atomic units. unit_to_user() returns the value in the user

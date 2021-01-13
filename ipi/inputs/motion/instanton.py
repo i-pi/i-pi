@@ -260,16 +260,6 @@ class InputInst(InputDictionary):
                 "dimension": ["energy", "undefined"],
             },
         ),
-        # Friction
-        # "friction": (
-        #     InputDictionary,
-        #     {
-        #         "dtype": float,
-        #         "default": [],
-        #         "help": """The electronic friction tensor""",
-        #         "dimension": ["undefined"]
-        #     }
-        # ),
         # Final calculations
         "energy_shift": (
             InputValue,

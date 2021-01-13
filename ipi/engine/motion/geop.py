@@ -172,7 +172,6 @@ class GeopMotion(Motion):
                 )
         else:
             self.optimizer.step(step)
-            # print('received EXTRA!!!:', self.optimizer.forces.mforces[0]._forces[0].extra)
 
 
 class LineMapper(object):

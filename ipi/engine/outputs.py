@@ -20,7 +20,7 @@ from ipi.utils.depend import *
 import ipi.utils.io as io
 from ipi.utils.io.inputs.io_xml import *
 from ipi.utils.io import open_backup
-from ipi.engine.properties import getkey, getall
+from ipi.engine.properties import getkey
 from ipi.engine.atoms import *
 from ipi.engine.cell import *
 import json
@@ -348,6 +348,7 @@ class TrajectoryOutput(BaseOutput):
         ]:
 
             # must write out trajectories for each bead, so must create b streams
+
             # prepare format string for file name
             if getkey(self.what) == "extras":
                 fmt_fn = self.filename + "_" + fmt_bead
@@ -364,6 +365,7 @@ class TrajectoryOutput(BaseOutput):
                     self.out.append(None)
 
         else:
+
             # open one file
             filename = self.filename + "." + self.format
             self.out = open_backup(filename, mode)
