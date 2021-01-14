@@ -13,7 +13,7 @@ jobs:
            python-version: '3.x'
       - uses: psf/black@stable
         with:
-          black_args: ". --check"
+           args: ". --check"
       - name: Setup flake8 annotations
         uses: rbialon/flake8-annotations@v1
       - name: flake8 for syntax

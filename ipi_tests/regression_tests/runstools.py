@@ -168,7 +168,7 @@ class Runner(object):
             clients = list()
 
             for s, ffsocket in enumerate(root.findall("ffsocket")):
-                #name = ffsocket.attrib["name"]
+                # name = ffsocket.attrib["name"]
                 mode = driver_info["socket_mode"]
                 ffsocket.attrib["mode"] = mode
 

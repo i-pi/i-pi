@@ -109,7 +109,7 @@ def modify_xml_2_dummy_test(
     clients = list()
 
     for s, ffsocket in enumerate(root.findall("ffsocket")):
-        #name = ffsocket.attrib["name"]
+        # name = ffsocket.attrib["name"]
         ffsocket.attrib["mode"] = driver_info["socket_mode"]
 
         for element in ffsocket:
