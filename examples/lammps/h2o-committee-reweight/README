@@ -5,7 +5,8 @@ for ase, just `pip install ase`
 
 1. generate committee data
  1.1 cd 01generate-data
- 1.2 ./run.sh to produce committee md simulation with two potentials
+ 1.2 ./run.sh 
+ #to produce committee md simulation with two potentials
 
 2. extract the values of potentials from .extra file
  2.1 cd  02extract-data
@@ -15,7 +16,7 @@ for ase, just `pip install ase`
 
 3. make radial distribution function from xyz file
  3.1 cd 03make-rdf
- 3.2 ln -s ../1generate-data/simulation.pos_0.xyz
+ 3.2 ln -s ../01generate-data/simulation.pos_0.xyz .
  3.3 python xyz2rdflist.py
 
 4. reweight the rdf from the committee run
