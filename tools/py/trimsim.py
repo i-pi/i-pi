@@ -157,7 +157,7 @@ def main(inputfile, outdir="trim"):
                 ltraj.append(ntraj)
 
     ptfile = None
-    wtefile = None
+    #wtefile = None
     if os.path.isfile(simul.outtemplate.prefix + "." + simul.smotion.swapfile):
         ptfile = open(simul.outtemplate.prefix + "." + simul.smotion.swapfile, "r")
         optfile = open(

@@ -11,8 +11,6 @@ import subprocess as sp
 import argparse
 from argparse import RawTextHelpFormatter
 from pathlib import Path
-import sys
-import shlex
 
 formatter = "black"
 linter = "black --check"
@@ -38,7 +36,6 @@ def main(check_mode, folder_path, file_path):
         msg = formatt.communicate(timeout=30)[1].decode("utf-8")
         print("{} output:".format(formatter))
         print(msg)
-
 
     print("\nRun {}".format(linter))
     cmd1 = linter.split()
