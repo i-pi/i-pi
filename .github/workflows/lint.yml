@@ -12,4 +12,9 @@ jobs:
            python-version: '3.x'
       - uses: psf/black@stable
         with:
-          args: ". --check"
+          black_args: ". --check"
+    - name: Setup flake8 annotations
+      uses: rbialon/flake8-annotations@v1
+    - name: flake8 for syntax
+      - run: |
+           flake8 --select=F --ignore= --ignore=F403,F405 --per-file-ignores=**__init__.py:F401 --statistics
