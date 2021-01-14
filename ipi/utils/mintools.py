@@ -277,7 +277,7 @@ def min_brent(fdf, fdf0, x0, tol, itmax, init_step):
             return
 
         # Initialize d values (used to determine step size) to outside of bracket
-        d = None
+        d = 0.0
         if abs(e) > tol1:
             d1 = 2.0 * (b - a)
             d2 = d1
@@ -1045,7 +1045,7 @@ def min_brent_neb(fdf, fdf0=None, x0=0.0, tol=1.0e-6, itmax=100, init_step=1.0e-
     gold = 0.3819660
     zeps = 1e-10
     e = 0.0  # Step size for step before last
-    d = None
+    d = 0.0
 
     (ax, bx, cx, fb) = bracket_neb(fdf, fdf0, x0, init_step)
 
