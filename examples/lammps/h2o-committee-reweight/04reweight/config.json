@@ -1,0 +1,8 @@
+{
+  "pot_file": "./input/ml_pot.dat",
+  "quant_file": "./input/rdf_list_O-O.dat",
+  "temp": 300,
+  "reweight_method": "Direct",
+  "new_alpha": 1.0,
+  "old_alpha": 1.0 
+}
