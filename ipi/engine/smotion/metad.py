@@ -37,7 +37,7 @@ class MetaDyn(Smotion):
             # Karen 07.05.2020: the line below causes the complaint "variable not used",
             # but I'm not sure that deleting it doesn't change the behavior, because
             # calling forces might cause their recalculation.
-            oldf = dstrip(s.forces.f).copy()
+            oldf = dstrip(s.forces.f).copy()  # noqa
             for ik, bc in enumerate(s.ensemble.bcomp):
                 k = bc.ffield
                 if k not in self.metaff:

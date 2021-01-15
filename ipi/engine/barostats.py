@@ -293,8 +293,8 @@ class Barostat(dobject):
         kst = np.zeros((3, 3), float)
         q = dstrip(self.beads.q)
         qc = dstrip(self.beads.qc)
-        pc = dstrip(self.beads.pc)
-        m = dstrip(self.beads.m)
+        # pc = dstrip(self.beads.pc)
+        # m = dstrip(self.beads.m)
         na3 = 3 * self.beads.natoms
         fall = dstrip(self.forces.fsc_part_2)
 
