@@ -203,7 +203,8 @@ def get_hessian(
         )
 
     h = np.zeros((ii, ii * nbeads), float)
-    eta_h = np.zeros((ii * 3, ii * 3 * nbeads), float)
+    if friction:
+        eta_h = np.zeros((nbeads, ii , ii , ii), float)
 
     # Check if there is a temporary file:
     i0 = -1
@@ -230,7 +231,7 @@ def get_hessian(
             except IOError:
                 pass
             else:
-                eta_h[:] = b[:]
+                eta_h[:] = b.reshape((nbeads, ii , ii , ii))
                 i0 = i
                 print(
                     (
@@ -239,12 +240,6 @@ def get_hessian(
                         + ".tmp). "
                     )
                 )
-                if (
-                    b.shape == h.shape
-                ):  # Check that the last temporary file was properly written
-                    break
-                else:
-                    continue
 
     # Start calculation:
     for j in range(i0 + 1, ii):
@@ -268,7 +263,7 @@ def get_hessian(
             g = (f1 - f2) / (2 * d)
 
             if friction:
-                eta_h[j, :] = (eta1 - eta2).flatten() / (2 * d)
+                eta_h[:,j, :] = (eta1 - eta2) / (2 * d)
             h[j, :] = g.flatten()
 
             f = open("hessian_" + str(j) + ".tmp", "w")
@@ -276,7 +271,7 @@ def get_hessian(
             f.close()
             if friction:
                 f = open("hessianEta_" + str(j) + ".tmp", "w")
-                np.savetxt(f, eta_h)
+                np.savetxt(f, eta_h.flatten())
                 f.close()
 
     u, g = gm(x0)  # Keep the mapper updated

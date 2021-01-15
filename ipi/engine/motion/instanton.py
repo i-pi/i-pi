@@ -221,7 +221,7 @@ class InstantonMotion(Motion):
         super(InstantonMotion, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
 
         # Redefine normal modes
-        self.nm = NormalModes(transform_method='matrix')
+        self.nm = NormalModes(transform_method="matrix")
         if self.options["mode"] == "rate":
             self.nm.bind(
                 self.ensemble, self, Beads(self.beads.natoms, self.beads.nbeads * 2)
@@ -393,60 +393,56 @@ class FrictionMapper(PesMapper):
 
     def get_fric_hessian(self, fric_hessian):
         """ Creates the friction hessian from the eta derivatives """
-        nphys = self.dbeads.natoms*3
-        ndof = self.dbeads.nbeads*self.dbeads.natoms*3
+        nphys = self.dbeads.natoms * 3
+        ndof = self.dbeads.nbeads * self.dbeads.natoms * 3
 
         z = self.z_friction / self.z_friction[1]
         s = self.eta
-
+        dgdq = s**0.5
         gq = self.obtain_g(s)
         gq = np.concatenate((gq, np.flipud(gq)), axis=0)
-        print('gq',gq.shape)
         gq_k = self.nm.transform.b2nm(gq)
         z_k = np.multiply(self.nm.get_omegak(), self.z_friction).reshape(-1, 1)
-        print('z_k',z_k.shape)
-        print('gq_k',gq_k.shape)
         f1 = self.nm.transform.nm2b(z_k * gq_k)[: self.dbeads.nbeads, :]
-        print('f1',f1.shape)
 
-        h_fric = np.zeros((ndof,ndof))
-        #Block diag:
-#        for i in range(self.dbeads.nbeads):
-#            h_fric[nphys*i:nphys*(i+1),nphys*i:nphys*(i+1)] = np.dot(fric_hessian[i] ** 0.5, f1[i])
+        h_fric = np.zeros((ndof, ndof))
+        # Block diag:
+        for n in range(self.dbeads.nbeads):
+            for i in range(nphys):
+                for ii in range(nphys):
+                   aux = 0
+                   for iii in range(nphys):
+                        try: 
+                           aux += 0.5 * fric_hessian[n, i, ii, iii] / dqdq[n,ii,iii] * f1[i,iii]
+                        except:
+                           pass
+                   h_fric[nphys * n + i , nphys * n + ii] = aux 
 
-        #Cross-terms:
-        h_test_1fric = np.zeros((ndof,ndof))
-        h_test_2fric = np.zeros((ndof,ndof))
-        for nl in range(self.dbeads.nbeads):
-          for ns in range(self.dbeads.nbeads):
-              delta_ks = self.nm.transform._b2nm[:,ns].reshape(-1,1)
-              prefactor = self.nm.transform.nm2b(z_k * delta_ks)[: self.dbeads.nbeads, :][nl] 
-              h_test_1fric[nphys*nl:nphys*(nl+1),nphys*ns:nphys*(ns+1)] = prefactor 
+        # Cross-terms:
 
         C = self.nm.transform._b2nm
         for nl in range(self.dbeads.nbeads):
-          for ns in range(self.dbeads.nbeads):
-             for i in range(nphys): 
-                for ii in range(nphys):
-                       prefactor = 0 
-                       for k in range(self.dbeads.nbeads):
-                         prefactor +=z_k[k]*C[k,nl]*C[k,ns] 
-                       h_test_2fric[nphys*nl+i,nphys*ns+ii] = prefactor#*s[nl,i,ii]*s[ns,i,ii] 
-        for nl in range(self.dbeads.nbeads):
-          for ns in range(self.dbeads.nbeads):
-             a=np.amax(h_test_2fric[nphys*nl:nphys*(nl+1),nphys*ns:nphys*(ns+1)]-h_test_1fric[nphys*nl:nphys*(nl+1),nphys*ns:nphys*(ns+1)])
-             b=np.amin(h_test_2fric[nphys*nl:nphys*(nl+1),nphys*ns:nphys*(ns+1)]-h_test_1fric[nphys*nl:nphys*(nl+1),nphys*ns:nphys*(ns+1)])
-             print(nl,ns,a,b)
+            for ns in range(self.dbeads.nbeads):
+                for i in range(nphys):
+                    for ii in range(nphys):
+                        prefactor = 0
+                        for k in range(2 * self.dbeads.nbeads):
+                            prefactor += z_k[k] * C[k, nl] * C[k, ns]
+                        suma = np.sum(s[nl, i, :] * s[ns, ii, :])
+                        h_fric[nphys * nl + i, nphys * ns + ii] = prefactor * suma
 
+        # Alternative cross-term
+        # for nl in range(self.dbeads.nbeads):
+        #   for ns in range(self.dbeads.nbeads):
+        #      delta_bead= np.zeros((2*self.dbeads.nbeads,nphys))
+        #      delta_bead[ns]=1.0
+        #      delta_ks = self.nm.transform.b2nm(delta_bead)
+        #      prefactor = self.nm.transform.nm2b(z_k * delta_ks)[: self.dbeads.nbeads, :][nl]
+        #      for i in range(nphys):
+        #         for ii in range(nphys):
+        #             h_fric[nphys*nl+i,nphys*ns:nphys*(ns+1)] = prefactor *np.dot(s[nl,i,:],s[ns,ii,:].T)
 
-        g = np.zeros(f1.shape)
-
-        print(fric_hessian.shape)
-        print(f1.shape)
-        print(s.shape)
-        print(s[1].shape,f1[1].shape)
-        print(np.dot(s[1],f1[1]).shape)
-        raise ValueError
+        return h_fric 
 
     def obtain_g(self, s):
         """ Computes g from s """
@@ -475,6 +471,7 @@ class FrictionMapper(PesMapper):
 
         z = self.z_friction / self.z_friction[1]
         s = self.eta
+        dgdq = s**0.5
 
         gq = self.obtain_g(s)
         if gq.shape != self.dbeads.q.shape:
@@ -492,7 +489,7 @@ class FrictionMapper(PesMapper):
 
         g = np.zeros(f.shape)
         for i in range(self.dbeads.nbeads):
-            g[i, :] = np.dot(s[i] ** 0.5, f[i])
+            g[i, :] = np.dot(dgdq[i], f[i])
         return e, g
 
     def __call__(self, x, new_disc=True):
@@ -1166,11 +1163,19 @@ class HessianOptimizer(DummyOptimizer):
         if self.options["friction"]:
 
             if geop.optarrays["fric_hessian"].size != (
-                self.beads.natoms * 9 * self.beads.q.size
+                self.beads.nbeads,
+                self.beads.natoms * 3,
+                self.beads.natoms * 3,
+                self.beads.natoms * 3,
             ):
                 if geop.options["hessian_init"]:
                     geop.optarrays["fric_hessian"] = np.zeros(
-                        (self.beads.natoms * 9, self.beads.q.size)
+                        (
+                            self.beads.nbeads,
+                            self.beads.natoms * 3,
+                            self.beads.natoms * 3,
+                            self.beads.natoms * 3,
+                        )
                     )
                 else:
                     raise ValueError(
@@ -1222,8 +1227,11 @@ class HessianOptimizer(DummyOptimizer):
                 friction=self.options["friction"],
             )
             if self.options["friction"]:
-                friction_hessian = active_hessian[1]
                 phys_hessian = active_hessian[0]
+                friction_hessian = active_hessian[1]
+                self.optarrays["fric_hessian"][:] = self.fix.get_full_vector(
+                    friction_hessian, 4
+                )
             else:
                 phys_hessian = active_hessian
 
@@ -1261,8 +1269,11 @@ class HessianOptimizer(DummyOptimizer):
             )
 
             if self.options["friction"]:
-                friction_hessian = active_hessian[1]
                 phys_hessian = active_hessian[0]
+                friction_hessian = active_hessian[1]
+                self.optarrays["fric_hessian"][:] = self.fix.get_full_vector(
+                    friction_hessian, 4
+                )
             else:
                 phys_hessian = active_hessian
 
