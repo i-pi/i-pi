@@ -34,8 +34,6 @@ from ipi.utils.hesstools import get_hessian, clean_hessian, get_dynmat
 
 __all__ = ["InstantonMotion"]
 
-# Finish
-# Friction hessian
 # TEST
 # test 1D double well with Ohmic
 # test 1D double well with Ohmic +SD
@@ -398,7 +396,7 @@ class FrictionMapper(PesMapper):
 
         z = self.z_friction / self.z_friction[1]
         s = self.eta
-        dgdq = s**0.5
+        dgdq = s ** 0.5
         gq = self.obtain_g(s)
         gq = np.concatenate((gq, np.flipud(gq)), axis=0)
         gq_k = self.nm.transform.b2nm(gq)
@@ -410,13 +408,18 @@ class FrictionMapper(PesMapper):
         for n in range(self.dbeads.nbeads):
             for i in range(nphys):
                 for ii in range(nphys):
-                   aux = 0
-                   for iii in range(nphys):
-                        try: 
-                           aux += 0.5 * fric_hessian[n, i, ii, iii] / dqdq[n,ii,iii] * f1[i,iii]
+                    aux = 0
+                    for iii in range(nphys):
+                        try:
+                            aux += (
+                                0.5
+                                * fric_hessian[n, i, ii, iii]
+                                / dgdq[n, ii, iii]
+                                * f1[i, iii]
+                            )
                         except:
-                           pass
-                   h_fric[nphys * n + i , nphys * n + ii] = aux 
+                            pass
+                    h_fric[nphys * n + i, nphys * n + ii] = aux
 
         # Cross-terms:
 
@@ -442,7 +445,7 @@ class FrictionMapper(PesMapper):
         #         for ii in range(nphys):
         #             h_fric[nphys*nl+i,nphys*ns:nphys*(ns+1)] = prefactor *np.dot(s[nl,i,:],s[ns,ii,:].T)
 
-        return h_fric 
+        return h_fric
 
     def obtain_g(self, s):
         """ Computes g from s """
@@ -471,7 +474,7 @@ class FrictionMapper(PesMapper):
 
         z = self.z_friction / self.z_friction[1]
         s = self.eta
-        dgdq = s**0.5
+        dgdq = s ** 0.5
 
         gq = self.obtain_g(s)
         if gq.shape != self.dbeads.q.shape:

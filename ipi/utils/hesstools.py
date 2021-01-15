@@ -204,7 +204,7 @@ def get_hessian(
 
     h = np.zeros((ii, ii * nbeads), float)
     if friction:
-        eta_h = np.zeros((nbeads, ii , ii , ii), float)
+        eta_h = np.zeros((nbeads, ii, ii, ii), float)
 
     # Check if there is a temporary file:
     i0 = -1
@@ -231,7 +231,7 @@ def get_hessian(
             except IOError:
                 pass
             else:
-                eta_h[:] = b.reshape((nbeads, ii , ii , ii))
+                eta_h[:] = b.reshape((nbeads, ii, ii, ii))
                 i0 = i
                 print(
                     (
@@ -263,7 +263,7 @@ def get_hessian(
             g = (f1 - f2) / (2 * d)
 
             if friction:
-                eta_h[:,j, :] = (eta1 - eta2) / (2 * d)
+                eta_h[:, j, :] = (eta1 - eta2) / (2 * d)
             h[j, :] = g.flatten()
 
             f = open("hessian_" + str(j) + ".tmp", "w")
