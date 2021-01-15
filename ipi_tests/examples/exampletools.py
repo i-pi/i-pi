@@ -1,12 +1,9 @@
 import subprocess as sp
 import os
-import numpy as np
 from pathlib import Path
 from distutils.dir_util import copy_tree
 import xml.etree.ElementTree as ET
-import sys
 import tempfile
-import shutil
 import time
 
 driver_models = [
@@ -112,7 +109,7 @@ def modify_xml_2_dummy_test(
     clients = list()
 
     for s, ffsocket in enumerate(root.findall("ffsocket")):
-        name = ffsocket.attrib["name"]
+        # name = ffsocket.attrib["name"]
         ffsocket.attrib["mode"] = driver_info["socket_mode"]
 
         for element in ffsocket:

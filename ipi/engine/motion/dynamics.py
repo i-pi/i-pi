@@ -68,7 +68,7 @@ class Dynamics(Motion):
         """
 
         super(Dynamics, self).__init__(fixcom=fixcom, fixatoms=fixatoms)
-        dself = dd(self)
+        dself = dd(self)  # noqa
 
         # initialize time step. this is the master time step that covers a full time step
         dd(self).dt = depend_value(name="dt", value=timestep)
@@ -163,7 +163,7 @@ class Dynamics(Motion):
         dself = dd(self)
         dthrm = dd(self.thermostat)
         dbaro = dd(self.barostat)
-        dnm = dd(self.nm)
+        dnm = dd(self.nm)  # noqa
         dens = dd(self.ensemble)
 
         # n times the temperature (for path integral partition function)

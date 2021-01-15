@@ -48,9 +48,7 @@ def Evaluate_EkN(self, N, k):
                 next_bead_ind = 0
                 next_atom_ind = 3 * (l + 1)
 
-                if (
-                    l == N - 1
-                ):  # KAREN: flake8 complains about 'l' as a name of a variable. But I would keep it as in the paper.
+                if l == N - 1:
                     # If on the last bead of last atom, r_l_jp1 is the first bead of N-k atom
                     next_atom_ind = 3 * (N - k)
 
@@ -94,9 +92,7 @@ def Evaluate_dEkn_on_atom(self, l, j, N, k):
         next_bead_ind = 0
         next_atom_ind = 3 * (l + 1)
 
-        if (
-            l == N - 1
-        ):  # KAREN: flake8 complains about 'l' as a name of a variable. But I would keep it as in the paper.
+        if l == N - 1:
             # If on the last bead of last atom, r_l_jp1 is the first bead of N-k atom
             next_atom_ind = 3 * (N - k)
 
@@ -105,9 +101,7 @@ def Evaluate_dEkn_on_atom(self, l, j, N, k):
         prev_bead_ind = P - 1
         prev_atom_ind = 3 * (l - 1)
 
-        if (
-            l == N - k
-        ):  # KAREN: flake8 complains about 'l' as a name of a variable. But I would keep it as in the paper.
+        if l == N - k:
             # If on the first bead of N-k atom, r_l_j-1 is the last bead of last atom
             prev_atom_ind = 3 * (N - 1)
 

@@ -1,19 +1,20 @@
 #!/usr/bin/env python3
 
 """
-This script cleans python files in-place by calling black
-and checks linting by using flake8.
-Prior to running the script, black and flake8 must be installed.
+This script cleans python files in-place by calling "formatter" variable,
+checks linting by using "linter" variable and checks for syntactic consistency
+using the "syntaxer" variable.
+Prior to running the script, black >20.8b1 and flake8 >3.8.4 must be installed.
 For details of usage call it with "-h" option.
 """
 import subprocess as sp
 import argparse
 from argparse import RawTextHelpFormatter
 from pathlib import Path
-import sys
 
 formatter = "black"
-linter = "flake8"
+linter = "black --check"
+syntaxer = "flake8 --select=F --ignore= --ignore=F403,F405 --per-file-ignores=**__init__.py:F401 --statistics"
 cwd_repo = Path("./").resolve()
 
 
@@ -26,26 +27,36 @@ def main(check_mode, folder_path, file_path):
     else:
         path = cwd_repo
 
-    print("\nTarget: {}".format(path))
-    print("\nRun {}".format(formatter))
-    cmd1 = [formatter, path]
-    if check_mode:
-        cmd1.append("--check")
-    black = sp.Popen(cmd1, cwd=cwd_repo, stdout=sp.PIPE, stderr=sp.PIPE)
+    if not check_mode:
+        print("\nTarget: {}".format(path))
+        cmd1 = [formatter, path]
+        print("\nRun format", *cmd1)
+        formatt = sp.Popen(cmd1, cwd=cwd_repo, stdout=sp.PIPE, stderr=sp.PIPE)
 
-    msg = black.communicate(timeout=30)[1].decode("utf-8")
-    print("{} output:\n".format(formatter))
-    print(msg)
+        msg = formatt.communicate(timeout=30)[1].decode("utf-8")
+        print("{} output:".format(formatter))
+        print(msg)
 
     print("\nRun {}".format(linter))
-    cmd1 = [linter, path]
-    flake8 = sp.Popen(cmd1, cwd=cwd_repo, stdout=sp.PIPE, stderr=sp.PIPE)
-    msg = flake8.communicate(timeout=30)[0].decode("utf-8")
-    if msg == "":
+    cmd1 = linter.split()
+    cmd1.append(path)
+    lint = sp.Popen(cmd1, cwd=cwd_repo, stdout=sp.PIPE, stderr=sp.PIPE)
+    msg = lint.communicate(timeout=30)[0].decode("utf-8")
+
+    print("Run {}".format(syntaxer))
+    cmd2 = syntaxer.split()
+    cmd2.append(path)
+    syntaxx = sp.Popen(cmd2, cwd=cwd_repo, stdout=sp.PIPE, stderr=sp.PIPE)
+    msg2 = syntaxx.communicate(timeout=30)[0].decode("utf-8")
+
+    if msg == "" and msg2 == "":
         print("\nThere isn't any warning. You are ready to push this commit.\n")
-    else:
+    elif msg2 == "":
         print("{} output:\n".format(linter))
         print(msg)
+    elif msg == "":
+        print("{} output:".format(syntaxer.split()[0]))
+        print(msg2)
 
 
 if __name__ == "__main__":
@@ -53,9 +64,9 @@ if __name__ == "__main__":
         formatter_class=RawTextHelpFormatter,
         description=""
         "Script that takes care of the style guide enforcement. \n"
-        "To run this script black and flake8 must be installed: \n"
-        "https://flake8.pycqa.org/en/latest/\n"
+        "To run this script black >20.8b1 and flake8 >3.8.4 must be installed: \n"
         "https://black.readthedocs.io/en/stable/  \n"
+        "https://flake8.pycqa.org/en/latest/  \n"
         "\n"
         "If you want to clean your i-pi repository, \n"
         "type: i-pi-style \n"
