@@ -34,12 +34,12 @@ from ipi.utils.hesstools import get_hessian, clean_hessian, get_dynmat
 
 __all__ = ["InstantonMotion"]
 
-
+# Finish
+# Friction hessian
 # TEST
 # test 1D double well with Ohmic
 # test 1D double well with Ohmic +SD
 # test 2x*1D double well with Ohmic +SD
-
 
 
 class InstantonMotion(Motion):
@@ -201,12 +201,11 @@ class InstantonMotion(Motion):
             )
         if self.options["friction"]:
             try:
-             from scipy.interpolate import interp1d
+                from scipy.interpolate import interp1d
             except ImportError:
-             softexit.trigger(
-                "Scipy required to use friction in a instanton calculation"
-             )
- 
+                softexit.trigger(
+                    "Scipy required to use friction in a instanton calculation"
+                )
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         """Binds beads, cell, bforce and prng to InstantonMotion
@@ -222,7 +221,7 @@ class InstantonMotion(Motion):
         super(InstantonMotion, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
 
         # Redefine normal modes
-        self.nm = NormalModes()
+        self.nm = NormalModes(transform_method='matrix')
         if self.options["mode"] == "rate":
             self.nm.bind(
                 self.ensemble, self, Beads(self.beads.natoms, self.beads.nbeads * 2)
@@ -392,21 +391,83 @@ class FrictionMapper(PesMapper):
         super(FrictionMapper, self).save(e, g)
         self.eta = eta
 
+    def get_fric_hessian(self, fric_hessian):
+        """ Creates the friction hessian from the eta derivatives """
+        nphys = self.dbeads.natoms*3
+        ndof = self.dbeads.nbeads*self.dbeads.natoms*3
+
+        z = self.z_friction / self.z_friction[1]
+        s = self.eta
+
+        gq = self.obtain_g(s)
+        gq = np.concatenate((gq, np.flipud(gq)), axis=0)
+        print('gq',gq.shape)
+        gq_k = self.nm.transform.b2nm(gq)
+        z_k = np.multiply(self.nm.get_omegak(), self.z_friction).reshape(-1, 1)
+        print('z_k',z_k.shape)
+        print('gq_k',gq_k.shape)
+        f1 = self.nm.transform.nm2b(z_k * gq_k)[: self.dbeads.nbeads, :]
+        print('f1',f1.shape)
+
+        h_fric = np.zeros((ndof,ndof))
+        #Block diag:
+#        for i in range(self.dbeads.nbeads):
+#            h_fric[nphys*i:nphys*(i+1),nphys*i:nphys*(i+1)] = np.dot(fric_hessian[i] ** 0.5, f1[i])
+
+        #Cross-terms:
+        h_test_1fric = np.zeros((ndof,ndof))
+        h_test_2fric = np.zeros((ndof,ndof))
+        for nl in range(self.dbeads.nbeads):
+          for ns in range(self.dbeads.nbeads):
+              delta_ks = self.nm.transform._b2nm[:,ns].reshape(-1,1)
+              prefactor = self.nm.transform.nm2b(z_k * delta_ks)[: self.dbeads.nbeads, :][nl] 
+              h_test_1fric[nphys*nl:nphys*(nl+1),nphys*ns:nphys*(ns+1)] = prefactor 
+
+        C = self.nm.transform._b2nm
+        for nl in range(self.dbeads.nbeads):
+          for ns in range(self.dbeads.nbeads):
+             for i in range(nphys): 
+                for ii in range(nphys):
+                       prefactor = 0 
+                       for k in range(self.dbeads.nbeads):
+                         prefactor +=z_k[k]*C[k,nl]*C[k,ns] 
+                       h_test_2fric[nphys*nl+i,nphys*ns+ii] = prefactor#*s[nl,i,ii]*s[ns,i,ii] 
+        for nl in range(self.dbeads.nbeads):
+          for ns in range(self.dbeads.nbeads):
+             a=np.amax(h_test_2fric[nphys*nl:nphys*(nl+1),nphys*ns:nphys*(ns+1)]-h_test_1fric[nphys*nl:nphys*(nl+1),nphys*ns:nphys*(ns+1)])
+             b=np.amin(h_test_2fric[nphys*nl:nphys*(nl+1),nphys*ns:nphys*(ns+1)]-h_test_1fric[nphys*nl:nphys*(nl+1),nphys*ns:nphys*(ns+1)])
+             print(nl,ns,a,b)
+
+
+        g = np.zeros(f1.shape)
+
+        print(fric_hessian.shape)
+        print(f1.shape)
+        print(s.shape)
+        print(s[1].shape,f1[1].shape)
+        print(np.dot(s[1],f1[1]).shape)
+        raise ValueError
+
     def obtain_g(self, s):
         """ Computes g from s """
         ss = s ** 0.5
         from scipy.interpolate import interp1d
         from scipy.integrate import quad
+
         q = self.dbeads.q.copy()
         gq = np.zeros(self.dbeads.q.copy().shape)
-        for nd in range(1,3*self.dbeads.natoms):
-          try:
-            spline = interp1d(q[:,nd], np.diag(s[:,nd,nd], kind="cubic")) #spline for each dof
-            for nb in range(self.dbeads.nbeads):
-               gq[nb,nd] = quad(spline,q[0,nd],q[nb,nd]) #Cumulative integral along the path for each dof
-          except: 
-            gq[:,nd] =  0 
-             
+        for nd in range(1, 3 * self.dbeads.natoms):
+            try:
+                spline = interp1d(
+                    q[:, nd], np.diag(ss[:, nd, nd], kind="cubic")
+                )  # spline for each dof
+                for nb in range(self.dbeads.nbeads):
+                    gq[nb, nd] = quad(
+                        spline, q[0, nd], q[nb, nd]
+                    )  # Cumulative integral along the path for each dof
+            except:
+                gq[:, nd] = 0
+
         return gq
 
     def compute_friction_terms(self):
@@ -443,7 +504,7 @@ class FrictionMapper(PesMapper):
             full_q, full_mspath, get_index=True
         )
 
-        # ALBERTO: The following has to be joined to the json implementation
+        # The following has to be joined to the json implementation
         print("\n ALBERTO2 get friction from forces object\n")
         print("pick only the tensor corresponding to the first RP frequencies")
         red_eta = 0.01 * np.ones(
@@ -452,6 +513,7 @@ class FrictionMapper(PesMapper):
 
         # Interpolate if necessary to get full pot and forces
         if self.spline:
+            from scipy.interpolate import interp1d
 
             red_mspath = full_mspath[indexes]
             spline = interp1d(red_mspath, red_eta.T, kind="cubic")
@@ -653,7 +715,7 @@ class Mapper(object):
     def __init__(self, esum=False):
 
         self.sm = SpringMapper()
-        self.gm = PesMapper() 
+        self.gm = PesMapper()
         self.esum = esum
 
     def initialize(self, q, forces):
@@ -661,8 +723,8 @@ class Mapper(object):
         print("\nALBERTO1 get friction from forces object\n")
         eta = np.zeros((q.shape[0], q.shape[1], q.shape[1]))
         for i in range(q.shape[0]):
-         for ii in range(q.shape[1]):
-            eta[i,ii,ii] = q[i,ii]+2
+            for ii in range(q.shape[1]):
+                eta[i, ii, ii] = q[i, ii] + 2
         self.gm.save(forces.pots, -forces.f, eta)
         e1, g1 = self.gm.evaluate()
         e2, g2 = self.sm(q)
@@ -1266,8 +1328,7 @@ class NicholsOptimizer(HessianOptimizer):
 
         # Add friction terms to the hessian
         if self.options["friction"]:
-            # ALBERTO
-            h_fric = np.zeros(h.shape)
+            h_fric = self.mapper.gm.get_fric_hessian(activearrays["fric_hessian"])
             h = np.add(h, h_fric)
 
         # Get eigenvalues and eigenvector.
