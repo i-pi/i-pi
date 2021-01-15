@@ -295,7 +295,7 @@ class PesMapper(object):
         self.pot = e
         self.f = -g
 
-    def interpolation(self, full_q, full_mspath, get_index=False):
+    def interpolation(self, full_q, full_mspath, get_all_info=False):
         """Creates the reduced bead object from which energy and forces will be
         computed and interpolates the results to the full size
         """
@@ -340,7 +340,6 @@ class PesMapper(object):
         rpots = reduced_forces.pots  # reduced energy
         rforces = reduced_forces.f  # reduced gradient
 
-
         if self.spline:
             red_mspath = full_mspath[indexes]
             spline = interp1d(red_mspath, rpots.T, kind="cubic")
@@ -350,8 +349,8 @@ class PesMapper(object):
         else:
             full_pot = rpots
             full_forces = rforces
-        if get_index:
-            return full_pot, full_forces, indexes
+        if get_all_info:
+            return full_pot, full_forces, indexes, reduced_forces
         else:
             return full_pot, full_forces
 
@@ -361,27 +360,10 @@ class PesMapper(object):
         full_q = x.copy()
         full_mspath = ms_pathway(full_q, self.dbeads.m3)
         full_pot, full_forces = self.interpolation(full_q, full_mspath)
-#ALBERTO[
-        diction = {}
-        for key in reduced_forces.extras[0].listofKeys():
-            if str(key) != "nothing":
-                rkey = np.array(reduced_forces.extras[0][key])
-                if self.spline:
-                    red_mspath = full_mspath[indexes]
-                    spline = interp1d(red_mspath, rkey.T, kind="cubic")
-                    full_key = spline(full_mspath).T
-                else:
-                    full_key = rkey
-                if reduced_forces.extras[0][key]:
-                    diction[key] = full_key
-
-        full_extras = listDict.fromDict(diction)
-        if not full_extras:
-            full_extras = [[] for b in range(self.dbeads.nbeads)]
-#ALBERTO]
-        # This forces the update of the forces and the extras
         self.dbeads.q[:] = x[:]
-#ALBERTO
+
+        full_extras = [[] for b in range(self.dbeads.nbeads)]  # ALBERTO
+
         self.dforces.transfer_forces_manual(
             [full_q], [full_pot], [full_forces], [full_extras]
         )
@@ -526,16 +508,40 @@ class FrictionMapper(PesMapper):
             g[i, :] = np.dot(dgdq[i], f[i])
         return e, g
 
+    def get_full_extras(self, reduced_forces, full_mspath, indexes):
+        """ Get the full extra strings """  # ALBERTO
+        diction = {}
+        for key in reduced_forces.extras[0].listofKeys():
+            print("here", key)
+            if str(key) != "nothing":
+                rkey = np.array(reduced_forces.extras[0][key])
+                if self.spline:
+                    from scipy.interpolate import interp1d
+
+                    red_mspath = full_mspath[indexes]
+                    spline = interp1d(red_mspath, rkey.T, kind="cubic")
+                    full_key = spline(full_mspath).T
+                else:
+                    full_key = rkey
+                if reduced_forces.extras[0][key]:
+                    diction[key] = full_key
+
+        return listDict.fromDict(diction)
+
     def __call__(self, x, new_disc=True):
         """ Computes energy and gradient for optimization step"""
         self.fcount += 1
         full_q = x.copy()
         full_mspath = ms_pathway(full_q, self.dbeads.m3)
-        full_pot, full_forces, indexes = self.interpolation(
-            full_q, full_mspath, get_index=True
+        full_pot, full_forces, indexes, reduced_forces = self.interpolation(
+            full_q, full_mspath, get_all_info=True
         )
 
         # The following has to be joined to the json implementation
+        full_extras = self.get_full_extras(reduced_forces, full_mspath, indexes)
+        print("CONTINUE HERE")
+        print(len(full_extras["friction"]))
+        print(full_extras["friction"][0])
         print("\n ALBERTO2 get friction from forces object\n")
         print("pick only the tensor corresponding to the first RP frequencies")
         red_eta = 0.01 * np.ones(
@@ -552,9 +558,11 @@ class FrictionMapper(PesMapper):
         else:
             full_eta = red_eta
 
-        # This forces the update of the forces
+        # This forces the update of the forces and the extras
         self.dbeads.q[:] = x[:]
-        self.dforces.transfer_forces_manual([full_q], [full_pot], [full_forces])
+        self.dforces.transfer_forces_manual(
+            [full_q], [full_pot], [full_forces], [full_extras]
+        )
         self.save(full_pot, -full_forces, full_eta)
         return self.evaluate()
 
@@ -1123,7 +1131,7 @@ class DummyOptimizer(dobject):
 
         self.qtime = -time.time()
         info("\n Instanton optimization STEP {}".format(step), verbosity.low)
-#ALBERTO
+        # ALBERTO
         # Choosing the forcefield that has returned friction tensor in extras
         # for k in range(self.forces.nforces):
         #   if self.forces.mforces[k].extras[0]:
@@ -1156,7 +1164,7 @@ class DummyOptimizer(dobject):
         #               " Friction keyword hasn't been detected in extras. \n Will find the instanton without friction.",
         #               verbosity.low,
         #           )
-#ALBERTO
+        # ALBERTO
 
         activearrays = self.fix.get_active_array(self.optarrays)
 
