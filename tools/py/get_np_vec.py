@@ -133,8 +133,8 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, cut, der, skip):
     if der is True:
         delta_force = np.loadtxt(ffile)[skip:]
         fx = delta_force[:, 0::3]
-        fy = delta_force[:, 1::3]
-        fz = delta_force[:, 2::3]
+        # fy = delta_force[:, 1::3]
+        # fz = delta_force[:, 2::3]
 
     # convert to atomic units
     T = 3.1668105e-06 * Tkelv
@@ -316,8 +316,8 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, cut, der, skip):
         for x in range(n_block):
             dq = delta[x * bsize : (x + 1) * bsize]
             dfx = fx[x * bsize : (x + 1) * bsize]
-            dfy = fy[x * bsize : (x + 1) * bsize]
-            dfz = fz[x * bsize : (x + 1) * bsize]
+            # dfy = fy[x * bsize : (x + 1) * bsize]
+            # dfz = fz[x * bsize : (x + 1) * bsize]
             print("# Computing 3D histogram.")
             h3d_der = histo3d_der(
                 dq,

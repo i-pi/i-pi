@@ -59,8 +59,7 @@ def heatCapacity(prefix, temp, ss=0):
     skipSteps = int(ss)  # steps to skip for thermalization
 
     # some required sums
-    KPa_av, U_av, f2_av, f2KPa_av, f2U_av, E2_av, f2E_av, f2E2_av = (
-        0.0,
+    KPa_av, U_av, f2_av, f2KPa_av, f2U_av, E2_av, f2E2_av = (
         0.0,
         0.0,
         0.0,

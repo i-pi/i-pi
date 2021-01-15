@@ -4,9 +4,6 @@ from ipi.engine.beads import Beads
 from ipi.utils.messages import verbosity, info
 from ipi.utils import units
 import ipi.utils.mathtools as mt
-import os.path
-import glob
-import copy
 
 
 def banded_hessian(h, sm, masses=True, shift=0.001):
