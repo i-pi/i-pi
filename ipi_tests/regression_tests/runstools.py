@@ -3,15 +3,10 @@ import os
 import numpy as np
 from pathlib import Path
 import xml.etree.ElementTree as ET
-import sys
 import tempfile
 import shutil
 import time
 import glob
-from tempfile import TemporaryDirectory
-from distutils.dir_util import copy_tree
-import pytest
-import re
 
 driver_models = [
     "lj",
@@ -150,6 +145,7 @@ class Runner(object):
         cwd = info[0]
         self.files = []
         self.forms = []
+        self.usecol = []
 
         try:
             # Create temp file and copy files
@@ -173,7 +169,7 @@ class Runner(object):
             clients = list()
 
             for s, ffsocket in enumerate(root.findall("ffsocket")):
-                name = ffsocket.attrib["name"]
+                # name = ffsocket.attrib["name"]
                 mode = driver_info["socket_mode"]
                 ffsocket.attrib["mode"] = mode
 
@@ -212,6 +208,13 @@ class Runner(object):
                 if nl > 1:
                     self.files.append(line.split()[0])
                     self.forms.append(line.split()[1])
+                    if len(line.split()) > 2:
+                        listll = []
+                        for ll in line.split()[2:]:
+                            listll.append(int(ll))
+                        self.usecol.append(listll)
+                    else:
+                        self.usecol.append(None)
 
             # Run drivers by defining cmd2 which will be called, eventually
             flag_indeces = list()
@@ -299,7 +302,9 @@ class Runner(object):
         for ii, refname in enumerate(self.files):
             if self.forms[ii] == "numpy":
                 try:
-                    ref_output = np.loadtxt(Path(cwd) / refname)
+                    ref_output = np.loadtxt(
+                        Path(cwd) / refname, usecols=self.usecol[ii]
+                    )
                 except IOError:
                     raise IOError(
                         'Please provide a reference properties output named "{}"'.format(
@@ -312,7 +317,7 @@ class Runner(object):
                     )
 
                 fname = refname[4:]
-                test_output = np.loadtxt(self.tmp_dir / fname)
+                test_output = np.loadtxt(self.tmp_dir / fname, usecols=self.usecol[ii])
 
                 try:
                     np.testing.assert_allclose(

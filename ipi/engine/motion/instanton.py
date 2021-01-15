@@ -960,37 +960,37 @@ class DummyOptimizer(dobject):
         info("\n Instanton optimization STEP {}".format(step), verbosity.low)
 
         # Choosing the forcefield that has returned friction tensor in extras
-        for k in range(self.forces.nforces):
-            if self.forces.mforces[k].extras[0]:
-                if "friction" in self.forces.mforces[k].extras[0].keys():
-                    extras = self.forces.mforces[k].extras
-                    self.friction = np.zeros((self.beads.nbeads, self.beads.natoms, 6))
-                    for b in range(self.beads.nbeads):
-                        if "friction" in extras[b].keys():
-                            for at in range(self.beads.natoms):
-                                self.friction[b, at, :] = extras[b]["friction"][
-                                    6 * at : 6 * (at + 1)
-                                ]
-                                info(
-                                    "FRICTION: {} {} {} {} {} {}".format(
-                                        self.friction[b, at, 0],
-                                        self.friction[b, at, 1],
-                                        self.friction[b, at, 2],
-                                        self.friction[b, at, 3],
-                                        self.friction[b, at, 4],
-                                        self.friction[b, at, 5],
-                                    ),
-                                    verbosity.debug,
-                                )
-                    info(
-                        " Friction keyword detected in extras. \n Will find the instanton with friction.",
-                        verbosity.low,
-                    )
-                else:
-                    info(
-                        " Friction keyword hasn't been detected in extras. \n Will find the instanton without friction.",
-                        verbosity.low,
-                    )
+        # for k in range(self.forces.nforces):
+        #   if self.forces.mforces[k].extras[0]:
+        #       if "friction" in self.forces.mforces[k].extras[0].keys():
+        #           extras = self.forces.mforces[k].extras
+        #           self.friction = np.zeros((self.beads.nbeads, self.beads.natoms, 6))
+        #           for b in range(self.beads.nbeads):
+        #               if "friction" in extras[b].keys():
+        #                   for at in range(self.beads.natoms):
+        #                       self.friction[b, at, :] = extras[b]["friction"][
+        #                           6 * at : 6 * (at + 1)
+        #                       ]
+        #                       info(
+        #                           "FRICTION: {} {} {} {} {} {}".format(
+        #                               self.friction[b, at, 0],
+        #                               self.friction[b, at, 1],
+        #                               self.friction[b, at, 2],
+        #                               self.friction[b, at, 3],
+        #                               self.friction[b, at, 4],
+        #                               self.friction[b, at, 5],
+        #                           ),
+        #                           verbosity.debug,
+        #                       )
+        #           info(
+        #               " Friction keyword detected in extras. \n Will find the instanton with friction.",
+        #               verbosity.low,
+        #           )
+        #       else:
+        #           info(
+        #               " Friction keyword hasn't been detected in extras. \n Will find the instanton without friction.",
+        #               verbosity.low,
+        #           )
 
         activearrays = self.fix.get_active_array(self.optarrays)
 

@@ -13,4 +13,3 @@ doc/manual.xml
 \#*
 *.orig
 regtest-ref
-JSONtest

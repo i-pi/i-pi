@@ -491,7 +491,7 @@ class TrajectoryOutput(BaseOutput):
                             fatom = Atoms(self.system.beads.natoms)
                             fatom.names[:] = self.system.beads.names
                             stream.write(
-                                "      %s\n"
+                                "#     %s\n"
                                 % "      ".join(
                                     "%15s" % el
                                     for el in [
@@ -524,8 +524,10 @@ class TrajectoryOutput(BaseOutput):
                                     for el in data[index][b][self.xtratype]
                                 )
                             )
+                            stream.write("\n")
                     except:
                         stream.write(json.dumps(data[index][b][self.xtratype]))
+                        stream.write("\n")
             except:
                 info(
                     "Sorry, your specified xtratype %s is not among the available options. \n"
@@ -536,7 +538,6 @@ class TrajectoryOutput(BaseOutput):
                     ),
                     verbosity.low,
                 )
-            stream.write("\n")
             if flush:
                 stream.flush()
                 os.fsync(stream)
