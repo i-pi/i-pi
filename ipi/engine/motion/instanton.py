@@ -12,6 +12,7 @@ Algorithms implemented by Yair Litman and Mariana Rossi, 2017
 import numpy as np
 import time
 import sys
+import importlib
 
 from ipi.engine.beads import Beads
 from ipi.engine.normalmodes import NormalModes
@@ -19,7 +20,7 @@ from ipi.engine.motion import Motion
 from ipi.utils.depend import dstrip, dobject
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, info
-from ipi.utils import units, nmtransform
+from ipi.utils import units
 from ipi.utils.mintools import nichols, Powell, L_BFGS
 from ipi.utils.instools import (
     banded_hessian,
@@ -191,18 +192,23 @@ class InstantonMotion(Motion):
             self.optarrays["glist"] = glist_lbfgs
             self.optarrays["d"] = old_direction
 
-        if self.options["opt"] == "NR":
+        if self.options["opt"] == "NR" or self.optimizer["opt"] == "lanczos":
             info(
-                "Note that we need scipy to use NR. If storage and diagonalization of the full hessian is not a "
+                "Note that we need scipy to use NR or lanczos. If storage and diagonalization of the full hessian is not a "
                 "problem use nichols even though it may not be as efficient.",
                 verbosity.low,
             )
-        if self.options["friction"]:
-            try:
-                from scipy.interpolate import interp1d
-            except ImportError:
+            found = importlib.util.find_spec("scpipy")
+            if found is None:
                 softexit.trigger(
-                    "Scipy required to use friction in a instanton calculation"
+                    "Scipy is required to use NR or lanczos optimization but could not be found"
+                )
+
+        if self.options["friction"]:
+            found = importlib.util.find_spec("scpipy")
+            if found is None:
+                softexit.trigger(
+                    "Scipy is required to use friction in a instanton calculation but could not be found"
                 )
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
@@ -400,7 +406,7 @@ class FrictionMapper(PesMapper):
         gq = self.obtain_g(s)
         gq = np.concatenate((gq, np.flipud(gq)), axis=0)
         gq_k = self.nm.transform.b2nm(gq)
-        z_k = np.multiply(self.nm.get_omegak(), self.z_friction).reshape(-1, 1)
+        z_k = np.multiply(self.nm.get_omegak(), z).reshape(-1, 1)
         f1 = self.nm.transform.nm2b(z_k * gq_k)[: self.dbeads.nbeads, :]
 
         h_fric = np.zeros((ndof, ndof))
@@ -482,7 +488,7 @@ class FrictionMapper(PesMapper):
         gq = np.concatenate((gq, np.flipud(gq)), axis=0)
         gq_k = self.nm.transform.b2nm(gq)
 
-        z_k = np.multiply(self.nm.get_omegak(), self.z_friction).reshape(-1, 1)
+        z_k = np.multiply(self.nm.get_omegak(), z).reshape(-1, 1)
 
         e_f = (0.5 * z_k * gq_k ** 2).sum()
         e = np.zeros(self.dbeads.nbeads)
@@ -1011,14 +1017,17 @@ class DummyOptimizer(dobject):
 
                 if self.options["friction"]:
                     friction_hessian = current_hessian[1]
-                    phys_hessian = current_hessian[0]
-
+                    self.optarrays["fric_hessian"][:] = self.fix.get_full_vector(
+                        friction_hessian, 4
+                    )
                     print_instanton_hess(
                         self.options["prefix"] + "fric_FINAL",
                         step,
                         self.optarrays["fric_hessian"],
                         self.output_maker,
                     )
+
+                    phys_hessian = current_hessian[0]
 
                 else:
                     phys_hessian = current_hessian
