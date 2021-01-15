@@ -1,0 +1,5 @@
+        filename                                       format
+-------------------------------------------------------------------
+ref_simulation.dip_0                                    numpy
+ref_simulation.dip_1                                    numpy
+ref_simulation.out                                      numpy
