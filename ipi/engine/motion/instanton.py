@@ -12,7 +12,7 @@ Algorithms implemented by Yair Litman and Mariana Rossi, 2017
 import numpy as np
 import time
 import sys
-import importlib
+from importlib import util
 
 from ipi.engine.beads import Beads
 from ipi.engine.normalmodes import NormalModes
@@ -194,20 +194,21 @@ class InstantonMotion(Motion):
             self.optarrays["glist"] = glist_lbfgs
             self.optarrays["d"] = old_direction
 
-        if self.options["opt"] == "NR" or self.optimizer["opt"] == "lanczos":
+        print(self.options["opt"])
+        if self.options["opt"] == "NR" or self.options["opt"] == "lanczos":
             info(
                 "Note that we need scipy to use NR or lanczos. If storage and diagonalization of the full hessian is not a "
                 "problem use nichols even though it may not be as efficient.",
                 verbosity.low,
             )
-            found = importlib.util.find_spec("scpipy")
+            found = util.find_spec("scipy")
             if found is None:
                 softexit.trigger(
                     "Scipy is required to use NR or lanczos optimization but could not be found"
                 )
 
         if self.options["friction"]:
-            found = importlib.util.find_spec("scpipy")
+            found = util.find_spec("scipy")
             if found is None:
                 softexit.trigger(
                     "Scipy is required to use friction in a instanton calculation but could not be found"
