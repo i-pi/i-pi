@@ -21,7 +21,6 @@ import json
 
 from ipi.utils.messages import verbosity, warning, info
 from ipi.utils.softexit import softexit
-from ipi.utils.xtratools import listDict
 
 
 __all__ = ["InterfaceSocket"]
