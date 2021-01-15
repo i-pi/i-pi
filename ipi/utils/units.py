@@ -272,7 +272,6 @@ UnitMap = {
         "atomic_unit": 1.00,
         "ev/ang^2": 0.010290858,
     },
-
 }
 
 

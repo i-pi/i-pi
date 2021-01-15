@@ -1,0 +1,56 @@
+name: Regression and unitary tests
+
+on:
+  push:
+
+jobs:
+  build:
+
+    strategy:
+      matrix:
+        python-version: [3.8.5]
+        os: ["ubuntu-latest"]
+
+    runs-on: "${{ matrix.os }}"
+    
+    name: Set up conda and install Python ${{ matrix.python-version }}         
+    steps:
+    - uses: actions/checkout@v2
+    - uses: s-weigand/setup-conda@v1
+      with:
+         activate-conda: true
+    - run: |
+           conda --version
+           conda install python=${{matrix.python-version}}
+
+    - name: Install dependencies and Project
+      run: |
+         conda config --add channels conda-forge
+         conda config --set channel_priority strict
+         conda install -c conda-forge --file requirements.txt
+         conda install scipy
+         conda install pip
+         
+         pip install .
+         echo "${GITHUB_WORKSPACE}/bin" >> $GITHUB_PATH
+
+    - name: Install Gfortran and Compile Driver
+      shell: bash
+      run: |
+         sudo apt-get update
+         sudo apt-get install gfortran
+         cd drivers
+         make
+
+    - name: unit-tests
+      shell: bash
+      run: |
+         pwd
+         i-pi-tests -t unit
+
+    - name: regtests
+      shell: bash
+      run: |
+         pwd
+         i-pi-tests -t regtests
+

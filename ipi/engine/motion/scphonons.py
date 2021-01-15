@@ -20,15 +20,15 @@ along with this program. If not, see <http.//www.gnu.org/licenses/>.
 
 __all__ = ["SCPhononsMover"]
 
-import time
 import os
 import numpy as np
 from ipi.engine.motion.motion import Motion
 from ipi.utils.depend import *
-from ipi.utils import units
+
+# from ipi.utils import units
 from ipi.utils.phonontools import apply_asr
 from ipi.utils.softexit import softexit
-from ipi.utils.messages import verbosity, warning, info
+from ipi.utils.messages import verbosity, info
 from ipi.utils.mathtools import gaussian_inv
 
 try:
@@ -684,7 +684,7 @@ class SCPhononator(DummyPhononator):
                 self.get_KnD()
 
                 # Stores the old forces.
-                fnm_old, fnm_err_old = fnm, fnm_err
+                fnm_old = fnm
 
                 # Recalculates the new forces in normal mode coordinates..
                 f, f_err, batch_w = self.weighted_force()
@@ -718,7 +718,7 @@ class SCPhononator(DummyPhononator):
         """
 
         # Creates new variable names for easier referencing.
-        qp, iDp, Kp, i = self.dm.beads.q, self.dm.iD, self.dm.K, self.dm.isc - 1
+        qp, i = self.dm.beads.q, self.dm.isc - 1
 
         # Takes the set of forces calculated at the previous step for (self.q, self.iD)
         avg_f = dstrip(self.f[i]).copy()[-1] * 0.0
@@ -789,7 +789,7 @@ class SCPhononator(DummyPhononator):
         """
 
         # Creates new variable names for easier referencing.
-        qp, iDp, Kp = self.dm.beads.q, self.dm.iD, self.dm.K
+        qp, iDp = self.dm.beads.q, self.dm.iD
 
         # Takes the set of positions calculated at the previous step for (self.q, self.iD)
         x = self.x[i].copy()

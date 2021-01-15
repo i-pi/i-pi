@@ -23,7 +23,8 @@ Classes:
 """
 
 import numpy as np
-import ipi.engine.initializer
+
+# import ipi.engine.initializer
 from ipi.engine.motion import *
 from ipi.utils.inputvalue import *
 from ipi.inputs.thermostats import *
