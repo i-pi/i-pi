@@ -15,7 +15,7 @@ import os
 import numpy as np
 from numpy.testing import assert_equal
 
-from ipi_tests.common.folder import local
+from ipi_tests.unit_tests.common.folder import local
 from ipi.utils.units import unit_to_internal
 from ipi.utils.io import iter_file, read_file, print_file
 
