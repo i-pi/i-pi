@@ -38,5 +38,48 @@
         ENDDO  
                 
         return
-        end
+      end
 
+    SUBROUTINE dw1d_dipole(nat,q,dip)
+        IMPLICIT NONE
+        integer                   :: nat, i
+        real(kind=8),intent(inout):: q(nat,3)
+        real(kind=8),intent(out)  :: dip(3)
+        real(kind=8)              :: x,y,z
+
+        dip = 0.0d0
+        DO i = 1,nat
+            x = q(i,1)
+            y = q(i,2)
+            z = q(i,3)
+
+            dip(1) = dip(1)+x**3
+            dip(2) = dip(2)-y**3
+            dip(3) = dip(3)+z**3
+        ENDDO
+
+        return
+    END
+
+    SUBROUTINE dw1d_friction(nat,q,friction)
+        IMPLICIT NONE
+        integer                  :: nat, i
+        real(kind=8),intent(in)  :: q(nat,3)
+        real(kind=8),intent(out) :: friction(nat,6)
+        real(kind=8)             :: x,y,z
+
+        DO i = 1,nat
+            x = q(i,1)
+            y = q(i,2)
+            z = q(i,3)
+
+            friction(i,1) = x**2
+            friction(i,2) = y**2
+            friction(i,3) = z**2
+            friction(i,4) = x*y
+            friction(i,5) = x*z
+            friction(i,6) = y*z
+        ENDDO
+
+        return
+    END

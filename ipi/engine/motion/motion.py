@@ -57,14 +57,14 @@ class Motion(dobject):
         """Binds beads, cell, bforce, and prng to the calculator.
 
         This takes a beads object, a cell object, a forcefield object and a
-        random number generator object and makes them members of the atom motion caclulator.
+        random number generator object and makes them members of the atom motion calculator.
         It also then creates the objects that will hold the data needed in the
         ensemble algorithms and the dependency network. Note that the conserved
         quantity is defined in the init, but as each ensemble has a different
         conserved quantity the dependencies are defined in bind.
 
         Args:
-            beads: The beads object from whcih the bead positions are taken.
+            beads: The beads object from which the bead positions are taken.
             nm: A normal modes object used to do the normal modes transformation.
             cell: The cell object from which the system box is taken.
             bforce: The forcefield object from which the force and virial are taken.

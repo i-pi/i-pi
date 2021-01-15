@@ -279,7 +279,7 @@ class Simulation(dobject):
                     stepthreads.append(st)
 
                 for st in stepthreads:
-                    while st.isAlive():
+                    while st.is_alive():
                         # This is necessary as join() without timeout prevents main from receiving signals.
                         st.join(2.0)
             else:
@@ -323,7 +323,7 @@ class Simulation(dobject):
                     st.start()
 
                 for st in stepthreads:
-                    while st.isAlive():
+                    while st.is_alive():
                         # This is necessary as join() without timeout prevents main from receiving signals.
                         st.join(2.0)
             else:
@@ -352,7 +352,7 @@ class Simulation(dobject):
                     stepthreads.append(st)
 
                 for st in stepthreads:
-                    while st.isAlive():
+                    while st.is_alive():
                         # This is necessary as join() without timeout prevents main from receiving signals.
                         st.join(2.0)
             else:

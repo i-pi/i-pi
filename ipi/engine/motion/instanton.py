@@ -21,7 +21,8 @@ from ipi.utils.depend import dstrip, dobject
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, info
 from ipi.utils import units
-from ipi.utils.mintools import nichols, Powell, L_BFGS
+from ipi.utils.mintools import nichols, Powell
+from ipi.engine.motion.geop import L_BFGS
 from ipi.utils.instools import (
     banded_hessian,
     invmul_banded,
@@ -32,6 +33,7 @@ from ipi.utils.instools import (
 )
 from ipi.utils.instools import print_instanton_hess, diag_banded, ms_pathway
 from ipi.utils.hesstools import get_hessian, clean_hessian, get_dynmat
+from ipi.utils.xtratools import listDict
 
 __all__ = ["InstantonMotion"]
 
@@ -215,7 +217,7 @@ class InstantonMotion(Motion):
         """Binds beads, cell, bforce and prng to InstantonMotion
 
         Args:
-        beads: The beads object from whcih the bead positions are taken.
+        beads: The beads object from which the bead positions are taken.
         nm: A normal modes object used to do the normal modes transformation.
         cell: The cell object from which the system box is taken.
         bforce: The forcefield object from which the force and virial are taken.
@@ -337,6 +339,7 @@ class PesMapper(object):
         rpots = reduced_forces.pots  # reduced energy
         rforces = reduced_forces.f  # reduced gradient
 
+
         if self.spline:
             red_mspath = full_mspath[indexes]
             spline = interp1d(red_mspath, rpots.T, kind="cubic")
@@ -357,10 +360,31 @@ class PesMapper(object):
         full_q = x.copy()
         full_mspath = ms_pathway(full_q, self.dbeads.m3)
         full_pot, full_forces = self.interpolation(full_q, full_mspath)
+#ALBERTO[
+        diction = {}
+        for key in reduced_forces.extras[0].listofKeys():
+            if str(key) != "nothing":
+                rkey = np.array(reduced_forces.extras[0][key])
+                if self.spline:
+                    red_mspath = full_mspath[indexes]
+                    spline = interp1d(red_mspath, rkey.T, kind="cubic")
+                    full_key = spline(full_mspath).T
+                else:
+                    full_key = rkey
+                if reduced_forces.extras[0][key]:
+                    diction[key] = full_key
 
-        # This forces the update of the forces
+        full_extras = listDict.fromDict(diction)
+        if not full_extras:
+            full_extras = [[] for b in range(self.dbeads.nbeads)]
+#ALBERTO]
+        # This forces the update of the forces and the extras
         self.dbeads.q[:] = x[:]
-        self.dforces.transfer_forces_manual([full_q], [full_pot], [full_forces])
+#ALBERTO
+        self.dforces.transfer_forces_manual(
+            [full_q], [full_pot], [full_forces], [full_extras]
+        )
+        info("UPDATE of forces and extras", verbosity.debug)
 
         self.save(full_pot, -full_forces)
         return self.evaluate()
@@ -920,7 +944,7 @@ class DummyOptimizer(dobject):
         """ Generates the initial instanton geometry by stretching the transitions-state geometry along the mode with imaginary frequency """
 
         info(
-            " @GEOP: We stretch the initial geometry with an 'amplitud' of {:4.2f}".format(
+            " @GEOP: We stretch the initial geometry with an 'amplitude' of {:4.2f}".format(
                 self.optarrays["delta"]
             ),
             verbosity.low,
@@ -1098,6 +1122,40 @@ class DummyOptimizer(dobject):
 
         self.qtime = -time.time()
         info("\n Instanton optimization STEP {}".format(step), verbosity.low)
+#ALBERTO
+        # Choosing the forcefield that has returned friction tensor in extras
+        # for k in range(self.forces.nforces):
+        #   if self.forces.mforces[k].extras[0]:
+        #       if "friction" in self.forces.mforces[k].extras[0].keys():
+        #           extras = self.forces.mforces[k].extras
+        #           self.friction = np.zeros((self.beads.nbeads, self.beads.natoms, 6))
+        #           for b in range(self.beads.nbeads):
+        #               if "friction" in extras[b].keys():
+        #                   for at in range(self.beads.natoms):
+        #                       self.friction[b, at, :] = extras[b]["friction"][
+        #                           6 * at : 6 * (at + 1)
+        #                       ]
+        #                       info(
+        #                           "FRICTION: {} {} {} {} {} {}".format(
+        #                               self.friction[b, at, 0],
+        #                               self.friction[b, at, 1],
+        #                               self.friction[b, at, 2],
+        #                               self.friction[b, at, 3],
+        #                               self.friction[b, at, 4],
+        #                               self.friction[b, at, 5],
+        #                           ),
+        #                           verbosity.debug,
+        #                       )
+        #           info(
+        #               " Friction keyword detected in extras. \n Will find the instanton with friction.",
+        #               verbosity.low,
+        #           )
+        #       else:
+        #           info(
+        #               " Friction keyword hasn't been detected in extras. \n Will find the instanton without friction.",
+        #               verbosity.low,
+        #           )
+#ALBERTO
 
         activearrays = self.fix.get_active_array(self.optarrays)
 
