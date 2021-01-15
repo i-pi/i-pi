@@ -20,18 +20,18 @@ along with this program. If not, see <http.//www.gnu.org/licenses/>.
 __all__ = ["NormalModeMover"]
 
 import numpy as np
-import time
-import itertools
 import os
 
 from ipi.engine.motion import Motion
 from ipi.utils.depend import *
-from ipi.utils import units
+
+# from ipi.utils import units
 from ipi.utils.phonontools import apply_asr
 from ipi.utils.softexit import softexit
-from ipi.utils.messages import verbosity, warning, info
-from ipi.utils.io import print_file
-from ipi.engine.atoms import Atoms
+from ipi.utils.messages import verbosity, info
+
+# from ipi.utils.io import print_file
+# from ipi.engine.atoms import Atoms
 
 try:
     import scipy

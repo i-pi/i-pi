@@ -3,15 +3,10 @@ import os
 import numpy as np
 from pathlib import Path
 import xml.etree.ElementTree as ET
-import sys
 import tempfile
 import shutil
 import time
 import glob
-from tempfile import TemporaryDirectory
-from distutils.dir_util import copy_tree
-import pytest
-import re
 
 driver_models = [
     "lj",
@@ -173,7 +168,7 @@ class Runner(object):
             clients = list()
 
             for s, ffsocket in enumerate(root.findall("ffsocket")):
-                name = ffsocket.attrib["name"]
+                # name = ffsocket.attrib["name"]
                 mode = driver_info["socket_mode"]
                 ffsocket.attrib["mode"] = mode
 
