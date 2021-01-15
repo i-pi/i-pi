@@ -64,17 +64,17 @@ class Replay(Motion):
         # Posibility to read beads from separate XYZ files by a wildcard
         if any(char in self.intraj.value for char in "*?[]"):
             infilelist = []
-            for file in sorted(os.listdir('.')):
+            for file in sorted(os.listdir(".")):
                 if fnmatch(file, self.intraj.value):
                     infilelist.append(file)
             # determine bead numbers in input files
             bead_map_list = []
             for file in infilelist:
-                fdin = open(file, 'r')
+                fdin = open(file, "r")
                 rr = read_file_raw(self.intraj.mode, fdin)
-                metainfo = rr['comment'].split()
+                metainfo = rr["comment"].split()
                 for i, word in enumerate(metainfo):
-                    if word == 'Bead:':
+                    if word == "Bead:":
                         bead_map_list.append(int(metainfo[i + 1]))
                 fdin.close()
             # check that beads are continuous (no files missing)
@@ -83,14 +83,16 @@ class Replay(Motion):
                     "ATTENTION: Provided trajectory files have non-sequential "
                     "range of bead indices.\n"
                     "\tIndices found: %s\n"
-                    "\tMake sure that the wildcard does what it's supposed to do." % str(bead_map_list),
-                    verbosity.low
+                    "\tMake sure that the wildcard does what it's supposed to do."
+                    % str(bead_map_list),
+                    verbosity.low,
                 )
             # sort the list of files according to their bead indices
-            infilelist_sorted, _ = zip(*sorted(zip(infilelist, bead_map_list),
-                                       key=lambda t: t[1]))
-            self.rfile = [open(f, 'r') for f in infilelist_sorted]
-        else:   # no wildcard
+            infilelist_sorted, _ = zip(
+                *sorted(zip(infilelist, bead_map_list), key=lambda t: t[1])
+            )
+            self.rfile = [open(f, "r") for f in infilelist_sorted]
+        else:  # no wildcard
             self.rfile = open(self.intraj.value, "r")
         self.rstep = 0
 
@@ -109,7 +111,7 @@ class Replay(Motion):
                 info(
                     "Error: if a wildcard is used for replay, then "
                     "the number of files should be equal to the number of beads.",
-                    verbosity.low
+                    verbosity.low,
                 )
                 softexit.trigger(" # Error in replay input.")
         while True:
