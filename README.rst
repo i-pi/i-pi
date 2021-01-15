@@ -79,7 +79,8 @@ Format Compliance
 
 i-PI code should be compliant to a minimal subset of PEP-8 recommendations.
 Currently, we require the use of `black` as formatter and linter.
-We also ask for the usage of `flake8` for syntactic checks.
+We also ask for the usage of `flake8` for syntactic checks, which is also
+part of linting.
 In most systems, both packages can be easily installed using `pip`.
 BEFORE proceeding to a pull request, the minimal requirement is that you run
 
@@ -87,7 +88,6 @@ BEFORE proceeding to a pull request, the minimal requirement is that you run
 
   $ make -f Makefile.style lint
   $ make -f Makefile.style pretty 
-  $ make -f Makefile.style syntax 
 
 This will ensure the formatting and linting requirement are applied in the whole 
 directory tree. Please resolve any warnings or errors that may appear. Your
