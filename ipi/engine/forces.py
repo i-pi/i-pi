@@ -922,6 +922,7 @@ class Forces(dobject):
             assert mq.shape[0] == mv.shape[0], msg
             assert mself.nbeads == mv.shape[0], msg
             assert mself.nbeads == mq.shape[0], msg
+            assert mself.nbeads == len(mextra), msg
             mxlist = mextra[:]
 
             dd(mself.beads).q.set(mq, manual=False)
