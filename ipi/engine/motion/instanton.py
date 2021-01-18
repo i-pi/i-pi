@@ -30,7 +30,6 @@ from ipi.utils.instools import (
 from ipi.utils.instools import print_instanton_hess, diag_banded, ms_pathway
 from ipi.utils.hesstools import get_hessian, clean_hessian, get_dynmat
 from ipi.engine.beads import Beads
-from ipi.utils.xtratools import listDict
 
 __all__ = ["InstantonMotion"]
 
@@ -72,7 +71,6 @@ class InstantonMotion(Motion):
         ls_options: Options for line search methods.
         hessian_final:  Boolean which decides whether the hessian after the optimization will be computed.
         energy_shift: zero of energy (usually it corresponds to reactant state)
-        friction: the electronic friction tensor that causes a change in the effective spring constant
     """
 
     def __init__(
@@ -104,7 +102,6 @@ class InstantonMotion(Motion):
         old_direction=np.zeros(0, float),
         hessian_final="False",
         energy_shift=np.zeros(0, float),
-        friction=np.zeros(0, float),
     ):
         """Initialises InstantonMotion."""
 
@@ -418,7 +415,7 @@ class GradientMapper(object):
         else:
             indexes = np.arange(self.dbeads.nbeads)
 
-        # Create reduced bead and force object and evaluate forces and extras
+        # Create reduced bead and force object and evaluate forces
         reduced_b = Beads(self.dbeads.natoms, len(indexes))
         reduced_b.q[:] = full_q[indexes]
         reduced_b.m[:] = self.dbeads.m
@@ -430,7 +427,7 @@ class GradientMapper(object):
         rpots = reduced_forces.pots  # reduced energy
         rforces = reduced_forces.f  # reduced gradient
 
-        # Interpolate if necessary to get full pot and forces and frictions
+        # Interpolate if necessary to get full pot and forces
         if self.spline:
             red_mspath = full_mspath[indexes]
             spline = interp1d(red_mspath, rpots.T, kind="cubic")
@@ -441,29 +438,9 @@ class GradientMapper(object):
             full_pot = rpots
             full_forces = rforces
 
-        diction = {}
-        for key in reduced_forces.extras[0].listofKeys():
-            if str(key) != "nothing":
-                rkey = np.array(reduced_forces.extras[0][key])
-                if self.spline:
-                    red_mspath = full_mspath[indexes]
-                    spline = interp1d(red_mspath, rkey.T, kind="cubic")
-                    full_key = spline(full_mspath).T
-                else:
-                    full_key = rkey
-                if reduced_forces.extras[0][key]:
-                    diction[key] = full_key
-
-        full_extras = listDict.fromDict(diction)
-        if not full_extras:
-            full_extras = [[] for b in range(self.dbeads.nbeads)]
-
-        # This forces the update of the forces and the extras
+        # This forces the update of the forces
         self.dbeads.q[:] = x[:]
-        self.dforces.transfer_forces_manual(
-            [full_q], [full_pot], [full_forces], [full_extras]
-        )
-        info("UPDATE of forces and extras", verbosity.debug)
+        self.dforces.transfer_forces_manual([full_q], [full_pot], [full_forces])
 
         # e = self.dforces.pot   # Energy
         # g = -self.dforces.f    # Gradient
