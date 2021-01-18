@@ -311,7 +311,7 @@ class Runner(object):
                     )
                 except ValueError:
                     raise ValueError(
-                        "Please check ref_simulation.out in {}".format(str(self.parent))
+                        "Please check ref_simulation.out in {}".format(str((self.parent / cwd).absolute()))
                     )
 
                 fname = refname[4:]
@@ -325,7 +325,7 @@ class Runner(object):
                 except AssertionError:
                     raise AssertionError(
                         "ANOMALY: Disagreement between reference and {} in {}".format(
-                            fname, str(self.parent.absolute())
+                            fname, str((self.parent / cwd).absolute())
                         )
                     )
 
@@ -367,14 +367,14 @@ class Runner(object):
                 except IOError:
                     raise IOError(
                         "Please provide a reference file named {} in {}".format(
-                            refname, str(self.parent / cwd)
+                            refname, str((self.parent / cwd).absolute())
                         )
                     )
 
                 except ValueError:
                     raise ValueError(
                         "Please check the values for the file named {} in {}".format(
-                            refname, str(self.parent / cwd)
+                            refname, str((self.parent / cwd).absolute())
                         )
                     )
 
