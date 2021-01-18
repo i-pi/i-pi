@@ -325,7 +325,7 @@ class Runner(object):
                 except AssertionError:
                     raise AssertionError(
                         "ANOMALY: Disagreement between reference and {} in {}".format(
-                            fname, str(self.parent)
+                            fname, str(self.parent.absolute())
                         )
                     )
 
