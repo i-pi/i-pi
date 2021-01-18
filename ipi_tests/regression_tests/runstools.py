@@ -287,9 +287,7 @@ class Runner(object):
         """ This function checks if ipi has exited with errors"""
 
         ipi_error = ipi.communicate(timeout=120)[1].decode("ascii")
-        if ipi_error != "":
-            print("IPI ERROR OCCURED: {}".format(ipi_error))
-        assert "" == ipi_error
+        assert "" == ipi_error, "IPI ERROR OCCURED: {}".format(ipi_error)
 
     def _check_numpy_output(self, cwd):
         """This function checks if the numpy-accessible datafiles are 'all_close' to the
