@@ -311,7 +311,9 @@ class Runner(object):
                     )
                 except ValueError:
                     raise ValueError(
-                        "Please check ref_simulation.out in {}".format(str((self.parent / cwd).absolute()))
+                        "Please check ref_simulation.out in {}".format(
+                            str((self.parent / cwd).absolute())
+                        )
                     )
 
                 fname = refname[4:]
