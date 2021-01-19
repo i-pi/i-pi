@@ -287,9 +287,7 @@ class Runner(object):
         """ This function checks if ipi has exited with errors"""
 
         ipi_error = ipi.communicate(timeout=120)[1].decode("ascii")
-        if ipi_error != "":
-            print("IPI ERROR OCCURED: {}".format(ipi_error))
-        assert "" == ipi_error
+        assert "" == ipi_error, "IPI ERROR OCCURED: {}".format(ipi_error)
 
     def _check_numpy_output(self, cwd):
         """This function checks if the numpy-accessible datafiles are 'all_close' to the
@@ -313,7 +311,9 @@ class Runner(object):
                     )
                 except ValueError:
                     raise ValueError(
-                        "Please check ref_simulation.out in {}".format(str(self.parent))
+                        "Please check ref_simulation.out in {}".format(
+                            str((self.parent / cwd).absolute())
+                        )
                     )
 
                 fname = refname[4:]
@@ -327,7 +327,7 @@ class Runner(object):
                 except AssertionError:
                     raise AssertionError(
                         "ANOMALY: Disagreement between reference and {} in {}".format(
-                            fname, str(self.parent)
+                            fname, str((self.parent / cwd).absolute())
                         )
                     )
 
@@ -369,14 +369,14 @@ class Runner(object):
                 except IOError:
                     raise IOError(
                         "Please provide a reference file named {} in {}".format(
-                            refname, str(self.parent / cwd)
+                            refname, str((self.parent / cwd).absolute())
                         )
                     )
 
                 except ValueError:
                     raise ValueError(
                         "Please check the values for the file named {} in {}".format(
-                            refname, str(self.parent / cwd)
+                            refname, str((self.parent / cwd).absolute())
                         )
                     )
 
@@ -398,6 +398,6 @@ class Runner(object):
                 except AssertionError:
                     raise AssertionError(
                         "ANOMALY: Disagreement between reference and {} in {}".format(
-                            fname, str(self.parent / cwd)
+                            fname, str((self.parent / cwd).absolute())
                         )
                     )

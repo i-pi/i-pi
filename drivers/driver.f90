@@ -389,7 +389,7 @@
          ENDIF
       ENDIF
 
-      OPEN(UNIT=32, FILE="driver_extras.json", ACTION="write")
+!      OPEN(UNIT=32, FILE="driver_extras.json", ACTION="write")
 
       ! Calls the interface to the POSIX sockets library to open a communication channel
       CALL open_socket(socket, inet, port, host)
@@ -724,26 +724,26 @@
 
             ELSEIF (vstyle==24 .or. vstyle==25) THEN ! returns fantasy friction
                 WRITE(initbuffer,'(a)') "{"
-                WRITE(string, '(a,3x,es21.14,a,es21.14,a,es21.14,&
+                WRITE(string, '(a,3x,f15.8,a,f15.8,a,f15.8,&
      &          3x,a)') '"dipole": [',dip(1),",",dip(2),",",dip(3),"],"
                 string2 = TRIM(initbuffer) // TRIM(string)
                 initbuffer = TRIM(string2)
-                WRITE(32,'(a)') '{'
-                WRITE(32,'(a,3x,es21.14,a,es21.14,a,es21.14,3x,a)') &
-     &                 '"dipole": [',dip(1),",",dip(2),",",dip(3),"] , "
+!                WRITE(32,'(a)') '{'
+!                WRITE(32,'(a,3x,f15.8,a,f15.8,a,f15.8,3x,a)') &
+!     &                 '"dipole": [',dip(1),",",dip(2),",",dip(3),"] , "
 
                 WRITE(string,'(a)') '"friction": ['
                 string2 = TRIM(initbuffer) // TRIM(string)
                 initbuffer = TRIM(string2)
                 DO i=1,nat
                     IF(i/=nat) THEN
-                        WRITE(string,'(es21.14,a,es21.14,a,es21.14, &
-     &          a,es21.14,a,es21.14,a,es21.14,a)') friction(i,1), &
+                        WRITE(string,'(f15.8,a,f15.8,a,f15.8, &
+     &          a,f15.8,a,f15.8,a,f15.8,a)') friction(i,1), &
      &          ",",friction(i,2),",",friction(i,3),",",friction(i,4), &
      &          ",",friction(i,5),",",friction(i,6),","
                     ELSE
-                        WRITE(string,'(es21.14,a,es21.14,a,es21.14, &
-     &          a,es21.14,a,es21.14,a,es21.14)') friction(i,1),",", &
+                        WRITE(string,'(f15.8,a,f15.8,a,f15.8, &
+     &          a,f15.8,a,f15.8,a,f15.8)') friction(i,1),",", &
      &          friction(i,2),",",friction(i,3),",",friction(i,4),",", &
      &          friction(i,5),",",friction(i,6)
                     ENDIF
@@ -757,37 +757,37 @@
                 IF (verbose > 1) WRITE(*,*) "!write!=> extra_length:", &
      &          cbuf
                 CALL writebuffer(socket,initbuffer,cbuf)
-                WRITE(32,'(a)') '"friction": ['
-                DO i=1,nat
-                    IF(i/=nat) THEN
-                        WRITE(32,'(es21.14,a,es21.14,a,es21.14,a, &
-     &          es21.14,a,es21.14,a,es21.14,a)') friction(i,1),",", &
-     &          friction(i,2),",",friction(i,3),",",friction(i,4),",", &
-     &          friction(i,5),",",friction(i,6),","
-                    ELSE
-                        WRITE(32,'(es21.14,a,es21.14,a,es21.14,a, &
-     &          es21.14,a,es21.14,a,es21.14)') friction(i,1),",", &
-     &          friction(i,2),",",friction(i,3),",",friction(i,4),",", &
-     &          friction(i,5),",",friction(i,6)
-                    ENDIF
-                END DO
-                WRITE(32,'(a)') "]"
-                WRITE(32,'(a)') "}"
+!                WRITE(32,'(a)') '"friction": ['
+!                DO i=1,nat
+!                    IF(i/=nat) THEN
+!                        WRITE(32,'(f15.8,a,f15.8,a,f15.8,a, &
+!     &          f15.8,a,f15.8,a,f15.8,a)') friction(i,1),",", &
+!     &          friction(i,2),",",friction(i,3),",",friction(i,4),",", &
+!     &          friction(i,5),",",friction(i,6),","
+!                    ELSE
+!                        WRITE(32,'(f15.8,a,f15.8,a,f15.8,a, &
+!     &          f15.8,a,f15.8,a,f15.8)') friction(i,1),",", &
+!     &          friction(i,2),",",friction(i,3),",",friction(i,4),",", &
+!     &          friction(i,5),",",friction(i,6)
+!                    ENDIF
+!                END DO
+!                WRITE(32,'(a)') "]"
+!                WRITE(32,'(a)') "}"
                 IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ",  &
      &          initbuffer
             ELSEIF (vstyle==5 .or. vstyle==6 .or. vstyle==8) THEN ! returns the dipole through initbuffer
-               initbuffer = " "
-               WRITE(initbuffer, '(a,3x,es21.14,a,es21.14,a,es21.14, &
+               !initbuffer = " "
+               WRITE(initbuffer, '(a,3x,f15.8,a,f15.8,a,f15.8, &
      &         3x,a)') '{"dipole": [',dip(1),",",dip(2),",",dip(3),"]}"
                cbuf = LEN_TRIM(initbuffer)
                CALL writebuffer(socket,cbuf) ! Writes back the molecular dipole
                IF (verbose > 1) WRITE(*,*)  &
      &         "    !write!=> extra_length: ", cbuf
                CALL writebuffer(socket,initbuffer,cbuf)
-               WRITE(32,'(a)') "{"
-               WRITE(32,'(a,3x,es21.14,a,es21.14,a,es21.14,3x,a)') &
-     &         '"dipole": [',dip(1),",",dip(2),",",dip(3),"]"
-               WRITE(32,'(a)') "}"
+!               WRITE(32,'(a)') "{"
+!               WRITE(32,'(a,3x,f15.8,a,f15.8,a,f15.8,3x,a)') &
+!     &         '"dipole": [',dip(1),",",dip(2),",",dip(3),"]"
+!               WRITE(32,'(a)') "}"
                IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ", &
      &         initbuffer
             ELSE
@@ -805,7 +805,7 @@
             STOP "ENDED"
          ENDIF
       ENDDO
-      CLOSE(32)
+!      CLOSE(32)
       IF (nat > 0) DEALLOCATE(atoms, forces, msgbuffer, friction)
  
     CONTAINS

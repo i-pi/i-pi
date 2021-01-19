@@ -529,15 +529,23 @@ class TrajectoryOutput(BaseOutput):
                         stream.write(json.dumps(data[index][b][self.xtratype]))
                         stream.write("\n")
             except:
-                info(
-                    "Sorry, your specified xtratype %s is not among the available options. \n"
-                    "The available keys are the following: %s "
-                    % (
-                        self.xtratype,
-                        ",".join("%s" % key for key in data[0][b].keys()),
-                    ),
-                    verbosity.low,
-                )
+                try:
+                    info(
+                        "Sorry, your specified xtratype %s is not among the available options. \n"
+                        "The available keys are the following: %s "
+                        % (
+                            self.xtratype,
+                            ",".join("%s" % key for key in data[0][b].keys()),
+                        ),
+                        verbosity.low,
+                    )
+                except:
+                    info(
+                        "Sorry, no extras string has been passed, there are no available options for the xtratype "
+                        "attribute. \n",
+                        verbosity.low,
+                    )
+
             if flush:
                 stream.flush()
                 os.fsync(stream)
