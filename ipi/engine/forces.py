@@ -911,7 +911,8 @@ class Forces(dobject):
         assert len(self.mforces) == len(new_forces), msg
         if new_x == None:
             new_x = [[None] * self.nbeads] * len(self.mforces)
-            warning("WARNING: No extras information has been passed.")
+            info("WARNING: No extras information has been passed.", verbosity.debug)
+
         assert len(self.mforces) == len(new_x), msg
 
         for k in range(len(self.mforces)):
