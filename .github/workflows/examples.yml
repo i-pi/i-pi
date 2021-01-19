@@ -47,4 +47,4 @@ jobs:
     - name: pytests for examples
       shell: bash
       run: |
-         i-pi-tests -t examples
+         i-pi-tests -t example 
