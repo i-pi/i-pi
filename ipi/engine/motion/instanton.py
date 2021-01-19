@@ -405,11 +405,7 @@ class FrictionMapper(PesMapper):
 
     def initialize(self,q,forces):
         """ Initialize potential, forces and friction """
-        print("\nALBERTO1 get friction from forces object\n")
-        eta = np.zeros((q.shape[0], q.shape[1], q.shape[1]))
-        for i in range(q.shape[0]):
-            for ii in range(q.shape[1]):
-               eta[i, ii, ii] = q[i, ii] + 2
+        eta = np.array(forces.extras[0]["friction"]).reshape((q.shape[0], q.shape[1], q.shape[1]))
         self.save(forces.pots, -forces.f,eta)
  
     def set_z_friction(self, z_friction):
@@ -421,7 +417,9 @@ class FrictionMapper(PesMapper):
         spline = interp1d(
             freq, z_friction[:, 1], kind="cubic", fill_value=0.0, bounds_error=False
         )
-        self.z_friction = spline(self.nm.get_omegak())  # ALBERTO checck frequencies
+        self.z_friction = spline(self.nm.get_omegak())  
+
+        info(units.unit_to_user("frequency", "inversecm", self.nm.get_omegak()),verbosity.debug)
 
     def get_fric_rp_hessian(self, fric_hessian):
         """ Creates the friction hessian from the eta derivatives """
@@ -530,10 +528,9 @@ class FrictionMapper(PesMapper):
         return e, g
 
     def get_full_extras(self, reduced_forces, full_mspath, indexes):
-        """ Get the full extra strings """  # ALBERTO
+        """ Get the full extra strings """  
         diction = {}
         for key in reduced_forces.extras[0].listofKeys():
-            print("here3", key)
             if str(key) != "nothing":
                 rkey = np.array(reduced_forces.extras[0][key])
                 if self.spline:
@@ -566,9 +563,7 @@ class FrictionMapper(PesMapper):
         for n in range(self.dbeads.nbeads):
             full_eta[n] = full_extras['friction'][n].reshape(self.dbeads.natoms * 3, self.dbeads.natoms * 3)
                
-        print("ALBERTO pick only the tensor corresponding to the first RP frequencies")
-        CONTINUE HERE
-
+        info("We expect friction tensor evaluated at the first RP frequency",verbosity.debug)
 
         # This forces the update of the forces and the extras
         self.dbeads.q[:] = x[:]
@@ -1132,40 +1127,6 @@ class DummyOptimizer(dobject):
 
         self.qtime = -time.time()
         info("\n Instanton optimization STEP {}".format(step), verbosity.low)
-        # ALBERTO
-        # Choosing the forcefield that has returned friction tensor in extras
-        # for k in range(self.forces.nforces):
-        #   if self.forces.mforces[k].extras[0]:
-        #       if "friction" in self.forces.mforces[k].extras[0].keys():
-        #           extras = self.forces.mforces[k].extras
-        #           self.friction = np.zeros((self.beads.nbeads, self.beads.natoms, 6))
-        #           for b in range(self.beads.nbeads):
-        #               if "friction" in extras[b].keys():
-        #                   for at in range(self.beads.natoms):
-        #                       self.friction[b, at, :] = extras[b]["friction"][
-        #                           6 * at : 6 * (at + 1)
-        #                       ]
-        #                       info(
-        #                           "FRICTION: {} {} {} {} {} {}".format(
-        #                               self.friction[b, at, 0],
-        #                               self.friction[b, at, 1],
-        #                               self.friction[b, at, 2],
-        #                               self.friction[b, at, 3],
-        #                               self.friction[b, at, 4],
-        #                               self.friction[b, at, 5],
-        #                           ),
-        #                           verbosity.debug,
-        #                       )
-        #           info(
-        #               " Friction keyword detected in extras. \n Will find the instanton with friction.",
-        #               verbosity.low,
-        #           )
-        #       else:
-        #           info(
-        #               " Friction keyword hasn't been detected in extras. \n Will find the instanton without friction.",
-        #               verbosity.low,
-        #           )
-        # ALBERTO
 
         activearrays = self.fix.get_active_array(self.optarrays)
 
