@@ -90,7 +90,7 @@ class NEBLineMover(object):
         # Get tangents, end images are distinct, fixed, pre-relaxed configurations
         btau = np.zeros((nimg, 3 * nat), float)
         for ii in range(1, nimg - 1):
-            d1 = bq[ii] - bq[ii - 1]  # tau mius
+            d1 = bq[ii] - bq[ii - 1]  # tau minus
             d2 = bq[ii + 1] - bq[ii]  # tau plus
 
             # "Old" implementation of NEB
@@ -218,13 +218,13 @@ class NEBBFGSMover(object):
         # Bead energies
         be = dstrip(self.dforces.pots).copy()
 
-        # Number of beads
+        # Number of images
         nimg = self.dbeads.nbeads
 
         # Number of atoms
         nat = self.dbeads.natoms
 
-        # Array for sping constants
+        # Array for spring constants
         kappa = np.zeros(nimg)
 
         # get tangents, end images are distinct, fixed, pre-relaxed configurations
@@ -465,7 +465,7 @@ class NEBMover(Motion):
             # Do one iteration of L-BFGS and return positions, gradient modulus,
             # direction, list of positions, list of gradients
             # self.beads.q, fx, self.nebbfgsm.d, self.qlist, self.glist = L_BFGS(self.beads.q,
-            info(" @NEB: Entering BFGS", verbosity.debug)
+            info(" @NEB: Entering L-BFGS", verbosity.debug)
 
             L_BFGS(
                 self.beads.q,
