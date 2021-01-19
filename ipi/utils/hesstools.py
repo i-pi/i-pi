@@ -263,7 +263,7 @@ def get_hessian(
             g = (f1 - f2) / (2 * d)
 
             if friction:
-                eta_h[:, j, :] = (eta1 - eta2) / (2 * d)
+                eta_h[:, :, :, j] = (eta1 - eta2) / (2 * d)
             h[j, :] = g.flatten()
 
             f = open("hessian_" + str(j) + ".tmp", "w")
@@ -279,6 +279,10 @@ def get_hessian(
     for i in range(ii):
         try:
             os.remove("hessianEta_" + str(i) + ".tmp")
+        except OSError:
+            pass
+
+        try:
             os.remove("hessian_" + str(i) + ".tmp")
         except OSError:
             pass

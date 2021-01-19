@@ -51,7 +51,7 @@
       LOGICAL :: isinit=.false., hasdata=.false.
       INTEGER cbuf, rid
       CHARACTER(LEN=4096) :: initbuffer      ! it's unlikely a string this large will ever be passed...
-      CHARACTER(LEN=4096) :: string,string2  ! it's unlikely a string this large will ever be passed...
+      CHARACTER(LEN=4096) :: string,string2,string3  ! it's unlikely a string this large will ever be passed...
       DOUBLE PRECISION, ALLOCATABLE :: msgbuffer(:)
       
       ! PARAMETERS OF THE SYSTEM (CELL, ATOM POSITIONS, ...)
@@ -156,11 +156,13 @@
                   vstyle = 24
                ELSEIF (trim(cmdbuffer) == "harmonic_bath") THEN
                   vstyle = 26
+               ELSEIF (trim(cmdbuffer) == "meanfield_bath") THEN
+                  vstyle = 27
                ELSEIF (trim(cmdbuffer) == "gas") THEN
                   vstyle = 0  ! ideal gas
                ELSE
                   WRITE(*,*) " Unrecognized potential type ", trim(cmdbuffer)
-                  WRITE(*,*) " Use -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|harmonic_bath] "
+                  WRITE(*,*) " Use -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|harmonic_bath|meanfield_bath] "
                   STOP "ENDED"
                ENDIF
             ELSEIF (ccmd == 4) THEN
@@ -266,6 +268,14 @@
              STOP "ENDED"
          END IF
          vpars(3) = vpars(3) * 4.5563353e-06 !Change omega_c from invcm to a.u.
+         isinit = .true.
+      ELSEIF (27 == vstyle) THEN !meanfield bath
+         IF (par_count /= 1) THEN ! defaults values 
+            WRITE(*,*) "Error: parameters not initialized correctly."
+            WRITE(*,*) "For harmonic meanfield bath use  <friction (atomic units)> "
+            STOP "ENDED"
+         ENDIF
+         vpars(1) = vpars(1) 
          isinit = .true.
       ELSEIF (22 == vstyle) THEN !ljpolymer
          IF (4/= par_count) THEN
@@ -437,7 +447,7 @@
                ALLOCATE(msgbuffer(3*nat))
                ALLOCATE(atoms(nat,3), datoms(nat,3))
                ALLOCATE(forces(nat,3))
-               ALLOCATE(friction(nat,6))
+               ALLOCATE(friction(3*nat,3*nat))
                atoms = 0.0d0
                datoms = 0.0d0
                forces = 0.0d0
@@ -600,6 +610,8 @@
                CALL geteckart(nat,vpars(1), vpars(2), vpars(3),vpars(4), atoms, pot, forces)
             ELSEIF (vstyle == 26) THEN ! harmonic_bath.
                CALL get_harmonic_bath(nat,vpars(1),vpars(2),vpars(3),atoms, pot, forces)
+            ELSEIF (vstyle == 27) THEN ! meanfield_bath.
+               CALL get_meanfield_harmonic_bath(nat,vpars(1),atoms, pot, forces,friction)
             ELSEIF (vstyle == 23) THEN ! MB.
                IF (nat/=1) THEN
                   WRITE(*,*) "Expecting 1 atom for MB"
@@ -672,7 +684,45 @@
             CALL writebuffer(socket,reshape(virial,(/9/)),9)  ! Writing the virial tensor, NOT divided by the volume
             IF (verbose > 1) WRITE(*,*) "    !write!=> strss: ", reshape(virial,(/9/))
 
-            IF (vstyle==24 .or. vstyle==25) THEN ! returns fantasy friction
+ 125  format(es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a)
+ 126  format(es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a)
+
+            IF (vstyle == 27) THEN ! returns meanfield friction
+                WRITE(initbuffer,'(a)') "{"
+                WRITE(32,'(a)') '{'
+                WRITE(string,'(a)') '"friction": ['
+                WRITE(32,'(a)') '"friction": ['
+
+                string2 = TRIM(initbuffer) // TRIM(string)
+                initbuffer = TRIM(string2)
+                DO i=1,3*nat
+                    IF(i/=3*nat) THEN
+                        WRITE(string,125) ( friction(i,j), "," , j=1,3*nat)
+                        WRITE(32,125) ( friction(i,j), "," , j=1,3*nat)
+                    ELSE
+                        WRITE(string,126) ( friction(i,j), "," , j=1,3*nat-1)
+                        WRITE(string2,'(es21.14)') friction(i,3*nat)
+                        string3 = TRIM(string) // TRIM(string2)
+                        string = string3
+                        WRITE(32,126) ( friction(i,j), "," , j=1,3*nat-1)
+                        WRITE(32,'(es21.14)') friction(i,3*nat)
+                    ENDIF
+                    string2 = TRIM(initbuffer) // TRIM(string)
+                    initbuffer = TRIM(string2)
+                END DO
+                string =  TRIM(initbuffer) // ']}'
+                initbuffer = TRIM(string)
+                WRITE(32,'(a)') "]"
+                WRITE(32,'(a)') "}"
+
+                cbuf = LEN_TRIM(initbuffer)
+                CALL writebuffer(socket,cbuf) 
+
+                IF (verbose > 1) WRITE(*,*) "!write!=> extra_length:", cbuf
+                CALL writebuffer(socket,initbuffer,cbuf)
+                IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ",  initbuffer
+
+            ELSEIF (vstyle==24 .or. vstyle==25) THEN ! returns fantasy friction
                 WRITE(initbuffer,'(a)') "{"
                 WRITE(string, '(a,3x,es21.14,a,es21.14,a,es21.14,&
      &          3x,a)') '"dipole": [',dip(1),",",dip(2),",",dip(3),"],"
@@ -761,7 +811,8 @@
     CONTAINS
       SUBROUTINE helpmessage
          ! Help banner
-         WRITE(*,*) " SYNTAX: driver.x [-u] -h hostname -p port -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|harmonic_bath"
+         WRITE(*,*) " SYNTAX: driver.x [-u] -h hostname -p port -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|..."
+         WRITE(*,*) "...|MB|doublewell|doublewell_1D|harmonic_bath|meanfield_bath]"
          WRITE(*,*) "         -o 'comma_separated_parameters' [-v] "
          WRITE(*,*) ""
          WRITE(*,*) " For LJ potential use -o sigma,epsilon,cutoff "

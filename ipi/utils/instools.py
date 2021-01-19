@@ -238,6 +238,7 @@ def print_instanton_geo(
     # print_file("xyz", pos[0], cell, out, title='positions{angstrom}')
 
     unit = "angstrom"
+    unit = "atomic_unit"
     unit2 = "atomic_unit"
     a, b, c, alpha, beta, gamma = mt.h2abc_deg(cell.h)
 

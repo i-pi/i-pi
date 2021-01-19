@@ -12,6 +12,7 @@
         real(kind=8) :: q(nat*3),pot,force(nat*3),x(nat*3-1)
         real(kind=8) :: c(nat*3-1),omega(nat*3-1), omega2(nat*3-1),aux
         mass = 1837
+        pot            =  0.0
         A = -0.00476705894242374
         B = 0.0005980249683218661
 
@@ -47,6 +48,48 @@
         WRITE(6,*) i, q(i), force(i)
         !WRITE(6,*) i, force(i),x(i) - (c(i)*q(1)) / ( mass*omega2(i) ),x(i+1) - (c(i+1)*q(1)) / ( mass*omega2(i+1) )
         ENDDO
+        return
+        end
+
+
+      SUBROUTINE get_meanfield_harmonic_bath(nat,eta,q,pot,force,friction)
+        IMPLICIT NONE
+        integer      :: nat, i 
+        real(kind=8),PARAMETER ::  pi= 3.141592653589793D0 
+        real(kind=8) :: A,B,k,eta
+        real(kind=8) :: x,y,z,fx,fy,fz
+        real(kind=8) :: q(nat,3),pot,force(nat,3)
+        real(kind=8) :: friction(3*nat,3*nat)
+
+        k  = 1836*(3800.0d0/219323d0)**2
+
+        A = -0.00476705894242374
+        B = 0.0005980249683218661
+
+        DO i = 1,nat
+           x = q(i,1)
+           y = q(i,2)
+           z = q(i,3)
+
+           pot            =  0.0
+
+           pot            = pot+ 0.5*k*y**2
+           fy             = -k*y
+           pot            = pot+ 0.5*k*z**2
+           fz             = -k*z
+
+           pot = pot + A * (x ** 2) + B * (x ** 4)
+
+
+           fx = - ( 2 * A * (x) + 4 * B * (x ** 3) )
+
+           force(i,1) = fx
+           force(i,2) = fy
+           force(i,3) = fz
+           friction = eta 
+
+        ENDDO
+
         return
         end
 
