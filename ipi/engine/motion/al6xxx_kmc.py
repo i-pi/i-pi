@@ -665,7 +665,7 @@ class AlKMC(Motion):
         # we want continuity (modulo PBC jumps, that we'll take care of later...)
         for i in range(self.nsites):
             # in which site sits atom i?
-            # isite = self.idx[i]       # flake8 complains 'unused variable'
+            # isite = self.idx[i]       #
 
             # which atom sits in this site in the unique-mapped structure?
             iuid = ruidx[self.idx[i]]

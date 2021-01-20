@@ -35,3 +35,27 @@
                 
         return
         end
+
+
+    SUBROUTINE dw_friction(nat,q,friction)
+        IMPLICIT NONE
+        integer      :: nat, i
+        real(kind=8) :: q(nat,3),friction(nat,6)
+        real(kind=8) :: x,y,z
+
+
+        DO i = 1,nat
+            x = q(i,1)
+            y = q(i,2)
+            z = q(i,3)
+
+            friction(i,1) = x**2
+            friction(i,2) = y**2
+            friction(i,3) = z**2
+            friction(i,4) = x*y
+            friction(i,5) = x*z
+            friction(i,6) = y*z
+        ENDDO
+
+        return
+    end

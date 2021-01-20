@@ -2295,7 +2295,7 @@ class Properties(dobject):
         # strips dependency control since we are not gonna change the true beads in what follows
         q = dstrip(self.beads.q)
         f = dstrip(self.forces.f)
-        #        m3 = dstrip(self.beads.m3)         # flake8 complains 'unused variable'
+        #        m3 = dstrip(self.beads.m3)         #
         #        pots = self.forces.pots            # -//-
         betaP = 1.0 / (self.beads.nbeads * Constants.kb * self.ensemble.temp)
 
@@ -2503,7 +2503,7 @@ class Properties(dobject):
 
         f = dstrip(self.forces.f)
         m3 = dstrip(self.beads.m3)
-        #        pots = self.forces.pots    # flake8 complains "unused variable"
+        #        pots = self.forces.pots    #
         betaP = 1.0 / (self.beads.nbeads * Constants.kb * self.ensemble.temp)
 
         ti = 0.0
@@ -2544,7 +2544,7 @@ class Properties(dobject):
 
         f = dstrip(self.forces.f)
         m3 = dstrip(self.beads.m3)
-        #        pots = self.forces.pots                                                # flake8 complains "unused variable"
+        #        pots = self.forces.pots                                                #
         #        betaP = 1.0 / (self.beads.nbeads * Constants.kb * self.ensemble.temp)  # -//-
 
         ti = 0.0
