@@ -677,7 +677,7 @@ class InterfaceSocket(object):
                 self.clients.remove(c)
                 # requeue jobs that have been left hanging
                 for [k, j, tc] in self.jobs[:]:
-                    if tc.isAlive():
+                    if tc.is_alive():
                         tc.join(2)
                     if j is c:
                         self.jobs = [
@@ -862,7 +862,7 @@ class InterfaceSocket(object):
         """
 
         if r["status"] == "Done":
-            while ct.isAlive():  # we can wait for end of thread
+            while ct.is_alive():  # we can wait for end of thread
                 ct.join()
             self.jobs = [
                 w for w in self.jobs if not (w[0] is r and w[1] is c)
