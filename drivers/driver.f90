@@ -41,7 +41,8 @@
       
       ! COMMAND LINE PARSING
       CHARACTER(LEN=1024) :: cmdbuffer
-      INTEGER ccmd, vstyle
+      INTEGER ccmd, vstyle, vseed
+      INTEGER, ALLOCATABLE :: seed(:)
       INTEGER verbose
       INTEGER commas(4), par_count      ! stores the index of commas in the parameter string
       DOUBLE PRECISION vpars(4)         ! array to store the parameters of the potential
@@ -156,9 +157,11 @@
                   vstyle = 24
                ELSEIF (trim(cmdbuffer) == "gas") THEN
                   vstyle = 0  ! ideal gas
+               ELSEIF (trim(cmdbuffer) == "dummy") THEN
+                  vstyle = 99 ! returns non-zero but otherwise meaningless values
                ELSE
                   WRITE(*,*) " Unrecognized potential type ", trim(cmdbuffer)
-                  WRITE(*,*) " Use -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D] "
+                  WRITE(*,*) " Use -m [duymmy|gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D] "
                   STOP "ENDED"
                ENDIF
             ELSEIF (ccmd == 4) THEN
@@ -185,6 +188,16 @@
             STOP "ENDED"
          ENDIF
          isinit = .true.
+      ELSEIF (99 == vstyle) THEN
+         IF (par_count /= 0) THEN
+            WRITE(*,*) "Error: no initialization string needed for dummy output."
+            STOP "ENDED"
+         ENDIF
+         CALL RANDOM_SEED(size=vseed)
+         ALLOCATE(seed(vseed))
+         seed = 12345
+         CALL RANDOM_SEED(put=seed)
+         isinit = .true.         
       ELSEIF (6 == vstyle) THEN
          IF (par_count /= 0) THEN
             WRITE(*,*) "Error:  no initialization string needed for qtip4pf."
@@ -438,7 +451,18 @@
             IF (vstyle == 0) THEN   ! ideal gas, so no calculation done
                pot = 0
                forces = 0.0d0
-               virial = 0.0d0
+               virial = 1.0d-200   
+               ! returns a tiny but non-zero stress, so it can
+               ! bypass the check for zero virial that is used
+               ! to avoid running constant-pressure simulations
+               ! with a code that cannot compute the virial
+            ELSEIF (vstyle == 99) THEN ! dummy output, useful to test that i-PI "just runs"
+               call random_number(pot)
+               pot = pot - 0.5                
+               call random_number(forces)
+               forces = forces - 0.5
+               call random_number(virial)
+               virial = virial - 0.5
             ELSEIF (vstyle == 3) THEN ! 1D harmonic potential, so only uses the first position variable
                pot = 0.5*ks*atoms(1,1)**2
                forces = 0.0d0
@@ -744,7 +768,7 @@
     CONTAINS
       SUBROUTINE helpmessage
          ! Help banner
-         WRITE(*,*) " SYNTAX: driver.x [-u] -h hostname -p port -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D] "
+         WRITE(*,*) " SYNTAX: driver.x [-u] -h hostname -p port -m [dummy|gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D] "
          WRITE(*,*) "         -o 'comma_separated_parameters' [-v] "
          WRITE(*,*) ""
          WRITE(*,*) " For LJ potential use -o sigma,epsilon,cutoff "
