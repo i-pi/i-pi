@@ -86,7 +86,9 @@
            force(i,1) = fx
            force(i,2) = fy
            force(i,3) = fz
-           friction = eta 
+           friction(nat*3*(i-1)+1,nat*3*(i-1)+1) = eta 
+           friction(nat*3*(i-1)+2,nat*3*(i-1)+2) = eta 
+           friction(nat*3*(i-1)+3,nat*3*(i-1)+3) = eta 
 
         ENDDO
 
