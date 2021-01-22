@@ -164,7 +164,7 @@ class depend_base(object):
         for item in dependencies:
             item.add_dependant(self, tainted)
 
-        # Convert dependants to weakreferences consitently
+        # Convert dependants to weakreferences consistently
         for item in dependants:
             if not isinstance(item, weakref.ref):
                 dependants.remove(item)
