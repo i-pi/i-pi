@@ -185,7 +185,7 @@ class InstantonMotion(Motion):
         """Binds beads, cell, bforce and prng to InstantonMotion
 
         Args:
-        beads: The beads object from whcih the bead positions are taken.
+        beads: The beads object from which the bead positions are taken.
         nm: A normal modes object used to do the normal modes transformation.
         cell: The cell object from which the system box is taken.
         bforce: The forcefield object from which the force and virial are taken.
@@ -415,7 +415,7 @@ class GradientMapper(object):
         else:
             indexes = np.arange(self.dbeads.nbeads)
 
-        # Create reduced bead and force objet and evaluate forces
+        # Create reduced bead and force object and evaluate forces
         reduced_b = Beads(self.dbeads.natoms, len(indexes))
         reduced_b.q[:] = full_q[indexes]
         reduced_b.m[:] = self.dbeads.m
@@ -427,7 +427,7 @@ class GradientMapper(object):
         rpots = reduced_forces.pots  # reduced energy
         rforces = reduced_forces.f  # reduced gradient
 
-        # Interpolate if necesary to get full pot and forces
+        # Interpolate if necessary to get full pot and forces
         if self.spline:
             red_mspath = full_mspath[indexes]
             spline = interp1d(red_mspath, rpots.T, kind="cubic")
@@ -515,7 +515,7 @@ class SpringMapper(object):
             )
 
     def set_coef(self, coef):
-        """ Sets coeficients for non-uniform instanton calculation """
+        """ Sets coefficients for non-uniform instanton calculation """
         self.coef = coef.reshape(-1, 1)
 
     def save(self, e, g):
@@ -673,8 +673,8 @@ class DummyOptimizer(dobject):
     """ Dummy class for all optimization classes """
 
     def __init__(self):
-        """Initialises object for GradientMapper (physical potential, forces and hessian)
-        and SpringMapper ( spring potential,forces and hessian)"""
+        """Initialises object for GradientMapper (physical potential, forces and Hessian)
+        and SpringMapper (spring potential, forces and Hessian)"""
 
         self.options = {}  # Optimization options
         self.optarrays = {}  # Optimization arrays
@@ -689,8 +689,8 @@ class DummyOptimizer(dobject):
 
     def bind(self, geop):
         """
-        Bind optimization options and call bind function of Mappers (get beads, cell,forces)
-        check whether force size,  Hessian size from  match system size
+        Bind optimization options and call bind function of Mappers (get beads, cell, forces)
+        check whether force size, Hessian size from  match system size
         """
 
         self.beads = geop.beads
@@ -740,9 +740,7 @@ class DummyOptimizer(dobject):
             if geop.options["discretization"].size == 0:
                 geop.options["discretization"] = np.ones(self.beads.nbeads + 1, float)
             else:
-                raise ValueError(
-                    "Discretization coefficients  does not match system size"
-                )
+                raise ValueError("Discretization coefficients do not match system size")
 
         self.options["max_ms"] = geop.options["max_ms"]
         self.options["max_e"] = geop.options["max_e"]
@@ -774,7 +772,7 @@ class DummyOptimizer(dobject):
         # TODO : add linear interpolation
 
         info(
-            " @GEOP: We stretch the initial geometry with an 'amplitud' of {:4.2f}".format(
+            " @GEOP: We stretch the initial geometry with an 'amplitude' of {:4.2f}".format(
                 self.optarrays["delta"]
             ),
             verbosity.low,
@@ -965,7 +963,7 @@ class DummyOptimizer(dobject):
 
 
 class HessianOptimizer(DummyOptimizer):
-    """ Instaton Rate calculation"""
+    """ Instanton Rate calculation"""
 
     def bind(self, geop):
         # call bind function from DummyOptimizer
@@ -1006,7 +1004,7 @@ class HessianOptimizer(DummyOptimizer):
                     (self.beads.q - self.beads.q[0]) == 0
                 ).all() and self.beads.nbeads > 1:
                     raise ValueError(
-                        """We need a initial hessian in order to create our initial
+                        """We need an initial hessian in order to create our initial
                     instanton geometry. Please provide a (1-bead) hessian or an initial instanton geometry."""
                     )
 
@@ -1040,9 +1038,15 @@ class HessianOptimizer(DummyOptimizer):
                         " @GEOP: Starting from the provided geometry in the extended phase space",
                         verbosity.low,
                     )
-                    if not (self.optarrays["initial_hessian"] is None):
+                    if not (
+                        (self.optarrays["initial_hessian"] is None)
+                        or (
+                            self.optarrays["initial_hessian"].size
+                            == (self.beads.natoms * 3) ** 2
+                        )
+                    ):
                         raise ValueError(
-                            " You have to provided a hessian with size (3 x natoms)^2 but also geometry in"
+                            " You have to provide a hessian with size (3 x natoms)^2 but also geometry in"
                             " the extended phase space (nbeads>1). Please check the inputs\n"
                         )
 
