@@ -29,7 +29,7 @@
                 <tau units="femtosecond"> 100</tau>
               </thermostat>
               <h0> [ 25.6156, 0, 0, 0, 29.5783, 0, 0, 0, 27.8867 ]</h0>
-              <hmask> [1, 1, 1, 0, 0, 0, 0, 0, 0] </hmask>
+              <hfix> [ offdiagonal ] </hfix>
               </barostat>
               <thermostat mode="langevin">
               <tau units="femtosecond"> 100 </tau>
@@ -46,7 +46,7 @@
                 <tau units="femtosecond"> 100</tau>
               </thermostat>
               <h0> [ 25.6156, 0, 0, 0, 29.5783, 0, 0, 0, 27.8867 ]</h0>
-              <hmask> [0,0,0, 0, 1, 1, 0, 0, 0] </hmask>
+              <hfix>  [ zz ] </hfix>
               </barostat>
               <thermostat mode="langevin">
               <tau units="femtosecond"> 100 </tau>
@@ -63,7 +63,7 @@
                 <tau units="femtosecond"> 100</tau>
               </thermostat>
               <h0> [ 25.6156, 0, 0, 0, 29.5783, 0, 0, 0, 27.8867 ]</h0>
-              <hmask> [0, 0, 0, 0, 0, 0, 0, 0, 1] </hmask>
+              <hfix> [ offdiagonal, xx, yy] </hfix>
               </barostat>
               <thermostat mode="langevin">
               <tau units="femtosecond"> 100 </tau>

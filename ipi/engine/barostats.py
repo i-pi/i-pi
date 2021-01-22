@@ -17,25 +17,50 @@ G. Martyna, A. Hughes and M. Tuckerman, J. Chem. Phys., 110, 3275.
 
 
 import numpy as np
-import sys
 
 from ipi.utils.depend import *
 from ipi.utils.units import *
 from ipi.utils.mathtools import (
-    eigensystem_ut3x3,
-    invert_ut3x3,
-    exp_ut3x3,
-    det_ut3x3,
     matrix_exp,
     sinch,
     mat_taylor,
 )
-from ipi.inputs.thermostats import InputThermo
 from ipi.engine.thermostats import Thermostat
 from ipi.engine.cell import Cell
 
 
 __all__ = ["Barostat", "BaroBZP", "BaroRGB", "BaroSCBZP", "BaroMTK"]
+
+
+def mask_from_fix(fix):
+    """Builds a mask for the cell velocities based on a list of strings
+    that indicates the entries that should be held fixed"""
+
+    m2f = dict(
+        xx=(0, 0),
+        xy=(0, 1),
+        xz=(0, 2),
+        yx=(0, 1),
+        yy=(1, 1),
+        yz=(
+            1,
+            2,
+        ),  # NB: we re-map to the upper-triangular section, which is the only meaningful one
+        zx=(0, 2),
+        zy=(1, 2),
+        zz=(2, 2),
+        offdiagonal=[(0, 1), (0, 2), (1, 2)],
+    )
+
+    hmask = np.ones(shape=(3, 3))
+    # hmask[(1,0)] = 0; hmask[(2,0)] = 0; hmask[(2,1)] = 0
+    for f in fix:
+        if type(m2f[f]) is list:
+            for i in m2f[f]:
+                hmask[i] = 0
+        else:
+            hmask[m2f[f]] = 0
+    return hmask
 
 
 class Barostat(dobject):
@@ -794,7 +819,7 @@ class BaroRGB(Barostat):
         stressext=None,
         h0=None,
         p=None,
-        hmask=None,
+        hfix=None,
     ):
         """Initializes RGB barostat.
 
@@ -844,14 +869,16 @@ class BaroRGB(Barostat):
         else:
             self.h0 = Cell()
 
-        if hmask is None:
-            hmask = np.ones((3, 3))
-        else:
-            hmask = hmask.reshape((3, 3))
+        if hfix is None:
+            hfix = []
+        self.hfix = hfix
+
+        hmask = mask_from_fix(self.hfix)
+        print("HFIX", hfix)
         print("HMASK", hmask)
 
         # mask to zero out components of the cell velocity, to implement cell-boundary constraints
-        dself.hmask = depend_array(name="hmask", value=hmask.copy())
+        dself.hmask = depend_array(name="hmask", value=hmask)
         # number of ones in the UT part of the mask
         self.L = np.diag([hmask[0].sum(), hmask[1, 1:].sum(), hmask[2, 2:].sum()])
 
@@ -1089,7 +1116,7 @@ class BaroMTK(Barostat):
         thermostat=None,
         pext=None,
         p=None,
-        hmask=None,
+        hfix=None,
     ):
         """Initializes RGB barostat.
 
@@ -1134,13 +1161,13 @@ class BaroMTK(Barostat):
         else:
             self.p = 0.0
 
-        if hmask is None:
-            self.hmask = np.ones((3, 3))
-        else:
-            hmask = hmask.reshape((3, 3))
+        if hfix is None:
+            hfix = []
+        self.hfix = hfix
+        hmask = mask_from_fix(hfix)
 
         # mask to zero out components of the cell velocity, to implement cell-boundary constraints
-        dself.hmask = depend_array(name="hmask", value=hmask.copy())
+        dself.hmask = depend_array(name="hmask", value=hmask)
         # number of ones in the UT part of the mask
         self.L = np.diag([hmask[0].sum(), hmask[1, 1:].sum(), hmask[2, 2:].sum()])
 

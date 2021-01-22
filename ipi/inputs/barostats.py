@@ -91,12 +91,12 @@ class InputBaro(Input):
                 "dimension": "length",
             },
         ),
-        "hmask": (
+        "hfix": (
             InputArray,
             {
-                "default": np.ones((3, 3)),
-                "dtype": float,
-                "help": "a matrix of 0s and 1s used to specify which components of the cell are allowed to fluctuate.",
+                "default": input_default(factory=np.zeros, args=(0, str)),
+                "dtype": str,
+                "help": "A list of the cell entries that should be held fixed (xx, yy, zz, xy, xz, yz). 'offdiagonal' is an alias for xy, xz, yz.",
             },
         ),
     }
@@ -123,12 +123,12 @@ class InputBaro(Input):
         elif type(baro) is BaroMTK:
             self.mode.store("flexible")
             self.p.store(baro.p)
-            self.hmask.store(baro.hmask)
+            self.hfix.store(baro.hfix)
         elif type(baro) is BaroRGB:
             self.mode.store("anisotropic")
             self.p.store(baro.p)
             self.h0.store(baro.h0)
-            self.hmask.store(baro.hmask)
+            self.hfix.store(baro.hfix)
         elif type(baro) is Barostat:
             self.mode.store("dummy")
         else:
@@ -157,7 +157,7 @@ class InputBaro(Input):
             baro = BaroMTK(
                 thermostat=self.thermostat.fetch(),
                 tau=self.tau.fetch(),
-                hmask=self.hmask.fetch(),
+                hfix=self.hfix.fetch(),
             )
             if self.p._explicit:
                 baro.p = self.p.fetch()
@@ -165,7 +165,7 @@ class InputBaro(Input):
             baro = BaroRGB(
                 thermostat=self.thermostat.fetch(),
                 tau=self.tau.fetch(),
-                hmask=self.hmask.fetch(),
+                hfix=self.hfix.fetch(),
             )
             if self.p._explicit:
                 baro.p = self.p.fetch()
