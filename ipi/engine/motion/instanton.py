@@ -239,9 +239,9 @@ class InstantonMotion(Motion):
         print("ALBERTO")
         self.nm.bind(self.ensemble, self, Beads(self.beads.natoms, self.beads.nbeads))
         if self.options["mode"] == "rate":
-            self.omegan = self.nm.omegan * 2  # ALBERTO, replace this by RP factor
+            self.rp_factor = 2  
         elif self.options["mode"] == "splitting":
-            self.omegan = self.nm.omegan
+            self.rp_factor = 1
 
         self.optimizer.bind(self)
 
@@ -269,7 +269,7 @@ class PesMapper(object):
         self.dcell = mapper.cell.copy()
         self.dforces = mapper.forces.copy(self.dbeads, self.dcell)
         self.nm = mapper.nm
-        self.omegan = mapper.omegan
+        self.rp_factor = mapper.rp_factor
         self.fix = mapper.fix
         self.coef = mapper.coef
 
@@ -688,8 +688,7 @@ class SpringMapper(object):
         self.coef = mapper.coef
         self.dbeads = mapper.beads.copy()
         self.nm = mapper.nm
-        self.omegan = mapper.omegan
-        self.omegan2 = self.omegan ** 2
+        self.rp_factor = mapper.rp_factor
 
         # Computes the spring hessian if the optimization modes requires it
         if (
@@ -701,7 +700,7 @@ class SpringMapper(object):
                 natoms=self.fix.fixbeads.natoms,
                 nbeads=self.fix.fixbeads.nbeads,
                 m3=self.fix.fixbeads.m3[0],
-                omega2=self.omegan2,
+                omega2=(self.rp_factor*self.nm.omegan)**2,
                 coef=self.coef,
             )
 
@@ -881,7 +880,7 @@ class Mapper(object):
         self.forces = dumop.forces
         self.cell = dumop.cell
         self.nm = dumop.nm
-        self.omegan = dumop.omegan
+        self.rp_factor = dumop.rp_factor
 
         self.fixatoms = dumop.fixatoms
         self.fix = dumop.fix
@@ -969,7 +968,7 @@ class DummyOptimizer(dobject):
 
         self.fix = Fix(self.fixatoms, self.beads, self.beads.nbeads)
         self.nm = geop.nm
-        self.omegan = geop.omegan
+        self.rp_factor = geop.rp_factor
 
         self.output_maker = geop.output_maker
 
