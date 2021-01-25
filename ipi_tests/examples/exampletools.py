@@ -24,7 +24,7 @@ driver_models = [
 
 def get_test_settings(
     example_folder,
-    driver_info_file="test_settings.txt ",
+    driver_info_file="test_settings.txt",
     driver="dummy",
     socket_mode="unix",
     port_number=33333,
