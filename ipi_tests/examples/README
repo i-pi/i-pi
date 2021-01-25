@@ -1,6 +1,8 @@
 Automatic testing of examples 
 =============================
 
+Please use 
+
 This section of the tests is meant to check that all examples parse input correctly,
 and can run a few steps without errors. It does NOT check that results are correct or
 meaningful, so by default it runs with a "dummy" driver that just generate random
@@ -9,18 +11,10 @@ fail randomly because of this.
 
 Examples to be excluded from this test should be added to 'excluded_test.txt'
 
-To run all the example-test type: 
+To run all the example tests you should use the script provided in  i-pi/bin/i-pi-tests. 
+For details of usage call it with "-h" option.
 
-python test_examples.py
+If you would like to test only a subset of examples, you can have a look at the test_examples.py script 
+that you find in this folder. To see more information type:
 
-To run the test for examples inside a folder type:
-
-python test_examples.py  -f <example-folder>
-
-For example: 
-
-python test_examples.py -f  examples/lammps/h2o-geop
-
-To see more information type: 
-
-python test_examples.py -h
+python test_examples.py -h 
