@@ -1,8 +1,6 @@
 Automatic testing of examples 
 =============================
 
-Please use 
-
 This section of the tests is meant to check that all examples parse input correctly,
 and can run a few steps without errors. It does NOT check that results are correct or
 meaningful, so by default it runs with a "dummy" driver that just generate random
