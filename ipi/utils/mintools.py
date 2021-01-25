@@ -1341,9 +1341,9 @@ def nichols(f0, d, dynmax, m3, big_step, mode=1):
     # Resize
     ndim = f0.size
     shape = f0.shape
-    f = f0.reshape((1, ndim)) / m3.reshape(
-        (1, ndim)
-    ) ** 0.5  # From cartesian base to mass-weighted base
+    f = (
+        f0.reshape((1, ndim)) / m3.reshape((1, ndim)) ** 0.5
+    )  # From cartesian base to mass-weighted base
 
     # Change of basis to eigenvector space
     d = d[:, np.newaxis]  # dimension nx1

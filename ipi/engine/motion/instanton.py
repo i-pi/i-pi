@@ -427,7 +427,9 @@ class FrictionMapper(PesMapper):
         )
 
         z_friction = spline(self.omegak)
-        self.z_friction = z_friction / z_friction[1] #UPDATE HERE WHEN AIMS IMPLEMENTATION IS READY 
+        self.z_friction = (
+            z_friction / z_friction[1]
+        )  # UPDATE HERE WHEN AIMS IMPLEMENTATION IS READY
 
         info(units.unit_to_user("frequency", "inversecm", self.omegak), verbosity.debug)
 
@@ -436,11 +438,11 @@ class FrictionMapper(PesMapper):
 
         nphys = self.dbeads.natoms * 3
         ndof = self.dbeads.nbeads * self.dbeads.natoms * 3
-        nbeads = self.dbeads.nbeads
+        # nbeads = self.dbeads.nbeads
 
         s = self.eta
         dgdq = s ** 0.5
-        gq = self.obtain_g(s)
+        # gq = self.obtain_g(s)
 
         z_k = np.multiply(self.omegak, self.z_friction)[:, np.newaxis]
         # factor = self.dbeads.m3[0, 0] / 1.674  # DEBUG
@@ -449,10 +451,10 @@ class FrictionMapper(PesMapper):
 
         h_fric = np.zeros((ndof, ndof))
 
-        #ALBERTO
+        # ALBERTO
         # Block diag:
-        #g = self.nm.transform.nm2b(z_k * gq_k)[active_beads]
-        #for n in range(self.dbeads.nbeads):
+        # g = self.nm.transform.nm2b(z_k * gq_k)[active_beads]
+        # for n in range(self.dbeads.nbeads):
         #    for j in range(nphys):
         #        for k in range(nphys):
         #            aux_jk = 0
@@ -462,7 +464,7 @@ class FrictionMapper(PesMapper):
         #                        0.5 * g[n, i] * fric_hessian[n, i, j, k] / dgdq[n, i, j]
         #                    )
         #            h_fric[nphys * n + j, nphys * n + k] = aux_jk
-        #ALBERTO
+        # ALBERTO
 
         # Cross-terms:
         for nl in range(self.dbeads.nbeads):
@@ -503,7 +505,6 @@ class FrictionMapper(PesMapper):
 
     def compute_friction_terms(self):
         """ Computes friction component of the energy and gradient """
-
 
         s = self.eta
         dgdq = s ** 0.5
