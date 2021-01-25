@@ -55,7 +55,6 @@ if __name__ == "__main__":
         "To ignore excluded files use -test_all option",
     )
 
-
     parser.add_argument(
         "-f", "--folder", type=str, nargs="+", help="Folder(s) of the example to test"
     )
