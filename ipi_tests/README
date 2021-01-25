@@ -2,6 +2,6 @@
 
  * To run the tests, please use i-pi/bin/i-pi-tests. For details of usage call it with "-h" option.
 
- * We also provide more flexible scripts for for performing the regresion tests and testing the examples.
+ * We also provide more flexible scripts for performing the regresion tests and testing the provided examples.
    See i-pi/ipi_tests/regression_tests/test_run.py and i-pi/ipi_tests/examples/test_examples.py, respectively. 
    For details of usage call them with "-h" option.

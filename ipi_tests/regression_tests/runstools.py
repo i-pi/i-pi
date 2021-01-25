@@ -150,7 +150,7 @@ class Runner(object):
         try:
             # Create temp file and copy files
             self.tmp_dir = Path(tempfile.mkdtemp())
-            print("\nTest folder: {}".format(str(cwd).split("ipi_tests/",1)[1]))
+            print("\nTest folder: {}".format(str(cwd).split("ipi_tests/", 1)[1]))
             print("temp folder: {}".format(self.tmp_dir))
 
             files = os.listdir(self.parent / cwd)
@@ -399,6 +399,9 @@ class Runner(object):
                 except AssertionError:
                     raise AssertionError(
                         "ANOMALY: {} in {}".format(
-                            fname, str((self.parent / cwd).absolute()).split("ipi_tests/",1)[1]
+                            fname,
+                            str((self.parent / cwd).absolute()).split("ipi_tests/", 1)[
+                                1
+                            ],
                         )
                     )

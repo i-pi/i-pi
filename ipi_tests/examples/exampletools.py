@@ -24,19 +24,19 @@ driver_models = [
 
 def get_test_settings(
     example_folder,
-    driver_info_file="test_settings.txt",
+    settings_file="test_settings.dat",
     driver="dummy",
     socket_mode="unix",
     port_number=33333,
     address_name="localhost",
     flags=[],
-    nsteps='2',
+    nsteps="2",
 ):
     """This function looks for the existence of test_settings.txt file.
-    This file can contain instructions like number of steps or driver name. 
+    This file can contain instructions like number of steps or driver name.
     If the file doesn't  exist, the driver dummy is assigned."""
     try:
-        with open(Path(example_folder) / driver_info_file) as f:
+        with open(Path(example_folder) / settings_file) as f:
             flags = list()
             while True:
                 line = f.readline()
@@ -68,9 +68,8 @@ def get_test_settings(
         "flag": flags,
     }
 
-    test_settings = {
-        "nsteps": nsteps}
- 
+    test_settings = {"nsteps": nsteps}
+
     return driver_info, test_settings
 
 
@@ -173,11 +172,15 @@ class Runner_examples(object):
             print("temp folder: {}".format(self.tmp_dir))
 
             copy_tree(str(cwd), str(self.tmp_dir))
-            driver_info ,test_settings = get_test_settings(self.tmp_dir)
+            driver_info, test_settings = get_test_settings(self.tmp_dir)
 
             # Modify xml
             clients = modify_xml_2_dummy_test(
-                self.tmp_dir / "input.xml", self.tmp_dir / "new.xml", nid, driver_info,test_settings
+                self.tmp_dir / "input.xml",
+                self.tmp_dir / "new.xml",
+                nid,
+                driver_info,
+                test_settings,
             )
             # Run i-pi
             ipi = sp.Popen(
@@ -187,7 +190,17 @@ class Runner_examples(object):
                 stdout=sp.PIPE,
                 stderr=sp.PIPE,
             )
-            time.sleep(3)
+
+            if len(clients) > 0:
+                f_connected = False
+                for i in range(50):
+                    if os.path.exists("/tmp/ipi_" + clients[0][1]):
+                        f_connected = True
+                        break
+                    else:
+                        time.sleep(0.1)
+                if not f_connected:
+                    raise RuntimeError("Couldn't find the i-PI UNIX socket")
 
             # Run drivers
             driver = list()
