@@ -71,7 +71,7 @@ def get_test_settings(
     test_settings = {
         "nsteps": nsteps}
  
-    return driver_info, test-settings
+    return driver_info, test_settings
 
 
 def find_examples(parent, excluded_file="excluded_test.txt", examples=[]):
@@ -177,7 +177,7 @@ class Runner_examples(object):
 
             # Modify xml
             clients = modify_xml_2_dummy_test(
-                self.tmp_dir / "input.xml", self.tmp_dir / "new.xml", nid, driver_info,test_setings
+                self.tmp_dir / "input.xml", self.tmp_dir / "new.xml", nid, driver_info,test_settings
             )
             # Run i-pi
             ipi = sp.Popen(
