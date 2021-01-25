@@ -427,9 +427,7 @@ class FrictionMapper(PesMapper):
         )
 
         z_friction = spline(self.omegak)
-        self.z_friction = (
-            z_friction / z_friction[1]
-        )  # UPDATE HERE WHEN AIMS IMPLEMENTATION IS READY
+        self.z_friction = z_friction  # / z_friction[1] )  # UPDATE HERE WHEN AIMS IMPLEMENTATION IS READY
 
         info(units.unit_to_user("frequency", "inversecm", self.omegak), verbosity.debug)
 
