@@ -166,20 +166,12 @@ class InputTrajectory(InputValue):
             "help": "How often should streams be flushed. 1 means each time, zero means never.",
         },
     )
-    attribs["xtratype"] = (
+    attribs["extra_type"] = (
         InputAttribute,
         {
             "dtype": str,
             "default": "info",
             "help": "What extra to print from the different extra strings.",
-            "options": [
-                "info",
-                "dipole",
-                "friction",
-                "hirshfeld",
-                "work_function",
-                "atomic_stress",
-            ],
         },
     )
 
@@ -204,7 +196,7 @@ class InputTrajectory(InputValue):
             format=self.format.fetch(),
             cell_units=self.cell_units.fetch(),
             ibead=self.bead.fetch(),
-            xtratype=self.xtratype.fetch(),
+            extra_type=self.extra_type.fetch(),
         )
 
     def store(self, traj):
@@ -217,7 +209,7 @@ class InputTrajectory(InputValue):
         self.format.store(traj.format)
         self.cell_units.store(traj.cell_units)
         self.bead.store(traj.ibead)
-        self.xtratype.store(traj.xtratype)
+        self.extra_type.store(traj.extra_type)
 
     def check(self):
         """Checks for optional parameters."""

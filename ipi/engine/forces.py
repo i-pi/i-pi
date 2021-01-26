@@ -23,7 +23,7 @@ from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, warning, info
 from ipi.utils.depend import *
 from ipi.utils.nmtransform import nm_rescale
-from ipi.utils.xtratools import listDict
+from ipi.utils.extratools import listDict
 from ipi.engine.beads import Beads
 
 

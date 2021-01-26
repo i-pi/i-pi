@@ -273,7 +273,7 @@ class TrajectoryOutput(BaseOutput):
         format="xyz",
         cell_units="atomic_unit",
         ibead=-1,
-        xtratype="info",
+        extra_type="info",
     ):
         """Initializes a trajectory output stream opening the corresponding
         file name.
@@ -290,7 +290,7 @@ class TrajectoryOutput(BaseOutput):
            cell_units: A string specifying the units that the cell parameters are
               given in.
            ibead: If positive, prints out only the selected bead. If negative, prints out one file per bead.
-           xtratype: Specifies the type of extras string that is printed in the file
+           extra_type: Specifies the type of extras string that is printed in the file
         """
 
         self.filename = filename
@@ -302,7 +302,7 @@ class TrajectoryOutput(BaseOutput):
         self.cell_units = cell_units
         self.out = None
         self.nout = 0
-        self.xtratype = xtratype
+        self.extra_type = extra_type
 
     def bind(self, system, mode="w"):
         """Binds output proxy to System object.
@@ -484,10 +484,10 @@ class TrajectoryOutput(BaseOutput):
             try:
                 index = 0
                 for el, item in enumerate(data):
-                    if self.xtratype in item[b].keys():
+                    if self.extra_type in item[b].keys():
                         index = el
                     try:
-                        if self.xtratype == "friction":
+                        if self.extra_type == "friction":
                             fatom = Atoms(self.system.beads.natoms)
                             fatom.names[:] = self.system.beads.names
                             stream.write(
@@ -511,7 +511,7 @@ class TrajectoryOutput(BaseOutput):
                                         fatom.names[na],
                                         "      ".join(
                                             "%15.8f" % el
-                                            for el in data[index][b][self.xtratype][
+                                            for el in data[index][b][self.extra_type][
                                                 na * 6 : (na + 1) * 6
                                             ]
                                         ),
@@ -521,27 +521,27 @@ class TrajectoryOutput(BaseOutput):
                             stream.write(
                                 "      ".join(
                                     "%15.8f" % el
-                                    for el in data[index][b][self.xtratype]
+                                    for el in data[index][b][self.extra_type]
                                 )
                             )
                             stream.write("\n")
                     except:
-                        stream.write(json.dumps(data[index][b][self.xtratype]))
+                        stream.write(json.dumps(data[index][b][self.extra_type]))
                         stream.write("\n")
             except:
                 try:
                     info(
-                        "Sorry, your specified xtratype %s is not among the available options. \n"
+                        "Sorry, your specified extra_type %s is not among the available options. \n"
                         "The available keys are the following: %s "
                         % (
-                            self.xtratype,
+                            self.extra_type,
                             ",".join("%s" % key for key in data[0][b].keys()),
                         ),
                         verbosity.low,
                     )
                 except:
                     info(
-                        "Sorry, no extras string has been passed, there are no available options for the xtratype "
+                        "Sorry, no extras string has been passed, there are no available options for the extra_type "
                         "attribute. \n",
                         verbosity.low,
                     )
