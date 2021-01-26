@@ -1266,7 +1266,7 @@ class Forces(dobject):
                 virs = dstrip(self.mforces[index].virs)
                 for i in range(3):
                     for j in range(3):
-                        dv[:, i, j] += self.mrpc[index].b2tob1(virs[:,i,j])
+                        dv[:, i, j] += self.mrpc[index].b2tob1(virs[:, i, j])
                 rp += (
                     self.mforces[index].weight
                     * self.mforces[index].mts_weights[level]

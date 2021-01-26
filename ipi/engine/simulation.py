@@ -268,8 +268,8 @@ class Simulation(dobject):
 
         # starts tracemalloc to debug memory leaks
         if verbosity.debug:
-            tracemalloc.start(10)   
-            
+            tracemalloc.start(10)
+
         # prints inital configuration -- only if we are not restarting
         if self.step == 0:
             self.step = -1
@@ -378,21 +378,19 @@ class Simulation(dobject):
                 )
                 cstep = 0
                 ttot = 0.0
-                
+
                 # tracemalloc memory traces
                 if verbosity.debug:
-                    
-                    snapshot = tracemalloc.take_snapshot()    
-                    top_stats = snapshot.statistics('lineno')
+
+                    snapshot = tracemalloc.take_snapshot()
+                    top_stats = snapshot.statistics("lineno")
                     info(" # DEBUG # Top 10 memory allocations: ")
                     for stat in top_stats[:10]:
                         info(stat)
-                    top_stats = snapshot.statistics('traceback')
+                    top_stats = snapshot.statistics("traceback")
                     info(" # DEBUG # Trace of the top memory allocation:")
                     for line in top_stats[0].traceback.format():
                         info(line)
-                
-    
 
             if os.path.exists("EXIT"):
                 info(" # EXIT file detected! Bye bye!", verbosity.low)
@@ -403,4 +401,3 @@ class Simulation(dobject):
                 break
 
         self.rollback = False
-        
