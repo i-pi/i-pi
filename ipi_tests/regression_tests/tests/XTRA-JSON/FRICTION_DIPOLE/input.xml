@@ -1,8 +1,8 @@
 <simulation verbosity='medium'>
   <output prefix='simulation'>
     <properties stride='1' filename='out'>  [ step, conserved] </properties>
-    <trajectory stride="1" filename="dip" xtratype="dipole"> extras </trajectory>
-    <trajectory stride="1" filename="friction" xtratype="friction"> extras </trajectory>
+    <trajectory stride="1" filename="dip" extra_type="dipole"> extras </trajectory>
+    <trajectory stride="1" filename="friction" extra_type="friction"> extras </trajectory>
   </output>
   <total_steps>9</total_steps>
   <prng>
