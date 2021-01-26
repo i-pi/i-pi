@@ -1,4 +1,4 @@
-<simulation>
+<simulation verbosity="medium">
     <output prefix="simulation">
         <properties stride="1" filename="out">  [ step, time{picosecond}, conserved , virial_cv, cell_abcABC ] </properties>
         <trajectory stride="100" filename="xc" format="pdb" cell_units="angstrom"> x_centroid{angstrom}</trajectory>
