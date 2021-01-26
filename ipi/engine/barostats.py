@@ -42,10 +42,8 @@ def mask_from_fix(fix):
         xz=(0, 2),
         yx=(0, 1),
         yy=(1, 1),
-        yz=(
-            1,
-            2,
-        ),  # NB: we re-map to the upper-triangular section, which is the only meaningful one
+        # NB: we re-map to the upper-triangular section, which is the only meaningful one        
+        yz=(1, 2),
         zx=(0, 2),
         zy=(1, 2),
         zz=(2, 2),
@@ -187,10 +185,6 @@ class Barostat(dobject):
         dself.kin = depend_value(name="kin", value=0.0)
 
         dself.cell_jacobian = depend_value(name="kin", value=0.0)
-
-        # ~ if bias != None:
-        # ~ dself.kstress.add_dependency(dd(bias).f)
-        # ~ dself.stress.add_dependency(dd(bias).vir)
 
         # Stress depend objects for Suzuki-Chin PIMD
         dself.kstress_sc = depend_value(
@@ -874,8 +868,6 @@ class BaroRGB(Barostat):
         self.hfix = hfix
 
         hmask = mask_from_fix(self.hfix)
-        print("HFIX", hfix)
-        print("HMASK", hmask)
 
         # mask to zero out components of the cell velocity, to implement cell-boundary constraints
         dself.hmask = depend_array(name="hmask", value=hmask)
@@ -1060,7 +1052,6 @@ class BaroRGB(Barostat):
 
         v = self.p / self.m[0]
         halfdt = self.qdt
-        # print("this is v", v )
         # compute in one go dt sinh v/v to handle zero-velocity cases
         # check eigen vector exists
         if np.count_nonzero(v.diagonal()) == 0:
@@ -1075,7 +1066,6 @@ class BaroRGB(Barostat):
 
         expq, expp = (matrix_exp(v * halfdt), matrix_exp(-v * halfdt))
         # oldsinh = np.dot(invert_ut3x3(v), (expq - expp) / (2.0))
-        # print(sinh, oldsinh)
 
         q = dstrip(self.nm.qnm)[0].copy().reshape((self.beads.natoms, 3))
         p = dstrip(self.nm.pnm)[0].copy()
@@ -1338,7 +1328,6 @@ class BaroMTK(Barostat):
         """Propagates the centroid position and momentum and the volume."""
 
         v = self.p / self.m[0]
-        # print(v)
         halfdt = self.qdt
         # compute in one go dt sinh v/v to handle zero-velocity cases
         # check eigen vector exists
