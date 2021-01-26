@@ -1263,11 +1263,10 @@ class Forces(dobject):
                 and self.mforces[index].weight != 0
             ):
                 dv = np.zeros((self.beads.nbeads, 3, 3), float)
+                virs = dstrip(self.mforces[index].virs)
                 for i in range(3):
                     for j in range(3):
-                        dv[:, i, j] += self.mrpc[index].b2tob1(
-                            self.mforces[index].virs[:, i, j]
-                        )
+                        dv[:, i, j] += self.mrpc[index].b2tob1(virs[:,i,j])
                 rp += (
                     self.mforces[index].weight
                     * self.mforces[index].mts_weights[level]
