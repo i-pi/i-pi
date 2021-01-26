@@ -120,7 +120,7 @@ def run_driver(unix=False, address="", port=12345, driver_function=dummy_driver)
             pos = recv_data(sock, pos)
 
             ##### THIS IS THE TIME TO DO SOMETHING WITH THE POSITIONS!
-            pot, force, vir, extras = driver(cell, pos)
+            pot, force, vir, extras = driver_function(cell, pos)
             f_data = True
         elif header == Message("GETFORCE"):
             sock.sendall(Message("FORCEREADY"))
