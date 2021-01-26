@@ -60,7 +60,7 @@ def dummy_driver(cell, pos):
     return pot, force, vir, extras
 
 
-def driver(unix=False, address="", port=12345, driver=dummy_driver):
+def run_driver(unix=False, address="", port=12345, driver_function=dummy_driver):
     """Minimal socket client for i-PI."""
 
     # Opens a socket to i-PI
@@ -69,7 +69,7 @@ def driver(unix=False, address="", port=12345, driver=dummy_driver):
         sock.connect("/tmp/ipi_" + address)
     else:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        raise ValueError("We haven't yet implemented the mf")
+        sock.connect((address, port))
 
     f_init = False
     f_data = False
@@ -166,4 +166,4 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    driver(unix=args.unix, address=args.address, port=args.port, driver=dummy_driver)
+    run_driver(unix=args.unix, address=args.address, port=args.port, driver_function=dummy_driver)
