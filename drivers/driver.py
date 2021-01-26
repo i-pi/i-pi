@@ -166,4 +166,9 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    run_driver(unix=args.unix, address=args.address, port=args.port, driver_function=dummy_driver)
+    run_driver(
+        unix=args.unix,
+        address=args.address,
+        port=args.port,
+        driver_function=dummy_driver,
+    )
