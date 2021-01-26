@@ -1,0 +1,6 @@
+Commands:
+ [i-pi]
+	i-pi input.xml
+ [driver]
+       i-pi-driver -u -m harmonic_bath -o 1,1.674,500
+  
