@@ -1263,11 +1263,10 @@ class Forces(dobject):
                 and self.mforces[index].weight != 0
             ):
                 dv = np.zeros((self.beads.nbeads, 3, 3), float)
+                dmvirs = dstrip(self.mforces[index].virs)
                 for i in range(3):
                     for j in range(3):
-                        dv[:, i, j] += self.mrpc[index].b2tob1(
-                            self.mforces[index].virs[:, i, j]
-                        )
+                        dv[:, i, j] += self.mrpc[index].b2tob1(dmvirs[:, i, j])
                 rp += (
                     self.mforces[index].weight
                     * self.mforces[index].mts_weights[level]
@@ -1327,7 +1326,7 @@ class Forces(dobject):
                 rp += (
                     self.mforces[k].weight
                     * self.mforces[k].mts_weights.sum()
-                    * self.mrpc[k].b2tob1(self.mforces[k].pots)
+                    * self.mrpc[k].b2tob1(dstrip(self.mforces[k].pots))
                 )
         return rp
 
@@ -1350,7 +1349,7 @@ class Forces(dobject):
         rp = np.zeros((self.nbeads, 3, 3), float)
         for k in range(self.nforces):
             if self.mforces[k].weight != 0:
-                virs = dstrip(self.mforces[k].virs)
+                dmvirs = dstrip(self.mforces[k].virs)
                 # "expand" to the total number of beads the virials from the
                 # contracted one, element by element
                 for i in range(3):
@@ -1358,7 +1357,7 @@ class Forces(dobject):
                         rp[:, i, j] += (
                             self.mforces[k].weight
                             * self.mforces[k].mts_weights.sum()
-                            * self.mrpc[k].b2tob1(virs[:, i, j])
+                            * self.mrpc[k].b2tob1(dmvirs[:, i, j])
                         )
         return rp
 
