@@ -42,7 +42,7 @@ def mask_from_fix(fix):
         xz=(0, 2),
         yx=(0, 1),
         yy=(1, 1),
-        # NB: we re-map to the upper-triangular section, which is the only meaningful one        
+        # NB: we re-map to the upper-triangular section, which is the only meaningful one
         yz=(1, 2),
         zx=(0, 2),
         zy=(1, 2),
