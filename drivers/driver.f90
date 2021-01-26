@@ -41,7 +41,8 @@
       
       ! COMMAND LINE PARSING
       CHARACTER(LEN=1024) :: cmdbuffer
-      INTEGER ccmd, vstyle
+      INTEGER ccmd, vstyle, vseed
+      INTEGER, ALLOCATABLE :: seed(:)
       INTEGER verbose
       INTEGER commas(4), par_count      ! stores the index of commas in the parameter string
       DOUBLE PRECISION vpars(4)         ! array to store the parameters of the potential
@@ -192,6 +193,10 @@
             WRITE(*,*) "Error: no initialization string needed for dummy output."
             STOP "ENDED"
          ENDIF
+         CALL RANDOM_SEED(size=vseed)
+         ALLOCATE(seed(vseed))
+         seed = 12345
+         CALL RANDOM_SEED(put=seed)
          isinit = .true.         
       ELSEIF (6 == vstyle) THEN
          IF (par_count /= 0) THEN
@@ -763,7 +768,7 @@
     CONTAINS
       SUBROUTINE helpmessage
          ! Help banner
-         WRITE(*,*) " SYNTAX: driver.x [-u] -h hostname -p port -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D] "
+         WRITE(*,*) " SYNTAX: driver.x [-u] -h hostname -p port -m [dummy|gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D] "
          WRITE(*,*) "         -o 'comma_separated_parameters' [-v] "
          WRITE(*,*) ""
          WRITE(*,*) " For LJ potential use -o sigma,epsilon,cutoff "
