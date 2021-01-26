@@ -1,7 +1,7 @@
 <simulation mode="static" verbosity="medium">
     <output prefix='inst'>
         <properties stride='1' filename='out'>  [ step, potential{electronvolt}] </properties>
-        <trajectory stride="1" filename="dip" xtratype="dipole"> extras </trajectory>
+        <trajectory stride="1" filename="dip" extra_type="dipole"> extras </trajectory>
    </output>
    <total_steps>160         </total_steps>
    <ffsocket name="qtip4pf" mode="unix" >
