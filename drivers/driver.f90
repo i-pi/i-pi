@@ -45,14 +45,14 @@
       INTEGER, ALLOCATABLE :: seed(:)
       INTEGER verbose
       INTEGER commas(4), par_count      ! stores the index of commas in the parameter string
-      DOUBLE PRECISION vpars(4)         ! array to store the parameters of the potential
+      DOUBLE PRECISION vpars(6)         ! array to store the parameters of the potential
       
       ! SOCKET COMMUNICATION BUFFERS
       CHARACTER(LEN=12) :: header
       LOGICAL :: isinit=.false., hasdata=.false.
-      INTEGER cbuf, rid, length
+      INTEGER cbuf, rid
       CHARACTER(LEN=4096) :: initbuffer      ! it's unlikely a string this large will ever be passed...
-      CHARACTER(LEN=4096) :: string,string2,string3,trimmed  ! it's unlikely a string this large will ever be passed...
+      CHARACTER(LEN=4096) :: string,string2,string3  ! it's unlikely a string this large will ever be passed...
       DOUBLE PRECISION, ALLOCATABLE :: msgbuffer(:)
       
       ! PARAMETERS OF THE SYSTEM (CELL, ATOM POSITIONS, ...)
@@ -269,9 +269,13 @@
          ENDIF
          isinit = .true.
       ELSEIF (26 == vstyle) THEN !harmonic_bath
-         IF (par_count /= 3) THEN ! defaults values 
+         IF (par_count == 3) THEN ! defaults values 
+            vpars(4) = 0
+            vpars(5) = 0
+            vpars(6) = 1
+         ELSEIF (par_count /= 6) THEN 
             WRITE(*,*) "Error: parameters not initialized correctly."
-            WRITE(*,*) "For harmonic bath use <bath_type> <friction (atomic units)> <omega_c (invcm)> "
+            WRITE(*,*) "For harmonic bath use <bath_type> <friction (atomic units)> <omega_c (invcm)> eps(a.u.) delta (a.u.) deltaQ(a.u.)"
             WRITE(*,*) "Available bath_type are: "
             WRITE(*,*) "1 = Ohmic "
             STOP "ENDED"
@@ -283,12 +287,15 @@
          vpars(3) = vpars(3) * 4.5563353e-06 !Change omega_c from invcm to a.u.
          isinit = .true.
       ELSEIF (27 == vstyle) THEN !meanfield bath
-         IF (par_count /= 1) THEN ! defaults values 
+         IF (par_count == 3) THEN ! defaults values 
+            vpars(2) = 0
+            vpars(3) = 0
+            vpars(4) = 1
+         ELSEIF (par_count /= 4) THEN 
             WRITE(*,*) "Error: parameters not initialized correctly."
-            WRITE(*,*) "For harmonic meanfield bath use  <friction (atomic units)> "
+            WRITE(*,*) "For harmonic meanfield bath use  <friction (atomic units)> eps(a.u.) delta (a.u.) deltaQ(a.u.)"
             STOP "ENDED"
          ENDIF
-         vpars(1) = vpars(1) 
          isinit = .true.
       ELSEIF (22 == vstyle) THEN !ljpolymer
          IF (4/= par_count) THEN
@@ -633,9 +640,9 @@
             ELSEIF (vstyle == 20) THEN ! eckart potential.
                CALL geteckart(nat,vpars(1), vpars(2), vpars(3),vpars(4), atoms, pot, forces)
             ELSEIF (vstyle == 26) THEN ! harmonic_bath.
-               CALL get_harmonic_bath(nat,vpars(1),vpars(2),vpars(3),atoms, pot, forces)
+               CALL get_harmonic_bath(nat,vpars(1),vpars(2),vpars(3),vpars(4),vpars(5),vpars(6),atoms, pot, forces)
             ELSEIF (vstyle == 27) THEN ! meanfield_bath.
-               CALL get_meanfield_harmonic_bath(nat,vpars(1),atoms, pot, forces,friction)
+               CALL get_meanfield_harmonic_bath(nat,vpars(1),vpars(2),vpars(3),vpars(4),atoms, pot, forces,friction)
             ELSEIF (vstyle == 23) THEN ! MB.
                IF (nat/=1) THEN
                   WRITE(*,*) "Expecting 1 atom for MB"
