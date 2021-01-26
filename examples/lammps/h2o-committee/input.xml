@@ -13,7 +13,7 @@
     <extras_mode> light </extras_mode>
     <weights> [ 1, 1 ] </weights>
     <alpha> 1.0 </alpha>
-    <al_thresh> 0.355 </al_thresh>
+    <active_thresh> 0.355 </active_thresh>
     <ffsocket name='lammps-1' mode='unix' matching="any">
         <address>h2o-pimd.1</address> <latency> 2e-4 </latency>
     </ffsocket>

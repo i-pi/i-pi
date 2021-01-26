@@ -640,7 +640,8 @@ class InputFFCommittee(InputForceField):
         {
             "dtype": float,
             "default": np.array([]),
-            "help": "List of weights to be given to the forcefields. Defaults to 1 for each FF. Note that the components are divided by the number of FF, and so the default corresponds to an average.",
+            "help": """List of weights to be given to the forcefields. Defaults to 1 for each FF. 
+                Note that the components are divided by the number of FF, and so the default corresponds to an average.""",
         },
     )
     fields["alpha"] = (
@@ -656,7 +657,8 @@ class InputFFCommittee(InputForceField):
         {
             "dtype": float,
             "default": -1.0,
-            "help": "Corresponds to the systematic error of the baseline model. In case it is defined the first forcefield defined within is assumed to the baseline model, while the rest are treated as a committee of delta / direct models.",
+            "help": """Corresponds to the systematic error of the baseline model. In case it is defined the first forcefield defined within <ffcommittee> 
+                       is assumed to the baseline model, while the rest are treated as a committee of delta / direct models.""",
         },
     )
     fields["is_committee_delta"] = (
@@ -675,20 +677,21 @@ class InputFFCommittee(InputForceField):
             "help": "Offsets the baseline potential with the value. Used only if baseline_uncertainty is defined.",
         },
     )
-    fields["al_thresh"] = (
+    fields["active_thresh"] = (
         InputValue,
         {
             "dtype": float,
             "default": 0.0,
-            "help": "The uncertainty threshold. Structure with an uncertainty above this value are printed in the specified output file so they can be used for active learning.",
+            "help": """The uncertainty threshold for active learning. Structure with an uncertainty above this 
+                        value are printed in the specified output file so they can be used for active learning.""",
         },
     )
-    fields["al_output"] = (
+    fields["active_output"] = (
         InputValue,
         {
             "dtype": str,
-            "default": "al_output",
-            "help": "Output filename for structures that exceed the accuracy threshold of the model.",
+            "default": "active_output",
+            "help": "Output filename for structures that exceed the accuracy threshold of the model, to be used in active learning.",
         },
     )
     fields["extras_mode"] = (
@@ -697,7 +700,8 @@ class InputFFCommittee(InputForceField):
             "dtype": str,
             "options": ["light", "heavy"],
             "default": "light",
-            "help": "In the light mode, only the potential energies of the committee members are printed out, while in the heavy mode the potential energies, forces and virials of the committee members are printed out.",
+            "help": """In the light mode, only the potential energies of the committee members are printed out, while in the heavy mode the potential energies, 
+                forces and virials of the committee members are printed out.""",
         },
     )
 
@@ -713,14 +717,11 @@ class InputFFCommittee(InputForceField):
         self.baseline_uncertainty.store(ff.baseline_uncertainty)
         self.baseline_offset.store(ff.baseline_offset)
         self.is_committee_delta.store(ff.is_committee_delta)
-        self.al_thresh.store(ff.al_thresh)
-        self.al_output.store(ff.al_out)
+        self.active_thresh.store(ff.active_thresh)
+        self.active_output.store(ff.active_out)
         self.extras_mode.store(ff.extras_mode)
 
-        for (
-            _ii,
-            _obj,
-        ) in enumerate(_fflist):
+        for ( _ii, _obj ) in enumerate(_fflist):
             if self.extra[_ii] == 0:
                 if isinstance(_obj, FFSocket):
                     _iobj = InputFFSocket()
@@ -774,7 +775,7 @@ class InputFFCommittee(InputForceField):
             baseline_uncertainty=self.baseline_uncertainty.fetch(),
             baseline_offset=self.baseline_offset.fetch(),
             is_committee_delta=self.is_committee_delta.fetch(),
-            al_thresh=self.al_thresh.fetch(),
-            al_out=self.al_output.fetch(),
+            active_thresh=self.active_thresh.fetch(),
+            active_out=self.active_output.fetch(),
             extras_mode=self.extras_mode.fetch(),
         )

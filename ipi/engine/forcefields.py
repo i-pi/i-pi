@@ -21,8 +21,8 @@ from ipi.utils.messages import info
 from ipi.interfaces.sockets import InterfaceSocket
 from ipi.utils.depend import dobject
 from ipi.utils.depend import dstrip
-from ipi.utils.io import read_file, print_file
-from ipi.utils.units import unit_to_internal, unit_to_user, UnitMap
+from ipi.utils.io import read_file
+from ipi.utils.units import unit_to_internal, UnitMap
 
 try:
     import plumed
@@ -901,8 +901,9 @@ class FFsGDML(ForceField):
 
 
 class FFCommittee(ForceField):
-    """Combines multiple forcefields into a single forcefield object
-    that consolidates individual components"""
+    """Combines multiple forcefields into a single forcefield object that consolidates 
+    individual components. Provides the infrastructure to run a simulation based on a
+    committee of potentials, and implements the weighted baseline method."""
 
     def __init__(
         self,
@@ -918,8 +919,8 @@ class FFCommittee(ForceField):
         baseline_uncertainty=-1.0,
         baseline_offset=0.0,
         is_committee_delta=True,
-        al_thresh=0.0,
-        al_out=None,
+        active_thresh=0.0,
+        active_out=None,
         extras_mode="light",
     ):
 
@@ -951,20 +952,20 @@ class FFCommittee(ForceField):
             raise ValueError("List of weights does not match length of committee model")
         self.ffweights = ffweights
         self.alpha = alpha
-        self.al_thresh = al_thresh
-        self.al_out = al_out
+        self.active_thresh = active_thresh
+        self.active_out = active_out
         self.extras_mode = extras_mode
 
     def bind(self, output_maker):
 
         super(FFCommittee, self).bind(output_maker)
-        if self.al_thresh > 0:
-            if self.al_out is None:
+        if self.active_thresh > 0:
+            if self.active_out is None:
                 raise ValueError(
                     "Must specify an output file if you want to save structures for active learning"
                 )
             else:
-                self.al_file = self.output_maker.get_output(self.al_out, "w")
+                self.active_file = self.output_maker.get_output(self.active_out, "w")
 
     def start(self):
         for ff in self.fflist:
@@ -1215,8 +1216,8 @@ class FFCommittee(ForceField):
                     "committee": r["ff_results"],
                 }
             )
-        # print( np.std(np.array(pot_uncertainty)), self.al_thresh )
-        if std_pot > self.al_thresh and self.al_thresh > 0.0:
+        # print( np.std(np.array(pot_uncertainty)), self.active_thresh )
+        if std_pot > self.active_thresh and self.active_thresh > 0.0:
             dumps = json.dumps(
                 {
                     "position": list(r["pos"]),
@@ -1224,7 +1225,7 @@ class FFCommittee(ForceField):
                     "uncertainty": std_pot,
                 }
             )
-            self.al_file.write(dumps)
+            self.active_file.write(dumps)
 
         # releases the requests from the committee FF
         for ff, ff_r in zip(self.fflist, r["ff_handles"]):
