@@ -24,7 +24,7 @@ driver_models = [
 def get_driver_info(
     example_folder,
     driver_info_file=".driver_info",
-    driver="gas",
+    driver="dummy",
     socket_mode="unix",
     port_number=33333,
     address_name="localhost",
@@ -32,7 +32,7 @@ def get_driver_info(
 ):
     """This function looks for the existence of .driver_info file
     to run the example with a meaningfull driver. If the file doesn't
-    exist, the driver gas is assigned."""
+    exist, the dummy driver is assigned."""
     try:
         with open(Path(example_folder) / driver_info_file) as f:
             flags = list()
@@ -54,7 +54,7 @@ def get_driver_info(
         pass
 
     if driver not in driver_models:
-        driver = "gas"
+        driver = "dummy"
 
     driver_info = {
         "model": driver,
@@ -190,7 +190,17 @@ class Runner_examples(object):
                 stdout=sp.PIPE,
                 stderr=sp.PIPE,
             )
-            time.sleep(3)
+
+            if len(clients) > 0:
+                f_connected = False
+                for i in range(50):
+                    if os.path.exists("/tmp/ipi_" + clients[0][1]):
+                        f_connected = True
+                        break
+                    else:
+                        time.sleep(0.1)
+                if not f_connected:
+                    raise RuntimeError("Couldn't find the i-PI UNIX socket")
 
             # Run drivers
             driver = list()

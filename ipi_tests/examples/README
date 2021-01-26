@@ -1,3 +1,11 @@
+Automatic testing of examples 
+=============================
+
+This section of the tests is meant to check that all examples parse input correctly,
+and can run a few steps without errors. It does NOT check that results are correct or
+meaningful, so by default it runs with a "dummy" driver that just generate random
+forces, energies and stress. Note that particularly unstable calculations might 
+fail randomly because of this. 
 
 Examples to be excluded from this test should be added to 'excluded_test.txt'
 

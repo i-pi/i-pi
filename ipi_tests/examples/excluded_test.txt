@@ -1,5 +1,6 @@
 # To check
 lammps/h2o-planetary-64                                                     # TypeError: string argument expected, got 'bytes' 
+lammps/h2o-imf                                                              # should run at least 7 steps otherwise it doesn't get to the point where the driver is called
 
 # Broken
 ffdebye/single_particle 

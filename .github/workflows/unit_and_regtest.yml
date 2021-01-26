@@ -1,7 +1,6 @@
 name: Regression and unitary tests
 
-on:
-  push:
+on: [push, pull_request]
 
 jobs:
   build:
@@ -13,7 +12,7 @@ jobs:
 
     runs-on: "${{ matrix.os }}"
     
-    name: Set up conda and install Python ${{ matrix.python-version }}         
+    name: Regression and unitary tests 
     steps:
     - uses: actions/checkout@v2
     - uses: s-weigand/setup-conda@v1

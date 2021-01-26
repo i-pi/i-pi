@@ -17,6 +17,7 @@ import time
 import threading
 
 import numpy as np
+import json
 
 from ipi.utils.messages import verbosity, warning, info
 from ipi.utils.softexit import softexit
@@ -412,13 +413,21 @@ class Driver(DriverSocket):
             mxtra = bytearray(mxtra).decode("utf-8")
         else:
             mxtra = ""
+        mxtradict = {}
+        if mxtra:
+            try:
+                mxtradict = json.loads(mxtra)
+                info("mxtradict JSON has been loaded.", verbosity.debug)
+            except:
+                mxtradict["info"] = mxtra
+                info("mxtradict traditional string has been loaded.", verbosity.debug)
 
-        return [mu, mf, mvir, mxtra]
+        return [mu, mf, mvir, mxtradict]
 
     def dispatch(self, r):
         """Dispatches a request r and looks after it setting results
         once it has been evaluated. This is meant to be launched as a
-        separate thread, and takes clear of all the communication related to
+        separate thread, and takes care of all the communication related to
         the request.
         """
 
@@ -495,7 +504,7 @@ class InterfaceSocket(object):
           before updating the client list.
        timeout: A float giving a timeout limit for considering a calculation dead
           and dropping the connection.
-       server: The socket used for data transmition.
+       server: The socket used for data transmission.
        clients: A list of the driver clients connected to the server.
        requests: A list of all the jobs required in the current PIMD step.
        jobs: A list of all the jobs currently running.
@@ -668,7 +677,7 @@ class InterfaceSocket(object):
                 self.clients.remove(c)
                 # requeue jobs that have been left hanging
                 for [k, j, tc] in self.jobs[:]:
-                    if tc.isAlive():
+                    if tc.is_alive():
                         tc.join(2)
                     if j is c:
                         self.jobs = [
@@ -853,7 +862,7 @@ class InterfaceSocket(object):
         """
 
         if r["status"] == "Done":
-            while ct.isAlive():  # we can wait for end of thread
+            while ct.is_alive():  # we can wait for end of thread
                 ct.join()
             self.jobs = [
                 w for w in self.jobs if not (w[0] is r and w[1] is c)

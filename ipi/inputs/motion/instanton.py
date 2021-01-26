@@ -48,18 +48,6 @@ class InputInst(InputDictionary):
         )
     }
 
-    attribs = {
-        "mode": (
-            InputAttribute,
-            {
-                "dtype": str,
-                "default": "rate",
-                "help": "Defines whether it is an instanton rate or instanton tunneling splitting calculaion",
-                "options": ["rate", "splitting"],
-            },
-        )
-    }
-
     fields = {
         "tolerances": (
             InputDictionary,
@@ -209,7 +197,7 @@ class InputInst(InputDictionary):
                 "dtype": str,
                 "default": "none",
                 "options": ["none", "poly", "crystal"],
-                "help": "Removes the zero frequency vibrational modes depending on the symmerty of the system.",
+                "help": "Removes the zero frequency vibrational modes depending on the symmetry of the system.",
             },
         ),
         # L-BFGS
@@ -260,7 +248,7 @@ class InputInst(InputDictionary):
             InputDictionary,
             {
                 "dtype": [float, int],
-                "help": """"Options for line search methods. Includes:
+                "help": """Options for line search methods. Includes:
                                   tolerance: stopping tolerance for the search,
                                   iter: the maximum number of iterations,
                                   step: initial step for bracketing,
