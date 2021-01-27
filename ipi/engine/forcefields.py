@@ -901,7 +901,7 @@ class FFsGDML(ForceField):
 
 
 class FFCommittee(ForceField):
-    """Combines multiple forcefields into a single forcefield object that consolidates 
+    """Combines multiple forcefields into a single forcefield object that consolidates
     individual components. Provides the infrastructure to run a simulation based on a
     committee of potentials, and implements the weighted baseline method."""
 
@@ -916,6 +916,7 @@ class FFCommittee(ForceField):
         fflist=[],
         ffweights=[],
         alpha=1.0,
+        baseline_name = "",
         baseline_uncertainty=-1.0,
         baseline_offset=0.0,
         is_committee_delta=True,
@@ -941,6 +942,7 @@ class FFCommittee(ForceField):
         self.ff_requests = {}
         self.baseline_uncertainty = baseline_uncertainty
         self.baseline_offset = baseline_offset
+        self.baseline_name = baseline_name
         self.is_committee_delta = is_committee_delta
         if len(ffweights) == 0 and self.baseline_uncertainty < 0:
             ffweights = np.ones(len(fflist))

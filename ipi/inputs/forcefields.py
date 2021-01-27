@@ -652,11 +652,22 @@ class InputFFCommittee(InputForceField):
             "help": "Scaling of the variance of the model, corresponding to a calibration of the error ",
         },
     )
+
+    fields["baseline_name"] = (
+        InputValue,
+        {
+            "dtype": str,
+            "default": "",
+            "help": """Name of the forcefield object that should be treated as the baseline.""",
+        },
+    )
+    
     fields["baseline_uncertainty"] = (
         InputValue,
         {
             "dtype": float,
             "default": -1.0,
+            "dimension" : "energy",
             "help": """Corresponds to the systematic error of the baseline model. In case it is defined the first forcefield defined within <ffcommittee> 
                        is assumed to the baseline model, while the rest are treated as a committee of delta / direct models.""",
         },
@@ -715,13 +726,14 @@ class InputFFCommittee(InputForceField):
         self.weights.store(ff.ffweights)
         self.alpha.store(ff.alpha)
         self.baseline_uncertainty.store(ff.baseline_uncertainty)
+        self.baseline_name.store(ff.baseline_name)
         self.baseline_offset.store(ff.baseline_offset)
         self.is_committee_delta.store(ff.is_committee_delta)
         self.active_thresh.store(ff.active_thresh)
         self.active_output.store(ff.active_out)
         self.extras_mode.store(ff.extras_mode)
 
-        for ( _ii, _obj ) in enumerate(_fflist):
+        for (_ii, _obj) in enumerate(_fflist):
             if self.extra[_ii] == 0:
                 if isinstance(_obj, FFSocket):
                     _iobj = InputFFSocket()
@@ -774,6 +786,7 @@ class InputFFCommittee(InputForceField):
             alpha=self.alpha.fetch(),
             baseline_uncertainty=self.baseline_uncertainty.fetch(),
             baseline_offset=self.baseline_offset.fetch(),
+            baseline_name=self.baseline_name.fetch(),
             is_committee_delta=self.is_committee_delta.fetch(),
             active_thresh=self.active_thresh.fetch(),
             active_out=self.active_output.fetch(),
