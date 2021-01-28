@@ -1,7 +1,7 @@
 <simulation threading='false'>
-    <ffsocket mode='unix' name='driver'>
+    <ffsocket mode='unix' name='gas'>
          <latency>  1.00000000e-03</latency>
-         <address> gas </address>
+         <address> localhost </address>
          <exit_on_disconnect> False </exit_on_disconnect>
    </ffsocket>
    <total_steps>100</total_steps>
@@ -26,7 +26,7 @@
    <template>	   
    <system prefix='IDX'>
       <forces> 
-          <force forcefield='driver'></force>
+          <force forcefield='gas'></force>
       </forces>
       <initialize nbeads='1'>
         <file mode='xyz'> init.xyz</file>
