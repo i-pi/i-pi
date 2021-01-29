@@ -661,13 +661,13 @@ class InputFFCommittee(InputForceField):
             "help": """Name of the forcefield object that should be treated as the baseline.""",
         },
     )
-    
+
     fields["baseline_uncertainty"] = (
         InputValue,
         {
             "dtype": float,
             "default": -1.0,
-            "dimension" : "energy",
+            "dimension": "energy",
             "help": """Corresponds to the systematic error of the baseline model. In case it is defined the first forcefield defined within <ffcommittee> 
                        is assumed to the baseline model, while the rest are treated as a committee of delta / direct models.""",
         },

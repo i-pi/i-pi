@@ -916,7 +916,7 @@ class FFCommittee(ForceField):
         fflist=[],
         ffweights=[],
         alpha=1.0,
-        baseline_name = "",
+        baseline_name="",
         baseline_uncertainty=-1.0,
         baseline_offset=0.0,
         is_committee_delta=True,
