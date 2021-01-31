@@ -918,8 +918,6 @@ class FFCommittee(ForceField):
         alpha=1.0,
         baseline_name="",
         baseline_uncertainty=-1.0,
-        baseline_offset=0.0,
-        is_committee_delta=True,
         active_thresh=0.0,
         active_out=None,
         extras_mode="light",
@@ -941,9 +939,7 @@ class FFCommittee(ForceField):
         self.fflist = fflist
         self.ff_requests = {}
         self.baseline_uncertainty = baseline_uncertainty
-        self.baseline_offset = baseline_offset
         self.baseline_name = baseline_name
-        self.is_committee_delta = is_committee_delta
         if len(ffweights) == 0 and self.baseline_uncertainty < 0:
             ffweights = np.ones(len(fflist))
         elif len(ffweights) == 0 and self.baseline_uncertainty > 0:
@@ -1042,7 +1038,7 @@ class FFCommittee(ForceField):
             virs = [ff_r["result"][2] for ff_r in r["ff_handles"]]
             xtrs = [ff_r["result"][3] for ff_r in r["ff_handles"]]
             # The first model is assumed to be the baseline
-            baseline_pot = pots[0] + self.baseline_offset
+            baseline_pot = pots[0]
             baseline_frc = frcs[0]
             baseline_vir = virs[0]
             baseline_xtr = xtrs[0]
@@ -1076,100 +1072,52 @@ class FFCommittee(ForceField):
                 axis=0,
             )
 
-            if self.is_committee_delta is True:
-                # Computes the final average energetics
-                final_pot = (
-                    baseline_pot
-                    + mean_pot
-                    * (
-                        self.baseline_uncertainty ** 2
-                        / (self.baseline_uncertainty ** 2 + var_pot)
-                    )
-                    - 2.0
-                    * mean_pot
-                    * (
-                        self.baseline_uncertainty ** 2
-                        / (self.baseline_uncertainty ** 2 + var_pot) ** 2
-                    )
-                    * uncertain_pot
+            # Computes the final average energetics
+            final_pot = (
+                baseline_pot
+                + mean_pot
+                * (
+                    self.baseline_uncertainty ** 2
+                    / (self.baseline_uncertainty ** 2 + var_pot)
                 )
-                final_frc = (
-                    baseline_frc
-                    + mean_frc
-                    * (
-                        self.baseline_uncertainty ** 2
-                        / (self.baseline_uncertainty ** 2 + var_pot)
-                    )
-                    - 2.0
-                    * mean_pot
-                    * (
-                        self.baseline_uncertainty ** 2
-                        / (self.baseline_uncertainty ** 2 + var_pot) ** 2
-                    )
-                    * uncertain_frc
+                - 2.0
+                * mean_pot
+                * (
+                    self.baseline_uncertainty ** 2
+                    / (self.baseline_uncertainty ** 2 + var_pot) ** 2
                 )
-                final_vir = (
-                    baseline_vir
-                    + mean_vir
-                    * (
-                        self.baseline_uncertainty ** 2
-                        / (self.baseline_uncertainty ** 2 + var_pot)
-                    )
-                    - 2.0
-                    * mean_pot
-                    * (
-                        self.baseline_uncertainty ** 2
-                        / (self.baseline_uncertainty ** 2 + var_pot) ** 2
-                    )
-                    * uncertain_vir
+                * uncertain_pot
+            )
+            final_frc = (
+                baseline_frc
+                + mean_frc
+                * (
+                    self.baseline_uncertainty ** 2
+                    / (self.baseline_uncertainty ** 2 + var_pot)
                 )
-            else:
-                # Computes the final average energetics
-                final_pot = (
-                    baseline_pot
-                    + (mean_pot - baseline_pot)
-                    * (
-                        self.baseline_uncertainty ** 2
-                        / (self.baseline_uncertainty ** 2 + var_pot)
-                    )
-                    - 2.0
-                    * (mean_pot - baseline_pot)
-                    * (
-                        self.baseline_uncertainty ** 2
-                        / (self.baseline_uncertainty ** 2 + var_pot) ** 2
-                    )
-                    * uncertain_pot
+                - 2.0
+                * mean_pot
+                * (
+                    self.baseline_uncertainty ** 2
+                    / (self.baseline_uncertainty ** 2 + var_pot) ** 2
                 )
-                final_frc = (
-                    baseline_frc
-                    + (mean_frc - baseline_frc)
-                    * (
-                        self.baseline_uncertainty ** 2
-                        / (self.baseline_uncertainty ** 2 + var_pot)
-                    )
-                    - 2.0
-                    * (mean_pot - baseline_pot)
-                    * (
-                        self.baseline_uncertainty ** 2
-                        / (self.baseline_uncertainty ** 2 + var_pot) ** 2
-                    )
-                    * uncertain_frc
+                * uncertain_frc
+            )
+            final_vir = (
+                baseline_vir
+                + mean_vir
+                * (
+                    self.baseline_uncertainty ** 2
+                    / (self.baseline_uncertainty ** 2 + var_pot)
                 )
-                final_vir = (
-                    baseline_vir
-                    + (mean_vir - baseline_vir)
-                    * (
-                        self.baseline_uncertainty ** 2
-                        / (self.baseline_uncertainty ** 2 + var_pot)
-                    )
-                    - 2.0
-                    * (mean_pot - baseline_pot)
-                    * (
-                        self.baseline_uncertainty ** 2
-                        / (self.baseline_uncertainty ** 2 + var_pot) ** 2
-                    )
-                    * uncertain_vir
+                - 2.0
+                * mean_pot
+                * (
+                    self.baseline_uncertainty ** 2
+                    / (self.baseline_uncertainty ** 2 + var_pot) ** 2
                 )
+                * uncertain_vir
+            )
 
             # Sets the output of the committee model.
             r["result"][0] = final_pot

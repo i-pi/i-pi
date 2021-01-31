@@ -672,22 +672,6 @@ class InputFFCommittee(InputForceField):
                        is assumed to the baseline model, while the rest are treated as a committee of delta / direct models.""",
         },
     )
-    fields["is_committee_delta"] = (
-        InputValue,
-        {
-            "dtype": bool,
-            "default": True,
-            "help": "Defines whether the committee is a delta model trained on the difference between the reference and the baseline mode, or if the committee is trained directly on reference data.",
-        },
-    )
-    fields["baseline_offset"] = (
-        InputValue,
-        {
-            "dtype": float,
-            "default": 0.0,
-            "help": "Offsets the baseline potential with the value. Used only if baseline_uncertainty is defined.",
-        },
-    )
     fields["active_thresh"] = (
         InputValue,
         {
@@ -727,8 +711,6 @@ class InputFFCommittee(InputForceField):
         self.alpha.store(ff.alpha)
         self.baseline_uncertainty.store(ff.baseline_uncertainty)
         self.baseline_name.store(ff.baseline_name)
-        self.baseline_offset.store(ff.baseline_offset)
-        self.is_committee_delta.store(ff.is_committee_delta)
         self.active_thresh.store(ff.active_thresh)
         self.active_output.store(ff.active_out)
         self.extras_mode.store(ff.extras_mode)
@@ -785,9 +767,7 @@ class InputFFCommittee(InputForceField):
             ffweights=self.weights.fetch(),
             alpha=self.alpha.fetch(),
             baseline_uncertainty=self.baseline_uncertainty.fetch(),
-            baseline_offset=self.baseline_offset.fetch(),
             baseline_name=self.baseline_name.fetch(),
-            is_committee_delta=self.is_committee_delta.fetch(),
             active_thresh=self.active_thresh.fetch(),
             active_out=self.active_output.fetch(),
             extras_mode=self.extras_mode.fetch(),
