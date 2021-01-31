@@ -948,6 +948,8 @@ class FFCommittee(ForceField):
             raise ValueError("List of weights does not match length of committee model")
         elif len(ffweights) != len(fflist) - 1 and self.baseline_uncertainty > 0:
             raise ValueError("List of weights does not match length of committee model")
+        if ((self.baseline_name == "")  != (self.baseline_uncertainty < 0)):
+            raise ValueError("Name and the uncertainty of the baseline are not simultaneously defined")
         self.ffweights = ffweights
         self.alpha = alpha
         self.active_thresh = active_thresh
