@@ -668,8 +668,7 @@ class InputFFCommittee(InputForceField):
             "dtype": float,
             "default": -1.0,
             "dimension": "energy",
-            "help": """Corresponds to the systematic error of the baseline model. In case it is defined the first forcefield defined within <ffcommittee> 
-                       is assumed to the baseline model, while the rest are treated as a committee of delta / direct models.""",
+            "help": """Corresponds to the systematic error of the baseline model.""",
         },
     )
     fields["active_thresh"] = (
@@ -695,8 +694,7 @@ class InputFFCommittee(InputForceField):
             "dtype": str,
             "options": ["light", "heavy"],
             "default": "light",
-            "help": """In the light mode, only the potential energies of the committee members are printed out, while in the heavy mode the potential energies, 
-                forces and virials of the committee members are printed out.""",
+            "help": """In the light mode only the potential energies of the committee members are printed out, while in the heavy mode the potential energies, forces and virials of the committee members are printed out.""",
         },
     )
 

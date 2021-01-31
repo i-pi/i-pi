@@ -1008,7 +1008,6 @@ class FFCommittee(ForceField):
             pots = [ff_r["result"][0] for ff_r in r["ff_handles"]]
             frcs = [ff_r["result"][1] for ff_r in r["ff_handles"]]
             virs = [ff_r["result"][2] for ff_r in r["ff_handles"]]
-            xtrs = [ff_r["result"][3] for ff_r in r["ff_handles"]]
 
             # Computes the mean energetics
             mean_pot = np.mean(pots, axis=0)
@@ -1033,19 +1032,23 @@ class FFCommittee(ForceField):
 
             # Gathers the forcefield energetics and extras
             ncommittee = len(r["ff_handles"]) - 1
-            pots = [ff_r["result"][0] for ff_r in r["ff_handles"]]
-            frcs = [ff_r["result"][1] for ff_r in r["ff_handles"]]
-            virs = [ff_r["result"][2] for ff_r in r["ff_handles"]]
-            xtrs = [ff_r["result"][3] for ff_r in r["ff_handles"]]
-            # The first model is assumed to be the baseline
-            baseline_pot = pots[0]
-            baseline_frc = frcs[0]
-            baseline_vir = virs[0]
-            baseline_xtr = xtrs[0]
-            pots = pots[1:]
-            frcs = frcs[1:]
-            virs = virs[1:]
-            xtrs = xtrs[1:]
+            names =[ff.name for ff in self.fflist]
+
+            pots = []
+            frcs = []
+            virs = []
+            xtrs = []
+            for i, ff_r in enumerate(r["ff_handles"]):
+                if names[i] == self.baseline_name:
+                    baseline_pot = ff_r["result"][0] 
+                    baseline_frc = ff_r["result"][1] 
+                    baseline_vir = ff_r["result"][2]
+                    baseline_xtr = ff_r["result"][3]
+                else:
+                    pots.append(ff_r["result"][0]) 
+                    frcs.append(ff_r["result"][1]) 
+                    virs.append(ff_r["result"][2]) 
+                    xtrs.append(ff_r["result"][3]) 
 
             # Computes the mean energetics
             mean_pot = np.mean(pots, axis=0)
