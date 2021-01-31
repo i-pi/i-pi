@@ -10,7 +10,6 @@
     <seed>31415</seed>
   </prng>
   <ffcommittee name="committee">
-    <baseline_name> lammps-1 </baseline_name>
     <extras_mode> light </extras_mode>
     <weights> [ 1, 1 ] </weights>
     <alpha> 1.0 </alpha>
