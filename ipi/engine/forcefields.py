@@ -948,8 +948,10 @@ class FFCommittee(ForceField):
             raise ValueError("List of weights does not match length of committee model")
         elif len(ffweights) != len(fflist) - 1 and self.baseline_uncertainty > 0:
             raise ValueError("List of weights does not match length of committee model")
-        if ((self.baseline_name == "")  != (self.baseline_uncertainty < 0)):
-            raise ValueError("Name and the uncertainty of the baseline are not simultaneously defined")
+        if (self.baseline_name == "") != (self.baseline_uncertainty < 0):
+            raise ValueError(
+                "Name and the uncertainty of the baseline are not simultaneously defined"
+            )
         self.ffweights = ffweights
         self.alpha = alpha
         self.active_thresh = active_thresh
@@ -998,10 +1000,6 @@ class FFCommittee(ForceField):
     def gather(self, r):
         """ Collects results from all sub-requests """
         ff_res = []
-        pot_uncertainty = []
-        pots = []
-        forces = []
-        virials = []
         r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]
 
         if self.baseline_uncertainty < 0:
@@ -1034,7 +1032,7 @@ class FFCommittee(ForceField):
 
             # Gathers the forcefield energetics and extras
             ncommittee = len(r["ff_handles"]) - 1
-            names =[ff.name for ff in self.fflist]
+            names = [ff.name for ff in self.fflist]
 
             pots = []
             frcs = []
@@ -1042,15 +1040,15 @@ class FFCommittee(ForceField):
             xtrs = []
             for i, ff_r in enumerate(r["ff_handles"]):
                 if names[i] == self.baseline_name:
-                    baseline_pot = ff_r["result"][0] 
-                    baseline_frc = ff_r["result"][1] 
+                    baseline_pot = ff_r["result"][0]
+                    baseline_frc = ff_r["result"][1]
                     baseline_vir = ff_r["result"][2]
                     baseline_xtr = ff_r["result"][3]
                 else:
-                    pots.append(ff_r["result"][0]) 
-                    frcs.append(ff_r["result"][1]) 
-                    virs.append(ff_r["result"][2]) 
-                    xtrs.append(ff_r["result"][3]) 
+                    pots.append(ff_r["result"][0])
+                    frcs.append(ff_r["result"][1])
+                    virs.append(ff_r["result"][2])
+                    xtrs.append(ff_r["result"][3])
 
             # Computes the mean energetics
             mean_pot = np.mean(pots, axis=0)
