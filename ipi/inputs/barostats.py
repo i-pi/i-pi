@@ -91,6 +91,14 @@ class InputBaro(Input):
                 "dimension": "length",
             },
         ),
+        "hfix": (
+            InputArray,
+            {
+                "default": input_default(factory=np.zeros, args=(0, str)),
+                "dtype": str,
+                "help": "A list of the cell entries that should be held fixed (xx, yy, zz, xy, xz, yz). 'offdiagonal' is an alias for xy, xz, yz.",
+            },
+        ),
     }
 
     default_help = "Simulates an external pressure bath."
@@ -115,10 +123,12 @@ class InputBaro(Input):
         elif type(baro) is BaroMTK:
             self.mode.store("flexible")
             self.p.store(baro.p)
+            self.hfix.store(baro.hfix)
         elif type(baro) is BaroRGB:
             self.mode.store("anisotropic")
             self.p.store(baro.p)
             self.h0.store(baro.h0)
+            self.hfix.store(baro.hfix)
         elif type(baro) is Barostat:
             self.mode.store("dummy")
         else:
@@ -144,11 +154,19 @@ class InputBaro(Input):
             if self.p._explicit:
                 baro.p = self.p.fetch()
         elif self.mode.fetch() == "flexible":
-            baro = BaroMTK(thermostat=self.thermostat.fetch(), tau=self.tau.fetch())
+            baro = BaroMTK(
+                thermostat=self.thermostat.fetch(),
+                tau=self.tau.fetch(),
+                hfix=self.hfix.fetch(),
+            )
             if self.p._explicit:
                 baro.p = self.p.fetch()
         elif self.mode.fetch() == "anisotropic":
-            baro = BaroRGB(thermostat=self.thermostat.fetch(), tau=self.tau.fetch())
+            baro = BaroRGB(
+                thermostat=self.thermostat.fetch(),
+                tau=self.tau.fetch(),
+                hfix=self.hfix.fetch(),
+            )
             if self.p._explicit:
                 baro.p = self.p.fetch()
             if self.h0._explicit:
