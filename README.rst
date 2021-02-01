@@ -103,7 +103,7 @@ Checklist to create a pull request:
 We are looking forward to your contribution!
 
 Format Compliance
-================
+-----------------
 
 i-PI code should be compliant to a minimal subset of PEP-8 recommendations.
 Currently, we require the use of `black` as formatter and linter.
