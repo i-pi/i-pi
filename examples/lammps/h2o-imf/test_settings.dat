@@ -1,0 +1,3 @@
+#Settings file for automatic test
+driver qtip4pf
+nsteps 10
