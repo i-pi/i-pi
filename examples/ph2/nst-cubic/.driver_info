@@ -1,2 +1,2 @@
-driver harm3d
-flags -o 2
+driver sg
+flags -o 15.0
