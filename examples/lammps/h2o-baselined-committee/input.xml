@@ -10,20 +10,26 @@
     <seed>31415</seed>
   </prng>
   <ffcommittee name="committee">
-    <baseline_name> lammps-1 </baseline_name>
+  <!--
+     This is just an example of the structure of a baselined-committee model.
+     The baseline is a LAMMPS calculations containing only the bonded terms for
+     a water model, while the corrections are the long-range terms, differing
+     only in the kspace cutoff. 
+  --> 
+    <baseline_name> lammps-base </baseline_name>
     <extras_mode> light </extras_mode>
     <weights> [ 1, 1 ] </weights>
-    <alpha> 1.0 </alpha>
+    <alpha> 1.5 </alpha>
     <baseline_uncertainty> 1.0 </baseline_uncertainty>
     <active_thresh> 0.355 </active_thresh>
-    <ffsocket name='lammps-1' mode='unix' matching="any">
-        <address> 1 </address> <latency> 2e-4 </latency>
+    <ffsocket name='lammps-base' mode='unix' matching="any">
+        <address> lmp-base </address> <latency> 2e-4 </latency>
     </ffsocket>
-    <ffsocket name='lammps-2' mode='unix' matching="any">
-      <address> 2 </address> <latency> 2e-4 </latency>
+    <ffsocket name='lammps-committee-1' mode='unix' matching="any">
+      <address> lmp-comm-1 </address> <latency> 2e-4 </latency>
     </ffsocket>
-    <ffsocket name='lammps-3' mode='unix' matching="any">
-      <address> 3 </address> <latency> 2e-4 </latency>
+    <ffsocket name='lammps-committee-2' mode='unix' matching="any">
+      <address> lmp-comm-2 </address> <latency> 2e-4 </latency>
     </ffsocket>
   </ffcommittee>
   <system>
