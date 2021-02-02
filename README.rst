@@ -28,7 +28,7 @@ To develop i-PI or test it with the self-contained driver, follow these
 instructions. It is assumed that i-PI will
 be run from a Linux environment, with a recent version of Python, Numpy and
 gfortran, and that the terminal is initially in the i-pi package directory (the
-directory containing this file), which you can obtain by cloning the repository
+directory containing this file), which you can obtain by cloning the repository::
 
    $ git clone https://github.com/cosmo-epfl/i-pi.git
 
