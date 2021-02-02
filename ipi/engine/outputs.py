@@ -481,58 +481,16 @@ class TrajectoryOutput(BaseOutput):
                 " #*EXTRAS*# Step:  %10d  Bead:  %5d  \n"
                 % (self.system.simul.step + 1, b)
             )
-            try:
-                index = 0
-                for el, item in enumerate(data):
-                    if self.extra_type in item[b].keys():
-                        index = el
-                    try:
-                        if self.extra_type == "friction":
-                            for na in range(3 * self.system.beads.natoms):
-                                stream.write(
-                                    "%s\n"
-                                    % (
-                                        "".join(
-                                            "%15.8f" % el
-                                            for el in data[index][b][self.extra_type][
-                                                na
-                                                * (3 * self.system.beads.natoms) : (
-                                                    na + 1
-                                                )
-                                                * (3 * self.system.beads.natoms)
-                                            ]
-                                        ),
-                                    )
-                                )
-                        else:
-                            stream.write(
-                                "      ".join(
-                                    "%15.8f" % el
-                                    for el in data[index][b][self.extra_type]
-                                )
+            if self.extra_type in data:
+                stream.write(
+                            "      ".join(
+                                "%15.8f" % el
+                                for el in data[self.extra_type][b]
                             )
-                            stream.write("\n")
-                    except:
-                        stream.write(json.dumps(data[index][b][self.extra_type]))
-                        stream.write("\n")
-            except:
-                try:
-                    info(
-                        "Sorry, your specified extra_type %s is not among the available options. \n"
-                        "The available keys are the following: %s "
-                        % (
-                            self.extra_type,
-                            ",".join("%s" % key for key in data[0][b].keys()),
-                        ),
-                        verbosity.low,
-                    )
-                except:
-                    info(
-                        "Sorry, no extras string has been passed, there are no available options for the extra_type "
-                        "attribute. \n",
-                        verbosity.low,
-                    )
-
+                        )
+                stream.write("\n")
+            else:
+                raise KeyError("Extra type '"+self.extra_type+"' is not among the quantities returned by any of the forcefields.")
             if flush:
                 stream.flush()
                 os.fsync(stream)

@@ -79,7 +79,15 @@ class InputForceComponent(Input):
                 "help": "The weight of force in each mts level starting from outer.",
                 "dimension": "force",
             },
-        )
+        ),
+        "force_extras": (
+            InputArray,
+            {
+                "dtype": str,
+                "default": np.zeros(0, str),
+                "help": "A list of extra quantities that should be fetched from the forcefield and promoted to be a physical quantity.",                
+            },
+        ),        
     }
 
     default_help = "The class that deals with how each forcefield contributes to the overall potential, force and virial calculation."
@@ -97,6 +105,7 @@ class InputForceComponent(Input):
         self.nbeads.store(forceb.nbeads)
         self.weight.store(forceb.weight)
         self.mts_weights.store(forceb.mts_weights)
+        self.force_extras.store(forceb.force_extras)
         self.fd_epsilon.store(forceb.epsilon)
         self.name.store(forceb.name)
         self.forcefield.store(forceb.ffield)
@@ -115,6 +124,7 @@ class InputForceComponent(Input):
             weight=self.weight.fetch(),
             name=self.name.fetch(),
             mts_weights=self.mts_weights.fetch(),
+            force_extras=self.force_extras.fetch(),
             epsilon=self.fd_epsilon.fetch(),
         )
 
