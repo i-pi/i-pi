@@ -481,9 +481,23 @@ class TrajectoryOutput(BaseOutput):
                 % (self.system.simul.step + 1, b)
             )
             if self.extra_type in data:
-                stream.write(
-                    "      ".join("%15.8f" % el for el in data[self.extra_type][b])
-                )
+                if np.array(data[self.extra_type][b]).ndim == 2:
+                    stream.write(
+                        "\n".join(
+                            [
+                                "      ".join(["{:15.8f}".format(item) for item in row])
+                                for row in data[self.extra_type][b]
+                            ]
+                        )
+                    )
+                elif np.array(data[self.extra_type][b]).ndim == 1:
+                    stream.write(
+                        "      ".join(
+                            "%15.8f" % el for el in np.asarray(data[self.extra_type][b])
+                        )
+                    )
+                else:
+                    stream.write("%s" % data[self.extra_type][b])
                 stream.write("\n")
             else:
                 raise KeyError(
