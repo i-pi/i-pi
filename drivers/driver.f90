@@ -688,11 +688,13 @@
                 string2 = TRIM(initbuffer) // TRIM(string)
                 initbuffer = TRIM(string2)
                 DO i=1,3*nat
-                    WRITE(string,'(*(f15.8,","))') friction(i,:)
+                    WRITE(string,'("[ ",*(f15.8,","))') friction(i,:)
+                    length = LEN_TRIM(string)
+                    trimmed = TRIM(string)
                     IF(i==3*nat) THEN
-                        length = LEN_TRIM(string)
-                        trimmed = TRIM(string)
-                        string = trimmed(:length-1)
+                        string = TRIM(trimmed(:length-1)) // "]"
+                    ELSE
+                        string = TRIM(trimmed(:length-1)) // "],"
                     ENDIF
                     string2 = TRIM(initbuffer) // TRIM(string)
                     initbuffer = TRIM(string2)
