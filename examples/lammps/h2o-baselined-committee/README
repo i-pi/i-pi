@@ -1,16 +1,10 @@
-- The following example implements a weighted delta 
-  committee with a baseline
+Weighted baseline
+=================
 
-- The "lammps-base" forcefield is meant to be a baseline. 
-  Here it is the short ranged intramolecular (bonds and angles) 
-  component of q-TIP4P/f
+The following example implements a weighted delta committee with a baseline
 
-- The "lammps-committee-1" and "lammps-committee-2" forcefields
-  are meant to represent a committee of delta potentials. Here 
-  they are the long ranged (electrstatics and LJ) component of 
-  q-TIP4P/f calculated at different levels of accuracy 
+The "lammps-base" forcefield is meant to be a baseline.  Here it is the short ranged intramolecular (bonds and angles) component of q-TIP4P/f
 
-- The systematic error of the baseline model can be set using
-  the "baseline_uncertainty" option, while the error of the
-  committee is calculated from the disagreement between the
-  models
+The "lammps-committee-1" and "lammps-committee-2" forcefields are meant to represent a committee of delta potentials. Here they are the long ranged (electrstatics and LJ) component of q-TIP4P/f calculated at different levels of accuracy 
+
+The systematic error of the baseline model can be set using the "baseline_uncertainty" option, while the error of the committee is calculated from the disagreement between the models
