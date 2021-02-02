@@ -272,7 +272,7 @@ class TrajectoryOutput(BaseOutput):
         format="xyz",
         cell_units="atomic_unit",
         ibead=-1,
-        extra_type="info",
+        extra_type="raw",
     ):
         """Initializes a trajectory output stream opening the corresponding
         file name.
@@ -342,6 +342,7 @@ class TrajectoryOutput(BaseOutput):
             "velocities",
             "forces",
             "extras",
+            "extras_component",
             "forces_sc",
             "momenta",
         ]:
@@ -349,7 +350,7 @@ class TrajectoryOutput(BaseOutput):
             # must write out trajectories for each bead, so must create b streams
 
             # prepare format string for file name
-            if getkey(self.what) == "extras":
+            if getkey(self.what) == "extras" or getkey(self.what) == "extras_component":
                 fmt_fn = self.filename + "_" + fmt_bead
             else:
                 fmt_fn = self.filename + "_" + fmt_bead + "." + self.format
@@ -362,9 +363,7 @@ class TrajectoryOutput(BaseOutput):
                 else:
                     # Create null outputs if a single bead output is chosen.
                     self.out.append(None)
-
         else:
-
             # open one file
             filename = self.filename + "." + self.format
             self.out = open_backup(filename, mode)
@@ -475,7 +474,7 @@ class TrajectoryOutput(BaseOutput):
         """
 
         key = getkey(what)
-        if key in ["extras"]:
+        if key in ["extras", "extras_component"]:
             stream.write(
                 " #*EXTRAS*# Step:  %10d  Bead:  %5d  \n"
                 % (self.system.simul.step + 1, b)

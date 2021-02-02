@@ -1036,6 +1036,19 @@ class Forces(dobject):
         else:
             return self.mrpc[index].b2tob1(dstrip(self.mforces[index].f))
 
+    def extras_component(self, index):
+        """ Fetches extras that are computed for one specific force component."""
+
+        if self.nbeads != self.mforces[index].nbeads:
+            raise ValueError(
+                "Cannot fetch extras for a component when using ring polymer contraction"
+            )
+        if self.mforces[index].weight == 0:
+            raise ValueError(
+                "Cannot fetch extras for a component that has not been computed because of zero weight"
+            )
+        return self.mforces[index].extras
+
     def queue_mts(self, level):
         """Submits all the required force calculations to the forcefields."""
 
@@ -1395,14 +1408,22 @@ class Forces(dobject):
                             verbosity.high,
                         )
                     else:
-                        if e in re:
-                            warning(
-                                "Extra field '"
-                                + e
-                                + "' appears in multiple forcefields will be overwritten unless interpreted as physical property",
-                                verbosity.high,
-                            )
-                        re[e] = v
+                        if e == "raw":
+                            # concatenates raw outputs
+                            if e in re:
+                                for br, bv in zip(re["raw"], v):
+                                    br += bv
+                            else:
+                                re["raw"] = v
+                        else:
+                            if e in re:
+                                warning(
+                                    "Extra field '"
+                                    + e
+                                    + "' appears in multiple forcefields will be overwritten unless interpreted as physical property",
+                                    verbosity.high,
+                                )
+                            re[e] = v
         return re
 
     def vir_combine(self):
