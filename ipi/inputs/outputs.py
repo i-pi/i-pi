@@ -170,7 +170,7 @@ class InputTrajectory(InputValue):
         InputAttribute,
         {
             "dtype": str,
-            "default": "info",
+            "default": "raw",
             "help": "What extra to print from the different extra strings.",
         },
     )
