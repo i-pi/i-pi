@@ -487,23 +487,17 @@ class TrajectoryOutput(BaseOutput):
                     if self.extra_type in item[b].keys():
                         index = el
                     try:
-                        if self.extra_type == "friction":
-                            for na in range(3 * self.system.beads.natoms):
-                                stream.write(
-                                    "%s\n"
-                                    % (
-                                        "".join(
-                                            "%15.8f" % el
-                                            for el in data[index][b][self.extra_type][
-                                                na
-                                                * (3 * self.system.beads.natoms) : (
-                                                    na + 1
-                                                )
-                                                * (3 * self.system.beads.natoms)
-                                            ]
-                                        ),
-                                    )
+                        if np.array(data[index][b][self.extra_type]).ndim == 2:
+                            stream.write(
+                                "\n".join(
+                                    [
+                                        "      ".join(
+                                            ["{:15.8f}".format(item) for item in row]
+                                        )
+                                        for row in data[index][b][self.extra_type]
+                                    ]
                                 )
+                            )
                         else:
                             stream.write(
                                 "      ".join(
@@ -511,10 +505,9 @@ class TrajectoryOutput(BaseOutput):
                                     for el in data[index][b][self.extra_type]
                                 )
                             )
-                            stream.write("\n")
                     except:
                         stream.write(json.dumps(data[index][b][self.extra_type]))
-                        stream.write("\n")
+                    stream.write("\n")
             except:
                 try:
                     info(
