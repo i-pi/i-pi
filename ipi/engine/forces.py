@@ -1364,14 +1364,17 @@ class Forces(dobject):
             # combines the extras from the different force components
             for e, v in self.mforces[k].extras.items():
                 if e in self.mforces[k].force_extras:
+                    # extras that are tagged as force_extras are treated exactly as if they were an energy/force/stress
                     v = ( self.mforces[k].weight * self.mforces[k].mts_weights.sum() *
                           self.mrpc[k].b2tob1(v) )
                     if e in re:
                         # if multiple forcefields have the same "promoted extras" these get summed
                         re[e] += v
-                    else:                         
+                    else:
+                        # the first is just added to the dict, so we don't have to worry about extras having different shapes                         
                         re[e] = v
                 else: 
+                    # other extras are not touched, just accummulated. if there is a contraction, they are dropped because there is no meaningful way to do a contraction 
                     if self.nbeads != self.mforces[k].nbeads:
                         warning("Extra field '"+e+"' cannot be contracted unless interpreted as physical properties. Will just drop it", verbosity.high)
                     else:
