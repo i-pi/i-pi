@@ -23,7 +23,6 @@ from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, warning, info
 from ipi.utils.depend import *
 from ipi.utils.nmtransform import nm_rescale
-from ipi.utils.extratools import listDict
 from ipi.engine.beads import Beads
 
 
@@ -287,7 +286,14 @@ class ForceComponent(dobject):
     """
 
     def __init__(
-        self, ffield, nbeads=0, weight=1.0, name="", mts_weights=None, force_extras=None, epsilon=-0.001
+        self,
+        ffield,
+        nbeads=0,
+        weight=1.0,
+        name="",
+        mts_weights=None,
+        force_extras=None,
+        epsilon=-0.001,
     ):
         """Initializes ForceComponent
 
@@ -427,19 +433,22 @@ class ForceComponent(dobject):
         """
 
         self.queue()
-        
+
         # converts a list of dictionaries to a dictionary of lists
         fc_extra = {}
         for e in self._forces[0].extra:
             fc_extra[e] = []
-        
-        for b in self._forces:            
+
+        for b in self._forces:
             for e in b.extra:
                 if not e in fc_extra:
-                    raise KeyError("Extras mismatch between beads in the same force component, key: "+e)
+                    raise KeyError(
+                        "Extras mismatch between beads in the same force component, key: "
+                        + e
+                    )
                 fc_extra[e].append(b.extra[e])
-                
-        # force_extras should be numerical, thus can be converted to numpy arrays 
+
+        # force_extras should be numerical, thus can be converted to numpy arrays
         # otherwise error will be raised, life is tough.
         for e in self.force_extras:
             fc_extra[e] = np.asarray(fc_extra[e])
@@ -1358,28 +1367,41 @@ class Forces(dobject):
         """Combines the extra dictionaries for each forcefield for each bead."""
 
         self.queue()
-        
+
         re = {}
-        for k in range(self.nforces):            
+        for k in range(self.nforces):
             # combines the extras from the different force components
             for e, v in self.mforces[k].extras.items():
                 if e in self.mforces[k].force_extras:
                     # extras that are tagged as force_extras are treated exactly as if they were an energy/force/stress
-                    v = ( self.mforces[k].weight * self.mforces[k].mts_weights.sum() *
-                          self.mrpc[k].b2tob1(v) )
+                    v = (
+                        self.mforces[k].weight
+                        * self.mforces[k].mts_weights.sum()
+                        * self.mrpc[k].b2tob1(v)
+                    )
                     if e in re:
                         # if multiple forcefields have the same "promoted extras" these get summed
                         re[e] += v
                     else:
-                        # the first is just added to the dict, so we don't have to worry about extras having different shapes                         
+                        # the first is just added to the dict, so we don't have to worry about extras having different shapes
                         re[e] = v
-                else: 
-                    # other extras are not touched, just accummulated. if there is a contraction, they are dropped because there is no meaningful way to do a contraction 
+                else:
+                    # other extras are not touched, just accummulated. if there is a contraction, they are dropped because there is no meaningful way to do a contraction
                     if self.nbeads != self.mforces[k].nbeads:
-                        warning("Extra field '"+e+"' cannot be contracted unless interpreted as physical properties. Will just drop it", verbosity.high)
+                        warning(
+                            "Extra field '"
+                            + e
+                            + "' cannot be contracted unless interpreted as physical properties. Will just drop it",
+                            verbosity.high,
+                        )
                     else:
                         if e in re:
-                            warning("Extra field '"+e+"' appears in multiple forcefields will be overwritten unless interpreted as physical property", verbosity.high)
+                            warning(
+                                "Extra field '"
+                                + e
+                                + "' appears in multiple forcefields will be overwritten unless interpreted as physical property",
+                                verbosity.high,
+                            )
                         re[e] = v
         return re
 

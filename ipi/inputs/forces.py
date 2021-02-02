@@ -85,9 +85,9 @@ class InputForceComponent(Input):
             {
                 "dtype": str,
                 "default": np.zeros(0, str),
-                "help": "A list of extra quantities that should be fetched from the forcefield and promoted to be a physical quantity.",                
+                "help": "A list of extra quantities that should be fetched from the forcefield and promoted to be a physical quantity.",
             },
-        ),        
+        ),
     }
 
     default_help = "The class that deals with how each forcefield contributes to the overall potential, force and virial calculation."

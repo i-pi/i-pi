@@ -23,7 +23,6 @@ from ipi.utils.io import open_backup
 from ipi.engine.properties import getkey
 from ipi.engine.atoms import *
 from ipi.engine.cell import *
-import json
 
 __all__ = [
     "PropertyOutput",
@@ -483,14 +482,15 @@ class TrajectoryOutput(BaseOutput):
             )
             if self.extra_type in data:
                 stream.write(
-                            "      ".join(
-                                "%15.8f" % el
-                                for el in data[self.extra_type][b]
-                            )
-                        )
+                    "      ".join("%15.8f" % el for el in data[self.extra_type][b])
+                )
                 stream.write("\n")
             else:
-                raise KeyError("Extra type '"+self.extra_type+"' is not among the quantities returned by any of the forcefields.")
+                raise KeyError(
+                    "Extra type '"
+                    + self.extra_type
+                    + "' is not among the quantities returned by any of the forcefields."
+                )
             if flush:
                 stream.flush()
                 os.fsync(stream)
