@@ -10,7 +10,7 @@
     <dmd_dt units='femtosecond'> 0.25 </dmd_dt>
   </ffdmd>
   <total_steps>10000</total_steps>
-  <total_time>6</total_time>
+  <!-- <total_time>6</total_time> --> 
   <output prefix='data-10'>
     <trajectory stride='2' filename='pos' cell_units='angstrom'>positions{angstrom}</trajectory>
     <trajectory stride='2' filename='vel'>velocities</trajectory>
