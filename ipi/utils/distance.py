@@ -6,7 +6,7 @@
 
 import numpy as np
 
-__all__ = ["vector_separation,"]
+__all__ = ["vector_separation"]
 
 
 def vector_separation(cell_h, cell_ih, qi, qj):
