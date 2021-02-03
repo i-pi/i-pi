@@ -668,14 +668,15 @@ class InputFFCommittee(InputForceField):
             "dtype": float,
             "default": -1.0,
             "dimension": "energy",
-            "help": """Corresponds to the systematic error of the baseline model.""",
+            "help": """Corresponds to the expected error of the baseline model. This represents the error on the TOTAL potential energy of the simulation. """,
         },
     )
     fields["active_thresh"] = (
         InputValue,
         {
             "dtype": float,
-            "default": 0.0,
+            "default": 0.0,,
+            "dimension": "energy",            
             "help": """The uncertainty threshold for active learning. Structure with an uncertainty above this 
                         value are printed in the specified output file so they can be used for active learning.""",
         },

@@ -998,11 +998,12 @@ class FFCommittee(ForceField):
         return True
 
     def gather(self, r):
-        """ Collects results from all sub-requests """
+        """ Collects results from all sub-requests, and assemble the committee of models. """
+        
         committee_results = []
         r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]
 
-        if self.baseline_uncertainty > 0:
+        if self.baseline_name != "":
             # looks for the baseline potential, store its value and drops it from the list             
             names = [ff.name for ff in self.fflist]
 
@@ -1013,6 +1014,7 @@ class FFCommittee(ForceField):
                     baseline_vir = ff_r["result"][2]
                     baseline_xtr = ff_r["result"][3]
                     r["ff_handles"].pop(i)
+                    break
 
         # Gathers the forcefield energetics and extras
         ncommittee = len(r["ff_handles"])
@@ -1035,13 +1037,15 @@ class FFCommittee(ForceField):
         var_pot = np.var(rescaled_pots, ddof=1)
         std_pot = np.sqrt(var_pot)
 
-        # Sets the output of the committee model.
-        r["result"][0] = mean_pot
-        r["result"][1] = mean_frc
-        r["result"][2] = mean_vir
-
-        if self.baseline_uncertainty > 0:
-            # Computes the additional component of the energetics due to a position dependent weight
+        if self.baseline_mean != "":
+            # Computes the additional component of the energetics due to a position 
+            # dependent weight. This is based on the assumption that V_committee is 
+            # a correction over the baseline, that V = V_baseline + V_committe, that
+            # V_baseline has an uncertainty given by baseline_uncertainty, 
+            # and V_committee the committee error. Then
+            # V = V_baseline + s_b^2/(s_c^2+s_b^2) V_committe 
+            
+            s_b = self.baseline_uncertainty 
             uncertain_pot = 0.0
             uncertain_frc = self.alpha ** 2 * np.mean(
                 [(pot - mean_pot) * (frc - mean_frc) for pot, frc in zip(pots, frcs)],
@@ -1103,6 +1107,11 @@ class FFCommittee(ForceField):
             r["result"][0] = final_pot
             r["result"][1] = final_frc
             r["result"][2] = final_vir
+        else:
+            # Sets the output of the committee model.
+            r["result"][0] = mean_pot
+            r["result"][1] = mean_frc
+            r["result"][2] = mean_vir            
 
         for i_r in range(ncommittee):            
             committee_results.append(
