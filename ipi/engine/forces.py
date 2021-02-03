@@ -453,7 +453,12 @@ class ForceComponent(dobject):
         # force_extras should be numerical, thus can be converted to numpy arrays.
         # we enforce the type and numpy will raise an error if not.
         for e in self.force_extras:
-            fc_extra[e] = np.asarray(fc_extra[e], dtype=float)
+            try:
+                fc_extra[e] = np.asarray(fc_extra[e], dtype=float)
+            except:
+                raise Exception(
+                    "force_extras has to be numerical to be treated as a physical quantity. It is not -- check the quantity that is being passed."
+                )
         return fc_extra
 
     def vir_gather(self):
