@@ -8,6 +8,7 @@
     <trajectory filename='dip' stride='2' extra_type='dipole'> extras </trajectory>
     <trajectory filename='raw' stride='2' extra_type='raw'> extras </trajectory>    
     <trajectory filename='dip0' stride='2' extra_type='dipole'> extras_component(0) </trajectory>
+    <trajectory filename='dip1' stride='2' extra_type='dipole'> extras_component(1) </trajectory>
     <checkpoint stride='100' filename='chk' overwrite='true'/>
     <checkpoint stride='2000' filename='restart' overwrite='false'/>
   </output>
@@ -22,6 +23,13 @@
     <latency>0.02</latency>
     <timeout>400</timeout>
   </ffsocket>
+  <ffsocket mode='unix' pbc='false' name='driver2'>
+    <!--<address>localhost</address>   -->
+    <address>driver2</address>
+    <port>31400</port>
+    <latency>0.02</latency>
+    <timeout>400</timeout>
+  </ffsocket>
   <system>
     <initialize nbeads='1'>
       <file mode='xyz' units='angstrom'> init.xyz </file>
@@ -30,7 +38,12 @@
       <velocities mode='thermal' units='kelvin'> 300 </velocities>
     </initialize>
     <forces>
-      <force forcefield='driver'/>
+      <force forcefield='driver' weight="1.0">
+          <force_extras> ['dipole'] </force_extras>
+      </force>
+      <force forcefield='driver2' weight="2.0" >
+           <force_extras> ['dipole'] </force_extras>  
+      </force>
     </forces>
     <ensemble>
       <temperature units='kelvin'>300</temperature>
