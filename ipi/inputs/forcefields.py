@@ -675,7 +675,7 @@ class InputFFCommittee(InputForceField):
         InputValue,
         {
             "dtype": float,
-            "default": 0.0,,
+            "default": 0.0,
             "dimension": "energy",            
             "help": """The uncertainty threshold for active learning. Structure with an uncertainty above this 
                         value are printed in the specified output file so they can be used for active learning.""",

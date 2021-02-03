@@ -2,7 +2,8 @@
   <output prefix='simulation'>
     <properties stride='100' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potential{electronvolt}, pressure_cv{megapascal} ] </properties>
     <trajectory filename='pos' stride='100'> positions </trajectory>
-    <trajectory filename='extra' stride='100' extra_type='committee_pot'> extras </trajectory>
+    <trajectory filename='committee_pot' stride='100' extra_type='committee_pot'> extras </trajectory>
+    <trajectory filename='committee_force' stride='100' extra_type='committee_force'> extras </trajectory>    
     <checkpoint stride='200'/>
   </output>
   <total_steps>10000</total_steps>
@@ -33,12 +34,15 @@
     </ffsocket>
   </ffcommittee>
   <system>
-    <initialize nbeads='1'>
+    <initialize nbeads='4'>
       <file mode='pdb'> init.pdb </file>
       <velocities mode='thermal' units='kelvin'> 300 </velocities>
     </initialize>
     <forces>
-      <force forcefield='committee'> </force>
+        <force forcefield='committee' nbeads='1'> 
+            <!-- adding these to force_extras will make the committee extras be treated properly with ring-polymer contraction, ect. -->
+            <force_extras> [committee_pot, committee_force, committee_virial, baseline_pot, baseline_force, baseline_virial] </force_extras>
+        </force>
     </forces>
     <motion mode='dynamics'>
       <dynamics mode='nvt'>
