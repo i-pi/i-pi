@@ -304,11 +304,13 @@ class ForceComponent(dobject):
            weight: A relative weight to be given to the values obtained with this
               forcefield. When the contribution of all the forcefields is
               combined to give a total force, the contribution of this forcefield
-              will be weighted by this factor.
+              will be weighted by this factor. The combination is a weighted sum.
            name: The name of the forcefield.
            mts_weights: Weight of forcefield at each mts level.
            force_extras: A list of properties that should be treated as physical quantities,
-              converted to numpy arrays and treated with ring polymer contraction
+              converted to numpy arrays and treated with ring polymer contraction. If
+              different force components have this field, they will also be summed with
+              the respective weight like a forces object.
         """
 
         self.ffield = ffield
@@ -448,10 +450,10 @@ class ForceComponent(dobject):
                     )
                 fc_extra[e].append(b.extra[e])
 
-        # force_extras should be numerical, thus can be converted to numpy arrays
-        # otherwise error will be raised, life is tough.
+        # force_extras should be numerical, thus can be converted to numpy arrays.
+        # we enforce the type and numpy will raise an error if not.
         for e in self.force_extras:
-            fc_extra[e] = np.asarray(fc_extra[e])
+            fc_extra[e] = np.asarray(fc_extra[e], dtype=float)
         return fc_extra
 
     def vir_gather(self):
