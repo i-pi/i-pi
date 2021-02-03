@@ -1002,68 +1002,45 @@ class FFCommittee(ForceField):
         committee_results = []
         r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]
 
-        if self.baseline_uncertainty < 0:
-            # Gathers the forcefield energetics and extras
-            ncommittee = len(r["ff_handles"])
-            pots = [ff_r["result"][0] for ff_r in r["ff_handles"]]
-            frcs = [ff_r["result"][1] for ff_r in r["ff_handles"]]
-            virs = [ff_r["result"][2] for ff_r in r["ff_handles"]]
-
-            # Computes the mean energetics
-            mean_pot = np.mean(pots, axis=0)
-            mean_frc = np.mean(frcs, axis=0)
-            mean_vir = np.mean(virs, axis=0)
-
-            # Rescales the committee energetics so that their standard deviation corresponds to the error
-            rescaled_pots = [mean_pot + self.alpha * (pot - mean_pot) for pot in pots]
-            rescaled_frcs = [mean_frc + self.alpha * (frc - mean_frc) for frc in frcs]
-            rescaled_virs = [mean_vir + self.alpha * (vir - mean_vir) for vir in virs]
-
-            # Calculates the error associated with the committee
-            var_pot = np.var(rescaled_pots, ddof=1)
-            std_pot = np.sqrt(var_pot)
-
-            # Sets the output of the committee model.
-            r["result"][0] = mean_pot
-            r["result"][1] = mean_frc
-            r["result"][2] = mean_vir
-
-        elif self.baseline_uncertainty > 0:
-
-            # Gathers the forcefield energetics and extras
-            ncommittee = len(r["ff_handles"]) - 1
+        if self.baseline_uncertainty > 0:
+            # looks for the baseline potential, store its value and drops it from the list             
             names = [ff.name for ff in self.fflist]
 
-            pots = []
-            frcs = []
-            virs = []
-            xtrs = []
             for i, ff_r in enumerate(r["ff_handles"]):
                 if names[i] == self.baseline_name:
                     baseline_pot = ff_r["result"][0]
                     baseline_frc = ff_r["result"][1]
                     baseline_vir = ff_r["result"][2]
                     baseline_xtr = ff_r["result"][3]
-                else:
-                    pots.append(ff_r["result"][0])
-                    frcs.append(ff_r["result"][1])
-                    virs.append(ff_r["result"][2])
-                    xtrs.append(ff_r["result"][3])
+                    r["ff_handles"].pop(i)
 
-            # Computes the mean energetics
-            mean_pot = np.mean(pots, axis=0)
-            mean_frc = np.mean(frcs, axis=0)
-            mean_vir = np.mean(virs, axis=0)
+        # Gathers the forcefield energetics and extras
+        ncommittee = len(r["ff_handles"])
+        pots = [ff_r["result"][0] for ff_r in r["ff_handles"]]
+        frcs = [ff_r["result"][1] for ff_r in r["ff_handles"]]
+        virs = [ff_r["result"][2] for ff_r in r["ff_handles"]]
+        xtrs = [ff_r["result"][3] for ff_r in r["ff_handles"]]
 
-            # Rescales the committee energetics so that their standard deviation corresponds to the error
-            rescaled_pots = np.asarray([mean_pot + self.alpha * (pot - mean_pot) for pot in pots])
-            rescaled_frcs = np.asarray([mean_frc + self.alpha * (frc - mean_frc) for frc in frcs])
-            rescaled_virs = np.asarray([mean_vir + self.alpha * (vir - mean_vir) for vir in virs])
+        # Computes the mean energetics
+        mean_pot = np.mean(pots, axis=0)
+        mean_frc = np.mean(frcs, axis=0)
+        mean_vir = np.mean(virs, axis=0)
 
-            # Calculates the error associated with the committee
-            var_pot = np.var(rescaled_pots, ddof=1)
-            std_pot = np.sqrt(var_pot)
+        # Rescales the committee energetics so that their standard deviation corresponds to the error
+        rescaled_pots = np.asarray([mean_pot + self.alpha * (pot - mean_pot) for pot in pots])
+        rescaled_frcs = np.asarray([mean_frc + self.alpha * (frc - mean_frc) for frc in frcs])
+        rescaled_virs = np.asarray([mean_vir + self.alpha * (vir - mean_vir) for vir in virs])
 
+        # Calculates the error associated with the committee
+        var_pot = np.var(rescaled_pots, ddof=1)
+        std_pot = np.sqrt(var_pot)
+
+        # Sets the output of the committee model.
+        r["result"][0] = mean_pot
+        r["result"][1] = mean_frc
+        r["result"][2] = mean_vir
+
+        if self.baseline_uncertainty > 0:
             # Computes the additional component of the energetics due to a position dependent weight
             uncertain_pot = 0.0
             uncertain_frc = self.alpha ** 2 * np.mean(
@@ -1141,7 +1118,8 @@ class FFCommittee(ForceField):
             "committee_pot" : rescaled_pots,
             "committee_force" : rescaled_frcs.reshape(len(rescaled_pots),-1),
             "committee_virial" : rescaled_virs.reshape(len(rescaled_pots),-1),
-            }
+        }
+            
         if self.baseline_uncertainty > 0:
             r["result"][3]["baseline"] = {
                 "v": baseline_pot,
