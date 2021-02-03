@@ -1,4 +1,4 @@
-"""Python version of vector_separation() in drivers/distance.f90 """
+"""Python version of vector_separation() in drivers/distance.f90"""
 
 # This file is part of i-PI.
 # i-PI Copyright (C) 2014-2015 i-PI developers
@@ -6,7 +6,9 @@
 
 import numpy as np
 
-__all__ = ["vector_separation"]
+__all__ = [
+          "vector_separation,"
+]
 
 
 def vector_separation(cell_h, cell_ih, qi, qj):

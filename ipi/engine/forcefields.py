@@ -492,7 +492,7 @@ class FFdmd(ForceField):
 
     def evaluate(self, r):
         """Evaluating dmd: pbc: YES,
-           cutoff: NO, neighbour list: NO."""
+        cutoff: NO, neighbour list: NO."""
 
         q = r["pos"].reshape((-1, 3))
         nat = len(q)
