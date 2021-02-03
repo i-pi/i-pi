@@ -1,0 +1,50 @@
+<simulation verbosity='medium'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'>  [ time{picosecond}, conserved, temperature{kelvin}, kinetic_md, kinetic_cv, kinetic_cv(O), kinetic_cv(H), potential ] </properties>
+    <trajectory filename='pos' format='xyz' stride='2'> positions{angstrom} </trajectory>
+    <trajectory filename='vel' format='xyz' stride='5'> velocities </trajectory>
+    <trajectory filename='for' format='xyz' stride='2'> forces </trajectory>
+    <trajectory filename='kin' format='xyz' stride='2'> kinetic_cv </trajectory>
+    <trajectory filename='dip' stride='2' extra_type='dipole'> extras </trajectory>
+    <checkpoint stride='100' filename='chk' overwrite='true'/>
+    <checkpoint stride='2000' filename='restart' overwrite='false'/>
+  </output>
+  <total_steps>1000</total_steps>
+  <prng>
+    <seed>23658</seed>
+  </prng>
+  <ffsocket mode='unix' pbc='false' name='driver'>
+    <!--<address>localhost</address>   -->
+    <address>driver</address>
+    <port>31400</port>
+    <latency>0.02</latency>
+    <timeout>400</timeout>
+  </ffsocket>
+  <system>
+    <initialize nbeads='4'>
+      <file mode='xyz' units='angstrom'> init.xyz </file>
+      <cell mode='abc' units='angstrom'> [ 10.0, 10.0, 10.0 ] </cell>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='driver' nbeads="2">
+        <!-- The line below is the one that tells i-PI that the 'dipole' extras quantity will be 
+        treated as a physical quantity like forces. It can then be interpolated, and if there are
+        several force components, it will be automatically summed with the respective weights -->
+        <force_extras> ['dipole'] </force_extras>
+      </force>
+    </forces>
+    <ensemble>
+      <temperature units='kelvin'>300</temperature>
+    </ensemble>
+    <motion mode='dynamics'>
+      <fixcom>True</fixcom>
+      <dynamics mode='nvt'>
+        <timestep units='femtosecond'>0.5</timestep>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100</tau>
+        </thermostat>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>

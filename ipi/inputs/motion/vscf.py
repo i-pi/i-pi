@@ -23,7 +23,8 @@ Classes:
 """
 
 import numpy as np
-import ipi.engine.initializer
+
+# import ipi.engine.initializer
 from ipi.engine.motion import *
 from ipi.utils.inputvalue import *
 from ipi.inputs.thermostats import *
@@ -36,7 +37,7 @@ __all__ = ["InputNormalMode"]
 class InputNormalMode(InputDictionary):
     """Vibrational self-consistent phonons calculation options.
 
-       Contains options related with finite difference computation of force constats.
+    Contains options related with finite difference computation of force constats.
 
     """
 

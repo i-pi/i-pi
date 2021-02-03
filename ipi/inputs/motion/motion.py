@@ -152,7 +152,14 @@ class InputMotionBase(Input):
                 "default": input_default(
                     factory=ipi.engine.initializer.InitFile, kwargs={"mode": "xyz"}
                 ),
-                "help": "This describes the location to read a trajectory file from.",
+                "help": "This describes the location to read a trajectory file from. "
+                "Replay syntax allows using some POSIX wildcards in the filename "
+                "of trajectory files. If symbols *?[] are found in a filename, "
+                "the code expects to find exactly Nbeads files that match "
+                "the provided pattern. Bead indices will be read from the files, "
+                "and the files will be ordered ascendingly by their bead indices. "
+                "Wildcarded files are expected to be in the folder "
+                "where the simulation runs.",
             },
         ),
         "vibrations": (
@@ -307,11 +314,15 @@ class InputMotionBase(Input):
                 **self.optimizer.fetch()
             )
         elif self.mode.fetch() == "neb":
-            sc = NEBMover(
-                fixcom=self.fixcom.fetch(),
-                fixatoms=self.fixatoms.fetch(),
-                **self.neb_optimizer.fetch()
+
+            raise ValueError(
+                "The nudged elastic band calculation has been temporarily disabled until further bug-fixes."
             )
+        #            sc = NEBMover(
+        #                fixcom=self.fixcom.fetch(),
+        #                fixatoms=self.fixatoms.fetch(),
+        #                **self.neb_optimizer.fetch()
+        #            )
         elif self.mode.fetch() == "dynamics":
             sc = Dynamics(
                 fixcom=self.fixcom.fetch(),

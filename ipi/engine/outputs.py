@@ -35,8 +35,8 @@ __all__ = [
 
 
 class OutputList(list):
-    """ A simple decorated list to save the output prefix and bring it
-    back to the initialization phase of the simulation """
+    """A simple decorated list to save the output prefix and bring it
+    back to the initialization phase of the simulation"""
 
     def __init__(self, prefix, olist):
         super(OutputList, self).__init__(olist)
@@ -272,8 +272,9 @@ class TrajectoryOutput(BaseOutput):
         format="xyz",
         cell_units="atomic_unit",
         ibead=-1,
+        extra_type="raw",
     ):
-        """ Initializes a property output stream opening the corresponding
+        """Initializes a trajectory output stream opening the corresponding
         file name.
 
         Also writes out headers.
@@ -288,6 +289,7 @@ class TrajectoryOutput(BaseOutput):
            cell_units: A string specifying the units that the cell parameters are
               given in.
            ibead: If positive, prints out only the selected bead. If negative, prints out one file per bead.
+           extra_type: Specifies the type of extras string that is printed in the file
         """
 
         self.filename = filename
@@ -299,6 +301,7 @@ class TrajectoryOutput(BaseOutput):
         self.cell_units = cell_units
         self.out = None
         self.nout = 0
+        self.extra_type = extra_type
 
     def bind(self, system, mode="w"):
         """Binds output proxy to System object.
@@ -308,7 +311,7 @@ class TrajectoryOutput(BaseOutput):
         """
 
         self.system = system
-        # Checks as soon as possible if some asked-for trajs are missing or mispelled
+        # Checks as soon as possible if some asked-for trajs are missing or misspelled
         key = getkey(self.what)
         if key not in list(self.system.trajs.traj_dict.keys()):
             print(
@@ -327,7 +330,7 @@ class TrajectoryOutput(BaseOutput):
         """Opens the output stream(s)."""
 
         # prepare format string for zero-padded number of beads,
-        # including underscpre
+        # including underscore
         fmt_bead = (
             "{0:0"
             + str(int(1 + np.floor(np.log(self.system.beads.nbeads) / np.log(10))))
@@ -339,6 +342,7 @@ class TrajectoryOutput(BaseOutput):
             "velocities",
             "forces",
             "extras",
+            "extras_component",
             "forces_sc",
             "momenta",
         ]:
@@ -346,7 +350,7 @@ class TrajectoryOutput(BaseOutput):
             # must write out trajectories for each bead, so must create b streams
 
             # prepare format string for file name
-            if getkey(self.what) == "extras":
+            if getkey(self.what) == "extras" or getkey(self.what) == "extras_component":
                 fmt_fn = self.filename + "_" + fmt_bead
             else:
                 fmt_fn = self.filename + "_" + fmt_bead + "." + self.format
@@ -359,9 +363,7 @@ class TrajectoryOutput(BaseOutput):
                 else:
                     # Create null outputs if a single bead output is chosen.
                     self.out.append(None)
-
         else:
-
             # open one file
             filename = self.filename + "." + self.format
             self.out = open_backup(filename, mode)
@@ -472,13 +474,36 @@ class TrajectoryOutput(BaseOutput):
         """
 
         key = getkey(what)
-        if key in ["extras"]:
+        if key in ["extras", "extras_component"]:
             stream.write(
                 " #*EXTRAS*# Step:  %10d  Bead:  %5d  \n"
                 % (self.system.simul.step + 1, b)
             )
-            stream.write(data[b])
-            stream.write("\n")
+            if self.extra_type in data:
+                if np.array(data[self.extra_type][b]).ndim == 2:
+                    stream.write(
+                        "\n".join(
+                            [
+                                "      ".join(["{:15.8f}".format(item) for item in row])
+                                for row in data[self.extra_type][b]
+                            ]
+                        )
+                    )
+                elif np.array(data[self.extra_type][b]).ndim == 1:
+                    stream.write(
+                        "      ".join(
+                            "%15.8f" % el for el in np.asarray(data[self.extra_type][b])
+                        )
+                    )
+                else:
+                    stream.write("%s" % data[self.extra_type][b])
+                stream.write("\n")
+            else:
+                raise KeyError(
+                    "Extra type '"
+                    + self.extra_type
+                    + "' is not among the quantities returned by any of the forcefields."
+                )
             if flush:
                 stream.flush()
                 os.fsync(stream)

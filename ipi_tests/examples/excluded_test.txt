@@ -1,22 +1,12 @@
-# To check
-lammps/h2o-planetary-64                                                     # TypeError: string argument expected, got 'bytes' 
-
 # Broken
+lammps/h2o-planetary-64                                                     # TypeError: string argument expected, got 'bytes' 
 ffdebye/single_particle 
 lammps/h2o-constraints 
 lammps/isof-vapor                                                           # Isotope-zeta-sc is stopping the termination of the run
 lammps/isof-water                                                           # Isotope-zeta-sc is stopping the termination of the run
-lammps/h2o-pimd+sc+rpc_open                                                 # RuntimeWarning: overflow encountered in multiply
+pes/neb                                                                     # The nudged elastic band calculations have been temporarily disabled  
 
-# no apropiate driver to use
-lammps/paracetamol-geop                             # no appropriate driver 
-lammps/NaCl-cellopt                                 # lack of stress tensor 
-lammps/h2o-extreme-rem                              # lack of stress tensor
-lammps/ice-npt+sc                                   # lack of stress tensor
-lammps/ice-npt                                      # qtip4pf PES only works for orthorombic cells
-lammps/h2o-repimd                                   # lack of stress tensor 
-
-# Need other dependency
+# Need of external dependency
 yaff/mil53_ffyaff 
 yaff/mil53_ffsocket 
 plumed/zundel-remd-metad 
@@ -26,4 +16,3 @@ ffsgdml/benzene-scpimd.10
 ASEClient/aims 
 ASEClient/aims_double_server 
 ASEClient/CP2K 
-

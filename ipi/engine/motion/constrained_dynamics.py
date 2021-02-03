@@ -191,7 +191,7 @@ class ConstrainedDynamics(Dynamics):
 
 
 class ConstraintSolverBase(dobject):
-    """ Empty base class for the constraint solver. Provides the interface
+    """Empty base class for the constraint solver. Provides the interface
     that must be used to offer constraint functionalities to an integrator.
     """
 
@@ -226,7 +226,7 @@ class ConstraintSolverBase(dobject):
 
 
 class ConstraintSolver(ConstraintSolverBase):
-    """ An implementation of a constraint solver that uses M-RATTLE to
+    """An implementation of a constraint solver that uses M-RATTLE to
     impose constraints onto the momenta and a quasi-Newton method
     to impose constraints onto the positions. The constraint is applied
     sparsely, i.e. on each block of constraints separately.
@@ -243,9 +243,9 @@ class ConstraintSolver(ConstraintSolverBase):
     def __init__(
         self, constraint_list, dt=1.0, tolerance=0.001, maxit=1000, norm_order=2
     ):
-        """ Solver options include a tolerance for the projection on the
+        """Solver options include a tolerance for the projection on the
         manifold, maximum number of iterations for the projection, and
-        the order of the norm to estimate the convergence """
+        the order of the norm to estimate the convergence"""
 
         super(ConstraintSolver, self).__init__(constraint_list, dt)
         self.tolerance = tolerance
@@ -331,7 +331,7 @@ class ConstraintSolver(ConstraintSolverBase):
 
 
 class ConstrainedIntegrator(DummyIntegrator):
-    """ No-op integrator for classical constrained propagation.
+    """No-op integrator for classical constrained propagation.
     It also incorporates a constraint solver, so as to make the
     integration modular in case one wanted to implement multiple
     solvers.
@@ -419,7 +419,7 @@ class NVEConstrainedIntegrator(ConstrainedIntegrator):
             self.proj_cotangent()
 
     def mtsprop_ba(self, index):
-        """ Recursive MTS step -- this is adapted directly from the
+        """Recursive MTS step -- this is adapted directly from the
         NVEIntegrator class"""
 
         mk = int(self.nmts[index] / 2)
@@ -448,7 +448,7 @@ class NVEConstrainedIntegrator(ConstrainedIntegrator):
                 self.mtsprop_ba(index + 1)
 
     def mtsprop_ab(self, index):
-        """ Recursive MTS step -- this is adapted directly from the
+        """Recursive MTS step -- this is adapted directly from the
         NVEIntegrator class"""
 
         if self.nmts[index] % 2 == 1:
@@ -503,9 +503,9 @@ class NVTConstrainedIntegrator(NVEConstrainedIntegrator):
     """
 
     def step_Oc(self):
-        """ Constrained stochastic propagation. We solve the problem that
+        """Constrained stochastic propagation. We solve the problem that
         the thermostat and the projective step do not necessarily commute
-        (e.g. in GLE) by doing a MTS splitting scheme """
+        (e.g. in GLE) by doing a MTS splitting scheme"""
 
         m3 = dstrip(self.beads.m3)
         for i in range(self.nsteps_o):

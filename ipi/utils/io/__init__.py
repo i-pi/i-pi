@@ -231,7 +231,7 @@ def print_file(
 
 
 def read_file_raw(mode, filedesc):
-    """ Reads atom positions, or atom-vector properties, from a file of mode "mode",
+    """Reads atom positions, or atom-vector properties, from a file of mode "mode",
         returns positions and cell parameters in raw array format, without creating i-PI
         internal objects.
 
@@ -257,7 +257,7 @@ def read_file_raw(mode, filedesc):
 def read_file(
     mode, filedesc, dimension="automatic", units="automatic", cell_units="automatic"
 ):
-    """ Reads one frame from an open `mode`-style file. Also performs units
+    """Reads one frame from an open `mode`-style file. Also performs units
         conversion as requested, or as guessed from the input comment line.
 
     Args:

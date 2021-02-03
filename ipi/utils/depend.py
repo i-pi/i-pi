@@ -164,7 +164,7 @@ class depend_base(object):
         for item in dependencies:
             item.add_dependant(self, tainted)
 
-        # Convert dependants to weakreferences consitently
+        # Convert dependants to weakreferences consistently
         for item in dependants:
             if not isinstance(item, weakref.ref):
                 dependants.remove(item)
@@ -564,7 +564,7 @@ class depend_array(np.ndarray, depend_base):
             )
 
     def __array_wrap__(self, arr, context=None):
-        """ Wraps up output array from ufunc.
+        """Wraps up output array from ufunc.
 
         See docstring of __array_prepare__().
         """
@@ -843,8 +843,8 @@ class dobject(object):
     """
 
     def __new__(cls, *args, **kwds):
-        """ Initialize the object using __new__, because we do not want
-        to impose to derived classes to call the super __init__ """
+        """Initialize the object using __new__, because we do not want
+        to impose to derived classes to call the super __init__"""
 
         obj = object.__new__(cls)
         obj._direct = ddirect(obj)
@@ -881,8 +881,8 @@ class dobject(object):
         return super(dobject, self).__setattr__(name, value)
 
     def __deepcopy__(self, memo):
-        """ Overrides deepcopy behavior, so that _direct is not actually copied
-        but linked to a ddirect object """
+        """Overrides deepcopy behavior, so that _direct is not actually copied
+        but linked to a ddirect object"""
 
         newone = type(self)()
 

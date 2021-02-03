@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 """
 Computes the quantum momentum distribution of a particle given the end-to-end distances.
 It computes both the three components of the momentum distribution and the radial function.

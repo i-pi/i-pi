@@ -1,8 +1,3 @@
-import os
-import sys
-
-from ase.optimize import BFGS as BFGS
-from ase.optimize.optimize import Optimizer
 from ase.calculators.aims import Aims
 from ase.calculators.socketio import SocketClient, SocketIOCalculator
 from ase.io import read

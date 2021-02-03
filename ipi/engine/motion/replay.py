@@ -8,12 +8,15 @@
 
 
 import time
+import os
+from fnmatch import fnmatch
 
 from ipi.engine.motion import Motion
 from ipi.utils.softexit import softexit
-from ipi.utils.io import read_file
+from ipi.utils.io import read_file, read_file_raw
 from ipi.utils.io.inputs.io_xml import xml_parse_file
 from ipi.utils.units import unit_to_internal
+from ipi.utils.messages import verbosity, info
 
 
 __all__ = ["Replay"]
@@ -58,7 +61,39 @@ class Replay(Motion):
             raise ValueError(
                 "Replay can only read from PDB or XYZ files -- or a single frame from a CHK file"
             )
-        self.rfile = open(self.intraj.value, "r")
+        # Posibility to read beads from separate XYZ files by a wildcard
+        if any(char in self.intraj.value for char in "*?[]"):
+            infilelist = []
+            for file in sorted(os.listdir(".")):
+                if fnmatch(file, self.intraj.value):
+                    infilelist.append(file)
+            # determine bead numbers in input files
+            bead_map_list = []
+            for file in infilelist:
+                fdin = open(file, "r")
+                rr = read_file_raw(self.intraj.mode, fdin)
+                metainfo = rr["comment"].split()
+                for i, word in enumerate(metainfo):
+                    if word == "Bead:":
+                        bead_map_list.append(int(metainfo[i + 1]))
+                fdin.close()
+            # check that beads are continuous (no files missing)
+            if sorted(bead_map_list) != list(range(len(bead_map_list))):
+                info(
+                    "ATTENTION: Provided trajectory files have non-sequential "
+                    "range of bead indices.\n"
+                    "\tIndices found: %s\n"
+                    "\tMake sure that the wildcard does what it's supposed to do."
+                    % str(bead_map_list),
+                    verbosity.low,
+                )
+            # sort the list of files according to their bead indices
+            infilelist_sorted, _ = zip(
+                *sorted(zip(infilelist, bead_map_list), key=lambda t: t[1])
+            )
+            self.rfile = [open(f, "r") for f in infilelist_sorted]
+        else:  # no wildcard
+            self.rfile = open(self.intraj.value, "r")
         self.rstep = 0
 
     def step(self, step=None):
@@ -68,29 +103,42 @@ class Replay(Motion):
         self.ttime = 0.0
         self.qtime = -time.time()
 
+        # If wildcard is used, check that it is consistent with Nbeads
+        wildcard_used = False
+        if any(char in self.intraj.value for char in "*?[]"):
+            wildcard_used = True
+            if len(self.rfile) != len(self.beads):
+                info(
+                    "Error: if a wildcard is used for replay, then "
+                    "the number of files should be equal to the number of beads.",
+                    verbosity.low,
+                )
+                softexit.trigger(" # Error in replay input.")
         while True:
             self.rstep += 1
             try:
                 if self.intraj.mode == "xyz":
-                    for b in self.beads:
-                        myframe = read_file("xyz", self.rfile)
+                    for bindex, b in enumerate(self.beads):
+                        if wildcard_used:
+                            myframe = read_file("xyz", self.rfile[bindex])
+                        else:
+                            myframe = read_file("xyz", self.rfile)
                         myatoms = myframe["atoms"]
                         mycell = myframe["cell"]
                         myatoms.q *= unit_to_internal("length", self.intraj.units, 1.0)
                         mycell.h *= unit_to_internal("length", self.intraj.units, 1.0)
                         b.q[:] = myatoms.q
-                    self.cell.h[:] = mycell.h
                 elif self.intraj.mode == "pdb":
-                    for b in self.beads:
-                        myatoms, mycell = read_file("pdb", self.rfile)
+                    for bindex, b in enumerate(self.beads):
+                        if wildcard_used:
+                            myatoms, mycell = read_file("pdb", self.rfile[bindex])
+                        else:
+                            myatoms, mycell = read_file("pdb", self.rfile)
                         myatoms.q *= unit_to_internal("length", self.intraj.units, 1.0)
                         mycell.h *= unit_to_internal("length", self.intraj.units, 1.0)
                         b.q[:] = myatoms.q
-                    self.cell.h[:] = mycell.h
                 elif self.intraj.mode == "chk" or self.intraj.mode == "checkpoint":
-
                     # TODO: Adapt the new `Simulation.load_from_xml`?
-
                     # reads configuration from a checkpoint file
                     xmlchk = xml_parse_file(self.rfile)  # Parses the file.
 
@@ -100,9 +148,11 @@ class Replay(Motion):
                     simchk.parse(xmlchk.fields[0][1])
                     mycell = simchk.cell.fetch()
                     mybeads = simchk.beads.fetch()
-                    self.cell.h[:] = mycell.h
                     self.beads.q[:] = mybeads.q
                     softexit.trigger(" # Read single checkpoint")
+                # do not assign cell if it contains an invalid value (typically missing cell in the input)
+                if mycell.V > 0:
+                    self.cell.h[:] = mycell.h
             except EOFError:
                 softexit.trigger(" # Finished reading re-run trajectory")
             if (step is None) or (self.rstep > step):

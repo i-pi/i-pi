@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 import argparse
 import numpy as np
 import time
@@ -133,8 +133,8 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, cut, der, skip):
     if der is True:
         delta_force = np.loadtxt(ffile)[skip:]
         fx = delta_force[:, 0::3]
-        fy = delta_force[:, 1::3]
-        fz = delta_force[:, 2::3]
+        # fy = delta_force[:, 1::3]
+        # fz = delta_force[:, 2::3]
 
     # convert to atomic units
     T = 3.1668105e-06 * Tkelv
@@ -316,8 +316,8 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, cut, der, skip):
         for x in range(n_block):
             dq = delta[x * bsize : (x + 1) * bsize]
             dfx = fx[x * bsize : (x + 1) * bsize]
-            dfy = fy[x * bsize : (x + 1) * bsize]
-            dfz = fz[x * bsize : (x + 1) * bsize]
+            # dfy = fy[x * bsize : (x + 1) * bsize]
+            # dfz = fz[x * bsize : (x + 1) * bsize]
             print("# Computing 3D histogram.")
             h3d_der = histo3d_der(
                 dq,
@@ -355,19 +355,19 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, cut, der, skip):
         print(h.sum() * dqxstep)
         np.savetxt("hx.data", np.c_[xgrid, h])
 
-        print(
-            "# px^2 (from the 2nd derivative of the histogram)",
-            (
-                30.0 * avghx[(ns - 1) / 2]
-                - 16.0 * avghx[(ns - 1) / 2 + 1]
-                - 16.0 * avghx[(ns - 1) / 2 - 1]
-                + avghx[(ns - 1) / 2 - 2]
-                + avghx[(ns - 1) / 2 + 2]
-            )
-            / dqxstep ** 2
-            / norm_npx
-            / 12.0,
-        )
+        # print(
+        #    "# px^2 (from the 2nd derivative of the histogram)",
+        #    (
+        #        30.0 * avghx[(ns - 1) / 2]
+        #        - 16.0 * avghx[(ns - 1) / 2 + 1]
+        #        - 16.0 * avghx[(ns - 1) / 2 - 1]
+        #        + avghx[(ns - 1) / 2 - 2]
+        #        + avghx[(ns - 1) / 2 + 2]
+        #    )
+        #    / dqxstep ** 2
+        #    / norm_npx
+        #    / 12.0,
+        # )
 
         print(
             (

@@ -1,10 +1,10 @@
       SUBROUTINE CH4HPOT_INTER(X1, en1)
 C, initialized)
-      Implicit Real*8 (A-H,O-Z)
+      implicit double precision (A-H,O-Z)
 C
       double precision X1(6,3)
       double precision en1
-      logical initialized
+C      logical initialized
 
       PARAMETER (NATOM=25)
       PARAMETER (ISURF = 5)
@@ -64,7 +64,7 @@ C                       X(16) - X(18) : X, Y, Z for H5
 C
       IMPLICIT DOUBLE PRECISION (A-H,O-Z)
 C
-      CHARACTER*75 REF(5)
+      CHARACTER(75) REF(5)
 C
       PARAMETER(N3ATOM = 75)
       PARAMETER (ISURF = 5)
@@ -183,7 +183,7 @@ c  calculates relative coordinates and bond lengths
 c
        implicit double precision (a-h,o-z)
 C
-      CHARACTER*75 REF(5)
+      CHARACTER(75) REF(5)
 C
       PARAMETER(N3ATOM = 75)
       PARAMETER (ISURF = 5)
@@ -263,7 +263,7 @@ c  subroutine calculates reference angles for the "in-plane" potential
 c
        implicit double precision (a-h,o-z)
 C
-      CHARACTER*75 REF(5)
+      CHARACTER(75) REF(5)
 C
       PARAMETER(N3ATOM = 75)
       PARAMETER (ISURF = 5)
@@ -403,7 +403,7 @@ c  derivatives
 c
        implicit double precision (a-h,o-z)
 C
-      CHARACTER*75 REF(5)
+      CHARACTER(75) REF(5)
 C
       PARAMETER(N3ATOM = 75)
       PARAMETER (ISURF = 5)
@@ -609,7 +609,7 @@ c  subroutine calculates symmetrized vop potential and derivatives
 c
        implicit double precision (a-h,o-z)
 C
-      CHARACTER*75 REF(5)
+      CHARACTER(75) REF(5)
 C
       PARAMETER(N3ATOM = 75)
       PARAMETER (ISURF = 5)
@@ -762,7 +762,7 @@ c  and its derivatives
 c
        implicit double precision (a-h,o-z)
 C
-      CHARACTER*75 REF(5)
+      CHARACTER(75) REF(5)
 C
       PARAMETER(N3ATOM = 75)
       PARAMETER (ISURF = 5)
@@ -886,7 +886,7 @@ c
        implicit double precision (a-h,o-z)
        double precision norma
 C
-      CHARACTER*75 REF(5)
+      CHARACTER(75) REF(5)
 C
       PARAMETER(N3ATOM = 75)
       PARAMETER (ISURF = 5)
@@ -1137,7 +1137,7 @@ c  and their derivatives
 c
        implicit double precision (a-h,o-z)
 C
-      CHARACTER*75 REF(5)
+      CHARACTER(75) REF(5)
 C
       PARAMETER(N3ATOM = 75)
       PARAMETER (ISURF = 5)
@@ -1247,7 +1247,7 @@ c  all partial derivatives involving them
 c
        implicit double precision (a-h,o-z)
 C
-      CHARACTER*75 REF(5)
+      CHARACTER(75) REF(5)
 C
       PARAMETER(N3ATOM = 75)
       PARAMETER (ISURF = 5)
@@ -1442,7 +1442,7 @@ c  and their derivatives ds3,dsphi,dstheta
 c
        implicit double precision (a-h,o-z)
 C
-      CHARACTER*75 REF(5)
+      CHARACTER(75) REF(5)
 C
       PARAMETER(N3ATOM = 75)
       PARAMETER (ISURF = 5)
@@ -1590,7 +1590,7 @@ C   N3TM must be greater than or equal to N3TMMN.
 C
       IMPLICIT DOUBLE PRECISION (A-H,O-Z)
 C
-      CHARACTER*75 REF(5)
+      CHARACTER(75) REF(5)
 C
       PARAMETER(N3ATOM = 75)
       PARAMETER (ISURF = 5)
@@ -1692,7 +1692,7 @@ C
 C
       IMPLICIT DOUBLE PRECISION (A-H,O-Z)
 C
-      CHARACTER*75 REF(5)
+      CHARACTER(75) REF(5)
 C
       PARAMETER(N3ATOM = 75)
       PARAMETER (ISURF = 5)

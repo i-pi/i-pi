@@ -103,8 +103,7 @@ class InstantonMotion(Motion):
         hessian_final="False",
         energy_shift=np.zeros(0, float),
     ):
-        """Initialises InstantonMotion.
-        """
+        """Initialises InstantonMotion."""
 
         super(InstantonMotion, self).__init__(fixcom=fixcom, fixatoms=fixatoms)
 
@@ -185,12 +184,12 @@ class InstantonMotion(Motion):
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         """Binds beads, cell, bforce and prng to InstantonMotion
 
-            Args:
-            beads: The beads object from whcih the bead positions are taken.
-            nm: A normal modes object used to do the normal modes transformation.
-            cell: The cell object from which the system box is taken.
-            bforce: The forcefield object from which the force and virial are taken.
-            prng: The random number generator object which controls random number generation.
+        Args:
+        beads: The beads object from which the bead positions are taken.
+        nm: A normal modes object used to do the normal modes transformation.
+        cell: The cell object from which the system box is taken.
+        bforce: The forcefield object from which the force and virial are taken.
+        prng: The random number generator object which controls random number generation.
         """
 
         super(InstantonMotion, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
@@ -232,8 +231,8 @@ class Fix(object):
             raise ValueError("Mask number not valid")
 
     def get_active_array(self, arrays):
-        """ Functions that gets the subarray corresponding to the active degrees-of-freedom of the
-            full dimensional array """
+        """Functions that gets the subarray corresponding to the active degrees-of-freedom of the
+        full dimensional array"""
 
         activearrays = {}
         for key in arrays:
@@ -263,18 +262,18 @@ class Fix(object):
 
     def get_full_vector(self, vector, t):
         """Set 0 the degrees of freedom (dof) corresponding to the fix atoms
-                    IN:
-                        fixatoms   indexes of the fixed atoms
-                        vector     vector to be reduced
-                        t          type of array:
-                            type=-1 : do nothing
-                            type=0 : names (natoms )
-                            type=1 : pos , force or m3 (nbeads,dof)
-                            type=2 : hessian (dof, nbeads*dof)
-                            type=3 : qlist or glist (corrections, nbeads*dof)
-                    OUT:
-                        clean_vector  reduced vector
-                """
+        IN:
+            fixatoms   indexes of the fixed atoms
+            vector     vector to be reduced
+            t          type of array:
+                type=-1 : do nothing
+                type=0 : names (natoms )
+                type=1 : pos , force or m3 (nbeads,dof)
+                type=2 : hessian (dof, nbeads*dof)
+                type=3 : qlist or glist (corrections, nbeads*dof)
+        OUT:
+            clean_vector  reduced vector
+        """
         if len(self.fixatoms) == 0 or t == -1:
             return vector
 
@@ -309,17 +308,17 @@ class Fix(object):
 
     def get_active_vector(self, vector, t):
         """Delete the degrees of freedom (dof) corresponding to the fix atoms
-            IN:
-                fixatoms   indexes of the fixed atoms
-                vector     vector to be reduced
-                t          type of array:
-                    type=-1 : do nothing
-                    type=0 : names (natoms )
-                    type=1 : pos , force or m3 (nbeads,dof)
-                    type=2 : hessian (dof, nbeads*dof)
-                    type=3 : qlist or glist (corrections, nbeads*dof)
-            OUT:
-                clean_vector  reduced vector
+        IN:
+            fixatoms   indexes of the fixed atoms
+            vector     vector to be reduced
+            t          type of array:
+                type=-1 : do nothing
+                type=0 : names (natoms )
+                type=1 : pos , force or m3 (nbeads,dof)
+                type=2 : hessian (dof, nbeads*dof)
+                type=3 : qlist or glist (corrections, nbeads*dof)
+        OUT:
+            clean_vector  reduced vector
         """
         if len(self.fixatoms) == 0 or t == -1:
             return vector
@@ -416,7 +415,7 @@ class GradientMapper(object):
         else:
             indexes = np.arange(self.dbeads.nbeads)
 
-        # Create reduced bead and force objet and evaluate forces
+        # Create reduced bead and force object and evaluate forces
         reduced_b = Beads(self.dbeads.natoms, len(indexes))
         reduced_b.q[:] = full_q[indexes]
         reduced_b.m[:] = self.dbeads.m
@@ -428,7 +427,7 @@ class GradientMapper(object):
         rpots = reduced_forces.pots  # reduced energy
         rforces = reduced_forces.f  # reduced gradient
 
-        # Interpolate if necesary to get full pot and forces
+        # Interpolate if necessary to get full pot and forces
         if self.spline:
             red_mspath = full_mspath[indexes]
             spline = interp1d(red_mspath, rpots.T, kind="cubic")
@@ -465,7 +464,7 @@ class GradientMapper(object):
 
 class SpringMapper(object):
     """Creation of the multi-dimensional function to compute full or half ring polymer pot
-       and forces.
+    and forces.
     """
 
     def __init__(self):
@@ -516,7 +515,7 @@ class SpringMapper(object):
             )
 
     def set_coef(self, coef):
-        """ Sets coeficients for non-uniform instanton calculation """
+        """ Sets coefficients for non-uniform instanton calculation """
         self.coef = coef.reshape(-1, 1)
 
     def save(self, e, g):
@@ -528,8 +527,8 @@ class SpringMapper(object):
     def spring_hessian(natoms, nbeads, m3, omega2, mode="half", coef=None):
         """Compute the 'spring hessian'
 
-           OUT    h       = hessian with only the spring terms ('spring hessian')
-            """
+        OUT    h       = hessian with only the spring terms ('spring hessian')
+        """
         if coef is None:
             coef = np.ones(nbeads + 1).reshape(-1, 1)
 
@@ -649,8 +648,7 @@ class SpringMapper(object):
 
 
 class FullMapper(object):
-    """Creation of the multi-dimensional function to compute the physical and the spring forces.
-    """
+    """Creation of the multi-dimensional function to compute the physical and the spring forces."""
 
     def __init__(self, im, gm, esum=False):
 
@@ -675,8 +673,8 @@ class DummyOptimizer(dobject):
     """ Dummy class for all optimization classes """
 
     def __init__(self):
-        """Initialises object for GradientMapper (physical potential, forces and hessian)
-        and SpringMapper ( spring potential,forces and hessian) """
+        """Initialises object for GradientMapper (physical potential, forces and Hessian)
+        and SpringMapper (spring potential, forces and Hessian)"""
 
         self.options = {}  # Optimization options
         self.optarrays = {}  # Optimization arrays
@@ -691,8 +689,8 @@ class DummyOptimizer(dobject):
 
     def bind(self, geop):
         """
-        Bind optimization options and call bind function of Mappers (get beads, cell,forces)
-        check whether force size,  Hessian size from  match system size
+        Bind optimization options and call bind function of Mappers (get beads, cell, forces)
+        check whether force size, Hessian size from  match system size
         """
 
         self.beads = geop.beads
@@ -742,9 +740,7 @@ class DummyOptimizer(dobject):
             if geop.options["discretization"].size == 0:
                 geop.options["discretization"] = np.ones(self.beads.nbeads + 1, float)
             else:
-                raise ValueError(
-                    "Discretization coefficients  does not match system size"
-                )
+                raise ValueError("Discretization coefficients do not match system size")
 
         self.options["max_ms"] = geop.options["max_ms"]
         self.options["max_e"] = geop.options["max_e"]
@@ -776,7 +772,7 @@ class DummyOptimizer(dobject):
         # TODO : add linear interpolation
 
         info(
-            " @GEOP: We stretch the initial geometry with an 'amplitud' of {:4.2f}".format(
+            " @GEOP: We stretch the initial geometry with an 'amplitude' of {:4.2f}".format(
                 self.optarrays["delta"]
             ),
             verbosity.low,
@@ -967,7 +963,7 @@ class DummyOptimizer(dobject):
 
 
 class HessianOptimizer(DummyOptimizer):
-    """ Instaton Rate calculation"""
+    """ Instanton Rate calculation"""
 
     def bind(self, geop):
         # call bind function from DummyOptimizer
@@ -1008,7 +1004,7 @@ class HessianOptimizer(DummyOptimizer):
                     (self.beads.q - self.beads.q[0]) == 0
                 ).all() and self.beads.nbeads > 1:
                     raise ValueError(
-                        """We need a initial hessian in order to create our initial
+                        """We need an initial hessian in order to create our initial
                     instanton geometry. Please provide a (1-bead) hessian or an initial instanton geometry."""
                     )
 
@@ -1042,9 +1038,15 @@ class HessianOptimizer(DummyOptimizer):
                         " @GEOP: Starting from the provided geometry in the extended phase space",
                         verbosity.low,
                     )
-                    if not (self.optarrays["initial_hessian"] is None):
+                    if not (
+                        (self.optarrays["initial_hessian"] is None)
+                        or (
+                            self.optarrays["initial_hessian"].size
+                            == (self.beads.natoms * 3) ** 2
+                        )
+                    ):
                         raise ValueError(
-                            " You have to provided a hessian with size (3 x natoms)^2 but also geometry in"
+                            " You have to provide a hessian with size (3 x natoms)^2 but also geometry in"
                             " the extended phase space (nbeads>1). Please check the inputs\n"
                         )
 
@@ -1271,8 +1273,8 @@ class NROptimizer(HessianOptimizer):
 
 
 class LanczosOptimizer(HessianOptimizer):
-    """ Class that implements a modified Nichols algorithm based on Lanczos diagonalization to avoid constructing and diagonalizing
-        the full (3*natoms*nbeads)^2 matrix """
+    """Class that implements a modified Nichols algorithm based on Lanczos diagonalization to avoid constructing and diagonalizing
+    the full (3*natoms*nbeads)^2 matrix"""
 
     def bind(self, geop):
         # call bind function from HessianOptimizer

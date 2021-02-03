@@ -42,7 +42,7 @@ class InputNMFrequencies(InputArray):
     default_help = "Provides a compact way of specifying the ring polymer frequencies"
 
     def __init__(self, help=None, dimension=None, default=None, dtype=None):
-        """ Initializes InputNormalModes.
+        """Initializes InputNormalModes.
 
         Just calls the parent initialization function with appropriate arguments.
         """
@@ -75,7 +75,7 @@ class InputNMFrequencies(InputArray):
 
 class InputNormalModes(Input):
 
-    """ Storage class for NormalModes engine.
+    """Storage class for NormalModes engine.
 
     Describes how normal-modes transformation and integration should be
     performed.

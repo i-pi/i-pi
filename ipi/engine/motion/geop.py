@@ -143,12 +143,12 @@ class GeopMotion(Motion):
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         """Binds beads, cell, bforce and prng to GeopMotion
 
-            Args:
-            beads: The beads object from which the bead positions are taken.
-            nm: A normal modes object used to do the normal modes transformation.
-            cell: The cell object from which the system box is taken.
-            bforce: The forcefield object from which the force and virial are taken.
-            prng: The random number generator object which controls random number generation.
+        Args:
+        beads: The beads object from which the bead positions are taken.
+        nm: A normal modes object used to do the normal modes transformation.
+        cell: The cell object from which the system box is taken.
+        bforce: The forcefield object from which the force and virial are taken.
+        prng: The random number generator object which controls random number generation.
         """
 
         super(GeopMotion, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
@@ -214,8 +214,8 @@ class LineMapper(object):
             )
 
     def __call__(self, x):
-        """ computes energy and gradient for optimization step
-            determines new position (x0+d*x)"""
+        """computes energy and gradient for optimization step
+        determines new position (x0+d*x)"""
 
         self.fcount += 1
         self.dbeads.q[:, self.fixatoms_mask] = (
@@ -419,9 +419,9 @@ class BFGSOptimizer(DummyOptimizer):
         self.ls_options = geop.ls_options
 
     def step(self, step=None):
-        """ Does one simulation time step.
-            Attributes:
-            qtime: The time taken in updating the positions.
+        """Does one simulation time step.
+        Attributes:
+        qtime: The time taken in updating the positions.
         """
 
         self.qtime = -time.time()
@@ -432,6 +432,7 @@ class BFGSOptimizer(DummyOptimizer):
             self.d += dstrip(self.forces.f) / np.sqrt(
                 np.dot(self.forces.f.flatten(), self.forces.f.flatten())
             )
+
             if len(self.fixatoms) > 0:
                 for dqb in self.d:
                     dqb[self.fixatoms * 3] = 0.0
@@ -527,11 +528,11 @@ class BFGSTRMOptimizer(DummyOptimizer):
         self.big_step = geop.big_step
 
     def step(self, step=None):
-        """ Does one simulation time step.
+        """Does one simulation time step.
 
-            Attributes:
-            qtime : The time taken in updating the real positions.
-            tr    : current trust radius
+        Attributes:
+        qtime : The time taken in updating the real positions.
+        tr    : current trust radius
         """
 
         self.qtime = -time.time()
@@ -600,8 +601,8 @@ class BFGSTRMOptimizer(DummyOptimizer):
 
 
 class LBFGSOptimizer(DummyOptimizer):
-    """ L-BFGS Minimization: Note that the accuracy you can achieve with this method depends
-        on how many ''corrections'' you store (default is 5). """
+    """L-BFGS Minimization: Note that the accuracy you can achieve with this method depends
+    on how many ''corrections'' you store (default is 5)."""
 
     def bind(self, geop):
         # call bind function from DummyOptimizer
@@ -636,9 +637,9 @@ class LBFGSOptimizer(DummyOptimizer):
         self.scale = geop.scale
 
     def step(self, step=None):
-        """ Does one simulation time step
-            Attributes:
-            ttime: The time taken in applying the thermostat steps.
+        """Does one simulation time step
+        Attributes:
+        ttime: The time taken in applying the thermostat steps.
         """
 
         self.qtime = -time.time()
@@ -647,7 +648,6 @@ class LBFGSOptimizer(DummyOptimizer):
 
         if step == 0:
             info(" @GEOP: Initializing L-BFGS", verbosity.debug)
-            print(self.d)
             self.d += dstrip(self.forces.f) / np.sqrt(
                 np.dot(self.forces.f.flatten(), self.forces.f.flatten())
             )
@@ -738,9 +738,9 @@ class SDOptimizer(DummyOptimizer):
         self.ls_options = geop.ls_options
 
     def step(self, step=None):
-        """ Does one simulation time step
-            Attributes:
-            ttime: The time taken in applying the thermostat steps.
+        """Does one simulation time step
+        Attributes:
+        ttime: The time taken in applying the thermostat steps.
         """
 
         self.qtime = -time.time()
@@ -823,10 +823,10 @@ class CGOptimizer(DummyOptimizer):
 
     def step(self, step=None):
         """Does one simulation time step
-           Attributes:
-           ptime: The time taken in updating the velocities.
-           qtime: The time taken in updating the positions.
-           ttime: The time taken in applying the thermostat steps.
+        Attributes:
+        ptime: The time taken in updating the velocities.
+        qtime: The time taken in updating the positions.
+        ttime: The time taken in applying the thermostat steps.
         """
 
         self.ptime = 0.0
