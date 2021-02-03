@@ -481,7 +481,7 @@ class TrajectoryOutput(BaseOutput):
             )
             if self.extra_type in data:
                 try:
-                    flotatarray = np.asarray(data[self.extra_type][b], dtype=float)
+                    floatarray = np.asarray(data[self.extra_type][b], dtype=float)
                     if floatarray.ndim == 2:
                         stream.write(
                             "\n".join(
@@ -497,6 +497,8 @@ class TrajectoryOutput(BaseOutput):
                                 "%15.8f" % el for el in floatarray
                             )
                         )
+                    else:
+                        raise ValueError("No specialized writer for arrays of dimension > 2")
                 except:
                     stream.write("%s" % data[self.extra_type][b])
                 stream.write("\n")
