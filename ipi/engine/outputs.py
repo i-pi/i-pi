@@ -480,22 +480,24 @@ class TrajectoryOutput(BaseOutput):
                 % (self.system.simul.step + 1, b)
             )
             if self.extra_type in data:
-                if np.array(data[self.extra_type][b]).ndim == 2:
-                    stream.write(
-                        "\n".join(
-                            [
-                                "      ".join(["{:15.8f}".format(item) for item in row])
-                                for row in data[self.extra_type][b]
-                            ]
+                try:
+                    flotatarray = np.asarray(data[self.extra_type][b], dtype=float)
+                    if floatarray.ndim == 2:
+                        stream.write(
+                            "\n".join(
+                                [
+                                    "      ".join(["{:15.8f}".format(item) for item in row])
+                                    for row in floatarray
+                                ]
+                            )
                         )
-                    )
-                elif np.array(data[self.extra_type][b]).ndim == 1:
-                    stream.write(
-                        "      ".join(
-                            "%15.8f" % el for el in np.asarray(data[self.extra_type][b])
+                    elif floatarray.ndim == 1:
+                        stream.write(
+                            "      ".join(
+                                "%15.8f" % el for el in floatarray
+                            )
                         )
-                    )
-                else:
+                except:
                     stream.write("%s" % data[self.extra_type][b])
                 stream.write("\n")
             else:

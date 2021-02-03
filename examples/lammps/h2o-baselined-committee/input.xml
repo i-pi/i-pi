@@ -2,7 +2,7 @@
   <output prefix='simulation'>
     <properties stride='100' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potential{electronvolt}, pressure_cv{megapascal} ] </properties>
     <trajectory filename='pos' stride='100'> positions </trajectory>
-    <trajectory filename='extra' stride='100' xtratype='info'> extras </trajectory>
+    <trajectory filename='extra' stride='100' extra_type='committee'> extras </trajectory>
     <checkpoint stride='200'/>
   </output>
   <total_steps>10000</total_steps>
@@ -20,7 +20,7 @@
     <extras_mode> light </extras_mode>
     <weights> [ 1, 1 ] </weights>
     <alpha> 1.5 </alpha>
-    <baseline_uncertainty> 1.0 </baseline_uncertainty>
+    <baseline_uncertainty units="electronvolt"> 1e-2 </baseline_uncertainty>
     <active_thresh> 0.355 </active_thresh>
     <ffsocket name='lammps-base' mode='unix' matching="any">
         <address> lmp-base </address> <latency> 2e-4 </latency>
