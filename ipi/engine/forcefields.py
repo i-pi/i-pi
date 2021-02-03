@@ -1154,19 +1154,19 @@ class FFCommittee(ForceField):
             }
 
             r["result"][3] = {
-                    "position": list(r["pos"]),
-                    "cell": list(r["cell"][0].flatten()),
-                    "committee": r["ff_results"],
-                    "baseline": bs_res,
-                    "raw" : ""
-                }
+                "position": list(r["pos"]),
+                "cell": list(r["cell"][0].flatten()),
+                "committee": r["ff_results"],
+                "baseline": bs_res,
+                "raw": "",
+            }
         else:
             r["result"][3] = {
-                    "position": list(r["pos"]),
-                    "cell": list(r["cell"][0].flatten()),
-                    "committee": r["ff_results"],
-                    "raw" : ""
-                }
+                "position": list(r["pos"]),
+                "cell": list(r["cell"][0].flatten()),
+                "committee": r["ff_results"],
+                "raw": "",
+            }
         # print( np.std(np.array(pot_uncertainty)), self.active_thresh )
         if std_pot > self.active_thresh and self.active_thresh > 0.0:
             dumps = json.dumps(
