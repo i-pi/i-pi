@@ -999,7 +999,7 @@ class FFCommittee(ForceField):
 
     def gather(self, r):
         """ Collects results from all sub-requests """
-        ff_res = []
+        committee_results = []
         r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]
 
         if self.baseline_uncertainty < 0:
@@ -1056,9 +1056,9 @@ class FFCommittee(ForceField):
             mean_vir = np.mean(virs, axis=0)
 
             # Rescales the committee energetics so that their standard deviation corresponds to the error
-            rescaled_pots = [mean_pot + self.alpha * (pot - mean_pot) for pot in pots]
-            rescaled_frcs = [mean_frc + self.alpha * (frc - mean_frc) for frc in frcs]
-            rescaled_virs = [mean_vir + self.alpha * (vir - mean_vir) for vir in virs]
+            rescaled_pots = np.asarray([mean_pot + self.alpha * (pot - mean_pot) for pot in pots])
+            rescaled_frcs = np.asarray([mean_frc + self.alpha * (frc - mean_frc) for frc in frcs])
+            rescaled_virs = np.asarray([mean_vir + self.alpha * (vir - mean_vir) for vir in virs])
 
             # Calculates the error associated with the committee
             var_pot = np.var(rescaled_pots, ddof=1)
@@ -1127,46 +1127,37 @@ class FFCommittee(ForceField):
             r["result"][1] = final_frc
             r["result"][2] = final_vir
 
-        for i_r in range(ncommittee):
-            if self.extras_mode == "light":
-                ff_res.append(
-                    {
-                        "v": rescaled_pots[i_r],
-                    }
-                )
-            elif self.extras_mode == "heavy":
-                ff_res.append(
-                    {
-                        "v": rescaled_pots[i_r],
-                        "f": list(rescaled_frcs[i_r]),
-                        "s": list(rescaled_virs[i_r].flatten()),
-                        "x": xtrs[i_r],
-                    }
-                )
-
-        r["ff_results"] = ff_res
+        for i_r in range(ncommittee):            
+            committee_results.append(
+                {
+                    "v": rescaled_pots[i_r],
+                    "f": list(rescaled_frcs[i_r]),
+                    "s": list(rescaled_virs[i_r].flatten()),
+                    "x": xtrs[i_r],
+                }
+            )
+            
+        r["result"][3] = {
+            "committee_pot" : rescaled_pots,
+            "committee_force" : rescaled_frcs.reshape(len(rescaled_pots),-1),
+            "committee_virial" : rescaled_virs.reshape(len(rescaled_pots),-1),
+            }
         if self.baseline_uncertainty > 0:
-            bs_res = {
+            r["result"][3]["baseline"] = {
                 "v": baseline_pot,
                 "f": list(baseline_frc),
                 "s": list(baseline_vir.flatten()),
                 "x": baseline_xtr,
             }
-
-            r["result"][3] = {
-                    "position": list(r["pos"]),
-                    "cell": list(r["cell"][0].flatten()),
-                    "committee": r["ff_results"],
-                    "baseline": bs_res,
-                    "raw" : ""
-                }
-        else:
-            r["result"][3] = {
-                    "position": list(r["pos"]),
-                    "cell": list(r["cell"][0].flatten()),
-                    "committee": r["ff_results"],
-                    "raw" : ""
-                }
+            
+        # full info as JSON string
+        #rr = r["result"][3] 
+        #r["result"][3]["raw"] = json.dumps({
+        #    "committee_pot" : list(rr["committee_pot"]),
+        #    "committee_forces" : list(rr["committee_forces"]),
+        #    "committee_virial" : list(rr["committee_virial"]),
+        #    })
+            
         # print( np.std(np.array(pot_uncertainty)), self.active_thresh )
         if std_pot > self.active_thresh and self.active_thresh > 0.0:
             dumps = json.dumps(

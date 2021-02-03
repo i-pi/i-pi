@@ -476,8 +476,8 @@ class TrajectoryOutput(BaseOutput):
         key = getkey(what)
         if key in ["extras", "extras_component"]:
             stream.write(
-                " #*EXTRAS*# Step:  %10d  Bead:  %5d  \n"
-                % (self.system.simul.step + 1, b)
+                " #%s(%s)# Step:  %10d  Bead:  %5d  \n"
+                % (key.upper(),self.extra_type ,self.system.simul.step + 1, b)
             )
             if self.extra_type in data:
                 try:
