@@ -1411,8 +1411,9 @@ class Forces(dobject):
                         if e == "raw":
                             # concatenates raw outputs
                             if e in re:
-                                for br, bv in zip(re["raw"], v):
-                                    br += bv
+                                # concatenation must happen bead per bead
+                                for ib in range(self.nbeads):
+                                    re["raw"][ib] += v[ib]
                             else:
                                 re["raw"] = v
                         else:
