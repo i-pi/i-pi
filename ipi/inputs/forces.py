@@ -87,7 +87,7 @@ class InputForceComponent(Input):
                 "default": np.zeros(0, str),
                 "help": """A list of quantities that should be extracted from the 'extra' string returned by the forcefield,
                            that are then treated the same way as energy or forces -- that is treated as a numerical, physical
-                           quantity, interpolated when changing the number of PI replicas. same quantities from different force
+                           quantity, interpolated when changing the number of PI replicas. Same quantities from different force
                            components are summed as well. The names should correspond to entries in the JSON-formatted extra string.""",
             },
         ),
