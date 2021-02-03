@@ -196,7 +196,7 @@ class ForceField(dobject):
                         0.0,
                         np.zeros(len(r["pos"]), float),
                         np.zeros((3, 3), float),
-                        "",
+                        {"raw": ""},
                     ]
                     r["status"] = "Done"
                     r["t_finished"] = time.time()
@@ -416,7 +416,7 @@ class FFLennardJones(ForceField):
 
         v *= self.epsfour
 
-        r["result"] = [v, f.reshape(nat * 3), np.zeros((3, 3), float), ""]
+        r["result"] = [v, f.reshape(nat * 3), np.zeros((3, 3), float), {"raw": ""}]
         r["status"] = "Done"
 
 
@@ -502,7 +502,7 @@ class FFDebye(ForceField):
             self.vref + 0.5 * np.dot(d, mf),
             -mf,
             np.zeros((3, 3), float),
-            "",
+            {"raw": ""},
         ]
         r["status"] = "Done"
         r["t_finished"] = time.time()
@@ -631,7 +631,7 @@ class FFPlumed(ForceField):
         v = bias[0]
         vir *= -1
 
-        r["result"] = [v, f, vir, ""]
+        r["result"] = [v, f, vir, {"raw": ""}]
         r["status"] = "Done"
 
     def mtd_update(self, pos, cell):
@@ -766,7 +766,7 @@ class FFYaff(ForceField):
         vtens = np.zeros((3, 3))
         e = self.ff.compute(gpos, vtens)
 
-        r["result"] = [e, -gpos.ravel(), -vtens, ""]
+        r["result"] = [e, -gpos.ravel(), -vtens, {"raw": ""}]
         r["status"] = "Done"
         r["t_finished"] = time.time()
 
@@ -881,7 +881,7 @@ class FFsGDML(ForceField):
             E[0] * self.kcalmol_to_hartree,
             F.flatten() * self.kcalmolang_to_hartreebohr,
             np.zeros((3, 3), float),
-            "",
+            {"raw": ""},
         ]
         r["status"] = "Done"
         r["t_finished"] = time.time()
