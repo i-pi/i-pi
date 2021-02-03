@@ -8,9 +8,6 @@ Algorithms implemented by Robert Meissner and Riccardo Petraglia, 2016
 # See the "licenses" directory for full license information.
 
 
-import numpy as np
-import time
-
 from ipi.engine.smotion import Smotion
 from ipi.engine.ensembles import ensemble_swap
 from ipi.utils.depend import *
