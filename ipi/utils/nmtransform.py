@@ -191,16 +191,16 @@ class nm_trans(object):
            q: A matrix with nbeads rows, in the bead representation.
         """
 
-        qnm = np.dot(self._b2nm, q)
+        qnm = np.tensordot(self._b2nm, q, axes=(1,0))
         if len(self._open) > 0:
             for (
                 io
             ) in (
                 self._open
             ):  # does separately the transformation for the atom that are marked as open paths
-                qnm[:, 3 * io] = np.dot(self._b2o_nm, q[:, 3 * io])
-                qnm[:, 3 * io + 1] = np.dot(self._b2o_nm, q[:, 3 * io + 1])
-                qnm[:, 3 * io + 2] = np.dot(self._b2o_nm, q[:, 3 * io + 2])
+                qnm[:, 3 * io] = np.tensordot(self._b2o_nm, q[:, 3 * io], axes=(1,0))
+                qnm[:, 3 * io + 1] = np.tensordot(self._b2o_nm, q[:, 3 * io + 1], axes=(1,0))
+                qnm[:, 3 * io + 2] = np.tensordot(self._b2o_nm, q[:, 3 * io + 2], axes=(1,0))
 
         return qnm
 
@@ -211,12 +211,12 @@ class nm_trans(object):
            q: A matrix with nbeads rows, in the normal mode representation.
         """
 
-        q = np.dot(self._nm2b, qnm)
+        q = np.tensordot(self._nm2b, qnm, axes=(1,0))
         if len(self._open) > 0:
             for io in self._open:
-                q[:, 3 * io] = np.dot(self._o_nm2b, qnm[:, 3 * io])
-                q[:, 3 * io + 1] = np.dot(self._o_nm2b, qnm[:, 3 * io + 1])
-                q[:, 3 * io + 2] = np.dot(self._o_nm2b, qnm[:, 3 * io + 2])
+                q[:, 3 * io] = np.tensordot(self._o_nm2b, qnm[:, 3 * io], axes=(1,0))
+                q[:, 3 * io + 1] = np.tensordot(self._o_nm2b, qnm[:, 3 * io + 1], axes=(1,0))
+                q[:, 3 * io + 2] = np.tensordot(self._o_nm2b, qnm[:, 3 * io + 2], axes=(1,0))
 
         return q
 
@@ -268,19 +268,19 @@ class nm_rescale(object):
             q_scal = dstrip(q).copy()
         else:
             # this applies to both bead property arrays (e.g. potentials) and bead vector properties (e.g. positions, forces)
-            q_scal = np.dot(self._b1tob2, q)
+            q_scal = np.tensordot(self._b1tob2, q, axes=(1,0))
             if len(self._open) > 0:
                 if len(q_scal.shape) == 2:
                     for io in self._open:
-                        q_scal[:, 3 * io] = np.dot(self._o_b1tob2, q[:, 3 * io])
-                        q_scal[:, 3 * io + 1] = np.dot(self._o_b1tob2, q[:, 3 * io + 1])
-                        q_scal[:, 3 * io + 2] = np.dot(self._o_b1tob2, q[:, 3 * io + 2])
+                        q_scal[:, 3 * io] = np.tensordot(self._o_b1tob2, q[:, 3 * io], axes=(1,0))
+                        q_scal[:, 3 * io + 1] = np.tensordot(self._o_b1tob2, q[:, 3 * io + 1], axes=(1,0))
+                        q_scal[:, 3 * io + 2] = np.tensordot(self._o_b1tob2, q[:, 3 * io + 2], axes=(1,0))
                 else:
                     # this applies the open path contraction to EVERYTHING because otherwise we don't know how to handle
                     # the fact that only some beads are open. clearly this is a hack, and in practice the point is that
                     # a "per bead" NM transformation of the potential is not well-defined when different beads have different
                     # NM transformations
-                    q_scal = np.dot(self._o_b1tob2, q)
+                    q_scal = np.tensordot(self._o_b1tob2, q, axes=(1,0))
 
         return q_scal
 
@@ -296,15 +296,15 @@ class nm_rescale(object):
             q_scal = dstrip(q).copy()
         else:
             # see b1tob2 for an explanation of the rationale for dealing with open path transformations
-            q_scal = np.dot(self._b2tob1, q)
+            q_scal = np.tensordot(self._b2tob1, q, axes=(1,0))
             if len(self._open) > 0:
                 if len(q_scal.shape) == 2:
                     for io in self._open:
-                        q_scal[:, 3 * io] = np.dot(self._o_b2tob1, q[:, 3 * io])
-                        q_scal[:, 3 * io + 1] = np.dot(self._o_b2tob1, q[:, 3 * io + 1])
-                        q_scal[:, 3 * io + 2] = np.dot(self._o_b2tob1, q[:, 3 * io + 2])
+                        q_scal[:, 3 * io] = np.tensordot(self._o_b2tob1, q[:, 3 * io], axes=(1,0))
+                        q_scal[:, 3 * io + 1] = np.tensordot(self._o_b2tob1, q[:, 3 * io + 1], axes=(1,0))
+                        q_scal[:, 3 * io + 2] = np.tensordot(self._o_b2tob1, q[:, 3 * io + 2], axes=(1,0))
                     else:
-                        q_scal = np.dot(self._o_b2tob1, q)
+                        q_scal = np.tensordot(self._o_b2tob1, q, axes=(1,0))
         return q_scal
 
 
