@@ -150,6 +150,7 @@ class Runner(object):
         try:
             # Create temp file and copy files
             self.tmp_dir = Path(tempfile.mkdtemp())
+            print("\nTest folder: {}".format(str(cwd).split("ipi_tests/", 1)[1]))
             print("temp folder: {}".format(self.tmp_dir))
 
             files = os.listdir(self.parent / cwd)
@@ -323,7 +324,7 @@ class Runner(object):
                     np.testing.assert_allclose(
                         test_output, ref_output, rtol=1.0e-7, atol=1.0e-15
                     )
-                    print("No anomaly during the regtest for {}".format(refname))
+                    # print("No anomaly during the regtest for {}".format(refname))
                 except AssertionError:
                     raise AssertionError(
                         "ANOMALY: Disagreement between reference and {} in {}".format(
@@ -394,10 +395,13 @@ class Runner(object):
                     np.testing.assert_allclose(
                         test_xyz, ref_xyz, rtol=1.0e-7, atol=1.0e-8
                     )
-                    print("No anomaly during the regtest for {}".format(refname))
+                    # print("No anomaly during the regtest for {}".format(refname))
                 except AssertionError:
                     raise AssertionError(
-                        "ANOMALY: Disagreement between reference and {} in {}".format(
-                            fname, str((self.parent / cwd).absolute())
+                        "ANOMALY: {} in {}".format(
+                            fname,
+                            str((self.parent / cwd).absolute()).split("ipi_tests/", 1)[
+                                1
+                            ],
                         )
                     )

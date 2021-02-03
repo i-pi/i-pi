@@ -1,0 +1,3 @@
+#Settings file for automatic test
+driver sg
+flags -o 15.0
