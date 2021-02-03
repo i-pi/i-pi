@@ -30,7 +30,7 @@ __all__ = ["InputDMD"]
 
 
 class InputDMD(InputDictionary):
-    """ Driven MD Options
+    """Driven MD Options
 
     Contains options related with MetaDynamics
 
