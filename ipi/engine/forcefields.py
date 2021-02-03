@@ -1118,6 +1118,7 @@ class FFCommittee(ForceField):
             "committee_pot" : rescaled_pots,
             "committee_force" : rescaled_frcs.reshape(len(rescaled_pots),-1),
             "committee_virial" : rescaled_virs.reshape(len(rescaled_pots),-1),
+            "raw" : ""
         }
             
         if self.baseline_uncertainty > 0:
@@ -1136,6 +1137,7 @@ class FFCommittee(ForceField):
         #    "committee_virial" : list(rr["committee_virial"]),
         #    })
             
+
         # print( np.std(np.array(pot_uncertainty)), self.active_thresh )
         if std_pot > self.active_thresh and self.active_thresh > 0.0:
             dumps = json.dumps(

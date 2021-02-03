@@ -486,19 +486,19 @@ class TrajectoryOutput(BaseOutput):
                         stream.write(
                             "\n".join(
                                 [
-                                    "      ".join(["{:15.8f}".format(item) for item in row])
+                                    "      ".join(
+                                        ["{:15.8f}".format(item) for item in row]
+                                    )
                                     for row in floatarray
                                 ]
                             )
                         )
                     elif floatarray.ndim == 1:
-                        stream.write(
-                            "      ".join(
-                                "%15.8f" % el for el in floatarray
-                            )
-                        )
+                        stream.write("      ".join("%15.8f" % el for el in floatarray))
                     else:
-                        raise ValueError("No specialized writer for arrays of dimension > 2")
+                        raise ValueError(
+                            "No specialized writer for arrays of dimension > 2"
+                        )
                 except:
                     stream.write("%s" % data[self.extra_type][b])
                 stream.write("\n")

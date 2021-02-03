@@ -2,7 +2,7 @@
   <output prefix='simulation'>
     <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potential{electronvolt}, pressure_cv{megapascal} ] </properties>
     <trajectory filename='pos' stride='1'> positions </trajectory>
-    <trajectory filename='extra' stride='1'> extras </trajectory>
+    <trajectory filename='extra' stride='1' extra_type='committee'> extras </trajectory>
     <checkpoint stride='200'/>
   </output>
   <total_steps>100</total_steps>
