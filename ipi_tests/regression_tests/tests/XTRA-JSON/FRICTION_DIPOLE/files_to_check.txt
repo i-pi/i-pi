@@ -6,9 +6,9 @@ ref_simulation.dip_1                                    numpy
 ref_simulation.dip_2                                    numpy
 ref_simulation.dip_3                                    numpy
 ref_simulation.dip_4                                    numpy
-ref_simulation.friction_0                               numpy           1 2 3 4 5 6
-ref_simulation.friction_1                               numpy           1 2 3 4 5 6
-ref_simulation.friction_2                               numpy           1 2 3 4 5 6
-ref_simulation.friction_3                               numpy           1 2 3 4 5 6
-ref_simulation.friction_4                               numpy           1 2 3 4 5 6
-ref_simulation.friction_5                               numpy           1 2 3 4 5 6
+ref_simulation.friction_0                               numpy              0 1 2
+ref_simulation.friction_1                               numpy              0 1 2
+ref_simulation.friction_2                               numpy              0 1 2
+ref_simulation.friction_3                               numpy              0 1 2
+ref_simulation.friction_4                               numpy              0 1 2
+ref_simulation.friction_5                               numpy              0 1 2
