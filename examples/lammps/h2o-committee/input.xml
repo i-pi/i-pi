@@ -2,8 +2,10 @@
   <output prefix='simulation'>
     <properties stride='10' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, potential ] </properties>
     <trajectory filename='pos' stride='10'> positions </trajectory>
-    <trajectory filename='cpot' stride='10' extra_type='committee_pot'> extras </trajectory>
-    <trajectory filename='csigma' stride='10' extra_type='committee_uncertainty'> extras </trajectory>
+    <trajectory filename='committee_pot' stride='100' extra_type='committee_pot'> extras </trajectory>
+    <trajectory filename='committee_force' stride='100' extra_type='committee_force'> extras </trajectory> 
+    <trajectory filename='committee_virial' stride='100' extra_type='committee_virial'> extras </trajectory> 
+    <trajectory filename='committee_sigma' stride='10' extra_type='committee_uncertainty'> extras </trajectory>
     <checkpoint stride='200'/>
   </output>
   <total_steps>10000</total_steps>
