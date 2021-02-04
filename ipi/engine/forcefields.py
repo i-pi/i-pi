@@ -1013,24 +1013,26 @@ class FFCommittee(ForceField):
 
         r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]
 
+        # list of pointers to the forcefield requests. shallow copy so we can remove stuff
+        com_handles = r["ff_handles"].copy() 
         if self.baseline_name != "":
             # looks for the baseline potential, store its value and drops it from the list
             names = [ff.name for ff in self.fflist]
 
-            for i, ff_r in enumerate(r["ff_handles"]):
+            for i, ff_r in enumerate(com_handles):
                 if names[i] == self.baseline_name:
                     baseline_pot = ff_r["result"][0]
                     baseline_frc = ff_r["result"][1]
                     baseline_vir = ff_r["result"][2]
                     baseline_xtr = ff_r["result"][3]
-                    r["ff_handles"].pop(i)
+                    com_handles.pop(i)
                     break
 
         # Gathers the forcefield energetics and extras
-        pots = [ff_r["result"][0] for ff_r in r["ff_handles"]]
-        frcs = [ff_r["result"][1] for ff_r in r["ff_handles"]]
-        virs = [ff_r["result"][2] for ff_r in r["ff_handles"]]
-        xtrs = [ff_r["result"][3] for ff_r in r["ff_handles"]]
+        pots = [ff_r["result"][0] for ff_r in com_handles]
+        frcs = [ff_r["result"][1] for ff_r in com_handles]
+        virs = [ff_r["result"][2] for ff_r in com_handles]
+        xtrs = [ff_r["result"][3] for ff_r in com_handles]
 
         # Computes the mean energetics
         mean_pot = np.mean(pots, axis=0)
@@ -1109,7 +1111,7 @@ class FFCommittee(ForceField):
             r["result"][3]["baseline_force"] = (baseline_frc,)
             r["result"][3]["baseline_virial"] = (baseline_vir,)
             r["result"][3]["baseline_extras"] = (baseline_xtr,)
-            r["result"][3]["baseline_weigth"] = self.baseline_uncertainty ** 2 / (
+            r["result"][3]["wb_mixing"] = self.baseline_uncertainty ** 2 / (
                 self.baseline_uncertainty ** 2 + var_pot
             )
 
