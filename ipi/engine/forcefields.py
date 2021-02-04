@@ -1061,7 +1061,6 @@ class FFCommittee(ForceField):
             # V = V_baseline + s_b^2/(s_c^2+s_b^2) V_committe
 
             s_b2 = self.baseline_uncertainty ** 2
-            uncertain_pot = 0.0
             uncertain_frc = self.alpha ** 2 * np.mean(
                 [(pot - mean_pot) * (frc - mean_frc) for pot, frc in zip(pots, frcs)],
                 axis=0,
@@ -1075,7 +1074,6 @@ class FFCommittee(ForceField):
             final_pot = (
                 baseline_pot
                 + mean_pot * s_b2 / (s_b2 + var_pot)
-                - 2.0 * mean_pot * s_b2 / (s_b2 + var_pot) ** 2 * uncertain_pot
             )
             final_frc = (
                 baseline_frc

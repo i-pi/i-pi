@@ -1,6 +1,6 @@
 <simulation verbosity='low' threading='false'>
   <output prefix='simulation'>
-    <properties stride='100' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potential{electronvolt}, pressure_cv{megapascal} ] </properties>
+    <properties stride='10' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potential{electronvolt}, pressure_cv{megapascal} ] </properties>
     <trajectory filename='pos' stride='100'> positions </trajectory>
     <trajectory filename='committee_pot' stride='100' extra_type='committee_pot'> extras </trajectory>
     <trajectory filename='committee_force' stride='100' extra_type='committee_force'> extras </trajectory>    
@@ -20,7 +20,7 @@
     <baseline_name> lammps-base </baseline_name>
     <weights> [ 1, 1 ] </weights>
     <alpha> 1.5 </alpha>
-    <baseline_uncertainty units="electronvolt"> 1e-2 </baseline_uncertainty>
+    <baseline_uncertainty units="electronvolt"> 1.0 </baseline_uncertainty>
     <active_thresh> 0.355 </active_thresh>
     <ffsocket name='lammps-base' mode='unix' matching="any">
         <address> lmp-base </address> <latency> 2e-4 </latency>
