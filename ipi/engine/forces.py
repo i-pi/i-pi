@@ -456,7 +456,12 @@ class ForceComponent(dobject):
             try:
                 fc_extra[e] = np.asarray(fc_extra[e], dtype=float)
             except KeyError:
-                raise KeyError("force_extras required "+e+" to promote, but was not found among extras " + str(list(fc_extra.keys())))
+                raise KeyError(
+                    "force_extras required "
+                    + e
+                    + " to promote, but was not found among extras "
+                    + str(list(fc_extra.keys()))
+                )
             except:
                 raise Exception(
                     "force_extras has to be numerical to be treated as a physical quantity. It is not -- check the quantity that is being passed."
@@ -1416,9 +1421,11 @@ class Forces(dobject):
                 dmvirs = dstrip(self.mforces[k].virs)
                 # "expand" to the total number of beads the virials from the
                 # contracted one, element by element
-                rp += (self.mforces[k].weight
-                        * self.mforces[k].mts_weights.sum()
-                        *self.mrpc[k].b2tob1(dmvirs))                        
+                rp += (
+                    self.mforces[k].weight
+                    * self.mforces[k].mts_weights.sum()
+                    * self.mrpc[k].b2tob1(dmvirs)
+                )
         return rp
 
     def get_potssc(self):

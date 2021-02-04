@@ -29,8 +29,10 @@ try:
 except ImportError:
     plumed = None
 
+
 class NumpyEncoder(json.JSONEncoder):
     """ Special json encoder for numpy types """
+
     def default(self, obj):
         if isinstance(obj, np.integer):
             return int(obj)
@@ -39,6 +41,7 @@ class NumpyEncoder(json.JSONEncoder):
         elif isinstance(obj, np.ndarray):
             return obj.tolist()
         return json.JSONEncoder.default(self, obj)
+
 
 class ForceRequest(dict):
 
@@ -930,7 +933,6 @@ class FFCommittee(ForceField):
         baseline_uncertainty=-1.0,
         active_thresh=0.0,
         active_out=None,
-        extras_mode="light",
     ):
 
         # force threaded mode as otherwise it cannot have threaded children
@@ -966,7 +968,6 @@ class FFCommittee(ForceField):
         self.alpha = alpha
         self.active_thresh = active_thresh
         self.active_out = active_out
-        self.extras_mode = extras_mode
 
     def bind(self, output_maker):
 
@@ -1009,11 +1010,11 @@ class FFCommittee(ForceField):
 
     def gather(self, r):
         """ Collects results from all sub-requests, and assemble the committee of models. """
-        
+
         r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]
 
         if self.baseline_name != "":
-            # looks for the baseline potential, store its value and drops it from the list             
+            # looks for the baseline potential, store its value and drops it from the list
             names = [ff.name for ff in self.fflist]
 
             for i, ff_r in enumerate(r["ff_handles"]):
@@ -1026,7 +1027,6 @@ class FFCommittee(ForceField):
                     break
 
         # Gathers the forcefield energetics and extras
-        ncommittee = len(r["ff_handles"])
         pots = [ff_r["result"][0] for ff_r in r["ff_handles"]]
         frcs = [ff_r["result"][1] for ff_r in r["ff_handles"]]
         virs = [ff_r["result"][2] for ff_r in r["ff_handles"]]
@@ -1038,23 +1038,29 @@ class FFCommittee(ForceField):
         mean_vir = np.mean(virs, axis=0)
 
         # Rescales the committee energetics so that their standard deviation corresponds to the error
-        rescaled_pots = np.asarray([mean_pot + self.alpha * (pot - mean_pot) for pot in pots])
-        rescaled_frcs = np.asarray([mean_frc + self.alpha * (frc - mean_frc) for frc in frcs])
-        rescaled_virs = np.asarray([mean_vir + self.alpha * (vir - mean_vir) for vir in virs])
+        rescaled_pots = np.asarray(
+            [mean_pot + self.alpha * (pot - mean_pot) for pot in pots]
+        )
+        rescaled_frcs = np.asarray(
+            [mean_frc + self.alpha * (frc - mean_frc) for frc in frcs]
+        )
+        rescaled_virs = np.asarray(
+            [mean_vir + self.alpha * (vir - mean_vir) for vir in virs]
+        )
 
         # Calculates the error associated with the committee
         var_pot = np.var(rescaled_pots, ddof=1)
         std_pot = np.sqrt(var_pot)
 
         if self.baseline_name != "":
-            # Computes the additional component of the energetics due to a position 
-            # dependent weight. This is based on the assumption that V_committee is 
+            # Computes the additional component of the energetics due to a position
+            # dependent weight. This is based on the assumption that V_committee is
             # a correction over the baseline, that V = V_baseline + V_committe, that
-            # V_baseline has an uncertainty given by baseline_uncertainty, 
+            # V_baseline has an uncertainty given by baseline_uncertainty,
             # and V_committee the committee error. Then
-            # V = V_baseline + s_b^2/(s_c^2+s_b^2) V_committe 
-            
-            s_b2 = self.baseline_uncertainty **2
+            # V = V_baseline + s_b^2/(s_c^2+s_b^2) V_committe
+
+            s_b2 = self.baseline_uncertainty ** 2
             uncertain_pot = 0.0
             uncertain_frc = self.alpha ** 2 * np.mean(
                 [(pot - mean_pot) * (frc - mean_frc) for pot, frc in zip(pots, frcs)],
@@ -1067,16 +1073,19 @@ class FFCommittee(ForceField):
 
             # Computes the final average energetics
             final_pot = (
-                baseline_pot + mean_pot * s_b2 / (s_b2 + var_pot)
+                baseline_pot
+                + mean_pot * s_b2 / (s_b2 + var_pot)
                 - 2.0 * mean_pot * s_b2 / (s_b2 + var_pot) ** 2 * uncertain_pot
             )
             final_frc = (
-                baseline_frc + mean_frc * s_b2 / (s_b2 + var_pot)
-                - 2.0 * mean_pot * s_b2 / (s_b2 + var_pot) **2 * uncertain_frc
+                baseline_frc
+                + mean_frc * s_b2 / (s_b2 + var_pot)
+                - 2.0 * mean_pot * s_b2 / (s_b2 + var_pot) ** 2 * uncertain_frc
             )
             final_vir = (
-                baseline_vir + mean_vir * s_b2 / (s_b2 + var_pot)
-                - 2.0 * mean_pot * s_b2 / (s_b2 + var_pot) **2 * uncertain_vir
+                baseline_vir
+                + mean_vir * s_b2 / (s_b2 + var_pot)
+                - 2.0 * mean_pot * s_b2 / (s_b2 + var_pot) ** 2 * uncertain_vir
             )
 
             # Sets the output of the committee model.
@@ -1088,25 +1097,26 @@ class FFCommittee(ForceField):
             r["result"][0] = mean_pot
             r["result"][1] = mean_frc
             r["result"][2] = mean_vir
-            
+
         r["result"][3] = {
-            "committee_pot" : rescaled_pots,
-            "committee_force" : rescaled_frcs.reshape(len(rescaled_pots),-1),
-            "committee_virial" : rescaled_virs.reshape(len(rescaled_pots),-1),
-            "committee_extras" : xtrs,
-            "committee_uncertainty" : std_pot,            
+            "committee_pot": rescaled_pots,
+            "committee_force": rescaled_frcs.reshape(len(rescaled_pots), -1),
+            "committee_virial": rescaled_virs.reshape(len(rescaled_pots), -1),
+            "committee_extras": xtrs,
+            "committee_uncertainty": std_pot,
         }
-            
+
         if self.baseline_name != "":
-            r["result"][3]["baseline_pot"] = baseline_pot,
-            r["result"][3]["baseline_force"] = baseline_frc,
-            r["result"][3]["baseline_virial"] = baseline_vir,            
-            r["result"][3]["baseline_extras"] = baseline_xtr,
-            r["result"][3]["baseline_weigth"] = (self.baseline_uncertainty **2/
-                       (self.baseline_uncertainty **2+var_pot))
-            
-        r["result"][3]["raw"] = json.dumps(r["result"][3], cls = NumpyEncoder)    
-        
+            r["result"][3]["baseline_pot"] = (baseline_pot,)
+            r["result"][3]["baseline_force"] = (baseline_frc,)
+            r["result"][3]["baseline_virial"] = (baseline_vir,)
+            r["result"][3]["baseline_extras"] = (baseline_xtr,)
+            r["result"][3]["baseline_weigth"] = self.baseline_uncertainty ** 2 / (
+                self.baseline_uncertainty ** 2 + var_pot
+            )
+
+        r["result"][3]["raw"] = json.dumps(r["result"][3], cls=NumpyEncoder)
+
         # print( np.std(np.array(pot_uncertainty)), self.active_thresh )
         if std_pot > self.active_thresh and self.active_thresh > 0.0:
             dumps = json.dumps(

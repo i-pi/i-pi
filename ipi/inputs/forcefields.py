@@ -676,7 +676,7 @@ class InputFFCommittee(InputForceField):
         {
             "dtype": float,
             "default": 0.0,
-            "dimension": "energy",            
+            "dimension": "energy",
             "help": """The uncertainty threshold for active learning. Structure with an uncertainty above this 
                         value are printed in the specified output file so they can be used for active learning.""",
         },
@@ -687,15 +687,6 @@ class InputFFCommittee(InputForceField):
             "dtype": str,
             "default": "active_output",
             "help": "Output filename for structures that exceed the accuracy threshold of the model, to be used in active learning.",
-        },
-    )
-    fields["extras_mode"] = (
-        InputValue,
-        {
-            "dtype": str,
-            "options": ["light", "heavy"],
-            "default": "light",
-            "help": """In the light mode only the potential energies of the committee members are printed out, while in the heavy mode the potential energies, forces and virials of the committee members are printed out.""",
         },
     )
 
@@ -712,7 +703,6 @@ class InputFFCommittee(InputForceField):
         self.baseline_name.store(ff.baseline_name)
         self.active_thresh.store(ff.active_thresh)
         self.active_output.store(ff.active_out)
-        self.extras_mode.store(ff.extras_mode)
 
         for (_ii, _obj) in enumerate(_fflist):
             if self.extra[_ii] == 0:
@@ -769,5 +759,4 @@ class InputFFCommittee(InputForceField):
             baseline_name=self.baseline_name.fetch(),
             active_thresh=self.active_thresh.fetch(),
             active_out=self.active_output.fetch(),
-            extras_mode=self.extras_mode.fetch(),
         )

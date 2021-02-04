@@ -18,7 +18,6 @@
      only in the kspace cutoff. 
   --> 
     <baseline_name> lammps-base </baseline_name>
-    <extras_mode> light </extras_mode>
     <weights> [ 1, 1 ] </weights>
     <alpha> 1.5 </alpha>
     <baseline_uncertainty units="electronvolt"> 1e-2 </baseline_uncertainty>
