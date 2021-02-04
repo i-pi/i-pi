@@ -1105,13 +1105,11 @@ class FFCommittee(ForceField):
         }
 
         if self.baseline_name != "":
-            r["result"][3]["baseline_pot"] = (baseline_pot,)
-            r["result"][3]["baseline_force"] = (baseline_frc,)
-            r["result"][3]["baseline_virial"] = (baseline_vir,)
-            r["result"][3]["baseline_extras"] = (baseline_xtr,)
-            r["result"][3]["wb_mixing"] = self.baseline_uncertainty ** 2 / (
-                self.baseline_uncertainty ** 2 + var_pot
-            )
+            r["result"][3]["baseline_pot"] = baseline_pot,
+            r["result"][3]["baseline_force"] = baseline_frc,
+            r["result"][3]["baseline_virial"] = (baseline_vir.flatten()),
+            r["result"][3]["baseline_extras"] = baseline_xtr,
+            r["result"][3]["wb_mixing"] = s_b2 / (s_b2 ** 2 + var_pot),
 
         r["result"][3]["raw"] = json.dumps(r["result"][3], cls=NumpyEncoder)
 

@@ -4,6 +4,11 @@
     <trajectory filename='pos' stride='10'> positions </trajectory>
     <trajectory filename='committee_pot' stride='100' extra_type='committee_pot'> extras </trajectory>
     <trajectory filename='committee_force' stride='100' extra_type='committee_force'> extras </trajectory> 
+    <trajectory filename='committee_virial' stride='100' extra_type='committee_virial'> extras </trajectory> 
+    <trajectory filename='committee_sigma' stride='100' extra_type='committee_uncertainty'> extras </trajectory>
+    <trajectory filename='baseline_pot' stride='100' extra_type='baseline_pot'> extras </trajectory>
+    <trajectory filename='baseline_force' stride='100' extra_type='baseline_force'> extras </trajectory> 
+    <trajectory filename='baseline_virial' stride='100' extra_type='baseline_virial'> extras </trajectory> 
     <trajectory filename='weight' stride='100' extra_type='wb_mixing'> extras </trajectory>    
     <checkpoint stride='200'/>
   </output>
