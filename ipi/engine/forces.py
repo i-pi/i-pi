@@ -100,7 +100,7 @@ class ForceBead(dobject):
         self.atoms = atoms
         self.cell = cell
         self.ff = ff
-        self.ff.bind(output_maker) 
+        self.ff.bind(output_maker)
         dself = dd(self)
 
         # ufvx depends on the atomic positions and on the cell
@@ -366,7 +366,7 @@ class ForceComponent(dobject):
         self._forces = []
         self.beads = beads
         for b in range(self.nbeads):
-            new_force = ForceBead()            
+            new_force = ForceBead()
             new_force.bind(beads[b], cell, self.ff, output_maker=output_maker)
             self._forces.append(new_force)
 
@@ -687,7 +687,7 @@ class Forces(dobject):
                 weight=fc.weight,
                 mts_weights=fc.mts_weights,
                 force_extras=fc.force_extras,
-                epsilon=fc.epsilon,                
+                epsilon=fc.epsilon,
             )
             newbeads = Beads(beads.natoms, newb)
             newrpc = nm_rescale(beads.nbeads, newb, open_paths=self.open_paths)
@@ -703,7 +703,7 @@ class Forces(dobject):
             dd(beads).q.add_dependant(dd(newbeads).q)
 
             # now we create a new forcecomponent which is bound to newbeads!
-            newforce.bind(newbeads, cell, fflist, output_maker = self.output_maker)
+            newforce.bind(newbeads, cell, fflist, output_maker=self.output_maker)
 
             # adds information we will later need to the appropriate lists.
             self.mbeads.append(newbeads)
@@ -898,8 +898,9 @@ class Forces(dobject):
         ncell = cell
         if cell is None:
             ncell = self.cell
-        nforce.bind(nbeads, ncell, self.fcomp, self.ff, self.open_paths, 
-                    self.output_maker)
+        nforce.bind(
+            nbeads, ncell, self.fcomp, self.ff, self.open_paths, self.output_maker
+        )
         return nforce
 
     def transfer_forces(self, refforce):
