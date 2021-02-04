@@ -972,6 +972,7 @@ class FFCommittee(ForceField):
     def bind(self, output_maker):
 
         super(FFCommittee, self).bind(output_maker)
+        print("BINDING FFCOMM ", self.active_thresh)
         if self.active_thresh > 0:
             if self.active_out is None:
                 raise ValueError(
@@ -1114,8 +1115,7 @@ class FFCommittee(ForceField):
 
         r["result"][3]["raw"] = json.dumps(r["result"][3], cls=NumpyEncoder)
 
-        # print( np.std(np.array(pot_uncertainty)), self.active_thresh )
-        if std_pot > self.active_thresh and self.active_thresh > 0.0:
+        if self.active_thresh > 0.0 and std_pot > self.active_thresh:
             dumps = json.dumps(
                 {
                     "position": list(r["pos"]),

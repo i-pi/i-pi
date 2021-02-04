@@ -95,11 +95,13 @@ class System(dobject):
             self.cell,
             self.fcomp,
             self.simul.fflist,
-            open_paths=self.nm.open_paths,
+            open_paths = self.nm.open_paths,
+            output_maker = simul.output_maker
         )
         self.nm.bind(self.ensemble, self.motion, beads=self.beads, forces=self.forces)
         self.ensemble.bind(
-            self.beads, self.nm, self.cell, self.forces, self.simul.fflist
+            self.beads, self.nm, self.cell, self.forces, self.simul.fflist, 
+            simul.output_maker
         )
         self.motion.bind(
             self.ensemble,

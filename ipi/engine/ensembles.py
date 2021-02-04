@@ -155,16 +155,17 @@ class Ensemble(dobject):
             time=self.time,
         )
 
-    def bind(self, beads, nm, cell, bforce, fflist, elist=[], xlpot=[], xlkin=[]):
+    def bind(self, beads, nm, cell, bforce, fflist, output_maker, elist=[], xlpot=[], xlkin=[]):
         self.beads = beads
         self.cell = cell
         self.forces = bforce
         self.nm = nm
         dself = dd(self)
+        self.output_maker = output_maker
 
         # this binds just the explicit bias forces
         self.bias.bind(
-            self.beads, self.cell, self.bcomp, fflist, open_paths=nm.open_paths
+            self.beads, self.cell, self.bcomp, fflist, open_paths=nm.open_paths, output_maker = self.output_maker
         )
 
         dself.econs = depend_value(name="econs", func=self.get_econs)
