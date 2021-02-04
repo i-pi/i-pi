@@ -2,7 +2,7 @@
   <output prefix='simulation'>
     <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potential{electronvolt}, pressure_cv{megapascal} ] </properties>
     <trajectory filename='pos' stride='1'> positions </trajectory>
-    <trajectory filename='extra' stride='1' extra_type='committee'> extras </trajectory>
+    <trajectory filename='extra' stride='1' extra_type='committee_pot'> extras </trajectory>
     <checkpoint stride='200'/>
   </output>
   <total_steps>100</total_steps>
@@ -10,10 +10,8 @@
     <seed>31415</seed>
   </prng>
   <ffcommittee name="committee">
-    <extras_mode> light </extras_mode>
-    <weights> [ 1, 1 ] </weights>
-    <alpha> 1.0 </alpha>
-    <active_thresh> 0.355 </active_thresh>
+    <alpha> 1.2 </alpha>
+    <active_thresh units="electronvolt"> 3.5 </active_thresh>
     <ffsocket name='lammps-1' mode='unix' matching="any">
         <address>h2o-pimd.1</address> <latency> 2e-4 </latency>
     </ffsocket>
