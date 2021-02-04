@@ -299,7 +299,8 @@ class AlKMC(Motion):
             )
             self.dbias[i] = ens.bias.copy(self.dbeads[i], self.dcell)
             self.dens[i].bind(
-                self.dbeads[i], self.dnm[i], self.dcell, self.dforces[i], self.dbias[i]
+                self.dbeads[i], self.dnm[i], self.dcell, self.dforces[i], self.dbias[i],
+                output_maker = self.output_maker
             )
             self.geop[i].bind(
                 self.dens[i],
