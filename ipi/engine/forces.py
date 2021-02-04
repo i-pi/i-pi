@@ -1109,11 +1109,8 @@ class Forces(dobject):
 
         # stores the force component.
         fbase = self.mrpc[index].b2tob1(dstrip(self.mforces[index].f))
-        vbase = np.zeros((self.nbeads, 3, 3), float)
         mvirs = dstrip(self.mforces[index].virs)
-        for i in range(3):
-            for j in range(3):
-                vbase[:, i, j] += self.mrpc[index].b2tob1(mvirs[:, i, j])
+        vbase = self.mrpc[index].b2tob1(mvirs)
 
         # uses a fwd difference if epsilon > 0.
         if self.mforces[index].epsilon > 0.0:
@@ -1157,13 +1154,8 @@ class Forces(dobject):
                 )
 
                 # calculates the virial.
-                vminus = np.zeros((self.nbeads // 2, 3, 3), float)
                 dmvirs = dstrip(self.dforces.mforces[index].virs)
-                for i in range(3):
-                    for j in range(3):
-                        vminus[:, i, j] += self.dforces.mrpc[index].b2tob1(
-                            dmvirs[:, i, j]
-                        )
+                vminus = self.dforces.mrpc[index].b2tob1(dmvirs)
 
                 # calculates the finite difference.
                 f_4th_order[1::2] = 2.0 * (fminus - fbase[1::2]) / delta
@@ -1192,13 +1184,8 @@ class Forces(dobject):
                 )
 
                 # calculates the virial.
-                vplus = np.zeros((self.nbeads, 3, 3), float)
                 dmvirs = dstrip(self.dforces.mforces[index].virs)
-                for i in range(3):
-                    for j in range(3):
-                        vplus[:, i, j] += self.dforces.mrpc[index].b2tob1(
-                            dmvirs[:, i, j]
-                        )
+                vplus = self.dforces.mrpc[index].b2tob1(dmvirs)
 
                 # calculates the finite difference.
                 f_4th_order = 2.0 * (fbase - fplus) / delta
@@ -1235,13 +1222,8 @@ class Forces(dobject):
                 )
 
                 # calculates the virial.
-                vplusminus = np.zeros((self.nbeads, 3, 3), float)
                 dmvirs = dstrip(self.dforces.mforces[index].virs)
-                for i in range(3):
-                    for j in range(3):
-                        vplusminus[:, i, j] += self.dforces.mrpc[index].b2tob1(
-                            dmvirs[:, i, j]
-                        )
+                vplusminus = self.dforces.mrpc[index].b2tob1(dmvirs)
 
                 # calculates the finite difference.
                 for k in range(self.nbeads // 2):
@@ -1272,11 +1254,7 @@ class Forces(dobject):
                 # calculates the virial.
                 vplus = np.zeros((self.nbeads, 3, 3), float)
                 dmvirs = dstrip(self.dforces.mforces[index].virs)
-                for i in range(3):
-                    for j in range(3):
-                        vplus[:, i, j] += self.dforces.mrpc[index].b2tob1(
-                            dmvirs[:, i, j]
-                        )
+                vplus += self.dforces.mrpc[index].b2tob1(dmvirs)
 
                 # displaces the beads.
                 self.dbeads.q = self.beads.q - dq
@@ -1287,13 +1265,8 @@ class Forces(dobject):
                 )
 
                 # calculates the virial.
-                vminus = np.zeros((self.nbeads, 3, 3), float)
                 dmvirs = dstrip(self.dforces.mforces[index].virs)
-                for i in range(3):
-                    for j in range(3):
-                        vminus[:, i, j] += self.dforces.mrpc[index].b2tob1(
-                            dmvirs[:, i, j]
-                        )
+                vminus = self.dforces.mrpc[index].b2tob1(dmvirs)
 
                 # calculates the finite difference.
                 f_4th_order = 2.0 * (fminus - fplus) / 2.0 / delta
@@ -1317,11 +1290,8 @@ class Forces(dobject):
                 and self.mforces[index].mts_weights[level] != 0
                 and self.mforces[index].weight != 0
             ):
-                dv = np.zeros((self.beads.nbeads, 3, 3), float)
                 dmvirs = dstrip(self.mforces[index].virs)
-                for i in range(3):
-                    for j in range(3):
-                        dv[:, i, j] += self.mrpc[index].b2tob1(dmvirs[:, i, j])
+                dv = self.mrpc[index].b2tob1(dmvirs)
                 rp += (
                     self.mforces[index].weight
                     * self.mforces[index].mts_weights[level]
