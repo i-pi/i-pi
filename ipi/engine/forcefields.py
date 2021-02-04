@@ -1014,7 +1014,7 @@ class FFCommittee(ForceField):
         r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]
 
         # list of pointers to the forcefield requests. shallow copy so we can remove stuff
-        com_handles = r["ff_handles"].copy() 
+        com_handles = r["ff_handles"].copy()
         if self.baseline_name != "":
             # looks for the baseline potential, store its value and drops it from the list
             names = [ff.name for ff in self.fflist]
@@ -1073,10 +1073,7 @@ class FFCommittee(ForceField):
             )
 
             # Computes the final average energetics
-            final_pot = (
-                baseline_pot
-                + mean_pot * s_b2 / (s_b2 + var_pot)
-            )
+            final_pot = baseline_pot + mean_pot * s_b2 / (s_b2 + var_pot)
             final_frc = (
                 baseline_frc
                 + mean_frc * s_b2 / (s_b2 + var_pot)
