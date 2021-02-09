@@ -233,35 +233,31 @@ class NEBBFGSMover(object):
             d2 = bq[ii + 1] - bq[ii]  # tau plus
 
             # Old implementation of NEB tangents
-            # btau[ii] = d1 / np.linalg.norm(d1) + d2 / np.linalg.norm(d2)
-            # btau[ii] *= 1.0 / np.linalg.norm(btau)
+            btau[ii] = d1 / np.linalg.norm(d1) + d2 / np.linalg.norm(d2)
+            btau[ii] /= np.linalg.norm(btau[ii])
 
             # Improved tangent estimate
             # J. Chem. Phys. 113, 9978 (2000) https://doi.org/10.1063/1.1323224
             # Energy of images: (ii+1) < (ii) < (ii-1)
-            if (be[ii + 1] < be[ii]) and (be[ii] < be[ii - 1]):
-                btau[ii] = d1
 
-            # Energy of images (ii-1) < (ii) < (ii+1)
-            elif (be[ii - 1] < be[ii]) and (be[ii] < be[ii + 1]):
-                btau[ii] = d2
+            # if (be[ii + 1] < be[ii]) and (be[ii] < be[ii - 1]):
+            #     btau[ii] = d1
+            # # Energy of images (ii-1) < (ii) < (ii+1)
+            # elif (be[ii - 1] < be[ii]) and (be[ii] < be[ii + 1]):
+            #     btau[ii] = d2
+            # # Energy of image (ii) is a minimum or maximum
+            # else:
+            #     maxpot = max(abs(be[ii + 1] - be[ii]), abs(be[ii - 1] - be[ii]))
+            #     minpot = min(abs(be[ii + 1] - be[ii]), abs(be[ii - 1] - be[ii]))
 
-            # Energy of image (ii) is a minimum or maximum
-            else:
-                maxpot = max(abs(be[ii + 1] - be[ii]), abs(be[ii - 1] - be[ii]))
-                minpot = min(abs(be[ii + 1] - be[ii]), abs(be[ii - 1] - be[ii]))
-
-                if be[ii + 1] < be[ii - 1]:
-                    btau[ii] = d2 * minpot + d1 * maxpot
-
-                elif be[ii - 1] < be[ii + 1]:
-                    btau[ii] = d2 * maxpot + d1 * minpot
-
-                else:   # KF: do we actually need to treat this specially?
-                    info(" @NEB: Warning in tangents: Energies of both neighboring images are equal.", verbosity.high)
-                    btau[ii] = d2 * minpot + d1 * maxpot
-
-            btau[ii] /= np.linalg.norm(btau)
+            #     if be[ii + 1] < be[ii - 1]:
+            #         btau[ii] = d2 * minpot + d1 * maxpot
+            #     elif be[ii - 1] < be[ii + 1]:
+            #         btau[ii] = d2 * maxpot + d1 * minpot
+            #     else:   # KF: do we actually need to treat this specially?
+            #         info(" @NEB: Warning in tangents: Energies of both neighboring images are equal.", verbosity.high)
+            #         btau[ii] = d2 * minpot + d1 * maxpot
+            # btau[ii] /= np.linalg.norm(btau)
 
         # if mode == "variablesprings":
 
@@ -297,8 +293,6 @@ class NEBBFGSMover(object):
         for ii in range(1, nimg - 1):
             bf[ii] = bf[ii] - np.dot(bf[ii], btau[ii]) * btau[ii]
 
-        # tmp printout
-        # iii = 0
         for ii in range(1, nimg):
             print("Bead %2i, distance to previous:   %f"
                 % (ii, np.linalg.norm(bq[ii] - bq[ii - 1])))
@@ -307,17 +301,18 @@ class NEBBFGSMover(object):
         for ii in range(1, nimg - 1):
 
             # Old implementation
-            # bf[ii] += kappa[ii] * btau[ii] * np.dot(btau[ii], (bq[ii + 1] + bq[ii - 1] - 2 * bq[ii]))
+            bf[ii] += kappa[ii] * btau[ii] * np.dot(btau[ii], (bq[ii + 1] + bq[ii - 1] - 2 * bq[ii]))
 
+            # Improved tangent implementation
             # Eq. 12 in J. Chem. Phys. 113, 9978 (2000):
-            bf[ii] += (
-                kappa[ii]
-                * (
-                    np.linalg.norm(bq[ii + 1] - bq[ii])
-                    - np.linalg.norm(bq[ii] - bq[ii - 1])
-                )
-                * btau[ii]
-            )
+            # bf[ii] += (
+            #     kappa[ii]
+            #     * (
+            #         np.linalg.norm(bq[ii + 1] - bq[ii])
+            #         - np.linalg.norm(bq[ii] - bq[ii - 1])
+            #     )
+            #     * btau[ii]
+            # )
 
         # Return forces and modulus of gradient
         g = -bf
@@ -333,7 +328,7 @@ class NEBMover(Motion):
         biggest_step: maximum step size for BFGS/L-BFGS
         old_force: force from previous iteration
         old_direction: direction from previous iteration
-        invhessian_bfgs: inverse Hessian for BFGS
+        invhessian_bfgs: inverse Hessian for (damped) BFGS
         ls_options:
             tolerance: tolerance for exit of line search
             iter: maximum iterations for line search per MD step
@@ -359,7 +354,8 @@ class NEBMover(Motion):
         self,
         fixcom=False,
         fixatoms=None,
-        mode="lbfgs",
+        # mode="lbfgs",
+        mode="damped_bfgs",
         biggest_step=100.0,
         old_force=np.zeros(0, float),
         old_direction=np.zeros(0, float),
@@ -444,7 +440,7 @@ class NEBMover(Motion):
         self.ptime = self.ttime = 0
         self.qtime = -time.time()
 
-        if self.mode in ["bfgs", "lbfgs"]:
+        if self.mode in ["damped_bfgs", "lbfgs"]:
             # L-BFGS/BFGS minimization
             # Initialize direction to the steepest descent direction
             if step == 0:  # or np.sqrt(np.dot(self.bfgsm.d, self.bfgsm.d)) == 0.0: <-- this part for restarting at claimed minimum
@@ -464,7 +460,7 @@ class NEBMover(Motion):
                         (self.corrections, len(self.beads.q.flatten()))
                     )
                 # else: pass
-                # Inverse Hessian for BFGS is initialized in bind()
+                # Inverse Hessian for Damped_BFGS is initialized in bind()
 
             else:
                 fx, nebgrad = self.nebbfgsm(self.beads.q)
@@ -496,10 +492,10 @@ class NEBMover(Motion):
                     scale=self.scale,
                     k=step,
                 )
-            elif self.mode == "bfgs":
-                info(" @NEB: Entering BFGS", verbosity.debug)
+            elif self.mode == "damped_bfgs":
+                info(" @NEB: Entering Damped_BFGS", verbosity.debug)
 
-                BFGS(
+                Damped_BFGS(
                     x0=self.beads.q,
                     d0=self.nebbfgsm.d,
                     fdf=self.nebbfgsm,

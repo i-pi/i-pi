@@ -668,7 +668,7 @@ def TRM_UPDATE(dx, df, h):
     dg = -df[:, np.newaxis]
     dg_t = dg.T
 
-    # JCP, 117,9160. Eq 44
+    # Bakken and Helgaker, JCP, 117,9160. Eq 44
     h1 = np.dot(dg, dg_t)
     h1 = h1 / (np.dot(dg_t, dx))
     h2a = np.dot(h, dx)
@@ -712,9 +712,9 @@ def min_trm(f, h, tr):
     gEt = np.dot(f, w)  # Change of basis  ##
     gE = gEt.T  # dimension nx1
 
-    # Count negative,zero,and positive eigenvalues
-    neg = (d < -0.0000001).sum()
-    zero = (d < 0.0000001).sum() - neg
+    # Count negative, zero and positive eigenvalues
+    neg = (d < -1e-7).sum()
+    zero = (d < 1e-7).sum() - neg
     # pos = d.size - neg - zero
 
     # Pull out zero-mode gE
@@ -725,7 +725,7 @@ def min_trm(f, h, tr):
     DXE = np.zeros((ndim, 1))
 
     for i in range(0, ndim):
-        if np.absolute(d[i]) > 0.00001:
+        if np.absolute(d[i]) > 1e-5:
             DXE[i] = gE[i] / d[i]
 
     min_d = np.amin(d)
@@ -750,7 +750,7 @@ def min_trm(f, h, tr):
         y = np.sum(DXE ** 2) - tr ** 2
         dy = -2.0 * np.sum((DXE ** 2) / (d + lamb))
 
-        if np.absolute(y / dy) < 0.00001 or np.absolute(y) < 1e-13:
+        if np.absolute(y / dy) < 1e-5 or np.absolute(y) < 1e-13:
             break
 
         if y < 0.0:
@@ -889,6 +889,85 @@ def L_BFGS(x0, d0, fdf, qlist, glist, fdf0, big_step, tol, itmax, m, scale, k):
         d = -1.0 * d_x
 
     d0[:] = d
+    info(" @MINIMIZE: Updated search direction", verbosity.debug)
+
+
+def Damped_BFGS(x0, d0, fdf, fdf0, invhessian, big_step, tol, itmax):
+    """ 08.02.2021 Karen Fidanyan
+        Line search BFGS, damped as described in
+        Nocedal, Wright (2nd ed.) Procedure 18.2
+        The purpose is using it for NEB optimization
+
+        Does one step.
+        Arguments:
+            x0: initial point
+            d0: initial direction for line minimization
+            fdf: function and gradient (mapper)
+            fdf0: initial function and gradient value
+            big_step: limit on step length
+            tol: convergence tolerance
+            itmax: maximum number of allowed iterations
+    """
+
+    info(" @MINIMIZE: Started BFGS", verbosity.debug)
+    zeps = 1.0e-13
+    u0, g0 = fdf0
+
+    # Maximum step size
+    n = len(x0.flatten())
+    linesum = np.dot(x0.flatten(), x0.flatten())
+    big_step = big_step * max(np.sqrt(linesum), n)
+
+    # Perform approximate line minimization in direction d0
+    x, u, g = min_approx(fdf, x0, fdf0, d0, big_step, tol, itmax)
+    d_x = np.subtract(x, x0)
+
+    # Update invhessian
+    d_g = np.subtract(g, g0)
+    fac = np.dot(d_g.flatten(), d_x.flatten())
+
+    # Equation 18.15 in Nocedal, Wright (2nd ed.)
+    theta = 1
+    thres = 0.2*np.dot(np.dot(d_x.flatten(), invhessian), d_x.flatten())
+
+    # Damped update if 'fac' isn't sufficiently positive
+    # fac is 1/rho_k, then just rho_k in Nocedal-Wright notation (eq. 6.14)
+    if fac < thres:
+        info(
+            " @MINIMIZE: Damped update of the invhessian; direction x gradient small",
+            verbosity.debug,
+        )
+        theta = (0.8 * thres) / (thres - fac)
+        d_g = theta * d_g + (1 - theta) * np.dot(invhessian, d_x.flatten())
+        fac = np.dot(d_g.flatten(), d_x.flatten())
+    else:
+        info(" @MINIMIZE: Update of the invhessian", verbosity.debug)
+
+    hdg = np.dot(invhessian, d_g.flatten())
+    fae = np.dot(d_g.flatten(), hdg)
+
+    try:
+        fac = 1.0 / fac
+    except ZeroDivisionError:
+        fac = 1e5
+    try:
+        fad = 1.0 / fae
+    except ZeroDivisionError:
+        fad = 1e5
+
+    # Compute BFGS term
+    # KF: I kept the expression from BFGS,
+    #     it should be correct with damped d_g and fac.
+    dg = np.subtract((fac * d_x).flatten(), fad * hdg)
+    invhessian += (
+        np.outer(d_x, d_x) * fac
+        - np.outer(hdg, hdg) * fad
+        + np.outer(dg, dg) * fae
+    )
+
+    # Update direction
+    d = np.dot(invhessian, -g.flatten())
+    d0[:] = d.reshape(d_x.shape)
     info(" @MINIMIZE: Updated search direction", verbosity.debug)
 
 
