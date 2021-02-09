@@ -893,24 +893,23 @@ def L_BFGS(x0, d0, fdf, qlist, glist, fdf0, big_step, tol, itmax, m, scale, k):
 
 
 def Damped_BFGS(x0, d0, fdf, fdf0, invhessian, big_step, tol, itmax):
-    """ 08.02.2021 Karen Fidanyan
-        Line search BFGS, damped as described in
-        Nocedal, Wright (2nd ed.) Procedure 18.2
-        The purpose is using it for NEB optimization
+    """08.02.2021 Karen Fidanyan
+    Line search BFGS, damped as described in
+    Nocedal, Wright (2nd ed.) Procedure 18.2
+    The purpose is using it for NEB optimization
 
-        Does one step.
-        Arguments:
-            x0: initial point
-            d0: initial direction for line minimization
-            fdf: function and gradient (mapper)
-            fdf0: initial function and gradient value
-            big_step: limit on step length
-            tol: convergence tolerance
-            itmax: maximum number of allowed iterations
+    Does one step.
+    Arguments:
+        x0: initial point
+        d0: initial direction for line minimization
+        fdf: function and gradient (mapper)
+        fdf0: initial function and gradient value
+        big_step: limit on step length
+        tol: convergence tolerance
+        itmax: maximum number of allowed iterations
     """
 
     info(" @MINIMIZE: Started BFGS", verbosity.debug)
-    zeps = 1.0e-13
     u0, g0 = fdf0
 
     # Maximum step size
@@ -928,7 +927,7 @@ def Damped_BFGS(x0, d0, fdf, fdf0, invhessian, big_step, tol, itmax):
 
     # Equation 18.15 in Nocedal, Wright (2nd ed.)
     theta = 1
-    thres = 0.2*np.dot(np.dot(d_x.flatten(), invhessian), d_x.flatten())
+    thres = 0.2 * np.dot(np.dot(d_x.flatten(), invhessian), d_x.flatten())
 
     # Damped update if 'fac' isn't sufficiently positive
     # fac is 1/rho_k, then just rho_k in Nocedal-Wright notation (eq. 6.14)
@@ -960,9 +959,7 @@ def Damped_BFGS(x0, d0, fdf, fdf0, invhessian, big_step, tol, itmax):
     #     it should be correct with damped d_g and fac.
     dg = np.subtract((fac * d_x).flatten(), fad * hdg)
     invhessian += (
-        np.outer(d_x, d_x) * fac
-        - np.outer(hdg, hdg) * fad
-        + np.outer(dg, dg) * fae
+        np.outer(d_x, d_x) * fac - np.outer(hdg, hdg) * fad + np.outer(dg, dg) * fae
     )
 
     # Update direction

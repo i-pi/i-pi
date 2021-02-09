@@ -14,7 +14,7 @@ import time
 from ipi.engine.motion import Motion
 from ipi.utils.depend import *
 from ipi.utils.softexit import softexit
-from ipi.utils.mintools import L_BFGS, BFGS, min_brent_neb
+from ipi.utils.mintools import L_BFGS, Damped_BFGS, min_brent_neb
 from ipi.utils.messages import verbosity, info
 
 
@@ -214,8 +214,8 @@ class NEBBFGSMover(object):
         # Forces
         bf = dstrip(self.dforces.f).copy()
 
-        # Bead energies
-        be = dstrip(self.dforces.pots).copy()
+        # Bead energies (needed for improved tangents)
+        # be = dstrip(self.dforces.pots).copy()
 
         # Number of images
         nimg = self.dbeads.nbeads
@@ -294,14 +294,20 @@ class NEBBFGSMover(object):
             bf[ii] = bf[ii] - np.dot(bf[ii], btau[ii]) * btau[ii]
 
         for ii in range(1, nimg):
-            print("Bead %2i, distance to previous:   %f"
-                % (ii, np.linalg.norm(bq[ii] - bq[ii - 1])))
+            print(
+                "Bead %2i, distance to previous:   %f"
+                % (ii, np.linalg.norm(bq[ii] - bq[ii - 1]))
+            )
 
         # Adds the spring forces
         for ii in range(1, nimg - 1):
 
             # Old implementation
-            bf[ii] += kappa[ii] * btau[ii] * np.dot(btau[ii], (bq[ii + 1] + bq[ii - 1] - 2 * bq[ii]))
+            bf[ii] += (
+                kappa[ii]
+                * btau[ii]
+                * np.dot(btau[ii], (bq[ii + 1] + bq[ii - 1] - 2 * bq[ii]))
+            )
 
             # Improved tangent implementation
             # Eq. 12 in J. Chem. Phys. 113, 9978 (2000):
@@ -405,16 +411,12 @@ class NEBMover(Motion):
             if self.old_f.shape == (0,):
                 self.old_f = np.zeros(beads.q.shape, float)
             else:
-                raise ValueError(
-                    "Force size does not match system size."
-                )
+                raise ValueError("Force size does not match system size.")
         if self.old_d.shape != beads.q.shape:
             if self.old_d.shape == (0,):
                 self.old_d = np.zeros(beads.q.shape, float)
             else:
-                raise ValueError(
-                    "Direction size does not match system size."
-                )
+                raise ValueError("Direction size does not match system size.")
         if self.mode == "bfgs" and self.invhessian.size != (
             beads.q.size * beads.q.size
         ):
@@ -443,7 +445,9 @@ class NEBMover(Motion):
         if self.mode in ["damped_bfgs", "lbfgs"]:
             # L-BFGS/BFGS minimization
             # Initialize direction to the steepest descent direction
-            if step == 0:  # or np.sqrt(np.dot(self.bfgsm.d, self.bfgsm.d)) == 0.0: <-- this part for restarting at claimed minimum
+            if (
+                step == 0
+            ):  # or np.sqrt(np.dot(self.bfgsm.d, self.bfgsm.d)) == 0.0: <-- this part for restarting at claimed minimum
                 info(" @NEB: Initializing (L)BFGS", verbosity.debug)
                 fx, nebgrad = self.nebbfgsm(self.beads.q)
 
