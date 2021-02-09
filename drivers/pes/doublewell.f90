@@ -35,3 +35,25 @@
                 
         return
         end
+
+
+    SUBROUTINE dw_friction(nat,q,friction)
+        IMPLICIT NONE
+        integer                  :: nat, i, j, qi, qj, coori, coorj
+        real(kind=8),intent(in)  :: q(nat,3)
+        real(kind=8),intent(out) :: friction(3*nat,3*nat)
+
+        DO i = 1,nat
+            DO j = 1,nat
+                DO qi = 1,3
+                    coori = (i-1)*nat+qi
+                    DO qj = 1,3
+                        coorj = (j-1)*nat+qj
+                        friction(coori,coorj) = q(i,qi)*q(j,qj)
+                    END DO
+                END DO
+            END DO
+        END DO
+
+        return
+    end

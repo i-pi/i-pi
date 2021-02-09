@@ -166,6 +166,14 @@ class InputTrajectory(InputValue):
             "help": "How often should streams be flushed. 1 means each time, zero means never.",
         },
     )
+    attribs["extra_type"] = (
+        InputAttribute,
+        {
+            "dtype": str,
+            "default": "raw",
+            "help": "What extra to print from the different extra strings.",
+        },
+    )
 
     def __init__(self, help=None, default=None, dtype=None, dimension=None):
         """Initializes InputTrajectory.
@@ -188,10 +196,11 @@ class InputTrajectory(InputValue):
             format=self.format.fetch(),
             cell_units=self.cell_units.fetch(),
             ibead=self.bead.fetch(),
+            extra_type=self.extra_type.fetch(),
         )
 
     def store(self, traj):
-        """Stores a PropertyOutput object."""
+        """Stores a TrajectoryOutput object."""
 
         super(InputTrajectory, self).store(traj.what)
         self.stride.store(traj.stride)
@@ -200,6 +209,7 @@ class InputTrajectory(InputValue):
         self.format.store(traj.format)
         self.cell_units.store(traj.cell_units)
         self.bead.store(traj.ibead)
+        self.extra_type.store(traj.extra_type)
 
     def check(self):
         """Checks for optional parameters."""
