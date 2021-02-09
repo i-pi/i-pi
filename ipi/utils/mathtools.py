@@ -24,6 +24,7 @@ __all__ = [
     "exp_ut3x3",
     "root_herm",
     "logsumlog",
+    "sinch",
     "gaussian_inv",
 ]
 
@@ -276,15 +277,18 @@ def eigensystem_ut3x3(p):
 
     for i in range(3):
         eigp[i, i] = 1
-    eigp[0, 1] = -p[0, 1] / (p[0, 0] - p[1, 1])
-    eigp[1, 2] = -p[1, 2] / (p[1, 1] - p[2, 2])
-    eigp[0, 2] = -(p[0, 1] * p[1, 2] - p[0, 2] * p[1, 1] + p[0, 2] * p[2, 2]) / (
-        (p[0, 0] - p[2, 2]) * (p[2, 2] - p[1, 1])
-    )
-
+    eigp[0, 1] = -p[0, 1]
+    if eigp[0, 1] != 0.0:
+        eigp[0, 1] /= p[0, 0] - p[1, 1]
+    eigp[1, 2] = -p[1, 2]
+    if eigp[1, 2] != 0.0:
+        eigp[1, 2] /= p[1, 1] - p[2, 2]
+    eigp[0, 2] = -(p[0, 1] * p[1, 2] - p[0, 2] * p[1, 1] + p[0, 2] * p[2, 2])
+    if eigp[1, 2] != 0.0:
+        eigp[1, 2] /= (p[0, 0] - p[2, 2]) * (p[2, 2] - p[1, 1])
     for i in range(3):
         eigvals[i] = p[i, i]
-    return eigp, eigvals
+    return eigvals, eigp
 
 
 def det_ut3x3(h):
@@ -404,6 +408,50 @@ def root_herm(A):
         )
 
     return rv
+
+
+def _sinch(x):
+    """ Computes sinh(x)/x in a way that is stable for x->0 """
+
+    x2 = x * x
+    if x2 < 1e-12:
+        return 1 + (x2 / 6.0) * (1 + (x2 / 20.0) * (1 + (x2 / 42.0)))
+    else:
+        return np.sinh(x) / x
+
+
+sinch = np.vectorize(_sinch)
+
+
+def mat_taylor(x, function):
+    """compute matrix function as direct taylor expansion
+    Args:
+       x: matrix
+       function: the function to be expanded
+    Return:
+       function of matrix.
+    """
+    if not (x.shape[0] == x.shape[1]):
+        warning("input matrix is not squared")
+        return None
+    dim = x.shape[0]
+    I = np.identity(dim)
+    if function == "sinhx/x":
+        # compute sinhx/x by directly taylor
+        x2 = np.linalg.matrix_power(x, 2)
+        return I + np.matmul(
+            x2 / (2.0 * 3.0),
+            (
+                I
+                + np.matmul(
+                    x2 / (4.0 * 5.0),
+                    (I + np.matmul(x2 / (6.0 * 7.0), (I + x2 / (8.0 * 9.0)))),
+                )
+            ),
+        )
+
+    else:
+        warning("function {} not implemented".format(function))
 
 
 def gaussian_inv(x):

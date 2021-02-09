@@ -7,6 +7,7 @@ import tempfile
 import time
 
 driver_models = [
+    "dummy",
     "lj",
     "sg",
     "harm",
@@ -21,20 +22,21 @@ driver_models = [
 ]
 
 
-def get_driver_info(
+def get_test_settings(
     example_folder,
-    driver_info_file=".driver_info",
+    settings_file="test_settings.dat",
     driver="dummy",
     socket_mode="unix",
     port_number=33333,
     address_name="localhost",
     flags=[],
+    nsteps="2",
 ):
-    """This function looks for the existence of .driver_info file
-    to run the example with a meaningfull driver. If the file doesn't
-    exist, the dummy driver is assigned."""
+    """This function looks for the existence of test_settings.txt file.
+    This file can contain instructions like number of steps or driver name.
+    If the file doesn't  exist, the driver dummy is assigned."""
     try:
-        with open(Path(example_folder) / driver_info_file) as f:
+        with open(Path(example_folder) / settings_file) as f:
             flags = list()
             while True:
                 line = f.readline()
@@ -50,6 +52,8 @@ def get_driver_info(
                     address_name = line.split()[1]
                 elif "flags" in line:
                     flags.append({line.split()[1]: line.split()[2:]})
+                elif "nsteps" in line:
+                    nsteps = line.split()[1]
     except:
         pass
 
@@ -64,7 +68,9 @@ def get_driver_info(
         "flag": flags,
     }
 
-    return driver_info
+    test_settings = {"nsteps": nsteps}
+
+    return driver_info, test_settings
 
 
 def find_examples(parent, excluded_file="excluded_test.txt", examples=[]):
@@ -98,7 +104,7 @@ def modify_xml_2_dummy_test(
     output_name,
     nid,
     driver_info,
-    nsteps=2,
+    test_settings,
 ):
     """ Modify xml to run dummy tests """
     try:
@@ -132,10 +138,10 @@ def modify_xml_2_dummy_test(
 
     element = root.find("total_steps")
     if element is not None:
-        element.text = str(nsteps)
+        element.text = test_settings["nsteps"]
     else:
         new_element = ET.SubElement(root, "total_steps")
-        new_element.text = str(nsteps)
+        new_element.text = test_settings["nsteps"]
 
     tree.write(open(output_name, "wb"))
     return clients
@@ -166,11 +172,15 @@ class Runner_examples(object):
             print("temp folder: {}".format(self.tmp_dir))
 
             copy_tree(str(cwd), str(self.tmp_dir))
-            driver_info = get_driver_info(self.tmp_dir)
+            driver_info, test_settings = get_test_settings(self.tmp_dir)
 
             # Modify xml
             clients = modify_xml_2_dummy_test(
-                self.tmp_dir / "input.xml", self.tmp_dir / "new.xml", nid, driver_info
+                self.tmp_dir / "input.xml",
+                self.tmp_dir / "new.xml",
+                nid,
+                driver_info,
+                test_settings,
             )
             # Run i-pi
             ipi = sp.Popen(

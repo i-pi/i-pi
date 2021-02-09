@@ -23,7 +23,6 @@ from ipi.utils.io import open_backup
 from ipi.engine.properties import getkey
 from ipi.engine.atoms import *
 from ipi.engine.cell import *
-import json
 
 __all__ = [
     "PropertyOutput",
@@ -273,7 +272,7 @@ class TrajectoryOutput(BaseOutput):
         format="xyz",
         cell_units="atomic_unit",
         ibead=-1,
-        xtratype="info",
+        extra_type="raw",
     ):
         """Initializes a trajectory output stream opening the corresponding
         file name.
@@ -290,7 +289,7 @@ class TrajectoryOutput(BaseOutput):
            cell_units: A string specifying the units that the cell parameters are
               given in.
            ibead: If positive, prints out only the selected bead. If negative, prints out one file per bead.
-           xtratype: Specifies the type of extras string that is printed in the file
+           extra_type: Specifies the type of extras string that is printed in the file
         """
 
         self.filename = filename
@@ -302,7 +301,7 @@ class TrajectoryOutput(BaseOutput):
         self.cell_units = cell_units
         self.out = None
         self.nout = 0
-        self.xtratype = xtratype
+        self.extra_type = extra_type
 
     def bind(self, system, mode="w"):
         """Binds output proxy to System object.
@@ -343,6 +342,7 @@ class TrajectoryOutput(BaseOutput):
             "velocities",
             "forces",
             "extras",
+            "extras_component",
             "forces_sc",
             "momenta",
         ]:
@@ -350,7 +350,7 @@ class TrajectoryOutput(BaseOutput):
             # must write out trajectories for each bead, so must create b streams
 
             # prepare format string for file name
-            if getkey(self.what) == "extras":
+            if getkey(self.what) == "extras" or getkey(self.what) == "extras_component":
                 fmt_fn = self.filename + "_" + fmt_bead
             else:
                 fmt_fn = self.filename + "_" + fmt_bead + "." + self.format
@@ -363,9 +363,7 @@ class TrajectoryOutput(BaseOutput):
                 else:
                     # Create null outputs if a single bead output is chosen.
                     self.out.append(None)
-
         else:
-
             # open one file
             filename = self.filename + "." + self.format
             self.out = open_backup(filename, mode)
@@ -476,63 +474,36 @@ class TrajectoryOutput(BaseOutput):
         """
 
         key = getkey(what)
-        if key in ["extras"]:
+        if key in ["extras", "extras_component"]:
             stream.write(
                 " #*EXTRAS*# Step:  %10d  Bead:  %5d  \n"
                 % (self.system.simul.step + 1, b)
             )
-            try:
-                index = 0
-                for el, item in enumerate(data):
-                    if self.xtratype in item[b].keys():
-                        index = el
-                    try:
-                        if self.xtratype == "friction":
-                            for na in range(self.system.beads.natoms * 3):
-                                stream.write(
-                                    "%s\n"
-                                    % (
-                                        "".join(
-                                            "%15.8f" % el
-                                            for el in data[index][b][self.xtratype][
-                                                na
-                                                * (3 * self.system.beads.natoms) : (
-                                                    na + 1
-                                                )
-                                                * (3 * self.system.beads.natoms)
-                                            ]
-                                        ),
-                                    )
-                                )
-                        else:
-                            stream.write(
-                                "      ".join(
-                                    "%15.8f" % el
-                                    for el in data[index][b][self.xtratype]
-                                )
-                            )
-                            stream.write("\n")
-                    except:
-                        stream.write(json.dumps(data[index][b][self.xtratype]))
-                        stream.write("\n")
-            except:
-                try:
-                    info(
-                        "Sorry, your specified xtratype %s is not among the available options. \n"
-                        "The available keys are the following: %s "
-                        % (
-                            self.xtratype,
-                            ",".join("%s" % key for key in data[0][b].keys()),
-                        ),
-                        verbosity.low,
+            if self.extra_type in data:
+                if np.array(data[self.extra_type][b]).ndim == 2:
+                    stream.write(
+                        "\n".join(
+                            [
+                                "      ".join(["{:15.8f}".format(item) for item in row])
+                                for row in data[self.extra_type][b]
+                            ]
+                        )
                     )
-                except:
-                    info(
-                        "Sorry, no extras string has been passed, there are no available options for the xtratype "
-                        "attribute. \n",
-                        verbosity.low,
+                elif np.array(data[self.extra_type][b]).ndim == 1:
+                    stream.write(
+                        "      ".join(
+                            "%15.8f" % el for el in np.asarray(data[self.extra_type][b])
+                        )
                     )
-
+                else:
+                    stream.write("%s" % data[self.extra_type][b])
+                stream.write("\n")
+            else:
+                raise KeyError(
+                    "Extra type '"
+                    + self.extra_type
+                    + "' is not among the quantities returned by any of the forcefields."
+                )
             if flush:
                 stream.flush()
                 os.fsync(stream)

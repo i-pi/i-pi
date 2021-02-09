@@ -50,9 +50,9 @@
       ! SOCKET COMMUNICATION BUFFERS
       CHARACTER(LEN=12) :: header
       LOGICAL :: isinit=.false., hasdata=.false.
-      INTEGER cbuf, rid
+      INTEGER cbuf, rid, length
       CHARACTER(LEN=4096) :: initbuffer      ! it's unlikely a string this large will ever be passed...
-      CHARACTER(LEN=4096) :: string,string2,string3  ! it's unlikely a string this large will ever be passed...
+      CHARACTER(LEN=4096) :: string,string2,string3,trimmed  ! it's unlikely a string this large will ever be passed...
       DOUBLE PRECISION, ALLOCATABLE :: msgbuffer(:)
       
       ! PARAMETERS OF THE SYSTEM (CELL, ATOM POSITIONS, ...)
@@ -409,8 +409,6 @@
          ENDIF
       ENDIF
 
-!      OPEN(UNIT=32, FILE="driver_extras.json", ACTION="write")
-
       ! Calls the interface to the POSIX sockets library to open a communication channel
       CALL open_socket(socket, inet, port, host)
       nat = -1
@@ -759,24 +757,17 @@
      &          3x,a)') '"dipole": [',dip(1),",",dip(2),",",dip(3),"],"
                 string2 = TRIM(initbuffer) // TRIM(string)
                 initbuffer = TRIM(string2)
-!                WRITE(32,'(a)') '{'
-!                WRITE(32,'(a,3x,f15.8,a,f15.8,a,f15.8,3x,a)') &
-!     &                 '"dipole": [',dip(1),",",dip(2),",",dip(3),"] , "
-
                 WRITE(string,'(a)') '"friction": ['
                 string2 = TRIM(initbuffer) // TRIM(string)
                 initbuffer = TRIM(string2)
-                DO i=1,nat
-                    IF(i/=nat) THEN
-                        WRITE(string,'(f15.8,a,f15.8,a,f15.8, &
-     &          a,f15.8,a,f15.8,a,f15.8,a)') friction(i,1), &
-     &          ",",friction(i,2),",",friction(i,3),",",friction(i,4), &
-     &          ",",friction(i,5),",",friction(i,6),","
+                DO i=1,3*nat
+                    WRITE(string,'("[ ",*(f15.8,","))') friction(i,:)
+                    length = LEN_TRIM(string)
+                    trimmed = TRIM(string)
+                    IF(i==3*nat) THEN
+                        string = TRIM(trimmed(:length-1)) // "]"
                     ELSE
-                        WRITE(string,'(f15.8,a,f15.8,a,f15.8, &
-     &          a,f15.8,a,f15.8,a,f15.8)') friction(i,1),",", &
-     &          friction(i,2),",",friction(i,3),",",friction(i,4),",", &
-     &          friction(i,5),",",friction(i,6)
+                        string = TRIM(trimmed(:length-1)) // "],"
                     ENDIF
                     string2 = TRIM(initbuffer) // TRIM(string)
                     initbuffer = TRIM(string2)
@@ -788,26 +779,9 @@
                 IF (verbose > 1) WRITE(*,*) "!write!=> extra_length:", &
      &          cbuf
                 CALL writebuffer(socket,initbuffer,cbuf)
-!                WRITE(32,'(a)') '"friction": ['
-!                DO i=1,nat
-!                    IF(i/=nat) THEN
-!                        WRITE(32,'(f15.8,a,f15.8,a,f15.8,a, &
-!     &          f15.8,a,f15.8,a,f15.8,a)') friction(i,1),",", &
-!     &          friction(i,2),",",friction(i,3),",",friction(i,4),",", &
-!     &          friction(i,5),",",friction(i,6),","
-!                    ELSE
-!                        WRITE(32,'(f15.8,a,f15.8,a,f15.8,a, &
-!     &          f15.8,a,f15.8,a,f15.8)') friction(i,1),",", &
-!     &          friction(i,2),",",friction(i,3),",",friction(i,4),",", &
-!     &          friction(i,5),",",friction(i,6)
-!                    ENDIF
-!                END DO
-!                WRITE(32,'(a)') "]"
-!                WRITE(32,'(a)') "}"
                 IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ",  &
      &          initbuffer
             ELSEIF (vstyle==5 .or. vstyle==6 .or. vstyle==8) THEN ! returns the dipole through initbuffer
-               !initbuffer = " "
                WRITE(initbuffer, '(a,3x,f15.8,a,f15.8,a,f15.8, &
      &         3x,a)') '{"dipole": [',dip(1),",",dip(2),",",dip(3),"]}"
                cbuf = LEN_TRIM(initbuffer)
@@ -815,20 +789,16 @@
                IF (verbose > 1) WRITE(*,*)  &
      &         "    !write!=> extra_length: ", cbuf
                CALL writebuffer(socket,initbuffer,cbuf)
-!               WRITE(32,'(a)') "{"
-!               WRITE(32,'(a,3x,f15.8,a,f15.8,a,f15.8,3x,a)') &
-!     &         '"dipole": [',dip(1),",",dip(2),",",dip(3),"]"
-!               WRITE(32,'(a)') "}"
                IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ", &
      &         initbuffer
             ELSE
-               cbuf = 16 ! Size of the "extras" string
+               cbuf = 1 ! Size of the "extras" string
                CALL writebuffer(socket,cbuf) ! This would write out the "extras" string, but in this case we only use a dummy string.
                IF (verbose > 1) WRITE(*,*)  &
      &         "    !write!=> extra_length: ", cbuf
-               CALL writebuffer(socket,'{"nothing": [] }',16)
+               CALL writebuffer(socket,' ',1)
                IF (verbose > 1) WRITE(*,*)  &
-     &         "    !write!=> extra: nothing"
+     &         "    !write!=> extra: empty"
             ENDIF
             hasdata = .false.
          ELSE
@@ -836,7 +806,6 @@
             STOP "ENDED"
          ENDIF
       ENDDO
-!      CLOSE(32)
       IF (nat > 0) DEALLOCATE(atoms, forces, msgbuffer, friction)
  
     CONTAINS

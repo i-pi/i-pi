@@ -1,0 +1,60 @@
+<simulation threading='false'>
+    <ffsocket mode='unix' name='driver'>
+         <latency>  1.00000000e-03</latency>
+         <address> gas </address>
+         <exit_on_disconnect> False </exit_on_disconnect>
+   </ffsocket>
+   <total_steps>1000000</total_steps>
+   <output prefix='simulation'>
+      <trajectory stride='1000' filename='pos'> positions </trajectory>
+      <properties stride='100'> [ step, time, conserved, temperature, kinetic_md, potential, pressure_md, volume ] </properties>
+   </output>
+   <prng>
+      <seed>18885</seed>
+   </prng>
+   <system_template>
+   <labels> [IDX, TEMP] </labels>
+   <instance> [0,  0.2] </instance>
+   <instance> [1,  0.4] </instance>
+   <instance> [2,  0.6] </instance>
+   <instance> [3,  0.8] </instance>
+   <instance> [4,  1.0] </instance>
+   <instance> [5,  1.2] </instance>
+   <instance> [6,  1.4] </instance>
+   <instance> [7,  1.6] </instance>
+   <instance> [8,  1.8] </instance>
+   <template>	   
+   <system prefix='IDX'>
+      <forces> 
+          <force forcefield='driver'></force>
+      </forces>
+      <initialize nbeads='1'>
+        <file mode='xyz'> init.xyz</file>
+        <cell> [10.0, 0, 0, 0, 10.0, 0, 0, 0, 10.0] </cell>
+        <masses mode='manual'> [1.0] </masses>
+        <velocities mode='thermal'> TEMP </velocities>
+      </initialize>
+      <ensemble>
+         <temperature> TEMP </temperature>
+         <pressure> 1 </pressure>
+      </ensemble>
+      <motion mode='dynamics'>
+        <fixcom> False </fixcom>
+        <dynamics mode='npt'>
+            <timestep> 0.01 </timestep>
+            <barostat mode='flexible'>
+              <tau> 1 </tau>
+              <thermostat mode='langevin'>
+                <tau> 1 </tau>
+              </thermostat>
+              <hfix> [ offdiagonal, xx, yy ] </hfix>
+            </barostat>
+            <thermostat mode='langevin'>
+              <tau> 1 </tau>
+            </thermostat>
+        </dynamics>
+      </motion>
+  </system>
+  </template>
+  </system_template>
+</simulation>
