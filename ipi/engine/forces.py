@@ -935,7 +935,7 @@ class Forces(dobject):
                 dfkbself.ufvx.taint(taintme=False)
 
     def transfer_forces_manual(
-        self, new_q, new_v, new_forces, new_x=None, vir=np.zeros((3, 3))
+        self, new_q, new_v, new_forces, new_extra={}, vir=np.zeros((3, 3))
     ):
         """Manual (and flexible) version of the transfer forces function.
         Instead of passing a force object, list with vectors are passed
@@ -949,29 +949,25 @@ class Forces(dobject):
         assert len(self.mforces) == len(new_q), msg
         assert len(self.mforces) == len(new_v), msg
         assert len(self.mforces) == len(new_forces), msg
-        if new_x == None:
-            new_x = [[None] * self.nbeads] * len(self.mforces)
-            info("WARNING: No extras information has been passed.", verbosity.debug)
-
-        assert len(self.mforces) == len(new_x), msg
 
         for k in range(len(self.mforces)):
             mv = new_v[k]
             mf = new_forces[k]
             mq = new_q[k]
-            mextra = new_x[k]
+            mextra = new_extra[k]
             mself = self.mforces[k]
 
             assert mq.shape == mf.shape, msg
             assert mq.shape[0] == mv.shape[0], msg
             assert mself.nbeads == mv.shape[0], msg
             assert mself.nbeads == mq.shape[0], msg
-            assert mself.nbeads == len(mextra), msg
-            mxlist = mextra[:]
 
             dd(mself.beads).q.set(mq, manual=False)
             for b in range(mself.nbeads):
-                ufvx = [mv[b], mf[b], vir, mxlist[b]]
+                mx = {}
+                for key in mextra.keys():
+                    mx[key]=mextra[key][b]    
+                ufvx = [mv[b], mf[b], vir, mx]
                 dfkbself = dd(mself._forces[b])
                 dfkbself.ufvx.set(ufvx, manual=False)
                 dfkbself.ufvx.taint(taintme=False)

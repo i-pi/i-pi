@@ -35,7 +35,6 @@ from ipi.utils.instools import (
 )
 from ipi.utils.instools import print_instanton_hess, diag_banded, ms_pathway
 from ipi.utils.hesstools import get_hessian, clean_hessian, get_dynmat
-from ipi.utils.xtratools import listDict
 
 __all__ = ["InstantonMotion"]
 
@@ -411,9 +410,10 @@ class FrictionMapper(PesMapper):
 
     def initialize(self, q, forces):
         """ Initialize potential, forces and friction """
-        eta = np.array(forces.extras[0]["friction"]).reshape(
+        eta = np.array(forces.extras["friction"]).reshape(
             (q.shape[0], q.shape[1], q.shape[1])
         )
+
         self.save(forces.pots, -forces.f, eta)
 
     def set_z_friction(self, z_friction):
@@ -527,21 +527,22 @@ class FrictionMapper(PesMapper):
     def get_full_extras(self, reduced_forces, full_mspath, indexes):
         """ Get the full extra strings """
         diction = {}
-        for key in reduced_forces.extras[0].listofKeys():
-            if str(key) != "nothing":
-                rkey = np.array(reduced_forces.extras[0][key])
+        for key in reduced_forces.extras.keys():
+            if str(key) != "raw":
+                red_data = np.array(reduced_forces.extras[key])
                 if self.spline:
                     from scipy.interpolate import interp1d
 
                     red_mspath = full_mspath[indexes]
-                    spline = interp1d(red_mspath, rkey.T, kind="cubic")
-                    full_key = spline(full_mspath).T
+                    spline = interp1d(red_mspath, red_data.T, kind="cubic")
+                    full_data = spline(full_mspath).T
                 else:
-                    full_key = rkey
-                if reduced_forces.extras[0][key]:
-                    diction[key] = full_key
+                    full_data = red_data
+            else:
+                 full_data = reduced_forces.extras[key]
+            diction[key] = full_data
 
-        return listDict.fromDict(diction)
+        return diction
 
     def __call__(self, x, new_disc=True):
         """ Computes energy and gradient for optimization step"""
@@ -552,7 +553,6 @@ class FrictionMapper(PesMapper):
             full_q, full_mspath, get_all_info=True
         )
 
-        # The following has to be joined to the json implementation
         full_extras = self.get_full_extras(reduced_forces, full_mspath, indexes)
         full_eta = np.zeros(
             (self.dbeads.nbeads, self.dbeads.natoms * 3, self.dbeads.natoms * 3)
