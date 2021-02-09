@@ -539,7 +539,7 @@ class FrictionMapper(PesMapper):
                 else:
                     full_data = red_data
             else:
-                 full_data = reduced_forces.extras[key]
+                full_data = reduced_forces.extras[key]
             diction[key] = full_data
 
         return diction

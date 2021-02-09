@@ -966,7 +966,7 @@ class Forces(dobject):
             for b in range(mself.nbeads):
                 mx = {}
                 for key in mextra.keys():
-                    mx[key]=mextra[key][b]    
+                    mx[key] = mextra[key][b]
                 ufvx = [mv[b], mf[b], vir, mx]
                 dfkbself = dd(mself._forces[b])
                 dfkbself.ufvx.set(ufvx, manual=False)
