@@ -950,7 +950,7 @@ class Forces(dobject):
         assert len(self.mforces) == len(new_v), msg
         assert len(self.mforces) == len(new_forces), msg
         if new_extra is None:
-             new_extra = [{} for i in range(len(self.mforces))]
+            new_extra = [{} for i in range(len(self.mforces))]
         for k in range(len(self.mforces)):
             mv = new_v[k]
             mf = new_forces[k]
