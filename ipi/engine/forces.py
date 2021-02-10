@@ -935,7 +935,7 @@ class Forces(dobject):
                 dfkbself.ufvx.taint(taintme=False)
 
     def transfer_forces_manual(
-        self, new_q, new_v, new_forces, new_extra={}, vir=np.zeros((3, 3))
+        self, new_q, new_v, new_forces, new_extra=None, vir=np.zeros((3, 3))
     ):
         """Manual (and flexible) version of the transfer forces function.
         Instead of passing a force object, list with vectors are passed
@@ -949,7 +949,8 @@ class Forces(dobject):
         assert len(self.mforces) == len(new_q), msg
         assert len(self.mforces) == len(new_v), msg
         assert len(self.mforces) == len(new_forces), msg
-
+        if new_extra is None:
+             new_extra = [{} for i in range(len(self.mforces))]
         for k in range(len(self.mforces)):
             mv = new_v[k]
             mf = new_forces[k]
