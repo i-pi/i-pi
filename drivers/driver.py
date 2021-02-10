@@ -59,6 +59,14 @@ def dummy_driver(cell, pos):
     extras = "nada"
     return pot, force, vir, extras
 
+def harm_driver(cell, pos):
+    """ Silly harmonic potential, with unit frequency in a.u."""
+    pot = (pos**2).sum()*0.5
+    force = -pos  # makes a zero force with same shape as pos
+    vir = cell * 0.0  # makes a zero virial with same shape as cell
+    extras = "nada"
+    return pot, force, vir, extras
+
 
 def run_driver(unix=False, address="", port=12345, driver_function=dummy_driver):
     """Minimal socket client for i-PI."""
@@ -129,7 +137,6 @@ def run_driver(unix=False, address="", port=12345, driver_function=dummy_driver)
             send_data(sock, np.int32(nat))
             send_data(sock, force)
             send_data(sock, vir)
-            print(len(extras))
             send_data(sock, np.int32(len(extras)))
             sock.sendall(extras.encode("utf-8"))
 
@@ -164,11 +171,26 @@ if __name__ == "__main__":
         default=12345,
         help="TCP/IP port number. Ignored when using UNIX domain sockets.",
     )
+    parser.add_argument(
+        "-m",
+        "--mode",
+        type=str,
+        default="dummy",
+        help="""Type of potential to be used to compute the potential and its derivatives.
+                Currently implemented: [dummy, harmonic]
+        """,
+    )
 
     args = parser.parse_args()
+    
+    if args.mode == "harmonic":
+        d_f = harm_driver
+    else:
+        d_f = dummy_driver
+        
     run_driver(
         unix=args.unix,
         address=args.address,
         port=args.port,
-        driver_function=dummy_driver,
+        driver_function=d_f,
     )
