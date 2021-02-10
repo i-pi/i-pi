@@ -410,6 +410,8 @@ class FrictionMapper(PesMapper):
 
     def initialize(self, q, forces):
         """ Initialize potential, forces and friction """
+        print('ALBERTO-friction')
+        print(forces.extras["friction"].shape)
         eta = np.array(forces.extras["friction"]).reshape(
             (q.shape[0], q.shape[1], q.shape[1])
         )
@@ -1227,8 +1229,7 @@ class HessianOptimizer(DummyOptimizer):
 
         self.optarrays["hessian"] = geop.optarrays["hessian"]
         if self.options["friction"]:
-
-            if geop.optarrays["fric_hessian"].size != (
+            if geop.optarrays["fric_hessian"].shape != (
                 self.beads.nbeads,
                 self.beads.natoms * 3,
                 self.beads.natoms * 3,
