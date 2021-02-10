@@ -417,10 +417,21 @@ class Driver(DriverSocket):
         if mxtra:
             try:
                 mxtradict = json.loads(mxtra)
-                info("mxtradict JSON has been loaded.", verbosity.debug)
+                info("Extra string JSON has been loaded.", verbosity.debug)
             except:
-                mxtradict["info"] = mxtra
-                info("mxtradict traditional string has been loaded.", verbosity.debug)
+                # if we can't parse it as a dict, issue a warning and carry on
+                info(
+                    "Extra string could not be loaded as a dictionary. Extra=" + mxtra,
+                    verbosity.debug,
+                )
+                mxtradict = {}
+                pass
+            if "raw" in mxtradict:
+                raise ValueError(
+                    "'raw' cannot be used as a field in a JSON-formatted extra string"
+                )
+
+            mxtradict["raw"] = mxtra
 
         return [mu, mf, mvir, mxtradict]
 

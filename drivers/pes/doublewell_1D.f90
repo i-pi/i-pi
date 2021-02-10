@@ -63,23 +63,21 @@
 
     SUBROUTINE dw1d_friction(nat,q,friction)
         IMPLICIT NONE
-        integer                  :: nat, i
+        integer                  :: nat, i, j, qi, qj, coori, coorj
         real(kind=8),intent(in)  :: q(nat,3)
-        real(kind=8),intent(out) :: friction(nat,6)
-        real(kind=8)             :: x,y,z
+        real(kind=8),intent(out) :: friction(3*nat,3*nat)
 
         DO i = 1,nat
-            x = q(i,1)
-            y = q(i,2)
-            z = q(i,3)
-
-            friction(i,1) = x**2
-            friction(i,2) = y**2
-            friction(i,3) = z**2
-            friction(i,4) = x*y
-            friction(i,5) = x*z
-            friction(i,6) = y*z
-        ENDDO
+            DO j = 1,nat
+                DO qi = 1,3
+                    coori = (i-1)*nat+qi
+                    DO qj = 1,3
+                        coorj = (j-1)*nat+qj
+                        friction(coori,coorj) = q(i,qi)*q(j,qj)
+                    END DO
+                END DO
+            END DO
+        END DO
 
         return
     END
