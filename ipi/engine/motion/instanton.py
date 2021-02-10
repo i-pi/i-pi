@@ -441,7 +441,13 @@ class FrictionMapper(PesMapper):
         # nbeads = self.dbeads.nbeads
 
         s = self.eta
-        dgdq = s ** 0.5
+        #ALBERTO 
+        print('#ALBERTO')
+        from scipy.linalg import sqrtm
+        dgdq = np.zeros(s.shape)
+        for i in range(self.dbeads.nbeads):
+            dgdq[i]=sqrtm(s[i])
+        #dgdq = s ** 0.5 -> won't work for multiD
         # gq = self.obtain_g(s)
 
         z_k = np.multiply(self.omegak, self.z_friction)[:, np.newaxis]
@@ -451,6 +457,7 @@ class FrictionMapper(PesMapper):
 
         h_fric = np.zeros((ndof, ndof))
 
+        print('#ALBERTO-check this')
         # ALBERTO
         # Block diag:
         # g = self.nm.transform.nm2b(z_k * gq_k)[active_beads]
@@ -481,7 +488,13 @@ class FrictionMapper(PesMapper):
 
     def obtain_g(self, s):
         """ Computes g from s """
-        ss = s ** 0.5
+        print('#ALBERTO')
+        from scipy.linalg import sqrtm
+        ss = np.zeros(s.shape)
+        for i in range(self.dbeads.nbeads):
+            ss[i]=sqrtm(s[i])
+        #ss = s ** 0.5 -> won't work for multiD 
+
         from scipy.interpolate import interp1d
         from scipy.integrate import quad
 
@@ -507,7 +520,12 @@ class FrictionMapper(PesMapper):
         """ Computes friction component of the energy and gradient """
 
         s = self.eta
-        dgdq = s ** 0.5
+        print('#ALBERTO')
+        from scipy.linalg import sqrtm
+        dgdq = np.zeros(s.shape)
+        for i in range(self.dbeads.nbeads):
+            dgdq[i]=sqrtm(s[i])
+        #dgdq = s ** 0.5 -> won't work for multiD
         gq = self.obtain_g(s)
 
         z_k = np.multiply(self.omegak, self.z_friction)[:, np.newaxis]
