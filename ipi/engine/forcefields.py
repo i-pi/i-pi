@@ -1100,7 +1100,6 @@ class FFCommittee(ForceField):
             "committee_pot": rescaled_pots,
             "committee_force": rescaled_frcs.reshape(len(rescaled_pots), -1),
             "committee_virial": rescaled_virs.reshape(len(rescaled_pots), -1),
-            "committee_extras": xtrs,
             "committee_uncertainty": std_pot,
         }
 
@@ -1111,7 +1110,17 @@ class FFCommittee(ForceField):
             r["result"][3]["baseline_extras"] = (baseline_xtr,)
             r["result"][3]["wb_mixing"] = (s_b2 / (s_b2 + var_pot),)
 
-        r["result"][3]["raw"] = json.dumps(r["result"][3], cls=NumpyEncoder)
+        # "dissolve" the extras dictionaries into a list
+        for k in xtrs[0].keys():
+            if ("committee_" + k) in r["result"][3].keys():
+                raise ValueError(
+                    "Name clash between extras key "
+                    + k
+                    + " and default committee extras"
+                )
+            r["result"][3][("committee_" + k)] = []
+            for x in xtrs:
+                r["result"][3][("committee_" + k)].append(x[k])
 
         if self.active_thresh > 0.0 and std_pot > self.active_thresh:
             dumps = json.dumps(
