@@ -2,6 +2,7 @@
 import socket
 import argparse
 import numpy as np
+from drivers import *
 
 description = """
 Minimal example of a Python driver connecting to i-PI and exchanging energy, forces, etc.
@@ -58,16 +59,6 @@ def dummy_driver(cell, pos):
     vir = cell * 0.0  # makes a zero virial with same shape as cell
     extras = "nada"
     return pot, force, vir, extras
-
-
-def harm_driver(cell, pos):
-    """ Silly harmonic potential, with unit frequency in a.u."""
-    pot = (pos ** 2).sum() * 0.5
-    force = -pos  # makes a zero force with same shape as pos
-    vir = cell * 0.0  # makes a zero virial with same shape as cell
-    extras = "nada"
-    return pot, force, vir, extras
-
 
 def run_driver(unix=False, address="", port=12345, driver_function=dummy_driver):
     """Minimal socket client for i-PI."""
@@ -184,10 +175,12 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    if args.mode == "harmonic":
-        d_f = harm_driver
-    else:
+    if args.mode in __drivers__:
+        d_f = __drivers__[args.mode]
+    elif args.mode == "dummy":
         d_f = dummy_driver
+    else:
+        raise ValueError("Unsupported driver mode ", args.mode)
 
     run_driver(
         unix=args.unix,
