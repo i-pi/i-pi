@@ -2,9 +2,7 @@
 
 from .harmonic import harm_driver
 
-__all__ = ["__drivers__", "harm_driver" ] 
+__all__ = ["__drivers__", "harm_driver"]
 
-# dictionary linking strings 
-__drivers__ = {
-    "harmonic" : harm_driver
-    }
+# dictionary linking strings
+__drivers__ = {"harmonic": harm_driver}

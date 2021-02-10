@@ -60,6 +60,7 @@ def dummy_driver(cell, pos):
     extras = "nada"
     return pot, force, vir, extras
 
+
 def run_driver(unix=False, address="", port=12345, driver_function=dummy_driver):
     """Minimal socket client for i-PI."""
 

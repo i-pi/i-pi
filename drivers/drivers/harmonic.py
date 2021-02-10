@@ -1,5 +1,6 @@
 """ Harmonic potential """
 
+
 def harm_driver(cell, pos):
     """ Silly harmonic potential, with unit frequency in a.u."""
     pot = (pos ** 2).sum() * 0.5
