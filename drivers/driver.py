@@ -59,9 +59,10 @@ def dummy_driver(cell, pos):
     extras = "nada"
     return pot, force, vir, extras
 
+
 def harm_driver(cell, pos):
     """ Silly harmonic potential, with unit frequency in a.u."""
-    pot = (pos**2).sum()*0.5
+    pot = (pos ** 2).sum() * 0.5
     force = -pos  # makes a zero force with same shape as pos
     vir = cell * 0.0  # makes a zero virial with same shape as cell
     extras = "nada"
@@ -182,12 +183,12 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-    
+
     if args.mode == "harmonic":
         d_f = harm_driver
     else:
         d_f = dummy_driver
-        
+
     run_driver(
         unix=args.unix,
         address=args.address,
