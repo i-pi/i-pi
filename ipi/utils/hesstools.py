@@ -240,6 +240,10 @@ def get_hessian(
                         + ".tmp). "
                     )
                 )
+                if (   b.shape == eta_h.shape  ):  # Check that the last temporary file was properly written
+                  break
+                else:
+                  continue
 
     # Start calculation:
     for j in range(i0 + 1, ii):
