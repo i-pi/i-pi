@@ -52,16 +52,7 @@ def Message(mystr):
     return str.ljust(str.upper(mystr), HDRLEN).encode()
 
 
-def dummy_driver(cell, pos):
-    """ Does nothing, but returns properties that can be used by the driver loop."""
-    pot = 0.0
-    force = pos * 0.0  # makes a zero force with same shape as pos
-    vir = cell * 0.0  # makes a zero virial with same shape as cell
-    extras = "nada"
-    return pot, force, vir, extras
-
-
-def run_driver(unix=False, address="", port=12345, driver_function=dummy_driver):
+def run_driver(unix=False, address="", port=12345, driver=Dummy_driver()):
     """Minimal socket client for i-PI."""
 
     # Opens a socket to i-PI
@@ -121,7 +112,7 @@ def run_driver(unix=False, address="", port=12345, driver_function=dummy_driver)
             pos = recv_data(sock, pos)
 
             ##### THIS IS THE TIME TO DO SOMETHING WITH THE POSITIONS!
-            pot, force, vir, extras = driver_function(cell, pos)
+            pot, force, vir, extras = driver(cell, pos)
             f_data = True
         elif header == Message("GETFORCE"):
             sock.sendall(Message("FORCEREADY"))
@@ -173,13 +164,21 @@ if __name__ == "__main__":
                 Currently implemented: [dummy, harmonic]
         """,
     )
+    parser.add_argument(
+        "-o",
+        "--param",
+        type=str,
+        default=None,
+        help="""Paramenters required to run the driver
+        """,
+    )
 
     args = parser.parse_args()
 
     if args.mode in __drivers__:
-        d_f = __drivers__[args.mode]
+        d_f = __drivers__[args.mode](args.param)
     elif args.mode == "dummy":
-        d_f = dummy_driver
+        d_f = Dummy_driver(args.param)
     else:
         raise ValueError("Unsupported driver mode ", args.mode)
 
@@ -187,5 +186,5 @@ if __name__ == "__main__":
         unix=args.unix,
         address=args.address,
         port=args.port,
-        driver_function=d_f,
+        driver=d_f,
     )
