@@ -196,6 +196,7 @@ def get_hessian(
     for i in fixatoms:
         fixdofs.extend([3 * i, 3 * i + 1, 3 * i + 2])
     ii = natoms * 3
+    activedof = np.delete(np.arange(ii),fixdofs) 
     ncalc = ii - len(fixdofs)
     if x0.size != natoms * 3 * nbeads:
         raise ValueError(
@@ -250,8 +251,9 @@ def get_hessian(
         if j in fixdofs:
             continue
         else:
+            ndone = len(activedof[activedof<j])
             info(
-                " @get_hessian: Computing hessian: %d of %d" % ((j + 1), ncalc),
+                " @get_hessian: Computing hessian: %d of %d" % (ndone+1, ncalc),
                 verbosity.low,
             )
             x = x0.copy()

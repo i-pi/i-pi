@@ -168,7 +168,8 @@ class InstantonMotion(Motion):
             self.options["hessian_asr"] = hessian_asr
             self.options["hessian_init"] = hessian_init
             self.optarrays["hessian"] = hessian
-            self.optarrays["fric_hessian"] = fric_hessian
+            if self.options['friction']:
+                self.optarrays["fric_hessian"] = fric_hessian
 
             if self.options["opt"] == "nichols":
                 self.optimizer = NicholsOptimizer()
@@ -1088,12 +1089,11 @@ class DummyOptimizer(dobject):
                     fixatoms=self.fixatoms,
                     friction=self.options["friction"],
                 )
-
+                
                 if self.options["friction"]:
                     friction_hessian = current_hessian[1]
-                    self.optarrays["fric_hessian"][:] = self.fix.get_full_vector(
-                        friction_hessian, 4
-                    )
+                    #self.optarrays["fric_hessian"][:] = self.fix.get_full_vector(friction_hessian, 4 )
+                    self.optarrays["fric_hessian"][:] = friction_hessian
                     print_instanton_hess(
                         self.options["prefix"] + "fric_FINAL",
                         step,
@@ -1106,7 +1106,8 @@ class DummyOptimizer(dobject):
                 else:
                     phys_hessian = current_hessian
 
-                self.optarrays["hessian"][:] = self.fix.get_full_vector(phys_hessian, 2)
+                #self.optarrays["hessian"][:] = self.fix.get_full_vector(phys_hessian, 2)
+                self.optarrays["hessian"][:] = phys_hessian
 
                 print_instanton_hess(
                     self.options["prefix"] + "_FINAL",
@@ -1268,7 +1269,7 @@ class HessianOptimizer(DummyOptimizer):
               'Hessian_init' is false, 'friction' is true so an initial fric_hessian (of the proper size) must be provided.
                     """
                     )
-        self.optarrays["fric_hessian"] = geop.optarrays["fric_hessian"]
+            self.optarrays["fric_hessian"] = geop.optarrays["fric_hessian"]
 
     def initialize(self, step):
 
@@ -1321,7 +1322,8 @@ class HessianOptimizer(DummyOptimizer):
                 phys_hessian = active_hessian
 
             print("Check phys_hessian")
-            self.optarrays["hessian"][:] = self.fix.get_full_vector(phys_hessian, 2)
+            #self.optarrays["hessian"][:] = self.fix.get_full_vector(phys_hessian, 2)
+            self.optarrays["hessian"][:] = phys_hessian
 
         self.update_old_pos_for()
 

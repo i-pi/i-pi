@@ -15,7 +15,7 @@ def banded_hessian(h, sm, masses=True, shift=0.001):
     natoms = sm.fix.fixbeads.natoms
     coef = sm.coef  # new_disc
     m3 = sm.fix.fixbeads.m3
-    omega2 = sm.omega2
+    omega2 = sm.omegan**2
 
     ii = natoms * 3 * nbeads
     ndiag = natoms * 3 + 1  # only upper diagonal form
@@ -464,4 +464,4 @@ class Fix(object):
         elif t == 3:
             return vector[:, self.mask2]
         else:
-            raise ValueError("@apply_fix_atoms: type number is not valid")
+            raise ValueError("@apply_fix_atoms: type number {} is not valid".format(t))
