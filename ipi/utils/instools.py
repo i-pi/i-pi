@@ -15,7 +15,7 @@ def banded_hessian(h, sm, masses=True, shift=0.001):
     natoms = sm.fix.fixbeads.natoms
     coef = sm.coef  # new_disc
     m3 = sm.fix.fixbeads.m3
-    omega2 = sm.omegan**2
+    omega2 = sm.omegan ** 2
 
     ii = natoms * 3 * nbeads
     ndiag = natoms * 3 + 1  # only upper diagonal form

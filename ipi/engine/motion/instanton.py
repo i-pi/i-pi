@@ -168,7 +168,7 @@ class InstantonMotion(Motion):
             self.options["hessian_asr"] = hessian_asr
             self.options["hessian_init"] = hessian_init
             self.optarrays["hessian"] = hessian
-            if self.options['friction']:
+            if self.options["friction"]:
                 self.optarrays["fric_hessian"] = fric_hessian
 
             if self.options["opt"] == "nichols":
@@ -411,7 +411,7 @@ class FrictionMapper(PesMapper):
 
     def initialize(self, q, forces):
         """ Initialize potential, forces and friction """
-        print('ALBERTO-friction')
+        print("ALBERTO-friction")
         print(forces.extras["friction"].shape)
         eta = np.array(forces.extras["friction"]).reshape(
             (q.shape[0], q.shape[1], q.shape[1])
@@ -442,13 +442,14 @@ class FrictionMapper(PesMapper):
         # nbeads = self.dbeads.nbeads
 
         s = self.eta
-        #ALBERTO 
-        print('#ALBERTO')
+        # ALBERTO
+        print("#ALBERTO")
         from scipy.linalg import sqrtm
+
         dgdq = np.zeros(s.shape)
         for i in range(self.dbeads.nbeads):
-            dgdq[i]=sqrtm(s[i])
-        #dgdq = s ** 0.5 -> won't work for multiD
+            dgdq[i] = sqrtm(s[i])
+        # dgdq = s ** 0.5 -> won't work for multiD
         # gq = self.obtain_g(s)
 
         z_k = np.multiply(self.omegak, self.z_friction)[:, np.newaxis]
@@ -458,7 +459,7 @@ class FrictionMapper(PesMapper):
 
         h_fric = np.zeros((ndof, ndof))
 
-        print('#ALBERTO-check this')
+        print("#ALBERTO-check this")
         # ALBERTO
         # Block diag:
         # g = self.nm.transform.nm2b(z_k * gq_k)[active_beads]
@@ -489,12 +490,13 @@ class FrictionMapper(PesMapper):
 
     def obtain_g(self, s):
         """ Computes g from s """
-        print('#ALBERTO')
+        print("#ALBERTO")
         from scipy.linalg import sqrtm
+
         ss = np.zeros(s.shape)
         for i in range(self.dbeads.nbeads):
-            ss[i]=sqrtm(s[i])
-        #ss = s ** 0.5 -> won't work for multiD 
+            ss[i] = sqrtm(s[i])
+        # ss = s ** 0.5 -> won't work for multiD
 
         from scipy.interpolate import interp1d
         from scipy.integrate import quad
@@ -521,12 +523,13 @@ class FrictionMapper(PesMapper):
         """ Computes friction component of the energy and gradient """
 
         s = self.eta
-        print('#ALBERTO')
+        print("#ALBERTO")
         from scipy.linalg import sqrtm
+
         dgdq = np.zeros(s.shape)
         for i in range(self.dbeads.nbeads):
-            dgdq[i]=sqrtm(s[i])
-        #dgdq = s ** 0.5 -> won't work for multiD
+            dgdq[i] = sqrtm(s[i])
+        # dgdq = s ** 0.5 -> won't work for multiD
         gq = self.obtain_g(s)
 
         z_k = np.multiply(self.omegak, self.z_friction)[:, np.newaxis]
@@ -1089,10 +1092,10 @@ class DummyOptimizer(dobject):
                     fixatoms=self.fixatoms,
                     friction=self.options["friction"],
                 )
-                
+
                 if self.options["friction"]:
                     friction_hessian = current_hessian[1]
-                    #self.optarrays["fric_hessian"][:] = self.fix.get_full_vector(friction_hessian, 4 )
+                    # self.optarrays["fric_hessian"][:] = self.fix.get_full_vector(friction_hessian, 4 )
                     self.optarrays["fric_hessian"][:] = friction_hessian
                     print_instanton_hess(
                         self.options["prefix"] + "fric_FINAL",
@@ -1106,7 +1109,7 @@ class DummyOptimizer(dobject):
                 else:
                     phys_hessian = current_hessian
 
-                #self.optarrays["hessian"][:] = self.fix.get_full_vector(phys_hessian, 2)
+                # self.optarrays["hessian"][:] = self.fix.get_full_vector(phys_hessian, 2)
                 self.optarrays["hessian"][:] = phys_hessian
 
                 print_instanton_hess(
@@ -1322,7 +1325,7 @@ class HessianOptimizer(DummyOptimizer):
                 phys_hessian = active_hessian
 
             print("Check phys_hessian")
-            #self.optarrays["hessian"][:] = self.fix.get_full_vector(phys_hessian, 2)
+            # self.optarrays["hessian"][:] = self.fix.get_full_vector(phys_hessian, 2)
             self.optarrays["hessian"][:] = phys_hessian
 
         self.update_old_pos_for()
