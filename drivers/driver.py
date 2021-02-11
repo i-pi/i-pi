@@ -168,7 +168,7 @@ if __name__ == "__main__":
         "-o",
         "--param",
         type=str,
-        default=None,
+        default="",
         help="""Paramenters required to run the driver
         """,
     )
