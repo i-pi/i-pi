@@ -114,8 +114,8 @@ BEFORE proceeding to a pull request, the minimal requirement is that you run
 
 ::
 
-  $ make -f Makefile.style lint
-  $ make -f Makefile.style pretty 
+  $ make lint
+  $ make pretty 
 
 This will ensure the formatting and linting requirement are applied in the whole 
 directory tree. Please resolve any warnings or errors that may appear. Your
