@@ -1163,7 +1163,7 @@ class DummyOptimizer(dobject):
         """ General tasks that have to be performed before actual step"""
 
         if self.exit:
-            softexit.trigger("Geometry optimzation converged. Exiting simulation")
+            softexit.trigger("Geometry optimization converged. Exiting simulation")
 
         if not self.init:
             self.initialize(step)
