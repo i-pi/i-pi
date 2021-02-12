@@ -271,7 +271,11 @@ class PesMapper(object):
 
         # self.nm = mapper.nm
         # self.rp_factor = mapper.rp_factor
-        self.C = mapper.nm.transform._b2o_nm
+        if self.dbeads.nbeads>1:
+           self.C = mapper.nm.transform._b2o_nm
+        else: 
+           self.C = 1
+
         self.omegak = mapper.rp_factor * mapper.nm.get_o_omegak()
 
         self.fix = mapper.fix
@@ -639,7 +643,10 @@ class SpringMapper(object):
         self.dbeads = mapper.beads.copy()
         # self.nm = mapper.nm
         # self.rp_factor = mapper.rp_factor
-        self.C = mapper.nm.transform._b2o_nm
+        if self.dbeads.nbeads >1:
+            self.C = mapper.nm.transform._b2o_nm
+        else:
+            self.C = 1
         self.omegak = mapper.rp_factor * mapper.nm.get_o_omegak()
         self.omegan = mapper.rp_factor * mapper.nm.omegan
 
