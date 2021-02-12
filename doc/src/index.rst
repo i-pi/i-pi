@@ -31,7 +31,7 @@ perform simple benchmarks and preparatory simulations.
 This documentation is structured as follows:
 
 .. toctree::
-   :maxdepth: 1
+   :maxdepth: 2
 
    introduction
    getting-started
