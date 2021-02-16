@@ -3,6 +3,21 @@ Contributing
 
 DRAFT!
 
+List of points to be addressed 
+- Welcome contributors
+- Try to do a table of contents (need to find out how)
+- Link to: homepage, issues/bug reports and forum
+- Where are our tests
+- What is the PR protocol (add example, etc.)
+- How to report bugs and ask about enhancements
+- Where to post "how to use i-PI questions"
+- How to get your contribution listed
+- Details about client codes and how to contribute a feature involving a client
+
+
+Current text in README
+----------------------
+
 i-PI is an open source project, and everyone is welcome to contribute
 with bug fixes, documentation, examples, new features, regression tests, etc.
 
@@ -21,3 +36,5 @@ Checklist to create a pull request:
 - Make sure that all the automatic checks pass without any error
 
 We are looking forward to your contribution!
+
+
