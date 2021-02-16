@@ -146,6 +146,7 @@ parser.add_option(
     default=False,
     help="add references to a latex help file. Ignored if -l is not present",
 )
+
 (options, args) = parser.parse_args()
 
 if options.opt not in objects:

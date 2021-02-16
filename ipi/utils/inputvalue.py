@@ -763,6 +763,145 @@ class Input(object):
         return rstr
 
 
+    def help_rst(self, name="", indent="", level=0, stop_level=None):
+        """Function to generate an rst formatted help file.
+
+        Args:
+           name: A string giving the name of the root node.
+           indent: The indent at the beginning of a line.
+           level: Current level of the hierarchy being considered.
+           stop_level: The depth to which information will be given. If not given,
+              all information will be given
+
+        Returns:
+           An xml formatted string.
+        """
+
+        # stops when we've printed out the prerequisite number of levels
+        if stop_level is not None and level > stop_level:
+            return ""
+
+        # these are booleans which tell us whether there are any attributes
+        # and fields to print out
+        show_attribs = len(self.attribs) != 0
+        show_fields = (
+            not (len(self.instancefields) == 0 and len(self.dynamic) == 0)
+        ) and level != stop_level
+
+        rstr = ""
+        rstr = indent + "<" + name
+        # prints tag name
+        for a in self.attribs:
+            if not (a == "units" and self._dimension == "undefined"):
+                # don't print out units if not necessary
+                rstr += " " + a + "=''"  # prints attribute names
+        rstr += ">\n"
+
+        # prints help string
+        rstr += indent + "   <help> " + self._help + " </help>\n"
+        if show_attribs:
+            for a in self.attribs:
+                if not (a == "units" and self._dimension == "undefined"):
+                    # information about tags is found in tags beginning with the name
+                    # of the attribute
+                    rstr += (
+                        indent
+                        + "   <"
+                        + a
+                        + "_help> "
+                        + self.__dict__[a]._help
+                        + " </"
+                        + a
+                        + "_help>\n"
+                    )
+
+        # prints dimensionality of the object
+        if hasattr(self, "_dimension") and self._dimension != "undefined":
+            rstr += indent + "   <dimension> " + self._dimension + " </dimension>\n"
+
+        if self._default is not None and issubclass(self.__class__, InputAttribute):
+            # We only print out the default if it has a well defined value.
+            # For classes such as InputCell, self._default is not the value,
+            # instead it is an object that is stored, putting the default value in
+            # self.value. For this reason we print out self.value at this stage,
+            # and not self._default
+            rstr += (
+                indent
+                + "   <default>"
+                + self.pprint(self.value, indent=indent, latex=False)
+                + "</default>\n"
+            )
+        if show_attribs:
+            for a in self.attribs:
+                if not (a == "units" and self._dimension == "undefined"):
+                    if self.__dict__[a]._default is not None:
+                        rstr += (
+                            indent
+                            + "   <"
+                            + a
+                            + "_default>"
+                            + self.pprint(
+                                self.__dict__[a]._default, indent=indent, latex=False
+                            )
+                            + "</"
+                            + a
+                            + "_default>\n"
+                        )
+
+        # prints out valid options, if required.
+        if hasattr(self, "_valid"):
+            if self._valid is not None:
+                rstr += indent + "   <options> " + str(self._valid) + " </options>\n"
+        if show_attribs:
+            for a in self.attribs:
+                if not (a == "units" and self._dimension == "undefined"):
+                    if hasattr(self.__dict__[a], "_valid"):
+                        if self.__dict__[a]._valid is not None:
+                            rstr += (
+                                indent
+                                + "   <"
+                                + a
+                                + "_options> "
+                                + str(self.__dict__[a]._valid)
+                                + " </"
+                                + a
+                                + "_options>\n"
+                            )
+
+        # if possible, prints out the type of data that is being used
+        if issubclass(self.__class__, InputAttribute):
+            rstr += indent + "   <dtype> " + self.type_print(self.type) + " </dtype>\n"
+        if show_attribs:
+            for a in self.attribs:
+                if not (a == "units" and self._dimension == "undefined"):
+                    rstr += (
+                        indent
+                        + "   <"
+                        + a
+                        + "_dtype> "
+                        + self.type_print(self.__dict__[a].type)
+                        + " </"
+                        + a
+                        + "_dtype>\n"
+                    )
+
+        # repeats the above instructions for any fields or dynamic tags.
+        # these will only be printed if their level in the hierarchy is not above
+        # the user specified limit.
+        if show_fields:
+            for f in self.instancefields:
+                rstr += self.__dict__[f].help_xml(
+                    f, "   " + indent, level + 1, stop_level
+                )
+            for f, v in self.dynamic.items():
+                # we must create the object manually, as dynamic objects are
+                # not automatically added to the input object's dictionary
+                dummy_obj = v[0](**v[1])
+                rstr += dummy_obj.help_xml(f, "   " + indent, level + 1, stop_level)
+
+        rstr += indent + "</" + name + ">\n"
+        return rstr
+
 class InputDictionary(Input):
 
     """Class that returns the value of all the fields as a dictionary."""
