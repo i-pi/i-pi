@@ -789,36 +789,22 @@ class Input(object):
         ) and level != stop_level
 
         rstr = ""
-        rstr = indent + "<" + name
-        # prints tag name
-        for a in self.attribs:
-            if not (a == "units" and self._dimension == "undefined"):
-                # don't print out units if not necessary
-                rstr += " " + a + "=''"  # prints attribute names
-        rstr += ">\n"
-
+        lindent = "   " # increase of indentation with each layer
+        rstr = "\n" + indent + ":" + name +":\n"
         # prints help string
-        rstr += indent + "   <help> " + self._help + " </help>\n"
-        if show_attribs:
-            for a in self.attribs:
-                if not (a == "units" and self._dimension == "undefined"):
-                    # information about tags is found in tags beginning with the name
-                    # of the attribute
-                    rstr += (
-                        indent
-                        + "   <"
-                        + a
-                        + "_help> "
-                        + self.__dict__[a]._help
-                        + " </"
-                        + a
-                        + "_help>\n"
-                    )
-
+        rstr += "\n" + indent + self._help + "\n"
+        
+        # if possible, prints out the type of data that is being used
+        if issubclass(self.__class__, InputAttribute):
+            rstr += "\n" + indent + "*dtype*: " + self.type_print(self.type) + "\n"   
         # prints dimensionality of the object
         if hasattr(self, "_dimension") and self._dimension != "undefined":
-            rstr += indent + "   <dimension> " + self._dimension + " </dimension>\n"
+            rstr += "\n" + indent + "*dimension*: " + self._dimension + "\n"
+        if hasattr(self, "_valid"):
+            if self._valid is not None:
+                rstr += "\n" +indent + "*options*: " + str(self._valid) + "\n"
 
+                         
         if self._default is not None and issubclass(self.__class__, InputAttribute):
             # We only print out the default if it has a well defined value.
             # For classes such as InputCell, self._default is not the value,
@@ -826,80 +812,42 @@ class Input(object):
             # self.value. For this reason we print out self.value at this stage,
             # and not self._default
             rstr += (
-                indent
-                + "   <default>"
+                "\n" + indent 
+                + "*default*: "
                 + self.pprint(self.value, indent=indent, latex=False)
-                + "</default>\n"
+                + "\n"
             )
+        
         if show_attribs:
-            for a in self.attribs:
-                if not (a == "units" and self._dimension == "undefined"):
-                    if self.__dict__[a]._default is not None:
-                        rstr += (
-                            indent
-                            + "   <"
-                            + a
-                            + "_default>"
-                            + self.pprint(
-                                self.__dict__[a]._default, indent=indent, latex=False
-                            )
-                            + "</"
-                            + a
-                            + "_default>\n"
-                        )
+            rstr += "\n" + indent + "*ATTRIBUTES*" + "\n"
+            for a in self.attribs: 
+                if (a == "units" and self._dimension == "undefined"):
+                    continue
+                # information about tags is found in tags beginning with the name
+                # of the attribute
+                rstr += self.__dict__[a].help_rst(
+                    a, lindent + indent, level, stop_level
+                )
 
-        # prints out valid options, if required.
-        if hasattr(self, "_valid"):
-            if self._valid is not None:
-                rstr += indent + "   <options> " + str(self._valid) + " </options>\n"
-        if show_attribs:
-            for a in self.attribs:
-                if not (a == "units" and self._dimension == "undefined"):
-                    if hasattr(self.__dict__[a], "_valid"):
-                        if self.__dict__[a]._valid is not None:
-                            rstr += (
-                                indent
-                                + "   <"
-                                + a
-                                + "_options> "
-                                + str(self.__dict__[a]._valid)
-                                + " </"
-                                + a
-                                + "_options>\n"
-                            )
 
-        # if possible, prints out the type of data that is being used
-        if issubclass(self.__class__, InputAttribute):
-            rstr += indent + "   <dtype> " + self.type_print(self.type) + " </dtype>\n"
-        if show_attribs:
-            for a in self.attribs:
-                if not (a == "units" and self._dimension == "undefined"):
-                    rstr += (
-                        indent
-                        + "   <"
-                        + a
-                        + "_dtype> "
-                        + self.type_print(self.__dict__[a].type)
-                        + " </"
-                        + a
-                        + "_dtype>\n"
-                    )
+        
 
         # repeats the above instructions for any fields or dynamic tags.
         # these will only be printed if their level in the hierarchy is not above
         # the user specified limit.
         if show_fields:
+            rstr += "\n" + indent + "*FIELDS*" + "\n"
             for f in self.instancefields:
-                rstr += self.__dict__[f].help_xml(
-                    f, "   " + indent, level + 1, stop_level
+                rstr += self.__dict__[f].help_rst(
+                    f, lindent + indent, level + 1, stop_level
                 )
             for f, v in self.dynamic.items():
                 # we must create the object manually, as dynamic objects are
                 # not automatically added to the input object's dictionary
                 dummy_obj = v[0](**v[1])
-                rstr += dummy_obj.help_xml(f, "   " + indent, level + 1, stop_level)
+                rstr += dummy_obj.help_rst(f, lindent + indent, level + 1, stop_level)
 
-        rstr += indent + "</" + name + ">\n"
+        rstr += "\n"
         return rstr
 
 class InputDictionary(Input):
