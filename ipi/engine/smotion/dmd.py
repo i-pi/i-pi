@@ -9,10 +9,6 @@ Algorithms implemented by Robert Meissner and Riccardo Petraglia, 2016
 
 
 from ipi.engine.smotion import Smotion
-from ipi.engine.ensembles import ensemble_swap
-from ipi.utils.depend import *
-from ipi.utils.softexit import softexit
-from ipi.utils.messages import verbosity, info
 
 
 __all__ = ["DMD"]

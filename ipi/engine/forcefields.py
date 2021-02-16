@@ -21,7 +21,7 @@ from ipi.interfaces.sockets import InterfaceSocket
 from ipi.utils.depend import dobject
 from ipi.utils.depend import dstrip
 from ipi.utils.io import read_file
-from ipi.utils.units import unit_to_internal, unit_to_user, UnitMap
+from ipi.utils.units import unit_to_internal, UnitMap
 from ipi.utils.distance import vector_separation
 
 try:
