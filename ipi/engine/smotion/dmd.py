@@ -1,6 +1,6 @@
-"""Holds the algorithms to perform replica exchange.
+"""Holds the algorithms to perform driven MD with and external time dependent drive.
+   Should work with PBC.
 
-Algorithms implemented by Robert Meissner and Riccardo Petraglia, 2016
 """
 
 # This file is part of i-PI.
@@ -34,7 +34,6 @@ class DMD(Smotion):
         """Updates driven md time step."""
 
         for s in self.syslist:
-            #            oldf = dstrip(s.forces.f).copy()
             for ik, bc in enumerate(s.ensemble.bcomp):
                 k = bc.ffield
                 if k not in self.dmdff:
@@ -48,14 +47,4 @@ class DMD(Smotion):
                                       does not have a dmd_update interface"
                         % (k)
                     )
-                #                if s.ensemble.bweights[ik] == 0:
-                #                    continue  # do not put metad bias on biases with zero weights (useful to do remd+metad!)
                 f.dmd_update()  # updates the time step
-
-
-#                if fmtd:  # if metadyn has updated, then we must recompute forces.
-#                    # hacky but cannot think of a better way: we must manually taint *just* that component
-#                    for fc in s.ensemble.bias.mforces:
-#                        if fc.ffield == k:
-#                            for fb in fc._forces:
-#                                dd(fb).ufvx.taint()
