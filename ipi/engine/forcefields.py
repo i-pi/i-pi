@@ -512,8 +512,6 @@ class FFdmd(ForceField):
             #            rij = np.sqrt((dij ** 2).sum(axis=1))
             # KF's implementation:
             dij, rij = vector_separation(cell_h, cell_ih, q[i], q[:i])
-
-            #            cij = self.coupling[:i]                      # KF 15.05.2020
             cij = self.coupling[i * (i - 1) // 2 : i * (i + 1) // 2]  #
             prefac = np.dot(
                 cij, rij
@@ -523,18 +521,12 @@ class FFdmd(ForceField):
             f[i] += dij.sum(axis=0) * periodic
             f[:i] -= dij * periodic  # everything symmetric
 
-        #        self.dmdstep+=1 # BAD -- DOES NOT WORK IN MOST CASES -- NEED SMOTION
-        #        print("Mystep ", self.dmdstep)
         r["result"] = [v, f.reshape(nat * 3), np.zeros((3, 3), float), ""]
         r["status"] = "Done"
 
     def dmd_update(self):
         """ Updates time step when a full step is done. Can only be called after implementation goes into smotion mode..."""
         self.dmdstep += 1
-
-
-#        f = np.zeros(3 * self.natoms)
-#        v=0.0
 
 
 class FFDebye(ForceField):
