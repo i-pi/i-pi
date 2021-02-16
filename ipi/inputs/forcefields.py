@@ -385,7 +385,7 @@ class InputFFdmd(InputForceField):
     attribs = {}
     attribs.update(InputForceField.attribs)
 
-    default_help = """Simple, internal DMD evaluator without cutoff, neighbour lists or minimal image convention.
+    default_help = """Simple, internal DMD evaluator without without neighbor lists, but with PBC.
                    Expects coupling elements (n*(n-1)/2 of them), oscillating frequency and time step. """
     default_label = "FFDMD"
 
@@ -410,14 +410,6 @@ class InputFFdmd(InputForceField):
             dopbc=self.pbc.fetch(),
             threaded=self.threaded.fetch(),
         )
-
-
-#        if self.slots.fetch() < 1 or self.slots.fetch() > 5:
-#            raise ValueError("Slot number " + str(self.slots.fetch()) + " out of acceptable range.")
-#        if self.latency.fetch() < 0:
-#            raise ValueError("Negative latency parameter specified.")
-#        if self.timeout.fetch() < 0.0:
-#            raise ValueError("Negative timeout parameter specified.")
 
 
 class InputFFDebye(InputForceField):
