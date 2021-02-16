@@ -63,3 +63,11 @@ $ i-pi-driver -u -h harmonic -m harm -o 1
   then run the driver as:
 
 $ i-pi-driver -h harmonic -m harm -o 1 -p port_no
+
+ * You can also compare the Fortran and Python drivers, running the same i-PI input but using respectively
+
+$ i-pi-driver -u -h harmonic -m harm3d -o 1
+
+or
+
+$ driver.py -u -a harmonic -m harmonic
