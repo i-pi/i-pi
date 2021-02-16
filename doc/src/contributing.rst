@@ -3,7 +3,8 @@ Contributing
 
 DRAFT!
 
-List of points to be addressed 
+List of points to be addressed
+ 
 - Welcome contributors
 - Try to do a table of contents (need to find out how)
 - Link to: homepage, issues/bug reports and forum
