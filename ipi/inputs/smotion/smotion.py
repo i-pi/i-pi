@@ -21,9 +21,7 @@ Classes:
       writing the checkpoints.
 """
 
-import numpy as np
 from copy import copy
-import ipi.engine.initializer
 from ipi.engine.smotion import Smotion, ReplicaExchange, MetaDyn, MultiSmotion, DMD
 from ipi.utils.inputvalue import *
 from .remd import InputReplicaExchange
