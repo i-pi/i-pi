@@ -1,4 +1,4 @@
-import sys 
+import sys
 
 src_dir = "../"
 sys.path.insert(0, src_dir)
