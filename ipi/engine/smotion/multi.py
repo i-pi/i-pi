@@ -13,8 +13,7 @@ __all__ = ["MultiSmotion"]
 
 
 class MultiSmotion(Smotion):
-    """A class to hold multiple Smotion objects to be executed serially.
-    """
+    """A class to hold multiple Smotion objects to be executed serially."""
 
     def __init__(self, smotionlist=None):
         """Initialises MultiSmotion.

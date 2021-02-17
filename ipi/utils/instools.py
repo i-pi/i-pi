@@ -3,9 +3,6 @@ import numpy as np
 from ipi.utils.messages import verbosity, info
 from ipi.utils import units
 import ipi.utils.mathtools as mt
-import os.path
-import glob
-import copy
 
 
 def banded_hessian(h, im, masses=True, shift=0.001):
@@ -112,7 +109,7 @@ def invmul_banded(A, B, posdef=False):
     """A is in upper banded form
         Solve H.h = -G for Newton - Raphson step, h
     using invmul_banded(H, -G) take step x += h
-    to  find minimum or transition state """
+    to  find minimum or transition state"""
 
     try:
         from scipy import linalg
@@ -135,8 +132,8 @@ def invmul_banded(A, B, posdef=False):
 
 def diag_banded(A, n=2):
     """A is in upper banded form.
-        Returns the smallest n eigenvalue and its corresponding eigenvector.
-        """
+    Returns the smallest n eigenvalue and its corresponding eigenvector.
+    """
     try:
         from scipy.linalg import eig_banded
 
@@ -153,7 +150,7 @@ def diag_banded(A, n=2):
 
 def red2comp(h, nbeads, natoms, coef=None):
     """Takes the reduced physical hessian (3*natoms*nbeads,3*natoms)
-     and construct the 'complete' one (3*natoms*nbeads)^2 """
+    and construct the 'complete' one (3*natoms*nbeads)^2"""
     info("\n @Instanton: Creating 'complete' physical hessian \n", verbosity.high)
 
     if coef is None:
@@ -170,11 +167,11 @@ def red2comp(h, nbeads, natoms, coef=None):
 
 
 def get_imvector(h, m3):
-    """ Compute eigenvector  corresponding to the imaginary mode
-            IN     h      = hessian
-                   m3     = mass vector (dimension = 1 x 3*natoms)
-            OUT    imv    = eigenvector corresponding to the imaginary mode
-        """
+    """Compute eigenvector  corresponding to the imaginary mode
+    IN     h      = hessian
+           m3     = mass vector (dimension = 1 x 3*natoms)
+    OUT    imv    = eigenvector corresponding to the imaginary mode
+    """
     info("@get_imvector", verbosity.high)
     if h.size != m3.size ** 2:
         raise ValueError(

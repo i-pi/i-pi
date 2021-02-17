@@ -30,8 +30,7 @@ from ipi.utils.messages import verbosity, info
 
 class DynMatrixMover(Motion):
 
-    """Dynamic matrix calculation routine by finite difference.
-    """
+    """Dynamic matrix calculation routine by finite difference."""
 
     def __init__(
         self,
@@ -126,7 +125,11 @@ class DynMatrixMover(Motion):
 
         # get active arrays:
         activedof = 3 * self.beads.natoms - fixdof.size
-        mask = np.delete(np.arange(3 * self.beads.natoms), fixdof)
+        if fixdof.size > 0:
+            mask = np.delete(np.arange(3 * self.beads.natoms), fixdof)
+        else:
+            mask = np.arange(3 * self.beads.natoms)
+
         dmatx_full = dmatx.copy()
         ism_full = self.ism.copy()
         dmatx = dmatx[mask][:, mask]
@@ -301,8 +304,7 @@ class DummyPhononCalculator(dobject):
 
 class FDPhononCalculator(DummyPhononCalculator):
 
-    """ Finite dinnerence phonon evaluator.
-    """
+    """Finite difference phonon evaluator."""
 
     def bind(self, dm):
         """ Reference all the variables for simpler access."""
@@ -358,7 +360,7 @@ class FDPhononCalculator(DummyPhononCalculator):
             self.dm.dynmatrix[step] = dmrow
             self.dm.refdynmatrix[step] = dmrow
         else:
-            info(" We have skiped the dof # {}.".format(step), verbosity.low)
+            info(" We have skipped the dof # {}.".format(step), verbosity.low)
 
     def transform(self):
         dm = self.dm.dynmatrix.copy()
@@ -369,8 +371,7 @@ class FDPhononCalculator(DummyPhononCalculator):
 
 class NMFDPhononCalculator(FDPhononCalculator):
 
-    """ Normal mode finite difference phonon evaluator.
-    """
+    """Normal mode finite difference phonon evaluator."""
 
     def bind(self, dm):
         """ Reference all the variables for simpler access."""
@@ -423,8 +424,7 @@ class NMFDPhononCalculator(FDPhononCalculator):
 
 class ENMFDPhononCalculator(NMFDPhononCalculator):
 
-    """ Energy scaled normal mode finite difference phonon evaluator.
-    """
+    """Energy scaled normal mode finite difference phonon evaluator."""
 
     def step(self, step=None):
         """Computes one row of the dynamic matrix."""

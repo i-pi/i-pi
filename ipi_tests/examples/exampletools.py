@@ -1,15 +1,13 @@
 import subprocess as sp
 import os
-import numpy as np
 from pathlib import Path
 from distutils.dir_util import copy_tree
 import xml.etree.ElementTree as ET
-import sys
 import tempfile
-import shutil
 import time
 
 driver_models = [
+    "dummy",
     "lj",
     "sg",
     "harm",
@@ -24,20 +22,21 @@ driver_models = [
 ]
 
 
-def get_driver_info(
+def get_test_settings(
     example_folder,
-    driver_info_file=".driver_info",
-    driver="gas",
+    settings_file="test_settings.dat",
+    driver="dummy",
     socket_mode="unix",
     port_number=33333,
     address_name="localhost",
     flags=[],
+    nsteps="2",
 ):
-    """ This function looks for the existence of .driver_info file
-        to run the example with a meaningfull driver. If the file doesn't
-        exist, the driver gas is assigned. """
+    """This function looks for the existence of test_settings.txt file.
+    This file can contain instructions like number of steps or driver name.
+    If the file doesn't  exist, the driver dummy is assigned."""
     try:
-        with open(Path(example_folder) / driver_info_file) as f:
+        with open(Path(example_folder) / settings_file) as f:
             flags = list()
             while True:
                 line = f.readline()
@@ -53,11 +52,13 @@ def get_driver_info(
                     address_name = line.split()[1]
                 elif "flags" in line:
                     flags.append({line.split()[1]: line.split()[2:]})
+                elif "nsteps" in line:
+                    nsteps = line.split()[1]
     except:
         pass
 
     if driver not in driver_models:
-        driver = "gas"
+        driver = "dummy"
 
     driver_info = {
         "model": driver,
@@ -67,12 +68,14 @@ def get_driver_info(
         "flag": flags,
     }
 
-    return driver_info
+    test_settings = {"nsteps": nsteps}
+
+    return driver_info, test_settings
 
 
 def find_examples(parent, excluded_file="excluded_test.txt", examples=[]):
-    """ This function looks for iteratively for examples and includes
-        them if they don't appear in the excluded_file """
+    """This function looks for iteratively for examples and includes
+    them if they don't appear in the excluded_file"""
 
     excluded = list()
     if excluded_file is not None:
@@ -97,7 +100,11 @@ def find_examples(parent, excluded_file="excluded_test.txt", examples=[]):
 
 
 def modify_xml_2_dummy_test(
-    input_name, output_name, nid, driver_info, nsteps=2,
+    input_name,
+    output_name,
+    nid,
+    driver_info,
+    test_settings,
 ):
     """ Modify xml to run dummy tests """
     try:
@@ -108,7 +115,7 @@ def modify_xml_2_dummy_test(
     clients = list()
 
     for s, ffsocket in enumerate(root.findall("ffsocket")):
-        name = ffsocket.attrib["name"]
+        # name = ffsocket.attrib["name"]
         ffsocket.attrib["mode"] = driver_info["socket_mode"]
 
         for element in ffsocket:
@@ -131,17 +138,17 @@ def modify_xml_2_dummy_test(
 
     element = root.find("total_steps")
     if element is not None:
-        element.text = str(nsteps)
+        element.text = test_settings["nsteps"]
     else:
         new_element = ET.SubElement(root, "total_steps")
-        new_element.text = str(nsteps)
+        new_element.text = test_settings["nsteps"]
 
     tree.write(open(output_name, "wb"))
     return clients
 
 
 class Runner_examples(object):
-    """ This class handles the modification of the examples inputs,
+    """This class handles the modification of the examples inputs,
     the creation of tmp directories, the i-pi call, the driver call, and finally
     it checks if i-pi ended without error.
     """
@@ -153,7 +160,7 @@ class Runner_examples(object):
         self.cmd2 = cmd2
 
     def run(self, cwd, nid):
-        """ This function tries to run the example in a tmp folder and
+        """This function tries to run the example in a tmp folder and
         afterwards checks if ipi has ended without error.
         arguments:
             cwd: folder where all the original examples files are stored
@@ -165,11 +172,15 @@ class Runner_examples(object):
             print("temp folder: {}".format(self.tmp_dir))
 
             copy_tree(str(cwd), str(self.tmp_dir))
-            driver_info = get_driver_info(self.tmp_dir)
+            driver_info, test_settings = get_test_settings(self.tmp_dir)
 
             # Modify xml
             clients = modify_xml_2_dummy_test(
-                self.tmp_dir / "input.xml", self.tmp_dir / "new.xml", nid, driver_info
+                self.tmp_dir / "input.xml",
+                self.tmp_dir / "new.xml",
+                nid,
+                driver_info,
+                test_settings,
             )
             # Run i-pi
             ipi = sp.Popen(
@@ -179,7 +190,17 @@ class Runner_examples(object):
                 stdout=sp.PIPE,
                 stderr=sp.PIPE,
             )
-            time.sleep(3)
+
+            if len(clients) > 0:
+                f_connected = False
+                for i in range(50):
+                    if os.path.exists("/tmp/ipi_" + clients[0][1]):
+                        f_connected = True
+                        break
+                    else:
+                        time.sleep(0.1)
+                if not f_connected:
+                    raise RuntimeError("Couldn't find the i-PI UNIX socket")
 
             # Run drivers
             driver = list()

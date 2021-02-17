@@ -1,9 +1,7 @@
-import subprocess as sp
 from pathlib import Path
 import pytest
 import argparse
 from argparse import RawTextHelpFormatter
-import sys
 import time
 from ipi_tests.examples.exampletools import find_examples, Runner_examples
 
@@ -20,7 +18,7 @@ print("We have found {} examples".format(len(examples)))
 
 @pytest.mark.parametrize("ex", examples)
 def test_example(ex):
-    """ Intermediate function to run the examples (by calling Runner_examples) which makes
+    """Intermediate function to run the examples (by calling Runner_examples) which makes
     possible to parametrize the arguments
     """
     t0 = time.time()
@@ -42,11 +40,15 @@ if __name__ == "__main__":
         "It can be called by pytest or as a normal script \n"
         "To check all examples in the repository, except the ones \n"
         "included in the 'excluded_test.txt' file\n"
+        "\n"
         "type: python test_examples.py \n"
         "\n"
+        "\n"
         "To check all the examples inside a folder  except the ones \n"
-        "inclueded in the 'excluded_test.txt' file\n"
+        "included in the 'excluded_test.txt' file\n"
+        "\n"
         "type: python test_examples.py -f <folder_path> \n"
+        "\n"
         "example: python test_examples.py examples/lammps/h2o-geop\n"
         "This script will recursively search for examples.\n"
         "\n"

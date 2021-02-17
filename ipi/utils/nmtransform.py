@@ -7,6 +7,7 @@
 
 import numpy as np
 
+from ipi.utils.depend import dstrip
 from ipi.utils.messages import verbosity, info
 
 
@@ -264,7 +265,7 @@ class nm_rescale(object):
 
         if self.noop:
             # still must return a copy, as the contraction is meant to return new data, not a view
-            q_scal = q.copy()
+            q_scal = dstrip(q).copy()
         else:
             # this applies to both bead property arrays (e.g. potentials) and bead vector properties (e.g. positions, forces)
             q_scal = np.dot(self._b1tob2, q)
@@ -292,7 +293,7 @@ class nm_rescale(object):
 
         if self.noop:
             # still must return a copy, as the contraction is meant to return new data, not a view
-            q_scal = q.copy()
+            q_scal = dstrip(q).copy()
         else:
             # see b1tob2 for an explanation of the rationale for dealing with open path transformations
             q_scal = np.dot(self._b2tob1, q)

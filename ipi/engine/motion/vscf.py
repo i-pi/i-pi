@@ -20,18 +20,18 @@ along with this program. If not, see <http.//www.gnu.org/licenses/>.
 __all__ = ["NormalModeMover"]
 
 import numpy as np
-import time
-import itertools
 import os
 
 from ipi.engine.motion import Motion
 from ipi.utils.depend import *
-from ipi.utils import units
+
+# from ipi.utils import units
 from ipi.utils.phonontools import apply_asr
 from ipi.utils.softexit import softexit
-from ipi.utils.messages import verbosity, warning, info
-from ipi.utils.io import print_file
-from ipi.engine.atoms import Atoms
+from ipi.utils.messages import verbosity, info
+
+# from ipi.utils.io import print_file
+# from ipi.engine.atoms import Atoms
 
 try:
     import scipy
@@ -46,8 +46,7 @@ from itertools import combinations
 
 
 class NormalModeMover(Motion):
-    """Normal Mode analysis.
-    """
+    """Normal Mode analysis."""
 
     def __init__(
         self,
@@ -80,7 +79,7 @@ class NormalModeMover(Motion):
     ):
         """Initialises NormalModeMover.
         Args:
-        fixcom	: An optional boolean which decides whether the centre of mass
+        fixcom : An optional boolean which decides whether the centre of mass
                   motion will be constrained or not. Defaults to False.
         dynmatrix : A 3Nx3N array that stores the dynamic matrix.
         refdynmatrix : A 3Nx3N array that stores the refined dynamic matrix.
@@ -167,8 +166,7 @@ class DummyCalculator(dobject):
 
 
 class IMF(DummyCalculator):
-    """ Temperature scaled normal mode Born-Oppenheimer surface evaluator.
-    """
+    """Temperature scaled normal mode Born-Oppenheimer surface evaluator."""
 
     def bind(self, imm):
         """ Reference all the variables for simpler access."""
@@ -483,10 +481,14 @@ class IMF(DummyCalculator):
                         - 0.50 * self.imm.w2[step] * (nmd * counter) ** 2
                         - v0
                     )
-                    df = np.dot(
-                        dstrip(self.imm.dforces.f).copy()[0],
-                        np.real(self.imm.V.T[step]),
-                    ) / self.nprim + self.imm.w2[step] * (nmd * counter)
+                    df = (
+                        np.dot(
+                            dstrip(self.imm.dforces.f).copy()[0],
+                            np.real(self.imm.V.T[step]),
+                        )
+                        / self.nprim
+                        + self.imm.w2[step] * (nmd * counter)
+                    )
 
                     # Adds to the list.
                     # Also stores the total energetics i.e. including
@@ -525,10 +527,14 @@ class IMF(DummyCalculator):
                         - 0.50 * self.imm.w2[step] * (nmd * counter) ** 2
                         - v0
                     )
-                    df = np.dot(
-                        dstrip(self.imm.dforces.f).copy()[0],
-                        np.real(self.imm.V.T[step]),
-                    ) / self.nprim + self.imm.w2[step] * (nmd * counter)
+                    df = (
+                        np.dot(
+                            dstrip(self.imm.dforces.f).copy()[0],
+                            np.real(self.imm.V.T[step]),
+                        )
+                        / self.nprim
+                        + self.imm.w2[step] * (nmd * counter)
+                    )
 
                     # Adds to the list.
                     # Also stores the total energetics i.e. including
@@ -752,8 +758,7 @@ class IMF(DummyCalculator):
 
 
 class VSCF(IMF):
-    """
-    """
+    """"""
 
     def bind(self, imm):
         """
@@ -800,7 +805,10 @@ class VSCF(IMF):
                 if self.imm.w[inm] < 9.1126705e-06:
                     info(
                         " @NM: Ignoring normal mode no.  %8d with frequency %15.8f cm^-1."
-                        % (inm, self.imm.w[inm] * 219474,),
+                        % (
+                            inm,
+                            self.imm.w[inm] * 219474,
+                        ),
                         verbosity.medium,
                     )
                     continue

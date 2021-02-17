@@ -425,7 +425,7 @@ class AlKMC(Motion):
         ):  # if all evaluators are busy, wait for one to get free
             for st in ethreads:
                 st.join(1e-2)
-                if st is None or not st.isAlive():
+                if st is None or not st.is_alive():
                     break
         with self._threadlock:
             # finds free evaluator
@@ -599,7 +599,7 @@ class AlKMC(Motion):
                 levents.append(nevent)
         # wait for all evaluators to finish
         for st in ethreads:
-            while st is not None and st.isAlive():
+            while st is not None and st.is_alive():
                 st.join(2)
 
         print(
@@ -665,7 +665,7 @@ class AlKMC(Motion):
         # we want continuity (modulo PBC jumps, that we'll take care of later...)
         for i in range(self.nsites):
             # in which site sits atom i?
-            # isite = self.idx[i]       # flake8 complains 'unused variable'
+            # isite = self.idx[i]       #
 
             # which atom sits in this site in the unique-mapped structure?
             iuid = ruidx[self.idx[i]]

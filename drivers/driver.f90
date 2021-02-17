@@ -41,7 +41,8 @@
       
       ! COMMAND LINE PARSING
       CHARACTER(LEN=1024) :: cmdbuffer
-      INTEGER ccmd, vstyle
+      INTEGER ccmd, vstyle, vseed
+      INTEGER, ALLOCATABLE :: seed(:)
       INTEGER verbose
       INTEGER commas(4), par_count      ! stores the index of commas in the parameter string
       DOUBLE PRECISION vpars(4)         ! array to store the parameters of the potential
@@ -49,8 +50,9 @@
       ! SOCKET COMMUNICATION BUFFERS
       CHARACTER(LEN=12) :: header
       LOGICAL :: isinit=.false., hasdata=.false.
-      INTEGER cbuf, rid
-      CHARACTER(LEN=2048) :: initbuffer      ! it's unlikely a string this large will ever be passed...
+      INTEGER cbuf, rid, length
+      CHARACTER(LEN=4096) :: initbuffer      ! it's unlikely a string this large will ever be passed...
+      CHARACTER(LEN=4096) :: string,string2,trimmed  ! it's unlikely a string this large will ever be passed...
       DOUBLE PRECISION, ALLOCATABLE :: msgbuffer(:)
       
       ! PARAMETERS OF THE SYSTEM (CELL, ATOM POSITIONS, ...)
@@ -61,6 +63,7 @@
       DOUBLE PRECISION pot, dpot, dist
       DOUBLE PRECISION, ALLOCATABLE :: atoms(:,:), forces(:,:), datoms(:,:)
       DOUBLE PRECISION cell_h(3,3), cell_ih(3,3), virial(3,3), mtxbuf(9), dip(3), charges(3), dummy(3,3,3), vecdiff(3)
+      DOUBLE PRECISION, ALLOCATABLE :: friction(:,:)
       DOUBLE PRECISION volume
       DOUBLE PRECISION, PARAMETER :: fddx = 1.0d-5
       
@@ -154,9 +157,11 @@
                   vstyle = 24
                ELSEIF (trim(cmdbuffer) == "gas") THEN
                   vstyle = 0  ! ideal gas
+               ELSEIF (trim(cmdbuffer) == "dummy") THEN
+                  vstyle = 99 ! returns non-zero but otherwise meaningless values
                ELSE
                   WRITE(*,*) " Unrecognized potential type ", trim(cmdbuffer)
-                  WRITE(*,*) " Use -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D] "
+                  WRITE(*,*) " Use -m [dummy|gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D] "
                   STOP "ENDED"
                ENDIF
             ELSEIF (ccmd == 4) THEN
@@ -183,6 +188,16 @@
             STOP "ENDED"
          ENDIF
          isinit = .true.
+      ELSEIF (99 == vstyle) THEN
+         IF (par_count /= 0) THEN
+            WRITE(*,*) "Error: no initialization string needed for dummy output."
+            STOP "ENDED"
+         ENDIF
+         CALL RANDOM_SEED(size=vseed)
+         ALLOCATE(seed(vseed))
+         seed = 12345
+         CALL RANDOM_SEED(put=seed)
+         isinit = .true.         
       ELSEIF (6 == vstyle) THEN
          IF (par_count /= 0) THEN
             WRITE(*,*) "Error:  no initialization string needed for qtip4pf."
@@ -235,7 +250,7 @@
             vpars(4) = 1836*(3800.0d0/219323d0)**2
          ELSEIF ( 4/= par_count) THEN
             WRITE(*,*) "Error: parameters not initialized correctly."
-            WRITE(*,*) "For ekart potential use  AA,A,B,k" 
+            WRITE(*,*) "For eckart potential use  AA,A,B,k"
             STOP "ENDED"
          ENDIF
          isinit = .true.
@@ -417,9 +432,11 @@
                ALLOCATE(msgbuffer(3*nat))
                ALLOCATE(atoms(nat,3), datoms(nat,3))
                ALLOCATE(forces(nat,3))
+               ALLOCATE(friction(3*nat,3*nat))
                atoms = 0.0d0
                datoms = 0.0d0
                forces = 0.0d0
+               friction = 0.0d0
                msgbuffer = 0.0d0
             ENDIF
 
@@ -432,7 +449,18 @@
             IF (vstyle == 0) THEN   ! ideal gas, so no calculation done
                pot = 0
                forces = 0.0d0
-               virial = 0.0d0
+               virial = 1.0d-200   
+               ! returns a tiny but non-zero stress, so it can
+               ! bypass the check for zero virial that is used
+               ! to avoid running constant-pressure simulations
+               ! with a code that cannot compute the virial
+            ELSEIF (vstyle == 99) THEN ! dummy output, useful to test that i-PI "just runs"
+               call random_number(pot)
+               pot = pot - 0.5                
+               call random_number(forces)
+               forces = forces - 0.5
+               call random_number(virial)
+               virial = virial - 0.5
             ELSEIF (vstyle == 3) THEN ! 1D harmonic potential, so only uses the first position variable
                pot = 0.5*ks*atoms(1,1)**2
                forces = 0.0d0
@@ -586,9 +614,12 @@
                CALL get_MB(nat,vpars(1), atoms, pot, forces)
             ELSEIF (vstyle == 25) THEN ! qQ
                CALL getdoublewell(nat, atoms, pot, forces)
+               CALL dw_friction(nat, atoms, friction)
 
             ELSEIF (vstyle == 24) THEN ! qQ
                CALL getdoublewell_1D(nat, atoms, pot, forces)
+               CALL dw1d_friction(nat, atoms, friction)
+               CALL dw1d_dipole(nat, atoms, dip)
 
             ELSE
                IF ((allocated(n_list) .neqv. .true.)) THEN
@@ -645,21 +676,56 @@
             IF (verbose > 1) WRITE(*,*) "    !write!=> forces:", msgbuffer
             CALL writebuffer(socket,reshape(virial,(/9/)),9)  ! Writing the virial tensor, NOT divided by the volume
             IF (verbose > 1) WRITE(*,*) "    !write!=> strss: ", reshape(virial,(/9/))
-            
-            IF (vstyle==5 .or. vstyle==6 .or. vstyle==8) THEN ! returns the dipole
-               initbuffer = " "
-               WRITE(initbuffer,*) dip(1:3)
+
+            IF (vstyle==24 .or. vstyle==25) THEN ! returns fantasy friction
+                WRITE(initbuffer,'(a)') "{"
+                WRITE(string, '(a,3x,f15.8,a,f15.8,a,f15.8,&
+     &          3x,a)') '"dipole": [',dip(1),",",dip(2),",",dip(3),"],"
+                string2 = TRIM(initbuffer) // TRIM(string)
+                initbuffer = TRIM(string2)
+
+                WRITE(string,'(a)') '"friction": ['
+                string2 = TRIM(initbuffer) // TRIM(string)
+                initbuffer = TRIM(string2)
+                DO i=1,3*nat
+                    WRITE(string,'("[ ",*(f15.8,","))') friction(i,:)
+                    length = LEN_TRIM(string)
+                    trimmed = TRIM(string)
+                    IF(i==3*nat) THEN
+                        string = TRIM(trimmed(:length-1)) // "]"
+                    ELSE
+                        string = TRIM(trimmed(:length-1)) // "],"
+                    ENDIF
+                    string2 = TRIM(initbuffer) // TRIM(string)
+                    initbuffer = TRIM(string2)
+                END DO
+                string =  TRIM(initbuffer) // ']}'
+                initbuffer = TRIM(string)
+                cbuf = LEN_TRIM(initbuffer)
+                CALL writebuffer(socket,cbuf) ! Writes back the fantasy friction
+                IF (verbose > 1) WRITE(*,*) "!write!=> extra_length:", &
+     &          cbuf
+                CALL writebuffer(socket,initbuffer,cbuf)
+                IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ",  &
+     &          initbuffer
+            ELSEIF (vstyle==5 .or. vstyle==6 .or. vstyle==8) THEN ! returns the dipole through initbuffer
+               WRITE(initbuffer, '(a,3x,f15.8,a,f15.8,a,f15.8, &
+     &         3x,a)') '{"dipole": [',dip(1),",",dip(2),",",dip(3),"]}"
                cbuf = LEN_TRIM(initbuffer)
                CALL writebuffer(socket,cbuf) ! Writes back the molecular dipole
-               IF (verbose > 1) WRITE(*,*) "    !write!=> extra_lenght: ", cbuf
+               IF (verbose > 1) WRITE(*,*)  &
+     &         "    !write!=> extra_length: ", cbuf
                CALL writebuffer(socket,initbuffer,cbuf)
-               IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ", initbuffer
+               IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ", &
+     &         initbuffer
             ELSE
-               cbuf = 7 ! Size of the "extras" string
+               cbuf = 1 ! Size of the "extras" string
                CALL writebuffer(socket,cbuf) ! This would write out the "extras" string, but in this case we only use a dummy string.
-               IF (verbose > 1) WRITE(*,*) "    !write!=> extra_lenght: ", cbuf
-               CALL writebuffer(socket,"nothing",7)
-               IF (verbose > 1) WRITE(*,*) "    !write!=> extra: nothing"
+               IF (verbose > 1) WRITE(*,*)  &
+     &         "    !write!=> extra_length: ", cbuf
+               CALL writebuffer(socket,' ',1)
+               IF (verbose > 1) WRITE(*,*)  &
+     &         "    !write!=> extra: empty"
             ENDIF
             hasdata = .false.
          ELSE
@@ -667,12 +733,12 @@
             STOP "ENDED"
          ENDIF
       ENDDO
-      IF (nat > 0) DEALLOCATE(atoms, forces, msgbuffer)
+      IF (nat > 0) DEALLOCATE(atoms, forces, msgbuffer, friction)
  
     CONTAINS
       SUBROUTINE helpmessage
          ! Help banner
-         WRITE(*,*) " SYNTAX: driver.x [-u] -h hostname -p port -m [gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D] "
+         WRITE(*,*) " SYNTAX: driver.x [-u] -h hostname -p port -m [dummy|gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D] "
          WRITE(*,*) "         -o 'comma_separated_parameters' [-v] "
          WRITE(*,*) ""
          WRITE(*,*) " For LJ potential use -o sigma,epsilon,cutoff "

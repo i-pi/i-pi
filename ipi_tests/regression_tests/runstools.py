@@ -3,15 +3,10 @@ import os
 import numpy as np
 from pathlib import Path
 import xml.etree.ElementTree as ET
-import sys
 import tempfile
 import shutil
 import time
 import glob
-from tempfile import TemporaryDirectory
-from distutils.dir_util import copy_tree
-import pytest
-import re
 
 driver_models = [
     "lj",
@@ -150,10 +145,12 @@ class Runner(object):
         cwd = info[0]
         self.files = []
         self.forms = []
+        self.usecol = []
 
         try:
             # Create temp file and copy files
             self.tmp_dir = Path(tempfile.mkdtemp())
+            print("\nTest folder: {}".format(str(cwd).split("ipi_tests/", 1)[1]))
             print("temp folder: {}".format(self.tmp_dir))
 
             files = os.listdir(self.parent / cwd)
@@ -173,7 +170,7 @@ class Runner(object):
             clients = list()
 
             for s, ffsocket in enumerate(root.findall("ffsocket")):
-                name = ffsocket.attrib["name"]
+                # name = ffsocket.attrib["name"]
                 mode = driver_info["socket_mode"]
                 ffsocket.attrib["mode"] = mode
 
@@ -212,6 +209,13 @@ class Runner(object):
                 if nl > 1:
                     self.files.append(line.split()[0])
                     self.forms.append(line.split()[1])
+                    if len(line.split()) > 2:
+                        listll = []
+                        for ll in line.split()[2:]:
+                            listll.append(int(ll))
+                        self.usecol.append(listll)
+                    else:
+                        self.usecol.append(None)
 
             # Run drivers by defining cmd2 which will be called, eventually
             flag_indeces = list()
@@ -284,9 +288,7 @@ class Runner(object):
         """ This function checks if ipi has exited with errors"""
 
         ipi_error = ipi.communicate(timeout=120)[1].decode("ascii")
-        if ipi_error != "":
-            print("IPI ERROR OCCURED: {}".format(ipi_error))
-        assert "" == ipi_error
+        assert "" == ipi_error, "IPI ERROR OCCURED: {}".format(ipi_error)
 
     def _check_numpy_output(self, cwd):
         """This function checks if the numpy-accessible datafiles are 'all_close' to the
@@ -299,7 +301,9 @@ class Runner(object):
         for ii, refname in enumerate(self.files):
             if self.forms[ii] == "numpy":
                 try:
-                    ref_output = np.loadtxt(Path(cwd) / refname)
+                    ref_output = np.loadtxt(
+                        Path(cwd) / refname, usecols=self.usecol[ii]
+                    )
                 except IOError:
                     raise IOError(
                         'Please provide a reference properties output named "{}"'.format(
@@ -308,21 +312,23 @@ class Runner(object):
                     )
                 except ValueError:
                     raise ValueError(
-                        "Please check ref_simulation.out in {}".format(str(self.parent))
+                        "Please check ref_simulation.out in {}".format(
+                            str((self.parent / cwd).absolute())
+                        )
                     )
 
                 fname = refname[4:]
-                test_output = np.loadtxt(self.tmp_dir / fname)
+                test_output = np.loadtxt(self.tmp_dir / fname, usecols=self.usecol[ii])
 
                 try:
                     np.testing.assert_allclose(
                         test_output, ref_output, rtol=1.0e-7, atol=1.0e-15
                     )
-                    print("No anomaly during the regtest for {}".format(refname))
+                    # print("No anomaly during the regtest for {}".format(refname))
                 except AssertionError:
                     raise AssertionError(
                         "ANOMALY: Disagreement between reference and {} in {}".format(
-                            fname, str(self.parent)
+                            fname, str((self.parent / cwd).absolute())
                         )
                     )
 
@@ -364,14 +370,14 @@ class Runner(object):
                 except IOError:
                     raise IOError(
                         "Please provide a reference file named {} in {}".format(
-                            refname, str(self.parent / cwd)
+                            refname, str((self.parent / cwd).absolute())
                         )
                     )
 
                 except ValueError:
                     raise ValueError(
                         "Please check the values for the file named {} in {}".format(
-                            refname, str(self.parent / cwd)
+                            refname, str((self.parent / cwd).absolute())
                         )
                     )
 
@@ -389,10 +395,13 @@ class Runner(object):
                     np.testing.assert_allclose(
                         test_xyz, ref_xyz, rtol=1.0e-7, atol=1.0e-8
                     )
-                    print("No anomaly during the regtest for {}".format(refname))
+                    # print("No anomaly during the regtest for {}".format(refname))
                 except AssertionError:
                     raise AssertionError(
-                        "ANOMALY: Disagreement between reference and {} in {}".format(
-                            fname, str(self.parent / cwd)
+                        "ANOMALY: {} in {}".format(
+                            fname,
+                            str((self.parent / cwd).absolute()).split("ipi_tests/", 1)[
+                                1
+                            ],
                         )
                     )

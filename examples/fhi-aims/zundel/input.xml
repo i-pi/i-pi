@@ -1,5 +1,5 @@
-<simulation verbosity='debug'>
-  <ffsocket mode='inet' name='aims'>
+<simulation verbosity='medium'>
+  <ffsocket mode='unix' name='aims'>
     <latency>  1.00000000e-02</latency>
     <slots>4</slots>
     <port>40050</port>
@@ -14,7 +14,7 @@
     <properties stride='2' filename='out'> [ step, time{femtosecond}, conserved, temperature, kinetic_cv,
     potential, kinetic_cv(H), kinetic_cv(O) ] </properties>
     <properties stride='200' filename='out-md'> [ kinetic_md ] </properties>
-    <trajectory stride='5' filename='dipole'> extras </trajectory>
+    <trajectory stride='5' filename='dip' extra_type='dipole'> extras </trajectory>
   </output>
   <prng>
     <seed>18885</seed>
