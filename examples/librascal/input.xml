@@ -1,6 +1,6 @@
 <simulation verbosity= "high">
-<output prefix="K_BaTiO3_MD"> 
-<properties stride="5" filename="out">  [ step, time{picosecond},  conserved{electronvolt}, 
+<output prefix="simulation"> 
+<properties stride="1" filename="out">  [ step, time{picosecond},  conserved{electronvolt}, 
 	temperature{kelvin}, kinetic_md{electronvolt}, potential{electronvolt}, pressure_md{bar}, volume{angstrom3}, 
 	ensemble_temperature{kelvin}, cell_abcABC] </properties>
 	<trajectory filename="xc" stride="5" cell_units="angstrom"> x_centroid{angstrom} </trajectory>
@@ -15,20 +15,24 @@
     		<timeout>60.000000e+00</timeout>
     		<address>BaTiO3</address>
   	</ffsocket> 
-   	<system_template>
-       		<labels>   [IDX, TEMP, INITFILE] </labels> 
-      		<instance> [  10 , 10.0 , BaTiO3_cubic_3x3x3.xyz ] </instance>
-	  	<template>    
-	   		<system prefix="IDX">
+	   		<system>
               			<initialize nbeads="1">
-                 			<file mode="xyz"> INITFILE </file>
-                 			<velocities mode="thermal" units="kelvin"> TEMP </velocities>
+                 			<file mode="xyz">  BaTiO3_cubic_3x3x3.xyz </file>
+                 			<velocities mode="thermal" units="kelvin"> 20 </velocities>
               			</initialize>
 	     	 		<forces>
       					<force forcefield='driver'/>
    		 		</forces>
 				<motion mode="dynamics">
-                 			<dynamics mode="nvt">
+                    <dynamics mode="nst">
+                <barostat mode="anisotropic">
+                    <tau units="femtosecond"> 800 </tau>
+                    <thermostat mode="langevin">
+                        <tau units="femtosecond"> 50 </tau>
+                    </thermostat>
+                    <h0 units="angstrom"> [ 12.10675, 0,0,0,    12.10675, 0,0,0,    12.10675 ]</h0>
+                </barostat>
+
                     				<timestep units="femtosecond"> 2.0 </timestep>
                         			<thermostat mode='gle'>
                         				<A shape='(5,5)'>
@@ -44,9 +48,8 @@
                  			</dynamics>
               			</motion>
 	   			<ensemble>
-                 			<temperature units="kelvin"> TEMP </temperature>
+                    <temperature units="kelvin"> 20 </temperature>
+                     <stress units="megapascal"> [ 5, 1, 0.1, 0, 2, 0.5, 0, 0, 1 ] </stress>
            			</ensemble>
          		</system>
-		</template>
-	</system_template>
 </simulation>
