@@ -308,7 +308,7 @@ class Fix(object):
 
     def __init__(self, fixatoms, beads, nbeads=None):
 
-        self.natoms = beads.natoms
+        self.natoms = beads.natoms 
         if nbeads is None:
             self.nbeads = beads.nbeads
         else:
@@ -317,6 +317,7 @@ class Fix(object):
         self.fixatoms = fixatoms
 
         self.mask0 = np.delete(np.arange(self.natoms), self.fixatoms)
+        self.nactive = len(self.mask0)
 
         mask1 = np.ones(3 * self.natoms, dtype=bool)
         for i in range(3):
@@ -367,7 +368,7 @@ class Fix(object):
                 t = -1
             elif key == "old_x" or key == "old_f" or key == "d":
                 t = 1
-            elif key == "hessian" or key == "eta":
+            elif key == "hessian":
                 t = 2
             elif key == "qlist" or key == "glist":
                 t = 3
@@ -393,7 +394,8 @@ class Fix(object):
                 type=1 : pos , force or m3 (nbeads,dof)
                 type=2 : hessian (dof, nbeads*dof)
                 type=3 : qlist or glist (corrections, nbeads*dof)
-                type=4 : fric_hessian
+                type=4 : fric_hessian(nbeads,dof,dof,dof)
+                type=5 : eta(nbeads,dof,dof)
         OUT:
             clean_vector  reduced vector
         """
@@ -426,12 +428,28 @@ class Fix(object):
             return full_vector
         elif t == 4:
 
-            full_vector = np.zeros((9 * self.natoms, 9 * self.natoms * self.nbeads))
+            full_vector = np.zeros((self.nbeads, 3 * self.natoms, 3 * self.natoms, 3*self.natoms))
             ii = 0
+            jj = 0
+            kk = 0
             for i in self.get_mask(1):
-                full_vector[i, self.get_mask(3)] = vector[ii]
+                for j in self.get_mask(1):
+                     for k in self.get_mask(1):
+                         full_vector[:,i,j,k] = vector[:,ii,jj,kk] #Yes, this can be improved
+                         kk += 1
+                     jj += 1
                 ii += 1
+            return full_vector
 
+        elif t == 5:
+            full_vector = np.zeros((self.nbeads, 3 * self.natoms, 3 * self.natoms))
+            ii = 0
+            jj = 0
+            for i in self.get_mask(1):
+                for j in self.get_mask(1):
+                     full_vector[:,i,j] = vector[:,ii,jj] #Yes, this can be improved
+                     jj += 1
+                ii += 1
             return full_vector
 
         else:
@@ -449,6 +467,8 @@ class Fix(object):
                 type=1 : pos , force or m3 (nbeads,dof)
                 type=2 : hessian (dof, nbeads*dof)
                 type=3 : qlist or glist (corrections, nbeads*dof)
+                type=4 : fric_hessian(nbeads,dof,dof,dof)
+                type=5 : eta(nbeads,dof,dof)
         OUT:
             clean_vector  reduced vector
         """
@@ -463,5 +483,9 @@ class Fix(object):
             return aux[:, self.mask2]
         elif t == 3:
             return vector[:, self.mask2]
+        elif t == 4:
+            return vector[:,self.mask1][:,:,self.mask1][:,:,:,self.mask1] 
+        elif t == 5:
+            return vector[:,self.mask1][:,:,self.mask1]
         else:
             raise ValueError("@apply_fix_atoms: type number {} is not valid".format(t))
