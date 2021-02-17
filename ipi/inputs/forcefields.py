@@ -15,7 +15,7 @@ from ipi.engine.forcefields import (
     FFPlumed,
     FFYaff,
     FFsGDML,
-    FFrascal, 
+    FFrascal,
 )
 from ipi.interfaces.sockets import InterfaceSocket
 import ipi.engine.initializer
@@ -616,6 +616,7 @@ class InputFFsGDML(InputForceField):
             dopbc=self.pbc.fetch(),
             threaded=self.threaded.fetch(),
         )
+
 
 class InputFFrascal(InputForceField):
 
