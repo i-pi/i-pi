@@ -204,7 +204,7 @@ def commitee_reweight(path2ixml, pot_file, obs_file, stride=1, index=-1, direct=
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="""This tool exploits a committee of ML models to compute the reweighted  canonical averages of a given observable, in order to quantify its uncertainty at thermodynamic equilibrium.
-    The units are assumed to be atomic, which are also the internal units of i-PI.
+    The units for the potentials are assumed to be Hartree.
     The full methodology is described in: https://doi.org/10.1063/5.0036522"""
     )
 
