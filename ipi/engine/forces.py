@@ -100,7 +100,6 @@ class ForceBead(dobject):
         self.atoms = atoms
         self.cell = cell
         self.ff = ff
-        self.ff.bind(output_maker)
         dself = dd(self)
 
         # ufvx depends on the atomic positions and on the cell

@@ -972,7 +972,6 @@ class FFCommittee(ForceField):
     def bind(self, output_maker):
 
         super(FFCommittee, self).bind(output_maker)
-        print("BINDING FFCOMM ", self.active_thresh)
         if self.active_thresh > 0:
             if self.active_out is None:
                 raise ValueError(
