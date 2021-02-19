@@ -1,7 +1,6 @@
 #!/usr/bin/python
 import sys
 import argparse
-import time
 import numpy as np
 from ipi.inputs.simulation import InputSimulation
 from ipi.utils.io.inputs import io_xml
@@ -26,7 +25,6 @@ def direct_reweight(pot, obs, kbT):
     num_pot_models = pot.shape[1]
     if obs.ndim == 1:
         obs = np.expand_dims(obs, axis=1)
-    num_obs_models = obs.shape[1]
 
     # vectorized evaluation of weights
     weights = np.array(-beta * (pot.T - np.mean(pot, axis=1)).T, dtype=np.float128)
