@@ -110,17 +110,13 @@ def commitee_reweight(path2ixml, pot_file, obs_file, stride=1, index=-1, direct=
     else:
         obs = np.loadtxt(obs_file)
 
-
     if stride > 0:
         potentials = np.loadtxt(pot_file)[::stride]
     elif stride < 0:
         stride = np.abs(stride)
         obs = obs[::stride]
     else:
-        raise ValueError(
-                "Stride value cannot be zero"
-                )
-
+        raise ValueError("Stride value cannot be zero")
 
     # Load kbT from i-PI, we could make it into a small function
     ifile = open(path2ixml, "r")
