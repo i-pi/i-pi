@@ -19,7 +19,7 @@ def direct_reweight(pot, obs, kbT):
     num_obs_frames = obs.shape[0]
     if num_pot_frames != num_obs_frames:
         raise RuntimeError(
-            "potential and observable files have different numbers of frames"
+            "Potential and observable files have different numbers of frames"
         )
 
     num_pot_models = pot.shape[1]
@@ -92,9 +92,10 @@ def commitee_reweight(path2ixml, pot_file, obs_file, stride=1, index=-1, direct=
                     A file containing the value of the observable for each frame.
                     It is assumed that lines correspond to frames, while columns to properties.
                     Multiple properties can be reweighted at the same time.
-    stride      :   integer [1]
-                    The frequency of sampling of prop_file, if different from that of pot_file (e.g. --stride 10 if
-                    observables are output 10 times more rarely than potential
+    stride      :   integer, [1]
+                    The frequency of sampling of pot_file, if different from that of prop_file (e.g. --stride 10 if
+                    the potential was printed 10 times more often than the observable. --stride -10 must be used if
+                    the observable were printed more often than the potential).
     index       :   integer, optional
                     Which column of the property file should be used to compute the average and uncertainty.
                     If it is not given, and there are multiple columns, they will be interpreted as corresponding
@@ -104,12 +105,22 @@ def commitee_reweight(path2ixml, pot_file, obs_file, stride=1, index=-1, direct=
                     Use at your own risk!
 
     """
-    potentials = np.loadtxt(pot_file)
-
     if index >= 0:
-        obs = np.loadtxt(obs_file, usecols=index)[::stride]
+        obs = np.loadtxt(obs_file, usecols=index)
     else:
-        obs = np.loadtxt(obs_file)[::stride]
+        obs = np.loadtxt(obs_file)
+
+
+    if stride > 0:
+        potentials = np.loadtxt(pot_file)[::stride]
+    elif stride < 0:
+        stride = np.abs(stride)
+        obs = obs[::stride]
+    else:
+        raise ValueError(
+                "Stride value cannot be zero"
+                )
+
 
     # Load kbT from i-PI, we could make it into a small function
     ifile = open(path2ixml, "r")
@@ -156,7 +167,7 @@ if __name__ == "__main__":
         "--stride",
         type=int,
         default=1,
-        help="The difference in stride between the potential and properties",
+        help="The stride ratio used to print the potential and the property. A positive number will take one every n-th value of the potential. A negative number will do the same on the property file.",
     )
     parser.add_argument(
         "--index",
