@@ -34,7 +34,6 @@ def find_examples(parent, excluded_file="excluded_test.txt", examples=[]):
     return examples
 
 
-
 class Runner_examples(Runner):
     """This class handles the modification of the examples inputs,
     the creation of tmp directories, the i-pi call, the driver call, and finally

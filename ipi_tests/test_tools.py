@@ -23,15 +23,15 @@ fortran_driver_models = [
     "MB",
     "doublewell_1D",
     "doublewell",
-    "gas"
+    "gas",
 ]
 
 # YL should do this  automatically but fFor now I do it explicitly
 python_driver_models = ["dummy", "harmonic"]
 
+
 def get_test_list(parent):
-    """This function recursively searches for test 
-    """
+    """This function recursively searches for test"""
     folders = [x[0] for x in os.walk(parent)]
     reg_tests = list()
 
@@ -40,6 +40,7 @@ def get_test_list(parent):
             reg_tests.append(ff)
 
     return reg_tests
+
 
 def clean_tmp_dir():
     if clean_all:
@@ -68,7 +69,7 @@ def get_test_settings(
     try:
         with open(Path(example_folder) / settings_file) as f:
             flags = list()
-             
+
             while True:
                 line = f.readline()
                 if not line:
@@ -114,6 +115,7 @@ def get_test_settings(
 
     return driver_info, test_settings
 
+
 def modify_xml_4_dummy_test(
     input_name,
     output_name,
@@ -153,11 +155,11 @@ def modify_xml_4_dummy_test(
 
     element = root.find("total_steps")
     if test_settings is not None:
-     if element is not None:
-        element.text = test_settings["nsteps"]
-     else:
-        new_element = ET.SubElement(root, "total_steps")
-        new_element.text = test_settings["nsteps"]
+        if element is not None:
+            element.text = test_settings["nsteps"]
+        else:
+            new_element = ET.SubElement(root, "total_steps")
+            new_element.text = test_settings["nsteps"]
 
     tree.write(open(output_name, "wb"))
     return clients
@@ -278,7 +280,7 @@ class Runner(object):
             ipi_error = ipi.communicate(timeout=120)[1].decode("ascii")
             if ipi_error != "":
                 print(ipi_error)
-            assert "" == ipi_error , "IPI ERROR OCCURED: {}".format(ipi_error)
+            assert "" == ipi_error, "IPI ERROR OCCURED: {}".format(ipi_error)
 
         except sp.TimeoutExpired:
             raise RuntimeError(
@@ -293,6 +295,3 @@ class Runner(object):
 
         except ValueError:
             return "Value Error\n{}".format(str(cwd))
-
-
-      

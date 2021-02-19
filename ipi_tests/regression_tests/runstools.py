@@ -7,7 +7,12 @@ import tempfile
 import shutil
 import time
 import glob
-from ipi_tests.test_tools import get_test_settings, Runner,modify_xml_4_dummy_test, get_test_list
+from ipi_tests.test_tools import (
+    get_test_settings,
+    Runner,
+    modify_xml_4_dummy_test,
+    get_test_list,
+)
 
 
 class Runner_regression(Runner):
@@ -38,7 +43,7 @@ class Runner_regression(Runner):
         self.usecol = []
 
     def create_client_list(self, driver_info, nid, test_settings):
-        
+
         try:
             # Modify xml
             clients = modify_xml_4_dummy_test(
@@ -63,18 +68,18 @@ class Runner_regression(Runner):
         super().run(cwd, nid)
 
         with open(self.tmp_dir / "files_to_check.txt") as f:
-                lines = f.readlines()
+            lines = f.readlines()
         for nl, line in enumerate(lines):
-                if nl > 1:
-                    self.files.append(line.split()[0])
-                    self.forms.append(line.split()[1])
-                    if len(line.split()) > 2:
-                        listll = []
-                        for ll in line.split()[2:]:
-                            listll.append(int(ll))
-                        self.usecol.append(listll)
-                    else:
-                        self.usecol.append(None)
+            if nl > 1:
+                self.files.append(line.split()[0])
+                self.forms.append(line.split()[1])
+                if len(line.split()) > 2:
+                    listll = []
+                    for ll in line.split()[2:]:
+                        listll.append(int(ll))
+                    self.usecol.append(listll)
+                else:
+                    self.usecol.append(None)
 
         if self.check_numpy_output:
             self._check_numpy_output(cwd)
