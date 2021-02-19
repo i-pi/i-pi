@@ -619,9 +619,17 @@ class InputFFsGDML(InputForceField):
 
 
 class InputFFCommittee(InputForceField):
-    default_help = """A class to consolidate multiple FF inputs in a single XML field.
+    default_help = """Combines multiple forcefields to build a committee model, that can 
+                      be used to compute uncertainty-quantified machine-learning models. 
+                      Each forcefield can be any of the other FF objects, and each should
+                      be used with a client that generates a slightly different estimation
+                      of energy and forces. These are averaged, and the mean used as the 
+                      actual forcefield. Statistics about the distribution are also returned
+                      as extras fields, and can be printed for further postprocessing. 
                       Also contains options to use it for uncertainty estimation and for
-                      active learning in a ML context, based on a committee model."""
+                      active learning in a ML context, based on a committee model.
+                      Implements the approaches discussed in DOI: 10.1063/5.0036522.
+                      """
     default_label = "FFCOMMITTEE"
 
     dynamic = {
@@ -658,7 +666,7 @@ class InputFFCommittee(InputForceField):
         {
             "dtype": str,
             "default": "",
-            "help": """Name of the forcefield object that should be treated as the baseline.""",
+            "help": """Name of the forcefield object that should be treated as the baseline for a weighted baseline model.""",
         },
     )
 
