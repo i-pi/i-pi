@@ -13,14 +13,12 @@ To add a new regression test please provide:
 
    - input.xml (and all the files required by it)
 
-   - driver.txt specifying  "<driver> <address> <port> <unix/inet> <-o possible
-     options> " (see existing examples)
-	The driver will be run using the following syntax*: 
- 
-	"i-pi-driver -m <driver> -h <address> -u -o <possible options>" if unix 
-     
-     for an existing example including the usage of option flags, please see:
-	tests/GEOP/BFGS/harmonic/driver.txt
+   - test_settings.dat 
+     This file specified the driver_model and flags that will be used when running
+     the driver to perform the regression test.
+     For examples including the usage of option flags, please see:
+         tests/NVE/NVE_1/harmonic_python/test_settings.dat
+         tests/NVE/NVE_1/harmonic/test_settings.dat
 
      *Please note that the driver can be run with the same syntax when one
      creates the reference files for the regression tests.
