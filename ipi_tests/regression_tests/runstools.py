@@ -7,79 +7,7 @@ import tempfile
 import shutil
 import time
 import glob
-
-driver_models = [
-    "lj",
-    "sg",
-    "harm",
-    "harm3d",
-    "morse",
-    "zundel",
-    "qtip4pf",
-    "pswater",
-    "eckart",
-    "ch4hcbe",
-    "ljpolymer",
-    "doublewell",
-    "doublewell_1D",
-    "MB",
-]
-
-
-def get_driver_info(
-    example_folder,
-    driver_info_file="driver.txt",
-    driver="gas",
-    socket_mode="unix",
-    port_number=33333,
-    address_name="localhost",
-    flags=[],
-):
-    """This function looks for the existence of .driver_info file
-    to run the example with a meaningfull driver. If the file doesn't
-    exist, the driver gas is assigned."""
-    try:
-        with open(Path(example_folder) / driver_info_file) as f:
-            flags = list()
-            ncount = 0
-            while True:
-                line = f.readline()
-                if not line:
-                    break
-                elif "driver" in line:
-                    driver = line.split()[1]
-                elif "socket_mode" in line:
-                    socket_mode = line.split()[1]
-                elif "port" in line:
-                    port_number = line.split()[1]
-                elif "address" in line:
-                    address_name = line.split()[1]
-                elif "flags" in line:
-                    flags.append({line.split()[1]: line.split()[2:]})
-                ncount += 1
-            if ncount == 0:
-                raise ValueError("driver.txt is empty")
-    except FileNotFoundError:
-        raise FileNotFoundError(
-            "({}) An input.xml file was found but a driver.txt not".format(
-                example_folder
-            )
-        )
-    except:
-        pass
-
-    if driver not in driver_models:
-        driver = "gas"
-
-    driver_info = {
-        "model": driver,
-        "socket_mode": socket_mode,
-        "port_number": port_number,
-        "address_name": address_name,
-        "flag": flags,
-    }
-
-    return driver_info
+from ipi_tests.test_tools import get_test_settings
 
 
 def get_info_test(parent):
@@ -93,7 +21,7 @@ def get_info_test(parent):
     for ff in folders:
         if os.path.isfile(Path(ff) / "input.xml"):
             try:
-                driver_info = get_driver_info(ff)
+                driver_info, test_settings = get_test_settings(ff)
                 reg_tests.append([ff, driver_info])
             except FileNotFoundError:
                 raise FileNotFoundError(
@@ -117,7 +45,6 @@ class Runner(object):
         self,
         parent,
         call_ipi="i-pi input.xml",
-        call_driver="i-pi-driver",
         check_errors=True,
         check_numpy_output=True,
         check_xyz_output=True,
@@ -129,7 +56,6 @@ class Runner(object):
 
         self.parent = parent
         self.call_ipi = call_ipi
-        self.call_driver = call_driver
         self.check_error = check_errors
         self.check_numpy_output = check_numpy_output
         self.check_xyz_output = check_xyz_output
@@ -156,7 +82,7 @@ class Runner(object):
             files = os.listdir(self.parent / cwd)
             for f in files:
                 shutil.copy(self.parent / cwd / f, self.tmp_dir)
-            driver_info = get_driver_info(self.tmp_dir)
+            driver_info, test_settings = get_test_settings(self.tmp_dir)
 
             # Creating the clients list
             input_name = self.tmp_dir / "input.xml"
@@ -183,8 +109,9 @@ class Runner(object):
                         element.text = dd
                         address = dd
 
-                model = driver_info["model"]
-                clients.append([model, address, port, mode])
+                model = driver_info["driver_model"]
+                driver_code = driver_info["driver_code"]
+                clients.append([model, address, port, mode, driver_code])
 
                 for flag in driver_info["flag"]:
                     for k, v in flag.items():
@@ -224,15 +151,16 @@ class Runner(object):
             cmd2 = list()
             for client in clients:
                 if client[3] == "unix":
-                    clientcall = self.call_driver + " -m {} -h {} -u ".format(
+                    clientcall = client[4] + " -m {} -h {} -u ".format(
                         client[0], client[1]
                     )
                     cmd2.append(clientcall)
                 elif client[3] == "inet":
-                    cmd2.append(
-                        self.call_driver
-                        + " -m {} -h {} -p {}".format(client[0], client[1], client[2])
+                    clientcall = client[4] + " -m {} -h {} -p {}".format(
+                        client[0], client[1], client[2]
                     )
+
+                    cmd2.append(clientcall)
                 else:
                     raise ValueError("Driver mode has to be either unix or inet")
 

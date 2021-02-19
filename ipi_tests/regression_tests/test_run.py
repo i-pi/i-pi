@@ -10,7 +10,6 @@ from ipi_tests.regression_tests.runstools import Runner, get_info_test
 
 regtests_folder = Path(__file__).resolve().parent / "tests"
 call_ipi = "i-pi input.xml"
-call_driver = "i-pi-driver"
 
 reg_tests = get_info_test(regtests_folder)
 

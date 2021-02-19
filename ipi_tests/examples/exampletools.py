@@ -5,7 +5,7 @@ from distutils.dir_util import copy_tree
 import xml.etree.ElementTree as ET
 import tempfile
 import time
-from ipi_tests.test_tools import get_test_settings
+from ipi_tests.test_tools import get_test_settings, Runner
 
 
 def find_examples(parent, excluded_file="excluded_test.txt", examples=[]):
@@ -34,7 +34,7 @@ def find_examples(parent, excluded_file="excluded_test.txt", examples=[]):
     return examples
 
 
-def modify_xml_2_dummy_test(
+def modify_xml_4_dummy_test(
     input_name,
     output_name,
     nid,
@@ -63,8 +63,8 @@ def modify_xml_2_dummy_test(
                 address = dd
 
         model = driver_info["driver_model"]
-        print("driver:", model)
-        clients.append([model, address, port])
+
+        clients.append([model, "unix", address, port])
 
         for flag in driver_info["flag"]:
             for k, v in flag.items():
@@ -82,117 +82,27 @@ def modify_xml_2_dummy_test(
     return clients
 
 
-class Runner_examples(object):
+class Runner_examples(Runner):
     """This class handles the modification of the examples inputs,
     the creation of tmp directories, the i-pi call, the driver call, and finally
     it checks if i-pi ended without error.
     """
 
-    def __init__(self, parent, cmd1="i-pi new.xml"):
+    def __init__(self, parent, call_ipi="i-pi new.xml"):
         """ Store parent directory and commands to call i-pi """
         self.parent = parent
-        self.cmd1 = cmd1
+        self.call_ipi = call_ipi
 
-    def run(self, cwd, nid):
-        """This function tries to run the example in a tmp folder and
-        afterwards checks if ipi has ended without error.
-        arguments:
-            cwd: folder where all the original examples files are stored
-            nid: identification number to avoid repetitions of addresses"""
-
-        try:
-            # Create temp file and copy files
-            self.tmp_dir = Path(tempfile.mkdtemp())
-            print("temp folder: {}".format(self.tmp_dir))
-            copy_tree(str(cwd), str(self.tmp_dir))
-        except:
-            return "Couldn't create the tmp folder"
-
-        try:
-            driver_info, test_settings = get_test_settings(self.tmp_dir)
-            if driver_info["driver_code"] == "fortran":
-                cmd2 = "i-pi-driver"
-                address_key = "-h"
-            elif driver_info["driver_code"] == "python":
-                cmd2 = "i-pi-py_driver"
-                address_key = "-a"
-        except:
-            return "Problem getting driver_info"
-
+    def create_client_list(self, driver_info, nid, test_settings):
         try:
             # Modify xml
-            clients = modify_xml_2_dummy_test(
+            clients = modify_xml_4_dummy_test(
                 self.tmp_dir / "input.xml",
                 self.tmp_dir / "new.xml",
                 nid,
                 driver_info,
                 test_settings,
             )
+            return clients
         except:
             raise RuntimeError("Couldn't modify the xml file")
-        print("Launching i-pi\n")
-
-        try:
-            # Run i-pi
-            ipi = sp.Popen(
-                self.cmd1,
-                cwd=(self.tmp_dir),
-                shell=True,
-                stdout=sp.PIPE,
-                stderr=sp.PIPE,
-            )
-
-            if len(clients) > 0:
-                f_connected = False
-                for i in range(50):
-                    if os.path.exists("/tmp/ipi_" + clients[0][1]):
-                        f_connected = True
-                        break
-                    else:
-                        time.sleep(0.1)
-                if not f_connected:
-                    return "Couldn't find the i-PI UNIX socket"
-
-            # Run drivers
-            driver = list()
-            flag_indeces = list()
-            for client in clients:
-                cmd = cmd2 + " -m {} -u {} {}".format(client[0], address_key, client[1])
-                if any("-" in str(s) for s in client):
-                    flag_indeces = [
-                        i for i, elem in enumerate(client) if "-" in str(elem)
-                    ]
-                    for i, ll in enumerate(flag_indeces):
-                        if i < len(flag_indeces) - 1:
-                            cmd += " {} {}".format(
-                                client[ll],
-                                ",".join(client[ll + 1 : flag_indeces[i + 1]][:]),
-                            )
-                        else:
-                            cmd += " {} {}".format(
-                                client[ll], ",".join(client[ll + 1 :][:])
-                            )
-                print("cmd:", cmd)
-                driver.append(
-                    sp.Popen(cmd, cwd=(cwd), shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
-                )
-
-            # Check errors
-            ipi_error = ipi.communicate(timeout=120)[1].decode("ascii")
-            if ipi_error != "":
-                print(ipi_error)
-            assert "" == ipi_error
-
-        except sp.TimeoutExpired:
-            raise RuntimeError(
-                "Time is out. Aborted during {} test. \
-              Error {}".format(
-                    str(cwd), ipi.communicate(timeout=2)[0]
-                )
-            )
-
-        except FileNotFoundError:
-            raise ("{}".format(str(cwd)))
-
-        except ValueError:
-            raise ("{}".format(str(cwd)))
