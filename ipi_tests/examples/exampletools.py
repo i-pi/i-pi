@@ -5,7 +5,7 @@ from distutils.dir_util import copy_tree
 import xml.etree.ElementTree as ET
 import tempfile
 import time
-from ipi_tests.test_tools import get_test_settings, Runner
+from ipi_tests.test_tools import get_test_settings, Runner, modify_xml_4_dummy_test
 
 
 def find_examples(parent, excluded_file="excluded_test.txt", examples=[]):
@@ -33,53 +33,6 @@ def find_examples(parent, excluded_file="excluded_test.txt", examples=[]):
 
     return examples
 
-
-def modify_xml_4_dummy_test(
-    input_name,
-    output_name,
-    nid,
-    driver_info,
-    test_settings,
-):
-    """ Modify xml to run dummy tests """
-    try:
-        tree = ET.parse(input_name)
-    except:
-        print("The error is in the format or the tags of the xml!")
-    root = tree.getroot()
-    clients = list()
-
-    for s, ffsocket in enumerate(root.findall("ffsocket")):
-        # name = ffsocket.attrib["name"]
-        ffsocket.attrib["mode"] = driver_info["socket_mode"]
-
-        for element in ffsocket:
-            port = driver_info["port_number"]
-            if element.tag == "port":
-                element.text = str(port)
-            elif element.tag == "address":
-                dd = driver_info["address_name"] + "_" + str(nid) + "_" + str(s)
-                element.text = dd
-                address = dd
-
-        model = driver_info["driver_model"]
-
-        clients.append([model, "unix", address, port])
-
-        for flag in driver_info["flag"]:
-            for k, v in flag.items():
-                clients[s].append(k)
-                clients[s].extend(v)
-
-    element = root.find("total_steps")
-    if element is not None:
-        element.text = test_settings["nsteps"]
-    else:
-        new_element = ET.SubElement(root, "total_steps")
-        new_element.text = test_settings["nsteps"]
-
-    tree.write(open(output_name, "wb"))
-    return clients
 
 
 class Runner_examples(Runner):

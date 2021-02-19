@@ -21,11 +21,25 @@ fortran_driver_models = [
     "eckart",
     "ch4hcbe",
     "MB",
+    "doublewell_1D",
+    "doublewell",
+    "gas"
 ]
 
 # YL should do this  automatically but fFor now I do it explicitly
 python_driver_models = ["dummy", "harmonic"]
 
+def get_test_list(parent):
+    """This function recursively searches for test 
+    """
+    folders = [x[0] for x in os.walk(parent)]
+    reg_tests = list()
+
+    for ff in folders:
+        if os.path.isfile(Path(ff) / "input.xml"):
+            reg_tests.append(ff)
+
+    return reg_tests
 
 def clean_tmp_dir():
     if clean_all:
@@ -50,10 +64,11 @@ def get_test_settings(
     """This function looks for the existence of test_settings.txt file.
     This file can contain instructions like number of steps or driver name.
     If the file doesn't  exist, the driver dummy is assigned."""
+
     try:
         with open(Path(example_folder) / settings_file) as f:
             flags = list()
-
+             
             while True:
                 line = f.readline()
                 if not line:
@@ -98,6 +113,54 @@ def get_test_settings(
     test_settings = {"nsteps": nsteps}
 
     return driver_info, test_settings
+
+def modify_xml_4_dummy_test(
+    input_name,
+    output_name,
+    nid,
+    driver_info,
+    test_settings,
+):
+    """ Modify xml to run dummy tests """
+    try:
+        tree = ET.parse(input_name)
+    except:
+        print("The error is in the format or the tags of the xml!")
+    root = tree.getroot()
+    clients = list()
+
+    for s, ffsocket in enumerate(root.findall("ffsocket")):
+        # name = ffsocket.attrib["name"]
+        ffsocket.attrib["mode"] = driver_info["socket_mode"]
+
+        for element in ffsocket:
+            port = driver_info["port_number"]
+            if element.tag == "port":
+                element.text = str(port)
+            elif element.tag == "address":
+                dd = driver_info["address_name"] + "_" + str(nid) + "_" + str(s)
+                element.text = dd
+                address = dd
+
+        model = driver_info["driver_model"]
+
+        clients.append([model, "unix", address, port])
+
+        for flag in driver_info["flag"]:
+            for k, v in flag.items():
+                clients[s].append(k)
+                clients[s].extend(v)
+
+    element = root.find("total_steps")
+    if test_settings is not None:
+     if element is not None:
+        element.text = test_settings["nsteps"]
+     else:
+        new_element = ET.SubElement(root, "total_steps")
+        new_element.text = test_settings["nsteps"]
+
+    tree.write(open(output_name, "wb"))
+    return clients
 
 
 class Runner(object):
@@ -149,8 +212,7 @@ class Runner(object):
 
         clients = self.create_client_list(driver_info, nid, test_settings)
 
-        if True:
-            # try:
+        try:
             # Run i-pi
 
             ipi = sp.Popen(
@@ -216,10 +278,8 @@ class Runner(object):
             ipi_error = ipi.communicate(timeout=120)[1].decode("ascii")
             if ipi_error != "":
                 print(ipi_error)
-            assert "" == ipi_error
+            assert "" == ipi_error , "IPI ERROR OCCURED: {}".format(ipi_error)
 
-        try:
-            2 == 2
         except sp.TimeoutExpired:
             raise RuntimeError(
                 "Time is out. Aborted during {} test. \
@@ -233,3 +293,6 @@ class Runner(object):
 
         except ValueError:
             return "Value Error\n{}".format(str(cwd))
+
+
+      

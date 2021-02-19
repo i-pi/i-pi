@@ -7,35 +7,10 @@ import tempfile
 import shutil
 import time
 import glob
-from ipi_tests.test_tools import get_test_settings
+from ipi_tests.test_tools import get_test_settings, Runner,modify_xml_4_dummy_test, get_test_list
 
 
-def get_info_test(parent):
-    """This function recursively searches for examples
-    and checks for the presence of the required additional info
-    required (i.e. driver.txt)
-    """
-    folders = [x[0] for x in os.walk(parent)]
-    reg_tests = list()
-
-    for ff in folders:
-        if os.path.isfile(Path(ff) / "input.xml"):
-            try:
-                driver_info, test_settings = get_test_settings(ff)
-                reg_tests.append([ff, driver_info])
-            except FileNotFoundError:
-                raise FileNotFoundError(
-                    "({}) An input.xml file was found but a driver.txt not".format(ff)
-                )
-            except ValueError:
-                raise ValueError(
-                    'Please specify "model address      port mode" inside driver.txt'
-                )
-
-    return reg_tests
-
-
-class Runner(object):
+class Runner_regression(Runner):
     """This class handles the creation of tmp directories,
     the i-pi call, the driver call, and finally
     it checks that the generated outputs are the expected ones.
@@ -45,7 +20,6 @@ class Runner(object):
         self,
         parent,
         call_ipi="i-pi input.xml",
-        check_errors=True,
         check_numpy_output=True,
         check_xyz_output=True,
     ):
@@ -56,11 +30,29 @@ class Runner(object):
 
         self.parent = parent
         self.call_ipi = call_ipi
-        self.check_error = check_errors
         self.check_numpy_output = check_numpy_output
         self.check_xyz_output = check_xyz_output
 
-    def _run(self, info, nid):
+        self.files = []
+        self.forms = []
+        self.usecol = []
+
+    def create_client_list(self, driver_info, nid, test_settings):
+        
+        try:
+            # Modify xml
+            clients = modify_xml_4_dummy_test(
+                self.tmp_dir / "input.xml",
+                self.tmp_dir / "input.xml",
+                nid,
+                driver_info,
+                test_settings=None,
+            )
+            return clients
+        except:
+            raise RuntimeError("Couldn't modify the xml file")
+
+    def run(self, cwd, nid):
         """This function tries to run the example in a tmp folder and
         checks if ipi has ended without error.
         After that the output is checked against a reference
@@ -68,71 +60,11 @@ class Runner(object):
             cwd: folder where all the original regression tests are stored
         """
 
-        cwd = info[0]
-        self.files = []
-        self.forms = []
-        self.usecol = []
+        super().run(cwd, nid)
 
-        try:
-            # Create temp file and copy files
-            self.tmp_dir = Path(tempfile.mkdtemp())
-            print("\nTest folder: {}".format(str(cwd).split("ipi_tests/", 1)[1]))
-            print("temp folder: {}".format(self.tmp_dir))
-
-            files = os.listdir(self.parent / cwd)
-            for f in files:
-                shutil.copy(self.parent / cwd / f, self.tmp_dir)
-            driver_info, test_settings = get_test_settings(self.tmp_dir)
-
-            # Creating the clients list
-            input_name = self.tmp_dir / "input.xml"
-            output_name = self.tmp_dir / "input.xml"
-            try:
-                tree = ET.parse(input_name)
-            except:
-                print("The error is in the format or the tags of the xml!")
-            root = tree.getroot()
-
-            clients = list()
-
-            for s, ffsocket in enumerate(root.findall("ffsocket")):
-                # name = ffsocket.attrib["name"]
-                mode = driver_info["socket_mode"]
-                ffsocket.attrib["mode"] = mode
-
-                for element in ffsocket:
-                    port = driver_info["port_number"]
-                    if element.tag == "port":
-                        element.text = str(port)
-                    elif element.tag == "address":
-                        dd = driver_info["address_name"] + "_" + str(nid) + "_" + str(s)
-                        element.text = dd
-                        address = dd
-
-                model = driver_info["driver_model"]
-                driver_code = driver_info["driver_code"]
-                clients.append([model, address, port, mode, driver_code])
-
-                for flag in driver_info["flag"]:
-                    for k, v in flag.items():
-                        clients[s].append(k)
-                        clients[s].extend(v)
-
-            tree.write(open(output_name, "wb"))
-
-            # Run i-pi
-            ipi = sp.Popen(
-                self.call_ipi,
-                cwd=(self.tmp_dir),
-                shell=True,
-                stdout=sp.PIPE,
-                stderr=sp.PIPE,
-            )
-            time.sleep(2)
-
-            with open(self.tmp_dir / "files_to_check.txt") as f:
+        with open(self.tmp_dir / "files_to_check.txt") as f:
                 lines = f.readlines()
-            for nl, line in enumerate(lines):
+        for nl, line in enumerate(lines):
                 if nl > 1:
                     self.files.append(line.split()[0])
                     self.forms.append(line.split()[1])
@@ -144,79 +76,10 @@ class Runner(object):
                     else:
                         self.usecol.append(None)
 
-            # Run drivers by defining cmd2 which will be called, eventually
-            flag_indeces = list()
-
-            driver = list()
-            cmd2 = list()
-            for client in clients:
-                if client[3] == "unix":
-                    clientcall = client[4] + " -m {} -h {} -u ".format(
-                        client[0], client[1]
-                    )
-                    cmd2.append(clientcall)
-                elif client[3] == "inet":
-                    clientcall = client[4] + " -m {} -h {} -p {}".format(
-                        client[0], client[1], client[2]
-                    )
-
-                    cmd2.append(clientcall)
-                else:
-                    raise ValueError("Driver mode has to be either unix or inet")
-
-                cmd = cmd2[0]
-                if any("-" in str(s) for s in client):
-                    flag_indeces = [
-                        i for i, elem in enumerate(client) if "-" in str(elem)
-                    ]
-                    for i, ll in enumerate(flag_indeces):
-                        if i < len(flag_indeces) - 1:
-                            cmd2 += "{} {}".format(
-                                client[ll],
-                                ",".join(client[ll + 1 : flag_indeces[i + 1]][:]),
-                            )
-                        else:
-                            cmd2.append(
-                                " {} {}".format(
-                                    client[ll], ",".join(client[ll + 1 :][:])
-                                )
-                            )
-                    cmd += cmd2[1]
-                driver.append(
-                    sp.call(cmd, cwd=(cwd), shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
-                )
-
-        except sp.TimeoutExpired:
-            raise RuntimeError(
-                "Time is out. Aborted during {} test. \
-              Error {}".format(
-                    str(cwd), ipi.communicate(timeout=2)[0]
-                )
-            )
-
-        except FileNotFoundError:
-            raise ("{}".format(str(cwd)))
-
-        except ValueError:
-            raise ("{}".format(str(cwd)))
-        try:
-            for filename in glob.glob("/tmp/ipi_*"):
-                os.remove(filename)
-        except:
-            pass
-
-        if self.check_error:
-            self._check_error(ipi)
         if self.check_numpy_output:
             self._check_numpy_output(cwd)
         if self.check_xyz_output:
             self._check_xyz_output(cwd)
-
-    def _check_error(self, ipi):
-        """ This function checks if ipi has exited with errors"""
-
-        ipi_error = ipi.communicate(timeout=120)[1].decode("ascii")
-        assert "" == ipi_error, "IPI ERROR OCCURED: {}".format(ipi_error)
 
     def _check_numpy_output(self, cwd):
         """This function checks if the numpy-accessible datafiles are 'all_close' to the
