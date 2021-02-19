@@ -1,11 +1,6 @@
-import subprocess as sp
 import os
 from pathlib import Path
-from distutils.dir_util import copy_tree
-import xml.etree.ElementTree as ET
-import tempfile
-import time
-from ipi_tests.test_tools import get_test_settings, Runner, modify_xml_4_dummy_test
+from ipi_tests.test_tools import Runner, modify_xml_4_dummy_test
 
 
 def find_examples(parent, excluded_file="excluded_test.txt", examples=[]):

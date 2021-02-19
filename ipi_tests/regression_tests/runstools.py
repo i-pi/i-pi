@@ -1,17 +1,8 @@
-import subprocess as sp
-import os
 import numpy as np
 from pathlib import Path
-import xml.etree.ElementTree as ET
-import tempfile
-import shutil
-import time
-import glob
 from ipi_tests.test_tools import (
-    get_test_settings,
     Runner,
     modify_xml_4_dummy_test,
-    get_test_list,
 )
 
 

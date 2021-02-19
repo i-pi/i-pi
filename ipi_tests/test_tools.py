@@ -5,6 +5,7 @@ from distutils.dir_util import copy_tree
 import xml.etree.ElementTree as ET
 import tempfile
 import time
+import glob
 
 clean_all = False
 
@@ -196,7 +197,7 @@ class Runner(object):
             print("\nTest folder: {}".format(cwd))
             print("temp folder: {}".format(self.tmp_dir))
 
-            files = os.listdir(self.parent / cwd)
+            # files = os.listdir(self.parent / cwd)
             copy_tree(str(cwd), str(self.tmp_dir))
         except:
             return "Couldn't create the tmp folder"
