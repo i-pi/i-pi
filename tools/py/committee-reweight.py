@@ -8,11 +8,21 @@ from ipi.utils.io.inputs import io_xml
 
 def direct_reweight(pot, obs, kbT):
     """
-    reweights an observable based on a committee of potentials, at the temperature kT
+    Reweights an observable based on a committee of potentials, at the temperature kT
+    ref:
+    Torrie, Glenn M., and John P. Valleau. "Nonphysical sampling distributions in Monte 
+    Carlo free-energy estimation: Umbrella sampling." 
+    Journal of Computational Physics 23.2 (1977): 187-199.
+    https://doi.org/10.1016/0021-9991(77)90121-8
+    
+    Inputs:
+    pot          : an array (nframes x ncommittee) containing the values of the potentials for each committee
+    obs          : an array containing the values of the observables
+    kbT          : the temperature, in energy units
 
-    pot: an array (nframes x ncommittee) containing the values of the potentials for each committee
-    obs: an array containing the values of the observables
-    kbT: the temperature, in energy units
+    Returns:
+    obs_avg_rew  : the observable reweighted for each potential
+    weights      : the weights computed for each model and frame
     """
     beta = 1.0 / kbT
     num_pot_frames = pot.shape[0]
@@ -40,14 +50,23 @@ def direct_reweight(pot, obs, kbT):
 
 def CEA(pot, obs, kbT):
     """
-    reweight the quantity by cumulant expansion approximation (CEA)
+    Reweights the quantity by cumulant expansion approximation (CEA)
     ref:
     Michele Ceriotti,  Guy A. R. Brain, Oliver Riordan and David E.
-    Manolopoulos 2011The inefficiency of re-weighted sampling and
+    Manolopoulos 2011 The inefficiency of re-weighted sampling and
     the curse of system size in high-order path integration
     Proc. R. Soc. A.4682–17
     http://doi.org/10.1098/rspa.2011.0413
-    :return:
+
+    Inputs:
+    pot          : an array (nframes x ncommittee) containing the values of the potentials for each committee
+    obs          : an array containing the values of the observables
+    kbT          : the temperature, in energy units
+
+    Returns:
+    obs_avg_rew  : the observable reweighted for each potential
+    weights      : the weights computed for each model and frame
+
     """
     beta = 1.0 / kbT
     num_pot_frames = pot.shape[0]
@@ -81,6 +100,29 @@ def CEA(pot, obs, kbT):
 
 
 def uncertainty_CEA_multiple_models(pot,obs,kbT):
+    """
+    Reweights the quantity by cumulant expansion approximation (CEA) in the case of 
+    multiple models used to predict the observable.
+    ref:
+    Michele Ceriotti,  Guy A. R. Brain, Oliver Riordan and David E.
+    Manolopoulos 2011 The inefficiency of re-weighted sampling and
+    the curse of system size in high-order path integration
+    Proc. R. Soc. A.4682–17
+    http://doi.org/10.1098/rspa.2011.0413
+
+    Inputs:
+    pot         : an array (nframes x ncommittee) containing the values of the potentials for each committee
+    obs         : an array containing the values of the observables
+    kbT         : the temperature, in energy units
+
+    Returns:
+    mean_value  : the average value of the observable
+    sigma2_a    : the uncertainty related to the models used to predict the observable
+    sigma2_aV   : the uncertainty related to the use of a committee of potentials driving the dynamics
+    sigma2_tile : the total uncertainty for the observable
+
+    """
+    beta = 1.0 / kbT
     obs_avg = np.mean(obs,axis=0)
     obs_avg_CEA, _h_matrix = CEA(obs,pot,kbT)
     fac_a = ( pot.shape[1] * (obs.shape[1]-1) ) / (pot.shape[1] * obs.shape[1]  -1)
