@@ -1,25 +1,20 @@
-# Makefile for the help files
+# Minimal makefile for Sphinx documentation
+#
 
-# This file is part of i-PI.
-# i-PI Copyright (C) 2014-2015 i-PI developers
-# See the "licenses" directory for full license information.
+# You can set these variables from the command line, and also
+# from the environment for the first two.
+SPHINXOPTS    ?=
+SPHINXBUILD   ?= sphinx-build
+SOURCEDIR     = src
+BUILDDIR      = _build
 
+# Put it first so that "make" without argument is like "make help".
+help:
+	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-.PHONY: all distclean clean aux
-all: manual.pdf
+.PHONY: help Makefile
 
-aux:
-	PYTHONPATH=..:$(PYTHONPATH) python3 create_man.py
-	rm -f *.pyc
-
-manual.pdf: aux
-	pdflatex manual
-	bibtex manual
-	pdflatex manual
-	pdflatex manual
-
-clean:
-	bash -c "rm -rf input_docs manual.{aux,bbl,blg,brf,idx,log,lof,out,toc}"
-
-distclean: clean
-	rm -f manual.pdf manual.xml
+# Catch-all target: route all unknown targets to Sphinx using the new
+# "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
+%: Makefile
+	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
