@@ -29,12 +29,10 @@ class Rascal_driver(Dummy_driver):
         except ValueError:
             sys.exit(self.error_msg)
 
-        print("ARGLIST ", arglist)
         if len(arglist) == 2:
             self.model = arglist[0]
             self.template = arglist[1]
         else:
-            raise
             sys.exit(self.error_msg)
 
         self.rascal_calc = IPICalc(self.model, self.template)

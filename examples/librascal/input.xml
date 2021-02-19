@@ -48,8 +48,8 @@
                  			</dynamics>
               			</motion>
 	   			<ensemble>
-                    <temperature units="kelvin"> 20 </temperature>
-                     <stress units="megapascal"> [ 5, 1, 0.1, 0, 2, 0.5, 0, 0, 1 ] </stress>
+                    <temperature units="kelvin"> 10 </temperature>
+                     <stress units="megapascal"> [ 1, 0, 0.0, 0, 1, 0.0, 0, 0, 1 ] </stress>
            			</ensemble>
          		</system>
 </simulation>
