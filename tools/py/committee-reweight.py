@@ -127,7 +127,7 @@ def commitee_reweight(path2ixml, pot_file, obs_file, stride=1, index=-1, direct=
     else:
         rw_obs, _h_matrix = CEA(potentials, obs, kbT)
 
-    np.savetxt("rw_" + obs_file + ".dat", rw_obs)
+    np.savetxt("rw_" + obs_file, rw_obs)
 
 
 if __name__ == "__main__":
