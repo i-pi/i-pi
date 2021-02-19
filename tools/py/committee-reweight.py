@@ -38,7 +38,6 @@ def direct_reweight(pot, obs, kbT):
 
     return obs_avg_rew, weights
 
-
 def CEA(pot, obs, kbT):
     """
     reweight the quantity by cumulant expansion approximation (CEA)
@@ -81,7 +80,17 @@ def CEA(pot, obs, kbT):
     return obs_avg_CEA, h_matrix
 
 
-def commitee_reweight(path2ixml, pot_file, obs_file, stride=1, index=-1, direct=False):
+def uncertainty_CEA_multiple_models(pot,obs,kbT):
+    obs_avg = np.mean(obs,axis=0)
+    obs_avg_CEA, _h_matrix = CEA(obs,pot,kbT)
+    fac_a = ( pot.shape[1] * (obs.shape[1]-1) ) / (pot.shape[1] * obs.shape[1]  -1)
+    fac_aV = ( (pot.shape[1]-1) * obs.shape[1] ) / (pot.shape[1] * obs.shape[1]  -1)
+    sigma2_a = np.var(obs_avg, ddof=1)                        # Eq.(27)
+    sigma2_aV = np.mean(np.var(obs_avg_CEA, axis=1, ddof=1))  # Eq.(28)
+    sigma2_tilde = fac_a * sigma2_a + fac_aV * sigma2_aV      # Eq.(26)
+    return np.mean(obs_avg), sigma2_a, sigma2_aV, sigma2_tilde
+
+def commitee_reweight(path2ixml, pot_file, obs_file, stride=1, index=-1, direct=False, multi_models=False):
     """
     Parameters
     ----------
@@ -102,7 +111,11 @@ def commitee_reweight(path2ixml, pot_file, obs_file, stride=1, index=-1, direct=
                     to multiple property models
     direct      :   bool, optional
                     Activates the direct reweighting, instead of the cumulant expansion approximation.
-                    Use at your own risk!
+                    Use at your own risk! Does not work with multi_models
+    multi_models:   bool, optional
+                    Activates the uncertainty for multiple models, as in Eqs. 26,27,28 of the paper.
+                    It considers each column as a prediction from a single model and returns the 
+                    uncertainty of the models together with the uncertainty of the potentials.
 
     """
     if index >= 0:
@@ -128,13 +141,22 @@ def commitee_reweight(path2ixml, pot_file, obs_file, stride=1, index=-1, direct=
     simul = isimul.fetch()
 
     kbT = float(simul.syslist[0].ensemble.temp)
-    # CEA is the default choice. The weights or h_matrix are
-    if direct:
-        rw_obs, _weights = direct_reweight(potentials, obs, kbT)
+    if multi_models:
+        mean_value, sigma2_a, sigma2_aV, sigma2_tilde = uncertainty_CEA_multiple_models(potentials, obs, kbT)
+        print("")
+        print("# Uncertainty estimation for multiple models")
+        print("MEAN AND STD   {:.4f} ± {:.4f}".format(mean_value, np.sqrt(sigma2_tilde)))
+        print("SIGMA_a        {:.4f}".format(np.sqrt(sigma2_a)))
+        print("SIGMA_aV       {:.4f}".format(np.sqrt(sigma2_aV)))
     else:
-        rw_obs, _h_matrix = CEA(potentials, obs, kbT)
-
-    np.savetxt("rw_" + obs_file, rw_obs)
+        # CEA is the default choice. The weights or h_matrix are
+        if direct:
+            rw_obs, _weights = direct_reweight(potentials, obs, kbT)
+        else:
+            rw_obs, _h_matrix = CEA(potentials, obs, kbT)
+        print("")
+        print("# Reweighted observables for each member of the committee. Each row is an observable, each column a committee member")
+        np.savetxt(sys.stdout, rw_obs, fmt="%12.4f")
 
 
 if __name__ == "__main__":
@@ -176,6 +198,11 @@ if __name__ == "__main__":
         action="store_true",
         help="Call this option to activate direct reweighting. Standard reweighting is the CEA",
     )
+    parser.add_argument(
+        "--multi",
+        action="store_true",
+        help="Call this option to activate reweighting for multiple ML models. It returns both the uncertainty of the model and the one derived from the potentials",
+    )
 
     args = parser.parse_args()
     sys.exit(
@@ -186,5 +213,6 @@ if __name__ == "__main__":
             args.stride,
             args.index,
             args.direct,
+            args.multi,
         )
     )
