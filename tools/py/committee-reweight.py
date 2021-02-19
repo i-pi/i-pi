@@ -7,25 +7,34 @@ from ipi.inputs.simulation import InputSimulation
 from ipi.utils.io.inputs import io_xml
 
 def direct_reweight(pot, obs, kbT):
+    """
+    reweights an observable based on a committee of potentials, at the temperature kT
+    
+    pot: an array (nframes x ncommittee) containing the values of the potentials for each committee 
+    obs: an array containing the values of the observables 
+    kbT: the temperature, in energy units
+    """
     beta = 1.0 / kbT
     num_pot_frames = pot.shape[0]
     num_obs_frames = obs.shape[0]
     if num_pot_frames != num_obs_frames:
-       print("potential and observable have different number of frames")
-       sys.exit("exiting...")
+       raise RuntimeError("potential and observable files have different numbers of frames")
+       
     num_pot_models = pot.shape[1]
     if obs.ndim == 1 :
         obs = np.expand_dims(obs, axis=1)
     num_obs_models = obs.shape[1]
-    # fast way avoiding double loop
+    
+    # vectorized evaluation of weights
     weights = np.array(- beta * ( pot.T - np.mean(pot, axis=1) ).T , dtype=np.float128)
     weights = np.exp(weights)
+    
     # 1-d array of lenght num_pot_models: normalization of the weights over frames
     norm    = np.sum(weights, axis=0) 
     for i in range(num_pot_models):
         weights[:,i] /= norm[i]
     obs_avg_rew = obs.T @ weights
-    # np.savetxt("weights.dat", weights)
+    
     return obs_avg_rew, weights
 
 
@@ -71,7 +80,7 @@ def CEA(pot, obs, kbT):
             obs_avg_CEA[j,i] = obs_avg[j] - obsxh_avg[j,i] + obs_avg[j]*h_avg[i]
     return obs_avg_CEA, h_matrix
 
-def main(path2ixml, pot_file, obs_file, stride, index, direct):
+def commitee_reweight(path2ixml, pot_file, obs_file, stride=1, index=-1, direct=False):
     """
     Parameters
     ----------
@@ -96,7 +105,7 @@ def main(path2ixml, pot_file, obs_file, stride, index, direct):
     """
     potentials = np.loadtxt(pot_file)
 
-    if index is not None:
+    if index >= 0:
         obs = np.loadtxt(obs_file,usecols=index)[::stride]
     else:
         obs = np.loadtxt(obs_file)[::stride]
@@ -127,13 +136,14 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="""This tool exploits a committee of ML models to compute the reweighted  canonical averages of a given observable, in order to quantify its uncertainty at thermodynamic equilibrium.
     The units are assumed to be atomic, which are also the internal units of i-PI.
     The full methodology is described in: https://doi.org/10.1063/5.0036522""")
+    
     parser.add_argument("input_xml", type = str, help = "The path to the input file used to run the simulation (usually input.xml)")
     parser.add_argument("pot_file", type = str, help = "The file containing the potentials. Rows = frames, columns = potentials")
-    parser.add_argument("obs_file", type=str, default=None, help="The file containing the properties. Rows = frames, columns = property/ies")
+    parser.add_argument("obs_file", type=str, help="The file containing the properties. Rows = frames, columns = property/ies")
     parser.add_argument("--stride", type=int, default=1, help="The difference in stride between the potential and properties")
-    parser.add_argument("--index", type=int, default=None, help="0-based index of the property that we want to compute")
+    parser.add_argument("--index", type=int, default=-1, help="0-based index of the property that we want to compute")
     parser.add_argument("--direct", action='store_true', help="Call this option to activate direct reweighting. Standard reweighting is the CEA")
 
 
     args = parser.parse_args()
-    sys.exit(main(args.input_xml, args.pot_file,args.obs_file,args.stride,args.index, args.direct))
+    sys.exit(commitee_reweight(args.input_xml, args.pot_file,args.obs_file,args.stride,args.index, args.direct))
