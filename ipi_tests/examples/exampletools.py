@@ -5,72 +5,7 @@ from distutils.dir_util import copy_tree
 import xml.etree.ElementTree as ET
 import tempfile
 import time
-
-driver_models = [
-    "dummy",
-    "lj",
-    "sg",
-    "harm",
-    "harm3d",
-    "morse",
-    "zundel",
-    "qtip4pf",
-    "pswater",
-    "eckart",
-    "ch4hcbe",
-    "MB",
-]
-
-
-def get_test_settings(
-    example_folder,
-    settings_file="test_settings.dat",
-    driver="dummy",
-    socket_mode="unix",
-    port_number=33333,
-    address_name="localhost",
-    flags=[],
-    nsteps="2",
-):
-    """This function looks for the existence of test_settings.txt file.
-    This file can contain instructions like number of steps or driver name.
-    If the file doesn't  exist, the driver dummy is assigned."""
-    try:
-        with open(Path(example_folder) / settings_file) as f:
-            flags = list()
-            while True:
-                line = f.readline()
-                if not line:
-                    break
-                elif "driver" in line:
-                    driver = line.split()[1]
-                elif "socket_mode" in line:
-                    socket_mode = line.split()[1]
-                elif "port" in line:
-                    port_number = line.split()[1]
-                elif "address" in line:
-                    address_name = line.split()[1]
-                elif "flags" in line:
-                    flags.append({line.split()[1]: line.split()[2:]})
-                elif "nsteps" in line:
-                    nsteps = line.split()[1]
-    except:
-        pass
-
-    if driver not in driver_models:
-        driver = "dummy"
-
-    driver_info = {
-        "model": driver,
-        "socket_mode": socket_mode,
-        "port_number": port_number,
-        "address_name": address_name,
-        "flag": flags,
-    }
-
-    test_settings = {"nsteps": nsteps}
-
-    return driver_info, test_settings
+from ipi_tests.test_tools import get_test_settings
 
 
 def find_examples(parent, excluded_file="excluded_test.txt", examples=[]):
@@ -127,7 +62,7 @@ def modify_xml_2_dummy_test(
                 element.text = dd
                 address = dd
 
-        model = driver_info["model"]
+        model = driver_info["driver_model"]
         print("driver:", model)
         clients.append([model, address, port])
 
@@ -153,11 +88,10 @@ class Runner_examples(object):
     it checks if i-pi ended without error.
     """
 
-    def __init__(self, parent, cmd1="i-pi new.xml", cmd2="i-pi-driver"):
-        """ Store parent directory and commands to call i-pi and driver """
+    def __init__(self, parent, cmd1="i-pi new.xml"):
+        """ Store parent directory and commands to call i-pi """
         self.parent = parent
         self.cmd1 = cmd1
-        self.cmd2 = cmd2
 
     def run(self, cwd, nid):
         """This function tries to run the example in a tmp folder and
@@ -170,10 +104,22 @@ class Runner_examples(object):
             # Create temp file and copy files
             self.tmp_dir = Path(tempfile.mkdtemp())
             print("temp folder: {}".format(self.tmp_dir))
-
             copy_tree(str(cwd), str(self.tmp_dir))
-            driver_info, test_settings = get_test_settings(self.tmp_dir)
+        except:
+            return "Couldn't create the tmp folder"
 
+        try:
+            driver_info, test_settings = get_test_settings(self.tmp_dir)
+            if driver_info["driver_code"] == "fortran":
+                cmd2 = "i-pi-driver"
+                address_key = "-h"
+            elif driver_info["driver_code"] == "python":
+                cmd2 = "i-pi-py_driver"
+                address_key = "-a"
+        except:
+            return "Problem getting driver_info"
+
+        try:
             # Modify xml
             clients = modify_xml_2_dummy_test(
                 self.tmp_dir / "input.xml",
@@ -182,6 +128,11 @@ class Runner_examples(object):
                 driver_info,
                 test_settings,
             )
+        except:
+            raise RuntimeError("Couldn't modify the xml file")
+        print("Launching i-pi\n")
+
+        try:
             # Run i-pi
             ipi = sp.Popen(
                 self.cmd1,
@@ -200,13 +151,13 @@ class Runner_examples(object):
                     else:
                         time.sleep(0.1)
                 if not f_connected:
-                    raise RuntimeError("Couldn't find the i-PI UNIX socket")
+                    return "Couldn't find the i-PI UNIX socket"
 
             # Run drivers
             driver = list()
             flag_indeces = list()
             for client in clients:
-                cmd = self.cmd2 + " -m {} -u -h {}".format(client[0], client[1])
+                cmd = cmd2 + " -m {} -u {} {}".format(client[0], address_key, client[1])
                 if any("-" in str(s) for s in client):
                     flag_indeces = [
                         i for i, elem in enumerate(client) if "-" in str(elem)

@@ -17,15 +17,21 @@ print("We have found {} examples".format(len(examples)))
 
 
 @pytest.mark.parametrize("ex", examples)
-def test_example(ex):
+def test_example(ex, verbose=False):
     """Intermediate function to run the examples (by calling Runner_examples) which makes
     possible to parametrize the arguments
     """
     t0 = time.time()
     nid = examples.index(ex)
     runner = Runner_examples(Path("."))
-    runner.run(ex, nid)
+    error_msg = runner.run(ex, nid)
     print("Time for this example: {:4.1f} s \n".format(time.time() - t0))
+
+    if verbose:
+        return error_msg
+
+    if error_msg != None:
+        raise RuntimeError
 
 
 if __name__ == "__main__":
@@ -84,10 +90,9 @@ if __name__ == "__main__":
     errors = list()
     for ex in examples:
         print("Running {} ".format(ex))
-        try:
-            test_example(ex)
-        except:
-            print("Error ...\n")
+        error_msg = test_example(ex, verbose=True)
+        if error_msg is not None:
+            print("Error: {}...\n".format(error_msg))
             errors.append(ex)
 
     if len(errors) > 0:
