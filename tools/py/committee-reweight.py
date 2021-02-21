@@ -3,8 +3,6 @@ import sys
 import argparse
 import numpy as np
 from ipi.engine.simulation import Simulation
-from ipi.utils.io.inputs import io_xml
-from ipi.utils.messages import verbosity
 
 
 def direct_reweight(pot, obs, kbT):
@@ -178,9 +176,11 @@ def commitee_reweight(
         raise ValueError("Stride value cannot be zero")
 
     # Load kbT from i-PI, we could make it into a small function
-    simul = Simulation.load_from_xml(path2ixml, custom_verbosity = "quiet", read_only = True)
+    simul = Simulation.load_from_xml(
+        path2ixml, custom_verbosity="quiet", read_only=True
+    )
     kbT = float(simul.syslist[0].ensemble.temp)
-    
+
     if multi_models:
         mean_value, sigma2_a, sigma2_aV, sigma2_tilde = uncertainty_CEA_multiple_models(
             potentials, obs, kbT
@@ -188,7 +188,8 @@ def commitee_reweight(
         print("#     Mean            Error         sigma_a        sigma_aV")
         print(
             "{:.8e}  {:.8e}  {:.8e}  {:.8e}".format(
-               mean_value,np.sqrt(sigma2_tilde),np.sqrt(sigma2_a),np.sqrt(sigma2_aV) )
+                mean_value, np.sqrt(sigma2_tilde), np.sqrt(sigma2_a), np.sqrt(sigma2_aV)
+            )
         )
     else:
         # CEA is the default choice. The weights or h_matrix are
@@ -196,9 +197,15 @@ def commitee_reweight(
             rw_obs, _weights = direct_reweight(potentials, obs, kbT)
         else:
             rw_obs, _h_matrix = CEA(potentials, obs, kbT)
-        print("#     Mean            Error      <committee_1>       ....         <committee_N>")
-                
-        np.savetxt(sys.stdout, np.vstack([rw_obs.mean(axis=1),rw_obs.std(axis=1),rw_obs.T]).T, fmt="%12.8e")
+        print(
+            "#     Mean            Error        <committee_1>         ....         <committee_N>"
+        )
+
+        np.savetxt(
+            sys.stdout,
+            np.vstack([rw_obs.mean(axis=1), rw_obs.std(axis=1), rw_obs.T]).T,
+            fmt="% 15.8e ",
+        )
 
 
 if __name__ == "__main__":
