@@ -4,7 +4,7 @@
     <trajectory filename='pos' stride='5' format='xyz' cell_units='angstrom'> positions{angstrom} </trajectory>
     <trajectory filename='force' stride='5' format='xyz' cell_units='angstrom'> forces{piconewton} </trajectory>
   </output>
-  <total_steps>1000</total_steps>
+  <total_steps>100</total_steps>
   <prng>
     <seed>3348</seed>
   </prng>
@@ -13,7 +13,7 @@
   </ffsocket>
   <system>
     <initialize nbeads='4'>
-      <file mode='pdb'> init.pdb </file>
+      <file mode='xyz'> init.xyz </file>
       <velocities mode='thermal' units='kelvin'>3683.412077</velocities>
     </initialize>
     <forces>
