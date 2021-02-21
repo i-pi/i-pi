@@ -212,9 +212,9 @@ class InputFFSocket(InputForceField):
             InputAttribute,
             {
                 "dtype": str,
-                "options": ["auto", "any"],
+                "options": ["auto", "any", "force_match"],
                 "default": "auto",
-                "help": "Specifies whether requests should be dispatched to any client, or automatically matched to the same client when possible [auto].",
+                "help": "Specifies whether requests should be dispatched to any client, automatically matched to the same client when possible [auto] or strictly forced to match with the same client [force_match].",
             },
         ),
     }
@@ -268,6 +268,12 @@ class InputFFSocket(InputForceField):
         if self.threaded.fetch() is False:
             raise ValueError("FFSockets cannot poll without threaded mode.")
         # just use threaded throughout
+
+        # if using forced match mode, ensure softexit called upon disconnection of a client.
+        if self.matching.fetch() == "force_match":
+            self.exit_on_disconnect.store(True)
+
+        
         return FFSocket(
             pars=self.parameters.fetch(),
             name=self.name.fetch(),
