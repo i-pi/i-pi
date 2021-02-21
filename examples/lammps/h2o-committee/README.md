@@ -33,3 +33,10 @@ If one wants to narrow the reweighting to a single property, then they can
 add the `--index` flag to indicate the property that must be reweighted.
 To reweight the volume, for example, one should use
 `i-pi-committee-reweight input.xml simulation.committee_pot_0 simulation.out --stride 2 --index 5`
+
+To compute uncertainties in the case in which one also obtains multiple 
+predictions for the observables, one can run with the `--multi-obs` option.
+For instance, to compute the error on the potential energy (which itself 
+comes with multiple predictions) one can run 
+`i-pi-committee-reweight input.xml simulation.committee_pot_0 simulation.committee_pot_0 --multi-obs`
+

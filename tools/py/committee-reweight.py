@@ -2,8 +2,9 @@
 import sys
 import argparse
 import numpy as np
-from ipi.inputs.simulation import InputSimulation
+from ipi.engine.simulation import Simulation
 from ipi.utils.io.inputs import io_xml
+from ipi.utils.messages import verbosity
 
 
 def direct_reweight(pot, obs, kbT):
@@ -73,19 +74,18 @@ def CEA(pot, obs, kbT):
     num_pot_frames = pot.shape[0]
     num_obs_frames = obs.shape[0]
     if num_pot_frames != num_obs_frames:
-        print("potential and observable have different number of frames")
-        sys.exit("exiting...")
+        raise RuntimeError(
+            "Potential and observable files have different numbers of frames"
+        )
     num_pot_models = pot.shape[1]
     if obs.ndim == 1:
         obs = np.expand_dims(obs, axis=1)
     num_obs_models = obs.shape[1]
 
-    print("Computing h matrix")
     # get the h matrix h = beta(V^i - barV)
     h_matrix = np.zeros((num_pot_frames, num_pot_models))
     # fast way avoiding double loop
     h_matrix = beta * (pot.T - np.mean(pot, axis=1)).T
-    print("Computing averages")
     # get frame-average of h, h_avg
     h_avg = np.mean(h_matrix, axis=0)  # 1d-array of length num_pot_models
     # get frame-average of observable, obs_avg
@@ -178,13 +178,13 @@ def commitee_reweight(
         raise ValueError("Stride value cannot be zero")
 
     # Load kbT from i-PI, we could make it into a small function
-    ifile = open(path2ixml, "r")
-    xmlrestart = io_xml.xml_parse_file(ifile)
-    ifile.close()
+    #ifile = open(path2ixml, "r")
+    #xmlrestart = io_xml.xml_parse_file(ifile)
+    #ifile.close()
 
-    isimul = InputSimulation()
-    isimul.parse(xmlrestart.fields[0][1])
-    simul = isimul.fetch()
+    #isimul = InputSimulation()
+    #isimul.parse(xmlrestart.fields[0][1])
+    simul = Simulation.load_from_xml(path2ixml, custom_verbosity = "quiet", read_only = True)
 
     kbT = float(simul.syslist[0].ensemble.temp)
     if multi_models:
@@ -251,9 +251,9 @@ if __name__ == "__main__":
         help="Call this option to activate direct reweighting. Standard reweighting is the CEA",
     )
     parser.add_argument(
-        "--multi",
+        "--multi-obs",
         action="store_true",
-        help="Call this option to activate reweighting for multiple ML models. It returns both the uncertainty of the model and the one derived from the potentials",
+        help="Call this option to activate reweighting for multiple observable models. The obs_file is interpreted as having one row per step, and columns correspond to the members of a property committee. It returns both the uncertainty associated with the spread of the observable models, and the one derived from the reweighting due to the potential models",
     )
 
     args = parser.parse_args()
@@ -265,6 +265,6 @@ if __name__ == "__main__":
             args.stride,
             args.index,
             args.direct,
-            args.multi,
+            args.multi_obs,
         )
     )
