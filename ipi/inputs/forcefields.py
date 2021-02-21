@@ -273,7 +273,6 @@ class InputFFSocket(InputForceField):
         if self.matching.fetch() == "force_match":
             self.exit_on_disconnect.store(True)
 
-        
         return FFSocket(
             pars=self.parameters.fetch(),
             name=self.name.fetch(),

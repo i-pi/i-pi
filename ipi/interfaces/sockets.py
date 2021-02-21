@@ -781,10 +781,10 @@ class InterfaceSocket(object):
                     if len(self.prlist) == 0:
                         break
             # if using forced match mode, check that there is a at least one client-replica match in the lists freec and prlist.
-            #If not, we break out of the while loop
+            # If not, we break out of the while loop
             if self.match_mode == "force_match":
-                  break
-          
+                break
+
             if len(freec) > 0:
                 self.prlist = [r for r in self.requests if r["status"] == "Queued"]
         tdispatch += time.time()
@@ -844,9 +844,13 @@ class InterfaceSocket(object):
                 continue
             elif match_ids == "none" and fc.lastreq is not None:
                 continue
-            elif self.match_mode == "force_match" and match_ids == "none" and (r["id"] in [c.lastreq for c in self.clients]):
+            elif (
+                self.match_mode == "force_match"
+                and match_ids == "none"
+                and (r["id"] in [c.lastreq for c in self.clients])
+            ):
                 # if using forced match mode and the user connects more clients than there are replicas, do not allow this client to
-                # be matched with a pending request. 
+                # be matched with a pending request.
                 continue
 
             elif match_ids == "free" and fc.locked:
