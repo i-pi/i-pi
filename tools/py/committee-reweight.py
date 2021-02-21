@@ -10,11 +10,11 @@ def direct_reweight(pot, obs, kbT):
     """
     Reweights an observable based on a committee of potentials, at the temperature kT
     ref:
-    Torrie, Glenn M., and John P. Valleau. "Nonphysical sampling distributions in Monte 
-    Carlo free-energy estimation: Umbrella sampling." 
+    Torrie, Glenn M., and John P. Valleau. "Nonphysical sampling distributions in Monte
+    Carlo free-energy estimation: Umbrella sampling."
     Journal of Computational Physics 23.2 (1977): 187-199.
     https://doi.org/10.1016/0021-9991(77)90121-8
-    
+
     Inputs:
     pot          : an array (nframes x ncommittee) containing the values of the potentials for each committee
     obs          : an array containing the values of the observables
@@ -47,6 +47,7 @@ def direct_reweight(pot, obs, kbT):
     obs_avg_rew = obs.T @ weights
 
     return obs_avg_rew, weights
+
 
 def CEA(pot, obs, kbT):
     """
@@ -99,9 +100,9 @@ def CEA(pot, obs, kbT):
     return obs_avg_CEA, h_matrix
 
 
-def uncertainty_CEA_multiple_models(pot,obs,kbT):
+def uncertainty_CEA_multiple_models(pot, obs, kbT):
     """
-    Reweights the quantity by cumulant expansion approximation (CEA) in the case of 
+    Reweights the quantity by cumulant expansion approximation (CEA) in the case of
     multiple models used to predict the observable.
     ref:
     Michele Ceriotti,  Guy A. R. Brain, Oliver Riordan and David E.
@@ -122,17 +123,20 @@ def uncertainty_CEA_multiple_models(pot,obs,kbT):
     sigma2_tile : the total uncertainty for the observable
 
     """
-    beta = 1.0 / kbT
-    obs_avg = np.mean(obs,axis=0)
-    obs_avg_CEA, _h_matrix = CEA(obs,pot,kbT)
-    fac_a = ( pot.shape[1] * (obs.shape[1]-1) ) / (pot.shape[1] * obs.shape[1]  -1)
-    fac_aV = ( (pot.shape[1]-1) * obs.shape[1] ) / (pot.shape[1] * obs.shape[1]  -1)
-    sigma2_a = np.var(obs_avg, ddof=1)                        # Eq.(27)
+    beta = 1.0 / kbT  # noqa
+    obs_avg = np.mean(obs, axis=0)
+    obs_avg_CEA, _h_matrix = CEA(obs, pot, kbT)
+    fac_a = (pot.shape[1] * (obs.shape[1] - 1)) / (pot.shape[1] * obs.shape[1] - 1)
+    fac_aV = ((pot.shape[1] - 1) * obs.shape[1]) / (pot.shape[1] * obs.shape[1] - 1)
+    sigma2_a = np.var(obs_avg, ddof=1)  # Eq.(27)
     sigma2_aV = np.mean(np.var(obs_avg_CEA, axis=1, ddof=1))  # Eq.(28)
-    sigma2_tilde = fac_a * sigma2_a + fac_aV * sigma2_aV      # Eq.(26)
+    sigma2_tilde = fac_a * sigma2_a + fac_aV * sigma2_aV  # Eq.(26)
     return np.mean(obs_avg), sigma2_a, sigma2_aV, sigma2_tilde
 
-def commitee_reweight(path2ixml, pot_file, obs_file, stride=1, index=-1, direct=False, multi_models=False):
+
+def commitee_reweight(
+    path2ixml, pot_file, obs_file, stride=1, index=-1, direct=False, multi_models=False
+):
     """
     Parameters
     ----------
@@ -156,7 +160,7 @@ def commitee_reweight(path2ixml, pot_file, obs_file, stride=1, index=-1, direct=
                     Use at your own risk! Does not work with multi_models
     multi_models:   bool, optional
                     Activates the uncertainty for multiple models, as in Eqs. 26,27,28 of the paper.
-                    It considers each column as a prediction from a single model and returns the 
+                    It considers each column as a prediction from a single model and returns the
                     uncertainty of the models together with the uncertainty of the potentials.
 
     """
@@ -184,10 +188,14 @@ def commitee_reweight(path2ixml, pot_file, obs_file, stride=1, index=-1, direct=
 
     kbT = float(simul.syslist[0].ensemble.temp)
     if multi_models:
-        mean_value, sigma2_a, sigma2_aV, sigma2_tilde = uncertainty_CEA_multiple_models(potentials, obs, kbT)
+        mean_value, sigma2_a, sigma2_aV, sigma2_tilde = uncertainty_CEA_multiple_models(
+            potentials, obs, kbT
+        )
         print("")
         print("# Uncertainty estimation for multiple models")
-        print("MEAN AND STD   {:.4f} ± {:.4f}".format(mean_value, np.sqrt(sigma2_tilde)))
+        print(
+            "MEAN AND STD   {:.4f} ± {:.4f}".format(mean_value, np.sqrt(sigma2_tilde))
+        )
         print("SIGMA_a        {:.4f}".format(np.sqrt(sigma2_a)))
         print("SIGMA_aV       {:.4f}".format(np.sqrt(sigma2_aV)))
     else:
@@ -197,7 +205,9 @@ def commitee_reweight(path2ixml, pot_file, obs_file, stride=1, index=-1, direct=
         else:
             rw_obs, _h_matrix = CEA(potentials, obs, kbT)
         print("")
-        print("# Reweighted observables for each member of the committee. Each row is an observable, each column a committee member")
+        print(
+            "# Reweighted observables for each member of the committee. Each row is an observable, each column a committee member"
+        )
         np.savetxt(sys.stdout, rw_obs, fmt="%12.4f")
 
 
