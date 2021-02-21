@@ -9,10 +9,13 @@
     <seed>3348</seed>
   </prng>
   <ffsocket mode='unix' name='driver'>
-    <address>harmonic</address>
+    <address>localhost</address>
   </ffsocket>
   <system>
     <initialize nbeads='4'>
+      <cell mode='abc'>
+        [   15., 15.0, 15.0 ]
+      </cell>
       <file mode='xyz'> init.xyz </file>
       <velocities mode='thermal' units='kelvin'>3683.412077</velocities>
     </initialize>
