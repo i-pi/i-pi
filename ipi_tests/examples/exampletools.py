@@ -18,104 +18,54 @@ driver_models = [
     "pswater",
     "eckart",
     "ch4hcbe",
-    "doublewell",
-    "doublewell_1D",
     "MB",
 ]
-
-
-def get_single_driver_info(block, drivers, sockets, ports, addresses, flaglists):
-
-    found_driver = False
-    found_socket = False
-    found_address = False
-    found_port = False
-    found_flags = False
-    for line in block:
-        if "driver" in line:
-            driver = line.split()[1]
-            if driver not in driver_models:
-                driver = "dummy"
-            drivers.append(driver)
-            found_driver = True
-        if "address" in line:
-            addresses.append(line.split()[1])
-            found_address = True
-        if "port" in line:
-            ports.append(line.split()[1])
-            found_port = True
-        if "socket_mode" in line:
-            sockets.append(line.split()[1])
-            found_socket = True
-        if "flags" in line:
-            flaglists.append({line.split()[1]: line.split()[2:]})
-            found_flags = True
-
-    # Checking that each driver has appropriate settings, if not, use default.
-    if not found_driver:
-        drivers.append("dummy")
-    if not found_socket:
-        sockets.append("unix")
-    if not found_port:
-        ports.append(33333)
-    if not found_address:
-        addresses.append("localhost")
-    if not found_flags:
-        flaglists.append({})
-
-    return drivers, sockets, ports, addresses, flaglists
 
 
 def get_test_settings(
     example_folder,
     settings_file="test_settings.dat",
+    driver="dummy",
+    socket_mode="unix",
+    port_number=33333,
+    address_name="localhost",
+    flags=[],
     nsteps="2",
 ):
-    """This function looks for the existence of test_settings.dat file.
+    """This function looks for the existence of test_settings.txt file.
     This file can contain instructions like number of steps or driver name.
     If the file doesn't  exist, the driver dummy is assigned."""
-    drivers = list()
-    sockets = list()
-    ports = list()
-    addresses = list()
-    flaglists = list()
-
     try:
         with open(Path(example_folder) / settings_file) as f:
-            lines = f.readlines()
-            if len(lines) == 0:
-                raise ValueError("test_settings.dat is empty")
-
-        nline = 0
-        starts = []
-        for line in lines:
-            if "driver" in line:
-                starts.append(nline)
-            nline += 1
-            if "nsteps" in line:
-                nsteps = line.split()[1]
-
-        for client in range(len(starts)):
-            if client < len(starts) - 1:
-                block = lines[starts[client] : starts[client + 1]]
-            else:
-                block = lines[starts[client] :]
-            drivers, sockets, ports, addresses, flaglists = get_single_driver_info(
-                block, drivers, sockets, ports, addresses, flaglists
-            )
-
+            flags = list()
+            while True:
+                line = f.readline()
+                if not line:
+                    break
+                elif "driver" in line:
+                    driver = line.split()[1]
+                elif "socket_mode" in line:
+                    socket_mode = line.split()[1]
+                elif "port" in line:
+                    port_number = line.split()[1]
+                elif "address" in line:
+                    address_name = line.split()[1]
+                elif "flags" in line:
+                    flags.append({line.split()[1]: line.split()[2:]})
+                elif "nsteps" in line:
+                    nsteps = line.split()[1]
     except:
-        drivers, sockets, ports, addresses, flaglists = get_single_driver_info(
-            "", drivers, sockets, ports, addresses, flaglists
-        )
         pass
 
+    if driver not in driver_models:
+        driver = "dummy"
+
     driver_info = {
-        "model": drivers,
-        "socket_mode": sockets,
-        "port_number": ports,
-        "address_name": addresses,
-        "flag": flaglists,
+        "model": driver,
+        "socket_mode": socket_mode,
+        "port_number": port_number,
+        "address_name": address_name,
+        "flag": flags,
     }
 
     test_settings = {"nsteps": nsteps}
@@ -175,24 +125,26 @@ def modify_xml_2_dummy_test(
             ff_sockets.append(ff_socket)
 
     for s, ffsocket in enumerate(ff_sockets):
-        ffsocket.attrib["mode"] = driver_info["socket_mode"][s]
+        # name = ffsocket.attrib["name"]
+        ffsocket.attrib["mode"] = driver_info["socket_mode"]
 
         for element in ffsocket:
-            port = driver_info["port_number"][s]
+            port = driver_info["port_number"]
             if element.tag == "port":
                 element.text = str(port)
             elif element.tag == "address":
-                dd = driver_info["address_name"][s] + "_" + str(nid) + "_" + str(s)
+                dd = driver_info["address_name"] + "_" + str(nid) + "_" + str(s)
                 element.text = dd
                 address = dd
 
-        model = driver_info["model"][s]
+        model = driver_info["model"]
         print("driver:", model)
         clients.append([model, address, port])
 
-        for k, v in driver_info["flag"][s].items():
-            clients[s].append(k)
-            clients[s].extend(v)
+        for flag in driver_info["flag"]:
+            for k, v in flag.items():
+                clients[s].append(k)
+                clients[s].extend(v)
 
     element = root.find("total_steps")
     if element is not None:

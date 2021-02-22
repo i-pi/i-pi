@@ -26,79 +26,39 @@ driver_models = [
 ]
 
 
-def get_single_driver_info(block, drivers, sockets, ports, addresses, flaglists):
-
-    found_socket = False
-    found_address = False
-    found_port = False
-    found_flags = False
-    for line in block:
-        if "driver" in line:
-            driver = line.split()[1]
-            drivers.append(driver)
-            if driver not in driver_models:
-                drivers.append("gas")
-        if "address" in line:
-            addresses.append(line.split()[1])
-            found_address = True
-        if "port" in line:
-            ports.append(line.split()[1])
-            found_port = True
-        if "socket_mode" in line:
-            sockets.append(line.split()[1])
-            found_socket = True
-        if "flags" in line:
-            flaglists.append({line.split()[1]: line.split()[2:]})
-            found_flags = True
-
-    # Checking that each driver has appropriate settings, if not, use default.
-    if not found_socket:
-        sockets.append("unix")
-    if not found_port:
-        ports.append(33333)
-    if not found_address:
-        addresses.append("localhost")
-    if not found_flags:
-        flaglists.append({})
-
-    return drivers, sockets, ports, addresses, flaglists
-
-
 def get_driver_info(
     example_folder,
     driver_info_file="driver.txt",
+    driver="gas",
+    socket_mode="unix",
+    port_number=33333,
+    address_name="localhost",
+    flags=[],
 ):
-    """This function looks for the existence of driver.txt file
+    """This function looks for the existence of .driver_info file
     to run the example with a meaningfull driver. If the file doesn't
     exist, the driver gas is assigned."""
     try:
         with open(Path(example_folder) / driver_info_file) as f:
-            lines = f.readlines()
-            if len(lines) == 0:
+            flags = list()
+            ncount = 0
+            while True:
+                line = f.readline()
+                if not line:
+                    break
+                elif "driver" in line:
+                    driver = line.split()[1]
+                elif "socket_mode" in line:
+                    socket_mode = line.split()[1]
+                elif "port" in line:
+                    port_number = line.split()[1]
+                elif "address" in line:
+                    address_name = line.split()[1]
+                elif "flags" in line:
+                    flags.append({line.split()[1]: line.split()[2:]})
+                ncount += 1
+            if ncount == 0:
                 raise ValueError("driver.txt is empty")
-
-        nline = 0
-        starts = []
-        for line in lines:
-            if "driver" in line:
-                starts.append(nline)
-            nline += 1
-
-        drivers = list()
-        sockets = list()
-        ports = list()
-        addresses = list()
-        flaglists = list()
-
-        for client in range(len(starts)):
-            if client < len(starts) - 1:
-                block = lines[starts[client] : starts[client + 1]]
-            else:
-                block = lines[starts[client] :]
-            drivers, sockets, ports, addresses, flaglists = get_single_driver_info(
-                block, drivers, sockets, ports, addresses, flaglists
-            )
-
     except FileNotFoundError:
         raise FileNotFoundError(
             "({}) An input.xml file was found but a driver.txt not".format(
@@ -108,12 +68,15 @@ def get_driver_info(
     except:
         pass
 
+    if driver not in driver_models:
+        driver = "gas"
+
     driver_info = {
-        "model": drivers,
-        "socket_mode": sockets,
-        "port_number": ports,
-        "address_name": addresses,
-        "flag": flaglists,
+        "model": driver,
+        "socket_mode": socket_mode,
+        "port_number": port_number,
+        "address_name": address_name,
+        "flag": flags,
     }
 
     return driver_info
@@ -206,41 +169,27 @@ class Runner(object):
 
             clients = list()
 
-            if len(root.findall("ffcommittee")) > 0:
-                ff_roots = root.findall("ffcommittee")
-            else:
-                ff_roots = [root]
+            for s, ffsocket in enumerate(root.findall("ffsocket")):
+                # name = ffsocket.attrib["name"]
+                mode = driver_info["socket_mode"]
+                ffsocket.attrib["mode"] = mode
 
-            ff_sockets = []
-            for ff_root in ff_roots:
-                for ff_socket in ff_root.findall("ffsocket"):
-                    ff_sockets.append(ff_socket)
-
-            for s, ff_socket in enumerate(ff_sockets):
-                ff_socket.attrib["mode"] = driver_info["socket_mode"][s]
-                mode = driver_info["socket_mode"][s]
-
-                for element in ff_socket:
-                    port = driver_info["port_number"][s]
+                for element in ffsocket:
+                    port = driver_info["port_number"]
                     if element.tag == "port":
                         element.text = str(port)
                     elif element.tag == "address":
-                        dd = (
-                            driver_info["address_name"][s]
-                            + "_"
-                            + str(nid)
-                            + "_"
-                            + str(s)
-                        )
+                        dd = driver_info["address_name"] + "_" + str(nid) + "_" + str(s)
                         element.text = dd
                         address = dd
 
-                model = driver_info["model"][s]
+                model = driver_info["model"]
                 clients.append([model, address, port, mode])
 
-                for k, v in driver_info["flag"][s].items():
-                    clients[s].append(k)
-                    clients[s].extend(v)
+                for flag in driver_info["flag"]:
+                    for k, v in flag.items():
+                        clients[s].append(k)
+                        clients[s].extend(v)
 
             tree.write(open(output_name, "wb"))
 
@@ -287,7 +236,7 @@ class Runner(object):
                 else:
                     raise ValueError("Driver mode has to be either unix or inet")
 
-                cmd = cmd2[-1]
+                cmd = cmd2[0]
                 if any("-" in str(s) for s in client):
                     flag_indeces = [
                         i for i, elem in enumerate(client) if "-" in str(elem)
@@ -304,9 +253,7 @@ class Runner(object):
                                     client[ll], ",".join(client[ll + 1 :][:])
                                 )
                             )
-                    cmd += cmd2[-1]
-                if client != clients[-1]:
-                    cmd += " &"
+                    cmd += cmd2[1]
                 driver.append(
                     sp.call(cmd, cwd=(cwd), shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
                 )
