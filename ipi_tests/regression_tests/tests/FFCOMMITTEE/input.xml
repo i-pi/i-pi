@@ -6,6 +6,7 @@
     <trajectory filename='committee_force' stride='1' extra_type='committee_force'> extras </trajectory> 
     <trajectory filename='committee_virial' stride='1' extra_type='committee_virial'> extras </trajectory> 
     <trajectory filename='committee_sigma' stride='1' extra_type='committee_uncertainty'> extras </trajectory>
+    <!--checkpoint stride='100'/-->
   </output>
   <total_steps>10</total_steps>
   <prng>
@@ -35,6 +36,9 @@
     </initialize>
     <forces>
       <force forcefield='committee'> </force>
+      <!--force forcefield='driver1' weight='0.33'> </force>
+      <force forcefield='driver2' weight='0.33'> </force> 
+      <force forcefield='driver3' weight='0.33'> </force--> 
     </forces>
     <motion mode='dynamics'>
       <dynamics mode='npt'>
