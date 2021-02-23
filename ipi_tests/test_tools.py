@@ -22,12 +22,13 @@ fortran_driver_models = [
     "eckart",
     "ch4hcbe",
     "MB",
+    "ljpolymer",
     "doublewell_1D",
     "doublewell",
     "gas",
 ]
 
-# YL should do this  automatically but fFor now I do it explicitly
+# YL should do this automatically but for now I do it explicitly
 python_driver_models = ["dummy", "harmonic"]
 
 
@@ -55,64 +56,124 @@ def clean_tmp_dir():
 def get_test_settings(
     example_folder,
     settings_file="test_settings.dat",
-    driver_code="fortran",
-    driver_model="dummy",
-    socket_mode="unix",
-    port_number=33333,
-    address_name="localhost",
-    flags=[],
-    nsteps="2",
 ):
-    """This function looks for the existence of test_settings.txt file.
+    """This function looks for the existence of test_settings.dat file.
     This file can contain instructions like number of steps or driver name.
     If the file doesn't  exist, the driver dummy is assigned."""
 
+    driver_models = list()
+    driver_codes = list()
+    socket_modes = list()
+    port_numbers = list()
+    address_names = list()
+    flaglists = list()
+    found_nsteps = False
+
     try:
         with open(Path(example_folder) / settings_file) as f:
-            flags = list()
+            lines = f.readlines()
+            if len(lines) == 0:
+                raise ValueError("Error: The test_settings.dat file is empty.")
 
-            while True:
-                line = f.readline()
-                if not line:
-                    break
+        nline = 0
+        starts = []
+        for line in lines:
+            if "driver_model" in line:
+                starts.append(nline)
+            nline += 1
+
+        for client in range(len(starts)):
+            if client < len(starts) - 1:
+                block = lines[starts[client]: starts[client + 1]]
+            else:
+                block = lines[starts[client]:]
+
+            found_socket = False
+            found_address = False
+            found_port = False
+            found_flags = False
+            found_driver_code = False
+            driver_code = None
+
+            for line in block:
+                if "driver_code" in line:
+                    driver_code = line.split()[1]
+                    found_driver_code = True
                 elif "driver_model" in line:
                     driver_model = line.split()[1]
-                elif "socket_mode" in line:
-                    socket_mode = line.split()[1]
-                elif "port" in line:
-                    port_number = line.split()[1]
                 elif "address" in line:
                     address_name = line.split()[1]
+                    found_address = True
+                elif "port" in line:
+                    port_number = line.split()[1]
+                    found_port = True
+                elif "socket_mode" in line:
+                    socket_mode = line.split()[1]
+                    found_socket = True
                 elif "flags" in line:
-                    flags.append({line.split()[1]: line.split()[2:]})
+                    flaglist = {line.split()[1]: line.split()[2:]}
+                    found_flags = True
                 elif "nsteps" in line:
                     nsteps = line.split()[1]
-                elif "driver_code" in line:
-                    driver_code = line.split()[1]
-    except:
-        pass
+                    found_nsteps = True
 
-    if driver_code == "fortran":
-        if driver_model not in fortran_driver_models:
-            driver_model = "dummy"
-    elif driver_code == "python":
-        if driver_model not in python_driver_models:
-            driver_model = "dummy"
-    else:
-        raise ValueError(
-            "Drive code not available. Valid options are 'fortran' and 'python'"
-        )
+            # Checking that each driver has appropriate settings, if not, use default.
+            if driver_code is None:
+                driver_code = "fortran"
+            if driver_code == "fortran":
+                if driver_model not in fortran_driver_models:
+                    driver_model = "dummy"
+            elif driver_code == "python":
+                if driver_model not in python_driver_models:
+                    driver_model = "dummy"
+            else:
+                raise ValueError(
+                    "Drive code not available. Valid options are 'fortran' and 'python'"
+                )
+
+            driver_models.append(driver_model)
+            if found_driver_code:
+                driver_codes.append(driver_code)
+            else:
+                driver_codes.append("fortran")
+            if found_socket:
+                socket_modes.append(socket_mode)
+            else:
+                socket_modes.append("unix")
+            if found_port:
+                port_numbers.append(port_number)
+            else:
+                port_numbers.append(33333)
+            if found_address:
+                address_names.append(address_name)
+            else:
+                address_names.append("localhost")
+            if found_flags:
+                flaglists.append(flaglist)
+            else:
+                flaglists.append({})
+
+    except:
+        driver_codes.append("fortran")
+        driver_models.append("dummy")
+        address_names.append("localhost")
+        port_numbers.append(33333)
+        socket_modes.append("unix")
+        flaglists.append({})
 
     driver_info = {
-        "driver_model": driver_model,
-        "socket_mode": socket_mode,
-        "port_number": port_number,
-        "address_name": address_name,
-        "driver_code": driver_code,
-        "flag": flags,
+        "driver_model": driver_models,
+        "socket_mode": socket_modes,
+        "port_number": port_numbers,
+        "address_name": address_names,
+        "driver_code": driver_codes,
+        "flag": flaglists,
     }
 
-    test_settings = {"nsteps": nsteps}
+    if found_nsteps:
+        test_settings = {"nsteps": nsteps}
+    else:
+        test_settings = {"nsteps": '1'}
 
     return driver_info, test_settings
 
@@ -132,27 +193,37 @@ def modify_xml_4_dummy_test(
     root = tree.getroot()
     clients = list()
 
-    for s, ffsocket in enumerate(root.findall("ffsocket")):
-        # name = ffsocket.attrib["name"]
-        ffsocket.attrib["mode"] = driver_info["socket_mode"]
+    if len(root.findall("ffcommittee")) > 0:
+        ff_roots = root.findall("ffcommittee")
+    else:
+        ff_roots = [root]
+
+    ff_sockets = []
+    for ff_root in ff_roots:
+        for ff_socket in ff_root.findall("ffsocket"):
+            ff_sockets.append(ff_socket)
+
+    for s, ffsocket in enumerate(ff_sockets):
+        ffsocket.attrib["mode"] = driver_info["socket_mode"][s]
 
         for element in ffsocket:
-            port = driver_info["port_number"]
+            port = driver_info["port_number"][s]
             if element.tag == "port":
                 element.text = str(port)
             elif element.tag == "address":
-                dd = driver_info["address_name"] + "_" + str(nid) + "_" + str(s)
+                dd = driver_info["address_name"][s] + "_" + str(nid) + "_" + str(s)
                 element.text = dd
                 address = dd
 
-        model = driver_info["driver_model"]
+        model = driver_info["driver_model"][s]
 
         clients.append([model, "unix", address, port])
 
-        for flag in driver_info["flag"]:
-            for k, v in flag.items():
-                clients[s].append(k)
-                clients[s].extend(v)
+        for key in driver_info["flag"][s].keys():
+            if '-' in key:
+                for k, v in driver_info["flag"][s].items():
+                    clients[s].append(k)
+                    clients[s].extend(v)
 
     element = root.find("total_steps")
     if test_settings is not None:
@@ -204,13 +275,14 @@ class Runner(object):
 
         try:
             driver_info, test_settings = get_test_settings(self.tmp_dir)
-            if driver_info["driver_code"] == "fortran":
+            if "fortran" in driver_info["driver_code"]:
                 call_driver = "i-pi-driver"
                 address_key = "-h"
-            elif driver_info["driver_code"] == "python":
+            elif "python" in driver_info["driver_code"]:
                 call_driver = "i-pi-py_driver"
                 address_key = "-a"
         except:
+            print("Problem getting driver_info")
             return "Problem getting driver_info"
 
         clients = self.create_client_list(driver_info, nid, test_settings)
@@ -225,24 +297,23 @@ class Runner(object):
                 stdout=sp.PIPE,
                 stderr=sp.PIPE,
             )
-
             if len(clients) > 0:
                 f_connected = False
-                for i in range(50):
-                    if os.path.exists("/tmp/ipi_" + clients[0][2]):
-                        f_connected = True
-                        break
-                    else:
-                        time.sleep(0.1)
-                if not f_connected:
-                    return "Couldn't find the i-PI UNIX socket"
+                for cli in range(len(clients)):
+                    for i in range(50):
+                        if os.path.exists("/tmp/ipi_" + clients[cli][2]):
+                            f_connected = True
+                            break
+                        else:
+                            time.sleep(0.5)
+                    if not f_connected:
+                        print("Could not find the i-PI UNIX socket.")
+                        return "Could not find the i-PI UNIX socket"
 
             # Run drivers by defining cmd2 which will be called, eventually
             driver = list()
-            flag_indeces = list()
 
             for client in clients:
-
                 if client[1] == "unix":
                     clientcall = call_driver + " -m {} {} {} -u ".format(
                         client[0], address_key, client[2]

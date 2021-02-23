@@ -3,3 +3,4 @@ address localhost
 port 31415
 socket_mode unix
 flags -o 0.12356216778762334
+nsteps 10
