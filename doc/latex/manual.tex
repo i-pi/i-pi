@@ -48,7 +48,7 @@
 \hbox{}
 \vspace*{\fill}
 \begin{center}
-\ 
+\
 \end{center}
 \vspace{\fill}
 \thispagestyle{empty}
@@ -89,7 +89,7 @@
 % properties and fields formatting
 %%%%%%%%%%%%%%%%%%%%%%%%%%%
 % old version using ifthenelse
-%\newcommand{\ipiitem}[3]{%   
+%\newcommand{\ipiitem}[3]{%
 %  \ifthenelse{ \equal{#1}{} } %
 %             {} %
 %             { \ifthenelse{ \equal{#1}{\underline{\smash{}}} } %
@@ -106,7 +106,7 @@
 
 \newcommand{\ipiitem}[3]{%
    \ifblank{#1} % if no name is specified just output nothing
-           {} %  
+           {} %
            { \ifstrequal{#1}{\underline{\smash{}}} % also in this case
              {} %
              { % print out beautifully
@@ -135,7 +135,7 @@
               { \ifblank{#3} {} { \vspace{-1em}{\hfill\raggedleft\textit{\small #3}}\par } % print the details
                 {#4} \vspace{-1em} \\\hline } % negative vspace to undo the line break
    \end{tabular}
-   \parskip=0pt\list{}{\listparindent 1.5em % indent the body of the environment 
+   \parskip=0pt\list{}{\listparindent 1.5em % indent the body of the environment
          \leftmargin    \listparindent
          \rightmargin   0pt
          \parsep        0pt
@@ -154,7 +154,7 @@
 \usepackage[numbers]{natbib}
 
 \newenvironment{code}{%
-\footnotesize 
+\footnotesize
 \verbatim
 }{
 \endverbatim
@@ -164,19 +164,19 @@
 \makeatother
 
 \begin{document}
-\newcommand{\dd}{\; \mathrm{d}} 
-\newcommand{\Tr}{\mathrm{Tr}} 
-\newcommand{\bra}{< \! \!} 
-\newcommand{\ket}{\! \! >} 
-\newcommand{\betan}{\beta_N} 
-\newcommand{\logn}{\mathrm{ln}} 
-\newcommand{\expon}{\mathrm{exp}} 
+\newcommand{\dd}{\; \mathrm{d}}
+\newcommand{\Tr}{\mathrm{Tr}}
+\newcommand{\bra}{< \! \!}
+\newcommand{\ket}{\! \! >}
+\newcommand{\betan}{\beta_N}
+\newcommand{\logn}{\mathrm{ln}}
+\newcommand{\expon}{\mathrm{exp}}
 \newcommand{\Imag}{\mathrm{Im}}
 \newcommand{\ipi}{{i-PI}\xspace}
 \newcommand{\DFT}{Quantum Espresso, CP2K, CPMD and FHI-AIMS }
 \newcommand{\empirical}{LAMMPS}
 
-\begin{titlepage} 
+\begin{titlepage}
 
 \begin{center}
 \vspace*{2.5cm}
@@ -216,13 +216,13 @@ the problem of evolving the ionic positions to sample the appropriate
 thermodynamic ensemble and the problem of computing the inter-atomic
 forces. \ipi was initially developed for Path Integral Molecular Dynamics (PIMD)
 simulations, and contains probably the most comprehensive array of PIMD
-techniques. Since v2.0, however, it also contains several general-purpose 
-methods for molecular simulations, ranging from phonon calculators to 
+techniques. Since v2.0, however, it also contains several general-purpose
+methods for molecular simulations, ranging from phonon calculators to
 replica exchange molecular dynamics.
 
 \begin{figure}[hb]
 \centering\includegraphics[width=0.9\textwidth]{../figures/ipi-scheme.pdf}
-\caption{\label{fig:scheme} Schematic representation of the functioning of \ipi{}.} 
+\caption{\label{fig:scheme} Schematic representation of the functioning of \ipi{}.}
 \end{figure}
 
 The implementation is based on a client-server paradigm, where \ipi
@@ -234,16 +234,16 @@ performing \emph{ab initio} PIMD -- where the cost of the force evaluation
 is overwhelming relative to the ionic dynamics -- clarity has been
 privileged over speed. Still, the implementation of \ipi is efficient
 enough that it can be used with empirical forcefields to perform simple
-benchmarks and preparatory simulations. 
+benchmarks and preparatory simulations.
 
 
 \section{Manual structure}
 
-This manual will be structured as follows: 
+This manual will be structured as follows:
 \begin{itemize}
 \item In chapter \ref{intro} we briefly discuss the basis for PIMD and
-some of the specialized techniques used in \ipi. 
-\item In chapter \ref{getstarted} we will discuss how to install 
+some of the specialized techniques used in \ipi.
+\item In chapter \ref{getstarted} we will discuss how to install
 and run the code, and test that it is working.
 \item In chapter \ref{userguide} we explain in more detail the form of the input
 and output files and how the communication between the client and
@@ -296,7 +296,7 @@ techniques developed to improve the scope and efficiency of MD simulations
 can be applied straightforwardly to the equivalent PIMD calculations
 \cite{ceri+10jcp,mart+99jcp}. Finally, several techniques designed
 specifically for PIMD simulations are now available to increase the
-rate of convergence with respect to the number of replicas used 
+rate of convergence with respect to the number of replicas used
 \cite{mark-mano08jcp,ceri+11jcp,suzu95pla,chin97pla,ceri+12prsa,pere-tuck11jcp},
 further reducing the computational overhead of the method. All
 of these facts mean that it is now feasible to do PIMD simulations
@@ -304,10 +304,10 @@ with thousands of molecules, or even to use \emph{ab initio} electronic
 structure calculations to propagate the dynamics for small systems.
 
 Furthermore, the framework used to run PIMD simulations can be adapted
-to generate approximate quantum dynamical information 
+to generate approximate quantum dynamical information
 \cite{cao-voth93jcp,cao-voth94jcp,crai-mano04jcp,braa-mano06jcp},
 and so can also be used to calculate correlation functions. While
-real-time quantum coherences cannot be captured, the inclusion 
+real-time quantum coherences cannot be captured, the inclusion
 of quantum statistical information
 and the rapid decoherence observed in condensed phase systems mean
 that in many cases very accurate results can be obtained from such
@@ -323,18 +323,18 @@ approximate treatments of quantum dynamics \cite{habe+13arpc}.
 the code used to propagate the dynamics as simple and clear as possible.
 Every physical quantity that is referenced in the code is created
 using a {}``depend'' object class, which is given the parameters
-on which it depends and a function used to calculate its value. 
+on which it depends and a function used to calculate its value.
 
 \begin{figure}[hpbt]
 \centering\includegraphics[width=0.9\textwidth]{../figures/ipi-depend.pdf}
-\caption{\label{fig:depend} Schematic overview of the functioning of the 
-\emph{depend} class used as the base for properties and physical quantities in \ipi{}. 
+\caption{\label{fig:depend} Schematic overview of the functioning of the
+\emph{depend} class used as the base for properties and physical quantities in \ipi{}.
 A few ``primitive'' quantities -- such as atomic positions or momenta -- can be modified
 directly. For most properties, one defines a function that can compute that property based on the
 value of other properties. Whenever one property is modified, all the quantities that
 depend on it are marked as tainted, so that when the value of one of the properties
 is used, the function can be invoked and the updated value obtained. If a quantity
-is not marked as tainted, the cached value is returned instead. 
+is not marked as tainted, the cached value is returned instead.
 }
 \end{figure}
 
@@ -346,7 +346,7 @@ value is cached, so further references to that quantity will not need
 to evaluate the function that calculates it. Furthermore, the code
 keeps track of when any of the dependencies of the variable are updated,
 and makes sure that the quantity is automatically recomputed when
-it is needed (i.e., when the quantity is assessed again). 
+it is needed (i.e., when the quantity is assessed again).
 
 This choice makes implementation slightly more complex when the physical
 observables are first introduced as variables, as one has to take
@@ -361,19 +361,19 @@ and the code can be clean, transparent and readable.
 \centering\includegraphics[width=0.9\textwidth]{../figures/ipi-forces.pdf}
 \caption{\label{fig:forces} Schematic representation of the different objects
 that are involved in the evaluation of the forces. The multiple layers and complex
-structure are necessary to give the possibility of decomposing the evaluation 
+structure are necessary to give the possibility of decomposing the evaluation
 of the forces between multiple different clients and using different imaginary
 time partitioning (e.g. one can compute the bonded interactions using one client,
 and use a different client to compute the long-range electrostatic interactions,
-contracted on a single bead~\cite{mark-mano08jcp}). 
+contracted on a single bead~\cite{mark-mano08jcp}).
 }
 \end{figure}
 
 
 \subsection{Force evaluation}
 
-Within \ipi{}, the evaluation of the forces plays a crucial role, 
-as it is the step requiring communication with the client code. 
+Within \ipi{}, the evaluation of the forces plays a crucial role,
+as it is the step requiring communication with the client code.
 In order to have a flexible infrastructure that makes it possible
 to perform simulations with advanced techniques such as ring-polymer
 contraction~\cite{mark-mano08jcp}, the force evaluation machinery
@@ -382,44 +382,44 @@ discussion.
 
 A scheme of the objects involved in the calculation of the forces
 is presented in Figure~\ref{fig:forces}. The infrastracture comprises
-a force provider class that deals with the actual subdivision of 
+a force provider class that deals with the actual subdivision of
 work among the clients, and a sequence of objects that translate
-the request of the overall force of the system into atomic 
+the request of the overall force of the system into atomic
 evaluations of one component of the force for an individual bead:
-\ipi{} is built to hide the path integral infrastructure from the client, and so 
+\ipi{} is built to hide the path integral infrastructure from the client, and so
 beads must be transferred individually.
 
-Let us discuss for clarity a practical example -- a calculation 
-of an empirical water model where the bonded interactions are 
+Let us discuss for clarity a practical example -- a calculation
+of an empirical water model where the bonded interactions are
 computed on 32 beads by the program A, and the non-bonded interactions
 are computed by client B, ring-polymer contracted on 8 beads.
-Each client ``type'' is associated with a \hyperref[FORCEFIELD]{ForceField} 
+Each client ``type'' is associated with a \hyperref[FORCEFIELD]{ForceField}
 object in the input. In the case of a \hyperref[FFSOCKET]{socket} interface,
 the forcefield object specifies the address to which a client should connect,
 and so multiple clients of type A or B can connect to \ipi{} at the same time.
 Each forcefield object deals with queueing force evaluation requests
-and computing them in a first-in-first-out fashion, possibly executing 
-multiple requests in parallel. 
+and computing them in a first-in-first-out fashion, possibly executing
+multiple requests in parallel.
 
 On the force evaluation side, the task of splitting the request of a
-force evaluation into individual components and individual beads is 
+force evaluation into individual components and individual beads is
 accomplished by a chain of three objects, Forces, ForceComponent and ForceBead.
 is the main force Forces evaluator, that is built from the prototypes
 listed within the \hyperref[FORCES]{forces} field of \hyperref[SYSTEM]{system}.
-Each \hyperref[FORCECOMPONENT]{force} item within the 
+Each \hyperref[FORCECOMPONENT]{force} item within the
 \hyperref[FORCES]{forces} tag describe one component of the force --
-in our example one ForceComponent bound to a forcefield of type A, 
+in our example one ForceComponent bound to a forcefield of type A,
 evaluated on 32 beads, and one ForceComponent bound to type B, evaluated
 on 8 beads. Forces contains the machinery that automatically contracts the
 actual ring polymer to the number of beads required by each component,
-and combines the various components with the given weights to provide the 
+and combines the various components with the given weights to provide the
 overall force, energy and virial where required. Note that in order to support
 ring polymer contraction (RPC), the RPC procedure is executed even if
-no contraction was required (i.e. even if all clients contain the full amount of beads). 
-ForceComponent is a very simple helper class that associates with each bead 
+no contraction was required (i.e. even if all clients contain the full amount of beads).
+ForceComponent is a very simple helper class that associates with each bead
 a ForceBead object, that is the entity in charge of filing force requests to
 the appropriate ForceField object and waiting for completion of the
-evaluation. 
+evaluation.
 
 
 \subsection{Communication protocol}
@@ -446,7 +446,7 @@ is transferred between the client and the server; the position of
 the atoms and cell parameters in one direction, and the forces, virial
 and potential in the other.
 
-For more details about sockets and communication, see \ref{distrib}. 
+For more details about sockets and communication, see \ref{distrib}.
 
 
 \subsection{Internal units}
@@ -464,7 +464,7 @@ wishes so. For details on how to do this, see \ref{inputunits} and
 \begin{tabular}{lll}
 \hline\hline
 Unit & Name & S.I. Value\\
-\hline 
+\hline
 Length & Bohr radius & 5.2917721e-11 m\\
 Time & N.A. & 2.4188843e-17 s\\
 Mass & Electron mass & 9.1093819e-31 kg\\
@@ -478,9 +478,11 @@ Pressure & N.A. & 2.9421912e13 Pa\\
 }
 
 
-Regarding the specification of these units in the i-PI input files, the user is able to specify units both in the i-PI input file or in the structure file. 
-If the structure file is of the .xyz format, the units specifications should be present in the comment line. Examples of such inputs can be found in \texttt{examples/pes-regtest/io-units/} .
-The code then behaves in the following way, depending on the user's choice: 
+Regarding the specification of these units in the i-PI input files, the user is able to specify units both in the i-PI input file or in the structure file.
+If the structure file is of the .xyz format, the units specifications should be present in the comment line in a form \texttt{property\{units\}},
+e.g. \texttt{forces\{ev/ang\}}.
+Examples of such inputs can be found in \texttt{examples/lammps/*/init.xyz} . An example for PDB can be found in \texttt{examples/qespresso/h2o/init.pdb} .
+The code then behaves in the following way, depending on the user's choice:
 \begin{itemize}
 \item If no units are specified in the input, i-PI tries to guess from the comment line of the structure file and it nothing is present, assumes atomic units, or angstrom for PDB files.
 \item If units are specified in both input and structure file and they match, conversion happens just once. If they do not match, an error is raised and i-PI stops.
@@ -494,23 +496,23 @@ The code then behaves in the following way, depending on the user's choice:
 \subsection{Features in version 1.0}
 \begin{itemize}
 \item molecular dynamics and PIMD in the {\em NVE}, {\em NVT} and {\em NPT} ensembles, with the high-frequency internal vibrations of the path propagated in the normal-mode representation~\cite{ceri+10jcp} {to allow for longer time steps};
-\item ring polymer contraction~\cite{mark-mano08jcp,mark-mano08cpl}, implemented 
+\item ring polymer contraction~\cite{mark-mano08jcp,mark-mano08cpl}, implemented
 by exposing multiple socket interfaces to deal with short and long-range components of the potential energy separately; {treating different components that have different computational cost and characteristic time scale separately can reduce substantially the overall effort associated with a simulation}
-\item efficient stochastic velocity rescaling \cite{buss+07jcp} and 
-path integral Langevin equation thermostats~\cite{ceri+10jcp} {to sample efficiently the canonical ensemble}; 
+\item efficient stochastic velocity rescaling \cite{buss+07jcp} and
+path integral Langevin equation thermostats~\cite{ceri+10jcp} {to sample efficiently the canonical ensemble};
 \item various generalized Langevin equation (GLE) thermostats,
-including the optimal sampling~\cite{ceri+09prl,ceri+10jctc}, quantum 
-~\cite{ceri+09prl2}, and $\delta$~\cite{ceri-parr10pcs} thermostats; the parameters 
+including the optimal sampling~\cite{ceri+09prl,ceri+10jctc}, quantum
+~\cite{ceri+09prl2}, and $\delta$~\cite{ceri-parr10pcs} thermostats; the parameters
 {for different GLE flavors and the conditions in which they should be applied can be obtained from a separate website~\cite{gle4md};}
-\item mixed path integral--generalized Langevin equation techniques for 
-accelerated convergence, including both PI+GLE~\cite{ceri+11jcp} and the 
+\item mixed path integral--generalized Langevin equation techniques for
+accelerated convergence, including both PI+GLE~\cite{ceri+11jcp} and the
 more recent and effective version PIGLET~\cite{ceri-mano12prl}; {these techniques reduce the number of path integral replicas needed, while allowing for systematic convergence;}
-\item all the standard estimators for structural properties, the quantum 
+\item all the standard estimators for structural properties, the quantum
 kinetic energy, pressure, etc.;
-\item more sophisticated estimators such as the scaled-coordinate 
-heat capacity estimator~\cite{yama05jcp}, 
-estimators to obtain isotope fractionation free energies by re-weighting a 
-simulation of the most abundant isotope~\cite{ceri-mark13jcp}, and 
+\item more sophisticated estimators such as the scaled-coordinate
+heat capacity estimator~\cite{yama05jcp},
+estimators to obtain isotope fractionation free energies by re-weighting a
+simulation of the most abundant isotope~\cite{ceri-mark13jcp}, and
 a displaced-path estimator for the particle momentum distribution~\cite{lin+10prl};
 \item the infrastructure that is needed to perform approximate quantum dynamics calculations such as ring polymer molecular dynamics (RPMD)~\cite{crai-mano04jcp,habe+13arpc} and centroid molecular dynamics
 (CMD)~\cite{cao-voth93jcp,cao-voth94jcp}.
@@ -524,7 +526,7 @@ Further details can be found in Ref. \cite{Kapil:2019ju}.
 \item reweighted fourth-order path integral MD (M. Ceriotti, G.A.R. Brain)~\cite{ceri+12prsa,jang-voth01jcp}; {this method makes it possible to obtain fourth-order statistics by re-weighting second-order trajectories; attention should be paid to avoid statistical inefficiencies;}
 \item finite-differences implementation of fourth-order path integrals (V. Kapil, M. Ceriotti)~\cite{kapi+16jcp2}; {this schemes enables explicit fourth-order path integral simulations, that converge faster than conventional Trotter methods};
 \item perturbed path integrals (I. Poltavsky)~\cite{polt-tkat16cs}; {essentially, a truncated cumulant expansion of fourth-order reweighting, that often enables fast convergence avoiding statistical instability; }
-\item open path integrals and momentum distribution estimators (V. Kapil, A. Cuzzocrea, M. Ceriotti) \cite{kapi+18jpcb}; {makes it possible to compute the particle momentum distribution including quantum fluctuations of nuclei;} 
+\item open path integrals and momentum distribution estimators (V. Kapil, A. Cuzzocrea, M. Ceriotti) \cite{kapi+18jpcb}; {makes it possible to compute the particle momentum distribution including quantum fluctuations of nuclei;}
 \item quantum alchemical transformations (B. Cheng) \cite{liu+13jpcc,chen+16jpcl}; {Monte Carlo exchanges between isotopes of different mass, useful to sample isotope propensity for different molecules or environments;}
 \item direct isotope fractionation estimators (B. Cheng, M. Ceriotti) ~\cite{chen-ceri14jcp}; {avoid thermodynamic integration to obtain isotope fractionation ratios;}
 \item spatially localized ring polymer contraction (M. Rossi, M. Ceriotti) \cite{litm+17jcp}; {simple contraction scheme for weakly bound molecules, e.g. on surfaces;}
@@ -545,7 +547,7 @@ Further details can be found in Ref. \cite{Kapil:2019ju}.
 \section{Licence and credits}
 
 Most of this code is distributed under the GPL licence. For more details see
-\url{www.gnu.org/licences/gpl.html}. 
+\url{www.gnu.org/licences/gpl.html}.
 So that they can easily be incorporated in other codes, the files
 in the directory {}``drivers'' are all held under the MIT licence.
 For more details see \url{https://fedoraproject.org/wiki/Licensing:MIT}.
@@ -583,13 +585,13 @@ respectively.
 
 These codes do not come as part of the \ipi package, and must be
 downloaded separately. See chapter~\ref{clientinstall} for more details
-of how to do this. 
+of how to do this.
 
 
 \subsection{\ipi resources}
 
 For more information about \ipi{} and to download the source code
-go to \url{http://ipi-code.org/}. 
+go to \url{http://ipi-code.org/}.
 
 In \url{http://gle4md.org/} one can also obtain colored-noise
 parameters to run Path Integral with Generalized Langevin Equation
@@ -608,9 +610,9 @@ thermostat (PI+GLE/PIGLET) calculations.
 
 \subsection{Requirements}
 
-\ipi is Python code, and as such strictly speaking does not 
+\ipi is Python code, and as such strictly speaking does not
 need to be compiled and installed. The {\tt i-pi} file in the
-{\tt bin} directory of the distribution is the main (executable) script, 
+{\tt bin} directory of the distribution is the main (executable) script,
 and can be run as long as the system has installed:
 \begin{itemize}
 \item Python version 2.4 or greater (i-PI up to version v2.0 is not Python3 compatible)
@@ -632,12 +634,12 @@ Patching for use with \ipi{} should not introduce further dependencies.
 \subsubsection{Using the setup.py module}
 
 While the {\tt i-pi} file can be used to run any \ipi simulation, it
-is often more convenient to install the package to the system's 
+is often more convenient to install the package to the system's
 Python modules path, so that it is accessible by all users and can
 be run without specifying the path to the Python script.
 
 For this purpose we have included a module in the root directory of the \ipi
-distribution, {\tt setup.py}, which handles creating a package with the 
+distribution, {\tt setup.py}, which handles creating a package with the
 executable and all the modules which are necessary for it to run.
 The first step is to build the distribution using:
 
@@ -645,7 +647,7 @@ The first step is to build the distribution using:
 > python setup.py build
 \end{code}
 Note that this requires the distutils package that comes with the
-python-dev package. 
+python-dev package.
 
 This creates a "build" directory containing only the files that
 are used to run an \ipi simulation, which can then be used to create the
@@ -661,7 +663,7 @@ This will install the package in the /usr/lib/py\_vers directory,
 where py\_vers is the version of Python that is being used.
 This requires administrator priviledges.
 
-Otherwise, one can install \ipi in a local Python path. If such 
+Otherwise, one can install \ipi in a local Python path. If such
 path does not exist yet, one must create directories for the package to
 go into, using:
 
@@ -676,7 +678,7 @@ to the Linux environment variable PYTHONPATH, using:
 
 \begin{code}
 > export PYTHONPATH=$PYTHONPATH:~/lib/py_vers/site-packages/
-\end{code} 
+\end{code}
 
 Finally, the code can be installed using:
 
@@ -717,7 +719,7 @@ be installed to the Python tree if so desired.
 NumPy is the standard Python mathematics library, and is used for
 most of the array manipulation and linear algebra in \ipi. It should
 be installed alongside most standard Python environments on HPC facilities.
-Otherwise, it is generally relatively straightforward to install it. 
+Otherwise, it is generally relatively straightforward to install it.
 
 In any case you must first obtain the NumPy code, which can be downloaded
 as a tar file from \url{http://www.numpy.org}. If the version of
@@ -812,7 +814,7 @@ default. Otherwise the slower NumPy version will be used.
 
 \label{clientinstall}
 
-As of today, the following codes provide out-of-the-box an i-PI interface: CP2K, DFTB+, Lammps, Quantum ESPRESSO, Siesta, FHI-aims, Yaff, deMonNano, TBE. 
+As of today, the following codes provide out-of-the-box an i-PI interface: CP2K, DFTB+, Lammps, Quantum ESPRESSO, Siesta, FHI-aims, Yaff, deMonNano, TBE.
 Links to the webpages of these codes, including information on how to obtain them, can be found in \url{http://ipi-code.org/}.
 
 If you are interested in interfacing your code to i-PI please get in touch, we are always glad to help.
@@ -833,10 +835,10 @@ distribution is held in a directory {}``old'', then a patch
 \section{Running \ipi}
 
 \ipi functions based on a client-server protocol, where the evolution of the nuclear dynamics
-is performed by the \ipi server, whereas the energy and forces evaluation is delegated to 
+is performed by the \ipi server, whereas the energy and forces evaluation is delegated to
 one or more instances of an external program, that acts as a client. This design principle
 has several advantages, in particular the possibility of performing PIMD based on the forces
-produced by one's favourite electronic structure/empirical force field code. However, it 
+produced by one's favourite electronic structure/empirical force field code. However, it
 also makes running a simulation slightly more complicated, since the two components
 must be set up and started independently.
 
@@ -874,13 +876,13 @@ Most clients also include descriptions on how to do this from their own document
 \label{driver.x}
 
 While \ipi is designed with \emph{ab initio} electronic structure calculations
-in mind, it also includes a Fortran empirical potential client code to do 
+in mind, it also includes a Fortran empirical potential client code to do
 simple calculations and to run the examples.
 
 The source code for this is included in the directory {}``drivers'', and can
 be compiled into an executable {}``i-pi-driver'' using the UNIX utility make.
 
-This code currently has four empirical potentials hardcoded into it, 
+This code currently has four empirical potentials hardcoded into it,
 a Lennard-Jones potential, the Silvera-Goldman potential \cite{silv-gold78jcp},
 a 1D harmonic oscillator potential, and the ideal gas (i.e. no potential
 interaction).
@@ -911,18 +913,18 @@ comma separated values needed to initialize the potential parameters.
 {}``gas'' requires no parameters, {}``harm'' requires a spring constant,
 {}``sg'' requires a cut-off radius and {}``lj'' requires the length and
 energy scales and a cut-off radius to be specified. All of these must
-be given in atomic units. 
+be given in atomic units.
 \item[-v:] Optional parameter. If given, the client will print out
 more information each time step.
 \end{description}
 
 This code should be fairly simple to extend to other pair-wise interaction
-potentials, and examples of its use can be seen in the {}``examples'' 
+potentials, and examples of its use can be seen in the {}``examples''
 directory, as explained in \ref{tests}.
 
 \subsubsection{CP2K}
 
-To use CP2K as the client code using an 
+To use CP2K as the client code using an
 internet domain socket on the host
 address {}``host\_address'' and on the port number {}``port''
 the following lines must be added to its input file:
@@ -959,12 +961,12 @@ modification is necessary:
 &END MOTION
 \end{code}
 
-The rest of the input file should be the same as for a standard CP2K 
+The rest of the input file should be the same as for a standard CP2K
 calculation, as explained at \url{www.cp2k.org/}.
 
 \subsubsection{Quantum-Espresso}
 
-To use Quantum-Espresso as the client code using an 
+To use Quantum-Espresso as the client code using an
 internet domain socket on the host
 address {}``host\_address'' and on the port number {}``port''
 the following lines must be added to its input file:
@@ -995,7 +997,7 @@ Espresso calculation, as explained at \url{www.quantum-espresso.org/}.
 
 \subsubsection{LAMMPS}
 
-To use LAMMPS as the client code using an 
+To use LAMMPS as the client code using an
 internet domain socket on the host
 address {}``host\_address'' and on the port number {}``port''
 the following lines must be added to its input file:
@@ -1011,7 +1013,7 @@ modification is necessary:
 fix 1  all ipi host_address port unix
 \end{code}
 
-The rest of the input file should be the same as for a standard LAMMPS 
+The rest of the input file should be the same as for a standard LAMMPS
 calculation, as explained at \url{http://lammps.sandia.gov/index.html}.
 Note that LAMMPS must be compiled with the \texttt{yes-user-misc} option
 to communicate with i-PI. More information from \url{https://lammps.sandia.gov/doc/fix_ipi.html}.
@@ -1046,40 +1048,40 @@ where option can be, e.g., {\small {\tt dipole, hirshfeld, workfunction, frictio
 \subsection{Running on a HPC system}\label{hpc}
 
 Running \ipi on a high-performance computing (HPC) system can be a bit more challenging
-than running it locally using UNIX-domain sockets or using the \emph{localhost} 
+than running it locally using UNIX-domain sockets or using the \emph{localhost}
 network interface.
 The main problem is related to the fact that different HPC systems adopt
 a variety of solutions to have the different nodes communicate with each other
-and with the login nodes, and to queue and manage computational jobs. 
- 
+and with the login nodes, and to queue and manage computational jobs.
+
 \begin{figure}[hbt]
 \centering\includegraphics[width=0.9\textwidth]{../figures/ipi-running.pdf}
-\caption{\label{fig:running} Different approaches to run \ipi and a number of 
+\caption{\label{fig:running} Different approaches to run \ipi and a number of
 instances of the forces code on a HPC system: a) running \ipi and the clients in a single
 job; b) running \ipi and the clients on the same system, but using different jobs, or running
 \ipi interactively on the login node; c) running \ipi on a local workstation, communicating
-with the clients (that can run on one or multiple HPC systems) over the internet. } 
+with the clients (that can run on one or multiple HPC systems) over the internet. }
 \end{figure}
 
 Figure~\ref{fig:running} represents schematically three different approaches
 to run \ipi on a HPC system:
 \begin{enumerate}
-\item running both \ipi{} and multiple instances of the client as a single job on 
+\item running both \ipi{} and multiple instances of the client as a single job on
 the HPC system. The job submission script must launch \ipi{} first, as a serial
 background job, then wait a few seconds for it to load and create a socket
 \begin{code}
 > python i-pi input_file.xml &> log & wait 10
 \end{code}
-Then, one should launch with mpirun or any system-specific mechanism 
+Then, one should launch with mpirun or any system-specific mechanism
 one or more independent instances of the client code. Note that not all
 queing systems allow launching several mpirun instances from a single job.
 \item running \ipi{} and the clients on the HPC system, but in separate jobs.
-Since \ipi{} consumes very little resources, one should ideally launch it 
-interactively on a login node 
+Since \ipi{} consumes very little resources, one should ideally launch it
+interactively on a login node
 \begin{code}
-> nohup python i-pi input_file.xml < /dev/null &> log & 
+> nohup python i-pi input_file.xml < /dev/null &> log &
 \end{code}
-or alternative on a queue with a very long wall-clock time. 
+or alternative on a queue with a very long wall-clock time.
 Then, multiple instances of the client can be run as independent jobs:
 as they start, they will connect to the server which will take care of
 adding them dynamically to the list of active clients,
@@ -1087,18 +1089,18 @@ dispatching force calculations to them, and removing them from the list
 when their wall-clock time expires. This is perhaps the model
 that applies more easily to different HPC systems; however it requires
 having permission to run on the head node, or having access to a long
-wall-clock time queue that ensures that \ipi is always active. 
-\item running \ipi{} on a simple workstation, and performing 
+wall-clock time queue that ensures that \ipi is always active.
+\item running \ipi{} on a simple workstation, and performing
 communication over the internet with the clients that run on one
 or more HPC systems. This model exploits in full the distributed-computing
 model that underlies the philosophy of \ipi and is very robust --
-as the server can be always on, and the output of the simulation is 
+as the server can be always on, and the output of the simulation is
 generated locally. However, this is also the most complicated to set up,
-as the local workstation must accept in-coming connections 
-from the internet -- which is not always possible when behind a 
+as the local workstation must accept in-coming connections
+from the internet -- which is not always possible when behind a
  firewall -- and the compute nodes of the HPC centre must have
 an outgoing connection to the internet, which often requires ssh tunnelling
-through a login node (see section~\ref{distrib} for more details). 
+through a login node (see section~\ref{distrib} for more details).
 \end{enumerate}
 \section{Testing the install}
 
@@ -1149,10 +1151,10 @@ code LAMMPS. It demonstrates both the convergence of the PIGLET method
 methods \cite{mark-mano08jcp}.
 
 This also contains one example using LAMMPS to calculate the interactions
-between carbon atoms in graphene. This uses the optimized Tersoff 
+between carbon atoms in graphene. This uses the optimized Tersoff
 parameters for carbon given in \cite{lind-broi10prb}.
 \item [{cp2k:}] Contains the tests for the CP2K client code. Holds input files
-to run the high-pressure water calculations 
+to run the high-pressure water calculations
 presented in [cpc publication citation].
 \end{description}
 
@@ -1177,7 +1179,7 @@ tags there may be some data, which may or may not contain other tags.
 This is used to specify the contents of a class object,
 or the value of a variable. Finally tags can have attributes,
 which are used for metadata, i.e. data used to specify
-how the tag should be interpreted. As an example, a `mode' attribute can 
+how the tag should be interpreted. As an example, a `mode' attribute can
 be used to select between different thermostatting algorithms,
 specifying how the options of the thermostat class should be interpreted.
 
@@ -1187,14 +1189,14 @@ A xml tag has the following syntax:
 <tag_name attribute_name='attribute_data'>tag_data</tag_name>
 \end{code}
 
-The syntax for the different types of tag data is given below: 
+The syntax for the different types of tag data is given below:
 
 \texttt{
 \begin{center}
 \begin{tabular}{cc}
 \hline\hline
 Data type & Syntax\\
-\hline 
+\hline
 Boolean & <tag>True</tag> or <tag>False</tag>\\
 Float & <tag>11.111</tag> or <tag>1.1111e+1</tag>\\
 Integer & <tag>12345</tag>\\
@@ -1211,7 +1213,7 @@ Note that arrays are always given as one-dimensional lists. In cases
 where a multi-dimensional array must be entered, one can use the `shape'
 attribute, that determines how the list will be reshaped into a multi-dimensional
 array. For example, the bead positions are
-represented in the code as an array of shape 
+represented in the code as an array of shape
 (number of beads, 3*number of atoms). If we take a system with 20 atoms
 and 8 beads, then this can be represented in the xml input file as:
 
@@ -1227,7 +1229,7 @@ If `shape' is not specified, a 1D array will be assumed.
 The code uses the hierarchical nature of the xml format to help read the data; if
 a particular object is held within a parent object in the code, then
 the tag for that object will be within the appropriate parent tags.
-This is used to make the structure of the simulation clear. 
+This is used to make the structure of the simulation clear.
 
 For example,
 the system that is being studied is partly defined by the thermodynamic
@@ -1235,9 +1237,9 @@ ensemble that should be sampled, which in turn may be partly defined
 by the pressure, and so on. To make this dependence clear in the code
 the global simulation object which holds all the data contains
 an ensemble object, which contains a pressure variable.
- 
+
 Therefore the input file is specified
-by having a {}``\hyperref[SIMULATION]{simulation}'' tag, containing an 
+by having a {}``\hyperref[SIMULATION]{simulation}'' tag, containing an
 {}``\hyperref[ENSEMBLE]{ensemble}''
 tag, which itself contains a {}``pressure'' tag, which will contain
 a float value corresponding to the external pressure. In this
@@ -1306,10 +1308,10 @@ can be found in the units.py module.
 The input file can contain a {}``\hyperref[INITIALIZER]{initialize}'' tag, which
 contains a number of fields that determine the starting values of the various
 quantities that define the state of the simulation -- atomic positions, cell parameters, velocities, \ldots.
-These fields (\hyperref[INITPOSITIONS]{positions},  \hyperref[INITVELOCITIES]{velocities},  
+These fields (\hyperref[INITPOSITIONS]{positions},  \hyperref[INITVELOCITIES]{velocities},
 \hyperref[INITCELL]{cell},  \hyperref[INITMASSES]{masses},  \hyperref[INITLABELS]{labels},
-\hyperref[INITFILE]{file}) specify how the values should be obtained: 
-either from a manually-input list or from an external file.   
+\hyperref[INITFILE]{file}) specify how the values should be obtained:
+either from a manually-input list or from an external file.
 
 \subsubsection{Configuration files}
 
@@ -1318,7 +1320,7 @@ either from a manually-input list or from an external file.
 Instead of initializing the atom positions manually, the starting
 configuration can be specified through a separate data file. The name
 of the configuration file is specified within one of the possible
-fields of an {}``\hyperref[INITIALIZER]{initialize}'' tag. 
+fields of an {}``\hyperref[INITIALIZER]{initialize}'' tag.
 The file format is specified with the  {}``mode'' attribute.
 The currently accepted file formats are:
 \begin{itemize}
@@ -1328,11 +1330,11 @@ The currently accepted file formats are:
 \end{itemize}
 the last of which will be described in the next section.
 
-Depending on the field name, the values read from the external file will 
+Depending on the field name, the values read from the external file will
 be used to initialize one component of the simulation or another (e.g. the positions
-or the velocities). The \hyperref[INITFILE]{file} tag can be used as a shortcut 
+or the velocities). The \hyperref[INITFILE]{file} tag can be used as a shortcut
 to initialize the atom positions, labels, masses and possibly
-the cell parameters at the same time. For instance, 
+the cell parameters at the same time. For instance,
 
 \begin{code}
 <initialize nbeads="8">
@@ -1353,7 +1355,7 @@ the cell parameters at the same time. For instance,
 
 In practice, the using the \hyperref[INITFILE]{file} tag will only read the information that
 can be inferred from the given file type, so for an `xyz' file, the cell
-parameters will not be initialized. 
+parameters will not be initialized.
 
 
 \subsubsection{Initialization from checkpoint files}
@@ -1361,11 +1363,11 @@ parameters will not be initialized.
 \ipi gives the option to output the entire state of the simulation at
 a particular timestep as an xml input file, called a checkpoint file
 (see \ref{checkpoint} for details). As well as being a valid input
-for \ipi{},  a checkpoint can also be used inside an 
+for \ipi{},  a checkpoint can also be used inside an
 ``\hyperref[INITIALIZER]{initialize}'' tag to specify the configuration
 of the system, discarding other parameters of the simulation such as
-the current time step or the chosen ensemble. 
-Input from a checkpoint is selected 
+the current time step or the chosen ensemble.
+Input from a checkpoint is selected
 by using {}``chk'' as the value of the {}``mode'' attribute. As
 for the configuration file, a checkpoint file can be used to initialize
 either one or many variables depending on which tag name is used.
@@ -1376,8 +1378,8 @@ either one or many variables depending on which tag name is used.
 
 \ipi uses a very flexible mechanism to specify how and how often
 atomic configurations and physical properties should be output. Within
-the {}``\hyperref[OUTPUTS]{output}'' tag of the xml input 
-file the user can specify multiple tags, each one of 
+the {}``\hyperref[OUTPUTS]{output}'' tag of the xml input
+file the user can specify multiple tags, each one of
 which will correspond to a particular output
 file. Each file is managed separately by the code, so what is output
 to a particular file and how often can be adjusted for different files independently.
@@ -1388,7 +1390,7 @@ increase the computational cost of a simulation unless they are computed
 once every several time steps. On the other hand,
 for properties such as the conserved energy quantity it is easy, and
 often useful, to output them every time step as they are simple to
-compute and do not take long to output to file. 
+compute and do not take long to output to file.
 
 There are three types of output file that can be specified; property
 files for system level properties, trajectory files for atom/bead
@@ -1396,7 +1398,7 @@ level properties, and checkpoint files which save the state of the
 system and so can be used to restart the simulation from a particular
 point. For a brief overview of the format of each of these types of
 files, and some of their more common uses, see \ref{part1}.
-To give a more in depth explanation of each of these files, 
+To give a more in depth explanation of each of these files,
 they will now be considered in turn.
 
 
@@ -1405,7 +1407,7 @@ they will now be considered in turn.
 \label{propertyfile}
 
 This is the output file for all the system and simulation level properties,
-such as the total energy and the time elapsed. It is designed to 
+such as the total energy and the time elapsed. It is designed to
 track a small number of important properties throughout a
 simulation run, and as such has been formatted to be used as input
 for plotting programs such as gnuplot.
@@ -1432,7 +1434,7 @@ then the properties output file would look something like:
 ...
 \end{code}
 
-The properties that are output are determined by the 
+The properties that are output are determined by the
 {}``\hyperref[PROPERTIES]{properties}''
 tag in the xml input file. The format of this tag is:
 
@@ -1471,14 +1473,14 @@ standard brackets, with each argument separated by a semi-colon. These
 may or may not be mandatory depending on the property, as some arguments
 have well defined default values. The arguments
 can be specified by either of two different syntaxes, (name1=arg1;
-\ldots ) or (arg1; \ldots ). 
+\ldots ) or (arg1; \ldots ).
 
 The first syntax uses keyword arguments. The above example would set the variable
-with the name {}``name1'' the value {}``arg1''. 
+with the name {}``name1'' the value {}``arg1''.
 The second syntax uses positional arguments. This syntax
 relies on the arguments being specified in the correct order, as defined
 in the relevant function in the property.py module, since the user has
-not specified which variable to assign the value to. 
+not specified which variable to assign the value to.
 
 The two syntaxes
 may be mixed, but positional arguments must be specified first otherwise
@@ -1492,13 +1494,13 @@ The different available properties are:
 \subsection{Trajectory files} \label{trajectories}
 
 These are the output files for atomic or bead level properties, such
-as the bead positions. In contrast to properties files, they output data for 
+as the bead positions. In contrast to properties files, they output data for
 all atomic degrees of freedom, in a format that can be read by visualization packages
 such as VMD.
 
 Multiple trajectory files can be specified, each described by a separate
-{}``\hyperref[TRAJECTORY]{trajectory}'' tag within the 
-``\hyperref[OUTPUTS]{output}'' section of the input file. 
+{}``\hyperref[TRAJECTORY]{trajectory}'' tag within the
+``\hyperref[OUTPUTS]{output}'' section of the input file.
 The allowable file formats for the trajectory output files are the same as for the configuration
 input files, given in~\ref{configfile}.
 
@@ -1510,19 +1512,19 @@ These tags have the format:
 </trajectory>
 \end{code}
 
-This is very similar to the 
+This is very similar to the
 {}``\hyperref[PROPERTIES]{properties}'' tag, except that it has the
 additional tags {}``format'' and {}``cell\_units'', and only one
 \emph{traj\_name} quantity can be specified per file. `format' specifies the format
 of the output file, and `cell\_units' specifies the units in which
-the cell dimensions are output. 
-Depending on the quantity being output, the trajectory may consist of just 
-one file per time step (e.g. the position of the centroid) or of several files, 
-one for each bead, whose name will be automatically determined by 
-appending the bead index to the specified  {}``filename'' attribute (e.g. 
-the beads position). 
+the cell dimensions are output.
+Depending on the quantity being output, the trajectory may consist of just
+one file per time step (e.g. the position of the centroid) or of several files,
+one for each bead, whose name will be automatically determined by
+appending the bead index to the specified  {}``filename'' attribute (e.g.
+the beads position).
 In the latter case it is also possible to output the quantity computed
-for a single bead by specifying its (zero-based) index in the {}``bead'' attribute. 
+for a single bead by specifying its (zero-based) index in the {}``bead'' attribute.
 
 The quantities that can be output in trajectory files are:
 
@@ -1536,7 +1538,7 @@ The quantities that can be output in trajectory files are:
 As well as the above output files, the state of the system at a particular
 time step can also be saved to file. These checkpoint files can later be
 used as input files, with all the information required to restore
-the state of the system to the point at which the file was created. 
+the state of the system to the point at which the file was created.
 
 This is specified by the {}``\hyperref[CHECKPOINT]{checkpoint}'' tag
 which has the syntax:
@@ -1547,7 +1549,7 @@ which has the syntax:
 </checkpoint>
 \end{code}
 
-Again, this is similar to the {}``\hyperref[TRAJECTORY]{trajectory}'' and 
+Again, this is similar to the {}``\hyperref[TRAJECTORY]{trajectory}'' and
 {}``\hyperref[PROPERTIES]{properties}''
 tags, but instead of having a value which specifies what to output,
 the value simply gives a number to identify the current checkpoint
@@ -1570,31 +1572,31 @@ also be used:
 
 As well as outputting checkpoint files during a simulation run, \ipi{} also
 creates a checkpoint automatically at the end of the simulation, with
-file name {}``RESTART''. In the same way as the checkpoint files discussed 
-above, it contains the full state of the simulation. 
-It can be used to seamlessly restart the simulation if the user decides 
+file name {}``RESTART''. In the same way as the checkpoint files discussed
+above, it contains the full state of the simulation.
+It can be used to seamlessly restart the simulation if the user decides
 that a longer run is needed to gather sufficient statistics, or if \ipi{} is terminated
 before the desired number of steps have been completed.
 
 \ipi will try to generate a RESTART file when it terminates, either because
-\emph{total\_time} has elapsed, or because it received a (soft) kill signal 
-by the operating system. A soft exit can also be forced by creating 
+\emph{total\_time} has elapsed, or because it received a (soft) kill signal
+by the operating system. A soft exit can also be forced by creating
 an empty file named ``EXIT'' in
-the directory in which \ipi is running. 
+the directory in which \ipi is running.
 
 An important point to note is that since each time step is split into
 several parts, it is only at the end of each step that all the
 variables are consistent with each other in such a way that the simulation
 can be restarted from them without changing the dynamics. Thus if
 a soft exit call is made during a step, then the restart file that
-is created must correspond to the state of the system \emph{before} 
+is created must correspond to the state of the system \emph{before}
 that step began. To this end, the state of the system is saved at the
 start of every step.
 
 In order to restart i-PI from a file named ``RESTART" one simply has to run
 
 \begin{code}
-> python i-pi RESTART 
+> python i-pi RESTART
 \end{code}
 
 
@@ -1604,36 +1606,36 @@ In order to restart i-PI from a file named ``RESTART" one simply has to run
 
 \subsection{Communication protocol}
 
-\ipi is based on a clear-cut separation between the 
+\ipi is based on a clear-cut separation between the
 evolution of the nuclear coordinates and the evaluation of energy
 and forces, which is delegated to an external program.
 The two parts are kept as independent as possible, to minimize
-the client-side implementation burden, and to make sure that the 
-server will be compatible with any empirical or \emph{ab initio} code that 
+the client-side implementation burden, and to make sure that the
+server will be compatible with any empirical or \emph{ab initio} code that
 can compute inter-atomic forces for a given configuration.
 
-Once a communication channel has been established between the 
+Once a communication channel has been established between the
 client and the server (see \ref{sockets}), the two parties
 exchange minimal information: \ipi{} sends the atomic positions
 and the cell parameters to the client, which computes energy, forces
-and virial and returns them to the server. 
+and virial and returns them to the server.
 
-The exchange of information is regulated by a simple 
+The exchange of information is regulated by a simple
 communication protocol. The server polls the status of the client,
-and when the client signals that is ready to compute forces 
+and when the client signals that is ready to compute forces
 \ipi sends the atomic positions to it. When the client responds to the
 status query by signalling that the force evaluation is finished,
 \ipi will prepare to receive the results of the calculation.
- If at any stage the client does not respond to a query, the server 
-will wait and try again until a prescribed timeout period has elapsed, 
-then consider the client to be stuck, disconnect from it 
-and reassign its force evaluation task to another active instance. 
+ If at any stage the client does not respond to a query, the server
+will wait and try again until a prescribed timeout period has elapsed,
+then consider the client to be stuck, disconnect from it
+and reassign its force evaluation task to another active instance.
 The server assumes that 4-byte integers, 8-byte floats
 and 1-byte characters are used. The typical communication flow is
 as follows:
 %
 \begin{enumerate}
-\item a header string {}``\textbf{STATUS}'' is sent by the server to 
+\item a header string {}``\textbf{STATUS}'' is sent by the server to
 the client that has connected to it;
 \item a header string is then returned, giving the status of the client
 code. Recognized messages are:
@@ -1654,9 +1656,9 @@ potential and forces. The server socket then sends a string {}``GETFORCE'',
 and the client socket returns {}``FORCEREADY''. The potential is
 then returned as a float, the number of atoms as an integer, then
 the force data as 3 floats per atom in the same way as the positions,
-and the virial as 9 floats in the same way as the cell vector matrix. 
+and the virial as 9 floats in the same way as the cell vector matrix.
 Finally, the client may return an arbitrary string containing additional
-data that have been obtained by the electronic structure calculation 
+data that have been obtained by the electronic structure calculation
 (atomic charges, dipole moment, \ldots). The client first returns
 an integer specifying the number of characters, and then the string,
 which will be output verbatim if this ``extra'' information is
@@ -1679,7 +1681,7 @@ to an \ipi server, so that different replicas of the system can be
 assigned to different client codes and their forces computed in parallel.
 In the case of \emph{ab initio} force evaluation, this is a trivial
 level of parallelism, since the cost of the force calculation
-is overwhelming relative to the overhead involved in exchanging 
+is overwhelming relative to the overhead involved in exchanging
 coordinates and forces. Note that even if the parallelization over
 the replicas is trivial, often one does not obtain perfect scaling,
 due to the fact that some of the atomic configurations might require
@@ -1687,11 +1689,11 @@ more steps to reach self-consistency, and the wall-clock time per step
 is determined by the slowest replica.
 
 \ipi maintains a list of active clients, and distributes the forces
-evaluations among those available. This means that, if desired, one 
-can run an $n$-bead calculation using only $m<n$ clients, as the 
-server takes care of sending multiple replicas to each client per 
+evaluations among those available. This means that, if desired, one
+can run an $n$-bead calculation using only $m<n$ clients, as the
+server takes care of sending multiple replicas to each client per
 MD step. To avoid having clients idling for a substantial amount
-of time, $m$ should be a divisor of $n$. The main advantage of 
+of time, $m$ should be a divisor of $n$. The main advantage of
 this approach, compared to one that rigidly assigns one instance of
 the client to each bead, is that if each client is run as an independent
 job in a queue (see~\ref{hpc}), \ipi can start performing PIMD
@@ -1700,10 +1702,10 @@ simulation even if one of the clients becomes unresponsive.
 
 Especially for \emph{ab initio} calculations, there is an advantage
 in running with $m=n$. \ipi will always try to send the coordinates for one
-path integral replica to the client that computed it at the previous 
-step: this reduces the change in the particle positions between 
-force evaluations, so that the charge density/wavefunction from the 
-previous step is a better starting guess and self-consistency can be 
+path integral replica to the client that computed it at the previous
+step: this reduces the change in the particle positions between
+force evaluations, so that the charge density/wavefunction from the
+previous step is a better starting guess and self-consistency can be
 achieved faster. Also, receiving coordinates that represent a continuous
 trajectory makes it possible to use extrapolation
 strategies that might be available in the client code.
@@ -1712,44 +1714,44 @@ Obviously, most electronic-structure client codes provide a further level
 of parallelisation, based on OpenMP and/or MPI. This is fully compatible with
 \ipi, as it does not matter how the client does the calculation since
 only the forces, potential and virial are sent to the server, and the communication
-is typically performed by the master process of the client. 
+is typically performed by the master process of the client.
 
 
 \subsection{Sockets} \label{sockets}
 
 The communication between the \ipi server and the client code that
-evaluates forces is implemented through sockets. A socket is a 
+evaluates forces is implemented through sockets. A socket is a
 data transfer device that is designed for internet communication,
 so it supports both multiple client connections to the same server and
 two-way communication. This makes sockets ideal for use in \ipi,
-where each calculation may require multiple instances of the client code. 
+where each calculation may require multiple instances of the client code.
 A socket interface can actually function in two different modes.
 
 UNIX-domain sockets are a mechanism for local, inter-process
 communication. They are fast, and best suited when one wants
-to run \ipi  with empirical potentials, and the latency of the 
+to run \ipi  with empirical potentials, and the latency of the
 communication with the client becomes a significant overhead
 for the calculation. UNIX-domain sockets create a special file
 in the local file system, that serves as a rendezvous point
 between server and clients, and are uniquely identified by the
-name of the file itself, that can be specified in the ``address'' tag of 
-``\hyperref[FFSOCKET]{socket}'' in the xml input file and in 
+name of the file itself, that can be specified in the ``address'' tag of
+``\hyperref[FFSOCKET]{socket}'' in the xml input file and in
 the input of the client.
 
-Unfortunately, UNIX sockets do not allow one to run \ipi{} and 
-the clients on different computers, which limits greatly their 
-utility when  one needs to run massively parallel calculations. 
-In these cases -- typically when performing \emph{ab initio} 
+Unfortunately, UNIX sockets do not allow one to run \ipi{} and
+the clients on different computers, which limits greatly their
+utility when  one needs to run massively parallel calculations.
+In these cases -- typically when performing \emph{ab initio}
 simulations -- the force calculation becomes the bottleneck, so there is no
-need for fast communication with the server, and one can 
+need for fast communication with the server, and one can
 use internet sockets, that instead are specifically designed
 for communication over a network.
 
 Internet sockets are described by an address and a port number.
 The address of the host is given as the IP address,
 or as a hostname that is resolved to an IP address by a domain name server,
-and is specified by the {}``address'' variable of a 
-\hyperref[FFSOCKET]{socket} object. 
+and is specified by the {}``address'' variable of a
+\hyperref[FFSOCKET]{socket} object.
 The port number is an integer between 1 and 65535 used to distinguish
 between all the different sockets open on a particular host. As
 many of the lower numbers are protected for use in important system
@@ -1757,21 +1759,21 @@ processes or internet communication, it is generally advisable to
 only use numbers in the range 1025-65535 for simulations.
 
 The \hyperref[FFSOCKET]{socket} object has two more parameters.
-The option ``latency'' specifies how often \ipi{} polls the list of 
+The option ``latency'' specifies how often \ipi{} polls the list of
 active clients to dispatch positions and collect results:
-setting it to a small value makes the program more responsive, 
+setting it to a small value makes the program more responsive,
 which is appropriate when the evaluation of the forces is very
-fast. In \emph{ab initio} simulations, it is best to set it to 
-a larger value (of the order of 0.01 seconds), as higher latency 
-will have no noticeable impact on performance, but will reduce 
-the cost of having \ipi run in the background to basically zero. 
+fast. In \emph{ab initio} simulations, it is best to set it to
+a larger value (of the order of 0.01 seconds), as higher latency
+will have no noticeable impact on performance, but will reduce
+the cost of having \ipi run in the background to basically zero.
 
 Normally, \ipi can detect when one of the clients dies or disconnects,
 and can remove it from the active list and dispatch its force calculation
-to another instance. If however one of the client hangs without 
+to another instance. If however one of the client hangs without
 closing the communication channel, \ipi has no way of determining that
-something is going wrong, and will just wait forever. One can 
-specify a parameter ``timeout'', that corresponds to the maximum time -- in 
+something is going wrong, and will just wait forever. One can
+specify a parameter ``timeout'', that corresponds to the maximum time -- in
 seconds -- that \ipi should wait before deciding that one of the clients
 has become unresponsive and should be discarded.
 
@@ -1793,7 +1795,7 @@ can be obtained for instance with the command
 \noindent which will return a list of interfaces of the form
 
 \begin{code}
-1: lo: <LOOPBACK,UP,LOWER_UP> mtu 16436 qdisc noqueue 
+1: lo: <LOOPBACK,UP,LOWER_UP> mtu 16436 qdisc noqueue
     link/loopback 00:00:00:00:00:00 brd 00:00:00:00:00:00
     inet 127.0.0.1/8 scope host lo
 2: eth0: <BROADCAST,MULTICAST,UP,LOWER_UP> mtu 1500 qdisc pfifo_fast qlen 1000
@@ -1810,30 +1812,30 @@ that are listed after ``inet'', e.g. 192.168.1.254 for the eth0 interface in the
 
 \begin{figure}[hbt]
 \centering\includegraphics[width=0.9\textwidth]{../figures/ipi-network.pdf}
-\caption{\label{fig:network} A schematic representation of the network layout one 
-typically finds when running \ipi and the clients on a HPC system and/or on a local workstation. } 
+\caption{\label{fig:network} A schematic representation of the network layout one
+typically finds when running \ipi and the clients on a HPC system and/or on a local workstation. }
 \end{figure}
 
 Figure~\ref{fig:network} represents schematically a typical network layout
-for a HPC system and a local workstation. When running \ipi locally on a 
-workstation, one can use the loopback interface (that can be referred to as 
+for a HPC system and a local workstation. When running \ipi locally on a
+workstation, one can use the loopback interface (that can be referred to as
 ``localhost'' in the ``address'' field of both \ipi and the client) for communication.
 When running both \ipi and the clients on a HPC cluster, one should work out which of the
 the interfaces that are available on the node where the \ipi server runs are accessible from the
-compute nodes. This requires some trial and error, and possibly setting the 
- ``address'' field dynamically from the job that launches \ipi. 
+compute nodes. This requires some trial and error, and possibly setting the
+ ``address'' field dynamically from the job that launches \ipi.
  For instance,
-if one was running \ipi on the login node, and the clients on different compute nodes, as 
-in Figure~\ref{fig:running}b, then on the HPC system described in Figure~\ref{fig:network} 
-one should set the address to that of the \emph{ib1} interface -- $111.111.111.111$ in 
+if one was running \ipi on the login node, and the clients on different compute nodes, as
+in Figure~\ref{fig:running}b, then on the HPC system described in Figure~\ref{fig:network}
+one should set the address to that of the \emph{ib1} interface -- $111.111.111.111$ in
 the example above. If instead \ipi was launched in a job script, then the submission script would
 have to check for the IP address associated with the \emph{ib0} interface on the node
 the job has been dispatched to, and set that address (e.g. $111.111.111.200$) in the inputs
 of both \ipi and the clients that will be launched in the same (or separate) jobs.
 
-Running \ipi on a separate workstation (Figure~\ref{fig:running}c) gives 
-maximum flexibility, but is also trickier as one has to reach the 
-internet from the compute nodes, that are typically not directly connected to it. 
+Running \ipi on a separate workstation (Figure~\ref{fig:running}c) gives
+maximum flexibility, but is also trickier as one has to reach the
+internet from the compute nodes, that are typically not directly connected to it.
 We discuss this more advanced setup in the next paragraph.
 
 \subsubsection{ssh tunnelling}
@@ -1846,19 +1848,19 @@ the outside internet on the range of ports that one wants to use for
 \ipi. There are ways to circumvent a firewall, but we will not discuss them
 here, as the whole point of \ipi is that it can be run on a low-profile
 PC whose security does not need to be critical. Typically arrangements
-can be made to open up a range of ports for incoming connections. 
+can be made to open up a range of ports for incoming connections.
 
 A more substantial problem -- as it depends on the physical layout
 of the network rather than on software settings of the firewall --
 is how to access the workstation from the compute nodes, which in most
-cases do not have a network interface directly connected to the 
+cases do not have a network interface directly connected to the
 outside internet.
 
 The problem can be solved by creating a ssh tunnel, i.e. an instance of
-the ssh secure shell that will connect the compute node to the login node, 
+the ssh secure shell that will connect the compute node to the login node,
 and then forward all traffic that is directed to a designated port
 on the compute node to the remote location that is running \ipi, passing
-through the outbound network interface of the login node. 
+through the outbound network interface of the login node.
 
 In the example above, if \ipi{} is running on a local workstation, one should run:
 
@@ -1866,8 +1868,8 @@ In the example above, if \ipi{} is running on a local workstation, one should ru
 > ssh -f -N -L local_port:workstation:remote_port -2 login_node
 \end{code}
 
-\noindent from the job script that launches the client. 
-For instance, with the network layout of Figure~\ref{fig:network}, 
+\noindent from the job script that launches the client.
+For instance, with the network layout of Figure~\ref{fig:network},
 and if the \ipi{} server is listening
 on port 12345 of the \emph{eth0} interface, the tunnel should be created as:
 
@@ -1880,14 +1882,14 @@ on port 54321. The connection with \ipi will be established through the tunnel,
 and the data exchange can begin.
 
 Note that, in order to be able to include the above commands in a script,
-the login node and the compute nodes should be configured to allow 
+the login node and the compute nodes should be configured to allow
 password-less login within the HPC system. This can be achieved easily, and
-does not entail significant security risks, since it only allows one to 
+does not entail significant security risks, since it only allows one to
 connect from one node to another within the local network.
-To do so, you should log onto the HPC system, and create a pair 
-of ssh keys (if this has not been done already, in which case an 
-id\_rsa.pub file should be present in the user's \textasciitilde{}/.ssh/ directory) 
-by issuing the command 
+To do so, you should log onto the HPC system, and create a pair
+of ssh keys (if this has not been done already, in which case an
+id\_rsa.pub file should be present in the user's \textasciitilde{}/.ssh/ directory)
+by issuing the command
 
 \begin{code}
 > ssh-keygen -t rsa
@@ -1895,7 +1897,7 @@ by issuing the command
 
 \noindent The program will then prompt for a passphrase twice. Since we wish to have
 use this in a job script where we will not be able to enter a password,
-just hit enter twice. 
+just hit enter twice.
 
 This should now have created two files in the directory \textasciitilde{}/.ssh,
 id\_rsa and id\_rsa.pub. These should be readable only by you, so
@@ -1908,7 +1910,7 @@ use the following code to set up the correct file permissions:
 \noindent Finally, copy the contents of the file id\_rsa.pub and append them
 to the file authorized\_keys in the directory \textasciitilde{}/.ssh
 of the user on the login node, which is typically shared among all
-the nodes of a cluster and therefore allows password-less login 
+the nodes of a cluster and therefore allows password-less login
 from all of the compute nodes.
 
 
@@ -1918,8 +1920,8 @@ from all of the compute nodes.
 
 This chapter gives a complete list of the tags that can be
 specified in the xml input file, along with the hierarchy of objects.
-Note that every xml input file must start with the root tag 
-{}``\hyperref[SIMULATION]{simulation}''. 
+Note that every xml input file must start with the root tag
+{}``\hyperref[SIMULATION]{simulation}''.
 See the accompanying {}``help.xml'' file in the {}``doc/help\_files'' directory
 to see the recommended input file structure.
 
@@ -1930,7 +1932,7 @@ After this the attributes of the tag will be listed, enclosed within
 a frame for clarity.
 Finally, the fields contained within the tag will be listed in alphabetical order,
 possibly followed by their attributes.
-\textbf{Attribute} names will be bold and 
+\textbf{Attribute} names will be bold and
 \textbf{\underline{field}} names both bold and underlined.
 \emph{\small Other supplementary information} will be in small font and italicized.
 
@@ -1998,8 +2000,8 @@ to work through it themselves. For this purpose, the input files
 have been included with the \ipi distribution, in the {}``test/tutorial''
 directory.
 
-The chosen problem is that of a small \emph{NPT} simulation of para-hydrogen, 
-using the Silvera-Goldman potential \cite{silv-gold78jcp}. 
+The chosen problem is that of a small \emph{NPT} simulation of para-hydrogen,
+using the Silvera-Goldman potential \cite{silv-gold78jcp}.
 We will take (\(N\),\(P\),\(T\)) = (108, 0, 25 K).
 
 \section{Part 1 - \emph{NVT} Equilibration run}
@@ -2029,10 +2031,10 @@ of 15 \(a_0\). This is run using the following command:
 \end{code}
 
 The option {}``-m'' is followed by the empirical potential required,
-in this case we use {}``sg'' for Silvera-Goldman, 
+in this case we use {}``sg'' for Silvera-Goldman,
 {}``-h localhost'' sets up the client hostname
-as {}``localhost'', {}``-o 15'' sets the cut-off to 15 \(a_0\), 
-and {}``-p 31415'' sets the port number to 31415. 
+as {}``localhost'', {}``-o 15'' sets the cut-off to 15 \(a_0\),
+and {}``-p 31415'' sets the port number to 31415.
 
 Note that usually this step will require setting up appropriate
 client code input files, possibly for an \emph{ab initio} electronic
@@ -2053,8 +2055,8 @@ for reference.
 Firstly, when reading the input file the \ipi xml functions look
 for a {}``simulation''
 tag as a sign to start reading data. For those familiar with xml jargon,
-we have defined {}``\hyperref[SIMULATION]{simulation}'' as the 
-root tag, so all the input data read in must start and end with a 
+we have defined {}``\hyperref[SIMULATION]{simulation}'' as the
+root tag, so all the input data read in must start and end with a
 {}``\hyperref[SIMULATION]{simulation}'' tag, as show below:
 
 \begin{code}
@@ -2069,12 +2071,12 @@ tags to be present, and keeps track of which tags are supposed to
 be where. More information about which tags are available can be found
 in \ref{hierarchy}, more information on xml syntax can be found in
 \ref{ifilestructure}, and possible errors which can occur if the
-input file is not well formed can be found in \ref{trouble}. 
+input file is not well formed can be found in \ref{trouble}.
 
 For the sake of this first tutorial however, we will simply discuss the
 those tags which are needed for a single \emph{NVT} equilibration run.
-The most important tags are {}``\hyperref[INITIALIZER]{initialize}'', 
-{}``\hyperref[ENSEMBLE]{ensemble}'', {}``\hyperref[MOTION]{motion}'', 
+The most important tags are {}``\hyperref[INITIALIZER]{initialize}'',
+{}``\hyperref[ENSEMBLE]{ensemble}'', {}``\hyperref[MOTION]{motion}'',
 {}``\hyperref[DYNAMICS]{dynamics}'',{}``total\_steps''
 {}``\hyperref[FFSOCKET]{ffsocket}'',
  and {}``\hyperref[FORCES]{forces}''.
@@ -2094,7 +2096,7 @@ the attribute ``forcefield'' of the force tag must correspond to the
 attribute ``name'' of one of the ffsocket tag. All the tags that
 define the actual simulation must be within the {}``\hyperref[SYSTEM]{system}''
 environment.
-We will also discuss {}``\hyperref[OUTPUTS]{output}'', 
+We will also discuss {}``\hyperref[OUTPUTS]{output}'',
 which is used to define what output data
 is generated by the code.
 
@@ -2138,7 +2140,7 @@ At this point then, the input file looks like:
 
 \subsubsection{Initializing the configurations}
 
-Now let us consider each of these tags in turn. Firstly, 
+Now let us consider each of these tags in turn. Firstly,
 {}``\hyperref[INITIALIZER]{initialize}''.
 As the name suggests, this initializes the state of the system, so
 this is where we will specify the atom positions and the cell
@@ -2158,12 +2160,12 @@ value being assigned to it is held within quotation marks. In this
 case, we have set the number of replicas, or beads, to 4.
 
 Next, we must specify the atomic configuration. Rather than initialize
-the atom positions manually, we will instead use a separate configuration 
+the atom positions manually, we will instead use a separate configuration
 file for this purpose.
 Here we will discuss two of the input formats that are compatible
 with \ipi: xyz files and pdb files.
 
-Note that, for the sake of this tutorial, we have 
+Note that, for the sake of this tutorial, we have
 included valid xyz and pdb input
 files in the {}``tutorial-1'' directory called {}``our\_ref.xyz''
 and {}``our\_ref.pdb'' respectively.
@@ -2188,8 +2190,8 @@ also contains the cell parameters and the position and cell units
 
 Note that we are treating the para-hydrogen molecules isotropically here,
 i.e. as spherical psuedo-atoms.
-For the current system this is a good approximation, since at 
-the state point under consideration every molecule is in its 
+For the current system this is a good approximation, since at
+the state point under consideration every molecule is in its
 rotational ground state. For further details on this potential,
 and a demonstration of its application to quantum dynamics, see
 \cite{silv-gold78jcp} and \cite{mill-mano05jcp}.
@@ -2211,13 +2213,13 @@ ATOM      2   n2   1     1          x2      y2      z2  0.00  0.00             0
 \end{code}
 where a, b and c are the cell vector lengths, A, B and C are the angles between
 them, n1 and n2 are the labels for atoms 1 and 2, and (x1, y1, z1)
-and (x2, y2, z2) give the position vectors of atoms 1 and 2. 
+and (x2, y2, z2) give the position vectors of atoms 1 and 2.
 
 Note that this is
 fixed-formatted, so the number of spaces matters. Essentially, the
 above format needs to be copied verbatim, using the same column
 widths and all the same keywords. For an exact specification
-of the file format (of which only a subset is implemented 
+of the file format (of which only a subset is implemented
 with \ipi) see
 \url{http://deposit.rcsb.org/adit/docs/pdb_atom_format.html}.
 
@@ -2225,11 +2227,11 @@ Here we will show how to specify the xml input file
 in both of these cases, assuming that the user has already
 created the configuration file themselves.
 Note that these file formats can be read by
-visualization programs such as VMD, and so it is generally advised 
+visualization programs such as VMD, and so it is generally advised
 when making your own input files to
 use such software to make sure that the configuration is as expected.
 
-To use a configuration file the {}``\hyperref[INITFILE]{file}'' tag in 
+To use a configuration file the {}``\hyperref[INITFILE]{file}'' tag in
 {}``\hyperref[INITIALIZER]{initialize}'' should be used.
 This will take an input file with a given name and use it to initialize
 all relevant data. Both of these formats have the atom
@@ -2239,17 +2241,17 @@ implicitly set based on the atom label. The pdb configuration file
 will also be used to set the cell parameters.
 
 Let us take these two file types in turn, and form the appropriate
-input sections. First, the xyz file. 
-There are two attributes which are 
+input sections. First, the xyz file.
+There are two attributes which are
 relevant to the {}``\hyperref[INITFILE]{file}'' tag
 for our current problem, {}``mode'' and {}``units''.
 {}``mode'' is used to describe what kind of data is being used to
 initialize from, and so in this case will be {}``xyz''.
 {}``units'' specifies which units the file is given in, and
 so in this case is given by {}``angstrom'', which are the
-standard units of both xyz and pdb files. 
+standard units of both xyz and pdb files.
 Note that if no units are specified then atomic units are assumed.
-For more information on the \ipi unit conversion libraries, 
+For more information on the \ipi unit conversion libraries,
 and the available units, see \ref{inputunits}.
 
 The {}``units'' attribute is now deprecated and will be removed in the
@@ -2263,7 +2265,7 @@ applied twice. It is also important to note that the units of the cell
 parameters and the units of the content of the files are specified
 separately ({}``position{units}'' specify the units of the data and
 {}``cell{units}'' specify the units of the cell). This is necessary
-because the xyz format can be used to 
+because the xyz format can be used to
 store also quantity which have a different dimension than length
 (velocities, forces, etc.). Even the cell parameters can now be specified
 directly within the xyz format. The comment line is parsed looking for
@@ -2290,9 +2292,9 @@ config file will contain:
 </initialize>
 \end{code}
 
-If the cell parameters are not specified in the xyz file, then, in the 
-configuration file we must specify them separately. 
-To initialize just the cell parameters, 
+If the cell parameters are not specified in the xyz file, then, in the
+configuration file we must specify them separately.
+To initialize just the cell parameters,
 we use the tag {}``\hyperref[INITCELL]{cell}''.
 These could in theory be set using a separate
 file, but here we will initialize them manually. Taking a cubic cell
@@ -2300,8 +2302,8 @@ with cell parameter 17.847 angstroms, we can specify this using
 the {}``\hyperref[INITCELL]{cell}'' tag in three different ways:
 
 \begin{code}
-<cell mode='manual' units='angstrom'> 
-   [17.847, 0, 0, 0, 17.847, 0, 0, 0, 17.847] 
+<cell mode='manual' units='angstrom'>
+   [17.847, 0, 0, 0, 17.847, 0, 0, 0, 17.847]
 </cell>
 \end{code}
 
@@ -2329,7 +2331,7 @@ Note the use of the different {}``mode'' attributes, {}``manual'',
 matrix manually, the second takes the length of the three unit vectors
 and the angles between them in degrees, and the last assumes an orthorhombic
 cell and so only takes the length of the three unit vectors as arguments.
-We will take the last version for brevity, giving as our final 
+We will take the last version for brevity, giving as our final
 {}``\hyperref[INITIALIZER]{initialize}'' section:
 
 \begin{code}
@@ -2342,7 +2344,7 @@ We will take the last version for brevity, giving as our final
 </initialize>
 \end{code}
 
-The pdb file is specified in a similar way, except that no 
+The pdb file is specified in a similar way, except that no
 {}``\hyperref[INITCELL]{cell}''
 tag needs be specified and the {}``mode'' tag should be
 set to {}``pdb'' (the units should be specified into the pdb file as
@@ -2358,11 +2360,11 @@ shown in the example above):
 As well as initializing all the atom positions, this section
 can also be used to set the atom velocities. Rather than setting these manually,
 it is usually simpler to sample these randomly from a Maxwell-Boltzmann
-distribution. This can be done using the 
-{}``\hyperref[INITVELOCITIES]{velocities}'' 
+distribution. This can be done using the
+{}``\hyperref[INITVELOCITIES]{velocities}''
 tag by setting the {}``mode'' attribute to {}``thermal''.
 This then takes an argument specifying the temperature to initialize the
-velocities to. With this, the final 
+velocities to. With this, the final
 {}``\hyperref[INITIALIZER]{initialize}'' section is:
 
 \begin{code}
@@ -2374,7 +2376,7 @@ velocities to. With this, the final
 
 \subsubsection{Creating the server socket}
 
-Next let us consider the {}``\hyperref[FFSOCKET]{ffsocket}'' and the 
+Next let us consider the {}``\hyperref[FFSOCKET]{ffsocket}'' and the
 {}``\hyperref[FORCES]{forces}'' sections, which deals with communication
 with the client codes. Since in this example we do not use ring-polymer contraction,
 we only need to specify a single {}``\hyperref[FFSOCKET]{ffsocket}'' tag:
@@ -2386,12 +2388,12 @@ we only need to specify a single {}``\hyperref[FFSOCKET]{ffsocket}'' tag:
 \end{code}
 
 A socket is specified with three parameters; the port number, the
-hostname and whether it is a unix or an internet socket. 
+hostname and whether it is a unix or an internet socket.
 These are specified by the {}``port'' and {}``address'' tags
 and the {}``mode'' attribute respectively.
 To match up with the client socket specified above,
 we will take an internet socket on the hostname localhost and
-use port number 31415. 
+use port number 31415.
 
 This gives the final {}``\hyperref[FFSOCKET]{ffsocket}'' section:
 
@@ -2437,7 +2439,7 @@ For the sake of this tutorial, the ``force'' tag must be empty.
 
 \subsubsection{Generating the correct dynamics}
 
-The next section that we will need is 
+The next section that we will need is
 {}``\hyperref[MOTION]{motion}'', which determines the computation i-pi
 will perform. Since we wish to do a molecular dynamics, the attribute
 ``mode'' of the ``motion'' tag must be equal to ``dynamics''.
@@ -2475,11 +2477,11 @@ is initialized automatically, there are several different options
 for the constant temperature sampling algorithm,
 specified by {}``\hyperref[THERMOSTATS]{thermostat}''. For simplicity we
 will use (the global version of) the path-integral Langevin equation (PILE) algorithm \cite{ceri+10jcp},
-which is specifically designed for path integral simulations. 
-This is specified by the {}``mode'' tag {}``pile\_g''. 
+which is specifically designed for path integral simulations.
+This is specified by the {}``mode'' tag {}``pile\_g''.
 This integrator also has to
 be initialized with a time scale parameter, {}``tau'', which determines
-how strong the thermostat is, which we will set to 25 femtoseconds. 
+how strong the thermostat is, which we will set to 25 femtoseconds.
 Putting all of this together, we get:
 
 \begin{code}
@@ -2516,12 +2518,12 @@ The temperature must be specified within the
 
 So far, we have only considered how to set up the simulation, and not
 the data we wish to obtain from it. However, there are a wide
-variety of properties of interest that \ipi can calculate 
+variety of properties of interest that \ipi can calculate
 and a large number of different output
 options, so to avoid confusion let us go through them one at a time.
 
 Firstly, the amount of data sent to standard output can be adjusted
-with the {}``verbosity'' attribute of 
+with the {}``verbosity'' attribute of
 {}``\hyperref[SIMULATION]{simulation}'':
 
 \begin{code}
@@ -2531,9 +2533,9 @@ with the {}``verbosity'' attribute of
 \end{code}
 
 By default the verbosity is set to {}``low'', which only outputs
-important warning messages and information, and some statistical 
-information every 1000 time steps. Here we will set it to 
-{}``high'', which will 
+important warning messages and information, and some statistical
+information every 1000 time steps. Here we will set it to
+{}``high'', which will
 tell \ipi to output the following data every time step:
 
 \begin{code}
@@ -2551,7 +2553,7 @@ where the output values have been replaced with the following:
 \item [{POTENTIAL:}] This gives the current potential energy of the system.
 \item [{KINETIC:}] This gives the current kinetic energy of the system.
 \item [{CONSERVED:}] This gives the current conserved quantity.
-\item [{X:}] This says whether or not \ipi found a match for the calculation of 
+\item [{X:}] This says whether or not \ipi found a match for the calculation of
 replica ID or not.
 If one of the connected client codes calculated the forces for this replica on the
 last time step, then X will be {}``match'', and \ipi will automatically assign
@@ -2564,15 +2566,15 @@ of.
 \item [{CTOT:}] The total number of connected client codes.
 \end{description}
 
-What output gets written to file is specified by the 
+What output gets written to file is specified by the
 {}``\hyperref[OUTPUTS]{output}'' tag.
-There are three types of files; properties files, 
-trajectory files and checkpoint files, which are specified with 
-{}``\hyperref[PROPERTIES]{properties}'', 
-{}``\hyperref[TRAJECTORY]{trajectory}'' 
+There are three types of files; properties files,
+trajectory files and checkpoint files, which are specified with
+{}``\hyperref[PROPERTIES]{properties}'',
+{}``\hyperref[TRAJECTORY]{trajectory}''
 and {}``\hyperref[CHECKPOINT]{checkpoint}'' tags respectively.
 For an in-depth discussion on these three types
-of output files see \ref{outputfiles}, 
+of output files see \ref{outputfiles},
 but for now let us just explain the rationale
 behind each of these output file types in turn.
 
@@ -2582,26 +2584,26 @@ These give a snapshot of the state of the simulation.
 If used as an input file for a new \ipi simulation,
 this simulation will start from the point where the
 checkpoint file was created in the old simulation.
-\item[trajectory files:] 
+\item[trajectory files:]
 These are used to print out properties
 relevant to all the atoms, such as the velocities or forces, for each degree of freedom.
 These can be useful
 for calculating correlation functions or radial distribution functions,
 but possibly their most useful feature is that visualization
 programs such as VMD can read them, and then use this data to show
-a movie of how the simulation is progressing. 
-\item[properties files:] 
+a movie of how the simulation is progressing.
+\item[properties files:]
 These are usually used to print out
 system level properties, such as the timestep, temperature,
 or kinetic energy. Essentially these are used to keep track of a small
 number of important properties, either to visualize the
-progress of the simulation using plotting programs such as gnuplot, 
+progress of the simulation using plotting programs such as gnuplot,
 or to be used to get ensemble averages.
 \end{description}
 
 Now that we know what each input file is used for, let us take an
 example of an output section and show how the xml input section works.
-The default output, i.e. what would be output if nothing was set by the user, 
+The default output, i.e. what would be output if nothing was set by the user,
 would be generated with the following {}``\hyperref[OUTPUTS]{output}'' section:
 
 \begin{code}
@@ -2618,14 +2620,14 @@ would be generated with the following {}``\hyperref[OUTPUTS]{output}'' section:
 
 This creates 6 files: {}``i-pi.md'', {}``i-pi.pos\_0.xyz'',
 {}``i-pi.pos\_1.xyz'', {}``i-pi.pos\_2.xyz'', {}``i-pi.pos\_3.xyz''
-and {}``i-pi.checkpoint''. 
+and {}``i-pi.checkpoint''.
 {}``i-pi.md'' is the properties file, {}``i-pi.pos\_x.xyz'' are the
 position trajectory files, and {}``i-pi.checkpoint'' is the
 checkpoint file.
 
-The filenames are created using the syntax 
+The filenames are created using the syntax
 {}``prefix''.{}``filename''[\_(file specifier)][.(file format)], where the file specifier is
-added to separate similar files. For example, in the above case the 
+added to separate similar files. For example, in the above case the
 different position trajectories for each bead are given a file specifier
 corresponding to the appropriate bead index.
 
@@ -2633,7 +2635,7 @@ The {}``stride'' attributes set how often data is output to each file;
 so in the above case the properties are written out every 10 time steps,
 the trajectories every 100, and the checkpoints every 1000.
 The {}``format'' attribute sets the format of the trajectory files,
-and the {}``overwrite'' attribute sets whether each checkpoint file 
+and the {}``overwrite'' attribute sets whether each checkpoint file
 overwrites the previous one or not.
 
 There are several options we can use to customize the
@@ -2648,19 +2650,19 @@ simulation runs. In this case we can simply set it to {}``tut1'':
 \end{code}
 
 As for the input parameters, the units the output data is given in can be
-set by the user. Unlike the input parameters however, 
+set by the user. Unlike the input parameters however,
 this is done by specifying an
-appropriate unit in curly braces after the name of the 
+appropriate unit in curly braces after the name of the
 property or trajectory of interest, as shown below:
 
 \begin{code}
 <output prefix='tut1'>
    <properties filename='md' stride='10'>
-      [step, time{picosecond}, conserved{kelvin}, 
-       temperature{kelvin}, potential{kelvin}, kinetic_cv{kelvin}] 
+      [step, time{picosecond}, conserved{kelvin},
+       temperature{kelvin}, potential{kelvin}, kinetic_cv{kelvin}]
    </properties>
    <trajectory filename='pos' stride='100' format='xyz'>
-      positions{angstrom} 
+      positions{angstrom}
    </trajectory>
    <checkpoint filename='checkpoint' stride='1000' overwrite='True'/>
 </output>
@@ -2675,11 +2677,11 @@ as shown below:
 \begin{code}
 <output prefix='tut1'>
    <properties filename='md' stride='1'>
-      [step, time{picosecond}, conserved{kelvin}, 
-       temperature{kelvin}, potential{kelvin}, kinetic_cv{kelvin}] 
+      [step, time{picosecond}, conserved{kelvin},
+       temperature{kelvin}, potential{kelvin}, kinetic_cv{kelvin}]
    </properties>
    <trajectory filename='pos' stride='100' format='pdb' cell_units='angstrom'>
-      positions{angstrom} 
+      positions{angstrom}
    </trajectory>
    <checkpoint filename='checkpoint' stride='1000' overwrite='True'/>
 </output>
@@ -2690,7 +2692,7 @@ to the {}``\hyperref[TRAJECTORY]{trajectory}'' tag, so that the
 cell parameters are consistent with the position output.
 
 Finally, let us suppose that we wished to output another output property
-to a different file to the others. One example of when this 
+to a different file to the others. One example of when this
 might be necessary is if there
 were an output property which was more expensive to calculate than the
 others, and so it would be impractical to output it every time step.
@@ -2709,8 +2711,8 @@ giving the index of the atom and bead tagged respectively. The
 appropriate syntax is then given below:
 
 \begin{code}
-<properties> 
-   [atom_f(atom=0;bead=0)] 
+<properties>
+   [atom_f(atom=0;bead=0)]
 </properties>
 \end{code}
 
@@ -2720,8 +2722,8 @@ This will print out the force vector acting on bead 0 of atom 0.
 in the list of arguments), and so this could also be written as:
 
 \begin{code}
-<properties> 
-   [atom_f(0;0)] 
+<properties>
+   [atom_f(0;0)]
 </properties>
 \end{code}
 
@@ -2730,15 +2732,15 @@ of the parameters of the new file, we get:
 
 \begin{code}
 <output prefix='tut1'>
-   <properties filename='md' stride='1'> 
-      [step, time{picosecond}, conserved{kelvin}, 
-       temperature{kelvin}, potential{kelvin}, kinetic_cv{kelvin}] 
+   <properties filename='md' stride='1'>
+      [step, time{picosecond}, conserved{kelvin},
+       temperature{kelvin}, potential{kelvin}, kinetic_cv{kelvin}]
    </properties>
-   <properties filename='force' stride='20'> 
-      [atom_f{piconewton}(atom=0;bead=0)] 
+   <properties filename='force' stride='20'>
+      [atom_f{piconewton}(atom=0;bead=0)]
    </properties>
-   <trajectory filename='pos' stride='100' format='pdb' cell_units='angstrom'> 
-      positions{angstrom} 
+   <trajectory filename='pos' stride='100' format='pdb' cell_units='angstrom'>
+      positions{angstrom}
    </trajectory>
    <checkpoint filename='checkpoint' stride='1000' overwrite='True'/>
 </output>
@@ -2751,7 +2753,7 @@ of the parameters of the new file, we get:
 Now that we have a valid input file, we can run the test simulation.
 The {}``i-pi'' script in the root directory is used to create an
 \ipi simulation from a xml input file. As explained in
-\ref{runningsimulations} this script is run 
+\ref{runningsimulations} this script is run
 (if we assume that we are in the {}``tutorial-1'' directory) using:
 
 \begin{code}
@@ -2765,7 +2767,7 @@ messages that end with {}``starting the polling thread main loop'',
 which signifies that the server socket has been opened and is waiting
 for connections from client codes.
 
-At this point the driver code is run in a new terminal 
+At this point the driver code is run in a new terminal
 from the {}``drivers'' directory using the command
 specified above:
 
@@ -2783,7 +2785,7 @@ it should have output {}``tut1.md'', {}``tut1.force'', {}``tut1.pos\_0.xyz'',
 {}``tut1.pos\_1.xyz'', {}``tut1.pos\_2.xyz'', {}``tut1.pos\_3.xyz'',
 {}``tut1.checkpoint'' and {}``RESTART''.
 
-Firstly, we consider the checkpoint files, 
+Firstly, we consider the checkpoint files,
 {}``tut1.checkpoint'' and {}``RESTART''.
 As mentioned before, these files can be used as a means of restarting
 the simulation from a previous point. As an example, the last
@@ -2821,7 +2823,7 @@ have converged. Using gnuplot, we can plot the relevant graphs using:
 
 \begin{code}
 > gnuplot
-> p './tut1.md' u 1:3 # Plots column 1, i.e. current simulation step, 
+> p './tut1.md' u 1:3 # Plots column 1, i.e. current simulation step,
 > p './tut1.md' u 1:4 # against columns 3, 4, 5 and 6,
 > p './tut1.md' u 1:5 # i.e. conserved quantity, temperature,
 > p './tut1.md' u 1:6 # potential energy and kinetic energy
@@ -2841,7 +2843,7 @@ to start the \emph{NPT} run.
 \label{part2}
 
 Now that we have converged \emph{NVT} simulation data, we can use this to
-initialize a \emph{NPT} simulation. 
+initialize a \emph{NPT} simulation.
 There are two ways of doing this,
 both of which involve using the RESTART file generated at
 the end of the \emph{NVT} run as a starting point.
@@ -2873,12 +2875,12 @@ Putting this together this gives:
 \begin{code}
 <output prefix=''>
    <properties shape='(8)' filename='tut2a.md'>
-      [ step, time{picosecond}, conserved{kelvin}, 
-        temperature{kelvin}, potential{kelvin}, kinetic_cv{kelvin}, 
-        pressure_cv{megapascal}, volume ] 
+      [ step, time{picosecond}, conserved{kelvin},
+        temperature{kelvin}, potential{kelvin}, kinetic_cv{kelvin},
+        pressure_cv{megapascal}, volume ]
    </properties>
-   <properties stride='20' shape='(1)' filename='tut2a.force'> 
-      [ atom_f{piconewton}(atom=0;bead=0) ] 
+   <properties stride='20' shape='(1)' filename='tut2a.force'>
+      [ atom_f{piconewton}(atom=0;bead=0) ]
    </properties>
    <trajectory filename='tut2a.pos' stride='100' format='pdb' cell_units='angstrom'>
       positions{angstrom}
@@ -2887,7 +2889,7 @@ Putting this together this gives:
 </output>
 \end{code}
 
-Finally, we must change the {}``\hyperref[ENSEMBLE]{ensemble}'' 
+Finally, we must change the {}``\hyperref[ENSEMBLE]{ensemble}''
 and the {}``\hyperref[DYNAMICS]{dynamics}'' tags so that the correct
 ensemble is sampled. The first thing that must be done is
 adding a {}``pressure'' tag in the ensemble:
@@ -2904,8 +2906,8 @@ using the tag {}``\hyperref[BAROSTAT]{barostat}'' within the dynamics
 environment. Do not forget to change the mode attribute of the
 dynamics from ``nvt'' to ``npt''.
 At present, \ipi only contains a stochastic barostat to apply pressure
-to an isotropic system, which can be specified with the option ``isotropic''. 
-Anisotropic versions of the barostat may be added in future releases of \ipi. 
+to an isotropic system, which can be specified with the option ``isotropic''.
+Anisotropic versions of the barostat may be added in future releases of \ipi.
 
 The isotropic barostat also requires a thermostat
 to deal with the volume degree of freedom, which we will take
@@ -2962,15 +2964,15 @@ with the rest of the {}``\hyperref[ENSEMBLE]{ensemble}'' and
 
 \subsection{Initialization from RESTART}
 
-A different way of initializing the simulation is to use the 
+A different way of initializing the simulation is to use the
 RESTART file as a configuration file, in the same way that
 the xyz/pdb files were used previously.
 
 Firstly, the original input file {}``tutorial-1.xml'' needs to
 be modified so that
 it will do a \emph{NPT} simulation instead of \emph{NVT}. This involves modifying
-the {}``total\_steps'', {}``\hyperref[OUTPUTS]{output}'' and 
-{}``\hyperref[ENSEMBLE]{ensemble}'' tags as above. Next, we replace the 
+the {}``total\_steps'', {}``\hyperref[OUTPUTS]{output}'' and
+{}``\hyperref[ENSEMBLE]{ensemble}'' tags as above. Next, we replace the
 {}``\hyperref[INITIALIZER]{initialize}'' tag section with:
 
 \begin{code}
@@ -2991,19 +2993,19 @@ for this purpose, {}``tutorial-2b.xml''.
 
 Whichever method is used to create the input file, the simulation
 is run in the same way as before, using either
-{}``tutorial-2a.xml'' or {}``tutorial-2b.xml'' as the input file. 
+{}``tutorial-2a.xml'' or {}``tutorial-2b.xml'' as the input file.
 Note how the volume fluctuates with time, as it is no longer held
 constant in this ensemble.
 
 \section{Part 3 - A fully converged simulation}
 
 As a final example, we note that at this state point 16 replicas
-and at least 172 particles are actually 
+and at least 172 particles are actually
 required to provide converged results.
 As a last tutorial then, you should repeat tutorials 1 and 2 with
-this number of replicas and atoms. 
+this number of replicas and atoms.
 
-The directory {}``tutorial-3'' contains 
+The directory {}``tutorial-3'' contains
 \emph{NVT} and \emph{NPT} input files which can be used to do a fully converged
 \emph{NPT} simulation from scratch, except that they are missing some
 of the necessary input parameters.
@@ -3021,7 +3023,7 @@ Firstly, in this simple case where we are calculating an isotropic,
 pair-wise interaction, the data transfer time is likely to be a
 significant proportion of the total calculation time. To help speed this
 up, there is the option to use a unix domain socket rather than an
-internet socket. These are optimized for local communication between 
+internet socket. These are optimized for local communication between
 processes on a single computer, and so for the current problem they will be much
 faster than internet sockets.
 
@@ -3054,8 +3056,8 @@ command multiple times. For example, if we wish to run
 
 Using these techniques should help speed up the calculation considerably,
 at least in this simple case. Note however, that using unix domain sockets
-would give a negligible gain in speed in most simulations, 
-since the force calculation usually takes much longer than the data transfer. 
+would give a negligible gain in speed in most simulations,
+since the force calculation usually takes much longer than the data transfer.
 
 \chapter{Troubleshooting}
 
@@ -3110,7 +3112,7 @@ different place. Check that the input file has the correct syntax.
 \item \emph{Negative \_\_\_ parameter specified.}: Self-explanatory.
 \item \emph{If you are initializing cell from cell side lengths you must pass the 'cell' tag an array of 3 floats}:
 If you are attempting to initialize a cell using the {}``abc'' mode,
-the code expects three floats corresponding to the three side lengths. 
+the code expects three floats corresponding to the three side lengths.
 \item \emph{If you are initializing cell from cell side lengths and angles you must pass the 'cell' tag an array of 6 floats}:
 If you are attempting to initialize a cell using the {}``abcABC''
 mode, the code expects six floats corresponding to the three side
@@ -3139,11 +3141,11 @@ must be input by the user. Add the appropriate tags to the input file.
 \item \emph{Manual path mode requires (nbeads-1) frequencies, one for each internal mode of the path.}:
 If the {}``mode'' tag of {}``normal\_modes'' is set to {}``manual'',
 it will expect an array of frequencies, one for each of the internal
-normal modes of the ring polymers. 
+normal modes of the ring polymers.
 \item \emph{PA-CMD mode requires the target frequency of all the internal modes.}:
 If the {}``mode'' tag of {}``normal\_modes'' is set to {}``pa-cmd'',
 it will expect an array of one frequency, to which all the internal
-modes of the ring polymers will be set. 
+modes of the ring polymers will be set.
 \item \emph{WMAX-CMD mode requires [wmax, wtarget]. The normal modes will be scaled such that the first internal mode is at frequency wtarget and all the normal modes coincide at frequency wmax.}:
 If the {}``mode'' tag of {}``normal\_modes'' is set to {}``wmax-cmd'',
 it will expect an array of two frequencies, one two set the lowest
@@ -3184,7 +3186,7 @@ for the GLE thermostats with a checkpoint file that either does not
 have a GLE thermostat or does not have a thermostat at all.
 \item \emph{Size mismatch in thermostat initialization data}: Called if
 the shape of the GLE matrices defined in the checkpoint file is different
-from those defined in the new simulation. 
+from those defined in the new simulation.
 \item \emph{Replay can only read from PDB or XYZ files -- or a single frame from a CHK file}:
 If the user specifies a replay ensemble, the state of the system must
 be defined by either a configuration file or a checkpoint file, and
@@ -3220,7 +3222,7 @@ by the user has a keyword argument that does not match any of those
 in the function to calculate it. Check the properties.py module to
 see which property this function is calculating, and what the correct
 keyword arguments are. Then check the {}``properties'' tag, and
-find which of the arguments has been misspelt. 
+find which of the arguments has been misspelt.
 \item \emph{Must specify the index of atom\_vec property}: Any property
 which prints out a vector corresponding to one atom needs the index
 of that atom, as no default is specified.
@@ -3256,7 +3258,7 @@ Similar to the above error, but given if you are using a unix socket
 rather than an internet socket. Since this binds locally the socket
 can be removed by the user, which means that it is not necessary to
 wait for the computer to automatically disconnect an unused server
-socket. 
+socket.
 \item \emph{Port number \_\_\_ out of acceptable range}: The port number
 must be between 1 and 65535, and should be greater than 1024. Change
 the port number accordingly.
