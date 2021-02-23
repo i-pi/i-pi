@@ -84,9 +84,9 @@ def get_test_settings(
 
         for client in range(len(starts)):
             if client < len(starts) - 1:
-                block = lines[starts[client]: starts[client + 1]]
+                block = lines[starts[client] : starts[client + 1]]
             else:
-                block = lines[starts[client]:]
+                block = lines[starts[client] :]
 
             found_socket = False
             found_address = False
@@ -173,7 +173,7 @@ def get_test_settings(
     if found_nsteps:
         test_settings = {"nsteps": nsteps}
     else:
-        test_settings = {"nsteps": '1'}
+        test_settings = {"nsteps": "1"}
 
     return driver_info, test_settings
 
@@ -220,7 +220,7 @@ def modify_xml_4_dummy_test(
         clients.append([model, "unix", address, port])
 
         for key in driver_info["flag"][s].keys():
-            if '-' in key:
+            if "-" in key:
                 for k, v in driver_info["flag"][s].items():
                     clients[s].append(k)
                     clients[s].extend(v)
