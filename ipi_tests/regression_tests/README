@@ -14,7 +14,7 @@ To add a new regression test please provide:
    - input.xml (and all the files required by it)
 
    - test_settings.dat 
-     This file specified the driver_model and flags that will be used when running
+     This file specifies the driver_model and flags that will be used when running
      the driver to perform the regression test.
      For examples including the usage of option flags, please see:
          tests/NVE/NVE_1/harmonic_python/test_settings.dat
@@ -23,6 +23,9 @@ To add a new regression test please provide:
      *Please note that the driver can be run with the same syntax when one
      creates the reference files for the regression tests.
 
+     **Please note that in the case of different drivers one should start to
+     describe the setup of each driver by specifying driver_model xxxx in the 
+     first line
    
    - file_to_check.txt specifying the files serving as reference with their
      respective filenames

@@ -75,12 +75,7 @@ def get_test_settings(
             if len(lines) == 0:
                 raise ValueError("Error: The test_settings.dat file is empty.")
 
-        nline = 0
-        starts = []
-        for line in lines:
-            if "driver_model" in line:
-                starts.append(nline)
-            nline += 1
+        starts = [i for i, line in enumerate(lines) if "driver_model" in line]
 
         for client in range(len(starts)):
             if client < len(starts) - 1:
@@ -88,70 +83,45 @@ def get_test_settings(
             else:
                 block = lines[starts[client] :]
 
-            found_socket = False
-            found_address = False
-            found_port = False
-            found_flags = False
-            found_driver_code = False
-            driver_code = None
+            driver_code = "fortran"
+            driver_model = "dummy"
+            address_name = "localhost"
+            port_number = 33333
+            socket_mode = "unix"
+            flaglist = {}
 
             for line in block:
                 if "driver_code" in line:
                     driver_code = line.split()[1]
-                    found_driver_code = True
                 elif "driver_model" in line:
                     driver_model = line.split()[1]
                 elif "address" in line:
                     address_name = line.split()[1]
-                    found_address = True
                 elif "port" in line:
                     port_number = line.split()[1]
-                    found_port = True
                 elif "socket_mode" in line:
                     socket_mode = line.split()[1]
-                    found_socket = True
                 elif "flags" in line:
                     flaglist = {line.split()[1]: line.split()[2:]}
-                    found_flags = True
                 elif "nsteps" in line:
                     nsteps = line.split()[1]
                     found_nsteps = True
 
             # Checking that each driver has appropriate settings, if not, use default.
-            if driver_code is None:
-                driver_code = "fortran"
-            if driver_code == "fortran":
-                if driver_model not in fortran_driver_models:
-                    driver_model = "dummy"
-            elif driver_code == "python":
-                if driver_model not in python_driver_models:
-                    driver_model = "dummy"
-            else:
+            if driver_code == "fortran" and driver_model not in fortran_driver_models:
+                driver_model = "dummy"
+            elif driver_code == "python" and driver_model not in python_driver_models:
+                driver_model = "dummy"
+            elif driver_code not in ["fortran", "python"]:
                 raise ValueError(
-                    "Drive code not available. Valid options are 'fortran' and 'python'"
+                    "Driver code not available. Valid options are 'fortran' and 'python' only."
                 )
-
             driver_models.append(driver_model)
-            if found_driver_code:
-                driver_codes.append(driver_code)
-            else:
-                driver_codes.append("fortran")
-            if found_socket:
-                socket_modes.append(socket_mode)
-            else:
-                socket_modes.append("unix")
-            if found_port:
-                port_numbers.append(port_number)
-            else:
-                port_numbers.append(33333)
-            if found_address:
-                address_names.append(address_name)
-            else:
-                address_names.append("localhost")
-            if found_flags:
-                flaglists.append(flaglist)
-            else:
-                flaglists.append({})
+            driver_codes.append(driver_code)
+            socket_modes.append(socket_mode)
+            port_numbers.append(port_number)
+            address_names.append(address_name)
+            flaglists.append(flaglist)
 
     except:
         driver_codes.append("fortran")
@@ -299,9 +269,9 @@ class Runner(object):
             )
             if len(clients) > 0:
                 f_connected = False
-                for cli in range(len(clients)):
+                for client in clients:
                     for i in range(50):
-                        if os.path.exists("/tmp/ipi_" + clients[cli][2]):
+                        if os.path.exists("/tmp/ipi_" + client[2]):
                             f_connected = True
                             break
                         else:
@@ -343,7 +313,7 @@ class Runner(object):
                             cmd += " {} {}".format(
                                 client[ll], ",".join(client[ll + 1 :][:])
                             )
-                print("cmd:", cmd)
+                # print("cmd:", cmd)
                 driver.append(
                     sp.Popen(cmd, cwd=(cwd), shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
                 )
@@ -352,7 +322,7 @@ class Runner(object):
             ipi_error = ipi.communicate(timeout=120)[1].decode("ascii")
             if ipi_error != "":
                 print(ipi_error)
-            assert "" == ipi_error, "IPI ERROR OCCURED: {}".format(ipi_error)
+            assert "" == ipi_error, "IPI ERROR OCCURRED: {}".format(ipi_error)
 
         except sp.TimeoutExpired:
             raise RuntimeError(

@@ -65,7 +65,7 @@ if __name__ == "__main__":
         reg_tests = get_test_list(path)
         print("We will run only:")
         for i in reg_tests:
-            print(i[0])
+            print(i)
         print("")
     except:
         print("We will run all available regression tests")
