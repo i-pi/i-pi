@@ -15,7 +15,7 @@
         real(kind=8) :: A,B
         real(kind=8) :: q(nat*3),pot,force(nat*3),x(nat*3-1)
         real(kind=8) :: c(nat*3-1),omega(nat*3-1), omega2(nat*3-1),aux
-        mass = 1837
+        mass = 1837.36223469
         pot            =  0.0
         A = -0.00476705894242374
         B = 0.0005980249683218661
@@ -30,10 +30,9 @@
               omega(i) = - omega_c * LOG(  (i - 0.5 ) /  (3*nat-1) )  
               omega2(i) = omega(i)**2
               c(i) = omega(i) * ( ( 2 * friction * mass *omega_c) / ( (3*nat-1) * pi ) )**0.5
-
            ENDDO 
         END IF
-
+         
         !SYSTEM
          pot =  A * (q(1) ** 2) + B * (q(1) ** 4)
          force(1) = - ( 2 * A * (q(1)) + 4 * B * (q(1) ** 3) )

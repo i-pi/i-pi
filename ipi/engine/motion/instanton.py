@@ -416,7 +416,14 @@ class FrictionMapper(PesMapper):
     def save(self, e, g, eta=None):
         """ Stores potential and forces in this class for convenience """
         super(FrictionMapper, self).save(e, g)
-        self.eta = eta
+        # ALBERTO: CLEAN THE MASS UNSCALING
+        self.eta = eta 
+        print('mass scaling ALBERTO')
+        #for e in self.eta:
+        #    m=self.dbeads.m3[0][:,np.newaxis]
+        #    e[:] =(e/m**-0.5)/m.T**-0.5 #Mass unscale
+        #ALBERTO
+        print(self.eta[0])
 
     def initialize(self, q, forces):
         """ Initialize potential, forces and friction """
@@ -425,6 +432,8 @@ class FrictionMapper(PesMapper):
         eta = np.array(forces.extras["friction"]).reshape(
             (q.shape[0], q.shape[1], q.shape[1])
         )
+
+
         self.check_eta(eta)
 
 
@@ -627,7 +636,7 @@ class FrictionMapper(PesMapper):
         e_friction, g_friction = self.compute_friction_terms()
         e += e_friction
         g += g_friction
-
+        
         e = e * (self.coef[1:] + self.coef[:-1]) / 2
         g = g * (self.coef[1:] + self.coef[:-1]) / 2
 
@@ -710,7 +719,6 @@ class SpringMapper(object):
             # for i in range(1, self.dbeads.nbeads):
             #    #g[i, :] +=  self.omega2 * (self.dbeads.q[i, :] - self.dbeads.q[i - 1, :])
             #    g[i, :] += self.dbeads.m3[i, :] * self.omega2 * (self.dbeads.q[i, :] - self.dbeads.q[i - 1, :])
-
             gq_k = np.dot(self.C, self.dbeads.q)
             g = self.dbeads.m3[0] * np.dot(
                 self.C.T, gq_k * (self.omegak ** 2)[:, np.newaxis]
