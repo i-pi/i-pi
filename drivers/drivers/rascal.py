@@ -1,13 +1,16 @@
-""" Harmonic potential """
+"""Interface with librascal to run machine learning potentials"""
 
 import sys
 import numpy as np
 from .dummy import Dummy_driver
 
+from ipi.utils.mathtools import det_ut3x3
+from ipi.utils.units import unit_to_internal, unit_to_user
+
 try:
-    from rascal.models.IP_ipi_interface import IPICalculator as IPICalc
+    from rascal.models.IP_generic_md import GenericMDCalculator as MDCalc
 except:
-    IPICalc = None
+    MDCalc = None
 
 
 class Rascal_driver(Dummy_driver):
@@ -19,11 +22,14 @@ class Rascal_driver(Dummy_driver):
 
         super().__init__(args)
 
-        if IPICalc is None:
+        if MDCalc is None:
             raise ImportError("Couldn't load librascal bindings")
 
     def check_arguments(self):
-        """ Function that checks the arguments required to run the driver """
+        """Check the arguments required to run the driver
+
+        This loads the potential and atoms template in librascal
+        """
         try:
             arglist = self.args.split(",")
         except ValueError:
@@ -35,14 +41,18 @@ class Rascal_driver(Dummy_driver):
         else:
             sys.exit(self.error_msg)
 
-        self.rascal_calc = IPICalc(self.model, self.template)
+        self.rascal_calc = MDCalc(self.model, self.template)
 
     def __call__(self, cell, pos):
-        """ Silly harmonic potential, with unit frequency in a.u."""
-
-        cell_tuple = np.zeros((2, 3, 3), float)
-        cell_tuple[0] = cell
-        cell_tuple[1] = cell
-        pot, force, vir = self.rascal_calc.calculate(pos, cell_tuple)
+        """Get energies, forces, and stresses from the librascal model"""
+        pos_rascal = unit_to_user("length", "angstrom", pos)
+        cell_rascal = unit_to_user("length", "angstrom", cell)
+        # Do the actual calculation
+        pot, force, stress = self.rascal_calc.calculate(pos_rascal, cell_rascal)
+        pot_ipi = unit_to_internal("energy", "electronvolt", pot)
+        force_ipi = unit_to_internal("force", "ev/ang", force)
+        # The rascal stress is normalized by the cell volume (in rascal units)
+        vir_rascal = -1 * stress * np.linalg.det(cell_rascal)
+        vir_ipi = unit_to_internal("energy", "electronvolt", vir_rascal)
         extras = "nada"
-        return pot, force, vir, extras
+        return pot_ipi, force_ipi, vir_ipi, extras
