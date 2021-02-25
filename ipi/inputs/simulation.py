@@ -157,10 +157,6 @@ class InputSimulation(Input):
             iforcefields.InputFFsGDML,
             {"help": iforcefields.InputFFsGDML.default_help},
         ),
-        "ffrascal": (
-            iforcefields.InputFFrascal,
-            {"help": iforcefields.InputFFrascal.default_help},
-        ),
     }
 
     default_help = "This is the top level class that deals with the running of the simulation, including holding the simulation specific properties such as the time step and outputting the data."
