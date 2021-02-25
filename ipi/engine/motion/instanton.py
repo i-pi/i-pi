@@ -3,7 +3,9 @@ Contains classes for instanton  calculations.
 
 Algorithms implemented by Yair Litman and Mariana Rossi, 2017
 """
-
+debug=True
+debug=False
+test_factor =1
 # This file is part of i-PI.
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
@@ -417,13 +419,16 @@ class FrictionMapper(PesMapper):
         """ Stores potential and forces in this class for convenience """
         super(FrictionMapper, self).save(e, g)
         # ALBERTO: CLEAN THE MASS UNSCALING
-        self.eta = eta 
-        print('mass scaling ALBERTO')
+        self.eta = eta * test_factor 
+        if debug:
+         for i in range(self.dbeads.nbeads):
+            self.eta[i]=np.eye(self.dbeads.natoms*3) 
+        #print('mass scaling ALBERTO')
         #for e in self.eta:
         #    m=self.dbeads.m3[0][:,np.newaxis]
         #    e[:] =(e/m**-0.5)/m.T**-0.5 #Mass unscale
         #ALBERTO
-        print(self.eta[0])
+        #print(self.eta[0])
 
     def initialize(self, q, forces):
         """ Initialize potential, forces and friction """
@@ -462,8 +467,11 @@ class FrictionMapper(PesMapper):
         )
 
         z_friction = spline(self.omegak)
-        self.z_friction = z_friction  # / z_friction[1] )  # UPDATE HERE WHEN AIMS IMPLEMENTATION IS READY
-
+        #z_friction = z_friction  /1.6743276# / z_friction[1]  # UPDATE HERE WHEN AIMS IMPLEMENTATION IS READY
+        if debug: 
+           z_friction = self.dbeads.m3[0,0]*self.omegak
+        self.z_k = np.multiply(self.omegak, z_friction)[:, np.newaxis]/test_factor
+        
         info(units.unit_to_user("frequency", "inversecm", self.omegak), verbosity.debug)
 
     def get_fric_rp_hessian(self, fric_hessian, eta ):
@@ -475,45 +483,44 @@ class FrictionMapper(PesMapper):
         nbeads = self.dbeads.nbeads
 
         s = eta
-        z_k = np.multiply(self.omegak, self.z_friction)[:, np.newaxis]
-        
+
         dgdq = np.zeros(s.shape)
         for i in range(nbeads):
             dgdq[i] = self.sqrtm(s[i]+np.eye(nphys)*0.0001)
 
-
         h_fric = np.zeros((ndof, ndof))
 
         #Block diag:
-        #gq = self.obtain_g(s)
-        #gq_k = np.dot(self.C,gq)
-        #prefactor = np.dot(self.C.T, z_k*gq_k)        
-        #for n in range(self.dbeads.nbeads):
-        #    for j in range(nphys):
-        #        for k in range(nphys):
-        #            aux_jk = 0
-        #            for i in range(nphys):
-        #                if dgdq[n, i, j] != 0:
-        #                    aux_jk += (
-        #                        0.5 * prefactor[n, i] * fric_hessian[n, i, j, k] / dgdq[n, i, j]
-        #                    )
-        #            h_fric[nphys * n + j, nphys * n + k] = aux_jk
-
+        gq = self.obtain_g(s)
+        gq_k = np.dot(self.C,gq)
+        prefactor = np.dot(self.C.T, self.z_k*gq_k)        
+        for n in range(self.dbeads.nbeads):
+            for j in range(nphys):
+                for k in range(nphys):
+                    aux_jk = 0
+                    for i in range(nphys):
+                        if dgdq[n, i, j] != 0:
+                            aux_jk += (
+                                0.5 * prefactor[n, i] * fric_hessian[n, i, j, k] / dgdq[n, i, j]
+                            )
+                    h_fric[nphys * n + j, nphys * n + k] = aux_jk
         # Cross-terms:
         for nl in range(nbeads):
             for ne in range(nbeads):
                 prefactor = 0
                 for alpha in range(nbeads):
-                    prefactor += self.C[alpha, nl] * self.C[alpha, ne] * z_k[alpha]
+                    prefactor += self.C[alpha, nl] * self.C[alpha, ne] * self.z_k[alpha]
                 for j in range(nphys):
                     for k in range(nphys):
                         suma = np.sum(dgdq[nl, :, j] * dgdq[ne, :, k])
                         h_fric[nphys * nl + j, nphys * ne + k] = prefactor * suma
-
         return h_fric
 
     def obtain_g(self, s):
         """ Computes g from s """
+
+        if debug:
+            return  self.dbeads.q.copy() 
 
         nphys = self.dbeads.natoms * 3
 
@@ -538,6 +545,7 @@ class FrictionMapper(PesMapper):
             except ValueError:
                 gq[:, nd] = 0
 
+        
         return gq
 
     def compute_friction_terms(self):
@@ -558,20 +566,14 @@ class FrictionMapper(PesMapper):
          
         gq = self.obtain_g(s)
 
-        z_k = np.multiply(self.omegak, self.z_friction)[:, np.newaxis]
-        # factor = self.dbeads.m3[0] / 1.674  # DEBUG
-        # z_k_spring = factor * new_omegak2[:, np.newaxis]  #DEBUG
-        # z_k = z_k + z_k_spring
+        gq_k = np.dot(self.C, gq)  
+        e = 0.5 * np.sum(self.z_k * gq_k ** 2 )
 
-        gq_k = np.dot(self.C, gq) * z_k
-
-        e = 0.5 * np.sum(gq_k ** 2)
-
-        f = np.dot(self.C.T, gq_k)
+        f = np.dot(self.C.T, self.z_k * gq_k)
         g = np.zeros(f.shape)
         for i in range(self.dbeads.nbeads):
             g[i, :] = np.dot(dgdq[i], f[i])
-
+        #raise softexit.trigger('ACA')
         return e, g 
 
     def get_full_extras(self, reduced_forces, full_mspath, indexes):
@@ -835,10 +837,9 @@ class Mapper(object):
         e2, g2 = self.sm(q)
         g = self.fix.get_active_vector(g1 + g2, 1)
         e = np.sum(e1 + e2)
-        # print('DEBUG')
-        # e1, g1 = self.gm.evaluate()
-        # g = self.fix.get_active_vector(g1, 1)
-        # e = np.sum(e1)
+        if debug:
+         g = self.fix.get_active_vector(g1, 1)
+         e = np.sum(e1)
 
         self.save(e, g)
 
@@ -887,10 +888,9 @@ class Mapper(object):
             e2, g2 = self.gm(x, new_disc)
             e = e1 + e2
             g = np.add(g1, g2)
-            # print('DEBUG')
-            # e2, g2 = self.gm(x, new_disc)
-            # e = e2
-            # g = g2
+            if debug:
+              e = e2
+              g = g2
 
         elif mode == "physical":
             e, g = self.gm(x, new_disc)
@@ -1448,8 +1448,9 @@ class NicholsOptimizer(HessianOptimizer):
 
         # Add spring terms to the physical hessian
         h = np.add(self.mapper.sm.h, h0)
-        # print("DEBUG")
-        # h = h0
+
+        if debug: 
+          h = h0
 
         # Add friction terms to the hessian
         if self.options["friction"]:
