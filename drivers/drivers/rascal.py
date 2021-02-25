@@ -1,16 +1,15 @@
 """Interface with librascal to run machine learning potentials"""
 
 import sys
-import numpy as np
 from .dummy import Dummy_driver
 
 from ipi.utils.mathtools import det_ut3x3
 from ipi.utils.units import unit_to_internal, unit_to_user
 
 try:
-    from rascal.models.IP_generic_md import GenericMDCalculator as MDCalc
+    from rascal.models.IP_generic_md import GenericMDCalculator as RascalCalc
 except:
-    MDCalc = None
+    RascalCalc = None
 
 
 class Rascal_driver(Dummy_driver):
@@ -22,7 +21,7 @@ class Rascal_driver(Dummy_driver):
 
         super().__init__(args)
 
-        if MDCalc is None:
+        if RascalCalc is None:
             raise ImportError("Couldn't load librascal bindings")
 
     def check_arguments(self):
@@ -41,7 +40,7 @@ class Rascal_driver(Dummy_driver):
         else:
             sys.exit(self.error_msg)
 
-        self.rascal_calc = MDCalc(self.model, self.template)
+        self.rascal_calc = RascalCalc(self.model, self.template)
 
     def __call__(self, cell, pos):
         """Get energies, forces, and stresses from the librascal model"""
@@ -52,7 +51,7 @@ class Rascal_driver(Dummy_driver):
         pot_ipi = unit_to_internal("energy", "electronvolt", pot)
         force_ipi = unit_to_internal("force", "ev/ang", force)
         # The rascal stress is normalized by the cell volume (in rascal units)
-        vir_rascal = -1 * stress * np.linalg.det(cell_rascal)
+        vir_rascal = -1 * stress * det_ut3x3(cell_rascal)
         vir_ipi = unit_to_internal("energy", "electronvolt", vir_rascal)
         extras = "nada"
         return pot_ipi, force_ipi, vir_ipi, extras

@@ -16,11 +16,7 @@ from ipi.engine.forcefields import (
     FFPlumed,
     FFYaff,
     FFsGDML,
-<<<<<<< HEAD
-    FFrascal,
-=======
     FFCommittee,
->>>>>>> master
 )
 from ipi.interfaces.sockets import InterfaceSocket
 import ipi.engine.initializer
@@ -34,11 +30,7 @@ __all__ = [
     "InputFFPlumed",
     "InputFFYaff",
     "InputFFsGDML",
-<<<<<<< HEAD
-    "InputFFrascal",
-=======
     "InputFFCommittee",
->>>>>>> master
 ]
 
 
@@ -624,6 +616,7 @@ class InputFFsGDML(InputForceField):
             dopbc=self.pbc.fetch(),
             threaded=self.threaded.fetch(),
         )
+
 
 class InputFFCommittee(InputForceField):
     default_help = """Combines multiple forcefields to build a committee model, that can 
