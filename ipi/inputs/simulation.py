@@ -149,6 +149,10 @@ class InputSimulation(Input):
             iforcefields.InputFFYaff,
             {"help": iforcefields.InputFFYaff.default_help},
         ),
+        "ffcommittee": (
+            iforcefields.InputFFCommittee,
+            {"help": iforcefields.InputFFCommittee.default_help},
+        ),
         "ffsgdml": (
             iforcefields.InputFFsGDML,
             {"help": iforcefields.InputFFsGDML.default_help},
@@ -229,10 +233,10 @@ class InputSimulation(Input):
                     _iobj = iforcefields.InputFFsGDML()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("ffsgdml", _iobj)
-                elif isinstance(_obj, eforcefields.FFrascal):
-                    _iobj = iforcefields.InputFFrascal()
+                elif isinstance(_obj, eforcefields.FFCommittee):
+                    _iobj = iforcefields.InputFFCommittee()
                     _iobj.store(_obj)
-                    self.extra[_ii] = ("ffrascal", _iobj)
+                    self.extra[_ii] = ("ffcommittee", _iobj)
                 elif isinstance(_obj, System):
                     _iobj = InputSystem()
                     _iobj.store(_obj)
@@ -275,7 +279,7 @@ class InputSimulation(Input):
                 or k == "ffplumed"
                 or k == "ffsgdml"
                 or k == "ffyaff"
-                or k == "ffrascal"
+                or k == "ffcommittee"
             ):
                 info(" # @simulation: Fetching" + k, verbosity.low)
                 fflist.append(v.fetch())

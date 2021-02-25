@@ -81,6 +81,7 @@ objects = {
     "ffplumed": forcefields.InputFFPlumed(),
     "ffyaff": forcefields.InputFFYaff(),
     "ffsgdml": forcefields.InputFFsGDML(),
+    "ffcommittee": forcefields.InputFFCommittee(),
     "forcecomponent": forces.InputForceComponent(),
     "forces": forces.InputForces(),
     "atoms": atoms.InputAtoms(),
