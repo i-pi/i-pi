@@ -1,0 +1,8 @@
+
+Tested Instanton geometries and Hessian matrices
+----------------------------------------------------------------------
+For the finite difference calculation of Hessian matrix, we rely on the
+numpy-accessible outputs. 
+
+These have been tested against Yair Litman's in-the-house independent implementation (2020).
+

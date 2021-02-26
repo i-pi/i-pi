@@ -1,4 +1,4 @@
 #Settings file for automatic test
-driver pswater
-driver2 pswater
+driver_model pswater
+driver_model2 pswater
 nsteps 10
