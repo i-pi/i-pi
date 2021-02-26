@@ -1,7 +1,7 @@
 <simulation verbosity='high'>
   <output prefix='simulation'>
     <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potential{electronvolt}, pressure_cv{megapascal} ] </properties>
-    <trajectory filename='pos' stride='20'> positions </trajectory>
+    <trajectory filename='pos' stride='20' cell_units='angstrom'> positions{angstrom} </trajectory>
     <checkpoint stride='200'/>
   </output>
   <total_steps>10000</total_steps>
@@ -13,7 +13,7 @@
   </ffsocket>
   <system>
     <initialize nbeads='1'>
-      <file mode='pdb'> init.pdb </file>
+      <file mode='xyz'> init.xyz </file>
       <velocities mode='thermal' units='kelvin'> 300 </velocities>
     </initialize>
     <forces>
