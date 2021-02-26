@@ -2,7 +2,7 @@
 import socket
 import argparse
 import numpy as np
-from pydrivers import *
+from pes import *
 
 description = """
 Minimal example of a Python driver connecting to i-PI and exchanging energy, forces, etc.
