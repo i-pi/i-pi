@@ -50,4 +50,4 @@ driver_pure.x: $(OBJECTS) fsockets_pure.o driver.o | $(OBJECTS)
 	$(FC) $(FFLAGS) -c $< -o $@
 
 clean:
-	rm -f *.o *.mod *.x */*.mod */*.o ../bin/i-pi-driver
+	rm -f *.o *.mod *.x */*.mod */*.o ../../bin/i-pi-driver
