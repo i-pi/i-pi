@@ -54,6 +54,7 @@ if __name__ == "__main__":
         "included in the 'excluded_test.txt' file\n"
         "\n"
         "type: python test_examples.py -f <folder_path> \n"
+        "example  python test_examples.py -f examples/MBPOL/splitting> \n"
         "\n"
         "example: python test_examples.py examples/lammps/h2o-geop\n"
         "This script will recursively search for examples.\n"
@@ -62,7 +63,11 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "-f", "--folder", type=str, nargs="+", help="Folder(s) of the example to test"
+        "-f",
+        "--folder",
+        type=str,
+        nargs="+",
+        help="Folder(s) of the example to test. Example: -f examples/MBPOL/splitting",
     )
     parser.add_argument(
         "--test_all", action="store_true", help="Folder of the example to test"

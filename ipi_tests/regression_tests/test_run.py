@@ -51,7 +51,7 @@ if __name__ == "__main__":
         "--folder",
         type=str,
         default=None,
-        help="Folder of the regressions to test",
+        help="Folder of the regressions to test. Example '-f GEOP'",
     )
     parser.add_argument(
         "--test_all",
