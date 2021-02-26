@@ -37,7 +37,7 @@ if __name__ == "__main__":
         "type: i-pi-tests \n"
         "\n"
         "for running only the tests that checks the integrity of the examples inputs \n"
-        "type: i-pi-style -t examples > \n"
+        "type: i-pi-style -t examples  \n"
         "\n"
         "for running the regression tests  \n"
         "type: i-pi-style -t regtests \n"

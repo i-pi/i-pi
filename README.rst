@@ -72,13 +72,14 @@ The monitoring can be interrupted with CTRL+C when the run has finished (5000 st
 Run the automatic test suite
 ----------------------------
 
-The automatic test suite can be run with the Python package `pytest` from the
-root directory of the i-PI project.
+The automatic test suite can be run by calling the i-pi-test script. 
+You need to have the `pytest` package installed
 
 ::
 
-  $ pytest -v
+  $ i-pi-test
 
+See more details in the README file inside the ipi_tests folder.
 
 Contributing
 ================

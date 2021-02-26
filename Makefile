@@ -4,3 +4,4 @@ lint:
 	black --check ./
 pretty:
 	black ./
+
