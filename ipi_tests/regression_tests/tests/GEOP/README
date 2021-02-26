@@ -1,0 +1,25 @@
+Geometry optimizations with FHI-aims against ASE:
+----------------------------------------------------------------------
+Note, that the results and accuracy of the geometry optimization routines have 
+been tested against the ASE using FHI-aims and hartree fock with a strict 
+convergence criteria. The tests have been conducted by Eszter Pos (2020) 
+
+The following routines are tested and give perfect agreement:
+	- BFGS
+	- L-BFGS
+	- BFGS-TRM
+	- CG: there is an issue about the line-search of the CG routine, the
+	      function needs to be evaluated ~100 times, while with ASE , the routine
+	      converges after 7 steps. Needs to be checked further. Final geometry agrees
+	      well enough with the ASE geometry, but the linesearch needs to be checked and
+	      optimized. 
+
+Partially tested, but problematic routines with FHI-aims against ASE:
+	- SD: could not be tested against ASE, however, it gives the same final
+optimized geometry as the BFGS routines. (takes a very long time becasue of
+the line search.)
+        - NEB: the Nudged Elastic Band routine is disabled until further
+               debugging is conducted on the routine and its spring constants. 
+	
+
+

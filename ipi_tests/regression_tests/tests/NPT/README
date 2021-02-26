@@ -1,0 +1,5 @@
+Tested NPT dynamics  
+----------------------------------------------------------------------
+The following features have been tested by Venkat Kapil (2021) 
+    - VT curve for an ideal gas in the NPzT ensemble
+    - PV curve for an ideal gas in the NPzT ensemble
