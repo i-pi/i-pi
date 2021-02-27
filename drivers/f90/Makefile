@@ -38,7 +38,7 @@ sockets.o: sockets.c
 
 driver.x: $(OBJECTS) sockets.o fsockets.o driver.o | $(OBJECTS)
 	$(FC) $(FFLAGS) -o driver.x $^
-	ln -fs ../drivers/fortran/driver.x ../../bin/i-pi-driver
+	ln -fs ../drivers/f90/driver.x ../../bin/i-pi-driver
 
 driver_pure.x: $(OBJECTS) fsockets_pure.o driver.o | $(OBJECTS)
 	$(FC) $(FFLAGS) -o driver_pure.x $^
