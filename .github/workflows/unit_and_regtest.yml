@@ -38,7 +38,7 @@ jobs:
       run: |
          sudo apt-get update
          sudo apt-get install gfortran
-         cd drivers
+         cd drivers/f90
          make
 
     - name: unit-tests
