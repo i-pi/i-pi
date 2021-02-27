@@ -1,0 +1,3 @@
+#Settings file for automatic test
+driver_model harm3d
+flags -o 2

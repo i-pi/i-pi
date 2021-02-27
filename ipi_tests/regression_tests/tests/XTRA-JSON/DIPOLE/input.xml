@@ -2,7 +2,7 @@
   <output prefix='simulation'>
     <properties stride='2' filename='out'>  [ step, time{picosecond}, 
 conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potential{electronvolt}, pressure_cv{megapascal}] </properties>
-    <trajectory stride="1" filename="dip" xtratype="dipole"> extras </trajectory>
+    <trajectory stride="1" filename="dip" extra_type="dipole"> extras </trajectory>
   </output>
   <total_steps>10</total_steps>
   <prng>

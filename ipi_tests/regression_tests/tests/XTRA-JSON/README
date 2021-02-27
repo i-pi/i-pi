@@ -1,0 +1,7 @@
+XTRA-JSON regression tests checking the capabilities of the JSON infrastructure
+----------------------------------------------------------------------
+These tests have been tested by Eszter Pos's (2020) dummy friction-tensor and dipole
+implemented in the doublewell_1D potential and using the existing dipole
+implemented in the zundel potential. The tests are comparing numpy-accessible
+output trajectory files.  
+

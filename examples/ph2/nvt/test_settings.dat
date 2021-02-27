@@ -1,0 +1,5 @@
+#Settings file for automatic test
+driver_model sg
+flags -o 2.4
+nsteps 10
+

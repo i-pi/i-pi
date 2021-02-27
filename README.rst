@@ -20,11 +20,17 @@ To use i-PI with already existing drivers, install using Pip::
 
    $ pip install git+https://github.com/i-pi/i-pi.git
 
+
+Full installation
+=================
+
 To develop i-PI or test it with the self-contained driver, follow these
 instructions. It is assumed that i-PI will
 be run from a Linux environment, with a recent version of Python, Numpy and
 gfortran, and that the terminal is initially in the i-pi package directory (the
-directory containing this file).
+directory containing this file), which you can obtain by cloning the repository::
+
+   $ git clone https://github.com/cosmo-epfl/i-pi.git
 
 Source the environment settings file :code:`env.sh` as :code:`$ source env.sh` or :code:`$ .
 env.sh`.  It is useful to put this in your :code:`.bashrc` or other settings file if
@@ -66,39 +72,14 @@ The monitoring can be interrupted with CTRL+C when the run has finished (5000 st
 Run the automatic test suite
 ----------------------------
 
-The automatic test suite can be run with the Python package `pytest` from the
-root directory of the i-PI project.
+The automatic test suite can be run by calling the i-pi-test script. 
+You need to have the `pytest` package installed
 
 ::
 
-  $ pytest -v
+  $ i-pi-test
 
-
-Format Compliance
-================
-
-i-PI code should be compliant to a minimal subset of PEP-8 recommendations.
-Currently, we require the use of `black` as formatter and linter.
-We also ask for the usage of `flake8` for syntactic checks, which is also
-part of linting.
-In most systems, both packages can be easily installed using `pip`.
-BEFORE proceeding to a pull request, the minimal requirement is that you run
-
-::
-
-  $ make -f Makefile.style lint
-  $ make -f Makefile.style pretty 
-
-This will ensure the formatting and linting requirement are applied in the whole 
-directory tree. Please resolve any warnings or errors that may appear. Your
-commit will not pass the CI tests otherwise.
-
-For a more flexible setup, we also provide the script `i-pi-style`, for
-which instructions can be obtained by typing 
-
-::
-
-  $ i-pi-style -h 
+See more details in the README file inside the ipi_tests folder.
 
 Contributing
 ================
@@ -121,3 +102,29 @@ Checklist to create a pull request:
 - Make sure that all the automatic checks pass without any error
 
 We are looking forward to your contribution!
+
+Format Compliance
+-----------------
+
+i-PI code should be compliant to a minimal subset of PEP-8 recommendations.
+Currently, we require the use of `black` as formatter and linter.
+We also ask for the usage of `flake8` for syntactic checks, which is also
+part of linting.
+In most systems, both packages can be easily installed using `pip`.
+BEFORE proceeding to a pull request, the minimal requirement is that you run
+
+::
+
+  $ make lint
+  $ make pretty 
+
+This will ensure the formatting and linting requirement are applied in the whole 
+directory tree. Please resolve any warnings or errors that may appear. Your
+commit will not pass the CI tests otherwise.
+
+For a more flexible setup, we also provide the script `i-pi-style`, for
+which instructions can be obtained by typing 
+
+::
+
+  $ i-pi-style -h 

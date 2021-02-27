@@ -1,0 +1,3 @@
+#Settings file for automatic test
+driver_model pswater
+nsteps 10
