@@ -2,3 +2,4 @@ driver_model dummy
 driver_model2 dummy
 driver_model3 sg
 flags -o 15.
+nsteps 10
