@@ -3,7 +3,6 @@
 import numpy as np
 import sys
 from .dummy import Dummy_driver
-from toolkit.tools.units import convert as c
 from scipy import interpolate
 import json
 

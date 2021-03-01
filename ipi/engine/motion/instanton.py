@@ -477,8 +477,8 @@ class FrictionMapper(PesMapper):
                 self.sqrtm(
                     eta[i] + np.eye(self.dbeads.natoms * 3) * 0.0001
                 )  # dgdq = s ** 0.5 -> won't work for multiD
-            except Warning as e:
-                print(s[i])
+            except Warning:
+                print(eta[i])
                 softexit.trigger("The provided friction is not positive definite")
 
     def set_z_friction(self, z_friction):
@@ -593,7 +593,7 @@ class FrictionMapper(PesMapper):
                     dgdq[i] = self.sqrtm(
                         s[i] + np.eye(nphys) * 0.0001
                     )  # dgdq = s ** 0.5 -> won't work for multiD
-                except Warning as e:
+                except Warning:
                     print(s[i])
                     softexit.trigger("The provided friction is not positive definite")
 
