@@ -135,11 +135,11 @@ if asr not in list(["poly", "linear", "crystal", "none"]):
     )
 
 if asr == "poly":
-        nzeros = 6
+    nzeros = 6
 elif asr == "crystal":
-        nzeros = 3
+    nzeros = 3
 else:
-        nzeros = 0
+    nzeros = 0
 if asr == "linear":
     raise NotImplementedError("Sum rules for linear molecules is not implemented")
 

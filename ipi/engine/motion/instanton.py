@@ -3,9 +3,9 @@ Contains classes for instanton  calculations.
 
 Algorithms implemented by Yair Litman and Mariana Rossi, 2017
 """
-debug=True
-debug=False
-test_factor =1
+debug = True
+debug = False
+test_factor = 1
 # This file is part of i-PI.
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
@@ -13,6 +13,7 @@ test_factor =1
 
 import numpy as np
 import warnings
+
 np.set_printoptions(suppress=True, linewidth=1000)
 import time
 import sys
@@ -117,6 +118,8 @@ class InstantonMotion(Motion):
         hessian_final="False",
         energy_shift=np.zeros(0, float),
         friction=False,
+        frictionSD=True,
+        eta=np.eye(0, 0, 0, float),
         z_friction=np.zeros(0, float),
     ):
         """Initialises InstantonMotion."""
@@ -124,7 +127,6 @@ class InstantonMotion(Motion):
         super(InstantonMotion, self).__init__(fixcom=fixcom, fixatoms=fixatoms)
 
         self.options = {}  # Optimization options
-        self.optarrays = {}  # Optimization arrays
 
         # Optimization mode
         self.options["mode"] = mode
@@ -142,7 +144,14 @@ class InstantonMotion(Motion):
         self.options["max_ms"] = max_ms
         self.options["discretization"] = discretization
         self.options["friction"] = friction
+        if not friction:
+            self.options["frictionSD"] = False
+        else:
+            self.options["frictionSD"] = frictionSD
+
         self.options["z_friction"] = z_friction
+
+        self.optarrays = {}  # Optimization arrays
         self.optarrays["big_step"] = biggest_step
         self.optarrays["energy_shift"] = energy_shift
         self.optarrays["delta"] = delta
@@ -167,11 +176,14 @@ class InstantonMotion(Motion):
             or self.options["opt"] == "lanczos"
         ):
 
+            if self.options["friction"]:  # and not self.options["frictionSD"]:
+                self.options["eta0"] = eta
+
             self.options["hessian_update"] = hessian_update
             self.options["hessian_asr"] = hessian_asr
             self.options["hessian_init"] = hessian_init
             self.optarrays["hessian"] = hessian
-            if self.options["friction"]:
+            if self.options["friction"] and self.options["frictionSD"]:
                 self.optarrays["fric_hessian"] = fric_hessian
 
             if self.options["opt"] == "nichols":
@@ -198,7 +210,6 @@ class InstantonMotion(Motion):
             self.optarrays["qlist"] = qlist_lbfgs
             self.optarrays["glist"] = glist_lbfgs
             self.optarrays["d"] = old_direction
-
 
         if self.options["opt"] == "NR" or self.options["opt"] == "lanczos":
             info(
@@ -272,10 +283,10 @@ class PesMapper(object):
 
         # self.nm = mapper.nm
         # self.rp_factor = mapper.rp_factor
-        if self.dbeads.nbeads>1:
-           self.C = mapper.nm.transform._b2o_nm
-        else: 
-           self.C = 1
+        if self.dbeads.nbeads > 1:
+            self.C = mapper.nm.transform._b2o_nm
+        else:
+            self.C = 1
 
         self.omegak = mapper.rp_factor * mapper.nm.get_o_omegak()
 
@@ -405,12 +416,19 @@ class FrictionMapper(PesMapper):
     """Creation of the multi-dimensional function to compute the physical potential and forces,
     as well as the friction terms"""
 
+    def __init__(self, frictionSD, eta0):
+
+        super(FrictionMapper, self).__init__()
+        self.frictionSD = frictionSD
+        self.eta0 = eta0
+
     def bind(self, mapper):
 
         super(FrictionMapper, self).bind(mapper)
         from scipy.interpolate import interp1d
         from scipy.linalg import sqrtm
         from scipy.integrate import quad
+
         self.sqrtm = sqrtm
         self.quad = quad
         self.interp1d = interp1d
@@ -419,47 +437,54 @@ class FrictionMapper(PesMapper):
         """ Stores potential and forces in this class for convenience """
         super(FrictionMapper, self).save(e, g)
         # ALBERTO: CLEAN THE MASS UNSCALING
-        self.eta = eta * test_factor 
+        self.eta = eta * test_factor
         if debug:
-         for i in range(self.dbeads.nbeads):
-            self.eta[i]=np.eye(self.dbeads.natoms*3) 
-        #print('mass scaling ALBERTO')
-        #for e in self.eta:
+            for i in range(self.dbeads.nbeads):
+                self.eta[i] = np.eye(self.dbeads.natoms * 3)
+        # print('mass scaling ALBERTO')
+        # for e in self.eta:
         #    m=self.dbeads.m3[0][:,np.newaxis]
         #    e[:] =(e/m**-0.5)/m.T**-0.5 #Mass unscale
-        #ALBERTO
-        #print(self.eta[0])
+        # ALBERTO
+        # print(self.eta[0])
 
     def initialize(self, q, forces):
         """ Initialize potential, forces and friction """
 
-
-        eta = np.array(forces.extras["friction"]).reshape(
-            (q.shape[0], q.shape[1], q.shape[1])
-        )
-
+        if self.frictionSD:
+            eta = np.array(forces.extras["friction"]).reshape(
+                (q.shape[0], q.shape[1], q.shape[1])
+            )
+        else:
+            eta = np.zeros((q.shape[0], q.shape[1], q.shape[1]))
+            for i in range(self.dbeads.nbeads):
+                eta[i] = self.eta0
 
         self.check_eta(eta)
 
-
         self.save(forces.pots, -forces.f, eta)
 
-    def check_eta(self,eta):
- 
-        for i in range(self.dbeads.nbeads):       
-            assert (eta[i] - eta[i].T == np.zeros((self.dbeads.natoms*3,self.dbeads.natoms*3))).all()
+    def check_eta(self, eta):
+
+        for i in range(self.dbeads.nbeads):
+            assert (
+                eta[i] - eta[i].T
+                == np.zeros((self.dbeads.natoms * 3, self.dbeads.natoms * 3))
+            ).all()
         with warnings.catch_warnings():
-             warnings.filterwarnings('error')
-             try:
-                self.sqrtm(eta[i]+np.eye(self.dbeads.natoms*3)*0.0001)  # dgdq = s ** 0.5 -> won't work for multiD
-             except Warning as e:
+            warnings.filterwarnings("error")
+            try:
+                self.sqrtm(
+                    eta[i] + np.eye(self.dbeads.natoms * 3) * 0.0001
+                )  # dgdq = s ** 0.5 -> won't work for multiD
+            except Warning as e:
                 print(s[i])
                 softexit.trigger("The provided friction is not positive definite")
-         
+
     def set_z_friction(self, z_friction):
         """Sets the scaling factors corresponding to frequency dependence of the friction """
 
-        #from scipy.interpolate import interp1d
+        # from scipy.interpolate import interp1d
 
         freq = units.unit_to_internal("frequency", "inversecm", z_friction[:, 0])
         spline = self.interp1d(
@@ -467,17 +492,17 @@ class FrictionMapper(PesMapper):
         )
 
         z_friction = spline(self.omegak)
-        #z_friction = z_friction  /1.6743276# / z_friction[1]  # UPDATE HERE WHEN AIMS IMPLEMENTATION IS READY
-        if debug: 
-           z_friction = self.dbeads.m3[0,0]*self.omegak
-        self.z_k = np.multiply(self.omegak, z_friction)[:, np.newaxis]/test_factor
-        
+        # z_friction = z_friction  /1.6743276# / z_friction[1]  # UPDATE HERE WHEN AIMS IMPLEMENTATION IS READY
+        if debug:
+            z_friction = self.dbeads.m3[0, 0] * self.omegak
+        self.z_k = np.multiply(self.omegak, z_friction)[:, np.newaxis] / test_factor
+
         info(units.unit_to_user("frequency", "inversecm", self.omegak), verbosity.debug)
 
-    def get_fric_rp_hessian(self, fric_hessian, eta ):
-        """ Creates the friction hessian from the eta derivatives
-        THIS IS ONLY DONE FOR THE ACTIVE MODES """
-         
+    def get_fric_rp_hessian(self, fric_hessian, eta, SD):
+        """Creates the friction hessian from the eta derivatives
+        THIS IS ONLY DONE FOR THE ACTIVE MODES"""
+
         nphys = self.fix.nactive * 3
         ndof = self.dbeads.nbeads * self.fix.nactive * 3
         nbeads = self.dbeads.nbeads
@@ -486,24 +511,28 @@ class FrictionMapper(PesMapper):
 
         dgdq = np.zeros(s.shape)
         for i in range(nbeads):
-            dgdq[i] = self.sqrtm(s[i]+np.eye(nphys)*0.0001)
+            dgdq[i] = self.sqrtm(s[i] + np.eye(nphys) * 0.0001)
 
         h_fric = np.zeros((ndof, ndof))
 
-        #Block diag:
-        gq = self.obtain_g(s)
-        gq_k = np.dot(self.C,gq)
-        prefactor = np.dot(self.C.T, self.z_k*gq_k)        
-        for n in range(self.dbeads.nbeads):
-            for j in range(nphys):
-                for k in range(nphys):
-                    aux_jk = 0
-                    for i in range(nphys):
-                        if dgdq[n, i, j] != 0:
-                            aux_jk += (
-                                0.5 * prefactor[n, i] * fric_hessian[n, i, j, k] / dgdq[n, i, j]
-                            )
-                    h_fric[nphys * n + j, nphys * n + k] = aux_jk
+        # Block diag:
+        if SD:
+            gq = self.obtain_g(s)
+            gq_k = np.dot(self.C, gq)
+            prefactor = np.dot(self.C.T, self.z_k * gq_k)
+            for n in range(self.dbeads.nbeads):
+                for j in range(nphys):
+                    for k in range(nphys):
+                        aux_jk = 0
+                        for i in range(nphys):
+                            if dgdq[n, i, j] != 0:
+                                aux_jk += (
+                                    0.5
+                                    * prefactor[n, i]
+                                    * fric_hessian[n, i, j, k]
+                                    / dgdq[n, i, j]
+                                )
+                        h_fric[nphys * n + j, nphys * n + k] = aux_jk
         # Cross-terms:
         for nl in range(nbeads):
             for ne in range(nbeads):
@@ -520,14 +549,16 @@ class FrictionMapper(PesMapper):
         """ Computes g from s """
 
         if debug:
-            return  self.dbeads.q.copy() 
+            return self.dbeads.q.copy()
 
         nphys = self.dbeads.natoms * 3
 
         ss = np.zeros(s.shape)
 
         for i in range(self.dbeads.nbeads):
-            ss[i] = self.sqrtm(s[i] + np.eye(nphys)*0.0001) # ss = s ** 0.5 -> won't work for multiD
+            ss[i] = self.sqrtm(
+                s[i] + np.eye(nphys) * 0.0001
+            )  # ss = s ** 0.5 -> won't work for multiD
 
         q = self.dbeads.q.copy()
         gq = np.zeros(self.dbeads.q.copy().shape)
@@ -545,36 +576,37 @@ class FrictionMapper(PesMapper):
             except ValueError:
                 gq[:, nd] = 0
 
-        
         return gq
 
     def compute_friction_terms(self):
         """ Computes friction component of the energy and gradient """
 
         s = self.eta
+
         nphys = self.dbeads.natoms * 3
 
         dgdq = np.zeros(s.shape)
         for i in range(self.dbeads.nbeads):
-             with warnings.catch_warnings():
-                  warnings.filterwarnings('error')
-                  try:
-                     dgdq[i] = self.sqrtm(s[i]+np.eye(nphys)*0.0001)  # dgdq = s ** 0.5 -> won't work for multiD
-                  except Warning as e:
-                      print(s[i])
-                      softexit.trigger("The provided friction is not positive definite")
-         
-        gq = self.obtain_g(s)
+            with warnings.catch_warnings():
+                warnings.filterwarnings("error")
+                try:
+                    dgdq[i] = self.sqrtm(
+                        s[i] + np.eye(nphys) * 0.0001
+                    )  # dgdq = s ** 0.5 -> won't work for multiD
+                except Warning as e:
+                    print(s[i])
+                    softexit.trigger("The provided friction is not positive definite")
 
-        gq_k = np.dot(self.C, gq)  
-        e = 0.5 * np.sum(self.z_k * gq_k ** 2 )
+        gq = self.obtain_g(s)
+        gq_k = np.dot(self.C, gq)
+        e = 0.5 * np.sum(self.z_k * gq_k ** 2)
 
         f = np.dot(self.C.T, self.z_k * gq_k)
         g = np.zeros(f.shape)
         for i in range(self.dbeads.nbeads):
             g[i, :] = np.dot(dgdq[i], f[i])
-        #raise softexit.trigger('ACA')
-        return e, g 
+
+        return e, g
 
     def get_full_extras(self, reduced_forces, full_mspath, indexes):
         """ Get the full extra strings """
@@ -605,13 +637,16 @@ class FrictionMapper(PesMapper):
         )
 
         full_extras = self.get_full_extras(reduced_forces, full_mspath, indexes)
-        full_eta = np.zeros(
-            (self.dbeads.nbeads, self.dbeads.natoms * 3, self.dbeads.natoms * 3)
-        )
-        for n in range(self.dbeads.nbeads):
-            full_eta[n] = full_extras["friction"][n].reshape(
-                self.dbeads.natoms * 3, self.dbeads.natoms * 3
+        if self.frictionSD:
+            full_eta = np.zeros(
+                (self.dbeads.nbeads, self.dbeads.natoms * 3, self.dbeads.natoms * 3)
             )
+            for n in range(self.dbeads.nbeads):
+                full_eta[n] = full_extras["friction"][n].reshape(
+                    self.dbeads.natoms * 3, self.dbeads.natoms * 3
+                )
+        else:
+            full_eta = self.eta
 
         info(
             "We expect friction tensor evaluated at the first RP frequency",
@@ -638,7 +673,7 @@ class FrictionMapper(PesMapper):
         e_friction, g_friction = self.compute_friction_terms()
         e += e_friction
         g += g_friction
-        
+
         e = e * (self.coef[1:] + self.coef[:-1]) / 2
         g = g * (self.coef[1:] + self.coef[:-1]) / 2
 
@@ -664,7 +699,7 @@ class SpringMapper(object):
         self.dbeads = mapper.beads.copy()
         # self.nm = mapper.nm
         # self.rp_factor = mapper.rp_factor
-        if self.dbeads.nbeads >1:
+        if self.dbeads.nbeads > 1:
             self.C = mapper.nm.transform._b2o_nm
         else:
             self.C = 1
@@ -727,7 +762,7 @@ class SpringMapper(object):
             )
 
             # With new discretization #This can be expressed as matrix multp
-            if False: #ALBERTO 
+            if False:  # ALBERTO
                 for i in range(self.dbeads.nbeads - 1):
                     dq = (self.dbeads.q[i + 1, :] - self.dbeads.q[i, :]) / np.sqrt(
                         coef[i + 1]
@@ -838,8 +873,8 @@ class Mapper(object):
         g = self.fix.get_active_vector(g1 + g2, 1)
         e = np.sum(e1 + e2)
         if debug:
-         g = self.fix.get_active_vector(g1, 1)
-         e = np.sum(e1)
+            g = self.fix.get_active_vector(g1, 1)
+            e = np.sum(e1)
 
         self.save(e, g)
 
@@ -866,9 +901,9 @@ class Mapper(object):
         self.set_coef(self.options["discretization"])
 
         self.friction = self.options["friction"]
-
         if self.friction:
-            self.gm = FrictionMapper()
+            self.frictionSD = self.options["frictionSD"]
+            self.gm = FrictionMapper(self.frictionSD, self.options["eta0"])
             self.gm.bind(self)
             self.gm.set_z_friction(dumop.options["z_friction"])
         else:
@@ -889,8 +924,8 @@ class Mapper(object):
             e = e1 + e2
             g = np.add(g1, g2)
             if debug:
-              e = e2
-              g = g2
+                e = e2
+                g = g2
 
         elif mode == "physical":
             e, g = self.gm(x, new_disc)
@@ -992,13 +1027,13 @@ class DummyOptimizer(dobject):
         self.options["max_e"] = geop.options["max_e"]
         self.options["discretization"] = geop.options["discretization"]
         self.options["friction"] = geop.options["friction"]
-
+        self.options["frictionSD"] = geop.options["frictionSD"]
         if self.options["friction"]:
+            self.options["eta0"] = geop.options["eta0"]
             if len(geop.options["z_friction"]) == 0:
                 geop.options["z_friction"] = np.ones((1000, 2))
                 geop.options["z_friction"][:, 0] = np.arange(1000)
             self.options["z_friction"] = geop.options["z_friction"]
-
         self.options["tolerances"] = geop.options["tolerances"]
         self.optarrays["big_step"] = geop.optarrays["big_step"]
         self.optarrays["old_x"] = geop.optarrays["old_x"]
@@ -1113,10 +1148,10 @@ class DummyOptimizer(dobject):
                     natoms=self.beads.natoms,
                     nbeads=self.beads.nbeads,
                     fixatoms=self.fixatoms,
-                    friction=self.options["friction"],
+                    friction=self.options["frictionSD"],
                 )
 
-                if self.options["friction"]:
+                if self.options["friction"] and self.options["frictionSD"]:
                     friction_hessian = current_hessian[1]
                     # self.optarrays["fric_hessian"][:] = self.fix.get_full_vector(friction_hessian, 4 )
                     self.optarrays["fric_hessian"][:] = friction_hessian
@@ -1274,28 +1309,40 @@ class HessianOptimizer(DummyOptimizer):
 
         self.optarrays["hessian"] = geop.optarrays["hessian"]
         if self.options["friction"]:
-            if geop.optarrays["fric_hessian"].shape != (
-                self.beads.nbeads,
+
+            if geop.options["eta0"].shape == (0, 0):
+                geop.options["eta0"] = np.zeros(
+                    (self.beads.natoms * 3, self.beads.natoms * 3)
+                )
+            assert geop.options["eta0"].shape == (
                 self.beads.natoms * 3,
                 self.beads.natoms * 3,
-                self.beads.natoms * 3,
-            ):
-                if geop.options["hessian_init"]:
-                    geop.optarrays["fric_hessian"] = np.zeros(
-                        (
-                            self.beads.nbeads,
-                            self.beads.natoms * 3,
-                            self.beads.natoms * 3,
-                            self.beads.natoms * 3,
+            ), "Please provide a friction tensor with the appropiate shape"
+            self.options["eta0"] = geop.options["eta0"]
+
+            if self.options["frictionSD"]:
+                if geop.optarrays["fric_hessian"].shape != (
+                    self.beads.nbeads,
+                    self.beads.natoms * 3,
+                    self.beads.natoms * 3,
+                    self.beads.natoms * 3,
+                ):
+                    if geop.options["hessian_init"]:
+                        geop.optarrays["fric_hessian"] = np.zeros(
+                            (
+                                self.beads.nbeads,
+                                self.beads.natoms * 3,
+                                self.beads.natoms * 3,
+                                self.beads.natoms * 3,
+                            )
                         )
-                    )
-                else:
-                    raise ValueError(
-                        """
+                    else:
+                        raise ValueError(
+                            """
               'Hessian_init' is false, 'friction' is true so an initial fric_hessian (of the proper size) must be provided.
                     """
-                    )
-            self.optarrays["fric_hessian"] = geop.optarrays["fric_hessian"]
+                        )
+                self.optarrays["fric_hessian"] = geop.optarrays["fric_hessian"]
 
     def initialize(self, step):
 
@@ -1336,9 +1383,9 @@ class HessianOptimizer(DummyOptimizer):
                 natoms=self.beads.natoms,
                 nbeads=self.beads.nbeads,
                 fixatoms=self.fixatoms,
-                friction=self.options["friction"],
+                friction=self.options["frictionSD"],
             )
-            if self.options["friction"]:
+            if self.options["friction"] and self.options["frictionSD"]:
                 phys_hessian = active_hessian[0]
                 friction_hessian = active_hessian[1]
                 self.optarrays["fric_hessian"][:] = friction_hessian[:]
@@ -1377,10 +1424,10 @@ class HessianOptimizer(DummyOptimizer):
                 natoms=self.beads.natoms,
                 nbeads=self.beads.nbeads,
                 fixatoms=self.fixatoms,
-                friction=self.options["friction"],
+                friction=self.options["frictionSD"],
             )
 
-            if self.options["friction"]:
+            if self.options["friction"] and self.options["frictionSD"]:
                 phys_hessian = active_hessian[0]
                 friction_hessian = active_hessian[1]
                 self.optarrays["fric_hessian"][:] = self.fix.get_full_vector(
@@ -1449,14 +1496,21 @@ class NicholsOptimizer(HessianOptimizer):
         # Add spring terms to the physical hessian
         h = np.add(self.mapper.sm.h, h0)
 
-        if debug: 
-          h = h0
+        if debug:
+            h = h0
 
         # Add friction terms to the hessian
         if self.options["friction"]:
-            print('ALBERTO clean here gm call')
-            eta_active = self.fix.get_active_vector(self.mapper.gm.eta,5)
-            h_fric = self.mapper.gm.get_fric_rp_hessian(activearrays["fric_hessian"],eta_active)
+            print("ALBERTO clean here gm call")
+            eta_active = self.fix.get_active_vector(self.mapper.gm.eta, 5)
+            if self.options["frictionSD"]:
+                h_fric = self.mapper.gm.get_fric_rp_hessian(
+                    activearrays["fric_hessian"], eta_active, self.options["frictionSD"]
+                )
+            else:
+                h_fric = self.mapper.gm.get_fric_rp_hessian(
+                    None, eta_active, self.options["frictionSD"]
+                )
             h = np.add(h, h_fric)
 
         # Get eigenvalues and eigenvector.

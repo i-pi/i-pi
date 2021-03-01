@@ -168,9 +168,9 @@ if __name__ == "__main__":
         "-o",
         "--param",
         type=str,
+        nargs="+",
         default="",
-        help="""Paramenters required to run the driver
-        """,
+        help="""Paramenters required to run the driver  """,
     )
 
     args = parser.parse_args()

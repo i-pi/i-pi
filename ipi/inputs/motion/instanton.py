@@ -135,12 +135,24 @@ class InputInst(InputDictionary):
             InputValue,
             {"dtype": bool, "default": False, "help": "Activates Friction."},
         ),
+        "frictionSD": (
+            InputValue,
+            {"dtype": bool, "default": True, "help": "Activates SD Friction."},
+        ),
         "z_friction": (
             InputArray,
             {
                 "dtype": float,
                 "default": input_default(factory=np.ones, args=(0,)),
                 "help": "Normalized frequency dependence of the friction tensor (z). A two column data is expected. First column: omega (cm^-1). Second column: z(omega). ",
+            },
+        ),
+        "eta": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.eye, args=(0,)),
+                "help": "Friction Tensor. Only to be used when frictionSD is disabled.",
             },
         ),
         "alt_out": (
@@ -323,6 +335,7 @@ class InputInst(InputDictionary):
         self.max_ms.store(options["max_ms"])
         self.discretization.store(options["discretization"])
         self.friction.store(options["friction"])
+        self.frictionSD.store(options["frictionSD"])
         if options["friction"]:
             self.z_friction.store(options["z_friction"])
         self.alt_out.store(options["save"])
@@ -343,7 +356,10 @@ class InputInst(InputDictionary):
             self.hessian_update.store(options["hessian_update"])
             self.hessian_asr.store(options["hessian_asr"])
             if options["friction"]:
-                self.fric_hessian.store(optarrays["fric_hessian"])
+                if options["frictionSD"]:
+                    self.fric_hessian.store(optarrays["fric_hessian"])
+                else:
+                    self.fric_hessian.store(options["eta0"])
         elif geop.options["opt"] == "lbfgs":
             self.qlist_lbfgs.store(optarrays["qlist"])
             self.glist_lbfgs.store(optarrays["glist"])
