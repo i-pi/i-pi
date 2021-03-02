@@ -9,7 +9,7 @@ import json
 """Spline driver. This is not a serious interpolation, use it if you know what you are doing. """
 factor_coord = 5
 mass = 1836
-friction = True
+friction = False
 SI = True
 fric_value = 0.165
 
