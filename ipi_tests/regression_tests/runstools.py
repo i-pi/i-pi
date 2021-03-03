@@ -109,7 +109,7 @@ class Runner_regression(Runner):
 
                 try:
                     np.testing.assert_allclose(
-                        test_output, ref_output, rtol=1.0e-7, atol=1.0e-15
+                        test_output, ref_output, rtol=1.0e-6, atol=1.0e-13
                     )
                     # print("No anomaly during the regtest for {}".format(refname))
                 except AssertionError:
