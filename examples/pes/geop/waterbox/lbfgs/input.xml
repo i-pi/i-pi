@@ -12,7 +12,7 @@
   </ffsocket>
   <system>
     <initialize nbeads='1'>
-      <file mode='pdb'> init.pdb </file>
+      <file mode='xyz'> init.xyz </file>
     </initialize>
     <forces>
       <force forcefield='qtip4pf'/>

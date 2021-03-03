@@ -1,7 +1,7 @@
 <simulation verbosity='high'>
   <output prefix='simulation'>
     <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved{kelvin}, temperature{kelvin}, kinetic_cv{kelvin}, potential{kelvin}, pressure_cv{megapascal}, volume, cell_h] </properties>
-    <trajectory stride='1' filename='pos' format='pdb'> x_centroid</trajectory>
+    <trajectory stride='1' filename='pos' format='xyz'> x_centroid</trajectory>
     <checkpoint stride='2000'/>
   </output>
   <total_steps>100000</total_steps>
@@ -13,7 +13,7 @@
   </ffsocket>
   <system>
     <initialize nbeads='4'>
-      <file mode='pdb'> init.pdb </file>
+      <file mode='xyz'> init.xyz </file>
       <velocities mode='thermal' units='kelvin'> 30 </velocities>
     </initialize>
     <forces>
