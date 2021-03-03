@@ -359,7 +359,7 @@ class InputInst(InputDictionary):
                 if options["frictionSD"]:
                     self.fric_hessian.store(optarrays["fric_hessian"])
                 else:
-                    self.fric_hessian.store(options["eta0"])
+                    self.eta.store(options["eta0"])
         elif geop.options["opt"] == "lbfgs":
             self.qlist_lbfgs.store(optarrays["qlist"])
             self.glist_lbfgs.store(optarrays["glist"])
