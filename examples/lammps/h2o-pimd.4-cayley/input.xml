@@ -14,7 +14,7 @@
   <system>
     <normal_modes propagator="cayley"/>
     <initialize nbeads='4'>
-      <file mode='xyz'> init.xyz </file>
+      <file mode='xyz'> water_216.xyz </file>
       <velocities mode='thermal' units='kelvin'> 300 </velocities>
     </initialize>
     <forces>
