@@ -11,7 +11,7 @@
   </ffsocket>
   <system>
     <initialize nbeads='16'>
-      <file mode='pdb'> our_ref.pdb </file>
+      <file mode='xyz'> our_ref.xyz </file>
       <velocities mode='thermal' units='kelvin'> ??? </velocities>
     </initialize>
     <forces>

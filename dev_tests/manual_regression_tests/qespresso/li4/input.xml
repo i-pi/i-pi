@@ -1,5 +1,5 @@
 <!-- REGTEST
-DEPENDENCIES Li.pbe-tm.UPF init.pdb pw.in
+DEPENDENCIES Li.pbe-tm.UPF init.xyz pw.in
 COMMAND(2) pw.x -ipi localhost:31415 -in pw.in > pw.out
 ENDREGTEST -->
 <simulation verbosity='high'>
@@ -23,7 +23,7 @@ ENDREGTEST -->
       <force forcefield='pw'/>
     </forces>
     <initialize nbeads='2'>
-      <file mode='pdb'> init.pdb </file>
+      <file mode='xyz'> init.xyz </file>
       <velocities mode='thermal' units='kelvin'> 100 </velocities>
     </initialize>
     <ensemble>
