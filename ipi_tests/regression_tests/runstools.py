@@ -1,6 +1,6 @@
 import numpy as np
 from pathlib import Path
-from ipi_tests.test_tools import (
+from ..test_tools import (
     Runner,
     modify_xml_4_dummy_test,
 )
