@@ -1,4 +1,0 @@
-driver doublewell_1D 
-address localhost
-port 33335
-socket_mode unix

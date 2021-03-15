@@ -1,6 +1,6 @@
-====
+==============================
 i-PI: a Universal Force Engine
-====
+==============================
 
 A Python interface for ab initio path integral molecular dynamics simulations.
 i-PI is composed of a Python server (i-pi itself, that does not need to be
@@ -16,9 +16,14 @@ Silvera-Goldman potentials is included for test purposes.
 Quick Setup and Test
 ====================
 
-To use i-PI with already existing drivers, install using Pip::
+To use i-PI with already existing drivers, install and update using Pip::
 
-   $ pip install git+https://github.com/i-pi/i-pi.git
+   $ pip install -U i-PI
+
+Test with Pytest::
+
+   $ pip install pytest
+   $ pytest --pyargs ipi.tests
 
 
 Full installation
@@ -30,7 +35,7 @@ be run from a Linux environment, with a recent version of Python, Numpy and
 gfortran, and that the terminal is initially in the i-pi package directory (the
 directory containing this file), which you can obtain by cloning the repository::
 
-   $ git clone https://github.com/cosmo-epfl/i-pi.git
+   $ git clone https://github.com/i-pi/i-pi.git
 
 Source the environment settings file :code:`env.sh` as :code:`$ source env.sh` or :code:`$ .
 env.sh`.  It is useful to put this in your :code:`.bashrc` or other settings file if
@@ -72,13 +77,14 @@ The monitoring can be interrupted with CTRL+C when the run has finished (5000 st
 Run the automatic test suite
 ----------------------------
 
-The automatic test suite can be run with the Python package `pytest` from the
-root directory of the i-PI project.
+The automatic test suite can be run by calling the i-pi-test script. 
+You need to have the `pytest` package installed
 
 ::
 
-  $ pytest -v
+  $ i-pi-test
 
+See more details in the README file inside the ipi_tests folder.
 
 Contributing
 ================
