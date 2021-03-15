@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import pytest
-import ipi_tests.unit_tests.common.xyz_generator as xyz_gen
+from ....common import xyz_generator as xyz_gen
 import ipi.utils.mathtools as mt
 import ipi.utils.io.io_units as testing
 
