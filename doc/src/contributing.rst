@@ -1,6 +1,12 @@
 Contributing
 ============
 
+i-PI is an open source project, and everyone is welcome to contribute
+with bug fixes, documentation, examples, new features, regression tests, etc.
+Any contribution from users or developers is very much welcome! These contributions
+may be full new methods that you have developed or that you just would like to
+add to i-PI, or simple improvements (that would make your life easier) or 
+
 DRAFT!
 
 List of points to be addressed
