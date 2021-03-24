@@ -10,7 +10,7 @@ jobs:
     strategy:
       matrix:
         python-version: [3.8.5]
-        os: ["ubuntu-latest"]
+        os: ["ubuntu-18.04"]
 
     runs-on: "${{ matrix.os }}"
     
@@ -41,7 +41,7 @@ jobs:
       run: |
          sudo apt-get update
          sudo apt-get install gfortran
-         cd drivers
+         cd drivers/f90
          make
 
     - name: pytests for examples
