@@ -17,6 +17,7 @@ For more information on i-PI in general please consult the following places:
 - i-PI forum:
 - i-PI github repo, including issues page:
 - i-PI homepage:
+- i-PI documentation:
 
 What we expect from a contribution
 ----------------------------------
@@ -45,45 +46,60 @@ file in the `i-pi/ipi_tests/regression_tests` folder:
 
 To add a new regression test please provide:
 
-   - input.xml (and all the files required by it)
+   *  input.xml (and all the files required by it)
 
-   - test_settings.dat 
+   * test_settings.dat 
      This file specifies the driver_model and flags that will be used when running
      the driver to perform the regression test.
      For examples including the usage of option flags, please see:
          tests/NVE/NVE_1/harmonic_python/test_settings.dat
          tests/NVE/NVE_1/harmonic/test_settings.dat
 
-   - file_to_check.txt specifying the files serving as reference with their
+   * file_to_check.txt specifying the files serving as reference with their
      respective filenames
 
      for an existing example, please see:
         tests/INSTANTON/100K/files_to_check.txt
 
-   - reference files that are listed in the files_to_check.txt file. Currently,
+   * reference files that are listed in the files_to_check.txt file. Currently,
      the available formats are .xyz and numpy-accessible which should be
      specified with the keywords 'xyz' and 'numpy'.
 
 Important points to note:
 
-CLARIFY BELOW:
-- The driver can be run with the same syntax when one creates the reference files for the regression tests.
-
-- In the case of different drivers one should start to describe the setup of each driver by specifying `driver_model xxxx` in the  first line.
+- In the case of multiple drivers needed for a simulation, the `test_settings.dat` file has to include a line for each driver by specifying as many lines as needed of `driver_model xxxx` in the order they should be assigned to the sockets. That
+is followed by lines decribing the corresponding flags of each driver.  
    
-
-
 - The extension `*.out` appears in the `.gitignore` file. This means that the 'ref_simulation.out' file has to be added manually to your commit.
    You can do that by typing:
 
     "git add -f ref_simulation.out"
 
 
+Getting recognition for your contribution
+-----------------------------------------
+
+We recognize that adding new features or enhancements to any project is a task that needs more recognition.
+If you want your contribution advertised, we are happy to do so through our webpage. Just let us know and we
+will add your name, a short description, and links to any publications here_:
+
+.. _here: http://ipi-code.org/about/features/ 
+
+
+
 Contributing with a bug report
 ------------------------------
 
+Bug reports are a very welcome feedback! These should be posted in the i-PI Github repository (issues tab). Please include inputs and outputs that allow us to reproduce the bug, and a short description of the bug you are encountering. 
  
- 
+
+Questions related to i-PI usage
+-------------------------------
+
+Questions related to usage or general questions are best posted in our forum (see link above). 
+If we establish that there is the need to open a Github issue related to the question, we will do so.
+
+
 
 DRAFT!
 
