@@ -47,4 +47,5 @@ This documentation is structured as follows:
    input-reference
    troubleshooting
    faq
+   contributing
    bibliography
