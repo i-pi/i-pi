@@ -1,4 +1,4 @@
-<simulation verbosity='high'>
+<simulation verbosity='low'>
   <ffsocket  name='h0' pbc='False' mode='unix'>
     <address>localhost</address>
   </ffsocket>
