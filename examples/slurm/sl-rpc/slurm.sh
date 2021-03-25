@@ -114,7 +114,7 @@ cp -p log.ipi IPI_LOGS/log.ipi_$l
 ########## Resubmit ################
 # One can resubmit calculations automatically when running
 # long simulations. Use it carefully and responsibly,
-# As present here, it can lead to endless loop of resubmission of erroneous script.
+# otherwise it can lead to endless loop of resubmission of erroneous script.
 if [ ! -f "STOP"   ]
     then
         echo "Resubmit: YES" >> LIST
