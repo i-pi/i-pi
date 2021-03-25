@@ -1,0 +1,24 @@
+This is an example for a time dependent drive in the smotion class involving a solid.
+
+Order of manipulations to get things done:
+  1. Make sure you have i-PI and LAMMPS installed,
+     put proper executable names to run-*.sh
+
+  2. Calculate phonons with i-PI (or with your code of choice)
+
+  3. Convert i-PI normal modes to xyz_jmol format using 'eigvec-to-xyz_jmol.py'
+     (call it without parameters to see the options and ask for script if you don't have it)
+     If you created phonons with another code, feel free to convert them.
+
+  4. Using these eigenvectors, make coupling constants by 'make-couplings-dmd.py'
+     The constants are produced for all modes at the same time.
+     NOTE that the first number in each line is a frequency, then the constants follow.
+     (Ask us for script if you don't have it)
+
+  5. Pick one line of constants or make some linear combination, and put them to a file 'coupling.dat'
+     i-PI expects only constants as a single line in this file, 
+     therefore you have to remove a frequency before putting a line in 'coupling.dat'
+
+  6. Adjust driving frequency in input-dmd.xml
+
+  7. run i-PI with the driving frequency! 
