@@ -1,0 +1,37 @@
+ <simulation verbosity='high'>
+   <output prefix='lock_mode'>
+         <properties stride='1' flush='1'>[step, time{femtosecond}, conserved, potential, kinetic_cv, pressure_cv, volume, temperature{kelvin}, kinetic_md, pressure_md ] </properties>
+      <checkpoint filename='restart' stride='1' />
+      <trajectory filename='xc' stride='1' format='xyz' cell_units='atomic_unit'> x_centroid{atomic_unit} </trajectory>
+      <trajectory filename='vc' stride='1' cell_units='atomic_unit'> v_centroid </trajectory>
+      <trajectory filename='for' stride='1' format='xyz' cell_units='atomic_unit'> forces </trajectory>
+      <trajectory stride="1" filename="pos" cell_units="atomic_unit">positions{atomic_unit}</trajectory>
+   </output>
+   <total_steps>100</total_steps>
+   <prng><seed>32645</seed></prng>
+   <ffsocket name='driver' mode='unix' matching='lock'>
+    <address>driver</address>
+   </ffsocket>
+     <system>
+    <initialize nbeads='8'>
+      <file mode='xyz'>init.xyz</file>
+      <velocities mode='xyz'>v_init.xyz</velocities>
+    </initialize>
+    <forces>
+      <force forcefield='driver'/>
+    </forces>
+    <ensemble>
+      <temperature units='kelvin'> 50 </temperature>
+    </ensemble>
+    <motion mode='dynamics'>
+      <dynamics mode="nvt">
+	<timestep units="femtosecond">0.1</timestep>
+            <thermostat mode="pile_l">
+              <tau units="femtosecond"> 100 </tau>
+	</thermostat>
+      </dynamics>
+      <fixcom>False</fixcom>
+    </motion>
+  </system>
+</simulation>
+

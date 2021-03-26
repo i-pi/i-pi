@@ -212,9 +212,9 @@ class InputFFSocket(InputForceField):
             InputAttribute,
             {
                 "dtype": str,
-                "options": ["auto", "any", "force_match"],
+                "options": ["auto", "any", "lock"],
                 "default": "auto",
-                "help": "Specifies whether requests should be dispatched to any client, automatically matched to the same client when possible [auto] or strictly forced to match with the same client [force_match].",
+                "help": "Specifies whether requests should be dispatched to any client, automatically matched to the same client when possible [auto] or strictly forced to match with the same client [lock].",
             },
         ),
     }
@@ -270,7 +270,7 @@ class InputFFSocket(InputForceField):
         # just use threaded throughout
 
         # if using forced match mode, ensure softexit called upon disconnection of a client.
-        if self.matching.fetch() == "force_match":
+        if self.matching.fetch() == "lock":
             self.exit_on_disconnect.store(True)
 
         return FFSocket(
