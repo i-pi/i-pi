@@ -66,6 +66,8 @@ class Barostat(dobject):
 
     Gives the standard methods and attributes needed in all the barostat classes.
 
+    Used as barostat for mode "dummy".
+
     Attributes:
        beads: A beads object giving the atoms positions
        cell: A cell object giving the system box.
@@ -394,6 +396,9 @@ class Barostat(dobject):
 class BaroBZP(Barostat):
     """Bussi-Zykova-Parrinello barostat class.
 
+    The barostat used for mode "isotropic", changes volume of the unit
+    cell, but not its shape.
+
     Just extends the standard class adding finite-dt propagators for the
     barostat velocities, positions, piston.
 
@@ -588,6 +593,8 @@ class BaroBZP(Barostat):
 
 class BaroSCBZP(Barostat):
     """The Suzuki Chin Bussi-Zykova-Parrinello barostat class.
+
+    The barostat used for mode "sc-isotropic".
 
     Just extends the standard class adding finite-dt propagators for the
     barostat velocities, positions, piston.
@@ -794,6 +801,9 @@ class BaroSCBZP(Barostat):
 
 class BaroRGB(Barostat):
     """Raiteri-Gale-Bussi constant stress barostat class (JPCM 23, 334213, 2011).
+
+    The barostat used for mode "anisotropic", changes lengths of the basis vectors,
+    but not the angles between them.
 
     Just extends the standard class adding finite-dt propagators for the barostat
     velocities, positions, piston.
@@ -1088,6 +1098,8 @@ class BaroRGB(Barostat):
 
 class BaroMTK(Barostat):
     """Martyna-Tobias-Klein flexible cell, constant pressure barostat class (JCP 101, 1994).
+
+    The barostat used for mode "flexible", changes lengths and angles of the basis vectors.
 
     Just extends the standard class adding finite-dt propagators for the barostat
     velocities, positions, piston.

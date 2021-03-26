@@ -42,10 +42,7 @@ class InputBaro(Input):
             {
                 "dtype": str,
                 "default": "dummy",
-                "help": """The type of barostat.  Currently, only a 'isotropic' barostat is implemented, that combines
-                                    ideas from the Bussi-Zykova-Parrinello barostat for classical MD with ideas from the
-                                    Martyna-Hughes-Tuckerman centroid barostat for PIMD; see Ceriotti, More, Manolopoulos, Comp. Phys. Comm. 2013 for
-                                    implementation details.""",
+                "help": """The type of barostat.""",
                 "options": [
                     "dummy",
                     "isotropic",
