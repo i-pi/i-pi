@@ -10,7 +10,7 @@
   </ffdmd>
   <total_steps>4</total_steps>
   <!-- <total_time>6</total_time> --> 
-  <output prefix='ref-simulation'>
+  <output prefix='simulation'>
     <trajectory stride='1' filename='pos' cell_units='angstrom'>positions{angstrom}</trajectory>
     <trajectory stride='1' filename='for' cell_units='angstrom'>forces</trajectory>
     <trajectory stride='1' filename='vel' cell_units='angstrom'>velocities</trajectory>

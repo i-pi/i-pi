@@ -1,9 +1,9 @@
         filename                        format
 ----------------------------------------------------------
-ref-simulation.vel_1.xyz                 xyz
-ref-simulation.vel_2.xyz                 xyz
-ref-simulation.for_1.xyz                 xyz
-ref-simulation.for_2.xyz                 xyz
-ref-simulation.pos_1.xyz                 xyz
-ref-simulation.pos_2.xyz                 xyz
-ref-simulation.out                       numpy
+ref_simulation.vel_0.xyz                 xyz
+ref_simulation.vel_1.xyz                 xyz
+ref_simulation.for_0.xyz                 xyz
+ref_simulation.for_1.xyz                 xyz
+ref_simulation.pos_0.xyz                 xyz
+ref_simulation.pos_1.xyz                 xyz
+ref_simulation.out                       numpy
