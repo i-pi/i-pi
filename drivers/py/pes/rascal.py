@@ -7,7 +7,7 @@ from ipi.utils.mathtools import det_ut3x3
 from ipi.utils.units import unit_to_internal, unit_to_user
 
 try:
-    from rascal.models.IP_generic_md import GenericMDCalculator as RascalCalc
+    from rascal.models.genericmd import GenericMDCalculator as RascalCalc
 except:
     RascalCalc = None
 
@@ -40,7 +40,10 @@ class Rascal_driver(Dummy_driver):
         else:
             sys.exit(self.error_msg)
 
-        self.rascal_calc = RascalCalc(self.model, self.template)
+        try:
+            self.rascal_calc = RascalCalc(self.model, True, self.template)
+        except ValueError:
+            sys.exit(self.error_msg)
 
     def __call__(self, cell, pos):
         """Get energies, forces, and stresses from the librascal model"""
