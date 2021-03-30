@@ -48,9 +48,9 @@ class InputNEB(InputDictionary):
             InputAttribute,
             {
                 "dtype": str,
-                "default": "lbfgs",
+                "default": "bfgs",
                 "help": "The geometry optimization algorithm to optimize NEB path",
-                "options": ["sd", "cg", "bfgs", "lbfgs"],
+                "options": ["sd", "cg", "bfgs", "bfgstrm", "damped_bfgs", "lbfgs"],
             },
         )
     }
@@ -80,15 +80,43 @@ class InputNEB(InputDictionary):
                 "options": ["energy", "force", "position"],
                 "default": [1e-8, 1e-8, 1e-8],
                 "dimension": ["energy", "force", "length"],
+                "help": """Tolerance criteria to stop NEB optimization.
+                           If you work with DFT, do not use these defaults.
+                        """
             },
         ),
-        "old_force": (
+        "old_coord": (
             InputArray,
             {
                 "dtype": float,
                 "default": input_default(factory=np.zeros, args=(0,)),
-                "help": "The previous force in an optimization step.",
-                "dimension": "force",
+                "help": "The previous position in an optimization step.",
+                "dimension": "length",
+            },
+        ),
+#        "old_force": (
+#            InputArray,
+#            {
+#                "dtype": float,
+#                "default": input_default(factory=np.zeros, args=(0,)),
+#                "help": "The previous force in an optimization step.",
+#                "dimension": "force",
+#            },
+#        ),
+        "old_potential": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.zeros, args=(0,)),
+                "help": "Previous bead potentials.",
+            },
+        ),
+        "old_nebgradient": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.zeros, args=(0,)),
+                "help": "The previous gradient including NEB spring forces.",
             },
         ),
         "old_direction": (
@@ -103,8 +131,13 @@ class InputNEB(InputDictionary):
             InputValue,
             {
                 "dtype": float,
-                "default": 100.0,
-                "help": "The maximum step size for (L)-BFGS line minimizations.",
+                "default": 0.5 ,
+                "help": """The maximum atomic displacement in a single step 
+                           of optimizations within NEB procedure.
+                           If requested step is larger, it will be downscaled so 
+                           that maximal atomic displacement won't exceed biggest_step.
+                        """,
+                "dimension": "length",
             },
         ),
         "scale_lbfgs": (
@@ -150,12 +183,21 @@ class InputNEB(InputDictionary):
                 "help": "The number of past vectors to store for L-BFGS.",
             },
         ),
+        "tr_trm": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.zeros, args=(0,)),
+                "help": "Starting value for the trust radius for BFGSTRM.",
+                "dimension": "length",
+            },
+        ),
         "endpoints": (
             InputDictionary,
             {
                 "dtype": [bool, str],
                 "options": ["optimize", "algorithm"],
-                "default": [True, "bfgs"],
+                "default": [False, "bfgs"],
                 "help": "Geometry optimization of endpoints",
             },
         ),
@@ -176,7 +218,8 @@ class InputNEB(InputDictionary):
 
     dynamic = {}
 
-    default_help = "Contains the required parameters for performing nudged elastic band (NEB) calculations"
+    default_help = ("Contains the required parameters "
+                   "for performing nudged elastic band (NEB) calculations")
     default_label = "NEB"
 
     def store(self, neb):
@@ -185,12 +228,16 @@ class InputNEB(InputDictionary):
         self.ls_options.store(neb.ls_options)
         self.tolerances.store(neb.tolerances)
         self.mode.store(neb.mode)
-        self.old_force.store(neb.old_f)
-        self.old_direction.store(neb.old_d)
+        self.old_coord.store(neb.old_x)
+#        self.old_force.store(neb.old_f)
+        self.old_potential.store(neb.pot)
+        self.old_nebgradient.store(neb.nebgrad)
+        self.old_direction.store(neb.d)
         self.biggest_step.store(neb.big_step)
         self.invhessian_bfgs.store(neb.invhessian)
         self.qlist_lbfgs.store(neb.qlist)
         self.glist_lbfgs.store(neb.glist)
+        self.tr_trm.store(neb.tr_trm)
         self.endpoints.store(neb.endpoints)
         self.spring.store(neb.spring)
         self.climb.store(neb.climb)
