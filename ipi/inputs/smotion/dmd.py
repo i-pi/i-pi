@@ -32,7 +32,8 @@ __all__ = ["InputDMD"]
 class InputDMD(InputDictionary):
     """Driven MD Options
 
-    Contains options related with MetaDynamics
+    Contains options related with a driven dynamics through a (possibly time-dependent) potential.
+
 
     """
 
@@ -42,12 +43,12 @@ class InputDMD(InputDictionary):
             {
                 "dtype": str,
                 "default": input_default(factory=np.zeros, args=(0,)),
-                "help": "List of names of forcefields that should do driven MD. Currently only accepts something of ffdmd type.",
+                "help": "List of names of forcefields that should do driven MD. Accepts ffdmd forcefield types. Currently implemented (2021) for ffdmd only the driving potential similar to the one described in Bowman, .., Brown JCP 119, 646 (2003).",
             },
         )
     }
 
-    default_help = "DrivenMD"
+    default_help = "DrivenMD with external time-dependent driving potential"
     default_label = "DMD"
 
     def store(self, drivenmd):
