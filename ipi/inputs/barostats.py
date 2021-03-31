@@ -28,7 +28,7 @@ class InputBaro(Input):
 
     Attributes:
        mode: An optional string giving the type of barostat used. Defaults to
-          'rigid'.
+          'dummy'.
 
     Fields:
        thermostat: A thermostat object giving the cell thermostat.
@@ -42,7 +42,13 @@ class InputBaro(Input):
             {
                 "dtype": str,
                 "default": "dummy",
-                "help": """The type of barostat.""",
+                "help": """The type of barostat.
+                            'isotropic' implements the Bussi-Zykova-Parrinello barostat [doi:10.1063/1.3073889] that isotropically scales the volume while sampling the isothermal isobaric ensemble. The implementation details are given in [doi:10.1016/j.cpc.2013.10.027].
+                            'sc-isotropic' implements the same for Suzuki-Chin path integral molecular dynamics [10.1021/acs.jctc.8b01297]. This barostat is suitable for simulating liquids.
+                            'flexible' implements the path integral version of the Martyna-Tuckerman-Tobias-Klein barostat which incorporates full cell fluctuations while sampling the isothermal isobaric ensemble [doi:10.1063/1.478193]. This is suitable for anisotropic systems such as molecular solids.
+                            'anisotropic' implements the Raiteri-Gale-Bussi barostat which enables cell fluctuations at constant external stress [10.1088/0953-8984/23/33/334213]. It is suitable for simulating solids at given external (non-diagonal) stresses and requires specifying a reference cell for estimating strain. Note that this ensemble is valid only within the elastic limit of small strains.
+                            For diagonal stresses (or external pressures) the 'flexible' and the 'anisotropic' modes should give very similar results. 
+                            'dummy' barostat does not do anything.""",
                 "options": [
                     "dummy",
                     "isotropic",

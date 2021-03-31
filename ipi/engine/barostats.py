@@ -396,14 +396,19 @@ class Barostat(dobject):
 class BaroBZP(Barostat):
     """Bussi-Zykova-Parrinello barostat class.
 
-    The barostat used for mode "isotropic", changes volume of the unit
-    cell, but not its shape.
+    Mode "isotropic" implements the Bussi-Zykova-Parrinello barostat.
+
+    Isotropically scales the unit cell volume while sampling the
+    isothermal isobaric ensemble.
+
+    Bussi, Zykova-Timan, Parinello, J. Chem. Phys. 130, 074101 (2009)
+        [doi:10.1063/1.3073889]
 
     Just extends the standard class adding finite-dt propagators for the
     barostat velocities, positions, piston.
 
     Generates dynamics with a stochastic barostat. Implementation details:
-    Ceriotti, More, Manolopoulos, Comp. Phys. Comm. 185, 1019, (2013)
+    Ceriotti, More, Manolopoulos, Comp. Phys. Comm. 185, 1019 (2013)
 
     Depend objects:
        p: The momentum associated with the volume degree of freedom.
@@ -594,13 +599,22 @@ class BaroBZP(Barostat):
 class BaroSCBZP(Barostat):
     """The Suzuki Chin Bussi-Zykova-Parrinello barostat class.
 
-    The barostat used for mode "sc-isotropic".
+    Mode "sc-isotropic" implements the Bussi-Zykova-Parrinello
+    barostat for Suzuki-Chin path integral molecular dynamics.
+
+    Isotropically scales the unit cell volume while sampling the
+    isothermal isobaric ensemble.
+
+    This barostat is suitable for simulating liquids.
+
+    Kapil et al., J. Chem. Theory Comput. 15, 5 (2019)
+        [10.1021/acs.jctc.8b01297]
 
     Just extends the standard class adding finite-dt propagators for the
     barostat velocities, positions, piston.
 
     Generates dynamics with a stochastic barostat. Implementation details:
-    Ceriotti, More, Manolopoulos, Comp. Phys. Comm. 185, 1019, (2013)
+    Ceriotti, More, Manolopoulos, Comp. Phys. Comm. 185, 1019 (2013)
 
     Depend objects:
        p: The momentum associated with the volume degree of freedom.
@@ -800,10 +814,21 @@ class BaroSCBZP(Barostat):
 
 
 class BaroRGB(Barostat):
-    """Raiteri-Gale-Bussi constant stress barostat class (JPCM 23, 334213, 2011).
+    """Raiteri-Gale-Bussi constant stress barostat class.
 
-    The barostat used for mode "anisotropic", changes lengths of the basis vectors,
-    but not the angles between them.
+    Mode "anisotropic" implements the Raiteri-Gale-Bussi barostat which enables
+    cell fluctuations (lengths and angles) at constant external stress.
+
+    It is suitable for simulating solids at given external (non-diagonal) stresses
+    and requires specifying a reference cell for estimating strain.
+
+     For diagonal stresses (or external pressures) the "flexible" and the
+     "anisotropic" modes should give very similar results.
+
+    Note that this ensemble is valid only within the elastic limit of small strains.
+
+    Raiteri, Gale, Bussi, J. Phys. Condens. Matter, 23, 334213 (2011)
+        [doi:10.1088/0953-8984/23/33/334213]
 
     Just extends the standard class adding finite-dt propagators for the barostat
     velocities, positions, piston.
@@ -1097,9 +1122,19 @@ class BaroRGB(Barostat):
 
 
 class BaroMTK(Barostat):
-    """Martyna-Tobias-Klein flexible cell, constant pressure barostat class (JCP 101, 1994).
+    """Martyna-Tobias-Klein flexible cell, constant pressure barostat class.
 
-    The barostat used for mode "flexible", changes lengths and angles of the basis vectors.
+    Mode "flexible" implements the path integral version of Martyna-Tuckerman-Tobias-Klein
+    barostat, which incorporates full cell fluctuations (lengths and angles) while
+    sampling the isothermal isobaric ensemble.
+
+    This is suitable for anisotropic systems such as molecular solids.
+
+    For diagonal stresses (or external pressures) the "flexible" and the
+    "anisotropic" modes should give very similar results.
+
+    Martyna and Hughes, J. Chem. Phys 110, 3275 (1999)
+        [doi:10.1063/1.478193]
 
     Just extends the standard class adding finite-dt propagators for the barostat
     velocities, positions, piston.
