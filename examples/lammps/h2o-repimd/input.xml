@@ -16,7 +16,7 @@
        <latency> 1e-3 </latency> 
    </ffsocket>
    <system_template>
-       <labels>   [ IDX, TEMP, PRESSURE ,INITFILE] </labels>
+       <labels>   [ IDX, TEMP, PRESSURE, INITFILE] </labels>
        <instance> [ 0,  250, 1.0, 0_init.xyz ] </instance>
        <instance> [ 1,  260, 1.0, 1_init.xyz ] </instance>
        <instance> [ 2,  270, 1.0, 2_init.xyz ] </instance>
