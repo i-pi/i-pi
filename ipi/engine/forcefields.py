@@ -449,9 +449,10 @@ class FFLennardJones(ForceField):
 
 class FFdmd(ForceField):
 
-    """Basic fully pythonic force provider.
+    """Pythonic force provider.
 
-    Computes DMD forces as in Bowman, .., Brown JCP 2003. It is a time dependent potential.
+    Computes DMD forces as in Bowman, .., Brown JCP 2003 DOI: 10.1063/1.1578475. It is a time dependent potential.
+    Here extended for periodic systems and for virial term calculation.
 
     Attributes:
         parameters: A dictionary of the parameters used by the driver. Of the
@@ -539,24 +540,24 @@ class FFdmd(ForceField):
             #            rij = np.sqrt((dij ** 2).sum(axis=1))
             # KF's implementation:
             dij, rij = vector_separation(cell_h, cell_ih, q[i], q[:i])
-            cij = self.coupling[i * (i - 1) // 2 : i * (i + 1) // 2]  #
+            cij = self.coupling[
+                i * (i - 1) // 2 : i * (i + 1) // 2
+            ]  # Check this again...
             prefac = np.dot(
                 cij, rij
             )  # for each i it has the distances to all indexes previous
             v += np.sum(prefac) * periodic
-            dij *= -(cij / rij)[:, np.newaxis]  # magic line...
-            f[i] += dij.sum(axis=0) * periodic
-            f[:i] -= dij * periodic  # everything symmetric
-            # building virial (not yet benchmarked and very explicit
-            # fij = dij * periodic
-            # for j in range(0, nat):
-            #    for cart1 in range(0, 3):
-            #        for cart2 in range(cart1, 3):
-            #            vir[cart1][cart2] -= fij[j][cart1] * dij[j][cart2]
-            #            vir[cart2][cart1] = vir[cart1][cart2]
-            vir = (
-                -vir
-            )  # correcct sign? and what about volume scaling? seems not to be the case. Factor 1/2 alreafy there.
+            nij = np.copy(dij)
+            nij *= -(cij / rij)[:, np.newaxis]  # magic line...
+            f[i] += nij.sum(axis=0) * periodic
+            f[:i] -= nij * periodic  # everything symmetric
+            # building virial (not yet benchmarked)
+            fij = nij * periodic
+            for j in range(i):
+                for cart1 in range(3):
+                    for cart2 in range(3):
+                        vir[cart1][cart2] += fij[j][cart1] * dij[j][cart2]
+            vir = -vir  # correcct sign? factor 1/2 ?
         # DEBUG
         print("virial", vir)
 
