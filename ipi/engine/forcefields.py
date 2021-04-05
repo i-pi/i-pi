@@ -529,6 +529,7 @@ class FFdmd(ForceField):
 
         v = 0.0
         f = np.zeros(q.shape)
+        vir = np.zeros((3, 3), float)
         # must think and check handling of time step
         periodic = np.sin(self.dmdstep * self.freq * self.dtdmd)
         # MR: the algorithm below has been benchmarked against explicit loop implementation
@@ -546,8 +547,20 @@ class FFdmd(ForceField):
             dij *= -(cij / rij)[:, np.newaxis]  # magic line...
             f[i] += dij.sum(axis=0) * periodic
             f[:i] -= dij * periodic  # everything symmetric
+            # building virial (not yet benchmarked and very explicit
+            # fij = dij * periodic
+            # for j in range(0, nat):
+            #    for cart1 in range(0, 3):
+            #        for cart2 in range(cart1, 3):
+            #            vir[cart1][cart2] -= fij[j][cart1] * dij[j][cart2]
+            #            vir[cart2][cart1] = vir[cart1][cart2]
+            vir = (
+                -vir
+            )  # correcct sign? and what about volume scaling? seems not to be the case. Factor 1/2 alreafy there.
+        # DEBUG
+        print("virial", vir)
 
-        r["result"] = [v, f.reshape(nat * 3), np.zeros((3, 3), float), ""]
+        r["result"] = [v, f.reshape(nat * 3), vir, ""]
         r["status"] = "Done"
 
     def dmd_update(self):

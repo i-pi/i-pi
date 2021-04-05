@@ -1,4 +1,4 @@
-"""Holds the algorithms to perform driven MD with and external time dependent drive.
+"""Holds an algorithm to update an external time dependent drive.
    Should work with PBC.
 
 """
@@ -15,7 +15,13 @@ __all__ = ["DMD"]
 
 
 class DMD(Smotion):
-    """Metadynamics routine based on a FFPlumed forcefield.
+    """Class that updates the time step for a time-dependent forcefield.
+    Solves issues when a i-PI native time-dependent forcefield needs to be
+    called several times (several beads or replicas) at the same time step
+    and only when all evaluations have been performed the "time" of the forcecield
+    should be updated. Depending on how the actual forcefield is implemented, the
+    update step can be made more intricate than just a time increment.
+
 
     Attributes:
 
