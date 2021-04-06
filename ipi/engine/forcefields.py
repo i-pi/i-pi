@@ -557,7 +557,7 @@ class FFdmd(ForceField):
                 for cart1 in range(3):
                     for cart2 in range(3):
                         vir[cart1][cart2] += fij[j][cart1] * dij[j][cart2]
-            vir = -vir  # correcct sign? factor 1/2 ?
+            vir = -vir  # correct sign? factor 1/2 ?
         # DEBUG
         print("virial", vir)
 
