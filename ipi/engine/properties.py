@@ -453,7 +453,7 @@ class Properties(dobject):
             "atom_x_path": {
                 "dimension": "length",
                 "help": "The positions of all the beads of a particle given its index.",
-                "longhelp": """The positions of all the beads of a particle given its index. 
+                "longhelp": """The positions of all the beads of a particle given its index.
                         Takes an argument index (zero based).""",
                 "func": (
                     lambda atom="": np.asarray(

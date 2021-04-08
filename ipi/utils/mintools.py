@@ -60,6 +60,7 @@ __all__ = ["min_brent"]
 
 import numpy as np
 import math
+from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, info
 
 # Bracketing function
@@ -427,17 +428,17 @@ def min_approx(fdf, x0, fdf0, d0, big_step, tol, itmax):
         fdf0 = fdf(x0)
     f0, df0 = fdf0
     if d0 is None:
-        d0 = -df0 / np.sqrt(np.dot(df0.flatten(), df0.flatten()))
+        d0 = -df0 / np.linalg.norm(df0.flatten())
     x = np.zeros(n)
     alf = 1.0e-4
 
     # Step size
-    stepsum = np.sqrt(np.dot(d0.flatten(), d0.flatten()))
+    stepsum = np.linalg.norm(d0.flatten())
 
     # Scale if attempted step is too large
     if stepsum > big_step:
         info(" @MINIMIZE: Scaled step size for line search", verbosity.debug)
-        d0 = np.multiply(d0, big_step / stepsum)
+        d0 *= big_step / stepsum
 
     slope = np.dot(df0.flatten(), d0.flatten())
 
@@ -571,10 +572,10 @@ def BFGS(x0, d0, fdf, fdf0, invhessian, big_step, tol, itmax):
     d_g = np.subtract(g, g0)
     hdg = np.dot(invhessian, d_g.flatten())
 
-    fac = np.dot(d_g.flatten(), d_x.flatten())
+    fac = np.vdot(d_g, d_x)
     fae = np.dot(d_g.flatten(), hdg)
-    sumdg = np.dot(d_g.flatten(), d_g.flatten())
-    sumxi = np.dot(d_x.flatten(), d_x.flatten())
+    sumdg = np.vdot(d_g, d_g)
+    sumxi = np.vdot(d_x, d_x)
 
     # Skip update if not 'fac' sufficiently positive
     if fac > np.sqrt(zeps * sumdg * sumxi):
@@ -648,7 +649,7 @@ def BFGSTRM(x0, u0, f0, h0, tr, mapper, big_step):
             if tr > big_step:
                 tr[0] = big_step
 
-    # After accept, Update  Hessian
+    # After accept, update the Hessian
     d_f = np.subtract(f, f0)
     TRM_UPDATE(d_x.flatten(), d_f.flatten(), h0)
 
@@ -892,80 +893,115 @@ def L_BFGS(x0, d0, fdf, qlist, glist, fdf0, big_step, tol, itmax, m, scale, k):
     info(" @MINIMIZE: Updated search direction", verbosity.debug)
 
 
-def Damped_BFGS(x0, d0, fdf, fdf0, invhessian, big_step, tol, itmax):
-    """08.02.2021 Karen Fidanyan
-    Line search BFGS, damped as described in
-    Nocedal, Wright (2nd ed.) Procedure 18.2
-    The purpose is using it for NEB optimization
+# Damped BFGS to use in NEB. Has no line search and no TRM.
+def Damped_BFGS(x0, fdf, fdf0, invhessian, big_step):
+    """ BFGS, damped as described in
+        Nocedal, Wright (2nd ed.) Procedure 18.2
+        The purpose is mostly using it for NEB optimization, but it is capable of
+        plain geometry optimization also.
 
-    Does one step.
-    Arguments:
-        x0: initial point
-        d0: initial direction for line minimization
-        fdf: function and gradient (mapper)
-        fdf0: initial function and gradient value
-        big_step: limit on step length
-        tol: convergence tolerance
-        itmax: maximum number of allowed iterations
+        Currently it doesn't use min_approx, TRM or any other step determination,
+        just the simplest (invhessian dot gradient) step, as in aimsChain.
+        The reason is that both LS and TRM require energy, and the energy 
+        of NEB springs is somewhat ill-defined because of all projections that we do.
+        This may be improved later, but first we need to have NEB working.
+
+        Inside this function I use flattened vectors, restoring shape only when needed.
+        I always keep x0 in the original shape.
+
+        Does one step.
+
+        Arguments:
+          x0: initial point
+          fdf: function and gradient (mapper)
+          fdf0: initial function and gradient values
+          big_step: limit on step length. It is defined differently
+                      compared to other optimization algorithms, take care.
+
+        Returns:
+          quality: minus cosine of the (gradient, dx) angle. 
+                   Needed for the step length adjustment.
     """
 
-    info(" @MINIMIZE: Started BFGS", verbosity.debug)
-    u0, g0 = fdf0
+    info(" @DampedBFGS: Started.", verbosity.debug)
+    _, g0 = fdf0
+    g0 = g0.flatten()
 
-    # Maximum step size
-    n = len(x0.flatten())
-    linesum = np.dot(x0.flatten(), x0.flatten())
-    big_step = big_step * max(np.sqrt(linesum), n)
+#    if big_step > 0.5:
+#        softexit.trigger(" @DampedBFGS: ERROR: big_step is too big. "
+#                         "Damped_BFGS handles it differently from other algorithms, "
+#                         "see ipi/inputs/motion/neb.py:'biggest_step' to get an idea.\n"
+#                         "Current big_step value: %f." % big_step)
+    # Catch all Numpy warnings
+    old_settings = np.geterr()  # save seterr to restore it later
+    np.seterr(all='raise')
 
-    # Perform approximate line minimization in direction d0
-    x, u, g = min_approx(fdf, x0, fdf0, d0, big_step, tol, itmax)
-    d_x = np.subtract(x, x0)
+    # Calculate direction
+    sk = np.dot(invhessian, -g0)
+    info(" @DampedBFGS: Calculated direction.", verbosity.debug)
+
+    # Cosine of the (f, dx) angle
+    quality = - np.dot(sk / np.linalg.norm(sk), g0 / np.linalg.norm(g0))
+    info(" @DampedBFGS: Direction quality: %.4f." % quality, verbosity.debug)
+
+    # I use maximal cartesian atomic displacement as a measure of step length
+    maxdispl = np.amax(np.linalg.norm(sk.reshape(-1,3), axis=1))
+    info(" @DampedBFGS: big_step = %.6f" % big_step, verbosity.debug)
+    if maxdispl > big_step:
+        info(" @DampedBFGS: maxdispl before scaling: %.6f bohr" 
+             % maxdispl,
+             verbosity.debug)
+        sk *= big_step / maxdispl
+
+    info(" @DampedBFGS: maxdispl:                %.6f bohr"
+         % (np.amax(np.linalg.norm(sk.reshape(-1,3), axis=1))),
+         verbosity.debug)
+
+    _, g = fdf(x0 + sk.reshape(x0.shape))
+    g = g.flatten()
 
     # Update invhessian
-    d_g = np.subtract(g, g0)
-    fac = np.dot(d_g.flatten(), d_x.flatten())
+    yk = g - g0
+    # 1/rho_k in Nocedal notation (eq. 6.14)
+    invrhok = np.dot(yk, sk)
 
-    # Equation 18.15 in Nocedal, Wright (2nd ed.)
-    theta = 1
-    thres = 0.2 * np.dot(np.dot(d_x.flatten(), invhessian), d_x.flatten())
-
-    # Damped update if 'fac' isn't sufficiently positive
-    # fac is 1/rho_k, then just rho_k in Nocedal-Wright notation (eq. 6.14)
-    if fac < thres:
-        info(
-            " @MINIMIZE: Damped update of the invhessian; direction x gradient small",
-            verbosity.debug,
+    # Equation 18.15 in Nocedal
+    B = np.linalg.inv(invhessian)
+    theta = 1.
+    sBs = np.dot(np.dot(sk, B), sk)
+    # Damped update if rhok isn't sufficiently positive
+    if invrhok < 0.2 * sBs:
+        theta = (0.8 * sBs) / (sBs - invrhok)
+        info(" @DampedBFGS: Damped update of the invhessian; "
+             "(direction dot d_gradient) is small. "
+             "theta := %.6f" % theta,
+             verbosity.debug
         )
-        theta = (0.8 * thres) / (thres - fac)
-        d_g = theta * d_g + (1 - theta) * np.dot(invhessian, d_x.flatten())
-        fac = np.dot(d_g.flatten(), d_x.flatten())
+        yk = theta * yk + (1 - theta) * np.dot(B, sk)
+        invrhok = np.dot(yk, sk)
     else:
-        info(" @MINIMIZE: Update of the invhessian", verbosity.debug)
+        info(" @DampedBFGS: Update of the invhessian", verbosity.debug)
 
-    hdg = np.dot(invhessian, d_g.flatten())
-    fae = np.dot(d_g.flatten(), hdg)
-
+    info(" @DampedBFGS: invrhok before reciprocating: %e" % invrhok, verbosity.debug)
     try:
-        fac = 1.0 / fac
-    except ZeroDivisionError:
-        fac = 1e5
-    try:
-        fad = 1.0 / fae
-    except ZeroDivisionError:
-        fad = 1e5
+        rhok = 1. / invrhok
+    except:
+        info(" @DampedBFGS: caught ZeroDivisionError in 1/rhok.", verbosity.debug)
+        rhok = 1e+5
 
     # Compute BFGS term
-    # KF: I kept the expression from BFGS,
-    #     it should be correct with damped d_g and fac.
-    dg = np.subtract((fac * d_x).flatten(), fad * hdg)
-    invhessian += (
-        np.outer(d_x, d_x) * fac - np.outer(hdg, hdg) * fad + np.outer(dg, dg) * fae
-    )
+    I= np.eye(len(sk))
+    A1 = I - rhok * np.outer(sk, yk)
+    A2 = I - rhok * np.outer(yk, sk)
+    # invhessian is passed to the optimizer as a link, so [:] assignment should be used.
+    invhessian[:] = np.dot(A1, np.dot(invhessian, A2)) + rhok * np.outer(sk, sk)
+    if np.isnan(invhessian).any():
+        softexit.trigger(" @DampedBFGS: Invhessian contains NaN.")
+#    print(" @DampedBFGS: Invhessian after update:")
+#    print(invhessian)
 
-    # Update direction
-    d = np.dot(invhessian, -g.flatten())
-    d0[:] = d.reshape(d_x.shape)
-    info(" @MINIMIZE: Updated search direction", verbosity.debug)
+    np.seterr(**old_settings)
+    return quality
 
 
 # Bracketing for NEB, TODO: DEBUG THIS IF USING SD OR CG OPTIONS FOR NEB
@@ -1303,20 +1339,19 @@ def L_BFGS_nls(
     dg = df0
 
     # Step size
-    stepsize = np.sqrt(np.dot(d0.flatten(), d0.flatten()))
+    stepsize = np.linalg.norm(d0.flatten())
 
     # First iteration; use initial step
     if k == 0:
         scale = 1.0
         while (
-            np.sqrt(np.dot(g.flatten(), g.flatten()))
-            >= np.sqrt(np.dot(df0.flatten(), df0.flatten()))
-            or np.isnan(np.sqrt(np.dot(g.flatten(), g.flatten()))) is True
-            or np.isinf(np.sqrt(np.dot(g.flatten(), g.flatten()))) is True
+            np.linalg.norm(g.flatten()) >= np.linalg.norm(df0.flatten())
+            or np.isnan(np.linalg.norm(g.flatten()))
+            or np.isinf(np.linalg.norm(g.flatten()))
         ):
             x = np.add(
                 x0,
-                (scale * init_step * d0 / np.sqrt(np.dot(d0.flatten(), d0.flatten()))),
+                (scale * init_step * d0 / np.linalg.norm(d0.flatten())),
             )
             scale *= 0.1
             fx, g = fdf(x)
@@ -1324,11 +1359,11 @@ def L_BFGS_nls(
 
         # Scale if attempted step is too large
         if stepsize > big_step:
-            d0 = big_step * d0 / np.sqrt(np.dot(d0.flatten(), d0.flatten()))
+            d0 = big_step * d0 /np.linalg.norm(d0.flatten()) 
             info(" @MINIMIZE: Scaled step size", verbosity.debug)
 
         x = np.add(x0, d0)
-        print("step size:", np.sqrt(np.dot(d0.flatten(), d0.flatten())))
+        print("step size:", np.linalg.norm(d0.flatten()))
         fx, g = fdf(x)
 
     info(" @MINIMIZE: Started L-BFGS", verbosity.debug)
@@ -1436,7 +1471,7 @@ def nichols(f0, f1, d, dynmax, m3, big_step, mode=1):
 
         d_x = alpha * (gE) / (lamb - d)
 
-        if d[0] < 0 or np.dot(d_x.flatten(), d_x.flatten()) > big_step ** 2:
+        if d[0] < 0 or np.vdot(d_x, d_x) > big_step ** 2:
             lamb = d[0] - np.absolute(gE[0] / big_step)
             d_x = alpha * (gE) / (lamb - d)
 

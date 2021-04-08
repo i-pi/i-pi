@@ -103,12 +103,12 @@ class InputNEB(InputDictionary):
 #                "dimension": "force",
 #            },
 #        ),
-        "old_potential": (
+        "old_nebpotential": (
             InputArray,
             {
                 "dtype": float,
                 "default": input_default(factory=np.zeros, args=(0,)),
-                "help": "Previous bead potentials.",
+                "help": "Previous NEB potential energy, which includes spring energy.",
             },
         ),
         "old_nebgradient": (
@@ -230,7 +230,7 @@ class InputNEB(InputDictionary):
         self.mode.store(neb.mode)
         self.old_coord.store(neb.old_x)
 #        self.old_force.store(neb.old_f)
-        self.old_potential.store(neb.pot)
+        self.old_nebpotential.store(neb.nebpot)
         self.old_nebgradient.store(neb.nebgrad)
         self.old_direction.store(neb.d)
         self.biggest_step.store(neb.big_step)

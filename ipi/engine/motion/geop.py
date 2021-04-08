@@ -17,7 +17,7 @@ import time
 from ipi.engine.motion import Motion
 from ipi.utils.depend import dstrip, dobject
 from ipi.utils.softexit import softexit
-from ipi.utils.mintools import min_brent, BFGS, BFGSTRM, L_BFGS
+from ipi.utils.mintools import min_brent, BFGS, BFGSTRM, L_BFGS, Damped_BFGS
 from ipi.utils.messages import verbosity, info
 
 
@@ -115,6 +115,9 @@ class GeopMotion(Motion):
             self.optimizer = SDOptimizer()
         elif self.mode == "cg":
             self.optimizer = CGOptimizer()
+        elif self.mode == "damped_bfgs":
+            self.invhessian = invhessian_bfgs
+            self.optimizer = Damped_BFGSOptimizer()
         else:
             self.optimizer = DummyOptimizer()
 
@@ -720,6 +723,102 @@ class LBFGSOptimizer(DummyOptimizer):
         self.forces.transfer_forces(
             self.gm.dforces
         )  # This forces the update of the forces
+
+        # Exit simulation step
+        d_x_max = np.amax(np.absolute(np.subtract(self.beads.q, self.old_x)))
+        self.exitstep(self.forces.pot, self.old_u, d_x_max)
+
+
+class Damped_BFGSOptimizer(DummyOptimizer):
+    """ Damped BFGS Minimization according to
+        the Procedure 18.2 in Nocedal-Wright (2nd ed, ISBN-13: 978-0387-30303-1).
+        It is meant to be used in NEB only.
+        One of the differences is that it uses neither TRM
+        nor line search, because the potential is ill-defined for NEB.
+        It just takes the step suggested from invhessian and force
+        and downscales it if it's too big.
+        Therefore it's MUCH WORSE than the other BFGS versions for geometry optimization.
+        It is kept here for testing mainly, to prove that
+        the algorithm works for optimization problems.
+    """
+
+    def bind(self, geop):
+        # call bind function from DummyOptimizer
+        super(Damped_BFGSOptimizer, self).bind(geop)
+
+        if geop.invhessian.size != (self.beads.q.size * self.beads.q.size):
+            if geop.invhessian.size == 0:
+                geop.invhessian = np.eye(self.beads.q.size, self.beads.q.size, 0, float)
+            else:
+                raise ValueError("Inverse Hessian size does not match system size")
+
+        self.invhessian = geop.invhessian
+        self.gm.bind(self)
+        self.big_step = geop.big_step
+        self.ls_options = geop.ls_options
+
+    def step(self, step=None):
+        """Does one simulation time step.
+        Attributes:
+        qtime: The time taken in updating the positions.
+        """
+
+        self.qtime = -time.time()
+        info("\nMD STEP %d" % step, verbosity.debug)
+
+        self.old_x[:] = self.beads.q
+        self.old_u[:] = self.forces.pot
+        self.old_f[:] = self.forces.f
+
+        if len(self.fixatoms) > 0:
+            for dqb in self.old_f:
+                dqb[self.fixatoms * 3] = 0.0
+                dqb[self.fixatoms * 3 + 1] = 0.0
+                dqb[self.fixatoms * 3 + 2] = 0.0
+
+            fdf0 = (self.old_u, -self.old_f[:, self.gm.fixatoms_mask])
+
+            # Reduce dimensionality
+            masked_old_x = self.old_x[:, self.gm.fixatoms_mask]
+            masked_invhessian = self.invhessian[
+                np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)
+            ]
+
+            # Do one iteration of Damped_BFGS
+            # The invhessian and the directions are updated inside.
+            # Everything passed inside Damped_BFGS() in masked form, including the invhessian
+            Damped_BFGS(
+                masked_old_x,
+                self.gm,
+                fdf0,
+                masked_invhessian,
+                self.big_step,
+            )
+
+            # Restore dimensionality of the invhessian
+            self.invhessian[
+                np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)
+            ] = masked_invhessian
+
+        else:
+            fdf0 = (self.old_u, -self.old_f)
+
+            # Do one iteration of Damped_BFGS
+            # The invhessian and the directions are updated inside.
+            Damped_BFGS(
+                self.old_x,
+                self.gm,
+                fdf0,
+                self.invhessian,
+                self.big_step,
+            )
+
+        info("   Number of force calls: %d" % (self.gm.fcount))
+        self.gm.fcount = 0
+        # Update positions
+        self.beads.q = self.gm.dbeads.q
+        # This enforces the update of the forces
+        self.forces.transfer_forces(self.gm.dforces)
 
         # Exit simulation step
         d_x_max = np.amax(np.absolute(np.subtract(self.beads.q, self.old_x)))

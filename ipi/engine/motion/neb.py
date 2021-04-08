@@ -187,8 +187,10 @@ class NEBLineMapper(object):
 
 
 class NEBGradientMapper(object):
-    """Creation of the multi-dimensional function that will be minimized.
-       Functional analog of a GradientMapper in geop.py
+    """ Creation of the multi-dimensional function that will be minimized.
+        Functional analog of a GradientMapper in geop.py
+
+        Fixed atoms are excluded via boolean mask. 1 = moving, 0 = fixed.
 
     Attributes:
 #        x0: initial position
@@ -206,21 +208,31 @@ class NEBGradientMapper(object):
         self.dbeads = ens.beads.copy()
         self.dcell = ens.cell.copy()
         self.dforces = ens.forces.copy(self.dbeads, self.dcell)
+        self.fixatoms = ens.fixatoms.copy()
+
+        # Mask to exclude fixed atoms from 3N-arrays
+        self.fixatoms_mask = np.ones(3 * ens.beads.natoms, dtype=bool)
+        if len(ens.fixatoms) > 0:
+            self.fixatoms_mask[3 * ens.fixatoms] = 0
+            self.fixatoms_mask[3 * ens.fixatoms + 1] = 0
+            self.fixatoms_mask[3 * ens.fixatoms + 2] = 0
 
     def __call__(self, x):
         """ Returns the potential for all beads and the gradient.
         """
 
         # Bead positions
-        self.dbeads.q = x
-        bq = self.dbeads.q
+        # Touch positions only if they have changed (to avoid triggering forces)
+        if (self.dbeads.q[:, self.fixatoms_mask] != x).any():
+            self.dbeads.q[:, self.fixatoms_mask] = x
+        bq = self.dbeads.q[:, self.fixatoms_mask]
 #        print("bq [bohr]:")
 #        print(bq)
 
         # Forces
-        bf = self.dforces.f.copy()
-#        print("bf [atomic]:")
-#        print(bf)
+        bf = self.dforces.f.copy()[:, self.fixatoms_mask]
+        print("bf [atomic]:")
+        print(bf)
         # Zeroing endpoint forces
         bf[0,:] = bf[-1,:] = 0.
 
@@ -231,7 +243,7 @@ class NEBGradientMapper(object):
         nimg = self.dbeads.nbeads
 
         # Number of atoms
-        nat = self.dbeads.natoms
+        nat = self.dbeads.natoms - len(self.fixatoms)
 
         # Array for spring constants
         kappa = np.zeros(nimg)
@@ -327,23 +339,23 @@ class NEBGradientMapper(object):
                 * btau[ii]
             )
 
-#        print("NEB forces in NEBGradientMapper.call:")
-#        print(bf)
+        print("NEB forces in NEBGradientMapper.call:")
+        print(bf)
 
         # Including spring energy into potential (experimental)
         # The reason for having such term is that many optimization algorithms
         # need energy for line search or TRM update.
         for ii in range(1, nimg - 1):
             dl = (npnorm(bq[ii + 1] - bq[ii]) - npnorm(bq[ii] - bq[ii - 1]))
-            be[ii] += kappa[ii] * dl * dl
+            be[ii] += 0.5 * kappa[ii] * dl * dl
 
         # Return forces and the total potential energy of the band
         e = be.sum()
         g = -bf
-        print("Sum of E_pot of all beads in NEBGradientMapper.call:")
-        print(e)
-        print("NEB gradient in NEBGradientMapper.call:")
-        print(g)
+#        print("Sum of E_pot of all beads in NEBGradientMapper.call:")
+#        print(e)
+#        print("NEB gradient in NEBGradientMapper.call:")
+#        print(g)
         return e, g
 
 
@@ -355,7 +367,7 @@ class NEBMover(Motion):
         biggest_step: maximum step size for BFGS/L-BFGS
         old_force: force from previous iteration (not NEB-projected)
         old_direction: direction from previous iteration
-        old_potential: bead potentials from previous iteration
+        old_nebpotential: bead potentials from previous iteration
         old_nebgradient: gradient wrt springs from previous iteration
         invhessian_bfgs: inverse Hessian for (damped) BFGS
         ls_options:
@@ -383,12 +395,11 @@ class NEBMover(Motion):
         self,
         fixcom=False,
         fixatoms=None,
-        # mode="lbfgs",
-        mode="bfgs",
-        biggest_step=1.0,
+        mode="damped_bfgs",
+        biggest_step=0.5,
         old_coord=np.zeros(0, float),
         old_force=np.zeros(0, float),
-        old_potential=np.zeros(0, float),
+        old_nebpotential=np.zeros(0, float),
         old_nebgradient=np.zeros(0, float),
         old_direction=np.zeros(0, float),
         invhessian_bfgs=np.eye(0),
@@ -417,9 +428,14 @@ class NEBMover(Motion):
         self.tolerances = tolerances
         self.mode = mode
         self.big_step = biggest_step
+        if self.big_step > 0.5:
+            softexit.trigger(" @DampedBFGS: ERROR: big_step is too big. "
+                             "Damped_BFGS handles it differently from other algorithms, "
+                             "see ipi/inputs/motion/neb.py:'biggest_step' to get an idea.\n"
+                             "Current big_step value: %f." % big_step)
         self.old_x = old_coord
 #        self.old_f = old_force
-        self.pot = old_potential
+        self.nebpot = old_nebpotential
         self.nebgrad = old_nebgradient
         self.d = old_direction
         self.invhessian = invhessian_bfgs
@@ -449,22 +465,28 @@ class NEBMover(Motion):
                 self.d = np.zeros(beads.q.shape, float)
             else:
                 raise ValueError("Direction size does not match system size.")
+        # I don't reduce dimensionality of the invhessian from the beginning,
+        # because someone may want to provide existing invessian of the full system.
         if (self.mode in ["damped_bfgs", "bfgs", "bfgstrm"]
             and self.invhessian.size != (beads.q.size * beads.q.size)
         ):
             if self.invhessian.size == 0:
-                self.invhessian = np.eye(
-                    beads.q.flatten().size, beads.q.flatten().size, 0, float
-                )
+                self.invhessian = np.eye(beads.q.size, dtype=float)
             else:
                 raise ValueError("Inverse Hessian size does not match system size.")
 
-#        self.neblm.bind(self)
+        if len(self.fixatoms) == len(self.beads[0]):
+            softexit.trigger(
+                "WARNING: all atoms are fixed, geometry won't change. Exiting simulation"
+            )
+
         self.nebgm.bind(self)
 
 
     def step(self, step=None):
-        """Does one simulation time step."""
+        """ Does one simulation time step.
+            Dimensionality is reduced in the very beginning.
+        """
 
         info(" @NEB STEP %d" % step, verbosity.debug)
 
@@ -476,24 +498,23 @@ class NEBMover(Motion):
         elif not self.climb:
             # Fetch spring constants
             self.nebgm.kappa = self.spring["kappa"]
-#            self.neblm.kappa = self.spring["kappa"]
 
             self.ptime = self.ttime = 0
             self.qtime = -time.time()
 
-            if self.mode in ["damped_bfgs", "bfgs", "bfgstrm"]:
-                # BFGS minimization
-                if step == 0:
+            if self.mode in ["damped_bfgs", ]:
+                # BFGS-family algorithms
+                if step == 0: # need to add a condition when after the endpoints.
                     # Initialize direction to the steepest descent direction
                     info(" @NEB: calling NEBGradientMapper at step 0.", verbosity.debug)
-                    self.pot, self.nebgrad = self.nebgm(self.beads.q)
-                    info(" @NEB: NEBGradientMapper returned pot and nebgrad.",
+                    self.nebpot, self.nebgrad = self.nebgm(self.beads.q[:, self.nebgm.fixatoms_mask])
+                    info(" @NEB: NEBGradientMapper returned nebpot and nebgrad.",
                          verbosity.debug)
 
                     # Set the initial direction to the direction of NEB forces
                     self.d = -self.nebgrad
-                    self.old_x = self.beads.q.copy()
-#                    self.old_f = self.forces.f.copy()
+                    self.old_x = self.beads.q.copy()[:, self.nebgm.fixatoms_mask]
+#                    self.old_f = self.forces.f.copy()[:, self.nebgm.fixatoms_mask]
 
                     # Inverse Hessian for BFGS should be
                     # initialized in bind(), but better to check. (remove in cleanup)
@@ -502,81 +523,95 @@ class NEBMover(Motion):
                         softexit.trigger("Invhessian not initialized correctly in NEB.")
 
                 # Self instances will be updated in the optimizer, so we store the copies.
-                # old_pot is used later as a convergence criterion.
-                old_pot, old_nebgrad = (self.pot.copy(), self.nebgrad.copy())
+                # old_nebpot is used later as a convergence criterion.
+                old_nebpot, old_nebgrad = (self.nebpot.copy(), self.nebgrad.copy())
 
-                # Ensure zero displacements of the endpoints
+                # Ensure zero displacements on the endpoints
                 self.d[0, :] = self.d[-1, :] = 0.
 
+                # Reducing dimension of the invhessian before passing it to optimizer
+                masked_invhessian = self.invhessian[
+                    np.ix_(np.tile(self.nebgm.fixatoms_mask, self.beads.nbeads),
+                           np.tile(self.nebgm.fixatoms_mask, self.beads.nbeads)
+                    )
+                ]
+
                 if self.mode == "damped_bfgs":
-                    info(" @NEB: before Damped_BFGS call", verbosity.debug)
-                    Damped_BFGS(
-                        x0=self.beads.q,
-                        fdf=self.nebgm,
-                        fdf0=(self.pot, self.nebgrad),
-                        invhessian=self.invhessian,
-                        big_step=self.big_step,
-                    )
-                    info(" @NEB: after Damped_BFGS call", verbosity.debug)
-                elif self.mode == "bfgs":
-                    info(" @NEB: before BFGS call", verbosity.debug)
-                    BFGS(
-                        x0=self.beads.q,
-                        d0=self.d,
-                        fdf=self.nebgm,
-                        fdf0=(self.pot, self.nebgrad),
-                        invhessian=self.invhessian,
-                        big_step=self.big_step,
-                        tol=self.ls_options["tolerance"] * self.tolerances["energy"],
-                        itmax=self.ls_options["iter"],
-                    )
-                    info(" @NEB: after BFGS call", verbosity.debug)
-                elif self.mode == "bfgstrm":
-                    softexit.trigger("BFGSTRM doesn't work yet.")
-                    info(" @NEB: before BFGSTRM call", verbosity.debug)
-                    BFGSTRM(
-                        x0=self.beads.q,
-                        u0=self.pot,
-                        f0=self.nebgrad,
-                        h0=self.invhessian,
-                        tr=self.tr_trm,
-                        mapper=self.nebgm,
-                        big_step=self.big_step,
-                    )
-                    info(" @NEB: after BFGSTRM call", verbosity.debug)
+                    info(" @NEB: before Damped_BFGS() call", verbosity.debug)
+                    quality = Damped_BFGS(
+                                x0=self.old_x,
+                                fdf=self.nebgm,
+                                fdf0=(self.nebpot, self.nebgrad),
+                                invhessian=masked_invhessian,
+                                big_step=self.big_step,
+                              )
+                    info(" @NEB: after Damped_BFGS() call", verbosity.debug)
+
+                    # Let's try to make big_step brave enough
+                    if quality > 0.8:
+                        self.big_step *= 1.3
+                        info(" @NEB: increasing big_step to %.6f bohr." % self.big_step,
+                             verbosity.debug)
+                    elif quality > 0.6:
+                        self.big_step *= 1.1
+                        info(" @NEB: increasing big_step to %.6f bohr." % self.big_step,
+                             verbosity.debug)
+                    else:
+                        self.big_step *= 0.5
+                        info(" @NEB: Step direction far from nebgrad, "
+                             "reducing big_step to %.6f bohr." % self.big_step,
+                             verbosity.debug)
+
+#                elif self.mode == "bfgs":
+#                    info(" @NEB: before BFGS call", verbosity.debug)
+#                    BFGS(
+#                        x0=self.old_x,
+#                        d0=self.d,
+#                        fdf=self.nebgm,
+#                        fdf0=(self.nebpot, self.nebgrad),
+#                        invhessian=masked_invhessian,
+#                        big_step=self.big_step,
+#                        tol=self.ls_options["tolerance"] * self.tolerances["energy"],
+#                        itmax=self.ls_options["iter"],
+#                    )
+#                    info(" @NEB: after BFGS call", verbosity.debug)
+#                elif self.mode == "bfgstrm":
+#                    softexit.trigger("BFGSTRM doesn't work yet.")
                 else:
                     softexit.trigger("NEBMover has a bug in BFGS-family options.")
 
-                # Update positions and forces
-                self.beads.q = self.nebgm.dbeads.q
+                # Restore dimensionality of the invhessian
+                self.invhessian[
+                    np.ix_(np.tile(self.nebgm.fixatoms_mask, self.beads.nbeads),
+                           np.tile(self.nebgm.fixatoms_mask, self.beads.nbeads)
+                    )
+                ] = masked_invhessian
+
+                # Update positions
+                self.beads.q[:] = self.nebgm.dbeads.q
                 info(" @NEB: bead positions updated.", verbosity.debug)
-                # This transfers forces from the mapper
-                # so that recalculation won't be triggered.
-                self.forces.transfer_forces(self.nebgm.dforces)
 
-# Temporarily commented, but it is needed for convergence.
-# It seems that this block breaks relaxation process...
-#                # I call the mapper again and hope that it won't trigger recalculation of forces
-#                print(" @NEB: Before re-calling NEBGradientMapper")
-#                self.pot, self.nebgrad = self.nebgm(self.beads.q)
-#                print(" @NEB: After re-calling NEBGradientMapper")
-
-                print("Properties after (damped) BFGS call:")
+                print(" @NEB: Before re-calling NEBGradientMapper")
+                self.nebpot, self.nebgrad = self.nebgm(
+                    self.beads.q[:, self.nebgm.fixatoms_mask])
+                print(" @NEB: After re-calling NEBGradientMapper")
+#                print("Properties after calling a BFGS-family optimizer:")
                 print("old_nebgrad:")
                 print(old_nebgrad)
                 print("self.nebgrad:")
                 print(self.nebgrad)
-#                print("self.old_f:")
-#                print(self.old_f)
-                print("self.forces.f:")
-                print(self.forces.f)
 
                 # dx = current position - previous position.
                 # Use to determine converged minimization
-                dx = np.amax(np.abs(self.beads.q - self.old_x))
+                dx = np.amax(
+                        np.abs(self.beads.q[:, self.nebgm.fixatoms_mask] - self.old_x)
+                     )
 
                 # Store old positions
-                self.old_x[:] = self.beads.q
+                self.old_x[:] = self.beads.q[:, self.nebgm.fixatoms_mask]
+                # This transfers forces from the mapper to the "main" beads,
+                # so that recalculation won't be triggered after the step.
+                self.forces.transfer_forces(self.nebgm.dforces)
 
 
             # TODO: Routines for L-BFGS, SD, CG
@@ -587,9 +622,10 @@ class NEBMover(Motion):
 
             self.qtime += time.time()
 
+
             # Check convergence criteria
             if (
-                (np.amax(np.abs(self.pot - old_pot)) / (self.beads.nbeads * self.beads.natoms)
+                (np.amax(np.abs(self.nebpot - old_nebpot)) / (self.beads.nbeads * self.beads.natoms)
                     <= self.tolerances["energy"]
                 )
                 and (np.amax(np.abs(self.nebgrad)) <= self.tolerances["force"])
@@ -599,13 +635,18 @@ class NEBMover(Motion):
             else:
                 info(
                     " @NEB: Not converged, deltaEnergy = %.8f, tol = %.8f per atom"
-                    % (np.amax(np.abs(self.pot - old_pot)) / (self.beads.nbeads * self.beads.natoms),
+                    % (np.amax(np.abs(self.nebpot - old_nebpot)) / (self.beads.nbeads * self.beads.natoms),
                        self.tolerances["energy"]),
                     verbosity.debug,
                 )
                 info(
                     " @NEB: Not converged, nebgrad = %.8f, tol = %f"
                     % (np.amax(np.abs(self.nebgrad)), self.tolerances["force"]),
+                    verbosity.debug,
+                )
+                info(
+                    " @NEB: Not converged, deltaX = %.8f"
+                    % dx,
                     verbosity.debug,
                 )
                 info(
