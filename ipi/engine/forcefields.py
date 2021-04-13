@@ -482,10 +482,6 @@ class FFdmd(ForceField):
            pars: Optional dictionary, giving the parameters needed by the driver.
         """
 
-        # check input - PBCs are not implemented here
-        #        if dopbc:
-        #            raise ValueError("Periodic boundary conditions are not supported by FFdmd.")
-
         # a socket to the communication library is created or linked
         super(FFdmd, self).__init__(latency, name, pars, dopbc=dopbc, threaded=threaded)
 
@@ -540,9 +536,7 @@ class FFdmd(ForceField):
             #            rij = np.sqrt((dij ** 2).sum(axis=1))
             # KF's implementation:
             dij, rij = vector_separation(cell_h, cell_ih, q[i], q[:i])
-            cij = self.coupling[
-                i * (i - 1) // 2 : i * (i + 1) // 2
-            ]  # Check this again...
+            cij = self.coupling[i * (i - 1) // 2 : i * (i + 1) // 2]
             prefac = np.dot(
                 cij, rij
             )  # for each i it has the distances to all indexes previous
@@ -551,15 +545,14 @@ class FFdmd(ForceField):
             nij *= -(cij / rij)[:, np.newaxis]  # magic line...
             f[i] += nij.sum(axis=0) * periodic
             f[:i] -= nij * periodic  # everything symmetric
-            # building virial (not yet benchmarked)
+            # virial:
             fij = nij * periodic
             for j in range(i):
                 for cart1 in range(3):
                     for cart2 in range(3):
                         vir[cart1][cart2] += fij[j][cart1] * dij[j][cart2]
-            vir = -vir  # correct sign? factor 1/2 ?
-        # DEBUG
-        print("virial", vir)
+            # MR 2021: The virial looks correct and produces stable NPT simulations. It was not bullet-proof benchmarked, though.
+            #          Because this is "out of equilibrium" I still did not find a good benchmark. Change cell and look at variation of energy only for this term?
 
         r["result"] = [v, f.reshape(nat * 3), vir, ""]
         r["status"] = "Done"
