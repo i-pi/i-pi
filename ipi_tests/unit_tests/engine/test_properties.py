@@ -9,7 +9,7 @@ import numpy as np
 import numpy.testing as npt
 
 import ipi.engine.properties
-from ipi_tests.unit_tests.common import xyz_generator as xyz_gen
+from ..common import xyz_generator as xyz_gen
 
 test_Trajectories_print_traj_prms = [
     # natoms, nbeads, bead, cell, cell_units, property_, property_units, format_, units_conversion

@@ -2,7 +2,12 @@
 import socket
 import argparse
 import numpy as np
-from pes import *
+
+try:
+    from pes import *
+except ImportError:
+    # when in an installed i-PI package
+    from ipi._driver.pes import *
 
 description = """
 Minimal example of a Python driver connecting to i-PI and exchanging energy, forces, etc.

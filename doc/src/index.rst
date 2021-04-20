@@ -28,6 +28,13 @@ been privileged over speed. Still, the implementation of i-PI is
 efficient enough that it can be used with empirical forcefields to
 perform simple benchmarks and preparatory simulations.
 
+The documentation including the python help strings of the keywords is
+best accessed through the latex-generated PDF file that can be compiled from the code
+repository for the most recent version or downloaded from here (static
+version updated periodically): `manual-pdf`_
+
+.. _manual-pdf: ./_static/manual.pdf
+
 This documentation is structured as follows:
 
 .. toctree::
@@ -40,4 +47,5 @@ This documentation is structured as follows:
    input-reference
    troubleshooting
    faq
+   contributing
    bibliography
