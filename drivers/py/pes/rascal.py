@@ -41,7 +41,7 @@ class Rascal_driver(Dummy_driver):
             sys.exit(self.error_msg)
 
         self.rascal_calc = RascalCalc(self.model, True, self.template)
-        
+
     def __call__(self, cell, pos):
         """Get energies, forces, and stresses from the librascal model"""
         pos_rascal = unit_to_user("length", "angstrom", pos)
