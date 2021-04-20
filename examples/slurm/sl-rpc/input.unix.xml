@@ -1,0 +1,51 @@
+<simulation verbosity="high">
+  <total_steps>10000</total_steps>
+  <ffsocket mode='unix' name='full' pbc='true'>
+    <latency>  1.00000000e-03</latency>
+    <port> 13234 </port>
+    <address> full </address>
+  </ffsocket>
+  <ffsocket mode='unix' name='beads' pbc='true'>
+    <latency>  1.00000000e-03</latency>
+    <port> 13235 </port>
+    <address> beads </address>
+    <activelist>[128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139] </activelist>
+  </ffsocket>
+  <ffsocket mode='unix' name='contracted' pbc='true'>
+    <latency>  1.00000000e-03</latency>
+    <port> 13236 </port>
+    <address> contracted </address>
+    <activelist>[128, 129, 130, 131, 132, 133, 134, 135, 136, 137, 138, 139]</activelist>
+  </ffsocket>
+
+  <output prefix='simulation'>
+    <trajectory stride='100' filename='pos' cell_units='angstrom'>positions{angstrom}</trajectory>
+    <properties stride='10'> [ step, time, conserved, temperature{kelvin}, kinetic_md, kinetic_cv, potential ] </properties>
+  </output>
+  <prng>
+    <seed>18885</seed>
+  </prng>
+  <system>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <timestep units='femtosecond'> 0.25 </timestep>
+        <thermostat mode='pile_l'>
+          <tau units='femtosecond'>100</tau>
+        </thermostat>
+      </dynamics>
+    </motion>
+    <forces>
+      <force forcefield='full' nbeads='1' weight="1.0"/>
+      <force forcefield='beads' nbeads='32' weight="1.0"/>
+      <force forcefield='contracted' nbeads='1' weight="-1.0"/>
+    </forces>
+    <initialize nbeads='32'>
+      <file mode='xyz'> init.xyz </file>
+      <cell mode='abc' units='angstrom'> [ 17.1404, 19.792, 30.00 ] </cell>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <ensemble>
+      <temperature units='kelvin'> 300.0 </temperature>
+    </ensemble>
+  </system>
+</simulation>

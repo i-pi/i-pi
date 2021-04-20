@@ -1,0 +1,30 @@
+# 22.02.2021
+dimension    3
+boundary    p p p
+
+atom_style    atomic
+
+units        metal
+
+read_data    data.full
+mass    1    12
+mass    2    1
+
+group    C    type    1
+group    H    type    2
+
+neighbor    0.5    bin
+neigh_modify    delay    1
+
+
+pair_style    airebo    3    1    1
+
+pair_coeff    * *    ../CH.airebo    C    H
+
+timestep	0.00025
+
+#fix 1 all ipi full 13234 unix
+fix 1 all ipi localhost 13234
+
+run		1000000000
+
