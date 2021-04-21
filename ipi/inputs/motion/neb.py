@@ -210,9 +210,21 @@ class InputNEB(InputDictionary):
                 "help": "Uniform or variable spring constants along the elastic band",
             },
         ),
-        "climb": (
+        "stage": (
             InputValue,
-            {"dtype": bool, "default": False, "help": "Use climbing image NEB"},
+            {
+                "dtype": str,
+                "options": ["endpoints", "neb", "climb"],
+                "default": "neb",
+                "help": "Stage of the NEB pipeline: optimization of endpoints, "
+                        "NEB itself, climbing image",
+            },
+        ),
+        "use_climb": (
+            InputValue,
+            {"dtype": bool,
+             "default": False,
+             "help": "Use climbing image NEB or not"},
         ),
     }
 
@@ -240,7 +252,8 @@ class InputNEB(InputDictionary):
         self.tr_trm.store(neb.tr_trm)
         self.endpoints.store(neb.endpoints)
         self.spring.store(neb.spring)
-        self.climb.store(neb.climb)
+        self.stage.store(neb.stage)
+        self.use_climb.store(neb.use_climb)
         self.scale_lbfgs.store(neb.scale)
 
     def fetch(self):
