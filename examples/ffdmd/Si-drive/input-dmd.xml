@@ -6,7 +6,7 @@
   </ffsocket>
   <ffdmd name='timeperiod' pbc='True' threaded='False'>
     <dmd_coupling mode='file'>coupling.dat</dmd_coupling>
-    <dmd_freq units='inversecm'>559</dmd_freq>
+    <dmd_freq units='inversecm'>560</dmd_freq>
     <dmd_dt units='femtosecond'>0.25</dmd_dt>
   </ffdmd>
   <output prefix='sim.20_K'>
