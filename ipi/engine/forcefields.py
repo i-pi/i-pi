@@ -971,7 +971,7 @@ class FFsGDML(ForceField):
             )
         except ValueError:
             raise ValueError(
-                "ERROR: Reading sGDML model " + self.model + " file failed."
+                "ERROR: Reading sGDML model " + self.sGDML_model + " file failed."
             )
 
         if "r_unit" in self.model and "e_unit" in self.model:
