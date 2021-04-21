@@ -222,15 +222,37 @@ class NEBGradientMapper(object):
         # self.rpots = self.reduced_forces.pots  # reduced energy
         # self.rforces = self.reduced_forces.f  # reduced gradient
 
-    def get_tangents(bq=None, be=None):
-        """ Compute tangents.
-            The end images are distinct, fixed, pre-relaxed configurations.
-            Arguments:
-              bq - bead coordinates (nbeads, 3*natoms)
-              be - bead energies (nbeads)
-            Returns:
-              btau - array of tangents (nbeads, 3)
+    def __call__(self, x):
+        """ Returns the potential for all beads and the gradient.
         """
+
+        # Bead positions
+        # Touch positions only if they have changed (to avoid triggering forces)
+        # I need both dbeads and reduced_b because of the endpoint tangents.
+        if (self.dbeads.q[:, self.fixatoms_mask] != x).any():
+            self.dbeads.q[:, self.fixatoms_mask] = x
+        bq = self.dbeads.q[:, self.fixatoms_mask]
+#        if (self.reduced_b.q[:, self.fixatoms_mask] != x).any():
+#            self.reduced_b.q[:, self.fixatoms_mask] = x
+#        rbq = self.reduced_b.q[:, self.fixatoms_mask]
+
+        # Forces
+        bf = self.dforces.f.copy()[:, self.fixatoms_mask]
+        # Zeroing endpoint forces
+        bf[0,:] = bf[-1,:] = 0.
+
+        # Bead energies (needed for improved tangents)
+        be = self.dforces.pots.copy()
+
+        # Number of images
+        nimg = self.dbeads.nbeads
+
+        # Number of atoms
+        nat = self.dbeads.natoms - len(self.fixatoms)
+
+        # Array for spring constants
+        kappa = np.zeros(nimg)
+
         btau = np.zeros((nimg, 3 * nat), float)
         for ii in range(1, nimg - 1):
             d1 = bq[ii] - bq[ii - 1]  # tau minus
@@ -259,40 +281,6 @@ class NEBGradientMapper(object):
                 elif be[ii + 1] < be[ii - 1]:
                     btau[ii] = d2 * minpot + d1 * maxpot
             btau[ii] /= npnorm(btau[ii])
-        return btau
-
-    def __call__(self, x):
-        """ Returns the potential for all beads and the gradient.
-        """
-
-        # Bead positions
-        # Touch positions only if they have changed (to avoid triggering forces)
-        # I need both dbeads and reduced_b because of the endpoint tangents.
-        if (self.dbeads.q[:, self.fixatoms_mask] != x).any():
-            self.dbeads.q[:, self.fixatoms_mask] = x
-        bq = self.dbeads.q[:, self.fixatoms_mask]
-#        if (self.reduced_b.q[:, self.fixatoms_mask] != x).any():
-#            self.reduced_b.q[:, self.fixatoms_mask] = x
-#        rbq = self.reduced_b.q[:, self.fixatoms_mask]
-
-        # Forces
-        bf = self.dforces.f.copy()[:, self.fixatoms_mask]
-        # Zeroing endpoint forces
-        bf[0,:] = bf[-1,:] = 0.
-
-        # Bead energies (needed for improved tangents)
-        be = self.dforces.pots.copy()
-
-        # Number of images
-        nimg = self.dbeads.nbeads
-
-#        # Number of atoms
-#        nat = self.dbeads.natoms - len(self.fixatoms)
-
-        # Array for spring constants
-        kappa = np.zeros(nimg)
-
-        btau = self.get_tangents(bq, be)
 
         # if mode == "variablesprings":
         #    if mode == "ci":
@@ -392,7 +380,7 @@ class NEBClimbGrMapper(object):
         self.reduced_b = Beads(ens.beads.natoms, 1)
         self.dcell = ens.cell.copy()
         self.reduced_forces = ens.forces.copy(self.reduced_b, self.dcell)
-        self.rforces = self.reduced_forces.f  # reduced gradient
+#        self.rforces = self.reduced_forces.f  # reduced gradient
 
     def __call__(self, x):
         """ Returns climbing force for a climbing image.
@@ -406,7 +394,7 @@ class NEBClimbGrMapper(object):
         rbq = self.reduced_b.q[:, self.fixatoms_mask]
 
         # Reduced forces
-        rbf = self.rforces.copy()[:, self.fixatoms_mask]
+        rbf = self.reduced_forces.f.copy()[:, self.fixatoms_mask]
 
         # I think here it's better to use plain tangents.
         # Then we don't need energies of the neighboring beads.
@@ -512,6 +500,7 @@ class NEBMover(Motion):
         self.endpoints = endpoints
         self.spring = spring
         self.use_climb = use_climb
+        self.stage = stage
         self.scale = scale_lbfgs
 
         self.neblm = NEBLineMapper()
