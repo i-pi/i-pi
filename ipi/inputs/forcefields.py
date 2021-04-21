@@ -5,6 +5,7 @@
 # See the "licenses" directory for full license information.
 
 
+from copy import copy
 import numpy as np
 
 from ipi.engine.forcefields import (
@@ -15,12 +16,12 @@ from ipi.engine.forcefields import (
     FFPlumed,
     FFYaff,
     FFsGDML,
+    FFCommittee,
 )
 from ipi.interfaces.sockets import InterfaceSocket
 import ipi.engine.initializer
 from ipi.inputs.initializer import *
 from ipi.utils.inputvalue import *
-
 
 __all__ = [
     "InputFFSocket",
@@ -29,6 +30,7 @@ __all__ = [
     "InputFFPlumed",
     "InputFFYaff",
     "InputFFsGDML",
+    "InputFFCommittee",
 ]
 
 
@@ -69,7 +71,7 @@ class InputForceField(Input):
             },
         ),
         "threaded": (
-            InputValue,
+            InputAttribute,
             {
                 "dtype": bool,
                 "default": False,
@@ -618,4 +620,156 @@ class InputFFsGDML(InputForceField):
             latency=self.latency.fetch(),
             dopbc=self.pbc.fetch(),
             threaded=self.threaded.fetch(),
+        )
+
+
+class InputFFCommittee(InputForceField):
+    default_help = """Combines multiple forcefields to build a committee model, that can 
+                      be used to compute uncertainty-quantified machine-learning models. 
+                      Each forcefield can be any of the other FF objects, and each should
+                      be used with a client that generates a slightly different estimation
+                      of energy and forces. These are averaged, and the mean used as the 
+                      actual forcefield. Statistics about the distribution are also returned
+                      as extras fields, and can be printed for further postprocessing. 
+                      Also contains options to use it for uncertainty estimation and for
+                      active learning in a ML context, based on a committee model.
+                      Implements the approaches discussed in DOI: 10.1063/5.0036522.
+                      """
+    default_label = "FFCOMMITTEE"
+
+    dynamic = {
+        "ffsocket": (InputFFSocket, {"help": InputFFSocket.default_help}),
+        "fflj": (InputFFLennardJones, {"help": InputFFLennardJones.default_help}),
+        "ffdebye": (InputFFDebye, {"help": InputFFDebye.default_help}),
+        "ffplumed": (InputFFPlumed, {"help": InputFFPlumed.default_help}),
+        "ffyaff": (InputFFYaff, {"help": InputFFYaff.default_help}),
+        "ffsgdml": (InputFFsGDML, {"help": InputFFsGDML.default_help}),
+    }
+
+    fields = copy(InputForceField.fields)
+
+    fields["weights"] = (
+        InputArray,
+        {
+            "dtype": float,
+            "default": np.array([]),
+            "help": """List of weights to be given to the forcefields. Defaults to 1 for each FF. 
+                Note that the components are divided by the number of FF, and so the default corresponds to an average.""",
+        },
+    )
+    fields["alpha"] = (
+        InputValue,
+        {
+            "dtype": float,
+            "default": 1.0,
+            "help": "Scaling of the variance of the model, corresponding to a calibration of the error ",
+        },
+    )
+
+    fields["baseline_name"] = (
+        InputValue,
+        {
+            "dtype": str,
+            "default": "",
+            "help": """Name of the forcefield object that should be treated as the baseline for a weighted baseline model.""",
+        },
+    )
+
+    fields["baseline_uncertainty"] = (
+        InputValue,
+        {
+            "dtype": float,
+            "default": -1.0,
+            "dimension": "energy",
+            "help": """Corresponds to the expected error of the baseline model. This represents the error on the TOTAL potential energy of the simulation. """,
+        },
+    )
+    fields["active_thresh"] = (
+        InputValue,
+        {
+            "dtype": float,
+            "default": 0.0,
+            "dimension": "energy",
+            "help": """The uncertainty threshold for active learning. Structure with an uncertainty above this 
+                        value are printed in the specified output file so they can be used for active learning.""",
+        },
+    )
+    fields["active_output"] = (
+        InputValue,
+        {
+            "dtype": str,
+            "default": "active_output",
+            "help": "Output filename for structures that exceed the accuracy threshold of the model, to be used in active learning.",
+        },
+    )
+
+    def store(self, ff):
+        """ Store all the sub-forcefields """
+
+        super(InputFFCommittee, self).store(ff)
+        _fflist = ff.fflist
+        if len(self.extra) != len(_fflist):
+            self.extra = [0] * len(_fflist)
+        self.weights.store(ff.ffweights)
+        self.alpha.store(ff.alpha)
+        self.baseline_uncertainty.store(ff.baseline_uncertainty)
+        self.baseline_name.store(ff.baseline_name)
+        self.active_thresh.store(ff.active_thresh)
+        self.active_output.store(ff.active_out)
+
+        for (_ii, _obj) in enumerate(_fflist):
+            if self.extra[_ii] == 0:
+                if isinstance(_obj, FFSocket):
+                    _iobj = InputFFSocket()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffsocket", _iobj)
+                elif isinstance(_obj, FFLennardJones):
+                    _iobj = InputFFLennardJones()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("fflj", _iobj)
+                elif isinstance(_obj, FFQUIP):
+                    _iobj = InputFFQUIP()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffquip", _iobj)
+                elif isinstance(_obj, FFDebye):
+                    _iobj = InputFFDebye()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffdebye", _iobj)
+                elif isinstance(_obj, FFPlumed):
+                    _iobj = InputFFPlumed()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffplumed", _iobj)
+                elif isinstance(_obj, FFYaff):
+                    _iobj = InputFFYaff()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffyaff", _iobj)
+                elif isinstance(_obj, FFsGDML):
+                    _iobj = InputFFsGDML()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffsgdml", _iobj)
+            else:
+                self.extra[_ii][1].store(_obj)
+
+    def fetch(self):
+        """ Fetches all of the FF objects """
+
+        super(InputFFCommittee, self).fetch()
+
+        fflist = []
+        for (k, v) in self.extra:
+            fflist.append(v.fetch())
+
+        # TODO: will actually need to create a FF object here!
+        return FFCommittee(
+            pars=self.parameters.fetch(),
+            name=self.name.fetch(),
+            latency=self.latency.fetch(),
+            dopbc=self.pbc.fetch(),
+            fflist=fflist,
+            ffweights=self.weights.fetch(),
+            alpha=self.alpha.fetch(),
+            baseline_uncertainty=self.baseline_uncertainty.fetch(),
+            baseline_name=self.baseline_name.fetch(),
+            active_thresh=self.active_thresh.fetch(),
+            active_out=self.active_output.fetch(),
         )
