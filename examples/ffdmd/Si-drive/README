@@ -1,0 +1,4 @@
+This is an example for a time dependent drive in the smotion class involving a solid.
+The external potential drives the Si cell with a coupling of the same symmetry of
+the mode at 560 cm-1 and with this driving frequency. 
+
