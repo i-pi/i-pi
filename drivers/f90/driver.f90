@@ -96,7 +96,9 @@
          IF (cmdbuffer == "-u") THEN ! flag for unix socket
             inet = 0
             ccmd = 0
-         ELSEIF (cmdbuffer == "-h") THEN ! read the hostname
+         ELSEIF (cmdbuffer == "-h") THEN ! read the hostname (deprecated)
+            ccmd = 1
+         ELSEIF (cmdbuffer == "-a") THEN ! read the hostname (address)
             ccmd = 1
          ELSEIF (cmdbuffer == "-p") THEN ! reads the port number
             ccmd = 2
@@ -738,7 +740,7 @@
     CONTAINS
       SUBROUTINE helpmessage
          ! Help banner
-         WRITE(*,*) " SYNTAX: driver.x [-u] -h hostname -p port -m [dummy|gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D] "
+         WRITE(*,*) " SYNTAX: driver.x [-u] -a address -p port -m [dummy|gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D] "
          WRITE(*,*) "         -o 'comma_separated_parameters' [-v] "
          WRITE(*,*) ""
          WRITE(*,*) " For LJ potential use -o sigma,epsilon,cutoff "
