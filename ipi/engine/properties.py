@@ -300,6 +300,14 @@ class Properties(dobject):
                     else self.forces.pots[int(bead)]
                 ),
             },
+            "bead_potentials": {
+                "dimension": "energy",
+                "help": "The physical system potential energy of each bead.",
+                "size": -1,
+                "func": (
+                    lambda: self.forces.pots
+                ),
+            },
             "potential_opsc": {
                 "dimension": "energy",
                 "help": "The Suzuki-Chin operator estimator for the potential energy of the physical system.",
@@ -848,6 +856,7 @@ class Properties(dobject):
             system._propertylock
         )  # lock to avoid concurrent access and messing up with dbeads
 
+        self.property_dict["bead_potentials"]["size"] = self.beads.nbeads
         # self.properties_init()  # Initialize the properties here so that all
         # +all variables are accessible (for example to set
         # +the size of the hamiltonian_weights).
