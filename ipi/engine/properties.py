@@ -304,9 +304,7 @@ class Properties(dobject):
                 "dimension": "energy",
                 "help": "The physical system potential energy of each bead.",
                 "size": -1,
-                "func": (
-                    lambda: self.forces.pots
-                ),
+                "func": (lambda: self.forces.pots),
             },
             "potential_opsc": {
                 "dimension": "energy",
