@@ -972,7 +972,7 @@ def Damped_BFGS(x0, fdf, fdf0, invhessian, big_step):
     # Damped update if rhok isn't sufficiently positive
     if invrhok < 0.2 * sBs:
         theta = (0.8 * sBs) / (sBs - invrhok)
-        info(" @DampedBFGS: Damped update of the invhessian; "
+        info(" @DampedBFGS: damping update of the invhessian; "
              "(direction dot d_gradient) is small. "
              "theta := %.6f" % theta,
              verbosity.debug
@@ -980,7 +980,7 @@ def Damped_BFGS(x0, fdf, fdf0, invhessian, big_step):
         yk = theta * yk + (1 - theta) * np.dot(B, sk)
         invrhok = np.dot(yk, sk)
     else:
-        info(" @DampedBFGS: Update of the invhessian", verbosity.debug)
+        info(" @DampedBFGS: Update of the invhessian, no damping.", verbosity.debug)
 
     info(" @DampedBFGS: invrhok before reciprocating: %e" % invrhok, verbosity.debug)
     try:
