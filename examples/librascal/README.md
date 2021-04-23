@@ -11,4 +11,3 @@ After having obtained the potential file, the example can be run as usual
 
 $ i-pi input.xml &
 $ i-pi-py_driver -m rascal -a zundel -u -o zundel_model.json,h5o2+.extxyz
-

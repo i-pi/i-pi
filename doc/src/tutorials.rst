@@ -684,10 +684,11 @@ the ensemble:
 
 Then, we must also specify the constant pressure algorithm, using the
 tag within the dynamics environment. Do not forget to change the mode
-attribute of the dynamics from “nvt” to “npt”. At present, i-PI only
-contains a stochastic barostat to apply pressure to an isotropic system,
-which can be specified with the option “isotropic”. Anisotropic versions
-of the barostat may be added in future releases of i-PI.
+attribute of the dynamics from “nvt” to “npt”. 
+This example uses a stochastic barostat to apply pressure
+to an isotropic system, which can be specified with the option “isotropic”.
+See the documentation of the object and the examples to see how to apply 
+an anisotropic stress, or to allow for cell shape fluctuations.
 
 The isotropic barostat also requires a thermostat to deal with the
 volume degree of freedom, which we will take to be a simple Langevin
