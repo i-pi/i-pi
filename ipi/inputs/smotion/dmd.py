@@ -1,4 +1,4 @@
-"""Deals with creating the Metadynamics class
+"""Deals with creating the DMD class.
 
 Copyright (C) i-PI developers team.
 
@@ -14,7 +14,7 @@ GNU General Public License for more details.
 
 
 Classes:
-   InputMetaDyn: Deals with creating the Ensemble object from a file, and
+   InputDMD: Deals with creating the Ensemble object from a file, and
       writing the checkpoints.
 
 """
@@ -24,35 +24,36 @@ from ipi.engine.motion import *
 from ipi.utils.inputvalue import *
 from ipi.utils.units import *
 
-__all__ = ["InputMetaDyn"]
+__all__ = ["InputDMD"]
 
 
-class InputMetaDyn(InputDictionary):
-    """Metadynamics Options
+class InputDMD(InputDictionary):
+    """Driven MD Options
 
-    Contains options related with MetaDynamics
+    Contains options related with a driven dynamics through a (possibly time-dependent) potential.
+
 
     """
 
     fields = {
-        "metaff": (
+        "dmdff": (
             InputArray,
             {
                 "dtype": str,
                 "default": input_default(factory=np.zeros, args=(0,)),
-                "help": "List of names of forcefields that should do metadynamics.",
+                "help": "List of names of forcefields that should do driven MD. Accepts ffdmd forcefield types. Currently implemented (2021) for ffdmd only the driving potential similar to the one described in Bowman, .., Brown JCP 119, 646 (2003).",
             },
         )
     }
 
-    default_help = "MetaDynamics"
-    default_label = "META"
+    default_help = "DrivenMD with external time-dependent driving potential"
+    default_label = "DMD"
 
-    def store(self, meta):
-        if meta == {}:
+    def store(self, drivenmd):
+        if drivenmd == {}:
             return
-        self.metaff.store(meta.metaff)
+        self.dmdff.store(drivenmd.dmdff)
 
     def fetch(self):
-        rv = super(InputMetaDyn, self).fetch()
+        rv = super(InputDMD, self).fetch()
         return rv
