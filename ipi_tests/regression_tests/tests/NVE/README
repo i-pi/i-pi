@@ -1,0 +1,5 @@
+NVE dynamics 
+---------------------------------------------------------------------- 
+The classical and multibead NVE dynamics have been tested against the independent
+implementation of Yair Litman (2020).
+

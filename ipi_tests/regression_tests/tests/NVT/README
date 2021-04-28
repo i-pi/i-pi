@@ -1,0 +1,11 @@
+Tested Thermostats and NVT dynamics  
+----------------------------------------------------------------------
+The following thermostats have been tested against an in-house independent
+code by Yair Litman (2020) and hence have been included in the regression 
+test analysis of i-pi. 
+	- Langevin 
+	- PILE-local (pile_l)
+	- PILE-global (pile_g)
+	- Stochastic Velocity Rescaling (SVR)
+	 
+
