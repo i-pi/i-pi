@@ -770,7 +770,7 @@ class InputDictionary(Input):
     def __init__(
         self, help=None, default=None, dtype=str, options=None, dimension=None
     ):
-        """Allows one to introduce additional (homogeneous) fields during initialization """
+        """Allows one to introduce additional (homogeneous) fields during initialization"""
 
         if hasattr(options, "__len__"):
             self.instancefields = {}

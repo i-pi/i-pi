@@ -325,7 +325,7 @@ class InputThermoBase(Input):
 
 class InputThermo(InputThermoBase):
 
-    """ Extends InputThermoBase to allow the definition of a multithermo """
+    """Extends InputThermoBase to allow the definition of a multithermo"""
 
     attribs = copy(InputThermoBase.attribs)
 

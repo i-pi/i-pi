@@ -26,7 +26,7 @@ class DoubleWell_driver(Dummy_driver):
         super(DoubleWell_driver, self).__init__(args)
 
     def check_arguments(self):
-        """ Function that checks the arguments required to run the driver """
+        """Function that checks the arguments required to run the driver"""
         self.k = 1836 * (3800.0 / 219323.0) ** 2
         if self.args == "":
             # We used Craig's values (J. Chem. Phys. 122, 084106, 2005)
@@ -49,7 +49,7 @@ class DoubleWell_driver(Dummy_driver):
         self.B = ((m ** 2) * (w_b) ** 4) / (16 * v0)
 
     def __call__(self, cell, pos):
-        """ DoubleWell potential l"""
+        """DoubleWell potential l"""
         pot = 0
         pos3 = pos.reshape(-1, 3)
         force3 = np.zeros(pos.shape)

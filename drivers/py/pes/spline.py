@@ -25,7 +25,7 @@ class Spline_driver(Dummy_driver):
         self.k = 1836 * (3800.0 / 219323.0) ** 2
 
     def check_arguments(self):
-        """ Function that checks the arguments required to run the driver """
+        """Function that checks the arguments required to run the driver"""
 
         try:
             data = np.loadtxt(self.args[0]).reshape(-1, 5)
@@ -34,7 +34,7 @@ class Spline_driver(Dummy_driver):
         self.data = data
 
     def get_spline(self):
-        """Function that creates the 1D spline and its derivative """
+        """Function that creates the 1D spline and its derivative"""
 
         self.spline_f = []
         for i in range(3):
@@ -47,7 +47,7 @@ class Spline_driver(Dummy_driver):
         )
 
     def get_spline_fric(self):
-        """Function that creates the 1D spline for the friction """
+        """Function that creates the 1D spline for the friction"""
         data = np.loadtxt(self.args[1]).reshape(-1, 10)
         self.spline_fric = []
         for i in range(9):
@@ -98,11 +98,11 @@ class Spline_driver(Dummy_driver):
         return factor_coord * pos[0, 0]
 
     def check_dimensions(self, pos):
-        """ Functions that checks dimensions of the received position """
+        """Functions that checks dimensions of the received position"""
         assert pos.shape == (1, 3)
 
     def __call__(self, cell, pos):
-        """ Evaluate energy, forces and friction"""
+        """Evaluate energy, forces and friction"""
         self.check_dimensions(pos)
         vir = cell * 0.0  # makes a zero virial with same shape as cell
 

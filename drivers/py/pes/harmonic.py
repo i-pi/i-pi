@@ -12,7 +12,7 @@ class Harmonic_driver(Dummy_driver):
         super(Harmonic_driver, self).__init__(args)
 
     def check_arguments(self):
-        """ Function that checks the arguments required to run the driver """
+        """Function that checks the arguments required to run the driver"""
         try:
             k = list(map(float, self.args.split(",")))
         except ValueError:
@@ -28,7 +28,7 @@ class Harmonic_driver(Dummy_driver):
             sys.exit(self.error_msg)
 
     def __call__(self, cell, pos):
-        """ Silly harmonic potential"""
+        """Silly harmonic potential"""
         if self.type == "isotropic":
             pot = 0.5 * self.k * (pos ** 2).sum()
             force = -self.k * pos  # makes a zero force with same shape as pos
