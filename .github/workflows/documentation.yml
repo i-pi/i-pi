@@ -1,0 +1,38 @@
+name: Documentation
+
+on:
+  push:
+    branches: [master]
+    tags: ["*"]
+  pull_request:
+    # Check all PR
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-18.04
+    steps:
+      - uses: actions/checkout@v2
+      - name: set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: 3.8
+      - name: install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r doc/requirements.txt
+
+          sudo apt install -y texlive-latex-extra texlive-lang-greek latexmk
+      - name: build documentation
+        run: |
+          cd doc
+          make html
+          make latexpdf
+
+          cp _build/latex/i-pi.pdf _build/html/ipi-manual.pdf
+      - name: deploy to gh-pages
+        if: github.event_name == 'push'
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./doc/_build/html/
+          force_orphan: true
