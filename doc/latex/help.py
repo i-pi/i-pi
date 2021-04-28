@@ -60,6 +60,7 @@ objects = {
     "smotion": smotion.smotion.InputSmotion(),
     "remd": smotion.remd.InputReplicaExchange(),
     "meta": smotion.metad.InputMetaDyn(),
+    "driven": smotion.dmd.InputDMD(),
     "system": system.InputSystem(),
     "ensembles": ensembles.InputEnsemble(),
     "motion": motion.motion.InputMotion(),

@@ -14,7 +14,7 @@ class Harmonic_driver(Dummy_driver):
     def check_arguments(self):
         """ Function that checks the arguments required to run the driver """
         try:
-            k = list(map(float, self.args))
+            k = list(map(float, self.args.split(",")))
         except ValueError:
             sys.exit(self.error_msg)
 

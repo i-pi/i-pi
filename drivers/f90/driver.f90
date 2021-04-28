@@ -96,7 +96,9 @@
          IF (cmdbuffer == "-u") THEN ! flag for unix socket
             inet = 0
             ccmd = 0
-         ELSEIF (cmdbuffer == "-h") THEN ! read the hostname
+         ELSEIF (cmdbuffer == "-h") THEN ! read the hostname (deprecated)
+            ccmd = 1
+         ELSEIF (cmdbuffer == "-a") THEN ! read the hostname (address)
             ccmd = 1
          ELSEIF (cmdbuffer == "-p") THEN ! reads the port number
             ccmd = 2
@@ -757,6 +759,7 @@
      &          3x,a)') '"dipole": [',dip(1),",",dip(2),",",dip(3),"],"
                 string2 = TRIM(initbuffer) // TRIM(string)
                 initbuffer = TRIM(string2)
+
                 WRITE(string,'(a)') '"friction": ['
                 string2 = TRIM(initbuffer) // TRIM(string)
                 initbuffer = TRIM(string2)
