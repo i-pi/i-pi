@@ -137,6 +137,10 @@ class InputSimulation(Input):
             iforcefields.InputFFLennardJones,
             {"help": iforcefields.InputFFLennardJones.default_help},
         ),
+        "ffdmd": (
+            iforcefields.InputFFdmd,
+            {"help": iforcefields.InputFFdmd.default_help},
+        ),
         "ffdebye": (
             iforcefields.InputFFDebye,
             {"help": iforcefields.InputFFDebye.default_help},
@@ -148,6 +152,10 @@ class InputSimulation(Input):
         "ffyaff": (
             iforcefields.InputFFYaff,
             {"help": iforcefields.InputFFYaff.default_help},
+        ),
+        "ffcommittee": (
+            iforcefields.InputFFCommittee,
+            {"help": iforcefields.InputFFCommittee.default_help},
         ),
         "ffsgdml": (
             iforcefields.InputFFsGDML,
@@ -209,6 +217,10 @@ class InputSimulation(Input):
                     _iobj = iforcefields.InputFFLennardJones()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("fflj", _iobj)
+                elif isinstance(_obj, eforcefields.FFdmd):
+                    _iobj = iforcefields.InputFFdmd()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffdmd", _iobj)
                 elif isinstance(_obj, eforcefields.FFDebye):
                     _iobj = iforcefields.InputFFDebye()
                     _iobj.store(_obj)
@@ -225,6 +237,10 @@ class InputSimulation(Input):
                     _iobj = iforcefields.InputFFsGDML()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("ffsgdml", _iobj)
+                elif isinstance(_obj, eforcefields.FFCommittee):
+                    _iobj = iforcefields.InputFFCommittee()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffcommittee", _iobj)
                 elif isinstance(_obj, System):
                     _iobj = InputSystem()
                     _iobj.store(_obj)
@@ -264,9 +280,11 @@ class InputSimulation(Input):
                 k == "ffsocket"
                 or k == "fflj"
                 or k == "ffdebye"
+                or k == "ffdmd"
                 or k == "ffplumed"
                 or k == "ffsgdml"
                 or k == "ffyaff"
+                or k == "ffcommittee"
             ):
                 info(" # @simulation: Fetching" + k, verbosity.low)
                 fflist.append(v.fetch())

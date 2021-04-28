@@ -1,0 +1,43 @@
+<simulation verbosity='medium'>
+  <total_steps>3000</total_steps>
+  <ffsocket mode='unix' name='lammps' pbc='True'>
+    <address>si2x2</address>
+    <latency>1e-3</latency>
+  </ffsocket>
+  <ffdmd name='timeperiod' pbc='True' threaded='False'>
+    <dmd_coupling mode='file'>coupling.dat</dmd_coupling>
+    <dmd_freq units='inversecm'>560</dmd_freq>
+    <dmd_dt units='femtosecond'>0.25</dmd_dt>
+  </ffdmd>
+  <output prefix='sim.20_K'>
+    <trajectory stride='2' filename='pos' cell_units='angstrom'>positions{angstrom}</trajectory>
+    <trajectory stride='2' filename='vel'>velocities</trajectory>
+    <properties stride='2'> [ step, time, conserved, temperature{kelvin}, potential, kinetic_md ] </properties>
+  </output>
+  <prng>
+    <seed>10545</seed>
+  </prng>
+  <system>
+    <forces>
+      <force forcefield='lammps'/>
+    </forces>
+    <initialize nbeads='1'>
+      <file mode='xyz'>init.xyz</file>
+        <velocities mode='thermal' units='kelvin'>20</velocities> 
+    </initialize>
+    <ensemble>
+      <temperature units='kelvin'>20</temperature>
+         <bias>
+            <force forcefield="timeperiod" nbeads="1"></force>
+         </bias>
+    </ensemble>
+    <motion mode='dynamics'>
+      <dynamics mode='nve'>
+        <timestep units='femtosecond'>0.25</timestep>
+      </dynamics>
+    </motion>
+  </system>
+  <smotion mode="dmd">
+    <dmd> <dmdff>[ timeperiod ]</dmdff> </dmd>
+  </smotion>
+</simulation>

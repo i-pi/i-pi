@@ -1,0 +1,48 @@
+<simulation verbosity='high'>
+  <ffsocket  name='h0' pbc='False'>
+    <address>localhost</address>
+    <port>14195</port>
+  </ffsocket>
+  <ffdmd name='timeperiod' pbc='False' threaded='False'>
+<!--    <dmd_coupling mode='manual'> [0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01, 0.01]  </dmd_coupling> -->
+    <dmd_coupling mode='file'> coupling.dat </dmd_coupling>
+    <dmd_freq units='inversecm' > 3500  </dmd_freq>
+    <dmd_dt units='femtosecond'> 0.25 </dmd_dt>
+  </ffdmd>
+  <total_steps>10000</total_steps>
+  <!-- <total_time>6</total_time> --> 
+  <output prefix='data-10'>
+    <trajectory stride='2' filename='pos' cell_units='angstrom'>positions{angstrom}</trajectory>
+    <trajectory stride='2' filename='vel'>velocities</trajectory>
+    <properties stride='2'> [ step, time, conserved, temperature{kelvin}, potential, kinetic_md ] </properties>
+  </output>
+  <prng>
+    <seed>18885</seed>
+  </prng>
+  <system>
+    <forces>
+      <force forcefield='h0'/>
+    </forces>
+    <initialize nbeads='4'>
+      <file mode='xyz'>init.xyz</file>
+      <cell>
+         [   25.29166, 0, 0, 0, 25.29166, 0, 0, 0, 25.29166 ]
+        </cell>
+<!--        <velocities mode='thermal' units='kelvin'> 300 </velocities> -->
+    </initialize>
+    <ensemble>
+      <temperature units='kelvin'> 300.0 </temperature>
+         <bias>
+            <force forcefield="timeperiod" nbeads="4"></force>
+         </bias>
+    </ensemble>
+    <motion mode='dynamics'>
+      <dynamics mode='nve'>
+        <timestep units='femtosecond'> 0.25 </timestep>
+      </dynamics>
+    </motion>
+  </system>
+  <smotion mode="dmd">
+    <dmd> <dmdff> [ timeperiod ] </dmdff> </dmd>
+  </smotion>
+</simulation>
