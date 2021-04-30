@@ -60,6 +60,7 @@ __all__ = ["min_brent"]
 
 import numpy as np
 import math
+import time
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, info
 
@@ -902,7 +903,7 @@ def Damped_BFGS(x0, fdf, fdf0, invhessian, big_step):
 
         Currently it doesn't use min_approx, TRM or any other step determination,
         just the simplest (invhessian dot gradient) step, as in aimsChain.
-        The reason is that both LS and TRM require energy, and the energy 
+        The reason is that both LS and TRM require energy, and the energy
         of NEB springs is somewhat ill-defined because of all projections that we do.
         This may be improved later, but first we need to have NEB working.
 
@@ -919,7 +920,7 @@ def Damped_BFGS(x0, fdf, fdf0, invhessian, big_step):
                       compared to other optimization algorithms, take care.
 
         Returns:
-          quality: minus cosine of the (gradient, dx) angle. 
+          quality: minus cosine of the (gradient, dx) angle.
                    Needed for the step length adjustment.
     """
 
@@ -939,6 +940,7 @@ def Damped_BFGS(x0, fdf, fdf0, invhessian, big_step):
     # Calculate direction
     sk = np.dot(invhessian, -g0)
     info(" @DampedBFGS: Calculated direction.", verbosity.debug)
+    print(sk)
 
     # Cosine of the (f, dx) angle
     quality = - np.dot(sk / np.linalg.norm(sk), g0 / np.linalg.norm(g0))
@@ -948,7 +950,7 @@ def Damped_BFGS(x0, fdf, fdf0, invhessian, big_step):
     maxdispl = np.amax(np.linalg.norm(sk.reshape(-1,3), axis=1))
     info(" @DampedBFGS: big_step = %.6f" % big_step, verbosity.debug)
     if maxdispl > big_step:
-        info(" @DampedBFGS: maxdispl before scaling: %.6f bohr" 
+        info(" @DampedBFGS: maxdispl before scaling: %.6f bohr"
              % maxdispl,
              verbosity.debug)
         sk *= big_step / maxdispl
@@ -957,18 +959,37 @@ def Damped_BFGS(x0, fdf, fdf0, invhessian, big_step):
          % (np.amax(np.linalg.norm(sk.reshape(-1,3), axis=1))),
          verbosity.debug)
 
+    print("Before fdf call:")
+    print("x0.shape:  %s,  sk.shape:  %s", (str(x0.shape), str(sk.shape)))
     _, g = fdf(x0 + sk.reshape(x0.shape))
     g = g.flatten()
 
     # Update invhessian
     yk = g - g0
+    print("yk:")
+    print(yk)
     # 1/rho_k in Nocedal notation (eq. 6.14)
     invrhok = np.dot(yk, sk)
+    print("invrhok:")
+    print(invrhok)
 
     # Equation 18.15 in Nocedal
+    print("\n\ninvhessian: dtype %s, shape %s" % (invhessian.dtype, str(invhessian.shape)))
+    print(invhessian)
+    print("|invh|: %f" % np.linalg.det(invhessian))
+    print("Condition number: %f" % np.linalg.cond(invhessian))
+    print("Positive definite: %r" % np.all(np.linalg.eigvals(invhessian) > 0))
+    print("Eigenvalues of invhessian:")
+    with np.printoptions(threshold=10000, linewidth=100000):
+        print(np.real(np.linalg.eigvals(invhessian)))
+    print("Matrix inversion...")
     B = np.linalg.inv(invhessian)
+    print("B obtained:")
+    print(B)
     theta = 1.
     sBs = np.dot(np.dot(sk, B), sk)
+    print("sBs:")
+    print(sBs)
     # Damped update if rhok isn't sufficiently positive
     if invrhok < 0.2 * sBs:
         theta = (0.8 * sBs) / (sBs - invrhok)
@@ -988,6 +1009,8 @@ def Damped_BFGS(x0, fdf, fdf0, invhessian, big_step):
     except:
         info(" @DampedBFGS: caught ZeroDivisionError in 1/rhok.", verbosity.debug)
         rhok = 1e+5
+    print("rhok:")
+    print(rhok)
 
     # Compute BFGS term
     I= np.eye(len(sk))

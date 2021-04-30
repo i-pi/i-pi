@@ -132,9 +132,9 @@ class InputNEB(InputDictionary):
             {
                 "dtype": float,
                 "default": 0.5 ,
-                "help": """The maximum atomic displacement in a single step 
+                "help": """The maximum atomic displacement in a single step
                            of optimizations within NEB procedure.
-                           If requested step is larger, it will be downscaled so 
+                           If requested step is larger, it will be downscaled so
                            that maximal atomic displacement won't exceed biggest_step.
                         """,
                 "dimension": "length",
@@ -241,7 +241,6 @@ class InputNEB(InputDictionary):
         self.tolerances.store(neb.tolerances)
         self.mode.store(neb.mode)
         self.old_coord.store(neb.old_x)
-#        self.old_force.store(neb.old_f)
         self.old_nebpotential.store(neb.nebpot)
         self.old_nebgradient.store(neb.nebgrad)
         self.old_direction.store(neb.d)
