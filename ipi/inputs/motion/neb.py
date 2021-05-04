@@ -94,15 +94,24 @@ class InputNEB(InputDictionary):
                 "dimension": "length",
             },
         ),
-#        "old_force": (
-#            InputArray,
-#            {
-#                "dtype": float,
-#                "default": input_default(factory=np.zeros, args=(0,)),
-#                "help": "The previous force in an optimization step.",
-#                "dimension": "force",
-#            },
-#        ),
+        "full_force": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.zeros, args=(0,)),
+                "help": "The previous full-dimensional force in an optimization step.",
+                "dimension": "force",
+            },
+        ),
+        "full_pots": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.zeros, args=(0,)),
+                "help": "Previous physical potentials of all beads.",
+                "dimension": "energy",
+            },
+        ),
         "old_nebpotential": (
             InputArray,
             {
@@ -151,12 +160,12 @@ class InputNEB(InputDictionary):
                                             2 Use last  member of position/gradient list.""",
             },
         ),
-        "invhessian_bfgs": (
+        "hessian_bfgs": (
             InputArray,
             {
                 "dtype": float,
                 "default": input_default(factory=np.eye, args=(0,)),
-                "help": "Approximate inverse Hessian for BFGS, if known.",
+                "help": "Approximate Hessian for damped_BFGS, if known.",
             },
         ),
         "qlist_lbfgs": (
@@ -226,6 +235,14 @@ class InputNEB(InputDictionary):
              "default": False,
              "help": "Use climbing image NEB or not"},
         ),
+        "climb_bead": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": -1,
+                "help": "The index of the climbing bead.",
+            },
+        ),
     }
 
     dynamic = {}
@@ -241,11 +258,13 @@ class InputNEB(InputDictionary):
         self.tolerances.store(neb.tolerances)
         self.mode.store(neb.mode)
         self.old_coord.store(neb.old_x)
+        self.full_force.store(neb.full_f)
+        self.full_pots.store(neb.full_v)
         self.old_nebpotential.store(neb.nebpot)
         self.old_nebgradient.store(neb.nebgrad)
         self.old_direction.store(neb.d)
         self.biggest_step.store(neb.big_step)
-        self.invhessian_bfgs.store(neb.invhessian)
+        self.hessian_bfgs.store(neb.hessian)
         self.qlist_lbfgs.store(neb.qlist)
         self.glist_lbfgs.store(neb.glist)
         self.tr_trm.store(neb.tr_trm)
@@ -253,6 +272,7 @@ class InputNEB(InputDictionary):
         self.spring.store(neb.spring)
         self.stage.store(neb.stage)
         self.use_climb.store(neb.use_climb)
+        self.climb_bead.store(neb.cl_indx)
         self.scale_lbfgs.store(neb.scale)
 
     def fetch(self):

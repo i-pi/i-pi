@@ -895,11 +895,12 @@ def L_BFGS(x0, d0, fdf, qlist, glist, fdf0, big_step, tol, itmax, m, scale, k):
 
 
 # Damped BFGS to use in NEB. Has no line search and no TRM.
-def Damped_BFGS(x0, fdf, fdf0, invhessian, big_step):
+def Damped_BFGS(x0, fdf, fdf0, hessian, big_step):
     """ BFGS, damped as described in
         Nocedal, Wright (2nd ed.) Procedure 18.2
         The purpose is mostly using it for NEB optimization, but it is capable of
         plain geometry optimization also.
+        Written for a DIRECT Hessian B, not for the inverse H.
 
         Currently it doesn't use min_approx, TRM or any other step determination,
         just the simplest (invhessian dot gradient) step, as in aimsChain.
@@ -916,6 +917,7 @@ def Damped_BFGS(x0, fdf, fdf0, invhessian, big_step):
           x0: initial point
           fdf: function and gradient (mapper)
           fdf0: initial function and gradient values
+          hessian: approximate Hessian for the BFGS algorithm
           big_step: limit on step length. It is defined differently
                       compared to other optimization algorithms, take care.
 
@@ -928,17 +930,15 @@ def Damped_BFGS(x0, fdf, fdf0, invhessian, big_step):
     _, g0 = fdf0
     g0 = g0.flatten()
 
-#    if big_step > 0.5:
-#        softexit.trigger(" @DampedBFGS: ERROR: big_step is too big. "
-#                         "Damped_BFGS handles it differently from other algorithms, "
-#                         "see ipi/inputs/motion/neb.py:'biggest_step' to get an idea.\n"
-#                         "Current big_step value: %f." % big_step)
-    # Catch all Numpy warnings
-    old_settings = np.geterr()  # save seterr to restore it later
-    np.seterr(all='raise')
+    # Nocedal's notation
+    B = hessian
+    # I think symmetrization can never harm.
+    # [:] because hessian is passed as a reference
+    B[:] = 0.5 * (B + B.T)
 
     # Calculate direction
-    sk = np.dot(invhessian, -g0)
+    # When the inverse itself is not needed, people recommend solve(), not inv().
+    sk = np.linalg.solve(B, -g0)
     info(" @DampedBFGS: Calculated direction.", verbosity.debug)
     print(sk)
 
@@ -966,42 +966,28 @@ def Damped_BFGS(x0, fdf, fdf0, invhessian, big_step):
 
     # Update invhessian
     yk = g - g0
-    print("yk:")
-    print(yk)
     # 1/rho_k in Nocedal notation (eq. 6.14)
     invrhok = np.dot(yk, sk)
     print("invrhok:")
     print(invrhok)
 
     # Equation 18.15 in Nocedal
-    print("\n\ninvhessian: dtype %s, shape %s" % (invhessian.dtype, str(invhessian.shape)))
-    print(invhessian)
-    print("|invh|: %f" % np.linalg.det(invhessian))
-    print("Condition number: %f" % np.linalg.cond(invhessian))
-    print("Positive definite: %r" % np.all(np.linalg.eigvals(invhessian) > 0))
-    print("Eigenvalues of invhessian:")
-    with np.printoptions(threshold=10000, linewidth=100000):
-        print(np.real(np.linalg.eigvals(invhessian)))
-    print("Matrix inversion...")
-    B = np.linalg.inv(invhessian)
-    print("B obtained:")
-    print(B)
     theta = 1.
-    sBs = np.dot(np.dot(sk, B), sk)
-    print("sBs:")
-    print(sBs)
+    Bsk = np.dot(B, sk)
+    sBs = np.dot(Bsk, sk)
+    print("sBs: %f" % sBs)
     # Damped update if rhok isn't sufficiently positive
     if invrhok < 0.2 * sBs:
         theta = (0.8 * sBs) / (sBs - invrhok)
-        info(" @DampedBFGS: damping update of the invhessian; "
+        info(" @DampedBFGS: damping update of the Hessian; "
              "(direction dot d_gradient) is small. "
              "theta := %.6f" % theta,
              verbosity.debug
         )
-        yk = theta * yk + (1 - theta) * np.dot(B, sk)
+        yk = theta * yk + (1 - theta) * Bsk
         invrhok = np.dot(yk, sk)
     else:
-        info(" @DampedBFGS: Update of the invhessian, no damping.", verbosity.debug)
+        info(" @DampedBFGS: Update of the Hessian, no damping.", verbosity.debug)
 
     info(" @DampedBFGS: invrhok before reciprocating: %e" % invrhok, verbosity.debug)
     try:
@@ -1009,21 +995,25 @@ def Damped_BFGS(x0, fdf, fdf0, invhessian, big_step):
     except:
         info(" @DampedBFGS: caught ZeroDivisionError in 1/rhok.", verbosity.debug)
         rhok = 1e+5
-    print("rhok:")
-    print(rhok)
+    print("rhok: %f" % rhok)
 
-    # Compute BFGS term
-    I= np.eye(len(sk))
-    A1 = I - rhok * np.outer(sk, yk)
-    A2 = I - rhok * np.outer(yk, sk)
-    # invhessian is passed to the optimizer as a link, so [:] assignment should be used.
-    invhessian[:] = np.dot(A1, np.dot(invhessian, A2)) + rhok * np.outer(sk, sk)
-    if np.isnan(invhessian).any():
-        softexit.trigger(" @DampedBFGS: Invhessian contains NaN.")
-#    print(" @DampedBFGS: Invhessian after update:")
-#    print(invhessian)
+    # Compute BFGS term (eq. 18.16 in Nocedal)
+    B += np.outer(yk, yk) * rhok - np.outer(Bsk, Bsk) / sBs
 
-    np.seterr(**old_settings)
+    print("det(Hessian): %f" % np.linalg.det(B))
+    print("Condition number: %f" % np.linalg.cond(B))
+    print("Positive definite: %r" % np.all(np.linalg.eigvals(B) > 0))
+    print("Eigenvalues of the Hessian:")
+    eigvals = np.real(np.linalg.eigvals(B))
+    with np.printoptions(threshold=10000, linewidth=100000):
+        print(eigvals)
+
+    # If small numbers are found on the diagonal of the Hessian,
+    # add small positive numbers. 1 Ha/Bohr^2 is ~97.2 eV/ang^2.
+    if np.any(eigvals < 1e-3):
+        info(" @DampedBFGS: adding 1e-3 on the diagonal.", verbosity.debug)
+        B += 1e-3 * np.eye(len(B))
+
     return quality
 
 
@@ -1382,7 +1372,7 @@ def L_BFGS_nls(
 
         # Scale if attempted step is too large
         if stepsize > big_step:
-            d0 = big_step * d0 /np.linalg.norm(d0.flatten()) 
+            d0 = big_step * d0 /np.linalg.norm(d0.flatten())
             info(" @MINIMIZE: Scaled step size", verbosity.debug)
 
         x = np.add(x0, d0)

@@ -13,7 +13,7 @@ from numpy.linalg import norm as npnorm
 import time
 
 from ipi.engine.motion import Motion
-from ipi.utils.depend import *
+from ipi.utils.depend import dstrip
 from ipi.utils.softexit import softexit
 from ipi.utils.mintools import L_BFGS, BFGS, BFGSTRM, Damped_BFGS, min_brent_neb
 from ipi.utils.messages import verbosity, info
@@ -21,11 +21,11 @@ from ipi.engine.beads import Beads
 
 np.set_printoptions(threshold=10000, linewidth=1000)  # Remove in cleanup
 
-__all__ = ["NEBMover"]
+__all__ = ["NEBGradientMapper", "NEBClimbGrMapper", "NEBMover"]
 
 
-#       THIS NEB IMPLEMENTATION USES THE "IMPROVED TANGENTS" OF HENKELMAN AND JONSSON, 2000.
-#       THE "OLD IMPLEMENTATION" IS PRESERVED IN COMMENTS
+# THIS NEB IMPLEMENTATION USES THE "IMPROVED TANGENTS" OF HENKELMAN AND JONSSON, 2000.
+# THE "OLD IMPLEMENTATION" IS PRESERVED IN COMMENTS
 
 
 class NEBGradientMapper(object):
@@ -58,10 +58,7 @@ class NEBGradientMapper(object):
         # # Create reduced bead and force object and evaluate forces
         # self.rbeads = Beads(ens.beads.natoms, ens.beads.nbeads)
         # self.rbeads.q[:] = ens.beads.q[1:-1]
-        # self.reduced_forces = self.dforces.copy(self.rbeads, self.dcell)
-        # # Do I really need this?
-        # self.rpots = self.reduced_forces.pots  # reduced energy
-        # self.rforces = self.reduced_forces.f  # reduced gradient
+        # self.rforces = self.dforces.copy(self.rbeads, self.dcell)
 
     def __call__(self, x):
         """Returns the potential for all beads and the gradient."""
@@ -78,13 +75,13 @@ class NEBGradientMapper(object):
 
         # Forces
         print("Before calling nebgm.dforces.f")
-        bf = self.dforces.f.copy()[:, self.fixatoms_mask]
+        bf = dstrip(self.dforces.f.copy())[:, self.fixatoms_mask]
         print("After calling nebgm.dforces.f")
         # Zeroing endpoint forces
         bf[0, :] = bf[-1, :] = 0.0
 
         # Bead energies (needed for improved tangents)
-        be = self.dforces.pots.copy()
+        be = dstrip(self.dforces.pots.copy())
 
         # Number of images
         nimg = self.dbeads.nbeads
@@ -231,6 +228,7 @@ class NEBClimbGrMapper(object):
         if self.q_prev is None or self.q_next is None:
             raise RuntimeError("NEBClimbGrMapper.q_prev or q_next is None.")
 
+        info("@NEB_CLIMB: NEBClimbGrMapper.x.shape: %s" % str(x.shape), verbosity.debug)
         # Touch positions only if they have changed (to avoid triggering forces)
         if (self.rbeads.q[:, self.fixatoms_mask] != x).any():
             self.rbeads.q[:, self.fixatoms_mask] = x
@@ -239,7 +237,8 @@ class NEBClimbGrMapper(object):
         rbq = self.rbeads.q[:, self.fixatoms_mask].flatten()
 
         # Reduced forces
-        rbf = self.reduced_forces.f.copy()[:, self.fixatoms_mask].flatten()
+        # We don't need copy() because flatten() implies copying.
+        rbf = dstrip(self.reduced_forces.f)[:, self.fixatoms_mask].flatten()
 
         # I think here it's better to use plain tangents.
         # Then we don't need energies of the neighboring beads.
@@ -252,8 +251,9 @@ class NEBClimbGrMapper(object):
         rbf -= 2 * np.dot(rbf, tau) * tau
 
         # Return the potential energy and gradient of the climbing bead
-        e = self.reduced_forces.pot
+        e = dstrip(self.reduced_forces.pot.copy())
         g = -rbf
+        info("@NEB_CLIMB: NEBClimbGrMapper finished.", verbosity.debug)
         return e, g
 
 
@@ -267,7 +267,7 @@ class NEBMover(Motion):
         old_direction: direction from previous iteration
         old_nebpotential: bead potentials from previous iteration
         old_nebgradient: gradient wrt springs from previous iteration
-        invhessian_bfgs: inverse Hessian for (damped) BFGS
+        hessian_bfgs: Hessian for (damped) BFGS
         ls_options:
             tolerance: tolerance for exit of line search
             iter: maximum iterations for line search per MD step
@@ -297,11 +297,12 @@ class NEBMover(Motion):
         mode="damped_bfgs",
         biggest_step=0.5,
         old_coord=np.zeros(0, float),
-        old_force=np.zeros(0, float),
+        full_force=np.zeros(0, float),
+        full_pots=np.zeros(0, float),
         old_nebpotential=np.zeros(0, float),
         old_nebgradient=np.zeros(0, float),
         old_direction=np.zeros(0, float),
-        invhessian_bfgs=np.eye(0),
+        hessian_bfgs=np.eye(0),
         ls_options={"tolerance": 1e-5, "iter": 100.0, "step": 1e-3, "adaptive": 1.0},
         tolerances={"energy": 1e-5, "force": 1e-5, "position": 1e-5},
         corrections_lbfgs=5,
@@ -313,6 +314,7 @@ class NEBMover(Motion):
         scale_lbfgs=2,
         stage="neb",
         use_climb=False,
+        climb_bead=-1,
     ):
         """Initialises NEBMover.
 
@@ -340,7 +342,9 @@ class NEBMover(Motion):
         self.nebpot = old_nebpotential
         self.nebgrad = old_nebgradient
         self.d = old_direction
-        self.invhessian = invhessian_bfgs
+        self.full_f = full_force  # forces of ALL beads even in climb stage
+        self.full_v = full_pots   # potentials of ALL beads
+        self.hessian = hessian_bfgs
         self.corrections = corrections_lbfgs
         self.qlist = qlist_lbfgs
         self.glist = glist_lbfgs
@@ -348,6 +352,7 @@ class NEBMover(Motion):
         self.endpoints = endpoints
         self.spring = spring
         self.use_climb = use_climb
+        self.cl_indx = climb_bead
         self.stage = stage
         self.scale = scale_lbfgs
 
@@ -357,25 +362,25 @@ class NEBMover(Motion):
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
 
         super(NEBMover, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
-        # I don't reduce dimensionality of the invhessian from the beginning,
+        # I don't reduce dimensionality of the hessian from the beginning,
         # because someone may want to provide existing invessian of the full system.
         if self.mode == "damped_bfgs":
-            if self.stage == "neb" and self.invhessian.size != (
+            if self.stage == "neb" and self.hessian.size != (
                 beads.q.size * beads.q.size
             ):
-                if self.invhessian.size == 0:
-                    self.invhessian = np.eye(beads.q.size, dtype=float)
+                if self.hessian.size == 0:
+                    self.hessian = np.eye(beads.q.size, dtype=float)
                 else:
-                    raise ValueError("Inverse Hessian size does not match system size.")
-            # In climb stage, invhessian has only 1 bead.
+                    raise ValueError("Hessian size does not match system size.")
+            # In climb stage, hessian has only 1 bead.
             # Not sure whether fixatoms should be handled here or not, let's see...
-            elif self.stage == "climb" and self.invhessian.size != (
+            elif self.stage == "climb" and self.hessian.size != (
                 beads.q[0].size * beads.q[0].size
             ):
-                if self.invhessian.size == 0:
-                    self.invhessian = np.eye(beads.q[0].size, dtype=float)
+                if self.hessian.size == 0:
+                    self.hessian = np.eye(beads.q[0].size, dtype=float)
                 else:
-                    raise ValueError("Inverse Hessian size does not match system size.")
+                    raise ValueError("Hessian size does not match system size.")
 
         if len(self.fixatoms) == len(self.beads[0]):
             softexit.trigger(
@@ -386,15 +391,16 @@ class NEBMover(Motion):
         self.climbgm.bind(self)
 
     def init_climb(self):
-        """Operations to resize invhessian for the climbing bead(s),
+        """Operations to resize hessian for the climbing bead(s),
         get neighboring beads and other things necessary for climbing.
         Returns:
           cl_indx - index of the bead for climbing
         """
         cl_indx = np.argmax(self.forces.pots)
-        info("Initializing climbing. Climbing bead: %i." % cl_indx, verbosity.medium)
+        info(" @NEB: Initializing climbing. Climbing bead: %i." % cl_indx, verbosity.medium)
         if cl_indx in [0, self.beads.nbeads - 1]:
             softexit.trigger("ERROR: climbing bead is the endpoint.")
+        self.climbgm.rbeads.q[:] = self.beads.q[cl_indx]
         self.climbgm.q_prev[:] = self.beads.q[cl_indx - 1, self.climbgm.fixatoms_mask]
         self.climbgm.q_next[:] = self.beads.q[cl_indx + 1, self.climbgm.fixatoms_mask]
         info(
@@ -402,8 +408,8 @@ class NEBMover(Motion):
             % (str(self.climbgm.q_prev.shape), str(self.climbgm.q_next.shape)),
             verbosity.debug,
         )
-        if self.invhessian.shape != (self.beads.q[0].size, self.beads.q[0].size):
-            self.invhessian = np.eye(self.beads.q[0].size)
+        if self.hessian.shape != (self.beads.q[0].size, self.beads.q[0].size):
+            self.hessian = np.eye(self.beads.q[0].size)
 
         info(" @NEB_CLIMB: calling NEBClimbGrMapper first time.", verbosity.debug)
         self.nebpot, self.nebgrad = self.climbgm(
@@ -411,8 +417,9 @@ class NEBMover(Motion):
         )
 
         print("self.beads.q.shape: %s" % str(self.beads.q.shape))
-        self.old_x = self.beads.q[cl_indx, self.climbgm.fixatoms_mask]
-        print("self.old_x.shape: %s" % str(self.old_x.shape))
+        self.old_x = dstrip(self.beads.q[cl_indx, self.climbgm.fixatoms_mask]).copy()
+        print("self.old_x.shape: %s  type: %s"
+              % (str(self.old_x.shape), type(self.old_x)))
         self.stage = "climb"
         return cl_indx
 
@@ -423,13 +430,13 @@ class NEBMover(Motion):
         if quality > 0.8:
             self.big_step *= 1.3
             info(
-                " @NEB_CLIMB: increasing big_step to %.6f bohr." % self.big_step,
+                " @NEBMover: increasing big_step to %.6f bohr." % self.big_step,
                 verbosity.debug,
             )
         elif quality > 0.6:
             self.big_step *= 1.1
             info(
-                " @NEB_CLIMB: increasing big_step to %.6f bohr." % self.big_step,
+                " @NEBMover: increasing big_step to %.6f bohr." % self.big_step,
                 verbosity.debug,
             )
         else:
@@ -438,7 +445,7 @@ class NEBMover(Motion):
             if self.big_step <= self.tolerances["position"]:
                 self.big_step = 10 * self.tolerances["position"]
             info(
-                " @NEB_CLIMB: Step direction far from climbgrad, "
+                " @NEBMover: Step direction far from climbgrad, "
                 "reducing big_step to %.6f bohr." % self.big_step,
                 verbosity.debug,
             )
@@ -477,20 +484,20 @@ class NEBMover(Motion):
                     )
 
                     # Set the initial direction to the direction of NEB forces
-                    self.old_x = self.beads.q.copy()[:, self.nebgm.fixatoms_mask]
+                    self.old_x = dstrip(self.beads.q[:, self.nebgm.fixatoms_mask]).copy()
 
-                    # With multiple stages, the size of the invhessian is different
+                    # With multiple stages, the size of the hessian is different
                     # at each stage, therefore we check.
-                    if self.invhessian.shape != (self.beads.q.size, self.beads.q.size):
-                        print((self.invhessian.shape, self.beads.q.size))
-                        softexit.trigger("Invhessian not initialized correctly in NEB.")
+                    if self.hessian.shape != (self.beads.q.size, self.beads.q.size):
+                        print((self.hessian.shape, self.beads.q.size))
+                        softexit.trigger("hessian not initialized correctly in NEB.")
 
                 # Self instances will be updated in the optimizer, so we store the copies.
                 # old_nebpot is used later as a convergence criterion.
                 old_nebpot, old_nebgrad = (self.nebpot.copy(), self.nebgrad.copy())
 
-                # Reducing dimension of the invhessian before passing it to optimizer
-                masked_invhessian = self.invhessian[
+                # Reducing dimension of the hessian before passing it to optimizer
+                masked_hessian = self.hessian[
                     np.ix_(
                         np.tile(self.nebgm.fixatoms_mask, self.beads.nbeads),
                         np.tile(self.nebgm.fixatoms_mask, self.beads.nbeads),
@@ -501,12 +508,12 @@ class NEBMover(Motion):
                 info(" @NEB: before Damped_BFGS() call", verbosity.debug)
                 print("self.old_x.shape: %s" % str(self.old_x.shape))
                 print("self.nebgrad.shape: %s" % str(self.nebgrad.shape))
-                print("masked_invhessian.shape: %s" % str(masked_invhessian.shape))
+                print("masked_hessian.shape: %s" % str(masked_hessian.shape))
                 quality = Damped_BFGS(
                     x0=self.old_x,
                     fdf=self.nebgm,
                     fdf0=(self.nebpot, self.nebgrad),
-                    invhessian=masked_invhessian,
+                    hessian=masked_hessian,
                     big_step=self.big_step,
                 )
                 info(" @NEB: after Damped_BFGS() call", verbosity.debug)
@@ -516,13 +523,13 @@ class NEBMover(Motion):
                 # else:
                 #     softexit.trigger("NEBMover has a bug in BFGS-family options.")
 
-                # Restore dimensionality of the invhessian
-                self.invhessian[
+                # Restore dimensionality of the hessian
+                self.hessian[
                     np.ix_(
                         np.tile(self.nebgm.fixatoms_mask, self.beads.nbeads),
                         np.tile(self.nebgm.fixatoms_mask, self.beads.nbeads),
                     )
-                ] = masked_invhessian
+                ] = masked_hessian
 
                 # Update positions
                 self.beads.q[:] = self.nebgm.dbeads.q
@@ -544,6 +551,12 @@ class NEBMover(Motion):
                 # so that recalculation won't be triggered after the step.
                 self.forces.transfer_forces(self.nebgm.dforces)
 
+                # full dimensional forces are not really needed all the time,
+                # but it's easier to have it. They are needed in reduced-beads modes,
+                # i.e. in "endpoints" and "climb".
+                self.full_f = dstrip(self.forces.f)
+                self.full_v = dstrip(self.forces.pots)
+
             # TODO: Routines for L-BFGS, SD, CG
             else:
                 softexit.trigger(
@@ -562,13 +575,16 @@ class NEBMover(Motion):
                 and (np.amax(np.abs(self.nebgrad)) <= self.tolerances["force"])
                 and (dx <= self.tolerances["position"])
             ):
-                info("NEB path optimization converged.", verbosity.medium)
+                info(60 * "=" + "\n"
+                     + " @NEB: path optimization converged.\n"
+                     + 60*"=" + "\n",
+                     verbosity.medium)
 
-                # Initialization of climbing
+                # Set climbing stage indicator
                 if self.use_climb:
-                    cl_indx = self.init_climb()
+                    self.stage = "climb"
                 else:
-                    softexit.trigger("NEB finished successfully.")
+                    softexit.trigger("NEB finished successfully at STEP %i." % step)
 
             else:
                 info(
@@ -599,9 +615,11 @@ class NEBMover(Motion):
             self.ptime = self.ttime = 0
             self.qtime = -time.time()
 
-            # If restarting in climb stage, initialization after NEB doesn't happen
+            # We need to initialize climbing once
             if np.all(self.climbgm.q_prev == 0.0) or np.all(self.climbgm.q_next == 0.0):
-                cl_indx = self.init_climb()
+                print("CHECK 622")
+                self.cl_indx = self.init_climb()
+                print("CHECK 624")
 
             if self.mode == "damped_bfgs":
                 # BFGS-family algorithms
@@ -610,8 +628,8 @@ class NEBMover(Motion):
                 # old_nebpot is used later as a convergence criterion.
                 old_nebpot, old_nebgrad = (self.nebpot.copy(), self.nebgrad.copy())
 
-                # Reducing dimension of the invhessian before passing it to optimizer
-                masked_invhessian = self.invhessian[
+                # Reducing dimension of the hessian before passing it to optimizer
+                masked_hessian = self.hessian[
                     np.ix_(self.climbgm.fixatoms_mask, self.climbgm.fixatoms_mask)
                 ]
 
@@ -619,50 +637,57 @@ class NEBMover(Motion):
                 info(" @NEB_CLIMB: before Damped_BFGS() call", verbosity.debug)
                 print("self.old_x.shape: %s" % str(self.old_x.shape))
                 print("self.nebgrad.shape: %s" % str(self.nebgrad.shape))
-                print("masked_invhessian.shape: %s" % str(masked_invhessian.shape))
+                print("masked_hessian.shape: %s" % str(masked_hessian.shape))
                 quality = Damped_BFGS(
                     x0=self.old_x,
                     fdf=self.climbgm,
                     fdf0=(self.nebpot, self.nebgrad),
-                    invhessian=masked_invhessian,
+                    hessian=masked_hessian,
                     big_step=self.big_step,
                 )
                 info(" @NEB_CLIMB: after Damped_BFGS() call", verbosity.debug)
 
                 self.adjust_big_step(quality)
 
-                # Restore dimensionality of the invhessian
-                self.invhessian[
+                # Restore dimensionality of the hessian
+                self.hessian[
                     np.ix_(self.climbgm.fixatoms_mask, self.climbgm.fixatoms_mask)
-                ] = masked_invhessian
+                ] = masked_hessian
 
                 # Update positions
-                self.beads.q[cl_indx] = self.climbgm.rbeads.q
+                self.beads.q[self.cl_indx] = self.climbgm.rbeads.q
                 info(" @NEB_CLIMB: bead positions updated.", verbosity.debug)
 
                 self.nebpot, self.nebgrad = self.climbgm(
-                    self.beads.q[cl_indx, self.climbgm.fixatoms_mask]
+                    self.beads.q[self.cl_indx, self.climbgm.fixatoms_mask]
                 )
 
                 # dx = current position - previous position.
                 # Use to determine converged minimization
                 dx = np.amax(
                     np.abs(
-                        self.beads.q[cl_indx, self.climbgm.fixatoms_mask] - self.old_x
+                        self.beads.q[self.cl_indx, self.climbgm.fixatoms_mask] - self.old_x
                     )
                 )
 
                 # Store old positions
-                self.old_x[:] = self.beads.q[cl_indx, self.climbgm.fixatoms_mask]
-                # This transfers forces from the mapper to the "main" beads,
+                self.old_x[:] = self.beads.q[self.cl_indx, self.climbgm.fixatoms_mask]
+                # This transfers forces from the ClimbMapper to the "main" beads,
                 # so that recalculation won't be triggered after the step.
                 print("Before transfer_forces_manual in climb.")
-                tmp_forces = self.forces.f.copy()
-                tmp_forces[cl_indx, :] = self.nebgrad[:]
+                tmp_f = self.full_f.copy()
+                tmp_v = self.full_v.copy()
+                tmp_f[self.cl_indx, self.climbgm.fixatoms_mask] = self.nebgrad
+                tmp_v[self.cl_indx] = self.nebpot
+                print("tmp_f.shape: %s" % str(tmp_f.shape))
                 self.forces.transfer_forces_manual(
-                    new_q=self.beads.q, new_v=self.beads.v, new_forces=tmp_forces
+                    new_q=[self.beads.q, ],
+                    new_v=[tmp_v, ],
+                    new_forces=[tmp_f, ],
                 )
                 print("After transfer_forces_manual in climb.")
+                self.full_f = dstrip(self.forces.f)
+                self.full_v = dstrip(self.forces.pots)
 
             # TODO: Routines for L-BFGS, SD, CG, FIRE, ...
             else:
