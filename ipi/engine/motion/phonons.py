@@ -105,7 +105,7 @@ class DynMatrixMover(Motion):
         self.dforces = self.forces.copy(self.dbeads, self.dcell)
 
     def step(self, step=None):
-        """Executes one step of phonon computation. """
+        """Executes one step of phonon computation."""
         if step < 3 * self.beads.natoms:
             self.phcalc.step(step)
         else:
@@ -115,7 +115,7 @@ class DynMatrixMover(Motion):
             softexit.trigger("Dynamic matrix is calculated. Exiting simulation")
 
     def printall(self, prefix, dmatx, deltaw=0.0, fixdof=np.array([])):
-        """ Prints out diagnostics for a given dynamical matrix. """
+        """Prints out diagnostics for a given dynamical matrix."""
 
         dmatx = dmatx + np.eye(len(dmatx)) * deltaw
         if deltaw != 0.0:
@@ -284,13 +284,13 @@ class DynMatrixMover(Motion):
 
 class DummyPhononCalculator(dobject):
 
-    """ No-op PhononCalculator """
+    """No-op PhononCalculator"""
 
     def __init__(self):
         pass
 
     def bind(self, dm):
-        """ Reference all the variables for simpler access."""
+        """Reference all the variables for simpler access."""
         self.dm = dm
 
     def step(self, step=None):
@@ -307,7 +307,7 @@ class FDPhononCalculator(DummyPhononCalculator):
     """Finite difference phonon evaluator."""
 
     def bind(self, dm):
-        """ Reference all the variables for simpler access."""
+        """Reference all the variables for simpler access."""
         super(FDPhononCalculator, self).bind(dm)
 
         # Initialises a 3*number of atoms X 3*number of atoms dynamic matrix.
@@ -374,7 +374,7 @@ class NMFDPhononCalculator(FDPhononCalculator):
     """Normal mode finite difference phonon evaluator."""
 
     def bind(self, dm):
-        """ Reference all the variables for simpler access."""
+        """Reference all the variables for simpler access."""
         super(NMFDPhononCalculator, self).bind(dm)
 
         if np.array_equal(

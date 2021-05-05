@@ -124,7 +124,7 @@ class ConstraintBase(dobject):
             )
 
     def gfunc(self):
-        """ Calculates the value of the constraint(s) """
+        """Calculates the value of the constraint(s)"""
         raise NotImplementedError()
 
     def Dgfunc(self):
@@ -159,7 +159,7 @@ class ConstraintBase(dobject):
 
 
 class ValueConstraintBase(ConstraintBase):
-    """ Base class for a constraint that contains target values. """
+    """Base class for a constraint that contains target values."""
 
     def __init__(self, constrained_indices, constraint_values, ncons):
         """Initialize the constraint.
