@@ -768,7 +768,7 @@ class InputFFCommittee(InputForceField):
     )
 
     def store(self, ff):
-        """ Store all the sub-forcefields """
+        """Store all the sub-forcefields"""
 
         super(InputFFCommittee, self).store(ff)
         _fflist = ff.fflist
@@ -815,7 +815,7 @@ class InputFFCommittee(InputForceField):
                 self.extra[_ii][1].store(_obj)
 
     def fetch(self):
-        """ Fetches all of the FF objects """
+        """Fetches all of the FF objects"""
 
         super(InputFFCommittee, self).fetch()
 
