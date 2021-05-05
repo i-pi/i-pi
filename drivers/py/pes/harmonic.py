@@ -31,7 +31,7 @@ class Harmonic_driver(Dummy_driver):
         """Silly harmonic potential"""
         if self.type == "isotropic":
             pot = 0.5 * self.k * (pos ** 2).sum()
-            force = -self.k * pos  # makes a zero force with same shape as pos
+            force = -self.k * pos  
             vir = cell * 0.0  # makes a zero virial with same shape as cell
             extras = "nada"
         else:
