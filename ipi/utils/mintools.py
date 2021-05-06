@@ -62,7 +62,7 @@ import numpy as np
 import math
 import time
 from ipi.utils.softexit import softexit
-from ipi.utils.messages import verbosity, info
+from ipi.utils.messages import verbosity, info, warning
 
 # Bracketing function
 
@@ -896,34 +896,33 @@ def L_BFGS(x0, d0, fdf, qlist, glist, fdf0, big_step, tol, itmax, m, scale, k):
 
 # Damped BFGS to use in NEB. Has no line search and no TRM.
 def Damped_BFGS(x0, fdf, fdf0, hessian, big_step):
-    """ BFGS, damped as described in
-        Nocedal, Wright (2nd ed.) Procedure 18.2
-        The purpose is mostly using it for NEB optimization, but it is capable of
-        plain geometry optimization also.
-        Written for a DIRECT Hessian B, not for the inverse H.
+    """BFGS, damped as described in Nocedal, Wright (2nd ed.) Procedure 18.2
+    The purpose is mostly using it for NEB optimization, but it is capable of
+    plain geometry optimization also.
+    Written for a DIRECT Hessian B, not for the inverse H.
 
-        Currently it doesn't use min_approx, TRM or any other step determination,
-        just the simplest (invhessian dot gradient) step, as in aimsChain.
-        The reason is that both LS and TRM require energy, and the energy
-        of NEB springs is somewhat ill-defined because of all projections that we do.
-        This may be improved later, but first we need to have NEB working.
+    Currently it doesn't use min_approx, TRM or any other step determination,
+    just the simplest (invhessian dot gradient) step, as in aimsChain.
+    The reason is that both LS and TRM require energy, and the energy
+    of NEB springs is somewhat ill-defined because of all projections that we do.
+    This may be improved later, but first we need to have NEB working.
 
-        Inside this function I use flattened vectors, restoring shape only when needed.
-        I always keep x0 in the original shape.
+    Inside this function I use flattened vectors, restoring shape only when needed.
+    I always keep x0 in the original shape.
 
-        Does one step.
+    Does one step.
 
-        Arguments:
-          x0: initial point
-          fdf: function and gradient (mapper)
-          fdf0: initial function and gradient values
-          hessian: approximate Hessian for the BFGS algorithm
-          big_step: limit on step length. It is defined differently
-                      compared to other optimization algorithms, take care.
+    Arguments:
+      x0: initial point
+      fdf: function and gradient (mapper)
+      fdf0: initial function and gradient values
+      hessian: approximate Hessian for the BFGS algorithm
+      big_step: limit on step length. It is defined differently
+                  compared to other optimization algorithms, take care.
 
-        Returns:
-          quality: minus cosine of the (gradient, dx) angle.
-                   Needed for the step length adjustment.
+    Returns:
+      quality: minus cosine of the (gradient, dx) angle.
+               Needed for the step length adjustment.
     """
 
     info(" @DampedBFGS: Started.", verbosity.debug)
@@ -932,70 +931,64 @@ def Damped_BFGS(x0, fdf, fdf0, hessian, big_step):
 
     # Nocedal's notation
     B = hessian
-    # I think symmetrization can never harm.
-    # [:] because hessian is passed as a reference
-    B[:] = 0.5 * (B + B.T)
 
     # Calculate direction
     # When the inverse itself is not needed, people recommend solve(), not inv().
     sk = np.linalg.solve(B, -g0)
     info(" @DampedBFGS: Calculated direction.", verbosity.debug)
-    print(sk)
 
     # Cosine of the (f, dx) angle
-    quality = - np.dot(sk / np.linalg.norm(sk), g0 / np.linalg.norm(g0))
+    quality = -np.dot(sk / np.linalg.norm(sk), g0 / np.linalg.norm(g0))
     info(" @DampedBFGS: Direction quality: %.4f." % quality, verbosity.debug)
 
     # I use maximal cartesian atomic displacement as a measure of step length
-    maxdispl = np.amax(np.linalg.norm(sk.reshape(-1,3), axis=1))
+    maxdispl = np.amax(np.linalg.norm(sk.reshape(-1, 3), axis=1))
     info(" @DampedBFGS: big_step = %.6f" % big_step, verbosity.debug)
     if maxdispl > big_step:
-        info(" @DampedBFGS: maxdispl before scaling: %.6f bohr"
-             % maxdispl,
-             verbosity.debug)
+        info(
+            " @DampedBFGS: maxdispl before scaling: %.6f bohr" % maxdispl,
+            verbosity.debug,
+        )
         sk *= big_step / maxdispl
 
-    info(" @DampedBFGS: maxdispl:                %.6f bohr"
-         % (np.amax(np.linalg.norm(sk.reshape(-1,3), axis=1))),
-         verbosity.debug)
+    info(
+        " @DampedBFGS: maxdispl:                %.6f bohr"
+        % (np.amax(np.linalg.norm(sk.reshape(-1, 3), axis=1))),
+        verbosity.debug,
+    )
 
-    print("Before fdf call:")
-    print("x0.shape:  %s,  sk.shape:  %s", (str(x0.shape), str(sk.shape)))
+    # Force call
     _, g = fdf(x0 + sk.reshape(x0.shape))
     g = g.flatten()
 
     # Update invhessian
     yk = g - g0
-    # 1/rho_k in Nocedal notation (eq. 6.14)
-    invrhok = np.dot(yk, sk)
-    print("invrhok:")
-    print(invrhok)
+    skyk = np.dot(sk, yk)
 
     # Equation 18.15 in Nocedal
-    theta = 1.
+    theta = 1.0
     Bsk = np.dot(B, sk)
-    sBs = np.dot(Bsk, sk)
-    print("sBs: %f" % sBs)
+    sBs = np.dot(sk, Bsk)
     # Damped update if rhok isn't sufficiently positive
-    if invrhok < 0.2 * sBs:
-        theta = (0.8 * sBs) / (sBs - invrhok)
-        info(" @DampedBFGS: damping update of the Hessian; "
-             "(direction dot d_gradient) is small. "
-             "theta := %.6f" % theta,
-             verbosity.debug
+    if skyk < 0.2 * sBs:
+        theta = (0.8 * sBs) / (sBs - skyk)
+        info(
+            " @DampedBFGS: damping update of the Hessian; "
+            "(direction dot d_gradient) is small. "
+            "theta := %.6f" % theta,
+            verbosity.debug,
         )
         yk = theta * yk + (1 - theta) * Bsk
-        invrhok = np.dot(yk, sk)
+        skyk = np.dot(sk, yk)
     else:
         info(" @DampedBFGS: Update of the Hessian, no damping.", verbosity.debug)
 
-    info(" @DampedBFGS: invrhok before reciprocating: %e" % invrhok, verbosity.debug)
+    info(" @DampedBFGS: (s_k dot y_k) before reciprocating: %e" % skyk, verbosity.debug)
     try:
-        rhok = 1. / invrhok
+        rhok = 1.0 / skyk
     except:
-        info(" @DampedBFGS: caught ZeroDivisionError in 1/rhok.", verbosity.debug)
-        rhok = 1e+5
-    print("rhok: %f" % rhok)
+        warning(" @DampedBFGS: caught ZeroDivisionError in 1/skyk.", verbosity.high)
+        rhok = 1e5
 
     # Compute BFGS term (eq. 18.16 in Nocedal)
     B += np.outer(yk, yk) * rhok - np.outer(Bsk, Bsk) / sBs
@@ -1006,7 +999,7 @@ def Damped_BFGS(x0, fdf, fdf0, hessian, big_step):
     print("Eigenvalues of the Hessian:")
     eigvals = np.real(np.linalg.eigvals(B))
     with np.printoptions(threshold=10000, linewidth=100000):
-        print(eigvals)
+        print(np.sort(eigvals))
 
     # If small numbers are found on the diagonal of the Hessian,
     # add small positive numbers. 1 Ha/Bohr^2 is ~97.2 eV/ang^2.
@@ -1372,7 +1365,7 @@ def L_BFGS_nls(
 
         # Scale if attempted step is too large
         if stepsize > big_step:
-            d0 = big_step * d0 /np.linalg.norm(d0.flatten())
+            d0 = big_step * d0 / np.linalg.norm(d0.flatten())
             info(" @MINIMIZE: Scaled step size", verbosity.debug)
 
         x = np.add(x0, d0)
@@ -1448,7 +1441,7 @@ def nichols(f0, f1, d, dynmax, m3, big_step, mode=1):
     IN    f0      = physical forces        (n,)
           f1      = spring forces
           d       = dynmax eigenvalues
-          dynmax  = dynmax       (n-m x n-m) with m = # external modes
+          dynmax  = dynmax       (n x n-m) with m = # external modes
           m3      = mass vector
     OUT   DX      = displacement in cartesian basis
 

@@ -74,9 +74,7 @@ class NEBGradientMapper(object):
         # rbq = self.rbeads.q[:, self.fixatoms_mask]
 
         # Forces
-        print("Before calling nebgm.dforces.f")
         bf = dstrip(self.dforces.f.copy())[:, self.fixatoms_mask]
-        print("After calling nebgm.dforces.f")
         # Zeroing endpoint forces
         bf[0, :] = bf[-1, :] = 0.0
 
@@ -343,7 +341,7 @@ class NEBMover(Motion):
         self.nebgrad = old_nebgradient
         self.d = old_direction
         self.full_f = full_force  # forces of ALL beads even in climb stage
-        self.full_v = full_pots   # potentials of ALL beads
+        self.full_v = full_pots  # potentials of ALL beads
         self.hessian = hessian_bfgs
         self.corrections = corrections_lbfgs
         self.qlist = qlist_lbfgs
@@ -397,7 +395,10 @@ class NEBMover(Motion):
           cl_indx - index of the bead for climbing
         """
         cl_indx = np.argmax(self.forces.pots)
-        info(" @NEB: Initializing climbing. Climbing bead: %i." % cl_indx, verbosity.medium)
+        info(
+            " @NEB: Initializing climbing. Climbing bead: %i." % cl_indx,
+            verbosity.medium,
+        )
         if cl_indx in [0, self.beads.nbeads - 1]:
             softexit.trigger("ERROR: climbing bead is the endpoint.")
         self.climbgm.rbeads.q[:] = self.beads.q[cl_indx]
@@ -418,8 +419,9 @@ class NEBMover(Motion):
 
         print("self.beads.q.shape: %s" % str(self.beads.q.shape))
         self.old_x = dstrip(self.beads.q[cl_indx, self.climbgm.fixatoms_mask]).copy()
-        print("self.old_x.shape: %s  type: %s"
-              % (str(self.old_x.shape), type(self.old_x)))
+        print(
+            "self.old_x.shape: %s  type: %s" % (str(self.old_x.shape), type(self.old_x))
+        )
         self.stage = "climb"
         return cl_indx
 
@@ -442,8 +444,8 @@ class NEBMover(Motion):
         else:
             self.big_step *= 0.5
             # In no case we need big_step going to zero completely
-            if self.big_step <= self.tolerances["position"]:
-                self.big_step = 10 * self.tolerances["position"]
+            if self.big_step <= 0.01:
+                self.big_step = 0.02
             info(
                 " @NEBMover: Step direction far from climbgrad, "
                 "reducing big_step to %.6f bohr." % self.big_step,
@@ -484,7 +486,9 @@ class NEBMover(Motion):
                     )
 
                     # Set the initial direction to the direction of NEB forces
-                    self.old_x = dstrip(self.beads.q[:, self.nebgm.fixatoms_mask]).copy()
+                    self.old_x = dstrip(
+                        self.beads.q[:, self.nebgm.fixatoms_mask]
+                    ).copy()
 
                     # With multiple stages, the size of the hessian is different
                     # at each stage, therefore we check.
@@ -575,10 +579,14 @@ class NEBMover(Motion):
                 and (np.amax(np.abs(self.nebgrad)) <= self.tolerances["force"])
                 and (dx <= self.tolerances["position"])
             ):
-                info(60 * "=" + "\n"
-                     + " @NEB: path optimization converged.\n"
-                     + 60*"=" + "\n",
-                     verbosity.medium)
+                info(
+                    60 * "="
+                    + "\n"
+                    + " @NEB: path optimization converged.\n"
+                    + 60 * "="
+                    + "\n",
+                    verbosity.medium,
+                )
 
                 # Set climbing stage indicator
                 if self.use_climb:
@@ -617,9 +625,7 @@ class NEBMover(Motion):
 
             # We need to initialize climbing once
             if np.all(self.climbgm.q_prev == 0.0) or np.all(self.climbgm.q_next == 0.0):
-                print("CHECK 622")
                 self.cl_indx = self.init_climb()
-                print("CHECK 624")
 
             if self.mode == "damped_bfgs":
                 # BFGS-family algorithms
@@ -666,7 +672,8 @@ class NEBMover(Motion):
                 # Use to determine converged minimization
                 dx = np.amax(
                     np.abs(
-                        self.beads.q[self.cl_indx, self.climbgm.fixatoms_mask] - self.old_x
+                        self.beads.q[self.cl_indx, self.climbgm.fixatoms_mask]
+                        - self.old_x
                     )
                 )
 
@@ -679,11 +686,16 @@ class NEBMover(Motion):
                 tmp_v = self.full_v.copy()
                 tmp_f[self.cl_indx, self.climbgm.fixatoms_mask] = self.nebgrad
                 tmp_v[self.cl_indx] = self.nebpot
-                print("tmp_f.shape: %s" % str(tmp_f.shape))
                 self.forces.transfer_forces_manual(
-                    new_q=[self.beads.q, ],
-                    new_v=[tmp_v, ],
-                    new_forces=[tmp_f, ],
+                    new_q=[
+                        self.beads.q,
+                    ],
+                    new_v=[
+                        tmp_v,
+                    ],
+                    new_forces=[
+                        tmp_f,
+                    ],
                 )
                 print("After transfer_forces_manual in climb.")
                 self.full_f = dstrip(self.forces.f)

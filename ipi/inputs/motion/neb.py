@@ -82,7 +82,7 @@ class InputNEB(InputDictionary):
                 "dimension": ["energy", "force", "length"],
                 "help": """Tolerance criteria to stop NEB optimization.
                            If you work with DFT, do not use these defaults.
-                        """
+                        """,
             },
         ),
         "old_coord": (
@@ -140,7 +140,7 @@ class InputNEB(InputDictionary):
             InputValue,
             {
                 "dtype": float,
-                "default": 0.5 ,
+                "default": 0.5,
                 "help": """The maximum atomic displacement in a single step
                            of optimizations within NEB procedure.
                            If requested step is larger, it will be downscaled so
@@ -226,14 +226,12 @@ class InputNEB(InputDictionary):
                 "options": ["endpoints", "neb", "climb"],
                 "default": "neb",
                 "help": "Stage of the NEB pipeline: optimization of endpoints, "
-                        "NEB itself, climbing image",
+                "NEB itself, climbing image",
             },
         ),
         "use_climb": (
             InputValue,
-            {"dtype": bool,
-             "default": False,
-             "help": "Use climbing image NEB or not"},
+            {"dtype": bool, "default": False, "help": "Use climbing image NEB or not"},
         ),
         "climb_bead": (
             InputValue,
@@ -247,8 +245,10 @@ class InputNEB(InputDictionary):
 
     dynamic = {}
 
-    default_help = ("Contains the required parameters "
-                   "for performing nudged elastic band (NEB) calculations")
+    default_help = (
+        "Contains the required parameters "
+        "for performing nudged elastic band (NEB) calculations"
+    )
     default_label = "NEB"
 
     def store(self, neb):
