@@ -205,7 +205,7 @@ class Planetary(Motion):
         return sij
 
     def save_matrix(self, matrix):
-        """ Writes the compressed, sparse frequency matrix to a netstring encoded file """
+        """Writes the compressed, sparse frequency matrix to a netstring encoded file"""
 
         sparse.save_npz(
             self.fomega2, matrix, saver=netstring_encoded_savez, compressed=True

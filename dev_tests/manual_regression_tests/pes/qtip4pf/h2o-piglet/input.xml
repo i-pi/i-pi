@@ -1,12 +1,12 @@
 <!-- REGTEST
-DEPENDENCIES init.pdb
+DEPENDENCIES init.xyz
 COMMAND(4) i-pi-driver -u -h ffdriver -m qtip4pf
 ENDREGTEST -->
 <simulation>
   <output prefix='simulation'>
     <properties stride='20' filename='out'>  [ step, time{picosecond}, 
 conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potential{electronvolt}, pressure_cv{megapascal}] </properties>
-    <trajectory filename='pos' stride='20' format='pdb'> positions{angstrom} </trajectory>
+    <trajectory filename='pos' stride='20' format='xyz'> positions{angstrom} </trajectory>
     <trajectory filename='for' stride='20'> forces{piconewton} </trajectory>
   </output>
   <total_steps>20</total_steps>
@@ -18,7 +18,7 @@ conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potentia
   </ffsocket>
   <system>
     <initialize nbeads='8'>
-      <file mode='pdb'> init.pdb </file>
+      <file mode='xyz'> init.xyz </file>
       <velocities mode='thermal' units='kelvin'> 298 </velocities>
     </initialize>
     <forces>

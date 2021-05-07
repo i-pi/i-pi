@@ -396,7 +396,7 @@ class InputMotionBase(Input):
 
 class InputMotion(InputMotionBase):
 
-    """ Extends InputMotionBase to allow the definition of a multimotion """
+    """Extends InputMotionBase to allow the definition of a multimotion"""
 
     attribs = copy(InputMotionBase.attribs)
 

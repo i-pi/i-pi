@@ -10,7 +10,7 @@
   </ffsocket>
   <system>
     <initialize nbeads='1'>
-      <file mode='xyz'> init.xyz </file>
+      <file mode='xyz'> h2o_box.xyz </file>
     </initialize>
     <forces>
       <force forcefield='lmp'> </force>

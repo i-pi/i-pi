@@ -12,7 +12,7 @@
   </ffsocket>
   <system>
     <initialize nbeads='1'>
-      <file mode='xyz' units='angstrom'> init.xyz </file>
+      <file mode='xyz' units='angstrom'> waterhexamer_ring.xyz </file>
       <cell mode='abc' units='angstrom'> [45.0, 45.0, 45.0] </cell>
     </initialize>
     <forces>
