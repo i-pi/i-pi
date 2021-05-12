@@ -42,7 +42,6 @@
            aux =  x(i) - ( c(i)*S(q(1),eps,delta,deltaQ) / ( mass*omega2(i) ) )
 
            pot = pot + 0.5 * mass * omega2(i) * aux **2
-           
            force(1)  = force(1) + aux * c(i)*dSD_dq(q(1),eps,delta,deltaQ)
            force(i+1) = -mass * omega2(i) * aux 
 
@@ -58,7 +57,8 @@
         real(kind=8)             :: dx       
 
            dx =  q / deltaQ
-           SD = 1.0 + eps*DEXP(-0.5 * (dx**2) ) + delta*DTANH(dx) 
+           SD = 1.0 + eps*DEXP(-0.5 * (dx**2) ) + delta*DTANH(dx)
+           !write(6,*) 'ALBERTO', 1,eps, dx,  DEXP(-0.5 * (dx**2) ),  eps*DEXP(-0.5 * (dx**2) ) 
         END FUNCTION SD
 
         REAL*8 FUNCTION   S(q,eps,delta,deltaQ)
@@ -115,8 +115,8 @@
            force(i,3) = fz
 
            friction(nat*3*(i-1)+1,nat*3*(i-1)+1) = eta * (dSD_dq(x,eps,delta,deltaQ) )**2  
-           friction(nat*3*(i-1)+2,nat*3*(i-1)+2) = eta * (dSD_dq(y,eps,delta,deltaQ) )**2 
-           friction(nat*3*(i-1)+3,nat*3*(i-1)+3) = eta * (dSD_dq(z,eps,delta,deltaQ) )**2 
+           friction(nat*3*(i-1)+2,nat*3*(i-1)+2) = 0 !eta * (dSD_dq(y,eps,delta,deltaQ) )**2 
+           friction(nat*3*(i-1)+3,nat*3*(i-1)+3) = 0 !eta * (dSD_dq(z,eps,delta,deltaQ) )**2 
 
         ENDDO
 

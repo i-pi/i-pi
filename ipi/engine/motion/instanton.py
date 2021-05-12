@@ -3,9 +3,6 @@ Contains classes for instanton  calculations.
 
 Algorithms implemented by Yair Litman and Mariana Rossi, 2017
 """
-debug = True
-debug = False
-test_factor = 1
 # This file is part of i-PI.
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
@@ -436,17 +433,7 @@ class FrictionMapper(PesMapper):
     def save(self, e, g, eta=None):
         """Stores potential and forces in this class for convenience"""
         super(FrictionMapper, self).save(e, g)
-        # ALBERTO: CLEAN THE MASS UNSCALING
-        self.eta = eta * test_factor
-        if debug:
-            for i in range(self.dbeads.nbeads):
-                self.eta[i] = np.eye(self.dbeads.natoms * 3)
-        # print('mass scaling ALBERTO')
-        # for e in self.eta:
-        #    m=self.dbeads.m3[0][:,np.newaxis]
-        #    e[:] =(e/m**-0.5)/m.T**-0.5 #Mass unscale
-        # ALBERTO
-        # print(self.eta[0])
+        self.eta = eta 
 
     def initialize(self, q, forces):
         """Initialize potential, forces and friction"""
@@ -492,10 +479,7 @@ class FrictionMapper(PesMapper):
         )
 
         z_friction = spline(self.omegak)
-        # z_friction = z_friction  /1.6743276# / z_friction[1]  # UPDATE HERE WHEN AIMS IMPLEMENTATION IS READY
-        if debug:
-            z_friction = self.dbeads.m3[0, 0] * self.omegak
-        self.z_k = np.multiply(self.omegak, z_friction)[:, np.newaxis] / test_factor
+        self.z_k = np.multiply(self.omegak, z_friction)[:, np.newaxis]
 
         info(units.unit_to_user("frequency", "inversecm", self.omegak), verbosity.debug)
 
@@ -547,9 +531,6 @@ class FrictionMapper(PesMapper):
 
     def obtain_g(self, s):
         """Computes g from s"""
-
-        if debug:
-            return self.dbeads.q.copy()
 
         nphys = self.dbeads.natoms * 3
 
@@ -872,9 +853,6 @@ class Mapper(object):
         e2, g2 = self.sm(q)
         g = self.fix.get_active_vector(g1 + g2, 1)
         e = np.sum(e1 + e2)
-        if debug:
-            g = self.fix.get_active_vector(g1, 1)
-            e = np.sum(e1)
 
         self.save(e, g)
 
@@ -923,9 +901,6 @@ class Mapper(object):
             e2, g2 = self.gm(x, new_disc)
             e = e1 + e2
             g = np.add(g1, g2)
-            if debug:
-                e = e2
-                g = g2
 
         elif mode == "physical":
             e, g = self.gm(x, new_disc)
@@ -1153,8 +1128,10 @@ class DummyOptimizer(dobject):
 
                 if self.options["friction"] and self.options["frictionSD"]:
                     friction_hessian = current_hessian[1]
-                    # self.optarrays["fric_hessian"][:] = self.fix.get_full_vector(friction_hessian, 4 )
-                    self.optarrays["fric_hessian"][:] = friction_hessian
+                    print('alberto2')
+                    print(np.amax(friction_hessian),np.amin(friction_hessian))
+                    self.optarrays["fric_hessian"][:] = self.fix.get_full_vector(friction_hessian, 4 )
+                    #self.optarrays["fric_hessian"][:] = friction_hessian #ALBERTO
                     print_instanton_hess(
                         self.options["prefix"] + "fric_FINAL",
                         step,
@@ -1167,8 +1144,8 @@ class DummyOptimizer(dobject):
                 else:
                     phys_hessian = current_hessian
 
-                # self.optarrays["hessian"][:] = self.fix.get_full_vector(phys_hessian, 2)
-                self.optarrays["hessian"][:] = phys_hessian
+                self.optarrays["hessian"][:] = self.fix.get_full_vector(phys_hessian, 2)
+                #self.optarrays["hessian"][:] = phys_hessian #ALBERTO
 
                 print_instanton_hess(
                     self.options["prefix"] + "_FINAL",
@@ -1387,14 +1364,13 @@ class HessianOptimizer(DummyOptimizer):
             )
             if self.options["friction"] and self.options["frictionSD"]:
                 phys_hessian = active_hessian[0]
-                friction_hessian = active_hessian[1]
-                self.optarrays["fric_hessian"][:] = friction_hessian[:]
+                friction_hessian = active_hessian[1] #ALBERTO
+                self.optarrays["fric_hessian"][:] = friction_hessian[:] #ALBERTO
             else:
                 phys_hessian = active_hessian
 
-            print("Check phys_hessian")
-            # self.optarrays["hessian"][:] = self.fix.get_full_vector(phys_hessian, 2)
-            self.optarrays["hessian"][:] = phys_hessian
+            self.optarrays["hessian"][:] = self.fix.get_full_vector(phys_hessian, 2)
+            #self.optarrays["hessian"][:] = phys_hessian
 
         self.update_old_pos_for()
 
@@ -1411,9 +1387,10 @@ class HessianOptimizer(DummyOptimizer):
                 dg = d_g[j, :]
                 dx = d_x[j, :]
                 Powell(dx, dg, aux)
+            phys_hessian = active_hessian
             if self.options["friction"]:
                 info(
-                    "powell update for friction hessian is not implemented",
+                    "Powell update for friction hessian is not implemented. We move on without updating it. In all tested cases this is not a problem",
                     verbosity.medium,
                 )
 
@@ -1436,7 +1413,7 @@ class HessianOptimizer(DummyOptimizer):
             else:
                 phys_hessian = active_hessian
 
-            self.optarrays["hessian"][:] = self.fix.get_full_vector(phys_hessian, 2)
+        self.optarrays["hessian"][:] = self.fix.get_full_vector(phys_hessian, 2)
 
     def print_hess(self, step):
         if (
@@ -1448,6 +1425,14 @@ class HessianOptimizer(DummyOptimizer):
                 self.optarrays["hessian"],
                 self.output_maker,
             )
+            if self.options["friction"]:
+                print_instanton_hess(
+                self.options["prefix"]+'_fric',
+                step,
+                self.optarrays["fric_hessian"],
+                self.output_maker,
+                )
+ 
 
     def post_step(self, step, new_x, d_x, activearrays):
         """General tasks that have to be performed after finding the new step"""
@@ -1495,9 +1480,6 @@ class NicholsOptimizer(HessianOptimizer):
 
         # Add spring terms to the physical hessian
         h = np.add(self.mapper.sm.h, h0)
-
-        if debug:
-            h = h0
 
         # Add friction terms to the hessian
         if self.options["friction"]:

@@ -260,24 +260,27 @@ def get_hessian(
             )
             x = x0.copy()
 
+            #PLUS
             x[:, j] = x0[:, j] + d
             e, f1 = gm(x, new_disc)
             if friction:
                 eta1 = gm.eta
+
+            #Minus
             x[:, j] = x0[:, j] - d
+            e, f2 = gm(x, new_disc)
             if friction:
                 eta2 = gm.eta
-            e, f2 = gm(x, new_disc)
+
+            #COMBINE
             g = (f1 - f2) / (2 * d)
-
-            if friction:
-                eta_h[:, :, :, j] = (eta1 - eta2) / (2 * d)
             h[j, :] = g.flatten()
-
             f = open("hessian_" + str(j) + ".tmp", "w")
             np.savetxt(f, h)
             f.close()
+
             if friction:
+                eta_h[:, :, :, j] = (eta1 - eta2) / (2 * d)
                 f = open("hessianEta_" + str(j) + ".tmp", "w")
                 np.savetxt(f, eta_h.flatten())
                 f.close()
