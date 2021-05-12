@@ -19,7 +19,7 @@
       <force forcefield='pw'/>
     </forces>
     <initialize nbeads='8'>
-      <file mode='pdb'> init.pdb </file>
+      <file mode='xyz'> init.xyz </file>
       <velocities mode='thermal' units='kelvin'> 100 </velocities>
     </initialize>
     <ensemble>

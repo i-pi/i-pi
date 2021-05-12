@@ -3,6 +3,7 @@ Contains classes for instanton  calculations.
 
 Algorithms implemented by Yair Litman and Mariana Rossi, 2017
 """
+
 # This file is part of i-PI.
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
@@ -38,11 +39,6 @@ from ipi.utils.hesstools import get_hessian, clean_hessian, get_dynmat
 
 
 __all__ = ["InstantonMotion"]
-
-# TEST
-# test 1D double well with Ohmic
-# test 1D double well with Ohmic +SD
-# test 2x*1D double well with Ohmic +SD
 
 
 class InstantonMotion(Motion):
