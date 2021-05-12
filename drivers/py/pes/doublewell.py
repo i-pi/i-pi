@@ -39,12 +39,12 @@ class DoubleWell_driver(Dummy_driver):
         else:
             try:
                 arglist = self.args.split(",")
-                param = list(map(float, arglist ))
+                param = list(map(float, arglist))
                 assert len(param) == 4
                 w_b = param[0] * invcm2au
                 v0 = param[1] * invcm2au
                 m = param[2]
-                self.delta = param[3]*A2au
+                self.delta = param[3] * A2au
             except:
                 sys.exit(self.error_msg)
 
@@ -77,17 +77,14 @@ class DoubleWell_driver(Dummy_driver):
         return pot, force, vir, extras
 
 
-
-
-
 class DoubleWell_with_friction_driver(DoubleWell_driver):
-    """ Adds to the double well potential the calculation of the friction tensor.
+    """Adds to the double well potential the calculation of the friction tensor.
 
-        friction(q) = eta0 [\partial sd(q) \partial q ]^2
-        with
-        q = position, and
-        sd(q) = [1+eps1 exp( (q-0)^2 / (2deltaQ^2) ) ] + eps2 tanh(q/deltaQ)
-        """
+    friction(q) = eta0 [\partial sd(q) \partial q ]^2
+    with
+    q = position, and
+    sd(q) = [1+eps1 exp( (q-0)^2 / (2deltaQ^2) ) ] + eps2 tanh(q/deltaQ)
+    """
 
     def __init__(self, args=None):
 
@@ -108,7 +105,7 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
             w_b = param[0] * invcm2au
             v0 = param[1] * invcm2au
             m = param[2]
-            self.delta = param[3]*A2au
+            self.delta = param[3] * A2au
             self.eta0 = param[4]
             self.eps1 = param[5]
             self.eps2 = param[6]
@@ -123,13 +120,13 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
         """Functions that checks dimensions of the received position"""
         assert pos.shape == (1, 3)
 
-    def SD(self,q):
+    def SD(self, q):
         """Auxiliary function to compute friction tensor"""
         dx = q / self.deltaQ
         SD = 1.0 + self.eps1 * np.exp(-0.5 * (dx ** 2)) + self.eps2 * np.tanh(dx)
         return SD
 
-    def dSD_dq(self,q):
+    def dSD_dq(self, q):
         """Auxiliary function to compute friction tensor"""
         dx = q / self.deltaQ
         dsddq1 = self.eps1 * np.exp(-0.5 * (dx ** 2)) * (-dx / self.deltaQ)
@@ -138,7 +135,7 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
 
         return dSD_dq
 
-    def get_friction_tensor(self,pos):
+    def get_friction_tensor(self, pos):
         """Function that computes spatially dependent friction tensor"""
 
         self.check_dimensions(pos)

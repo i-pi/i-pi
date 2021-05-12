@@ -433,7 +433,7 @@ class FrictionMapper(PesMapper):
     def save(self, e, g, eta=None):
         """Stores potential and forces in this class for convenience"""
         super(FrictionMapper, self).save(e, g)
-        self.eta = eta 
+        self.eta = eta
 
     def initialize(self, q, forces):
         """Initialize potential, forces and friction"""
@@ -1128,10 +1128,12 @@ class DummyOptimizer(dobject):
 
                 if self.options["friction"] and self.options["frictionSD"]:
                     friction_hessian = current_hessian[1]
-                    print('alberto2')
-                    print(np.amax(friction_hessian),np.amin(friction_hessian))
-                    self.optarrays["fric_hessian"][:] = self.fix.get_full_vector(friction_hessian, 4 )
-                    #self.optarrays["fric_hessian"][:] = friction_hessian #ALBERTO
+                    print("alberto2")
+                    print(np.amax(friction_hessian), np.amin(friction_hessian))
+                    self.optarrays["fric_hessian"][:] = self.fix.get_full_vector(
+                        friction_hessian, 4
+                    )
+                    # self.optarrays["fric_hessian"][:] = friction_hessian #ALBERTO
                     print_instanton_hess(
                         self.options["prefix"] + "fric_FINAL",
                         step,
@@ -1145,7 +1147,7 @@ class DummyOptimizer(dobject):
                     phys_hessian = current_hessian
 
                 self.optarrays["hessian"][:] = self.fix.get_full_vector(phys_hessian, 2)
-                #self.optarrays["hessian"][:] = phys_hessian #ALBERTO
+                # self.optarrays["hessian"][:] = phys_hessian #ALBERTO
 
                 print_instanton_hess(
                     self.options["prefix"] + "_FINAL",
@@ -1364,13 +1366,13 @@ class HessianOptimizer(DummyOptimizer):
             )
             if self.options["friction"] and self.options["frictionSD"]:
                 phys_hessian = active_hessian[0]
-                friction_hessian = active_hessian[1] #ALBERTO
-                self.optarrays["fric_hessian"][:] = friction_hessian[:] #ALBERTO
+                friction_hessian = active_hessian[1]  # ALBERTO
+                self.optarrays["fric_hessian"][:] = friction_hessian[:]  # ALBERTO
             else:
                 phys_hessian = active_hessian
 
             self.optarrays["hessian"][:] = self.fix.get_full_vector(phys_hessian, 2)
-            #self.optarrays["hessian"][:] = phys_hessian
+            # self.optarrays["hessian"][:] = phys_hessian
 
         self.update_old_pos_for()
 
@@ -1427,12 +1429,11 @@ class HessianOptimizer(DummyOptimizer):
             )
             if self.options["friction"]:
                 print_instanton_hess(
-                self.options["prefix"]+'_fric',
-                step,
-                self.optarrays["fric_hessian"],
-                self.output_maker,
+                    self.options["prefix"] + "_fric",
+                    step,
+                    self.optarrays["fric_hessian"],
+                    self.output_maker,
                 )
- 
 
     def post_step(self, step, new_x, d_x, activearrays):
         """General tasks that have to be performed after finding the new step"""

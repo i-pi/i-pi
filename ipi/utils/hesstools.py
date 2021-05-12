@@ -260,19 +260,19 @@ def get_hessian(
             )
             x = x0.copy()
 
-            #PLUS
+            # PLUS
             x[:, j] = x0[:, j] + d
             e, f1 = gm(x, new_disc)
             if friction:
                 eta1 = gm.eta
 
-            #Minus
+            # Minus
             x[:, j] = x0[:, j] - d
             e, f2 = gm(x, new_disc)
             if friction:
                 eta2 = gm.eta
 
-            #COMBINE
+            # COMBINE
             g = (f1 - f2) / (2 * d)
             h[j, :] = g.flatten()
             f = open("hessian_" + str(j) + ".tmp", "w")
