@@ -485,7 +485,7 @@ class FrictionMapper(PesMapper):
                 fill_value=0.0,
                 bounds_error=False,
             )
-            fric_spec_dens = spline(self.omegak / invcm2au)
+            # fric_spec_dens = spline(self.omegak / invcm2au)
 
             if fric_spec_dens_ener == 0 or fric_spec_dens_ener < freq[0]:
                 norm = 1.0  # spline(freq[0])*freq[0]*invcm2au
