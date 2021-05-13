@@ -10,7 +10,6 @@ import math
 import numpy as np
 
 from ipi.utils.messages import verbosity, warning
-from ipi.utils import units
 
 __all__ = [
     "matrix_exp",
@@ -499,7 +498,6 @@ def LT_friction(freqs, spectral_density_over_w, forceit=False):
     spectral_density_over_w ( J(w)/w ) is a provided as a function (spline)
     For numerical reasons the  spline  expects frequencies in invcm"""
     import scipy.integrate as integrate
-    from scipy.interpolate import interp1d
 
     if freqs[1] < 1e-4 or np.amax(freqs) > 1e4:  # assumes invcm units
         if not forceit:

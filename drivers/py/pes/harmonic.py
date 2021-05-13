@@ -45,6 +45,5 @@ class Harmonic_driver(Dummy_driver):
                 )  # makes a zero force with same shape as pos
             vir = cell * 0.0  # makes a zero virial with same shape as cell
             extras = "nada"
-        pos = pos3.reshape(pos.shape)
-        force = force3.reshape(pos.shape)
+            force = force3.reshape(pos.shape)
         return pot, force, vir, extras

@@ -28,7 +28,7 @@ fortran_driver_models = [
     "gas",
 ]
 
-# YL should do this automatically but for now I do it explicitly
+# We should do this automatically but for now I we do it explicitly here
 python_driver_models = ["dummy", "harmonic"]
 
 
