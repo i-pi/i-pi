@@ -467,12 +467,12 @@ class FrictionMapper(PesMapper):
 
     def set_fric_spec_dens(self, fric_spec_dens_data, fric_spec_dens_ener):
         """Computes and sets the laplace transform of the friction tensor"""
-        from ipi.utils.mathtools import LT_friction
+        # from ipi.utils.mathtools import LT_friction
 
         # from scipy.interpolate import interp1d
         if len(fric_spec_dens_data) == 0:
             LT_fric_spec_dens = np.ones((1000, 2))
-            LT_fric_spec_dens[:, 0] = np.arange(1000)
+            LT_fric_spec_dens[:, 0] = np.arange(self.omegak.shape)
         else:
             invcm2au = units.unit_to_internal("frequency", "inversecm", 1)
 
@@ -485,16 +485,18 @@ class FrictionMapper(PesMapper):
                 fill_value=0.0,
                 bounds_error=False,
             )
-            # fric_spec_dens = spline(self.omegak / invcm2au)
 
-            if fric_spec_dens_ener == 0 or fric_spec_dens_ener < freq[0]:
+            if fric_spec_dens_ener == 0 or fric_spec_dens_ener / invcm2au < freq[0]:
                 norm = 1.0  # spline(freq[0])*freq[0]*invcm2au
-            elif fric_spec_dens_ener > freq[-1]:
+            elif fric_spec_dens_ener / invcm2au > freq[-1]:
                 norm = 1.0  # spline(freq[-1])*freq[-10]*invcm2au
             else:
-                norm = spline(fric_spec_dens_ener / invcm2au) * fric_spec_dens_ener
+                # norm = spline(fric_spec_dens_ener / invcm2au) * fric_spec_dens_ener
+                norm = spline(fric_spec_dens_ener / invcm2au)
 
-            LT_fric_spec_dens = LT_friction(self.omegak / invcm2au, spline) / norm
+            fric_spec_dens = spline(self.omegak / invcm2au)
+            LT_fric_spec_dens = fric_spec_dens / norm
+            # LT_fric_spec_dens = LT_friction(self.omegak / invcm2au, spline) / norm
 
         self.fric_LTwk = np.multiply(self.omegak, LT_fric_spec_dens)[:, np.newaxis]
 
