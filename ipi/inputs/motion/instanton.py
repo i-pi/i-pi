@@ -139,12 +139,21 @@ class InputInst(InputDictionary):
             InputValue,
             {"dtype": bool, "default": True, "help": "Activates SD Friction."},
         ),
-        "z_friction": (
+        "fric_spec_dens": (
             InputArray,
             {
                 "dtype": float,
                 "default": input_default(factory=np.ones, args=(0,)),
-                "help": "Normalized frequency dependence of the friction tensor (z). A two column data is expected. First column: omega (cm^-1). Second column: z(omega). ",
+                "help": "Spectral density of the friction tensor over frequency (J(w)/w). A two column data is expected. First column: w (a.u.). Second column: J(w)/w (a.u.)",
+            },
+        ),
+        "fric_spec_dens_ener": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 0.0,
+                "help": "Energy at which the friction tensor is evaluated in the client code",
+                "dimension": "energy",
             },
         ),
         "eta": (
@@ -337,7 +346,8 @@ class InputInst(InputDictionary):
         self.friction.store(options["friction"])
         self.frictionSD.store(options["frictionSD"])
         if options["friction"]:
-            self.z_friction.store(options["z_friction"])
+            self.fric_spec_dens.store(options["fric_spec_dens"])
+            self.fric_spec_dens_ener.store(options["fric_spec_dens_ener"])
         self.alt_out.store(options["save"])
         self.prefix.store(options["prefix"])
         self.delta.store(optarrays["delta"])

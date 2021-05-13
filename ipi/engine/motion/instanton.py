@@ -37,7 +37,6 @@ from ipi.utils.instools import (
 from ipi.utils.instools import print_instanton_hess, diag_banded, ms_pathway
 from ipi.utils.hesstools import get_hessian, clean_hessian, get_dynmat
 
-
 __all__ = ["InstantonMotion"]
 
 
@@ -113,7 +112,8 @@ class InstantonMotion(Motion):
         friction=False,
         frictionSD=True,
         eta=np.eye(0, 0, 0, float),
-        z_friction=np.zeros(0, float),
+        fric_spec_dens=np.zeros(0, float),
+        fric_spec_dens_ener=0.0,
     ):
         """Initialises InstantonMotion."""
 
@@ -142,7 +142,8 @@ class InstantonMotion(Motion):
         else:
             self.options["frictionSD"] = frictionSD
 
-        self.options["z_friction"] = z_friction
+        self.options["fric_spec_dens"] = fric_spec_dens
+        self.options["fric_spec_dens_ener"] = fric_spec_dens_ener
 
         self.optarrays = {}  # Optimization arrays
         self.optarrays["big_step"] = biggest_step
@@ -458,24 +459,44 @@ class FrictionMapper(PesMapper):
             warnings.filterwarnings("error")
             try:
                 self.sqrtm(
-                    eta[i] + np.eye(self.dbeads.natoms * 3) * 0.0001
+                    eta[i] + np.eye(self.dbeads.natoms * 3) * 0.000000000001
                 )  # dgdq = s ** 0.5 -> won't work for multiD
             except Warning:
                 print(eta[i])
                 softexit.trigger("The provided friction is not positive definite")
 
-    def set_z_friction(self, z_friction):
-        """Sets the scaling factors corresponding to frequency dependence of the friction"""
+    def set_fric_spec_dens(self, fric_spec_dens_data, fric_spec_dens_ener):
+        """Computes and sets the laplace transform of the friction tensor"""
+        from ipi.utils.mathtools import LT_friction
 
         # from scipy.interpolate import interp1d
+        if len(fric_spec_dens_data) == 0:
+            LT_fric_spec_dens = np.ones((1000, 2))
+            LT_fric_spec_dens[:, 0] = np.arange(1000)
+        else:
+            invcm2au = units.unit_to_internal("frequency", "inversecm", 1)
 
-        freq = units.unit_to_internal("frequency", "inversecm", z_friction[:, 0])
-        spline = self.interp1d(
-            freq, z_friction[:, 1], kind="cubic", fill_value=0.0, bounds_error=False
-        )
+            # We perform the spline in inversecm for numerical reasons
+            freq = fric_spec_dens_data[:, 0] / invcm2au
+            spline = self.interp1d(
+                freq,
+                fric_spec_dens_data[:, 1],
+                kind="cubic",
+                fill_value=0.0,
+                bounds_error=False,
+            )
+            fric_spec_dens = spline(self.omegak / invcm2au)
 
-        z_friction = spline(self.omegak)
-        self.z_k = np.multiply(self.omegak, z_friction)[:, np.newaxis]
+            if fric_spec_dens_ener == 0 or fric_spec_dens_ener < freq[0]:
+                norm = 1.0  # spline(freq[0])*freq[0]*invcm2au
+            elif fric_spec_dens_ener > freq[-1]:
+                norm = 1.0  # spline(freq[-1])*freq[-10]*invcm2au
+            else:
+                norm = spline(fric_spec_dens_ener / invcm2au) * fric_spec_dens_ener
+
+            LT_fric_spec_dens = LT_friction(self.omegak / invcm2au, spline) / norm
+
+        self.fric_LTwk = np.multiply(self.omegak, LT_fric_spec_dens)[:, np.newaxis]
 
         info(units.unit_to_user("frequency", "inversecm", self.omegak), verbosity.debug)
 
@@ -491,7 +512,7 @@ class FrictionMapper(PesMapper):
 
         dgdq = np.zeros(s.shape)
         for i in range(nbeads):
-            dgdq[i] = self.sqrtm(s[i] + np.eye(nphys) * 0.0001)
+            dgdq[i] = self.sqrtm(s[i] + np.eye(nphys) * 0.000000000001)
 
         h_fric = np.zeros((ndof, ndof))
 
@@ -499,7 +520,7 @@ class FrictionMapper(PesMapper):
         if SD:
             gq = self.obtain_g(s)
             gq_k = np.dot(self.C, gq)
-            prefactor = np.dot(self.C.T, self.z_k * gq_k)
+            prefactor = np.dot(self.C.T, self.fric_LTwk * gq_k)
             for n in range(self.dbeads.nbeads):
                 for j in range(nphys):
                     for k in range(nphys):
@@ -518,7 +539,9 @@ class FrictionMapper(PesMapper):
             for ne in range(nbeads):
                 prefactor = 0
                 for alpha in range(nbeads):
-                    prefactor += self.C[alpha, nl] * self.C[alpha, ne] * self.z_k[alpha]
+                    prefactor += (
+                        self.C[alpha, nl] * self.C[alpha, ne] * self.fric_LTwk[alpha]
+                    )
                 for j in range(nphys):
                     for k in range(nphys):
                         suma = np.sum(dgdq[nl, :, j] * dgdq[ne, :, k])
@@ -534,7 +557,7 @@ class FrictionMapper(PesMapper):
 
         for i in range(self.dbeads.nbeads):
             ss[i] = self.sqrtm(
-                s[i] + np.eye(nphys) * 0.0001
+                s[i] + np.eye(nphys) * 0.000000001
             )  # ss = s ** 0.5 -> won't work for multiD
 
         q = self.dbeads.q.copy()
@@ -568,7 +591,7 @@ class FrictionMapper(PesMapper):
                 warnings.filterwarnings("error")
                 try:
                     dgdq[i] = self.sqrtm(
-                        s[i] + np.eye(nphys) * 0.0001
+                        s[i] + np.eye(nphys) * 0.00000001
                     )  # dgdq = s ** 0.5 -> won't work for multiD
                 except Warning:
                     print(s[i])
@@ -576,9 +599,9 @@ class FrictionMapper(PesMapper):
 
         gq = self.obtain_g(s)
         gq_k = np.dot(self.C, gq)
-        e = 0.5 * np.sum(self.z_k * gq_k ** 2)
+        e = 0.5 * np.sum(self.fric_LTwk * gq_k ** 2)
 
-        f = np.dot(self.C.T, self.z_k * gq_k)
+        f = np.dot(self.C.T, self.fric_LTwk * gq_k)
         g = np.zeros(f.shape)
         for i in range(self.dbeads.nbeads):
             g[i, :] = np.dot(dgdq[i], f[i])
@@ -879,7 +902,9 @@ class Mapper(object):
             self.frictionSD = self.options["frictionSD"]
             self.gm = FrictionMapper(self.frictionSD, self.options["eta0"])
             self.gm.bind(self)
-            self.gm.set_z_friction(dumop.options["z_friction"])
+            self.gm.set_fric_spec_dens(
+                dumop.options["fric_spec_dens"], dumop.options["fric_spec_dens_ener"]
+            )
         else:
             self.gm.bind(self)
 
@@ -1001,10 +1026,8 @@ class DummyOptimizer(dobject):
         self.options["frictionSD"] = geop.options["frictionSD"]
         if self.options["friction"]:
             self.options["eta0"] = geop.options["eta0"]
-            if len(geop.options["z_friction"]) == 0:
-                geop.options["z_friction"] = np.ones((1000, 2))
-                geop.options["z_friction"][:, 0] = np.arange(1000)
-            self.options["z_friction"] = geop.options["z_friction"]
+            self.options["fric_spec_dens"] = geop.options["fric_spec_dens"]
+            self.options["fric_spec_dens_ener"] = geop.options["fric_spec_dens_ener"]
         self.options["tolerances"] = geop.options["tolerances"]
         self.optarrays["big_step"] = geop.optarrays["big_step"]
         self.optarrays["old_x"] = geop.optarrays["old_x"]
@@ -1624,7 +1647,7 @@ class LanczosOptimizer(HessianOptimizer):
             )
 
             h_up_band = banded_hessian(
-                dyn_mat, self.mapper.sm, masses=False, shift=0.000000001
+                dyn_mat, self.mapper.sm, masses=False, shift=0.0000001
             )  # create upper band matrix
             f = np.multiply(f, self.fix.fixbeads.m3.reshape(f.shape) ** -0.5)
             # CARTESIAN
