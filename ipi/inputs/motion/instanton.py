@@ -144,7 +144,7 @@ class InputInst(InputDictionary):
             {
                 "dtype": float,
                 "default": input_default(factory=np.ones, args=(0,)),
-                "help": "Spectral density of the friction tensor over frequency (J(w)/w). A two column data is expected. First column: w (a.u.). Second column: J(w)/w (a.u.)",
+                "help": "LT of friction. A two column data is expected. First column: w (a.u.). Second column: LT(eta)(w)",
             },
         ),
         "fric_spec_dens_ener": (
@@ -152,7 +152,7 @@ class InputInst(InputDictionary):
             {
                 "dtype": float,
                 "default": 0.0,
-                "help": "Energy at which the friction tensor is evaluated in the client code",
+                "help": "Energy at which the LT of the friction tensor is evaluated in the client code",
                 "dimension": "energy",
             },
         ),
