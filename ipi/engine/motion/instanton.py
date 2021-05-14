@@ -1385,9 +1385,11 @@ class HessianOptimizer(DummyOptimizer):
             )
             if self.options["friction"] and self.options["frictionSD"]:
                 phys_hessian = active_hessian[0]
-                friction_hessian = active_hessian[1]  
-                self.optarrays["fric_hessian"][:] = self.fix.get_full_vector(friction_hessian, 4 )
-                #self.optarrays["fric_hessian"][:] = friction_hessian[:]  # ALBERTO 
+                friction_hessian = active_hessian[1]
+                self.optarrays["fric_hessian"][:] = self.fix.get_full_vector(
+                    friction_hessian, 4
+                )
+                # self.optarrays["fric_hessian"][:] = friction_hessian[:]  # ALBERTO
             else:
                 phys_hessian = active_hessian
 
@@ -1504,7 +1506,7 @@ class NicholsOptimizer(HessianOptimizer):
 
         # Add friction terms to the hessian
         if self.options["friction"]:
-            
+
             eta_active = self.fix.get_active_vector(self.mapper.gm.eta, 5)
             if self.options["frictionSD"]:
                 h_fric = self.mapper.gm.get_fric_rp_hessian(
