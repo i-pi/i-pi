@@ -60,13 +60,14 @@ __all__ = ["min_brent"]
 
 import numpy as np
 import math
-import time
-from ipi.utils.softexit import softexit
+
+from numpy.core.numerictypes import maximum_sctype
 from ipi.utils.messages import verbosity, info, warning
 
+# import time
+# from ipi.utils.softexit import softexit
+
 # Bracketing function
-
-
 def bracket(fdf, fdf0=None, x0=0.0, init_step=1.0e-3):
     """Given an initial point, determines the initial bracket for the minimum
     Arguments:
@@ -1010,6 +1011,98 @@ def Damped_BFGS(x0, fdf, fdf0, hessian, big_step):
     return quality
 
 
+def fire(
+    x0,
+    fdf,
+    fdf0,
+    v=None,
+    a=0.1,
+    N=0,
+    dt=0.1,
+    maxstep=0.5,
+    dtmax=1.0,
+    dtmin=1e-5,
+    Nmin=5,
+    finc=1.1,
+    fdec=0.5,
+    astart=0.1,
+    fa=0.99,
+):
+    """
+    FIRE algorithms for NEB optimization based on Bitzek et al, Phys. Rev. Lett. 97,
+    170201 (2006).
+
+    FIRE does not rely on energy therefore it it suitable for NEB calculation where
+    the energy is not conservative. Basic principle: accelerate towards force grandient
+    (downhill direction) and stop immediately when going uphill. Try adjusting dt, dtmax,
+    dtmin for optimal performance.
+    
+
+    Arguments:
+        x0: initial beads positions
+        fdf: energy and function mapper. call fdf(x) to update beads position and froces
+        fdf0: initial value of energy and gradient
+        v: velocity from last step
+        a: velocity factor 
+        N: time step since last downhill direction
+        dt: time interval
+        dtmax: max dt (increase when uphill)
+        dtmin: min dt (decrease when downhill)
+        finc: dt increment factor
+        fdec: dt decrement factor
+        Nmin: min steps required to be in uphill direction
+        fa: a decrement factor
+        astart: initial a value
+    
+    Returns:
+        v, a, N, dt since they are dynamically adjusted
+
+
+    """
+    info(" @FIRE being called", verbosity.debug)
+    _, g0 = fdf0
+
+    # initialize velocity and a
+    if v is None:
+        info(" @FIRE: initialize velocity")
+        v = a * g0
+
+    # TODO
+    # In ase.optimize.fire, the energy is also compared to determine down or uphill
+    # this is the original approach in the paper.
+    p = np.vdot(g0, v)
+    # downhill
+    if p > 0.0:
+        N += 1
+        f_unit = g0 / np.linalg.norm(g0)
+        # change velocity direction
+        v = (1 - a) * v + a * np.linalg.norm(v) * f_unit
+        if N > Nmin:
+            dt = min(dt * finc, dtmax)
+            a = a * fa
+    # uphill
+    else:
+        v = np.zeros(v.shape)
+        a = astart
+        dt = max(dt * fdec, dtmin)
+        N = 0
+
+    # accelerate
+    v += dt * g0
+    # update posistion
+    dx = dt * v
+    # check max dx
+    normdx = np.linalg.norm(dx)
+    if normdx > maxstep:
+        dx = maxstep * dx / normdx
+    x0 += dx
+
+    info(" @FIRE: calling NEBGradientMapper to update position", verbosity.debug)
+    fdf(x0)
+
+    return v, a, N, dt
+
+
 # Bracketing for NEB, TODO: DEBUG THIS IF USING SD OR CG OPTIONS FOR NEB
 def bracket_neb(fdf, fdf0=None, x0=0.0, init_step=1.0e-3):
     """Given an initial point, determines the initial bracket for the minimum
@@ -1355,10 +1448,7 @@ def L_BFGS_nls(
             or np.isnan(np.linalg.norm(g.flatten()))
             or np.isinf(np.linalg.norm(g.flatten()))
         ):
-            x = np.add(
-                x0,
-                (scale * init_step * d0 / np.linalg.norm(d0.flatten())),
-            )
+            x = np.add(x0, (scale * init_step * d0 / np.linalg.norm(d0.flatten())),)
             scale *= 0.1
             fx, g = fdf(x)
     else:

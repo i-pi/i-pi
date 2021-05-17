@@ -50,7 +50,7 @@ class InputNEB(InputDictionary):
                 "dtype": str,
                 "default": "bfgs",
                 "help": "The geometry optimization algorithm to optimize NEB path",
-                "options": ["sd", "cg", "bfgs", "bfgstrm", "damped_bfgs", "lbfgs"],
+                "options": ["sd", "cg", "bfgs", "bfgstrm", "damped_bfgs", "lbfgs", "fire"],
             },
         )
     }
