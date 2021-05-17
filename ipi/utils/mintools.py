@@ -961,8 +961,9 @@ def Damped_BFGS(x0, fdf, fdf0, hessian, big_step):
     # Force call
     _, g = fdf(x0 + sk.reshape(x0.shape))
     g = g.flatten()
+    # coordinates CHECKED
 
-    # Update invhessian
+    # Update hessian
     yk = g - g0
     skyk = np.dot(sk, yk)
 
@@ -1004,9 +1005,9 @@ def Damped_BFGS(x0, fdf, fdf0, hessian, big_step):
 
     # If small numbers are found on the diagonal of the Hessian,
     # add small positive numbers. 1 Ha/Bohr^2 is ~97.2 eV/ang^2.
-    if np.any(eigvals < 1e-3):
-        info(" @DampedBFGS: adding 1e-3 on the diagonal.", verbosity.debug)
-        B += 1e-3 * np.eye(len(B))
+    if np.any(eigvals < 1e-1):
+        info(" @DampedBFGS: stabilizing the diagonal of the Hessian.", verbosity.debug)
+        B += 1e-2 * np.eye(len(B))
 
     return quality
 

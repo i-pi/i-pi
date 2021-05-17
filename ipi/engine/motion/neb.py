@@ -520,7 +520,7 @@ class NEBMover(Motion):
                 print("self.nebgrad.shape: %s" % str(self.nebgrad.shape))
                 print("masked_hessian.shape: %s" % str(masked_hessian.shape))
                 quality = Damped_BFGS(
-                    x0=self.old_x,
+                    x0=self.old_x.copy(),
                     fdf=self.nebgm,
                     fdf0=(self.nebpot, self.nebgrad),
                     hessian=masked_hessian,
@@ -578,18 +578,16 @@ class NEBMover(Motion):
                     )
                     # use the right direction for fire
                     self.nebgrad = -self.nebgrad
-                    self.old_x = dstrip(self.beads.q[:, self.nebgm.fixatoms_mask]).copy()
-                    # velocity for FIRE
+                    self.old_x = dstrip(self.beads.q.copy())
+                    # initial velocity for FIRE
                     self.v = self.a * self.nebgrad
                 # store potential and force gradient for convergence creterion
                 old_nebpot, old_nebgrad = (self.nebpot.copy(), self.nebgrad.copy())
                 info(" @NEB: using FIRE", verbosity.debug)
-                print("self.old_x.shape: %s" % str(self.old_x.shape))
-                print("self.nebgrad.shape: %s" % str(self.nebgrad.shape))
-                print(" @FIRE velocity: %s" % str(npnorm(self.v)))
-                print(" @FIRE N: %s" % str(npnorm(self.N)))
+                info(" @FIRE velocity: %s" % str(npnorm(self.v)), verbosity.debug)
+                info(" @FIRE N: %s" % str(self.N), verbosity.debug)
                 self.v, self.a, self.N, self.dt_fire = fire(
-                    x0=self.old_x,
+                    x0=self.old_x.copy(),
                     fdf=self.nebgm,
                     fdf0=(self.nebpot, self.nebgrad),
                     v=self.v,
@@ -614,7 +612,7 @@ class NEBMover(Motion):
                 )
 
                 # Store old positions
-                self.old_x[:] = self.beads.q[:, self.nebgm.fixatoms_mask].copy()
+                self.old_x[:] = dstrip(self.beads.q.copy())
                 # This transfers forces from the mapper to the "main" beads,
                 # so that recalculation won't be triggered after the step.
                 self.forces.transfer_forces(self.nebgm.dforces)
@@ -631,7 +629,7 @@ class NEBMover(Motion):
                         np.amax(np.abs(self.nebgrad))
                     )
                 )
-                info(" @NEB: max delta x {}".format(dx))
+                info(" @NEB: max delta x: {}".format(dx))
             # TODO: Routines for L-BFGS, SD, CG
             else:
                 softexit.trigger(
