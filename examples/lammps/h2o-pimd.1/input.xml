@@ -1,10 +1,10 @@
-<simulation verbosity='low'>
+<simulation verbosity='high'>
   <output prefix='simulation'>
-    <properties stride='400' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potential{electronvolt}, pressure_cv{megapascal} ] </properties>
-    <trajectory filename='pos' stride='400' format='pdb'> positions </trajectory>
+    <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potential{electronvolt}, pressure_cv{megapascal} ] </properties>
+    <trajectory filename='pos' stride='20'> positions </trajectory>
     <checkpoint stride='200'/>
   </output>
-  <total_steps>1000000</total_steps>
+  <total_steps>10000</total_steps>
   <prng>
     <seed>31415</seed>
   </prng>
