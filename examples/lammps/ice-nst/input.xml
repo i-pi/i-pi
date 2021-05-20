@@ -11,7 +11,7 @@
     </ffsocket>
     <system>
         <initialize nbeads="4">
-            <file mode="xyz"> in.xyz </file>
+            <file mode="xyz"> ice_96.xyz </file>
             <velocities mode="thermal" units="kelvin"> 200 </velocities>
         </initialize>
         <forces><force forcefield="lammps"> </force></forces>

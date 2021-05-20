@@ -37,6 +37,11 @@ To add a new regression test please provide:
      the available formats are .xyz and numpy-accessible which should be
      specified with the keywords 'xyz' and 'numpy'.
 
+   - (For the moment) We assume a very specific syntax for the file names. 
+     The reference file name should be the same as the output file name with the addition of 'ref_' at the beginning, example:
+
+     reference file: ref_simulation.out
+     output to be genererated from i-pi: simulation.out
 
 
 Important: 

@@ -1,12 +1,12 @@
 <!-- REGTEST
-DEPENDENCIES  start.pdb
+DEPENDENCIES  start.xyz
 COMMAND(4)    i-pi-driver -u -h ffdriver -m lj -o  5.270446,1.1663e-4,13.176115
 ENDREGTEST -->
 
 <simulation>
    <output prefix='lj-nst'>
       <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_md, potential, pressure_md{megapascal}, volume, cell_h] </properties>
-      <trajectory stride='20' filename='pos' format='pdb'>positions</trajectory>
+      <trajectory stride='20' filename='pos' format='xyz'>positions</trajectory>
       <checkpoint stride='2000'/>
    </output>
    <total_steps> 30 </total_steps>
@@ -16,7 +16,7 @@ ENDREGTEST -->
    </ffsocket>
    <system>
       <initialize nbeads='4'>
-         <file mode='pdb'> start.pdb </file>
+         <file mode='xyz'> start.xyz </file>
          <cell mode='manual'> [ 56, 28, 28, 0, 48.497, 16.1658, 0,0, 45.724] </cell>
          <velocities mode='thermal' units='kelvin'> 20 </velocities>
       </initialize>

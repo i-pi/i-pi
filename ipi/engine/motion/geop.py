@@ -267,10 +267,10 @@ class GradientMapper(object):
 
 
 class DummyOptimizer(dobject):
-    """ Dummy class for all optimization classes """
+    """Dummy class for all optimization classes"""
 
     def __init__(self):
-        """initialises object for LineMapper (1-d function) and for GradientMapper (multi-dimensional function) """
+        """initialises object for LineMapper (1-d function) and for GradientMapper (multi-dimensional function)"""
 
         self.lm = LineMapper()
         self.gm = GradientMapper()
@@ -348,7 +348,7 @@ class DummyOptimizer(dobject):
         self.d = geop.d
 
     def exitstep(self, fx, u0, x):
-        """ Exits the simulation step. Computes time, checks for convergence. """
+        """Exits the simulation step. Computes time, checks for convergence."""
 
         info(" @GEOP: Updating bead positions", verbosity.debug)
         self.qtime += time.time()
@@ -401,7 +401,7 @@ class DummyOptimizer(dobject):
 
 
 class BFGSOptimizer(DummyOptimizer):
-    """ BFGS Minimization """
+    """BFGS Minimization"""
 
     def bind(self, geop):
         # call bind function from DummyOptimizer
@@ -508,7 +508,7 @@ class BFGSOptimizer(DummyOptimizer):
 
 
 class BFGSTRMOptimizer(DummyOptimizer):
-    """ BFGSTRM Minimization with Trust Radius Method.  """
+    """BFGSTRM Minimization with Trust Radius Method."""
 
     def bind(self, geop):
         # call bind function from DummyOptimizer
