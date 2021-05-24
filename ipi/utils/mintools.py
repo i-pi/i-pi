@@ -65,7 +65,7 @@ from numpy.core.numerictypes import maximum_sctype
 from ipi.utils.messages import verbosity, info, warning
 
 # import time
-# from ipi.utils.softexit import softexit
+from ipi.utils.softexit import softexit
 
 # Bracketing function
 def bracket(fdf, fdf0=None, x0=0.0, init_step=1.0e-3):
@@ -1018,12 +1018,14 @@ def fire(
     fdf0,
     v=None,
     a=0.1,
-    N=0,
+    N_dn=0,
+    N_up=0,
     dt=0.1,
     maxstep=0.5,
     dtmax=1.0,
     dtmin=1e-5,
-    Nmin=5,
+    Ndelay=5,
+    Nmax=2000,
     finc=1.1,
     fdec=0.5,
     astart=0.1,
@@ -1031,7 +1033,10 @@ def fire(
 ):
     """
     FIRE algorithms for NEB optimization based on Bitzek et al, Phys. Rev. Lett. 97,
-    170201 (2006).
+    170201 (2006) and Guénolé, J. et al.  Computational Materials Science 175, 109584
+   (2020). Semi-implicit Euler integration used. 
+
+
 
     FIRE does not rely on energy therefore it it suitable for NEB calculation where
     the energy is not conservative. Basic principle: accelerate towards force grandient
@@ -1043,17 +1048,19 @@ def fire(
         x0: initial beads positions
         fdf: energy and function mapper. call fdf(x) to update beads position and froces
         fdf0: initial value of energy and gradient
-        v: velocity from last step
-        a: velocity factor 
-        N: time step since last downhill direction
+        v: current velocity
+        a: velocity mixing factor, in the paper it is called alpha
+        fa: a decrement factor
+        astart: initial a value
+        N_dn: number of steps since last downhill direction
+        N_up: number of steps since last uphill direction
         dt: time interval
         dtmax: max dt (increase when uphill)
         dtmin: min dt (decrease when downhill)
         finc: dt increment factor
         fdec: dt decrement factor
-        Nmin: min steps required to be in uphill direction
-        fa: a decrement factor
-        astart: initial a value
+        Ndelay: min steps required to be in one direction before adjust dt and a
+        Nmax: max consecutive steps in uphill direction before trigger exit
     
     Returns:
         v, a, N, dt since they are dynamically adjusted
@@ -1062,34 +1069,40 @@ def fire(
     """
     info(" @FIRE being called", verbosity.debug)
     _, g0 = fdf0
+    force = -g0
 
-    # initialize velocity and a
+    # initialize velocity
     if v is None:
         info(" @FIRE: initialize velocity")
-        v = a * g0
+        v = a * force
 
-    # TODO
-    # In ase.optimize.fire, the energy is also compared to determine down or uphill
-    # this is the original approach in the paper.
-    p = np.vdot(g0, v)
+    p = np.vdot(force, v)
     # downhill
     if p > 0.0:
-        N += 1
-        f_unit = g0 / np.linalg.norm(g0)
-        # change velocity direction
-        v = (1 - a) * v + a * np.linalg.norm(v) * f_unit
-        if N > Nmin:
+        N_dn += 1
+        N_up = 0
+        if N_dn > Ndelay:
             dt = min(dt * finc, dtmax)
             a = a * fa
     # uphill
     else:
-        v = np.zeros(v.shape)
-        a = astart
+        N_dn = 0
+        N_up += 1
+        if N_up > Nmax:
+            softexit.trigger("@FIRE stuck. Cannot minimize futher!")
         dt = max(dt * fdec, dtmin)
-        N = 0
+        a = astart
+        # correct uphill motion
+        x0 -= 0.5 * dt * v
+        # stop moving in uphill direction
+        v = np.zeros(v.shape)
 
     # accelerate
-    v += dt * g0
+    v += dt * force
+    # change velocity direction with inertia
+    if p > 0.0:
+        f_unit = force / np.linalg.norm(force)
+        v = (1 - a) * v + a * np.linalg.norm(v) * f_unit
     # update posistion
     dx = dt * v
     # check max dx
@@ -1101,7 +1114,7 @@ def fire(
     info(" @FIRE: calling NEBGradientMapper to update position", verbosity.debug)
     fdf(x0)
 
-    return v, a, N, dt
+    return v, a, N_dn, N_up, dt
 
 
 # Bracketing for NEB, TODO: DEBUG THIS IF USING SD OR CG OPTIONS FOR NEB
