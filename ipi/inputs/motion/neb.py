@@ -50,7 +50,15 @@ class InputNEB(InputDictionary):
                 "dtype": str,
                 "default": "bfgs",
                 "help": "The geometry optimization algorithm to optimize NEB path",
-                "options": ["sd", "cg", "bfgs", "bfgstrm", "damped_bfgs", "lbfgs", "fire"],
+                "options": [
+                    "sd",
+                    "cg",
+                    "bfgs",
+                    "bfgstrm",
+                    "damped_bfgs",
+                    "lbfgs",
+                    "fire",
+                ],
             },
         )
     }
@@ -235,11 +243,7 @@ class InputNEB(InputDictionary):
         ),
         "climb_bead": (
             InputValue,
-            {
-                "dtype": int,
-                "default": -1,
-                "help": "The index of the climbing bead.",
-            },
+            {"dtype": int, "default": -1, "help": "The index of the climbing bead.",},
         ),
     }
 

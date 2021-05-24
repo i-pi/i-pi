@@ -188,8 +188,5 @@ if __name__ == "__main__":
         raise ValueError("Unsupported driver mode ", args.mode)
 
     run_driver(
-        unix=args.unix,
-        address=args.address,
-        port=args.port,
-        driver=d_f,
+        unix=args.unix, address=args.address, port=args.port, driver=d_f,
     )

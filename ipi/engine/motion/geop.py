@@ -788,11 +788,7 @@ class Damped_BFGSOptimizer(DummyOptimizer):
             # The invhessian and the directions are updated inside.
             # Everything passed inside Damped_BFGS() in masked form, including the invhessian
             Damped_BFGS(
-                masked_old_x,
-                self.gm,
-                fdf0,
-                masked_invhessian,
-                self.big_step,
+                masked_old_x, self.gm, fdf0, masked_invhessian, self.big_step,
             )
 
             # Restore dimensionality of the invhessian
@@ -806,11 +802,7 @@ class Damped_BFGSOptimizer(DummyOptimizer):
             # Do one iteration of Damped_BFGS
             # The invhessian and the directions are updated inside.
             Damped_BFGS(
-                self.old_x,
-                self.gm,
-                fdf0,
-                self.invhessian,
-                self.big_step,
+                self.old_x, self.gm, fdf0, self.invhessian, self.big_step,
             )
 
         info("   Number of force calls: %d" % (self.gm.fcount))
