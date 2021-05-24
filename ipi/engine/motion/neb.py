@@ -74,12 +74,12 @@ class NEBGradientMapper(object):
         # rbq = self.rbeads.q[:, self.fixatoms_mask]
 
         # Forces
-        bf = dstrip(self.dforces.f.copy())[:, self.fixatoms_mask]
+        bf = dstrip(self.dforces.f).copy()[:, self.fixatoms_mask]
         # Zeroing endpoint forces
         bf[0, :] = bf[-1, :] = 0.0
 
         # Bead energies (needed for improved tangents)
-        be = dstrip(self.dforces.pots.copy())
+        be = dstrip(self.dforces.pots).copy()
 
         # Number of images
         nimg = self.dbeads.nbeads
@@ -452,6 +452,12 @@ class NEBMover(Motion):
                 verbosity.debug,
             )
 
+    def build_precon_hessian(self):
+        """Preconditioner for the Hessian with Lindh for intra-bead parts
+        and explicit spring terms between neighboring beads"""
+        # TODO
+        pass
+
     def step(self, step=None):
         """Does one simulation time step.
         Dimensionality is reduced in the very beginning.
@@ -461,6 +467,7 @@ class NEBMover(Motion):
 
         # First, optimization of endpoints, if required
         if self.endpoints["optimize"] and self.stage == "endpoints":
+            # TODO
             softexit.trigger("Optimization of endpoints in NEB is not implemented yet.")
 
         # Endpoints are optimized or optimization is not required
@@ -535,13 +542,22 @@ class NEBMover(Motion):
                     )
                 ] = masked_hessian
 
+                # tmp printout
+                if step % 100 == 0:
+                    eigvals, eigvecs = np.linalg.eigh(self.hessian)
+                    idx = eigvals.argsort()
+                    np.savetxt("eigvecs.s%04d.dat" % step, eigvecs[:, idx])
+                    np.savetxt("eigvals.s%04d.dat" % step, eigvals[idx])
+
                 # Update positions
                 self.beads.q[:] = self.nebgm.dbeads.q
-                info(" @NEB: bead positions updated.", verbosity.debug)
+                info(" @NEB: bead positions transferred from mapper.", verbosity.debug)
 
+                # Recalculation won't be triggered because the position is the same.
                 self.nebpot, self.nebgrad = self.nebgm(
                     self.beads.q[:, self.nebgm.fixatoms_mask]
                 )
+                info(" @NEB: NEB forces transferred from mapper.", verbosity.debug)
 
                 # dx = current position - previous position.
                 # Use to determine converged minimization
@@ -582,7 +598,7 @@ class NEBMover(Motion):
                 info(
                     60 * "="
                     + "\n"
-                    + " @NEB: path optimization converged.\n"
+                    + " @NEB: path optimization converged. Step: %i\n" % step
                     + 60 * "="
                     + "\n",
                     verbosity.medium,
@@ -645,7 +661,7 @@ class NEBMover(Motion):
                 print("self.nebgrad.shape: %s" % str(self.nebgrad.shape))
                 print("masked_hessian.shape: %s" % str(masked_hessian.shape))
                 quality = Damped_BFGS(
-                    x0=self.old_x,
+                    x0=self.old_x.copy(),
                     fdf=self.climbgm,
                     fdf0=(self.nebpot, self.nebgrad),
                     hessian=masked_hessian,
@@ -718,7 +734,11 @@ class NEBMover(Motion):
                 and (np.amax(np.abs(self.nebgrad)) <= self.tolerances["force"])
                 and (dx <= self.tolerances["position"])
             ):
-                info(" @NEB_CLIMB: converged.", verbosity.medium)
+                decor = 60 * "=" + "\n"
+                info(
+                    decor + " @NEB_CLIMB: converged. Step: %i\n" % step + decor,
+                    verbosity.medium,
+                )
                 softexit.trigger("NEB_CLIMB finished successfully.")
 
             else:
