@@ -61,7 +61,7 @@ __all__ = ["min_brent"]
 import numpy as np
 import math
 
-from numpy.core.numerictypes import maximum_sctype
+# from numpy.core.numerictypes import maximum_sctype
 from ipi.utils.messages import verbosity, info, warning
 
 # import time
@@ -1070,11 +1070,6 @@ def fire(
     info(" @FIRE being called", verbosity.debug)
     _, g0 = fdf0
     force = -g0
-
-    # initialize velocity
-    if v is None:
-        info(" @FIRE: initialize velocity")
-        v = a * force
 
     p = np.vdot(force, v)
     # downhill
