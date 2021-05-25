@@ -309,6 +309,12 @@ class NEBMover(Motion):
         qlist_lbfgs=np.zeros(0, float),
         glist_lbfgs=np.zeros(0, float),
         tr_trm=np.zeros(0, float),
+        dtmax_fire=1.0,
+        v_fire=np.zeros(0, float),
+        alpha_fire=0.1,
+        N_down_fire=0,
+        N_up_fire=0,
+        dt_fire=0.1,
         endpoints=(False, "bfgs"),
         spring={"varsprings": False, "kappa": 1.0, "kappamax": 1.5, "kappamin": 0.5},
         scale_lbfgs=2,
@@ -357,11 +363,12 @@ class NEBMover(Motion):
         # damped_bfgs
         self.hessian = hessian_bfgs
         # fire
-        self.v = None  # velocity
-        self.a = 0.1  # alpha. velocity mixing factor
-        self.N_dn = 0  # consecutive steps in downhill dierction
-        self.N_up = 0  # consecutive steps in uphill dierction
-        self.dt_fire = 0.1
+        self.v = v_fire  # velocity
+        self.a = alpha_fire  # alpha. velocity mixing factor
+        self.N_dn = N_down_fire  # consecutive steps in downhill dierction
+        self.N_up = N_up_fire  # consecutive steps in uphill dierction
+        self.dt_fire = dt_fire
+        self.dtmax = dtmax_fire  # maximum dt for FIRE
 
         self.nebgm = NEBGradientMapper()
         self.climbgm = NEBClimbGrMapper()
@@ -502,9 +509,7 @@ class NEBMover(Motion):
                     )
 
                     # store old beads position
-                    self.old_x = dstrip(
-                        self.beads.q[:, self.nebgm.fixatoms_mask]
-                    ).copy()
+                    self.old_x = dstrip(self.beads.q[:, self.nebgm.fixatoms_mask]).copy()
 
                     # With multiple stages, the size of the hessian is different
                     # at each stage, therefore we check.
@@ -514,7 +519,8 @@ class NEBMover(Motion):
 
                 # Self instances will be updated in the optimizer, so we store the copies.
                 # old_nebpot is used later as a convergence criterion.
-                old_nebpot, old_nebgrad = (self.nebpot.copy(), self.nebgrad.copy())
+                old_nebpot = self.nebpot.copy()
+                # old_nebgrad = self.nebgrad.copy()
 
                 # Reducing dimension of the hessian before passing it to optimizer
                 masked_hessian = self.hessian[
@@ -577,8 +583,9 @@ class NEBMover(Motion):
                 self.full_f = dstrip(self.forces.f)
                 self.full_v = dstrip(self.forces.pots)
 
-            elif self.mode.lower() == "fire":
-                if step == 0:
+            elif self.mode == "fire":
+                # only initialize velocity for fresh start not for RESTART
+                if step == 0 and self.v.size == 0:
                     info(
                         " @NEB: calling NEBGradientMapper at step 0 by FIRE",
                         verbosity.debug,
@@ -586,12 +593,11 @@ class NEBMover(Motion):
                     self.nebpot, self.nebgrad = self.nebgm(
                         self.beads.q[:, self.nebgm.fixatoms_mask]
                     )
-                    self.old_x = dstrip(
-                        self.beads.q[:, self.nebgm.fixatoms_mask].copy()
-                    )
+                    self.old_x = dstrip(self.beads.q[:, self.nebgm.fixatoms_mask].copy())
                     self.v = -self.a * self.nebgrad
                 # store potential and force gradient for convergence creterion
-                old_nebpot, old_nebgrad = (self.nebpot.copy(), self.nebgrad.copy())
+                old_nebpot = self.nebpot.copy()
+                # old_nebgrad = self.nebgrad.copy()
                 info(" @NEB: using FIRE", verbosity.debug)
                 info(" @FIRE velocity: %s" % str(npnorm(self.v)), verbosity.debug)
                 info(" @FIRE alpha: %s" % str(self.a), verbosity.debug)
@@ -607,6 +613,7 @@ class NEBMover(Motion):
                     N_dn=self.N_dn,
                     N_up=self.N_up,
                     dt=self.dt_fire,
+                    dtmax=self.dtmax,
                 )
                 info(" @NEB: after fire call")
                 # This part can be modulized, maybe put optimizers in seperate class?
@@ -713,7 +720,8 @@ class NEBMover(Motion):
 
                 # Self instances will be updated in the optimizer, so we store the copies.
                 # old_nebpot is used later as a convergence criterion.
-                old_nebpot, old_nebgrad = (self.nebpot.copy(), self.nebgrad.copy())
+                old_nebpot = self.nebpot.copy()
+                # old_nebgrad = self.nebgrad.copy()
 
                 # Reducing dimension of the hessian before passing it to optimizer
                 masked_hessian = self.hessian[
@@ -766,7 +774,8 @@ class NEBMover(Motion):
 
                 # Self instances will be updated in the optimizer, so we store the copies.
                 # old_nebpot is used later as a convergence criterion.
-                old_nebpot, old_nebgrad = (self.nebpot.copy(), self.nebgrad.copy())
+                old_nebpot = self.nebpot.copy()
+                # old_nebgrad = self.nebgrad.copy()
                 info(" @NEB: using FIRE", verbosity.debug)
                 info(" @FIRE velocity: %s" % str(npnorm(self.v)), verbosity.debug)
                 info(" @FIRE alpha: %s" % str(self.a), verbosity.debug)
@@ -782,6 +791,7 @@ class NEBMover(Motion):
                     N_dn=self.N_dn,
                     N_up=self.N_up,
                     dt=self.dt_fire,
+                    dtmax=self.dtmax,
                 )
                 # update positions
                 self.beads.q[self.cl_indx] = self.climbgm.rbeads.q
