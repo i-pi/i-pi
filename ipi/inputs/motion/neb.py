@@ -243,7 +243,11 @@ class InputNEB(InputDictionary):
         ),
         "climb_bead": (
             InputValue,
-            {"dtype": int, "default": -1, "help": "The index of the climbing bead.",},
+            {
+                "dtype": int,
+                "default": -1,
+                "help": "The index of the climbing bead.",
+            },
         ),
     }
 

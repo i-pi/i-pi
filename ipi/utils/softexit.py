@@ -158,7 +158,7 @@ class Softexit(object):
             self._kill[signal](signal, frame)
 
     def _softexit_monitor(self):
-        """Keeps checking for soft exit conditions. """
+        """Keeps checking for soft exit conditions."""
 
         while self._doloop[0]:
             time.sleep(SOFTEXITLATENCY)

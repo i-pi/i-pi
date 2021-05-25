@@ -817,7 +817,15 @@ class NEBMover(Motion):
             tmp_f[self.cl_indx, self.climbgm.fixatoms_mask] = self.nebgrad
             tmp_v[self.cl_indx] = self.nebpot
             self.forces.transfer_forces_manual(
-                new_q=[self.beads.q,], new_v=[tmp_v,], new_forces=[tmp_f,],
+                new_q=[
+                    self.beads.q,
+                ],
+                new_v=[
+                    tmp_v,
+                ],
+                new_forces=[
+                    tmp_f,
+                ],
             )
             print("After transfer_forces_manual in climb.")
             self.full_f = dstrip(self.forces.f)

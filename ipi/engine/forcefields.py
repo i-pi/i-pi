@@ -31,7 +31,7 @@ except ImportError:
 
 
 class NumpyEncoder(json.JSONEncoder):
-    """ Special json encoder for numpy types """
+    """Special json encoder for numpy types"""
 
     def default(self, obj):
         if isinstance(obj, np.integer):
@@ -291,7 +291,7 @@ class ForceField(dobject):
         softexit.register_function(self.softexit)
 
     def softexit(self):
-        """ Takes care of cleaning up upon softexit """
+        """Takes care of cleaning up upon softexit"""
 
         self.stop()
 
@@ -512,7 +512,7 @@ class FFDebye(ForceField):
                     self.evaluate(r)
 
     def evaluate(self, r):
-        """ A simple evaluator for a harmonic Debye crystal potential. """
+        """A simple evaluator for a harmonic Debye crystal potential."""
 
         q = r["pos"]
         n3 = len(q)
@@ -684,7 +684,7 @@ class FFPlumed(ForceField):
 
 class FFYaff(ForceField):
 
-    """ Use Yaff as a library to construct a force field """
+    """Use Yaff as a library to construct a force field"""
 
     def __init__(
         self,
@@ -780,7 +780,7 @@ class FFYaff(ForceField):
                     self.evaluate(r)
 
     def evaluate(self, r):
-        """ Evaluate the energy and forces with the Yaff force field. """
+        """Evaluate the energy and forces with the Yaff force field."""
 
         q = r["pos"]
         nat = len(q) / 3
@@ -899,7 +899,7 @@ class FFsGDML(ForceField):
                     self.evaluate(r)
 
     def evaluate(self, r):
-        """ Evaluate the energy and forces. """
+        """Evaluate the energy and forces."""
 
         E, F = self.predictor.predict(r["pos"] * self.bohr_to_ang)
 
@@ -1009,7 +1009,7 @@ class FFCommittee(ForceField):
         return True
 
     def gather(self, r):
-        """ Collects results from all sub-requests, and assemble the committee of models. """
+        """Collects results from all sub-requests, and assemble the committee of models."""
 
         r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]
 

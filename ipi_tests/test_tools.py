@@ -54,7 +54,8 @@ def clean_tmp_dir():
 
 
 def get_test_settings(
-    example_folder, settings_file="test_settings.dat",
+    example_folder,
+    settings_file="test_settings.dat",
 ):
     """This function looks for the existence of test_settings.dat file.
     This file can contain instructions like number of steps or driver name.
@@ -148,9 +149,13 @@ def get_test_settings(
 
 
 def modify_xml_4_dummy_test(
-    input_name, output_name, nid, driver_info, test_settings,
+    input_name,
+    output_name,
+    nid,
+    driver_info,
+    test_settings,
 ):
-    """ Modify xml to run dummy tests """
+    """Modify xml to run dummy tests"""
     try:
         tree = ET.parse(input_name)
     except:
@@ -209,7 +214,9 @@ class Runner(object):
     """
 
     def __init__(
-        self, parent, call_ipi="i-pi input.xml",
+        self,
+        parent,
+        call_ipi="i-pi input.xml",
     ):
         """Store parent directory and commands to call i-pi and driver
         call_ipi: command to call i-pi

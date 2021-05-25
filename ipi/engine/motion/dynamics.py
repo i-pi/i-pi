@@ -241,14 +241,14 @@ class Dynamics(Motion):
         return self.ensemble.temp * self.beads.nbeads
 
     def step(self, step=None):
-        """ Advances the dynamics by one time step """
+        """Advances the dynamics by one time step"""
 
         self.integrator.step(step)
         self.ensemble.time += self.dt  # increments internal time
 
 
 class DummyIntegrator(dobject):
-    """ No-op integrator for (PI)MD """
+    """No-op integrator for (PI)MD"""
 
     def __init__(self):
         pass
@@ -274,7 +274,7 @@ class DummyIntegrator(dobject):
             )
 
     def bind(self, motion):
-        """ Reference all the variables for simpler access."""
+        """Reference all the variables for simpler access."""
 
         self.beads = motion.beads
         self.bias = motion.ensemble.bias
@@ -428,7 +428,7 @@ class NVEIntegrator(DummyIntegrator):
     # take the BAB MTS, and insert the O in the very middle. This might imply breaking a A step in two, e.g. one could have
     # Bbabb(a/2) O (a/2)bbabB
     def mtsprop_ba(self, index):
-        """ Recursive MTS step """
+        """Recursive MTS step"""
 
         mk = int(self.nmts[index] / 2)
 
@@ -461,7 +461,7 @@ class NVEIntegrator(DummyIntegrator):
                 self.mtsprop_ba(index + 1)
 
     def mtsprop_ab(self, index):
-        """ Recursive MTS step """
+        """Recursive MTS step"""
 
         if self.nmts[index] % 2 == 1:
             if index == self.nmtslevels - 1:

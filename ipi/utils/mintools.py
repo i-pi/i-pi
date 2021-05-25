@@ -1032,38 +1032,38 @@ def fire(
     fa=0.99,
 ):
     """
-    FIRE algorithms for NEB optimization based on Bitzek et al, Phys. Rev. Lett. 97,
-    170201 (2006) and Guénolé, J. et al.  Computational Materials Science 175, 109584
-   (2020). Semi-implicit Euler integration used. 
+     FIRE algorithms for NEB optimization based on Bitzek et al, Phys. Rev. Lett. 97,
+     170201 (2006) and Guénolé, J. et al.  Computational Materials Science 175, 109584
+    (2020). Semi-implicit Euler integration used.
 
 
 
-    FIRE does not rely on energy therefore it it suitable for NEB calculation where
-    the energy is not conservative. Basic principle: accelerate towards force grandient
-    (downhill direction) and stop immediately when going uphill. Try adjusting dt, dtmax,
-    dtmin for optimal performance.
-    
+     FIRE does not rely on energy therefore it it suitable for NEB calculation where
+     the energy is not conservative. Basic principle: accelerate towards force grandient
+     (downhill direction) and stop immediately when going uphill. Try adjusting dt, dtmax,
+     dtmin for optimal performance.
 
-    Arguments:
-        x0: initial beads positions
-        fdf: energy and function mapper. call fdf(x) to update beads position and froces
-        fdf0: initial value of energy and gradient
-        v: current velocity
-        a: velocity mixing factor, in the paper it is called alpha
-        fa: a decrement factor
-        astart: initial a value
-        N_dn: number of steps since last downhill direction
-        N_up: number of steps since last uphill direction
-        dt: time interval
-        dtmax: max dt (increase when uphill)
-        dtmin: min dt (decrease when downhill)
-        finc: dt increment factor
-        fdec: dt decrement factor
-        Ndelay: min steps required to be in one direction before adjust dt and a
-        Nmax: max consecutive steps in uphill direction before trigger exit
-    
-    Returns:
-        v, a, N, dt since they are dynamically adjusted
+
+     Arguments:
+         x0: initial beads positions
+         fdf: energy and function mapper. call fdf(x) to update beads position and froces
+         fdf0: initial value of energy and gradient
+         v: current velocity
+         a: velocity mixing factor, in the paper it is called alpha
+         fa: a decrement factor
+         astart: initial a value
+         N_dn: number of steps since last downhill direction
+         N_up: number of steps since last uphill direction
+         dt: time interval
+         dtmax: max dt (increase when uphill)
+         dtmin: min dt (decrease when downhill)
+         finc: dt increment factor
+         fdec: dt decrement factor
+         Ndelay: min steps required to be in one direction before adjust dt and a
+         Nmax: max consecutive steps in uphill direction before trigger exit
+
+     Returns:
+         v, a, N, dt since they are dynamically adjusted
 
 
     """
@@ -1462,7 +1462,10 @@ def L_BFGS_nls(
             or np.isnan(np.linalg.norm(g.flatten()))
             or np.isinf(np.linalg.norm(g.flatten()))
         ):
-            x = np.add(x0, (scale * init_step * d0 / np.linalg.norm(d0.flatten())),)
+            x = np.add(
+                x0,
+                (scale * init_step * d0 / np.linalg.norm(d0.flatten())),
+            )
             scale *= 0.1
             fx, g = fdf(x)
     else:

@@ -36,7 +36,7 @@ class Runner_examples(Runner):
     """
 
     def __init__(self, parent, call_ipi="i-pi new.xml"):
-        """ Store parent directory and commands to call i-pi """
+        """Store parent directory and commands to call i-pi"""
         self.parent = parent
         self.call_ipi = call_ipi
 

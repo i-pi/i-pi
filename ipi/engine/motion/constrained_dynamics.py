@@ -353,7 +353,7 @@ class ConstrainedIntegrator(DummyIntegrator):
         return super(ConstrainedIntegrator, self).get_tdt() / self.nsteps_o
 
     def bind(self, motion):
-        """ Creates local references to all the variables for simpler access."""
+        """Creates local references to all the variables for simpler access."""
 
         super(ConstrainedIntegrator, self).bind(motion)
 

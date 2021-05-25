@@ -146,18 +146,18 @@ class NormalModeMover(Motion):
         self.dforces = self.forces.copy(self.dbeads, self.dcell)
 
     def step(self, step=None):
-        """Executes one step of phonon computation. """
+        """Executes one step of phonon computation."""
         self.calc.step(step)
 
 
 class DummyCalculator(dobject):
-    """ No-op Calculator """
+    """No-op Calculator"""
 
     def __init__(self):
         pass
 
     def bind(self, imm):
-        """ Reference all the variables for simpler access."""
+        """Reference all the variables for simpler access."""
         self.imm = imm
 
     def step(self, step=None):
@@ -169,7 +169,7 @@ class IMF(DummyCalculator):
     """Temperature scaled normal mode Born-Oppenheimer surface evaluator."""
 
     def bind(self, imm):
-        """ Reference all the variables for simpler access."""
+        """Reference all the variables for simpler access."""
 
         if scipy is None:
             info(" @NM: scipy import failed", verbosity.low)
@@ -481,10 +481,14 @@ class IMF(DummyCalculator):
                         - 0.50 * self.imm.w2[step] * (nmd * counter) ** 2
                         - v0
                     )
-                    df = np.dot(
-                        dstrip(self.imm.dforces.f).copy()[0],
-                        np.real(self.imm.V.T[step]),
-                    ) / self.nprim + self.imm.w2[step] * (nmd * counter)
+                    df = (
+                        np.dot(
+                            dstrip(self.imm.dforces.f).copy()[0],
+                            np.real(self.imm.V.T[step]),
+                        )
+                        / self.nprim
+                        + self.imm.w2[step] * (nmd * counter)
+                    )
 
                     # Adds to the list.
                     # Also stores the total energetics i.e. including
@@ -523,10 +527,14 @@ class IMF(DummyCalculator):
                         - 0.50 * self.imm.w2[step] * (nmd * counter) ** 2
                         - v0
                     )
-                    df = np.dot(
-                        dstrip(self.imm.dforces.f).copy()[0],
-                        np.real(self.imm.V.T[step]),
-                    ) / self.nprim + self.imm.w2[step] * (nmd * counter)
+                    df = (
+                        np.dot(
+                            dstrip(self.imm.dforces.f).copy()[0],
+                            np.real(self.imm.V.T[step]),
+                        )
+                        / self.nprim
+                        + self.imm.w2[step] * (nmd * counter)
+                    )
 
                     # Adds to the list.
                     # Also stores the total energetics i.e. including
@@ -750,7 +758,7 @@ class IMF(DummyCalculator):
 
 
 class VSCF(IMF):
-    """"""
+    """ """
 
     def bind(self, imm):
         """
@@ -797,7 +805,10 @@ class VSCF(IMF):
                 if self.imm.w[inm] < 9.1126705e-06:
                     info(
                         " @NM: Ignoring normal mode no.  %8d with frequency %15.8f cm^-1."
-                        % (inm, self.imm.w[inm] * 219474,),
+                        % (
+                            inm,
+                            self.imm.w[inm] * 219474,
+                        ),
                         verbosity.medium,
                     )
                     continue
