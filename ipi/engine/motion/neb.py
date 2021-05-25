@@ -509,9 +509,7 @@ class NEBMover(Motion):
                     )
 
                     # store old beads position
-                    self.old_x = dstrip(
-                        self.beads.q[:, self.nebgm.fixatoms_mask]
-                    ).copy()
+                    self.old_x = dstrip(self.beads.q[:, self.nebgm.fixatoms_mask]).copy()
 
                     # With multiple stages, the size of the hessian is different
                     # at each stage, therefore we check.
@@ -595,9 +593,7 @@ class NEBMover(Motion):
                     self.nebpot, self.nebgrad = self.nebgm(
                         self.beads.q[:, self.nebgm.fixatoms_mask]
                     )
-                    self.old_x = dstrip(
-                        self.beads.q[:, self.nebgm.fixatoms_mask].copy()
-                    )
+                    self.old_x = dstrip(self.beads.q[:, self.nebgm.fixatoms_mask].copy())
                     self.v = -self.a * self.nebgrad
                 # store potential and force gradient for convergence creterion
                 old_nebpot = self.nebpot.copy()
