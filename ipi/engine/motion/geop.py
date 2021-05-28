@@ -270,7 +270,7 @@ class GradientMapper(object):
 
 
 class DummyOptimizer(dobject):
-    """ Dummy class for all optimization classes """
+    """Dummy class for all optimization classes"""
 
     def __init__(self):
         """initialises object for LineMapper (1-d function)
@@ -353,7 +353,7 @@ class DummyOptimizer(dobject):
         self.d = geop.d
 
     def exitstep(self, fx, u0, x):
-        """ Exits the simulation step. Computes time, checks for convergence. """
+        """Exits the simulation step. Computes time, checks for convergence."""
 
         info(" @GEOP: Updating bead positions", verbosity.debug)
         self.qtime += time.time()
@@ -406,7 +406,7 @@ class DummyOptimizer(dobject):
 
 
 class BFGSOptimizer(DummyOptimizer):
-    """ BFGS Minimization """
+    """BFGS Minimization"""
 
     def bind(self, geop):
         # call bind function from DummyOptimizer
@@ -513,7 +513,7 @@ class BFGSOptimizer(DummyOptimizer):
 
 
 class BFGSTRMOptimizer(DummyOptimizer):
-    """ BFGSTRM Minimization with Trust Radius Method.  """
+    """BFGSTRM Minimization with Trust Radius Method."""
 
     def bind(self, geop):
         # call bind function from DummyOptimizer
@@ -730,16 +730,16 @@ class LBFGSOptimizer(DummyOptimizer):
 
 
 class Damped_BFGSOptimizer(DummyOptimizer):
-    """ Damped BFGS Minimization according to
-        the Procedure 18.2 in Nocedal-Wright (2nd ed, ISBN-13: 978-0387-30303-1).
-        It is meant to be used in NEB only.
-        One of the differences is that it uses neither TRM
-        nor line search, because the potential is ill-defined for NEB.
-        It just takes the step suggested from invhessian and force
-        and downscales it if it's too big.
-        Therefore it's MUCH WORSE than the other BFGS versions for geometry optimization.
-        It is kept here for testing mainly, to prove that
-        the algorithm works for optimization problems.
+    """Damped BFGS Minimization according to
+    the Procedure 18.2 in Nocedal-Wright (2nd ed, ISBN-13: 978-0387-30303-1).
+    It is meant to be used in NEB only.
+    One of the differences is that it uses neither TRM
+    nor line search, because the potential is ill-defined for NEB.
+    It just takes the step suggested from invhessian and force
+    and downscales it if it's too big.
+    Therefore it's MUCH WORSE than the other BFGS versions for geometry optimization.
+    It is kept here for testing mainly, to prove that
+    the algorithm works for optimization problems.
     """
 
     def bind(self, geop):

@@ -201,13 +201,13 @@ class SCPhononsMover(Motion):
 
 
 class DummyPhononator(dobject):
-    """ No-op phononator """
+    """No-op phononator"""
 
     def __init__(self):
         pass
 
     def bind(self, dm):
-        """ Reference all the variables for simpler access."""
+        """Reference all the variables for simpler access."""
         self.dm = dm
 
     def reset(self):

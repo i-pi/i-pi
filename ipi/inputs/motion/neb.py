@@ -50,7 +50,15 @@ class InputNEB(InputDictionary):
                 "dtype": str,
                 "default": "bfgs",
                 "help": "The geometry optimization algorithm to optimize NEB path",
-                "options": ["sd", "cg", "bfgs", "bfgstrm", "damped_bfgs", "lbfgs"],
+                "options": [
+                    "sd",
+                    "cg",
+                    "bfgs",
+                    "bfgstrm",
+                    "damped_bfgs",
+                    "lbfgs",
+                    "fire",
+                ],
             },
         )
     }
@@ -201,6 +209,54 @@ class InputNEB(InputDictionary):
                 "dimension": "length",
             },
         ),
+        "dtmax_fire": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 1.0,
+                "help": "Maximum time interval per step for FIRE.",
+            },
+        ),
+        "v_fire": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.zeros, args=(0,)),
+                "help": "Current velocity for FIRE",
+            },
+        ),
+        "alpha_fire": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 0.1,
+                "help": "velocity mixing factor for FIRE",
+            },
+        ),
+        "N_down_fire": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": 0,
+                "help": "consecutive steps in downhill dierction for FIRE",
+            },
+        ),
+        "N_up_fire": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": 0,
+                "help": "consecutive steps in uphill direction",
+            },
+        ),
+        "dt_fire": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 0.1,
+                "help": "time per step",
+            },
+        ),
         "endpoints": (
             InputDictionary,
             {
@@ -268,6 +324,12 @@ class InputNEB(InputDictionary):
         self.qlist_lbfgs.store(neb.qlist)
         self.glist_lbfgs.store(neb.glist)
         self.tr_trm.store(neb.tr_trm)
+        self.v_fire.store(neb.v)
+        self.alpha_fire.store(neb.a)
+        self.N_down_fire.store(neb.N_dn)
+        self.N_up_fire.store(neb.N_up)
+        self.dt_fire.store(neb.dt_fire)
+        self.dtmax_fire.store(neb.dtmax)
         self.endpoints.store(neb.endpoints)
         self.spring.store(neb.spring)
         self.stage.store(neb.stage)

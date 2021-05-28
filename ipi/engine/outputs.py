@@ -44,7 +44,7 @@ class OutputList(list):
 
 
 class OutputMaker(dobject):
-    """ Class to create floating outputs with an appropriate prefix """
+    """Class to create floating outputs with an appropriate prefix"""
 
     def __init__(self, prefix="", f_start=False):
         self.prefix = prefix
@@ -69,7 +69,7 @@ class OutputMaker(dobject):
 
 
 class BaseOutput(object):
-    """Base class for outputs. Deals with flushing upon close and little more """
+    """Base class for outputs. Deals with flushing upon close and little more"""
 
     def __init__(self, filename="out"):
         """Initializes the class"""
@@ -116,7 +116,7 @@ class BaseOutput(object):
             os.remove(self.filename)
 
     def write(self, data):
-        """ Writes data to file """
+        """Writes data to file"""
 
         if self.out is not None:
             return self.out.write(data)
@@ -326,7 +326,7 @@ class TrajectoryOutput(BaseOutput):
         super(TrajectoryOutput, self).bind(mode)
 
     def print_header(self):
-        """ No headers for trajectory files """
+        """No headers for trajectory files"""
         pass
 
     def open_stream(self, mode):

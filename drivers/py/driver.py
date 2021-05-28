@@ -15,7 +15,7 @@ Minimal example of a Python driver connecting to i-PI and exchanging energy, for
 
 
 def recv_data(sock, data):
-    """ Fetches binary data from i-PI socket. """
+    """Fetches binary data from i-PI socket."""
     blen = data.itemsize * data.size
     buf = np.zeros(blen, np.byte)
 
@@ -39,7 +39,7 @@ def recv_data(sock, data):
 
 
 def send_data(sock, data):
-    """ Sends binary data to i-PI socket. """
+    """Sends binary data to i-PI socket."""
 
     if np.isscalar(data):
         data = np.array([data], data.dtype)

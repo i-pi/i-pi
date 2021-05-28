@@ -411,7 +411,7 @@ def root_herm(A):
 
 
 def _sinch(x):
-    """ Computes sinh(x)/x in a way that is stable for x->0 """
+    """Computes sinh(x)/x in a way that is stable for x->0"""
 
     x2 = x * x
     if x2 < 1e-12:
