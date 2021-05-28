@@ -630,9 +630,7 @@ class NEBMover(Motion):
 
             # dx = current position - previous position.
             # Use to determine converged minimization
-            dx = np.amax(
-                np.abs(self.beads.q[:, self.nebgm.fixatoms_mask] - self.old_x)
-            )
+            dx = np.amax(np.abs(self.beads.q[:, self.nebgm.fixatoms_mask] - self.old_x))
 
             # Store old positions
             self.old_x[:] = self.beads.q[:, self.nebgm.fixatoms_mask]
@@ -790,8 +788,7 @@ class NEBMover(Motion):
             # max movement
             dx = np.amax(
                 np.abs(
-                    self.beads.q[self.cl_indx, self.climbgm.fixatoms_mask]
-                    - self.old_x
+                    self.beads.q[self.cl_indx, self.climbgm.fixatoms_mask] - self.old_x
                 )
             )
 
