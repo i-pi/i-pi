@@ -182,8 +182,10 @@ class NEBGradientMapper(object):
         #     dl = (npnorm(bq[ii + 1] - bq[ii]) - npnorm(bq[ii] - bq[ii - 1]))
         #     be[ii] += 0.5 * kappa[ii] * dl * dl
 
-        # Return NEB forces (negative) and the total potential energy of the band
+        # Return NEB total potential energy of the band and total force gradient
         e = be.sum()
+        # TODO I think right direction of gradient should be bf judging by the
+        # result of FIRE
         g = -bf
         return e, g
 
@@ -571,33 +573,6 @@ class NEBMover(Motion):
                     np.savetxt("eigvecs.s%04d.dat" % step, eigvecs[:, idx])
                     np.savetxt("eigvals.s%04d.dat" % step, eigvals[idx])
 
-                # Update positions
-                self.beads.q[:] = self.nebgm.dbeads.q
-                info(" @NEB: bead positions updated.", verbosity.debug)
-
-                # store current potential and gradient
-                self.nebpot, self.nebgrad = self.nebgm(
-                    self.beads.q[:, self.nebgm.fixatoms_mask]
-                )
-
-                # dx = current position - previous position.
-                # Use to determine converged minimization
-                dx = np.amax(
-                    np.abs(self.beads.q[:, self.nebgm.fixatoms_mask] - self.old_x)
-                )
-
-                # Store old positions
-                self.old_x[:] = self.beads.q[:, self.nebgm.fixatoms_mask]
-                # This transfers forces from the mapper to the "main" beads,
-                # so that recalculation won't be triggered after the step.
-                self.forces.transfer_forces(self.nebgm.dforces)
-
-                # full dimensional forces are not really needed all the time,
-                # but it's easier to have it. They are needed in reduced-beads modes,
-                # i.e. in "endpoints" and "climb".
-                self.full_f = dstrip(self.forces.f)
-                self.full_v = dstrip(self.forces.pots)
-
             elif self.mode == "fire":
                 # only initialize velocity for fresh start not for RESTART
                 if step == 0 and self.v.size == 0:
@@ -632,48 +607,52 @@ class NEBMover(Motion):
                     dt=self.dt_fire,
                     dtmax=self.dtmax,
                 )
-                info(" @NEB: after fire call")
-                # This part can be modulized, maybe put optimizers in seperate class?
-                # Update positions
-                self.beads.q[:] = self.nebgm.dbeads.q
-                info(" @NEB: bead positions transferred from mapper.", verbosity.debug)
-
-                # Recalculation won't be triggered because the position is the same.
-                self.nebpot, self.nebgrad = self.nebgm(
-                    self.beads.q[:, self.nebgm.fixatoms_mask]
-                )
-                info(" @NEB: NEB forces transferred from mapper.", verbosity.debug)
-
-                # dx = current position - previous position.
-                # Use to determine converged minimization
-                dx = np.amax(
-                    np.abs(self.beads.q[:, self.nebgm.fixatoms_mask] - self.old_x)
-                )
-
-                # Store old positions
-                self.old_x[:] = self.beads.q[:, self.nebgm.fixatoms_mask]
-                # This transfers forces from the mapper to the "main" beads,
-                # so that recalculation won't be triggered after the step.
-                self.forces.transfer_forces(self.nebgm.dforces)
-
-                # full dimensional forces are not really needed all the time,
-                # but it's easier to have it. They are needed in reduced-beads modes,
-                # i.e. in "endpoints" and "climb".
-                self.full_f = dstrip(self.forces.f)
-                self.full_v = dstrip(self.forces.pots)
-
-                info(
-                    " @NEB: remaining max force component: {}".format(
-                        np.amax(np.abs(self.nebgrad))
-                    )
-                )
-                info(" @NEB: max delta x: {}".format(dx))
+                info(" @NEB: after FIRE call")
 
             # TODO: Routines for L-BFGS, SD, CG
             else:
                 softexit.trigger(
                     "Try damped_bfgs or fire. Other algorithms are not implemented for NEB."
                 )
+
+            # ************** Temporary comment ****************************************
+            # I put updating of the variables outside the mode-specific actions
+            # in order to reduce duplicity.
+            # Update positions
+            self.beads.q[:] = self.nebgm.dbeads.q
+            info(" @NEB: bead positions transferred from mapper.", verbosity.debug)
+
+            # Recalculation won't be triggered because the position is the same.
+            self.nebpot, self.nebgrad = self.nebgm(
+                self.beads.q[:, self.nebgm.fixatoms_mask]
+            )
+            info(" @NEB: NEB forces transferred from mapper.", verbosity.debug)
+
+            # dx = current position - previous position.
+            # Use to determine converged minimization
+            dx = np.amax(
+                np.abs(self.beads.q[:, self.nebgm.fixatoms_mask] - self.old_x)
+            )
+
+            # Store old positions
+            self.old_x[:] = self.beads.q[:, self.nebgm.fixatoms_mask]
+            # This transfers forces from the mapper to the "main" beads,
+            # so that recalculation won't be triggered after the step.
+            self.forces.transfer_forces(self.nebgm.dforces)
+
+            # full dimensional forces are not really needed all the time,
+            # but it's easier to have it. They are needed in reduced-beads modes,
+            # i.e. in "endpoints" and "climb".
+            self.full_f = dstrip(self.forces.f)
+            self.full_v = dstrip(self.forces.pots)
+
+            info(
+                " @NEB: remaining max force component: {}".format(
+                    np.amax(np.abs(self.nebgrad))
+                )
+            )
+            info(" @NEB: max delta x: {}".format(dx))
+            # ************** Temporary comment ****************************************
 
             self.qtime += time.time()
 
@@ -768,26 +747,6 @@ class NEBMover(Motion):
                     np.ix_(self.climbgm.fixatoms_mask, self.climbgm.fixatoms_mask)
                 ] = masked_hessian
 
-                # Update positions
-                self.beads.q[self.cl_indx] = self.climbgm.rbeads.q
-                info(" @NEB_CLIMB: climbing bead positions updated.", verbosity.debug)
-
-                self.nebpot, self.nebgrad = self.climbgm(
-                    self.beads.q[self.cl_indx, self.climbgm.fixatoms_mask]
-                )
-
-                # dx = current position - previous position.
-                # Use to determine converged minimization
-                dx = np.amax(
-                    np.abs(
-                        self.beads.q[self.cl_indx, self.climbgm.fixatoms_mask]
-                        - self.old_x
-                    )
-                )
-
-                # Store old positions
-                self.old_x[:] = self.beads.q[self.cl_indx, self.climbgm.fixatoms_mask]
-
             elif self.mode == "fire":
                 # FIRE algorithms
 
@@ -812,31 +771,32 @@ class NEBMover(Motion):
                     dt=self.dt_fire,
                     dtmax=self.dtmax,
                 )
-                # update positions
-                self.beads.q[self.cl_indx] = self.climbgm.rbeads.q
-                info(" @NEB_CLIMB: climb beads positions updated.", verbosity.debug)
-
-                self.nebpot, self.nebgrad = self.climbgm(
-                    self.beads.q[self.cl_indx, self.climbgm.fixatoms_mask]
-                )
-
-                # Use to determine converged minimization
-                # max movement
-                dx = np.amax(
-                    np.abs(
-                        self.beads.q[self.cl_indx, self.climbgm.fixatoms_mask]
-                        - self.old_x
-                    )
-                )
-
-                # Store old positions
-                self.old_x[:] = self.beads.q[self.cl_indx, self.climbgm.fixatoms_mask]
 
             # TODO: Routines for L-BFGS, SD, CG, ...
             else:
                 softexit.trigger(
                     "Try damped_bfgs or fire, other algorithms are not implemented for NEB."
                 )
+
+            # update positions
+            self.beads.q[self.cl_indx] = self.climbgm.rbeads.q
+            info(" @NEB_CLIMB: climb beads positions updated.", verbosity.debug)
+
+            self.nebpot, self.nebgrad = self.climbgm(
+                self.beads.q[self.cl_indx, self.climbgm.fixatoms_mask]
+            )
+
+            # Use to determine converged minimization
+            # max movement
+            dx = np.amax(
+                np.abs(
+                    self.beads.q[self.cl_indx, self.climbgm.fixatoms_mask]
+                    - self.old_x
+                )
+            )
+
+            # Store old positions
+            self.old_x[:] = self.beads.q[self.cl_indx, self.climbgm.fixatoms_mask]
 
             # This transfers forces from the ClimbMapper to the "main" beads,
             # so that recalculation won't be triggered after the step.

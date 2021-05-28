@@ -66,8 +66,6 @@ from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, info, warning
 
 # Bracketing function
-
-
 def bracket(fdf, fdf0=None, x0=0.0, init_step=1.0e-3):
     """Given an initial point, determines the initial bracket for the minimum
     Arguments:
