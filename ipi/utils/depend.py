@@ -180,7 +180,7 @@ class depend_base(object):
                 self.taint(taintme=tainted)
 
     def __deepcopy__(self, memo):
-        """ Overrides deepcopy behavior, to avoid copying the (uncopiable) RLOCK """
+        """Overrides deepcopy behavior, to avoid copying the (uncopiable) RLOCK"""
 
         newone = type(self)(None)
 
@@ -192,11 +192,11 @@ class depend_base(object):
         return newone
 
     def hold(self):
-        """ Sets depend object as on hold. """
+        """Sets depend object as on hold."""
         self._active[:] = False
 
     def resume(self):
-        """ Sets depend object as active again. """
+        """Sets depend object as active again."""
         self._active[:] = True
         if self._func is None:
             self.taint(taintme=False)
@@ -204,7 +204,7 @@ class depend_base(object):
             self.taint(taintme=True)
 
     def add_synchro(self, synchro=None):
-        """ Links depend object to a synchronizer. """
+        """Links depend object to a synchronizer."""
 
         assert (
             self._synchro is None
@@ -909,7 +909,7 @@ class ddirect(object):
     depend_base members."""
 
     def __init__(self, dobj):
-        """ Just stores a reference to the dobject we want to access """
+        """Just stores a reference to the dobject we want to access"""
 
         object.__setattr__(self, "dobj", dobj)
 

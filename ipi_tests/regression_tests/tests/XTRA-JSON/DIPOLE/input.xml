@@ -13,7 +13,7 @@ conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potentia
   </ffsocket>
   <system>
     <initialize nbeads='8'>
-      <file mode='pdb'> init.pdb </file>
+      <file mode='xyz'> init.xyz </file>
       <velocities mode='thermal' units='kelvin'> 298 </velocities>
     </initialize>
     <forces>

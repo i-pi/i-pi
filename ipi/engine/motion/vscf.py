@@ -146,18 +146,18 @@ class NormalModeMover(Motion):
         self.dforces = self.forces.copy(self.dbeads, self.dcell)
 
     def step(self, step=None):
-        """Executes one step of phonon computation. """
+        """Executes one step of phonon computation."""
         self.calc.step(step)
 
 
 class DummyCalculator(dobject):
-    """ No-op Calculator """
+    """No-op Calculator"""
 
     def __init__(self):
         pass
 
     def bind(self, imm):
-        """ Reference all the variables for simpler access."""
+        """Reference all the variables for simpler access."""
         self.imm = imm
 
     def step(self, step=None):
@@ -169,7 +169,7 @@ class IMF(DummyCalculator):
     """Temperature scaled normal mode Born-Oppenheimer surface evaluator."""
 
     def bind(self, imm):
-        """ Reference all the variables for simpler access."""
+        """Reference all the variables for simpler access."""
 
         if scipy is None:
             info(" @NM: scipy import failed", verbosity.low)
@@ -758,7 +758,7 @@ class IMF(DummyCalculator):
 
 
 class VSCF(IMF):
-    """"""
+    """ """
 
     def bind(self, imm):
         """

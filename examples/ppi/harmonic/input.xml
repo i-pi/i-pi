@@ -13,7 +13,7 @@
   </ffsocket>
   <system>
     <initialize nbeads='2'>
-      <file mode='pdb'> init.pdb </file>
+      <file mode='xyz'> init.xyz </file>
       <velocities mode='thermal' units='kelvin'>1841.7060385</velocities>
     </initialize>
     <forces>

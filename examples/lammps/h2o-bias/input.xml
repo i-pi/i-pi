@@ -14,7 +14,7 @@
    </ffsocket>
    <system>
       <initialize nbeads="1">
-         <file mode="pdb"> water_298K.pdb </file>
+         <file mode="xyz"> water_298K.xyz </file>
          <velocities mode="thermal" units="kelvin"> 300 </velocities>
       </initialize>
       <forces>

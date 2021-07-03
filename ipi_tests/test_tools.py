@@ -155,7 +155,7 @@ def modify_xml_4_dummy_test(
     driver_info,
     test_settings,
 ):
-    """ Modify xml to run dummy tests """
+    """Modify xml to run dummy tests"""
     try:
         tree = ET.parse(input_name)
     except:
