@@ -202,19 +202,20 @@ class DoubleWell_with_explicit_bath_driver(DoubleWell_with_friction_driver):
     def set_ci_and_wi(self):
         """ Computes the the parameters to represent the harmonic bath """
 
-        self.omega = np.zeros(self.nbath)
+        omega = np.zeros(self.nbath)
         self.omega2 = np.zeros(self.nbath)
         self.coef = np.zeros(self.nbath)
 
-        for i in range(self.nbath):
-            self.omega[i] = -self.w_c * np.log((i + 0.5) / self.nbath)
-            self.omega2[i] = self.omega[i] ** 2
+        if self.w_c>0:
+         for i in range(self.nbath):
+            omega[i] = -self.w_c * np.log((i + 0.5) / self.nbath)
+            self.omega2[i] = omega[i] ** 2
             self.coef[i] = (
-                self.omega[i]
+                omega[i]
                 * ((2 * self.eta0 * self.m * self.w_c) / (self.nbath * np.pi)) ** 0.5
             )
         self.init = True
-
+        
     def S(self, q):
         """ S coupling function """
         return q * self.SD(q)
@@ -234,10 +235,10 @@ class DoubleWell_with_explicit_bath_driver(DoubleWell_with_friction_driver):
         # DW
         pot += self.A * (q - self.delta) ** 2 + self.B * (q ** 4)
         fq = -2.0 * self.A * (q - self.delta) - 4.0 * self.B * (q ** 3)
-
         # Harmonic bath
 
-        for i in range(self.nbath):
+        if self.w_c >0:
+         for i in range(self.nbath):
             aux = x[i] - (self.coef[i] * self.S(q) / (self.m * self.omega2[i]))
             pot += 0.5 * self.m * self.omega2[i] * aux ** 2
             fq += aux * self.coef[i] * self.dSD_dq(q)
