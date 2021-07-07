@@ -70,7 +70,7 @@ class DoubleWell_driver(Dummy_driver):
         force3[:, 2] = -self.k * pos3[:, 2]
 
         vir = cell * 0.0  # makes a zero virial with same shape as cell
-        extras = "nada"
+        extras = "empty"
         pos = pos3.reshape(pos.shape)
         force = force3.reshape(pos.shape)
 
@@ -88,8 +88,8 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
 
     def __init__(self, args=None):
 
-        self.error_msg = """\nDW+fric driver excepts 8 arguments.\n
-        Example: python driver.py -m DoubleWell_with_fric -o omega_c (cm^-1) V0 (cm^-1) mass delta(\AA) eta0  eps1 eps2  deltaQ      \n
+        self.error_msg = """\nDW+fric driver expects 8 arguments.\n
+        Example: python driver.py -m DoubleWell_with_fric -o omega_b (cm^-1) V0 (cm^-1) mass delta(\AA) eta0  eps1 eps2  deltaQ      \n
         python driver.py -m DoubleWell -o 500,2085,1837,0.00,1,0,0,1\n"""
         self.args = args
         self.check_arguments()
@@ -154,5 +154,98 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
 
         friction_tensor = self.get_friction_tensor(pos)
         extras = json.dumps({"friction": friction_tensor.tolist()})
+        return pot, force, vir, extras
+
+
+class DoubleWell_with_explicit_bath_driver(DoubleWell_with_friction_driver):
+    """Adds to the double well potential the an explicit harmonic bath. First dof correpond to the DW, the rest to the bath discretization 
+
+!  V(q,x1,..,xn) = DW(q) + 
+!      sum_2^(3*N) [ 0.5 m w_i^2(q - (c_i s(q))/(m w_i)^2)^2 ]
+!      s(q) = q *sd(q)
+!      sd(q) = [1+eps1*exp( q^2 / (2 deltaQ^2) ) ] + eps2 tanh(q/deltaQ)
+!      If eps1=eps2=0 then sd(q) =1 and s(q) = q --->Spatially independenth bath 
+
+"""
+
+    def __init__(self, args=None):
+
+        self.error_msg = """\nDW+explicit_bath driver expects 8 arguments.\n
+        Example: python driver.py -m DoubleWell_with_explicit_bath -o omega_b (cm^-1) V0 (cm^-1) mass delta(\AA) eta0  eps1 eps2  deltaQ omega_c(cm^-1)     \n
+        python driver.py -m DoubleWell -o 500,2085,1837,0.00,1,0,0,1,500\n"""
+        self.args = args
+        self.check_arguments()
+        self.init = False
+
+    def check_arguments(self):
+        """Function that checks the arguments required to run the driver"""
+
+        try:
+            arglist = self.args.split(",")
+            param = list(map(float, arglist))
+            assert len(param) == 9
+            w_b = param[0] * invcm2au
+            v0 = param[1] * invcm2au
+            self.m = param[2]
+            self.delta = param[3] * A2au
+            self.eta0 = param[4]
+            self.eps1 = param[5]
+            self.eps2 = param[6]
+            self.deltaQ = param[7]
+            self.w_c = param[8] * invcm2au
+        except:
+            sys.exit(self.error_msg)
+
+        self.A = -0.5 * self.m * (w_b) ** 2
+        self.B = ((self.m ** 2) * (w_b) ** 4) / (16 * v0)
+
+    def set_ci_and_wi(self):
+        """ Computes the the parameters to represent the harmonic bath """
+
+        self.omega = np.zeros(self.nbath)
+        self.omega2 = np.zeros(self.nbath)
+        self.coef = np.zeros(self.nbath)
+
+        for i in range(self.nbath):
+            self.omega[i] = -self.w_c * np.log((i + 0.5) / self.nbath)
+            self.omega2[i] = self.omega[i] ** 2
+            self.coef[i] = (
+                self.omega[i]
+                * ((2 * self.eta0 * self.m * self.w_c) / (self.nbath * np.pi)) ** 0.5
+            )
+        self.init = True
+
+    def S(self, q):
+        """ S coupling function """
+        return q * self.SD(q)
+
+    def __call__(self, cell, pos):
+        """DoubleWell potential"""
+        pot = 0
+        q = pos.reshape(-1, 1)[0]
+        x = pos.reshape(-1, 1)[1:]
+        fq = np.zeros(q.shape)
+        fx = np.zeros(x.shape)
+
+        if not self.init:
+            self.nbath = np.size(x)
+            self.set_ci_and_wi()
+
+        # DW
+        pot += self.A * (q - self.delta) ** 2 + self.B * (q ** 4)
+        fq = -2.0 * self.A * (q - self.delta) - 4.0 * self.B * (q ** 3)
+
+        # Harmonic bath
+
+        for i in range(self.nbath):
+            aux = x[i] - (self.coef[i] * self.S(q) / (self.m * self.omega2[i]))
+            pot += 0.5 * self.m * self.omega2[i] * aux ** 2
+            fq += aux * self.coef[i] * self.dSD_dq(q)
+            fx[i] -= self.m * self.omega2[i] * aux
+
+        pos = np.concatenate((q, x.flatten())).reshape(pos.shape)
+        force = np.concatenate((fq, fx.flatten())).reshape(pos.shape)
+        vir = cell * 0.0  # makes a zero virial with same shape as cell
+        extras = "empty"
 
         return pot, force, vir, extras

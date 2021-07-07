@@ -1558,11 +1558,7 @@ class NicholsOptimizer(HessianOptimizer):
         if self.options["mode"] == "rate":
 
             d_x = nichols(
-                self.mapper.f,
-                d,
-                w,
-                self.fix.fixbeads.m3,
-                activearrays["big_step"],
+                self.mapper.f, d, w, self.fix.fixbeads.m3, activearrays["big_step"],
             )
         elif self.options["mode"] == "splitting":
             d_x = nichols(
