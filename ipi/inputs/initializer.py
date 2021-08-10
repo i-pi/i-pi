@@ -504,7 +504,13 @@ class InputInitializer(Input):
                 )
             if k == "file":
                 mode = v.mode.fetch()
-                if mode == "xyz" or mode == "manual" or mode == "pdb" or mode == "chk" or mode == "ase":
+                if (
+                    mode == "xyz"
+                    or mode == "manual"
+                    or mode == "pdb"
+                    or mode == "chk"
+                    or mode == "ase"
+                ):
                     initlist.append(("positions", v.fetch(initclass=ei.InitIndexed)))
                 if mode == "xyz" or mode == "pdb" or mode == "chk" or mode == "ase":
                     rm = v.fetch(initclass=ei.InitIndexed)

@@ -8,10 +8,6 @@ using the Atomic Simulation Environment
 
 import sys
 
-import numpy as np
-
-import ipi.utils.mathtools as mt
-
 try:
     import ase
 except ImportError:
@@ -22,11 +18,13 @@ __all__ = ["print_ase", "read_ase"]
 
 def _asecheck():
     if ase is None:
-        raise RuntimeError("""The Atomic Simulation Environment must be installed to use the mode 'ase'. Please run
+        raise RuntimeError(
+            """The Atomic Simulation Environment must be installed to use the mode 'ase'. Please run
 
 $~ pip install -U ase
 
-to install it.""")
+to install it."""
+        )
 
 
 def print_ase(
@@ -45,8 +43,7 @@ def print_ase(
 
     from ase import Atoms
 
-    atoms = Atoms(atoms.names, positions=atoms.q*atoms_conv, 
-                  cell=cell.h*cell_conv)
+    atoms = Atoms(atoms.names, positions=atoms.q * atoms_conv, cell=cell.h * cell_conv)
     atoms.write(filedesc)
 
 
@@ -73,7 +70,7 @@ def read_ase(filedesc):
 
     niggli_reduce(a)
 
-    comment = "Structure read with ASE with composition %s"%a.symbols.formula
+    comment = "Structure read with ASE with composition %s" % a.symbols.formula
     cell = a.cell.array
     qatoms = a.positions.reshape((-1))
     names = list(a.symbols)
