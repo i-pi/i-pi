@@ -224,7 +224,7 @@ def init_vector(
 
     mode = iif.mode
     value = iif.value
-    if mode == "xyz" or mode == "pdb":
+    if mode == "xyz" or mode == "pdb" or mode == "ase":
         rq = init_beads(iif, nbeads, dimension, units, cell_units).q
     elif mode == "chk":
         if momenta:

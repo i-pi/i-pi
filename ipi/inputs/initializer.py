@@ -163,10 +163,10 @@ class InputInitFile(InputInitBase):
 
     attribs = deepcopy(InputInitBase.attribs)
     attribs["mode"][1]["default"] = "chk"
-    attribs["mode"][1]["options"] = ["xyz", "pdb", "chk"]
+    attribs["mode"][1]["options"] = ["xyz", "pdb", "chk", "ase"]
     attribs["mode"][1][
         "help"
-    ] = "The input data format. 'xyz' and 'pdb' stand for xyz and pdb input files respectively. 'chk' stands for initialization from a checkpoint file."
+    ] = "The input data format. 'xyz' and 'pdb' stand for xyz and pdb input files respectively. 'chk' stands for initialization from a checkpoint file. 'ase' is to read a file with the Atomic Simulation Environment"
 
     attribs["bead"] = (
         InputAttribute,
@@ -504,9 +504,9 @@ class InputInitializer(Input):
                 )
             if k == "file":
                 mode = v.mode.fetch()
-                if mode == "xyz" or mode == "manual" or mode == "pdb" or mode == "chk":
+                if mode == "xyz" or mode == "manual" or mode == "pdb" or mode == "chk" or mode == "ase":
                     initlist.append(("positions", v.fetch(initclass=ei.InitIndexed)))
-                if mode == "xyz" or mode == "pdb" or mode == "chk":
+                if mode == "xyz" or mode == "pdb" or mode == "chk" or mode == "ase":
                     rm = v.fetch(initclass=ei.InitIndexed)
                     rm.units = ""
                     initlist.append(("masses", rm))
