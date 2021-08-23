@@ -52,7 +52,7 @@ class Rascal_driver(Dummy_driver):
         pot_ipi = unit_to_internal("energy", "electronvolt", pot)
         force_ipi = unit_to_internal("force", "ev/ang", force)
         # The rascal stress is normalized by the cell volume (in rascal units)
-        vir_rascal = -1 * stress * det_ut3x3(cell_rascal)        
+        vir_rascal = -1 * stress * det_ut3x3(cell_rascal)
         vir_ipi = unit_to_internal("energy", "electronvolt", vir_rascal.T)
         extras = ""
         return pot_ipi, force_ipi, vir_ipi, extras
