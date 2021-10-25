@@ -186,7 +186,7 @@ class NEBGradientMapper(object):
 
         # Get perpendicular forces
         for ii in range(1, nimg - 1):
-            rbf[ii-1] -= np.dot(rbf[ii-1], btau[ii]) * btau[ii]
+            rbf[ii - 1] -= np.dot(rbf[ii - 1], btau[ii]) * btau[ii]
 
         for ii in range(1, nimg):
             print(
@@ -205,7 +205,7 @@ class NEBGradientMapper(object):
 
             # Improved tangent implementation
             # Eq. 12 in J. Chem. Phys. 113, 9978 (2000):
-            rbf[ii-1] += (
+            rbf[ii - 1] += (
                 kappa[ii]
                 * (npnorm(bq[ii + 1] - bq[ii]) - npnorm(bq[ii] - bq[ii - 1]))
                 * btau[ii]
@@ -705,7 +705,9 @@ class NEBMover(Motion):
 
             # dx = current position - previous position.
             # Use to determine converged minimization
-            dx = np.amax(np.abs(self.beads.q[1:-1, self.nebgm.fixatoms_mask] - self.old_x))
+            dx = np.amax(
+                np.abs(self.beads.q[1:-1, self.nebgm.fixatoms_mask] - self.old_x)
+            )
 
             # Store old positions
             self.old_x[:] = self.beads.q[1:-1, self.nebgm.fixatoms_mask]
