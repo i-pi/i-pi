@@ -903,7 +903,7 @@ def Damped_BFGS(x0, fdf, fdf0, hessian, big_step):
     Currently it doesn't use min_approx, TRM or any other step determination,
     just the simplest (invhessian dot gradient) step, as in aimsChain.
     The reason is that both LS and TRM require energy, and the energy
-    of NEB springs is somewhat ill-defined because of all projections that we do.
+    of NEB springs is ill-defined because of all projections that we do.
     This may be improved later, but first we need to have NEB working.
 
     Inside this function I use flattened vectors, restoring shape only when needed.
@@ -933,6 +933,16 @@ def Damped_BFGS(x0, fdf, fdf0, hessian, big_step):
 
     # Calculate direction
     # When the inverse itself is not needed, people recommend solve(), not inv().
+    info(" @DampedBFGS: sk = np.linalg.solve(B, -g0) ...", verbosity.debug)
+    info(
+        "              The code randomly crashes here with some versions of Numpy "
+        "based on OpenBLAS.\n"
+        "              If this happens, use Numpy based on MKL, e.g. from Anaconda.",
+        verbosity.debug,
+    )
+    info("Operands:", verbosity.debug)
+    info("%s,  %s" % (type(B), str(B.shape)), verbosity.debug)
+    info("%s,  %s" % (type(g0), str(g0.shape)), verbosity.debug)
     sk = np.linalg.solve(B, -g0)
     info(" @DampedBFGS: Calculated direction.", verbosity.debug)
 
@@ -995,9 +1005,9 @@ def Damped_BFGS(x0, fdf, fdf0, hessian, big_step):
 
     print("det(Hessian): %f" % np.linalg.det(B))
     print("Condition number: %f" % np.linalg.cond(B))
-    print("Positive definite: %r" % np.all(np.linalg.eigvals(B) > 0))
-    print("Eigenvalues of the Hessian:")
     eigvals = np.real(np.linalg.eigvals(B))
+    print("Positive definite: %r" % np.all(eigvals > 0))
+    print("Eigenvalues of the Hessian:")
     with np.printoptions(threshold=10000, linewidth=100000):
         print(np.sort(eigvals))
 
