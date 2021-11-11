@@ -64,13 +64,8 @@ def read_ase(filedesc):
     from ase.io import read
     from ase.build import niggli_reduce
 
-    # Extract the format
-    fmt = os.path.splitext(filedesc.name)[1].strip('.')
-    # One special case. extxyz is more powerful
-    fmt = 'extxyz' if fmt == 'xyz' else fmt
-
     try:
-        a = read(filedesc, format=fmt)
+        a = read(filedesc)
     except ValueError:
         raise EOFError()
 
