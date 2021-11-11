@@ -6,6 +6,7 @@ using the Atomic Simulation Environment
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
+import os
 import sys
 
 try:
@@ -63,12 +64,16 @@ def read_ase(filedesc):
     from ase.io import read
     from ase.build import niggli_reduce
 
+    # Extract the format
+    fmt = os.path.splitext(filedesc.name)[1].strip('.')
+
     try:
-        a = read(filedesc)
+        a = read(filedesc, format=fmt)
     except ValueError:
         raise EOFError()
 
-    niggli_reduce(a)
+    if all(a.get_pbc()):
+        niggli_reduce(a)
 
     comment = "Structure read with ASE with composition %s" % a.symbols.formula
     cell = a.cell.array
