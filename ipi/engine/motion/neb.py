@@ -297,7 +297,7 @@ class NEBMover(Motion):
         glist_lbfgs: list of previous gradients (g_n+1 - g_n) for L-BFGS
         endpoints: flag for minimizing end images in NEB *** NOT YET IMPLEMENTED ***
         use_climb: flag for climbing image NEB
-        stage: flag denoting current procedure: "endpoints", "neb" or "climb"
+        stage: flag denoting current stage: "endpoints", "neb" or "climb", or "converged"
         spring:
             varsprings: T/F for variable spring constants
             kappa: single spring constant if varsprings is F
@@ -553,6 +553,10 @@ class NEBMover(Motion):
 
         n_activedim = self.beads.q[0].size - len(self.fixatoms) * 3
 
+        # Check if we restarted a converged calculation (by mistake)
+        if self.stage == "converged":
+            softexit.trigger("NEB has already converged. Exiting simulation.")
+
         # First, optimization of endpoints, if required
         if self.endpoints["optimize"] and self.stage == "endpoints":
             # TODO
@@ -751,6 +755,7 @@ class NEBMover(Motion):
                 if self.use_climb:
                     self.stage = "climb"
                 else:
+                    self.stage = "converged"
                     softexit.trigger("NEB finished successfully at STEP %i." % step)
 
             else:
@@ -893,9 +898,10 @@ class NEBMover(Motion):
             ):
                 decor = 60 * "=" + "\n"
                 info(
-                    decor + " @NEB_CLIMB: converged. Step: %i\n" % step + decor,
+                    decor + " @NEB_CLIMB: optimization converged. Step: %i\n" % step + decor,
                     verbosity.medium,
                 )
+                self.stage = "converged"
                 softexit.trigger("NEB_CLIMB finished successfully.")
 
             else:
