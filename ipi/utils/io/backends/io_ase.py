@@ -64,6 +64,16 @@ def read_ase(filedesc):
     from ase.io import read
     from ase.build import niggli_reduce
 
+    # A check to avoid getting stuck in an infinite reading loop with some 
+    # readers
+    
+    try:
+        pos = filedesc.tell()
+        if pos > 0:
+            raise RuntimeError()
+    except Exception:
+        raise EOFError()
+
     try:
         a = read(filedesc)
     except ValueError:
