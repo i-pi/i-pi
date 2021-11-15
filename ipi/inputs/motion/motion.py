@@ -282,7 +282,8 @@ class InputMotionBase(Input):
 
         if (sc.fixcom is True) and (len(sc.fixatoms) > 0):
             softexit.trigger(
-                "Fixed atoms break translational invariance, and so should be used with <fixcom> False </fixcom>. You can disable this error if you know what you are doing."
+                status="bad",
+                message="Fixed atoms break translational invariance, and so should be used with <fixcom> False </fixcom>. You can disable this error if you know what you are doing.",
             )
 
         if tsc == 0:
