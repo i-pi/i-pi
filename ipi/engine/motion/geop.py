@@ -160,14 +160,18 @@ class GeopMotion(Motion):
 
         if len(self.fixatoms) == len(self.beads[0]):
             softexit.trigger(
-                "WARNING: all atoms are fixed, geometry won't change. Exiting simulation"
+                status="bad",
+                message="WARNING: all atoms are fixed, geometry won't change. Exiting simulation",
             )
 
     def step(self, step=None):
         if self.optimizer.converged:
             # if required, exit upon convergence. otherwise just return without action
             if self.conv_exit:
-                softexit.trigger("Geometry optimization converged. Exiting simulation")
+                softexit.trigger(
+                    status="success",
+                    message="Geometry optimization converged. Exiting simulation",
+                )
             else:
                 info(
                     "Convergence threshold met. Will carry on but do nothing.",
@@ -617,10 +621,6 @@ class LBFGSOptimizer(DummyOptimizer):
         self.gm.bind(self)
         self.big_step = geop.big_step
         self.ls_options = geop.ls_options
-
-        # if len(self.fixatoms) > 0:
-        #     softexit.trigger("The L-BFGS optimization with fixatoms is implemented, but seems to be unstable. "
-        #                      "We stop here. Comment this line and continue only if you know what you are doing.")
 
         if geop.qlist.size != (self.corrections * self.beads.q.size):
             if geop.qlist.size == 0:

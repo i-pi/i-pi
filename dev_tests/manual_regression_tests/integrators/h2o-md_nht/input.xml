@@ -1,5 +1,5 @@
 <!-- REGTEST
-DEPENDENCIES init.pdb  in.lmp data.lmp
+DEPENDENCIES init.xyz  in.lmp data.lmp
 COMMAND(1) lmp_serial -i in.lmp
 ENDREGTEST -->
 <simulation verbosity='high'>
@@ -17,7 +17,7 @@ ENDREGTEST -->
   </ffsocket>
   <system>
     <initialize nbeads='1'>
-      <file mode='pdb'> init.pdb </file>
+      <file mode='xyz'> init.xyz </file>
       <velocities mode='thermal' units='kelvin'> 300 </velocities>
     </initialize>
     <forces>

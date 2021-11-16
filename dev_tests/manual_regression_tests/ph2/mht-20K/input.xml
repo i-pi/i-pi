@@ -1,5 +1,5 @@
 <!-- REGTEST
-DEPENDENCIES  init.pdb
+DEPENDENCIES  init.xyz
 COMMAND(4)    i-pi-driver -u -h mht-20K -m sg -o 30.0
 ENDREGTEST -->
 <simulation verbosity='high'>
@@ -7,7 +7,7 @@ ENDREGTEST -->
     <properties filename='out'>
          [ step, time{picosecond}, conserved{kelvin}, temperature{kelvin}, kinetic_cv{kelvin}, potential{kelvin}, pressure_cv{megapascal}, volume]
       </properties>
-    <trajectory format='pdb' filename='pos' stride='100' cell_units='angstrom'>positions{angstrom}</trajectory>
+    <trajectory format='xyz' filename='pos' stride='100' cell_units='angstrom'>positions{angstrom}</trajectory>
   </output>
   <total_steps>25</total_steps>
   <prng>
@@ -18,7 +18,7 @@ ENDREGTEST -->
   </ffsocket>
   <system>
     <initialize nbeads='20'>
-      <file mode='pdb'> init.pdb </file>
+      <file mode='xyz'> init.xyz </file>
       <velocities mode='thermal' units='kelvin'> 40 </velocities>
     </initialize>
     <forces>

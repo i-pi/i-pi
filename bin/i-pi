@@ -67,7 +67,7 @@ def main(fn_input, options):
     # TODO: Have them written when simulation.run() finishes instead.
     # It should be sufficient to run `self.softexit() at the end of
     # `Simulation.run()`. Anything else missing?
-    softexit.trigger(" @ SIMULATION: Exiting cleanly.")
+    softexit.trigger(status="success", message=" @ SIMULATION: Exiting cleanly.")
 
 
 if __name__ == '__main__':
