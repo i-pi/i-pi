@@ -158,7 +158,7 @@ class Softexit(object):
             " @SOFTEXIT:   Kill signal. Trying to make a clean exit.", verbosity.low
         )
 
-        self.trigger(" @SOFTEXIT: Kill signal received")
+        self.trigger(status="restartable", message=" @SOFTEXIT: Kill signal received")
 
         try:
             self.__del__()
@@ -173,11 +173,16 @@ class Softexit(object):
         while self._doloop[0]:
             time.sleep(SOFTEXITLATENCY)
             if os.path.exists("EXIT"):
-                self.trigger(" @SOFTEXIT: EXIT file detected.")
+                self.trigger(
+                    status="restartable", message=" @SOFTEXIT: EXIT file detected."
+                )
                 break
 
             if self.timeout > 0 and self.timeout < time.time():
-                self.trigger(" @SOFTEXIT: Maximum wallclock time elapsed.")
+                self.trigger(
+                    status="restartable",
+                    message=" @SOFTEXIT: Maximum wallclock time elapsed.",
+                )
                 break
 
 
