@@ -9,6 +9,8 @@ using the Atomic Simulation Environment
 import os
 import sys
 
+from ipi.utils.units import Constants
+
 try:
     import ase
 except ImportError:
@@ -79,13 +81,13 @@ def read_ase(filedesc):
     except ValueError:
         raise EOFError()
 
-    if all(a.get_pbc()):
-        niggli_reduce(a)
+#    if all(a.get_pbc()):
+#        niggli_reduce(a)
 
     comment = "Structure read with ASE with composition %s" % a.symbols.formula
     cell = a.cell.array
     qatoms = a.positions.reshape((-1))
     names = list(a.symbols)
-    masses = a.get_masses()
+    masses = a.get_masses() * Constants.amu
 
     return comment, cell, qatoms, names, masses
