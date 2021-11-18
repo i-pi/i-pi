@@ -8,7 +8,7 @@ using the Atomic Simulation Environment
 
 # import os
 import sys
-
+import numpy as np
 from ipi.utils.units import Constants
 
 try:
