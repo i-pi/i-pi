@@ -78,17 +78,23 @@ def read_ase(filedesc):
         raise EOFError()
 
     try:
-        a = read(filedesc)
+        atoms = read(filedesc)
     except ValueError:
         raise EOFError()
 
-    #    if all(a.get_pbc()):
-    #        niggli_reduce(a)
+    if all(atoms.get_pbc()):
+        # We want to make the cell conform
+        a = atoms.cell[0]
+        atoms.rotate(a, 'x', rotate_cell=True) # a along x
+        b = atoms.cell[1]
+        b = b.copy()/np.linalg.norm(b)
+        ang = -np.arctan2(b[2], b[1])*180/np.pi
+        atoms.rotate(ang, 'x', rotate_cell=True) # b in xy
 
-    comment = "Structure read with ASE with composition %s" % a.symbols.formula
-    cell = a.cell.array
-    qatoms = a.positions.reshape((-1))
-    names = list(a.symbols)
-    masses = a.get_masses() * Constants.amu
+    comment = "Structure read with ASE with composition %s" % atoms.symbols.formula
+    cell = atoms.cell.array
+    qatoms = atoms.positions.reshape((-1))
+    names = list(atoms.symbols)
+    masses = atoms.get_masses() * Constants.amu
 
     return comment, cell, qatoms, names, masses
