@@ -139,17 +139,17 @@ class Replay(Motion):
                         myatoms.q *= unit_to_internal("length", self.intraj.units, 1.0)
                         mycell.h *= unit_to_internal("length", self.intraj.units, 1.0)
                         b.q[:] = myatoms.q
-                elif self.intraj.mode == "ase":                    
+                elif self.intraj.mode == "ase":
                     for bindex, b in enumerate(self.beads):
                         if wildcard_used:
                             myframe = read_file("ase", self.rfile[bindex])
                         else:
                             myframe = read_file("ase", self.rfile)
                         myatoms = myframe["atoms"]
-                        mycell = myframe["cell"]                                                    
+                        mycell = myframe["cell"]
                         myatoms.q *= unit_to_internal("length", self.intraj.units, 1.0)
                         mycell.h *= unit_to_internal("length", self.intraj.units, 1.0)
-                        b.q[:] = myatoms.q                        
+                        b.q[:] = myatoms.q
                 elif self.intraj.mode == "chk" or self.intraj.mode == "checkpoint":
                     # TODO: Adapt the new `Simulation.load_from_xml`?
                     # reads configuration from a checkpoint file
@@ -165,7 +165,7 @@ class Replay(Motion):
                     softexit.trigger(" # Read single checkpoint")
                 # do not assign cell if it contains an invalid value (typically missing cell in the input)
                 if mycell.V > 0:
-                    self.cell.h[:] = mycell.h                
+                    self.cell.h[:] = mycell.h
             except EOFError:
                 softexit.trigger(" # Finished reading re-run trajectory")
             if (step is None) or (self.rstep > step):

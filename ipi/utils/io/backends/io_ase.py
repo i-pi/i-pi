@@ -85,11 +85,11 @@ def read_ase(filedesc):
     if all(atoms.get_pbc()):
         # We want to make the cell conform
         a = atoms.cell[0]
-        atoms.rotate(a, 'x', rotate_cell=True) # a along x
+        atoms.rotate(a, "x", rotate_cell=True)  # a along x
         b = atoms.cell[1]
-        b = b.copy()/np.linalg.norm(b)
-        ang = -np.arctan2(b[2], b[1])*180/np.pi
-        atoms.rotate(ang, 'x', rotate_cell=True) # b in xy
+        b = b.copy() / np.linalg.norm(b)
+        ang = -np.arctan2(b[2], b[1]) * 180 / np.pi
+        atoms.rotate(ang, "x", rotate_cell=True)  # b in xy
 
     comment = "Structure read with ASE with composition %s" % atoms.symbols.formula
     cell = atoms.cell.array
