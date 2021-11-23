@@ -15,7 +15,6 @@
   <system_template>
       <labels> [ id, filename ] </labels>
       <instance> [ cif, K2S2O8_rotated.cif ] </instance>
-          <!--<instance> [ cell, K2S2O8_rotated.cell ] </instance>-->
       <instance> [ xyz, K2S2O8_rotated.xyz ] </instance>
       <template>
   <system prefix="id">
