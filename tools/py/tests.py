@@ -58,7 +58,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     tests = args.tests
     print(test_folder[args.tests])
-    exit_code = pytest.main(["--tb=line", "-ra", "-vv", "-s" , str(test_folder[args.tests])])
+    exit_code = pytest.main(
+        ["--tb=line", "-ra", "-vv", "-s", str(test_folder[args.tests])]
+    )
 
     if exit_code != 0:
         raise RuntimeError("pytest exit code is {}".format(exit_code))
