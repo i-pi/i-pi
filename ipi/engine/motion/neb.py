@@ -463,8 +463,8 @@ class NEBMover(Motion):
 
         if len(self.fixatoms) == len(self.beads[0]):
             softexit.trigger(
-                "WARNING: all atoms are fixed, geometry won't change.\n"
-                "Exiting simulation."
+                status="bad",
+                message="WARNING: all atoms are fixed, geometry won't change. Exiting simulation.",
             )
 
         self.nebgm.bind(self)
@@ -482,7 +482,9 @@ class NEBMover(Motion):
             verbosity.medium,
         )
         if cl_indx in [0, self.beads.nbeads - 1]:
-            softexit.trigger("ERROR: climbing bead is the endpoint.")
+            softexit.trigger(
+                status="bad", message="ERROR: climbing bead is the endpoint."
+            )
         self.climbgm.rbeads.q[:] = self.beads.q[cl_indx]
         self.climbgm.q_prev[:] = self.beads.q[cl_indx - 1, self.climbgm.fixatoms_mask]
         self.climbgm.q_next[:] = self.beads.q[cl_indx + 1, self.climbgm.fixatoms_mask]
@@ -555,12 +557,18 @@ class NEBMover(Motion):
 
         # Check if we restarted a converged calculation (by mistake)
         if self.stage == "converged":
-            softexit.trigger("NEB has already converged. Exiting simulation.")
+            softexit.trigger(
+                status="success",
+                message="NEB has already converged. Exiting simulation.",
+            )
 
         # First, optimization of endpoints, if required
         if self.endpoints["optimize"] and self.stage == "endpoints":
             # TODO
-            softexit.trigger("Optimization of endpoints in NEB is not implemented yet.")
+            softexit.trigger(
+                status="bad",
+                message="Optimization of endpoints in NEB is not implemented yet.",
+            )
 
         # Endpoints are optimized or optimization is not required
         elif self.stage == "neb":
@@ -602,7 +610,10 @@ class NEBMover(Motion):
                     ):
                         print("Dimensions of the Hessian and of the beads:")
                         print((self.hessian.shape, self.beads.q.shape))
-                        softexit.trigger("Hessian not initialized correctly in NEB.")
+                        softexit.trigger(
+                            status="bad",
+                            message="Hessian not initialized correctly in NEB.",
+                        )
 
                 # Self instances will be updated in the optimizer, so we store the copies.
                 # old_nebpot is used later as a convergence criterion.
@@ -676,7 +687,8 @@ class NEBMover(Motion):
             # TODO: Routines for L-BFGS, SD, CG
             else:
                 softexit.trigger(
-                    "Try 'damped_bfgs' or 'fire'. Other algorithms are not implemented for NEB."
+                    status="bad",
+                    message="Try 'damped_bfgs' or 'fire'. Other algorithms are not implemented for NEB.",
                 )
 
             # Update positions
@@ -756,7 +768,10 @@ class NEBMover(Motion):
                     self.stage = "climb"
                 else:
                     self.stage = "converged"
-                    softexit.trigger("NEB finished successfully at STEP %i." % step)
+                    softexit.trigger(
+                        status="success",
+                        message="NEB finished successfully at STEP %i." % step,
+                    )
 
             else:
                 info(
@@ -783,7 +798,6 @@ class NEBMover(Motion):
 
         # Climbing image optimization
         elif self.stage == "climb":
-            # softexit.trigger("Climbing image NEB is not implemented yet.")
             self.ptime = self.ttime = 0
             self.qtime = -time.time()
 
@@ -843,7 +857,8 @@ class NEBMover(Motion):
             # TODO: Routines for L-BFGS, SD, CG, ...
             else:
                 softexit.trigger(
-                    "Try damped_bfgs or fire, other algorithms are not implemented for NEB."
+                    status="bad",
+                    message="Try damped_bfgs or fire, other algorithms are not implemented for NEB.",
                 )
 
             # Update positions
@@ -898,11 +913,15 @@ class NEBMover(Motion):
             ):
                 decor = 60 * "=" + "\n"
                 info(
-                    decor + " @NEB_CLIMB: optimization converged. Step: %i\n" % step + decor,
+                    decor
+                    + " @NEB_CLIMB: optimization converged. Step: %i\n" % step
+                    + decor,
                     verbosity.medium,
                 )
                 self.stage = "converged"
-                softexit.trigger("NEB_CLIMB finished successfully.")
+                softexit.trigger(
+                    status="success", message="NEB_CLIMB finished successfully."
+                )
 
             else:
                 info(
