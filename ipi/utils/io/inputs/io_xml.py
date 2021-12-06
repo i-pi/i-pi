@@ -534,9 +534,9 @@ def write_float(data):
     """Writes a formatted string from a float.
 
     Floats are printed out in exponential format, to 8 decimal places and
-    filling up any spaces under 16 not used with spaces.
+    filling up any spaces under 18 not used with spaces.
 
-    For example 1.0 --> '  1.00000000e+00'
+    For example 1.0 --> '  1.0000000000e+00'
 
     Args:
         data: The value to be read in.
@@ -545,7 +545,7 @@ def write_float(data):
         A formatted string.
     """
 
-    return "%16.8e" % data
+    return "%18.10e" % data
 
 
 def write_bool(data):
