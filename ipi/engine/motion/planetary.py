@@ -143,7 +143,9 @@ class Planetary(Motion):
         )
         self.dens = ens.copy()
         self.dbias = ens.bias.copy(self.dbeads, self.dcell)
-        self.dens.bind(self.dbeads, self.dnm, self.dcell, self.dforces, self.dbias)
+        self.dens.bind(
+            self.dbeads, self.dnm, self.dcell, self.dforces, self.dbias, omaker
+        )
 
         self.natoms = self.dbeads.natoms
         natoms3 = self.dbeads.natoms * 3
