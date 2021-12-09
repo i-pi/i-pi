@@ -100,7 +100,7 @@ class InputForceField(Input):
                 "dtype": int,
                 "default": np.array([-1]),
                 #                                     "default" : input_default(factory=np.array, args =[-1]),
-                "help": "List with indexes of the atoms that this socket is taking care of.    Default: all (corresponding to -1)",
+                "help": "List with indexes of the atoms that this socket is taking care of.    Default: [-1] (corresponding to all)",
             },
         ),
     }
