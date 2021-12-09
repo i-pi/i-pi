@@ -22,8 +22,11 @@ import ipi.inputs.outputs as ioutputs
 from ipi.inputs.smotion import InputSmotion
 
 
-__all__ = ["InputSimulation"]
+__all__ = ["InputSimulation", "GLOBALS"]
 
+# Apparently, the easiest way to propagate format to all output cases
+# is to define it globally.
+GLOBALS = {"floatformat": "%18.10e"}
 
 class InputSimulation(Input):
 
@@ -124,6 +127,14 @@ class InputSimulation(Input):
                 "options": ["md", "paratemp", "static"],
             },
         ),
+        "floatformat": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "default": "%18.10e",
+                "help": "A format for all printed floats.",
+            },
+        ),
     }
 
     dynamic = {
@@ -182,6 +193,7 @@ class InputSimulation(Input):
         self.total_time.store(simul.ttime)
         self.smotion.store(simul.smotion)
         self.threading.store(simul.threading)
+        self.floatformat.store(GLOBALS["floatformat"])
 
         # this we pick from the messages class. kind of a "global" but it seems to
         # be the best way to pass around the (global) information on the level of output.
@@ -263,6 +275,14 @@ class InputSimulation(Input):
 
         super(InputSimulation, self).fetch()
 
+        # We fetch format and store it in the global variable
+        GLOBALS["floatformat"] = self.floatformat.fetch()
+        try:
+            tryvar = GLOBALS["floatformat"] % 1.0
+        except:
+            print("Error: <simulation> has invalid floatformat attribute.")
+            exit(-1)
+
         # small hack: initialize here the verbosity level -- we really assume to have
         # just one simulation object
         verbosity.level = self.verbosity.fetch()
@@ -273,9 +293,10 @@ class InputSimulation(Input):
             if k == "system":
                 syslist.append(v.fetch())
             elif k == "system_template":
-                syslist += (
-                    v.fetch()
-                )  # this will actually generate automatically a bunch of system objects with the desired properties set automatically to many values
+                # This will actually generate automatically a bunch
+                # of system objects with the desired properties set
+                # automatically to many values.
+                syslist += (v.fetch())
             elif (
                 k == "ffsocket"
                 or k == "fflj"
