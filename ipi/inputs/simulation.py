@@ -279,7 +279,7 @@ class InputSimulation(Input):
         # We fetch format and store it in the global variable
         GLOBALS["floatformat"] = self.floatformat.fetch()
         try:
-            tryvar = GLOBALS["floatformat"] % 1.0
+            _ = GLOBALS["floatformat"] % 1.0
         except:
             print("Error: <simulation> has invalid floatformat attribute.")
             exit(-1)
