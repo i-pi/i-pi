@@ -546,6 +546,7 @@ def write_float(data):
     """
 
     from ipi.inputs.simulation import GLOBALS
+
     return GLOBALS["floatformat"] % data
 
 

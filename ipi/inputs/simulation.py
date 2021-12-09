@@ -28,6 +28,7 @@ __all__ = ["InputSimulation", "GLOBALS"]
 # is to define it globally.
 GLOBALS = {"floatformat": "%18.10e"}
 
+
 class InputSimulation(Input):
 
     """Simulation input class.
@@ -296,7 +297,7 @@ class InputSimulation(Input):
                 # This will actually generate automatically a bunch
                 # of system objects with the desired properties set
                 # automatically to many values.
-                syslist += (v.fetch())
+                syslist += v.fetch()
             elif (
                 k == "ffsocket"
                 or k == "fflj"
