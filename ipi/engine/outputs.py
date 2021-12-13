@@ -192,9 +192,12 @@ class PropertyOutput(BaseOutput):
             key = getkey(what)
             prop = self.system.properties.property_dict[key]
 
-            if "size" in prop and prop["size"] > 1:
-                ohead += "cols.  %3d-%-3d" % (icol, icol + prop["size"] - 1)
-                icol += prop["size"]
+            if "size" in prop:
+                if (type(prop["size"]) is str) or (prop["size"] <= 0):
+                    raise RuntimeError("ERROR: property %s has undefined size." % key)
+                elif prop["size"] > 1:
+                    ohead += "cols.  %3d-%-3d" % (icol, icol + prop["size"] - 1)
+                    icol += prop["size"]
             else:
                 ohead += "column %3d    " % (icol)
                 icol += 1
