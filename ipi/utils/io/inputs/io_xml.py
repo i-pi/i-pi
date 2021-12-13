@@ -545,9 +545,9 @@ def write_float(data):
         A formatted string.
     """
 
-    from ipi import GLOBALS
+    from ipi import ipi_global_settings
 
-    return GLOBALS["floatformat"] % data
+    return ipi_global_settings["floatformat"] % data
 
 
 def write_bool(data):

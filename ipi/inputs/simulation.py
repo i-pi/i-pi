@@ -5,7 +5,7 @@
 # See the "licenses" directory for full license information.
 
 
-from ipi import GLOBALS
+from ipi import ipi_global_settings
 from ipi.utils.depend import *
 from ipi.utils.inputvalue import *
 from ipi.utils.units import *
@@ -191,7 +191,7 @@ class InputSimulation(Input):
         self.total_time.store(simul.ttime)
         self.smotion.store(simul.smotion)
         self.threading.store(simul.threading)
-        self.floatformat.store(GLOBALS["floatformat"])
+        self.floatformat.store(ipi_global_settings["floatformat"])
 
         # this we pick from the messages class. kind of a "global" but it seems to
         # be the best way to pass around the (global) information on the level of output.
@@ -274,9 +274,9 @@ class InputSimulation(Input):
         super(InputSimulation, self).fetch()
 
         # We fetch format and store it in the global variable
-        GLOBALS["floatformat"] = self.floatformat.fetch()
+        ipi_global_settings["floatformat"] = self.floatformat.fetch()
         try:
-            _ = GLOBALS["floatformat"] % 1.0
+            _ = ipi_global_settings["floatformat"] % 1.0
         except:
             print("Error: <simulation> has invalid floatformat attribute.")
             exit(-1)
