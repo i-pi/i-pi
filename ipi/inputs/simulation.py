@@ -129,7 +129,7 @@ class InputSimulation(Input):
             InputAttribute,
             {
                 "dtype": str,
-                "default": "%18.10e",
+                "default": "%16.8e",
                 "help": "A format for all printed floats.",
             },
         ),
