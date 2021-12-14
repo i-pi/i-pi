@@ -29,6 +29,12 @@ $~ pip install -U ase
 to install it."""
         )
 
+    from packaging import version
+
+    assert version.parse(ase.__version__) >= version.parse(
+        "3.22.1"
+    ), "Please get a newer version of ASE"
+
 
 def print_ase(
     atoms, cell, filedesc=sys.stdout, title="", cell_conv=1.0, atoms_conv=1.0
