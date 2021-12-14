@@ -39,7 +39,7 @@ then behaves in the following way, depending on the user’s choice:
 There are a few exceptions:
 
   - The total simulation time, specified by the flag <total_time> , has to be provided  in seconds.
-  - When using ASE format for I/O the units are dictated by the ase defaults. 
+  - When using ASE format for I/O, the units are dictated by the ase defaults. 
     So for example, the ASE extended xyz format  expects positions in angstroms.
     (See for example ``examples/ase-io/``)
 
