@@ -9,4 +9,3 @@ pytest-cov
 mock
 coverage
 flake8>=3.8.4
-ase
