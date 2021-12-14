@@ -533,7 +533,7 @@ def write_tuple(data):
 def write_float(data):
     """Writes a formatted string from a float.
 
-    Floats are printed out in exponential format, to 8 decimal places and
+    The default format is exponential to 8 decimal places and
     filling up any spaces under 16 not used with spaces.
 
     For example 1.0 --> '  1.00000000e+00'
@@ -545,7 +545,9 @@ def write_float(data):
         A formatted string.
     """
 
-    return "%16.8e" % data
+    from ipi import ipi_global_settings
+
+    return ipi_global_settings["floatformat"] % data
 
 
 def write_bool(data):
