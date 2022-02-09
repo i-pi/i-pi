@@ -33,6 +33,7 @@ from ipi.engine.motion import (
     Replay,
     GeopMotion,
     NEBMover,
+    StringMover,
     DynMatrixMover,
     MultiMotion,
     AlchemyMC,
@@ -51,6 +52,7 @@ from ipi.inputs.initializer import *
 from .geop import InputGeop
 from .instanton import InputInst
 from .neb import InputNEB
+from .string_mep import InputStringMEP
 from .dynamics import InputDynamics
 from .vscf import InputNormalMode
 from .constrained_dynamics import InputConstrainedDynamics
@@ -93,6 +95,7 @@ class InputMotionBase(Input):
                     "minimize",
                     "replay",
                     "neb",
+                    "string",
                     "dynamics",
                     "constrained_dynamics",
                     "t_ramp",
@@ -134,6 +137,13 @@ class InputMotionBase(Input):
         "neb_optimizer": (
             InputNEB,
             {"default": {}, "help": "Option for NEB optimization"},
+        ),
+        "string_optimizer": (
+            InputStringMEP,
+            {
+                "default": {},
+                "help": "Option for String minimal-energy path optimization",
+            },
         ),
         "dynamics": (
             InputDynamics,
@@ -230,6 +240,10 @@ class InputMotionBase(Input):
             self.mode.store("neb")
             self.neb_optimizer.store(sc)
             tsc = 1
+        elif type(sc) is StringMover:
+            self.mode.store("string")
+            self.string_optimizer.store(sc)
+            tsc = 1
         elif type(sc) is Dynamics:
             self.mode.store("dynamics")
             self.dynamics.store(sc)
@@ -325,6 +339,14 @@ class InputMotionBase(Input):
                 fixcom=self.fixcom.fetch(),
                 fixatoms=self.fixatoms.fetch(),
                 **self.neb_optimizer.fetch()
+            )
+        elif self.mode.fetch() == "string":
+
+            print("WARNING: STRING IS EXPERIMENTAL, DON'T TRUST THE RESULTS!")
+            sc = StringMover(
+                fixcom=self.fixcom.fetch(),
+                fixatoms=self.fixatoms.fetch(),
+                **self.string_optimizer.fetch()
             )
         elif self.mode.fetch() == "dynamics":
             sc = Dynamics(

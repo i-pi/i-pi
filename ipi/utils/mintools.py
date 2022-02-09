@@ -1039,14 +1039,14 @@ def FIRE(
     astart=0.1,
     fa=0.99,
 ):
-    """FIRE algorithm for NEB optimization based on
+    """FIRE algorithm based on
     Bitzek et al, Phys. Rev. Lett. 97, 170201 (2006) and
     Guénolé, J. et al.  Comp. Mat. Sci. 175, 109584 (2020).
     Semi-implicit Euler integration used.
     Done by Guoyuan Liu <liuthepro@outlook.com>, May 2021.
 
     FIRE does not rely on energy, therefore it is suitable for NEB calculation, where
-    the energy is not conservative. Basic principle: accelerate towards force grandient
+    the energy is not conservative. Basic principle: accelerate towards force gradient
     (downhill direction) and stop immediately when going uphill.
     Try adjusting dt, dtmax, dtmin for optimal performance.
 
@@ -1088,7 +1088,7 @@ def FIRE(
         N_dn = 0
         N_up += 1
         if N_up > Nmax:
-            softexit.trigger("@FIRE stuck. Cannot minimize futher!")
+            softexit.trigger("@FIRE is stuck for %d steps. We stop here." % N_up)
         dt = max(dt * fdec, dtmin)
         a = astart
         # correct uphill motion
@@ -1110,7 +1110,7 @@ def FIRE(
         dx = maxstep * dx / normdx
     x0 += dx
 
-    info(" @FIRE: calling NEBGradientMapper to update position", verbosity.debug)
+    info(" @FIRE: calling a gradient mapper to update position", verbosity.debug)
     fdf(x0)
 
     return v, a, N_dn, N_up, dt
