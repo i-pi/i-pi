@@ -20,7 +20,7 @@ from ipi.engine.beads import Beads
 
 try:
     import scipy
-    from scipy.interpolate import splprep, splev
+    from scipy.interpolate import make_interp_spline, splev
 except Exception as e:
     scipy = None
     scipy_exception = e
@@ -236,15 +236,10 @@ class StringClimbGrMapper(object):
 
 
 class StringMover(Motion):
-    """MEP optimization routine for the 'Simplified and improved string method'.
+    """MEP optimization routine for the String method.
     The algorithm is close to the one described in
-    W. E, W. Ren and E. Vanden-Eijnden, J. Chem. Phys. 126, 164103 (2007),
-    https://doi.org/10.1063/1.2720838.
-    The main difference is that we first reparameterize the spline,
-    then do an optimizer step and check convergence of perpendicular force
-    at those positions - in order to avoid two force calls within single step.
-    If converged - only then we calculate and check the force on the
-    reparameterized position.
+    W. E, W. Ren, E. Vanden-Eijnden, PRB 66, 052301 (2002)
+    "String method for the study of rare events".
 
     Attributes:
         mode: minimizer to use for string optimization.
@@ -501,20 +496,21 @@ class StringMover(Motion):
                 vrb.debug,
             )
 
-    def path_step_textbook2007(self, step=None):
+    def path_step_textbook2002(self, step=None):
         """A variant of the step which is responsible for moving N-2 intermediate beads.
         It uses StringGradientMapper to construct N-2 beads object in order to avoid
         recalculation of the static endpoints at every step.
 
-        'textbook' variant does optimizer step and spline resampling consecutively
-        and without any projection of forces, as suggested in JCP 126, 164103 (2007),
-        https://doi.org/10.1063/1.2720838.
+        'textbook' variant does optimizer step and spline resampling consecutively,
+        as suggested in W. E, W. Ren, E. Vanden-Eijnden, PRB 66, 052301 (2002)
+        https://doi.org/10.1103/PhysRevB.66.052301
 
-        The main problem here is that any optimizer from mintools.py needs to receive forces
-        at resampled positions, but returns forces from NOT resampled ones,
-        therefore it's necessary to have 2 force calls per each step.
-
-        So far, this method doesn't work with any reasonable optimizer.
+        The main problem here is that any optimizer from 'mintools.py' needs to
+        receive forces at resampled positions, but returns forces from NOT resampled
+        ones, therefore it's necessary to have 2 force calls per step. We provide an
+        alternative step 'path_step_single_f_call', which uses different optimization
+        routines with spline resampling inside, but it's not strictly the textbook
+        String method anymore.
         """
         self.ptime = self.ttime = 0
         self.qtime = -time.time()
@@ -725,12 +721,15 @@ class StringMover(Motion):
 
     def path_step_single_f_call(self, step=None):
         """A variant of the step which is responsible for moving N-2 intermediate beads.
-        It uses StringGradientMapper to construct N-2 beads object
-        in order to avoid recalculation of the static endpoints at every step.
-        'single_f_call' variant calls forces only once per step because it uses custom
-        optimization algorithms which resample the spline inside.
-        It's not the textbook algorithm anymore, but it is twice mor eefficient, so we
-        provide both.
+        It uses StringGradientMapper to construct N-2 beads object in order to avoid
+        recalculation of the static endpoints every step.
+
+        'single_f_call' variant calls forces only once per step, because it
+        uses custom optimization algorithms which resample the spline in the middle of
+        an optimization step. Thus, it's not the textbook algorithm anymore, but it is
+        TWICE more efficient in number of force calls, so we provide both variants.
+
+        11.02.2022: doesn't work yet.
         """
         self.ptime = self.ttime = 0
         self.qtime = -time.time()
@@ -1148,7 +1147,7 @@ class StringMover(Motion):
                 # Store old bead positions at step 0
                 self.old_x = dstrip(self.beads.q[1:-1, self.stringgm.fixmask]).copy()
 
-            self.path_step_textbook2007(step)
+            self.path_step_textbook2002(step)
 
         elif self.stage == "climb":
             # We need to initialize climbing once
@@ -1159,7 +1158,7 @@ class StringMover(Motion):
 
 def spline_resample(q, nbeads):
     """Resamples the intermediate points along the spline so that
-    all points are equidistant by the 3N-dimensional Euclidean metric.
+    all points are equidistant by the spline arc length.
 
     Arguments:
         q - beads.q[:]
@@ -1170,66 +1169,47 @@ def spline_resample(q, nbeads):
     if nbeads <= 2:
         softexit.trigger(status="bad", message="Nbeads < 3 in string optimization.")
 
-    # In case t is good already, we just return q
-    new_q = q
+    # First, we calculate the current parameterization of the path
+    # according to 3N-D Euclidean distances between adjacent beads.
+    t = [0.0]
+    current_t = 0.0
+    print("Cartesian 3N-D distances between beads:")
+    for i in range(1, nbeads):
+        dist = npnorm(q[i] - q[i - 1])
+        print("\tfrom %3d to %3d : %.6f bohr" % (i - 1, i, dist))
+        if dist <= 1e-2:
+            info("Warning: two adjacent beads are very close.", vrb.medium)
+        current_t += dist
+        t.append(current_t)
 
-    # I noticed that in a single run it doesn't make beads exactly equidistant,
-    # therefore I run iteratively until new parameterization
-    # coincides with the old one.
-    for attepmt in range(10):
-        q = new_q
-        # First, we calculate the current parameterization of the path
-        # according to 3N-D Euclidean distances between adjacent beads.
-        t = [0.0]
-        current_t = 0.0
-        print("Cartesian 3N-D distances between beads:")
-        for i in range(1, nbeads):
-            dist = npnorm(q[i] - q[i - 1])
-            print("\tfrom %3d to %3d : %.6f bohr" % (i - 1, i, dist))
-            if dist <= 1e-2:
-                info("Warning: two adjacent beads are very close.", vrb.medium)
-            current_t += dist
-            t.append(current_t)
+    t = np.array(t)
+    t /= t[-1]
+    info("Spline parameter 't' before resampling:", vrb.medium)
+    info(t, vrb.medium)
+    info("t[i] - t[i-1]:", vrb.medium)
+    info((t - np.roll(t, 1)), vrb.medium)
 
-        t = np.array(t)
-        t /= t[-1]
-        info("Spline parameter 't' before resampling:", vrb.medium)
-        info(t, vrb.medium)
-        info("t[i] - t[i-1]:", vrb.medium)
-        info((t - np.roll(t, 1)), vrb.medium)
+    # New parameterization, equidistant by spline parameter
+    new_t = np.arange(nbeads) / (nbeads - 1)
+    info("New t:", vrb.debug)
+    info(new_t, vrb.debug)
 
-        new_t = np.arange(nbeads) / (nbeads - 1)
-        # If t is good already, we stop and return
-        if np.allclose(t, new_t, rtol=1e-3):
-            print("'t' is equidistant.")
-            break
+    # This will reshape q to a list of 3*Natoms sets consisting of
+    # nbeads numbers each, describing trajectory of one Cartesian component
+    # of an atom over the path.
+    atoms = q.T
 
-        info("New t:", vrb.debug)
-        info(new_t, vrb.debug)
+    new_atoms = []
+    for component in atoms:
+        # Interpolate the trajectory of one cartesian component  by a spline.
+        # bc_type='natural' imposes zero second derivative at the endpoints.
+        spl = make_interp_spline(t, component, bc_type='natural')
+        # Sample new parameter values uniformly from the old range.
+        # Resample positions of this atom.
+        new_atoms.append(splev(new_t, spl))
 
-        # This will reshape q to a list of Natoms sets consisting of
-        # nbeads triplets each, describing trajectory of one atom over the entire path.
-        atoms = np.transpose(q).reshape((-1, 3, nbeads))
-
-        new_atoms = []
-        for atom in atoms:
-            # Interpolate the trajectory of one atom by a spline.
-            # s=0 imposes exact interpolation at the knots.
-            (tck, *_) = splprep(atom, u=t, s=0.0)
-            # Sample new parameter values uniformly from the old range.
-            # Resample positions of this atom.
-            new_atoms.append(splev(new_t, tck))
-
-        new_atoms = np.array(new_atoms)
-        # Reshape the path back to the beads shape
-        new_q = new_atoms.reshape((-1, nbeads)).T
-        # print("q:")
-        # print(q.reshape((-1, 3)))
-        # print("new_q:")
-        # print(new_q.reshape((-1, 3)))
-
-    else:  # if didn't converge in 10 attempts
-        softexit.trigger("bad", message=" @STRING: Error: cannot resample the spline.")
+    # Reshape the path back to the beads shape
+    new_q = np.array(new_atoms).T
 
     return new_q
 
@@ -1238,7 +1218,7 @@ def spline_derv(q, nbeads):
     """Calculates normalized tangent vectors at the knots of the spline.
 
     Arguments:
-        q - beads.q[:]
+        q - beads.q[:], shape (nbeads, 3N)
         nbeads - number of beads
     Returns:
         tangent - full-dimensional tangent of the spline, shape (nbeads, 3N).
@@ -1248,9 +1228,7 @@ def spline_derv(q, nbeads):
 
     # First, we calculate current parameterization of the path
     # according to 3N-D Euclidean distances between adjacent beads.
-    t = [
-        0.0,
-    ]
+    t = [0.0]
     current_t = 0.0
     for i in range(1, nbeads):
         dist = npnorm(q[i] - q[i - 1])
@@ -1262,27 +1240,25 @@ def spline_derv(q, nbeads):
 
     t = np.array(t)
     t /= t[-1]
-    # This will reshape q to a list of Natoms sets consisting of
-    # nbeads triplets each, describing trajectory of one atom over the entire path.
-    atoms = np.transpose(q).reshape((-1, 3, nbeads))
+    # This will reshape q to a list of 3*Natoms sets consisting of
+    # nbeads numbers each, describing trajectory of one Cartesian component
+    # of an atom over the path.
+    atoms = q.T
 
     derv = []
-    for atom in atoms:
+    for component in atoms:
         # Interpolate the trajectory of one atom by a spline.
         # s=0 imposes exact interpolation at the knots.
-        (tck, *_) = splprep(atom, u=t, s=0.0)
+        spl = make_interp_spline(t, component, bc_type='natural')
         # Evaluate derivatives
-        derv.append(splev(t, tck, der=1))
+        derv.append(splev(t, spl, der=1))
 
-    derv = np.array(derv)
     # Reshape the array back to the beads shape
-    tangent = derv.reshape((-1, nbeads)).T
-    # Normalize so that at each bead it's unitary vector
+    tangent = np.array(derv).T
+    # Normalize so that at each bead it's a unitary vector
     tangent /= npnorm(tangent, axis=1)[:, np.newaxis]
-
     # print("tangent:")
     # print(tangent.reshape((-1, 3)))
-
     return tangent
 
 
