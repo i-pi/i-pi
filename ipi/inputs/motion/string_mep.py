@@ -185,7 +185,7 @@ class InputStringMEP(InputDictionary):
             InputArray,
             {
                 "dtype": float,
-                "default": input_default(factory=np.zeros, args=(0,)),
+                "default": input_default(factory=np.array, args=(1.0,)),
                 "help": "Starting value for the trust radius for BFGSTRM.",
                 "dimension": "length",
             },
@@ -281,35 +281,35 @@ class InputStringMEP(InputDictionary):
         "Contains the required parameters "
         "for performing string minimal energy path optimization."
     )
-    default_label = "String"
+    default_label = "String_MEP"
 
-    def store(self, string):
-        if string == {}:
+    def store(self, string_mep):
+        if string_mep == {}:
             return
-        self.tolerances.store(string.tolerances)
-        self.mode.store(string.mode)
-        self.old_coord.store(string.old_x)
-        self.full_force.store(string.full_f)
-        self.full_pots.store(string.full_v)
-        self.old_stringpotential.store(string.stringpot)
-        self.old_stringgradient.store(string.stringgrad)
-        self.old_direction.store(string.d)
-        self.biggest_step.store(string.big_step)
-        self.hessian_bfgs.store(string.hessian)
-        self.qlist_lbfgs.store(string.qlist)
-        self.glist_lbfgs.store(string.glist)
-        self.tr_trm.store(string.tr_trm)
-        self.v_fire.store(string.v)
-        self.alpha_fire.store(string.a)
-        self.N_down_fire.store(string.N_dn)
-        self.N_up_fire.store(string.N_up)
-        self.dt_fire.store(string.dt_fire)
-        self.dtmax_fire.store(string.dtmax)
-        self.endpoints.store(string.endpoints)
-        self.stage.store(string.stage)
-        self.use_climb.store(string.use_climb)
-        self.climb_bead.store(string.cl_indx)
-        self.scale_lbfgs.store(string.scale)
+        self.tolerances.store(string_mep.tolerances)
+        self.mode.store(string_mep.mode)
+        self.old_coord.store(string_mep.old_x)
+        self.full_force.store(string_mep.full_f)
+        self.full_pots.store(string_mep.full_v)
+        self.old_stringpotential.store(string_mep.stringpot)
+        self.old_stringgradient.store(string_mep.stringgrad)
+        self.old_direction.store(string_mep.d)
+        self.biggest_step.store(string_mep.big_step)
+        self.hessian_bfgs.store(string_mep.hessian)
+        self.qlist_lbfgs.store(string_mep.qlist)
+        self.glist_lbfgs.store(string_mep.glist)
+        self.tr_trm.store(string_mep.tr_trm)
+        self.v_fire.store(string_mep.v)
+        self.alpha_fire.store(string_mep.a)
+        self.N_down_fire.store(string_mep.N_dn)
+        self.N_up_fire.store(string_mep.N_up)
+        self.dt_fire.store(string_mep.dt_fire)
+        self.dtmax_fire.store(string_mep.dtmax)
+        self.endpoints.store(string_mep.endpoints)
+        self.stage.store(string_mep.stage)
+        self.use_climb.store(string_mep.use_climb)
+        self.climb_bead.store(string_mep.cl_indx)
+        self.scale_lbfgs.store(string_mep.scale)
 
     def fetch(self):
         rv = super(InputStringMEP, self).fetch()

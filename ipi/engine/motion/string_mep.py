@@ -14,8 +14,8 @@ import time
 from ipi.engine.motion import Motion
 from ipi.utils.depend import dstrip
 from ipi.utils.softexit import softexit
-from ipi.utils.mintools import Damped_BFGS, FIRE
-from ipi.utils.messages import verbosity as vrb, info
+from ipi.utils.mintools import Damped_BFGS, BFGSTRM, FIRE
+from ipi.utils.messages import verbosity as vrb, info, warning
 from ipi.engine.beads import Beads
 
 try:
@@ -29,7 +29,12 @@ np.set_printoptions(threshold=10000, linewidth=1000)  # Remove in cleanup
 
 decor = 60 * "=" + "\n"
 
-__all__ = ["StringGradientMapper", "StringClimbGrMapper", "StringMover"]
+__all__ = [
+    "StringGradientMapper",
+    "GradientMapper",
+    "StringClimbGrMapper",
+    "StringMover",
+]
 
 
 class StringGradientMapper(object):
@@ -39,7 +44,8 @@ class StringGradientMapper(object):
     object 'rbeads' with (N-2) beads to avoid constant recalculation
     of the forces on the end-point beads.
 
-    This version returns the orthogonal component of the force.
+    This version returns the orthogonal component of the force, as required in the
+    original 2002 version of the string method.
 
     Fixed atoms are excluded via boolean mask. 1 = moving, 0 = fixed.
     """
@@ -106,7 +112,9 @@ class GradientMapper(object):
     of the forces on the end-point beads.
 
     This version does not make any projections and returns just physical forces
-    for the intermediate beads (except fixed atoms).
+    for the intermediate beads (except fixed atoms). Its purpose here is to be used
+    in the "Simplified and improved string method" (JCP 126, 164103 (2007),
+    http://dx.doi.org/10.1063/1.2720838), which is not yet implemented.
 
     Fixed atoms are excluded via boolean mask. 1 = moving, 0 = fixed.
     """
@@ -278,7 +286,7 @@ class StringMover(Motion):
         corrections_lbfgs=5,
         qlist_lbfgs=np.zeros(0, float),
         glist_lbfgs=np.zeros(0, float),
-        tr_trm=np.zeros(0, float),
+        tr_trm=[0.1],
         dtmax_fire=1.0,
         v_fire=np.zeros(0, float),
         alpha_fire=0.1,
@@ -347,10 +355,10 @@ class StringMover(Motion):
             raise scipy_exception
 
         super(StringMover, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
-        # I check dimensionality of the hessian in the beginning
+        # We check dimensionality of the Hessian in the beginning
         # and reduce it if needed, because someone may want to provide
-        # existing hessian of the full system.
-        if self.mode == "damped_bfgs":
+        # existing Hessian of the full system.
+        if self.mode in ["damped_bfgs", "bfgstrm"]:
             n_activedim = beads.q[0].size - len(self.fixatoms) * 3
             if self.stage == "string":
                 if self.hessian.size == (n_activedim * (beads.nbeads - 2)) ** 2:
@@ -449,52 +457,27 @@ class StringMover(Motion):
             % (str(self.climbgm.q_prev.shape), str(self.climbgm.q_next.shape)),
             vrb.debug,
         )
-        n_activedim = self.beads.q[0].size - len(self.fixatoms) * 3
-        if self.hessian.shape != (n_activedim, n_activedim):
-            self.hessian = np.eye(n_activedim)
+
+        if self.mode in ["damped_bfgs", "bfgstrm"]:
+            n_activedim = self.beads.q[0].size - len(self.fixatoms) * 3
+            if self.hessian.shape != (n_activedim, n_activedim):
+                self.hessian = np.eye(n_activedim)
+        elif self.mode == "fire":
+            # Initialize FIRE parameters
+            self.v = -self.a * self.stringgrad
+            self.a = 0.1
+            self.N_dn = 0
+            self.N_up = 0
+            self.dt_fire = 0.1
 
         info(" @STRING_CLIMB: calling StringClimbGrMapper first time.", vrb.debug)
         self.stringpot, self.stringgrad = self.climbgm(
             self.beads.q[cl_indx, self.climbgm.fixmask]
         )
 
-        # Initialize FIRE parameters
-        self.v = -self.a * self.stringgrad
-        self.a = 0.1
-        self.N_dn = 0
-        self.N_up = 0
-        self.dt_fire = 0.1
-
         self.old_x = dstrip(self.beads.q[cl_indx, self.climbgm.fixmask]).copy()
         self.stage = "climb"
         return cl_indx
-
-    def adjust_big_step(self, quality):
-        """We try to make big_step brave enough, but if relaxation goes wrong,
-        we decrease the maximal allowed step."""
-
-        if quality > 0.8:
-            self.big_step *= 1.3
-            info(
-                " @STRINGMover: increasing big_step to %.6f bohr." % self.big_step,
-                vrb.debug,
-            )
-        elif quality > 0.6:
-            self.big_step *= 1.1
-            info(
-                " @STRINGMover: increasing big_step to %.6f bohr." % self.big_step,
-                vrb.debug,
-            )
-        else:
-            self.big_step *= 0.5
-            # In no case we need big_step going to zero completely
-            if self.big_step <= 0.01:
-                self.big_step = 0.02
-            info(
-                " @STRINGMover: Step direction far from climbgrad, "
-                "reducing big_step to %.6f bohr." % self.big_step,
-                vrb.debug,
-            )
 
     def path_step_textbook2002(self, step=None):
         """A variant of the step which is responsible for moving N-2 intermediate beads.
@@ -553,7 +536,7 @@ class StringMover(Motion):
                     "self.stringgrad.shape: %s" % str(self.stringgrad.shape), vrb.debug
                 )
                 info("self.hessian.shape: %s" % str(self.hessian.shape), vrb.debug)
-                quality = Damped_BFGS(
+                Damped_BFGS(
                     x0=self.old_x.copy(),
                     fdf=self.stringgm,
                     fdf0=(self.stringpot, self.stringgrad),
@@ -569,17 +552,18 @@ class StringMover(Motion):
                     "self.stringgrad.shape: %s" % str(self.stringgrad.shape), vrb.debug
                 )
                 info("self.hessian.shape: %s" % str(self.hessian.shape), vrb.debug)
-                quality = BFGSTRM(
+                info("self.tr_trm: %s" % self.tr_trm, vrb.debug)
+                BFGSTRM(
                     x0=self.old_x.copy(),
-                    fdf=self.stringgm,
-                    fdf0=(self.stringpot, self.stringgrad),
-                    hessian=self.hessian,
+                    u0=self.stringpot,
+                    # BFGSTRM expects force instead of gradient, therefore minus
+                    f0=-self.stringgrad,
+                    h0=self.hessian,
+                    tr=self.tr_trm,
+                    mapper=self.stringgm,
                     big_step=self.big_step,
-                    # ADJUST!,
                 )
                 info(" @STRING: after BFGSTRM() call", vrb.debug)
-
-            self.adjust_big_step(quality)
 
         elif self.mode == "fire":
             # Only initialize velocity for fresh start, not for RESTART
@@ -646,20 +630,14 @@ class StringMover(Motion):
         # so that recalculation won't be triggered after the step.
         # We need to keep forces up to date to be able to output
         # full potentials and full forces.
-        tmp_f = self.full_f.copy()
-        tmp_f[1:-1] = self.stringgm.rforces.f
         tmp_v = self.full_v
         tmp_v[1:-1] = self.stringgm.rforces.pots
+        tmp_f = self.full_f.copy()
+        tmp_f[1:-1] = self.stringgm.rforces.f
         self.forces.transfer_forces_manual(
-            new_q=[
-                self.beads.q,
-            ],
-            new_v=[
-                tmp_v,
-            ],
-            new_forces=[
-                tmp_f,
-            ],
+            new_q=[self.beads.q],
+            new_v=[tmp_v],
+            new_forces=[tmp_f],
         )
         # Full-dimensional forces are needed in reduced-beads modes,
         # i.e. in "endpoints" and "climb".
@@ -779,7 +757,7 @@ class StringMover(Motion):
                     "self.stringgrad.shape: %s" % str(self.stringgrad.shape), vrb.debug
                 )
                 info("self.hessian.shape: %s" % str(self.hessian.shape), vrb.debug)
-                quality = Damped_BFGS(
+                Damped_BFGS(
                     x0=self.old_x.copy(),
                     fdf=self.stringgm,
                     fdf0=(self.stringpot, self.stringgrad),
@@ -795,17 +773,17 @@ class StringMover(Motion):
                     "self.stringgrad.shape: %s" % str(self.stringgrad.shape), vrb.debug
                 )
                 info("self.hessian.shape: %s" % str(self.hessian.shape), vrb.debug)
-                quality = BFGSTRM(
+                BFGSTRM(
                     x0=self.old_x.copy(),
-                    fdf=self.stringgm,
-                    fdf0=(self.stringpot, self.stringgrad),
-                    hessian=self.hessian,
+                    u0=self.stringpot,
+                    # BFGSTRM expects force instead of gradient, therefore minus
+                    f0=-self.stringgrad,
+                    h0=self.hessian,
+                    tr=self.tr_trm,
+                    mapper=self.stringgm,
                     big_step=self.big_step,
-                    # ADJUST!,
                 )
                 info(" @STRING: after BFGSTRM() call", vrb.debug)
-
-            self.adjust_big_step(quality)
 
         elif self.mode == "fire":
             # Only initialize velocity for fresh start, not for RESTART
@@ -968,19 +946,16 @@ class StringMover(Motion):
         self.ptime = self.ttime = 0
         self.qtime = -time.time()
 
+        # Self instances will be updated in the optimizer, so we store the copies.
+        # old_stringpot is used later as a convergence criterion.
+        old_stringpot = self.stringpot.copy()
+
         if self.mode == "damped_bfgs":
-            # BFGS-family algorithms
-
-            # Self instances will be updated in the optimizer, so we store the copies.
-            # old_stringpot is used later as a convergence criterion.
-            old_stringpot = self.stringpot.copy()
-
-            # if self.mode == "damped_bfgs":
             info(" @STRING_CLIMB: before Damped_BFGS() call", vrb.debug)
             print("self.old_x.shape: %s" % str(self.old_x.shape))
             print("self.stringgrad.shape: %s" % str(self.stringgrad.shape))
             print("self.hessian.shape: %s" % str(self.hessian.shape))
-            quality = Damped_BFGS(
+            Damped_BFGS(
                 x0=self.old_x.copy(),
                 fdf=self.climbgm,
                 fdf0=(self.stringpot, self.stringgrad),
@@ -989,12 +964,24 @@ class StringMover(Motion):
             )
             info(" @STRING_CLIMB: after Damped_BFGS() call", vrb.debug)
 
-            self.adjust_big_step(quality)
+        elif self.mode == "bfgstrm":
+            info(" @STRING_CLIMB: before BFGSTRM() call", vrb.debug)
+            print("self.old_x.shape: %s" % str(self.old_x.shape))
+            print("self.stringgrad.shape: %s" % str(self.stringgrad.shape))
+            print("self.hessian.shape: %s" % str(self.hessian.shape))
+            BFGSTRM(
+                x0=self.old_x.copy(),
+                u0=self.stringpot,
+                # BFGSTRM expects force instead of gradient, therefore minus
+                f0=-self.stringgrad,
+                h0=self.hessian,
+                tr=self.tr_trm,
+                mapper=self.climbgm,
+                big_step=self.big_step,
+            )
+            info(" @STRING_CLIMB: after BFGSTRM() call", vrb.debug)
 
         elif self.mode == "fire":
-            # Self instances will be updated in the optimizer, so we store the copies.
-            # old_stringpot is used later as a convergence criterion.
-            old_stringpot = self.stringpot.copy()
             info(" @STRING: using FIRE", vrb.debug)
             info(" @FIRE velocity: %s" % str(npnorm(self.v)), vrb.debug)
             info(" @FIRE alpha: %s" % str(self.a), vrb.debug)
@@ -1133,9 +1120,20 @@ class StringMover(Motion):
                 )
 
                 # Store full forces and pots
+                info(" @STRING: calling the full force at step 0.", vrb.debug)
                 self.full_f = dstrip(self.stringgm.dforces.f).copy()
                 self.full_v = dstrip(self.stringgm.dforces.pots).copy()
                 # Initialize the mapper forces for the first time
+                # Since we just called full forces, it makes sense to transfer them to the
+                # reduced beads (rbeads). No fixmask here, rforces are not the same
+                # as stringgrad!
+                print("self.stringgm.rforces.shape, self.full_f.shape:")
+                print(self.stringgm.rforces.f.shape, self.full_f.shape)
+                self.stringgm.rforces.transfer_forces_manual(
+                    new_q=[self.beads.q[1:-1]],
+                    new_v=[self.full_v[1:-1]],
+                    new_forces=[self.full_f[1:-1]],
+                )
                 info(" @STRING: calling StringGradientMapper at step 0.", vrb.debug)
                 self.stringpot, self.stringgrad = self.stringgm(
                     self.beads.q[1:-1, self.stringgm.fixmask]
@@ -1203,7 +1201,7 @@ def spline_resample(q, nbeads):
     for component in atoms:
         # Interpolate the trajectory of one cartesian component  by a spline.
         # bc_type='natural' imposes zero second derivative at the endpoints.
-        spl = make_interp_spline(t, component, bc_type='natural')
+        spl = make_interp_spline(t, component, bc_type="natural")
         # Sample new parameter values uniformly from the old range.
         # Resample positions of this atom.
         new_atoms.append(splev(new_t, spl))
@@ -1249,7 +1247,7 @@ def spline_derv(q, nbeads):
     for component in atoms:
         # Interpolate the trajectory of one atom by a spline.
         # s=0 imposes exact interpolation at the knots.
-        spl = make_interp_spline(t, component, bc_type='natural')
+        spl = make_interp_spline(t, component, bc_type="natural")
         # Evaluate derivatives
         derv.append(splev(t, spl, der=1))
 
@@ -1306,7 +1304,7 @@ def Damped_BFGS_String(x0, fdf, fdf0, hessian, big_step):
                Needed for the step length adjustment.
     """
 
-    info(" @DampedBFGS_String: Started.", verbosity.debug)
+    info(" @DampedBFGS_String: Started.", vrb.debug)
     _, g0 = fdf0
     g0 = g0.flatten()
 
@@ -1315,37 +1313,37 @@ def Damped_BFGS_String(x0, fdf, fdf0, hessian, big_step):
 
     # Calculate direction
     # When the inverse itself is not needed, people recommend solve(), not inv().
-    info(" @DampedBFGS_String: sk = np.linalg.solve(B, -g0) ...", verbosity.debug)
+    info(" @DampedBFGS_String: sk = np.linalg.solve(B, -g0) ...", vrb.debug)
     info(
         "              The code randomly crashes here with some versions of Numpy "
         "based on OpenBLAS.\n"
         "              If this happens, use Numpy based on MKL, e.g. from Anaconda.",
-        verbosity.debug,
+        vrb.debug,
     )
-    info("Operands:", verbosity.debug)
-    info("%s,  %s" % (type(B), str(B.shape)), verbosity.debug)
-    info("%s,  %s" % (type(g0), str(g0.shape)), verbosity.debug)
+    info("Operands:", vrb.debug)
+    info("%s,  %s" % (type(B), str(B.shape)), vrb.debug)
+    info("%s,  %s" % (type(g0), str(g0.shape)), vrb.debug)
     sk = np.linalg.solve(B, -g0)
-    info(" @DampedBFGS_String: Calculated direction.", verbosity.debug)
+    info(" @DampedBFGS_String: Calculated direction.", vrb.debug)
 
     # Cosine of the (f, dx) angle
     quality = -np.dot(sk / np.linalg.norm(sk), g0 / np.linalg.norm(g0))
-    info(" @DampedBFGS_String: Direction quality: %.4f." % quality, verbosity.debug)
+    info(" @DampedBFGS_String: Direction quality: %.4f." % quality, vrb.debug)
 
     # I use maximal cartesian atomic displacement as a measure of step length
     maxdispl = np.amax(np.linalg.norm(sk.reshape(-1, 3), axis=1))
-    info(" @DampedBFGS_String: big_step = %.6f" % big_step, verbosity.debug)
+    info(" @DampedBFGS_String: big_step = %.6f" % big_step, vrb.debug)
     if maxdispl > big_step:
         info(
             " @DampedBFGS_String: maxdispl before scaling: %.6f bohr" % maxdispl,
-            verbosity.debug,
+            vrb.debug,
         )
         sk *= big_step / maxdispl
 
     info(
         " @DampedBFGS_String: maxdispl:                %.6f bohr"
         % (np.amax(np.linalg.norm(sk.reshape(-1, 3), axis=1))),
-        verbosity.debug,
+        vrb.debug,
     )
 
     # Force call
@@ -1368,23 +1366,21 @@ def Damped_BFGS_String(x0, fdf, fdf0, hessian, big_step):
             " @DampedBFGS_String: damping update of the Hessian; "
             "(direction dot d_gradient) is small. "
             "theta := %.6f" % theta,
-            verbosity.debug,
+            vrb.debug,
         )
         yk = theta * yk + (1 - theta) * Bsk
         skyk = np.dot(sk, yk)
     else:
-        info(" @DampedBFGS_String: Update of the Hessian, no damping.", verbosity.debug)
+        info(" @DampedBFGS_String: Update of the Hessian, no damping.", vrb.debug)
 
     info(
         " @DampedBFGS_String: (s_k dot y_k) before reciprocating: %e" % skyk,
-        verbosity.debug,
+        vrb.debug,
     )
     try:
         rhok = 1.0 / skyk
     except:
-        warning(
-            " @DampedBFGS_String: caught ZeroDivisionError in 1/skyk.", verbosity.high
-        )
+        warning(" @DampedBFGS_String: caught ZeroDivisionError in 1/skyk.", vrb.high)
         rhok = 1e5
 
     # Compute BFGS term (eq. 18.16 in Nocedal)
@@ -1403,7 +1399,7 @@ def Damped_BFGS_String(x0, fdf, fdf0, hessian, big_step):
     if np.any(eigvals < 1e-1):
         info(
             " @DampedBFGS_String: stabilizing the diagonal of the Hessian.",
-            verbosity.debug,
+            vrb.debug,
         )
         B += 1e-2 * np.eye(len(B))
 
@@ -1463,7 +1459,7 @@ def FIRE_String(
     Returns:
         v, a, N, dt since they are dynamically adjusted
     """
-    info(" @FIRE_String being called", verbosity.debug)
+    info(" @FIRE_String being called", vrb.debug)
     _, g0 = fdf0
     force = -g0
 
@@ -1502,7 +1498,7 @@ def FIRE_String(
         dx = maxstep * dx / normdx
     x0 += dx
 
-    info(" @FIRE_String calling a gradient mapper to update position", verbosity.debug)
+    info(" @FIRE_String calling a gradient mapper to update position", vrb.debug)
     fdf(x0)
 
     return v, a, N_dn, N_up, dt

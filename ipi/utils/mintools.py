@@ -722,7 +722,7 @@ def min_trm(f, h, tr):
     if zero > 0:
         gE[neg : neg + zero] = np.zeros((zero, 1))
 
-    # Real work start here
+    # Real work starts here
     DXE = np.zeros((ndim, 1))
 
     for i in range(0, ndim):
@@ -731,7 +731,7 @@ def min_trm(f, h, tr):
 
     min_d = np.amin(d)
 
-    # Check if h is possitive definite and use trivial result if within trust radius
+    # Check if h is positive definite and use trivial result if within trust radius
     if min_d > 0.0:
 
         if neg != 0:
@@ -741,7 +741,7 @@ def min_trm(f, h, tr):
             DX = DX.reshape(shape)
             return DX
 
-    # If we haven't luck. Let's start with the iteration
+    # If we don't have luck, let's start with the iteration
     lamb_min = max(0.0, -min_d)
     lamb_max = 1e30
     lamb = min(lamb_min + 0.5, 0.5 * (lamb_min + lamb_max))
