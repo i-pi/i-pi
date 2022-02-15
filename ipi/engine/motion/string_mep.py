@@ -458,22 +458,23 @@ class StringMover(Motion):
             vrb.debug,
         )
 
+        info(" @STRING_CLIMB: call StringClimbGrMapper for the first time.", vrb.debug)
+        self.stringpot, self.stringgrad = self.climbgm(
+            self.beads.q[cl_indx, self.climbgm.fixmask]
+        )
+
         if self.mode in ["damped_bfgs", "bfgstrm"]:
+            # Initialize BFGS Hessian for a single bead
             n_activedim = self.beads.q[0].size - len(self.fixatoms) * 3
             if self.hessian.shape != (n_activedim, n_activedim):
                 self.hessian = np.eye(n_activedim)
         elif self.mode == "fire":
             # Initialize FIRE parameters
-            self.v = -self.a * self.stringgrad
             self.a = 0.1
+            self.v = -self.a * self.stringgrad
             self.N_dn = 0
             self.N_up = 0
             self.dt_fire = 0.1
-
-        info(" @STRING_CLIMB: calling StringClimbGrMapper first time.", vrb.debug)
-        self.stringpot, self.stringgrad = self.climbgm(
-            self.beads.q[cl_indx, self.climbgm.fixmask]
-        )
 
         self.old_x = dstrip(self.beads.q[cl_indx, self.climbgm.fixmask]).copy()
         self.stage = "climb"
@@ -678,7 +679,7 @@ class StringMover(Motion):
                     message="String MEP finished successfully at STEP %i." % step,
                 )
 
-        else:  # The check on resampled positions didn't pass
+        else:
             info(
                 " @STRING: Not converged, deltaEnergy = %.8f, tol = %.8f per atom"
                 % (de, self.tolerances["energy"]),
@@ -982,7 +983,7 @@ class StringMover(Motion):
             info(" @STRING_CLIMB: after BFGSTRM() call", vrb.debug)
 
         elif self.mode == "fire":
-            info(" @STRING: using FIRE", vrb.debug)
+            info(" @STRING: before FIRE() call", vrb.debug)
             info(" @FIRE velocity: %s" % str(npnorm(self.v)), vrb.debug)
             info(" @FIRE alpha: %s" % str(self.a), vrb.debug)
             info(" @FIRE N down: %s" % str(self.N_dn), vrb.debug)
@@ -999,6 +1000,7 @@ class StringMover(Motion):
                 dt=self.dt_fire,
                 dtmax=self.dtmax,
             )
+            info(" @STRING_CLIMB: after FIRE() call", vrb.debug)
 
         # TODO: Routines for L-BFGS, SD, CG, ...
         else:
