@@ -36,6 +36,7 @@ except Exception as e:
     scipy = None
     scipy_exception = e
 
+
 def spline_resample(q, nbeads_old, nbeads_new, k=3):
     """Resamples the intermediate points along the spline so that
     all points are equidistant by the spline arc length.
@@ -49,9 +50,10 @@ def spline_resample(q, nbeads_old, nbeads_new, k=3):
         new_q - resampled coordinates
     """
     from numpy.linalg import norm as npnorm
+
     if scipy is None:
         print("spline interpolation requires scipy module.")
-        raise(scipy_exception)
+        raise (scipy_exception)
 
     if nbeads_new <= 2:
         softexit.trigger(status="bad", message="nbeads_new < 3 in string optimization.")
@@ -60,7 +62,7 @@ def spline_resample(q, nbeads_old, nbeads_new, k=3):
     # according to 3N-D Euclidean distances between adjacent beads.
     t = [0.0]
     current_t = 0.0
-    print("Cartesian 3N-D distances between beads:")
+    print("Cartesian 3N-D distances between old beads:")
     for i in range(1, nbeads_old):
         dist = npnorm(q[i] - q[i - 1])
         print("\tfrom %3d to %3d : %.6f bohr" % (i - 1, i, dist))
@@ -99,6 +101,11 @@ def spline_resample(q, nbeads_old, nbeads_new, k=3):
 
     # Reshape the path back to the beads shape
     new_q = np.array(new_atoms).T
+
+    print("Cartesian 3N-D distances between NEW beads:")
+    for i in range(1, nbeads):
+        dist = npnorm(new_q[i] - new_q[i - 1])
+        print("\tfrom %3d to %3d : %.6f bohr" % (i - 1, i, dist))
 
     return new_q
 
@@ -173,21 +180,21 @@ if __name__ == "__main__":
     mode = args.mode
     k = args.order
     assert k in [1, 3]  # I don't know whether other spline orders work well.
-    nbeads=args.nbeads
+    nbeads = args.nbeads
     assert nbeads >= 2  # 2 can be helpful also - to extract the endpoints quickly.
 
-    if mode == 'endpoints':
+    if mode == "endpoints":
         input_ini = args.ini
         input_fin = args.fin
-    elif mode == 'xyz':
+    elif mode == "xyz":
         input_xyz = args.xyz
-    elif mode == 'chk':
+    elif mode == "chk":
         input_chk = args.chk
     else:
         print("Error: cannot recognize mode %s." % mode)
         exit(-1)
 
-    if mode == 'endpoints':
+    if mode == "endpoints":
         # Reading data from 2 geometries
         if os.path.exists(input_ini):
             with open(input_ini, "r") as fd_ini:
@@ -200,15 +207,22 @@ if __name__ == "__main__":
                         break
                     inipos.append(ret["atoms"])
                     cell = ret["cell"]
+                    if np.all(
+                        cell.h == -np.eye(3)
+                    ):  # default when cell not found in xyz file.
+                        print("Error: no cell found in %s." % input_ini)
+                        exit(-1)
                     nframes += 1
                     if nframes > 1:
-                        print("Error: in 'endpoints' mode, xyz files should contain only one geometry each.")
+                        print(
+                            "Error: in 'endpoints' mode, xyz files should contain only one geometry each."
+                        )
                         exit(-1)
             inipos = inipos[0]
             natoms = inipos.natoms
             with open(input_ini, "r") as fd_ini:
-                rr = read_file_raw('xyz', fd_ini)
-                (_, units, cell_units) = auto_units(rr['comment'])
+                rr = read_file_raw("xyz", fd_ini)
+                (_, units, cell_units) = auto_units(rr["comment"])
         else:
             print("Error: cannot find {}.".format(input_ini))
             exit(-1)
@@ -223,18 +237,24 @@ if __name__ == "__main__":
                         finpos.append(ret["atoms"])
                         cell2 = ret["cell"]
                         if np.any(cell2.h != cell.h):
-                            print("Error: initial and final structures have different cells:")
+                            print(
+                                "Error: initial and final structures have different cells:"
+                            )
                             print(cell.h, cell2.h)
                             exit(-1)
                         nframes += 1
                         if nframes > 1:
-                            print("Error: in 'endpoints' mode, xyz files should contain only one geometry each.")
+                            print(
+                                "Error: in 'endpoints' mode, xyz files should contain only one geometry each."
+                            )
                             exit(-1)
                     except EOFError:  # finished reading file
                         break
             finpos = finpos[0]
             if natoms != finpos.natoms:
-                print("Error: the number of atoms is different in ini and fin geometries.")
+                print(
+                    "Error: the number of atoms is different in ini and fin geometries."
+                )
                 exit(-1)
         else:
             print("Error: cannot find {}.".format(input_fin))
@@ -244,7 +264,7 @@ if __name__ == "__main__":
         q = np.concatenate((inipos.q[np.newaxis, :], finpos.q[np.newaxis, :]), axis=0)
         nbeads_old = 2
 
-    elif mode == 'xyz':
+    elif mode == "xyz":
         # Reading beads from a xyz file
         if os.path.exists(input_xyz):
             with open(input_xyz, "r") as fd_xyz:
@@ -255,6 +275,11 @@ if __name__ == "__main__":
                         ret = read_file("xyz", fd_xyz)
                         path.append(ret["atoms"])
                         cell = ret["cell"]
+                        if np.all(
+                            cell.h == -np.eye(3)
+                        ):  # default when cell not found in xyz file.
+                            print("Error: no cell found in %s." % input_xyz)
+                            exit(-1)
                         nbeads_old += 1
                     except EOFError:  # fxyzshed reading files
                         break
@@ -265,8 +290,8 @@ if __name__ == "__main__":
                 natoms = path[0].natoms
             # Extract units information to write output with the same units as input
             with open(input_xyz, "r") as fd_xyz:
-                rr = read_file_raw('xyz', fd_xyz)
-                (_, units, cell_units) = auto_units(rr['comment'])
+                rr = read_file_raw("xyz", fd_xyz)
+                (_, units, cell_units) = auto_units(rr["comment"])
         else:
             print("Error: cannot find {}.".format(input_xyz))
             exit(-1)
@@ -274,7 +299,7 @@ if __name__ == "__main__":
         prototype = path[0]
         q = np.concatenate([x.q[np.newaxis, :] for x in path], axis=0)
 
-    elif mode == 'chk':
+    elif mode == "chk":
         # Reading beads from a checkpoint
         from ipi.engine.simulation import Simulation
 
@@ -310,7 +335,7 @@ if __name__ == "__main__":
         units = cell_units = args.units
 
     out_fname = args.output
-    with open(out_fname, 'w') as fdout:
+    with open(out_fname, "w") as fdout:
         for i in range(nbeads):
             newpath[i].q = new_q[i]
             print_file(
@@ -318,7 +343,7 @@ if __name__ == "__main__":
                 atoms=newpath[i],
                 cell=cell,
                 filedesc=fdout,
-                title="Bead: %d " %i,
+                title="Bead: %d " % i,
                 key="positions",
                 dimension="length",
                 units=units,
