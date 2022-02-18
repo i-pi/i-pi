@@ -5,8 +5,12 @@ equidistantly to a piecewise-linear path or a cubic spline formed by 2 or more
 provided beads.
 
 Arguments:
-    --mode          - "endpoints" or "xyz" or "chk"
+    --mode              - "endpoints" or "xyz" or "chk"
     -n, -N, --nbeads    - number of NEB replicas incl. endpoints
+    -k                  - degree of spline: 1 or 3
+    --units             - i-pi-supported distance units to write output geometries.
+    -al, --activelist   - whitespace-separated list of active atoms to read from the command line
+    -af, --activefile   - a file with the space or linebreak separated list of active atoms.
     EITHER
       --ini         - initial geometry (.xyz) if mode "endoints"
       --fin         - final geometry (.xyz) if mode "endpoints"
@@ -55,8 +59,8 @@ def spline_resample(q, nbeads_old, nbeads_new, k=3):
         print("spline interpolation requires scipy module.")
         raise (scipy_exception)
 
-    if nbeads_new <= 2:
-        softexit.trigger(status="bad", message="nbeads_new < 3 in string optimization.")
+    if nbeads_new < 2:
+        raise RuntimeError("nbeads_new < 2.")
 
     # First, we calculate the current parameterization of the path
     # according to 3N-D Euclidean distances between adjacent beads.
@@ -85,25 +89,25 @@ def spline_resample(q, nbeads_old, nbeads_new, k=3):
 
     # This reshapes q to a list of 3*Natoms sets consisting of nbeads_old numbers each,
     # describing trajectory of one Cartesian component of an atom over the path.
-    atoms = q.T
+    components = q.T
 
-    new_atoms = []
-    for component in atoms:
+    new_components = []
+    for comp in components:
         # Interpolate the trajectory of one cartesian component by a spline.
         # bc_type='natural' imposes zero second derivative at the endpoints.
         if k == 3:
-            spl = make_interp_spline(t, component, k=k, bc_type="natural")
+            spl = make_interp_spline(t, comp, k=k, bc_type="natural")
         elif k == 1:
-            spl = make_interp_spline(t, component, k=k)
+            spl = make_interp_spline(t, comp, k=k)
         # Sample new parameter values uniformly from the old range.
         # Resample positions of this atom.
-        new_atoms.append(splev(new_t, spl))
+        new_components.append(splev(new_t, spl))
 
     # Reshape the path back to the beads shape
-    new_q = np.array(new_atoms).T
+    new_q = np.array(new_components).T
 
     print("Cartesian 3N-D distances between NEW beads:")
-    for i in range(1, nbeads):
+    for i in range(1, nbeads_new):
         dist = npnorm(new_q[i] - new_q[i - 1])
         print("\tfrom %3d to %3d : %.6f bohr" % (i - 1, i, dist))
 
@@ -175,13 +179,34 @@ if __name__ == "__main__":
         default="None",
         help="Units to output cell and positions.",
     )
+    parser.add_argument(
+        "--activelist",
+        "-al",
+        nargs="+",
+        type=int,
+        default=[],
+        help="List of atom indices to use. Positions of the others will be kept from bead 0, "
+        "except one particular case when old and new number of beads coincide. "
+        "Then, old positions will be kept. Atoms are counted from 0.",
+    )
+    parser.add_argument(
+        "--activefile",
+        "-af",
+        type=str,
+        default=None,
+        help="A file with atom indices to use, the others will be kept from bead 0. "
+        "Atoms are counted from 0.",
+    )
 
     args = parser.parse_args()
     mode = args.mode
     k = args.order
     assert k in [1, 3]  # I don't know whether other spline orders work well.
-    nbeads = args.nbeads
-    assert nbeads >= 2  # 2 can be helpful also - to extract the endpoints quickly.
+    nbeads_new = args.nbeads
+    assert nbeads_new >= 2  # 2 can be helpful also - to extract the endpoints quickly.
+    assert (
+        args.activelist == [] or args.activefile is None
+    ), "Only one active list is allowed."
 
     if mode == "endpoints":
         input_ini = args.ini
@@ -322,22 +347,67 @@ if __name__ == "__main__":
         prototype = beads._blist[0]
         units = cell_units = "automatic"
 
+    # =================================================================
     # Below this point, it shouldn't matter where the inputs came from.
+    # =================================================================
+    print("Imported structures: %d geometries, %d atoms each." % (nbeads_old, natoms))
 
-    # Create new Atoms objects from the prorotype
+    # Parse the arguments for the list of active atoms
+    activelist = None
+    if args.activelist != []:
+        activelist = args.activelist
+    elif args.activefile is not None:
+        with open(args.activefile, "r") as af:
+            al = af.read().split()
+            activelist = [int(w) for w in al]
+    if activelist is not None:
+        if any([a < 0 or a >= natoms for a in activelist]):
+            print("Error: index < 0 or > natoms found in activelist.")
+            print("Activelist: %s" % activelist)
+            exit(-1)
+        else:
+            activelist = np.array(activelist)
+            print("Activelist: %s" % activelist)
+            # Mask to exclude fixed atoms from 3N-array. 0 are frozen, 1 are active.
+            fixmask = np.zeros(3 * natoms, dtype=bool)
+            fixmask[3 * activelist] = 1
+            fixmask[3 * activelist + 1] = 1
+            fixmask[3 * activelist + 2] = 1
+    else:
+        fixmask = np.ones(3 * natoms, dtype=bool)
+
+    # Resample the path
+    masked_new_q = spline_resample(q[:, fixmask], nbeads_old, nbeads_new, k)
+
+    # Create new Atoms objects from the prorotype, and put there resampled coordinates
+    # If nbeads remains the same, we keep fixed atoms as they were in the input beads.
     newpath = []
-    for i in range(nbeads):
-        newpath.append(prototype)
-
-    new_q = spline_resample(q, nbeads_old, nbeads, k)
+    if nbeads_new == nbeads_old:
+        if activelist is not None:
+            print(
+                "nbeads_new = nbeads_old, "
+                "therefore we keep fixed atoms in their original positions."
+            )
+        for i in range(nbeads_new):
+            # copy() is necessary, otherwise they all point to the same obj.
+            newpath.append(prototype.copy())
+            newpath[i].q[:] = q[i]
+            newpath[i].q[fixmask] = masked_new_q[i]
+    else:  # If nbeads changes, we put fixed atoms from the bead 0 to all beads.
+        if activelist is not None:
+            print(
+                "nbeads_new != nbeads_old, therefore we put fixed atoms from bead 0 to all beads."
+            )
+        for i in range(nbeads_new):
+            newpath.append(prototype.copy())
+            newpath[i].q[fixmask] = masked_new_q[i]
 
     if args.units != "None":
         units = cell_units = args.units
 
     out_fname = args.output
     with open(out_fname, "w") as fdout:
-        for i in range(nbeads):
-            newpath[i].q = new_q[i]
+        for i in range(nbeads_new):
             print_file(
                 mode="xyz",
                 atoms=newpath[i],
@@ -350,4 +420,4 @@ if __name__ == "__main__":
                 cell_units=cell_units,
             )
 
-    print("The new path written to %s." % out_fname)
+    print("The new path is written to %s." % out_fname)
