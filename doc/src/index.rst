@@ -45,6 +45,7 @@ This documentation is structured as follows:
    user-guide
    tutorials
    input-reference
+   units
    troubleshooting
    faq
    contributing
