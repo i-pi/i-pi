@@ -1255,7 +1255,7 @@ class NROptimizer(HessianOptimizer):
         f = np.multiply(f, self.im.dbeads.m3.reshape(f.shape) ** -0.5)
 
         d_x = invmul_banded(h_up_band, f).reshape(self.im.dbeads.q.shape)
-        d_x = np.multiply(d_x, self.im.dbeads.m3 ** -0.5)
+        d_x = np.multiply(d_x, self.im.dbeads.m3**-0.5)
 
         # Rescale step if necessary
         if np.amax(np.absolute(d_x)) > activearrays["big_step"]:
@@ -1391,7 +1391,7 @@ class LanczosOptimizer(HessianOptimizer):
         d_x.shape = self.im.dbeads.q.shape
 
         # MASS-scaled
-        d_x = np.multiply(d_x, self.im.dbeads.m3 ** -0.5)
+        d_x = np.multiply(d_x, self.im.dbeads.m3**-0.5)
 
         # Rescale step if necessary
         if np.amax(np.absolute(d_x)) > activearrays["big_step"]:

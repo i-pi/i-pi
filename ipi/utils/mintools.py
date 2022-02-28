@@ -747,8 +747,8 @@ def min_trm(f, h, tr):
 
     for i in range(0, 100):
         DXE = gE / (d + lamb)
-        y = np.sum(DXE ** 2) - tr ** 2
-        dy = -2.0 * np.sum((DXE ** 2) / (d + lamb))
+        y = np.sum(DXE**2) - tr**2
+        dy = -2.0 * np.sum((DXE**2) / (d + lamb))
 
         if np.absolute(y / dy) < 0.00001 or np.absolute(y) < 1e-13:
             break
@@ -1360,7 +1360,7 @@ def nichols(f0, f1, d, dynmax, m3, big_step, mode=1):
 
         d_x = alpha * (gE) / (lamb - d)
 
-        if d[0] < 0 or np.dot(d_x.flatten(), d_x.flatten()) > big_step ** 2:
+        if d[0] < 0 or np.dot(d_x.flatten(), d_x.flatten()) > big_step**2:
             lamb = d[0] - np.absolute(gE[0] / big_step)
             d_x = alpha * (gE) / (lamb - d)
 

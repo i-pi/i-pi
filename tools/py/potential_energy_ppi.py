@@ -88,7 +88,7 @@ def potentialEnergy(prefix, temp, ss=0, unit=""):
 
     # Some constants
     beta = 1.0 / (Constants.kb * temperature)
-    const = Constants.hbar ** 2 * beta ** 2 / (24.0 * nbeads ** 3)
+    const = Constants.hbar**2 * beta**2 / (24.0 * nbeads**3)
 
     timeUnit, potentialEnergyUnit, potentialEnergy_index, time_index = extractUnits(
         iU
@@ -156,7 +156,7 @@ def potentialEnergy(prefix, temp, ss=0, unit=""):
 
             norm = float(ifr - skipSteps)
 
-            dU = 2.0 * f2_av / norm - beta * (f2U_av / norm - f2_av * U_av / norm ** 2)
+            dU = 2.0 * f2_av / norm - beta * (f2U_av / norm - f2_av * U_av / norm**2)
             dU *= const
 
             dU = unit_to_user("energy", unit, dU)
