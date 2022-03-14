@@ -535,7 +535,7 @@ class NEBMover(Motion):
             if self.big_step <= 0.01:
                 self.big_step = 0.02
             info(
-                " @NEBMover: Step direction far from climbgrad, "
+                " @NEBMover: Step direction far from nebgrad/climbgrad, "
                 "reducing big_step to %.6f bohr." % self.big_step,
                 verbosity.debug,
             )

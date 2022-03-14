@@ -52,7 +52,7 @@ from ipi.inputs.initializer import *
 from .geop import InputGeop
 from .instanton import InputInst
 from .neb import InputNEB
-from .string_mep import InputStringMEP
+from .stringmep import InputStringMEP
 from .dynamics import InputDynamics
 from .vscf import InputNormalMode
 from .constrained_dynamics import InputConstrainedDynamics
