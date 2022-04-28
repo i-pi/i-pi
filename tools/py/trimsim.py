@@ -158,7 +158,9 @@ def main(inputfile, outdir="trim"):
 
     ptfile = None
     # wtefile = None
-    if os.path.isfile(simul.outtemplate.prefix + "." + simul.smotion.swapfile):
+    if hasattr(simul.smotion, "swapfile") and os.path.isfile(
+        simul.outtemplate.prefix + "." + simul.smotion.swapfile
+    ):
         ptfile = open(simul.outtemplate.prefix + "." + simul.smotion.swapfile, "r")
         optfile = open(
             outdir + "/" + simul.outtemplate.prefix + "." + simul.smotion.swapfile, "w"
@@ -169,8 +171,8 @@ def main(inputfile, outdir="trim"):
     #    owtefile = open(outdir + "/PARAWTE", "w")
 
     # First reads the swap file
-    while True:
-        if ptfile is not None:
+    if ptfile is not None:
+        while True:
             try:
                 line = ptfile.readline()
                 step = int(line.split()[0])

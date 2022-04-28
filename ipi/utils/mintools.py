@@ -722,7 +722,7 @@ def min_trm(f, h, tr):
     if zero > 0:
         gE[neg : neg + zero] = np.zeros((zero, 1))
 
-    # Real work start here
+    # Real work starts here
     DXE = np.zeros((ndim, 1))
 
     for i in range(0, ndim):
@@ -731,7 +731,7 @@ def min_trm(f, h, tr):
 
     min_d = np.amin(d)
 
-    # Check if h is possitive definite and use trivial result if within trust radius
+    # Check if h is positive definite and use trivial result if within trust radius
     if min_d > 0.0:
 
         if neg != 0:
@@ -741,7 +741,7 @@ def min_trm(f, h, tr):
             DX = DX.reshape(shape)
             return DX
 
-    # If we haven't luck. Let's start with the iteration
+    # If we don't have luck, let's start with the iteration
     lamb_min = max(0.0, -min_d)
     lamb_max = 1e30
     lamb = min(lamb_min + 0.5, 0.5 * (lamb_min + lamb_max))
@@ -1039,14 +1039,14 @@ def FIRE(
     astart=0.1,
     fa=0.99,
 ):
-    """FIRE algorithm for NEB optimization based on
+    """FIRE algorithm based on
     Bitzek et al, Phys. Rev. Lett. 97, 170201 (2006) and
     Guénolé, J. et al.  Comp. Mat. Sci. 175, 109584 (2020).
     Semi-implicit Euler integration used.
     Done by Guoyuan Liu <liuthepro@outlook.com>, May 2021.
 
     FIRE does not rely on energy, therefore it is suitable for NEB calculation, where
-    the energy is not conservative. Basic principle: accelerate towards force grandient
+    the energy is not conservative. Basic principle: accelerate towards force gradient
     (downhill direction) and stop immediately when going uphill.
     Try adjusting dt, dtmax, dtmin for optimal performance.
 
@@ -1088,7 +1088,7 @@ def FIRE(
         N_dn = 0
         N_up += 1
         if N_up > Nmax:
-            softexit.trigger("@FIRE stuck. Cannot minimize futher!")
+            softexit.trigger("@FIRE is stuck for %d steps. We stop here." % N_up)
         dt = max(dt * fdec, dtmin)
         a = astart
         # correct uphill motion
@@ -1110,7 +1110,7 @@ def FIRE(
         dx = maxstep * dx / normdx
     x0 += dx
 
-    info(" @FIRE: calling NEBGradientMapper to update position", verbosity.debug)
+    info(" @FIRE: calling a gradient mapper to update position", verbosity.debug)
     fdf(x0)
 
     return v, a, N_dn, N_up, dt

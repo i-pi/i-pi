@@ -1,6 +1,6 @@
-"""Deals with creating the ensembles class.
+"""Deals with creating the string class.
 
-Copyright (C) 2013, Joshua More and Michele Ceriotti
+Copyright (C) 2022, Karen Fidanyan
 
 This program is free software: you can redistribute it and/or modify
 it under the terms of the GNU General Public License as published by
@@ -28,19 +28,16 @@ from ipi.inputs.thermostats import *
 from ipi.inputs.initializer import *
 from ipi.utils.units import *
 
-__all__ = ["InputNEB"]
+__all__ = ["InputStringMEP"]
 
 
-class InputNEB(InputDictionary):
+class InputStringMEP(InputDictionary):
 
-    """Geometry optimization options for nudged elastic band (NEB) calculations.
+    """Options for string minimal energy path calculations.
 
-    Contains options related with geometry optimization, such as method,
-    thresholds, linear search strategy, etc.
-
-    Also contains options related specifically to NEB, such as spring constants
-    and climbing image.
-
+    Contains options related to geometry optimization, such as method,
+    thresholds, etc.
+    Also contains options related specifically to String method.
     """
 
     attribs = {
@@ -48,39 +45,23 @@ class InputNEB(InputDictionary):
             InputAttribute,
             {
                 "dtype": str,
-                "default": "fire",
-                "help": "The geometry optimization algorithm to optimize NEB path",
+                "default": "bfgstrm",
+                "help": "The geometry optimization algorithm to optimize MEP string",
                 "options": [
-                    # "sd",
-                    # "cg",
-                    # "bfgs",
+                    "sd",
+                    "cg",
+                    "bfgs",
                     "bfgstrm",
                     "damped_bfgs",
-                    # "lbfgs",
+                    "lbfgs",
                     "fire",
+                    "euler",
                 ],
             },
         )
     }
 
     fields = {
-        "ls_options": (
-            InputDictionary,
-            {
-                "dtype": [float, int, float, float],
-                "help": """Options for line search methods. Includes:
-                              tolerance: stopping tolerance for the search,
-                              grad_tolerance: stopping tolerance on gradient for
-                              BFGS line search,
-                              iter: the maximum number of iterations,
-                              step: initial step for bracketing,
-                              adaptive: whether to update initial step.
-                              """,
-                "options": ["tolerance", "iter", "step", "adaptive"],
-                "default": [1e-6, 100, 1e-3, 1.0],
-                "dimension": ["energy", "undefined", "length", "undefined"],
-            },
-        ),
         "tolerances": (
             InputDictionary,
             {
@@ -88,7 +69,7 @@ class InputNEB(InputDictionary):
                 "options": ["energy", "force", "position"],
                 "default": [1e-8, 1e-8, 1e-8],
                 "dimension": ["energy", "force", "length"],
-                "help": """Tolerance criteria to stop NEB optimization.
+                "help": """Tolerance criteria to stop String optimization.
                            If you work with DFT, do not use these defaults.
                         """,
             },
@@ -120,20 +101,20 @@ class InputNEB(InputDictionary):
                 "dimension": "energy",
             },
         ),
-        "old_nebpotential": (
+        "old_stringpotential": (
             InputArray,
             {
                 "dtype": float,
                 "default": input_default(factory=np.zeros, args=(0,)),
-                "help": "Previous NEB potential energy, which includes spring energy.",
+                "help": "Previous string potential energy.",
             },
         ),
-        "old_nebgradient": (
+        "old_stringgradient": (
             InputArray,
             {
                 "dtype": float,
                 "default": input_default(factory=np.zeros, args=(0,)),
-                "help": "The previous gradient including NEB spring forces.",
+                "help": "The previous gradient of the string.",
             },
         ),
         "old_direction": (
@@ -150,7 +131,7 @@ class InputNEB(InputDictionary):
                 "dtype": float,
                 "default": 0.5,
                 "help": """The maximum atomic displacement in a single step
-                           of optimizations within NEB procedure.
+                           of optimizations within String MEP procedure.
                            If requested step is larger, it will be downscaled so
                            that maximal atomic displacement won't exceed biggest_step.
                         """,
@@ -204,7 +185,7 @@ class InputNEB(InputDictionary):
             InputArray,
             {
                 "dtype": float,
-                "default": input_default(factory=np.zeros, args=(0,)),
+                "default": input_default(factory=np.array, args=(1.0,)),
                 "help": "Starting value for the trust radius for BFGSTRM.",
                 "dimension": "length",
             },
@@ -262,32 +243,27 @@ class InputNEB(InputDictionary):
             {
                 "dtype": [bool, str],
                 "options": ["optimize", "algorithm"],
-                "default": [False, "bfgs"],
+                "default": [False, "bfgstrm"],
                 "help": "Geometry optimization of endpoints (not implemented yet)",
-            },
-        ),
-        "spring": (
-            InputDictionary,
-            {
-                "dtype": [bool, float, float, float],
-                "options": ["varsprings", "kappa", "kappamax", "kappamin"],
-                "default": [False, 1.0, 1.5, 0.5],
-                "help": "Uniform or variable spring constants along the elastic band",
             },
         ),
         "stage": (
             InputValue,
             {
                 "dtype": str,
-                "options": ["endpoints", "neb", "climb"],
-                "default": "neb",
-                "help": "Stage of the NEB pipeline: optimization of endpoints, "
-                "NEB itself, climbing image",
+                "options": ["endpoints", "string", "climb"],
+                "default": "string",
+                "help": "Stage of the String pipeline: optimization of the endpoints, "
+                "string opt., climbing image opt.",
             },
         ),
         "use_climb": (
             InputValue,
-            {"dtype": bool, "default": False, "help": "Use climbing image NEB or not"},
+            {
+                "dtype": bool,
+                "default": False,
+                "help": "Use climbing image String MEP or not",
+            },
         ),
         "climb_bead": (
             InputValue,
@@ -303,41 +279,39 @@ class InputNEB(InputDictionary):
 
     default_help = (
         "Contains the required parameters "
-        "for performing nudged elastic band (NEB) calculations"
+        "for performing string minimal energy path optimization."
     )
-    default_label = "NEB"
+    default_label = "StringMEP"
 
-    def store(self, neb):
-        if neb == {}:
+    def store(self, stringmep):
+        if stringmep == {}:
             return
-        self.ls_options.store(neb.ls_options)
-        self.tolerances.store(neb.tolerances)
-        self.mode.store(neb.mode)
-        self.old_coord.store(neb.old_x)
-        self.full_force.store(neb.full_f)
-        self.full_pots.store(neb.full_v)
-        self.old_nebpotential.store(neb.nebpot)
-        self.old_nebgradient.store(neb.nebgrad)
-        self.old_direction.store(neb.d)
-        self.biggest_step.store(neb.big_step)
-        self.hessian_bfgs.store(neb.hessian)
-        self.qlist_lbfgs.store(neb.qlist)
-        self.glist_lbfgs.store(neb.glist)
-        self.tr_trm.store(neb.tr_trm)
-        self.v_fire.store(neb.v)
-        self.alpha_fire.store(neb.a)
-        self.N_down_fire.store(neb.N_dn)
-        self.N_up_fire.store(neb.N_up)
-        self.dt_fire.store(neb.dt_fire)
-        self.dtmax_fire.store(neb.dtmax)
-        self.endpoints.store(neb.endpoints)
-        self.spring.store(neb.spring)
-        self.stage.store(neb.stage)
-        self.use_climb.store(neb.use_climb)
-        self.climb_bead.store(neb.cl_indx)
-        self.scale_lbfgs.store(neb.scale)
+        self.tolerances.store(stringmep.tolerances)
+        self.mode.store(stringmep.mode)
+        self.old_coord.store(stringmep.old_x)
+        self.full_force.store(stringmep.full_f)
+        self.full_pots.store(stringmep.full_v)
+        self.old_stringpotential.store(stringmep.stringpot)
+        self.old_stringgradient.store(stringmep.stringgrad)
+        self.old_direction.store(stringmep.d)
+        self.biggest_step.store(stringmep.big_step)
+        self.hessian_bfgs.store(stringmep.hessian)
+        self.qlist_lbfgs.store(stringmep.qlist)
+        self.glist_lbfgs.store(stringmep.glist)
+        self.tr_trm.store(stringmep.tr_trm)
+        self.v_fire.store(stringmep.v)
+        self.alpha_fire.store(stringmep.a)
+        self.N_down_fire.store(stringmep.N_dn)
+        self.N_up_fire.store(stringmep.N_up)
+        self.dt_fire.store(stringmep.dt_fire)
+        self.dtmax_fire.store(stringmep.dtmax)
+        self.endpoints.store(stringmep.endpoints)
+        self.stage.store(stringmep.stage)
+        self.use_climb.store(stringmep.use_climb)
+        self.climb_bead.store(stringmep.cl_indx)
+        self.scale_lbfgs.store(stringmep.scale)
 
     def fetch(self):
-        rv = super(InputNEB, self).fetch()
+        rv = super(InputStringMEP, self).fetch()
         rv["mode"] = self.mode.fetch()
         return rv
