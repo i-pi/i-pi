@@ -272,6 +272,21 @@ class NEBClimbGrMapper(object):
         return e, g
 
 
+#TODO
+#class NEB_GPR(object):
+#    """KF: I strongly suggest that someone implements and this method:
+#    J. A. G. Torres et al, PRL 122, 156001 (2019),
+#    https://doi.org/10.1103/PhysRevLett.122.156001
+#
+#    Given that the stability of NEB is so far quite bad
+#    and small step size is desired, it sounds very promising, and the examples
+#    shown in the SI of that paper are really practical.
+#
+#    Also, it would be nice to build a unified framework
+#    for NEB, String and probably Instanton methods to work with GPR.
+#    """
+
+
 class NEBMover(Motion):
     """Nudged elastic band routine.
 
@@ -535,7 +550,7 @@ class NEBMover(Motion):
             if self.big_step <= 0.01:
                 self.big_step = 0.02
             info(
-                " @NEBMover: Step direction far from climbgrad, "
+                " @NEBMover: Step direction far from nebgrad/climbgrad, "
                 "reducing big_step to %.6f bohr." % self.big_step,
                 verbosity.debug,
             )
