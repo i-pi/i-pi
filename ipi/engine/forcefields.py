@@ -431,10 +431,10 @@ class FFLennardJones(ForceField):
         f = np.zeros(q.shape)
         for i in range(1, nat):
             dij = q[i] - q[:i]
-            rij2 = (dij ** 2).sum(axis=1)
+            rij2 = (dij**2).sum(axis=1)
 
             x6 = (self.sigma2 / rij2) ** 3
-            x12 = x6 ** 2
+            x12 = x6**2
 
             v += (x12 - x6).sum()
             dij *= (self.sixepsfour * (2.0 * x12 - x6) / rij2)[:, np.newaxis]
@@ -1178,12 +1178,12 @@ class FFCommittee(ForceField):
             # and V_committee the committee error. Then
             # V = V_baseline + s_b^2/(s_c^2+s_b^2) V_committe
 
-            s_b2 = self.baseline_uncertainty ** 2
-            uncertain_frc = self.alpha ** 2 * np.mean(
+            s_b2 = self.baseline_uncertainty**2
+            uncertain_frc = self.alpha**2 * np.mean(
                 [(pot - mean_pot) * (frc - mean_frc) for pot, frc in zip(pots, frcs)],
                 axis=0,
             )
-            uncertain_vir = self.alpha ** 2 * np.mean(
+            uncertain_vir = self.alpha**2 * np.mean(
                 [(pot - mean_pot) * (vir - mean_vir) for pot, vir in zip(pots, virs)],
                 axis=0,
             )

@@ -366,7 +366,7 @@ class DummyIntegrator(dobject):
             dens = 0
             for i in range(3):
                 pcom = p[:, i:na3:3].sum()
-                dens += pcom ** 2
+                dens += pcom**2
                 pcom /= Mnb
                 self.beads.p[:, i:na3:3] -= m * pcom
 
