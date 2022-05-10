@@ -53,7 +53,7 @@ class InputEnsemble(Input):
             InputValue,
             {
                 "dtype": float,
-                "default": -12345, # hard-coded to signal unset pressure
+                "default": -12345,  # hard-coded to signal unset pressure
                 "help": "The external pressure.",
                 "dimension": "pressure",
             },
@@ -62,7 +62,9 @@ class InputEnsemble(Input):
             InputArray,
             {
                 "dtype": float,
-                "default": -np.identity(-12345, float),   # hard-coded to signal unset stress
+                "default": -np.identity(
+                    -12345, float
+                ),  # hard-coded to signal unset stress
                 "help": "The external stress.",
                 "dimension": "pressure",
             },

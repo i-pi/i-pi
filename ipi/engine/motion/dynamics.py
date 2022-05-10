@@ -225,15 +225,11 @@ class Dynamics(Motion):
                     raise ValueError(
                         "The barostat and its mode have to be specified for constant-p integrators"
                     )
-                if np.allclose(self.ensemble.pext, -12345):  
-                    raise ValueError(
-                        "Unspecified pressure for a constant-p integrator"
-                    )
+                if np.allclose(self.ensemble.pext, -12345):
+                    raise ValueError("Unspecified pressure for a constant-p integrator")
             elif self.enstype == "nst":
                 if np.allclose(self.ensemble.stressext.diagonal(), -12345):
-                    raise ValueError(
-                        "Unspecified stress for a constant-s integrator"
-                    )
+                    raise ValueError("Unspecified stress for a constant-s integrator")
 
     def get_ntemp(self):
         """Returns the PI simulation temperature (P times the physical T)."""
