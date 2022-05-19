@@ -35,11 +35,18 @@ class NEBGradientMapper(object):
         Fixed atoms are excluded via boolean mask. 1 = moving, 0 = fixed.
 
     Attributes:
-        kappa: spring constants"""
+        kappa: spring constants
+        tangent: plain or improved tangents
+    """
 
-    def __init__(self):
+    def __init__(self, tangent=None):
         self.kappa = None
         self.allpots = None
+        self.tangent = tangent
+        info(
+            "NEBGradientMapper: Using %s tangent." % tangent,
+            verbosity.low,
+        )
 
     def bind(self, ens):
         # In principle, there is no need in dforces within the Mapper,
@@ -112,29 +119,37 @@ class NEBGradientMapper(object):
             d1 = bq[ii] - bq[ii - 1]  # tau minus
             d2 = bq[ii + 1] - bq[ii]  # tau plus
 
-            # Old implementation of NEB tangents
-            # btau[ii] = d1 / npnorm(d1) + d2 / npnorm(d2)
-            # btau[ii] /= npnorm(btau[ii])
+            if self.tangent == "plain":
+                # Old implementation of NEB tangents
+                btau[ii] = d1 / npnorm(d1) + d2 / npnorm(d2)
+                btau[ii] /= npnorm(btau[ii])
 
-            # Improved tangent estimate
-            # J. Chem. Phys. 113, 9978 (2000) https://doi.org/10.1063/1.1323224
+            elif self.tangent == "improved":
+                # Improved tangent estimate
+                # J. Chem. Phys. 113, 9978 (2000) https://doi.org/10.1063/1.1323224
 
-            # Energy of images: (ii+1) < (ii) < (ii-1)
-            if be[ii + 1] < be[ii] < be[ii - 1]:
-                btau[ii] = d1
-            # Energy of images (ii-1) < (ii) < (ii+1)
-            elif be[ii - 1] <= be[ii] <= be[ii + 1]:
-                btau[ii] = d2
-            # Energy of image (ii) is a minimum or maximum
+                # Energy of images: (ii+1) < (ii) < (ii-1)
+                if be[ii + 1] < be[ii] < be[ii - 1]:
+                    btau[ii] = d1
+                # Energy of images (ii-1) < (ii) < (ii+1)
+                elif be[ii - 1] <= be[ii] <= be[ii + 1]:
+                    btau[ii] = d2
+                # Energy of image (ii) is a minimum or maximum
+                else:
+                    maxpot = max(abs(be[ii + 1] - be[ii]), abs(be[ii - 1] - be[ii]))
+                    minpot = min(abs(be[ii + 1] - be[ii]), abs(be[ii - 1] - be[ii]))
+
+                    if be[ii + 1] >= be[ii - 1]:
+                        btau[ii] = d2 * maxpot + d1 * minpot
+                    elif be[ii + 1] < be[ii - 1]:
+                        btau[ii] = d2 * minpot + d1 * maxpot
+                btau[ii] /= npnorm(btau[ii])
+
             else:
-                maxpot = max(abs(be[ii + 1] - be[ii]), abs(be[ii - 1] - be[ii]))
-                minpot = min(abs(be[ii + 1] - be[ii]), abs(be[ii - 1] - be[ii]))
-
-                if be[ii + 1] >= be[ii - 1]:
-                    btau[ii] = d2 * maxpot + d1 * minpot
-                elif be[ii + 1] < be[ii - 1]:
-                    btau[ii] = d2 * minpot + d1 * maxpot
-            btau[ii] /= npnorm(btau[ii])
+                softexit.trigger(
+                    status="bad",
+                    message="Error: unknown tangent kind %s." % self.tangent,
+                )
 
         # if mode == "variablesprings":
         #    if mode == "ci":
@@ -272,8 +287,8 @@ class NEBClimbGrMapper(object):
         return e, g
 
 
-#TODO
-#class NEB_GPR(object):
+# TODO
+# class NEB_GPR(object):
 #    """KF: I strongly suggest that someone implements and this method:
 #    J. A. G. Torres et al, PRL 122, 156001 (2019),
 #    https://doi.org/10.1103/PhysRevLett.122.156001
@@ -313,6 +328,7 @@ class NEBMover(Motion):
         endpoints: flag for minimizing end images in NEB *** NOT YET IMPLEMENTED ***
         use_climb: flag for climbing image NEB
         stage: flag denoting current stage: "endpoints", "neb" or "climb", or "converged"
+        tangents: "plain" or "improved"
         spring:
             varsprings: T/F for variable spring constants
             kappa: single spring constant if varsprings is F
@@ -347,6 +363,7 @@ class NEBMover(Motion):
         dt_fire=0.1,
         endpoints=(False, "bfgs"),
         spring={"varsprings": False, "kappa": 1.0, "kappamax": 1.5, "kappamin": 0.5},
+        tangent=None,
         scale_lbfgs=2,
         stage="neb",
         use_climb=False,
@@ -387,6 +404,7 @@ class NEBMover(Motion):
         self.tr_trm = tr_trm
         self.endpoints = endpoints
         self.spring = spring
+        self.tangent = tangent
         self.use_climb = use_climb
         self.cl_indx = climb_bead
         self.stage = stage
@@ -400,7 +418,7 @@ class NEBMover(Motion):
         self.dt_fire = dt_fire
         self.dtmax = dtmax_fire  # maximum dt for FIRE
 
-        self.nebgm = NEBGradientMapper()
+        self.nebgm = NEBGradientMapper(tangent=self.tangent)
         self.climbgm = NEBClimbGrMapper()
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):

@@ -275,6 +275,16 @@ class InputNEB(InputDictionary):
                 "help": "Uniform or variable spring constants along the elastic band",
             },
         ),
+        "tangent": (
+            InputValue,
+            {
+                "dtype": str,
+                "options": ["plain", "improved"],
+                "default": "improved",
+                "help": "How to calculate tangents: simple averaging from the original 1998 paper, "
+                "or the improved tangent estimate from J. Chem. Phys. 113, 9978 (2000)",
+            },
+        ),
         "stage": (
             InputValue,
             {
@@ -332,6 +342,7 @@ class InputNEB(InputDictionary):
         self.dtmax_fire.store(neb.dtmax)
         self.endpoints.store(neb.endpoints)
         self.spring.store(neb.spring)
+        self.tangent.store(neb.tangent)
         self.stage.store(neb.stage)
         self.use_climb.store(neb.use_climb)
         self.climb_bead.store(neb.cl_indx)
