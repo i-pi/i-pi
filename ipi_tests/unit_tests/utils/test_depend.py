@@ -87,7 +87,7 @@ def threadB(Aobj, Bobj):
         time.sleep(0.0001)
         Bobj.scalar = 4 + i
         Bobj.vector = np.sqrt(i)
-        #print(Bobj.dvector[0])
+        # print(Bobj.dvector[0])
 
 
 # myB.dvector should always contain B.vector*B.scalar- A.scalar
