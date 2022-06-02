@@ -161,13 +161,9 @@ class DriverSocket(socket.socket):
         while bpos < blen:
             timeout = False
 
-            # pre-2.5 version.
             try:
-                bpart = ""
-                bpart = self.recv(blen - bpos)
-                if len(bpart) == 0:
-                    raise socket.timeout  # if this keeps returning no data, we are in trouble....
-                self._buf[bpos : bpos + len(bpart)] = np.fromstring(bpart, np.byte)
+                bpart = 1
+                bpart = self.recv_into(self._buf[bpos:], blen - bpos)
             except socket.timeout:
                 # warning(" @SOCKET:   Timeout in recvall, trying again!", verbosity.low)
                 timeout = True
@@ -180,23 +176,11 @@ class DriverSocket(socket.socket):
                     )
                     raise Disconnected()
                 pass
-            if not timeout and len(bpart) == 0:
-                raise Disconnected()
-            bpos += len(bpart)
 
-            # post-2.5 version: slightly more compact for modern python versions
-            # try:
-            #   bpart = 1
-            #   bpart = self.recv_into(self._buf[bpos:], blen-bpos)
-            # except socket.timeout:
-            #   print " @SOCKET:   Timeout in status recvall, trying again!"
-            #   timeout = True
-            #   pass
-            # if (not timeout and bpart == 0):
-            #   raise Disconnected()
-            # bpos += bpart
-            # TODO this Disconnected() exception currently just causes the program to hang.
-            # This should do something more graceful
+            if not timeout and bpart == 0:
+                raise Disconnected()
+
+            bpos += bpart
 
         if np.isscalar(dest):
             return np.fromstring(self._buf[0:blen], dest.dtype)[0]

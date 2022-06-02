@@ -21,7 +21,8 @@ jobs:
           pip install --upgrade pip
           pip install -r doc/requirements.txt
 
-          sudo apt install -y texlive-latex-extra texlive-lang-greek latexmk
+          sudo apt-get update
+          sudo apt-get install -y texlive-latex-extra texlive-lang-greek latexmk
       - name: build documentation
         run: |
           cd doc
