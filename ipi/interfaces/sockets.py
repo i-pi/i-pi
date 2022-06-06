@@ -177,7 +177,7 @@ class DriverSocket(socket.socket):
                     raise Disconnected()
                 pass
 
-            if not timeout and bpart == -1:
+            if not timeout and bpart == 0:
                 raise Disconnected()
 
             bpos += bpart
