@@ -162,7 +162,7 @@ class DriverSocket(socket.socket):
             timeout = False
 
             try:
-                bpart = 1
+                bpart = 0
                 bpart = self.recv_into(self._buf[bpos:], blen - bpos)
             except socket.timeout:
                 # warning(" @SOCKET:   Timeout in recvall, trying again!", verbosity.low)
