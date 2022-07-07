@@ -18,8 +18,12 @@ Quick Setup and Test
 
 To use i-PI with already existing drivers, install and update using Pip::
 
+Last version
+ 
    $ python -m pip install git+https://github.com/i-pi/i-pi.git
 
+Last Release
+   $ pip install -U i-PI
 
 Test with Pytest::
 
