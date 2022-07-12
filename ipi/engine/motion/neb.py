@@ -535,6 +535,18 @@ class NEBMover(Motion):
             self.beads.q[cl_indx, self.climbgm.fixatoms_mask]
         )
 
+        # If climbing is launched from geometries rather than i-pi restart,
+        # these need to be initialized
+        if self.full_f.shape == (0,) or self.full_v.shape == (0,):
+            self.full_f = dstrip(self.nebgm.dforces.f).copy()
+            self.full_v = dstrip(self.nebgm.dforces.pots).copy()
+            info(
+                " @NEB_CLIMB: full_f and full_v are initialized in init_climb()."
+                "\n\tself.full_f.shape: %s"
+                "\n\tself.full_v.shape: %s"
+                % (str(self.full_f.shape), str(self.full_v.shape)),
+                verbosity.debug)
+
         # Initialize FIRE parameters
         self.v = -self.a * self.nebgrad
         self.a = 0.1
