@@ -748,8 +748,8 @@ def min_trm(f, h, tr):
 
     for i in range(0, 100):
         DXE = gE / (d + lamb)
-        y = np.sum(DXE ** 2) - tr ** 2
-        dy = -2.0 * np.sum((DXE ** 2) / (d + lamb))
+        y = np.sum(DXE**2) - tr**2
+        dy = -2.0 * np.sum((DXE**2) / (d + lamb))
 
         if np.absolute(y / dy) < 1e-5 or np.absolute(y) < 1e-13:
             break

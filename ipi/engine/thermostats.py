@@ -174,7 +174,7 @@ class ThermoLangevin(Thermostat):
     def get_S(self):
         """Calculates the coefficient of the white noise."""
 
-        return np.sqrt(Constants.kb * self.temp * (1 - self.T ** 2))
+        return np.sqrt(Constants.kb * self.temp * (1 - self.T**2))
 
     def __init__(self, temp=1.0, dt=1.0, tau=1.0, ethermo=0.0):
         """Initialises ThermoLangevin.
@@ -470,11 +470,11 @@ class ThermoSVR(Thermostat):
         if (self.ndof - 1) % 2 == 0:
             rg = 2.0 * self.prng.gamma((self.ndof - 1) / 2)
         else:
-            rg = 2.0 * self.prng.gamma((self.ndof - 2) / 2) + self.prng.g ** 2
+            rg = 2.0 * self.prng.gamma((self.ndof - 2) / 2) + self.prng.g**2
 
         alpha2 = (
             self.et
-            + self.K / K * (1 - self.et) * (r1 ** 2 + rg)
+            + self.K / K * (1 - self.et) * (r1**2 + rg)
             + 2.0 * r1 * np.sqrt(self.K / K * self.et * (1 - self.et))
         )
         alpha = np.sqrt(alpha2)
@@ -1114,7 +1114,7 @@ class ThermoFFL(Thermostat):
     def get_S(self):
         """Calculates the coefficient of the white noise."""
 
-        return np.sqrt(Constants.kb * self.temp * (1 - self.T ** 2))
+        return np.sqrt(Constants.kb * self.temp * (1 - self.T**2))
 
     def __init__(self, temp=1.0, dt=1.0, tau=1.0, ethermo=0.0, flip="rescale"):
         """Initialises ThermoFFL.

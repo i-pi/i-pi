@@ -1698,7 +1698,7 @@ class Properties(dobject):
                 self.dbeads.q[b, 3 * i : 3 * (i + 1)] += self.opening(b) * u
             dV = self.dforces.pot - self.forces.pot
 
-            n0 = np.exp(-mass * u_size / (2.0 * beta * Constants.hbar ** 2))
+            n0 = np.exp(-mass * u_size / (2.0 * beta * Constants.hbar**2))
             nx_tot += n0 * np.exp(-dV * beta / float(self.beads.nbeads))
             ncount += 1
 
@@ -1720,7 +1720,7 @@ class Properties(dobject):
 
         eps = abs(float(fd_delta))
         beta = 1.0 / (Constants.kb * self.ensemble.temp)
-        beta2 = beta ** 2
+        beta2 = beta**2
         qc = dstrip(self.beads.qc)
         q = dstrip(self.beads.q)
 
@@ -1817,8 +1817,8 @@ class Properties(dobject):
 
                 eps_prime = (
                     (1.0 + dbeta) * vplus + (1.0 - dbeta) * vminus - 2 * v0
-                ) / (dbeta ** 2 * beta)
-                eps_prime -= 0.5 * (3 * self.beads.natoms) / beta ** 2
+                ) / (dbeta**2 * beta)
+                eps_prime -= 0.5 * (3 * self.beads.natoms) / beta**2
 
                 break
 
@@ -1890,8 +1890,8 @@ class Properties(dobject):
 
                 eps_prime = (
                     (1.0 + dbeta) * vplus + (1.0 - dbeta) * vminus - 2 * v0
-                ) / (dbeta ** 2 * beta)
-                eps_prime -= 0.5 * (3 * self.beads.natoms) / beta ** 2
+                ) / (dbeta**2 * beta)
+                eps_prime -= 0.5 * (3 * self.beads.natoms) / beta**2
 
                 break
 
@@ -2501,7 +2501,7 @@ class Properties(dobject):
             chin += (-pots[b] + pots[b + 1]) / 3.0
 
         chin *= -betaP
-        chin2 = chin ** 2
+        chin2 = chin**2
         chinexp = np.exp(chin)
 
         return np.asarray([chin, chin2, chinexp])
@@ -2522,7 +2522,7 @@ class Properties(dobject):
         ti *= (1.0 / 24.0) / self.nm.omegan2
 
         ti *= -betaP
-        ti2 = ti ** 2
+        ti2 = ti**2
         tiexp = np.exp(ti)
 
         return np.asarray([ti, ti2, tiexp])
