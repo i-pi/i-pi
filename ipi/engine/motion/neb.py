@@ -536,7 +536,8 @@ class NEBMover(Motion):
                 "\n\tself.full_f.shape: %s"
                 "\n\tself.full_v.shape: %s"
                 % (str(self.full_f.shape), str(self.full_v.shape)),
-                verbosity.debug)
+                verbosity.debug,
+            )
 
         # Initialize FIRE parameters
         self.v = -self.a * self.nebgrad

@@ -15,7 +15,7 @@ from ipi.engine.motion import Motion
 from ipi.utils.depend import dstrip
 from ipi.utils.softexit import softexit
 from ipi.utils.mintools import Damped_BFGS, BFGSTRM, FIRE
-from ipi.utils.messages import verbosity as vrb, info #, warning
+from ipi.utils.messages import verbosity as vrb, info  # , warning
 from ipi.engine.beads import Beads
 
 try:
