@@ -116,7 +116,7 @@ def spline_resample(q, nbeads_old, nbeads_new, k=3):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="""A script for linear interpolation of a NEB path"""
+        description="""A script for interpolating a NEB path"""
     )
     parser.add_argument(
         "-m",
@@ -131,13 +131,13 @@ if __name__ == "__main__":
         "--ini",
         type=str,
         default="ini.xyz",
-        help="Filename of the initial geometry when interpolating between 2 points. XYZ expected.",
+        help="Filename of the initial geometry when interpolating between 2 points (-m endpoints). XYZ expected.",
     )
     parser.add_argument(
         "--fin",
         type=str,
         default="fin.xyz",
-        help="Filename of the final geometry when interpolating between 2 points. XYZ expected.",
+        help="Filename of the final geometry when interpolating between 2 points (-m endpoints). XYZ expected.",
     )
     parser.add_argument(
         "--xyz",
@@ -163,7 +163,7 @@ if __name__ == "__main__":
         "-N",
         "--nbeads",
         required=True,
-        help="Desired number of beads (including the endpoints)",
+        help="Desired number of beads (including the endpoints).",
         type=int,
     )
     parser.add_argument(
@@ -171,13 +171,13 @@ if __name__ == "__main__":
         "--order",
         type=int,
         default=3,
-        help="The order of interpolation. 1 and 3 are supported",
+        help="The order of interpolation. 1 (piecewise-linear) and 3 (cubic spline) are supported.",
     )
     parser.add_argument(
         "--units",
         type=str,
         default="None",
-        help="Units to output cell and positions.",
+        help="Units to output cell and positions. Default is keeping units from inputs.",
     )
     parser.add_argument(
         "--activelist",
