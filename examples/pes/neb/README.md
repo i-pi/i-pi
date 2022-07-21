@@ -1,4 +1,4 @@
-Neb example
+NEB example
 -------------
 
 Once the env.sh file in the i-pi root directory has been sourced with
@@ -18,3 +18,11 @@ And the driver:
 ```bash
 i-pi-driver -u -h driver -p 20614 -m zundel
 ```
+
+You can analyze the results using provided gnuplot scripts `plot*.plt`:
+
+```bash
+gnuplot plot-converg.plt
+gnuplot plot-bells.plt
+```
+

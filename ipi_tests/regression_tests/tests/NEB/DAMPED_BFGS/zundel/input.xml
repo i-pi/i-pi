@@ -1,15 +1,15 @@
 <simulation mode='static' verbosity='debug'>
-  <total_steps> 600 </total_steps>
+  <total_steps> 10 </total_steps>
   <ffsocket mode='unix' name='zundel'>
     <latency> 1.0e-2 </latency>
     <slots> 4 </slots>
     <port> 20614 </port>
     <timeout> 600 </timeout>
-    <address> driver </address>
+    <address> localhost </address>
   </ffsocket>
-  <output prefix='dbfgs'>
-    <trajectory stride='2' filename='pos' cell_units='angstrom'> positions{angstrom} </trajectory>
-    <trajectory stride='10' filename='for' cell_units='angstrom'> forces </trajectory>
+  <output prefix='simulation'>
+    <trajectory stride='1' filename='pos' cell_units='angstrom'> positions{angstrom} </trajectory>
+    <trajectory stride='1' filename='for' cell_units='angstrom'> forces </trajectory>
     <properties stride='1' filename='neb'> [step, bead_potentials] </properties>
   </output>
   <system>
