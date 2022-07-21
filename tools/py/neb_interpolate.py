@@ -31,7 +31,6 @@ import argparse
 
 from ipi.utils.io import read_file, read_file_raw, print_file
 from ipi.utils.io.io_units import auto_units
-from ipi.utils.units import unit_to_internal
 
 try:
     import scipy

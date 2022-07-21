@@ -1,4 +1,4 @@
-"""Holds the algorithms to perform string minimal energy path calculations.
+"""Contains the algorithms to perform String minimal energy path calculations.
 
 (C) Karen Fidanyan 2022
 
@@ -15,7 +15,7 @@ from ipi.engine.motion import Motion
 from ipi.utils.depend import dstrip
 from ipi.utils.softexit import softexit
 from ipi.utils.mintools import Damped_BFGS, BFGSTRM, FIRE
-from ipi.utils.messages import verbosity as vrb, info, warning
+from ipi.utils.messages import verbosity as vrb, info #, warning
 from ipi.engine.beads import Beads
 
 try:
@@ -710,234 +710,238 @@ class StringMover(Motion):
 
         11.02.2022: doesn't work yet.
         """
-        self.ptime = self.ttime = 0
-        self.qtime = -time.time()
-        # Shortcuts for prettier expresions
-        nbeads = self.beads.nbeads
-        natoms = self.beads.natoms
-        fixmask = self.stringgm.fixmask
-
-        n_activedim = self.beads.q[0].size - len(self.fixatoms) * 3
-
-        # Resample beads in the beginning of every step.
-        info(" @STRING: resampling beads uniformly.", vrb.debug)
-        self.beads.q[:, fixmask] = spline_resample(
-            self.beads.q[:, fixmask],
-            nbeads,
+        softexit.trigger(
+            status="bad",
+            message="Optimizers for path_step_single_f_call() are not yet implemented.",
         )
-        # Store 'old' resampled positions
-        self.old_x[:] = self.beads.q[1:-1, fixmask]
+        # self.ptime = self.ttime = 0
+        # self.qtime = -time.time()
+        # # Shortcuts for prettier expresions
+        # nbeads = self.beads.nbeads
+        # natoms = self.beads.natoms
+        # fixmask = self.stringgm.fixmask
 
-        # 'Self' instances will be updated in the optimizer,
-        # therefore we store the copy of the potential.
-        # old_stringpot is used later as a convergence criterion.
-        old_stringpot = self.stringpot.copy()
+        # n_activedim = self.beads.q[0].size - len(self.fixatoms) * 3
 
-        if self.mode in ["damped_bfgs", "bfgstrm"]:
-            # All BFGS-family algorithms would have similar structure.
-            # For simplicity, we only use the two which use direct Hessian
-            # not the inverse one.
-            if step == 0:  # TODO add a condition when after the endpoints.
-                # With multiple stages, the size of the hessian is different
-                # at each stage, therefore we check.
-                if self.hessian.shape != (
-                    (nbeads - 2) * n_activedim,
-                    (nbeads - 2) * n_activedim,
-                ):
-                    print("Dimensions of the Hessian and of the beads:")
-                    print((self.hessian.shape, self.beads.q.shape))
-                    softexit.trigger(
-                        status="bad",
-                        message="Wrong Hessian size in String step.",
-                    )
+        # # Resample beads in the beginning of every step.
+        # info(" @STRING: resampling beads uniformly.", vrb.debug)
+        # self.beads.q[:, fixmask] = spline_resample(
+        #     self.beads.q[:, fixmask],
+        #     nbeads,
+        # )
+        # # Store 'old' resampled positions
+        # self.old_x[:] = self.beads.q[1:-1, fixmask]
 
-            if self.mode == "damped_bfgs":
-                info(" @STRING: before Damped_BFGS() call", vrb.debug)
-                info("self.old_x.shape: %s" % str(self.old_x.shape), vrb.debug)
-                info(
-                    "self.stringgrad.shape: %s" % str(self.stringgrad.shape), vrb.debug
-                )
-                info("self.hessian.shape: %s" % str(self.hessian.shape), vrb.debug)
-                Damped_BFGS(
-                    x0=self.old_x.copy(),
-                    fdf=self.stringgm,
-                    fdf0=(self.stringpot, self.stringgrad),
-                    hessian=self.hessian,
-                    big_step=self.big_step,
-                )
-                info(" @STRING: after Damped_BFGS() call", vrb.debug)
+        # # 'Self' instances will be updated in the optimizer,
+        # # therefore we store the copy of the potential.
+        # # old_stringpot is used later as a convergence criterion.
+        # old_stringpot = self.stringpot.copy()
 
-            elif self.mode == "bfgstrm":
-                info(" @STRING: before BFGSTRM() call", vrb.debug)
-                info("self.old_x.shape: %s" % str(self.old_x.shape), vrb.debug)
-                info(
-                    "self.stringgrad.shape: %s" % str(self.stringgrad.shape), vrb.debug
-                )
-                info("self.hessian.shape: %s" % str(self.hessian.shape), vrb.debug)
-                BFGSTRM(
-                    x0=self.old_x.copy(),
-                    u0=self.stringpot,
-                    # BFGSTRM expects force instead of gradient, therefore minus
-                    f0=-self.stringgrad,
-                    h0=self.hessian,
-                    tr=self.tr_trm,
-                    mapper=self.stringgm,
-                    big_step=self.big_step,
-                )
-                info(" @STRING: after BFGSTRM() call", vrb.debug)
+        # if self.mode in ["damped_bfgs", "bfgstrm"]:
+        #     # All BFGS-family algorithms would have similar structure.
+        #     # For simplicity, we only use the two which use direct Hessian
+        #     # not the inverse one.
+        #     if step == 0:  # TODO add a condition when after the endpoints.
+        #         # With multiple stages, the size of the hessian is different
+        #         # at each stage, therefore we check.
+        #         if self.hessian.shape != (
+        #             (nbeads - 2) * n_activedim,
+        #             (nbeads - 2) * n_activedim,
+        #         ):
+        #             print("Dimensions of the Hessian and of the beads:")
+        #             print((self.hessian.shape, self.beads.q.shape))
+        #             softexit.trigger(
+        #                 status="bad",
+        #                 message="Wrong Hessian size in String step.",
+        #             )
 
-        elif self.mode == "fire":
-            # Only initialize velocity for fresh start, not for RESTART
-            if step == 0 and self.v.size == 0:
-                # Mapper has already been called in the step()
-                self.v = -self.a * self.stringgrad
+        #     if self.mode == "damped_bfgs":
+        #         info(" @STRING: before Damped_BFGS() call", vrb.debug)
+        #         info("self.old_x.shape: %s" % str(self.old_x.shape), vrb.debug)
+        #         info(
+        #             "self.stringgrad.shape: %s" % str(self.stringgrad.shape), vrb.debug
+        #         )
+        #         info("self.hessian.shape: %s" % str(self.hessian.shape), vrb.debug)
+        #         Damped_BFGS(
+        #             x0=self.old_x.copy(),
+        #             fdf=self.stringgm,
+        #             fdf0=(self.stringpot, self.stringgrad),
+        #             hessian=self.hessian,
+        #             big_step=self.big_step,
+        #         )
+        #         info(" @STRING: after Damped_BFGS() call", vrb.debug)
 
-            info(" @STRING: calling FIRE", vrb.debug)
-            info(" @FIRE velocity: %s" % str(npnorm(self.v)), vrb.debug)
-            info(" @FIRE alpha: %s" % str(self.a), vrb.debug)
-            info(" @FIRE N down: %s" % str(self.N_dn), vrb.debug)
-            info(" @FIRE N up: %s" % str(self.N_up), vrb.debug)
-            info(" @FIRE dt: %s" % str(self.dt_fire), vrb.debug)
-            self.v, self.a, self.N_dn, self.N_up, self.dt_fire = FIRE(
-                x0=self.old_x.copy(),
-                fdf=self.stringgm,
-                fdf0=(self.stringpot, self.stringgrad),
-                v=self.v,
-                a=self.a,
-                N_dn=self.N_dn,
-                N_up=self.N_up,
-                dt=self.dt_fire,
-                dtmax=self.dtmax,
-            )
-            info(" @STRING: after FIRE call", vrb.debug)
+        #     elif self.mode == "bfgstrm":
+        #         info(" @STRING: before BFGSTRM() call", vrb.debug)
+        #         info("self.old_x.shape: %s" % str(self.old_x.shape), vrb.debug)
+        #         info(
+        #             "self.stringgrad.shape: %s" % str(self.stringgrad.shape), vrb.debug
+        #         )
+        #         info("self.hessian.shape: %s" % str(self.hessian.shape), vrb.debug)
+        #         BFGSTRM(
+        #             x0=self.old_x.copy(),
+        #             u0=self.stringpot,
+        #             # BFGSTRM expects force instead of gradient, therefore minus
+        #             f0=-self.stringgrad,
+        #             h0=self.hessian,
+        #             tr=self.tr_trm,
+        #             mapper=self.stringgm,
+        #             big_step=self.big_step,
+        #         )
+        #         info(" @STRING: after BFGSTRM() call", vrb.debug)
 
-        # TODO: Routines for L-BFGS, SD, CG
-        else:
-            print("Error: mode %s is not supported." % self.mode)
-            softexit.trigger(
-                status="bad",
-                message="Try 'damped_bfgs', 'bfgstrm' or 'fire'. Other algorithms are not implemented for string optimization.",
-            )
+        # elif self.mode == "fire":
+        #     # Only initialize velocity for fresh start, not for RESTART
+        #     if step == 0 and self.v.size == 0:
+        #         # Mapper has already been called in the step()
+        #         self.v = -self.a * self.stringgrad
 
-        # Update positions
-        self.beads.q[:] = self.stringgm.dbeads.q
-        info(" @STRING: bead positions transferred from mapper.", vrb.debug)
+        #     info(" @STRING: calling FIRE", vrb.debug)
+        #     info(" @FIRE velocity: %s" % str(npnorm(self.v)), vrb.debug)
+        #     info(" @FIRE alpha: %s" % str(self.a), vrb.debug)
+        #     info(" @FIRE N down: %s" % str(self.N_dn), vrb.debug)
+        #     info(" @FIRE N up: %s" % str(self.N_up), vrb.debug)
+        #     info(" @FIRE dt: %s" % str(self.dt_fire), vrb.debug)
+        #     self.v, self.a, self.N_dn, self.N_up, self.dt_fire = FIRE(
+        #         x0=self.old_x.copy(),
+        #         fdf=self.stringgm,
+        #         fdf0=(self.stringpot, self.stringgrad),
+        #         v=self.v,
+        #         a=self.a,
+        #         N_dn=self.N_dn,
+        #         N_up=self.N_up,
+        #         dt=self.dt_fire,
+        #         dtmax=self.dtmax,
+        #     )
+        #     info(" @STRING: after FIRE call", vrb.debug)
 
-        # Recalculation won't be triggered because the position is the same.
-        self.stringpot, self.stringgrad = self.stringgm(self.beads.q[1:-1, fixmask])
-        info(" @STRING: forces transferred from mapper.", vrb.debug)
+        # # TODO: Routines for L-BFGS, SD, CG
+        # else:
+        #     print("Error: mode %s is not supported." % self.mode)
+        #     softexit.trigger(
+        #         status="bad",
+        #         message="Try 'damped_bfgs', 'bfgstrm' or 'fire'. Other algorithms are not implemented for string optimization.",
+        #     )
 
-        # This transfers forces from the mapper to the "main" beads,
-        # so that recalculation won't be triggered after the step.
-        # We need to keep forces up to date to be able to output
-        # full potentials and full forces.
-        tmp_f = self.full_f.copy()
-        tmp_f[1:-1] = self.stringgm.rforces.f
-        tmp_v = self.full_v
-        tmp_v[1:-1] = self.stringgm.rforces.pots
-        self.forces.transfer_forces_manual(
-            new_q=[
-                self.beads.q,
-            ],
-            new_v=[
-                tmp_v,
-            ],
-            new_forces=[
-                tmp_f,
-            ],
-        )
+        # # Update positions
+        # self.beads.q[:] = self.stringgm.dbeads.q
+        # info(" @STRING: bead positions transferred from mapper.", vrb.debug)
 
-        # Full-dimensional forces are needed in reduced-beads modes,
-        # i.e. in "endpoints" and "climb".
-        self.full_f = dstrip(self.forces.f)
-        self.full_v = dstrip(self.forces.pots)
+        # # Recalculation won't be triggered because the position is the same.
+        # self.stringpot, self.stringgrad = self.stringgm(self.beads.q[1:-1, fixmask])
+        # info(" @STRING: forces transferred from mapper.", vrb.debug)
 
-        # We need the force component perpendicular to the spline to check convergence.
-        tangent = spline_derv(self.beads.q[:, fixmask], nbeads)[1:-1]
-        f_perp = (
-            self.full_f[1:-1, fixmask]
-            - tangent
-            * np.sum(self.full_f[1:-1, fixmask] * tangent, axis=1)[:, np.newaxis]
-        )
+        # # This transfers forces from the mapper to the "main" beads,
+        # # so that recalculation won't be triggered after the step.
+        # # We need to keep forces up to date to be able to output
+        # # full potentials and full forces.
+        # tmp_f = self.full_f.copy()
+        # tmp_f[1:-1] = self.stringgm.rforces.f
+        # tmp_v = self.full_v
+        # tmp_v[1:-1] = self.stringgm.rforces.pots
+        # self.forces.transfer_forces_manual(
+        #     new_q=[
+        #         self.beads.q,
+        #     ],
+        #     new_v=[
+        #         tmp_v,
+        #     ],
+        #     new_forces=[
+        #         tmp_f,
+        #     ],
+        # )
 
-        self.qtime += time.time()
+        # # Full-dimensional forces are needed in reduced-beads modes,
+        # # i.e. in "endpoints" and "climb".
+        # self.full_f = dstrip(self.forces.f)
+        # self.full_v = dstrip(self.forces.pots)
 
-        # Check preliminary convergence: only the perpendicular component of the force
-        # at the NOT resampled positions - because this costs nothing.
-        if np.amax(np.abs(f_perp)) <= self.tolerances["force"]:
-            info(
-                " @STRING: The force before resampling has converged. Step: %i\n"
-                % step,
-                vrb.medium,
-            )
-            info(" @STRING: resampling beads and checking again.", vrb.debug)
-            self.beads.q[:, fixmask] = spline_resample(
-                self.beads.q[:, fixmask],
-                nbeads,
-            )
-            # dx = current resampled position - previous resampled position.
-            dx = np.amax(np.abs(self.beads.q[1:-1, fixmask] - self.old_x))
+        # # We need the force component perpendicular to the spline to check convergence.
+        # tangent = spline_derv(self.beads.q[:, fixmask], nbeads)[1:-1]
+        # f_perp = (
+        #     self.full_f[1:-1, fixmask]
+        #     - tangent
+        #     * np.sum(self.full_f[1:-1, fixmask] * tangent, axis=1)[:, np.newaxis]
+        # )
 
-            # Here we check forces on the resampled positions, which costs
-            # an additional force evaluation. We again call it via the mapper
-            # to omit the endpoints.
-            self.stringpot, self.stringgrad = self.stringgm(self.beads.q[1:-1, fixmask])
-            tangent = spline_derv(self.beads.q[:, fixmask], nbeads)[1:-1]
-            f_perp = (
-                self.stringgrad
-                - tangent * np.sum(self.stringgrad * tangent, axis=1)[:, np.newaxis]
-            )
-            if (
-                (
-                    np.amax(np.abs(self.stringpot - old_stringpot)) / (nbeads * natoms)
-                    <= self.tolerances["energy"]
-                )
-                and (np.amax(np.abs(f_perp)) <= self.tolerances["force"])
-                and (dx <= self.tolerances["position"])
-            ):
-                info(
-                    decor
-                    + " @STRING: path optimization converged. Step: %i\n" % step
-                    + decor,
-                    vrb.medium,
-                )
+        # self.qtime += time.time()
 
-                # Set climbing stage indicator after convergence of the path
-                if self.use_climb:
-                    self.stage = "climb"
-                else:
-                    self.stage = "converged"
-                    softexit.trigger(
-                        status="success",
-                        message="String MEP finished successfully at STEP %i." % step,
-                    )
+        # # Check preliminary convergence: only the perpendicular component of the force
+        # # at the NOT resampled positions - because this costs nothing.
+        # if np.amax(np.abs(f_perp)) <= self.tolerances["force"]:
+        #     info(
+        #         " @STRING: The force before resampling has converged. Step: %i\n"
+        #         % step,
+        #         vrb.medium,
+        #     )
+        #     info(" @STRING: resampling beads and checking again.", vrb.debug)
+        #     self.beads.q[:, fixmask] = spline_resample(
+        #         self.beads.q[:, fixmask],
+        #         nbeads,
+        #     )
+        #     # dx = current resampled position - previous resampled position.
+        #     dx = np.amax(np.abs(self.beads.q[1:-1, fixmask] - self.old_x))
 
-            else:  # the 2nd check didn't pass
-                info(
-                    " @STRING: Not converged, deltaEnergy = %.8f, tol = %.8f per atom"
-                    % (
-                        np.amax(np.abs(self.stringpot - old_stringpot))
-                        / (nbeads * natoms),
-                        self.tolerances["energy"],
-                    ),
-                    vrb.debug,
-                )
-                info(
-                    " @STRING: Not converged, f_perp_2 = %.8f, tol = %f"
-                    % (np.amax(np.abs(self.stringgrad)), self.tolerances["force"]),
-                    vrb.debug,
-                )
-                info(
-                    " @STRING: Not converged, deltaX = %.8f, tol = %.8f"
-                    % (dx, self.tolerances["position"]),
-                    vrb.debug,
-                )
-        else:  # the 1st check didn't pass
-            info(
-                " @STRING: Not converged, f_perp_1 = %.8f, tol = %f"
-                % (np.amax(np.abs(self.stringgrad)), self.tolerances["force"]),
-                vrb.debug,
-            )
+        #     # Here we check forces on the resampled positions, which costs
+        #     # an additional force evaluation. We again call it via the mapper
+        #     # to omit the endpoints.
+        #     self.stringpot, self.stringgrad = self.stringgm(self.beads.q[1:-1, fixmask])
+        #     tangent = spline_derv(self.beads.q[:, fixmask], nbeads)[1:-1]
+        #     f_perp = (
+        #         self.stringgrad
+        #         - tangent * np.sum(self.stringgrad * tangent, axis=1)[:, np.newaxis]
+        #     )
+        #     if (
+        #         (
+        #             np.amax(np.abs(self.stringpot - old_stringpot)) / (nbeads * natoms)
+        #             <= self.tolerances["energy"]
+        #         )
+        #         and (np.amax(np.abs(f_perp)) <= self.tolerances["force"])
+        #         and (dx <= self.tolerances["position"])
+        #     ):
+        #         info(
+        #             decor
+        #             + " @STRING: path optimization converged. Step: %i\n" % step
+        #             + decor,
+        #             vrb.medium,
+        #         )
+
+        #         # Set climbing stage indicator after convergence of the path
+        #         if self.use_climb:
+        #             self.stage = "climb"
+        #         else:
+        #             self.stage = "converged"
+        #             softexit.trigger(
+        #                 status="success",
+        #                 message="String MEP finished successfully at STEP %i." % step,
+        #             )
+
+        #     else:  # the 2nd check didn't pass
+        #         info(
+        #             " @STRING: Not converged, deltaEnergy = %.8f, tol = %.8f per atom"
+        #             % (
+        #                 np.amax(np.abs(self.stringpot - old_stringpot))
+        #                 / (nbeads * natoms),
+        #                 self.tolerances["energy"],
+        #             ),
+        #             vrb.debug,
+        #         )
+        #         info(
+        #             " @STRING: Not converged, f_perp_2 = %.8f, tol = %f"
+        #             % (np.amax(np.abs(self.stringgrad)), self.tolerances["force"]),
+        #             vrb.debug,
+        #         )
+        #         info(
+        #             " @STRING: Not converged, deltaX = %.8f, tol = %.8f"
+        #             % (dx, self.tolerances["position"]),
+        #             vrb.debug,
+        #         )
+        # else:  # the 1st check didn't pass
+        #     info(
+        #         " @STRING: Not converged, f_perp_1 = %.8f, tol = %f"
+        #         % (np.amax(np.abs(self.stringgrad)), self.tolerances["force"]),
+        #         vrb.debug,
+        #     )
 
     def climb_step(self, step=None):
         """Climbing image optimization. It uses StringClimbGrMapper
@@ -1280,227 +1284,229 @@ def print_distances(q, nbeads):
 # Damped BFGS to use in String ONLY. It resamples the spline
 # right after the quasi-Newton step.
 # Has no line search and no TRM.
-def Damped_BFGS_String(x0, fdf, fdf0, hessian, big_step):
-    """BFGS, damped as described in Nocedal, Wright (2nd ed.) Procedure 18.2
-    The purpose is SOLELY using it for String optimization, because it reparameterizes
-    the string right after quasi-Newton step. The reason for such complication is
-    to avoid calculating forces twice - on resampled and non-resampled positions.
-
-    Written for a DIRECT Hessian B, not for the inverse H.
-
-    I use flattened vectors inside this function, restoring the shape only when needed.
-    I always keep x0 in the original shape.
-
-    Does one step.
-
-    Arguments:
-      x0: initial point
-      fdf: function and gradient (mapper)
-      fdf0: initial function and gradient values
-      hessian: approximate Hessian for the BFGS algorithm
-      big_step: limit on step length. It is defined differently
-                  compared to other optimization algorithms, take care.
-
-    Returns:
-      quality: minus cosine of the (gradient, dx) angle.
-               Needed for the step length adjustment.
-    """
-
-    info(" @DampedBFGS_String: Started.", vrb.debug)
-    _, g0 = fdf0
-    g0 = g0.flatten()
-
-    # Nocedal's notation
-    B = hessian
-
-    # Calculate direction
-    # When the inverse itself is not needed, people recommend solve(), not inv().
-    info(" @DampedBFGS_String: sk = np.linalg.solve(B, -g0) ...", vrb.debug)
-    info(
-        "              The code randomly crashes here with some versions of Numpy "
-        "based on OpenBLAS.\n"
-        "              If this happens, use Numpy based on MKL, e.g. from Anaconda.",
-        vrb.debug,
-    )
-    info("Operands:", vrb.debug)
-    info("%s,  %s" % (type(B), str(B.shape)), vrb.debug)
-    info("%s,  %s" % (type(g0), str(g0.shape)), vrb.debug)
-    sk = np.linalg.solve(B, -g0)
-    info(" @DampedBFGS_String: Calculated direction.", vrb.debug)
-
-    # Cosine of the (f, dx) angle
-    quality = -np.dot(sk / np.linalg.norm(sk), g0 / np.linalg.norm(g0))
-    info(" @DampedBFGS_String: Direction quality: %.4f." % quality, vrb.debug)
-
-    # I use maximal cartesian atomic displacement as a measure of step length
-    maxdispl = np.amax(np.linalg.norm(sk.reshape(-1, 3), axis=1))
-    info(" @DampedBFGS_String: big_step = %.6f" % big_step, vrb.debug)
-    if maxdispl > big_step:
-        info(
-            " @DampedBFGS_String: maxdispl before scaling: %.6f bohr" % maxdispl,
-            vrb.debug,
-        )
-        sk *= big_step / maxdispl
-
-    info(
-        " @DampedBFGS_String: maxdispl:                %.6f bohr"
-        % (np.amax(np.linalg.norm(sk.reshape(-1, 3), axis=1))),
-        vrb.debug,
-    )
-
-    # Force call
-    _, g = fdf(x0 + sk.reshape(x0.shape))
-    g = g.flatten()
-    # coordinates CHECKED
-
-    # Update hessian
-    yk = g - g0
-    skyk = np.dot(sk, yk)
-
-    # Equation 18.15 in Nocedal
-    theta = 1.0
-    Bsk = np.dot(B, sk)
-    sBs = np.dot(sk, Bsk)
-    # Damped update if rhok isn't sufficiently positive
-    if skyk < 0.2 * sBs:
-        theta = (0.8 * sBs) / (sBs - skyk)
-        info(
-            " @DampedBFGS_String: damping update of the Hessian; "
-            "(direction dot d_gradient) is small. "
-            "theta := %.6f" % theta,
-            vrb.debug,
-        )
-        yk = theta * yk + (1 - theta) * Bsk
-        skyk = np.dot(sk, yk)
-    else:
-        info(" @DampedBFGS_String: Update of the Hessian, no damping.", vrb.debug)
-
-    info(
-        " @DampedBFGS_String: (s_k dot y_k) before reciprocating: %e" % skyk,
-        vrb.debug,
-    )
-    try:
-        rhok = 1.0 / skyk
-    except:
-        warning(" @DampedBFGS_String: caught ZeroDivisionError in 1/skyk.", vrb.high)
-        rhok = 1e5
-
-    # Compute BFGS term (eq. 18.16 in Nocedal)
-    B += np.outer(yk, yk) * rhok - np.outer(Bsk, Bsk) / sBs
-
-    print("det(Hessian): %f" % np.linalg.det(B))
-    print("Condition number: %f" % np.linalg.cond(B))
-    eigvals = np.real(np.linalg.eigvals(B))
-    print("Positive definite: %r" % np.all(eigvals > 0))
-    print("Eigenvalues of the Hessian:")
-    with np.printoptions(threshold=10000, linewidth=100000):
-        print(np.sort(eigvals))
-
-    # If small numbers are found on the diagonal of the Hessian,
-    # add small positive numbers. 1 Ha/Bohr^2 is ~97.2 eV/ang^2.
-    if np.any(eigvals < 1e-1):
-        info(
-            " @DampedBFGS_String: stabilizing the diagonal of the Hessian.",
-            vrb.debug,
-        )
-        B += 1e-2 * np.eye(len(B))
-
-    return quality
+# TODO: It's a placeholder to start from.
+# def Damped_BFGS_String(x0, fdf, fdf0, hessian, big_step):
+#    """BFGS, damped as described in Nocedal, Wright (2nd ed.) Procedure 18.2
+#    The purpose is SOLELY using it for String optimization, because it reparameterizes
+#    the string right after quasi-Newton step. The reason for such complication is
+#    to avoid calculating forces twice - on resampled and non-resampled positions.
+#
+#    Written for a DIRECT Hessian B, not for the inverse H.
+#
+#    I use flattened vectors inside this function, restoring the shape only when needed.
+#    I always keep x0 in the original shape.
+#
+#    Does one step.
+#
+#    Arguments:
+#      x0: initial point
+#      fdf: function and gradient (mapper)
+#      fdf0: initial function and gradient values
+#      hessian: approximate Hessian for the BFGS algorithm
+#      big_step: limit on step length. It is defined differently
+#                  compared to other optimization algorithms, take care.
+#
+#    Returns:
+#      quality: minus cosine of the (gradient, dx) angle.
+#               Needed for the step length adjustment.
+#    """
+#
+#    info(" @DampedBFGS_String: Started.", vrb.debug)
+#    _, g0 = fdf0
+#    g0 = g0.flatten()
+#
+#    # Nocedal's notation
+#    B = hessian
+#
+#    # Calculate direction
+#    # When the inverse itself is not needed, people recommend solve(), not inv().
+#    info(" @DampedBFGS_String: sk = np.linalg.solve(B, -g0) ...", vrb.debug)
+#    info(
+#        "              The code randomly crashes here with some versions of Numpy "
+#        "based on OpenBLAS.\n"
+#        "              If this happens, use Numpy based on MKL, e.g. from Anaconda.",
+#        vrb.debug,
+#    )
+#    info("Operands:", vrb.debug)
+#    info("%s,  %s" % (type(B), str(B.shape)), vrb.debug)
+#    info("%s,  %s" % (type(g0), str(g0.shape)), vrb.debug)
+#    sk = np.linalg.solve(B, -g0)
+#    info(" @DampedBFGS_String: Calculated direction.", vrb.debug)
+#
+#    # Cosine of the (f, dx) angle
+#    quality = -np.dot(sk / np.linalg.norm(sk), g0 / np.linalg.norm(g0))
+#    info(" @DampedBFGS_String: Direction quality: %.4f." % quality, vrb.debug)
+#
+#    # I use maximal cartesian atomic displacement as a measure of step length
+#    maxdispl = np.amax(np.linalg.norm(sk.reshape(-1, 3), axis=1))
+#    info(" @DampedBFGS_String: big_step = %.6f" % big_step, vrb.debug)
+#    if maxdispl > big_step:
+#        info(
+#            " @DampedBFGS_String: maxdispl before scaling: %.6f bohr" % maxdispl,
+#            vrb.debug,
+#        )
+#        sk *= big_step / maxdispl
+#
+#    info(
+#        " @DampedBFGS_String: maxdispl:                %.6f bohr"
+#        % (np.amax(np.linalg.norm(sk.reshape(-1, 3), axis=1))),
+#        vrb.debug,
+#    )
+#
+#    # Force call
+#    _, g = fdf(x0 + sk.reshape(x0.shape))
+#    g = g.flatten()
+#    # coordinates CHECKED
+#
+#    # Update hessian
+#    yk = g - g0
+#    skyk = np.dot(sk, yk)
+#
+#    # Equation 18.15 in Nocedal
+#    theta = 1.0
+#    Bsk = np.dot(B, sk)
+#    sBs = np.dot(sk, Bsk)
+#    # Damped update if rhok isn't sufficiently positive
+#    if skyk < 0.2 * sBs:
+#        theta = (0.8 * sBs) / (sBs - skyk)
+#        info(
+#            " @DampedBFGS_String: damping update of the Hessian; "
+#            "(direction dot d_gradient) is small. "
+#            "theta := %.6f" % theta,
+#            vrb.debug,
+#        )
+#        yk = theta * yk + (1 - theta) * Bsk
+#        skyk = np.dot(sk, yk)
+#    else:
+#        info(" @DampedBFGS_String: Update of the Hessian, no damping.", vrb.debug)
+#
+#    info(
+#        " @DampedBFGS_String: (s_k dot y_k) before reciprocating: %e" % skyk,
+#        vrb.debug,
+#    )
+#    try:
+#        rhok = 1.0 / skyk
+#    except:
+#        warning(" @DampedBFGS_String: caught ZeroDivisionError in 1/skyk.", vrb.high)
+#        rhok = 1e5
+#
+#    # Compute BFGS term (eq. 18.16 in Nocedal)
+#    B += np.outer(yk, yk) * rhok - np.outer(Bsk, Bsk) / sBs
+#
+#    print("det(Hessian): %f" % np.linalg.det(B))
+#    print("Condition number: %f" % np.linalg.cond(B))
+#    eigvals = np.real(np.linalg.eigvals(B))
+#    print("Positive definite: %r" % np.all(eigvals > 0))
+#    print("Eigenvalues of the Hessian:")
+#    with np.printoptions(threshold=10000, linewidth=100000):
+#        print(np.sort(eigvals))
+#
+#    # If small numbers are found on the diagonal of the Hessian,
+#    # add small positive numbers. 1 Ha/Bohr^2 is ~97.2 eV/ang^2.
+#    if np.any(eigvals < 1e-1):
+#        info(
+#            " @DampedBFGS_String: stabilizing the diagonal of the Hessian.",
+#            vrb.debug,
+#        )
+#        B += 1e-2 * np.eye(len(B))
+#
+#    return quality
 
 
 # FIRE to use in String ONLY. It resamples the spline
 # right after FIRE displaces atoms.
-def FIRE_String(
-    x0,
-    fdf,
-    fdf0,
-    v=None,
-    a=0.1,
-    N_dn=0,
-    N_up=0,
-    dt=0.1,
-    maxstep=0.5,
-    dtmax=1.0,
-    dtmin=1e-5,
-    Ndelay=5,
-    Nmax=2000,
-    finc=1.1,
-    fdec=0.5,
-    astart=0.1,
-    fa=0.99,
-):
-    """FIRE algorithm based on
-    Bitzek et al, Phys. Rev. Lett. 97, 170201 (2006) and
-    Guénolé, J. et al.  Comp. Mat. Sci. 175, 109584 (2020).
-    Semi-implicit Euler integration used.
-    Done by Guoyuan Liu <liuthepro@outlook.com>, May 2021.
-
-    FIRE does not rely on energy, therefore it is suitable for NEB calculation, where
-    the energy is not conservative. Basic principle: accelerate towards force gradient
-    (downhill direction) and stop immediately when going uphill.
-    Try adjusting dt, dtmax, dtmin for optimal performance.
-
-    Arguments:
-        x0: initial beads positions
-        fdf: energy and function mapper. call fdf(x) to update beads position and froces
-        fdf0: initial value of energy and gradient
-        v: current velocity
-        a: velocity mixing factor, in the paper it is called alpha
-        fa: a decrement factor
-        astart: initial a value
-        N_dn: number of steps since last downhill direction
-        N_up: number of steps since last uphill direction
-        dt: time interval
-        dtmax: max dt (increase when uphill)
-        dtmin: min dt (decrease when downhill)
-        finc: dt increment factor
-        fdec: dt decrement factor
-        Ndelay: min steps required to be in one direction before adjust dt and a
-        Nmax: max consecutive steps in uphill direction before trigger exit
-
-    Returns:
-        v, a, N, dt since they are dynamically adjusted
-    """
-    info(" @FIRE_String being called", vrb.debug)
-    _, g0 = fdf0
-    force = -g0
-
-    p = np.vdot(force, v)
-    # downhill
-    if p > 0.0:
-        N_dn += 1
-        N_up = 0
-        if N_dn > Ndelay:
-            dt = min(dt * finc, dtmax)
-            a = a * fa
-    # uphill
-    else:
-        N_dn = 0
-        N_up += 1
-        if N_up > Nmax:
-            softexit.trigger("@FIRE is stuck for %d steps. We stop here." % N_up)
-        dt = max(dt * fdec, dtmin)
-        a = astart
-        # correct uphill motion
-        x0 -= 0.5 * dt * v
-        # stop moving in uphill direction
-        v = np.zeros(v.shape)
-
-    # accelerate
-    v += dt * force
-    # change velocity direction with inertia
-    if p > 0.0:
-        f_unit = force / np.linalg.norm(force)
-        v = (1 - a) * v + a * np.linalg.norm(v) * f_unit
-    # update posistion
-    dx = dt * v
-    # check max dx
-    normdx = np.linalg.norm(dx)
-    if normdx > maxstep:
-        dx = maxstep * dx / normdx
-    x0 += dx
-
-    info(" @FIRE_String calling a gradient mapper to update position", vrb.debug)
-    fdf(x0)
-
-    return v, a, N_dn, N_up, dt
+# TODO: It's a placeholder to start from.
+# def FIRE_String(
+#    x0,
+#    fdf,
+#    fdf0,
+#    v=None,
+#    a=0.1,
+#    N_dn=0,
+#    N_up=0,
+#    dt=0.1,
+#    maxstep=0.5,
+#    dtmax=1.0,
+#    dtmin=1e-5,
+#    Ndelay=5,
+#    Nmax=2000,
+#    finc=1.1,
+#    fdec=0.5,
+#    astart=0.1,
+#    fa=0.99,
+# ):
+#    """FIRE algorithm based on
+#    Bitzek et al, Phys. Rev. Lett. 97, 170201 (2006) and
+#    Guénolé, J. et al.  Comp. Mat. Sci. 175, 109584 (2020).
+#    Semi-implicit Euler integration used.
+#    Done by Guoyuan Liu <liuthepro@outlook.com>, May 2021.
+#
+#    FIRE does not rely on energy, therefore it is suitable for NEB calculation, where
+#    the energy is not conservative. Basic principle: accelerate towards force gradient
+#    (downhill direction) and stop immediately when going uphill.
+#    Try adjusting dt, dtmax, dtmin for optimal performance.
+#
+#    Arguments:
+#        x0: initial beads positions
+#        fdf: energy and function mapper. call fdf(x) to update beads position and froces
+#        fdf0: initial value of energy and gradient
+#        v: current velocity
+#        a: velocity mixing factor, in the paper it is called alpha
+#        fa: a decrement factor
+#        astart: initial a value
+#        N_dn: number of steps since last downhill direction
+#        N_up: number of steps since last uphill direction
+#        dt: time interval
+#        dtmax: max dt (increase when uphill)
+#        dtmin: min dt (decrease when downhill)
+#        finc: dt increment factor
+#        fdec: dt decrement factor
+#        Ndelay: min steps required to be in one direction before adjust dt and a
+#        Nmax: max consecutive steps in uphill direction before trigger exit
+#
+#    Returns:
+#        v, a, N, dt since they are dynamically adjusted
+#    """
+#    info(" @FIRE_String being called", vrb.debug)
+#    _, g0 = fdf0
+#    force = -g0
+#
+#    p = np.vdot(force, v)
+#    # downhill
+#    if p > 0.0:
+#        N_dn += 1
+#        N_up = 0
+#        if N_dn > Ndelay:
+#            dt = min(dt * finc, dtmax)
+#            a = a * fa
+#    # uphill
+#    else:
+#        N_dn = 0
+#        N_up += 1
+#        if N_up > Nmax:
+#            softexit.trigger("@FIRE is stuck for %d steps. We stop here." % N_up)
+#        dt = max(dt * fdec, dtmin)
+#        a = astart
+#        # correct uphill motion
+#        x0 -= 0.5 * dt * v
+#        # stop moving in uphill direction
+#        v = np.zeros(v.shape)
+#
+#    # accelerate
+#    v += dt * force
+#    # change velocity direction with inertia
+#    if p > 0.0:
+#        f_unit = force / np.linalg.norm(force)
+#        v = (1 - a) * v + a * np.linalg.norm(v) * f_unit
+#    # update posistion
+#    dx = dt * v
+#    # check max dx
+#    normdx = np.linalg.norm(dx)
+#    if normdx > maxstep:
+#        dx = maxstep * dx / normdx
+#    x0 += dx
+#
+#    info(" @FIRE_String calling a gradient mapper to update position", vrb.debug)
+#    fdf(x0)
+#
+#    return v, a, N_dn, N_up, dt
