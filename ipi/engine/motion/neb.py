@@ -313,11 +313,6 @@ class NEBMover(Motion):
         old_nebpotential: bead potentials from previous iteration
         old_nebgradient: gradient wrt springs from previous iteration
         hessian_bfgs: Hessian for (damped) BFGS
-        ls_options:
-            tolerance: tolerance for exit of line search
-            iter: maximum iterations for line search per MD step
-            step: initial step size for SD/CG
-            adaptive: flag for adaptive step size
         tolerances:
             energy: tolerance on change in energy for exiting minimization
             force: tolerance on force/change in force for exiting minimization
@@ -349,12 +344,10 @@ class NEBMover(Motion):
         old_nebgradient=np.zeros(0, float),
         old_direction=np.zeros(0, float),
         hessian_bfgs=np.eye(0),
-        ls_options={"tolerance": 1e-5, "iter": 100.0, "step": 1e-3, "adaptive": 1.0},
         tolerances={"energy": 1e-5, "force": 1e-5, "position": 1e-5},
         corrections_lbfgs=5,
         qlist_lbfgs=np.zeros(0, float),
         glist_lbfgs=np.zeros(0, float),
-        tr_trm=np.zeros(0, float),
         dtmax_fire=1.0,
         v_fire=np.zeros(0, float),
         alpha_fire=0.1,
@@ -379,7 +372,6 @@ class NEBMover(Motion):
         super(NEBMover, self).__init__(fixcom=fixcom, fixatoms=fixatoms)
 
         # Optimization options
-        self.ls_options = ls_options
         self.tolerances = tolerances
         self.mode = mode
         self.big_step = biggest_step
@@ -401,7 +393,6 @@ class NEBMover(Motion):
         self.qlist = qlist_lbfgs
         self.glist = glist_lbfgs
         self.scale = scale_lbfgs
-        self.tr_trm = tr_trm
         self.endpoints = endpoints
         self.spring = spring
         self.tangent = tangent

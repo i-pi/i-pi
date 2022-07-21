@@ -64,23 +64,6 @@ class InputNEB(InputDictionary):
     }
 
     fields = {
-        "ls_options": (
-            InputDictionary,
-            {
-                "dtype": [float, int, float, float],
-                "help": """Options for line search methods. Includes:
-                              tolerance: stopping tolerance for the search,
-                              grad_tolerance: stopping tolerance on gradient for
-                              BFGS line search,
-                              iter: the maximum number of iterations,
-                              step: initial step for bracketing,
-                              adaptive: whether to update initial step.
-                              """,
-                "options": ["tolerance", "iter", "step", "adaptive"],
-                "default": [1e-6, 100, 1e-3, 1.0],
-                "dimension": ["energy", "undefined", "length", "undefined"],
-            },
-        ),
         "tolerances": (
             InputDictionary,
             {
@@ -200,15 +183,6 @@ class InputNEB(InputDictionary):
                 "help": "The number of past vectors to store for L-BFGS.",
             },
         ),
-        "tr_trm": (
-            InputArray,
-            {
-                "dtype": float,
-                "default": input_default(factory=np.zeros, args=(0,)),
-                "help": "Starting value for the trust radius for BFGSTRM.",
-                "dimension": "length",
-            },
-        ),
         "dtmax_fire": (
             InputValue,
             {
@@ -320,7 +294,6 @@ class InputNEB(InputDictionary):
     def store(self, neb):
         if neb == {}:
             return
-        self.ls_options.store(neb.ls_options)
         self.tolerances.store(neb.tolerances)
         self.mode.store(neb.mode)
         self.old_coord.store(neb.old_x)
@@ -333,7 +306,6 @@ class InputNEB(InputDictionary):
         self.hessian_bfgs.store(neb.hessian)
         self.qlist_lbfgs.store(neb.qlist)
         self.glist_lbfgs.store(neb.glist)
-        self.tr_trm.store(neb.tr_trm)
         self.v_fire.store(neb.v)
         self.alpha_fire.store(neb.a)
         self.N_down_fire.store(neb.N_dn)
