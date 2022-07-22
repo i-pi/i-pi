@@ -1583,7 +1583,7 @@ def nichols(f0, f1, d, dynmax, m3, big_step, mode=1):
 
         d_x = alpha * (gE) / (lamb - d)
 
-        if d[0] < 0 or np.vdot(d_x, d_x) > big_step ** 2:
+        if d[0] < 0 or np.vdot(d_x, d_x) > big_step**2:
             lamb = d[0] - np.absolute(gE[0] / big_step)
             d_x = alpha * (gE) / (lamb - d)
 
