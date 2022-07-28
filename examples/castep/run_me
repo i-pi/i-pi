@@ -52,7 +52,7 @@ if ( "$nbeads" == "" ) then
 endif
 
 echo Starting i-pi with $nbeads beads for system $seed
-i-pi ${seed}.xml > log &
+i-pi ${seed}.xml > log & sleep 5
 
 #spawn castep instances in separate1 directories for each bead
 set i = 1
