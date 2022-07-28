@@ -7,10 +7,10 @@
 
                   -- Running the CASTEP example --
 
- * As long as you have CASTEP v23 or later, then it will run without any need to
+ * As long as you have CASTEP v22 or later, then it will run without any need to
 patch or modify the CASTEP source.
 
- * CASTEP v23 has built-in support for internet sockets. You can specify the socket port
+ * CASTEP v22 has built-in support for internet sockets. You can specify the socket port
 and hostname via the keywords in the CASTEP param file.
 
  * A simple launching script has been provided. This will run the example if you type:
