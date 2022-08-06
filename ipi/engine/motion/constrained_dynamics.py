@@ -204,7 +204,9 @@ class ConstraintSolverBase(dobject):
     def bind(self, beads):
 
         if beads.nbeads > 1:
-            raise ValueError("Constrained dynamics is only implemented for the case of classical MD (nbeads=1)")
+            raise ValueError(
+                "Constrained dynamics is only implemented for the case of classical MD (nbeads=1)"
+            )
 
         self.beads = beads
         # Sets the initial value of the constraint positions
