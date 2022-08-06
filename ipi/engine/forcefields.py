@@ -1179,13 +1179,28 @@ class FFCommittee(ForceField):
             # V = V_baseline + s_b^2/(s_c^2+s_b^2) V_committe
 
             s_b2 = self.baseline_uncertainty**2
-            uncertain_frc = self.alpha**2 * np.mean(
-                [(pot - mean_pot) * (frc - mean_frc) for pot, frc in zip(pots, frcs)],
-                axis=0,
+            nmodels = len(pots)
+            uncertain_frc = (
+                self.alpha**2
+                * np.sum(
+                    [
+                        (pot - mean_pot) * (frc - mean_frc)
+                        for pot, frc in zip(pots, frcs)
+                    ],
+                    axis=0,
+                )
+                / (nmodels - 1)
             )
-            uncertain_vir = self.alpha**2 * np.mean(
-                [(pot - mean_pot) * (vir - mean_vir) for pot, vir in zip(pots, virs)],
-                axis=0,
+            uncertain_vir = (
+                self.alpha**2
+                * np.sum(
+                    [
+                        (pot - mean_pot) * (vir - mean_vir)
+                        for pot, vir in zip(pots, virs)
+                    ],
+                    axis=0,
+                )
+                / (nmodels - 1)
             )
 
             # Computes the final average energetics
