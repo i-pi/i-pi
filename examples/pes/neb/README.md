@@ -26,3 +26,4 @@ gnuplot plot-converg.plt
 gnuplot plot-bells.plt
 ```
 
+You can extract certain path as a single .xyz file using `tools/bash/get-certain-path.sh`.

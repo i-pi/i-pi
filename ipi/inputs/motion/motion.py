@@ -329,20 +329,24 @@ class InputMotionBase(Input):
                 **self.optimizer.fetch()
             )
         elif self.mode.fetch() == "neb":
-
             #            raise ValueError(
             #                "The nudged elastic band calculation has been "
             #                "temporarily disabled until further bug-fixes."
             #            )
-            print("WARNING: NEB IS EXPERIMENTAL, DON'T TRUST THE RESULTS!")
             sc = NEBMover(
                 fixcom=self.fixcom.fetch(),
                 fixatoms=self.fixatoms.fetch(),
                 **self.neb_optimizer.fetch()
             )
         elif self.mode.fetch() == "string":
-
-            print("WARNING: STRING IS EXPERIMENTAL, DON'T TRUST THE RESULTS!")
+            softexit.trigger(
+                status="bad",
+                message=(
+                    "String method is experimental: not guaranteed to work correctly "
+                    "and makes twice more force calls than it is expected to.\n"
+                    "We stop here. If you want to proceed, comment out this trigger."
+                ),
+            )
             sc = StringMover(
                 fixcom=self.fixcom.fetch(),
                 fixatoms=self.fixatoms.fetch(),

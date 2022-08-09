@@ -121,6 +121,7 @@ if __name__ == "__main__":
         "-m",
         "--mode",
         type=str,
+        choices=["endpoints", "xyz","chk"],
         default="endpoints",
         help="Mode: 'endpoints' to interpolate between 2 geometries provided separately,\n"
         "   'xyz' to interpolate between multiple geometries in a single file,\n"
@@ -208,18 +209,9 @@ if __name__ == "__main__":
     ), "Only one active list is allowed."
 
     if mode == "endpoints":
+        # Reading data from 2 geometries
         input_ini = args.ini
         input_fin = args.fin
-    elif mode == "xyz":
-        input_xyz = args.xyz
-    elif mode == "chk":
-        input_chk = args.chk
-    else:
-        print("Error: cannot recognize mode %s." % mode)
-        exit(-1)
-
-    if mode == "endpoints":
-        # Reading data from 2 geometries
         if os.path.exists(input_ini):
             with open(input_ini, "r") as fd_ini:
                 inipos = []
@@ -290,6 +282,7 @@ if __name__ == "__main__":
 
     elif mode == "xyz":
         # Reading beads from a xyz file
+        input_xyz = args.xyz
         if os.path.exists(input_xyz):
             with open(input_xyz, "r") as fd_xyz:
                 path = []
@@ -327,6 +320,7 @@ if __name__ == "__main__":
         # Reading beads from a checkpoint
         from ipi.engine.simulation import Simulation
 
+        input_chk = args.chk
         if os.path.exists(input_chk):
             simulation = Simulation.load_from_xml(
                 input_chk, custom_verbosity="low", request_banner=False, read_only=True

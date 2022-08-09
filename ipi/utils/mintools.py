@@ -1003,16 +1003,11 @@ def Damped_BFGS(x0, fdf, fdf0, hessian, big_step):
     # Compute BFGS term (eq. 18.16 in Nocedal)
     B += np.outer(yk, yk) * rhok - np.outer(Bsk, Bsk) / sBs
 
-    print("det(Hessian): %f" % np.linalg.det(B))
-    print("Condition number: %f" % np.linalg.cond(B))
-    eigvals = np.real(np.linalg.eigvals(B))
-    print("Positive definite: %r" % np.all(eigvals > 0))
-    print("Eigenvalues of the Hessian:")
-    with np.printoptions(threshold=10000, linewidth=100000):
-        print(np.sort(eigvals))
-
     # If small numbers are found on the diagonal of the Hessian,
-    # add small positive numbers. 1 Ha/Bohr^2 is ~97.2 eV/ang^2.
+    # add small positive numbers. Somewhat dirty solution,
+    # but it increased stability in some tests.
+    # 1 Ha/Bohr^2 is ~97.2 eV/ang^2.
+    eigvals = np.real(np.linalg.eigvals(B))
     if np.any(eigvals < 1e-1):
         info(" @DampedBFGS: stabilizing the diagonal of the Hessian.", verbosity.debug)
         B += 1e-2 * np.eye(len(B))

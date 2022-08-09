@@ -1,7 +1,8 @@
-"""Holds the algorithms to perform nudged elastic band calculations.
+"""Holds the algorithms to perform nudged elastic band (NEB) calculations.
+J. Chem. Phys. 113, 9901 (2000); https://doi.org/10.1063/1.1329672
 
-Algorithms are first implemented by Michele Ceriotti and Benjamin Helfrecht, 2015.
-Considerably restructured by Karen Fidanyan in 2021.
+The algorithms are first implemented by Michele Ceriotti and Benjamin Helfrecht, 2015.
+Considerably reworked by Karen Fidanyan in 2021.
 """
 
 # This file is part of i-PI.
@@ -24,10 +25,6 @@ np.set_printoptions(threshold=10000, linewidth=1000)  # Remove in cleanup
 __all__ = ["NEBGradientMapper", "NEBClimbGrMapper", "NEBMover"]
 
 
-# THIS NEB IMPLEMENTATION USES THE "IMPROVED TANGENTS" OF HENKELMAN AND JONSSON, 2000.
-# THE "OLD IMPLEMENTATION" IS PRESERVED IN COMMENTS
-
-
 class NEBGradientMapper(object):
     """Creation of the multi-dimensional function that will be minimized.
         Functional analog of a GradientMapper in geop.py
@@ -37,6 +34,8 @@ class NEBGradientMapper(object):
     Attributes:
         kappa: spring constants
         tangent: plain or improved tangents
+          "plain":    J. Chem. Phys. 113, 9901 (2000); https://doi.org/10.1063/1.1329672
+          "improved": J. Chem. Phys. 113, 9978 (2000); https://doi.org/10.1063/1.1323224
     """
 
     def __init__(self, tangent=None):
@@ -610,6 +609,11 @@ class NEBMover(Motion):
         # Endpoints are optimized or optimization is not required
         elif self.stage == "neb":
             # Fetch spring constants
+            if self.spring["varsprings"] == True:
+                softexit.trigger(
+                    status="bad",
+                    message="Variable springs in NEB are not implemented yet.",
+                )
             self.nebgm.kappa = self.spring["kappa"]
 
             self.ptime = self.ttime = 0
