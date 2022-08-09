@@ -1,0 +1,40 @@
+<simulation verbosity="high">
+  <output prefix="simulation">
+      <properties stride='1' filename='out'>
+        [ step, time{femtosecond}, conserved, temperature{kelvin}, potential{electronvolt}, pressure_md{gigapascal} ]
+      </properties>
+      <trajectory filename='fc' stride='1'>f_centroid</trajectory>
+      <trajectory filename='xc' stride='1'>x_centroid{angstrom}</trajectory>
+      <properties filename='cell' stride='1'>[cell_h{angstrom}]</properties>
+      <properties filename='stress' stride='1'>[virial_md{bar}]</properties>
+<checkpoint filename="chk" stride="2" overwrite="true"/>
+  </output>
+  <prng><seed> 3924</seed></prng>
+  <total_steps>10</total_steps>
+    <ffsocket mode='inet' name='castep'>
+         <port> 31415 </port>
+         <address> localhost </address>
+   </ffsocket>  
+<system>
+    <initialize nbeads="4">
+      <file mode="xyz"> h2o.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 300  </velocities>
+    </initialize>
+    <forces>
+      <force forcefield="castep"> </force>
+    </forces>
+    <ensemble>
+      <temperature units="kelvin"> 300 </temperature>
+      <pressure units="gigapascal" > 1 </pressure>
+    </ensemble>
+    <motion mode="dynamics">
+      <fixcom>True</fixcom>
+      <dynamics mode="nvt">
+        <timestep units="femtosecond"> 0.5 </timestep>
+        <thermostat mode="langevin">
+        <tau units="femtosecond">50</tau> 
+        </thermostat>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>
