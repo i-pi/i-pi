@@ -121,7 +121,7 @@ if __name__ == "__main__":
         "-m",
         "--mode",
         type=str,
-        choices=["endpoints", "xyz","chk"],
+        choices=["endpoints", "xyz", "chk"],
         default="endpoints",
         help="Mode: 'endpoints' to interpolate between 2 geometries provided separately,\n"
         "   'xyz' to interpolate between multiple geometries in a single file,\n"
