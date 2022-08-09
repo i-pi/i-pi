@@ -77,7 +77,7 @@ class Runner_regression(Runner):
         if self.check_xyz_output:
             self._check_xyz_output(cwd)
 
-    def _check_numpy_output(self, cwd):
+    def _check_numpy_output(self, cwd, rtol=1e-7, atol=1e-15):
         """This function checks if the numpy-accessible datafiles are 'all_close' to the
         reference file provided
 
@@ -109,17 +109,19 @@ class Runner_regression(Runner):
 
                 try:
                     np.testing.assert_allclose(
-                        test_output, ref_output, rtol=1.0e-7, atol=1.0e-15
+                        test_output, ref_output, rtol=rtol, atol=atol
                     )
-                    # print("No anomaly during the regtest for {}".format(refname))
                 except AssertionError:
                     raise AssertionError(
-                        "ANOMALY: Disagreement between reference and {} in {}".format(
-                            fname, str((self.parent / cwd).absolute())
+                        "ANOMALY: Disagreement between reference and {} in {}. Absolute discrepancy (mean,max): {},{}.".format(
+                            fname,
+                            str((self.parent / cwd).absolute()),
+                            np.abs(test_output - ref_output).mean(),
+                            np.abs(test_output - ref_output).max(),
                         )
                     )
 
-    def _check_xyz_output(self, cwd):
+    def _check_xyz_output(self, cwd, rtol=1e-7, atol=1e-8):
         """This function checks if the ref_simulation.XXXXX.xyz files are 'all_close'
         to the reference file provided.
 
@@ -179,10 +181,7 @@ class Runner_regression(Runner):
                     test_xyz = np.array(testt)
 
                 try:
-                    np.testing.assert_allclose(
-                        test_xyz, ref_xyz, rtol=1.0e-7, atol=1.0e-8
-                    )
-                    # print("No anomaly during the regtest for {}".format(refname))
+                    np.testing.assert_allclose(test_xyz, ref_xyz, rtol=rtol, atol=atol)
                 except AssertionError:
                     raise AssertionError(
                         "ANOMALY: {} in {}".format(
