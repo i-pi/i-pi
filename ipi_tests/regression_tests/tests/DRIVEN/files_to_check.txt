@@ -6,4 +6,4 @@ ref_simulation.for_0.xyz                 xyz
 ref_simulation.for_1.xyz                 xyz
 ref_simulation.pos_0.xyz                 xyz
 ref_simulation.pos_1.xyz                 xyz
-ref_simulation.out                       numpy
+ref_simulation.out                       numpy   2,1e-4,1e-4 3,1e-4,1e-4 4,1e-4,1e-4 5,1e-4,1e-4
