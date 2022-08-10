@@ -30,8 +30,23 @@ To add a new regression test please provide:
    - file_to_check.txt specifying the files serving as reference with their
      respective filenames
 
+     the syntax of file_to_check.txt includes a two-line header, followed 
+     by a list of files. each line contains the name of the reference file 
+     (see below), the format (xyz, or numpy for files that can be read by
+     numpy.loadtxt). Both are read as a 2D array, and one can optionally
+     specify a list of columns that should be compared (this is useful e.g.
+     to ignore noisy quantities). Each column entry should be 
+     
+     icol[,rtol,atol]
+
+     where icol is an integer (0-based) index optionally followed by a 
+     specification of rtol and atol tolerances, that correspond to the 
+     parameters of numpy.allclose. 
+
      for an existing example, please see:
-	tests/INSTANTON/100K/files_to_check.txt
+	tests/INSTANTON/100K/files_to_check.txt 
+    or
+    tests/GEOP/LBFGS/zundel/files_to_check.txt
 
    - reference files that are listed in the files_to_check.txt file. Currently,
      the available formats are .xyz and numpy-accessible which should be
