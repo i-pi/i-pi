@@ -73,7 +73,10 @@ class Runner_regression(Runner):
                     info_tol = line.split()[2].split(",")
                     if info_tol[0] == "all":
                         listcol = info_tol[0]
-                        listtol.append((float(info_tol[1]), float(info_tol[2])))
+                        try:
+                            listtol.append((float(info_tol[1]), float(info_tol[2])))
+                        except:
+                            listtol.append(None)
                     else:
                         # We have tol values for specific columns
                         for ll in line.split()[2:]:
