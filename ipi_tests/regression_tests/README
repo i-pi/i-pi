@@ -42,8 +42,13 @@ To add a new regression test please provide:
      where icol is an integer (0-based) index optionally followed by a 
      specification of rtol and atol tolerances, that correspond to the 
      parameters of numpy.allclose. 
+    
+     Alternatively, it is posible to speciy the same rtol and atol for all
+     the columns (only numpy data for the moment) as
+ 
+     all[,rtol,atol]
 
-     for an existing example, please see:
+     For existing examples, please see:
 	tests/INSTANTON/200K/files_to_check.txt  [standard case]
         tests/NEB/FIRE/zundel/files_to_check.txt [verbose case] 
         tests/NEB/DAMPED_BFGS/zundel/files_to_check.txt [super verbose case] 
