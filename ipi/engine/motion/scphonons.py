@@ -40,7 +40,7 @@ except ImportError as e:
 
 class SCPhononsMover(Motion):
     """
-    Self consistent phonons method.
+    Self-consistent phonons method.
     """
 
     def __init__(
@@ -189,7 +189,8 @@ class SCPhononsMover(Motion):
     def step(self, step=None):
         if self.isc == self.max_iter:
             softexit.trigger(
-                " @SCP: Reached maximum iterations. Terminating the SCP calculation."
+                status="bad",
+                message=" @SCP: Reached maximum iterations. Terminating the SCP calculation.",
             )
         if self.imc == 0:
             self.phononator.reset()

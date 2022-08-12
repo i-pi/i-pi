@@ -18,7 +18,7 @@ Quick Setup and Test
 To use i-PI with already existing drivers, install and update using Pip:
 
 Last version::
- 
+
    $ python -m pip install git+https://github.com/i-pi/i-pi.git
 
 Last Release::
@@ -79,7 +79,7 @@ The monitoring can be interrupted with CTRL+C when the run has finished (5000 st
 
 ### Run the automatic test suite
 
-The automatic test suite can be run by calling the i-pi-test script. 
+The automatic test suite can be run by calling the i-pi-test script.
 You need to have the `pytest` package installed
 
 ::
@@ -91,7 +91,7 @@ See more details in the README file inside the ipi_tests folder.
 Contributing
 ------------
 
-If you have new features you want to implement into i-PI, your contributions are much welcome. 
+If you have new features you want to implement into i-PI, your contributions are much welcome.
 See `CONTRIBUTING.md` for a brief set of style guidelines and best practices. Before embarking
 into a substantial project, it might be good to get in touch with the developers, e.g. by opening
-a wishlist issue. 
+a wishlist issue.
