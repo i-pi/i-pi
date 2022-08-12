@@ -178,7 +178,9 @@ class ForceBead(dobject):
                 # if we return, we may as well output wrong numbers, or mess up things.
                 # so we can only call soft-exit and wait until that is done. then kill the thread
                 # we are in.
-                softexit.trigger(" @ FORCES : cannot return so will die off here")
+                softexit.trigger(
+                    message=" @ FORCES : cannot return so will die off here"
+                )
                 while softexit.exiting:
                     time.sleep(self.ff.latency)
                 sys.exit()

@@ -60,11 +60,12 @@ __all__ = ["min_brent"]
 
 import numpy as np
 import math
-from ipi.utils.messages import verbosity, info
+
+# import time
+from ipi.utils.softexit import softexit
+from ipi.utils.messages import verbosity, info, warning
 
 # Bracketing function
-
-
 def bracket(fdf, fdf0=None, x0=0.0, init_step=1.0e-3):
     """Given an initial point, determines the initial bracket for the minimum
     Arguments:
@@ -427,17 +428,17 @@ def min_approx(fdf, x0, fdf0, d0, big_step, tol, itmax):
         fdf0 = fdf(x0)
     f0, df0 = fdf0
     if d0 is None:
-        d0 = -df0 / np.sqrt(np.dot(df0.flatten(), df0.flatten()))
+        d0 = -df0 / np.linalg.norm(df0.flatten())
     x = np.zeros(n)
     alf = 1.0e-4
 
     # Step size
-    stepsum = np.sqrt(np.dot(d0.flatten(), d0.flatten()))
+    stepsum = np.linalg.norm(d0.flatten())
 
     # Scale if attempted step is too large
     if stepsum > big_step:
         info(" @MINIMIZE: Scaled step size for line search", verbosity.debug)
-        d0 = np.multiply(d0, big_step / stepsum)
+        d0 *= big_step / stepsum
 
     slope = np.dot(df0.flatten(), d0.flatten())
 
@@ -571,10 +572,10 @@ def BFGS(x0, d0, fdf, fdf0, invhessian, big_step, tol, itmax):
     d_g = np.subtract(g, g0)
     hdg = np.dot(invhessian, d_g.flatten())
 
-    fac = np.dot(d_g.flatten(), d_x.flatten())
+    fac = np.vdot(d_g, d_x)
     fae = np.dot(d_g.flatten(), hdg)
-    sumdg = np.dot(d_g.flatten(), d_g.flatten())
-    sumxi = np.dot(d_x.flatten(), d_x.flatten())
+    sumdg = np.vdot(d_g, d_g)
+    sumxi = np.vdot(d_x, d_x)
 
     # Skip update if not 'fac' sufficiently positive
     if fac > np.sqrt(zeps * sumdg * sumxi):
@@ -648,7 +649,7 @@ def BFGSTRM(x0, u0, f0, h0, tr, mapper, big_step):
             if tr > big_step:
                 tr[0] = big_step
 
-    # After accept, Update  Hessian
+    # After accept, update the Hessian
     d_f = np.subtract(f, f0)
     TRM_UPDATE(d_x.flatten(), d_f.flatten(), h0)
 
@@ -668,7 +669,7 @@ def TRM_UPDATE(dx, df, h):
     dg = -df[:, np.newaxis]
     dg_t = dg.T
 
-    # JCP, 117,9160. Eq 44
+    # Bakken and Helgaker, JCP, 117,9160. Eq 44
     h1 = np.dot(dg, dg_t)
     h1 = h1 / (np.dot(dg_t, dx))
     h2a = np.dot(h, dx)
@@ -712,25 +713,25 @@ def min_trm(f, h, tr):
     gEt = np.dot(f, w)  # Change of basis  ##
     gE = gEt.T  # dimension nx1
 
-    # Count negative,zero,and positive eigenvalues
-    neg = (d < -0.0000001).sum()
-    zero = (d < 0.0000001).sum() - neg
+    # Count negative, zero and positive eigenvalues
+    neg = (d < -1e-7).sum()
+    zero = (d < 1e-7).sum() - neg
     # pos = d.size - neg - zero
 
     # Pull out zero-mode gE
     if zero > 0:
         gE[neg : neg + zero] = np.zeros((zero, 1))
 
-    # Real work start here
+    # Real work starts here
     DXE = np.zeros((ndim, 1))
 
     for i in range(0, ndim):
-        if np.absolute(d[i]) > 0.00001:
+        if np.absolute(d[i]) > 1e-5:
             DXE[i] = gE[i] / d[i]
 
     min_d = np.amin(d)
 
-    # Check if h is possitive definite and use trivial result if within trust radius
+    # Check if h is positive definite and use trivial result if within trust radius
     if min_d > 0.0:
 
         if neg != 0:
@@ -740,7 +741,7 @@ def min_trm(f, h, tr):
             DX = DX.reshape(shape)
             return DX
 
-    # If we haven't luck. Let's start with the iteration
+    # If we don't have luck, let's start with the iteration
     lamb_min = max(0.0, -min_d)
     lamb_max = 1e30
     lamb = min(lamb_min + 0.5, 0.5 * (lamb_min + lamb_max))
@@ -750,7 +751,7 @@ def min_trm(f, h, tr):
         y = np.sum(DXE**2) - tr**2
         dy = -2.0 * np.sum((DXE**2) / (d + lamb))
 
-        if np.absolute(y / dy) < 0.00001 or np.absolute(y) < 1e-13:
+        if np.absolute(y / dy) < 1e-5 or np.absolute(y) < 1e-13:
             break
 
         if y < 0.0:
@@ -890,6 +891,224 @@ def L_BFGS(x0, d0, fdf, qlist, glist, fdf0, big_step, tol, itmax, m, scale, k):
 
     d0[:] = d
     info(" @MINIMIZE: Updated search direction", verbosity.debug)
+
+
+# Damped BFGS to use in NEB. Has no line search and no TRM.
+def Damped_BFGS(x0, fdf, fdf0, hessian, big_step):
+    """BFGS, damped as described in Nocedal, Wright (2nd ed.) Procedure 18.2
+    The purpose is mostly using it for NEB optimization, but it is capable of
+    plain geometry optimization also.
+    Written for a DIRECT Hessian B, not for the inverse H.
+
+    Currently it doesn't use min_approx, TRM or any other step determination,
+    just the simplest (invhessian dot gradient) step, as in aimsChain.
+    The reason is that both LS and TRM require energy, and the energy
+    of NEB springs is ill-defined because of all projections that we do.
+    This may be improved later, but first we need to have NEB working.
+
+    Inside this function I use flattened vectors, restoring shape only when needed.
+    I always keep x0 in the original shape.
+
+    Does one step.
+
+    Arguments:
+      x0: initial point
+      fdf: function and gradient (mapper)
+      fdf0: initial function and gradient values
+      hessian: approximate Hessian for the BFGS algorithm
+      big_step: limit on step length. It is defined differently
+                  compared to other optimization algorithms, take care.
+
+    Returns:
+      quality: minus cosine of the (gradient, dx) angle.
+               Needed for the step length adjustment.
+    """
+
+    info(" @DampedBFGS: Started.", verbosity.debug)
+    _, g0 = fdf0
+    g0 = g0.flatten()
+
+    # Nocedal's notation
+    B = hessian
+
+    # Calculate direction
+    # When the inverse itself is not needed, people recommend solve(), not inv().
+    info(" @DampedBFGS: sk = np.linalg.solve(B, -g0) ...", verbosity.debug)
+    info(
+        "              The code randomly crashes here with some versions of Numpy "
+        "based on OpenBLAS.\n"
+        "              If this happens, use Numpy based on MKL, e.g. from Anaconda.",
+        verbosity.debug,
+    )
+    info("Operands:", verbosity.debug)
+    info("%s,  %s" % (type(B), str(B.shape)), verbosity.debug)
+    info("%s,  %s" % (type(g0), str(g0.shape)), verbosity.debug)
+    sk = np.linalg.solve(B, -g0)
+    info(" @DampedBFGS: Calculated direction.", verbosity.debug)
+
+    # Cosine of the (f, dx) angle
+    quality = -np.dot(sk / np.linalg.norm(sk), g0 / np.linalg.norm(g0))
+    info(" @DampedBFGS: Direction quality: %.4f." % quality, verbosity.debug)
+
+    # I use maximal cartesian atomic displacement as a measure of step length
+    maxdispl = np.amax(np.linalg.norm(sk.reshape(-1, 3), axis=1))
+    info(" @DampedBFGS: big_step = %.6f" % big_step, verbosity.debug)
+    if maxdispl > big_step:
+        info(
+            " @DampedBFGS: maxdispl before scaling: %.6f bohr" % maxdispl,
+            verbosity.debug,
+        )
+        sk *= big_step / maxdispl
+
+    info(
+        " @DampedBFGS: maxdispl:                %.6f bohr"
+        % (np.amax(np.linalg.norm(sk.reshape(-1, 3), axis=1))),
+        verbosity.debug,
+    )
+
+    # Force call
+    _, g = fdf(x0 + sk.reshape(x0.shape))
+    g = g.flatten()
+    # coordinates CHECKED
+
+    # Update hessian
+    yk = g - g0
+    skyk = np.dot(sk, yk)
+
+    # Equation 18.15 in Nocedal
+    theta = 1.0
+    Bsk = np.dot(B, sk)
+    sBs = np.dot(sk, Bsk)
+    # Damped update if rhok isn't sufficiently positive
+    if skyk < 0.2 * sBs:
+        theta = (0.8 * sBs) / (sBs - skyk)
+        info(
+            " @DampedBFGS: damping update of the Hessian; "
+            "(direction dot d_gradient) is small. "
+            "theta := %.6f" % theta,
+            verbosity.debug,
+        )
+        yk = theta * yk + (1 - theta) * Bsk
+        skyk = np.dot(sk, yk)
+    else:
+        info(" @DampedBFGS: Update of the Hessian, no damping.", verbosity.debug)
+
+    info(" @DampedBFGS: (s_k dot y_k) before reciprocating: %e" % skyk, verbosity.debug)
+    try:
+        rhok = 1.0 / skyk
+    except:
+        warning(" @DampedBFGS: caught ZeroDivisionError in 1/skyk.", verbosity.high)
+        rhok = 1e5
+
+    # Compute BFGS term (eq. 18.16 in Nocedal)
+    B += np.outer(yk, yk) * rhok - np.outer(Bsk, Bsk) / sBs
+
+    # If small numbers are found on the diagonal of the Hessian,
+    # add small positive numbers. Somewhat dirty solution,
+    # but it increased stability in some tests.
+    # 1 Ha/Bohr^2 is ~97.2 eV/ang^2.
+    eigvals = np.real(np.linalg.eigvals(B))
+    if np.any(eigvals < 1e-1):
+        info(" @DampedBFGS: stabilizing the diagonal of the Hessian.", verbosity.debug)
+        B += 1e-2 * np.eye(len(B))
+
+    return quality
+
+
+def FIRE(
+    x0,
+    fdf,
+    fdf0,
+    v=None,
+    a=0.1,
+    N_dn=0,
+    N_up=0,
+    dt=0.1,
+    maxstep=0.5,
+    dtmax=1.0,
+    dtmin=1e-5,
+    Ndelay=5,
+    Nmax=2000,
+    finc=1.1,
+    fdec=0.5,
+    astart=0.1,
+    fa=0.99,
+):
+    """FIRE algorithm based on
+    Bitzek et al, Phys. Rev. Lett. 97, 170201 (2006) and
+    Guénolé, J. et al.  Comp. Mat. Sci. 175, 109584 (2020).
+    Semi-implicit Euler integration used.
+    Done by Guoyuan Liu <liuthepro@outlook.com>, May 2021.
+
+    FIRE does not rely on energy, therefore it is suitable for NEB calculation, where
+    the energy is not conservative. Basic principle: accelerate towards force gradient
+    (downhill direction) and stop immediately when going uphill.
+    Try adjusting dt, dtmax, dtmin for optimal performance.
+
+    Arguments:
+        x0: initial beads positions
+        fdf: energy and function mapper. call fdf(x) to update beads position and froces
+        fdf0: initial value of energy and gradient
+        v: current velocity
+        a: velocity mixing factor, in the paper it is called alpha
+        fa: a decrement factor
+        astart: initial a value
+        N_dn: number of steps since last downhill direction
+        N_up: number of steps since last uphill direction
+        dt: time interval
+        dtmax: max dt (increase when uphill)
+        dtmin: min dt (decrease when downhill)
+        finc: dt increment factor
+        fdec: dt decrement factor
+        Ndelay: min steps required to be in one direction before adjust dt and a
+        Nmax: max consecutive steps in uphill direction before trigger exit
+
+    Returns:
+        v, a, N, dt since they are dynamically adjusted
+    """
+    info(" @FIRE being called", verbosity.debug)
+    _, g0 = fdf0
+    force = -g0
+
+    p = np.vdot(force, v)
+    # downhill
+    if p > 0.0:
+        N_dn += 1
+        N_up = 0
+        if N_dn > Ndelay:
+            dt = min(dt * finc, dtmax)
+            a = a * fa
+    # uphill
+    else:
+        N_dn = 0
+        N_up += 1
+        if N_up > Nmax:
+            softexit.trigger("@FIRE is stuck for %d steps. We stop here." % N_up)
+        dt = max(dt * fdec, dtmin)
+        a = astart
+        # correct uphill motion
+        x0 -= 0.5 * dt * v
+        # stop moving in uphill direction
+        v = np.zeros(v.shape)
+
+    # accelerate
+    v += dt * force
+    # change velocity direction with inertia
+    if p > 0.0:
+        f_unit = force / np.linalg.norm(force)
+        v = (1 - a) * v + a * np.linalg.norm(v) * f_unit
+    # update posistion
+    dx = dt * v
+    # check max dx
+    normdx = np.linalg.norm(dx)
+    if normdx > maxstep:
+        dx = maxstep * dx / normdx
+    x0 += dx
+
+    info(" @FIRE: calling a gradient mapper to update position", verbosity.debug)
+    fdf(x0)
+
+    return v, a, N_dn, N_up, dt
 
 
 # Bracketing for NEB, TODO: DEBUG THIS IF USING SD OR CG OPTIONS FOR NEB
@@ -1227,20 +1446,19 @@ def L_BFGS_nls(
     dg = df0
 
     # Step size
-    stepsize = np.sqrt(np.dot(d0.flatten(), d0.flatten()))
+    stepsize = np.linalg.norm(d0.flatten())
 
     # First iteration; use initial step
     if k == 0:
         scale = 1.0
         while (
-            np.sqrt(np.dot(g.flatten(), g.flatten()))
-            >= np.sqrt(np.dot(df0.flatten(), df0.flatten()))
-            or np.isnan(np.sqrt(np.dot(g.flatten(), g.flatten()))) is True
-            or np.isinf(np.sqrt(np.dot(g.flatten(), g.flatten()))) is True
+            np.linalg.norm(g.flatten()) >= np.linalg.norm(df0.flatten())
+            or np.isnan(np.linalg.norm(g.flatten()))
+            or np.isinf(np.linalg.norm(g.flatten()))
         ):
             x = np.add(
                 x0,
-                (scale * init_step * d0 / np.sqrt(np.dot(d0.flatten(), d0.flatten()))),
+                (scale * init_step * d0 / np.linalg.norm(d0.flatten())),
             )
             scale *= 0.1
             fx, g = fdf(x)
@@ -1248,11 +1466,11 @@ def L_BFGS_nls(
 
         # Scale if attempted step is too large
         if stepsize > big_step:
-            d0 = big_step * d0 / np.sqrt(np.dot(d0.flatten(), d0.flatten()))
+            d0 = big_step * d0 / np.linalg.norm(d0.flatten())
             info(" @MINIMIZE: Scaled step size", verbosity.debug)
 
         x = np.add(x0, d0)
-        print("step size:", np.sqrt(np.dot(d0.flatten(), d0.flatten())))
+        print("step size:", np.linalg.norm(d0.flatten()))
         fx, g = fdf(x)
 
     info(" @MINIMIZE: Started L-BFGS", verbosity.debug)
@@ -1324,7 +1542,7 @@ def nichols(f0, f1, d, dynmax, m3, big_step, mode=1):
     IN    f0      = physical forces        (n,)
           f1      = spring forces
           d       = dynmax eigenvalues
-          dynmax  = dynmax       (n-m x n-m) with m = # external modes
+          dynmax  = dynmax       (n x n-m) with m = # external modes
           m3      = mass vector
     OUT   DX      = displacement in cartesian basis
 
@@ -1360,7 +1578,7 @@ def nichols(f0, f1, d, dynmax, m3, big_step, mode=1):
 
         d_x = alpha * (gE) / (lamb - d)
 
-        if d[0] < 0 or np.dot(d_x.flatten(), d_x.flatten()) > big_step**2:
+        if d[0] < 0 or np.vdot(d_x, d_x) > big_step**2:
             lamb = d[0] - np.absolute(gE[0] / big_step)
             d_x = alpha * (gE) / (lamb - d)
 
