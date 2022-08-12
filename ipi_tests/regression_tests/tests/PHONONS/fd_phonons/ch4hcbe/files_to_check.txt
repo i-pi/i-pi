@@ -2,7 +2,7 @@
 ----------------------------------------------------------
 ref_vib.xc.xyz                  xyz
 ref_vib.out                     numpy
-ref_vib.phonons.dynmat          numpy
+ref_vib.phonons.dynmat          numpy      0,1e-6,1e-6 1,1e-6,1e-6 2,1e-6,1e-6
 ref_vib.phonons.eigval          numpy
-ref_vib.phonons_full.hess       numpy
-ref_vib.phonons.hess            numpy
+ref_vib.phonons_full.hess       numpy      0,1e-6,1e-6 1,1e-6,1e-6 2,1e-6,1e-6
+ref_vib.phonons.hess            numpy      0,1e-6,1e-6 1,1e-6,1e-6 2,1e-6,1e-6
