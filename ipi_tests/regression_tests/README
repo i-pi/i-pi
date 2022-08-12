@@ -44,9 +44,9 @@ To add a new regression test please provide:
      parameters of numpy.allclose. 
 
      for an existing example, please see:
-	tests/INSTANTON/100K/files_to_check.txt 
-    or
-    tests/GEOP/LBFGS/zundel/files_to_check.txt
+	tests/INSTANTON/200K/files_to_check.txt  [standard case]
+     or
+        tests/GEOP/LBFGS/zundel/files_to_check.txt [advanced case]
 
    - reference files that are listed in the files_to_check.txt file. Currently,
      the available formats are .xyz and numpy-accessible which should be
