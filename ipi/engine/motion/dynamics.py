@@ -80,7 +80,8 @@ class Dynamics(Motion):
                 thermostat.__class__.__name__ is ("ThermoPILE_G" or "ThermoNMGLEG ")
             ) and (len(fixatoms) > 0):
                 softexit.trigger(
-                    "!! Sorry, fixed atoms and global thermostat on the centroid not supported. Use a local thermostat. !!"
+                    status="bad",
+                    message="!! Sorry, fixed atoms and global thermostat on the centroid not supported. Use a local thermostat. !!",
                 )
             self.thermostat = thermostat
 
