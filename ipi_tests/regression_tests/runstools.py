@@ -65,17 +65,28 @@ class Runner_regression(Runner):
             if nl > 1:
                 self.files.append(line.split()[0])
                 self.forms.append(line.split()[1])
+
                 if len(line.split()) > 2:
-                    listll = []
+
+                    listcol = []
                     listtol = []
-                    for ll in line.split()[2:]:
-                        lltol = ll.split(",")
-                        listll.append(int(lltol[0]))
-                        if len(lltol) > 1:
-                            listtol.append((float(lltol[1]), float(lltol[2])))
-                        else:
+                    info_tol = line.split()[2].split(",")
+                    if info_tol[0] == "all":
+                        listcol = info_tol[0]
+                        try:
+                            listtol.append((float(info_tol[1]), float(info_tol[2])))
+                        except:
                             listtol.append(None)
-                    self.usecol.append(listll)
+                    else:
+                        # We have tol values for specific columns
+                        for ll in line.split()[2:]:
+                            lltol = ll.split(",")
+                            listcol.append(int(lltol[0]))
+                            if len(lltol) > 1:
+                                listtol.append((float(lltol[1]), float(lltol[2])))
+                            else:
+                                listtol.append(None)
+                    self.usecol.append(listcol)
                     self.usetol.append(listtol)
                 else:
                     self.usecol.append(None)
@@ -97,9 +108,11 @@ class Runner_regression(Runner):
         for ii, refname in enumerate(self.files):
             if self.forms[ii] == "numpy":
                 try:
-                    ref_output = np.loadtxt(
-                        Path(cwd) / refname, usecols=self.usecol[ii]
-                    )
+                    if type(self.usecol[ii]) is list:
+                        usecol = self.usecol[ii]
+                    else:
+                        usecol = None
+                    ref_output = np.loadtxt(Path(cwd) / refname, usecols=usecol)
                 except IOError:
                     raise IOError(
                         'Please provide a reference properties output named "{}"'.format(
@@ -114,7 +127,7 @@ class Runner_regression(Runner):
                     )
 
                 fname = refname[4:]
-                test_output = np.loadtxt(self.tmp_dir / fname, usecols=self.usecol[ii])
+                test_output = np.loadtxt(self.tmp_dir / fname, usecols=usecol)
 
                 try:
                     if self.usetol[ii] is None:
