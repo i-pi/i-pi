@@ -113,7 +113,7 @@ class Replay(Motion):
                     "the number of files should be equal to the number of beads.",
                     verbosity.low,
                 )
-                softexit.trigger(" # Error in replay input.")
+                softexit.trigger(status="bad", message=" # Error in replay input.")
         while True:
             self.rstep += 1
             try:
@@ -162,12 +162,16 @@ class Replay(Motion):
                     mycell = simchk.cell.fetch()
                     mybeads = simchk.beads.fetch()
                     self.beads.q[:] = mybeads.q
-                    softexit.trigger(" # Read single checkpoint")
+                    softexit.trigger(
+                        status="success", message=" # Read single checkpoint"
+                    )
                 # do not assign cell if it contains an invalid value (typically missing cell in the input)
                 if mycell.V > 0:
                     self.cell.h[:] = mycell.h
             except EOFError:
-                softexit.trigger(" # Finished reading re-run trajectory")
+                softexit.trigger(
+                    status="success", message=" # Finished reading re-run trajectory"
+                )
             if (step is None) or (self.rstep > step):
                 break
 

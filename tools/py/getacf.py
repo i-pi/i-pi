@@ -34,7 +34,7 @@ def compute_acf(
     bsize = int(block_length)
     npad = int(length_zeropadding)
     ftbox = str(spectral_windowing)
-    labels = str(labels)
+    labels = str(labels).split()
     timestep = str(timestep).split()
     fskip = int(skip)
 

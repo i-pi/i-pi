@@ -746,7 +746,9 @@ class IMF(DummyCalculator):
             " @NM: ALL QUANTITIES PER PRIMITIVE UNIT CELL (WHERE APPLICABLE) \n",
             verbosity.low,
         )
-        softexit.trigger(" @NM: The IMF calculation has terminated.")
+        softexit.trigger(
+            status="success", message=" @NM: The IMF calculation has terminated."
+        )
 
 
 class VSCF(IMF):
@@ -856,7 +858,7 @@ class VSCF(IMF):
             self.evecs_vscf = np.zeros((self.dof, self.nbasis, self.nbasis))
 
     def step(self, step=None):
-        """Computes the Born Oppenheimer curve along a normal mode."""
+        """Computes the Born-Oppenheimer curve along a normal mode."""
 
         # Performs some basic initialization.
         if step == 0:
@@ -1490,4 +1492,6 @@ class VSCF(IMF):
         Triggers a soft exit.
         """
 
-        softexit.trigger(" @NM: The VSCF calculation has terminated.")
+        softexit.trigger(
+            status="success", message=" @NM: The VSCF calculation has terminated."
+        )
