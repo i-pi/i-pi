@@ -38,7 +38,7 @@ class MetaDyn(Smotion):
                 k = bc.ffield
                 if k not in self.metaff:
                     continue  # only does metad for the indicated forcefield
-                f = s.ensemble.bias.ff[k]                
+                f = s.ensemble.bias.ff[k]
                 if not hasattr(
                     f, "mtd_update"
                 ):  # forcefield does not expose mtd_update interface
@@ -59,6 +59,6 @@ class MetaDyn(Smotion):
                             for fb in fc._forces:
                                 dd(fb).ufvx.taint()
                     meta_pot_after = s.ensemble.bias.pot
-                    # updates the conserved quantity with the change in bias so that 
+                    # updates the conserved quantity with the change in bias so that
                     # we remove the shift due to added hills
-                    s.ensemble.eens += meta_pot_before-meta_pot_after
+                    s.ensemble.eens += meta_pot_before - meta_pot_after
