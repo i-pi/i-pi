@@ -772,7 +772,8 @@ class FFPlumed(ForceField):
         self.plumed.cmd("getBias", bias)
         v = bias[0]
         vir *= -1
-
+        
+        # nb: the virial is a symmetric tensor, so we don't need to transpose
         r["result"] = [v, f, vir, {"raw": ""}]
         r["status"] = "Done"
 
