@@ -761,7 +761,7 @@ class FFPlumed(ForceField):
         self.plumed.cmd("setMasses", self.masses)
 
         # these instead are set properly. units conversion is done on the PLUMED side
-        self.plumed.cmd("setBox", r["cell"][0])
+        self.plumed.cmd("setBox", r["cell"][0].T)
         self.plumed.cmd("setPositions", r["pos"])
         self.plumed.cmd("setForces", f)
         self.plumed.cmd("setVirial", vir)
@@ -773,6 +773,7 @@ class FFPlumed(ForceField):
         v = bias[0]
         vir *= -1
 
+        # nb: the virial is a symmetric tensor, so we don't need to transpose
         r["result"] = [v, f, vir, {"raw": ""}]
         r["status"] = "Done"
 
@@ -788,7 +789,7 @@ class FFPlumed(ForceField):
         self.plumed.cmd("setCharges", self.charges)
         self.plumed.cmd("setMasses", self.masses)
         self.plumed.cmd("setPositions", pos)
-        self.plumed.cmd("setBox", cell)
+        self.plumed.cmd("setBox", cell.T)
         self.plumed.cmd("setForces", f)
         self.plumed.cmd("setVirial", vir)
         self.plumed.cmd("prepareCalc")
