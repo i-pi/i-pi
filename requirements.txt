@@ -1,4 +1,4 @@
-black>=20.8b
+black>=22.3
 mkl
 blas=*=mkl
 numpy

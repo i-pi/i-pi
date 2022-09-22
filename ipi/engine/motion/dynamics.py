@@ -80,7 +80,8 @@ class Dynamics(Motion):
                 thermostat.__class__.__name__ is ("ThermoPILE_G" or "ThermoNMGLEG ")
             ) and (len(fixatoms) > 0):
                 softexit.trigger(
-                    "!! Sorry, fixed atoms and global thermostat on the centroid not supported. Use a local thermostat. !!"
+                    status="bad",
+                    message="!! Sorry, fixed atoms and global thermostat on the centroid not supported. Use a local thermostat. !!",
                 )
             self.thermostat = thermostat
 
@@ -225,15 +226,11 @@ class Dynamics(Motion):
                     raise ValueError(
                         "The barostat and its mode have to be specified for constant-p integrators"
                     )
-                if self.ensemble.pext < 0:
-                    raise ValueError(
-                        "Negative or unspecified pressure for a constant-p integrator"
-                    )
+                if np.allclose(self.ensemble.pext, -12345):
+                    raise ValueError("Unspecified pressure for a constant-p integrator")
             elif self.enstype == "nst":
-                if np.trace(self.ensemble.stressext) < 0:
-                    raise ValueError(
-                        "Negative or unspecified stress for a constant-s integrator"
-                    )
+                if np.allclose(self.ensemble.stressext.diagonal(), -12345):
+                    raise ValueError("Unspecified stress for a constant-s integrator")
 
     def get_ntemp(self):
         """Returns the PI simulation temperature (P times the physical T)."""

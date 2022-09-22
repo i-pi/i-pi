@@ -1,0 +1,19 @@
+%BLOCK lattice_abc
+7.0 7.0 7.0
+90  90  90
+%ENDBLOCK lattice_abc
+
+%BLOCK species_pot
+O O_C19_LDA_OTF.usp
+H H_C19_LDA_OTF.usp
+%ENDBLOCK species_pot
+
+%BLOCK positions_abs
+   H                2.43356633413376       3.55504329656657       3.5
+   H                3.55504332161282       2.43356635316410       3.5
+   O                3.51139034425342       3.51139035026933       3.5
+%ENDBLOCK positions_abs
+
+%BLOCK kpoints_list
+  0.0000000000000000   0.0000000000000000   0.0000000000000000   1.0000000000000000
+%ENDBLOCK kpoints_list

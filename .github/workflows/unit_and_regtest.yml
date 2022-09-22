@@ -8,7 +8,7 @@ jobs:
     strategy:
       matrix:
         python-version: [3.8.5]
-        os: ["ubuntu-18.04"]
+        os: ["ubuntu-22.04"]
 
     runs-on: "${{ matrix.os }}"
     
@@ -31,6 +31,7 @@ jobs:
          conda install pip
          
          pip install .
+         pip install ase>=3.22.1
          echo "${GITHUB_WORKSPACE}/bin" >> $GITHUB_PATH
 
     - name: Install Gfortran and Compile Driver
