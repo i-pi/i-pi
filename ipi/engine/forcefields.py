@@ -1180,6 +1180,7 @@ class FFCommittee(ForceField):
             # V = V_baseline + s_b^2/(s_c^2+s_b^2) V_committe
 
             s_b2 = self.baseline_uncertainty**2
+
             nmodels = len(pots)
             uncertain_frc = (
                 self.alpha**2
