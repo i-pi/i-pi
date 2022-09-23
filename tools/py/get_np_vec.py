@@ -29,7 +29,7 @@ def histo3d(qdata, dqxgrid, dqygrid, dqzgrid, ns, cut, invsigma, bsize):
     dqcutz = int(cut / invsigma / dqzstep)
 
     nshalf = ns / 2.0
-    halfinvsigma2 = 0.5 * invsigma ** 2
+    halfinvsigma2 = 0.5 * invsigma**2
 
     for x, y, z in qdata:
         qx = int(x / dqxstep + nshalf)
@@ -55,7 +55,7 @@ def histo3d(qdata, dqxgrid, dqygrid, dqzgrid, ns, cut, invsigma, bsize):
             fy[qy - dqcuty : qy + dqcuty],
             fz[qz - dqcutz : qz + dqcutz],
         )
-    return histo * np.sqrt(1.0 / 2.0 / np.pi * invsigma ** 2) ** 3
+    return histo * np.sqrt(1.0 / 2.0 / np.pi * invsigma**2) ** 3
 
 
 def histo3d_der(
@@ -76,7 +76,7 @@ def histo3d_der(
     dqcutz = int(cut / invsigma / dqzstep)
 
     nshalf = ns / 2.0
-    halfinvsigma2 = 0.5 * invsigma ** 2
+    halfinvsigma2 = 0.5 * invsigma**2
     c = np.asarray([-0.5 + float(j) * 1.0 / float(P - 1) for j in range(P)])
     bp = 1.0 / (P * T)
     mwp2 = m * (P * T) ** 2
@@ -115,7 +115,7 @@ def histo3d_der(
                 fz[qz - dqcutz : qz + dqcutz],
             )
         )
-    return histo * np.sqrt(1.0 / 2.0 / np.pi * invsigma ** 2) ** 3
+    return histo * np.sqrt(1.0 / 2.0 / np.pi * invsigma**2) ** 3
 
 
 def outer3(*vs):
@@ -229,7 +229,7 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, cut, der, skip):
             ygrid = dqygrid
             zgrid = dqzgrid
 
-            print("# NORM OF THE 3D HISTO:", h3d.flatten().sum() * dqxstep ** 3)
+            print("# NORM OF THE 3D HISTO:", h3d.flatten().sum() * dqxstep**3)
 
             # Creates an interpolation function on a 3D grid
             hxyz = RegularGridInterpolator((xgrid, ygrid, zgrid), h3d)
@@ -257,9 +257,9 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, cut, der, skip):
                 fth00z[i] = (h00z * np.cos(pzgrid[i] * dqzgrid)).sum() * dqzstep
 
             # Calculates the average values of the second moments.
-            px2list.append((fthx00 * pxgrid ** 2).sum() * pxstep)
-            py2list.append((fth0y0 * pygrid ** 2).sum() * pystep)
-            pz2list.append((fth00z * pzgrid ** 2).sum() * pzstep)
+            px2list.append((fthx00 * pxgrid**2).sum() * pxstep)
+            py2list.append((fth0y0 * pygrid**2).sum() * pystep)
+            pz2list.append((fth00z * pzgrid**2).sum() * pzstep)
 
             ftxlist.append(fthx00)
             ftylist.append(fth0y0)
@@ -377,7 +377,7 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, cut, der, skip):
                 + h[(ns - 1) / 2 - 2]
                 + h[(ns - 1) / 2 + 2]
             )
-            / dqxstep ** 2
+            / dqxstep**2
             / (n_block * bsize)
             / 12.0
         )

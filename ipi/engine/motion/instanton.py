@@ -374,7 +374,7 @@ class GradientMapper(object):
         self.coef = coef.reshape(-1, 1)
 
     def set_pos(self, x):
-        """Set the positions """
+        """Set the positions"""
         self.dbeads.q = x
 
     def save(self, e, g):
@@ -391,7 +391,9 @@ class GradientMapper(object):
             try:
                 from scipy.interpolate import interp1d
             except ImportError:
-                softexit.trigger("Scipy required to use  max_ms >0")
+                softexit.trigger(
+                    status="bad", message="Scipy required to use  max_ms >0"
+                )
 
             indexes = list()
             indexes.append(0)
@@ -410,7 +412,8 @@ class GradientMapper(object):
             )
             if len(indexes) <= 2:
                 softexit.trigger(
-                    "Too few beads fulfill criteria. Please reduce max_ms or max_e"
+                    status="bad",
+                    message="Too few beads fulfill criteria. Please reduce max_ms or max_e",
                 )
         else:
             indexes = np.arange(self.dbeads.nbeads)
@@ -515,11 +518,11 @@ class SpringMapper(object):
             )
 
     def set_coef(self, coef):
-        """ Sets coefficients for non-uniform instanton calculation """
+        """Sets coefficients for non-uniform instanton calculation"""
         self.coef = coef.reshape(-1, 1)
 
     def save(self, e, g):
-        """ Stores potential and forces in this class for convenience """
+        """Stores potential and forces in this class for convenience"""
         self.pot = e
         self.f = -g
 
@@ -670,7 +673,7 @@ class FullMapper(object):
 
 
 class DummyOptimizer(dobject):
-    """ Dummy class for all optimization classes """
+    """Dummy class for all optimization classes"""
 
     def __init__(self):
         """Initialises object for GradientMapper (physical potential, forces and Hessian)
@@ -793,7 +796,7 @@ class DummyOptimizer(dobject):
             )
 
     def exitstep(self, d_x_max, step):
-        """ Exits the simulation step. Computes time, checks for convergence. """
+        """Exits the simulation step. Computes time, checks for convergence."""
         self.qtime += time.time()
 
         tolerances = self.options["tolerances"]
@@ -885,7 +888,7 @@ class DummyOptimizer(dobject):
         return False
 
     def update_pos_for(self):
-        """ Update positions and forces """
+        """Update positions and forces"""
 
         self.beads.q[:] = self.gm.dbeads.q[:]
 
@@ -918,16 +921,22 @@ class DummyOptimizer(dobject):
             )
 
     def pre_step(self, step=None, adaptative=False):
-        """ General tasks that have to be performed before actual step"""
+        """General tasks that have to be performed before actual step"""
 
         if self.exit:
-            softexit.trigger("Geometry optimization converged. Exiting simulation")
+            softexit.trigger(
+                status="success",
+                message="Geometry optimization converged. Exiting simulation",
+            )
 
         if not self.init:
             self.initialize(step)
 
         if adaptative:
-            softexit.trigger("Adaptative discretization is not fully implemented")
+            softexit.trigger(
+                status="bad",
+                message="Adaptative discretization is not fully implemented",
+            )
             # new_coef = <implement_here>
             # self.im.set_coef(coef)
             # self.gm.set_coef(coef)
@@ -963,7 +972,7 @@ class DummyOptimizer(dobject):
 
 
 class HessianOptimizer(DummyOptimizer):
-    """ Instanton Rate calculation"""
+    """Instanton Rate calculation"""
 
     def bind(self, geop):
         # call bind function from DummyOptimizer
@@ -1071,7 +1080,7 @@ class HessianOptimizer(DummyOptimizer):
         self.init = True
 
     def update_hessian(self, update, active_hessian, new_x, d_x, d_g):
-        """ Update hessian """
+        """Update hessian"""
 
         if update == "powell":
 
@@ -1101,7 +1110,7 @@ class HessianOptimizer(DummyOptimizer):
             )
 
     def post_step(self, step, new_x, d_x, activearrays):
-        """ General tasks that have to be performed after the  actual step"""
+        """General tasks that have to be performed after the  actual step"""
 
         d_x_max = np.amax(np.absolute(d_x))
         info("Current step norm = {}".format(d_x_max), verbosity.medium)
@@ -1129,7 +1138,7 @@ class HessianOptimizer(DummyOptimizer):
 
 
 class NicholsOptimizer(HessianOptimizer):
-    """ Class that implements a nichols optimizations. It can find first order saddle points or minimum"""
+    """Class that implements a nichols optimizations. It can find first order saddle points or minimum"""
 
     def bind(self, geop):
         # call bind function from HessianOptimizer
@@ -1140,7 +1149,7 @@ class NicholsOptimizer(HessianOptimizer):
         super(NicholsOptimizer, self).initialize(step)
 
     def step(self, step=None):
-        """ Does one simulation time step."""
+        """Does one simulation time step."""
 
         activearrays = self.pre_step(step)
 
@@ -1227,7 +1236,7 @@ class NicholsOptimizer(HessianOptimizer):
 
 
 class NROptimizer(HessianOptimizer):
-    """ Class that implements a Newton-Raphson optimizations. It can find first order saddle points or minima"""
+    """Class that implements a Newton-Raphson optimizations. It can find first order saddle points or minima"""
 
     def bind(self, geop):
         # call bind function from HessianOptimizer
@@ -1238,7 +1247,7 @@ class NROptimizer(HessianOptimizer):
         super(NROptimizer, self).initialize(step)
 
     def step(self, step=None):
-        """ Does one simulation time step."""
+        """Does one simulation time step."""
         activearrays = self.pre_step(step)
 
         dyn_mat = get_dynmat(
@@ -1255,7 +1264,7 @@ class NROptimizer(HessianOptimizer):
         f = np.multiply(f, self.im.dbeads.m3.reshape(f.shape) ** -0.5)
 
         d_x = invmul_banded(h_up_band, f).reshape(self.im.dbeads.q.shape)
-        d_x = np.multiply(d_x, self.im.dbeads.m3 ** -0.5)
+        d_x = np.multiply(d_x, self.im.dbeads.m3**-0.5)
 
         # Rescale step if necessary
         if np.amax(np.absolute(d_x)) > activearrays["big_step"]:
@@ -1285,7 +1294,7 @@ class LanczosOptimizer(HessianOptimizer):
         super(LanczosOptimizer, self).initialize(step)
 
     def step(self, step=None):
-        """ Does one simulation time step."""
+        """Does one simulation time step."""
 
         activearrays = self.pre_step(step)
 
@@ -1391,7 +1400,7 @@ class LanczosOptimizer(HessianOptimizer):
         d_x.shape = self.im.dbeads.q.shape
 
         # MASS-scaled
-        d_x = np.multiply(d_x, self.im.dbeads.m3 ** -0.5)
+        d_x = np.multiply(d_x, self.im.dbeads.m3**-0.5)
 
         # Rescale step if necessary
         if np.amax(np.absolute(d_x)) > activearrays["big_step"]:
@@ -1511,7 +1520,7 @@ class LBFGSOptimizer(DummyOptimizer):
 
     def post_step(self, step, activearrays):
 
-        """ General tasks that have to be performed after the  actual step"""
+        """General tasks that have to be performed after the  actual step"""
 
         # Update
         self.optarrays["qlist"][:] = self.fix.get_full_vector(
@@ -1534,7 +1543,7 @@ class LBFGSOptimizer(DummyOptimizer):
         self.update_old_pos_for()
 
     def step(self, step=None):
-        """ Does one simulation time step."""
+        """Does one simulation time step."""
 
         activearrays = self.pre_step(step)
 

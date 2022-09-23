@@ -66,13 +66,15 @@ class Softexit(object):
 
         self.tlist.append((thread, loop_control))
 
-    def trigger(self, message=""):
+    def trigger(self, status="restartable", message=""):
         """Halts the simulation.
 
         Prints out a warning message, then runs all the exit functions in flist
         before terminating the simulation.
 
         Args:
+           status: which kind of stop it is: simulation restartable as is,
+                   successful finish or aborted because of some problem.
            message: The message to output to standard output.
         """
 
@@ -81,13 +83,21 @@ class Softexit(object):
             self.exiting = True
             self.triggered = True
 
-            if message != "":
-                warning(
-                    "Soft exit has been requested with message: '"
-                    + message
-                    + "'. Cleaning up.",
-                    verbosity.low,
-                )
+            if status == "restartable":
+                message += "\nRestartable as is: YES."
+            elif status == "success":
+                message += "\nI-PI reports success. Restartable as is: NO."
+            elif status == "bad":
+                message += "\nI-PI reports a problem. Restartable as is: NO."
+            else:
+                raise ValueError("Unknown option for softexit status.")
+
+            warning(
+                "Soft exit has been requested with message: '"
+                + message
+                + "'. Cleaning up.",
+                verbosity.low,
+            )
 
             # calls all the registered emergency softexit procedures
             for f in self.flist:
@@ -148,7 +158,7 @@ class Softexit(object):
             " @SOFTEXIT:   Kill signal. Trying to make a clean exit.", verbosity.low
         )
 
-        self.trigger(" @SOFTEXIT: Kill signal received")
+        self.trigger(status="restartable", message=" @SOFTEXIT: Kill signal received")
 
         try:
             self.__del__()
@@ -158,16 +168,21 @@ class Softexit(object):
             self._kill[signal](signal, frame)
 
     def _softexit_monitor(self):
-        """Keeps checking for soft exit conditions. """
+        """Keeps checking for soft exit conditions."""
 
         while self._doloop[0]:
             time.sleep(SOFTEXITLATENCY)
             if os.path.exists("EXIT"):
-                self.trigger(" @SOFTEXIT: EXIT file detected.")
+                self.trigger(
+                    status="restartable", message=" @SOFTEXIT: EXIT file detected."
+                )
                 break
 
             if self.timeout > 0 and self.timeout < time.time():
-                self.trigger(" @SOFTEXIT: Maximum wallclock time elapsed.")
+                self.trigger(
+                    status="restartable",
+                    message=" @SOFTEXIT: Maximum wallclock time elapsed.",
+                )
                 break
 
 

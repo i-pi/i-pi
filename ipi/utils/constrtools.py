@@ -124,7 +124,7 @@ class ConstraintBase(dobject):
             )
 
     def gfunc(self):
-        """ Calculates the value of the constraint(s) """
+        """Calculates the value of the constraint(s)"""
         raise NotImplementedError()
 
     def Dgfunc(self):
@@ -159,7 +159,7 @@ class ConstraintBase(dobject):
 
 
 class ValueConstraintBase(ConstraintBase):
-    """ Base class for a constraint that contains target values. """
+    """Base class for a constraint that contains target values."""
 
     def __init__(self, constrained_indices, constraint_values, ncons):
         """Initialize the constraint.
@@ -237,7 +237,7 @@ class RigidBondConstraint(ValueConstraintBase):
             c_atoms = self.i3_indirect[i]
             c_dist = constraint_distances[i]
             # print q[c_atoms[0]], q[c_atoms[1]], c_dist
-            r[i] = np.sum((q[c_atoms[0]] - q[c_atoms[1]]) ** 2) - c_dist ** 2
+            r[i] = np.sum((q[c_atoms[0]] - q[c_atoms[1]]) ** 2) - c_dist**2
         if q[0] == float("inf"):
             ValueError("fgfgf")
             print("autsch")

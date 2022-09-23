@@ -80,7 +80,8 @@ class Dynamics(Motion):
                 thermostat.__class__.__name__ is ("ThermoPILE_G" or "ThermoNMGLEG ")
             ) and (len(fixatoms) > 0):
                 softexit.trigger(
-                    "!! Sorry, fixed atoms and global thermostat on the centroid not supported. Use a local thermostat. !!"
+                    status="bad",
+                    message="!! Sorry, fixed atoms and global thermostat on the centroid not supported. Use a local thermostat. !!",
                 )
             self.thermostat = thermostat
 
@@ -225,15 +226,11 @@ class Dynamics(Motion):
                     raise ValueError(
                         "The barostat and its mode have to be specified for constant-p integrators"
                     )
-                if self.ensemble.pext < 0:
-                    raise ValueError(
-                        "Negative or unspecified pressure for a constant-p integrator"
-                    )
+                if np.allclose(self.ensemble.pext, -12345):
+                    raise ValueError("Unspecified pressure for a constant-p integrator")
             elif self.enstype == "nst":
-                if np.trace(self.ensemble.stressext) < 0:
-                    raise ValueError(
-                        "Negative or unspecified stress for a constant-s integrator"
-                    )
+                if np.allclose(self.ensemble.stressext.diagonal(), -12345):
+                    raise ValueError("Unspecified stress for a constant-s integrator")
 
     def get_ntemp(self):
         """Returns the PI simulation temperature (P times the physical T)."""
@@ -241,14 +238,14 @@ class Dynamics(Motion):
         return self.ensemble.temp * self.beads.nbeads
 
     def step(self, step=None):
-        """ Advances the dynamics by one time step """
+        """Advances the dynamics by one time step"""
 
         self.integrator.step(step)
         self.ensemble.time += self.dt  # increments internal time
 
 
 class DummyIntegrator(dobject):
-    """ No-op integrator for (PI)MD """
+    """No-op integrator for (PI)MD"""
 
     def __init__(self):
         pass
@@ -274,7 +271,7 @@ class DummyIntegrator(dobject):
             )
 
     def bind(self, motion):
-        """ Reference all the variables for simpler access."""
+        """Reference all the variables for simpler access."""
 
         self.beads = motion.beads
         self.bias = motion.ensemble.bias
@@ -366,7 +363,7 @@ class DummyIntegrator(dobject):
             dens = 0
             for i in range(3):
                 pcom = p[:, i:na3:3].sum()
-                dens += pcom ** 2
+                dens += pcom**2
                 pcom /= Mnb
                 self.beads.p[:, i:na3:3] -= m * pcom
 
@@ -428,7 +425,7 @@ class NVEIntegrator(DummyIntegrator):
     # take the BAB MTS, and insert the O in the very middle. This might imply breaking a A step in two, e.g. one could have
     # Bbabb(a/2) O (a/2)bbabB
     def mtsprop_ba(self, index):
-        """ Recursive MTS step """
+        """Recursive MTS step"""
 
         mk = int(self.nmts[index] / 2)
 
@@ -461,7 +458,7 @@ class NVEIntegrator(DummyIntegrator):
                 self.mtsprop_ba(index + 1)
 
     def mtsprop_ab(self, index):
-        """ Recursive MTS step """
+        """Recursive MTS step"""
 
         if self.nmts[index] % 2 == 1:
             if index == self.nmtslevels - 1:

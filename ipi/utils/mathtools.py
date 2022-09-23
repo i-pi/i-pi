@@ -77,7 +77,7 @@ def matrix_exp(M, ntaylor=20, nsquare=10):
     for i in range(ntaylor):
         tc[i + 1] = tc[i] / (i + 1)
 
-    SM = np.copy(M) / 2.0 ** nsquare
+    SM = np.copy(M) / 2.0**nsquare
 
     EM = np.identity(n, float) * tc[ntaylor]
     for i in range(ntaylor - 1, -1, -1):
@@ -239,7 +239,7 @@ def abc2h(a, b, c, alpha, beta, gamma):
     h[0, 2] = c * math.cos(beta)
     h[1, 1] = b * math.sin(gamma)
     h[1, 2] = (b * c * math.cos(alpha) - h[0, 1] * h[0, 2]) / h[1, 1]
-    h[2, 2] = math.sqrt(c ** 2 - h[0, 2] ** 2 - h[1, 2] ** 2)
+    h[2, 2] = math.sqrt(c**2 - h[0, 2] ** 2 - h[1, 2] ** 2)
     return h
 
 
@@ -411,7 +411,7 @@ def root_herm(A):
 
 
 def _sinch(x):
-    """ Computes sinh(x)/x in a way that is stable for x->0 """
+    """Computes sinh(x)/x in a way that is stable for x->0"""
 
     x2 = x * x
     if x2 < 1e-12:
