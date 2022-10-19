@@ -147,8 +147,8 @@ class Replay(Motion):
                             myframe = read_file("ase", self.rfile)
                         myatoms = myframe["atoms"]
                         mycell = myframe["cell"]
-                        b.q[:] = myatoms.q                                               
-                        
+                        b.q[:] = myatoms.q
+
                 elif self.intraj.mode == "chk" or self.intraj.mode == "checkpoint":
                     # TODO: Adapt the new `Simulation.load_from_xml`?
                     # reads configuration from a checkpoint file

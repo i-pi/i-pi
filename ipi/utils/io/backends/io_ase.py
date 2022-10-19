@@ -18,6 +18,7 @@ except ImportError:
 
 __all__ = ["print_ase", "read_ase"]
 
+
 def _asecheck():
     if ase is None:
         raise RuntimeError(
@@ -54,8 +55,10 @@ def print_ase(
     atoms = Atoms(atoms.names, positions=atoms.q * atoms_conv, cell=cell.h * cell_conv)
     atoms.write(filedesc)
 
+
 # this is a ugly hack to support reading iteratively from a file descriptor while coping with the quirks of both ASE and i-PI
 _ase_open_files = {}
+
 
 def read_ase(filedesc):
     """Reads an ASE-compatible file and returns data in raw format for further units transformation
@@ -75,13 +78,13 @@ def read_ase(filedesc):
     # keep a list of open files to iterate on using iread
     if filedesc not in _ase_open_files:
         _ase_open_files[filedesc] = iread(filedesc, ":")
-    
+
     try:
         atoms = next(_ase_open_files[filedesc])
     except StopIteration:
         _ase_open_files.pop(filedesc)
         raise EOFError()
-        
+
     if all(atoms.get_pbc()):
         # We want to make the cell conform
         a = atoms.cell[0]
@@ -90,7 +93,7 @@ def read_ase(filedesc):
         b = b.copy() / np.linalg.norm(b)
         ang = -np.arctan2(b[2], b[1]) * 180 / np.pi
         atoms.rotate(ang, "x", rotate_cell=True)  # b in xy
-        
+
     comment = "Structure read with ASE with composition %s" % atoms.symbols.formula
     cell = atoms.cell.array.T
     qatoms = atoms.positions.reshape((-1))
