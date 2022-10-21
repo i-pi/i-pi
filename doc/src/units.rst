@@ -29,7 +29,7 @@ then behaves in the following way, depending on the user’s choice:
 
 -  If no units are specified in the input, i-PI tries to guess from the
    comment line of the structure file and it nothing is present, assumes
-   atomic units, or angstrom for PDB files.
+   atomic units, except for the cases discussed below.
 
 -  If units are specified in both input and structure file and they
    match, conversion happens just once. If they do not match, an error
@@ -38,8 +38,9 @@ then behaves in the following way, depending on the user’s choice:
 
 There are a few exceptions:
 
-  - The total simulation time, specified by the flag <total_time> , has to be provided  in seconds.
-  - When using ASE format for I/O, the units are dictated by the ase defaults. 
+  - The total simulation time, specified by the flag <total_time>, has to be provided  in seconds.
+  - The PDB standard defines units to be in angstrom, and so default units for PDB are angstrom.  
+  - When using ASE format for I/O, the units are dictated by the ASE defaults. 
     So for example, the ASE extended xyz format  expects positions in angstroms.
     (See for example ``examples/ase-io/``)
 
