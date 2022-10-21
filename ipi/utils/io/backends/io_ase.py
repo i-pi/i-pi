@@ -52,7 +52,11 @@ def print_ase(
 
     from ase import Atoms
 
-    ase_atoms = Atoms(atoms.names, positions=atoms.q.reshape((-1,3)) * atoms_conv, cell=cell.h.T * cell_conv)
+    ase_atoms = Atoms(
+        atoms.names,
+        positions=atoms.q.reshape((-1, 3)) * atoms_conv,
+        cell=cell.h.T * cell_conv,
+    )
     ase_atoms.write(filedesc, format="extxyz")
 
 
