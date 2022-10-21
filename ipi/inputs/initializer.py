@@ -166,7 +166,8 @@ class InputInitFile(InputInitBase):
     attribs["mode"][1]["options"] = ["xyz", "pdb", "chk", "ase"]
     attribs["mode"][1][
         "help"
-    ] = "The input data format. 'xyz' and 'pdb' stand for xyz and pdb input files respectively. 'chk' stands for initialization from a checkpoint file. 'ase' is to read a file with the Atomic Simulation Environment"
+    ] = """The input data format. 'xyz' and 'pdb' stand for xyz and pdb input files respectively. 
+        'chk' stands for initialization from a checkpoint file. 'ase' is to read a file with the Atomic Simulation Environment"""
 
     attribs["bead"] = (
         InputAttribute,
@@ -211,10 +212,11 @@ class InputInitPositions(InputInitIndexed):
 
     attribs = deepcopy(InputInitIndexed.attribs)
     attribs["mode"][1]["default"] = "chk"
-    attribs["mode"][1]["options"] = ["manual", "xyz", "pdb", "chk"]
+    attribs["mode"][1]["options"] = ["manual", "xyz", "pdb", "ase", "chk"]
     attribs["mode"][1][
         "help"
-    ] = "The input data format. 'xyz' and 'pdb' stand for xyz and pdb input files respectively. 'chk' stands for initialization from a checkpoint file. 'manual' means that the value to initialize from is giving explicitly as a vector."
+    ] = """The input data format. 'xyz' and 'pdb' stand for xyz and pdb input files respectively.  'ase' is to read a file with the Atomic Simulation Environment.
+        'chk' stands for initialization from a checkpoint file. 'manual' means that the value to initialize from is giving explicitly as a vector."""
 
     default_label = "INITPOSITIONS"
     default_help = "This is the class to initialize positions."
@@ -229,7 +231,9 @@ class InputInitMomenta(InputInitPositions):
     attribs["mode"][1]["options"].append("thermal")
     attribs["mode"][1][
         "help"
-    ] = "The input data format. 'xyz' and 'pdb' stand for xyz and pdb input files respectively. 'chk' stands for initialization from a checkpoint file. 'manual' means that the value to initialize from is giving explicitly as a vector. 'thermal' means that the data is to be generated from a Maxwell-Boltzmann distribution at the given temperature."
+    ] = """The input data format. 'xyz' and 'pdb' stand for xyz and pdb input files respectively. 
+        'chk' stands for initialization from a checkpoint file. 'manual' means that the value to initialize from is giving explicitly as a vector. 
+        'thermal' means that the data is to be generated from a Maxwell-Boltzmann distribution at the given temperature."""
 
     default_label = "INITMOMENTA"
     default_help = "This is the class to initialize momenta."
