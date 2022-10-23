@@ -56,6 +56,10 @@ def print_ase(
     atoms.write(filedesc)
 
 
+# this is a ugly hack to support reading iteratively from a file descriptor while coping with the quirks of both ASE and i-PI
+_ase_open_files = {}
+
+
 def read_ase(filedesc):
     """Reads an ASE-compatible file and returns data in raw format for further units transformation
     and other post processing.
@@ -69,23 +73,16 @@ def read_ase(filedesc):
 
     _asecheck()
 
-    from ase.io import read
+    from ase.io import iread
 
-    #    from ase.build import niggli_reduce
-
-    # A check to avoid getting stuck in an infinite reading loop with some
-    # readers
-
-    try:
-        pos = filedesc.tell()
-        if pos > 0:
-            raise RuntimeError()
-    except Exception:
-        raise EOFError()
+    # keep a list of open files to iterate on using iread
+    if filedesc not in _ase_open_files:
+        _ase_open_files[filedesc] = iread(filedesc, ":")
 
     try:
-        atoms = read(filedesc)
-    except ValueError:
+        atoms = next(_ase_open_files[filedesc])
+    except StopIteration:
+        _ase_open_files.pop(filedesc)
         raise EOFError()
 
     if all(atoms.get_pbc()):
@@ -98,7 +95,7 @@ def read_ase(filedesc):
         atoms.rotate(ang, "x", rotate_cell=True)  # b in xy
 
     comment = "Structure read with ASE with composition %s" % atoms.symbols.formula
-    cell = atoms.cell.array
+    cell = atoms.cell.array.T
     qatoms = atoms.positions.reshape((-1))
     names = list(atoms.symbols)
     masses = atoms.get_masses() * Constants.amu

@@ -1,0 +1,2 @@
+Demonstration of ASE I/O module. Requires a working installation of ASE in the path.
+Structures are read from the CIF and the XYZ file. Output from the two runs should match.
