@@ -214,7 +214,7 @@ def main(inputfile, prefix="SRT_"):
                             ibuffer.append(straj["ifile"].readline())
                             ibuffer.append(straj["ifile"].readline())
                             traj[irep[isys]]["ofile"].write("".join(ibuffer))
-                        if straj["format"] == "xyz":
+                        if straj["format"] in ["xyz", "ase"]:
                             iline = straj["ifile"].readline()
                             nat = int(iline)
                             ibuffer.append(iline)
