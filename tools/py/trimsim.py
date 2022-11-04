@@ -207,7 +207,7 @@ def main(inputfile, outdir="trim"):
                             ibuffer.append(straj["ifile"].readline())
                             ibuffer.append(straj["ifile"].readline())
                             traj[isys]["ofile"].write("".join(ibuffer))
-                        if straj["format"] == "xyz":
+                        if straj["format"] in ["xyz", "ase"]:
                             iline = straj["ifile"].readline()
                             nat = int(iline)
                             ibuffer.append(iline)
