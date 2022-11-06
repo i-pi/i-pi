@@ -56,7 +56,9 @@ def print_ase(
         atoms.names,
         positions=atoms.q.reshape((-1, 3)) * atoms_conv,
         cell=cell.h.T * cell_conv,
+        pbc=True,
     )
+    ase_atoms.info["ipi_comment"] = title
     ase_atoms.write(filedesc, format="extxyz")
 
 
