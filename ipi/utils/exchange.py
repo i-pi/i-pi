@@ -10,174 +10,258 @@ from ipi.utils.depend import *
 
 import numpy as np
 
-
-def Evaluate_EkN(self, N, k):
+def kth_diag_indices(a, k):
     """
-    Returns E_N^{(k)} as defined in Equation 5 of arXiv:1905.09053.
-    That is, the energy of k particles R_{N-k+1},...,R_N, connceted sequentially into a ring polymer.
-    j and l go from 0 to N-1 and P-1, respectively, for indexing. (In the paper they start from 1)
+    Indices to access matrix k-diagonals in numpy.
+    https://stackoverflow.com/questions/10925671/numpy-k-th-diagonal-indices
     """
-
-    m = dstrip(self.beads.m)[self.bosons[0]]  # Take mass of first boson
-
-    P = self.nbeads
-    omegaP_sq = self.omegan2
-
-    q = np.zeros((P, 3 * len(self.bosons)), float)
-    qall = dstrip(self.beads.q).copy()
-
-    # Stores coordinates just for bosons in separate arrays with new indices 1,...,Nbosons
-    for ind, boson in enumerate(self.bosons):
-        q[:, 3 * ind : (3 * ind + 3)] = qall[:, 3 * boson : (3 * boson + 3)]
-
-    sumE = 0.0
-    # Here indices go from 0 to N-1 and P-1, respectively. In paper they start from 1.
-    for l in range(N - k, N):
-        for j in range(P):
-            # q[j,:] stores 3*natoms xyz coordinates of all atoms.
-            # Index of bead #(j+1) of atom #(l+1) is [l,3*l]
-            r = q[j, 3 * l : 3 * (l + 1)]
-
-            # Taking care of boundary conditions.
-            # Usually r_l_jp1 is the next bead of same atom.
-            next_bead_ind = j + 1
-            next_atom_ind = 3 * l
-
-            if j == P - 1:
-                # If on the last bead, r_l_jp1 is the first bead of next atom
-                next_bead_ind = 0
-                next_atom_ind = 3 * (l + 1)
-
-                if l == N - 1:
-                    # If on the last bead of last atom, r_l_jp1 is the first bead of N-k atom
-                    next_atom_ind = 3 * (N - k)
-
-            r_next = q[next_bead_ind, next_atom_ind : (next_atom_ind + 3)]
-            diff = r_next - r
-
-            sumE = sumE + np.dot(diff, diff)
-
-    return 0.5 * m * omegaP_sq * sumE
+    rows, cols = np.diag_indices_from(a)
+    if k < 0:
+        return rows[-k:], cols[:k]
+    elif k > 0:
+        return rows[:-k], cols[k:]
+    else:
+        return rows, cols
 
 
-def Evaluate_dEkn_on_atom(self, l, j, N, k):
-    """
-    Returns dE_N^{(k)} as defined in Equation 3 of SI to arXiv:1905.09053.
-    That is, the force on bead j of atom l due to k particles
-    R_{N-k+1},...,R_N, connceted sequentially into a ring polymer.
-    j and l go from 0 to N-1 and P-1, respectively, for indexing. (In the paper they start from 1)
-    """
+class ExchangePotential(dobject):
+    def __init__(self, boson_identities, q,
+                 nbeads, bead_mass,
+                 spring_freq_squared, betaP):
+        assert len(boson_identities) != 0
 
-    m = dstrip(self.beads.m)[self.bosons[0]]  # Take mass of first boson
-    P = self.nbeads
-    omegaP_sq = self.omegan2
+        self._N = len(boson_identities)
+        self._P = nbeads
+        self._betaP = betaP
+        self._spring_freq_squared = spring_freq_squared
+        self._particle_mass = bead_mass
+        self._q = q
 
-    q = np.zeros((P, 3 * len(self.bosons)), float)
-    qall = dstrip(self.beads.q).copy()
+        # self._bead_diff_intra[j] = [r^{j+1}_0 - r^{j}_0, ..., r^{j+1}_{N-1} - r^{j}_{N-1}]
+        self._bead_diff_intra = np.diff(self._q, axis=0)
+        # self._bead_dist_inter_first_last_bead[l][m] = r^0_{l} - r^{P-1}_{m}
+        self._bead_diff_inter_first_last_bead = self._q[0, :, np.newaxis, :] - self._q[self._P - 1, np.newaxis, :, :]
 
-    # Stores coordinates just for bosons in separate arrays with new indices 1,...,Nbosons
-    for ind, boson in enumerate(self.bosons):
-        q[:, 3 * ind : (3 * ind + 3)] = qall[:, 3 * boson : (3 * boson + 3)]
+        # cycle energies:
+        # self._E_from_to[u, u] is the ring polymer energy of the cycle on particle indices u,...,v
+        self._E_from_to = self._evaluate_cycle_energies()
 
-    # q[j,:] stores 3*natoms xyz coordinates of all atoms.
-    # Index of bead #(j+1) of atom #(l+1) is [l,3*l]
-    r = q[j, 3 * l : 3 * (l + 1)]
-    next_bead_ind = j + 1
-    next_atom_ind = 3 * l
-    prev_bead_ind = j - 1
-    prev_atom_ind = 3 * l
+        # prefix potentials:
+        # self._V[l] = V^[1,l+1]
+        self._V = self._evaluate_prefix_V()
 
-    if j == P - 1:
-        # If on the last bead, r_l_jp1 is the first bead of next atom
-        next_bead_ind = 0
-        next_atom_ind = 3 * (l + 1)
+        # suffix potentials:
+        # self._V_backward[l] = V^[l+1, N]
+        self._V_backward = self._evaluate_suffix_V()
 
-        if l == N - 1:
-            # If on the last bead of last atom, r_l_jp1 is the first bead of N-k atom
-            next_atom_ind = 3 * (N - k)
+    def get_vspring_and_fspring(self):
+        """
+        Returns spring potential and forces for bosons.
+        """
+        F = self.evaluate_spring_forces()
 
-    if j == 0:
-        # If on the first bead, r_l_j-1 is the last bead of previous atom
-        prev_bead_ind = P - 1
-        prev_atom_ind = 3 * (l - 1)
+        return [self.V_all(), F]
 
-        if l == N - k:
-            # If on the first bead of N-k atom, r_l_j-1 is the last bead of last atom
-            prev_atom_ind = 3 * (N - 1)
+    def V_all(self):
+        """
+        Returns the potential on all particles: V^[1,N]
+        """
+        return self._V[self._N]
 
-    r_next = q[next_bead_ind, next_atom_ind : (next_atom_ind + 3)]
-    r_prev = q[prev_bead_ind, prev_atom_ind : (prev_atom_ind + 3)]
-    diff = 2 * r - r_next - r_prev
+    def _spring_potential_prefix(self):
+        """
+        Helper function: the term for the spring constant as used in spring potential expressions
+        """
+        return 0.5 * self._particle_mass * self._spring_freq_squared
+    
+    def _spring_force_prefix(self):
+        """
+        Helper function: the term for the spring constant as used in spring force expressions
+        """
+        return (-1.0) * self._particle_mass * self._spring_freq_squared
 
-    return m * omegaP_sq * diff
+    def _evaluate_cycle_energies(self):
+        """
+        Evaluate all the cycle energies, as outlined in Eqs. 5-7 of the paper.
+        Returns an upper-triangular matrix, Emks[u,v] is the ring polymer energy of the cycle on u,...,v.
+        """
+        # using column-major (Fortran order) because uses of the array are mostly within the same column
+        Emks = np.zeros((self._N, self._N), dtype=float, order='F')
 
+        intra_spring_energies = np.sum(self._bead_diff_intra ** 2, axis=(0, -1))
+        spring_energy_first_last_bead_array = np.sum(self._bead_diff_inter_first_last_bead ** 2, axis=-1)
 
-def Evaluate_VB(self):
-    """
-    Evaluate VB_m, m = {0,...,N}. VB0 = 0.0 by definition.
-    Evalaution of each VB_m is done using Equation 6 of arXiv:1905.0905.
-    Returns all VB_m and all E_m^{(k)} which are required for the forces later.
-    """
+        # for m in range(self._N):
+        #     Emks[m][m] = self._spring_potential_prefix() * \
+        #                     (intra_spring_energies[m] + spring_energy_first_last_bead_array[m, m])
+        Emks[np.diag_indices_from(Emks)] = self._spring_potential_prefix() * \
+                                           (intra_spring_energies + np.diagonal(spring_energy_first_last_bead_array))
 
-    N = len(self.bosons)
-    betaP = 1.0 / (self.beads.nbeads * units.Constants.kb * self.ensemble.temp)
+        for s in range(self._N - 1 - 1, -1, -1):
+            # for m in range(s + 1, self._N):
+            #     Emks[s][m] = Emks[s + 1][m] + self._spring_potential_prefix() * (
+            #             - spring_energy_first_last_bead_array[s + 1, m]
+            #             + intra_spring_energies[s]
+            #             + spring_energy_first_last_bead_array[s + 1, s]
+            #             + spring_energy_first_last_bead_array[s, m])
+            Emks[s, (s + 1):] = Emks[s + 1, (s + 1):] + self._spring_potential_prefix() * (
+                    - spring_energy_first_last_bead_array[s + 1, (s + 1):]
+                    + intra_spring_energies[s]
+                    + spring_energy_first_last_bead_array[s + 1, s]
+                    + spring_energy_first_last_bead_array[s, (s + 1):])
 
-    V = np.zeros(N + 1, float)
-    save_Ek_N = np.zeros(N * (N + 1) // 2, float)
+        return Emks
 
-    count = 0
-    for m in range(1, N + 1):
-        sig = 0.0
+    def _evaluate_prefix_V(self):
+        """
+        Evaluate V^[1,1], V^[1,2], ..., V^[1,N], as outlined in Eq. 3 of the paper.
+        (In the code, particle indices start from 0.)
+        Returns a vector of these potentials, in this order.
+        Assumes that the cycle energies self._E_from_to have been computed.
+        """
+        V = np.zeros(self._N + 1, float)
 
-        # Reversed sum order to be able to use energy of longest ring polymer in Elong
-        for k in range(m, 0, -1):
-            E_k_N = Evaluate_EkN(self, m, k)
+        for m in range(1, self._N + 1):
+            # For numerical stability
+            subdivision_potentials = V[:m] + self._E_from_to[:m, m - 1]
+            Elong = np.min(subdivision_potentials)
 
-            # This is required for numerical stability. See SI of arXiv:1905.0905
-            if k == m:
-                Elong = 0.5 * (E_k_N + V[m - 1])
+            # sig = 0.0
+            # for u in range(m):
+            #   sig += np.exp(- self._betaP *
+            #                (V[u] + self._E_from_to[u, m - 1] - Elong) # V until u-1, then cycle from u to m
+            #                 )
+            sig = np.sum(np.exp(- self._betaP * (subdivision_potentials - Elong)))
+            assert sig != 0.0 and np.isfinite(sig)
+            V[m] = Elong - np.log(sig / m) / self._betaP
 
-            sig = sig + np.exp(-betaP * (E_k_N + V[m - k] - Elong))
+        return V
 
-            save_Ek_N[count] = E_k_N
-            count += 1
+    def _evaluate_suffix_V(self):
+        """
+        Evaluate V^[1,N], V^[2,N], ..., V^[N,N], as outlined in Eq. 16 of the paper.
+        (In the code, particle indices start from 0.)
+        Returns a vector of these potentials, in this order.
+        Assumes that both the cycle energies self._E_from_to and prefix potentials self._V have been computed.
+        """
+        RV = np.zeros(self._N + 1, float)
 
-        V[m] = Elong - np.log(sig / m) / betaP
+        for l in range(self._N - 1, 0, -1):
+            # For numerical stability
+            subdivision_potentials = self._E_from_to[l, l:] + RV[l + 1:]
+            Elong = np.min(subdivision_potentials)
 
-    return (save_Ek_N, V)
+            # sig = 0.0
+            # for p in range(l, self._N):
+            #     sig += 1 / (p + 1) * np.exp(- self._betaP * (self._E_from_to[l, p] + RV[p + 1]
+            #                                                 - Elong))
+            sig = np.sum(np.reciprocal(np.arange(l + 1.0, self._N + 1)) *
+                         np.exp(- self._betaP * (subdivision_potentials - Elong)))
+            assert sig != 0.0 and np.isfinite(sig)
+            RV[l] = Elong - np.log(sig) / self._betaP
 
+        # V^[1,N]
+        RV[0] = self._V[-1]
 
-def Evaluate_dVB(self, E_k_N, V, l, j):
-    """
-    Evaluates dVB_m, m = {0,...,N} for bead #(j+1) of atom #(l+1). dVB_0 = 0.0 by definition.
-    Evalaution of each VB_m is done using Equation 6 of arXiv:1905.0905.
-    Returns -dVB_N, the force acting on bead #(j+1) of atom #(l+1).
-    """
+        return RV
 
-    N = len(self.bosons)
-    betaP = 1.0 / (self.beads.nbeads * units.Constants.kb * self.ensemble.temp)
+    def evaluate_spring_forces(self):
+        """
+        Evaluate the ring polymer forces on all the beads, as outlined in Eq. 13, 17-18 of the paper.
+        (In the code, particle indices start from 0.)
+        Returns an array, F[j, l, :] is the force (3d vector) on bead j of particle l.
+        Assumes that both the cycle energies self._E_from_to, the prefix potentials self._V,
+        and the suffix potentials self._V_backward have been computed.
+        """
+        F = np.zeros((self._P, self._N, 3), float)
 
-    dV = np.zeros((N + 1, 3), float)
+        # force on intermediate beads
+        #
+        # for j in range(1, self._P - 1):
+        #   for l in range(self._N):
+        #         F[j, l, :] = self._spring_force_prefix() * (-self._bead_diff_intra[j][l] +
+        #                                                     self._bead_diff_intra[j - 1][l])
+        F[1:-1, :, :] = self._spring_force_prefix() * (-self._bead_diff_intra[1:, :] +
+                                                       np.roll(self._bead_diff_intra, axis=0, shift=1)[1:, :])
 
-    # Reversed sum order to agree with Evaluate_VB() above
-    for m in range(1, N + 1):
-        sig = 0
-        if l + 1 > m:  # l goes from 0 to N-1 so check for l+1
-            pass  # dV[m,:] is initialized to zero vector already
-        else:
-            count = m * (m - 1) // 2
-            for k in range(m, 0, -1):
-                if (
-                    l + 1 >= m - k + 1 and l + 1 <= m
-                ):  # l goes from 0 to N-1 so check for l+1
-                    dE_k_N = Evaluate_dEkn_on_atom(self, l, j, m, k)
-                else:
-                    dE_k_N = np.zeros(3, float)
-                sig += (dE_k_N + dV[m - k, :]) * np.exp(
-                    -betaP * (E_k_N[count] + V[m - k])
-                )
-                count += 1
+        # force on endpoint beads
+        #
+        connection_probs = np.zeros((self._N, self._N), float)
+        # close cycle probabilities:
+        # for u in range(0, self._N):
+        #     for l in range(u, self._N):
+        #         connection_probs[l][u] = 1 / (l + 1) * \
+        #                np.exp(- self._betaP *
+        #                        (self._V[u] + self._E_from_to[u, l] + self._V_backward[l+1]
+        #                         - self.V_all()))
+        tril_indices = np.tril_indices(self._N, k=0)
+        connection_probs[tril_indices] = (
+                            # np.asarray([1 / (l + 1) for l in range(self._N)])[:, np.newaxis] *
+                            np.reciprocal(np.arange(1.0, self._N + 1))[:, np.newaxis] *
+                            np.exp(- self._betaP * (
+                                # np.asarray([self.V_forward(u - 1) for u in range(self._N)])[np.newaxis, :]
+                                self._V[np.newaxis, :-1]
+                                # + np.asarray([(self._E_from_to[u, l] if l >= u else 0) for l in range(self._N)
+                                #                   for u in range(self._N)]).reshape((self._N, self._N))
+                                + self._E_from_to.T
+                                # + np.asarray([self.V_backward(l + 1) for l in range(self._N)])[:, np.newaxis]
+                                + self._V_backward[1:, np.newaxis]
+                                - self.V_all()
+                            )))[tril_indices]
 
-            dV[m, :] = sig / (m * np.exp(-betaP * V[m]))
+        # direct link probabilities:
+        # for l in range(self._N - 1):
+        #     connection_probs[l][l+1] = 1 - (np.exp(- self._betaP * (self._V[l + 1] + self._V_backward[l + 1] -
+        #                                         self.V_all())))
+        superdiagonal_indices = kth_diag_indices(connection_probs, k=1)
+        connection_probs[superdiagonal_indices] = 1 - (np.exp(- self._betaP * (
+                                                        self._V[1:-1] + self._V_backward[1:-1]
+                                                        - self.V_all())))
 
-    return -1.0 * dV[N, :]
+        # on the last bead:
+        #
+        # for l in range(self._N):
+        #     force_from_neighbor = np.empty((self._N, 3))
+        #     for next_l in range(max(l + 1, self._N)):
+        #         force_from_neighbor[next_l, :] = self._spring_force_prefix() * \
+        #                         (-self._bead_diff_inter_first_last_bead[next_l, l] + self._bead_diff_intra[-1, l])
+        #     F[-1, l, :] = sum(connection_probs[l][next_l] * force_from_neighbor[next_l]
+        #                       for next_l in range(self._N))
+        #
+        # First vectorization:
+        # for l in range(self._N):
+        #     force_from_neighbors = np.empty((self._N, 3))
+        #     force_from_neighbors[:, :] = self._spring_force_prefix() * \
+        #                         (-self._bead_diff_inter_first_last_bead[:, l] + self._bead_diff_intra[-1, l])
+        #     F[-1, l, :] = np.dot(connection_probs[l][:], force_from_neighbors)
+        force_from_neighbors = self._spring_force_prefix() * \
+                               (-np.transpose(self._bead_diff_inter_first_last_bead,
+                                              axes=(1,0,2))
+                                + self._bead_diff_intra[-1, :, np.newaxis])
+        # F[-1, l, k] = sum_{j}{force_from_neighbors[l][j][k] * connection_probs[l,j]}
+        F[-1, :, :] = np.einsum('ljk,lj->lk', force_from_neighbors, connection_probs)
+
+        # on the first bead:
+        #
+        # for l in range(self._N):
+        #     force_from_neighbor = np.empty((self._N, 3))
+        #     for prev_l in range(l - 1, self._N):
+        #         force_from_neighbor[prev_l, :] = self._spring_force_prefix() * \
+        #                            (-self._bead_diff_intra[0, l] + self._bead_diff_inter_first_last_bead[l, prev_l])
+        #     F[0, l, :] = sum(connection_probs[prev_l][l] * force_from_neighbor[prev_l]
+        #                      for prev_l in range(self._N))
+        #
+        # First vectorization:
+        #
+        # for l in range(self._N):
+        #     force_from_neighbors = np.empty((self._N, 3))
+        #     force_from_neighbors[:, :] = self._spring_force_prefix() * \
+        #                              (-self._bead_diff_intra[0, l] + self._bead_diff_inter_first_last_bead[l, :])
+        #     F[0, l, :] = np.dot(connection_probs[:, l], force_from_neighbors)
+        #
+        force_from_neighbors = self._spring_force_prefix() * \
+                                    (self._bead_diff_inter_first_last_bead - self._bead_diff_intra[0, :, np.newaxis])
+        # F[0, l, k] = sum_{j}{force_from_neighbors[l][j][k] * connection_probs[j,l]}
+        F[0, :, :] = np.einsum('ljk,jl->lk', force_from_neighbors, connection_probs)
+
+        return F

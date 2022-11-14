@@ -707,24 +707,19 @@ class NormalModes(dobject):
 
     def get_vspring_and_fspring_B(self):
         """
-        Calculates spring forces and potential for bosons.
-        Evaluated using recursion relation from arXiv:1905.090.
+        Calculates spring forces and potential, including exchange effects for the bosons present, if any.
         """
-
         if len(self.bosons) == 0:
-            pass
-        else:
-            (E_k_N, V) = Evaluate_VB(self)
+            return
 
-            P = self.nbeads
-
-            F = np.zeros((P, 3 * self.natoms), float)
-
-            for ind, l in enumerate(self.bosons):
-                for j in range(P):
-                    F[j, 3 * l : 3 * (l + 1)] = Evaluate_dVB(self, E_k_N, V, ind, j)
-
-            return [V[-1], F]
+        boson_mass = dstrip(self.beads.m)[self.bosons[0]] # take mass of first boson
+        betaP = 1.0 / (self.nbeads * units.Constants.kb * self.ensemble.temp)
+        # positions of only the boson atoms
+        q = self.beads.q.reshape((self.nbeads, self.natoms, 3))[:, self.bosons, :]
+        exchange_potential = ExchangePotential(self.bosons, q,
+                                               self.nbeads, boson_mass,
+                                               self.omegan2, betaP)
+        return exchange_potential.get_vspring_and_fspring()
 
     def get_fspring(self):
         """
@@ -737,15 +732,13 @@ class NormalModes(dobject):
         if len(self.bosons) == 0:
             return self.transform.nm2b(dstrip(self.fspringnm))
         elif len(self.bosons) is self.natoms:
-            return self.vspring_and_fspring_B[1]
+            return self.vspring_and_fspring_B[1].reshape((self.nbeads, 3 * self.natoms))
         else:
-            # raise("@NormalModes: Implementing mixtures of B and D")
-            f_distinguish = self.transform.nm2b(dstrip(self.fspringnm))
-            # zero force for bosons
-            for boson in self.bosons:
-                f_distinguish[:, 3 * boson : (3 * boson + 3)] = 0.0
+            f_distinguishable = self.transform.nm2b(dstrip(self.fspringnm))
+            f_all = f_distinguishable.reshape((self.nbeads, self.natoms, 3))
+            f_all[:, self.bosons, :] = self.vspring_and_fspring_B[1]
 
-            return f_distinguish + self.vspring_and_fspring_B[1]
+            return f_all.reshape((self.nbeads, 3 * self.natoms))
 
     def free_babstep(self):
         """
