@@ -307,8 +307,6 @@ if __name__ == "__main__":
                 while True:
                     try:
                         ret = read_file("xyz", fd_xyz)
-#                        print("ret:")
-#                        print(ret)
                         path.append(ret["atoms"])
                         cell = ret["cell"]
                         if np.all(
@@ -402,14 +400,17 @@ if __name__ == "__main__":
     print("q.shape:")
     print(q.shape)
     sqrtm = np.sqrt(masses)
-    sqrtm = np.column_stack((sqrtm, sqrtm, sqrtm)).flatten() # We need the shape (3N)
+    sqrtm = np.column_stack((sqrtm, sqrtm, sqrtm)).flatten()  # We need the shape (3N)
     mass_scaled_q = q[:, fixmask] * sqrtm[fixmask]
     mass_scaled_t = 0
     print("Distances between the old beads in the mass-scaled space:")
     for i in range(1, nbeads_old):
         dist = npnorm(mass_scaled_q[i] - mass_scaled_q[i - 1])
         mass_scaled_t += dist
-        print("\tfrom %3d to %3d : %.6f bohr×√m, from start:  %6f" % (i - 1, i, dist, mass_scaled_t))
+        print(
+            "\tfrom %3d to %3d : %.6f bohr×√m, from start:  %6f"
+            % (i - 1, i, dist, mass_scaled_t)
+        )
 
     # Resample the path
     masked_new_q = spline_resample(q[:, fixmask], nbeads_old, nbeads_new, k)
