@@ -15,16 +15,24 @@ jobs:
     name: Regression and unitary tests 
     steps:
     - uses: actions/checkout@v2
-    - uses: s-weigand/setup-conda@v1
-      with:
-         activate-conda: true
-    - run: |
-           conda --version
-           conda install python=${{matrix.python-version}}
+#    - uses: s-weigand/setup-conda@v1
+#      with:
+#         activate-conda: true
+#    - run: |
+#           conda --version
+#           conda install python=${{matrix.python-version}}
+    - name: Setup conda
+        uses: s-weigand/setup-conda@v1
+        with:
+          update-conda: true
+          python-version: ${{ matrix.python-version }}
+          conda-channels: anaconda, conda-forge
+      - run: conda --version
+      - run: which python
 
     - name: Install dependencies and Project
       run: |
-         conda config --add channels conda-forge
+         #conda config --add channels conda-forge
          conda config --set channel_priority strict
          conda install -c conda-forge --file requirements.txt
          conda install scipy
