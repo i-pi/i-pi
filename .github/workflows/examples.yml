@@ -13,16 +13,18 @@ jobs:
         os: ["ubuntu-22.04"]
 
     runs-on: "${{ matrix.os }}"
-    
+
     name: pytest for examples
     steps:
     - uses: actions/checkout@v2
-    - uses: s-weigand/setup-conda@v1
-      with:
-         activate-conda: true
-    - run: |
-           conda --version
-           conda install python=${{matrix.python-version}}
+    - name: Setup conda
+        uses: s-weigand/setup-conda@v1
+        with:
+          update-conda: true
+          python-version: ${{ matrix.python-version }}
+          conda-channels: anaconda
+      - run: conda --version
+      - run: which python
 
     - name: Install dependencies and Project
       run: |
