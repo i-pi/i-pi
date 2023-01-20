@@ -39,7 +39,7 @@ to install it."""
 def print_ase(
     atoms, cell, filedesc=sys.stdout, title="", cell_conv=1.0, atoms_conv=1.0
 ):
-    """Prints an atomic configuration into an XYZ formatted file.
+    """Prints an atomic configuration into an ASE extended XYZ formatted file.
 
     Args:
         atoms: An atoms object giving the centroid positions.
@@ -52,8 +52,18 @@ def print_ase(
 
     from ase import Atoms
 
-    atoms = Atoms(atoms.names, positions=atoms.q * atoms_conv, cell=cell.h * cell_conv)
-    atoms.write(filedesc)
+    ase_atoms = Atoms(
+        atoms.names,
+        positions=atoms.q.reshape((-1, 3)) * atoms_conv,
+        cell=cell.h.T * cell_conv,
+        pbc=True,
+    )
+    ase_atoms.info["ipi_comment"] = title
+    ase_atoms.write(filedesc, format="extxyz")
+
+
+# this is a ugly hack to support reading iteratively from a file descriptor while coping with the quirks of both ASE and i-PI
+_ase_open_files = {}
 
 
 def read_ase(filedesc):
@@ -69,23 +79,16 @@ def read_ase(filedesc):
 
     _asecheck()
 
-    from ase.io import read
+    from ase.io import iread
 
-    #    from ase.build import niggli_reduce
-
-    # A check to avoid getting stuck in an infinite reading loop with some
-    # readers
-
-    try:
-        pos = filedesc.tell()
-        if pos > 0:
-            raise RuntimeError()
-    except Exception:
-        raise EOFError()
+    # keep a list of open files to iterate on using iread
+    if filedesc not in _ase_open_files:
+        _ase_open_files[filedesc] = iread(filedesc, ":")
 
     try:
-        atoms = read(filedesc)
-    except ValueError:
+        atoms = next(_ase_open_files[filedesc])
+    except StopIteration:
+        _ase_open_files.pop(filedesc)
         raise EOFError()
 
     if all(atoms.get_pbc()):
@@ -98,7 +101,7 @@ def read_ase(filedesc):
         atoms.rotate(ang, "x", rotate_cell=True)  # b in xy
 
     comment = "Structure read with ASE with composition %s" % atoms.symbols.formula
-    cell = atoms.cell.array
+    cell = atoms.cell.array.T
     qatoms = atoms.positions.reshape((-1))
     names = list(atoms.symbols)
     masses = atoms.get_masses() * Constants.amu
