@@ -15,10 +15,11 @@ jobs:
     runs-on: "${{ matrix.os }}"
 
     name: pytest for examples
+    
     steps:
     - uses: actions/checkout@v2
     - name: Setup conda
-        uses: s-weigand/setup-conda@v1
+        uses: s-weigand/setup-conda@v1 
         with:
           update-conda: true
           python-version: ${{ matrix.python-version }}
