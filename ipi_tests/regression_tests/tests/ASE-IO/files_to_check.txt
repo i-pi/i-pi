@@ -1,0 +1,8 @@
+        filename                        format
+----------------------------------------------------------
+ref_cif_simulation.for_0.xyz                  xyz
+ref_cif_simulation.pos_0.xyz                  xyz
+ref_cif_simulation.out          numpy      all,1e-6,1e-6
+ref_xyz_simulation.for_0.xyz                  xyz
+ref_xyz_simulation.pos_0.xyz                  xyz
+ref_xyz_simulation.out          numpy      all,1e-6,1e-6

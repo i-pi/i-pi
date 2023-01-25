@@ -58,9 +58,9 @@ you always want to have i-PI available.
 ### Compile the driver code
 
 ```bash
-cd drivers
+cd drivers/f90
 make
-cd ..
+cd ../..
 ```
 
 ### Run one of the examples

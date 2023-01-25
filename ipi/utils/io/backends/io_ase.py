@@ -39,7 +39,7 @@ to install it."""
 def print_ase(
     atoms, cell, filedesc=sys.stdout, title="", cell_conv=1.0, atoms_conv=1.0
 ):
-    """Prints an atomic configuration into an XYZ formatted file.
+    """Prints an atomic configuration into an ASE extended XYZ formatted file.
 
     Args:
         atoms: An atoms object giving the centroid positions.
@@ -52,8 +52,14 @@ def print_ase(
 
     from ase import Atoms
 
-    atoms = Atoms(atoms.names, positions=atoms.q * atoms_conv, cell=cell.h * cell_conv)
-    atoms.write(filedesc)
+    ase_atoms = Atoms(
+        atoms.names,
+        positions=atoms.q.reshape((-1, 3)) * atoms_conv,
+        cell=cell.h.T * cell_conv,
+        pbc=True,
+    )
+    ase_atoms.info["ipi_comment"] = title
+    ase_atoms.write(filedesc, format="extxyz")
 
 
 # this is a ugly hack to support reading iteratively from a file descriptor while coping with the quirks of both ASE and i-PI
