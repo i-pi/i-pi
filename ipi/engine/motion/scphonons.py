@@ -40,7 +40,7 @@ except ImportError as e:
 
 class SCPhononsMover(Motion):
     """
-    Self consistent phonons method.
+    Self-consistent phonons method.
     """
 
     def __init__(
@@ -189,7 +189,8 @@ class SCPhononsMover(Motion):
     def step(self, step=None):
         if self.isc == self.max_iter:
             softexit.trigger(
-                " @SCP: Reached maximum iterations. Terminating the SCP calculation."
+                status="bad",
+                message=" @SCP: Reached maximum iterations. Terminating the SCP calculation.",
             )
         if self.imc == 0:
             self.phononator.reset()
@@ -468,7 +469,7 @@ class SCPhononator(DummyPhononator):
             fnm = np.dot(self.dm.V.T, f)
 
             # Assumes error = standard error.
-            fnm_err = np.sqrt(np.dot(self.dm.V.T ** 2, f_err ** 2))
+            fnm_err = np.sqrt(np.dot(self.dm.V.T**2, f_err**2))
             fnm[self.z] = 0.0
 
             if np.all(np.abs(fnm) < fnm_err):
@@ -568,7 +569,7 @@ class SCPhononator(DummyPhononator):
             # Estimates the error.
             fnm = np.dot(self.dm.V.T, f)
             fnm[self.z] = 0.0
-            fnm_err = np.sqrt(np.dot(self.dm.V.T ** 2, f_err ** 2))
+            fnm_err = np.sqrt(np.dot(self.dm.V.T**2, f_err**2))
 
             # Zeros the displacement along "insignificant" normal modes.
             iKfnm = self.dm.iw2 * fnm
@@ -626,7 +627,7 @@ class SCPhononator(DummyPhononator):
                     # Computes the force along the normal modes.
                     fnm = np.dot(self.dm.V.T, f)
                     fnm[self.z] = 0.0
-                    fnm_err = np.sqrt(np.dot(self.dm.V.T ** 2, f_err ** 2))
+                    fnm_err = np.sqrt(np.dot(self.dm.V.T**2, f_err**2))
 
                     # Breaks if all the forces are statistically insignificant.
                     if np.all(np.abs(fnm) < fnm_err):
@@ -691,7 +692,7 @@ class SCPhononator(DummyPhononator):
                 f_err = f_err
                 fnm = np.dot(self.dm.V.T, f)
                 fnm[self.z] = 0.0
-                fnm_err = np.sqrt(np.dot(self.dm.V.T ** 2, f_err ** 2))
+                fnm_err = np.sqrt(np.dot(self.dm.V.T**2, f_err**2))
 
                 # Breaks if all the forces are statistically insignificant.
                 if np.all(np.abs(fnm) < fnm_err):
@@ -739,14 +740,14 @@ class SCPhononator(DummyPhononator):
 
             # Simply multiplies the forces by the weights and averages.
             V1 = np.sum(rw)
-            V2 = np.sum(rw ** 2)
+            V2 = np.sum(rw**2)
             avg_fi = np.sum(rw * (f - fh), axis=0) / V1
             var_fi = np.sum(rw * (f - fh - avg_fi) ** 2, axis=0) / (V1 - V2 / V1)
             avg_f += sw * avg_fi
-            var_f += sw ** 2 * var_fi
+            var_f += sw**2 * var_fi
             norm += sw
 
-        return avg_f / norm, np.sqrt(var_f / norm ** 2 / self.dm.max_steps), batch_w
+        return avg_f / norm, np.sqrt(var_f / norm**2 / self.dm.max_steps), batch_w
 
     def weighted_hessian(self):
         """

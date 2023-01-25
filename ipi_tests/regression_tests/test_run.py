@@ -3,9 +3,13 @@ import pytest
 import argparse
 from argparse import RawTextHelpFormatter
 import time
-from .runstools import Runner_regression
-from ..test_tools import get_test_list
 
+try:
+    from ipi_tests.regression_tests.runstools import Runner_regression
+    from ipi_tests.test_tools import get_test_list
+except:
+    from .runstools import Runner_regression
+    from ..test_tools import get_test_list
 
 """ Run regression test """
 

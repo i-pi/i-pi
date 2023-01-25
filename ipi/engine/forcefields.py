@@ -431,10 +431,10 @@ class FFLennardJones(ForceField):
         f = np.zeros(q.shape)
         for i in range(1, nat):
             dij = q[i] - q[:i]
-            rij2 = (dij ** 2).sum(axis=1)
+            rij2 = (dij**2).sum(axis=1)
 
             x6 = (self.sigma2 / rij2) ** 3
-            x12 = x6 ** 2
+            x12 = x6**2
 
             v += (x12 - x6).sum()
             dij *= (self.sixepsfour * (2.0 * x12 - x6) / rij2)[:, np.newaxis]
@@ -761,7 +761,7 @@ class FFPlumed(ForceField):
         self.plumed.cmd("setMasses", self.masses)
 
         # these instead are set properly. units conversion is done on the PLUMED side
-        self.plumed.cmd("setBox", r["cell"][0])
+        self.plumed.cmd("setBox", r["cell"][0].T)
         self.plumed.cmd("setPositions", r["pos"])
         self.plumed.cmd("setForces", f)
         self.plumed.cmd("setVirial", vir)
@@ -773,6 +773,7 @@ class FFPlumed(ForceField):
         v = bias[0]
         vir *= -1
 
+        # nb: the virial is a symmetric tensor, so we don't need to transpose
         r["result"] = [v, f, vir, {"raw": ""}]
         r["status"] = "Done"
 
@@ -788,7 +789,7 @@ class FFPlumed(ForceField):
         self.plumed.cmd("setCharges", self.charges)
         self.plumed.cmd("setMasses", self.masses)
         self.plumed.cmd("setPositions", pos)
-        self.plumed.cmd("setBox", cell)
+        self.plumed.cmd("setBox", cell.T)
         self.plumed.cmd("setForces", f)
         self.plumed.cmd("setVirial", vir)
         self.plumed.cmd("prepareCalc")
@@ -1191,14 +1192,30 @@ class FFCommittee(ForceField):
             # and V_committee the committee error. Then
             # V = V_baseline + s_b^2/(s_c^2+s_b^2) V_committe
 
-            s_b2 = self.baseline_uncertainty ** 2
-            uncertain_frc = self.alpha ** 2 * np.mean(
-                [(pot - mean_pot) * (frc - mean_frc) for pot, frc in zip(pots, frcs)],
-                axis=0,
+            s_b2 = self.baseline_uncertainty**2
+
+            nmodels = len(pots)
+            uncertain_frc = (
+                self.alpha**2
+                * np.sum(
+                    [
+                        (pot - mean_pot) * (frc - mean_frc)
+                        for pot, frc in zip(pots, frcs)
+                    ],
+                    axis=0,
+                )
+                / (nmodels - 1)
             )
-            uncertain_vir = self.alpha ** 2 * np.mean(
-                [(pot - mean_pot) * (vir - mean_vir) for pot, vir in zip(pots, virs)],
-                axis=0,
+            uncertain_vir = (
+                self.alpha**2
+                * np.sum(
+                    [
+                        (pot - mean_pot) * (vir - mean_vir)
+                        for pot, vir in zip(pots, virs)
+                    ],
+                    axis=0,
+                )
+                / (nmodels - 1)
             )
 
             # Computes the final average energetics

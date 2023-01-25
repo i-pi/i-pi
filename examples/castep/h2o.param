@@ -1,0 +1,6 @@
+task       : socketdriver
+socket_port: 31415
+socket_host: localhost
+
+finite_basis_corr = none
+cut_off_energy = 345 eV

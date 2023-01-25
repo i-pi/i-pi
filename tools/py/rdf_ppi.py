@@ -202,11 +202,11 @@ def RDF(prefix, temp, A, B, nbins, r_min, r_max, ss=0, unit="angstrom"):
 
                 # Some constants
                 const = 1.0 / float(ifr - skipSteps)
-                alpha = Constants.hbar ** 2 / (
-                    24.0 * nbeads ** 3 * (temperature * Constants.kb) ** 3
+                alpha = Constants.hbar**2 / (
+                    24.0 * nbeads**3 * (temperature * Constants.kb) ** 3
                 )
-                beta = Constants.hbar ** 2 / (
-                    12.0 * nbeads ** 3 * (temperature * Constants.kb) ** 2
+                beta = Constants.hbar**2 / (
+                    12.0 * nbeads**3 * (temperature * Constants.kb) ** 2
                 )
 
                 # Normalization

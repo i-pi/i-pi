@@ -37,7 +37,7 @@ def histo_der(qdata, fdata, grid, k, invsigma, m, P, T):
         ly[jx - dj : jx + dj + 1] += (
             -bp * (fc + sc) * k(grid[jx - dj : jx + dj + 1] - x, invsigma)
         )
-    return ly * np.sqrt(0.5 / np.pi * invsigma ** 2)
+    return ly * np.sqrt(0.5 / np.pi * invsigma**2)
 
 
 def histo(data, grid, k, invsigma):
@@ -49,7 +49,7 @@ def histo(data, grid, k, invsigma):
         x = data[i]
         jx = int(x / dx + ns / 2.0)
         ly[jx - dj : jx + dj + 1] += k(grid[jx - dj : jx + dj + 1] - x, invsigma)
-    return ly * np.sqrt(1.0 / 2.0 / np.pi * invsigma ** 2)
+    return ly * np.sqrt(1.0 / 2.0 / np.pi * invsigma**2)
 
 
 def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, der, skip):
@@ -215,9 +215,9 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, der, skip):
     norm_npy = avghy[(ns - 1) / 2]
     norm_npz = avghz[(ns - 1) / 2]
 
-    print("# Dx^2", np.dot(dqxgrid ** 2, avghx) * dqxstep / (bsize * n_block))
-    print("# Dy^2", np.dot(dqygrid ** 2, avghy) * dqystep / (bsize * n_block))
-    print("# Dz^2", np.dot(dqzgrid ** 2, avghz) * dqzstep / (bsize * n_block))
+    print("# Dx^2", np.dot(dqxgrid**2, avghx) * dqxstep / (bsize * n_block))
+    print("# Dy^2", np.dot(dqygrid**2, avghy) * dqystep / (bsize * n_block))
+    print("# Dz^2", np.dot(dqzgrid**2, avghz) * dqzstep / (bsize * n_block))
 
     print(
         "# px^2 (from the 2nd derivative of the histogram)",
@@ -228,7 +228,7 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, der, skip):
             + avghx[(ns - 1) / 2 - 2]
             + avghx[(ns - 1) / 2 + 2]
         )
-        / dqxstep ** 2
+        / dqxstep**2
         / norm_npx
         / 12.0,
     )
@@ -241,7 +241,7 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, der, skip):
             + avghy[(ns - 1) / 2 - 2]
             + avghy[(ns - 1) / 2 + 2]
         )
-        / dqystep ** 2
+        / dqystep**2
         / norm_npy
         / 12.0,
     )
@@ -254,7 +254,7 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, der, skip):
             + avghz[(ns - 1) / 2 - 2]
             + avghz[(ns - 1) / 2 + 2]
         )
-        / dqzstep ** 2
+        / dqzstep**2
         / norm_npz
         / 12.0,
     )
@@ -301,7 +301,7 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, der, skip):
     pz2 = []
     for i in range(n_block):
         px2.append(
-            np.dot(pxgrid ** 2, np.asarray(nplistx)[i, :])
+            np.dot(pxgrid**2, np.asarray(nplistx)[i, :])
             * pxstep
             / norm_npx
             / 2.0
@@ -309,7 +309,7 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, der, skip):
             * n_block
         )
         py2.append(
-            np.dot(pygrid ** 2, np.asarray(nplisty)[i, :])
+            np.dot(pygrid**2, np.asarray(nplisty)[i, :])
             * pystep
             / norm_npy
             / 2.0
@@ -317,7 +317,7 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, der, skip):
             * n_block
         )
         pz2.append(
-            np.dot(pzgrid ** 2, np.asarray(nplistz)[i, :])
+            np.dot(pzgrid**2, np.asarray(nplistz)[i, :])
             * pzstep
             / norm_npz
             / 2.0
