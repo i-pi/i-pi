@@ -99,7 +99,7 @@ class InputInitBase(InputValue):
         if self.mode.fetch() == "manual":
             if "[" in value and "]" in value:  # value appears to be a list
                 if self._storageclass is float:
-                    value = io_xml.read_array(np.float, value)
+                    value = io_xml.read_array(float, value)
                 else:
                     value = io_xml.read_list(value)
             else:
@@ -320,7 +320,9 @@ class InputInitCell(InputInitBase):
         ibase = super(InputInitCell, self).fetch()
         if mode == "abc" or mode == "abcABC":
 
-            h = io_xml.read_array(np.float, ibase.value)
+            h = io_xml.read_array(
+                float, ibase.value
+            )  # As of numpy v1.20, numpy.float as well as similar aliases (including numpy.int) were deprecated
 
             if mode == "abc":
                 if h.size != 3:
