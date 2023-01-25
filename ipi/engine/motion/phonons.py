@@ -112,7 +112,10 @@ class DynMatrixMover(Motion):
             self.phcalc.transform()
             self.refdynmatrix = self.apply_asr(self.refdynmatrix.copy())
             self.printall(self.prefix, self.refdynmatrix.copy(), fixdof=self.fixdof)
-            softexit.trigger("Dynamic matrix is calculated. Exiting simulation")
+            softexit.trigger(
+                status="success",
+                message="Dynamic matrix is calculated. Exiting simulation",
+            )
 
     def printall(self, prefix, dmatx, deltaw=0.0, fixdof=np.array([])):
         """Prints out diagnostics for a given dynamical matrix."""

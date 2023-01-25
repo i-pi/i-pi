@@ -391,7 +391,9 @@ class GradientMapper(object):
             try:
                 from scipy.interpolate import interp1d
             except ImportError:
-                softexit.trigger("Scipy required to use  max_ms >0")
+                softexit.trigger(
+                    status="bad", message="Scipy required to use  max_ms >0"
+                )
 
             indexes = list()
             indexes.append(0)
@@ -410,7 +412,8 @@ class GradientMapper(object):
             )
             if len(indexes) <= 2:
                 softexit.trigger(
-                    "Too few beads fulfill criteria. Please reduce max_ms or max_e"
+                    status="bad",
+                    message="Too few beads fulfill criteria. Please reduce max_ms or max_e",
                 )
         else:
             indexes = np.arange(self.dbeads.nbeads)
@@ -921,13 +924,19 @@ class DummyOptimizer(dobject):
         """General tasks that have to be performed before actual step"""
 
         if self.exit:
-            softexit.trigger("Geometry optimization converged. Exiting simulation")
+            softexit.trigger(
+                status="success",
+                message="Geometry optimization converged. Exiting simulation",
+            )
 
         if not self.init:
             self.initialize(step)
 
         if adaptative:
-            softexit.trigger("Adaptative discretization is not fully implemented")
+            softexit.trigger(
+                status="bad",
+                message="Adaptative discretization is not fully implemented",
+            )
             # new_coef = <implement_here>
             # self.im.set_coef(coef)
             # self.gm.set_coef(coef)
@@ -1255,7 +1264,7 @@ class NROptimizer(HessianOptimizer):
         f = np.multiply(f, self.im.dbeads.m3.reshape(f.shape) ** -0.5)
 
         d_x = invmul_banded(h_up_band, f).reshape(self.im.dbeads.q.shape)
-        d_x = np.multiply(d_x, self.im.dbeads.m3 ** -0.5)
+        d_x = np.multiply(d_x, self.im.dbeads.m3**-0.5)
 
         # Rescale step if necessary
         if np.amax(np.absolute(d_x)) > activearrays["big_step"]:
@@ -1391,7 +1400,7 @@ class LanczosOptimizer(HessianOptimizer):
         d_x.shape = self.im.dbeads.q.shape
 
         # MASS-scaled
-        d_x = np.multiply(d_x, self.im.dbeads.m3 ** -0.5)
+        d_x = np.multiply(d_x, self.im.dbeads.m3**-0.5)
 
         # Rescale step if necessary
         if np.amax(np.absolute(d_x)) > activearrays["big_step"]:

@@ -484,8 +484,11 @@ e.g. \texttt{forces\{ev/ang\}}.
 Examples of such inputs can be found in \texttt{examples/lammps/*/init.xyz} . An example for PDB can be found in \texttt{examples/qespresso/h2o/init.pdb} .
 The code then behaves in the following way, depending on the user's choice:
 \begin{itemize}
-\item If no units are specified in the input, i-PI tries to guess from the comment line of the structure file and it nothing is present, assumes atomic units, or angstrom for PDB files.
-\item If units are specified in both input and structure file and they match, conversion happens just once. If they do not match, an error is raised and i-PI stops.
+\item If no units are specified in the input, i-PI tries to guess from the comment line of the structure file. 
+      If nothing is present, assumes atomic units, or angstrom for PDB files. Files processed using the ASE interface are
+      interpreted using the ASE conventional form, e.g. XYZ or CIF files are assumed to be in angstrom.  
+\item If units are specified in both input and structure file and they match, conversion happens just once. 
+      If they do not match, an error is raised and i-PI stops.
 \end{itemize}
 
 
@@ -1959,6 +1962,7 @@ possibly followed by their attributes.
 \input{input_docs/phonons}
 \input{input_docs/geop}
 \input{input_docs/neb}
+\input{input_docs/stringmep}
 \input{input_docs/t_ramp}
 \input{input_docs/p_ramp}
 \input{input_docs/initializer}
