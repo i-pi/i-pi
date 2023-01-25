@@ -178,7 +178,9 @@ class ForceBead(dobject):
                 # if we return, we may as well output wrong numbers, or mess up things.
                 # so we can only call soft-exit and wait until that is done. then kill the thread
                 # we are in.
-                softexit.trigger(" @ FORCES : cannot return so will die off here")
+                softexit.trigger(
+                    message=" @ FORCES : cannot return so will die off here"
+                )
                 while softexit.exiting:
                     time.sleep(self.ff.latency)
                 sys.exit()
@@ -1042,7 +1044,7 @@ class Forces(dobject):
             return self.mrpc[index].b2tob1(self.mforces[index].pots)
 
     def forces_component(self, index, weighted=True):
-        """ Fetches the index^th component of the total force."""
+        """Fetches the index^th component of the total force."""
         if weighted:
             if self.mforces[index].weight != 0:
                 return self.mforces[index].weight * self.mrpc[index].b2tob1(
@@ -1054,7 +1056,7 @@ class Forces(dobject):
             return self.mrpc[index].b2tob1(dstrip(self.mforces[index].f))
 
     def extras_component(self, index):
-        """ Fetches extras that are computed for one specific force component."""
+        """Fetches extras that are computed for one specific force component."""
 
         if self.nbeads != self.mforces[index].nbeads:
             raise ValueError(
@@ -1080,7 +1082,7 @@ class Forces(dobject):
                 ff.queue()
 
     def forces_mts(self, level):
-        """ Fetches ONLY the forces associated with a given MTS level."""
+        """Fetches ONLY the forces associated with a given MTS level."""
 
         self.queue_mts(level)
         fk = np.zeros((self.nbeads, 3 * self.natoms))
@@ -1099,7 +1101,7 @@ class Forces(dobject):
         return fk
 
     def forcesvirs_4th_order(self, index):
-        """ Fetches the 4th order |f^2| correction to the force vector and the virial associated with a given component."""
+        """Fetches the 4th order |f^2| correction to the force vector and the virial associated with a given component."""
 
         # gives an error is number of beads is not even.
         if self.nbeads % 2 != 0:
@@ -1284,11 +1286,11 @@ class Forces(dobject):
         return [f_4th_order, v_4th_order]
 
     def vir_mts(self, level):
-        """ Fetches ONLY the total virial associated with a given MTS level."""
+        """Fetches ONLY the total virial associated with a given MTS level."""
         return np.sum(self.virs_mts(level), axis=0)
 
     def virs_mts(self, level):
-        """ Fetches ONLY the total virial associated with a given MTS level."""
+        """Fetches ONLY the total virial associated with a given MTS level."""
 
         self.queue_mts(level)
         rp = np.zeros((self.beads.nbeads, 3, 3), float)
@@ -1308,7 +1310,7 @@ class Forces(dobject):
         return rp
 
     def get_nmtslevels(self):
-        """ Returns the total number of mts levels."""
+        """Returns the total number of mts levels."""
 
         nm = len(self.mforces[0].mts_weights)
         if all(len(x.mts_weights) == nm for x in self.mforces):

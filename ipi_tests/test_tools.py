@@ -155,7 +155,7 @@ def modify_xml_4_dummy_test(
     driver_info,
     test_settings,
 ):
-    """ Modify xml to run dummy tests """
+    """Modify xml to run dummy tests"""
     try:
         tree = ET.parse(input_name)
     except:
@@ -278,6 +278,12 @@ class Runner(object):
                             time.sleep(0.5)
                     if not f_connected:
                         print("Could not find the i-PI UNIX socket.")
+                        print("Current client {}".format(client))
+                        print("List all files  /tmp/ipi_*")
+                        for filename in glob.glob("/tmp/ipi_*"):
+                            print(filename)
+                        ipi_error = ipi.communicate(timeout=120)[1].decode("ascii")
+                        print(ipi_error)
                         return "Could not find the i-PI UNIX socket"
 
             # Run drivers by defining cmd2 which will be called, eventually

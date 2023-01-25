@@ -110,9 +110,9 @@ def energies(prefix, temp, ss=0, unit=""):
     const_1 = 0.5 * nbeads / (beta * Constants.hbar) ** 2
     const_2 = 1.5 * nbeads / beta
     const_3 = 1.5 / beta
-    const_4 = Constants.kb ** 2 / Constants.hbar ** 2
-    const_5 = Constants.hbar ** 2 * beta ** 3 / (24.0 * nbeads ** 3)
-    const_6 = Constants.hbar ** 2 * beta ** 2 / (24.0 * nbeads ** 3)
+    const_4 = Constants.kb**2 / Constants.hbar**2
+    const_5 = Constants.hbar**2 * beta**3 / (24.0 * nbeads**3)
+    const_6 = Constants.hbar**2 * beta**2 / (24.0 * nbeads**3)
 
     timeUnit, potentialEnergyUnit, potentialEnergy_index, time_index = extractUnits(
         iU
@@ -236,7 +236,7 @@ def energies(prefix, temp, ss=0, unit=""):
 
             norm = float(ifr - skipSteps)
 
-            dU = 2 * f2_av / norm - beta * (f2U_av / norm - f2_av * U_av / norm ** 2)
+            dU = 2 * f2_av / norm - beta * (f2U_av / norm - f2_av * U_av / norm**2)
             dU *= const_6
             dU = unit_to_user("energy", unit, dU)
 

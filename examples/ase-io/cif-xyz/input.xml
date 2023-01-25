@@ -1,0 +1,38 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+      <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv{megapascal}, volume, cell_h{angstrom}] </properties>
+    <trajectory stride='100' filename='xc' format='pdb' cell_units='angstrom'> x_centroid{angstrom}</trajectory>
+    <checkpoint stride='2000'/>
+  </output>
+  <total_steps>2</total_steps>
+  <prng>
+    <seed>31415</seed>
+  </prng>
+  <!-- dummy forcefield -->  
+  <fflj name='lj' pbc='False'>
+      <parameters> { eps:0.0, sigma:1.0 } </parameters>
+  </fflj>
+  <system_template>
+      <labels> [ id, filename ] </labels>
+      <instance> [ cif, K2S2O8_rotated.cif ] </instance>
+      <instance> [ xyz, K2S2O8_rotated.xyz ] </instance>
+      <template>
+  <system prefix="id">
+    <initialize nbeads='1'>
+      <file mode='ase'> filename </file>
+      <velocities mode='thermal' units='kelvin'> 200 </velocities>
+    </initialize>
+    <forces>
+      <force name='zero' forcefield='lj'>  </force>
+    </forces>
+    <ensemble>
+      <temperature units='kelvin'> 200 </temperature>
+      <pressure units='megapascal'> 10 </pressure>
+    </ensemble>
+    <motion mode="replay">
+      <file mode="ase"> filename </file>
+    </motion>
+  </system>
+    </template> 
+  </system_template>      
+</simulation>

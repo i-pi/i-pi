@@ -1,0 +1,71 @@
+#!/bin/csh -f
+
+# Start with <seed>.{cell,param} & usp files in top-level directory
+# and i-pi inputs of <seed>.xml & <seed>.xyz - need to keep xyz & cell in sync
+
+# NB In case of error, do 
+#     ps -fx | grep i-pi
+#     ps -fx | grep castep
+# to see if any processes left over and manually kill them before repeating this script
+
+set usage = "usage: run_me seed"
+
+# parse the argument list to get the compulsory seed name  ...
+if ( $#argv == 0 ) then
+   echo 'seed not set'
+   echo $usage
+   exit 1
+else
+   set seed = $argv[1]
+endif
+
+# warn if syntax error
+if ( $#argv > 1 ) then
+   echo 'too many arguments'
+   echo $usage
+   exit 2
+endif
+
+#now we have the seed we can check for the 4 compulsory input files needed:
+if ( ! -e ${seed}.xml ) then
+   echo missing ${seed}.xml
+   exit 3
+endif
+if ( ! -e ${seed}.xyz ) then
+   echo missing ${seed}.xyz
+   exit 3
+endif
+if ( ! -e ${seed}.cell ) then
+   echo missing ${seed}.cell
+   exit 3
+endif
+if ( ! -e ${seed}.param ) then
+   echo missing ${seed}.param
+   exit 3
+endif
+   
+
+#all present so now all OK to launch i-pi
+set nbeads = `grep nbead ${seed}.xml | awk -F\' '{print $2}'`
+if ( "$nbeads" == "" ) then
+   set nbeads = `grep nbead ${seed}.xml | awk -F\" '{print $2}'`
+endif
+
+echo Starting i-pi with $nbeads beads for system $seed
+i-pi ${seed}.xml > log & sleep 5
+
+#spawn castep instances in separate1 directories for each bead
+set i = 1
+while ( $i <= $nbeads )
+   if ( ! -d run_$i ) then
+      mkdir run_$i
+   endif
+   cp ${seed}.{param,cell} run_$i
+   cp *.usp run_$i
+   cd run_$i
+   castep.serial $seed &
+   cd ../
+   @ i++
+end
+
+echo '... finished'

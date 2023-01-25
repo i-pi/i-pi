@@ -33,6 +33,7 @@ from ipi.engine.motion import (
     Replay,
     GeopMotion,
     NEBMover,
+    StringMover,
     DynMatrixMover,
     MultiMotion,
     AlchemyMC,
@@ -51,6 +52,7 @@ from ipi.inputs.initializer import *
 from .geop import InputGeop
 from .instanton import InputInst
 from .neb import InputNEB
+from .stringmep import InputStringMEP
 from .dynamics import InputDynamics
 from .vscf import InputNormalMode
 from .constrained_dynamics import InputConstrainedDynamics
@@ -93,6 +95,7 @@ class InputMotionBase(Input):
                     "minimize",
                     "replay",
                     "neb",
+                    "string",
                     "dynamics",
                     "constrained_dynamics",
                     "t_ramp",
@@ -133,7 +136,14 @@ class InputMotionBase(Input):
         ),
         "neb_optimizer": (
             InputNEB,
-            {"default": {}, "help": "Option for geometry optimization"},
+            {"default": {}, "help": "Option for NEB optimization"},
+        ),
+        "string_optimizer": (
+            InputStringMEP,
+            {
+                "default": {},
+                "help": "Option for String minimal-energy path optimization",
+            },
         ),
         "dynamics": (
             InputDynamics,
@@ -230,6 +240,10 @@ class InputMotionBase(Input):
             self.mode.store("neb")
             self.neb_optimizer.store(sc)
             tsc = 1
+        elif type(sc) is StringMover:
+            self.mode.store("string")
+            self.string_optimizer.store(sc)
+            tsc = 1
         elif type(sc) is Dynamics:
             self.mode.store("dynamics")
             self.dynamics.store(sc)
@@ -282,7 +296,8 @@ class InputMotionBase(Input):
 
         if (sc.fixcom is True) and (len(sc.fixatoms) > 0):
             softexit.trigger(
-                "Fixed atoms break translational invariance, and so should be used with <fixcom> False </fixcom>. You can disable this error if you know what you are doing."
+                status="bad",
+                message="Fixed atoms break translational invariance, and so should be used with <fixcom> False </fixcom>. You can disable this error if you know what you are doing.",
             )
 
         if tsc == 0:
@@ -314,15 +329,29 @@ class InputMotionBase(Input):
                 **self.optimizer.fetch()
             )
         elif self.mode.fetch() == "neb":
-
-            raise ValueError(
-                "The nudged elastic band calculation has been temporarily disabled until further bug-fixes."
+            #            raise ValueError(
+            #                "The nudged elastic band calculation has been "
+            #                "temporarily disabled until further bug-fixes."
+            #            )
+            sc = NEBMover(
+                fixcom=self.fixcom.fetch(),
+                fixatoms=self.fixatoms.fetch(),
+                **self.neb_optimizer.fetch()
             )
-        #            sc = NEBMover(
-        #                fixcom=self.fixcom.fetch(),
-        #                fixatoms=self.fixatoms.fetch(),
-        #                **self.neb_optimizer.fetch()
-        #            )
+        elif self.mode.fetch() == "string":
+            softexit.trigger(
+                status="bad",
+                message=(
+                    "String method is experimental: not guaranteed to work correctly "
+                    "and makes twice more force calls than it is expected to.\n"
+                    "We stop here. If you want to proceed, comment out this trigger."
+                ),
+            )
+            sc = StringMover(
+                fixcom=self.fixcom.fetch(),
+                fixatoms=self.fixatoms.fetch(),
+                **self.string_optimizer.fetch()
+            )
         elif self.mode.fetch() == "dynamics":
             sc = Dynamics(
                 fixcom=self.fixcom.fetch(),
@@ -396,7 +425,7 @@ class InputMotionBase(Input):
 
 class InputMotion(InputMotionBase):
 
-    """ Extends InputMotionBase to allow the definition of a multimotion """
+    """Extends InputMotionBase to allow the definition of a multimotion"""
 
     attribs = copy(InputMotionBase.attribs)
 

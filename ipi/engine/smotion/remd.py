@@ -38,8 +38,10 @@ def motion_scale(motion, scale):
     if hasattr(motion, "mlist"):
         for m in motion.mlist:
             motion_scale(m, scale)
-    thermo_scale(motion.thermostat, scale)
-    thermo_scale(motion.barostat.thermostat, scale)
+    if hasattr(motion, "thermostat"):
+        thermo_scale(motion.thermostat, scale)
+    if hasattr(motion, "barostat"):
+        thermo_scale(motion.barostat.thermostat, scale)
 
 
 def gle_scale(sys, scale):

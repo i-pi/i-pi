@@ -100,7 +100,7 @@ class InputForceField(Input):
                 "dtype": int,
                 "default": np.array([-1]),
                 #                                     "default" : input_default(factory=np.array, args =[-1]),
-                "help": "List with indexes of the atoms that this socket is taking care of.    Default: all (corresponding to -1)",
+                "help": "List with indexes of the atoms that this socket is taking care of.    Default: [-1] (corresponding to all)",
             },
         ),
     }
@@ -768,7 +768,7 @@ class InputFFCommittee(InputForceField):
     )
 
     def store(self, ff):
-        """ Store all the sub-forcefields """
+        """Store all the sub-forcefields"""
 
         super(InputFFCommittee, self).store(ff)
         _fflist = ff.fflist
@@ -815,7 +815,7 @@ class InputFFCommittee(InputForceField):
                 self.extra[_ii][1].store(_obj)
 
     def fetch(self):
-        """ Fetches all of the FF objects """
+        """Fetches all of the FF objects"""
 
         super(InputFFCommittee, self).fetch()
 

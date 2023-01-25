@@ -7,4 +7,4 @@ binary format, pdb and xyz.
 # See the "licenses" directory for full license information.
 
 
-__all__ = ["io_pdb", "io_xyz", "io_binary"]
+__all__ = ["io_pdb", "io_xyz", "io_binary", "io_ase"]

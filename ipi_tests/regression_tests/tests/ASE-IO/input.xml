@@ -1,0 +1,39 @@
+<simulation verbosity="high">
+  <output prefix="simulation">
+    <properties filename="out" stride="1">  [ time{picosecond}, conserved, temperature{kelvin}, kinetic_md, kinetic_cv, potential ] </properties>
+    <trajectory filename="pos" format="xyz" stride="2"> positions{angstrom} </trajectory>
+    <trajectory filename="for" format="xyz" stride="2"> forces </trajectory>
+  </output>
+  <total_steps>25</total_steps>
+  <prng>
+    <seed>23658</seed>
+  </prng>
+  <ffsocket mode="unix" name="lj" pbc="true">
+      <address>driver_ase</address> <port> 1234 </port>
+    <latency>0.02</latency>
+    <timeout>400</timeout>
+  </ffsocket>
+  <system_template>
+      <labels> [ id, filename ] </labels>
+      <instance> [ cif, K2S2O8_rotated.cif ] </instance>
+      <instance> [ xyz, K2S2O8_rotated.xyz ] </instance>
+      <template>
+  <system prefix="id">
+    <initialize nbeads='1'>
+      <file mode='ase'> filename </file>
+      <velocities mode='thermal' units='kelvin'> 200 </velocities>
+    </initialize>
+    <forces>
+      <force name='zero' forcefield='lj'>  </force>
+    </forces>
+    <ensemble>
+      <temperature units='kelvin'> 200 </temperature>
+      <pressure units='megapascal'> 10 </pressure>
+    </ensemble>
+    <motion mode="replay">
+      <file mode="ase"> filename </file>
+    </motion>
+  </system>
+    </template> 
+  </system_template>
+</simulation>

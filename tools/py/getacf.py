@@ -34,7 +34,7 @@ def compute_acf(
     bsize = int(block_length)
     npad = int(length_zeropadding)
     ftbox = str(spectral_windowing)
-    labels = str(labels)
+    labels = str(labels).split()
     timestep = str(timestep).split()
     fskip = int(skip)
 
@@ -63,9 +63,9 @@ def compute_acf(
     # stores the indices of the "chosen" atoms.
     ndof = len(rr["data"])
     if "*" in labels:
-        labelbool = np.ones(ndof / 3, bool)
+        labelbool = np.ones(ndof // 3, bool)
     else:
-        labelbool = np.zeros(ndof / 3, bool)
+        labelbool = np.zeros(ndof // 3, bool)
         for l in labels:
             labelbool = np.logical_or(labelbool, rr["names"] == l)
     nspecies = labelbool.sum()
@@ -108,7 +108,7 @@ def compute_acf(
             # Reads the data in blocks.
             for i in range(bsize):
                 rr = read_file_raw("xyz", ff)
-                data[i] = rr["data"].reshape((ndof / 3, 3))[labelbool]
+                data[i] = rr["data"].reshape((ndof // 3, 3))[labelbool]
 
             if der is True:
                 data = np.gradient(data, axis=0) / dt
@@ -135,9 +135,9 @@ def compute_acf(
 
             # Accumulates the (f)acfs and their squares.
             fvvacf += mfpvvacf
-            fvvacf2 += mfpvvacf ** 2
+            fvvacf2 += mfpvvacf**2
             vvacf += mvvacf
-            vvacf2 += mvvacf ** 2
+            vvacf2 += mvvacf**2
 
             nblocks += 1
 
@@ -147,13 +147,13 @@ def compute_acf(
 
     # Performs the block average of the Fourier transform.
     fvvacf = fvvacf / nblocks
-    fvvacf_err = np.sqrt(fvvacf2 / nblocks - fvvacf ** 2)
+    fvvacf_err = np.sqrt(fvvacf2 / nblocks - fvvacf**2)
 
     np.savetxt(ofile + "_facf.data", np.c_[omega, fvvacf, fvvacf_err][: mlag + npad])
 
     # Computes the inverse Fourier transform to get the vvac.
     vvacf = vvacf / nblocks
-    vvacf_err = np.sqrt(vvacf2 / nblocks - vvacf ** 2)
+    vvacf_err = np.sqrt(vvacf2 / nblocks - vvacf**2)
     np.savetxt(ofile + "_acf.data", np.c_[time, vvacf, vvacf_err][: mlag + npad])
 
 

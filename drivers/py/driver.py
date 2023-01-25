@@ -15,7 +15,7 @@ Minimal example of a Python driver connecting to i-PI and exchanging energy, for
 
 
 def recv_data(sock, data):
-    """ Fetches binary data from i-PI socket. """
+    """Fetches binary data from i-PI socket."""
     blen = data.itemsize * data.size
     buf = np.zeros(blen, np.byte)
 
@@ -39,7 +39,7 @@ def recv_data(sock, data):
 
 
 def send_data(sock, data):
-    """ Sends binary data to i-PI socket. """
+    """Sends binary data to i-PI socket."""
 
     if np.isscalar(data):
         data = np.array([data], data.dtype)
@@ -121,6 +121,30 @@ def run_driver(unix=False, address="", port=12345, driver=Dummy_driver()):
             f_data = True
         elif header == Message("GETFORCE"):
             sock.sendall(Message("FORCEREADY"))
+
+            # sanity check in the returned values (catches bugs and inconsistencies in the implementation)
+            if not isinstance(force, np.ndarray) and force.dtype == np.float64:
+                raise ValueError(
+                    "driver returned forces with the wrong type: we need a "
+                    "numpy.ndarray containing 64-bit floating points values"
+                )
+
+            if not isinstance(vir, np.ndarray) and vir.dtype == np.float64:
+                raise ValueError(
+                    "driver returned virial with the wrong type: we need a "
+                    "numpy.ndarray containing 64-bit floating points values"
+                )
+
+            if len(force.flatten()) != len(pos.flatten()):
+                raise ValueError(
+                    "driver returned forces with the wrong size: number of "
+                    "atoms and dimensions must match positions"
+                )
+
+            if len(vir.flatten()) != 9:
+                raise ValueError(
+                    "driver returned a virial tensor which does not have 9 components"
+                )
 
             send_data(sock, np.float64(pot))
             send_data(sock, np.int32(nat))

@@ -10,19 +10,22 @@ jobs:
     strategy:
       matrix:
         python-version: [3.8.5]
-        os: ["ubuntu-18.04"]
+        os: ["ubuntu-22.04"]
 
     runs-on: "${{ matrix.os }}"
-    
+
     name: pytest for examples
+    
     steps:
     - uses: actions/checkout@v2
-    - uses: s-weigand/setup-conda@v1
+    - name: Setup conda
+      uses: s-weigand/setup-conda@v1 
       with:
-         activate-conda: true
-    - run: |
-           conda --version
-           conda install python=${{matrix.python-version}}
+          update-conda: true
+          python-version: ${{ matrix.python-version }}
+          conda-channels: anaconda
+    - run: conda --version
+    - run: which python
 
     - name: Install dependencies and Project
       run: |
@@ -34,6 +37,7 @@ jobs:
          
         
          pip install .
+         pip install ase>=3.22.1
          echo "${GITHUB_WORKSPACE}/bin" >> $GITHUB_PATH
 
     - name: Install Gfortran and Compile Driver

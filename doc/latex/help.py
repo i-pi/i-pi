@@ -74,6 +74,7 @@ objects = {
     "phonons": motion.phonons.InputDynMatrix(),
     "geop": motion.geop.InputGeop(),
     "neb": motion.neb.InputNEB(),
+    "stringmep": motion.stringmep.InputStringMEP(),
     "thermostats": thermostats.InputThermo(),
     "forcefield": forcefields.InputForceField(),
     "ffsocket": forcefields.InputFFSocket(),

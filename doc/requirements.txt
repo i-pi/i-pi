@@ -1,2 +1,3 @@
 sphinx >= 3.2
-sphinxcontrib-bibtex
+jinja2 < 3.1
+sphinxcontrib-bibtex==2.1.4
