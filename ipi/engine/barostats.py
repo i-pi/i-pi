@@ -1056,7 +1056,6 @@ class BaroRGB(Barostat):
 
         # integerates the kinetic part of the stress with the force at the inner-most level.
         if level == self.nmtslevels - 1:
-
             self.p += dt * (
                 self.cell.V * np.triu(-self.beads.nbeads * pi_ext)
                 + Constants.kb * self.temp * self.L
@@ -1345,7 +1344,6 @@ class BaroMTK(Barostat):
 
         # integerates the kinetic part of the stress with the force at the inner-most level.
         if level == self.nmtslevels - 1:
-
             self.p += dt * (
                 self.cell.V * np.triu(-self.beads.nbeads * pi_ext)
                 + Constants.kb * self.temp * self.L

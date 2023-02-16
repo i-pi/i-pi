@@ -109,7 +109,6 @@ def potentialEnergy(prefix, temp, ss=0, unit=""):
     time0 = 0
     f, m = None, None
     while True:  # Reading input files and calculating PPI correction
-
         if ifr % 100 == 0:
             print("\rProcessing frame {:d}".format(ifr), end=" ")
             sys.stdout.flush()
@@ -126,17 +125,14 @@ def potentialEnergy(prefix, temp, ss=0, unit=""):
             sys.exit(0)
 
         if ifr < skipSteps:
-
             time0 = time
 
         if ifr >= skipSteps:  # PPI correction
-
             time -= time0
 
             f2 = 0.0
 
             if not fast_code:
-
                 for j in range(nbeads):
                     for i in range(natoms):
                         f2 += (
@@ -245,10 +241,8 @@ def read_U(filedesc, potentialEnergyUnit, potentialEnergy_index, time_index):
 
 
 def main(*arg):
-
     potentialEnergy(*arg)
 
 
 if __name__ == "__main__":
-
     main(*sys.argv[1:])

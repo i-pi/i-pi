@@ -1064,7 +1064,6 @@ class FFCommittee(ForceField):
         active_thresh=0.0,
         active_out=None,
     ):
-
         # force threaded mode as otherwise it cannot have threaded children
         super(FFCommittee, self).__init__(
             latency=latency,
@@ -1100,7 +1099,6 @@ class FFCommittee(ForceField):
         self.active_out = active_out
 
     def bind(self, output_maker):
-
         super(FFCommittee, self).bind(output_maker)
         if self.active_thresh > 0:
             if self.active_out is None:
@@ -1116,7 +1114,6 @@ class FFCommittee(ForceField):
         super(FFCommittee, self).start()
 
     def queue(self, atoms, cell, reqid=-1):
-
         # launches requests for all of the committee FF objects
         ffh = []
         for ff in self.fflist:

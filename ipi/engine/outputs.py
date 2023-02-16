@@ -51,11 +51,9 @@ class OutputMaker(dobject):
         self.f_start = f_start
 
     def bind(self, system):
-
         self.system = system
 
     def get_output(self, filename="out", mode=None):
-
         if self.prefix != "":
             filename = self.prefix + "." + filename
         rout = BaseOutput(filename)
@@ -349,7 +347,6 @@ class TrajectoryOutput(BaseOutput):
             "forces_sc",
             "momenta",
         ]:
-
             # must write out trajectories for each bead, so must create b streams
 
             # prepare format string for file name

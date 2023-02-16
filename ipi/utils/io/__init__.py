@@ -392,7 +392,6 @@ def open_backup(filename, mode="r", buffering=-1):
     """
 
     if mode.startswith("w"):
-
         # If writing, make sure nothing is overwritten.
 
         i = 0

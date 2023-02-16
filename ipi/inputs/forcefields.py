@@ -315,7 +315,6 @@ class InputFFSocket(InputForceField):
 
 
 class InputFFLennardJones(InputForceField):
-
     attribs = {}
     attribs.update(InputForceField.attribs)
 
@@ -348,7 +347,6 @@ class InputFFLennardJones(InputForceField):
 
 
 class InputFFdmd(InputForceField):
-
     fields = {
         "dmd_coupling": (
             InputArray,
@@ -415,7 +413,6 @@ class InputFFdmd(InputForceField):
 
 
 class InputFFDebye(InputForceField):
-
     fields = {
         "hessian": (
             InputArray,
@@ -477,7 +474,6 @@ class InputFFDebye(InputForceField):
 
 
 class InputFFPlumed(InputForceField):
-
     fields = {
         "init_file": (
             InputInitFile,
@@ -534,7 +530,6 @@ class InputFFPlumed(InputForceField):
 
 
 class InputFFYaff(InputForceField):
-
     fields = {
         "yaffpara": (
             InputValue,
@@ -651,7 +646,6 @@ class InputFFYaff(InputForceField):
 
 
 class InputFFsGDML(InputForceField):
-
     fields = {
         "sGDML_model": (
             InputValue,
@@ -781,7 +775,7 @@ class InputFFCommittee(InputForceField):
         self.active_thresh.store(ff.active_thresh)
         self.active_output.store(ff.active_out)
 
-        for (_ii, _obj) in enumerate(_fflist):
+        for _ii, _obj in enumerate(_fflist):
             if self.extra[_ii] == 0:
                 if isinstance(_obj, FFSocket):
                     _iobj = InputFFSocket()
@@ -820,7 +814,7 @@ class InputFFCommittee(InputForceField):
         super(InputFFCommittee, self).fetch()
 
         fflist = []
-        for (k, v) in self.extra:
+        for k, v in self.extra:
             fflist.append(v.fetch())
 
         # TODO: will actually need to create a FF object here!

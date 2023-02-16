@@ -28,7 +28,6 @@ verbosity.level = "low"
 
 
 def main(prefix, temp):
-
     T = float(temp)
     fns_pos = sorted(glob.glob(prefix + ".pos*"))
     fns_for = sorted(glob.glob(prefix + ".for*"))
@@ -69,7 +68,6 @@ def main(prefix, temp):
     natoms = 0
     ifr = 0
     while True:
-
         # print progress
         if ifr % 100 == 0:
             print("\rProcessing frame {:d}".format(ifr), end=" ")

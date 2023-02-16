@@ -2483,7 +2483,6 @@ class Properties(dobject):
         )
 
     def get_chin_correction(self):
-
         f = dstrip(self.forces.f)
         m3 = dstrip(self.beads.m3)
         pots = self.forces.pots
@@ -2507,7 +2506,6 @@ class Properties(dobject):
         return np.asarray([chin, chin2, chinexp])
 
     def get_ti_correction(self):
-
         f = dstrip(self.forces.f)
         m3 = dstrip(self.beads.m3)
         #        pots = self.forces.pots    #
