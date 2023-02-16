@@ -412,7 +412,6 @@ class NEBMover(Motion):
         self.climbgm = NEBClimbGrMapper()
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
-
         super(NEBMover, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
         # I check dimensionality of the hessian in the beginning
         # and reduce it if needed, because someone may want to provide

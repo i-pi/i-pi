@@ -360,10 +360,9 @@ class InputThermo(InputThermoBase):
             super(InputThermo, self).store(thermo)
 
     def fetch(self):
-
         if self.mode.fetch() == "multi":
             tlist = []
-            for (k, t) in self.extra:
+            for k, t in self.extra:
                 tlist.append(t.fetch())
             thermo = ethermostats.MultiThermo(thermolist=tlist)
             thermo.ethermo = self.ethermo.fetch()

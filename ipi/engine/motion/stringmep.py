@@ -349,7 +349,6 @@ class StringMover(Motion):
         self.climbgm = StringClimbGrMapper()
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
-
         if scipy is None:
             info(" @NM: scipy import failed", vrb.low)
             raise scipy_exception

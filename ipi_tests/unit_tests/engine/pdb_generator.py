@@ -89,7 +89,6 @@ def xyz_traj_filedesc(natoms, nframe, comment):
 
 
 if __name__ == "__main__":
-
     # Fast autocheck... if the test is wrong itself... it is bad ;)
     natoms = 100
     print(xyz_rand(natoms, "")[0])

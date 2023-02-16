@@ -18,7 +18,6 @@ from ipi.utils.io import read_file, print_file
 
 
 def main(filename):
-
     ipos = open(filename, "r")
 
     ifr = 0

@@ -44,7 +44,6 @@ class TemperatureRamp(Motion):
         self.logscale = logscale
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
-
         super(TemperatureRamp, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
 
     def step(self, step=None):
@@ -96,7 +95,6 @@ class PressureRamp(Motion):
         self.logscale = logscale
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
-
         super(PressureRamp, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
 
     def step(self, step=None):
