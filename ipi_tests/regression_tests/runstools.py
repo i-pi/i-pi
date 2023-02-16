@@ -35,7 +35,6 @@ class Runner_regression(Runner):
         self.usetol = []
 
     def create_client_list(self, driver_info, nid, test_settings):
-
         try:
             # Modify xml
             clients = modify_xml_4_dummy_test(
@@ -67,7 +66,6 @@ class Runner_regression(Runner):
                 self.forms.append(line.split()[1])
 
                 if len(line.split()) > 2:
-
                     listcol = []
                     listtol = []
                     info_tol = line.split()[2].split(",")

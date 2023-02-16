@@ -30,7 +30,6 @@ def apply_asr(asr, dm, beads, return_trans_matrix=False):
     R = np.dot(qminuscom, U)
 
     if asr == "crystal":
-
         D = np.zeros((3, 3 * beads.natoms), float)
 
         # Computes the vectors along rotations.
@@ -43,7 +42,6 @@ def apply_asr(asr, dm, beads, return_trans_matrix=False):
             D[k] = D[k] / np.linalg.norm(D[k])
 
     elif asr == "poly":
-
         D = np.zeros((6, 3 * beads.natoms), float)
 
         # Computes the vectors along rotations.

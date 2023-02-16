@@ -166,7 +166,6 @@ class Planetary(Motion):
         self.fomega2 = omaker.get_output("omega2")
 
     def increment(self, dnm):
-
         # accumulates an estimate of the frequency matrix
         sm3 = dstrip(self.dbeads.sm3)
         qms = dstrip(dnm.qnm) * sm3
@@ -214,7 +213,6 @@ class Planetary(Motion):
         )
 
     def step(self, step=None):
-
         if step is not None and step % self.stride != 0:
             return
 

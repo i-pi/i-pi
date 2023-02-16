@@ -132,7 +132,6 @@ class InputSmotion(InputSmotionBase):
     }
 
     def store(self, smotion):
-
         if type(smotion) is MultiSmotion:
             self.mode.store("multi")
             self.extra = []
@@ -144,10 +143,9 @@ class InputSmotion(InputSmotionBase):
             super(InputSmotion, self).store(smotion)
 
     def fetch(self):
-
         if self.mode.fetch() == "multi":
             mlist = []
-            for (k, m) in self.extra:
+            for k, m in self.extra:
                 mlist.append(m.fetch())
             smotion = MultiSmotion(smotionlist=mlist)
         else:

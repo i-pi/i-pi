@@ -29,7 +29,6 @@ __all__ = ["InputConstrainedDynamics", "InputConstraint", "InputConstraintSolver
 
 
 class InputConstraintSolver(InputDictionary):
-
     fields = {
         "tolerance": (
             InputValue,
@@ -62,7 +61,6 @@ class InputConstraintSolver(InputDictionary):
     default_label = "CSOLVER"
 
     def store(self, csolver):
-
         self.tolerance.store(csolver.tolerance)
         self.maxit.store(csolver.maxit)
         self.norm_order.store(csolver.norm_order)
@@ -112,7 +110,6 @@ class InputConstraintBase(Input):
     }
 
     def store(self, cnstr):
-
         if type(cnstr) is RigidBondConstraint:
             self.mode.store("distance")
             self.atoms.store(cnstr.constrained_indices)
@@ -187,7 +184,7 @@ class InputConstraint(InputConstraintBase):
     def fetch(self):
         if self.mode.fetch() == "multi":
             cnstr_list = []
-            for (k, v) in self.extra:
+            for k, v in self.extra:
                 if k == "constraint":
                     cnstr_list.append(v.fetch())
                 else:
@@ -346,7 +343,7 @@ class InputConstrainedDynamics(InputDictionary):
         rv["csolver"] = self.csolver.fetch()
 
         cnstr_list = []
-        for (k, v) in self.extra:
+        for k, v in self.extra:
             if k == "constraint":
                 cnstr_list.append(v.fetch())
             else:

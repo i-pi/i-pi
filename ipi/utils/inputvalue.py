@@ -293,7 +293,7 @@ class Input(object):
             ):  # here we must compute the write string twice not to be confused by indents.
                 rstr += self.__dict__[f].write(f, "   " + indent)
 
-        for (f, v) in self.extra:
+        for f, v in self.extra:
             # also write out extended (dynamic) fields if present
             rstr += v.write(f, "   " + indent)
 
@@ -350,7 +350,7 @@ class Input(object):
                         + "' objects"
                     )
 
-            for (f, v) in xml.fields:  # reads all field and dynamic data.
+            for f, v in xml.fields:  # reads all field and dynamic data.
                 if f in self.instancefields:
                     self.__dict__[f].parse(xml=v)
                 elif f == "_text":

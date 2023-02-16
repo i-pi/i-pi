@@ -513,7 +513,6 @@ class ForceComponent(dobject):
 
 class ScaledForceComponent(dobject):
     def __init__(self, baseforce, scaling=1):
-
         self.bf = baseforce
         self.name = baseforce.name
         self.ffield = baseforce.ffield
@@ -674,7 +673,6 @@ class Forces(dobject):
         # creates new force objects, possibly acting on contracted path
         # representations. note that this new object is always created even if no contraction is required.
         for fc in self.fcomp:
-
             # creates an automatically-updated contracted beads object
             newb = fc.nbeads
             # if the number of beads for this force component is unspecified,
@@ -911,7 +909,8 @@ class Forces(dobject):
         We have noted that in some corner cases it is necessary to copy only
         the values of updated forces rather than the full depend object, in order to
         avoid triggering a repeated call to the client code that is potentially
-        very costly. This happens routinely in geometry relaxation routines, for example."""
+        very costly. This happens routinely in geometry relaxation routines, for example.
+        """
 
         if len(self.mforces) != len(refforce.mforces):
             raise ValueError(
@@ -1124,7 +1123,6 @@ class Forces(dobject):
 
         # uses a fwd difference if epsilon > 0.
         if self.mforces[index].epsilon > 0.0:
-
             # gives an error if RPC is used with a fwd difference.
             # The problem is that the finite difference is computed as [f(q + e.f) - f(q)].e^-1,
             # where f(q + e.f) is computed on a smaller rimg polymer of P / 2 beads which is made
@@ -1143,7 +1141,6 @@ class Forces(dobject):
 
             # for the case of alpha = 0, only odd beads are displaced.
             if self.alpha == 0:
-
                 # we use an aux force evaluator with half the number of beads.
                 if self.dforces is None:
                     self.dbeads = self.beads.copy(self.nbeads // 2)
@@ -1173,7 +1170,6 @@ class Forces(dobject):
 
             # For the case of alpha != 0, all the beads are displaced.
             else:
-
                 # we use an aux force evaluator with the same number of beads.
                 if self.dforces is None:
                     self.dbeads = self.beads.copy()
@@ -1203,7 +1199,6 @@ class Forces(dobject):
 
         # uses a centered difference for epsilon  < 0.
         if self.mforces[index].epsilon < 0.0:
-
             # we use an aux force evaluator with the same number of beads.
             if self.dforces is None:
                 self.dbeads = self.beads.copy()
@@ -1217,7 +1212,6 @@ class Forces(dobject):
 
             # for the case of alpha = 0, only odd beads are displaced.
             if self.alpha == 0:
-
                 # the first half of the aux beads are fwd displaced while the second half are bkwd displaced configurations.
                 self.dbeads.q[: self.nbeads // 2] = (
                     dstrip(self.beads.q)[1::2] + dq[1::2]

@@ -202,7 +202,6 @@ class ConstraintSolverBase(dobject):
         dd(self).dt = depend_value(name="dt", value=dt)
 
     def bind(self, beads):
-
         if beads.nbeads > 1:
             raise ValueError(
                 "Constrained dynamics is only implemented for the case of classical MD (nbeads=1)"
