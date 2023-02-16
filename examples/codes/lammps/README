@@ -63,7 +63,7 @@ $ path/lammps/src/lmp_serial < in_short.lmp
    scaling won't be appreciable.
 
  * If your system does not support Unix domain sockets, just set in input.xml
-   <socket mode="unix"> <port> port_no </port>
+   <socket mode="inet"> <port> port_no </port>
 
    To make the client socket connect, the in.lmp file should 
    be changed so that it has the line:
