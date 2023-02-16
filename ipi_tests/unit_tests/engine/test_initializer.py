@@ -93,7 +93,6 @@ def create_xyz_sample_file(request):
 
 
 def test_init_file(create_xyz_sample_file):
-
     tmp_file, expected_cell, expected_ratoms = create_xyz_sample_file
 
     ret = initializer.init_file("xyz", tmp_file.name)

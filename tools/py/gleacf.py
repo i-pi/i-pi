@@ -175,7 +175,6 @@ def gleacf(
     tscale,
     dparam,
 ):
-
     if path2ixml is not None and path2iA is not None:
         raise Exception(
             "The drift and covariance matrices have to be provided either through the i-pi xml file or manually. Can not use both forms of input simultaneously. "

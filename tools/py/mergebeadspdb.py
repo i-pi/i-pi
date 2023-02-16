@@ -22,7 +22,6 @@ verbosity.level = "low"
 
 
 def main(prefix, suffix="pos", unitconv="1.0"):
-
     ipos = []
     imode = []
     for filename in sorted(glob.glob(prefix + "." + suffix + "*")):

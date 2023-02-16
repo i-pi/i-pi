@@ -442,7 +442,6 @@ class InputMotion(InputMotionBase):
     }
 
     def store(self, motion):
-
         if type(motion) is MultiMotion:
             self.mode.store("multi")
 
@@ -460,10 +459,9 @@ class InputMotion(InputMotionBase):
             super(InputMotion, self).store(motion)
 
     def fetch(self):
-
         if self.mode.fetch() == "multi":
             mlist = []
-            for (k, m) in self.extra:
+            for k, m in self.extra:
                 mlist.append(m.fetch())
             motion = MultiMotion(motionlist=mlist)
         else:

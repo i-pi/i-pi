@@ -22,7 +22,6 @@ from ipi.utils.units import *
 
 
 def main(prefix, suffix="pos", outprefix="fixcom"):
-
     ipos = []
     imode = []
     for filename in sorted(glob.glob(prefix + "." + suffix + "*")):
@@ -48,7 +47,6 @@ def main(prefix, suffix="pos", outprefix="fixcom"):
         allbeads = []
         for i in range(nbeads):
             try:
-
                 poscell = read_file(imode[i], ipos[i])
                 cell = poscell["cell"]
                 pos = poscell["atoms"]

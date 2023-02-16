@@ -29,7 +29,6 @@ As a special case, this can calculate the centroid.
 
 
 def contract_trajectory(fns_in, fn_out_template, n_new, cell_units_in, cell_units_out):
-
     verbosity.level = "low"
     n = len(fns_in)
 
@@ -84,7 +83,6 @@ def contract_trajectory(fns_in, fn_out_template, n_new, cell_units_in, cell_unit
         h = frames[0]["cell"]
         natoms = len(frames[0]["data"]) // 3
         for i in range(n):
-
             # Check that all the cells are the same.
             if (frames[i]["cell"] != h).any():
                 msg = "Cell for beads {:d} and {:d} differ in frame {:d}."
@@ -138,7 +136,6 @@ def contract_trajectory(fns_in, fn_out_template, n_new, cell_units_in, cell_unit
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(description=description)
 
     parser.add_argument(

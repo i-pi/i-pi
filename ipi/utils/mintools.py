@@ -65,6 +65,7 @@ import math
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, info, warning
 
+
 # Bracketing function
 def bracket(fdf, fdf0=None, x0=0.0, init_step=1.0e-3):
     """Given an initial point, determines the initial bracket for the minimum
@@ -264,7 +265,6 @@ def min_brent(fdf, fdf0, x0, tol, itmax, init_step):
     j = 1
     info(" @MINIMIZE: Started 1D minimization", verbosity.debug)
     while j <= itmax:
-
         # Determine tolerance
         xm = 0.5 * (a + b)
         tol1 = tol * abs(x) + zeps
@@ -615,7 +615,6 @@ def BFGSTRM(x0, u0, f0, h0, tr, mapper, big_step):
     # If not only update the tr and restart the loop
     accept = False
     while not accept:
-
         # Find new movement direction candidate
         d_x = min_trm(f0, h0, tr)
         # Make movement  and get new energy (u)  and forces(f) using mapper
@@ -733,7 +732,6 @@ def min_trm(f, h, tr):
 
     # Check if h is positive definite and use trivial result if within trust radius
     if min_d > 0.0:
-
         if neg != 0:
             print("problem in 'find'!!!")
         if np.linalg.norm(DXE) < tr:
@@ -852,7 +850,6 @@ def L_BFGS(x0, d0, fdf, qlist, glist, fdf0, big_step, tol, itmax, m, scale, k):
 
     # Skip update if not 'fac' sufficiently positive
     if fac > np.sqrt(zeps * sumdg * sumdx):
-
         # Begin two loop recursion:
         # First loop
         for j in range(bound1, -1, -1):
@@ -1291,7 +1288,6 @@ def min_brent_neb(fdf, fdf0=None, x0=0.0, tol=1.0e-6, itmax=100, init_step=1.0e-
     # Main loop
     j = 1
     while j <= itmax:
-
         # Determine tolerance
         xm = 0.5 * (a + b)
         tol1 = tol * abs(x) + zeps
@@ -1463,7 +1459,6 @@ def L_BFGS_nls(
             scale *= 0.1
             fx, g = fdf(x)
     else:
-
         # Scale if attempted step is too large
         if stepsize > big_step:
             d0 = big_step * d0 / np.linalg.norm(d0.flatten())
@@ -1583,7 +1578,6 @@ def nichols(f0, f1, d, dynmax, m3, big_step, mode=1):
             d_x = alpha * (gE) / (lamb - d)
 
     elif mode == 1:
-
         if d[0] > 0:
             if d[1] / 2 > d[0]:
                 alpha = 1

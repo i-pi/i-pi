@@ -124,7 +124,6 @@ def kineticEnergy(prefix, temp, ss=0, unit=""):
     time0 = 0
     q, f, m = None, None, None
     while True:  # Reading input files and calculating PPI correction
-
         if ifr % 100 == 0:
             print("\rProcessing frame {:d}".format(ifr), end=" ")
             sys.stdout.flush()
@@ -143,17 +142,14 @@ def kineticEnergy(prefix, temp, ss=0, unit=""):
             sys.exit(0)
 
         if ifr < skipSteps:
-
             time0 = time
 
         if ifr >= skipSteps:  # PPI correction
-
             time -= time0
 
             KPa, f2, KVir = 0.0, 0.0, 0.0
 
             if not fast_code:
-
                 for j in range(nbeads):
                     for i in range(natoms):
                         f2 += (
@@ -194,7 +190,6 @@ def kineticEnergy(prefix, temp, ss=0, unit=""):
                 KVir += const_3 * natoms
 
             else:
-
                 f2 = fortran.f2divm(
                     np.array(f, order="F"), np.array(m, order="F"), natoms, nbeads
                 )
@@ -308,10 +303,8 @@ def read_time(filedesc, time_index):
 
 
 def main(*arg):
-
     kineticEnergy(*arg)
 
 
 if __name__ == "__main__":
-
     main(*sys.argv[1:])
