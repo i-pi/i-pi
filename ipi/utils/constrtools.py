@@ -206,7 +206,7 @@ class RigidBondConstraint(ValueConstraintBase):
     def __init__(self, constrained_indices, constraint_values):
         # this is a bit perverse, but we need to function regardless of
         # whether this is called with a shaped or flattended index list
-        ncons = len(constrained_indices.flatten()) / 2
+        ncons = len(constrained_indices.flatten()) // 2
         super(RigidBondConstraint, self).__init__(
             constrained_indices, constraint_values, ncons=ncons
         )
@@ -266,7 +266,7 @@ class AngleConstraint(ValueConstraintBase):
     """
 
     def __init__(self, constrained_indices, constraint_values):
-        ncons = len(constrained_indices.flatten()) / 3
+        ncons = len(constrained_indices.flatten()) // 3
         super(AngleConstraint, self).__init__(
             constrained_indices, constraint_values, ncons=ncons
         )

@@ -129,7 +129,7 @@ class InputConstraintBase(Input):
             alist = self.atoms.fetch()
             dlist = self.values.fetch()
             if len(alist.shape) == 1:
-                alist.shape = (alist.shape[0] / 2, 2)
+                alist.shape = (alist.shape[0] // 2, 2)
             if len(dlist) != len(alist) and len(dlist) != 0:
                 raise ValueError(
                     "Length of atom indices and of distance list do not match"
@@ -139,7 +139,7 @@ class InputConstraintBase(Input):
             alist = self.atoms.fetch()
             dlist = self.values.fetch()
             if len(alist.shape) == 1:
-                alist.shape = (alist.shape[0] / 3, 3)
+                alist.shape = (alist.shape[0] // 3, 3)
             if len(dlist) != len(alist) and len(dlist) != 0:
                 raise ValueError(
                     "Length of atom indices and of distance list do not match"
