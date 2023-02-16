@@ -19,7 +19,6 @@ cwd_repo = Path("./").resolve()
 
 
 def main(check_mode, folder_path, file_path):
-
     if file_path is not None:
         path = cwd_repo / file_path
     elif folder_path is not None:

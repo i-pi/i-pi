@@ -21,7 +21,6 @@ of beads is given by the number of input files.
 
 
 def main(fns_in, fn_out, begin, end, stride, wrap, unwrap):
-
     verbosity.level = "low"
     print("Multiplexing {:d} beads into one trajectory.".format(len(fns_in)))
     print()
@@ -50,7 +49,6 @@ def main(fns_in, fn_out, begin, end, stride, wrap, unwrap):
     frame_last = [None] * len(fns_in)
 
     while True:
-
         # Check the endpoint index, exit if we're done.
         if (end > -1) and (i_frame >= end):
             break
@@ -144,7 +142,6 @@ def unwrap_positions(frame, framelast):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(description=description)
 
     parser.add_argument(

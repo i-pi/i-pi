@@ -759,7 +759,6 @@ class NormalModes(dobject):
         if self.nbeads == 1:
             pass
         else:
-
             # Since the dynamics are done in Cartesian coordinates below (including all modes),
             # I need to revert centroid step done separately in qcstep
             self.qnm[0, :] -= (
@@ -770,7 +769,6 @@ class NormalModes(dobject):
             dt = self.dt / dstrip(self.nmts)
 
             for j in range(0, dstrip(self.nmts)):
-
                 self.beads.p += 0.5 * dt * self.fspring
                 self.beads.q += dt * self.beads.p / dstrip(self.beads.m3)
                 # The depend machinery will take care of automatically calculating
@@ -795,7 +793,6 @@ class NormalModes(dobject):
             pass
 
         elif self.propagator == "bab":
-
             if len(self.open_paths) > 0:
                 raise (
                     "@Normalmodes : Open path propagator not implemented for bosons. Feel free to implement it if you want to use it :) "

@@ -29,7 +29,6 @@ __all__ = ["InputConstrainedDynamics", "InputConstraint", "InputConstraintSolver
 
 
 class InputConstraintSolver(InputDictionary):
-
     fields = {
         "tolerance": (
             InputValue,
@@ -62,7 +61,6 @@ class InputConstraintSolver(InputDictionary):
     default_label = "CSOLVER"
 
     def store(self, csolver):
-
         self.tolerance.store(csolver.tolerance)
         self.maxit.store(csolver.maxit)
         self.norm_order.store(csolver.norm_order)
@@ -112,7 +110,6 @@ class InputConstraintBase(Input):
     }
 
     def store(self, cnstr):
-
         if type(cnstr) is RigidBondConstraint:
             self.mode.store("distance")
             self.atoms.store(cnstr.constrained_indices)
@@ -132,7 +129,7 @@ class InputConstraintBase(Input):
             alist = self.atoms.fetch()
             dlist = self.values.fetch()
             if len(alist.shape) == 1:
-                alist.shape = (alist.shape[0] / 2, 2)
+                alist.shape = (alist.shape[0] // 2, 2)
             if len(dlist) != len(alist) and len(dlist) != 0:
                 raise ValueError(
                     "Length of atom indices and of distance list do not match"
@@ -142,7 +139,7 @@ class InputConstraintBase(Input):
             alist = self.atoms.fetch()
             dlist = self.values.fetch()
             if len(alist.shape) == 1:
-                alist.shape = (alist.shape[0] / 3, 3)
+                alist.shape = (alist.shape[0] // 3, 3)
             if len(dlist) != len(alist) and len(dlist) != 0:
                 raise ValueError(
                     "Length of atom indices and of distance list do not match"
@@ -187,7 +184,7 @@ class InputConstraint(InputConstraintBase):
     def fetch(self):
         if self.mode.fetch() == "multi":
             cnstr_list = []
-            for (k, v) in self.extra:
+            for k, v in self.extra:
                 if k == "constraint":
                     cnstr_list.append(v.fetch())
                 else:
@@ -346,7 +343,7 @@ class InputConstrainedDynamics(InputDictionary):
         rv["csolver"] = self.csolver.fetch()
 
         cnstr_list = []
-        for (k, v) in self.extra:
+        for k, v in self.extra:
             if k == "constraint":
                 cnstr_list.append(v.fetch())
             else:

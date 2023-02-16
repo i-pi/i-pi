@@ -87,7 +87,6 @@ class DynMatrixMover(Motion):
             self.fixdof = np.array([])
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
-
         super(DynMatrixMover, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
 
         # Raises error for nbeads not equal to 1.

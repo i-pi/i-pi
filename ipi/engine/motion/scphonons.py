@@ -105,7 +105,6 @@ class SCPhononsMover(Motion):
             self.prefix = "scphonons"
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
-
         super(SCPhononsMover, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
 
         # Raises error if nparallel is not a factor of max_steps
@@ -342,7 +341,6 @@ class SCPhononator(DummyPhononator):
             )
             # Creates a list of configurations that are to be sampled.
             while self.dm.imc <= self.dm.max_steps:
-
                 irng = (self.dm.isc) * self.dm.max_steps // 2 + (self.dm.imc + 1) // 2
                 x = self.dm.fginv(self.dm.random_sequence[irng])
 
@@ -462,7 +460,6 @@ class SCPhononator(DummyPhononator):
         #  as a proxy.
 
         if self.precheck:
-
             # Calculates the force, the error and the
             # batch weights.
             f, f_err, batch_w = self.weighted_force()
@@ -484,7 +481,6 @@ class SCPhononator(DummyPhononator):
         # factor to move in the direction of the force.
 
         elif self.dm.displace_mode == "sd":
-
             # Calculates the force, the error and the
             # batch weights.
             f, f_err, batch_w = self.weighted_force()
@@ -517,7 +513,6 @@ class SCPhononator(DummyPhononator):
         # to move in the direction of the force.
 
         if self.dm.displace_mode == "ik":
-
             # Calculates the force, the error and the
             # batch weights.
             f, f_err, batch_w = self.weighted_force()
@@ -546,7 +541,6 @@ class SCPhononator(DummyPhononator):
         # significant force components.
 
         elif self.dm.displace_mode == "nmik":
-
             # Calculates the force, the error and the
             # batch weights.
             f, f_err, batch_w = self.weighted_force()
@@ -599,17 +593,14 @@ class SCPhononator(DummyPhononator):
             )
 
         elif self.dm.displace_mode == "rnmik":
-
             scale_forces = 1.0 * self.dm.tau
 
             # Outer Optimization Loop
             while True:
-
                 # Inner Optimization Loop
                 w = 1.0
 
                 while True:
-
                     # Calculates the force, the error and the
                     # batch weights.
                     f, f_err, batch_w = self.weighted_force()
@@ -728,7 +719,6 @@ class SCPhononator(DummyPhononator):
         batch_w = np.zeros(self.dm.isc)
 
         for i in range(self.dm.isc):
-
             # Calculates the harmonic force.
             f = self.f[i]
             x = self.x[i]

@@ -160,7 +160,6 @@ def run_driver(unix=False, address="", port=12345, driver=Dummy_driver()):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(description=description)
 
     parser.add_argument(
