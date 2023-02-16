@@ -202,7 +202,6 @@ class ConstraintSolverBase(dobject):
         dd(self).dt = depend_value(name="dt", value=dt)
 
     def bind(self, beads):
-
         self.beads = beads
         # Sets the initial value of the constraint positions
         q = dstrip(beads.q[0])

@@ -148,7 +148,6 @@ class InstantonMotion(Motion):
             or self.options["opt"] == "NR"
             or self.options["opt"] == "lanczos"
         ):
-
             self.options["hessian_update"] = hessian_update
             self.options["hessian_asr"] = hessian_asr
             self.options["hessian_init"] = hessian_init
@@ -220,7 +219,6 @@ class Fix(object):
         self.mask2 = np.arange(3 * self.natoms * self.nbeads)[mask2]
 
     def get_mask(self, m):
-
         if m == 0:
             return self.mask0
         elif m == 1:
@@ -236,7 +234,6 @@ class Fix(object):
 
         activearrays = {}
         for key in arrays:
-
             if (
                 key == "old_u"
                 or key == "big_step"
@@ -278,14 +275,12 @@ class Fix(object):
             return vector
 
         if t == 1:
-
             full_vector = np.zeros((self.nbeads, 3 * self.natoms))
             full_vector[:, self.get_mask(1)] = vector
 
             return full_vector
 
         elif t == 2:
-
             full_vector = np.zeros((3 * self.natoms, 3 * self.natoms * self.nbeads))
 
             ii = 0
@@ -296,14 +291,12 @@ class Fix(object):
             return full_vector
 
         elif t == 3:
-
             full_vector = np.zeros((vector.shape[0], 3 * self.natoms * self.nbeads))
             full_vector[:, self.fix.get_mask(2)] = vector
 
             return full_vector
 
         else:
-
             raise ValueError("@apply_fix_atoms: type number is not valid")
 
     def get_active_vector(self, vector, t):
@@ -350,7 +343,6 @@ class GradientMapper(object):
         pass
 
     def bind(self, dumop, discretization, max_ms, max_e):
-
         self.dbeads = dumop.beads.copy()
         self.dcell = dumop.cell.copy()
         self.dforces = dumop.forces.copy(self.dbeads, self.dcell)
@@ -471,14 +463,12 @@ class SpringMapper(object):
     """
 
     def __init__(self):
-
         self.pot = None
         self.f = None
         self.dbeads = None
         self.fix = None
 
     def bind(self, dumop, discretization):
-
         self.temp = dumop.temp
         self.fix = Fix(dumop.beads.natoms, dumop.fixatoms, dumop.beads.nbeads)
         self.dbeads = Beads(
@@ -654,13 +644,11 @@ class FullMapper(object):
     """Creation of the multi-dimensional function to compute the physical and the spring forces."""
 
     def __init__(self, im, gm, esum=False):
-
         self.im = im
         self.gm = gm
         self.esum = esum
 
     def __call__(self, x):
-
         e1, g1 = self.im(x)
         e2, g2 = self.gm(x)
         e = e1 + e2
@@ -842,7 +830,6 @@ class DummyOptimizer(dobject):
             )
             and (d_x_max <= tolerances["position"])
         ):
-
             print_instanton_geo(
                 self.options["prefix"] + "_FINAL",
                 step,
@@ -1025,24 +1012,19 @@ class HessianOptimizer(DummyOptimizer):
         self.optarrays["hessian"] = geop.optarrays["hessian"]
 
     def initialize(self, step):
-
         if step == 0:
-
             info(" @GEOP: Initializing INSTANTON", verbosity.low)
 
             if self.beads.nbeads == 1:
-
                 info(" @GEOP: Classical TS search", verbosity.low)
 
             else:
                 # If the coordinates in all the imaginary time slices are the same
                 if ((self.beads.q - self.beads.q[0]) == 0).all():
-
                     self.initial_geo()
                     self.options["hessian_init"] = "true"
 
                 else:
-
                     info(
                         " @GEOP: Starting from the provided geometry in the extended phase space",
                         verbosity.low,
@@ -1083,7 +1065,6 @@ class HessianOptimizer(DummyOptimizer):
         """Update hessian"""
 
         if update == "powell":
-
             i = self.im.dbeads.natoms * 3
             for j in range(self.im.dbeads.nbeads):
                 aux = active_hessian[:, j * i : (j + 1) * i]
@@ -1481,7 +1462,6 @@ class LBFGSOptimizer(DummyOptimizer):
         self.fm.esum = True
 
     def initialize(self, step):
-
         if step == 0:
             info(" @GEOP: Initializing instanton", verbosity.low)
 
@@ -1519,7 +1499,6 @@ class LBFGSOptimizer(DummyOptimizer):
         self.init = True
 
     def post_step(self, step, activearrays):
-
         """General tasks that have to be performed after the  actual step"""
 
         # Update

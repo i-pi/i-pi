@@ -279,10 +279,8 @@ def read_U(filedesc):
 
 
 def main(*arg):
-
     totalEnergy(*arg)
 
 
 if __name__ == "__main__":
-
     main(*sys.argv[1:])

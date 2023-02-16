@@ -917,7 +917,6 @@ class ThermoNMGLEG(ThermoNMGLE):
     """
 
     def __init__(self, temp=1.0, dt=1.0, A=None, C=None, tau=1.0, ethermo=0.0):
-
         super(ThermoNMGLEG, self).__init__(temp, dt, A, C, ethermo)
         dself.tau = depend_value(value=tau, name="tau")
 

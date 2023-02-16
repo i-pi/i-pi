@@ -63,7 +63,6 @@ def get_A(path2iipi):
     v_list = []
 
     for i in range(max_iter):
-
         try:
             # Imports the q, iD, x, f from the i^th  SCP iteration.
             # "0" stands for the SCP trial Hamiltonian.
@@ -89,7 +88,6 @@ def get_A(path2iipi):
 
     print("# Finished Import")
     for i in range(max_iter):
-
         try:
             # Imports the q, iD, x, f from the i^th  SCP iteration.
             iD0 = iD_list[i]
@@ -132,7 +130,6 @@ def get_A(path2iipi):
 
         # Inner loop over previous SCP steps
         for j in range(i + 1):
-
             try:
                 # Imports the q, iD of the j^th trial Hamiltonian.
                 # The idea is to reweight using samples drawn from the j <= i trial Hamiltonians.
