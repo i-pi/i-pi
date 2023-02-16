@@ -404,7 +404,6 @@ class Planets(object):
 
         """
         for mod in self.estimators:
-
             if hasattr(mod, "Afunc0"):
                 # Might as well calculate centroid TCF at little extra cost
                 mod.Barr_c[i, :] += mod.Bfunc(

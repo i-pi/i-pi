@@ -74,7 +74,6 @@ def effectiveTemperatures(prefix, temp, ss=0):
     ifr = 0
     f, m = None, None
     while True:  # Reading input files and calculating PPI correction
-
         if ifr % 100 == 0:
             print("\rProcessing frame {:d}".format(ifr), end=" ")
             sys.stdout.flush()
@@ -91,7 +90,6 @@ def effectiveTemperatures(prefix, temp, ss=0):
             break
 
         if ifr >= skipSteps:  # PPI correction
-
             f2 = np.zeros(3 * natoms)
             for i in range(natoms):
                 for j in range(nbeads):
@@ -126,10 +124,8 @@ def effectiveTemperatures(prefix, temp, ss=0):
 
 
 def main(*arg):
-
     effectiveTemperatures(*arg)
 
 
 if __name__ == "__main__":
-
     main(*sys.argv[1:])

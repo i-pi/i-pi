@@ -14,7 +14,6 @@ px py pz n(p)
 
 
 def histo3d(qdata, dqxgrid, dqygrid, dqzgrid, ns, cut, invsigma, bsize):
-
     histo = np.zeros((ns, ns, ns))
     fx = np.zeros(ns)
     fy = np.zeros(ns)
@@ -61,7 +60,6 @@ def histo3d(qdata, dqxgrid, dqygrid, dqzgrid, ns, cut, invsigma, bsize):
 def histo3d_der(
     qdata, fdata, dqxgrid, dqygrid, dqzgrid, ns, cut, invsigma, bsize, m, P, T
 ):
-
     histo = np.zeros((ns, ns, ns))
     fx = np.zeros(ns)
     fy = np.zeros(ns)
@@ -123,7 +121,6 @@ def outer3(*vs):
 
 
 def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, cut, der, skip):
-
     start = time.clock()
 
     # Read the end to end distances from file
@@ -384,7 +381,6 @@ def get_np(qfile, ffile, prefix, bsize, P, mamu, Tkelv, s, ns, cut, der, skip):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument(
         "-qfile", type=str, help="name of the end-to-end distance vectors file"

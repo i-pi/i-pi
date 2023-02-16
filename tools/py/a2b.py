@@ -28,7 +28,6 @@ verbosity.level = "low"
 
 
 def get_cell_units(comment, mode):
-
     # default units
     if mode == "pdb":
         auto_cell = "angstrom"
@@ -42,7 +41,6 @@ def get_cell_units(comment, mode):
 
 
 def get_key_dim_units(comment, mode):
-
     # if mode is pdb return standard units and dimensions.
     if mode == "pdb":
         auto_units = "angstrom"
@@ -75,7 +73,6 @@ def get_key_dim_units(comment, mode):
 
 
 def main(filename, imode, omode):
-
     ipos = open(filename, "r")
     ifr = 0
 

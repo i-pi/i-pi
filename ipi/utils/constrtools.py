@@ -190,7 +190,6 @@ class ValueConstraintBase(ConstraintBase):
         super(ValueConstraintBase, self).__init__(constrained_indices, ncons)
 
     def bind(self, beads):
-
         super(ValueConstraintBase, self).bind(beads)
 
         dself = dd(self)
@@ -205,7 +204,6 @@ class RigidBondConstraint(ValueConstraintBase):
     a list of bond lengths."""
 
     def __init__(self, constrained_indices, constraint_values):
-
         # this is a bit perverse, but we need to function regardless of
         # whether this is called with a shaped or flattended index list
         ncons = len(constrained_indices.flatten()) / 2
@@ -218,7 +216,6 @@ class RigidBondConstraint(ValueConstraintBase):
         self.i3_indirect.shape = (self.ncons, 2, 3)
 
     def bind(self, beads):
-
         super(RigidBondConstraint, self).bind(beads)
         # if constraint values are not specified, initializes based on the first frame
         if self._calc_cons:
@@ -269,7 +266,6 @@ class AngleConstraint(ValueConstraintBase):
     """
 
     def __init__(self, constrained_indices, constraint_values):
-
         ncons = len(constrained_indices.flatten()) / 3
         super(AngleConstraint, self).__init__(
             constrained_indices, constraint_values, ncons=ncons
@@ -278,7 +274,6 @@ class AngleConstraint(ValueConstraintBase):
         self.i3_indirect.shape = (self.ncons, 3, 3)
 
     def bind(self, beads):
-
         super(AngleConstraint, self).bind(beads)
         # if constraint values have not been provided, infers them from the
         # initial geometry
@@ -336,7 +331,6 @@ class EckartConstraint(ConstraintBase):
     """
 
     def __init__(self, constrained_indices, constraint_values):
-
         super(EckartConstraint, self).__init__(constrained_indices, 6)
         self.constrained_indices.shape = -1
         dd(self).constraint_values = depend_array(
@@ -360,7 +354,6 @@ class EckartConstraint(ConstraintBase):
             )
 
     def bind(self, beads):
-
         super(EckartConstraint, self).bind(beads)
         if self._calc_cons:
             self.qref[:] = dstrip(beads.q[0])[self.i3_unique].reshape((-1, 3))
@@ -480,7 +473,6 @@ class ConstraintList(ConstraintBase):
             )
 
     def bind(self, beads):
-
         super(ConstraintList, self).bind(beads)
 
         # we link all of the sub-constraints to the lists of unique q and qprev,
