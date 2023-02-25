@@ -18,6 +18,7 @@ from ipi.engine.forcefields import (
     FFsGDML,
     FFCommittee,
     FFdmd,
+    FFCavPhSocket,
 )
 from ipi.interfaces.sockets import InterfaceSocket
 import ipi.engine.initializer
@@ -33,6 +34,7 @@ __all__ = [
     "InputFFsGDML",
     "InputFFCommittee",
     "InputFFdmd",
+    "InputFFCavPhSocket",
 ]
 
 
@@ -831,3 +833,225 @@ class InputFFCommittee(InputForceField):
             active_thresh=self.active_thresh.fetch(),
             active_out=self.active_output.fetch(),
         )
+
+
+class InputFFCavPhSocket(InputForceField):
+
+    """Creates a ForceField object with a socket interface for cavity molecular dynamics.
+
+    Handles generating one instance of a socket interface forcefield class.
+
+    Attributes:
+       mode: Describes whether the socket will be a unix or an internet socket.
+
+    Fields:
+       address: The server socket binding address.
+       port: The port number for the socket.
+       slots: The number of clients that can queue for connections at any one
+          time.
+       timeout: The number of seconds that the socket will wait before assuming
+          that the client code has died. If 0 there is no timeout.
+    """
+
+    fields = {
+        "address": (
+            InputValue,
+            {
+                "dtype": str,
+                "default": "localhost",
+                "help": "This gives the server address that the socket will run on.",
+            },
+        ),
+        "port": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": 65535,
+                "help": "This gives the port number that defines the socket.",
+            },
+        ),
+        "slots": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": 4,
+                "help": "This gives the number of client codes that can queue at any one time.",
+            },
+        ),
+        "exit_on_disconnect": (
+            InputValue,
+            {
+                "dtype": bool,
+                "default": False,
+                "help": "Determines if i-PI should quit when a client disconnects.",
+            },
+        ),
+        "timeout": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 0.0,
+                "help": "This gives the number of seconds before assuming a calculation has died. If 0 there is no timeout.",
+            },
+        ),
+        "charge_array": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.zeros, args=(0,)),
+                "help": "The partial charges of all the atoms, in the format [Q1, Q2, ... ].",
+                "dimension": "length",
+            },
+        ),
+        "apply_photon": (
+            InputValue,
+            {
+                "dtype": bool,
+                "default": False,
+                "help": "Determines if additiona photonic degrees of freedom is included or not.",
+            },
+        ),
+        "E0": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 0.0,
+                "help": "The coefficient of varepsilon_tilde (effective light-matter coupling strength) defined in CavMD papers in atomic units",
+            },
+        ),
+        "omega_c_cminv": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 3400.0,
+                "help": "cavity photon frequency in cminv",
+            },
+        ),
+        "ph_rep": (
+            InputValue,
+            {
+                "dtype": str,
+                "default": "loose",
+                "help": "option: 'loose' | 'dense', 'loose' ('dense'): the cavity photons polarized along the x, y directions are represented by two (one) atoms",
+            },
+        ),
+    }
+    attribs = {
+        "mode": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "options": ["unix", "inet"],
+                "default": "inet",
+                "help": "Specifies whether the driver interface will listen onto a internet socket [inet] or onto a unix socket [unix].",
+            },
+        ),
+        "matching": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "options": ["auto", "any"],
+                "default": "auto",
+                "help": "Specifies whether requests should be dispatched to any client, or automatically matched to the same client when possible [auto].",
+            },
+        ),
+    }
+
+    attribs.update(InputForceField.attribs)
+    fields.update(InputForceField.fields)
+
+    # FFCav2DPhSocket polling mechanism won't work with non-threaded execution
+    attribs["threaded"] = (
+        InputValue,
+        {
+            "dtype": bool,
+            "default": True,
+            "help": "Whether the forcefield should use a thread loop to evaluate, or work in serial. Should be set to True for FFSockets",
+        },
+    )
+
+    default_help = "A Cavity Molecular Dynamics Driver"
+    default_label = "FFCavPhSocket"
+
+    def store(self, ff):
+        """Takes a ForceField instance and stores a minimal representation of it.
+
+        Args:
+           ff: A ForceField object with a FFCavPhSocket forcemodel object.
+        """
+
+        if not type(ff) is FFCavPhSocket:
+            raise TypeError(
+                "The type " + type(ff).__name__ + " is not a valid socket forcefield"
+            )
+        super(InputFFCavPhSocket, self).store(ff)
+
+        self.address.store(ff.socket.address)
+        self.port.store(ff.socket.port)
+        self.timeout.store(ff.socket.timeout)
+        self.slots.store(ff.socket.slots)
+        self.mode.store(ff.socket.mode)
+        self.matching.store(ff.socket.match_mode)
+        self.exit_on_disconnect.store(ff.socket.exit_on_disconnect)
+        self.threaded.store(True)  # hard-coded
+        self.charge_array.store(ff.charge_array)
+        self.apply_photon.store(ff.apply_photon)
+        self.E0.store(ff.E0)
+        self.omega_c_cminv.store(ff.omega_c_cminv)
+        self.ph_rep.store(ff.ph_rep)
+
+    def fetch(self):
+        """Creates a ForceSocket object.
+
+        Returns:
+           A ForceSocket object with the correct socket parameters.
+        """
+
+        if self.threaded.fetch() == False:
+            raise ValueError("FFCavPhFPSockets cannot poll without threaded mode.")
+        # just use threaded throughout
+        return FFCavPhSocket(
+            pars=self.parameters.fetch(),
+            name=self.name.fetch(),
+            latency=self.latency.fetch(),
+            dopbc=self.pbc.fetch(),
+            active=self.activelist.fetch(),
+            threaded=self.threaded.fetch(),
+            interface=InterfaceSocket(
+                address=self.address.fetch(),
+                port=self.port.fetch(),
+                slots=self.slots.fetch(),
+                mode=self.mode.fetch(),
+                timeout=self.timeout.fetch(),
+                match_mode=self.matching.fetch(),
+                exit_on_disconnect=self.exit_on_disconnect.fetch(),
+            ),
+            charge_array=self.charge_array.fetch(),
+            apply_photon=self.apply_photon.fetch(),
+            E0=self.E0.fetch(),
+            omega_c_cminv=self.omega_c_cminv.fetch(),
+            ph_rep=self.ph_rep.fetch(),
+        )
+
+    def check(self):
+        """Deals with optional parameters."""
+
+        super(InputFFCavPhSocket, self).check()
+        if self.port.fetch() < 1 or self.port.fetch() > 65535:
+            raise ValueError(
+                "Port number " + str(self.port.fetch()) + " out of acceptable range."
+            )
+        elif self.port.fetch() < 1025:
+            warning(
+                "Low port number being used, this may interrupt important system processes.",
+                verbosity.low,
+            )
+
+        if self.slots.fetch() < 1 or self.slots.fetch() > 5:
+            raise ValueError(
+                "Slot number " + str(self.slots.fetch()) + " out of acceptable range."
+            )
+        if self.latency.fetch() < 0:
+            raise ValueError("Negative latency parameter specified.")
+        if self.timeout.fetch() < 0.0:
+            raise ValueError("Negative timeout parameter specified.")
