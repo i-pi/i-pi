@@ -13,7 +13,7 @@
     		<slots>4</slots>
     		<port>12345</port>
     		<timeout>60.000000e+00</timeout>
-    		<address>zundel</address>
+   		<address>zundel</address>
   	</ffsocket> 
 	<system>
         	<initialize nbeads="1">
@@ -35,7 +35,7 @@
                                 -2.508912543565e-4,    4.800164465960e-6,   -1.245698716799e-4,    6.449207766266e-4,    2.783583234046e-4,
                                 5.273493443008e-3,   -1.025830873432e-5,    2.417657162526e-4,   -2.783583234046e-4,    7.488477456790e-3
                         					]
-                        		</A>
+                       		</A>
                         	</thermostat>
                  	</dynamics>
               	</motion>

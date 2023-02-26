@@ -56,7 +56,6 @@ def units_preparation(request):
 
 @pytest.mark.skip(reason="This needs to be updated to match current code.")
 def test_process_units_noobj(units_preparation):
-
     natoms, frames, comment, conver_xyz, conver_cell = units_preparation
     output = "noobj"
 
@@ -93,7 +92,6 @@ def test_process_units_noobj(units_preparation):
 
 @pytest.mark.skip(reason="This needs to be updated to match current code.")
 def test_process_units_object(units_preparation):
-
     natoms, frames, comment, conver_xyz, conver_cell = units_preparation
     output = "objects"
 

@@ -24,9 +24,8 @@ class InputAlchemy(InputDictionary):
     Handles generating the appropriate alchemical exchange class from the xml input file.
 
     Fields:
-        spicesA/B: isotopes for exchanges.
-        timestep: An optional float giving the size of the timestep in atomic
-            units. Defaults to 1.0.
+        names: isotopes for exchanges.
+        nxc: An optional float giving the number of exchanges that should be tried at each step.
     """
 
     attribs = {

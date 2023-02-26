@@ -17,6 +17,7 @@ from ipi.engine.forcefields import (
     FFYaff,
     FFsGDML,
     FFCommittee,
+    FFdmd,
 )
 from ipi.interfaces.sockets import InterfaceSocket
 import ipi.engine.initializer
@@ -31,6 +32,7 @@ __all__ = [
     "InputFFYaff",
     "InputFFsGDML",
     "InputFFCommittee",
+    "InputFFdmd",
 ]
 
 
@@ -98,7 +100,7 @@ class InputForceField(Input):
                 "dtype": int,
                 "default": np.array([-1]),
                 #                                     "default" : input_default(factory=np.array, args =[-1]),
-                "help": "List with indexes of the atoms that this socket is taking care of.    Default: all (corresponding to -1)",
+                "help": "List with indexes of the atoms that this socket is taking care of.    Default: [-1] (corresponding to all)",
             },
         ),
     }
@@ -318,7 +320,6 @@ class InputFFSocket(InputForceField):
 
 
 class InputFFLennardJones(InputForceField):
-
     attribs = {}
     attribs.update(InputForceField.attribs)
 
@@ -350,8 +351,73 @@ class InputFFLennardJones(InputForceField):
             raise ValueError("Negative timeout parameter specified.")
 
 
-class InputFFDebye(InputForceField):
+class InputFFdmd(InputForceField):
+    fields = {
+        "dmd_coupling": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.zeros, args=(0,)),
+                "help": "Specifies the coupling between atom pairs (should be size N*(N-1)/2 ordered c21, c32, c31, c43, c42, c41 etc.  -- in atomic units!)",
+            },
+        ),
+        "dmd_freq": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 0.0,
+                "help": "Frequency of the oscillation of the time-dependent term",
+                "dimension": "frequency",
+            },
+        ),
+        "dmd_dt": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 0.0,
+                "help": "Time step of the oscillating potential. Should match time step of simulation",
+                "dimension": "time",
+            },
+        ),
+        "dmd_step": (
+            InputValue,
+            {"dtype": int, "default": 0, "help": "The current step counter for dmd."},
+        ),
+    }
 
+    fields.update(InputForceField.fields)
+
+    attribs = {}
+    attribs.update(InputForceField.attribs)
+
+    default_help = """Simple, internal DMD evaluator without without neighbor lists, but with PBC.
+                   Expects coupling elements (n*(n-1)/2 of them), oscillating frequency and time step. """
+    default_label = "FFDMD"
+
+    def store(self, ff):
+        super(InputFFdmd, self).store(ff)
+        self.dmd_coupling.store(ff.coupling)
+        self.dmd_freq.store(ff.freq)
+        self.dmd_dt.store(ff.dtdmd)
+        self.dmd_step.store(ff.dmdstep)
+
+    def fetch(self):
+        super(InputFFdmd, self).fetch()
+
+        return FFdmd(
+            coupling=self.dmd_coupling.fetch(),
+            freq=self.dmd_freq.fetch(),
+            dtdmd=self.dmd_dt.fetch(),
+            dmdstep=self.dmd_step.fetch(),
+            pars=self.parameters.fetch(),
+            name=self.name.fetch(),
+            latency=self.latency.fetch(),
+            dopbc=self.pbc.fetch(),
+            threaded=self.threaded.fetch(),
+        )
+
+
+class InputFFDebye(InputForceField):
     fields = {
         "hessian": (
             InputArray,
@@ -413,7 +479,6 @@ class InputFFDebye(InputForceField):
 
 
 class InputFFPlumed(InputForceField):
-
     fields = {
         "init_file": (
             InputInitFile,
@@ -470,7 +535,6 @@ class InputFFPlumed(InputForceField):
 
 
 class InputFFYaff(InputForceField):
-
     fields = {
         "yaffpara": (
             InputValue,
@@ -587,7 +651,6 @@ class InputFFYaff(InputForceField):
 
 
 class InputFFsGDML(InputForceField):
-
     fields = {
         "sGDML_model": (
             InputValue,
@@ -704,7 +767,7 @@ class InputFFCommittee(InputForceField):
     )
 
     def store(self, ff):
-        """ Store all the sub-forcefields """
+        """Store all the sub-forcefields"""
 
         super(InputFFCommittee, self).store(ff)
         _fflist = ff.fflist
@@ -717,7 +780,7 @@ class InputFFCommittee(InputForceField):
         self.active_thresh.store(ff.active_thresh)
         self.active_output.store(ff.active_out)
 
-        for (_ii, _obj) in enumerate(_fflist):
+        for _ii, _obj in enumerate(_fflist):
             if self.extra[_ii] == 0:
                 if isinstance(_obj, FFSocket):
                     _iobj = InputFFSocket()
@@ -751,12 +814,12 @@ class InputFFCommittee(InputForceField):
                 self.extra[_ii][1].store(_obj)
 
     def fetch(self):
-        """ Fetches all of the FF objects """
+        """Fetches all of the FF objects"""
 
         super(InputFFCommittee, self).fetch()
 
         fflist = []
-        for (k, v) in self.extra:
+        for k, v in self.extra:
             fflist.append(v.fetch())
 
         # TODO: will actually need to create a FF object here!

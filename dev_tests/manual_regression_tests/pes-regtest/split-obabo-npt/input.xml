@@ -1,5 +1,5 @@
 <!-- REGTEST
-DEPENDENCIES  water_298K.pdb
+DEPENDENCIES  water_298K.xyz
 COMMAND(4)    i-pi-driver -u -h ffdriver -m qtip4pf
 ENDREGTEST -->
 
@@ -16,7 +16,7 @@ ENDREGTEST -->
   </ffsocket>
   <system>
     <initialize nbeads="4">
-      <file mode="pdb"> water_298K.pdb </file>
+      <file mode="xyz"> water_298K.xyz </file>
       <velocities mode="thermal" units="kelvin"> 298 </velocities>
     </initialize>
     <forces>

@@ -108,9 +108,9 @@ def heatCapacity(prefix, temp, ss=0):
     beta = 1.0 / (Constants.kb * temperature)
     const_1 = 0.5 * nbeads / (beta * Constants.hbar) ** 2
     const_2 = 1.5 * nbeads / beta
-    const_3 = Constants.kb ** 2 / Constants.hbar ** 2
-    const_4 = Constants.hbar ** 2 * beta ** 2 / (24.0 * nbeads ** 3)
-    const_5 = Constants.kb * beta ** 2
+    const_3 = Constants.kb**2 / Constants.hbar**2
+    const_4 = Constants.hbar**2 * beta**2 / (24.0 * nbeads**3)
+    const_5 = Constants.kb * beta**2
 
     timeUnit, potentialEnergyUnit, potentialEnergy_index, time_index = extractUnits(
         iU
@@ -128,7 +128,6 @@ def heatCapacity(prefix, temp, ss=0):
     time0 = 0
     q, f, m = None, None, None
     while True:  # Reading input files and calculating PPI correction
-
         if ifr % 100 == 0:
             print("\rProcessing frame {:d}".format(ifr), end=" ")
             sys.stdout.flush()
@@ -147,17 +146,14 @@ def heatCapacity(prefix, temp, ss=0):
             sys.exit(0)
 
         if ifr < skipSteps:
-
             time0 = time
 
         if ifr >= skipSteps:  # PPI correction
-
             time -= time0
 
             KPa, f2 = 0.0, 0.0
 
             if not fast_code:
-
                 for j in range(nbeads):
                     for i in range(natoms):
                         f2 += (
@@ -186,7 +182,6 @@ def heatCapacity(prefix, temp, ss=0):
                 KPa += const_2 * natoms
 
             else:
-
                 f2 = fortran.f2divm(
                     np.array(f, order="F"), np.array(m, order="F"), natoms, nbeads
                 )
@@ -212,17 +207,17 @@ def heatCapacity(prefix, temp, ss=0):
 
             norm = float(ifr - skipSteps)
 
-            dU = 2 * f2_av / norm - beta * (f2U_av / norm - f2_av * U_av / norm ** 2)
+            dU = 2 * f2_av / norm - beta * (f2U_av / norm - f2_av * U_av / norm**2)
             dU *= const_4
 
-            dK = f2_av / norm - beta * (f2KPa_av / norm - f2_av * KPa_av / norm ** 2)
+            dK = f2_av / norm - beta * (f2KPa_av / norm - f2_av * KPa_av / norm**2)
             dK *= const_4
 
             C = (
                 E2_av / norm
                 - ((KPa_av + U_av) / norm) ** 2
                 + (2.0 / beta) * KPa_av / norm
-                - 1.5 * nbeads * natoms / beta ** 2
+                - 1.5 * nbeads * natoms / beta**2
             )
             C *= const_5
 
@@ -235,7 +230,7 @@ def heatCapacity(prefix, temp, ss=0):
                 / norm
                 - 2 * (3 + beta * (KPa_av + U_av) / norm) * beta * (dK + dU)
                 + 2 * beta * dK
-                - const_4 * (f2E2_av / norm - f2_av * E2_av / norm ** 2) * beta ** 3
+                - const_4 * (f2E2_av / norm - f2_av * E2_av / norm**2) * beta**3
             )
 
             iC = open(fn_out_en, "a")
@@ -323,10 +318,8 @@ def read_U(filedesc, potentialEnergyUnit, potentialEnergy_index, time_index):
 
 
 def main(*arg):
-
     heatCapacity(*arg)
 
 
 if __name__ == "__main__":
-
     main(*sys.argv[1:])

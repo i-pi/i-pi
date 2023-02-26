@@ -127,7 +127,6 @@ class NormalModeMover(Motion):
             self.prefix = self.mode
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
-
         super(NormalModeMover, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
         self.temp = self.ensemble.temp
 
@@ -146,18 +145,18 @@ class NormalModeMover(Motion):
         self.dforces = self.forces.copy(self.dbeads, self.dcell)
 
     def step(self, step=None):
-        """Executes one step of phonon computation. """
+        """Executes one step of phonon computation."""
         self.calc.step(step)
 
 
 class DummyCalculator(dobject):
-    """ No-op Calculator """
+    """No-op Calculator"""
 
     def __init__(self):
         pass
 
     def bind(self, imm):
-        """ Reference all the variables for simpler access."""
+        """Reference all the variables for simpler access."""
         self.imm = imm
 
     def step(self, step=None):
@@ -169,7 +168,7 @@ class IMF(DummyCalculator):
     """Temperature scaled normal mode Born-Oppenheimer surface evaluator."""
 
     def bind(self, imm):
-        """ Reference all the variables for simpler access."""
+        """Reference all the variables for simpler access."""
 
         if scipy is None:
             info(" @NM: scipy import failed", verbosity.low)
@@ -293,7 +292,7 @@ class IMF(DummyCalculator):
         norm = (alpha / np.pi) ** 0.25 * np.sqrt(
             1.0 / (2.0 ** (n) * np.math.factorial(n))
         )
-        psival = norm * np.exp(-alpha * q ** 2 / 2.0) * herfun(np.sqrt(alpha) * q)
+        psival = norm * np.exp(-alpha * q**2 / 2.0) * herfun(np.sqrt(alpha) * q)
 
         return psival
 
@@ -366,7 +365,6 @@ class IMF(DummyCalculator):
             + ".qvf"
         )
         if os.path.exists(self.v_indep_filename):
-
             # Loads the displacemnts, the potential energy and the forces.
             qlist, vlist, flist = np.loadtxt(self.v_indep_filename).T
 
@@ -445,13 +443,12 @@ class IMF(DummyCalculator):
             sampling_density_iter = -1
 
             while True:
-
                 sampling_density_iter += 1
 
                 # Doubles the grid spacing, so that an estimate of the
                 # anharmonic free energy convergence is
                 # possible at default/input grid spacing
-                ffnmrms = self.fnmrms * 0.5 ** sampling_density_iter * 2.0
+                ffnmrms = self.fnmrms * 0.5**sampling_density_iter * 2.0
 
                 # Calculates the displacement in Cartesian coordinates.
                 nmd = ffnmrms * self.imm.nmrms[step]
@@ -470,7 +467,6 @@ class IMF(DummyCalculator):
                 # Explores configurations until the sampled energy exceeds
                 # a user-defined threshold of the zero-point energy.
                 while True:
-
                     # Displaces along the normal mode.
                     self.imm.dbeads.q = self.imm.beads.q + dev * counter
 
@@ -481,14 +477,10 @@ class IMF(DummyCalculator):
                         - 0.50 * self.imm.w2[step] * (nmd * counter) ** 2
                         - v0
                     )
-                    df = (
-                        np.dot(
-                            dstrip(self.imm.dforces.f).copy()[0],
-                            np.real(self.imm.V.T[step]),
-                        )
-                        / self.nprim
-                        + self.imm.w2[step] * (nmd * counter)
-                    )
+                    df = np.dot(
+                        dstrip(self.imm.dforces.f).copy()[0],
+                        np.real(self.imm.V.T[step]),
+                    ) / self.nprim + self.imm.w2[step] * (nmd * counter)
 
                     # Adds to the list.
                     # Also stores the total energetics i.e. including
@@ -516,7 +508,6 @@ class IMF(DummyCalculator):
 
                 # Similarly displaces in the "-ve direction"
                 while True:
-
                     # Displaces along the normal mode.
                     self.imm.dbeads.q = self.imm.beads.q + dev * counter
 
@@ -527,14 +518,10 @@ class IMF(DummyCalculator):
                         - 0.50 * self.imm.w2[step] * (nmd * counter) ** 2
                         - v0
                     )
-                    df = (
-                        np.dot(
-                            dstrip(self.imm.dforces.f).copy()[0],
-                            np.real(self.imm.V.T[step]),
-                        )
-                        / self.nprim
-                        + self.imm.w2[step] * (nmd * counter)
-                    )
+                    df = np.dot(
+                        dstrip(self.imm.dforces.f).copy()[0],
+                        np.real(self.imm.V.T[step]),
+                    ) / self.nprim + self.imm.w2[step] * (nmd * counter)
 
                     # Adds to the list.
                     # Also stores the total energetics i.e. including
@@ -754,11 +741,13 @@ class IMF(DummyCalculator):
             " @NM: ALL QUANTITIES PER PRIMITIVE UNIT CELL (WHERE APPLICABLE) \n",
             verbosity.low,
         )
-        softexit.trigger(" @NM: The IMF calculation has terminated.")
+        softexit.trigger(
+            status="success", message=" @NM: The IMF calculation has terminated."
+        )
 
 
 class VSCF(IMF):
-    """"""
+    """ """
 
     def bind(self, imm):
         """
@@ -801,7 +790,6 @@ class VSCF(IMF):
             info(" @NM: Identifying relevant frequency modes.", verbosity.medium)
             self.inms = []
             for inm in range(self.dof):
-
                 if self.imm.w[inm] < 9.1126705e-06:
                     info(
                         " @NM: Ignoring normal mode no.  %8d with frequency %15.8f cm^-1."
@@ -864,7 +852,7 @@ class VSCF(IMF):
             self.evecs_vscf = np.zeros((self.dof, self.nbasis, self.nbasis))
 
     def step(self, step=None):
-        """Computes the Born Oppenheimer curve along a normal mode."""
+        """Computes the Born-Oppenheimer curve along a normal mode."""
 
         # Performs some basic initialization.
         if step == 0:
@@ -884,7 +872,6 @@ class VSCF(IMF):
 
         # Maps 1D curves.
         elif step <= len(self.inms):
-
             # Selects the normal mode to map out.
             self.inm = self.inms[step - 1]
 
@@ -907,7 +894,6 @@ class VSCF(IMF):
             if os.path.exists(
                 self.imm.output_maker.prefix + "." + self.v_indep_filename
             ):
-
                 # Reads the number of sampled configurations from the header
                 # and the sampeld potential energy from the body.
                 with open(
@@ -950,7 +936,6 @@ class VSCF(IMF):
 
             # If mapping has NOT been perfomed previously, maps the 1D curves.
             else:
-
                 (
                     self.npts_neg[self.inm],
                     self.npts_pos[self.inm],
@@ -996,7 +981,6 @@ class VSCF(IMF):
             # We need the independent mode correction on a grid.
             # Checks if the potential exists otherwise loads from file.
             if self.grid:
-
                 if os.path.exists(
                     self.imm.output_maker.prefix + "." + self.v_indep_grid_filename
                 ):
@@ -1049,7 +1033,6 @@ class VSCF(IMF):
 
         # Maps 2D surfaces if the index of the pair lies in range.
         elif step - len(self.inms) - 1 < self.pair_range[1]:
-
             # Checks if the index lies in range.
             if not self.pair_range[0] <= step - len(self.inms) - 1:
                 return
@@ -1101,7 +1084,6 @@ class VSCF(IMF):
                 )
                 is not True
             ):
-
                 # Initializes the grid for interpolating the potential when
                 # displacements are made along pairs of normal modes.
                 self.v_coupled = np.zeros(
@@ -1129,7 +1111,6 @@ class VSCF(IMF):
 
                 for i in range(self.npts[self.inm] + 4):
                     for j in range(self.npts[self.jnm] + 4):
-
                         # Uses on-axis potentials are available from 1D maps.
                         if (-self.npts_neg[self.inm] + i - 2) == 0:
                             self.v_coupled[k] = self.v_indep_list[self.jnm_index][j]
@@ -1180,7 +1161,6 @@ class VSCF(IMF):
             # We need the pair-wise coupling correction on a grid.
             # Checks if the correction exists otherwise loads from file.
             if self.grid:
-
                 if os.path.exists(
                     self.imm.output_maker.prefix + "." + self.v_coupled_grid_filename
                 ):
@@ -1191,7 +1171,6 @@ class VSCF(IMF):
                     )
 
                 else:
-
                     # Interpolates the displacements on a grid and saves for VSCFSOLVER.
                     info(
                         " @NM: Interpolating the potential energy on a %8d x %8d grid."
@@ -1269,7 +1248,6 @@ class VSCF(IMF):
 
         # Saves the interpolated potential for each normal mode separately.
         for inm in self.inms:
-
             # Skips iteration if the file exists.
             ofn = self.v_coupled_grids_file_prefix + "." + str(inm) + ".dat"
             if os.path.exists(self.imm.output_maker.prefix + "." + ofn):
@@ -1278,7 +1256,6 @@ class VSCF(IMF):
             # Stores the coupled potential
             vc = np.zeros((self.dof, self.nint, self.nint))
             for jnm in self.inms:
-
                 if inm == jnm:
                     continue
 
@@ -1308,7 +1285,6 @@ class VSCF(IMF):
         info("\n", verbosity.medium)
         # Initializes the wavefunctions for all the normal modes.
         for inm in self.inms:
-
             for ibasis in range(self.nbasis):
                 self.psi_i_grids[inm, ibasis, :] = self.psi(
                     ibasis, 1.0, self.imm.w[inm], self.q_grids[inm]
@@ -1339,7 +1315,6 @@ class VSCF(IMF):
         info("\n @NM: The SCF begins.", verbosity.medium)
 
         while True:
-
             # Calculates the VSCF free energy.
             a_vscf_old = a_vscf
             a_vscf = self.v0 + ai.sum()
@@ -1373,7 +1348,6 @@ class VSCF(IMF):
             # Calculates the mean field potential for each normal
             # mode and solves the Schroedinger's equation.
             for inm in self.inms:
-
                 self.v_mft_grids[inm] = (
                     self.v_indep_grids[inm] + (1 - self.alpha) * self.v_mft_grids[inm]
                 )
@@ -1448,14 +1422,12 @@ class VSCF(IMF):
         # Displaces along the negative direction.
         counter = -1
         while True:
-
             self.imm.dbeads.q = self.imm.beads.q + dev * counter
             v = dstrip(self.imm.dforces.pots).copy()[0] / self.nprim
             v_indeps.append(v)
 
             # Bails out if the sampled potenital energy exceeds a user defined threshold.
             if self.nevib * self.imm.nmevib[self.inm] < np.absolute(v - self.v0):
-
                 # Adds two extra points required later for solid spline fitting at edges.
                 self.imm.dbeads.q -= dev
                 v_indeps.append(dstrip(self.imm.dforces.pots).copy()[0] / self.nprim)
@@ -1472,14 +1444,12 @@ class VSCF(IMF):
 
         counter = 1
         while True:
-
             self.imm.dbeads.q = self.imm.beads.q + dev * counter
             v = dstrip(self.imm.dforces.pots).copy()[0] / self.nprim
             v_indeps.append(v)
 
             # Bails out if the sampled potenital energy exceeds a user defined threshold.
             if self.nevib * self.imm.nmevib[self.inm] < np.absolute(v - self.v0):
-
                 # add two extra points required later for solid spline fitting at edges
                 self.imm.dbeads.q += dev
                 v_indeps.append(dstrip(self.imm.dforces.pots).copy()[0] / self.nprim)
@@ -1498,4 +1468,6 @@ class VSCF(IMF):
         Triggers a soft exit.
         """
 
-        softexit.trigger(" @NM: The VSCF calculation has terminated.")
+        softexit.trigger(
+            status="success", message=" @NM: The VSCF calculation has terminated."
+        )

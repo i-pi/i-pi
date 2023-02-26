@@ -34,10 +34,6 @@ class MetaDyn(Smotion):
         """Updates metad bias."""
 
         for s in self.syslist:
-            # Karen 07.05.2020: the line below causes the complaint "variable not used",
-            # but I'm not sure that deleting it doesn't change the behavior, because
-            # calling forces might cause their recalculation.
-            oldf = dstrip(s.forces.f).copy()  # noqa
             for ik, bc in enumerate(s.ensemble.bcomp):
                 k = bc.ffield
                 if k not in self.metaff:
@@ -53,6 +49,8 @@ class MetaDyn(Smotion):
                     )
                 if s.ensemble.bweights[ik] == 0:
                     continue  # do not put metad bias on biases with zero weights (useful to do remd+metad!)
+
+                meta_pot_before = s.ensemble.bias.pot
                 fmtd = f.mtd_update(pos=s.beads.qc, cell=s.cell.h)
                 if fmtd:  # if metadyn has updated, then we must recompute forces.
                     # hacky but cannot think of a better way: we must manually taint *just* that component
@@ -60,3 +58,7 @@ class MetaDyn(Smotion):
                         if fc.ffield == k:
                             for fb in fc._forces:
                                 dd(fb).ufvx.taint()
+                    meta_pot_after = s.ensemble.bias.pot
+                    # updates the conserved quantity with the change in bias so that
+                    # we remove the shift due to added hills
+                    s.ensemble.eens += meta_pot_before - meta_pot_after

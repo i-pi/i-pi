@@ -202,6 +202,10 @@ class ConstraintSolverBase(dobject):
         dd(self).dt = depend_value(name="dt", value=dt)
 
     def bind(self, beads):
+        if beads.nbeads > 1:
+            raise ValueError(
+                "Constrained dynamics is only implemented for the case of classical MD (nbeads=1)"
+            )
 
         self.beads = beads
         # Sets the initial value of the constraint positions
@@ -353,7 +357,7 @@ class ConstrainedIntegrator(DummyIntegrator):
         return super(ConstrainedIntegrator, self).get_tdt() / self.nsteps_o
 
     def bind(self, motion):
-        """ Creates local references to all the variables for simpler access."""
+        """Creates local references to all the variables for simpler access."""
 
         super(ConstrainedIntegrator, self).bind(motion)
 

@@ -55,7 +55,7 @@ class InitBase(dobject):
         self.mode = mode
         self.units = units
 
-        for (o, v) in list(others.items()):
+        for o, v in list(others.items()):
             self.__dict__[o] = v
 
 
@@ -224,7 +224,7 @@ def init_vector(
 
     mode = iif.mode
     value = iif.value
-    if mode == "xyz" or mode == "pdb":
+    if mode == "xyz" or mode == "pdb" or mode == "ase":
         rq = init_beads(iif, nbeads, dimension, units, cell_units).q
     elif mode == "chk":
         if momenta:
@@ -374,7 +374,7 @@ class Initializer(dobject):
         else:
             fpos = fmom = fmass = flab = fcell = True
 
-        for (k, v) in self.queue:
+        for k, v in self.queue:
             info(
                 " # Initializer (stage 1) parsing " + str(k) + " object.",
                 verbosity.high,
@@ -621,7 +621,7 @@ class Initializer(dobject):
               that have been specified are not compatible with each other.
         """
 
-        for (k, v) in self.queue:
+        for k, v in self.queue:
             info(
                 " # Initializer (stage 2) parsing " + str(k) + " object.",
                 verbosity.high,

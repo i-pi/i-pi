@@ -31,7 +31,6 @@ from ipi.utils.io.inputs import io_xml
 
 
 def main(inputfile, outdir="trim"):
-
     # opens & parses the input file
     ifile = open(inputfile, "r")
     xmlrestart = io_xml.xml_parse_file(ifile)  # Parses the file.
@@ -158,7 +157,9 @@ def main(inputfile, outdir="trim"):
 
     ptfile = None
     # wtefile = None
-    if os.path.isfile(simul.outtemplate.prefix + "." + simul.smotion.swapfile):
+    if hasattr(simul.smotion, "swapfile") and os.path.isfile(
+        simul.outtemplate.prefix + "." + simul.smotion.swapfile
+    ):
         ptfile = open(simul.outtemplate.prefix + "." + simul.smotion.swapfile, "r")
         optfile = open(
             outdir + "/" + simul.outtemplate.prefix + "." + simul.smotion.swapfile, "w"
@@ -169,8 +170,8 @@ def main(inputfile, outdir="trim"):
     #    owtefile = open(outdir + "/PARAWTE", "w")
 
     # First reads the swap file
-    while True:
-        if ptfile is not None:
+    if ptfile is not None:
+        while True:
             try:
                 line = ptfile.readline()
                 step = int(line.split()[0])
@@ -184,7 +185,6 @@ def main(inputfile, outdir="trim"):
     # now reads files one frame at a time, and re-direct output to the appropriate location
     for step in range(trimstep + 1):
         try:
-
             for prop in lprop:
                 for isys in range(nsys):
                     sprop = prop[isys]
@@ -205,7 +205,7 @@ def main(inputfile, outdir="trim"):
                             ibuffer.append(straj["ifile"].readline())
                             ibuffer.append(straj["ifile"].readline())
                             traj[isys]["ofile"].write("".join(ibuffer))
-                        if straj["format"] == "xyz":
+                        if straj["format"] in ["xyz", "ase"]:
                             iline = straj["ifile"].readline()
                             nat = int(iline)
                             ibuffer.append(iline)

@@ -99,7 +99,7 @@ class InputInitBase(InputValue):
         if self.mode.fetch() == "manual":
             if "[" in value and "]" in value:  # value appears to be a list
                 if self._storageclass is float:
-                    value = io_xml.read_array(np.float, value)
+                    value = io_xml.read_array(float, value)
                 else:
                     value = io_xml.read_list(value)
             else:
@@ -163,10 +163,11 @@ class InputInitFile(InputInitBase):
 
     attribs = deepcopy(InputInitBase.attribs)
     attribs["mode"][1]["default"] = "chk"
-    attribs["mode"][1]["options"] = ["xyz", "pdb", "chk"]
+    attribs["mode"][1]["options"] = ["xyz", "pdb", "chk", "ase"]
     attribs["mode"][1][
         "help"
-    ] = "The input data format. 'xyz' and 'pdb' stand for xyz and pdb input files respectively. 'chk' stands for initialization from a checkpoint file."
+    ] = """The input data format. 'xyz' and 'pdb' stand for xyz and pdb input files respectively. 
+        'chk' stands for initialization from a checkpoint file. 'ase' is to read a file with the Atomic Simulation Environment"""
 
     attribs["bead"] = (
         InputAttribute,
@@ -211,10 +212,11 @@ class InputInitPositions(InputInitIndexed):
 
     attribs = deepcopy(InputInitIndexed.attribs)
     attribs["mode"][1]["default"] = "chk"
-    attribs["mode"][1]["options"] = ["manual", "xyz", "pdb", "chk"]
+    attribs["mode"][1]["options"] = ["manual", "xyz", "pdb", "ase", "chk"]
     attribs["mode"][1][
         "help"
-    ] = "The input data format. 'xyz' and 'pdb' stand for xyz and pdb input files respectively. 'chk' stands for initialization from a checkpoint file. 'manual' means that the value to initialize from is giving explicitly as a vector."
+    ] = """The input data format. 'xyz' and 'pdb' stand for xyz and pdb input files respectively.  'ase' is to read a file with the Atomic Simulation Environment.
+        'chk' stands for initialization from a checkpoint file. 'manual' means that the value to initialize from is giving explicitly as a vector."""
 
     default_label = "INITPOSITIONS"
     default_help = "This is the class to initialize positions."
@@ -229,7 +231,9 @@ class InputInitMomenta(InputInitPositions):
     attribs["mode"][1]["options"].append("thermal")
     attribs["mode"][1][
         "help"
-    ] = "The input data format. 'xyz' and 'pdb' stand for xyz and pdb input files respectively. 'chk' stands for initialization from a checkpoint file. 'manual' means that the value to initialize from is giving explicitly as a vector. 'thermal' means that the data is to be generated from a Maxwell-Boltzmann distribution at the given temperature."
+    ] = """The input data format. 'xyz' and 'pdb' stand for xyz and pdb input files respectively. 
+        'chk' stands for initialization from a checkpoint file. 'manual' means that the value to initialize from is giving explicitly as a vector. 
+        'thermal' means that the data is to be generated from a Maxwell-Boltzmann distribution at the given temperature."""
 
     default_label = "INITMOMENTA"
     default_help = "This is the class to initialize momenta."
@@ -315,8 +319,9 @@ class InputInitCell(InputInitBase):
 
         ibase = super(InputInitCell, self).fetch()
         if mode == "abc" or mode == "abcABC":
-
-            h = io_xml.read_array(np.float, ibase.value)
+            h = io_xml.read_array(
+                float, ibase.value
+            )  # As of numpy v1.20, numpy.float as well as similar aliases (including numpy.int) were deprecated
 
             if mode == "abc":
                 if h.size != 3:
@@ -460,7 +465,7 @@ class InputInitializer(Input):
 
         self.extra = []
 
-        for (k, el) in ii.queue:
+        for k, el in ii.queue:
             if k == "positions":
                 ip = InputInitPositions()
                 ip.store(el)
@@ -495,7 +500,7 @@ class InputInitializer(Input):
 
         super(InputInitializer, self).fetch()
         initlist = []
-        for (k, v) in self.extra:
+        for k, v in self.extra:
             if v.mode.fetch() == "chk" and not v.fetch(
                 initclass=ei.InitIndexed
             ).units in ["", "automatic"]:
@@ -504,9 +509,15 @@ class InputInitializer(Input):
                 )
             if k == "file":
                 mode = v.mode.fetch()
-                if mode == "xyz" or mode == "manual" or mode == "pdb" or mode == "chk":
+                if (
+                    mode == "xyz"
+                    or mode == "manual"
+                    or mode == "pdb"
+                    or mode == "chk"
+                    or mode == "ase"
+                ):
                     initlist.append(("positions", v.fetch(initclass=ei.InitIndexed)))
-                if mode == "xyz" or mode == "pdb" or mode == "chk":
+                if mode == "xyz" or mode == "pdb" or mode == "chk" or mode == "ase":
                     rm = v.fetch(initclass=ei.InitIndexed)
                     rm.units = ""
                     initlist.append(("masses", rm))

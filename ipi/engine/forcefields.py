@@ -23,6 +23,7 @@ from ipi.utils.depend import dobject
 from ipi.utils.depend import dstrip
 from ipi.utils.io import read_file
 from ipi.utils.units import unit_to_internal, UnitMap
+from ipi.utils.distance import vector_separation
 
 try:
     import plumed
@@ -31,7 +32,7 @@ except ImportError:
 
 
 class NumpyEncoder(json.JSONEncoder):
-    """ Special json encoder for numpy types """
+    """Special json encoder for numpy types"""
 
     def default(self, obj):
         if isinstance(obj, np.integer):
@@ -291,7 +292,7 @@ class ForceField(dobject):
         softexit.register_function(self.softexit)
 
     def softexit(self):
-        """ Takes care of cleaning up upon softexit """
+        """Takes care of cleaning up upon softexit"""
 
         self.stop()
 
@@ -430,10 +431,10 @@ class FFLennardJones(ForceField):
         f = np.zeros(q.shape)
         for i in range(1, nat):
             dij = q[i] - q[:i]
-            rij2 = (dij ** 2).sum(axis=1)
+            rij2 = (dij**2).sum(axis=1)
 
             x6 = (self.sigma2 / rij2) ** 3
-            x12 = x6 ** 2
+            x12 = x6**2
 
             v += (x12 - x6).sum()
             dij *= (self.sixepsfour * (2.0 * x12 - x6) / rij2)[:, np.newaxis]
@@ -444,6 +445,121 @@ class FFLennardJones(ForceField):
 
         r["result"] = [v, f.reshape(nat * 3), np.zeros((3, 3), float), {"raw": ""}]
         r["status"] = "Done"
+
+
+class FFdmd(ForceField):
+
+    """Pythonic force provider.
+
+    Computes DMD forces as in Bowman, .., Brown JCP 2003 DOI: 10.1063/1.1578475. It is a time dependent potential.
+    Here extended for periodic systems and for virial term calculation.
+
+    Attributes:
+        parameters: A dictionary of the parameters used by the driver. Of the
+            form {'name': value}.
+        requests: During the force calculation step this holds a dictionary
+            containing the relevant data for determining the progress of the step.
+            Of the form {'atoms': atoms, 'cell': cell, 'pars': parameters,
+                         'status': status, 'result': result, 'id': bead id,
+                         'start': starting time}.
+    """
+
+    def __init__(
+        self,
+        latency=1.0e-3,
+        name="",
+        coupling=None,
+        freq=0.0,
+        dtdmd=0.0,
+        dmdstep=0,
+        pars=None,
+        dopbc=False,
+        threaded=False,
+    ):
+        """Initialises FFdmd.
+
+        Args:
+           pars: Optional dictionary, giving the parameters needed by the driver.
+        """
+
+        # a socket to the communication library is created or linked
+        super(FFdmd, self).__init__(latency, name, pars, dopbc=dopbc, threaded=threaded)
+
+        if coupling is None:
+            raise ValueError("Must provide the couplings for DMD.")
+        if freq is None:
+            raise ValueError(
+                "Must provide a frequency for the periodically oscillating potential."
+            )
+        if dtdmd is None:
+            raise ValueError(
+                "Must provide a time step for the periodically oscillating potential."
+            )
+        self.coupling = coupling
+        self.freq = freq
+        self.dtdmd = dtdmd
+        self.dmdstep = dmdstep
+
+    def poll(self):
+        """Polls the forcefield checking if there are requests that should
+        be answered, and if necessary evaluates the associated forces and energy."""
+
+        # We have to be thread-safe, as in multi-system mode this might get
+        # called by many threads at once.
+        with self._threadlock:
+            for r in self.requests:
+                if r["status"] == "Queued":
+                    r["status"] = "Running"
+                    r["t_dispatched"] = time.time()
+                    self.evaluate(r)  # MR BAD
+
+    def evaluate(self, r):
+        """Evaluating dmd: pbc: YES,
+        cutoff: NO, neighbour list: NO."""
+
+        q = r["pos"].reshape((-1, 3))
+        nat = len(q)
+        cell_h, cell_ih = r["cell"]
+
+        if len(self.coupling) != int(nat * (nat - 1) / 2):
+            raise ValueError("Coupling matrix size mismatch")
+
+        v = 0.0
+        f = np.zeros(q.shape)
+        vir = np.zeros((3, 3), float)
+        # must think and check handling of time step
+        periodic = np.sin(self.dmdstep * self.freq * self.dtdmd)
+        # MR: the algorithm below has been benchmarked against explicit loop implementation
+        for i in range(1, nat):
+            # MR's first implementation:
+            #            dij = q[i] - q[:i]
+            #            rij = np.sqrt((dij ** 2).sum(axis=1))
+            # KF's implementation:
+            dij, rij = vector_separation(cell_h, cell_ih, q[i], q[:i])
+            cij = self.coupling[i * (i - 1) // 2 : i * (i + 1) // 2]
+            prefac = np.dot(
+                cij, rij
+            )  # for each i it has the distances to all indexes previous
+            v += np.sum(prefac) * periodic
+            nij = np.copy(dij)
+            nij *= -(cij / rij)[:, np.newaxis]  # magic line...
+            f[i] += nij.sum(axis=0) * periodic
+            f[:i] -= nij * periodic  # everything symmetric
+            # virial:
+            fij = nij * periodic
+            for j in range(i):
+                for cart1 in range(3):
+                    for cart2 in range(3):
+                        vir[cart1][cart2] += fij[j][cart1] * dij[j][cart2]
+            # MR 2021: The virial looks correct and produces stable NPT simulations. It was not bullet-proof benchmarked, though.
+            #          Because this is "out of equilibrium" I still did not find a good benchmark. Change cell and look at variation of energy only for this term?
+
+        r["result"] = [v, f.reshape(nat * 3), vir, ""]
+        r["status"] = "Done"
+
+    def dmd_update(self):
+        """Updates time step when a full step is done. Can only be called after implementation goes into smotion mode..."""
+        self.dmdstep += 1
 
 
 class FFDebye(ForceField):
@@ -512,7 +628,7 @@ class FFDebye(ForceField):
                     self.evaluate(r)
 
     def evaluate(self, r):
-        """ A simple evaluator for a harmonic Debye crystal potential. """
+        """A simple evaluator for a harmonic Debye crystal potential."""
 
         q = r["pos"]
         n3 = len(q)
@@ -645,7 +761,7 @@ class FFPlumed(ForceField):
         self.plumed.cmd("setMasses", self.masses)
 
         # these instead are set properly. units conversion is done on the PLUMED side
-        self.plumed.cmd("setBox", r["cell"][0])
+        self.plumed.cmd("setBox", r["cell"][0].T)
         self.plumed.cmd("setPositions", r["pos"])
         self.plumed.cmd("setForces", f)
         self.plumed.cmd("setVirial", vir)
@@ -657,6 +773,7 @@ class FFPlumed(ForceField):
         v = bias[0]
         vir *= -1
 
+        # nb: the virial is a symmetric tensor, so we don't need to transpose
         r["result"] = [v, f, vir, {"raw": ""}]
         r["status"] = "Done"
 
@@ -672,7 +789,7 @@ class FFPlumed(ForceField):
         self.plumed.cmd("setCharges", self.charges)
         self.plumed.cmd("setMasses", self.masses)
         self.plumed.cmd("setPositions", pos)
-        self.plumed.cmd("setBox", cell)
+        self.plumed.cmd("setBox", cell.T)
         self.plumed.cmd("setForces", f)
         self.plumed.cmd("setVirial", vir)
         self.plumed.cmd("prepareCalc")
@@ -684,7 +801,7 @@ class FFPlumed(ForceField):
 
 class FFYaff(ForceField):
 
-    """ Use Yaff as a library to construct a force field """
+    """Use Yaff as a library to construct a force field"""
 
     def __init__(
         self,
@@ -780,7 +897,7 @@ class FFYaff(ForceField):
                     self.evaluate(r)
 
     def evaluate(self, r):
-        """ Evaluate the energy and forces with the Yaff force field. """
+        """Evaluate the energy and forces with the Yaff force field."""
 
         q = r["pos"]
         nat = len(q) / 3
@@ -899,7 +1016,7 @@ class FFsGDML(ForceField):
                     self.evaluate(r)
 
     def evaluate(self, r):
-        """ Evaluate the energy and forces. """
+        """Evaluate the energy and forces."""
 
         E, F = self.predictor.predict(r["pos"] * self.bohr_to_ang)
 
@@ -934,7 +1051,6 @@ class FFCommittee(ForceField):
         active_thresh=0.0,
         active_out=None,
     ):
-
         # force threaded mode as otherwise it cannot have threaded children
         super(FFCommittee, self).__init__(
             latency=latency,
@@ -970,7 +1086,6 @@ class FFCommittee(ForceField):
         self.active_out = active_out
 
     def bind(self, output_maker):
-
         super(FFCommittee, self).bind(output_maker)
         if self.active_thresh > 0:
             if self.active_out is None:
@@ -986,7 +1101,6 @@ class FFCommittee(ForceField):
         super(FFCommittee, self).start()
 
     def queue(self, atoms, cell, reqid=-1):
-
         # launches requests for all of the committee FF objects
         ffh = []
         for ff in self.fflist:
@@ -1009,7 +1123,7 @@ class FFCommittee(ForceField):
         return True
 
     def gather(self, r):
-        """ Collects results from all sub-requests, and assemble the committee of models. """
+        """Collects results from all sub-requests, and assemble the committee of models."""
 
         r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]
 
@@ -1062,14 +1176,30 @@ class FFCommittee(ForceField):
             # and V_committee the committee error. Then
             # V = V_baseline + s_b^2/(s_c^2+s_b^2) V_committe
 
-            s_b2 = self.baseline_uncertainty ** 2
-            uncertain_frc = self.alpha ** 2 * np.mean(
-                [(pot - mean_pot) * (frc - mean_frc) for pot, frc in zip(pots, frcs)],
-                axis=0,
+            s_b2 = self.baseline_uncertainty**2
+
+            nmodels = len(pots)
+            uncertain_frc = (
+                self.alpha**2
+                * np.sum(
+                    [
+                        (pot - mean_pot) * (frc - mean_frc)
+                        for pot, frc in zip(pots, frcs)
+                    ],
+                    axis=0,
+                )
+                / (nmodels - 1)
             )
-            uncertain_vir = self.alpha ** 2 * np.mean(
-                [(pot - mean_pot) * (vir - mean_vir) for pot, vir in zip(pots, virs)],
-                axis=0,
+            uncertain_vir = (
+                self.alpha**2
+                * np.sum(
+                    [
+                        (pot - mean_pot) * (vir - mean_vir)
+                        for pot, vir in zip(pots, virs)
+                    ],
+                    axis=0,
+                )
+                / (nmodels - 1)
             )
 
             # Computes the final average energetics

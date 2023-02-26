@@ -1,5 +1,5 @@
 <!-- REGTEST
-DEPENDENCIES init.pdb  in_short.lmp data_short.lmp in_long.lmp data_long.lmp
+DEPENDENCIES init.xyz  in_short.lmp data_short.lmp in_long.lmp data_long.lmp
 COMMAND(2) lmp_serial -i in_short.lmp
 COMMAND(2) lmp_serial -i in_long.lmp
 ENDREGTEST -->
@@ -21,7 +21,7 @@ ENDREGTEST -->
   </ffsocket>
   <system>
     <initialize nbeads='1'>
-      <file mode='pdb'> init.pdb </file>
+      <file mode='xyz'> init.xyz </file>
       <velocities mode='thermal' units='kelvin'> 300 </velocities>
     </initialize>
     <forces>

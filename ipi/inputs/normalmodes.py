@@ -19,7 +19,7 @@ __all__ = ["InputNormalModes", "InputNMFrequencies"]
 
 class InputNMFrequencies(InputArray):
 
-    """ Storage class for NormalModes engine. """
+    """Storage class for NormalModes engine."""
 
     attribs = copy(InputArray.attribs)
     attribs["style"] = (

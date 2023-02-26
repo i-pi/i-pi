@@ -141,10 +141,10 @@ def mk_o_rs_matrix(nb1, nb2):
 
 
 class nm_noop(object):
-    """ A no-op NM transformation for classical trajectories """
+    """A no-op NM transformation for classical trajectories"""
 
     def __init__(self, nbeads, open_paths=None):
-        """Initializes nm_noop. """
+        """Initializes nm_noop."""
         if nbeads > 1:
             raise ValueError(
                 "Shouldn't use a noop transformation for ring-polymer systems "
