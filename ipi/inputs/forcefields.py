@@ -908,7 +908,7 @@ class InputFFCavPhSocket(InputForceField):
             {
                 "dtype": bool,
                 "default": False,
-                "help": "Determines if additiona photonic degrees of freedom is included or not.",
+                "help": "Determines if additional photonic degrees of freedom is included or not.",
             },
         ),
         "E0": (
@@ -916,7 +916,7 @@ class InputFFCavPhSocket(InputForceField):
             {
                 "dtype": float,
                 "default": 0.0,
-                "help": "The coefficient of varepsilon_tilde (effective light-matter coupling strength) defined in CavMD papers in atomic units",
+                "help": "The value of varepsilon (effective light-matter coupling strength) in atomic units.",
             },
         ),
         "omega_c_cminv": (
@@ -924,7 +924,7 @@ class InputFFCavPhSocket(InputForceField):
             {
                 "dtype": float,
                 "default": 3400.0,
-                "help": "cavity photon frequency in cminv",
+                "help": "This gives the cavity photon frequency in wave number.",
             },
         ),
         "ph_rep": (
@@ -932,7 +932,7 @@ class InputFFCavPhSocket(InputForceField):
             {
                 "dtype": str,
                 "default": "loose",
-                "help": "option: 'loose' | 'dense', 'loose' ('dense'): the cavity photons polarized along the x, y directions are represented by two (one) atoms",
+                "help": "Option: 'loose' | 'dense'. If 'loose', the cavity photons polarized along the x, y directions are represented by two atoms. If 'dense', the cavity photons polarized along the x, y directions are represented by one atom.",
             },
         ),
     }
@@ -970,7 +970,7 @@ class InputFFCavPhSocket(InputForceField):
         },
     )
 
-    default_help = "A Cavity Molecular Dynamics Driver"
+    default_help = "A cavity molecular dynamics driver"
     default_label = "FFCavPhSocket"
 
     def store(self, ff):
