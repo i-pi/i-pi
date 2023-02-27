@@ -823,8 +823,6 @@ class InterfaceSocket(object):
             )
             return False
 
-       
-        
         for r in self.prlist[:]:
             if match_ids == "match" and fc.lastreq is not r["id"]:
                 continue
@@ -836,7 +834,7 @@ class InterfaceSocket(object):
                 and (r["id"] in [c.lastreq for c in self.clients])
             ):
                 # if using lock mode and the user connects more clients than there are replicas, do not allow this client to
-                # be matched with a pending request. 
+                # be matched with a pending request.
                 continue
 
             elif match_ids == "free" and fc.locked:
