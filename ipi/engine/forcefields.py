@@ -12,6 +12,7 @@ layer for a driver that gets positions and returns forces (and energy).
 import time
 import threading
 import json
+import sys
 
 import numpy as np
 
@@ -1284,7 +1285,7 @@ class PhotonDriver:
     """
 
     def __init__(
-        self, apply_photon=True, E0=1e-4, omega_c_cminv=3400.0, ph_rep="loose"
+        self, apply_photon=True, E0=1e-4, omega_c=0.01, ph_rep="loose"
     ):
         """
         Initialise PhotonDriver
@@ -1297,10 +1298,9 @@ class PhotonDriver:
             omega_c_cminv: cavity frequency in units of cm-1
             ph_rep: loose / dense: if the photon coordinates are stored as 2*Nmodes or Nmodes photon "atoms"
         """
-        self.hartree_to_cminv = 219474.63
         self.apply_photon = apply_photon
         self.E0 = E0
-        self.omega_c = omega_c_cminv / self.hartree_to_cminv
+        self.omega_c = omega_c 
 
         if self.apply_photon == False:
             self.n_mode = 0
@@ -1469,7 +1469,7 @@ class PhotonDriver:
         return fx, fy
 
 
-class FFCavPhSocket(ForceField):
+class FFCavPhSocket(FFSocket):
 
     """
     Socket for dealing with cavity photons interacting with molecules by
@@ -1491,7 +1491,7 @@ class FFCavPhSocket(ForceField):
         charge_array=None,
         apply_photon=True,
         E0=1e-4,
-        omega_c_cminv=3400.0,
+        omega_c=0.01,
         ph_rep="loose",
     ):
         """Initialises FFCavPhFPSocket.
@@ -1506,17 +1506,17 @@ class FFCavPhSocket(ForceField):
               before sending the positions to the client code.
            interface: The object used to create the socket used to interact
               with the client codes.
+           charge_array: An N-dimensional numpy array for fixed point charges of all atoms
+           apply_photon: If add photonic degrees of freedom in the dynamics
+           E0: Effective light-matter coupling strength
+           omega_c: Cavity mode frequency
+           ph_rep: A string to control how to represent the photonic coordinates
         """
 
         # a socket to the communication library is created or linked
         super(FFCavPhSocket, self).__init__(
-            latency, name, pars, dopbc, active, threaded
+            latency, name, pars, dopbc, active, threaded, interface
         )
-        if interface is None:
-            self.socket = InterfaceSocket()
-        else:
-            self.socket = interface
-        self.socket.requests = self.requests
 
         # definition of independent baths
         self.n_independent_bath = 1
@@ -1525,11 +1525,11 @@ class FFCavPhSocket(ForceField):
         # store photonic variables
         self.apply_photon = apply_photon
         self.E0 = E0
-        self.omega_c_cminv = omega_c_cminv
+        self.omega_c = omega_c
         self.ph_rep = ph_rep
         # define the photon environment
         self.ph = PhotonDriver(
-            apply_photon=apply_photon, E0=E0, omega_c_cminv=omega_c_cminv, ph_rep=ph_rep
+            apply_photon=apply_photon, E0=E0, omega_c=omega_c, ph_rep=ph_rep
         )
 
         self._getallcount = 0
@@ -1552,6 +1552,11 @@ class FFCavPhSocket(ForceField):
         dx_array, dy_array, dz_array = [], [], []
         for idx in range(n_bath):
             pos_bath = pos[ndim_local * idx : ndim_local * (idx + 1)]
+            # check the dimension of charge array
+            if np.size(pos_bath[::3]) != np.size(charge_array_bath):
+                raise ValueError(
+                "The size of charge array = %d does not match the size of atoms = %d "  %( np.size(charge_array_bath),  np.size(pos_bath[::3]) )
+            )
             dx = np.sum(pos_bath[::3] * charge_array_bath)
             dy = np.sum(pos_bath[1::3] * charge_array_bath)
             dz = np.sum(pos_bath[2::3] * charge_array_bath)
@@ -1659,8 +1664,6 @@ class FFCavPhSocket(ForceField):
             self.poll()
 
         # sleeps until all the new requests have been evaluated
-        import sys
-
         for self.request in newreq_lst:
             while self.request["status"] != "Done":
                 if self.request["status"] == "Exit" or softexit.triggered:
@@ -1743,22 +1746,3 @@ class FFCavPhSocket(ForceField):
 
         return newreq
 
-    def poll(self):
-        """Function to check the status of the client calculations."""
-
-        self.socket.poll()
-
-    def start(self):
-        """Spawns a new thread."""
-
-        self.socket.open()
-        super(FFCavPhSocket, self).start()
-
-    def stop(self):
-        """Closes the socket and the thread."""
-
-        super(FFCavPhSocket, self).stop()
-        if self._thread is not None:
-            # must wait until loop has ended before closing the socket
-            self._thread.join()
-        self.socket.close()

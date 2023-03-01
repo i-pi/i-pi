@@ -248,7 +248,7 @@ class InputFFSocket(InputForceField):
            ff: A ForceField object with a FFSocket forcemodel object.
         """
 
-        if not type(ff) is FFSocket:
+        if (not type(ff) is FFSocket) and (not type(ff) is FFCavPhSocket) :
             raise TypeError(
                 "The type " + type(ff).__name__ + " is not a valid socket forcefield"
             )
@@ -835,65 +835,15 @@ class InputFFCommittee(InputForceField):
         )
 
 
-class InputFFCavPhSocket(InputForceField):
+class InputFFCavPhSocket(InputFFSocket):
 
-    """Creates a ForceField object with a socket interface for cavity molecular dynamics.
-
-    Handles generating one instance of a socket interface forcefield class.
-
-    Attributes:
-       mode: Describes whether the socket will be a unix or an internet socket.
-
-    Fields:
-       address: The server socket binding address.
-       port: The port number for the socket.
-       slots: The number of clients that can queue for connections at any one
-          time.
-       timeout: The number of seconds that the socket will wait before assuming
-          that the client code has died. If 0 there is no timeout.
-    """
+    default_help = """A cavity molecular dynamics driver for vibraitonal strong coupling. 
+                      In the current implementation, only a single cavity mode polarized along the x and y directions is coupled to the molecules.
+                      Check https://doi.org/10.1073/pnas.2009272117 and also examples/lammps/h2o-cavmd/ for details.
+                   """
+    default_label = "FFCAVPHSOCKET"
 
     fields = {
-        "address": (
-            InputValue,
-            {
-                "dtype": str,
-                "default": "localhost",
-                "help": "This gives the server address that the socket will run on.",
-            },
-        ),
-        "port": (
-            InputValue,
-            {
-                "dtype": int,
-                "default": 65535,
-                "help": "This gives the port number that defines the socket.",
-            },
-        ),
-        "slots": (
-            InputValue,
-            {
-                "dtype": int,
-                "default": 4,
-                "help": "This gives the number of client codes that can queue at any one time.",
-            },
-        ),
-        "exit_on_disconnect": (
-            InputValue,
-            {
-                "dtype": bool,
-                "default": False,
-                "help": "Determines if i-PI should quit when a client disconnects.",
-            },
-        ),
-        "timeout": (
-            InputValue,
-            {
-                "dtype": float,
-                "default": 0.0,
-                "help": "This gives the number of seconds before assuming a calculation has died. If 0 there is no timeout.",
-            },
-        ),
         "charge_array": (
             InputArray,
             {
@@ -919,12 +869,13 @@ class InputFFCavPhSocket(InputForceField):
                 "help": "The value of varepsilon (effective light-matter coupling strength) in atomic units.",
             },
         ),
-        "omega_c_cminv": (
+        "omega_c": (
             InputValue,
             {
                 "dtype": float,
-                "default": 3400.0,
-                "help": "This gives the cavity photon frequency in wave number.",
+                "default": 0.01,
+                "help": "This gives the cavity photon frequency at normal incidence.",
+                "dimension": "frequency",
             },
         ),
         "ph_rep": (
@@ -932,46 +883,23 @@ class InputFFCavPhSocket(InputForceField):
             {
                 "dtype": str,
                 "default": "loose",
-                "help": "Option: 'loose' | 'dense'. If 'loose', the cavity photons polarized along the x, y directions are represented by two atoms. If 'dense', the cavity photons polarized along the x, y directions are represented by one atom.",
-            },
-        ),
-    }
-    attribs = {
-        "mode": (
-            InputAttribute,
-            {
-                "dtype": str,
-                "options": ["unix", "inet"],
-                "default": "inet",
-                "help": "Specifies whether the driver interface will listen onto a internet socket [inet] or onto a unix socket [unix].",
-            },
-        ),
-        "matching": (
-            InputAttribute,
-            {
-                "dtype": str,
-                "options": ["auto", "any"],
-                "default": "auto",
-                "help": "Specifies whether requests should be dispatched to any client, or automatically matched to the same client when possible [auto].",
+                "options": [
+                    "loose",
+                    "dense",
+                ],
+                "help": """In the current implementation, two energy-degenerate photon modes polarized along x and y directions
+                are coupled to the molecular system. If 'loose', the cavity photons polarized along the x, y directions are represented by two 'L' atoms; 
+                the x dimension of the first 'L' atom is coupled to the molecules, and the y dimension of the second 'L' atom is coupled to the molecules.
+                If 'dense', the cavity photons polarized along the x, y directions are represented by one 'L' atom; 
+                the x and y dimensions of this 'L' atom are coupled to the molecules.""",
             },
         ),
     }
 
-    attribs.update(InputForceField.attribs)
-    fields.update(InputForceField.fields)
+    fields.update(InputFFSocket.fields)
 
-    # FFCav2DPhSocket polling mechanism won't work with non-threaded execution
-    attribs["threaded"] = (
-        InputValue,
-        {
-            "dtype": bool,
-            "default": True,
-            "help": "Whether the forcefield should use a thread loop to evaluate, or work in serial. Should be set to True for FFSockets",
-        },
-    )
-
-    default_help = "A cavity molecular dynamics driver"
-    default_label = "FFCavPhSocket"
+    attribs = {}
+    attribs.update(InputFFSocket.attribs)
 
     def store(self, ff):
         """Takes a ForceField instance and stores a minimal representation of it.
@@ -986,18 +914,10 @@ class InputFFCavPhSocket(InputForceField):
             )
         super(InputFFCavPhSocket, self).store(ff)
 
-        self.address.store(ff.socket.address)
-        self.port.store(ff.socket.port)
-        self.timeout.store(ff.socket.timeout)
-        self.slots.store(ff.socket.slots)
-        self.mode.store(ff.socket.mode)
-        self.matching.store(ff.socket.match_mode)
-        self.exit_on_disconnect.store(ff.socket.exit_on_disconnect)
-        self.threaded.store(True)  # hard-coded
         self.charge_array.store(ff.charge_array)
         self.apply_photon.store(ff.apply_photon)
         self.E0.store(ff.E0)
-        self.omega_c_cminv.store(ff.omega_c_cminv)
+        self.omega_c.store(ff.omega_c)
         self.ph_rep.store(ff.ph_rep)
 
     def fetch(self):
@@ -1009,6 +929,7 @@ class InputFFCavPhSocket(InputForceField):
 
         if self.threaded.fetch() == False:
             raise ValueError("FFCavPhFPSockets cannot poll without threaded mode.")
+
         # just use threaded throughout
         return FFCavPhSocket(
             pars=self.parameters.fetch(),
@@ -1029,29 +950,6 @@ class InputFFCavPhSocket(InputForceField):
             charge_array=self.charge_array.fetch(),
             apply_photon=self.apply_photon.fetch(),
             E0=self.E0.fetch(),
-            omega_c_cminv=self.omega_c_cminv.fetch(),
+            omega_c=self.omega_c.fetch(),
             ph_rep=self.ph_rep.fetch(),
         )
-
-    def check(self):
-        """Deals with optional parameters."""
-
-        super(InputFFCavPhSocket, self).check()
-        if self.port.fetch() < 1 or self.port.fetch() > 65535:
-            raise ValueError(
-                "Port number " + str(self.port.fetch()) + " out of acceptable range."
-            )
-        elif self.port.fetch() < 1025:
-            warning(
-                "Low port number being used, this may interrupt important system processes.",
-                verbosity.low,
-            )
-
-        if self.slots.fetch() < 1 or self.slots.fetch() > 5:
-            raise ValueError(
-                "Slot number " + str(self.slots.fetch()) + " out of acceptable range."
-            )
-        if self.latency.fetch() < 0:
-            raise ValueError("Negative latency parameter specified.")
-        if self.timeout.fetch() < 0.0:
-            raise ValueError("Negative timeout parameter specified.")
