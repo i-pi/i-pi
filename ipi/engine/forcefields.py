@@ -1284,9 +1284,7 @@ class PhotonDriver:
     Photon driver for a single cavity mode
     """
 
-    def __init__(
-        self, apply_photon=True, E0=1e-4, omega_c=0.01, ph_rep="loose"
-    ):
+    def __init__(self, apply_photon=True, E0=1e-4, omega_c=0.01, ph_rep="loose"):
         """
         Initialise PhotonDriver
 
@@ -1300,7 +1298,7 @@ class PhotonDriver:
         """
         self.apply_photon = apply_photon
         self.E0 = E0
-        self.omega_c = omega_c 
+        self.omega_c = omega_c
 
         if self.apply_photon == False:
             self.n_mode = 0
@@ -1555,8 +1553,9 @@ class FFCavPhSocket(FFSocket):
             # check the dimension of charge array
             if np.size(pos_bath[::3]) != np.size(charge_array_bath):
                 raise ValueError(
-                "The size of charge array = %d does not match the size of atoms = %d "  %( np.size(charge_array_bath),  np.size(pos_bath[::3]) )
-            )
+                    "The size of charge array = %d does not match the size of atoms = %d "
+                    % (np.size(charge_array_bath), np.size(pos_bath[::3]))
+                )
             dx = np.sum(pos_bath[::3] * charge_array_bath)
             dy = np.sum(pos_bath[1::3] * charge_array_bath)
             dz = np.sum(pos_bath[2::3] * charge_array_bath)
@@ -1745,4 +1744,3 @@ class FFCavPhSocket(FFSocket):
         )
 
         return newreq
-
