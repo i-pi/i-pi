@@ -1284,9 +1284,7 @@ class PhotonDriver:
     Photon driver for a single cavity mode
     """
 
-    def __init__(
-        self, apply_photon=True, E0=1e-4, omega_c=0.01, ph_rep="loose"
-    ):
+    def __init__(self, apply_photon=True, E0=1e-4, omega_c=0.01, ph_rep="loose"):
         """
         Initialise PhotonDriver
 
@@ -1294,13 +1292,17 @@ class PhotonDriver:
 
         Args:
             apply_photon: Determine if applying light-matter interactions
-            E0: varepsilon in the paper, light-matter coupling strength
-            omega_c_cminv: cavity frequency in units of cm-1
-            ph_rep: loose / dense: if the photon coordinates are stored as 2*Nmodes or Nmodes photon "atoms"
+            E0: varepsilon in the paper (doi.org/10.1073/pnas.2009272117), light-matter coupling strength
+            omega_c: cavity frequency at normal incidence
+            ph_rep: 'loose' or 'dense'. In the current implementation, two energy-degenerate photon modes polarized along x and y directions
+                are coupled to the molecular system. If 'loose', the cavity photons polarized along the x, y directions are represented by two 'L' atoms;
+                the x dimension of the first 'L' atom is coupled to the molecules, and the y dimension of the second 'L' atom is coupled to the molecules.
+                If 'dense', the cavity photons polarized along the x, y directions are represented by one 'L' atom;
+                the x and y dimensions of this 'L' atom are coupled to the molecules.
         """
         self.apply_photon = apply_photon
         self.E0 = E0
-        self.omega_c = omega_c 
+        self.omega_c = omega_c
 
         if self.apply_photon == False:
             self.n_mode = 0
@@ -1510,7 +1512,13 @@ class FFCavPhSocket(FFSocket):
            apply_photon: If add photonic degrees of freedom in the dynamics
            E0: Effective light-matter coupling strength
            omega_c: Cavity mode frequency
-           ph_rep: A string to control how to represent the photonic coordinates
+           ph_rep: A string to control how to represent the photonic coordinates: 'loose' or 'dense'.
+                In the current implementation, two energy-degenerate photon modes polarized along x and
+                y directions are coupled to the molecular system. If 'loose', the cavity photons polarized
+                along the x, y directions are represented by two 'L' atoms; the x dimension of the first
+                'L' atom is coupled to the molecules, and the y dimension of the second 'L' atom is coupled
+                to the molecules. If 'dense', the cavity photons polarized along the x, y directions are
+                represented by one 'L' atom; the x and y dimensions of this 'L' atom are coupled to the molecules.
         """
 
         # a socket to the communication library is created or linked
@@ -1554,9 +1562,10 @@ class FFCavPhSocket(FFSocket):
             pos_bath = pos[ndim_local * idx : ndim_local * (idx + 1)]
             # check the dimension of charge array
             if np.size(pos_bath[::3]) != np.size(charge_array_bath):
-                raise ValueError(
-                "The size of charge array = %d does not match the size of atoms = %d "  %( np.size(charge_array_bath),  np.size(pos_bath[::3]) )
-            )
+                softexit.trigger(
+                    "The size of charge array = %d does not match the size of atoms = %d "
+                    % (np.size(charge_array_bath), np.size(pos_bath[::3]))
+                )
             dx = np.sum(pos_bath[::3] * charge_array_bath)
             dy = np.sum(pos_bath[1::3] * charge_array_bath)
             dz = np.sum(pos_bath[2::3] * charge_array_bath)
@@ -1710,6 +1719,14 @@ class FFCavPhSocket(FFSocket):
                 n_bath=self.n_independent_bath,
                 charge_array_bath=self.charge_array,
             )
+            # check the size of photon modes + molecules to match the total number of particles
+            if (
+                self.ph.n_photon + self.n_independent_bath * self.charge_array.size
+                != int(len(pbcpos) // 3)
+            ):
+                softexit.trigger(
+                    "Total number of photons + molecules does not match total number of particles"
+                )
             # info("mux = %.6f muy = %.6f muz = %.6f [units of a.u.]" %(dipole_x_tot, dipole_y_tot, dipole_z_tot), verbosity.medium)
             # 5. calculate photonic contribution of total energy
             e_ph = self.ph.get_ph_energy(dx_array=dx_array, dy_array=dy_array)
@@ -1745,4 +1762,3 @@ class FFCavPhSocket(FFSocket):
         )
 
         return newreq
-

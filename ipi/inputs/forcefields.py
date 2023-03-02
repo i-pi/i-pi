@@ -248,7 +248,7 @@ class InputFFSocket(InputForceField):
            ff: A ForceField object with a FFSocket forcemodel object.
         """
 
-        if (not type(ff) is FFSocket) and (not type(ff) is FFCavPhSocket) :
+        if (not type(ff) is FFSocket) and (not type(ff) is FFCavPhSocket):
             raise TypeError(
                 "The type " + type(ff).__name__ + " is not a valid socket forcefield"
             )
@@ -836,7 +836,6 @@ class InputFFCommittee(InputForceField):
 
 
 class InputFFCavPhSocket(InputFFSocket):
-
     default_help = """A cavity molecular dynamics driver for vibraitonal strong coupling. 
                       In the current implementation, only a single cavity mode polarized along the x and y directions is coupled to the molecules.
                       Check https://doi.org/10.1073/pnas.2009272117 and also examples/lammps/h2o-cavmd/ for details.
