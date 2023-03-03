@@ -32,7 +32,7 @@ def r2_K(d, r, is2half):
     """
 
     if d <= 1.0e-2:
-        r2 = r ** 2
+        r2 = r**2
         d_r2K = (
             np.exp(-is2half * r2) * 4 * r2
             + 4.0
@@ -41,7 +41,7 @@ def r2_K(d, r, is2half):
             * r2
             * is2half
             * (-3.0 + 2.0 * r2 * is2half)
-            * d ** 2
+            * d**2
         )
     else:
         d_r2K = (
@@ -74,8 +74,8 @@ def r2_dK(d, r, is2half):
 
     if d <= 1.0e-2:
         d_r2_dK = (
-            (8.0 * r ** 3 * d)
-            * np.exp(-(r ** 2) * is2half)
+            (8.0 * r**3 * d)
+            * np.exp(-(r**2) * is2half)
             / (3.0 * (1.0 / is2half) ** 2.5 * np.sqrt(np.pi))
         )
     else:
@@ -86,7 +86,7 @@ def r2_dK(d, r, is2half):
                 + np.exp(-is2half * (r + d) ** 2 + 4 * r * is2half * d)
                 * (-1 + 2 * r * is2half * d)
             )
-        ) / (2.0 * np.sqrt(np.pi) * d ** 2)
+        ) / (2.0 * np.sqrt(np.pi) * d**2)
     return d_r2_dK
 
 
@@ -274,7 +274,6 @@ def get_np(qpath_file, fpath_file, prefix, bsize, P, m, T, s, ns, skip, der):
         exit()
 
     for x in range(n_blocks):
-
         if der is False:
             qpath_block = qpath[x * bsize : (x + 1) * bsize]
             # fpath_block = fpath[x*bsize : (x+1)*bsize]
@@ -296,7 +295,7 @@ def get_np(qpath_file, fpath_file, prefix, bsize, P, m, T, s, ns, skip, der):
             p2_4pi_np_list.append(p2_4pi_np_block)
 
             # Appends the average value of p^2 modulo a normalization
-            avgp2_list.append(np.dot(p ** 2, p2_4pi_np_block) * dp)
+            avgp2_list.append(np.dot(p**2, p2_4pi_np_block) * dp)
 
         else:
             qpath_block = qpath[x * bsize : (x + 1) * bsize]
@@ -312,7 +311,7 @@ def get_np(qpath_file, fpath_file, prefix, bsize, P, m, T, s, ns, skip, der):
             )
             # Applies the boundary condition.
             h_block = h_block - h_block[-1]
-            r2_4pi_h_block = 4.0 * np.pi * r ** 2 * h_block
+            r2_4pi_h_block = 4.0 * np.pi * r**2 * h_block
             r2_4pi_h_list.append(r2_4pi_h_block)
 
             # Calculates the radial distribution of momentum by an integral by parts.
@@ -330,7 +329,7 @@ def get_np(qpath_file, fpath_file, prefix, bsize, P, m, T, s, ns, skip, der):
             p2_4pi_np_list.append(p2_4pi_np_block)
 
             # Appends the average value of p^2 modulo a normalization
-            avgp2_list.append(np.dot(p ** 2, p2_4pi_np_block) * dp)
+            avgp2_list.append(np.dot(p**2, p2_4pi_np_block) * dp)
 
     # Block averages the radial distribution of the end-to-end distance.
     avg_r2_4pi_h = np.sum(np.asarray(r2_4pi_h_list), axis=0)

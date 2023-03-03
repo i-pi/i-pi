@@ -1,0 +1,769 @@
+diff -rupN ../vasp-5.4.4/src/fsockets.f90 src/fsockets.f90
+--- ../vasp-5.4.4/src/fsockets.f90	1970-01-01 01:00:00.000000000 +0100
++++ src/fsockets.f90	2019-06-14 10:25:36.459020081 +0200
+@@ -0,0 +1,202 @@
++!F90 ISO_C_BINGING wrapper for socket communication.
++
++!Copyright (C) 2013, Michele Ceriotti
++
++!Permission is hereby granted, free of charge, to any person obtaining
++!a copy of this software and associated documentation files (the
++!"Software"), to deal in the Software without restriction, including
++!without limitation the rights to use, copy, modify, merge, publish,
++!distribute, sublicense, and/or sell copies of the Software, and to
++!permit persons to whom the Software is furnished to do so, subject to
++!the following conditions:
++
++!The above copyright notice and this permission notice shall be included
++!in all copies or substantial portions of the Software.
++
++!THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
++!EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
++!MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
++!IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
++!CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
++!TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
++!SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
++
++
++!Contains both the functions that transmit data to the socket and read the data
++!back out again once finished, and the function which opens the socket initially.
++
++!Functions:
++!   open_socket: Opens a socket with the required host server, socket type and
++!      port number.
++!   write_buffer: Writes a string to the socket.
++!   read_buffer: Reads data from the socket.
++
++   MODULE F90SOCKETS
++   USE ISO_C_BINDING
++   
++   IMPLICIT NONE
++
++  INTERFACE writebuffer
++      MODULE PROCEDURE writebuffer_s, &
++                       writebuffer_d, writebuffer_dv, &
++                       writebuffer_i
++                       
++  END INTERFACE 
++
++  INTERFACE readbuffer
++      MODULE PROCEDURE readbuffer_s, &
++                       readbuffer_dv, readbuffer_d, &
++                       readbuffer_i
++                       
++  END INTERFACE 
++
++  INTERFACE
++    SUBROUTINE open_csocket(psockfd, inet, port, host) BIND(C, name="open_socket")
++      USE ISO_C_BINDING
++    INTEGER(KIND=C_INT)                      :: psockfd, inet, port
++    CHARACTER(KIND=C_CHAR), DIMENSION(*)     :: host
++
++    END SUBROUTINE open_csocket
++
++    
++    SUBROUTINE writebuffer_csocket(psockfd, pdata, plen) BIND(C, name="writebuffer")
++      USE ISO_C_BINDING
++    INTEGER(KIND=C_INT)                      :: psockfd
++    TYPE(C_PTR), VALUE                       :: pdata
++    INTEGER(KIND=C_INT)                      :: plen
++
++    END SUBROUTINE writebuffer_csocket       
++
++    SUBROUTINE readbuffer_csocket(psockfd, pdata, plen) BIND(C, name="readbuffer")
++      USE ISO_C_BINDING
++    INTEGER(KIND=C_INT)                      :: psockfd
++    TYPE(C_PTR), VALUE                       :: pdata
++    INTEGER(KIND=C_INT)                      :: plen
++
++    END SUBROUTINE readbuffer_csocket   
++  END INTERFACE
++
++   CONTAINS
++   
++   SUBROUTINE open_socket(psockfd, inet, port, host)      
++      IMPLICIT NONE
++      INTEGER, INTENT(IN) :: inet, port
++      INTEGER, INTENT(OUT) :: psockfd
++      CHARACTER(LEN=1024), INTENT(IN) :: host
++      CHARACTER(LEN=1,KIND=C_CHAR) :: chost(1024)
++
++      CALL fstr2cstr(host, chost)
++      CALL open_csocket(psockfd, inet, port, host)
++   END SUBROUTINE
++
++   SUBROUTINE fstr2cstr(fstr, cstr, plen)
++      IMPLICIT NONE
++      CHARACTER(LEN=*), INTENT(IN) :: fstr
++      CHARACTER(LEN=1,KIND=C_CHAR), INTENT(OUT) :: cstr(:)
++      INTEGER, INTENT(IN), OPTIONAL :: plen
++      
++      INTEGER i,n
++      IF (PRESENT(plen)) THEN
++         n = plen
++         DO i=1,n
++            cstr(i) = fstr(i:i)
++         ENDDO
++      ELSE
++         n = LEN_TRIM(fstr)
++         DO i=1,n
++            cstr(i) = fstr(i:i)
++         ENDDO
++         cstr(n+1) = C_NULL_CHAR
++      END IF
++   END SUBROUTINE
++
++  SUBROUTINE writebuffer_d (psockfd, fdata)
++      USE ISO_C_BINDING
++    INTEGER, INTENT(IN)                      :: psockfd
++    REAL(KIND=8), INTENT(IN)                :: fdata
++
++    REAL(KIND=C_DOUBLE), TARGET              :: cdata
++
++      cdata = fdata
++      CALL writebuffer_csocket(psockfd, c_loc(cdata), 8)
++  END SUBROUTINE
++
++  SUBROUTINE writebuffer_i (psockfd, fdata)
++      USE ISO_C_BINDING
++    INTEGER, INTENT(IN)                      :: psockfd, fdata
++
++    INTEGER(KIND=C_INT), TARGET              :: cdata
++
++      cdata = fdata
++      CALL writebuffer_csocket(psockfd, c_loc(cdata), 4)
++  END SUBROUTINE
++
++  SUBROUTINE writebuffer_s (psockfd, fstring, plen)
++      USE ISO_C_BINDING
++    INTEGER, INTENT(IN)                      :: psockfd
++    CHARACTER(LEN=*), INTENT(IN)             :: fstring
++    INTEGER, INTENT(IN)                      :: plen
++
++    INTEGER                                  :: i
++    CHARACTER(LEN=1, KIND=C_CHAR), TARGET    :: cstring(plen)
++
++      DO i = 1,plen
++         cstring(i) = fstring(i:i)
++      ENDDO
++      CALL writebuffer_csocket(psockfd, c_loc(cstring(1)), plen)
++  END SUBROUTINE
++
++  SUBROUTINE writebuffer_dv(psockfd, fdata, plen)
++      USE ISO_C_BINDING  
++    INTEGER, INTENT(IN)                      :: psockfd, plen
++    REAL(KIND=8), INTENT(IN), TARGET        :: fdata(plen)
++
++      CALL writebuffer_csocket(psockfd, c_loc(fdata(1)), 8*plen)
++  END SUBROUTINE
++
++  SUBROUTINE readbuffer_d (psockfd, fdata)
++      USE ISO_C_BINDING
++    INTEGER, INTENT(IN)                      :: psockfd
++    REAL(KIND=8), INTENT(OUT)               :: fdata
++
++    REAL(KIND=C_DOUBLE), TARGET              :: cdata
++
++      CALL readbuffer_csocket(psockfd, c_loc(cdata), 8)
++      fdata=cdata
++  END SUBROUTINE
++
++  SUBROUTINE readbuffer_i (psockfd, fdata)
++      USE ISO_C_BINDING
++    INTEGER, INTENT(IN)                      :: psockfd
++    INTEGER, INTENT(OUT)                     :: fdata
++
++    INTEGER(KIND=C_INT), TARGET              :: cdata
++
++      CALL readbuffer_csocket(psockfd, c_loc(cdata), 4)
++      fdata = cdata
++  END SUBROUTINE
++
++  SUBROUTINE readbuffer_s (psockfd, fstring, plen)
++      USE ISO_C_BINDING
++    INTEGER, INTENT(IN)                      :: psockfd
++    CHARACTER(LEN=*), INTENT(OUT)            :: fstring
++    INTEGER, INTENT(IN)                      :: plen
++
++    INTEGER                                  :: i
++    CHARACTER(LEN=1, KIND=C_CHAR), TARGET    :: cstring(plen)
++
++      CALL readbuffer_csocket(psockfd, c_loc(cstring(1)), plen)
++      fstring=""   
++      DO i = 1,plen
++         fstring(i:i) = cstring(i)
++      ENDDO
++  END SUBROUTINE
++
++  SUBROUTINE readbuffer_dv(psockfd, fdata, plen)
++      USE ISO_C_BINDING  
++    INTEGER, INTENT(IN)                      :: psockfd, plen
++    REAL(KIND=8), INTENT(OUT), TARGET       :: fdata(plen)
++
++      CALL readbuffer_csocket(psockfd, c_loc(fdata(1)), 8*plen)
++  END SUBROUTINE
++  END MODULE
+diff -rupN ../vasp-5.4.4/src/main.F src/main.F
+--- ../vasp-5.4.4/src/main.F	2019-05-06 10:10:44.443455530 +0200
++++ src/main.F	2019-08-08 13:36:20.659860388 +0200
+@@ -142,6 +142,8 @@
+       USE mkproj
+       USE classicfields
+       USE rpa_force
++      ! ipi socket module
++      USE F90SOCKETS, ONLY : open_socket, writebuffer, readbuffer
+ ! Thomas Bucko's code contributions
+ #ifdef tbdyn
+       USE random_seeded
+@@ -256,6 +258,23 @@
+       INTEGER :: TIU6, TIU0
+       INTEGER :: ISPECIAL=0         ! allows to select special undocumented features
+       INTEGER :: MDALGO=0           ! dublicates MDALGO in tbdyn
++      
++      ! ipi socket variables
++      INTEGER, PARAMETER :: MSGLEN=12 ! length of headers of driver/wrapper commun. protocol
++      INTEGER :: SOCKET, PORT       ! socket ID, port
++      INTEGER :: INET               ! socket mode: 0 = unix, 1 = inet
++      CHARACTER(LEN=1024) :: IHOST  ! address of the server
++      CHARACTER(LEN=12) :: HEADER   ! socket communication buffers
++      INTEGER :: IMSG               ! 1 status, 2 posdata, 3 getforce, 4 other
++      LOGICAL :: HASDATA
++      ! ipi variables for the system
++      INTEGER :: NAT
++      REAL(q) :: IPIPOT
++      REAL(q), ALLOCATABLE :: IPIATOMS(:), IPIFORCES(:)
++      REAL(q) :: CELL_H(9), CELL_IH(9), VIRIAL(9)
++      ! unit conversion
++      REAL(q) :: EVTOHA, FOCTOAU
++
+ !=======================================================================
+ !  begin array dimensions ...
+ !=======================================================================
+@@ -391,6 +410,11 @@
+ !  initialise / set constants and parameters ...
+ !=======================================================================
+ 
++      ! ipi initialize variables
++      EVTOHA = 1_q/(2_q*RYTOEV)
++      FOCTOAU = AUTOA*EVTOHA
++      HASDATA = .FALSE.
++
+ #ifdef libbeef
+       LBEEFCALCBASIS = .FALSE.
+ #endif
+@@ -572,6 +596,7 @@
+           WDES%LSPIRAL,WDES%LZEROZ,WDES%QSPIRAL,WDES%LORBITALREAL, &
+           INFO%LASPH,INFO%TURBO,INFO%IRESTART,INFO%NREBOOT,INFO%NMIN,INFO%EREF, &
+           INFO%NLSPLINE,ISPECIAL,MDALGO &
++         ,IHOST,PORT,INET &
+ #ifdef libbeef
+          ,LBEEFENS,LBEEFBAS &
+ #endif
+@@ -671,6 +696,7 @@
+      &                 ITUT,1,CDUM,1,LDUM,1,IO%IU0,IO%IDIOT)
+       END IF
+ #endif
++
+ !-----------------------------------------------------------------------
+ ! core level shift related items (parses INCAR)
+ !-----------------------------------------------------------------------
+@@ -820,6 +846,95 @@
+ !xml finish copying parameters from INCAR to xml file
+ ! no INCAR reading from here 
+       CALL XML_CLOSE_TAG("incar")
++
++!-----------------------------------------------------------------------
++! ipi open socket
++!-----------------------------------------------------------------------
++#ifdef MPI
++      IF (DYN%IBRION==23) THEN
++        IF (COMM%NODE_ME == 1) THEN
++          WRITE(TIU0,*) " DRIVER - Connecting to host ", TRIM(IHOST)
++          IF (INET > 0) THEN
++            WRITE(TIU0,*) " on port ", PORT, " using an internet socket."
++          ELSE
++            WRITE(TIU0,*) " using UNIX socket."
++          ENDIF
++          CALL open_socket(SOCKET, INET, PORT, TRIM(IHOST))
++          WRITE(TIU0,*) "VASP ipi driver (written by Wei Fang) successfully starting"
++        ENDIF
++        ! get initial geometries from ipi
++      driver_init: DO
++        ! do communication on master node only
++        IF (COMM%NODE_ME == 1) THEN
++          CALL readbuffer(SOCKET, HEADER, MSGLEN)
++          IF (TRIM(HEADER) == "STATUS") THEN
++            IMSG=1
++          ELSE IF (TRIM(HEADER) == "POSDATA") THEN
++            IMSG=2
++          ELSE
++            IMSG=4
++          ENDIF
++        ENDIF
++        CALL M_bcast_i(COMM,IMSG,1)
++        IF (COMM%NODE_ME == 1) WRITE(TIU0,*) " @ DRIVER MODE: Message from server: ", TRIM(HEADER)
++        IF (IMSG == 1) THEN
++          IF (COMM%NODE_ME == 1) THEN  ! does not need init
++            CALL writebuffer(SOCKET, "READY       ", MSGLEN)
++          ENDIF
++        ELSE IF (IMSG == 2) THEN
++          ! receives the positions & the cell data
++          IF (COMM%NODE_ME == 1) THEN    ! first the cell and the number of atoms
++            CALL readbuffer(SOCKET, CELL_H, 9)
++            CALL readbuffer(SOCKET, CELL_IH, 9)
++            CALL readbuffer(SOCKET, NAT)
++          ENDIF
++          ! broadcast to all nodes
++          CALL M_bcast_d(COMM,CELL_H,9)
++          CALL M_bcast_d(COMM,CELL_IH,9)
++          CALL M_bcast_i(COMM,NAT,1)
++          ! convert to vasp LATT_CUR%A & %B format & units conversion
++          DO NI=1,3
++            LATT_CUR%A(NI,1) = CELL_H(NI*3-2)*AUTOA
++            LATT_CUR%A(NI,2) = CELL_H(NI*3-1)*AUTOA
++            LATT_CUR%A(NI,3) = CELL_H(NI*3)*AUTOA
++          ENDDO
++          DO NI=1,3
++            LATT_CUR%B(NI,1) = CELL_IH(NI*3-2)/AUTOA
++            LATT_CUR%B(NI,2) = CELL_IH(NI*3-1)/AUTOA
++            LATT_CUR%B(NI,3) = CELL_IH(NI*3)/AUTOA
++          ENDDO
++          CALL LATTIC(LATT_CUR)
++ 2333     FORMAT(' @DRIVER MODE: Received direct lattice vectors',17X,'reciprocal lattice vectors'/ &
++       &   3(2(3X,3F13.9)/) /)
++          IF (COMM%NODE_ME == 1) THEN
++            WRITE(TIU0,*) " @ DRIVER MODE: Received initial lattice "
++            WRITE(TIU6,2333) ((LATT_CUR%A(I,J),I=1,3),(LATT_CUR%B(I,J),I=1,3),J=1,3)
++          ENDIF
++          ! then we can allocate the buffer for the positions, and receive them
++          ALLOCATE(IPIATOMS(3*NAT))
++          ALLOCATE(IPIFORCES(3*NAT))
++          IF (COMM%NODE_ME == 1) CALL readbuffer(SOCKET, IPIATOMS, NAT*3)
++          CALL M_bcast_d(COMM,IPIATOMS,NAT*3) ! and broadcast them to all nodes
++          ! convert to vasp DYN%POSION format & units conversion
++          DO NI=1,NAT
++            DYN%POSION(1,NI) = IPIATOMS(NI*3-2)*AUTOA
++            DYN%POSION(2,NI) = IPIATOMS(NI*3-1)*AUTOA
++            DYN%POSION(3,NI) = IPIATOMS(NI*3)*AUTOA
++          ENDDO
++          CALL KARDIR(NAT,DYN%POSION,LATT_CUR%B)
++          CALL TOPRIM(NAT,DYN%POSION)
++          DYN%POSIOC=DYN%POSION
++          IF (COMM%NODE_ME == 1) WRITE(TIU0,*) " @ DRIVER MODE: Received initial positions "
++          EXIT driver_init
++        ELSE
++          INFO%LSTOP=.TRUE.
++          IF (COMM%NODE_ME == 1) WRITE(TIU0,*) "EXIT driver or unknow msg received"
++          EXIT driver_init
++        ENDIF
++      ENDDO driver_init
++      ENDIF
++#endif
++
+ !-----------------------------------------------------------------------
+ #if CUDA_GPU
+       CALL GPU_TEST(INFO,NPAR,IO)
+@@ -3191,7 +3306,7 @@ io_end
+       ENDIF
+ 
+       IF (DYN%IBRION==-1 .OR. DYN%IBRION==5 .OR. DYN%IBRION==6 .OR. &
+-           DYN%IBRION==7.OR.DYN%IBRION==8) THEN
++           DYN%IBRION==7.OR.DYN%IBRION==8 .OR. DYN%IBRION==23) THEN
+          EENTROPY=E%EENTROPY*SCALEE
+          io_begin
+          WRITE(17 ,7281,ADVANCE='NO') NSTEP,TOTEN, &
+@@ -3366,6 +3481,112 @@ ibrion: IF (DYN%IBRION==0) THEN
+ 
+ !=======================================================================
+ ! DYN%IBRION =
++! 23  driver mode for ipi
++!=======================================================================
++#ifdef MPI
++      ELSE IF (DYN%IBRION==23) THEN
++        DYN%POSIOC=DYN%POSION
++        HASDATA=.TRUE.
++
++      driver_loop: DO
++        ! do communication on master node only
++        IF (COMM%NODE_ME == 1) THEN
++          CALL readbuffer(SOCKET, HEADER, MSGLEN)
++          IF (TRIM(HEADER) == "STATUS") THEN
++            IMSG=1
++          ELSE IF (TRIM(HEADER) == "POSDATA") THEN
++            IMSG=2
++          ELSE IF (TRIM(HEADER) == "GETFORCE") THEN
++            IMSG=3
++          ELSE
++            IMSG=4
++          ENDIF
++        ENDIF
++        CALL M_bcast_i(COMM,IMSG,1)
++        IF (COMM%NODE_ME == 1) WRITE(TIU0,*) " @ DRIVER MODE: Message from server: ", TRIM(HEADER)
++        IF (IMSG == 1) THEN
++          IF (COMM%NODE_ME == 1) THEN
++            IF (HASDATA) THEN
++              CALL writebuffer(SOCKET,"HAVEDATA    ",MSGLEN)
++            ELSE
++              CALL writebuffer(SOCKET,"READY       ",MSGLEN)
++            ENDIF
++          ENDIF
++        ELSE IF (IMSG == 2) THEN
++          ! receives cell data
++          IF (COMM%NODE_ME == 1) THEN
++            CALL readbuffer(SOCKET, CELL_H, 9)
++            CALL readbuffer(SOCKET, CELL_IH, 9)
++            CALL readbuffer(SOCKET, NAT)
++          ENDIF
++          ! broadcast to all nodes
++          CALL M_bcast_d(COMM,CELL_H,9)
++          CALL M_bcast_d(COMM,CELL_IH,9)
++          CALL M_bcast_i(COMM,NAT,1)
++          ! convert to vasp LATT_CUR%A & %B format & units conversion
++          DO NI=1,3
++            LATT_CUR%A(NI,1) = CELL_H(NI*3-2)*AUTOA
++            LATT_CUR%A(NI,2) = CELL_H(NI*3-1)*AUTOA
++            LATT_CUR%A(NI,3) = CELL_H(NI*3)*AUTOA
++          ENDDO
++          DO NI=1,3
++            LATT_CUR%B(NI,1) = CELL_IH(NI*3-2)/AUTOA
++            LATT_CUR%B(NI,2) = CELL_IH(NI*3-1)/AUTOA
++            LATT_CUR%B(NI,3) = CELL_IH(NI*3)/AUTOA
++          ENDDO
++          CALL LATTIC(LATT_CUR)
++          IF (COMM%NODE_ME == 1) THEN
++            WRITE(TIU0,*) " @ DRIVER MODE: Received lattice"
++            WRITE(TIU6,2333) ((LATT_CUR%A(I,J),I=1,3),(LATT_CUR%B(I,J),I=1,3),J=1,3)
++          ENDIF
++          ! receives positions
++          IF (COMM%NODE_ME == 1) CALL readbuffer(SOCKET, IPIATOMS, NAT*3)
++          CALL M_bcast_d(COMM,IPIATOMS,NAT*3) ! and broadcast them to all nodes
++          ! convert to vasp DYN%POSION format & units conversion
++          DO NI=1,NAT
++            DYN%POSION(1,NI) = IPIATOMS(NI*3-2)*AUTOA
++            DYN%POSION(2,NI) = IPIATOMS(NI*3-1)*AUTOA
++            DYN%POSION(3,NI) = IPIATOMS(NI*3)*AUTOA
++          ENDDO
++          CALL KARDIR(NAT,DYN%POSION,LATT_CUR%B)
++          CALL TOPRIM(NAT,DYN%POSION)
++          IF (COMM%NODE_ME == 1) write(TIU0,*) " @ DRIVER MODE: Received positions "
++          ! move on to the next DO ion
++          EXIT driver_loop
++        ELSE IF (IMSG == 3) THEN
++          ! communicates energy info back to i-pi
++          IF (COMM%NODE_ME == 1) THEN
++            WRITE(TIU0,*) " @ DRIVER MODE: Returning v,forces,stress "
++            IPIPOT = (TOTEN-E%EENTROPY/(2+NORDER))*EVTOHA
++            DO NI=1,NAT
++              IPIFORCES(NI*3-2) = TIFOR(1,NI)*FOCTOAU
++              IPIFORCES(NI*3-1) = TIFOR(2,NI)*FOCTOAU
++              IPIFORCES(NI*3) = TIFOR(3,NI)*FOCTOAU
++            ENDDO
++            DO NI=1,3
++              VIRIAL(NI*3-2) = TSIF(1,NI)*EVTOHA
++              VIRIAL(NI*3-1) = TSIF(2,NI)*EVTOHA
++              VIRIAL(NI*3) = TSIF(3,NI)*EVTOHA
++            ENDDO
++            CALL writebuffer(SOCKET,"FORCEREADY  ",MSGLEN)
++            CALL writebuffer(SOCKET,IPIPOT)
++            CALL writebuffer(SOCKET,NAT)
++            CALL writebuffer(SOCKET,IPIFORCES,3*NAT)
++            CALL writebuffer(SOCKET,VIRIAL,9)
++            ! i-pi can also receive an arbitrary string, we just send back zero characters.
++            CALL writebuffer(SOCKET,0)
++          ENDIF
++          HASDATA=.FALSE.
++        ELSE
++          INFO%LSTOP=.TRUE.
++          IF (COMM%NODE_ME == 1) WRITE(TIU0,*) "EXIT driver or unknow msg received"
++          EXIT driver_loop
++        ENDIF
++      ENDDO driver_loop
++#endif
++
++!=======================================================================
++! DYN%IBRION =
+ ! 1  quasi-Newton algorithm
+ ! 2  conjugate gradient
+ ! 3  quickmin
+diff -rupN ../vasp-5.4.4/src/makefile src/makefile
+--- ../vasp-5.4.4/src/makefile	2019-05-06 10:10:44.451455475 +0200
++++ src/makefile	2019-08-06 16:25:54.737310619 +0200
+@@ -145,7 +145,7 @@ vasp: $(OBJS) $(FFT3D) $(INC) main.o
+ 	$(FCL) -o vasp $(OBJS) main.o $(FFT3D) $(LLIB) $(LINK)
+ 
+ sources:
+-	rsync -u $(SRCDIR)/*.F $(SRCDIR)/*.inc .
++	rsync -u $(SRCDIR)/*.F $(SRCDIR)/*.inc $(SRCDIR)/*.f90 $(SRCDIR)/*.c .
+ #	-rsync -u $(SRCDIR)/*.f .
+ 
+ libs: $(LIB)
+@@ -200,3 +200,5 @@ main.o : main$(SUFFIX)
+ fft3dlib_f77.o: fft3dlib_f77$(SUFFIX)
+ 	$(F77) $(FFLAGS_F77) -c $*$(SUFFIX)
+ 
++sockets.o: sockets.c
++	$(CC_LIB) -c sockets.c
+diff -rupN ../vasp-5.4.4/src/.objects src/.objects
+--- ../vasp-5.4.4/src/.objects	2019-05-06 10:10:44.921452285 +0200
++++ src/.objects	2019-06-14 10:25:36.595019242 +0200
+@@ -1,5 +1,7 @@
+ SOURCE=\
+ 	c2f_interface.o \
++        sockets.o \
++        fsockets.o \
+ 	base.o \
+ 	profiling.o \
+ 	openmp.o \
+diff -rupN ../vasp-5.4.4/src/reader.F src/reader.F
+--- ../vasp-5.4.4/src/reader.F	2019-05-06 10:10:44.688453867 +0200
++++ src/reader.F	2019-08-06 18:50:44.217443315 +0200
+@@ -20,6 +20,7 @@
+      &        LSPIRAL,LZEROZ,QSPIRAL,LORBITALREAL, &
+      &        LASPH,TURBO,IRESTART,NREBOOT,NMIN,EREF, &
+      &        NLSPLINE,ISPECIAL,MDALGO &
++     &       ,IHOST,PORT,INET &
+ #ifdef libbeef
+      &       ,LBEEFENS,LBEEFBAS &
+ #endif
+@@ -69,6 +70,9 @@
+       LOGICAL   NLSPLINE
+       INTEGER   ISPECIAL
+       INTEGER   MDALGO 
++! ipi port, socket type, host
++      INTEGER   PORT, INET
++      CHARACTER(1024) IHOST
+ !-MM- Spin spiral stuff      
+       LOGICAL   LSPIRAL,LZEROZ
+       REAL(q)   QSPIRAL(3)
+@@ -593,6 +597,7 @@
+ ! number of ionic steps, calculate stresses? (default NSW=0, ISIF=2):
+       NSW=0
+       IF (IBRION==5 .OR. IBRION==6 .OR. IBRION==7 .OR. IBRION==8) NSW=1
++      IF (IBRION==23) NSW=100000 ! default large steps for ipi driver
+       CALL RDATAB(LOPEN,INCAR,IU5,'NSW','=','#',';','I', &
+      &            NSW,RDUM,CDUM,LDUM,CHARAC,N,1,IERR)
+       IF (((IERR/=0).AND.(IERR/=3)).OR. &
+@@ -607,6 +612,8 @@
+       ISIF=2
+       ! if MD is selected dont calculate stress
+       IF (IBRION==0) ISIF=0
++      ! ipi driver mode default calculate stress and allow cell to change
++      IF (IBRION==23) ISIF=3
+       CALL RDATAB(LOPEN,INCAR,IU5,'ISIF','=','#',';','I', &
+      &            ISIF,RDUM,CDUM,LDUM,CHARAC,N,1,IERR)
+       IF (((IERR/=0).AND.(IERR/=3)).OR. &
+@@ -627,6 +634,8 @@
+ #endif
+ ! relaxation: IWAVPR=1
+       IF (IBRION>0) IWAVPR=1
++! ipi driver mode default wavefunction extrapolation same as relaxation
++      IF (IBRION==23) IWAVPR=1
+       CALL RDATAB(LOPEN,INCAR,IU5,'IWAVPR','=','#',';','I', &
+      &            IWAVPR,RDUM,CDUM,LDUM,CHARAC,N,1,IERR)
+       IF (((IERR/=0).AND.(IERR/=3)).OR. &
+@@ -647,9 +656,45 @@
+       IWAVPR=MOD(IWAVPR,10)+10
+ #endif
+       CALL XML_INCAR('IWAVPR','I',IWAVPR,RDUM,CDUM,LDUM,CHARAC,N)
++      
++! read ipi host & port 
++      IF (IBRION==23) THEN
++        SZNAM='localhost'
++        CALL RDATAB(LOPEN,INCAR,IU5,'IHOST','=','#',';','S', &
++        &            IDUM,RDUM,CDUM,LDUM,SZNAM,N,256,IERR)
++        IF ((IERR/=0).AND.(IERR/=3)) THEN
++            IF (IU0>=0) &
++            WRITE(IU0,*)'Error reading item ''IHOST'' from file INCAR.'
++            GOTO 150
++        ENDIF
++        CALL STRIP(SZNAM,N,'A')
++        IHOST=SZNAM
++        CALL XML_INCAR('IHOST','S',IDUM,RDUM,CDUM,LDUM,SZNAM,N)
++        PORT=23333
++        CALL RDATAB(LOPEN,INCAR,IU5,'PORT','=','#',';','I', &
++        &            PORT,RDUM,CDUM,LDUM,CHARAC,N,1,IERR)
++        IF (((IERR/=0).AND.(IERR/=3)).OR. &
++        &                    ((IERR==0).AND.(N<1))) THEN
++            IF (IU0>=0) &
++            WRITE(IU0,*)'Error reading item ''PORT'' from file INCAR.'
++            GOTO 150
++        ENDIF
++        CALL XML_INCAR('PORT','I',PORT,RDUM,CDUM,LDUM,CHARAC,N)
++        INET=1
++        CALL RDATAB(LOPEN,INCAR,IU5,'INET','=','#',';','I', &
++        &            INET,RDUM,CDUM,LDUM,CHARAC,N,1,IERR)
++        IF (((IERR/=0).AND.(IERR/=3)).OR. &
++        &                    ((IERR==0).AND.(N<1))) THEN
++            IF (IU0>=0) &
++            WRITE(IU0,*)'Error reading item ''INET'' from file INCAR.'
++            GOTO 150
++        ENDIF
++        CALL XML_INCAR('INET','I',INET,RDUM,CDUM,LDUM,CHARAC,N)
++      ENDIF
+ 
+ ! switch on symmetry (default ISYM=1):
+       ISYM=1 ; IF (LPAW) ISYM=2
++      IF (IBRION==23) ISYM=0 ! default no symm for ipi driver mode
+       CALL RDATAB(LOPEN,INCAR,IU5,'ISYM','=','#',';','I', &
+      &            ISYM,RDUM,CDUM,LDUM,CHARAC,N,1,IERR)
+       IF (((IERR/=0).AND.(IERR/=3)).OR. &
+diff -rupN ../vasp-5.4.4/src/sockets.c src/sockets.c
+--- ../vasp-5.4.4/src/sockets.c	1970-01-01 01:00:00.000000000 +0100
++++ src/sockets.c	2019-08-08 10:37:50.132001376 +0200
+@@ -0,0 +1,155 @@
++/* A minimal wrapper for socket communication.
++
++Copyright (C) 2013, Joshua More and Michele Ceriotti
++
++Permission is hereby granted, free of charge, to any person obtaining
++a copy of this software and associated documentation files (the
++"Software"), to deal in the Software without restriction, including
++without limitation the rights to use, copy, modify, merge, publish,
++distribute, sublicense, and/or sell copies of the Software, and to
++permit persons to whom the Software is furnished to do so, subject to
++the following conditions:
++
++The above copyright notice and this permission notice shall be included
++in all copies or substantial portions of the Software.
++
++THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND,
++EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF
++MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.
++IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY
++CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT,
++TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
++SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
++
++
++Contains both the functions that transmit data to the socket and read the data
++back out again once finished, and the function which opens the socket initially.
++Can be linked to a FORTRAN code that does not support sockets natively.
++
++Functions:
++   error: Prints an error message and then exits.
++   open_socket_: Opens a socket with the required host server, socket type and
++      port number.
++   write_buffer_: Writes a string to the socket.
++   read_buffer_: Reads data from the socket.
++*/
++
++#include <stdio.h>
++#include <stdlib.h>
++#include <unistd.h>
++#include <string.h>
++#include <sys/types.h>
++#include <sys/socket.h>
++#include <netinet/in.h>
++#include <sys/un.h>
++#include <netdb.h>
++
++void open_socket(int *psockfd, int* inet, int* port, const char* host)
++/* Opens a socket.
++
++Note that fortran passes an extra argument for the string length, but this is
++ignored here for C compatibility.
++
++Args:
++   psockfd: The id of the socket that will be created.
++   inet: An integer that determines whether the socket will be an inet or unix
++      domain socket. Gives unix if 0, inet otherwise.
++   port: The port number for the socket to be created. Low numbers are often
++      reserved for important channels, so use of numbers of 4 or more digits is
++      recommended.
++   host: The name of the host server.
++*/
++
++{
++   int sockfd, ai_err;
++
++   if (*inet>0)
++   {  // creates an internet socket
++      
++      // fetches information on the host      
++      struct addrinfo hints, *res;  
++      char service[256];
++   
++      memset(&hints, 0, sizeof(hints));
++      hints.ai_socktype = SOCK_STREAM;
++      hints.ai_family = AF_INET;
++      hints.ai_flags = AI_PASSIVE;
++
++      sprintf(service,"%d",*port); // convert the port number to a string
++      ai_err = getaddrinfo(host, service, &hints, &res); 
++      if (ai_err!=0) { perror("Error fetching host data. Wrong host name?"); exit(-1); }
++
++      // creates socket
++      sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
++      if (sockfd < 0) { perror("Error opening socket"); exit(-1); }
++    
++      // makes connection
++      if (connect(sockfd, res->ai_addr, res->ai_addrlen) < 0) 
++      { perror("Error opening INET socket: wrong port or server unreachable"); exit(-1); }
++      freeaddrinfo(res);
++   }
++   else
++   {  
++      struct sockaddr_un serv_addr;
++
++      // fills up details of the socket addres
++      memset(&serv_addr, 0, sizeof(serv_addr));
++      serv_addr.sun_family = AF_UNIX;
++      strcpy(serv_addr.sun_path, "/tmp/ipi_");
++      strcpy(serv_addr.sun_path+9, host);
++      // creates a unix socket
++  
++      // creates the socket
++      sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
++
++      // connects
++      if (connect(sockfd, (struct sockaddr *) &serv_addr, sizeof(serv_addr)) < 0) 
++      { perror("Error opening UNIX socket: path unavailable, or already existing"); exit(-1); }
++   }
++
++
++   *psockfd=sockfd;
++}
++
++void writebuffer(int *psockfd, const char *data, int* plen)
++/* Writes to a socket.
++
++Args:
++   psockfd: The id of the socket that will be written to.
++   data: The data to be written to the socket.
++   plen: The length of the data in bytes.
++*/
++
++{
++   int n;
++   int sockfd=*psockfd;
++   int len=*plen;
++
++   n = write(sockfd,data,len);
++   if (n < 0) { perror("Error writing to socket: server has quit or connection broke"); exit(-1); }
++}
++
++
++void readbuffer(int *psockfd, char *data, int* plen)
++/* Reads from a socket.
++
++Args:
++   psockfd: The id of the socket that will be read from.
++   data: The storage array for data read from the socket.
++   plen: The length of the data in bytes.
++*/
++
++{
++   int n, nr;
++   int sockfd=*psockfd;
++   int len=*plen;
++
++   n = nr = read(sockfd,data,len);
++
++   while (nr>0 && n<len )
++   {  nr=read(sockfd,&data[n],len-n); n+=nr; }
++
++   if (n == 0) { perror("Error reading from socket: server has quit or connection broke"); exit(-1); }
++}
++
++

@@ -3,16 +3,20 @@ import pytest
 import argparse
 from argparse import RawTextHelpFormatter
 import time
-from ipi_tests.regression_tests.runstools import Runner, get_info_test
 
+try:
+    from ipi_tests.regression_tests.runstools import Runner_regression
+    from ipi_tests.test_tools import get_test_list
+except:
+    from .runstools import Runner_regression
+    from ..test_tools import get_test_list
 
 """ Run regression test """
 
 regtests_folder = Path(__file__).resolve().parent / "tests"
 call_ipi = "i-pi input.xml"
-call_driver = "i-pi-driver"
 
-reg_tests = get_info_test(regtests_folder)
+reg_tests = get_test_list(regtests_folder)
 
 
 @pytest.mark.parametrize("regtest", reg_tests)
@@ -22,13 +26,15 @@ def test_regtest(regtest):
     """
     t0 = time.time()
     nid = reg_tests.index(regtest)
-    runner = Runner(Path("."))
-    runner._run(regtest, nid)
-    print("Time for this regtest: {:4.1f} s \n".format(time.time() - t0))
+    runner = Runner_regression(Path("."))
+    error_msg = runner.run(regtest, nid)
+    print("Time for this example: {:4.1f} s \n".format(time.time() - t0))
+
+    if error_msg != None:
+        raise RuntimeError(error_msg)
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(
         formatter_class=RawTextHelpFormatter,
         description=""
@@ -48,7 +54,7 @@ if __name__ == "__main__":
         "--folder",
         type=str,
         default=None,
-        help="Folder of the regressions to test",
+        help="Folder of the regressions to test. Example '-f GEOP'",
     )
     parser.add_argument(
         "--test_all",
@@ -59,16 +65,16 @@ if __name__ == "__main__":
 
     try:
         path = str(regtests_folder / args.folder)
-        reg_tests = get_info_test(path)
+        reg_tests = get_test_list(path)
         print("We will run only:")
         for i in reg_tests:
-            print(i[0])
+            print(i)
         print("")
     except:
         print("We will run all available regression tests")
-        reg_tests = get_info_test(regtests_folder)
+        reg_tests = get_test_list(regtests_folder)
 
     print("We have found {} reg_tests".format(len(reg_tests)))
     for test_info in reg_tests:
-        print("Running {} ".format(test_info[0]))
+        print("Running {} ".format(test_info))
         test_regtest(test_info)

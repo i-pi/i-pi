@@ -9,7 +9,8 @@ def banded_hessian(h, im, masses=True, shift=0.001):
     """Given Hessian in the reduced format (h), construct
     the upper band hessian including the RP terms.
     If masses is True returns hessian otherwise it returns dynmat
-    shift is value that is added to the diagonal to avoid numerical problems with close to 0 frequencies"""
+    shift is value that is added to the diagonal to avoid numerical problems with close to 0 frequencies
+    """
     nbeads = im.dbeads.nbeads
     natoms = im.dbeads.natoms
     coef = im.coef  # new_disc
@@ -173,11 +174,11 @@ def get_imvector(h, m3):
     OUT    imv    = eigenvector corresponding to the imaginary mode
     """
     info("@get_imvector", verbosity.high)
-    if h.size != m3.size ** 2:
+    if h.size != m3.size**2:
         raise ValueError(
             "@Get_imvector. Initial hessian size does not match system size."
         )
-    m = 1.0 / (m3 ** 0.5)
+    m = 1.0 / (m3**0.5)
     mm = np.outer(m, m)
     hm = np.multiply(h, mm)
 
@@ -217,7 +218,7 @@ def get_imvector(h, m3):
 def print_instanton_geo(
     prefix, step, nbeads, natoms, names, q, f, pots, cell, shift, output_maker
 ):
-    """ Alternative (but very useful) output of the instanton geometry and potential energy """
+    """Alternative (but very useful) output of the instanton geometry and potential energy"""
 
     outfile = output_maker.get_output(prefix + "_" + str(step) + ".ener", "w")
     print("#Bead    Energy (eV)", file=outfile)
@@ -282,14 +283,14 @@ def print_instanton_geo(
 
 
 def print_instanton_hess(prefix, step, hessian, output_maker):
-    """ Print physical part of the instanton hessian """
+    """Print physical part of the instanton hessian"""
     outfile = output_maker.get_output(prefix + ".hess_" + str(step), "w")
     np.savetxt(outfile, hessian.reshape(1, hessian.size))
     outfile.close_stream()
 
 
 def ms_pathway(pos, m3):
-    """ Compute mass scaled pathway """
+    """Compute mass scaled pathway"""
     dx = list()
     path = np.zeros(pos.shape[0])
     for i in range(1, pos.shape[0]):

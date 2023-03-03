@@ -84,7 +84,6 @@ class AlchemyMC(Motion):
         return np.asarray(atomexchangelist)
 
     def step(self, step=None):
-
         # picks number of attempted exchanges
         ntries = self.prng.rng.poisson(self.nxc)
         if ntries == 0:

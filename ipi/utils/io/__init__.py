@@ -199,7 +199,7 @@ def print_file(
         units: Units for the output (e.g. "angstrom")
         cell_units: Units for the cell (dimension length, e.g. "angstrom")
     """
-    if mode == "pdb":  # special case for PDB
+    if mode in ["pdb", "ase"]:  # special case for PDB and ASE
         if dimension != "length":
             raise ValueError("PDB Standard is only designed for atomic positions")
         if units == "automatic":
@@ -392,7 +392,6 @@ def open_backup(filename, mode="r", buffering=-1):
     """
 
     if mode.startswith("w"):
-
         # If writing, make sure nothing is overwritten.
 
         i = 0

@@ -37,7 +37,7 @@ if __name__ == "__main__":
         "type: i-pi-tests \n"
         "\n"
         "for running only the tests that checks the integrity of the examples inputs \n"
-        "type: i-pi-style -t examples > \n"
+        "type: i-pi-style -t example  \n"
         "\n"
         "for running the regression tests  \n"
         "type: i-pi-style -t regtests \n"
@@ -58,7 +58,9 @@ if __name__ == "__main__":
     args = parser.parse_args()
     tests = args.tests
     print(test_folder[args.tests])
-    exit_code = pytest.main(["--tb=line", "-ra", str(test_folder[args.tests])])
+    exit_code = pytest.main(
+        ["--tb=line", "-ra", "-vv", "-s", str(test_folder[args.tests])]
+    )
 
     if exit_code != 0:
         raise RuntimeError("pytest exit code is {}".format(exit_code))

@@ -205,7 +205,6 @@ def get_rp_freq(w0, nbeads, temp, mode="rate"):
         sys.exit()
 
     if mode == "rate":
-
         # for i in range(nzero):
         #    for k in range(1, nbeads):
         #        w += np.log(factor*np.sqrt(4./(betaP*hbar)**2 * np.sin(np.absolute(k)*np.pi/nbeads)**2))
@@ -302,7 +301,6 @@ elif case == "TS":
         print("Overwriting energy shift with the provided values")
         V0 = V00 * eV2au
 elif case == "instanton":
-
     hessian = simulation.syslist[0].motion.optarrays["hessian"].copy()
     mode = simulation.syslist[0].motion.options["mode"]
     temp2 = simulation.syslist[0].ensemble.temp
@@ -382,7 +380,7 @@ if not quiet:
     print(("{}".format(d10)))
 
 if case == "reactant":
-    Qtras = ((np.sum(m)) / (2 * np.pi * beta * hbar ** 2)) ** 1.5
+    Qtras = ((np.sum(m)) / (2 * np.pi * beta * hbar**2)) ** 1.5
 
     if asr == "poly":
         Qrot = (8 * np.pi * detI / ((hbar) ** 6 * (beta) ** 3)) ** 0.5
@@ -410,7 +408,7 @@ if case == "reactant":
     print("A file with the frequencies in atomic units was generated\n")
 
 elif case == "TS":
-    Qtras = ((np.sum(m)) / (2 * np.pi * beta * hbar ** 2)) ** 1.5
+    Qtras = ((np.sum(m)) / (2 * np.pi * beta * hbar**2)) ** 1.5
 
     if asr == "poly":
         Qrot = (8 * np.pi * detI / ((hbar) ** 6 * (beta) ** 3)) ** 0.5
@@ -437,13 +435,12 @@ elif case == "TS":
     )
 
 elif case == "instanton":
-
     if mode == "rate":
-        Qtras = ((np.sum(m)) / (2 * np.pi * beta * hbar ** 2)) ** 1.5
+        Qtras = ((np.sum(m)) / (2 * np.pi * beta * hbar**2)) ** 1.5
 
         if asr == "poly" and not quiet:
             Qrot = (8 * np.pi * detI / ((hbar) ** 6 * (betaP) ** 3)) ** 0.5
-            Qrot /= nbeads ** 3
+            Qrot /= nbeads**3
         else:
             Qrot = 1.0
 
@@ -504,7 +501,6 @@ elif case == "instanton":
         print("\n\n")
 
     elif mode == "splitting":
-
         out = open(input_freq, "r")
         d_min = np.zeros(natoms * 3)
         aux = out.readline().split()
@@ -553,7 +549,7 @@ elif case == "instanton":
         print("BN {} a.u.".format(BN))
         print(
             "BN/(hbar^2 * betaN)  {}  (should be same as S/hbar) ".format(
-                (BN / ((hbar ** 2) * betaP))
+                (BN / ((hbar**2) * betaP))
             )
         )
         print("")

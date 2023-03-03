@@ -13,29 +13,55 @@ To add a new regression test please provide:
 
    - input.xml (and all the files required by it)
 
-   - driver.txt specifying  "<driver> <address> <port> <unix/inet> <-o possible
-     options> " (see existing examples)
-	The driver will be run using the following syntax*: 
- 
-	"i-pi-driver -m <driver> -h <address> -u -o <possible options>" if unix 
-     
-     for an existing example including the usage of option flags, please see:
-	tests/GEOP/BFGS/harmonic/driver.txt
+   - test_settings.dat 
+     This file specifies the driver_model and flags that will be used when running
+     the driver to perform the regression test.
+     For examples including the usage of option flags, please see:
+         tests/NVE/NVE_1/harmonic_python/test_settings.dat
+         tests/NVE/NVE_1/harmonic/test_settings.dat
 
      *Please note that the driver can be run with the same syntax when one
      creates the reference files for the regression tests.
 
+     **Please note that in the case of different drivers one should start to
+     describe the setup of each driver by specifying driver_model xxxx in the 
+     first line
    
    - file_to_check.txt specifying the files serving as reference with their
      respective filenames
 
-     for an existing example, please see:
-	tests/INSTANTON/100K/files_to_check.txt
+     the syntax of file_to_check.txt includes a two-line header, followed 
+     by a list of files. each line contains the name of the reference file 
+     (see below), the format (xyz, or numpy for files that can be read by
+     numpy.loadtxt). Both are read as a 2D array, and one can optionally
+     specify a list of columns that should be compared (this is useful e.g.
+     to ignore noisy quantities). Each column entry should be 
+     
+     icol[,rtol,atol]
+
+     where icol is an integer (0-based) index optionally followed by a 
+     specification of rtol and atol tolerances, that correspond to the 
+     parameters of numpy.allclose. 
+    
+     Alternatively, it is posible to speciy the same rtol and atol for all
+     the columns (only numpy data for the moment) as
+ 
+     all[,rtol,atol]
+
+     For existing examples, please see:
+	tests/INSTANTON/200K/files_to_check.txt  [standard case]
+        tests/NEB/FIRE/zundel/files_to_check.txt [verbose case] 
+        tests/NEB/DAMPED_BFGS/zundel/files_to_check.txt [super verbose case] 
 
    - reference files that are listed in the files_to_check.txt file. Currently,
      the available formats are .xyz and numpy-accessible which should be
      specified with the keywords 'xyz' and 'numpy'.
 
+   - (For the moment) We assume a very specific syntax for the file names. 
+     The reference file name should be the same as the output file name with the addition of 'ref_' at the beginning, example:
+
+     reference file: ref_simulation.out
+     output to be genererated from i-pi: simulation.out
 
 
 Important: 
@@ -47,87 +73,3 @@ Important:
     "git add -f ref_simulation.out"
 
 
-
----------------------------------------------------------------------------
-INFORMATION ABOUT THE CURRENTLY INCLUDED FEATURES IN THE REGRESSION TESTS
----------------------------------------------------------------------------
-
-
-Thermostats and NVT dynamics  
-----------------------------------------------------------------------
-The following thermostats have been tested against an in-house independent
-code by Yair Litman (2020) and hence have been included in the regression 
-test analysis of i-pi. 
-	- Langevin 
-	- PILE-local (pile_l)
-	- PILE-global (pile_g)
-	- Stochastic Velocity Rescaling (SVR)
-	 
-Note, that these thermostats are tested with single bead and multiple bead
-system settings, too. 
-
-
-NVE dynamics 
----------------------------------------------------------------------- 
-The classical and multibead NVE dynamics have been tested against the independent
-implementation of Yair Litman (2020).
-
-
-
-Geometry optimizations with FHI-aims against ASE:
-----------------------------------------------------------------------
-Note, that the results and accuracy of the geometry optimization routines have 
-been tested against the ASE using FHI-aims and hartree fock with a strict 
-convergence criteria. The tests have been conducted by Eszter Pos (2020) 
-
-The following routines are tested and give perfect agreement:
-	- BFGS
-	- L-BFGS
-	- BFGS-TRM
-	- CG: there is an issue about the line-search of the CG routine, the
-	      function needs to be evaluated ~100 times, while with ASE , the routine
-	      converges after 7 steps. Needs to be checked further. Final geometry agrees
-	      well enough with the ASE geometry, but the linesearch needs to be checked and
-	      optimized. 
-
-Partially tested, but problematic routines with FHI-aims against ASE:
-	- SD: could not be tested against ASE, however, it gives the same final
-optimized geometry as the BFGS routines. (takes a very long time becasue of
-the line search.)
-        - NEB: the Nudged Elastic Band routine is disabled until further
-               debugging is conducted on the routine and its spring constants. 
-	
-
-
-Tested Thermostats and NVT dynamics  
-----------------------------------------------------------------------
-The following thermostats have been tested against an in-house independent
-code by Yair Litman (2020) and hence have been included in the regression 
-test analysis of i-pi. 
-	- Langevin 
-	- PILE-local (pile_l)
-	- PILE-global (pile_g)
-	- Stochastic Velocity Rescaling (SVR)
-	 
-
-Tested Instanton geometries and Hessian matrices
-----------------------------------------------------------------------
-For the instanton geometries and Hessian matrix, we rely on the
-numpy-accessible outputs. 
-
-These have been tested against Yair Litman's in-the-house independent implementation (2020).
-
-
-XTRA-JSON regression tests checking the capabilities of the JSON infrastructure
-----------------------------------------------------------------------
-These tests have been tested by Eszter Pos's (2020) dummy friction-tensor and dipole
-implemented in the doublewell_1D potential and using the existing dipole
-implemented in the zundel potential. The tests are comparing numpy-accessible
-output trajectory files.  
-
-
-Tested NPT dynamics  
-----------------------------------------------------------------------
-The following features have been tested by Venkat Kapil (2021) 
-    - VT curve for an ideal gas in the NPzT ensemble
-    - PV curve for an ideal gas in the NPzT ensemble

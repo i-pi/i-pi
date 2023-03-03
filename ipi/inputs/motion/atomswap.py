@@ -19,14 +19,13 @@ __all__ = ["InputAtomSwap"]
 
 class InputAtomSwap(InputDictionary):
 
-    """Alchemy input class.
+    """Atomswap input class.
 
-    Handles generating the appropriate alchemical exchange class from the xml input file.
+    Monte Carlo swaps of atoms types
 
     Fields:
-        spicesA/B: isotopes for exchanges.
-        timestep: An optional float giving the size of the timestep in atomic
-            units. Defaults to 1.0.
+        names:  labels of the atoms that should be exchanged.
+        nxc:    how many swaps should be attempted at each step. defaults to 1.0.
     """
 
     attribs = {

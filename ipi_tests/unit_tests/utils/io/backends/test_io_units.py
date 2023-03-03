@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 
 import pytest
-import ipi_tests.unit_tests.common.xyz_generator as xyz_gen
+from ....common import xyz_generator as xyz_gen
 import ipi.utils.mathtools as mt
 import ipi.utils.io.io_units as testing
 
@@ -56,7 +56,6 @@ def units_preparation(request):
 
 @pytest.mark.skip(reason="This needs to be updated to match current code.")
 def test_process_units_noobj(units_preparation):
-
     natoms, frames, comment, conver_xyz, conver_cell = units_preparation
     output = "noobj"
 
@@ -93,7 +92,6 @@ def test_process_units_noobj(units_preparation):
 
 @pytest.mark.skip(reason="This needs to be updated to match current code.")
 def test_process_units_object(units_preparation):
-
     natoms, frames, comment, conver_xyz, conver_cell = units_preparation
     output = "objects"
 

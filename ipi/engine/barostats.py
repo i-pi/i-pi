@@ -66,6 +66,8 @@ class Barostat(dobject):
 
     Gives the standard methods and attributes needed in all the barostat classes.
 
+    Used as barostat for mode "dummy".
+
     Attributes:
        beads: A beads object giving the atoms positions
        cell: A cell object giving the system box.
@@ -394,11 +396,19 @@ class Barostat(dobject):
 class BaroBZP(Barostat):
     """Bussi-Zykova-Parrinello barostat class.
 
+    Mode "isotropic" implements the Bussi-Zykova-Parrinello barostat.
+
+    Isotropically scales the unit cell volume while sampling the
+    isothermal isobaric ensemble.
+
+    Bussi, Zykova-Timan, Parinello, J. Chem. Phys. 130, 074101 (2009)
+        [doi:10.1063/1.3073889]
+
     Just extends the standard class adding finite-dt propagators for the
     barostat velocities, positions, piston.
 
     Generates dynamics with a stochastic barostat. Implementation details:
-    Ceriotti, More, Manolopoulos, Comp. Phys. Comm. 185, 1019, (2013)
+    Ceriotti, More, Manolopoulos, Comp. Phys. Comm. 185, 1019 (2013)
 
     Depend objects:
        p: The momentum associated with the volume degree of freedom.
@@ -473,7 +483,7 @@ class BaroBZP(Barostat):
             value=np.atleast_1d(0.0),
             func=(
                 lambda: np.asarray(
-                    [self.tau ** 2 * 3 * self.beads.natoms * Constants.kb * self.temp]
+                    [self.tau**2 * 3 * self.beads.natoms * Constants.kb * self.temp]
                 )
             ),
             dependencies=[dself.tau, dself.temp],
@@ -536,8 +546,8 @@ class BaroBZP(Barostat):
         dt = self.pdt[
             level
         ]  # this is already set to be half a time step at the specified MTS depth
-        dt2 = dt ** 2
-        dt3 = dt ** 3 / 3.0
+        dt2 = dt**2
+        dt3 = dt**3 / 3.0
 
         # computes the pressure associated with the forces at each MTS level.
         press = np.trace(self.stress_mts(level)) / 3.0
@@ -589,11 +599,22 @@ class BaroBZP(Barostat):
 class BaroSCBZP(Barostat):
     """The Suzuki Chin Bussi-Zykova-Parrinello barostat class.
 
+    Mode "sc-isotropic" implements the Bussi-Zykova-Parrinello
+    barostat for Suzuki-Chin path integral molecular dynamics.
+
+    Isotropically scales the unit cell volume while sampling the
+    isothermal isobaric ensemble.
+
+    This barostat is suitable for simulating liquids.
+
+    Kapil et al., J. Chem. Theory Comput. 15, 5 (2019)
+        [10.1021/acs.jctc.8b01297]
+
     Just extends the standard class adding finite-dt propagators for the
     barostat velocities, positions, piston.
 
     Generates dynamics with a stochastic barostat. Implementation details:
-    Ceriotti, More, Manolopoulos, Comp. Phys. Comm. 185, 1019, (2013)
+    Ceriotti, More, Manolopoulos, Comp. Phys. Comm. 185, 1019 (2013)
 
     Depend objects:
        p: The momentum associated with the volume degree of freedom.
@@ -667,7 +688,7 @@ class BaroSCBZP(Barostat):
             value=np.atleast_1d(0.0),
             func=(
                 lambda: np.asarray(
-                    [self.tau ** 2 * 3 * self.beads.natoms * Constants.kb * self.temp]
+                    [self.tau**2 * 3 * self.beads.natoms * Constants.kb * self.temp]
                 )
             ),
             dependencies=[dself.tau, dself.temp],
@@ -739,8 +760,8 @@ class BaroSCBZP(Barostat):
         dt = self.pdt[
             level
         ]  # this is already set to be half a time step at the specified MTS depth
-        dt2 = dt ** 2
-        dt3 = dt ** 3 / 3.0
+        dt2 = dt**2
+        dt3 = dt**3 / 3.0
 
         # computes the pressure associated with the forces at each MTS level and adds the +- 1/3 SC correction.
         press = np.trace(self.stress_mts_sc(level)) / 3.0
@@ -793,7 +814,21 @@ class BaroSCBZP(Barostat):
 
 
 class BaroRGB(Barostat):
-    """Raiteri-Gale-Bussi constant stress barostat class (JPCM 23, 334213, 2011).
+    """Raiteri-Gale-Bussi constant stress barostat class.
+
+    Mode "anisotropic" implements the Raiteri-Gale-Bussi barostat which enables
+    cell fluctuations (lengths and angles) at constant external stress.
+
+    It is suitable for simulating solids at given external (non-diagonal) stresses
+    and requires specifying a reference cell for estimating strain.
+
+     For diagonal stresses (or external pressures) the "flexible" and the
+     "anisotropic" modes should give very similar results.
+
+    Note that this ensemble is valid only within the elastic limit of small strains.
+
+    Raiteri, Gale, Bussi, J. Phys. Condens. Matter, 23, 334213 (2011)
+        [doi:10.1088/0953-8984/23/33/334213]
 
     Just extends the standard class adding finite-dt propagators for the barostat
     velocities, positions, piston.
@@ -908,7 +943,7 @@ class BaroRGB(Barostat):
             value=np.atleast_1d(0.0),
             func=(
                 lambda: np.asarray(
-                    [self.tau ** 2 * self.beads.natoms * Constants.kb * self.temp]
+                    [self.tau**2 * self.beads.natoms * Constants.kb * self.temp]
                 )
             ),
             dependencies=[dself.tau, dself.temp],
@@ -1010,8 +1045,8 @@ class BaroRGB(Barostat):
         """Propagates the momenta for half a time step."""
 
         dt = self.pdt[level]
-        dt2 = dt ** 2
-        dt3 = dt ** 3 / 3.0
+        dt2 = dt**2
+        dt3 = dt**3 / 3.0
 
         hh0 = np.dot(self.cell.h, self.h0.ih)
         pi_ext = np.dot(hh0, np.dot(self.stressext, hh0.T)) * self.h0.V / self.cell.V
@@ -1021,7 +1056,6 @@ class BaroRGB(Barostat):
 
         # integerates the kinetic part of the stress with the force at the inner-most level.
         if level == self.nmtslevels - 1:
-
             self.p += dt * (
                 self.cell.V * np.triu(-self.beads.nbeads * pi_ext)
                 + Constants.kb * self.temp * self.L
@@ -1087,7 +1121,19 @@ class BaroRGB(Barostat):
 
 
 class BaroMTK(Barostat):
-    """Martyna-Tobias-Klein flexible cell, constant pressure barostat class (JCP 101, 1994).
+    """Martyna-Tobias-Klein flexible cell, constant pressure barostat class.
+
+    Mode "flexible" implements the path integral version of Martyna-Tuckerman-Tobias-Klein
+    barostat, which incorporates full cell fluctuations (lengths and angles) while
+    sampling the isothermal isobaric ensemble.
+
+    This is suitable for anisotropic systems such as molecular solids.
+
+    For diagonal stresses (or external pressures) the "flexible" and the
+    "anisotropic" modes should give very similar results.
+
+    Martyna and Hughes, J. Chem. Phys 110, 3275 (1999)
+        [doi:10.1063/1.478193]
 
     Just extends the standard class adding finite-dt propagators for the barostat
     velocities, positions, piston.
@@ -1195,7 +1241,7 @@ class BaroMTK(Barostat):
             value=np.atleast_1d(0.0),
             func=(
                 lambda: np.asarray(
-                    [self.tau ** 2 * self.beads.natoms * Constants.kb * self.temp]
+                    [self.tau**2 * self.beads.natoms * Constants.kb * self.temp]
                 )
             ),
             dependencies=[dself.tau, dself.temp],
@@ -1285,8 +1331,8 @@ class BaroMTK(Barostat):
         """Propagates the momenta for half a time step."""
 
         dt = self.pdt[level]
-        dt2 = dt ** 2
-        dt3 = dt ** 3 / 3.0
+        dt2 = dt**2
+        dt3 = dt**3 / 3.0
 
         pi_ext = (
             np.eye(3) * self.pext
@@ -1298,7 +1344,6 @@ class BaroMTK(Barostat):
 
         # integerates the kinetic part of the stress with the force at the inner-most level.
         if level == self.nmtslevels - 1:
-
             self.p += dt * (
                 self.cell.V * np.triu(-self.beads.nbeads * pi_ext)
                 + Constants.kb * self.temp * self.L

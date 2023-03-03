@@ -3,7 +3,7 @@ import pytest
 import argparse
 from argparse import RawTextHelpFormatter
 import time
-from ipi_tests.examples.exampletools import find_examples, Runner_examples
+from .exampletools import find_examples, Runner_examples
 
 
 """ Test that examples are not broken. Doesn't not check that output is correct."""
@@ -17,19 +17,24 @@ print("We have found {} examples".format(len(examples)))
 
 
 @pytest.mark.parametrize("ex", examples)
-def test_example(ex):
+def test_example(ex, verbose=False):
     """Intermediate function to run the examples (by calling Runner_examples) which makes
     possible to parametrize the arguments
     """
     t0 = time.time()
     nid = examples.index(ex)
     runner = Runner_examples(Path("."))
-    runner.run(ex, nid)
+    error_msg = runner.run(ex, nid)
     print("Time for this example: {:4.1f} s \n".format(time.time() - t0))
+
+    if verbose:
+        return error_msg
+
+    if error_msg != None:
+        raise RuntimeError
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(
         formatter_class=RawTextHelpFormatter,
         description=""
@@ -48,6 +53,7 @@ if __name__ == "__main__":
         "included in the 'excluded_test.txt' file\n"
         "\n"
         "type: python test_examples.py -f <folder_path> \n"
+        "example  python test_examples.py -f examples/MBPOL/splitting> \n"
         "\n"
         "example: python test_examples.py examples/lammps/h2o-geop\n"
         "This script will recursively search for examples.\n"
@@ -56,7 +62,11 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "-f", "--folder", type=str, nargs="+", help="Folder(s) of the example to test"
+        "-f",
+        "--folder",
+        type=str,
+        nargs="+",
+        help="Folder(s) of the example to test. Example: -f examples/MBPOL/splitting",
     )
     parser.add_argument(
         "--test_all", action="store_true", help="Folder of the example to test"
@@ -84,10 +94,9 @@ if __name__ == "__main__":
     errors = list()
     for ex in examples:
         print("Running {} ".format(ex))
-        try:
-            test_example(ex)
-        except:
-            print("Error ...\n")
+        error_msg = test_example(ex, verbose=True)
+        if error_msg is not None:
+            print("Error: {}...\n".format(error_msg))
             errors.append(ex)
 
     if len(errors) > 0:

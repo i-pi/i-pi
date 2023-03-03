@@ -13,3 +13,6 @@ doc/manual.xml
 \#*
 *.orig
 regtest-ref
+/build
+/dist
+*.egg-info/

@@ -5,7 +5,7 @@ on: [push, pull_request]
 jobs:
 
   lint:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2
@@ -13,7 +13,7 @@ jobs:
            python-version: '3.x'
       - uses: psf/black@stable
         with:
-           args: ". --check"
+           options: ". --check"
       - name: Setup flake8 annotations
         uses: rbialon/flake8-annotations@v1
       - name: flake8 for syntax

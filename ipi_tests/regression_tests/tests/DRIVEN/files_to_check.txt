@@ -1,0 +1,9 @@
+        filename                        format
+----------------------------------------------------------
+ref_simulation.vel_0.xyz                 xyz
+ref_simulation.vel_1.xyz                 xyz
+ref_simulation.for_0.xyz                 xyz     0,3e-6,3e-6 1,3e-6,3e-6 2,3e-6,3e-6
+ref_simulation.for_1.xyz                 xyz     0,3e-6,3e-6 1,3e-6,3e-6 2,3e-6,3e-6
+ref_simulation.pos_0.xyz                 xyz
+ref_simulation.pos_1.xyz                 xyz
+ref_simulation.out                       numpy   2,1e-4,1e-4 3,1e-4,1e-4 4,1e-4,1e-4 5,1e-4,1e-4

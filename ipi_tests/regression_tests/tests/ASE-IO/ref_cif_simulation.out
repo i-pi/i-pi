@@ -1,0 +1,8 @@
+# column   1     --> time{picosecond} : The elapsed simulation time.
+# column   2     --> conserved : The value of the conserved energy quantity per bead.
+# column   3     --> temperature{kelvin} : The current temperature, as obtained from the MD kinetic energy.
+# column   4     --> kinetic_md : The kinetic energy of the (extended) classical system.
+# column   5     --> kinetic_cv : The centroid-virial quantum kinetic energy of the physical system.
+# column   6     --> potential : The physical system potential energy.
+    0.00000000e+00    -6.72204027e+00     2.82626153e+02     1.49854429e-02     1.14005347e-02    -6.73702572e+00   
+    0.00000000e+00    -6.72204027e+00     2.82626153e+02     1.49854429e-02     1.14005347e-02    -6.73702572e+00   

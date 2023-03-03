@@ -1,7 +1,7 @@
 <simulation verbosity='high'>
   <output prefix='simulation'>
     <properties stride='2' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_md, potential, pressure_md{megapascal}, volume, cell_h] </properties>
-    <trajectory stride='20' filename='pos' format='pdb'>positions</trajectory>
+    <trajectory stride='20' filename='pos' format='xyz'>positions</trajectory>
     <checkpoint stride='2000'/>
   </output>
   <total_steps>100000</total_steps>
@@ -13,8 +13,8 @@
   </ffsocket>
   <system>
     <initialize nbeads='1'>
-      <file mode='pdb'> init.pdb </file>
-      <!-- The following cell will be actually used despite the pdb
+      <file mode='xyz'> init.xyz </file>
+      <!-- The following cell will be actually used despite the xyz
          CRYST1 value.-->
       <cell mode='manual'> [ 56, 28, 28, 0, 48.497, 16.1658, 0,0, 45.724] </cell>
       <velocities mode='thermal' units='kelvin'> 20 </velocities>

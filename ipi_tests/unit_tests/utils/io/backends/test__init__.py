@@ -7,7 +7,7 @@ from pytest_mock import mocker
 import numpy as np
 import numpy.testing as npt
 
-import ipi_tests.unit_tests.common.xyz_generator as xyz_gen
+from ....common import xyz_generator as xyz_gen
 
 import ipi.utils.io as io
 import ipi.utils.mathtools as mt
@@ -71,7 +71,6 @@ test_read_file_prms = [
 
 @pytest.fixture(params=test_read_file_prms)
 def prepare_read_file(request):
-
     (
         natoms,
         nframes,
@@ -105,7 +104,6 @@ def prepare_read_file(request):
 
 @pytest.mark.skip(reason="This needs to be updated to match current code.")
 def test_read_file(prepare_read_file):
-
     (
         file_type,
         filedesc,

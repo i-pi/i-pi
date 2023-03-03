@@ -17,7 +17,7 @@ from ipi.engine.atoms import Atoms
 from ipi.engine.cell import Cell
 
 
-import ipi_tests.unit_tests.common.xyz_generator as xyz_gen
+from ..common import xyz_generator as xyz_gen
 
 
 # default_cell_mat = mt.abc2h(-1.0, -1.0, -1.0, np.pi/2.0, np.pi/2.0, np.pi/2.0) # After changing the input standard
@@ -93,7 +93,6 @@ def create_xyz_sample_file(request):
 
 
 def test_init_file(create_xyz_sample_file):
-
     tmp_file, expected_cell, expected_ratoms = create_xyz_sample_file
 
     ret = initializer.init_file("xyz", tmp_file.name)

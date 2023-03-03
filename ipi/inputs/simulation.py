@@ -5,6 +5,7 @@
 # See the "licenses" directory for full license information.
 
 
+from ipi import ipi_global_settings
 from ipi.utils.depend import *
 from ipi.utils.inputvalue import *
 from ipi.utils.units import *
@@ -124,6 +125,14 @@ class InputSimulation(Input):
                 "options": ["md", "paratemp", "static"],
             },
         ),
+        "floatformat": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "default": "%16.8e",
+                "help": "A format for all printed floats.",
+            },
+        ),
     }
 
     dynamic = {
@@ -137,6 +146,10 @@ class InputSimulation(Input):
             iforcefields.InputFFLennardJones,
             {"help": iforcefields.InputFFLennardJones.default_help},
         ),
+        "ffdmd": (
+            iforcefields.InputFFdmd,
+            {"help": iforcefields.InputFFdmd.default_help},
+        ),
         "ffdebye": (
             iforcefields.InputFFDebye,
             {"help": iforcefields.InputFFDebye.default_help},
@@ -148,6 +161,10 @@ class InputSimulation(Input):
         "ffyaff": (
             iforcefields.InputFFYaff,
             {"help": iforcefields.InputFFYaff.default_help},
+        ),
+        "ffcommittee": (
+            iforcefields.InputFFCommittee,
+            {"help": iforcefields.InputFFCommittee.default_help},
         ),
         "ffsgdml": (
             iforcefields.InputFFsGDML,
@@ -174,6 +191,7 @@ class InputSimulation(Input):
         self.total_time.store(simul.ttime)
         self.smotion.store(simul.smotion)
         self.threading.store(simul.threading)
+        self.floatformat.store(ipi_global_settings["floatformat"])
 
         # this we pick from the messages class. kind of a "global" but it seems to
         # be the best way to pass around the (global) information on the level of output.
@@ -209,6 +227,10 @@ class InputSimulation(Input):
                     _iobj = iforcefields.InputFFLennardJones()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("fflj", _iobj)
+                elif isinstance(_obj, eforcefields.FFdmd):
+                    _iobj = iforcefields.InputFFdmd()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffdmd", _iobj)
                 elif isinstance(_obj, eforcefields.FFDebye):
                     _iobj = iforcefields.InputFFDebye()
                     _iobj.store(_obj)
@@ -225,6 +247,10 @@ class InputSimulation(Input):
                     _iobj = iforcefields.InputFFsGDML()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("ffsgdml", _iobj)
+                elif isinstance(_obj, eforcefields.FFCommittee):
+                    _iobj = iforcefields.InputFFCommittee()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffcommittee", _iobj)
                 elif isinstance(_obj, System):
                     _iobj = InputSystem()
                     _iobj.store(_obj)
@@ -247,26 +273,37 @@ class InputSimulation(Input):
 
         super(InputSimulation, self).fetch()
 
+        # We fetch format and store it in the global variable
+        ipi_global_settings["floatformat"] = self.floatformat.fetch()
+        try:
+            _ = ipi_global_settings["floatformat"] % 1.0
+        except:
+            print("Error: <simulation> has invalid floatformat attribute.")
+            exit(-1)
+
         # small hack: initialize here the verbosity level -- we really assume to have
         # just one simulation object
         verbosity.level = self.verbosity.fetch()
 
         syslist = []
         fflist = []
-        for (k, v) in self.extra:
+        for k, v in self.extra:
             if k == "system":
                 syslist.append(v.fetch())
             elif k == "system_template":
-                syslist += (
-                    v.fetch()
-                )  # this will actually generate automatically a bunch of system objects with the desired properties set automatically to many values
+                # This will actually generate automatically a bunch
+                # of system objects with the desired properties set
+                # automatically to many values.
+                syslist += v.fetch()
             elif (
                 k == "ffsocket"
                 or k == "fflj"
                 or k == "ffdebye"
+                or k == "ffdmd"
                 or k == "ffplumed"
                 or k == "ffsgdml"
                 or k == "ffyaff"
+                or k == "ffcommittee"
             ):
                 info(" # @simulation: Fetching" + k, verbosity.low)
                 fflist.append(v.fetch())

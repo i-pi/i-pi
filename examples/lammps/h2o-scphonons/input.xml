@@ -10,7 +10,7 @@
   </ffsocket>
   <system>
   <initialize nbeads='1'>
-    <file mode='xyz' > init.xyz </file>
+    <file mode='xyz' > h2o_box.xyz </file>
     <cell mode='abc'> [35.233, 35.233,35.233]   </cell>
   </initialize>
   <forces>
