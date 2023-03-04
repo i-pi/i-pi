@@ -115,6 +115,9 @@ parser.add_option(
     "-x", action="store_true", dest="xml", default=False, help="write an xml help file"
 )
 parser.add_option(
+    "-r", action="store_true", dest="rst", default=False, help="write an rst help file"
+)
+parser.add_option(
     "-l",
     action="store_true",
     dest="latex",
@@ -146,11 +149,11 @@ parser.add_option(
     default="simulation",
 )
 parser.add_option(
-    "-r",
+    "-c",
     action="store_true",
     dest="ref",
     default=False,
-    help="add references to a latex help file. Ignored if -l is not present",
+    help="add cross-references to a latex help file. Ignored if -l is not present",
 )
 
 (options, args) = parser.parse_args()
@@ -162,6 +165,7 @@ if options.opt not in objects:
 def help(
     latex=False,
     xml=False,
+    rst=False,
     levels=None,
     option="simulation",
     prefix="help",
@@ -181,6 +185,7 @@ def help(
     Args:
        latex: Boolean specifying whether a latex file will be printed.
        xml: Boolean specifying whether an xml file will be printed.
+       rst: Boolean specifying whether an rst file will be printed.
        levels: An integer specifying how many layers of the hierarchy will be
           printed. If not given, all layers will be printed.
        option: A string specifying which object will be used as the root object
@@ -201,12 +206,18 @@ def help(
         latex_output.write(
             simrestart.help_latex(stop_level=levels, standalone=standalone)
         )
+    if rst:
+        rst_output = open(prefix + ".rst", "w")
+        rst_output.write(
+            simrestart.help_rst(name="simulation", stop_level=levels, standalone=standalone)
+        )
 
 
 if __name__ == "__main__":
     help(
         options.latex,
         options.xml,
+        options.rst,
         options.levels,
         options.opt,
         options.prefix,

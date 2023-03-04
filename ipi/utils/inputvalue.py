@@ -762,7 +762,7 @@ class Input(object):
         rstr += indent + "</" + name + ">\n"
         return rstr
 
-    def help_rst(self, name="", indent="", level=0, stop_level=None):
+    def help_rst(self, name="", indent="", level=0, stop_level=None, standalone=True):
         """Function to generate an rst formatted help file.
 
         Args:
@@ -771,6 +771,8 @@ class Input(object):
            level: Current level of the hierarchy being considered.
            stop_level: The depth to which information will be given. If not given,
               all information will be given
+           standalone: Should this be generated as a single document or as part of
+              a linked set of RST files? 
 
         Returns:
            An xml formatted string.
@@ -789,7 +791,12 @@ class Input(object):
 
         rstr = ""
         lindent = "   "  # increase of indentation with each layer
-        rstr = "\n" + indent + ":" + name + ":\n"
+        
+        if level==0:
+            rstr = "\n" + name + "\n" + ("*"*len(name))
+            rstr += "\n.. _" + name + ":\n"
+        else:
+            rstr += "\n" + indent + ":" + name + ":\n"
         # prints help string
         rstr += "\n" + indent + self._help + "\n"
 
@@ -825,7 +832,7 @@ class Input(object):
                 # information about tags is found in tags beginning with the name
                 # of the attribute
                 rstr += self.__dict__[a].help_rst(
-                    a, lindent + indent, level, stop_level
+                    a, lindent + indent, level + 1, stop_level
                 )
 
         # repeats the above instructions for any fields or dynamic tags.
