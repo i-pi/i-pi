@@ -500,9 +500,9 @@ class Input(object):
             else:
                 rstr += r"\begin{ipifield}{" + name + "}%\n"
 
-        rstr += "{" + self._help + "}%\n"
+        rstr += "{" + self._help.replace("%", "\\%") + "}%\n"
 
-        rstr += "{" + self.detail_str() + "}%\n"
+        rstr += "{" + self.detail_str().replace("%", "\\%") + "}%\n"
 
         rstr += "{"
         # Prints out the attributes
@@ -520,9 +520,9 @@ class Input(object):
                             r"\ipiitem{"
                             + a
                             + "}%\n{"
-                            + self.__dict__[a]._help
+                            + self.__dict__[a]._help.replace("%", "\\%")
                             + "}%\n{"
-                            + self.__dict__[a].detail_str()
+                            + self.__dict__[a].detail_str().replace("%", "\\%")
                             + "}%\n"
                         )  # !!MUST ADD OTHER STUFF
         rstr += "}\n"
