@@ -170,7 +170,7 @@ Initialization from checkpoint files
 
 i-PI gives the option to output the entire state of the simulation at a
 particular timestep as an xml input file, called a checkpoint file (see
-`3.2.3 <#checkpoint>`__ for details). As well as being a valid input for
+`3.2.3 <#checkpoints>`__ for details). As well as being a valid input for
 i-PI, a checkpoint can also be used inside an tag to specify the
 configuration of the system, discarding other parameters of the
 simulation such as the current time step or the chosen ensemble. Input
@@ -325,7 +325,7 @@ specifying its (zero-based) index in the “bead” attribute.
 
 The quantities that can be output in trajectory files are:
 
-.. _checkpoint:
+.. _checkpoints:
 
 Checkpoint files
 ~~~~~~~~~~~~~~~~

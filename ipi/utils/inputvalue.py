@@ -779,8 +779,21 @@ class Input(object):
         """
 
         # stops when we've printed out the prerequisite number of levels
-        if stop_level is not None and level > stop_level:
-            return ""
+        leaf_level = False
+        has_link_heuristics = not (
+            type(self) is InputValue
+            or type(self) is InputAttribute
+            or type(self) is InputArray
+            or type(self) is InputDictionary
+            or type(self) is InputRaw
+        )
+        if has_link_heuristics:
+            print(f"Processing {name} type {type(self)} ")
+        if stop_level is not None:
+            if level > stop_level:
+                return ""
+            if level == stop_level:
+                leaf_level = True
 
         # these are booleans which tell us whether there are any attributes
         # and fields to print out
@@ -793,10 +806,15 @@ class Input(object):
         lindent = "   "  # increase of indentation with each layer
 
         if level == 0:
-            rstr = "\n" + name + "\n" + ("*" * len(name))
+            rstr = "\n" + name + "\n" + ("-" * len(name))
             rstr += "\n.. _" + name + ":\n"
         else:
-            rstr += "\n" + indent + ":" + name + ":\n"
+            rstr += (
+                "\n"
+                + indent
+                + (f"{name}_" if has_link_heuristics else f"**{name}**")
+                + "\n"
+            )
         # prints help string
         rstr += "\n" + indent + self._help + "\n"
 
@@ -824,8 +842,8 @@ class Input(object):
                 + "\n"
             )
 
-        if show_attribs:
-            rstr += "\n" + indent + "*ATTRIBUTES*" + "\n"
+        if show_attribs and len(self.attribs) > 0 and not leaf_level:
+            rstr += "\n" + indent + "ATTRIBUTES\n" + indent + "^^^^^^^^^^^" + "\n"
             for a in self.attribs:
                 if a == "units" and self._dimension == "undefined":
                     continue
@@ -838,8 +856,12 @@ class Input(object):
         # repeats the above instructions for any fields or dynamic tags.
         # these will only be printed if their level in the hierarchy is not above
         # the user specified limit.
-        if show_fields:
-            rstr += "\n" + indent + "*FIELDS*" + "\n"
+        if (
+            show_fields
+            and (len(self.instancefields) > 0 or len(self.dynamic) > 0)
+            and not leaf_level
+        ):
+            rstr += "\n" + indent + "FIELDS\n" + indent + "^^^^^^^" + "\n"
             for f in self.instancefields:
                 rstr += self.__dict__[f].help_rst(
                     f, lindent + indent, level + 1, stop_level
