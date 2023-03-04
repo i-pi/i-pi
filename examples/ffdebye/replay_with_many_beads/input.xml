@@ -22,7 +22,7 @@
            of trajectory files. If symbols *?[] are found in a filename,
            the code expects to find exactly nbeads files that match 
            the provided pattern. Bead indices will be read from the files. -->
-      <replay_file mode='xyz'> traj.pos_*.xyz </replay_file>
+      <file mode='xyz'> traj.pos_*.xyz </file>
     </motion>
   </system>
 </simulation>

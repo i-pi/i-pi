@@ -31,7 +31,7 @@
       <pressure units='megapascal'> 10 </pressure>
     </ensemble>
     <motion mode="replay">
-      <replay_file mode="ase"> filename </replay_file>
+      <file mode="ase"> filename </file>
     </motion>
   </system>
     </template> 

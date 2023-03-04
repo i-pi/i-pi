@@ -27,7 +27,7 @@
       <pressure units='megapascal'> 10 </pressure>
     </ensemble>
     <motion mode="replay">
-      <replay_file mode="ase"> traj.extxyz </replay_file>
+      <file mode="ase"> traj.extxyz </file>
     </motion>
   </system>
 </simulation>

@@ -156,7 +156,7 @@ class InputMotionBase(Input):
                 "help": "Option for constrained classical molecular dynamics",
             },
         ),
-        "replay_file": (
+        "file": (
             InputInitFile,
             {
                 "default": input_default(
