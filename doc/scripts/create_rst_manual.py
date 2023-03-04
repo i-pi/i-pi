@@ -28,7 +28,7 @@ from help import help, objects
 if not os.path.exists("input_ref_sections"):
     os.mkdir("input_ref_sections")
 
-ref_includes = open("input_ref_idx.rst", "w")
+ref_includes = open("input_ref_idx.inc", "w")
 
 # help(rst=True, prefix="manual")
 for opt in objects:
@@ -39,6 +39,10 @@ for opt in objects:
         prefix=("input_ref_sections/" + opt),
         standalone=False,
     )
-    ref_includes.write(f".. include:: input_ref_sections/{opt}.rst\n")
+    # rename as .inc to avoid spurious multiple includes
+    os.rename(
+        "input_ref_sections/" + opt + ".rst", "input_ref_sections/" + opt + ".inc"
+    )
+    ref_includes.write(f".. include:: input_ref_sections/{opt}.inc\n")
 # for opt in list_objects:
 #    help_list(option=opt, prefix=("input_ref_sections/" + opt), standalone=False)

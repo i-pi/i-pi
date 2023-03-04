@@ -806,13 +806,13 @@ class Input(object):
         lindent = "   "  # increase of indentation with each layer
 
         if level == 0:
-            rstr = "\n" + name + "\n" + ("-" * len(name))
             rstr += "\n.. _" + name + ":\n"
+            rstr += "\n" + name + "\n" + ("-" * len(name))
         else:
             rstr += (
                 "\n"
                 + indent
-                + (f"{name}_" if has_link_heuristics else f"**{name}**")
+                + (f":ref:`{name}`" if has_link_heuristics else f"**{name}**")
                 + "\n"
             )
         # prints help string

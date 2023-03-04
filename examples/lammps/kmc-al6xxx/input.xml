@@ -24,7 +24,6 @@
         <motion mode="al-kmc">
             <al6xxx_kmc>
                <optimizer mode="lbfgs"> 
-               
                     <ls_options> <iter> 3 </iter> </ls_options>
                </optimizer>
                <a0 units="angstrom"> 4.057 </a0>

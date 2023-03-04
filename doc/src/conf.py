@@ -22,7 +22,7 @@ copyright = "2021, The i-PI developers"
 author = "The i-PI developers"
 
 # The full version, including alpha/beta/rc tags
-release = "TODO VERSION"
+release = "2"
 
 
 # -- General configuration ---------------------------------------------------
@@ -39,7 +39,7 @@ templates_path = ["_templates"]
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store", "**/input_ref_sections/*"]
 
 
 bibtex_bibfiles = ["references.bib"]
