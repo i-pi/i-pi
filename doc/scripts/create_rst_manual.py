@@ -21,8 +21,7 @@ Also creates an xml file with the full list of all the tags.
 import os
 
 from help import help, objects
-
-# from help_list import help_list, list_objects
+from help_list import help_list, list_objects
 
 
 if not os.path.exists("input_ref_sections"):
@@ -44,5 +43,15 @@ for opt in objects:
         "input_ref_sections/" + opt + ".rst", "input_ref_sections/" + opt + ".inc"
     )
     ref_includes.write(f".. include:: input_ref_sections/{opt}.inc\n")
-# for opt in list_objects:
-#    help_list(option=opt, prefix=("input_ref_sections/" + opt), standalone=False)
+
+for opt in list_objects:
+    help_list(
+        option=opt,
+        prefix=("input_ref_sections/" + opt),
+        latex=False,
+        rst=True,
+        standalone=False,
+    )
+    os.rename(
+        "input_ref_sections/" + opt + ".rst", "input_ref_sections/" + opt + ".inc"
+    )

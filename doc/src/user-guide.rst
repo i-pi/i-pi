@@ -292,7 +292,10 @@ different parts:
    arguments are specified, then the defaults as defined in the
    properties.py module will be used.
 
-The different available properties are:
+List of available properties
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. include:: input_ref_sections/property_list.inc
 
 .. _trajectories:
 
@@ -323,7 +326,10 @@ automatically determined by appending the bead index to the specified
 also possible to output the quantity computed for a single bead by
 specifying its (zero-based) index in the “bead” attribute.
 
-The quantities that can be output in trajectory files are:
+List of available trajectory files
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. include:: input_ref_sections/trajectory_list.inc
 
 .. _checkpoints:
 

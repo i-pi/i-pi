@@ -787,8 +787,6 @@ class Input(object):
             or type(self) is InputDictionary
             or type(self) is InputRaw
         )
-        if has_link_heuristics:
-            print(f"Processing {name} type {type(self)} ")
         if stop_level is not None:
             if level > stop_level:
                 return ""
