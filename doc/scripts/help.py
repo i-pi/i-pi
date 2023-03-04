@@ -209,7 +209,7 @@ def help(
     if rst:
         rst_output = open(prefix + ".rst", "w")
         rst_output.write(
-            simrestart.help_rst(name="simulation", stop_level=levels, standalone=standalone)
+            simrestart.help_rst(name=option, stop_level=levels, standalone=standalone)
         )
 
 

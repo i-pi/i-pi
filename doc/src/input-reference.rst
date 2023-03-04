@@ -18,7 +18,7 @@ underlined. *Other supplementary information* will be in small font and
 italicized.
 
 
-.. include:: input_refs.rst
+.. include:: input_ref_idx.rst
 
 .. todo::
     port create_man to output rst instead of latex

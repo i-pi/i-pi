@@ -772,7 +772,7 @@ class Input(object):
            stop_level: The depth to which information will be given. If not given,
               all information will be given
            standalone: Should this be generated as a single document or as part of
-              a linked set of RST files? 
+              a linked set of RST files?
 
         Returns:
            An xml formatted string.
@@ -791,9 +791,9 @@ class Input(object):
 
         rstr = ""
         lindent = "   "  # increase of indentation with each layer
-        
-        if level==0:
-            rstr = "\n" + name + "\n" + ("*"*len(name))
+
+        if level == 0:
+            rstr = "\n" + name + "\n" + ("*" * len(name))
             rstr += "\n.. _" + name + ":\n"
         else:
             rstr += "\n" + indent + ":" + name + ":\n"

@@ -20,4 +20,4 @@ help:
 	@$(SPHINXBUILD) -M $@ "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
 input_refs:
-	python3 scripts/help.py -r -n 1 -o src/input_refs
+	cd src/ && PYTHONPATH=../../:../scripts/:$(PYTHONPATH) python3 ../scripts/create_rst_manual.py  &&	rm -f *.pyc && cd ..
