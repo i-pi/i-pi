@@ -472,11 +472,21 @@
             ELSEIF (vstyle == 30) THEN ! 3D harmonic potential
                    pot = 0.0d0
                    forces = 0.0d0
+                   virial = 0.0d0
                DO i=1,nat 
                    pot = pot + 0.5*ks*atoms(i,1)**2 + 0.5*ks*atoms(i,2)**2 + 0.5*ks*atoms(i,3)**2
                    forces(i,1) = -ks*atoms(i,1)
                    forces(i,2) = -ks*atoms(i,2)
                    forces(i,3) = -ks*atoms(i,3)
+                   virial(1,1) = virial(1,1) + forces(i,1)*atoms(i,1)
+                   virial(1,2) = virial(1,2) + forces(i,2)*atoms(i,1)
+                   virial(1,3) = virial(1,3) + forces(i,3)*atoms(i,1)
+                   virial(2,1) = virial(2,1) + forces(i,1)*atoms(i,2)
+                   virial(2,2) = virial(2,2) + forces(i,2)*atoms(i,2)
+                   virial(2,3) = virial(2,3) + forces(i,3)*atoms(i,2)
+                   virial(3,1) = virial(3,1) + forces(i,1)*atoms(i,3)
+                   virial(3,2) = virial(3,2) + forces(i,2)*atoms(i,3)
+                   virial(3,3) = virial(3,3) + forces(i,3)*atoms(i,3)
                 enddo
             ELSEIF (vstyle == 7) THEN ! linear potential in x position of the 1st atom
                pot = ks*atoms(1,1)
