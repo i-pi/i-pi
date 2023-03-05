@@ -319,7 +319,6 @@ class InputInitCell(InputInitBase):
 
         ibase = super(InputInitCell, self).fetch()
         if mode == "abc" or mode == "abcABC":
-
             h = io_xml.read_array(
                 float, ibase.value
             )  # As of numpy v1.20, numpy.float as well as similar aliases (including numpy.int) were deprecated
@@ -466,7 +465,7 @@ class InputInitializer(Input):
 
         self.extra = []
 
-        for (k, el) in ii.queue:
+        for k, el in ii.queue:
             if k == "positions":
                 ip = InputInitPositions()
                 ip.store(el)
@@ -501,7 +500,7 @@ class InputInitializer(Input):
 
         super(InputInitializer, self).fetch()
         initlist = []
-        for (k, v) in self.extra:
+        for k, v in self.extra:
             if v.mode.fetch() == "chk" and not v.fetch(
                 initclass=ei.InitIndexed
             ).units in ["", "automatic"]:

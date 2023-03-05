@@ -178,7 +178,6 @@ if input_geo != "None" or chk != "None":
     print("")
 
 if input_hess != "None" or chk != "None":
-
     if manual:
         try:
             hess = open(input_hess, "r")

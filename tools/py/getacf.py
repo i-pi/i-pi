@@ -26,7 +26,6 @@ def compute_acf(
     skip,
     der,
 ):
-
     # stores the arguments
     ifile = str(input_file)
     ofile = str(output_prefix)
@@ -103,7 +102,6 @@ def compute_acf(
         rr = read_file_raw("xyz", ff)
 
     while True:
-
         try:
             # Reads the data in blocks.
             for i in range(bsize):
@@ -158,7 +156,6 @@ def compute_acf(
 
 
 if __name__ == "__main__":
-
     # adds description of the program.
     parser = argparse.ArgumentParser(
         description="Given a xyz formatted vector, computes its autocorrelation function and its Fourier transform, Parses xyz formatted files with units specified accoridng to i-pi standards. Produces the result in atomic units."

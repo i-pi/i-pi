@@ -501,7 +501,6 @@ class AlKMC(Motion):
         return iu12
 
     def step(self, step=None):
-
         kT = Constants.kb * self.ensemble.temp
         # computes current energy (if not already stored)
         ostr = "".join(

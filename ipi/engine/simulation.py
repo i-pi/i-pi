@@ -382,7 +382,6 @@ class Simulation(dobject):
 
                 # tracemalloc memory traces
                 if verbosity.debug:
-
                     snapshot = tracemalloc.take_snapshot()
                     top_stats = snapshot.statistics("lineno")
                     info(" # DEBUG # Top 10 memory allocations: ")
