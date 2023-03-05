@@ -7,7 +7,6 @@ import time
 
 class A(dobject):
     def __init__(self):
-
         dself = dd(self)
 
         dself.scalar = depend_value(name="a_scalar", value=1)
@@ -31,14 +30,12 @@ class A(dobject):
 
 class B(dobject):
     def __init__(self):
-
         dself = dd(self)
 
         dself.scalar = depend_value(name="b_scalar", value=1)
         dself.vector = depend_array(name="b_vector", value=np.zeros(10))
 
     def bind(self, A):
-
         self.A = A
         dself = dd(self)
         dself.dscalar = depend_value(

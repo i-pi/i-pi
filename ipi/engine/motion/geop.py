@@ -944,7 +944,6 @@ class CGOptimizer(DummyOptimizer):
             info(" @GEOP: Determined SD direction", verbosity.debug)
 
         else:
-
             gradf0 = self.old_f
             dq0 = self.d
             gradf1 = dstrip(self.forces.f)

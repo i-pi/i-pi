@@ -287,7 +287,7 @@ class InputSimulation(Input):
 
         syslist = []
         fflist = []
-        for (k, v) in self.extra:
+        for k, v in self.extra:
             if k == "system":
                 syslist.append(v.fetch())
             elif k == "system_template":

@@ -19,7 +19,6 @@ from ipi.utils.io import read_file, print_file
 
 
 def main(filename, wrap=True):
-
     ipos = open(filename, "r")
     if wrap == "False":
         wrap = False

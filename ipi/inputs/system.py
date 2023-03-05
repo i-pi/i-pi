@@ -82,7 +82,7 @@ class InputSysTemplate(Input):
         template = self.template.fetch()
         labels = self.labels.fetch()
         lsys = []
-        for (k, v) in self.extra:
+        for k, v in self.extra:
             if k == "instance":
                 ins = v.fetch()
                 sys = template
