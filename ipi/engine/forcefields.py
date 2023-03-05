@@ -1563,8 +1563,9 @@ class FFCavPhSocket(FFSocket):
             # check the dimension of charge array
             if np.size(pos_bath[::3]) != np.size(charge_array_bath):
                 softexit.trigger(
-                    "The size of charge array = %d does not match the size of atoms = %d "
-                    % (np.size(charge_array_bath), np.size(pos_bath[::3]))
+                    "The size of charge array = {}  does not match the size of atoms = {} ".format(
+                        np.size(charge_array_bath), np.size(pos_bath[::3])
+                    )
                 )
             dx = np.sum(pos_bath[::3] * charge_array_bath)
             dy = np.sum(pos_bath[1::3] * charge_array_bath)
