@@ -22,8 +22,10 @@ copyright = "2021, The i-PI developers"
 author = "The i-PI developers"
 
 # The full version, including alpha/beta/rc tags
-release = "2"
-
+import configparser
+config = configparser.ConfigParser()
+config.read('../../setup.cfg')
+release = config['metadata']['version']
 
 # -- General configuration ---------------------------------------------------
 needs_sphinx = "3.2"
