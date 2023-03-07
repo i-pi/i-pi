@@ -7,12 +7,12 @@
 
                   -- Running the VASP example --
 
- * In order to run VASP with i-PI, you will need to apply a patch that is compatible with VASP.5.4.4
-   Run the following in the top level directory of VASP
+ * In order to run VASP with i-PI, you will need to apply a patch that is compatible with your version of VASP
+   Run the following in the top level directory of VASP, setting the corresponding version number for X.X.X
 
-   patch -p0 < vasp.5.4.4-ipi.patch
-
- * It is then necessary to compile VASP (for older versions please patch it), 
+   patch -p0 < vasp.X.X.X-ipi.patch
+   
+ * It is then necessary to compile VASP (for other than the available versions please patch it), 
    and create a make.in file containing the path to vasp_std, e.g.
 
 VASP:=~/bin/vasp_std
