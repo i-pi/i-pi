@@ -16,10 +16,9 @@ T.Tian <alchem0x2a@gmail.com>
 """
 import re
 import os
+import shutil
 from argparse import ArgumentParser
 from pathlib import Path
-from copy import copy
-import shutil
 
 fpath = Path(__file__)
 fdir = fpath.parent
