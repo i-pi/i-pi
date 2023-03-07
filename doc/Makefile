@@ -12,7 +12,7 @@ BUILDDIR      = _build
 help:
 	@$(SPHINXBUILD) -M help "$(SOURCEDIR)" "$(BUILDDIR)" $(SPHINXOPTS) $(O)
 
-.PHONY: help Makefile input_refs
+.PHONY: help Makefile input_refs latex
 
 # Catch-all target: route all unknown targets to Sphinx using the new
 # "make mode" option.  $(O) is meant as a shortcut for $(SPHINXOPTS).
@@ -21,3 +21,6 @@ help:
 
 input_refs:
 	cd src/ && PYTHONPATH=../../:../scripts/:$(PYTHONPATH) python3 ../scripts/create_rst_manual.py  &&	rm -f *.pyc && cd ..
+
+latex: 
+	make -C latex

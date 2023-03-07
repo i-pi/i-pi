@@ -772,10 +772,10 @@ class Input(object):
            stop_level: The depth to which information will be given. If not given,
               all information will be given
            standalone: Should this be generated as a single document or as part of
-              a linked set of RST files?
+              a linked set of RST files? (currently unused)
 
         Returns:
-           An xml formatted string.
+           An rst formatted string.
         """
 
         # stops when we've printed out the prerequisite number of levels
@@ -814,7 +814,7 @@ class Input(object):
                 + "\n"
             )
         # prints help string
-        rstr += "\n" + indent + self._help + "\n"
+        rstr += "\n" + indent + " ".join(self._help.split()) + "\n"
 
         # if possible, prints out the type of data that is being used
         if issubclass(self.__class__, InputAttribute):
