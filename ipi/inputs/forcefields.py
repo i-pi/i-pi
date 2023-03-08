@@ -24,6 +24,7 @@ from ipi.interfaces.sockets import InterfaceSocket
 import ipi.engine.initializer
 from ipi.inputs.initializer import *
 from ipi.utils.inputvalue import *
+from ipi.utils.messages import verbosity, warning
 
 __all__ = [
     "InputFFSocket",
@@ -218,9 +219,9 @@ class InputFFSocket(InputForceField):
             InputAttribute,
             {
                 "dtype": str,
-                "options": ["auto", "any"],
+                "options": ["auto", "any", "lock"],
                 "default": "auto",
-                "help": "Specifies whether requests should be dispatched to any client, or automatically matched to the same client when possible [auto].",
+                "help": "Specifies whether requests should be dispatched to any client, automatically matched to the same client when possible [auto] or strictly forced to match with the same client [lock].",
             },
         ),
     }
@@ -274,6 +275,15 @@ class InputFFSocket(InputForceField):
         if self.threaded.fetch() is False:
             raise ValueError("FFSockets cannot poll without threaded mode.")
         # just use threaded throughout
+
+        # if using forced match mode, ensure softexit called upon disconnection of a client.
+        if self.matching.fetch() == "lock":
+            warning(
+                'When using matching="lock" pay attention to the possibility of superfluous drivers idling if there are more client codes connected than there are replicas.',
+                verbosity.low,
+            )
+            self.exit_on_disconnect.store(True)
+
         return FFSocket(
             pars=self.parameters.fetch(),
             name=self.name.fetch(),
