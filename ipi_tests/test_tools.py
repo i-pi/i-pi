@@ -197,6 +197,20 @@ def modify_xml_4_dummy_test(
                     clients[s].append(k)
                     clients[s].extend(v)
 
+        # if there are remaining drivers, assign them to the last socket
+        if (s == len(ff_sockets) - 1) and (
+            len(driver_info["driver_model"]) > len(ff_sockets)
+        ):
+            for remaining_client_idx in range(s + 1, len(driver_info["driver_model"])):
+                model = driver_info["driver_model"][remaining_client_idx]
+                clients.append([model, "unix", address, port])
+
+                for key in driver_info["flag"][remaining_client_idx].keys():
+                    if "-" in key:
+                        for k, v in driver_info["flag"][remaining_client_idx].items():
+                            clients[remaining_client_idx].append(k)
+                            clients[remaining_client_idx].extend(v)
+
     element = root.find("total_steps")
     if test_settings is not None:
         if element is not None:

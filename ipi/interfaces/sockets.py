@@ -748,6 +748,8 @@ class InterfaceSocket(object):
             match_seq = ["match", "none", "free", "any"]
         elif self.match_mode == "any":
             match_seq = ["any"]
+        elif self.match_mode == "lock":
+            match_seq = ["match", "none"]
 
         # first: dispatches jobs to free clients (if any!)
         # tries first to match previous replica<>driver association, then to get new clients, and only finally send the a new replica to old drivers
@@ -762,6 +764,11 @@ class InterfaceSocket(object):
 
                     if len(self.prlist) == 0:
                         break
+            # if using lock mode, check that there is a at least one client-replica match in the lists freec and prlist.
+            # If not, we break out of the while loop
+            if self.match_mode == "lock":
+                break
+
             if len(freec) > 0:
                 self.prlist = [r for r in self.requests if r["status"] == "Queued"]
         tdispatch += time.time()
@@ -821,6 +828,15 @@ class InterfaceSocket(object):
                 continue
             elif match_ids == "none" and fc.lastreq is not None:
                 continue
+            elif (
+                self.match_mode == "lock"
+                and match_ids == "none"
+                and (r["id"] in [c.lastreq for c in self.clients])
+            ):
+                # if using lock mode and the user connects more clients than there are replicas, do not allow this client to
+                # be matched with a pending request.
+                continue
+
             elif match_ids == "free" and fc.locked:
                 continue
 
