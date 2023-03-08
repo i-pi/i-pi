@@ -6,13 +6,19 @@
 *******************************************************************************
 
                   -- Running the VASP example --
+ * In order to run VASP with i-PI, you will need to apply a patch to the VASP source code to add socket support.
+   We provide a python3 script `patch_vasp.py` to automate the patching process that is compatible with VASP version >= 5.4:
 
- * In order to run VASP with i-PI, you will need to apply a patch that is compatible with VASP.5.4.4
-   Run the following in the top level directory of VASP
+   python patch_vasp.py vasp.X.Y.Z/src
 
-   patch -p0 < vasp.5.4.4-ipi.patch
+   where `vasp.X.Y.Z` is the top level directory of the decompressed VASP source code.
 
- * It is then necessary to compile VASP (for older versions please patch it), 
+ * Alternatively, there are also version-specific patch files in this directory you can use.
+   Run the following in the top level directory of VASP, setting the corresponding version number for X.X.X
+
+   patch -p0 < vasp.X.X.X-ipi.patch
+   
+ * It is then necessary to compile VASP (for other than the available versions please patch it), 
    and create a make.in file containing the path to vasp_std, e.g.
 
 VASP:=~/bin/vasp_std

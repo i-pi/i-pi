@@ -84,6 +84,7 @@ objects = {
     "ffyaff": forcefields.InputFFYaff(),
     "ffsgdml": forcefields.InputFFsGDML(),
     "ffcommittee": forcefields.InputFFCommittee(),
+    "ffcavphsocket": forcefields.InputFFCavPhSocket(),
     "forcecomponent": forces.InputForceComponent(),
     "forces": forces.InputForces(),
     "atoms": atoms.InputAtoms(),
