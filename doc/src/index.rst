@@ -50,3 +50,4 @@ This documentation is structured as follows:
    faq
    contributing
    bibliography
+

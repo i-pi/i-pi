@@ -487,7 +487,7 @@ class InputFFDebye(InputForceField):
 
 class InputFFPlumed(InputForceField):
     fields = {
-        "init_file": (
+        "file": (
             InputInitFile,
             {
                 "default": input_default(

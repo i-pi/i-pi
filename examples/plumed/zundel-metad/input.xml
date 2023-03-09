@@ -7,7 +7,7 @@
          <address>zundel</address>
    </ffsocket>
    <ffplumed name="plumed">
-         <init_file mode="xyz">./h5o2+.xyz</init_file>
+         <file mode="xyz">./h5o2+.xyz</file>
          <plumeddat> plumed/plumed.dat </plumeddat>
    </ffplumed>
    <total_steps>400</total_steps>
