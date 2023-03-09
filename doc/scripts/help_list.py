@@ -15,7 +15,7 @@ A full help message can be found by running 'python help.py -h' or
 
 import sys
 from optparse import OptionParser
-from ipi.engine.properties import Properties, Trajectories, help_latex
+from ipi.engine.properties import Properties, Trajectories, help_latex, help_rst
 
 src_dir = ".."
 
@@ -54,7 +54,9 @@ if options.opt not in list_objects:
     raise ValueError("Option " + options.opt + " is not a viable tag name")
 
 
-def help_list(option="property_list", prefix="help", standalone=True):
+def help_list(
+    option="property_list", prefix="help", standalone=True, latex=True, rst=False
+):
     """Writes the help file.
 
     Will write a latex file 'prefix.tex'. Can also print out
@@ -79,8 +81,12 @@ def help_list(option="property_list", prefix="help", standalone=True):
     else:
         raise ValueError("Incorrect option specified.")
 
-    latex_output = open(prefix + ".tex", "w")
-    latex_output.write(help_latex(idict, standalone=standalone))
+    if latex:
+        latex_output = open(prefix + ".tex", "w")
+        latex_output.write(help_latex(idict, standalone=standalone))
+    if rst:
+        rst_output = open(prefix + ".rst", "w")
+        rst_output.write(help_rst(idict, standalone=standalone))
 
 
 if __name__ == "__main__":

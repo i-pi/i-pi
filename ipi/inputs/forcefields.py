@@ -18,11 +18,13 @@ from ipi.engine.forcefields import (
     FFsGDML,
     FFCommittee,
     FFdmd,
+    FFCavPhSocket,
 )
 from ipi.interfaces.sockets import InterfaceSocket
 import ipi.engine.initializer
 from ipi.inputs.initializer import *
 from ipi.utils.inputvalue import *
+from ipi.utils.messages import verbosity, warning
 
 __all__ = [
     "InputFFSocket",
@@ -33,6 +35,7 @@ __all__ = [
     "InputFFsGDML",
     "InputFFCommittee",
     "InputFFdmd",
+    "InputFFCavPhSocket",
 ]
 
 
@@ -216,9 +219,9 @@ class InputFFSocket(InputForceField):
             InputAttribute,
             {
                 "dtype": str,
-                "options": ["auto", "any"],
+                "options": ["auto", "any", "lock"],
                 "default": "auto",
-                "help": "Specifies whether requests should be dispatched to any client, or automatically matched to the same client when possible [auto].",
+                "help": "Specifies whether requests should be dispatched to any client, automatically matched to the same client when possible [auto] or strictly forced to match with the same client [lock].",
             },
         ),
     }
@@ -246,7 +249,7 @@ class InputFFSocket(InputForceField):
            ff: A ForceField object with a FFSocket forcemodel object.
         """
 
-        if not type(ff) is FFSocket:
+        if (not type(ff) is FFSocket) and (not type(ff) is FFCavPhSocket):
             raise TypeError(
                 "The type " + type(ff).__name__ + " is not a valid socket forcefield"
             )
@@ -272,6 +275,15 @@ class InputFFSocket(InputForceField):
         if self.threaded.fetch() is False:
             raise ValueError("FFSockets cannot poll without threaded mode.")
         # just use threaded throughout
+
+        # if using forced match mode, ensure softexit called upon disconnection of a client.
+        if self.matching.fetch() == "lock":
+            warning(
+                'When using matching="lock" pay attention to the possibility of superfluous drivers idling if there are more client codes connected than there are replicas.',
+                verbosity.low,
+            )
+            self.exit_on_disconnect.store(True)
+
         return FFSocket(
             pars=self.parameters.fetch(),
             name=self.name.fetch(),
@@ -475,7 +487,7 @@ class InputFFDebye(InputForceField):
 
 class InputFFPlumed(InputForceField):
     fields = {
-        "init_file": (
+        "file": (
             InputInitFile,
             {
                 "default": input_default(
@@ -830,4 +842,123 @@ class InputFFCommittee(InputForceField):
             baseline_name=self.baseline_name.fetch(),
             active_thresh=self.active_thresh.fetch(),
             active_out=self.active_output.fetch(),
+        )
+
+
+class InputFFCavPhSocket(InputFFSocket):
+    default_help = """A cavity molecular dynamics driver for vibraitonal strong coupling. 
+                      In the current implementation, only a single cavity mode polarized along the x and y directions is coupled to the molecules.
+                      Check https://doi.org/10.1073/pnas.2009272117 and also examples/lammps/h2o-cavmd/ for details.
+                   """
+    default_label = "FFCAVPHSOCKET"
+
+    fields = {
+        "charge_array": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.zeros, args=(0,)),
+                "help": "The partial charges of all the atoms, in the format [Q1, Q2, ... ].",
+                "dimension": "length",
+            },
+        ),
+        "apply_photon": (
+            InputValue,
+            {
+                "dtype": bool,
+                "default": False,
+                "help": "Determines if additional photonic degrees of freedom is included or not.",
+            },
+        ),
+        "E0": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 0.0,
+                "help": "The value of varepsilon (effective light-matter coupling strength) in atomic units.",
+            },
+        ),
+        "omega_c": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 0.01,
+                "help": "This gives the cavity photon frequency at normal incidence.",
+                "dimension": "frequency",
+            },
+        ),
+        "ph_rep": (
+            InputValue,
+            {
+                "dtype": str,
+                "default": "loose",
+                "options": [
+                    "loose",
+                    "dense",
+                ],
+                "help": """In the current implementation, two energy-degenerate photon modes polarized along x and y directions
+                are coupled to the molecular system. If 'loose', the cavity photons polarized along the x, y directions are represented by two 'L' atoms; 
+                the x dimension of the first 'L' atom is coupled to the molecules, and the y dimension of the second 'L' atom is coupled to the molecules.
+                If 'dense', the cavity photons polarized along the x, y directions are represented by one 'L' atom; 
+                the x and y dimensions of this 'L' atom are coupled to the molecules.""",
+            },
+        ),
+    }
+
+    fields.update(InputFFSocket.fields)
+
+    attribs = {}
+    attribs.update(InputFFSocket.attribs)
+
+    def store(self, ff):
+        """Takes a ForceField instance and stores a minimal representation of it.
+
+        Args:
+           ff: A ForceField object with a FFCavPhSocket forcemodel object.
+        """
+
+        if not type(ff) is FFCavPhSocket:
+            raise TypeError(
+                "The type " + type(ff).__name__ + " is not a valid socket forcefield"
+            )
+        super(InputFFCavPhSocket, self).store(ff)
+
+        self.charge_array.store(ff.charge_array)
+        self.apply_photon.store(ff.apply_photon)
+        self.E0.store(ff.E0)
+        self.omega_c.store(ff.omega_c)
+        self.ph_rep.store(ff.ph_rep)
+
+    def fetch(self):
+        """Creates a ForceSocket object.
+
+        Returns:
+           A ForceSocket object with the correct socket parameters.
+        """
+
+        if self.threaded.fetch() == False:
+            raise ValueError("FFCavPhFPSockets cannot poll without threaded mode.")
+
+        # just use threaded throughout
+        return FFCavPhSocket(
+            pars=self.parameters.fetch(),
+            name=self.name.fetch(),
+            latency=self.latency.fetch(),
+            dopbc=self.pbc.fetch(),
+            active=self.activelist.fetch(),
+            threaded=self.threaded.fetch(),
+            interface=InterfaceSocket(
+                address=self.address.fetch(),
+                port=self.port.fetch(),
+                slots=self.slots.fetch(),
+                mode=self.mode.fetch(),
+                timeout=self.timeout.fetch(),
+                match_mode=self.matching.fetch(),
+                exit_on_disconnect=self.exit_on_disconnect.fetch(),
+            ),
+            charge_array=self.charge_array.fetch(),
+            apply_photon=self.apply_photon.fetch(),
+            E0=self.E0.fetch(),
+            omega_c=self.omega_c.fetch(),
+            ph_rep=self.ph_rep.fetch(),
         )

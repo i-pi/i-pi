@@ -7,15 +7,15 @@
          <address>zundel</address>
    </ffsocket>
    <ffplumed name="plumed-200K">
-         <init_file mode="xyz">./h5o2+.xyz</init_file>
+         <file mode="xyz">./h5o2+.xyz</file>
          <plumeddat> plumed-200K/plumed.dat </plumeddat>
    </ffplumed>
    <ffplumed name="plumed-250K">
-         <init_file mode="xyz">./h5o2+.xyz</init_file>
+         <file mode="xyz">./h5o2+.xyz</file>
          <plumeddat> plumed-250K/plumed.dat </plumeddat>
    </ffplumed>
    <ffplumed name="plumed-320K">
-         <init_file mode="xyz">./h5o2+.xyz</init_file>
+         <file mode="xyz">./h5o2+.xyz</file>
          <plumeddat> plumed-320K/plumed.dat </plumeddat>
    </ffplumed>
    <total_steps>20000</total_steps>

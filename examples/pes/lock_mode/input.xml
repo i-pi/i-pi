@@ -1,0 +1,37 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='5' filename='out'>  [ step, time{picosecond}, conserved{kelvin}, temperature{kelvin}, kinetic_cv{kelvin}, potential{kelvin}, pressure_cv{megapascal}] </properties>
+    <trajectory filename='pos' stride='5' format='xyz' cell_units='angstrom'> positions{angstrom} </trajectory>
+    <trajectory filename='force' stride='5' format='xyz' cell_units='angstrom'> forces{piconewton} </trajectory>
+  </output>
+  <total_steps>100</total_steps>
+  <prng>
+    <seed>3348</seed>
+  </prng>
+  <ffsocket mode='unix' name='driver' matching='lock'>
+    <address>localhost</address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='4'>
+      <cell mode='abc'>
+        [   15., 15.0, 15.0 ]
+      </cell>
+      <file mode='xyz'> init.xyz </file>
+      <velocities mode='thermal' units='kelvin'>3683.412077</velocities>
+    </initialize>
+    <forces>
+      <force forcefield='driver'/>
+    </forces>
+    <ensemble>
+      <temperature units='kelvin'>3683.412077</temperature>
+    </ensemble>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'>25</tau>
+        </thermostat>
+        <timestep units='femtosecond'>0.003</timestep>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>
