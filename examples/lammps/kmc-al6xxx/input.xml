@@ -23,9 +23,9 @@
         </forces>
         <motion mode="al-kmc">
             <al6xxx_kmc>
-               <geop mode="lbfgs"> 
+               <optimizer mode="lbfgs"> 
                     <ls_options> <iter> 3 </iter> </ls_options>
-               </geop>
+               </optimizer>
                <a0 units="angstrom"> 4.057 </a0>
                <nstep> 5 </nstep>
                <ncell> 5 </ncell>

@@ -8,11 +8,11 @@
       input reference sections of the manual.
 
  * Files:
-   - create_man.py: python script which automatically generates latex help files
+   - ../scripts/create_man.py: python script which automatically generates latex help files
       for all the classes, for use in the manual.
-   - help_list.py: python script which can generate custom help files for
+   - ../scripts/help_list.py: python script which can generate custom help files for
       the output classes, for use in the manual.
-   - help.py: python script which can generate custom help files for
+   - ../scripts/help.py: python script which can generate custom help files for
       each of the input classes, for use in the manual.
    - Makefile: The makefile for the automatically generated manual.
    - manual.tex: TeX file giving the manual template.

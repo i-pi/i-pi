@@ -128,7 +128,6 @@ def heatCapacity(prefix, temp, ss=0):
     time0 = 0
     q, f, m = None, None, None
     while True:  # Reading input files and calculating PPI correction
-
         if ifr % 100 == 0:
             print("\rProcessing frame {:d}".format(ifr), end=" ")
             sys.stdout.flush()
@@ -147,17 +146,14 @@ def heatCapacity(prefix, temp, ss=0):
             sys.exit(0)
 
         if ifr < skipSteps:
-
             time0 = time
 
         if ifr >= skipSteps:  # PPI correction
-
             time -= time0
 
             KPa, f2 = 0.0, 0.0
 
             if not fast_code:
-
                 for j in range(nbeads):
                     for i in range(natoms):
                         f2 += (
@@ -186,7 +182,6 @@ def heatCapacity(prefix, temp, ss=0):
                 KPa += const_2 * natoms
 
             else:
-
                 f2 = fortran.f2divm(
                     np.array(f, order="F"), np.array(m, order="F"), natoms, nbeads
                 )
@@ -323,10 +318,8 @@ def read_U(filedesc, potentialEnergyUnit, potentialEnergy_index, time_index):
 
 
 def main(*arg):
-
     heatCapacity(*arg)
 
 
 if __name__ == "__main__":
-
     main(*sys.argv[1:])

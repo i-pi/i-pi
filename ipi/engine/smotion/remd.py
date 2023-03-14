@@ -23,6 +23,7 @@ __all__ = ["ReplicaExchange"]
 # TODO: Do not shout :-)
 #       (1) Exchange of Hamiltonians is missing
 
+
 # utility functions to traverse systems to rescale all of the s momenta of
 # GLE thermostats that might be around. should look also inside multi-motion
 # and multi-thermo classes
@@ -81,7 +82,6 @@ class ReplicaExchange(Smotion):
         self.mode = "remd"
 
     def bind(self, syslist, prng, omaker):
-
         super(ReplicaExchange, self).bind(syslist, prng, omaker)
 
         if self.repindex is None or len(self.repindex) == 0:

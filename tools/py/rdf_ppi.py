@@ -35,7 +35,6 @@ from ipi.utils.io import read_file
 
 
 def RDF(prefix, temp, A, B, nbins, r_min, r_max, ss=0, unit="angstrom"):
-
     # Adding fortran functions (when exist)
     sys.path.append(os.path.abspath(os.path.dirname(sys.argv[0]))[:-2] + "f90")
     try:
@@ -124,7 +123,6 @@ def RDF(prefix, temp, A, B, nbins, r_min, r_max, ss=0, unit="angstrom"):
     noteof = True  # end of file test variable
 
     while noteof:  # Reading input files and calculating PPI correction
-
         if ifr % 100 == 0:
             print("\rProcessing frame {:d}".format(ifr), end=" ")
             sys.stdout.flush()
@@ -146,7 +144,6 @@ def RDF(prefix, temp, A, B, nbins, r_min, r_max, ss=0, unit="angstrom"):
 
         if noteof:
             if ifr >= skipSteps:  # RDF calculations
-
                 species_A = [
                     3 * i + j
                     for i in np.where(mass == speciesMass[0])[0]
@@ -199,7 +196,6 @@ def RDF(prefix, temp, A, B, nbins, r_min, r_max, ss=0, unit="angstrom"):
                 ifr += 1
 
             if ifr > skipSteps and ifr % 100 == 0:
-
                 # Some constants
                 const = 1.0 / float(ifr - skipSteps)
                 alpha = Constants.hbar**2 / (
@@ -253,10 +249,8 @@ def RDF(prefix, temp, A, B, nbins, r_min, r_max, ss=0, unit="angstrom"):
 
 
 def main(*arg):
-
     RDF(*arg)
 
 
 if __name__ == "__main__":
-
     main(*sys.argv[1:])

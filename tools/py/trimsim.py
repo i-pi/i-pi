@@ -31,7 +31,6 @@ from ipi.utils.io.inputs import io_xml
 
 
 def main(inputfile, outdir="trim"):
-
     # opens & parses the input file
     ifile = open(inputfile, "r")
     xmlrestart = io_xml.xml_parse_file(ifile)  # Parses the file.
@@ -186,7 +185,6 @@ def main(inputfile, outdir="trim"):
     # now reads files one frame at a time, and re-direct output to the appropriate location
     for step in range(trimstep + 1):
         try:
-
             for prop in lprop:
                 for isys in range(nsys):
                     sprop = prop[isys]

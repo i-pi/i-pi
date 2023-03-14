@@ -35,7 +35,6 @@ def test_example(ex, verbose=False):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(
         formatter_class=RawTextHelpFormatter,
         description=""

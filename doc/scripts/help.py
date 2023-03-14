@@ -54,28 +54,36 @@ time.sleep(1)
 __all__ = ["help", "objects"]
 
 objects = {
-    "barostats": barostats.InputBaro(),
-    "cell": cell.InputCell(),
     "simulation": simulation.InputSimulation(),
+    "system": system.InputSystem(),
+    "system_template": system.InputSysTemplate(),
+    "motion": motion.motion.InputMotion(),
+    "cell": cell.InputCell(),
     "smotion": smotion.smotion.InputSmotion(),
     "remd": smotion.remd.InputReplicaExchange(),
-    "meta": smotion.metad.InputMetaDyn(),
-    "driven": smotion.dmd.InputDMD(),
-    "system": system.InputSystem(),
-    "ensembles": ensembles.InputEnsemble(),
-    "motion": motion.motion.InputMotion(),
+    "metad": smotion.metad.InputMetaDyn(),
+    "dmd": smotion.dmd.InputDMD(),
+    "ensemble": ensembles.InputEnsemble(),
+    "bias": forces.InputForces(),
     "dynamics": motion.dynamics.InputDynamics(),
+    "constrained_dynamics": motion.constrained_dynamics.InputConstrainedDynamics(),
+    "csolver": motion.constrained_dynamics.InputConstraintSolver(),
+    "constraint": motion.constrained_dynamics.InputConstraint(),
     "t_ramp": motion.ramp.InputTemperatureRamp(),
     "p_ramp": motion.ramp.InputPressureRamp(),
     "alchemy": motion.alchemy.InputAlchemy(),
     "planetary": motion.planetary.InputPlanetary(),
     "atomswap": motion.atomswap.InputAtomSwap(),
     "instanton": motion.instanton.InputInst(),
-    "phonons": motion.phonons.InputDynMatrix(),
-    "geop": motion.geop.InputGeop(),
-    "neb": motion.neb.InputNEB(),
-    "stringmep": motion.stringmep.InputStringMEP(),
-    "thermostats": thermostats.InputThermo(),
+    "vibrations": motion.phonons.InputDynMatrix(),
+    "scp": motion.scphonons.InputSCPhonons(),
+    "normalmodes": motion.vscf.InputNormalMode(),
+    "optimizer": motion.geop.InputGeop(),
+    "neb_optimizer": motion.neb.InputNEB(),
+    "string_optimizer": motion.stringmep.InputStringMEP(),
+    "thermostat": thermostats.InputThermo(),
+    "barostat": barostats.InputBaro(),
+    "h0": cell.InputCell(),
     "forcefield": forcefields.InputForceField(),
     "ffsocket": forcefields.InputFFSocket(),
     "fflj": forcefields.InputFFLennardJones(),
@@ -83,23 +91,26 @@ objects = {
     "ffplumed": forcefields.InputFFPlumed(),
     "ffyaff": forcefields.InputFFYaff(),
     "ffsgdml": forcefields.InputFFsGDML(),
+    "ffdmd": forcefields.InputFFdmd(),
     "ffcommittee": forcefields.InputFFCommittee(),
-    "forcecomponent": forces.InputForceComponent(),
+    "ffcavphsocket": forcefields.InputFFCavPhSocket(),
     "forces": forces.InputForces(),
+    "force": forces.InputForceComponent(),
+    "al6xxx_kmc": motion.al6xxx_kmc.InputAlKMC(),
     "atoms": atoms.InputAtoms(),
     "beads": beads.InputBeads(),
     "prng": prng.InputRandom(),
-    "normalmodes": normalmodes.InputNormalModes(),
-    "nmfrequencies": normalmodes.InputNMFrequencies(),
-    "init_file": initializer.InputInitFile(),
-    "init_pos": initializer.InputInitPositions(),
-    "init_mom": initializer.InputInitMomenta(),
-    "init_lab": initializer.InputInitLabels(),
-    "init_mass": initializer.InputInitMasses(),
-    "init_vel": initializer.InputInitVelocities(),
+    "normal_modes": normalmodes.InputNormalModes(),
+    "frequencies": normalmodes.InputNMFrequencies(),
+    "initialize": initializer.InputInitializer(),
+    "file": initializer.InputInitFile(),
+    "positions": initializer.InputInitPositions(),
+    "momenta": initializer.InputInitMomenta(),
+    "labels": initializer.InputInitLabels(),
+    "masses": initializer.InputInitMasses(),
+    "velocities": initializer.InputInitVelocities(),
     "init_cell": initializer.InputInitCell(),
-    "init_therm": initializer.InputInitThermo(),
-    "initializer": initializer.InputInitializer(),
+    "gle": initializer.InputInitThermo(),
     "output": outputs.InputOutputs(),
     "properties": outputs.InputProperties(),
     "checkpoint": outputs.InputCheckpoint(),
@@ -110,6 +121,9 @@ usage = "usage: python %prog [options]"
 parser = OptionParser(usage=usage)
 parser.add_option(
     "-x", action="store_true", dest="xml", default=False, help="write an xml help file"
+)
+parser.add_option(
+    "-r", action="store_true", dest="rst", default=False, help="write an rst help file"
 )
 parser.add_option(
     "-l",
@@ -143,12 +157,13 @@ parser.add_option(
     default="simulation",
 )
 parser.add_option(
-    "-r",
+    "-c",
     action="store_true",
     dest="ref",
     default=False,
-    help="add references to a latex help file. Ignored if -l is not present",
+    help="add cross-references to a latex help file. Ignored if -l is not present",
 )
+
 (options, args) = parser.parse_args()
 
 if options.opt not in objects:
@@ -158,6 +173,7 @@ if options.opt not in objects:
 def help(
     latex=False,
     xml=False,
+    rst=False,
     levels=None,
     option="simulation",
     prefix="help",
@@ -177,6 +193,7 @@ def help(
     Args:
        latex: Boolean specifying whether a latex file will be printed.
        xml: Boolean specifying whether an xml file will be printed.
+       rst: Boolean specifying whether an rst file will be printed.
        levels: An integer specifying how many layers of the hierarchy will be
           printed. If not given, all layers will be printed.
        option: A string specifying which object will be used as the root object
@@ -197,12 +214,18 @@ def help(
         latex_output.write(
             simrestart.help_latex(stop_level=levels, standalone=standalone)
         )
+    if rst:
+        rst_output = open(prefix + ".rst", "w")
+        rst_output.write(
+            simrestart.help_rst(name=option, stop_level=levels, standalone=standalone)
+        )
 
 
 if __name__ == "__main__":
     help(
         options.latex,
         options.xml,
+        options.rst,
         options.levels,
         options.opt,
         options.prefix,

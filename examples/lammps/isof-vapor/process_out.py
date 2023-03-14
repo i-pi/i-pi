@@ -27,7 +27,6 @@ out = np.zeros((asize - equilibriumstep, 7))
 count = 0
 
 for a in range(asize):
-
     if a >= equilibriumstep:
         out[count][0] = table[a][1]
         out[count][1] = table[a][9]

@@ -20,7 +20,6 @@ with prefix.kin.xyz and prefix.kod.xyz naming scheme.
 
 
 def main(prefix, lag):
-
     verbosity.level = "low"
     lag = int(lag)
 

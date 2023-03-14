@@ -170,6 +170,10 @@ class InputSimulation(Input):
             iforcefields.InputFFsGDML,
             {"help": iforcefields.InputFFsGDML.default_help},
         ),
+        "ffcavphsocket": (
+            iforcefields.InputFFCavPhSocket,
+            {"help": iforcefields.InputFFCavPhSocket.default_help},
+        ),
     }
 
     default_help = "This is the top level class that deals with the running of the simulation, including holding the simulation specific properties such as the time step and outputting the data."
@@ -251,6 +255,10 @@ class InputSimulation(Input):
                     _iobj = iforcefields.InputFFCommittee()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("ffcommittee", _iobj)
+                elif isinstance(_obj, eforcefields.FFCavPhSocket):
+                    _iobj = iforcefields.InputFFCavPhSocket()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffcavphsocket", _iobj)
                 elif isinstance(_obj, System):
                     _iobj = InputSystem()
                     _iobj.store(_obj)
@@ -287,7 +295,7 @@ class InputSimulation(Input):
 
         syslist = []
         fflist = []
-        for (k, v) in self.extra:
+        for k, v in self.extra:
             if k == "system":
                 syslist.append(v.fetch())
             elif k == "system_template":
@@ -304,6 +312,7 @@ class InputSimulation(Input):
                 or k == "ffsgdml"
                 or k == "ffyaff"
                 or k == "ffcommittee"
+                or k == "ffcavphsocket"
             ):
                 info(" # @simulation: Fetching" + k, verbosity.low)
                 fflist.append(v.fetch())

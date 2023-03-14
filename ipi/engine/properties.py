@@ -159,6 +159,47 @@ def help_latex(idict, standalone=True):
     return rstr
 
 
+def help_rst(idict, standalone=True):
+    """Function to generate a REST formatted string.
+
+    Can be used in the manual to list the different available outputs.
+
+    Args:
+       idict: Either property_dict or traj_dict, to be used to
+          generate the help file.
+       standalone: A boolean giving whether the RST file produced will be a
+          stand-alone document, or will be intended as a section of a larger
+          document with cross-references between the different sections.
+
+    Returns:
+       A RST formatted string.
+    """
+
+    rstr = ""
+    for out in sorted(idict):
+        rstr += f"**{out}**:\n"
+        if "longhelp" in idict[out]:
+            rstr += " ".join(idict[out]["longhelp"].split())
+        else:
+            rstr += " ".join(idict[out]["help"].split())
+
+        # see if there are additional attributes to print out
+        xstr = ""
+        if (
+            "dimension" in idict[out]
+            and idict[out]["dimension"] != "undefined"
+            and len(idict[out]["dimension"]) > 0
+        ):  # doesn't print out dimension if not necessary.
+            xstr += "dimension: " + idict[out]["dimension"] + "; "
+        if "size" in idict[out]:
+            xstr += "size: " + str(idict[out]["size"]) + "; "
+
+        if len(xstr) > 0:
+            rstr += f"\n\n*{xstr.strip()}*"
+        rstr += "\n\n"
+    return rstr
+
+
 class Properties(dobject):
 
     """A proxy to compute and output properties of the system.
@@ -2483,7 +2524,6 @@ class Properties(dobject):
         )
 
     def get_chin_correction(self):
-
         f = dstrip(self.forces.f)
         m3 = dstrip(self.beads.m3)
         pots = self.forces.pots
@@ -2507,7 +2547,6 @@ class Properties(dobject):
         return np.asarray([chin, chin2, chinexp])
 
     def get_ti_correction(self):
-
         f = dstrip(self.forces.f)
         m3 = dstrip(self.beads.m3)
         #        pots = self.forces.pots    #
