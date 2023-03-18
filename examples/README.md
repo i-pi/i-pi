@@ -12,7 +12,7 @@ The example folders is structured in the three folders, each one with a differen
 - temp    :    Temporal folder with historice examples that have not yet been adapted
                to the current folder structure
 
-- init_files: repository of geometry files used by many examples
+- init_files: repository of input files used by many examples
 
 We keep this folder updated as much as we can, 
 please report  in the git repo iff you find something that is not working. 
