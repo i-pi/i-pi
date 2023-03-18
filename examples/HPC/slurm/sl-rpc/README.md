@@ -1,4 +1,4 @@
-This example is based on examples/demos/spatially_localized_RPC
+This example is based on examples/demos/Spatially_localized_RPC
 which requires multiple clients to be connected to the same i-PI instance.
 
 Here we launch i-PI and Lammps instances in the same Slurm script.
