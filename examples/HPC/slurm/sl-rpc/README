@@ -1,4 +1,4 @@
-This example is based on the lammps/benz-graph-slc/,
+This example is based on examples/demos/spatially_localized_RPC
 which requires multiple clients to be connected to the same i-PI instance.
 
 Here we launch i-PI and Lammps instances in the same Slurm script.
