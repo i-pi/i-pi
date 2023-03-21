@@ -1,6 +1,6 @@
 The example folders is structured in the three folders, each one with a different focused on a different aspect
 
-- **client**  :    Contains examples that are code-specific, highlighting how the driver code should be set up
+- **clients**  :    Contains examples that are code-specific, highlighting how the driver code should be set up
                    (client-specific syntax and tags) to run it properly with i-PI
 
 - **features**:    Examples of different functionalities implemented in i-pi. 
@@ -9,9 +9,9 @@ The example folders is structured in the three folders, each one with a differen
 - **demos**   :    Ready-to-use simple and complex setups that actually run meaningful simulations
                    for actual physical systems production runs
               
-- **HPC**     :    Examples of submission scripts in HPC platforms
+- **HPC-submission-examples**     :    Examples of submission scripts in HPC platforms
 
-- **temp**    :    Temporal folder with historice examples that have not yet been adapted
+- **temp**    :    Temporary folder with historice examples that have not yet been adapted
                    to the current folder structure
 
 - **init_files**: repository of input files used by many examples
