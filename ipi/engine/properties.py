@@ -1810,8 +1810,8 @@ class Properties(dobject):
            computing finite-difference quantities. If it is negative, will be
            scaled down automatically to avoid discontinuities in the potential.
         """
-        #Ugly but works
-        if type(fd_delta)==str:
+        # Ugly but works
+        if type(fd_delta) == str:
             fd_delta = np.float(fd_delta)
 
         dbeta = abs(float(fd_delta))

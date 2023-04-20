@@ -1,9 +1,11 @@
 import os
 from pathlib import Path
+
 #!try:
 #  from ..test_tools import Runner, modify_xml_4_dummy_test
-#except:
+# except:
 from ipi_tests.test_tools import Runner, modify_xml_4_dummy_test
+
 
 def find_examples(parent, excluded_file="excluded_test.txt", examples=[]):
     """This function looks for iteratively for examples and includes
