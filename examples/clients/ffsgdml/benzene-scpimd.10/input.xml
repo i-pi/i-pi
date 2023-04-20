@@ -12,7 +12,7 @@
   </ffsgdml>
   <system>
     <initialize nbeads='10'>
-      <file mode='xyz' units="angstrom"> ../molecules/benzene.xyz </file>
+      <file mode='xyz' units="angstrom"> benzene.xyz </file>
       <cell  mode="manual" units="angstrom">
           [200.0, 0.0, 0.0, 0.0, 200.0, 0.0, 0.0, 0.0, 200.0 ]
       </cell>
