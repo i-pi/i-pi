@@ -3,8 +3,10 @@ import pytest
 import argparse
 from argparse import RawTextHelpFormatter
 import time
-from .exampletools import find_examples, Runner_examples
-
+try:
+  from .exampletools import find_examples, Runner_examples
+except:
+  from exampletools import find_examples, Runner_examples
 
 """ Test that examples are not broken. Doesn't not check that output is correct."""
 

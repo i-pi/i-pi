@@ -8,7 +8,7 @@ The example folders is structured in the three folders, each one with a differen
 
 - **HPC-submission-examples**     :    Examples of submission scripts in HPC platforms
 
-- **temp**    :    Temporary folder with historice examples that have not yet been adapted
+- **temp**    :    Temporary folder with historic examples that have not yet been adapted
                    to the current folder structure
 
 - **init_files**: repository of input files used by many examples
