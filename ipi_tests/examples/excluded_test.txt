@@ -1,6 +1,6 @@
 # Broken
 broken/lammps/h2o-planetary-64                                                     # TypeError: string argument expected, got 'bytes' 
-ffdebye/single_particle 
+broken/ffdebye/single_particle 
 broken/lammps/h2o-constraints 
 broken/lammps/isof-vapor                                                           # Isotope-zeta-sc is stopping the termination of the run
 broken/lammps/isof-water                                                           # Isotope-zeta-sc is stopping the termination of the run
