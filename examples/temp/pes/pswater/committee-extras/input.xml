@@ -33,7 +33,7 @@
   </ffcommittee>
   <system>
     <initialize nbeads='1'>
-      <file mode='xyz' units='angstrom'> h2o.xyz </file>
+      <file mode='xyz' units='angstrom'> h2o_3.xyz </file>
       <cell mode='abc' units='angstrom'> [ 10.0, 10.0, 10.0 ] </cell>
       <!--     <gle mode='chk'> restart.chk </gle> -->
       <velocities mode='thermal' units='kelvin'> 300 </velocities>
