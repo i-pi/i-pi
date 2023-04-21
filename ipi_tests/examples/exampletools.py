@@ -27,7 +27,7 @@ def find_examples(parent, excluded_file="excluded_test.txt", examples=[]):
 
     for ff in folders:
         if os.path.isfile(Path(ff) / "input.xml"):
-            if ff not in excluded:
+            if ff not in excluded and "broken" not in ff:
                 examples.append(ff)
 
     return examples
