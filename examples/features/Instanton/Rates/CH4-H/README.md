@@ -1,5 +1,3 @@
-TODO: Update with detailed instructions
-
 Folders
 TS: Finds classical transition state 
 reactant: minimizes and calculates phonons for the reactant, necessary for the final calculation of the rate
