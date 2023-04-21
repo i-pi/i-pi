@@ -23,7 +23,7 @@
       <force forcefield='driver'/>
     </forces>
     <initialize nbeads='16'>
-      <file mode='xyz' units='angstrom'>init.xyz</file>
+      <file mode='xyz' units='angstrom'>h5o2+.xyz</file>
       <cell>
          [   25.29166, 0, 0, 0, 25.29166, 0, 0, 0, 25.29166 ]
         </cell>
