@@ -1,4 +1,0 @@
-#Settings file for automatic test
-driver_code fortran
-driver_model qtip4pf
-nsteps 10
