@@ -1,7 +1,7 @@
 <simulation mode='static' verbosity='high'>
   <output prefix='simulation'>
     <properties stride='1' filename='out'>  [ step, potential{electronvolt}] </properties>
-    <trajectory stride='1' filename='pos'>  positions{angstrom}  </trajectory>
+    <trajectory stride='1' filename='pos' cell_units='angstrom'>  positions{angstrom}  </trajectory>
   </output>
   <total_steps> 1000 </total_steps>
   <ffsocket name='lmp' mode='unix' pbc='true'>
@@ -10,8 +10,8 @@
   </ffsocket>
   <system>
     <initialize nbeads='1'>
-      <file mode='xyz'>  init.xyz </file>
-      <cell mode='abcABC'> [1, 2, 3, 90, 90, 90] </cell>
+      <file mode='xyz' units='angstrom'>  init.xyz </file>
+      <cell mode='abcABC' units='angstrom'> [1, 2, 3, 90, 90, 90] </cell>
     </initialize>
     <forces>
       <force forcefield='lmp'> </force>
