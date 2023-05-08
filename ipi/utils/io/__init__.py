@@ -310,10 +310,11 @@ def iter_file_raw(mode, filedesc):
     reader = _get_io_function(mode, "read")
 
     if mode == ".nc":
-        if hasattr(filedesc,"name"):
-            from . backends.io_nc import NCInput
-            filedesc = NCInput( filedesc.name )
-    
+        if hasattr(filedesc, "name"):
+            from .backends.io_nc import NCInput
+
+            filedesc = NCInput(filedesc.name)
+
     try:
         while True:
             comment, cell, atoms, names, masses = reader(filedesc=filedesc)
@@ -415,16 +416,18 @@ def open_backup(filename, mode="r", buffering=-1):
 
         ext = os.path.splitext(filename)[1]
         if ext == ".nc":
-            from . backends.io_nc import NCOutput
+            from .backends.io_nc import NCOutput
+
             return NCOutput(filename)
     elif ext == ".nc":
-        from . backends.io_nc import NCInput
+        from .backends.io_nc import NCInput
+
         return NCInput(filename)
     else:
         # There is no need to back up.
         # `open` will sort out whether `mode` is valid.
         pass
-    
+
     return open(filename, mode, buffering)
 
 
