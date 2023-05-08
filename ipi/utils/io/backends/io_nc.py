@@ -34,6 +34,17 @@ to install it."""
 
 
 def NewAmberNetCDF(filename, natoms):
+    """Returns a new NetCDF object populated with variables using
+    the Amber trajectory convention
+
+    Args:
+        filename: string, name of the netcdf file to create
+        natoms: the number of atoms in each frame
+
+    Returns:
+        A scipy.io.netcdf_file object
+    """
+
     from scipy.io import netcdf_file
 
     f = netcdf_file(filename, "w")
@@ -80,6 +91,22 @@ def NewAmberNetCDF(filename, natoms):
 
 
 def AppendAmberFrame(netcdfobj, crds, cell, filename, time=None):
+    """Appends coordinates to a netcdf trajectory
+
+    Args:
+        netcdfobj: A scipy.io.netcdf_file object or None. If it is None,
+        then a new, empty netcdf file will be created. If it is not None,
+        then frames will be appended to the existing trajectory.
+        crds: atomic coordinates, numpy.ndarray, shape=(N,3)
+        cell: unit cell parameters, list of length 6 (3 lengths and 3 angles in degrees)
+        filename: string. If netcdfobj is None, then the new netcdf file
+        will be created with the specified name.
+        time: simulation time (ps). If None, then the current frame number is instead used.
+
+    Returns:
+        A scipy.io.netcdf_file object. This is either the same object that was
+        input or a new object if the input was None.
+    """
     import os
     from scipy.io import netcdf_file
     import numpy as np
@@ -103,25 +130,39 @@ from ....engine.outputs import BaseOutput
 
 
 class NCOutput(BaseOutput):
+    """Helper class that makes the NetCDF object satisfy the required
+    methods of a writable file descriptor, as used in ipi/utils/io/__init__.py
+    """
+
     def __init__(self, filename="out"):
+        """Initializer
+
+        Args:
+            filename: string, default="out". Name of the netcdf file to create.
+        """
         super(NCOutput, self).__init__(filename=filename)
         _scipycheck()
 
     def force_flush(self):
+        """Write trajectory to disk"""
         if self.out is not None:
             self.out.flush()
 
     def flush(self):
+        """Write trajectory to disk"""
         if self.out is not None:
             self.out.flush()
 
     def append(self, crds, cell):
+        """Append a new frame to the trajectory"""
         self.out = AppendAmberFrame(self.out, crds, cell, self.filename)
 
     def write(self, data):
+        """This does nothing, and the input argument is ignored"""
         pass
 
     def fileno(self):
+        """Return the fileno() of the opened netcdf file descriptor"""
         if hasattr(self.out, "fp"):
             return self.out.fp.fileno()
         else:
@@ -130,11 +171,21 @@ class NCOutput(BaseOutput):
             return sys.stdout.fileno()
 
     def close(self):
+        """Close the netcdf file"""
         self.out.close()
 
 
 class NCInput(object):
+    """Helper class that makes the NetCDF object satisfy the required
+    methods of a readable file descriptor, as used in ipi/utils/io/__init__.py
+    """
+
     def __init__(self, filename="out"):
+        """Open an existing netcdf trajectory file
+
+        Args:
+            filename: string, default="out". Name of the netcdf file
+        """
         _scipycheck()
         from scipy.io import netcdf_file
 
@@ -146,6 +197,7 @@ class NCInput(object):
             self.shape = tuple(self.out.variables["coordinates"].shape)
 
     def close(self):
+        """Closes the netcdf file"""
         self.shape = None
         self.cframe = None
         self.out.close()
@@ -157,7 +209,7 @@ def print_nc(atoms, cell, filedesc=None, title="", cell_conv=1.0, atoms_conv=1.0
     Args:
         atoms: An atoms object giving the centroid positions.
         cell: A cell object giving the system box.
-        filedesc: An open writable ptraj.TrajectoryWriter object. Defaults to None.
+        filedesc: A NCOutput object.
         title: This gives a string to be appended to the comment line.
     """
     filedesc.append(
@@ -175,7 +227,7 @@ def read_nc(filedesc):
     be used to multiplex several trajectories, however.
 
     Args:
-        filedesc: An open readable pytraj.Trajectory object.
+        filedesc: A NCInput object.
 
     Returns:
         i-Pi comment line, cell array, data (positions, forces, etc.), atoms names and masses
@@ -185,7 +237,7 @@ def read_nc(filedesc):
 
     i = filedesc.cframe
     if i < filedesc.shape[0]:
-        comment = "Structure read from Amber NetCDF Format"
+        comment = "# positions{angstrom} cell{angstrom}"
         nat = filedesc.shape[1]
         #####################################
         # The topology file is unavailable,

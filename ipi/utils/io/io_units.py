@@ -31,7 +31,7 @@ def auto_units(
 ):
     """Processes comment line and requested units to determine how to interpret the I/O conversion."""
     # heuristics to detect units
-    if mode in ("pdb", "ase"):  # these are the default units
+    if mode in ("pdb", "ase", "nc"):  # these are the default units
         auto_cell = "angstrom"
         auto_units = "angstrom"
         auto_dimension = "length"
@@ -75,7 +75,6 @@ def auto_units(
         raise ValueError(
             "Requested cell units mismatch with units indicated in the comment string"
         )
-
     return dimension, units, cell_units
 
 

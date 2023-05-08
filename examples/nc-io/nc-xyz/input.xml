@@ -1,0 +1,30 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv{megapascal}, volume, cell_h{angstrom}] </properties>
+    <trajectory stride='1' filename='xc1' format='xyz' cell_units='angstrom'> x_centroid{angstrom}</trajectory>
+    <trajectory stride='1' filename='xc2' format='nc' cell_units='angstrom'> x_centroid{angstrom}</trajectory>
+    <checkpoint stride='2000'/>
+  </output>
+  <total_steps>2</total_steps>
+  <prng>
+    <seed>31415</seed>
+  </prng>
+  <!-- dummy forcefield -->  
+  <fflj name='lj' pbc='False'>
+      <parameters> { eps:0.0, sigma:1.0 } </parameters>
+  </fflj>
+
+  <system>
+    <initialize nbeads='1'>
+      <file mode='xyz'> K2S2O8_rotated.xyz </file>
+      <velocities mode='thermal' units='kelvin'> 200 </velocities>
+    </initialize>
+    <forces>
+      <force name='zero' forcefield='lj'>  </force>
+    </forces>
+    <ensemble>
+      <temperature units='kelvin'> 200 </temperature>
+      <pressure units='megapascal'> 10 </pressure>
+    </ensemble>
+  </system>
+</simulation>

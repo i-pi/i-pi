@@ -1,0 +1,16 @@
+Demonstration of NetCDF I/O module. Requires scipy.
+The simulation outputs two trajectories, one in xyz format and the other
+in Amber-compatible NetCDF format.
+One can convert both of the output trajectories to xyz format using
+i-pi-mux-positions.
+
+For example,
+i-pi input.xml
+i-pi-mux-positions --filename-out simulation.fromxyz.xyz simulation.xc1.xyz
+i-pi-mux-positions --filename-out simulation.fromnc.xyz simulation.xc2.nc
+
+The simulation.fromxyz.xyz and simulation.fromnc.xyz files will have the
+same coordinates, but different atom names. Specifically, the
+Amber-compatible NetCDF format only stores coordinates, not the names,
+so "XX" is instead output.
+

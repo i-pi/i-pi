@@ -215,7 +215,6 @@ def print_file(
             units = "atomic_unit"
         if cell_units == "automatic":
             cell_units = "atomic_unit"
-
     cell_conv = unit_to_user("length", cell_units, 1.0)
     atoms_conv = unit_to_user(dimension, units, 1.0)
 
