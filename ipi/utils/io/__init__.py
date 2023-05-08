@@ -33,6 +33,7 @@ __all__ = [
 
 mode_map = {
     "bin": "binary",
+    "nc": "nc",
 }
 
 
@@ -199,7 +200,7 @@ def print_file(
         units: Units for the output (e.g. "angstrom")
         cell_units: Units for the cell (dimension length, e.g. "angstrom")
     """
-    if mode in ["pdb", "ase"]:  # special case for PDB and ASE
+    if mode in ["pdb", "ase", "nc"]:  # special case for PDB, ASE, and NetCDF
         if dimension != "length":
             raise ValueError("PDB Standard is only designed for atomic positions")
         if units == "automatic":
@@ -308,6 +309,11 @@ def iter_file_raw(mode, filedesc):
 
     reader = _get_io_function(mode, "read")
 
+    if mode == ".nc":
+        if hasattr(filedesc,"name"):
+            from . backends.io_nc import NCInput
+            filedesc = NCInput( filedesc.name )
+    
     try:
         while True:
             comment, cell, atoms, names, masses = reader(filedesc=filedesc)
@@ -407,11 +413,18 @@ def open_backup(filename, mode="r", buffering=-1):
                 verbosity.low,
             )
 
+        ext = os.path.splitext(filename)[1]
+        if ext == ".nc":
+            from . backends.io_nc import NCOutput
+            return NCOutput(filename)
+    elif ext == ".nc":
+        from . backends.io_nc import NCInput
+        return NCInput(filename)
     else:
         # There is no need to back up.
         # `open` will sort out whether `mode` is valid.
         pass
-
+    
     return open(filename, mode, buffering)
 
 
