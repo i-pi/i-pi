@@ -5,6 +5,10 @@ broken/lammps/h2o-constraints
 broken/lammps/isof-vapor                                                           # Isotope-zeta-sc is stopping the termination of the run
 broken/lammps/isof-water                                                           # Isotope-zeta-sc is stopping the termination of the run
 
+# Needs infrastructure fixing
+
+clients/fhi-aims/zundel                        # dummy driver has an issue with extra_type. example works with actual backends.
+
 
 # Need of external dependency
 clients/ffsgdml/
