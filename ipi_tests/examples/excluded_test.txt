@@ -5,10 +5,6 @@ broken/lammps/h2o-constraints
 broken/lammps/isof-vapor                                                           # Isotope-zeta-sc is stopping the termination of the run
 broken/lammps/isof-water                                                           # Isotope-zeta-sc is stopping the termination of the run
 
-#easy fix needed
-broken/fhi-aims/zundel
-broken/fhi-aims/h2o-npt              #
-
 
 # Need of external dependency
 clients/ffsgdml/
