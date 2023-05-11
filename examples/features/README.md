@@ -1,4 +1,7 @@
-Minimal working examples of most features in i-PI 
-=================================================
+Minimal working examples of some of the simulation features available in i-PI 
+=============================================================================
 
-Each folder contains a 'run.sh' file with the corresponding commands to run the example.
+Each folder contains a `run.sh` launcher with the corresponding commands to run the example,
+and is based on the demonstrative driver that is distributed with i-PI.
+Most examples also contain a brief description of the underlying theory.
+
