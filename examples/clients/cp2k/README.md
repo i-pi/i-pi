@@ -1,3 +1,6 @@
+CP2K - i-PI example
+===================
+
 *******************************************************************************
   NOTE: The examples in this directory correspond to the calculations 
   performed in Ceriotti, More, Manolopoulos, Comp. Phys. Comm. 2013.
@@ -6,13 +9,15 @@
   are computationally demanding and should not be run on a workstation.
 *******************************************************************************
 
-                  -- Running the CP2K example --
+Running the CP2K example
+------------------------
 
  * First, it is necessary to patch and compile CP2K, and create a make.in
    file containing the path to the cp2k executable, e.g.
 
+```
 CP2K:=~/bin/cp2k.popt
-
+```
 
 ** Run the examples automatically:
  
@@ -21,25 +26,33 @@ CP2K:=~/bin/cp2k.popt
    self-explanatory -- npt-classical, nvt-classical, npt-piglet, nvt-piglet. 
    To run the NPT PIGLET example, for instance, just type:
 
+```bash
 $ make npt-piglet
+```
 
  * To clean up output files:
 
+```bash
 $ make clean
+```
 
 ** Run the examples manually:
  
  * In the main example directory run 
 
+```bash
 $ python path/bin/i-pi input.xml
- 
+ ```
+
  * In another terminal, create up to 4 temporary directories to run cp2k,
  and launch it from within:
- 
+
+```bash 
 $ mkdir run_1
 $ cd run_1
 $ $CP2K -i ../in.cp2k
- 
+ ```
+
  * Repeat several times to get multiple instances
  
  * To run CP2K remotely, you should:

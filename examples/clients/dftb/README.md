@@ -11,24 +11,34 @@ Running the examples
 
 Compile DFTB+ and create make.in file containing the path to dftb+ executable, e.g.
 
+```bash
 DFTB:=~/bin/dftb+
+```
 
 * Run an example automatically, type for instance:
 
+```bash
 $ make zundel
+```
 
 or
 
 To clean up output files:
 
+```bash
 $ make clean
+```
 
 * Run an example manually:
 
 In the example directory run
 
+```bash
 $ python path/src/i-pi input.xml
+```
 
 In another terminal launch dftb+:
 
+```bash
 $ path/dftb+ 
+```
