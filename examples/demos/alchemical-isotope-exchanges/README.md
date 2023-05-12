@@ -63,7 +63,8 @@ can be computed quickly, without having to re-evaluate the potential energy.
 
 On the other hand, note that this assumes that the atoms being swapped are bona fide 
 isotopes, and that they behave chemically in the same way: in this example, the driver
-code knows *nothing* about the swap having happened.
+code does not need to know about the swap having happened, because H and D behave the same 
+from the point of view of the forcefield.
 
 If you are looking for actual chemical swaps, these can be realized using a different
 class, [atomswap](https://ipi-code.org/i-pi/input-reference.html#atomswap).
