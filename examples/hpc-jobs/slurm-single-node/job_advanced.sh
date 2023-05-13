@@ -58,8 +58,10 @@ export PATH=$PATH:${IPI_PATH}/bin
 
 ## (Re-)launches i-PI
 if [ -e RESTART ]; then
+    echo "Restarting i-PI simulation"
     srun -n 1 i-pi RESTART >> log.ipi &
 else
+    echo "Launching i-PI simulation"
     srun -n 1 i-pi ${IPI_INPUT}-${IPI_UUID} &> log.ipi &
 fi
 
@@ -69,6 +71,7 @@ sleep 5;
 
 ## Launches the driver code
 for nbead in `seq 1 8`; do
+    echo "Launching driver ID: $nbead"
     srun -n 1 $IPI_DRIVER &> log.driver.$nbead &
 done
 
