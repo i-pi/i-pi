@@ -12,7 +12,7 @@
   </ffsocket>
   <system>
     <initialize nbeads='4'>
-      <file mode='pdb' units='angstrom'> ../../init_files/water_32.pdb </file>
+      <file mode='pdb' units='angstrom'> water_32.pdb </file>
       <labels mode='manual'> [ O, H, D, O, H, D, O, H, D, O, H, D, O, H, D, O, H, D, O, H, D, O, H, D, 
                                O, H, D, O, H, D, O, H, D, O, H, D, O, H, D, O, H, D, O, H, D, O, H, D, 
                                O, H, D, O, H, D, O, H, D, O, H, D, O, H, D, O, H, D, O, H, D, O, H, D, 
