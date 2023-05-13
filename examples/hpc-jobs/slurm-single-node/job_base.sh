@@ -9,8 +9,9 @@
 ## ^^^ N.B. the job must last a couple of minutes longer 
 ## than the <total_time> setting inside input.xml
 
-#SBATCH --ntasks-per-node=9
 #SBATCH --nodes=1
+#SBATCH --ntasks-per-node=9
+#SBATCH --cpus-per-task=1
 ## ^^^ N.B. it is important that all jobs are allocated to the same
 ## node because Unix domain sockets use the filesystem
 
@@ -28,20 +29,20 @@ IPI_PATH=
 IPI_INPUT=input.xml
 
 ## Driver command
-IPI_DRIVER="i-pi-driver -a slurm-one-job -m zundel -u -v"
+IPI_DRIVER="i-pi-driver -a slurm-one-node -m zundel -u -v"
 
 export PATH=$PATH:${IPI_PATH}/bin
 
 ## Launches i-PI
-srun -n 1 i-pi $IPI_INPUT &> log.ipi &
+srun -n 1 --cpus-per-task=1 i-pi $IPI_INPUT &> log.ipi &
 
 ## Gives a few seconds to allow the server to open the Unix socket
 ## For *very* complicated simulations you may need to increase a bit
 sleep 5; 
 
 ## Launches the driver code
-for nbead in `seq 1 16`; do
-    srun -n 1 $IPI_DRIVER &> log.driver.$nbead &
+for nbead in `seq 1 8`; do
+    srun -n 1 --cpus-per-task=1 $IPI_DRIVER &> log.driver.$nbead &
 done
 
 ## Waits for all jobs to be finished

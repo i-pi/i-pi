@@ -8,8 +8,9 @@
 ## ^^^ N.B. the job must last a couple of minutes longer 
 ## than the <total_time> setting inside input.xml
 
-#SBATCH --ntasks-per-node=9
 #SBATCH --nodes=1
+#SBATCH --ntasks-per-node=9
+#SBATCH --cpus-per-task=1
 ## ^^^ N.B. it is important that all jobs are allocated to the same
 ## node because Unix domain sockets use the filesystem
 
@@ -28,7 +29,7 @@ IPI_INPUT=input.xml
 
 ## Driver command
 IPI_DRIVER="i-pi-driver -a slurm-one-node -m zundel -u -v"
-DRIVER_INPUT=driver.in   # ignored for the example
+DRIVER_INPUT=driver.in  # ignored for the example
 
 ## Determines the address of the Unix-domain socket used in the input
 IPI_ADDRESS=$(grep '<address>' $IPI_INPUT | sed 's/[^>]*>[[:space:]]*//; s/[[:space:]]*<.*//')
@@ -59,10 +60,10 @@ export PATH=$PATH:${IPI_PATH}/bin
 ## (Re-)launches i-PI
 if [ -e RESTART ]; then
     echo "Restarting i-PI simulation"
-    srun -n 1 i-pi RESTART >> log.ipi &
+    srun -n 1 --cpus-per-task=1 i-pi RESTART >> log.ipi &
 else
     echo "Launching i-PI simulation"
-    srun -n 1 i-pi ${IPI_INPUT}-${IPI_UUID} &> log.ipi &
+    srun -n 1 --cpus-per-task=1 i-pi ${IPI_INPUT}-${IPI_UUID} &> log.ipi &
 fi
 
 ## Gives a few seconds to allow the server to open the Unix socket
@@ -72,7 +73,7 @@ sleep 5;
 ## Launches the driver code
 for nbead in `seq 1 8`; do
     echo "Launching driver ID: $nbead"
-    srun -n 1 $IPI_DRIVER &> log.driver.$nbead &
+    srun -n 1 --cpus-per-task=1 $IPI_DRIVER &> log.driver.$nbead &
 done
 
 ## Waits for all jobs to be finished
