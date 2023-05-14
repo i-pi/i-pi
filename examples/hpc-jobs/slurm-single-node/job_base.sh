@@ -19,6 +19,10 @@
 ## It is good to fix the memory per process, as on some systems
 ## otherwise the first driver reserves all the RAM
 
+## Needed since SLURM 22.05 so that srun picks up just one CPU per task
+export SRUN_CPUS_PER_TASK=1
+
+
 ## ******* Here starts the actual submission script ******* 
 
 ## We assume i-pi (and the driver code) are in the path, otherwise
@@ -34,7 +38,7 @@ IPI_DRIVER="i-pi-driver -a slurm-one-node -m zundel -u -v"
 export PATH=$PATH:${IPI_PATH}/bin
 
 ## Launches i-PI
-srun -n 1 --cpus-per-task=1 i-pi $IPI_INPUT &> log.ipi &
+srun -n 1 i-pi $IPI_INPUT &> log.ipi &
 
 ## Gives a few seconds to allow the server to open the Unix socket
 ## For *very* complicated simulations you may need to increase a bit
@@ -42,7 +46,7 @@ sleep 5;
 
 ## Launches the driver code
 for nbead in `seq 1 8`; do
-    srun -n 1 --cpus-per-task=1 $IPI_DRIVER &> log.driver.$nbead &
+    srun -n 1 $IPI_DRIVER &> log.driver.$nbead &
 done
 
 ## Waits for all jobs to be finished
