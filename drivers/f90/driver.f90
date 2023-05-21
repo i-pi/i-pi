@@ -479,7 +479,13 @@
                    forces(i,2) = -ks*atoms(i,2)
                    forces(i,3) = -ks*atoms(i,3)
                    virial(1,1) = virial(1,1) + forces(i,1)*atoms(i,1)
+                   virial(1,2) = virial(1,2) + forces(i,1)*atoms(i,2)
+                   virial(1,3) = virial(1,3) + forces(i,1)*atoms(i,3)
+                   virial(2,1) = virial(2,1) + forces(i,2)*atoms(i,1)
                    virial(2,2) = virial(2,2) + forces(i,2)*atoms(i,2)
+                   virial(2,3) = virial(2,3) + forces(i,2)*atoms(i,3)
+                   virial(3,1) = virial(3,1) + forces(i,3)*atoms(i,1)
+                   virial(3,2) = virial(3,2) + forces(i,3)*atoms(i,2)
                    virial(3,3) = virial(3,3) + forces(i,3)*atoms(i,3)
                 enddo
             ELSEIF (vstyle == 7) THEN ! linear potential in x position of the 1st atom
