@@ -10,6 +10,7 @@ from ipi.utils.depend import *
 
 import numpy as np
 
+
 def kth_diag_indices(a, k):
     """
     Indices to access matrix k-diagonals in numpy.
@@ -25,9 +26,9 @@ def kth_diag_indices(a, k):
 
 
 class ExchangePotential(dobject):
-    def __init__(self, boson_identities, q,
-                 nbeads, bead_mass,
-                 spring_freq_squared, betaP):
+    def __init__(
+        self, boson_identities, q, nbeads, bead_mass, spring_freq_squared, betaP
+    ):
         assert len(boson_identities) != 0
 
         self._N = len(boson_identities)
@@ -40,7 +41,9 @@ class ExchangePotential(dobject):
         # self._bead_diff_intra[j] = [r^{j+1}_0 - r^{j}_0, ..., r^{j+1}_{N-1} - r^{j}_{N-1}]
         self._bead_diff_intra = np.diff(self._q, axis=0)
         # self._bead_dist_inter_first_last_bead[l][m] = r^0_{l} - r^{P-1}_{m}
-        self._bead_diff_inter_first_last_bead = self._q[0, :, np.newaxis, :] - self._q[self._P - 1, np.newaxis, :, :]
+        self._bead_diff_inter_first_last_bead = (
+            self._q[0, :, np.newaxis, :] - self._q[self._P - 1, np.newaxis, :, :]
+        )
 
         # cycle energies:
         # self._E_from_to[u, u] is the ring polymer energy of the cycle on particle indices u,...,v
@@ -73,7 +76,7 @@ class ExchangePotential(dobject):
         Helper function: the term for the spring constant as used in spring potential expressions
         """
         return 0.5 * self._particle_mass * self._spring_freq_squared
-    
+
     def _spring_force_prefix(self):
         """
         Helper function: the term for the spring constant as used in spring force expressions
@@ -86,16 +89,19 @@ class ExchangePotential(dobject):
         Returns an upper-triangular matrix, Emks[u,v] is the ring polymer energy of the cycle on u,...,v.
         """
         # using column-major (Fortran order) because uses of the array are mostly within the same column
-        Emks = np.zeros((self._N, self._N), dtype=float, order='F')
+        Emks = np.zeros((self._N, self._N), dtype=float, order="F")
 
         intra_spring_energies = np.sum(self._bead_diff_intra ** 2, axis=(0, -1))
-        spring_energy_first_last_bead_array = np.sum(self._bead_diff_inter_first_last_bead ** 2, axis=-1)
+        spring_energy_first_last_bead_array = np.sum(
+            self._bead_diff_inter_first_last_bead ** 2, axis=-1
+        )
 
         # for m in range(self._N):
         #     Emks[m][m] = self._spring_potential_prefix() * \
         #                     (intra_spring_energies[m] + spring_energy_first_last_bead_array[m, m])
-        Emks[np.diag_indices_from(Emks)] = self._spring_potential_prefix() * \
-                                           (intra_spring_energies + np.diagonal(spring_energy_first_last_bead_array))
+        Emks[np.diag_indices_from(Emks)] = self._spring_potential_prefix() * (
+            intra_spring_energies + np.diagonal(spring_energy_first_last_bead_array)
+        )
 
         for s in range(self._N - 1 - 1, -1, -1):
             # for m in range(s + 1, self._N):
@@ -104,11 +110,14 @@ class ExchangePotential(dobject):
             #             + intra_spring_energies[s]
             #             + spring_energy_first_last_bead_array[s + 1, s]
             #             + spring_energy_first_last_bead_array[s, m])
-            Emks[s, (s + 1):] = Emks[s + 1, (s + 1):] + self._spring_potential_prefix() * (
-                    - spring_energy_first_last_bead_array[s + 1, (s + 1):]
-                    + intra_spring_energies[s]
-                    + spring_energy_first_last_bead_array[s + 1, s]
-                    + spring_energy_first_last_bead_array[s, (s + 1):])
+            Emks[s, (s + 1) :] = Emks[
+                s + 1, (s + 1) :
+            ] + self._spring_potential_prefix() * (
+                -spring_energy_first_last_bead_array[s + 1, (s + 1) :]
+                + intra_spring_energies[s]
+                + spring_energy_first_last_bead_array[s + 1, s]
+                + spring_energy_first_last_bead_array[s, (s + 1) :]
+            )
 
         return Emks
 
@@ -131,7 +140,7 @@ class ExchangePotential(dobject):
             #   sig += np.exp(- self._betaP *
             #                (V[u] + self._E_from_to[u, m - 1] - Elong) # V until u-1, then cycle from u to m
             #                 )
-            sig = np.sum(np.exp(- self._betaP * (subdivision_potentials - Elong)))
+            sig = np.sum(np.exp(-self._betaP * (subdivision_potentials - Elong)))
             assert sig != 0.0 and np.isfinite(sig)
             V[m] = Elong - np.log(sig / m) / self._betaP
 
@@ -148,15 +157,17 @@ class ExchangePotential(dobject):
 
         for l in range(self._N - 1, 0, -1):
             # For numerical stability
-            subdivision_potentials = self._E_from_to[l, l:] + RV[l + 1:]
+            subdivision_potentials = self._E_from_to[l, l:] + RV[l + 1 :]
             Elong = np.min(subdivision_potentials)
 
             # sig = 0.0
             # for p in range(l, self._N):
             #     sig += 1 / (p + 1) * np.exp(- self._betaP * (self._E_from_to[l, p] + RV[p + 1]
             #                                                 - Elong))
-            sig = np.sum(np.reciprocal(np.arange(l + 1.0, self._N + 1)) *
-                         np.exp(- self._betaP * (subdivision_potentials - Elong)))
+            sig = np.sum(
+                np.reciprocal(np.arange(l + 1.0, self._N + 1))
+                * np.exp(-self._betaP * (subdivision_potentials - Elong))
+            )
             assert sig != 0.0 and np.isfinite(sig)
             RV[l] = Elong - np.log(sig) / self._betaP
 
@@ -181,8 +192,10 @@ class ExchangePotential(dobject):
         #   for l in range(self._N):
         #         F[j, l, :] = self._spring_force_prefix() * (-self._bead_diff_intra[j][l] +
         #                                                     self._bead_diff_intra[j - 1][l])
-        F[1:-1, :, :] = self._spring_force_prefix() * (-self._bead_diff_intra[1:, :] +
-                                                       np.roll(self._bead_diff_intra, axis=0, shift=1)[1:, :])
+        F[1:-1, :, :] = self._spring_force_prefix() * (
+            -self._bead_diff_intra[1:, :]
+            + np.roll(self._bead_diff_intra, axis=0, shift=1)[1:, :]
+        )
 
         # force on endpoint beads
         #
@@ -196,27 +209,33 @@ class ExchangePotential(dobject):
         #                         - self.V_all()))
         tril_indices = np.tril_indices(self._N, k=0)
         connection_probs[tril_indices] = (
-                            # np.asarray([1 / (l + 1) for l in range(self._N)])[:, np.newaxis] *
-                            np.reciprocal(np.arange(1.0, self._N + 1))[:, np.newaxis] *
-                            np.exp(- self._betaP * (
-                                # np.asarray([self.V_forward(u - 1) for u in range(self._N)])[np.newaxis, :]
-                                self._V[np.newaxis, :-1]
-                                # + np.asarray([(self._E_from_to[u, l] if l >= u else 0) for l in range(self._N)
-                                #                   for u in range(self._N)]).reshape((self._N, self._N))
-                                + self._E_from_to.T
-                                # + np.asarray([self.V_backward(l + 1) for l in range(self._N)])[:, np.newaxis]
-                                + self._V_backward[1:, np.newaxis]
-                                - self.V_all()
-                            )))[tril_indices]
+            # np.asarray([1 / (l + 1) for l in range(self._N)])[:, np.newaxis] *
+            np.reciprocal(np.arange(1.0, self._N + 1))[:, np.newaxis]
+            * np.exp(
+                -self._betaP
+                * (
+                    # np.asarray([self.V_forward(u - 1) for u in range(self._N)])[np.newaxis, :]
+                    self._V[np.newaxis, :-1]
+                    # + np.asarray([(self._E_from_to[u, l] if l >= u else 0) for l in range(self._N)
+                    #                   for u in range(self._N)]).reshape((self._N, self._N))
+                    + self._E_from_to.T
+                    # + np.asarray([self.V_backward(l + 1) for l in range(self._N)])[:, np.newaxis]
+                    + self._V_backward[1:, np.newaxis]
+                    - self.V_all()
+                )
+            )
+        )[tril_indices]
 
         # direct link probabilities:
         # for l in range(self._N - 1):
         #     connection_probs[l][l+1] = 1 - (np.exp(- self._betaP * (self._V[l + 1] + self._V_backward[l + 1] -
         #                                         self.V_all())))
         superdiagonal_indices = kth_diag_indices(connection_probs, k=1)
-        connection_probs[superdiagonal_indices] = 1 - (np.exp(- self._betaP * (
-                                                        self._V[1:-1] + self._V_backward[1:-1]
-                                                        - self.V_all())))
+        connection_probs[superdiagonal_indices] = 1 - (
+            np.exp(
+                -self._betaP * (self._V[1:-1] + self._V_backward[1:-1] - self.V_all())
+            )
+        )
 
         # on the last bead:
         #
@@ -234,12 +253,12 @@ class ExchangePotential(dobject):
         #     force_from_neighbors[:, :] = self._spring_force_prefix() * \
         #                         (-self._bead_diff_inter_first_last_bead[:, l] + self._bead_diff_intra[-1, l])
         #     F[-1, l, :] = np.dot(connection_probs[l][:], force_from_neighbors)
-        force_from_neighbors = self._spring_force_prefix() * \
-                               (-np.transpose(self._bead_diff_inter_first_last_bead,
-                                              axes=(1,0,2))
-                                + self._bead_diff_intra[-1, :, np.newaxis])
+        force_from_neighbors = self._spring_force_prefix() * (
+            -np.transpose(self._bead_diff_inter_first_last_bead, axes=(1, 0, 2))
+            + self._bead_diff_intra[-1, :, np.newaxis]
+        )
         # F[-1, l, k] = sum_{j}{force_from_neighbors[l][j][k] * connection_probs[l,j]}
-        F[-1, :, :] = np.einsum('ljk,lj->lk', force_from_neighbors, connection_probs)
+        F[-1, :, :] = np.einsum("ljk,lj->lk", force_from_neighbors, connection_probs)
 
         # on the first bead:
         #
@@ -259,9 +278,11 @@ class ExchangePotential(dobject):
         #                              (-self._bead_diff_intra[0, l] + self._bead_diff_inter_first_last_bead[l, :])
         #     F[0, l, :] = np.dot(connection_probs[:, l], force_from_neighbors)
         #
-        force_from_neighbors = self._spring_force_prefix() * \
-                                    (self._bead_diff_inter_first_last_bead - self._bead_diff_intra[0, :, np.newaxis])
+        force_from_neighbors = self._spring_force_prefix() * (
+            self._bead_diff_inter_first_last_bead
+            - self._bead_diff_intra[0, :, np.newaxis]
+        )
         # F[0, l, k] = sum_{j}{force_from_neighbors[l][j][k] * connection_probs[j,l]}
-        F[0, :, :] = np.einsum('ljk,jl->lk', force_from_neighbors, connection_probs)
+        F[0, :, :] = np.einsum("ljk,jl->lk", force_from_neighbors, connection_probs)
 
         return F
