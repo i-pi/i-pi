@@ -17,6 +17,6 @@
          nq=dsqrt(dot_product(diff,diff))
          dr=nq-r0
          pot=D*(dexp(-2.*a*dr)-2.*dexp(-a*dr))
-         force(1,:)=2*a*D*(dexp(-a*dr)-dexp(-2.0*a*dr))*diff/nq
+         force(1,:)=-2*a*D*(dexp(-a*dr)-dexp(-2.0*a*dr))*diff/nq
          force(2,:)=2*a*D*(dexp(-a*dr)-dexp(-2.0*a*dr))*diff/nq
       END SUBROUTINE
