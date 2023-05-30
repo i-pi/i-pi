@@ -84,7 +84,7 @@ class ExchangePotential(dobject):
 
     def _evaluate_cycle_energies(self):
         """
-        Evaluate all the cycle energies, as outlined in Eqs. 5-7 of the paper.
+        Evaluate all the cycle energies, as outlined in Eqs. 5-7 of arXiv:2305.18025.
         Returns an upper-triangular matrix, Emks[u,v] is the ring polymer energy of the cycle on u,...,v.
         """
         # using column-major (Fortran order) because uses of the array are mostly within the same column
@@ -122,7 +122,7 @@ class ExchangePotential(dobject):
 
     def _evaluate_prefix_V(self):
         """
-        Evaluate V^[1,1], V^[1,2], ..., V^[1,N], as outlined in Eq. 3 of the paper.
+        Evaluate V^[1,1], V^[1,2], ..., V^[1,N], as outlined in Eq. 3 of arXiv:2305.18025.
         (In the code, particle indices start from 0.)
         Returns a vector of these potentials, in this order.
         Assumes that the cycle energies self._E_from_to have been computed.
@@ -147,7 +147,7 @@ class ExchangePotential(dobject):
 
     def _evaluate_suffix_V(self):
         """
-        Evaluate V^[1,N], V^[2,N], ..., V^[N,N], as outlined in Eq. 16 of the paper.
+        Evaluate V^[1,N], V^[2,N], ..., V^[N,N], as outlined in Eq. 16 of arXiv:2305.18025.
         (In the code, particle indices start from 0.)
         Returns a vector of these potentials, in this order.
         Assumes that both the cycle energies self._E_from_to and prefix potentials self._V have been computed.
@@ -177,7 +177,7 @@ class ExchangePotential(dobject):
 
     def evaluate_spring_forces(self):
         """
-        Evaluate the ring polymer forces on all the beads, as outlined in Eq. 13, 17-18 of the paper.
+        Evaluate the ring polymer forces on all the beads, as outlined in Eq. 13, 17-18 of arXiv:2305.18025.
         (In the code, particle indices start from 0.)
         Returns an array, F[j, l, :] is the force (3d vector) on bead j of particle l.
         Assumes that both the cycle energies self._E_from_to, the prefix potentials self._V,
