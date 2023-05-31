@@ -159,17 +159,15 @@
                   vstyle = 24
                ELSEIF (trim(cmdbuffer) == "morsedia") THEN
                   vstyle = 26
-               ELSEIF (trim(cmdbuffer) == "qtip4pf-lr") THEN
-                  vstyle = 27
                ELSEIF (trim(cmdbuffer) == "qtip4pf-sr") THEN
-                  vstyle = 29
+                  vstyle = 27
                ELSEIF (trim(cmdbuffer) == "gas") THEN
                   vstyle = 0  ! ideal gas
                ELSEIF (trim(cmdbuffer) == "dummy") THEN
                   vstyle = 99 ! returns non-zero but otherwise meaningless values
                ELSE
                   WRITE(*,*) " Unrecognized potential type ", trim(cmdbuffer)
-                  WRITE(*,*) " Use -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D] "
+                  WRITE(*,*) " Use -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|morsedia|qtip4pf-sr] "
                   STOP "ENDED"
                ENDIF
             ELSEIF (ccmd == 4) THEN
@@ -206,9 +204,9 @@
          seed = 12345
          CALL RANDOM_SEED(put=seed)
          isinit = .true.
-      ELSEIF (6 == vstyle) THEN
+      ELSEIF (6 == vstyle .OR. 27 == vstyle) THEN
          IF (par_count /= 0) THEN
-            WRITE(*,*) "Error:  no initialization string needed for qtip4pf."
+            WRITE(*,*) "Error:  no initialization string needed for qtip4pf or qtip4p-sr."
             STOP "ENDED"
          ENDIF
          isinit = .true.
@@ -587,7 +585,12 @@
                DO i=1, nat, 3
                   dip = dip -1.1128d0 * atoms(i,:) + 0.5564d0 * (atoms(i+1,:) + atoms(i+2,:))
                ENDDO
-               ! do not compute the virial term
+            ELSEIF (vstyle == 27) THEN ! short-range qtip4pf potential.
+               IF (mod(nat,3)/=0) THEN
+                  WRITE(*,*) " Expecting water molecules O H H O H H O H H but got ", nat, "atoms"
+                  STOP "ENDED"
+               ENDIF
+               CALL qtip4pf_sr(atoms,nat,forces,pot,virial)
             ELSEIF (vstyle == 11) THEN ! efield potential.
                IF (mod(nat,3)/=0) THEN
                   WRITE(*,*) " Expecting water molecules O H H O H H O H H but got ", nat, "atoms"
