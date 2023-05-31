@@ -1,12 +1,12 @@
 <simulation verbosity='high'>
   <output prefix='simulation'>
-    <properties stride='10' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv{megapascal} ] </properties>
-    <trajectory filename='pos' stride='400'> positions </trajectory>
-    <trajectory filename='xc' stride='40'> x_centroid{angstrom} </trajectory>
-    <trajectory filename='vc' stride='40'> v_centroid </trajectory>
+    <properties stride='4' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv{megapascal} ] </properties>
+    <trajectory filename='pos' stride='4'> positions </trajectory>
+    <trajectory filename='xc' stride='4'> x_centroid{angstrom} </trajectory>
+    <trajectory filename='vc' stride='4'> v_centroid </trajectory>
     <checkpoint stride='4000'/>
   </output>
-  <total_steps>10000</total_steps>
+  <total_steps>40</total_steps>
   <prng>
     <seed>32415</seed>
   </prng>
@@ -14,7 +14,7 @@
     <address> h2o-trpmd </address>
   </ffsocket>
   <system>
-    <initialize nbeads='32'>
+    <initialize nbeads='16'>
       <file mode='xyz'> water_216.xyz </file>
       <velocities mode='thermal' units='kelvin'> 300 </velocities>
     </initialize>
