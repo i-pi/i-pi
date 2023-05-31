@@ -18,7 +18,7 @@
       <force forcefield='qtip4pf'> </force>
     </forces>
     <motion mode='minimize'>
-      <optimizer mode='bfgs'>
+      <optimizer mode='sd'>
         <tolerances>
           <energy> 1e-5 </energy>
           <force> 1e-5 </force>

@@ -7,7 +7,7 @@ pair_style      lj/cut/tip4p/long 1 2 1 1 0.278072379 17.007
 bond_style      class2 
 angle_style     harmonic
 #kspace_style	pppm 0.0001
-kspace_style	pppm/tip4p 0.0001
+kspace_style	pppm/tip4p 0.000001
 
 read_data	data.lmp
 pair_coeff  * * 0 0
