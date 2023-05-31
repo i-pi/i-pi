@@ -2,16 +2,16 @@
   <output prefix='simulation'>
     <properties stride='10' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potential{electronvolt}, pressure_cv{megapascal} ] </properties>
     <trajectory filename='pos' stride='10'> positions </trajectory>
-    <trajectory filename='committee_pot' stride='100' extra_type='committee_pot'> extras </trajectory>
-    <trajectory filename='committee_force' stride='100' extra_type='committee_force'> extras </trajectory> 
-    <trajectory filename='committee_virial' stride='100' extra_type='committee_virial'> extras </trajectory> 
-    <trajectory filename='baseline_pot' stride='100' extra_type='baseline_pot'> extras </trajectory>
-    <trajectory filename='baseline_force' stride='100' extra_type='baseline_force'> extras </trajectory> 
-    <trajectory filename='baseline_virial' stride='100' extra_type='baseline_virial'> extras </trajectory> 
-    <trajectory filename='weight' stride='100' extra_type='wb_mixing'> extras </trajectory>    
-    <checkpoint stride='200'/>
+    <trajectory filename='committee_pot' stride='10' extra_type='committee_pot'> extras </trajectory>
+    <trajectory filename='committee_force' stride='10' extra_type='committee_force'> extras </trajectory> 
+    <trajectory filename='committee_virial' stride='10' extra_type='committee_virial'> extras </trajectory> 
+    <trajectory filename='baseline_pot' stride='10' extra_type='baseline_pot'> extras </trajectory>
+    <trajectory filename='baseline_force' stride='10' extra_type='baseline_force'> extras </trajectory> 
+    <trajectory filename='baseline_virial' stride='10' extra_type='baseline_virial'> extras </trajectory> 
+    <trajectory filename='weight' stride='10' extra_type='wb_mixing'> extras </trajectory>    
+    <checkpoint stride='100'/>
   </output>
-  <total_steps>10000</total_steps>
+  <total_steps>100</total_steps>
   <prng>
     <seed>31415</seed>
   </prng>

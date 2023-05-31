@@ -3,12 +3,12 @@
     <properties stride='10' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, potential, volume ] </properties>
     <trajectory filename='pos' stride='10'> positions </trajectory>
     <trajectory filename='committee_pot' stride='5' extra_type='committee_pot'> extras </trajectory>
-    <trajectory filename='committee_force' stride='100' extra_type='committee_force'> extras </trajectory> 
-    <trajectory filename='committee_virial' stride='100' extra_type='committee_virial'> extras </trajectory> 
+    <trajectory filename='committee_force' stride='10' extra_type='committee_force'> extras </trajectory> 
+    <trajectory filename='committee_virial' stride='10' extra_type='committee_virial'> extras </trajectory> 
     <trajectory filename='committee_sigma' stride='10' extra_type='committee_uncertainty'> extras </trajectory>
     <checkpoint stride='200'/>
   </output>
-  <total_steps>10000</total_steps>
+  <total_steps>100</total_steps>
   <prng>
     <seed>31415</seed>
   </prng>
