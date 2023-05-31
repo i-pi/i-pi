@@ -157,8 +157,12 @@
                   vstyle = 25
                ELSEIF (trim(cmdbuffer) == "doublewell_1D") THEN
                   vstyle = 24
-                ELSEIF (trim(cmdbuffer) == "morsedia") THEN
-                   vstyle = 26
+               ELSEIF (trim(cmdbuffer) == "morsedia") THEN
+                  vstyle = 26
+               ELSEIF (trim(cmdbuffer) == "qtip4pf-lr") THEN
+                  vstyle = 27
+               ELSEIF (trim(cmdbuffer) == "qtip4pf-sr") THEN
+                  vstyle = 29
                ELSEIF (trim(cmdbuffer) == "gas") THEN
                   vstyle = 0  ! ideal gas
                ELSEIF (trim(cmdbuffer) == "dummy") THEN
