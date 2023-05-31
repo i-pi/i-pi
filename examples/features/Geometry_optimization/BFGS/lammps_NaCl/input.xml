@@ -10,8 +10,7 @@
   </ffsocket>
   <system>
     <initialize nbeads='1'>
-      <file mode='xyz' units='angstrom'>  init.xyz </file>
-      <cell mode='abcABC' units='angstrom'> [1, 2, 3, 90, 90, 90] </cell>
+      <file mode='xyz'>  init.xyz </file>
     </initialize>
     <forces>
       <force forcefield='lmp'> </force>
