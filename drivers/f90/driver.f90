@@ -776,7 +776,8 @@
     CONTAINS
       SUBROUTINE helpmessage
          ! Help banner
-         WRITE(*,*) " SYNTAX: driver.x [-u] -a address -p port -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D] "
+         WRITE(*,*) " SYNTAX: driver.x [-u] -a address -p port -m
+[dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|morsedia|qtip4pf-sr] "
          WRITE(*,*) "         -o 'comma_separated_parameters' [-v] "
          WRITE(*,*) ""
          WRITE(*,*) " For LJ potential use -o sigma,epsilon,cutoff "
@@ -785,7 +786,7 @@
          WRITE(*,*) " For 1D morse oscillators use -o r0,D,a"
          WRITE(*,*) " For qtip4pf-efield use -o Ex,Ey,Ez with Ei in V/nm"
          WRITE(*,*) " For ljpolymer use -o n_monomer,sigma,epsilon,cutoff "
-         WRITE(*,*) " For the ideal gas, qtip4pf, zundel, ch4hcbe, nasa, doublewell or doublewell_1D no options are needed! "
+         WRITE(*,*) " For the ideal gas, qtip4pf, qtip4p-sr, zundel, ch4hcbe, nasa, doublewell or doublewell_1D no options are needed! "
        END SUBROUTINE helpmessage
 
    END PROGRAM
