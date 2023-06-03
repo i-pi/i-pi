@@ -525,7 +525,7 @@ class InputFFPlumed(InputForceField):
         # if pstep > 0: pstep -= 1 # roll back plumed step before writing a restart
         # self.plumedstep.store(pstep)
         self.plumedstep.store(ff.plumedstep)
-        self.init_file.store(ff.file)
+        self.file.store(ff.init_file)
 
     def fetch(self):
         super(InputFFPlumed, self).fetch()
