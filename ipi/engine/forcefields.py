@@ -749,7 +749,7 @@ class FFPlumed(ForceField):
             )
 
         v = 0.0
-        f = np.zeros(3 * self.natoms)
+        f = np.zeros((self.natoms, 3))
         vir = np.zeros((3, 3))
 
         self.lastq[:] = r["pos"]
@@ -763,7 +763,8 @@ class FFPlumed(ForceField):
 
         # these instead are set properly. units conversion is done on the PLUMED side
         self.plumed.cmd("setBox", r["cell"][0].T)
-        self.plumed.cmd("setPositions", r["pos"])
+        pos = r["pos"].reshape(-1,3)
+        self.plumed.cmd("setPositions", pos)
         self.plumed.cmd("setForces", f)
         self.plumed.cmd("setVirial", vir)
         self.plumed.cmd("prepareCalc")
@@ -775,7 +776,7 @@ class FFPlumed(ForceField):
         vir *= -1
 
         # nb: the virial is a symmetric tensor, so we don't need to transpose
-        r["result"] = [v, f, vir, {"raw": ""}]
+        r["result"] = [v, f.flatten(), vir, {"raw": ""}]
         r["status"] = "Done"
 
     def mtd_update(self, pos, cell):
@@ -783,13 +784,14 @@ class FFPlumed(ForceField):
         upon completion of a time step."""
 
         self.plumedstep += 1
-        f = np.zeros(3 * self.natoms)
+        f = np.zeros((self.natoms, 3))
         vir = np.zeros((3, 3))
 
         self.plumed.cmd("setStep", self.plumedstep)
         self.plumed.cmd("setCharges", self.charges)
         self.plumed.cmd("setMasses", self.masses)
-        self.plumed.cmd("setPositions", pos)
+        rpos = pos.reshape((-1,3))
+        self.plumed.cmd("setPositions", rpos)
         self.plumed.cmd("setBox", cell.T)
         self.plumed.cmd("setForces", f)
         self.plumed.cmd("setVirial", vir)
