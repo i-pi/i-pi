@@ -5,8 +5,7 @@
         <properties stride='8' filename='047.f'>  [ atom_f_path(047)] </properties>
         <checkpoint stride='4000'/>
     </output>
-    <total_steps> 4000000 </total_steps>
-    <total_time> 86000 </total_time>
+    <total_steps> 40 </total_steps>
     <prng><seed> 31415 </seed></prng>
      <ffsocket name='lammps' mode='unix'>
         <address> qtip4pf </address>

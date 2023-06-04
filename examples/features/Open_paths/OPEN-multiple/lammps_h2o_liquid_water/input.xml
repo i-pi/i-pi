@@ -132,7 +132,7 @@
         <trajectory stride='8' filename='xc' format='xyz'> x_centroid </trajectory>
         <checkpoint stride='4000'/>
     </output>
-    <total_steps> 4000000 </total_steps>
+    <total_steps> 40 </total_steps>
     <total_time> 86000 </total_time>
     <prng><seed> 31415 </seed></prng>
      <ffsocket name='lammps' mode='unix'>
