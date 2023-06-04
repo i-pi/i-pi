@@ -1,10 +1,10 @@
 <simulation>
   <output prefix="simulation">
-    <properties stride="1" filename="out"> [ step, time{picosecond}, conserved , cell_h{angstrom}, cell_abcABC,volume ] </properties>
+    <properties stride="1" filename="out"> [ step, time{picosecond}, conserved , cell_abcABC, volume, virial_md ] </properties>
     <trajectory stride="10" filename="xc" format="pdb" cell_units="angstrom"> x_centroid{angstrom}</trajectory>
     <checkpoint stride="2000"/>
   </output>
-  <total_steps> 100000</total_steps>
+  <total_steps> 100</total_steps>
   <prng><seed>31415</seed></prng>
   <ffsocket name="lammps" mode="unix">
     <address>lammps_ice</address>
@@ -17,20 +17,20 @@
     <forces><force forcefield="lammps"> </force></forces>
     <ensemble>
       <temperature units="kelvin"> 200 </temperature>
-      <pressure units='megapascal'> 1 </pressure>
+      <stress units="megapascal"> [ 1, 0, 0, 0, 1, 0, 0, 0, 1 ] </stress>
     </ensemble>
     <motion mode="dynamics">
-        <dynamics mode="npt">
-          <barostat mode="flexible">
+        <dynamics mode="nst">
+          <barostat mode="anisotropic">
           <tau units="femtosecond"> 200 </tau>
           <thermostat mode="langevin">
             <tau units="femtosecond"> 100</tau>
           </thermostat>
-          <hfix> [ offdiagonal, xx, yy ] </hfix>
+          <h0> [ 25.6156, 0, 0, 0, 29.5783, 0, 0, 0, 27.8867 ]</h0>
+          <hfix> [ offdiagonal ] </hfix>          
           </barostat>
           <thermostat mode="langevin">
           <tau units="femtosecond"> 100 </tau>
-          <pile_lambda> 0.2 </pile_lambda>
           </thermostat>
           <timestep units="femtosecond"> 0.25 </timestep>
         </dynamics>
