@@ -18,4 +18,5 @@ clients/ffsgdml/benzene-pimd.10
 clients/ffsgdml/benzene-scpimd.10 
 
 features/advanced_combinations/plumed/zundel-remd-metad 
-features/advanced_combinations/plumed/zundel-metad 
+features/advanced_combinations/plumed/zundel-metad
+features/advanced_combinations/plumed/zundel-wte
