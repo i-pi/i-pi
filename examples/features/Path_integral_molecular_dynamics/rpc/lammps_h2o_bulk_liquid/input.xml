@@ -3,7 +3,7 @@
     <properties stride='4' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv{megapascal}] </properties>
     <trajectory filename='pos' stride='40'> positions </trajectory>
   </output>
-  <total_steps>40000</total_steps>
+  <total_steps>400</total_steps>
   <prng>
     <seed>32346</seed>
   </prng>

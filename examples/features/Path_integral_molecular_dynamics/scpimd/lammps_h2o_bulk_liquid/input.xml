@@ -4,7 +4,7 @@
     <trajectory filename='f' stride='40'> positions </trajectory>
     <checkpoint stride='200'/>
   </output>
-  <total_steps> 40000 </total_steps>
+  <total_steps> 100 </total_steps>
   <prng>
     <seed>32415</seed>
   </prng>
