@@ -94,5 +94,4 @@ class MetaDyn(Smotion):
                     meta_pot_after = s.ensemble.bias.pot
                     # updates the conserved quantity with the change in bias so that
                     # we remove the shift due to added hills
-                    print("metad ", meta_pot_before, meta_pot_after)
                     s.ensemble.eens += meta_pot_before - meta_pot_after
