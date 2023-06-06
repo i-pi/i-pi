@@ -724,6 +724,7 @@ class FFPlumed(ForceField):
         self.charges = dstrip(myatoms.q) * 0.0
         self.masses = dstrip(myatoms.m)
         self.lastq = np.zeros(3 * self.natoms)
+        self.system_force = None  # reference to physical force calculator
 
     def poll(self):
         """Polls the forcefield checking if there are requests that should
@@ -749,7 +750,7 @@ class FFPlumed(ForceField):
             )
 
         v = 0.0
-        f = np.zeros(3 * self.natoms)
+        f = np.zeros((self.natoms, 3))
         vir = np.zeros((3, 3))
 
         self.lastq[:] = r["pos"]
@@ -763,7 +764,14 @@ class FFPlumed(ForceField):
 
         # these instead are set properly. units conversion is done on the PLUMED side
         self.plumed.cmd("setBox", r["cell"][0].T)
-        self.plumed.cmd("setPositions", r["pos"])
+        pos = r["pos"].reshape(-1, 3)
+
+        if self.system_force is not None:
+            f[:] = dstrip(self.system_force.f).reshape((-1, 3))
+            vir[:] = -dstrip(self.system_force.vir)
+            self.plumed.cmd("setEnergy", dstrip(self.system_force.pot))
+
+        self.plumed.cmd("setPositions", pos)
         self.plumed.cmd("setForces", f)
         self.plumed.cmd("setVirial", vir)
         self.plumed.cmd("prepareCalc")
@@ -772,7 +780,13 @@ class FFPlumed(ForceField):
         bias = np.zeros(1, float)
         self.plumed.cmd("getBias", bias)
         v = bias[0]
+        f = f.flatten()
         vir *= -1
+
+        if self.system_force is not None:
+            # plumed increments the value of the force, here we need only the correction term
+            f[:] -= dstrip(self.system_force.f).flatten()
+            vir[:] -= -dstrip(self.system_force.vir)
 
         # nb: the virial is a symmetric tensor, so we don't need to transpose
         r["result"] = [v, f, vir, {"raw": ""}]
@@ -783,14 +797,19 @@ class FFPlumed(ForceField):
         upon completion of a time step."""
 
         self.plumedstep += 1
-        f = np.zeros(3 * self.natoms)
+        f = np.zeros((self.natoms, 3))
         vir = np.zeros((3, 3))
 
         self.plumed.cmd("setStep", self.plumedstep)
         self.plumed.cmd("setCharges", self.charges)
         self.plumed.cmd("setMasses", self.masses)
-        self.plumed.cmd("setPositions", pos)
+        rpos = pos.reshape((-1, 3))
+        self.plumed.cmd("setPositions", rpos)
         self.plumed.cmd("setBox", cell.T)
+        if self.system_force is not None:
+            f[:] = dstrip(self.system_force.f).reshape((-1, 3))
+            vir[:] = -dstrip(self.system_force.vir)
+            self.plumed.cmd("setEnergy", dstrip(self.system_force.pot))
         self.plumed.cmd("setForces", f)
         self.plumed.cmd("setVirial", vir)
         self.plumed.cmd("prepareCalc")
