@@ -35,22 +35,9 @@
 ! Expects atoms in the order O H H O H H O H H ... 
 !====================================================================================
 !
-
-subroutine qtip4pf(box,rt,na,dvdrt,v, vir)
-  implicit none  
-  integer :: i,j,na,nm,ic,njump
-  real(8) :: r(3,na), dvdr(3,na), box(3), rt(na,3), dvdrt(na,3)
-  real(8) :: oo_eps, oo_sig, rcut,v,vlj,vint
-  real(8) :: apot, bpot, alp, alpha, alpha2
-  real(8) :: qo,qh,theta,reoh,vir(3,3), virlj(3,3), virint(3,3)
-  real(8), allocatable :: ro(:,:), dvdrlj(:,:), z(:)
-
-  ! Set and check number of molecules.
-  ! 
-  nm = na/3
-  if (3*nm .ne. na) stop 'ERROR 1 in POTENTIAL'
-
-  
+subroutine qtipfpf_setparameters(rcut, alpha, qo, qh, oo_sig, oo_eps, theta, reoh, apot, bpot, alp, alpha2)
+  implicit none
+  real(8) rcut, alpha, qo, qh, oo_sig, oo_eps, theta, reoh, apot, bpot, alp, alpha2
   !
   ! Set potential parameters - ATOMIC UNITS!
   !
@@ -66,7 +53,24 @@ subroutine qtip4pf(box,rt,na,dvdrt,v, vir)
   bpot = 0.07d0
   alp = 1.21d0
   alpha2 = 0.5d0 * (1.d0 - alpha)
+  
+end subroutine qtipfpf_setparameters
 
+subroutine qtip4pf(box,rt,na,dvdrt,v, vir)
+  implicit none  
+  integer :: i,j,na,nm,ic,njump
+  real(8) :: r(3,na), dvdr(3,na), box(3), rt(na,3), dvdrt(na,3)
+  real(8) :: oo_eps, oo_sig, rcut,v,vlj,vint
+  real(8) :: apot, bpot, alp, alpha, alpha2
+  real(8) :: qo,qh,theta,reoh,vir(3,3), virlj(3,3), virint(3,3)
+  real(8), allocatable :: ro(:,:), dvdrlj(:,:), z(:)
+
+  ! Set and check number of molecules.
+  ! 
+  nm = na/3
+  if (3*nm .ne. na) stop 'ERROR 1 in POTENTIAL'
+
+  call qtipfpf_setparameters(rcut, alpha, qo, qh, oo_sig, oo_eps, theta, reoh, apot, bpot, alp, alpha2)
 
   ! Zero-out potential and derivatives.
   !
@@ -157,7 +161,39 @@ subroutine qtip4pf(box,rt,na,dvdrt,v, vir)
   return
 end Subroutine qtip4pf
 
+subroutine qtip4pf_sr(rt,na, dvdrt,v, vir)
+  implicit none  
+  integer :: i,na,nm
+  real(8) :: r(3,na), dvdr(3,na), rt(na,3), dvdrt(na,3)
+  real(8) :: oo_eps, oo_sig, rcut,v
+  real(8) :: apot, bpot, alp, alpha, alpha2
+  real(8) :: qo,qh,theta,reoh,vir(3,3)
 
+  ! Set and check number of molecules.
+  ! 
+  nm = na/3
+  if (3*nm .ne. na) stop 'ERROR 1 in POTENTIAL'
+
+  call qtipfpf_setparameters(rcut, alpha, qo, qh, oo_sig, oo_eps, theta, reoh, apot, bpot, alp, alpha2)
+    
+  ! Zero-out potential and derivatives.
+  !
+  v = 0.d0
+  vir = 0.d0
+  dvdr(:,:) = 0.d0
+
+  do i=1, na 
+    r(:,i)=rt(i,:)
+  enddo
+
+  call intra_morse_harm(r,dvdr,na,v,vir,theta,reoh,apot,bpot,alp)  
+
+  vir = -1.0d0 *vir
+  do i=1, na 
+    dvdrt(i,:) = -dvdr(:,i)
+  enddo
+  return
+end subroutine
 
 !
 !==============================================================================
