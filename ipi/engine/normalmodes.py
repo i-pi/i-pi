@@ -712,7 +712,12 @@ class NormalModes(dobject):
         if len(self.bosons) == 0:
             return
 
-        boson_mass = dstrip(self.beads.m)[self.bosons[0]]  # take mass of first boson
+        masses = dstrip(self.beads.m)[self.bosons]
+        if len(set(masses)) > 1:
+            raise ValueError(
+                "Bosons must have the same mass, found %s for bosons %s" % (str(masses), str(self.bosons))
+            )
+        boson_mass = masses[0]
         betaP = 1.0 / (self.nbeads * units.Constants.kb * self.ensemble.temp)
         # positions of only the boson atoms
         q = self.beads.q.reshape((self.nbeads, self.natoms, 3))[:, self.bosons, :]
