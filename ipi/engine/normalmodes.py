@@ -715,7 +715,8 @@ class NormalModes(dobject):
         masses = dstrip(self.beads.m)[self.bosons]
         if len(set(masses)) > 1:
             raise ValueError(
-                "Bosons must have the same mass, found %s for bosons %s" % (str(masses), str(self.bosons))
+                "Bosons must have the same mass, found %s for bosons %s"
+                % (str(masses), str(self.bosons))
             )
         boson_mass = masses[0]
         betaP = 1.0 / (self.nbeads * units.Constants.kb * self.ensemble.temp)

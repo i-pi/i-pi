@@ -25,9 +25,7 @@ def kth_diag_indices(a, k):
 
 
 class ExchangePotential(dobject):
-    def __init__(
-        self, nbosons, q, nbeads, bead_mass, spring_freq_squared, betaP
-    ):
+    def __init__(self, nbosons, q, nbeads, bead_mass, spring_freq_squared, betaP):
         assert nbosons > 0
         self._N = nbosons
         self._P = nbeads
