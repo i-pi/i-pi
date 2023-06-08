@@ -26,11 +26,10 @@ def kth_diag_indices(a, k):
 
 class ExchangePotential(dobject):
     def __init__(
-        self, boson_identities, q, nbeads, bead_mass, spring_freq_squared, betaP
+        self, nbosons, q, nbeads, bead_mass, spring_freq_squared, betaP
     ):
-        assert len(boson_identities) != 0
-
-        self._N = len(boson_identities)
+        assert nbosons > 0
+        self._N = nbosons
         self._P = nbeads
         self._betaP = betaP
         self._spring_freq_squared = spring_freq_squared
