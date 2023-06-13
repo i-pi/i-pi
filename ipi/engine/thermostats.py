@@ -241,7 +241,7 @@ class ThermoPILE_L(Thermostat):
           required.
     """
 
-    def __init__(self, temp=1.0, dt=1.0, tau=1.0, ethermo=0.0, scale=1.0):
+    def __init__(self, temp=1.0, dt=1.0, tau=1.0, ethermo=0.0, scale=1.0, pilect=0.0):
         """Initialises ThermoPILE_L.
 
         Args:
@@ -263,6 +263,7 @@ class ThermoPILE_L(Thermostat):
         dself = dd(self)
         dself.tau = depend_value(value=tau, name="tau")
         dself.pilescale = depend_value(value=scale, name="pilescale")
+        dself.pilect = depend_value(value=pilect, name="pilect")
 
     def bind(
         self,
@@ -347,8 +348,15 @@ class ThermoPILE_L(Thermostat):
             # bind thermostat t to the it-th bead
 
             t.bind(pm=(nm.pnm[it, :], nm.dynm3[it, :]), prng=self.prng, fixdof=fixdof)
-            # pipes temp and dt
-            dpipe(dself.temp, dd(t).temp)
+            if it == 0:
+                if dself.pilect > 0.0:  # trying to pipe different temperature here
+                    dpipe(dself.pilect, dd(t).temp)
+                else:
+                    dpipe(dself.temp, dd(t).temp)
+            else:
+                # pipes temp
+                dpipe(dself.temp, dd(t).temp)
+            # pipes dt
             dpipe(dself.dt, dd(t).dt)
 
             # for tau it is slightly more complex
@@ -493,7 +501,7 @@ class ThermoPILE_G(ThermoPILE_L):
     a global velocity rescaling thermostat.
     """
 
-    def __init__(self, temp=1.0, dt=1.0, tau=1.0, ethermo=0.0, scale=1.0):
+    def __init__(self, temp=1.0, dt=1.0, tau=1.0, ethermo=0.0, scale=1.0, pilect=0.0):
         """Initialises ThermoPILE_G.
 
         Args:
@@ -509,6 +517,7 @@ class ThermoPILE_G(ThermoPILE_L):
         super(ThermoPILE_G, self).__init__(temp, dt, tau, ethermo)
         dself = dd(self)
         dself.pilescale = depend_value(value=scale, name="pilescale")
+        dself.pilect = depend_value(value=pilect, name="pilect")
 
     def bind(self, beads=None, atoms=None, pm=None, nm=None, prng=None, fixdof=None):
         """Binds the appropriate degrees of freedom to the thermostat.
@@ -544,7 +553,12 @@ class ThermoPILE_G(ThermoPILE_L):
 
         t = self._thermos[0]
         t.bind(pm=(nm.pnm[0, :], nm.dynm3[0, :]), prng=self.prng, fixdof=fixdof)
-        dpipe(dself.temp, dd(t).temp)
+        if dself.pilect > 0.0:  # trying to pipe different temperature here
+            dpipe(dself.pilect, dd(t).temp)
+        else:
+            dpipe(dself.temp, dd(t).temp)
+#        dpipe(dself.temp, dd(t).temp)
+
         dpipe(dself.dt, dd(t).dt)
         dpipe(dself.tau, dd(t).tau)
         dself.ethermo.add_dependency(dd(t).ethermo)
