@@ -105,7 +105,7 @@ class InputThermoBase(Input):
                 "dtype": float,
                 "default": 0.0,
                 "help": "Option to set a different centroid temperature wrt. that of the ensemble. Only used if value other than 0.0.",
-                "dimansion": "temperature"
+                "dimension": "temperature"
             },
         ),
         "A": (

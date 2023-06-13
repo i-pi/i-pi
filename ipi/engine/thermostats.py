@@ -349,7 +349,7 @@ class ThermoPILE_L(Thermostat):
 
             t.bind(pm=(nm.pnm[it, :], nm.dynm3[it, :]), prng=self.prng, fixdof=fixdof)
             if it == 0:
-                if dself.pilect > 0.0:  # trying to pipe different temperature here
+                if self.pilect > 0.0:  # trying to pipe different temperature here
                     dpipe(dself.pilect, dd(t).temp)
                 else:
                     dpipe(dself.temp, dd(t).temp)
@@ -553,7 +553,7 @@ class ThermoPILE_G(ThermoPILE_L):
 
         t = self._thermos[0]
         t.bind(pm=(nm.pnm[0, :], nm.dynm3[0, :]), prng=self.prng, fixdof=fixdof)
-        if dself.pilect > 0.0:  # trying to pipe different temperature here
+        if self.pilect > 0.0:  # trying to pipe different temperature here
             dpipe(dself.pilect, dd(t).temp)
         else:
             dpipe(dself.temp, dd(t).temp)
