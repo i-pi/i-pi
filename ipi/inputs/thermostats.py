@@ -26,7 +26,7 @@ class InputThermoBase(Input):
     """Thermostat input class.
 
     Handles generating the appropriate thermostat class from the xml input file,
-    and generating the xml checkpoiunt tags and data from an instance of the
+    and generating the xml checkpoint tags and data from an instance of the
     object.
 
     Attributes:
@@ -38,6 +38,7 @@ class InputThermoBase(Input):
           to the bath. Defaults to 0.0.
        tau: An optional float giving the damping time scale. Defaults to 1.0.
        pile_lambda: Scaling for the PILE damping relative to the critical damping.
+       pile_centroid_t: Option to set a different temperature to the centroid in PILE thermostats.
        A: An optional array of floats giving the drift matrix. Defaults to 0.0.
        C: An optional array of floats giving the static covariance matrix.
           Defaults to 0.0.
@@ -96,6 +97,15 @@ class InputThermoBase(Input):
                 "dtype": float,
                 "default": 1.0,
                 "help": "Scaling for the PILE damping relative to the critical damping. (gamma_k=2*lambda*omega_k",
+            },
+        ),
+        "pile_centroid_t": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 0.0,
+                "help": "Option to set a different centroid temperature wrt. that of the ensemble. Only used if value other than 0.0.",
+                "dimansion": "temperature"
             },
         ),
         "A": (
@@ -188,10 +198,12 @@ class InputThermoBase(Input):
             self.mode.store("pile_l")
             self.tau.store(thermo.tau)
             self.pile_lambda.store(thermo.pilescale)
+            self.pile_centroid_t.store(thermo.pilect)
         elif type(thermo) is ethermostats.ThermoPILE_G:
             self.mode.store("pile_g")
             self.tau.store(thermo.tau)
             self.pile_lambda.store(thermo.pilescale)
+            self.pile_centroid_t.store(thermo.pilect)
         elif type(thermo) is ethermostats.ThermoGLE:
             self.mode.store("gle")
             self.A.store(thermo.A)
@@ -245,11 +257,11 @@ class InputThermoBase(Input):
             thermo = ethermostats.ThermoSVR(tau=self.tau.fetch())
         elif self.mode.fetch() == "pile_l":
             thermo = ethermostats.ThermoPILE_L(
-                tau=self.tau.fetch(), scale=self.pile_lambda.fetch()
+                tau=self.tau.fetch(), scale=self.pile_lambda.fetch(), pilect=self.pile_centroid_t.fetch()
             )
         elif self.mode.fetch() == "pile_g":
             thermo = ethermostats.ThermoPILE_G(
-                tau=self.tau.fetch(), scale=self.pile_lambda.fetch()
+                tau=self.tau.fetch(), scale=self.pile_lambda.fetch(), pilect=self.pile_centroid_t.fetch()
             )
         elif self.mode.fetch() == "gle":
             rC = self.C.fetch()
@@ -321,6 +333,7 @@ class InputThermoBase(Input):
                 )
         if mode in ["gle", "nm_gle", "nm_gle_g"]:
             pass  # PERHAPS DO CHECKS THAT MATRICES SATISFY REASONABLE CONDITIONS (POSITIVE-DEFINITENESS, ETC)
+        # MR Check that pilect is not less than 0.0
 
 
 class InputThermo(InputThermoBase):
