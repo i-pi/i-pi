@@ -58,17 +58,17 @@ def spline_resample(q, nbeads_old, nbeads_new, k=3):
     """
 
     if scipy is None:
-        print("spline interpolation requires scipy module.")
+        print("@spline_resample: spline interpolation requires scipy module.")
         raise (scipy_exception)
 
     if nbeads_new < 2:
-        raise RuntimeError("nbeads_new < 2.")
+        raise RuntimeError("@spline_resample: nbeads_new < 2.")
 
     # First, we calculate the current parameterization of the path
     # according to 3N-D Euclidean distances between adjacent beads.
     t = [0.0]
     current_t = 0.0
-    print("Cartesian 3N-D distances between old beads:")
+    print("@spline_resample: Cartesian 3N-dimensional distances between old beads:")
     for i in range(1, nbeads_old):
         dist = npnorm(q[i] - q[i - 1])
         print("\tfrom %3d to %3d : %.6f bohr" % (i - 1, i, dist))
@@ -79,7 +79,7 @@ def spline_resample(q, nbeads_old, nbeads_new, k=3):
 
     t = np.array(t)
     t /= t[-1]
-    print("Spline parameter 't' before resampling:")
+    print("@spline_resample: Spline parameter 't' before resampling:")
     print(t)
     print("t[i] - t[i-1]:")
     print(t - np.roll(t, 1))
@@ -108,7 +108,7 @@ def spline_resample(q, nbeads_old, nbeads_new, k=3):
     # Reshape the path back to the beads shape
     new_q = np.array(new_components).T
 
-    print("Cartesian 3N-D distances between NEW beads:")
+    print("@spline_resample: Cartesian 3N-dimensional distances between NEW beads:")
     for i in range(1, nbeads_new):
         dist = npnorm(new_q[i] - new_q[i - 1])
         print("\tfrom %3d to %3d : %.6f bohr" % (i - 1, i, dist))
@@ -284,13 +284,16 @@ if __name__ == "__main__":
                 )
                 exit(-1)
         else:
-            print("Error: cannot find {}.".format(input_fin))
+            print("Error: cannot find {} file.".format(input_fin))
             exit(-1)
 
         if np.all(inimasses == finmasses):
             masses = inimasses
         else:
-            print("Error: initial and final masses differ.")
+            print(
+                "Error: initial and final masses differ. "
+                "Check that the input files have correct geometries and the same order of atoms."
+            )
             exit(-1)
 
         prototype = inipos
@@ -326,7 +329,10 @@ if __name__ == "__main__":
                 # Check that the masses in all frames are the same
                 for atoms in path:
                     if np.any(atoms.m != masses):
-                        print("Error: masses differ across XYZ frames")
+                        print(
+                            "Error: masses differ across XYZ frames. "
+                            "All frames should represent the same atomic system in the same order."
+                        )
                         exit(-1)
             # Extract units information to write output with the same units as input
             with open(input_xyz, "r") as fd_xyz:
@@ -370,7 +376,8 @@ if __name__ == "__main__":
     print("Imported structures: %d geometries, %d atoms each." % (nbeads_old, natoms))
     print("Atomic masses:")
     masses /= Constants.amu
-    print(masses)
+    for mm in masses:
+        print(mm)
 
     # Parse the arguments for the list of active atoms
     activelist = None

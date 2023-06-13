@@ -11,6 +11,7 @@ yaff/mil53_ffyaff
 yaff/mil53_ffsocket 
 plumed/zundel-remd-metad 
 plumed/zundel-metad 
+plumed/zundel-wte
 ffsgdml/benzene-pimd.10 
 ffsgdml/benzene-scpimd.10 
 ASEClient/aims 
