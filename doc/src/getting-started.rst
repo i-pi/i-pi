@@ -440,68 +440,18 @@ test the installation with ‘nose‘
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 There are several test cases included, that can be run automatically
-with ‘nosetests‘ from the root directory.
+with ‘i-pi-tests‘ from the root directory.
 
 .. code-block::
 
-   > nosetests -v
+   > i-pi-tests
 
-test cases with input files
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+test cases and examples
+~~~~~~~~~~~~~~~~~~~~~~~
 
-Several test cases are distributed with the code to ensure that your
-distribution is working correctly. There are also simple tests to see if
-the client codes are working correctly.
+The `examples/` folder contain a multitude of examples for i-PI, covering
+most of the existing functionalities, and including also simple tests that
+can be run with different client codes. 
 
 All the input files are contained in the directory “examples”, which is
-subdivided into the following directories:
-
-tutorial:
-   Contains the input files needed to run the tutorial in
-   `5 <#tutorial>`__.
-
-lj:
-   This gives a simple classical Lennard-Jones simulation of Ne. The
-   state points are given by (:math:`N`, :math:`\rho`, :math:`T`) =
-   (864, 0.35, 1.62), (:math:`N`, :math:`\rho`, :math:`T`) = (864, 0.75,
-   1.069) and (:math:`N`, :math:`\rho`, :math:`T`) = (864, 0.88, 1.095)
-   in reduced Lennard-Jones units, so that the results can be compared
-   to those in :cite:`lverlet67pr`.
-
-ph2:
-   This simulates para-hydrogen using the isotropic Silvera-Goldman pair
-   potential :cite:`silv-gold78jcp`. There are three
-   directories, “RPMD”, “nvt” and “Tuckerman”. “RPMD” and “nvt” have
-   tests which can be compared to the results of
-   :cite:`mill-mano05jcp`, and “Tuckerman” has tests which
-   can be compared to the results of :cite:`mart+99jcp`.
-
-qespresso:
-   This has two simple examples to test to see if the Quantum-Espresso
-   client is functioning correctly. There is one simple 4-atom lithium
-   test, and a test using a single water molecule.
-
-harmonic:
-   This has a simple example of a 1D harmonic oscillator. This
-   demonstrates the displaced path integral momentum distribution
-   estimator as given in :cite:`lin+10prl`. As the momentum
-   distribution is known analytically for this simple system, this
-   provides an indication of how well the method is working.
-
-lammps:
-   This has a simple implementation of the q-TIP4P-F empirical water
-   model of :cite:`habe+09jcp` using the classical molecular
-   dynamics code LAMMPS. It demonstrates both the convergence of the
-   PIGLET method :cite:`ceri-mano12prl`, as well as the use
-   of ring-polymer contraction methods
-   :cite:`mark-mano08jcp`.
-
-   This also contains one example using LAMMPS to calculate the
-   interactions between carbon atoms in graphene. This uses the
-   optimized Tersoff parameters for carbon given in
-   :cite:`lind-broi10prb`.
-
-cp2k:
-   Contains the tests for the CP2K client code. Holds input files to run
-   the high-pressure water calculations presented in [cpc publication
-   citation].
+subdivided into subfolder that cover different classes of simulations, and/or different client codes. 
