@@ -1,0 +1,7 @@
+# default units are LENGTH=nm ENERGY=kJ/mol TIME=ps
+ene: ENERGY
+
+mtd:   METAD ARG=ene PACE=100 SIGMA=2 HEIGHT=1 FILE=plumed/HILLS BIASFACTOR=2 TEMP=300
+
+PRINT ARG=ene,mtd.* STRIDE=10 FILE=plumed/COLVAR 
+FLUSH STRIDE=1
