@@ -173,7 +173,7 @@ class ThermoLangevin(Thermostat):
 
     def get_S(self):
         """Calculates the coefficient of the white noise."""
-
+        print("Temperature inside get_S Lang", self.temp)
         return np.sqrt(Constants.kb * self.temp * (1 - self.T**2))
 
     def __init__(self, temp=1.0, dt=1.0, tau=1.0, ethermo=0.0):
@@ -350,11 +350,14 @@ class ThermoPILE_L(Thermostat):
             t.bind(pm=(nm.pnm[it, :], nm.dynm3[it, :]), prng=self.prng, fixdof=fixdof)
             if it == 0:
                 if self.pilect > 0.0:  # trying to pipe different temperature here
+                    print("My c-temperature", dself.pilect)
                     dpipe(dself.pilect, dd(t).temp)
                 else:
+                    print("My c-temperature else", dself.temp)
                     dpipe(dself.temp, dd(t).temp)
             else:
                 # pipes temp
+                print("My b-temperature", dself.temp)
                 dpipe(dself.temp, dd(t).temp)
             # pipes dt
             dpipe(dself.dt, dd(t).dt)
@@ -438,7 +441,7 @@ class ThermoSVR(Thermostat):
 
     def get_K(self):
         """Calculates the average kinetic energy per degree of freedom."""
-
+        print("Temperature in get_K", self.temp)
         return Constants.kb * self.temp * 0.5
 
     def __init__(self, temp=1.0, dt=1.0, tau=1.0, ethermo=0.0):
@@ -554,6 +557,7 @@ class ThermoPILE_G(ThermoPILE_L):
         t = self._thermos[0]
         t.bind(pm=(nm.pnm[0, :], nm.dynm3[0, :]), prng=self.prng, fixdof=fixdof)
         if self.pilect > 0.0:  # trying to pipe different temperature here
+            print("My c-temp in pile_g", dself.pilect)
             dpipe(dself.pilect, dd(t).temp)
         else:
             dpipe(dself.temp, dd(t).temp)
