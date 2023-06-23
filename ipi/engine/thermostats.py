@@ -264,6 +264,7 @@ class ThermoPILE_L(Thermostat):
         dself.tau = depend_value(value=tau, name="tau")
         dself.pilescale = depend_value(value=scale, name="pilescale")
         dself.pilect = depend_value(value=pilect, name="pilect")
+        dself.npilect = depend_value(func=self.get_npilect, name="npilect", dependencies=[dself.pilect])
 
     def bind(
         self,
@@ -350,8 +351,8 @@ class ThermoPILE_L(Thermostat):
             t.bind(pm=(nm.pnm[it, :], nm.dynm3[it, :]), prng=self.prng, fixdof=fixdof)
             if it == 0:
                 if self.pilect > 0.0:  # trying to pipe different temperature here
-                    print("My c-temperature", dself.pilect)
-                    dpipe(dself.pilect, dd(t).temp)
+                    print("My c-temperature", dself.npilect)
+                    dpipe(dself.npilect, dd(t).temp)
                 else:
                     print("My c-temperature else", dself.temp)
                     dpipe(dself.temp, dd(t).temp)
@@ -409,6 +410,11 @@ class ThermoPILE_L(Thermostat):
         for t in self._thermos:
             et += t.ethermo
         return et
+
+    def get_npilect(self):
+        """ Multiplies centroid temperature by nbeads """
+        return self.nm.nbeads * self.pilect
+
 
     def step(self):
         """Updates the bound momentum vector with a PILE thermostat."""
@@ -521,6 +527,8 @@ class ThermoPILE_G(ThermoPILE_L):
         dself = dd(self)
         dself.pilescale = depend_value(value=scale, name="pilescale")
         dself.pilect = depend_value(value=pilect, name="pilect")
+        dself.npilect = depend_value(func=self.get_npilect, name="npilect", dependencies=[dself.pilect])
+
 
     def bind(self, beads=None, atoms=None, pm=None, nm=None, prng=None, fixdof=None):
         """Binds the appropriate degrees of freedom to the thermostat.
@@ -557,8 +565,8 @@ class ThermoPILE_G(ThermoPILE_L):
         t = self._thermos[0]
         t.bind(pm=(nm.pnm[0, :], nm.dynm3[0, :]), prng=self.prng, fixdof=fixdof)
         if self.pilect > 0.0:  # trying to pipe different temperature here
-            print("My c-temp in pile_g", dself.pilect)
-            dpipe(dself.pilect, dd(t).temp)
+            print("My c-temp in pile_g", dself.npilect)
+            dpipe(dself.npilect, dd(t).temp)
         else:
             dpipe(dself.temp, dd(t).temp)
 #        dpipe(dself.temp, dd(t).temp)
