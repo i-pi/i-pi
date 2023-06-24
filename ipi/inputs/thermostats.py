@@ -105,7 +105,7 @@ class InputThermoBase(Input):
                 "dtype": float,
                 "default": 0.0,
                 "help": "Option to set a different centroid temperature wrt. that of the ensemble. Only used if value other than 0.0.",
-                "dimension": "temperature"
+                "dimension": "temperature",
             },
         ),
         "A": (
@@ -257,11 +257,15 @@ class InputThermoBase(Input):
             thermo = ethermostats.ThermoSVR(tau=self.tau.fetch())
         elif self.mode.fetch() == "pile_l":
             thermo = ethermostats.ThermoPILE_L(
-                tau=self.tau.fetch(), scale=self.pile_lambda.fetch(), pilect=self.pile_centroid_t.fetch()
+                tau=self.tau.fetch(),
+                scale=self.pile_lambda.fetch(),
+                pilect=self.pile_centroid_t.fetch(),
             )
         elif self.mode.fetch() == "pile_g":
             thermo = ethermostats.ThermoPILE_G(
-                tau=self.tau.fetch(), scale=self.pile_lambda.fetch(), pilect=self.pile_centroid_t.fetch()
+                tau=self.tau.fetch(),
+                scale=self.pile_lambda.fetch(),
+                pilect=self.pile_centroid_t.fetch(),
             )
         elif self.mode.fetch() == "gle":
             rC = self.C.fetch()

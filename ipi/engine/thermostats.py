@@ -264,7 +264,9 @@ class ThermoPILE_L(Thermostat):
         dself.tau = depend_value(value=tau, name="tau")
         dself.pilescale = depend_value(value=scale, name="pilescale")
         dself.pilect = depend_value(value=pilect, name="pilect")
-        dself.npilect = depend_value(func=self.get_npilect, name="npilect", dependencies=[dself.pilect])
+        dself.npilect = depend_value(
+            func=self.get_npilect, name="npilect", dependencies=[dself.pilect]
+        )
 
     def bind(
         self,
@@ -412,9 +414,8 @@ class ThermoPILE_L(Thermostat):
         return et
 
     def get_npilect(self):
-        """ Multiplies centroid temperature by nbeads """
+        """Multiplies centroid temperature by nbeads"""
         return self.nm.nbeads * self.pilect
-
 
     def step(self):
         """Updates the bound momentum vector with a PILE thermostat."""
@@ -527,8 +528,9 @@ class ThermoPILE_G(ThermoPILE_L):
         dself = dd(self)
         dself.pilescale = depend_value(value=scale, name="pilescale")
         dself.pilect = depend_value(value=pilect, name="pilect")
-        dself.npilect = depend_value(func=self.get_npilect, name="npilect", dependencies=[dself.pilect])
-
+        dself.npilect = depend_value(
+            func=self.get_npilect, name="npilect", dependencies=[dself.pilect]
+        )
 
     def bind(self, beads=None, atoms=None, pm=None, nm=None, prng=None, fixdof=None):
         """Binds the appropriate degrees of freedom to the thermostat.
@@ -569,7 +571,7 @@ class ThermoPILE_G(ThermoPILE_L):
             dpipe(dself.npilect, dd(t).temp)
         else:
             dpipe(dself.temp, dd(t).temp)
-#        dpipe(dself.temp, dd(t).temp)
+        #        dpipe(dself.temp, dd(t).temp)
 
         dpipe(dself.dt, dd(t).dt)
         dpipe(dself.tau, dd(t).tau)
