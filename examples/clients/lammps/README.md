@@ -1,6 +1,6 @@
  - client: Lammps (https://www.lammps.org)
 
-   The command to inform lammps that it will run as driver is: 
+   The command to inform lammps that it will run as client code is: 
        ```
        fix ID group-ID ipi address port [unix] [reset] 
        ```
