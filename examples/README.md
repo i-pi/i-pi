@@ -1,4 +1,4 @@
-The example folders is structured in the three folders, each one with a different focused on a different aspect
+The example folders is structured in several folders, each one with a different focused on a different aspect
 
 - **clients**  :    Contains examples that are code-specific, highlighting how the driver code should be set up
                     (client-specific syntax and tags) to run it properly with i-PI
