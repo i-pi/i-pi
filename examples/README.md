@@ -6,9 +6,6 @@ The example folders is structured such that each sub-folder is focused on a diff
 - **features** :    Examples of different functionalities implemented in i-PI. 
                     All examples can be run locally with the drivers provided with the code.
 
-- **demos**    :    Complete examples demonstrating relatively advanced simulation setups, including also
-                    a discussion of the underlying theory and some usage notes.
-
 - **hpc-jobs** :    Examples of submission scripts on HPC platforms
 
 - **temp**     :    Temporary folder with historic examples that have not yet been adapted
