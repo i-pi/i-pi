@@ -21,3 +21,10 @@ This example demonstrates the use of the alchemical isotope exchange method, whi
 sampling equilibrium isotope fractionation between different molecular sites or different
 thermodynamic phases of matter.
 
+
+Kinetic Monte Carlo for Al6XXX
+------------------------------
+
+This is an experimental (and somewhat hacky) implementation of kinetic monte carlo, 
+specifically designed for the study of vacancy diffusion in aluminum alloys of the 6000 series (Al alloyed with ~1% Si and Mg).
+It demonstrates the use of i-PI with a ML potential, through LAMMPS patched with N2P2. Generalizing the implementation would require some coding, but most of the heavy lifting is already done. 

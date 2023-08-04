@@ -1,4 +1,4 @@
-<!--- To run with a reasonable LJ potential use
+<!--- To run with a reasonable LJ potential for testing purposes, use
   i-pi-driver -m lj -u -h al6xxx -o 5.0,0.1,12.0
 -->
 <simulation verbosity='low'>

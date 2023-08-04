@@ -6,8 +6,6 @@ elements                        Al Mg Si           # Specification of elements.
 atom_energy  Al    -19.6286626  #-2.4092354 
 atom_energy  Mg    -16.7493346  #-62.6068620
 atom_energy  Si    -5.5274864   #-5.5597835
-#atom_energy                     S  0.0         # Free atom reference energy (S).
-#atom_energy                     Cu 0.0         # Free atom reference energy (Cu).
 cutoff_type                     2          # Cutoff type (optional argument: shift parameter alpha).
 scale_symmetry_functions                       # Scale all symmetry functions with min/max values.
 #scale_symmetry_functions_sigma                 # Scale all symmetry functions with sigma.
