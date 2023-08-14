@@ -1,0 +1,287 @@
+###############################################################################
+# GENERAL NNP SETTINGS
+###############################################################################
+number_of_elements              3              # Number of elements.
+elements                        Al Mg Si           # Specification of elements.
+atom_energy  Al    -19.6286626  #-2.4092354 
+atom_energy  Mg    -16.7493346  #-62.6068620
+atom_energy  Si    -5.5274864   #-5.5597835
+cutoff_type                     2          # Cutoff type (optional argument: shift parameter alpha).
+scale_symmetry_functions                       # Scale all symmetry functions with min/max values.
+#scale_symmetry_functions_sigma                 # Scale all symmetry functions with sigma.
+scale_min_short                 0.0            # Minimum value for scaling.
+scale_max_short                 1.0            # Maximum value for scaling.
+center_symmetry_functions                      # Center all symmetry functions, i.e. subtract mean value.
+global_hidden_layers_short      2              # Number of hidden layers.
+global_nodes_short              16 16          # Number of nodes in each hidden layer.
+global_activation_short         p p l          # Activation function for each hidden layer and output layer.
+#normalize_nodes                                # Normalize input of nodes.
+
+###############################################################################
+# ADDITIONAL SETTINGS FOR TRAINING
+###############################################################################
+epochs                          1000             # Number of training epochs.
+updater_type                    1              # Weight update method (0 = Gradient Descent, 1 = Kalman filter).
+parallel_mode                   4              # Training parallelization used (0 = Serial, 1-4 = MSEKF implementations (2 or 4 are fastest)).
+update_strategy                 0              # Update strategy (0 = Combined, 1 = Per-element).
+selection_mode                  0              # Update candidate selection mode (0 = Random, 1 = Sort, 2 = Threshold).
+memorize_symfunc_results                       # Keep symmetry function results in memory.
+random_seed 102376
+test_fraction 0.1
+use_short_forces                               # Use forces for training.
+force_weight                    8.0           # Weight of force updates relative to energy updates.
+short_energy_fraction           1.000          # Fraction of energy updates per epoch.
+short_force_fraction            0.02115       # Fraction of force updates per epoch.
+short_energy_error_threshold    0.00           # RMSE threshold for energy update candidates.
+short_force_error_threshold     1.00           # RMSE threshold for force update candidates.
+rmse_threshold_trials           3              # Maximum number of RMSE threshold trials.
+#repeated_energy_update                         # After force update perform energy update for corresponding structure.
+#use_old_weights_short                          # Restart fitting with old weight parameters.
+weights_min                     -1.0           # Minimum value for initial random weights.
+weights_max                     1.0            # Maximum value for initial random weights.
+#precondition_weights                           # Precondition weights with initial energies.
+#nguyen_widrow_weights_short                    # Initialize neural network weights according to Nguyen-Widrow scheme.
+write_trainpoints               10              # Write energy comparison every this many epochs.
+write_trainforces               50              # Write force comparison every this many epochs.
+write_weights_epoch             1              # Write weights every this many epochs.
+#write_neuronstats               1              # Write neuron statistics every this many epochs.
+write_trainlog                                 # Write training log file.
+####################
+# GRADIENT DESCENT #
+####################
+#gradient_type                   0              # Gradient descent type (0 = Fixed step size).
+#gradient_eta                    1.0E-4         # Gradient descent parameter eta (fixed step size).
+############################
+# KALMAN FILTER (STANDARD) #
+############################
+#kalman_type                     0              # Kalman filter type (0 = Standard, 1 = Fading memory).
+#kalman_epsilon                  1.0E-2         # General Kalman filter parameter epsilon (sigmoidal: 0.01, linear: 0.001).
+#kalman_q0                       0.01           # General Kalman filter parameter q0 ("large").
+#kalman_qtau                     2.302          # General Kalman filter parameter qtau (2.302 => 1 order of magnitude per epoch).
+#kalman_qmin                     1.0E-6         # General Kalman filter parameter qmin (typ. 1.0E-6).
+#kalman_eta                      0.01           # Standard Kalman filter parameter eta (0.001-1.0).
+#kalman_etatau                   2.302          # Standard Kalman filter parameter etatau (2.302 => 1 order of magnitude per epoch).
+#kalman_etamax                   1.0            # Standard Kalman filter parameter etamax (1.0+).
+#################################
+# KALMAN FILTER (FADING MEMORY) #
+#################################
+kalman_type                     1              # Kalman filter type (0 = Standard, 1 = Fading memory).
+kalman_epsilon                  0.07         # General Kalman filter parameter epsilon (sigmoidal: 0.01, linear: 0.001).
+kalman_q0                       0.00           # General Kalman filter parameter q0 ("large").
+kalman_qtau                     2.302          # General Kalman filter parameter qtau (2.302 => 1 order of magnitude per epoch).
+kalman_qmin                     1.0E-6         # General Kalman filter parameter qmin (typ. 1.0E-6).
+kalman_lambda_short             0.98500        # Fading memory Kalman filter parameter lambda (forgetting factor 0.95-0.99).
+kalman_nue_short                0.99870        # Fading memory Kalman filter parameter nu (0.99-0.9995).
+
+###############################################################################
+# SYMMETRY FUNCTIONS
+###############################################################################
+
+# Radial symmetry function (type 2):
+#symfunction_short <element-central> 2 <element-neighbor> <eta> <rshift> <rcutoff>
+
+# Narrow Angular symmetry function (type 3):
+#symfunction_short <element-central> 3 <element-neighbor1> <element-neighbor2> <eta> <lambda> <zeta> <rcutoff> <<rshift>
+
+# Wide Angular symmetry function (type 9):
+#symfunction_short <element-central> 9 <element-neighbor1> <element-neighbor2> <eta> <lambda> <zeta> <rcutoff> <<rshift>
+
+# Generating radial symmetry function set:
+# mode  = shift    
+# r_0   = 1.500E+00
+# r_c   = 6.000E+00
+# r_N   = 5.500E+00
+# N     =         9
+# grid  = 1.5 2.0 2.5 3.0 3.5 4.0 4.5 5.0 5.5
+symfunction_short  Mg   2   Mg   0.003   0.000   20.000   
+symfunction_short  Mg   2   Si   0.003   0.000   20.000   
+symfunction_short  Mg   2   Al   0.003   0.000   20.000   
+symfunction_short  Mg   2   Mg   0.016   0.000   8.000   
+symfunction_short  Mg   2   Si   0.016   0.000   8.000   
+symfunction_short  Mg   2   Mg   0.117   7.071   20.000   
+symfunction_short  Mg   2   Si   0.029   14.142   20.000   
+symfunction_short  Mg   2   Al   0.016   0.000   8.000   
+symfunction_short  Mg   2   Si   0.045   11.314   16.000   
+symfunction_short  Mg   2   Mg   0.071   16.259   20.000   
+symfunction_short  Mg   2   Mg   0.058   10.000   20.000   
+symfunction_short  Mg   3   Si   Si   0.007   1.000   1.000   12.000   
+symfunction_short  Mg   2   Mg   0.108   13.218   20.000   
+symfunction_short  Mg   3   Mg   Si   0.007   1.000   1.000   12.000   
+symfunction_short  Mg   2   Si   0.112   13.007   16.000   
+symfunction_short  Mg   3   Mg   Mg   0.007   1.000   1.000   12.000   
+symfunction_short  Mg   2   Al   0.108   13.218   20.000   
+symfunction_short  Mg   2   Al   0.058   10.000   20.000   
+symfunction_short  Mg   2   Si   0.117   7.071   20.000   
+symfunction_short  Mg   3   Mg   Al   0.007   1.000   1.000   12.000   
+symfunction_short  Mg   3   Al   Si   0.007   1.000   1.000   12.000   
+symfunction_short  Mg   2   Al   0.091   8.000   16.000   
+symfunction_short  Mg   2   Mg   0.112   13.007   16.000   
+symfunction_short  Mg   2   Al   0.071   16.259   20.000   
+symfunction_short  Mg   3   Si   Si   0.007   -1.000   1.000   12.000   
+symfunction_short  Mg   2   Si   0.108   13.218   20.000   
+symfunction_short  Mg   2   Mg   0.062   0.000   8.000   
+symfunction_short  Mg   3   Al   Al   0.007   1.000   1.000   12.000   
+symfunction_short  Mg   2   Al   0.112   13.007   16.000   
+symfunction_short  Mg   3   Mg   Si   0.007   -1.000   1.000   12.000   
+symfunction_short  Mg   2   Si   0.082   0.000   8.000   
+symfunction_short  Mg   3   Al   Si   0.007   -1.000   1.000   12.000   
+symfunction_short  Mg   3   Mg   Si   0.020   1.000   1.000   12.000   
+symfunction_short  Mg   3   Mg   Mg   0.007   -1.000   1.000   12.000   
+symfunction_short  Mg   3   Si   Si   0.016   1.000   1.000   8.000   
+symfunction_short  Mg   2   Al   0.082   0.000   8.000   
+symfunction_short  Mg   3   Mg   Al   0.007   -1.000   1.000   12.000   
+symfunction_short  Mg   3   Mg   Mg   0.020   1.000   1.000   12.000   
+symfunction_short  Mg   3   Si   Si   0.007   1.000   4.000   12.000   
+symfunction_short  Mg   3   Mg   Si   0.007   1.000   4.000   12.000   
+symfunction_short  Mg   3   Al   Si   0.020   1.000   1.000   12.000   
+symfunction_short  Mg   2   Si   0.071   16.259   20.000   
+symfunction_short  Mg   3   Mg   Al   0.020   1.000   1.000   12.000   
+symfunction_short  Mg   2   Mg   0.016   0.000   16.000   
+symfunction_short  Mg   3   Mg   Mg   0.007   1.000   4.000   12.000   
+symfunction_short  Mg   3   Si   Si   0.020   1.000   4.000   12.000   
+symfunction_short  Mg   3   Al   Si   0.007   1.000   4.000   12.000   
+symfunction_short  Mg   2   Si   0.016   0.000   16.000   
+symfunction_short  Mg   3   Al   Al   0.007   -1.000   1.000   12.000   
+symfunction_short  Mg   2   Mg   0.124   0.000   8.000   
+symfunction_short  Mg   2   Mg   0.091   8.000   16.000   
+symfunction_short  Mg   3   Mg   Al   0.007   1.000   4.000   12.000   
+symfunction_short  Mg   2   Si   0.036   0.000   8.000   
+symfunction_short  Mg   3   Mg   Si   0.016   1.000   1.000   8.000   
+symfunction_short  Mg   3   Si   Si   0.007   -1.000   4.000   12.000   
+symfunction_short  Mg   3   Al   Al   0.016   1.000   1.000   8.000   
+symfunction_short  Mg   3   Si   Si   0.020   -1.000   1.000   12.000   
+symfunction_short  Mg   2   Al   0.016   0.000   16.000   
+symfunction_short  Mg   3   Mg   Si   0.020   -1.000   1.000   12.000   
+symfunction_short  Mg   2   Al   0.036   0.000   8.000   
+symfunction_short  Mg   3   Mg   Si   0.007   -1.000   4.000   12.000   
+symfunction_short  Mg   3   Mg   Mg   0.007   -1.000   4.000   12.000   
+symfunction_short  Mg   2   Mg   0.045   11.314   16.000   
+symfunction_short  Mg   3   Al   Al   0.007   1.000   4.000   12.000   
+symfunction_short  Si   2   Si   0.003   0.000   20.000   
+symfunction_short  Si   2   Mg   0.003   0.000   20.000   
+symfunction_short  Si   2   Al   0.003   0.000   20.000   
+symfunction_short  Si   2   Si   0.016   0.000   8.000   
+symfunction_short  Si   2   Mg   0.016   0.000   8.000   
+symfunction_short  Si   2   Si   0.108   13.218   20.000   
+symfunction_short  Si   2   Mg   0.108   13.218   20.000   
+symfunction_short  Si   2   Si   0.058   10.000   20.000   
+symfunction_short  Si   2   Mg   0.058   10.000   20.000   
+symfunction_short  Si   2   Si   0.091   8.000   16.000   
+symfunction_short  Si   2   Al   0.016   0.000   8.000   
+symfunction_short  Si   3   Mg   Si   0.007   1.000   1.000   12.000   
+symfunction_short  Si   2   Si   0.071   16.259   20.000   
+symfunction_short  Si   3   Si   Si   0.007   1.000   1.000   12.000   
+symfunction_short  Si   2   Mg   0.071   16.259   20.000   
+symfunction_short  Si   3   Al   Si   0.007   1.000   1.000   12.000   
+symfunction_short  Si   2   Mg   0.091   8.000   16.000   
+symfunction_short  Si   3   Mg   Mg   0.007   1.000   1.000   12.000   
+symfunction_short  Si   2   Al   0.016   0.000   16.000   
+symfunction_short  Si   3   Mg   Al   0.007   1.000   1.000   12.000   
+symfunction_short  Si   2   Si   0.082   0.000   8.000   
+symfunction_short  Si   2   Al   0.091   8.000   16.000   
+symfunction_short  Si   2   Al   0.108   13.218   20.000   
+symfunction_short  Si   3   Mg   Si   0.007   -1.000   1.000   12.000   
+symfunction_short  Si   2   Mg   0.112   13.007   16.000   
+symfunction_short  Si   2   Si   0.112   13.007   16.000   
+symfunction_short  Si   3   Al   Al   0.007   1.000   1.000   12.000   
+symfunction_short  Si   2   Al   0.112   13.007   16.000   
+symfunction_short  Si   3   Si   Si   0.007   -1.000   2.000   12.000   
+symfunction_short  Si   2   Al   0.071   16.259   20.000   
+symfunction_short  Si   2   Mg   0.082   0.000   8.000   
+symfunction_short  Si   2   Si   0.124   0.000   8.000   
+symfunction_short  Si   3   Mg   Mg   0.007   -1.000   1.000   12.000   
+symfunction_short  Si   2   Al   0.082   0.000   8.000   
+symfunction_short  Si   3   Mg   Si   0.016   1.000   1.000   8.000   
+symfunction_short  Si   3   Si   Si   0.007   1.000   4.000   12.000   
+symfunction_short  Si   3   Mg   Al   0.007   -1.000   1.000   12.000   
+symfunction_short  Si   3   Al   Si   0.007   -1.000   1.000   12.000   
+symfunction_short  Si   3   Si   Si   0.020   1.000   1.000   12.000   
+symfunction_short  Si   3   Mg   Si   0.007   -1.000   4.000   12.000   
+symfunction_short  Si   3   Si   Si   0.016   1.000   1.000   8.000   
+symfunction_short  Si   3   Al   Si   0.020   1.000   4.000   12.000   
+symfunction_short  Si   3   Mg   Mg   0.020   1.000   1.000   12.000   
+symfunction_short  Si   3   Mg   Mg   0.007   -1.000   4.000   12.000   
+symfunction_short  Si   2   Si   0.021   0.000   16.000   
+symfunction_short  Si   3   Si   Si   0.007   -1.000   4.000   12.000   
+symfunction_short  Si   3   Mg   Si   0.020   1.000   1.000   12.000   
+symfunction_short  Si   3   Al   Si   0.007   1.000   4.000   12.000   
+symfunction_short  Si   2   Si   0.117   7.071   20.000   
+symfunction_short  Si   3   Mg   Al   0.007   -1.000   4.000   12.000   
+symfunction_short  Si   3   Si   Si   0.020   -1.000   1.000   12.000   
+symfunction_short  Si   3   Mg   Si   0.007   1.000   4.000   12.000   
+symfunction_short  Si   3   Mg   Al   0.020   1.000   1.000   12.000   
+symfunction_short  Si   2   Mg   0.016   0.000   16.000   
+symfunction_short  Si   3   Al   Al   0.007   -1.000   1.000   12.000   
+symfunction_short  Si   2   Mg   0.117   7.071   20.000   
+symfunction_short  Si   3   Mg   Si   0.020   -1.000   1.000   12.000   
+symfunction_short  Si   3   Al   Si   0.016   1.000   1.000   8.000   
+symfunction_short  Si   2   Si   0.036   0.000   8.000   
+symfunction_short  Si   3   Al   Al   0.016   1.000   1.000   8.000   
+symfunction_short  Si   3   Si   Si   0.016   1.000   8.000   8.000   
+symfunction_short  Si   3   Mg   Mg   0.020   -1.000   1.000   12.000   
+symfunction_short  Si   3   Si   Si   0.016   -1.000   2.000   8.000   
+symfunction_short  Si   3   Mg   Mg   0.007   1.000   4.000   12.000   
+symfunction_short  Al   2   Al   0.003   0.000   20.000   
+symfunction_short  Al   2   Si   0.003   0.000   20.000   
+symfunction_short  Al   2   Mg   0.003   0.000   20.000   
+symfunction_short  Al   2   Si   0.016   0.000   8.000   
+symfunction_short  Al   2   Mg   0.016   0.000   8.000   
+symfunction_short  Al   2   Mg   0.108   13.218   20.000   
+symfunction_short  Al   2   Si   0.108   13.218   20.000   
+symfunction_short  Al   2   Al   0.016   0.000   8.000   
+symfunction_short  Al   2   Si   0.058   10.000   20.000   
+symfunction_short  Al   2   Mg   0.058   10.000   20.000   
+symfunction_short  Al   2   Mg   0.071   16.259   20.000   
+symfunction_short  Al   2   Si   0.071   16.259   20.000   
+symfunction_short  Al   2   Al   0.108   13.218   20.000   
+symfunction_short  Al   3   Si   Si   0.007   1.000   1.000   12.000   
+symfunction_short  Al   3   Mg   Si   0.007   1.000   1.000   12.000   
+symfunction_short  Al   2   Al   0.091   8.000   16.000   
+symfunction_short  Al   2   Al   0.058   10.000   20.000   
+symfunction_short  Al   2   Si   0.091   8.000   16.000   
+symfunction_short  Al   3   Mg   Mg   0.007   1.000   1.000   12.000   
+symfunction_short  Al   2   Mg   0.091   8.000   16.000   
+symfunction_short  Al   3   Al   Si   0.007   1.000   1.000   12.000   
+symfunction_short  Al   2   Al   0.071   16.259   20.000   
+symfunction_short  Al   3   Mg   Al   0.007   1.000   1.000   12.000   
+symfunction_short  Al   2   Al   0.112   13.007   16.000   
+symfunction_short  Al   2   Al   0.124   0.000   8.000   
+symfunction_short  Al   3   Al   Al   0.007   1.000   1.000   12.000   
+symfunction_short  Al   2   Si   0.112   13.007   16.000   
+symfunction_short  Al   3   Si   Si   0.007   -1.000   1.000   12.000   
+symfunction_short  Al   2   Mg   0.112   13.007   16.000   
+symfunction_short  Al   3   Mg   Mg   0.007   -1.000   1.000   12.000   
+symfunction_short  Al   3   Mg   Si   0.007   -1.000   1.000   12.000   
+symfunction_short  Al   2   Si   0.082   0.000   8.000   
+symfunction_short  Al   2   Mg   0.082   0.000   8.000   
+symfunction_short  Al   3   Mg   Al   0.007   -1.000   1.000   12.000   
+symfunction_short  Al   3   Al   Si   0.007   -1.000   1.000   12.000   
+symfunction_short  Al   3   Si   Si   0.016   1.000   1.000   8.000   
+symfunction_short  Al   3   Mg   Si   0.020   1.000   1.000   12.000   
+symfunction_short  Al   3   Si   Si   0.007   1.000   4.000   12.000   
+symfunction_short  Al   3   Al   Al   0.007   -1.000   1.000   12.000   
+symfunction_short  Al   2   Al   0.062   0.000   8.000   
+symfunction_short  Al   3   Mg   Si   0.007   1.000   4.000   12.000   
+symfunction_short  Al   3   Al   Si   0.016   1.000   1.000   8.000   
+symfunction_short  Al   3   Al   Al   0.016   1.000   1.000   8.000   
+symfunction_short  Al   3   Mg   Mg   0.020   1.000   1.000   12.000   
+symfunction_short  Al   2   Mg   0.016   0.000   16.000   
+symfunction_short  Al   3   Mg   Al   0.016   1.000   1.000   8.000   
+symfunction_short  Al   3   Mg   Mg   0.007   -1.000   4.000   12.000   
+symfunction_short  Al   2   Si   0.016   0.000   16.000   
+symfunction_short  Al   3   Al   Si   0.007   1.000   4.000   12.000   
+symfunction_short  Al   3   Mg   Al   0.007   1.000   4.000   12.000   
+symfunction_short  Al   3   Si   Si   0.020   1.000   2.000   12.000   
+symfunction_short  Al   3   Si   Si   0.020   -1.000   1.000   12.000   
+symfunction_short  Al   2   Si   0.117   7.071   20.000   
+symfunction_short  Al   2   Al   0.016   0.000   16.000   
+symfunction_short  Al   3   Al   Al   0.007   1.000   4.000   12.000   
+symfunction_short  Al   2   Mg   0.036   0.000   8.000   
+symfunction_short  Al   3   Mg   Si   0.007   -1.000   4.000   12.000   
+symfunction_short  Al   3   Al   Si   0.020   1.000   1.000   12.000   
+symfunction_short  Al   3   Si   Si   0.007   -1.000   4.000   12.000   
+symfunction_short  Al   2   Mg   0.117   7.071   20.000   
+symfunction_short  Al   3   Al   Al   0.016   -1.000   1.000   8.000   
+symfunction_short  Al   3   Mg   Al   0.020   1.000   2.000   12.000   
+symfunction_short  Al   2   Al   0.045   11.314   16.000   
+symfunction_short  Al   3   Mg   Mg   0.007   1.000   4.000   12.000   

@@ -39,6 +39,7 @@ jobs:
          pip install .
          pip install ase>=3.22.1
          echo "${GITHUB_WORKSPACE}/bin" >> $GITHUB_PATH
+         #pip install sgdml 
 
     - name: Install Gfortran and Compile Driver
       shell: bash
