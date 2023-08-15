@@ -1,0 +1,44 @@
+<simulation verbosity='high'>
+  <ffsocket mode='inet' name='driver'>
+    <latency>  1.00000000e-02</latency>
+    <slots>4</slots>
+    <timeout> 6.000000e+00</timeout>
+    <port> 12345 </port>
+    <address> hostname  </address>
+  </ffsocket>
+  <total_time> 3400 </total_time>
+  <total_steps>400</total_steps>
+  <output prefix='data'>
+    <trajectory stride='2' filename='pos' cell_units='angstrom'>positions{angstrom}</trajectory>
+    <trajectory stride='2' filename='xc' format='xyz'>x_centroid{angstrom}</trajectory>
+    <trajectory stride='2' filename='xc2' format='xyz'>x_centroid</trajectory>
+    <trajectory stride='2' filename='vc'>v_centroid</trajectory>
+    <properties stride='2'> [ step, time, conserved, temperature{kelvin}, kinetic_cv, 
+            potential, kinetic_cv(H), kinetic_cv(O) ] </properties>
+  </output>
+  <prng>
+    <seed>18885</seed>
+  </prng>
+  <system>
+    <forces>
+      <force forcefield='driver'/>
+    </forces>
+    <initialize nbeads='16'>
+      <file mode='xyz' units='angstrom'>h5o2+.xyz</file>
+      <cell>
+         [   25.29166, 0, 0, 0, 25.29166, 0, 0, 0, 25.29166 ]
+        </cell>
+    </initialize>
+    <ensemble>
+      <temperature units='kelvin'> 300.0 </temperature>
+    </ensemble>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <timestep units='femtosecond'> 0.25 </timestep>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'>100</tau>
+        </thermostat>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>

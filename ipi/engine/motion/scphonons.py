@@ -710,7 +710,7 @@ class SCPhononator(DummyPhononator):
         """
 
         # Creates new variable names for easier referencing.
-        qp, i = self.dm.beads.q, self.dm.isc - 1
+        qp, Kp, i = self.dm.beads.q, self.dm.K, self.dm.isc - 1
 
         # Takes the set of forces calculated at the previous step for (self.q, self.iD)
         avg_f = dstrip(self.f[i]).copy()[-1] * 0.0

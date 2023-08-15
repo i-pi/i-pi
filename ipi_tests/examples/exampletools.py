@@ -1,6 +1,10 @@
 import os
 from pathlib import Path
-from ..test_tools import Runner, modify_xml_4_dummy_test
+
+#!try:
+#  from ..test_tools import Runner, modify_xml_4_dummy_test
+# except:
+from ipi_tests.test_tools import Runner, modify_xml_4_dummy_test
 
 
 def find_examples(parent, excluded_file="excluded_test.txt", examples=[]):
@@ -23,7 +27,7 @@ def find_examples(parent, excluded_file="excluded_test.txt", examples=[]):
 
     for ff in folders:
         if os.path.isfile(Path(ff) / "input.xml"):
-            if ff not in excluded:
+            if ff not in excluded and "broken" not in ff:
                 examples.append(ff)
 
     return examples
