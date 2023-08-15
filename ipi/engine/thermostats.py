@@ -251,6 +251,7 @@ class ThermoPILE_L(Thermostat):
               be non-zero if the thermostat is initialised from a checkpoint file.
            scale: A float used to reduce the intensity of the PILE thermostat if
               required.
+           pilect: centroid mode temperature (if different from ensemble and set by input) 
 
         Raises:
            TypeError: Raised if the thermostat is used with any object other than
@@ -351,7 +352,8 @@ class ThermoPILE_L(Thermostat):
 
             t.bind(pm=(nm.pnm[it, :], nm.dynm3[it, :]), prng=self.prng, fixdof=fixdof)
             if it == 0:
-                if self.pilect > 0.0:  # trying to pipe different temperature here
+                # the following lines pipe a different temperature to the centroid, if requested
+                if self.pilect > 0.0: 
                     dpipe(dself.pilect, dd(t).temp)
                 else:
                     dpipe(dself.temp, dd(t).temp)
@@ -517,6 +519,8 @@ class ThermoPILE_G(ThermoPILE_L):
               be non-zero if the thermostat is initialised from a checkpoint file.
            scale: A float used to reduce the intensity of the PILE thermostat if
               required.
+           pilect: centroid mode temperature (if different from ensemble and set by input).
+              Default of 0.0 means it is not used and all modes have equal temperatures.
         """
 
         super(ThermoPILE_G, self).__init__(temp, dt, tau, ethermo)
@@ -561,11 +565,11 @@ class ThermoPILE_G(ThermoPILE_L):
 
         t = self._thermos[0]
         t.bind(pm=(nm.pnm[0, :], nm.dynm3[0, :]), prng=self.prng, fixdof=fixdof)
-        if self.pilect > 0.0:  # trying to pipe different temperature here
+        # the next lines pipe a different temperatures to the centroid modes, if requested.
+        if self.pilect > 0.0:  
             dpipe(dself.pilect, dd(t).temp)
         else:
             dpipe(dself.temp, dd(t).temp)
-        #        dpipe(dself.temp, dd(t).temp)
 
         dpipe(dself.dt, dd(t).dt)
         dpipe(dself.tau, dd(t).tau)
