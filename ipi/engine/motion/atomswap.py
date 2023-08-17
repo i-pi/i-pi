@@ -114,7 +114,7 @@ class AtomSwap(Motion):
             # map the "subset" indices back to the "absolute" atom indices
             i = axlist[i]
             j = axlist[j]
-            
+
             old_energy = self.forces.pot
             # swap the atom positions
             self.dbeads.q[:] = self.beads.q[:]
