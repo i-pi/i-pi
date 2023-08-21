@@ -8,3 +8,4 @@ rpc:  path integral molecular dynamics with RPC algorithm to use different numbe
 scpimd:  path integral molecular dynamics with the Suzuki-Chin splitting.
 replica_exchange: path integral molecular dynamics with replica-exchange acorss high-temperatures and pressures.
 standard_constant_pressure: path integral molecular dynamics using the PILE thermostat and MTS for propagating the ring polymer modes in the NPT ensemble.
+two_temperature_PILE: an example of how one could run PACMD with a two-temperature PILE protocol. Settings cannot prevent "temperature leakage", do not use for production.
