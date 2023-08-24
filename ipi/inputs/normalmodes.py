@@ -118,7 +118,7 @@ class InputBosons(InputArray):
            id: The specification mode of the atoms.
         """
 
-        self.id.store("manual")
+        self.id.store("index")
         super(InputBosons, self).store(value)
 
     def fetch(self):
