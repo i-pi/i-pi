@@ -1,0 +1,39 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_opsc, potential_opsc, pressure_tdsc ] </properties>
+    <trajectory stride='1' filename='pos'>  positions{angstrom}  </trajectory>
+  </output>
+  <total_steps> 10 </total_steps>
+  <prng>
+    <seed> 32342 </seed>
+  </prng>
+  <ffsgdml name='sgdml' pbc='False'>
+    <sGDML_model> ../sGDML_models/benzene.DFT.PBE-TS.npz </sGDML_model>
+  </ffsgdml>
+  <system>
+    <initialize nbeads='10'>
+      <file mode='xyz' units="angstrom"> benzene.xyz </file>
+      <cell  mode="manual" units="angstrom">
+          [200.0, 0.0, 0.0, 0.0, 200.0, 0.0, 0.0, 0.0, 200.0 ]
+      </cell>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='sgdml'> </force>
+    </forces>
+  <motion mode='dynamics'>
+       <fixcom>False</fixcom>
+        <dynamics mode='sc'>
+           <nmts>[1]</nmts>
+            <thermostat mode='pile_l'>
+            <tau units='femtosecond'> 1.2 </tau>
+               <pile_lambda> 0.1 </pile_lambda>
+           </thermostat>
+           <timestep units='femtosecond'>1.25</timestep>
+       </dynamics>
+     </motion>
+    <ensemble>
+      <temperature units='kelvin'> 300 </temperature>
+    </ensemble>
+  </system>
+</simulation>

@@ -63,18 +63,23 @@ make
 cd ../..
 ```
 
-### Run one of the examples
+### Examples and demos
 
-This will first start the wrapper in the background, redirecting the output to
+The `examples` and `demos` folders contain inputs for many different types of
+calculations based on i-PI. Examples are typically minimal use-cases of specific
+features, while demos are more structured, tutorial-like examples that show how
+to realize more complex setups, and also provide a brief discussion of the 
+underlying algorithms.
+
+To run these examples, you should typically start i-PI, redirecting the output to
 a log file, and then run a couple of instances of the driver code. The progress
-of the wrapper is followed by monitoring the log file with the `tail` Linux
-command.
+of the wrapper is followed by monitoring the log file with the `tail` Linux command.
 
 Optionally, you can make a copy of the directory with the example somewhere
-else if you want to keep the i-PI directory clean.
+else if you want to keep the i-PI directory clean. For example
 
 ```bash
-cd examples/tutorial/tutorial-1/
+cd demos/para-h2-tutorial/tutorial-1/
 i-pi tutorial-1.xml > log &
 i-pi-driver -h localhost -p 31415 -m sg -o 15 &
 i-pi-driver -h localhost -p 31415 -m sg -o 15 &

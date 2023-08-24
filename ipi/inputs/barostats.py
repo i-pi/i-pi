@@ -84,7 +84,7 @@ class InputBaro(Input):
             {
                 "dtype": float,
                 "default": input_default(factory=Cell),
-                "help": "Reference cell for Parrinello-Rahman-like barostats.",
+                "help": "Reference cell for Parrinello-Rahman-like barostats. Should be roughly equal to the mean size of the cell averaged over the trajectory. Sampling might be inaccurate if the difference is too large.",
                 "dimension": "length",
             },
         ),
