@@ -102,6 +102,7 @@ objects = {
     "prng": prng.InputRandom(),
     "normal_modes": normalmodes.InputNormalModes(),
     "frequencies": normalmodes.InputNMFrequencies(),
+    "bosons": normalmodes.InputBosons(),
     "initialize": initializer.InputInitializer(),
     "file": initializer.InputInitFile(),
     "positions": initializer.InputInitPositions(),

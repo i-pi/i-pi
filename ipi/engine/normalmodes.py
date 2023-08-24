@@ -103,10 +103,10 @@ class NormalModes(dobject):
             freqs = []
         if open_paths is None:
             open_paths = []
-        if bosons is None:
-            bosons = []
         self.open_paths = np.asarray(open_paths, int)
-        self.bosons = np.asarray(bosons, int)
+        if bosons is None:
+            bosons = np.zeros(0, int)
+        self.bosons = bosons
         dself = dd(self)
         dself.nmts = depend_value(name="nmts", value=nmts)
         dself.dt = depend_value(name="dt", value=dt)
@@ -160,6 +160,8 @@ class NormalModes(dobject):
         self.forces = forces
         self.nbeads = beads.nbeads
         self.natoms = beads.natoms
+
+        self.bosons = self.resolve_bosons()
 
         # if ( (len(self.bosons) > 0) and (len(self.bosons) < self.natoms) ):
         # raise(IOError("@NormalModes : Currently, only full bosonic/distinguishable simulations are allowed"))
@@ -380,6 +382,36 @@ class NormalModes(dobject):
             func=self.get_fspring,
             dependencies=[dself.fspringnm, dself.vspring_and_fspring_B],
         )
+
+    def resolve_bosons(self):
+        if not isinstance(self.bosons, tuple):
+            return self.bosons
+
+        bosons_lst, id_mode = self.bosons
+        if id_mode == "index":
+            bosons_array = bosons_lst.astype(int)
+        elif id_mode == "label":
+            for latom in bosons_lst:
+                if latom not in set(self.beads.names):
+                    raise ValueError("Unknown atom label %s for boson" % latom)
+            bosons_array = np.asarray(
+                [
+                    i
+                    for i in range(self.beads.natoms)
+                    if (self.beads.names[i] in bosons_lst)
+                ]
+            )
+        else:
+            raise ValueError(
+                "Error resolving boson identifies using unknown method %s" % id_mode
+            )
+
+        if len(bosons_array) > 0 and (
+            np.min(bosons_array) < 0 or np.max(bosons_array) >= self.beads.natoms
+        ):
+            raise ValueError("Invalid index for boson, got %s" % str(bosons_array))
+
+        return bosons_array
 
     def get_fspringnm(self):
         """Returns the spring force calculated in NM representation."""
