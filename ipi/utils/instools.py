@@ -10,7 +10,8 @@ def banded_hessian(h, sm, masses=True, shift=0.001):
     """Given Hessian in the reduced format (h), construct
     the upper band hessian including the RP terms.
     If masses is True returns hessian otherwise it returns dynmat
-    shift is value that is added to the diagonal to avoid numerical problems with close to 0 frequencies"""
+    shift is value that is added to the diagonal to avoid numerical problems with close to 0 frequencies
+    """
     nbeads = sm.fix.fixbeads.nbeads
     natoms = sm.fix.fixbeads.natoms
     coef = sm.coef  # new_disc
@@ -307,7 +308,6 @@ class Fix(object):
     """Class that applies a fixatoms type constrain"""
 
     def __init__(self, fixatoms, beads, nbeads=None):
-
         self.natoms = beads.natoms
         if nbeads is None:
             self.nbeads = beads.nbeads
@@ -339,7 +339,6 @@ class Fix(object):
         self.mask3 = np.arange(9 * self.natoms * self.nbeads)[mask3b]
 
     def get_mask(self, m):
-
         if m == 0:
             return self.mask0
         elif m == 1:
@@ -357,7 +356,6 @@ class Fix(object):
 
         activearrays = {}
         for key in arrays:
-
             if (
                 key == "old_u"
                 or key == "big_step"
@@ -403,14 +401,12 @@ class Fix(object):
             return vector
 
         if t == 1:
-
             full_vector = np.zeros((self.nbeads, 3 * self.natoms))
             full_vector[:, self.get_mask(1)] = vector
 
             return full_vector
 
         elif t == 2:
-
             full_vector = np.zeros((3 * self.natoms, 3 * self.natoms * self.nbeads))
 
             ii = 0
@@ -421,13 +417,11 @@ class Fix(object):
             return full_vector
 
         elif t == 3:
-
             full_vector = np.zeros((vector.shape[0], 3 * self.natoms * self.nbeads))
             full_vector[:, self.fix.get_mask(2)] = vector
 
             return full_vector
         elif t == 4:
-
             full_vector = np.zeros(
                 (self.nbeads, 3 * self.natoms, 3 * self.natoms, 3 * self.natoms)
             )
@@ -459,7 +453,6 @@ class Fix(object):
             return full_vector
 
         else:
-
             raise ValueError("@apply_fix_atoms: type number is not valid")
 
     def get_active_vector(self, vector, t):

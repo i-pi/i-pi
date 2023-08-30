@@ -22,7 +22,6 @@ A2au = units.unit_to_internal("length", "angstrom", 1.0)
 
 class DoubleWell_driver(Dummy_driver):
     def __init__(self, args=None):
-
         self.error_msg = """\nDW driver accepts 0 or 4 arguments.\nExample: python driver.py -m DoubleWell -o omega_b (cm^-1) V0 (cm^-1) mass(a.u) delta(angs) \n
         python driver.py -m DoubleWell -o 500,2085,1837,0.00 \n"""
         super(DoubleWell_driver, self).__init__(args)
@@ -87,7 +86,6 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
     """
 
     def __init__(self, args=None):
-
         self.error_msg = """\nDW+fric driver expects 8 arguments.\n
         Example: python driver.py -m DoubleWell_with_fric -o omega_b (cm^-1) V0 (cm^-1) mass delta(\AA) eta0  eps1 eps2  deltaQ      \n
         python driver.py -m DoubleWell -o 500,2085,1837,0.00,1,0,0,1\n"""
@@ -161,7 +159,6 @@ class Harmonic_Bath_explicit(object):
     """Explicit description of an Harmonic bath"""
 
     def __init__(self, nbath, parameters):
-
         self.nbath = nbath
         self.m = parameters["m"]
         # self.delta = parameters["delta"]
@@ -211,7 +208,6 @@ class Harmonic_Bath_explicit(object):
         return dSD_dq
 
     def __call__(self, q, x):
-
         pot_bath = 0
         fq_bath = np.zeros(q.shape)
         fx = np.zeros(x.shape)
@@ -238,7 +234,6 @@ class DoubleWell_with_explicit_bath_driver(Dummy_driver):
     """
 
     def __init__(self, args=None):
-
         self.error_msg = """\nDW+explicit_bath driver expects 9 arguments.\n
         Example: python driver.py -m DoubleWell_with_explicit_bath -o omega_b (cm^-1) V0 (cm^-1) mass delta(\AA) eta0  eps1 eps2  deltaQ omega_c(cm^-1)     \n
         python driver.py -m DoubleWell -o 500,2085,1837,0.00,1,0,0,1,500\n"""
@@ -323,7 +318,6 @@ class DDW_with_explicit_bath_driver(Dummy_driver):
     """
 
     def __init__(self, args=None):
-
         self.error_msg = """\nDW+explicit_bath driver expects 11 arguments.\n
         Example: python driver.py -m DoubleWell_with_explicit_bath -o wb1 (cm^-1) V1 (cm^-1) wb2 (cm^-1) V2 (cm^-1) coupling(au) mass delta(\AA) eta0  eps1 eps2  deltaQ omega_c(cm^-1)     \n
         python driver.py -m DoubleWell -o 500,2085,500,2085,0.1,1837,0.00,1,0,0,1,500\n"""

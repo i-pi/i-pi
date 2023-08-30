@@ -170,7 +170,6 @@ class InstantonMotion(Motion):
             or self.options["opt"] == "NR"
             or self.options["opt"] == "lanczos"
         ):
-
             if self.options["friction"]:  # and not self.options["frictionSD"]:
                 self.options["eta0"] = eta
 
@@ -219,7 +218,6 @@ class InstantonMotion(Motion):
                 )
 
         if self.options["friction"]:
-
             found = util.find_spec("scipy")
             if found is None:
                 softexit.trigger(
@@ -271,7 +269,6 @@ class PesMapper(object):
         pass
 
     def bind(self, mapper):
-
         self.dbeads = mapper.beads.copy()
         self.dcell = mapper.cell.copy()
         self.dforces = mapper.forces.copy(self.dbeads, self.dcell)
@@ -416,13 +413,11 @@ class FrictionMapper(PesMapper):
     as well as the friction terms"""
 
     def __init__(self, frictionSD, eta0):
-
         super(FrictionMapper, self).__init__()
         self.frictionSD = frictionSD
         self.eta0 = eta0
 
     def bind(self, mapper):
-
         super(FrictionMapper, self).bind(mapper)
         from scipy.interpolate import interp1d
         from scipy.linalg import sqrtm
@@ -454,7 +449,6 @@ class FrictionMapper(PesMapper):
         self.save(forces.pots, -forces.f, eta)
 
     def check_eta(self, eta):
-
         for i in range(self.dbeads.nbeads):
             assert (
                 eta[i] - eta[i].T
@@ -622,7 +616,6 @@ class FrictionMapper(PesMapper):
             if str(key) != "raw":
                 red_data = np.array(reduced_forces.extras[key])
                 if self.spline:
-
                     red_mspath = full_mspath[indexes]
                     spline = self.interp1d(red_mspath, red_data.T, kind="cubic")
                     full_data = spline(full_mspath).T
@@ -693,13 +686,11 @@ class SpringMapper(object):
     """
 
     def __init__(self):
-
         self.pot = None
         self.f = None
         pass
 
     def bind(self, mapper):
-
         self.temp = mapper.temp
         self.fix = mapper.fix
         self.coef = mapper.coef
@@ -873,13 +864,11 @@ class Mapper(object):
     It also handles fixatoms"""
 
     def __init__(self, esum=False):
-
         self.sm = SpringMapper()
         self.gm = PesMapper()
         self.esum = esum
 
     def initialize(self, q, forces):
-
         self.gm.initialize(q, forces)
 
         e1, g1 = self.gm.evaluate()
@@ -894,7 +883,6 @@ class Mapper(object):
         self.f = -g
 
     def bind(self, dumop):
-
         self.temp = dumop.temp
         self.beads = dumop.beads
         self.forces = dumop.forces
@@ -929,9 +917,7 @@ class Mapper(object):
         self.coef[:] = coef.reshape(-1, 1)
 
     def __call__(self, x, mode="all", apply_fix=True, new_disc=True, ret=True):
-
         if mode == "all":
-
             e1, g1 = self.sm(x, new_disc)
             e2, g2 = self.gm(x, new_disc)
             e = e1 + e2
@@ -1126,7 +1112,6 @@ class DummyOptimizer(dobject):
             )
             and (d_x_max <= tolerances["position"])
         ):
-
             print_instanton_geo(
                 self.options["prefix"] + "_FINAL",
                 step,
@@ -1328,7 +1313,6 @@ class HessianOptimizer(DummyOptimizer):
 
         self.optarrays["hessian"] = geop.optarrays["hessian"]
         if self.options["friction"]:
-
             if geop.options["eta0"].shape == (0, 0):
                 geop.options["eta0"] = np.zeros(
                     (self.beads.natoms * 3, self.beads.natoms * 3)
@@ -1364,24 +1348,19 @@ class HessianOptimizer(DummyOptimizer):
                 self.optarrays["fric_hessian"] = geop.optarrays["fric_hessian"]
 
     def initialize(self, step):
-
         if step == 0:
-
             info(" @GEOP: Initializing INSTANTON", verbosity.low)
 
             if self.beads.nbeads == 1:
-
                 info(" @GEOP: Classical TS search", verbosity.low)
 
             else:
                 # If the coordinates in all the imaginary time slices are the same
                 if ((self.beads.q - self.beads.q[0]) == 0).all():
-
                     self.initial_geo()
                     self.options["hessian_init"] = True
 
                 else:
-
                     info(
                         " @GEOP: Starting from the provided geometry in the extended phase space",
                         verbosity.low,
@@ -1426,7 +1405,6 @@ class HessianOptimizer(DummyOptimizer):
         """Update hessian"""
 
         if update == "powell":
-
             i = self.fix.fixbeads.natoms * 3
             for j in range(self.fix.fixbeads.nbeads):
                 aux = active_hessian[:, j * i : (j + 1) * i]
@@ -1537,7 +1515,6 @@ class NicholsOptimizer(HessianOptimizer):
 
         # Add friction terms to the hessian
         if self.options["friction"]:
-
             eta_active = self.fix.get_active_vector(self.mapper.gm.eta, 5)
             if self.options["frictionSD"]:
                 h_fric = self.mapper.gm.get_fric_rp_hessian(
@@ -1590,7 +1567,6 @@ class NicholsOptimizer(HessianOptimizer):
 
         # Find new movement direction
         if self.options["mode"] == "rate":
-
             d_x = nichols(
                 self.mapper.f,
                 d,
@@ -1869,7 +1845,6 @@ class LBFGSOptimizer(DummyOptimizer):
         self.mapper.esum = True
 
     def initialize(self, step):
-
         if step == 0:
             info(" @GEOP: Initializing instanton", verbosity.low)
 
@@ -1910,7 +1885,6 @@ class LBFGSOptimizer(DummyOptimizer):
         self.init = True
 
     def post_step(self, step, activearrays):
-
         """General tasks that have to be performed after the  actual step"""
 
         # Update

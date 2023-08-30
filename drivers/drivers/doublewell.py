@@ -20,7 +20,6 @@ invcm2au = units.unit_to_internal("frequency", "inversecm", 1.0)
 
 class DoubleWell_driver(Dummy_driver):
     def __init__(self, args=None):
-
         self.error_msg = """\nDW driver excepts 0 or 4 arguments.\nExample: python driver.py -m DoubleWell -u \n
         python driver.py -m DoubleWell -o 500 2085 1837 0.00\n"""
         super(DoubleWell_driver, self).__init__(args)
