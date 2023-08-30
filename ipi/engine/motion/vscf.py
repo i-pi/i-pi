@@ -793,7 +793,10 @@ class VSCF(IMF):
                 if self.imm.w[inm] < 9.1126705e-06:
                     info(
                         " @NM: Ignoring normal mode no.  %8d with frequency %15.8f cm^-1."
-                        % (inm, self.imm.w[inm] * 219474,),
+                        % (
+                            inm,
+                            self.imm.w[inm] * 219474,
+                        ),
                         verbosity.medium,
                     )
                     continue

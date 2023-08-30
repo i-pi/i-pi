@@ -30,7 +30,7 @@ class Harmonic_driver(Dummy_driver):
     def __call__(self, cell, pos):
         """Silly harmonic potential"""
         if self.type == "isotropic":
-            pot = 0.5 * self.k * (pos ** 2).sum()
+            pot = 0.5 * self.k * (pos**2).sum()
             force = -self.k * pos
             vir = cell * 0.0  # makes a zero virial with same shape as cell
             extras = "nada"

@@ -46,7 +46,7 @@ class DoubleWell_driver(Dummy_driver):
                 sys.exit(self.error_msg)
 
         self.A = -0.5 * m * (w_b) ** 2
-        self.B = ((m ** 2) * (w_b) ** 4) / (16 * v0)
+        self.B = ((m**2) * (w_b) ** 4) / (16 * v0)
 
     def __call__(self, cell, pos):
         """DoubleWell potential l"""

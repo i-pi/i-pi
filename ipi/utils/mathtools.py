@@ -512,7 +512,7 @@ def LT_friction(freqs, spectral_density_over_w, forceit=False):
         if wk != 0:
 
             def f(w):
-                return spectral_density_over_w(w) * (wk / (wk ** 2 + w ** 2))
+                return spectral_density_over_w(w) * (wk / (wk**2 + w**2))
 
             # if np.mod(n,100)==0:
             #        print('{} over {}'.format(n,freqs.size))

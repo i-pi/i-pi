@@ -606,7 +606,7 @@ class FrictionMapper(PesMapper):
 
         gq = self.obtain_g(s)
         gq_k = np.dot(self.C, gq)
-        e = 0.5 * np.sum(self.fric_LTwk * gq_k ** 2)
+        e = 0.5 * np.sum(self.fric_LTwk * gq_k**2)
 
         f = np.dot(self.C.T, self.fric_LTwk * gq_k)
         g = np.zeros(f.shape)
@@ -769,7 +769,7 @@ class SpringMapper(object):
             #    g[i, :] += self.dbeads.m3[i, :] * self.omega2 * (self.dbeads.q[i, :] - self.dbeads.q[i - 1, :])
             gq_k = np.dot(self.C, self.dbeads.q)
             g = self.dbeads.m3[0] * np.dot(
-                self.C.T, gq_k * (self.omegak ** 2)[:, np.newaxis]
+                self.C.T, gq_k * (self.omegak**2)[:, np.newaxis]
             )
 
             # With new discretization #This can be expressed as matrix multp
@@ -866,6 +866,7 @@ class SpringMapper(object):
 
     def __call__(self, x, ret=True, new_disc=True):
         """Computes spring energy and gradient for instanton optimization step"""
+
 
 class Mapper(object):
     """Creation of the multi-dimensional function that is the proxy between all the energy and force components and the optimization algorithm.
@@ -1089,7 +1090,7 @@ class DummyOptimizer(dobject):
 
         tolerances = self.options["tolerances"]
         d_u = self.forces.pot - self.optarrays["old_u"].sum()
-       # active_force = self.fix.get_active_vector(self.forces.f, 1) + self.im.f
+        # active_force = self.fix.get_active_vector(self.forces.f, 1) + self.im.f
 
         active_force = self.mapper.f
 
@@ -1268,7 +1269,7 @@ class DummyOptimizer(dobject):
         # c0   = 2*self.sm.dbeads.nbeads - 2*np.sum(coef)
         # coef = np.insert(coef,0,c0)
 
-        #self.im.set_coef(coef)
+        # self.im.set_coef(coef)
 
         fphys = self.gm.dforces.f * ((coef[1:] + coef[:-1]) / 2).reshape(-1, 1)
         e, gspring = self.sm(self.sm.dbeads.q)
@@ -1417,7 +1418,7 @@ class HessianOptimizer(DummyOptimizer):
             self.optarrays["hessian"][:] = self.fix.get_full_vector(phys_hessian, 2)
             # self.optarrays["hessian"][:] = phys_hessian
 
-     #   self.gm.save(self.forces.pots, self.forces.f)
+        #   self.gm.save(self.forces.pots, self.forces.f)
         self.update_old_pos_for()
 
         self.init = True
@@ -1592,7 +1593,11 @@ class NicholsOptimizer(HessianOptimizer):
         if self.options["mode"] == "rate":
 
             d_x = nichols(
-                self.mapper.f, d, w, self.fix.fixbeads.m3, activearrays["big_step"],
+                self.mapper.f,
+                d,
+                w,
+                self.fix.fixbeads.m3,
+                activearrays["big_step"],
             )
         elif self.options["mode"] == "splitting":
             d_x = nichols(
@@ -1648,7 +1653,7 @@ class NROptimizer(HessianOptimizer):
         f = np.multiply(f, self.sm.dbeads.m3.reshape(f.shape) ** -0.5)
 
         d_x = invmul_banded(h_up_band, f).reshape(self.sm.dbeads.q.shape)
-        d_x = np.multiply(d_x, self.sm.dbeads.m3 ** -0.5)
+        d_x = np.multiply(d_x, self.sm.dbeads.m3**-0.5)
 
         # Rescale step if necessary
         if np.amax(np.absolute(d_x)) > activearrays["big_step"]:
@@ -1784,7 +1789,7 @@ class LanczosOptimizer(HessianOptimizer):
         d_x.shape = self.fix.fixbeads.q.shape
 
         # MASS-scaled
-        d_x = np.multiply(d_x, self.fix.fixbeads.m3 ** -0.5)
+        d_x = np.multiply(d_x, self.fix.fixbeads.m3**-0.5)
 
         # Rescale step if necessary
         if np.amax(np.absolute(d_x)) > activearrays["big_step"]:

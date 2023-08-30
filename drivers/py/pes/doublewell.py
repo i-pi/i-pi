@@ -49,7 +49,7 @@ class DoubleWell_driver(Dummy_driver):
                 sys.exit(self.error_msg)
 
         self.A = -0.5 * m * (w_b) ** 2
-        self.B = ((m ** 2) * (w_b) ** 4) / (16 * v0)
+        self.B = ((m**2) * (w_b) ** 4) / (16 * v0)
 
     def __call__(self, cell, pos):
         """DoubleWell potential l"""
@@ -114,7 +114,7 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
             sys.exit(self.error_msg)
 
         self.A = -0.5 * m * (w_b) ** 2
-        self.B = ((m ** 2) * (w_b) ** 4) / (16 * v0)
+        self.B = ((m**2) * (w_b) ** 4) / (16 * v0)
 
     def check_dimensions(self, pos):
         """Functions that checks dimensions of the received position"""
@@ -123,13 +123,13 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
     def SD(self, q):
         """Auxiliary function to compute friction tensor"""
         dx = q / self.deltaQ
-        SD = 1.0 + self.eps1 * np.exp(-0.5 * (dx ** 2)) + self.eps2 * np.tanh(dx)
+        SD = 1.0 + self.eps1 * np.exp(-0.5 * (dx**2)) + self.eps2 * np.tanh(dx)
         return SD
 
     def dSD_dq(self, q):
         """Auxiliary function to compute friction tensor"""
         dx = q / self.deltaQ
-        dsddq1 = self.eps1 * np.exp(-0.5 * (dx ** 2)) * (-dx / self.deltaQ)
+        dsddq1 = self.eps1 * np.exp(-0.5 * (dx**2)) * (-dx / self.deltaQ)
         dsddq2 = self.eps2 * (1 - np.tanh(dx) ** 2) / self.deltaQ
         dSD_dq = q * (dsddq1 + dsddq2) + self.SD(q)
 
@@ -158,7 +158,7 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
 
 
 class Harmonic_Bath_explicit(object):
-    """ Explicit description of an Harmonic bath """
+    """Explicit description of an Harmonic bath"""
 
     def __init__(self, nbath, parameters):
 
@@ -174,7 +174,7 @@ class Harmonic_Bath_explicit(object):
         self.set_ci_and_wi()
 
     def set_ci_and_wi(self):
-        """ Computes the the parameters to represent the harmonic bath """
+        """Computes the the parameters to represent the harmonic bath"""
 
         omega = np.zeros(self.nbath)
         self.omega2 = np.zeros(self.nbath)
@@ -192,19 +192,19 @@ class Harmonic_Bath_explicit(object):
         self.init = True
 
     def S(self, q):
-        """ S coupling function """
+        """S coupling function"""
         return q * self.SD(q)
 
     def SD(self, q):
         """Auxiliary function to compute friction tensor"""
         dx = q / self.deltaQ
-        SD = 1.0 + self.eps1 * np.exp(-0.5 * (dx ** 2)) + self.eps2 * np.tanh(dx)
+        SD = 1.0 + self.eps1 * np.exp(-0.5 * (dx**2)) + self.eps2 * np.tanh(dx)
         return SD
 
     def dSD_dq(self, q):
         """Auxiliary function to compute friction tensor"""
         dx = q / self.deltaQ
-        dsddq1 = self.eps1 * np.exp(-0.5 * (dx ** 2)) * (-dx / self.deltaQ)
+        dsddq1 = self.eps1 * np.exp(-0.5 * (dx**2)) * (-dx / self.deltaQ)
         dsddq2 = self.eps2 * (1 - np.tanh(dx) ** 2) / self.deltaQ
         dSD_dq = q * (dsddq1 + dsddq2) + self.SD(q)
 
@@ -220,7 +220,7 @@ class Harmonic_Bath_explicit(object):
         if self.w_c > 0:
             for i in range(self.nbath):
                 aux = x[i] - (self.coef[i] * self.S(q) / (self.m * self.omega2[i]))
-                pot_bath += 0.5 * self.m * self.omega2[i] * aux ** 2
+                pot_bath += 0.5 * self.m * self.omega2[i] * aux**2
                 fq_bath += aux * self.coef[i] * self.dSD_dq(q)
                 fx[i] -= (self.m * self.omega2[i] * aux).flatten()
 
@@ -228,15 +228,14 @@ class Harmonic_Bath_explicit(object):
 
 
 class DoubleWell_with_explicit_bath_driver(Dummy_driver):
-    """Adds to the double well potential an explicit harmonic bath. First dof correpond to the DW, the rest to the bath discretization 
+    """Adds to the double well potential an explicit harmonic bath. First dof correpond to the DW, the rest to the bath discretization
 
-!  V(q,x1,..,xn) = DW(q) + 
-!      sum_2^(3*N) [ 0.5 m w_i^2(q - (c_i s(q))/(m w_i)^2)^2 ]
-!      s(q) = q *sd(q)
-!      sd(q) = [1+eps1*exp( q^2 / (2 deltaQ^2) ) ] + eps2 tanh(q/deltaQ)
-!      If eps1=eps2=0 then sd(q) =1 and s(q) = q --->Spatially independent bath 
-
-"""
+    !  V(q,x1,..,xn) = DW(q) +
+    !      sum_2^(3*N) [ 0.5 m w_i^2(q - (c_i s(q))/(m w_i)^2)^2 ]
+    !      s(q) = q *sd(q)
+    !      sd(q) = [1+eps1*exp( q^2 / (2 deltaQ^2) ) ] + eps2 tanh(q/deltaQ)
+    !      If eps1=eps2=0 then sd(q) =1 and s(q) = q --->Spatially independent bath
+    """
 
     def __init__(self, args=None):
 
@@ -272,7 +271,7 @@ class DoubleWell_with_explicit_bath_driver(Dummy_driver):
             sys.exit(self.error_msg)
 
         self.A = -0.5 * self.m * (w_b) ** 2
-        self.B = ((self.m ** 2) * (w_b) ** 4) / (16 * v0)
+        self.B = ((self.m**2) * (w_b) ** 4) / (16 * v0)
 
     def __call__(self, cell, pos):
         """DoubleWell potential"""
@@ -290,8 +289,8 @@ class DoubleWell_with_explicit_bath_driver(Dummy_driver):
         pot, fq, fx = self.bath(q, x)
 
         # DW
-        pot += self.A * (q - self.delta) ** 2 + self.B * (q ** 4)
-        fq += -2.0 * self.A * (q - self.delta) - 4.0 * self.B * (q ** 3)
+        pot += self.A * (q - self.delta) ** 2 + self.B * (q**4)
+        fq += -2.0 * self.A * (q - self.delta) - 4.0 * self.B * (q**3)
 
         force = np.concatenate((fq, fx.flatten())).reshape(pos.shape)
         vir = cell * 0.0  # makes a zero virial with same shape as cell
@@ -302,27 +301,26 @@ class DoubleWell_with_explicit_bath_driver(Dummy_driver):
 
 class DDW_with_explicit_bath_driver(Dummy_driver):
 
-    """Adds to a double-double well (DDW) potential coupled to two (explicit) harmonic baths. 
-       pos[0:2] = DDW 
-       pos[2:n//2+1] = bath1 
-       pos[n//2+1:] = bath2
-       where n = 3*natoms = # dofs
+    """Adds to a double-double well (DDW) potential coupled to two (explicit) harmonic baths.
+           pos[0:2] = DDW
+           pos[2:n//2+1] = bath1
+           pos[n//2+1:] = bath2
+           where n = 3*natoms = # dofs
 
-!  V(q1,q2,x1,..,xm,y1,...,ym) = 
-!      DDW(q1,q2) +
-!      sum_i^(m) [ 0.5 m w_i^2(xi - (c_i s(q1))/(m w_i)^2)^2 ] +
-!      sum_i^(m) [ 0.5 m w_i^2(yi - (c_i s(q2))/(m w_i)^2)^2 ] +
-!
-!      with
-!      s(q) = q *sd(q)
-!      sd(q) = [1+eps1*exp( q^2 / (2 deltaQ^2) ) ] + eps2 tanh(q/deltaQ)
-!      If eps1=eps2=0 then sd(q) =1 and s(q) = q --->Spatially independent bath
-!
-!      and
-!
-!      DDW(q1,q2) = DW(q1) + DW(q2) + C(q1q2)^2 
-
-"""
+    !  V(q1,q2,x1,..,xm,y1,...,ym) =
+    !      DDW(q1,q2) +
+    !      sum_i^(m) [ 0.5 m w_i^2(xi - (c_i s(q1))/(m w_i)^2)^2 ] +
+    !      sum_i^(m) [ 0.5 m w_i^2(yi - (c_i s(q2))/(m w_i)^2)^2 ] +
+    !
+    !      with
+    !      s(q) = q *sd(q)
+    !      sd(q) = [1+eps1*exp( q^2 / (2 deltaQ^2) ) ] + eps2 tanh(q/deltaQ)
+    !      If eps1=eps2=0 then sd(q) =1 and s(q) = q --->Spatially independent bath
+    !
+    !      and
+    !
+    !      DDW(q1,q2) = DW(q1) + DW(q2) + C(q1q2)^2
+    """
 
     def __init__(self, args=None):
 
@@ -362,10 +360,10 @@ class DDW_with_explicit_bath_driver(Dummy_driver):
             sys.exit(self.error_msg)
 
         self.A1 = -0.5 * self.m * (wb1) ** 2
-        self.B1 = ((self.m ** 2) * (wb1) ** 4) / (16 * v1)
+        self.B1 = ((self.m**2) * (wb1) ** 4) / (16 * v1)
 
         self.A2 = -0.5 * self.m * (wb2) ** 2
-        self.B2 = ((self.m ** 2) * (wb2) ** 4) / (16 * v2)
+        self.B2 = ((self.m**2) * (wb2) ** 4) / (16 * v2)
 
     def __call__(self, cell, pos):
         """DoubleWell potential"""
@@ -396,11 +394,11 @@ class DDW_with_explicit_bath_driver(Dummy_driver):
         pot = pot_x + pot_y
 
         # DW
-        pot += self.A1 * (q1 - self.delta) ** 2 + self.B1 * (q1 ** 4)
-        fq1 += -2.0 * self.A1 * (q1 - self.delta) - 4.0 * self.B1 * (q1 ** 3)
+        pot += self.A1 * (q1 - self.delta) ** 2 + self.B1 * (q1**4)
+        fq1 += -2.0 * self.A1 * (q1 - self.delta) - 4.0 * self.B1 * (q1**3)
 
-        pot += self.A2 * (q2 - self.delta) ** 2 + self.B2 * (q2 ** 4)
-        fq2 += -2.0 * self.A2 * (q2 - self.delta) - 4.0 * self.B2 * (q2 ** 3)
+        pot += self.A2 * (q2 - self.delta) ** 2 + self.B2 * (q2**4)
+        fq2 += -2.0 * self.A2 * (q2 - self.delta) - 4.0 * self.B2 * (q2**3)
 
         # Coupling
         pot += self.C * q1 * q2
