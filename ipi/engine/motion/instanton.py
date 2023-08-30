@@ -864,8 +864,8 @@ class SpringMapper(object):
 
         return h
 
-    def __call__(self, x, ret=True, new_disc=True):
-        """Computes spring energy and gradient for instanton optimization step"""
+    # def __call__(self, x, ret=True, new_disc=True):
+    #    """Computes spring energy and gradient for instanton optimization step"""
 
 
 class Mapper(object):
