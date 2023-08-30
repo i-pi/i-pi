@@ -1,18 +1,22 @@
 # Broken
-lammps/h2o-planetary-64                                                     # TypeError: string argument expected, got 'bytes' 
-ffdebye/single_particle 
-lammps/h2o-constraints 
-lammps/isof-vapor                                                           # Isotope-zeta-sc is stopping the termination of the run
-lammps/isof-water                                                           # Isotope-zeta-sc is stopping the termination of the run
-pes/neb                                                                     # The nudged elastic band calculations have been temporarily disabled  
+broken/lammps/h2o-planetary-64                                                     # TypeError: string argument expected, got 'bytes' 
+broken/ffdebye/single_particle 
+broken/lammps/h2o-constraints 
+broken/lammps/isof-vapor                                                           # Isotope-zeta-sc is stopping the termination of the run
+broken/lammps/isof-water                                                           # Isotope-zeta-sc is stopping the termination of the run
+
+# Needs infrastructure fixing
+
+clients/fhi-aims/zundel                        # dummy driver has an issue with extra_type. example works with actual backends.
+
 
 # Need of external dependency
-yaff/mil53_ffyaff 
-yaff/mil53_ffsocket 
-plumed/zundel-remd-metad 
-plumed/zundel-metad 
-ffsgdml/benzene-pimd.10 
-ffsgdml/benzene-scpimd.10 
-ASEClient/aims 
-ASEClient/aims_double_server 
-ASEClient/CP2K 
+clients/ffsgdml/
+clients/yaff/mil53_ffyaff 
+clients/yaff/mil53_ffsocket 
+clients/ffsgdml/benzene-pimd.10 
+clients/ffsgdml/benzene-scpimd.10 
+
+features/metadynamics/zundel-remd-metad 
+features/metadynamics/zundel-metad
+features/metadynamics/zundel-wte

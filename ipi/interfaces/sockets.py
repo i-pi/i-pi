@@ -161,13 +161,9 @@ class DriverSocket(socket.socket):
         while bpos < blen:
             timeout = False
 
-            # pre-2.5 version.
             try:
-                bpart = ""
-                bpart = self.recv(blen - bpos)
-                if len(bpart) == 0:
-                    raise socket.timeout  # if this keeps returning no data, we are in trouble....
-                self._buf[bpos : bpos + len(bpart)] = np.fromstring(bpart, np.byte)
+                bpart = 0
+                bpart = self.recv_into(self._buf[bpos:], blen - bpos)
             except socket.timeout:
                 # warning(" @SOCKET:   Timeout in recvall, trying again!", verbosity.low)
                 timeout = True
@@ -180,23 +176,11 @@ class DriverSocket(socket.socket):
                     )
                     raise Disconnected()
                 pass
-            if not timeout and len(bpart) == 0:
-                raise Disconnected()
-            bpos += len(bpart)
 
-            # post-2.5 version: slightly more compact for modern python versions
-            # try:
-            #   bpart = 1
-            #   bpart = self.recv_into(self._buf[bpos:], blen-bpos)
-            # except socket.timeout:
-            #   print " @SOCKET:   Timeout in status recvall, trying again!"
-            #   timeout = True
-            #   pass
-            # if (not timeout and bpart == 0):
-            #   raise Disconnected()
-            # bpos += bpart
-            # TODO this Disconnected() exception currently just causes the program to hang.
-            # This should do something more graceful
+            if not timeout and bpart == 0:
+                raise Disconnected()
+
+            bpos += bpart
 
         if np.isscalar(dest):
             return np.fromstring(self._buf[0:blen], dest.dtype)[0]
@@ -764,6 +748,8 @@ class InterfaceSocket(object):
             match_seq = ["match", "none", "free", "any"]
         elif self.match_mode == "any":
             match_seq = ["any"]
+        elif self.match_mode == "lock":
+            match_seq = ["match", "none"]
 
         # first: dispatches jobs to free clients (if any!)
         # tries first to match previous replica<>driver association, then to get new clients, and only finally send the a new replica to old drivers
@@ -778,6 +764,11 @@ class InterfaceSocket(object):
 
                     if len(self.prlist) == 0:
                         break
+            # if using lock mode, check that there is a at least one client-replica match in the lists freec and prlist.
+            # If not, we break out of the while loop
+            if self.match_mode == "lock":
+                break
+
             if len(freec) > 0:
                 self.prlist = [r for r in self.requests if r["status"] == "Queued"]
         tdispatch += time.time()
@@ -837,6 +828,15 @@ class InterfaceSocket(object):
                 continue
             elif match_ids == "none" and fc.lastreq is not None:
                 continue
+            elif (
+                self.match_mode == "lock"
+                and match_ids == "none"
+                and (r["id"] in [c.lastreq for c in self.clients])
+            ):
+                # if using lock mode and the user connects more clients than there are replicas, do not allow this client to
+                # be matched with a pending request.
+                continue
+
             elif match_ids == "free" and fc.locked:
                 continue
 

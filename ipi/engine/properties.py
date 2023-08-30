@@ -159,6 +159,47 @@ def help_latex(idict, standalone=True):
     return rstr
 
 
+def help_rst(idict, standalone=True):
+    """Function to generate a REST formatted string.
+
+    Can be used in the manual to list the different available outputs.
+
+    Args:
+       idict: Either property_dict or traj_dict, to be used to
+          generate the help file.
+       standalone: A boolean giving whether the RST file produced will be a
+          stand-alone document, or will be intended as a section of a larger
+          document with cross-references between the different sections.
+
+    Returns:
+       A RST formatted string.
+    """
+
+    rstr = ""
+    for out in sorted(idict):
+        rstr += f"**{out}**:\n"
+        if "longhelp" in idict[out]:
+            rstr += " ".join(idict[out]["longhelp"].split())
+        else:
+            rstr += " ".join(idict[out]["help"].split())
+
+        # see if there are additional attributes to print out
+        xstr = ""
+        if (
+            "dimension" in idict[out]
+            and idict[out]["dimension"] != "undefined"
+            and len(idict[out]["dimension"]) > 0
+        ):  # doesn't print out dimension if not necessary.
+            xstr += "dimension: " + idict[out]["dimension"] + "; "
+        if "size" in idict[out]:
+            xstr += "size: " + str(idict[out]["size"]) + "; "
+
+        if len(xstr) > 0:
+            rstr += f"\n\n*{xstr.strip()}*"
+        rstr += "\n\n"
+    return rstr
+
+
 class Properties(dobject):
 
     """A proxy to compute and output properties of the system.
@@ -299,6 +340,12 @@ class Properties(dobject):
                     if int(bead) < 0
                     else self.forces.pots[int(bead)]
                 ),
+            },
+            "bead_potentials": {
+                "dimension": "energy",
+                "help": "The physical system potential energy of each bead.",
+                "size": "nbeads",
+                "func": (lambda: self.forces.pots),
             },
             "potential_opsc": {
                 "dimension": "energy",
@@ -453,8 +500,8 @@ class Properties(dobject):
             "atom_x_path": {
                 "dimension": "length",
                 "help": "The positions of all the beads of a particle given its index.",
-                "longhelp": """The positions of all the beads of a particle given its index. Takes arguments index
-                       and bead (both zero based). If bead is not specified, refers to the centroid.""",
+                "longhelp": """The positions of all the beads of a particle given its index.
+                        Takes an argument index (zero based).""",
                 "func": (
                     lambda atom="": np.asarray(
                         [
@@ -848,6 +895,7 @@ class Properties(dobject):
             system._propertylock
         )  # lock to avoid concurrent access and messing up with dbeads
 
+        self.property_dict["bead_potentials"]["size"] = self.beads.nbeads
         # self.properties_init()  # Initialize the properties here so that all
         # +all variables are accessible (for example to set
         # +the size of the hamiltonian_weights).
@@ -1691,7 +1739,7 @@ class Properties(dobject):
                 self.dbeads.q[b, 3 * i : 3 * (i + 1)] += self.opening(b) * u
             dV = self.dforces.pot - self.forces.pot
 
-            n0 = np.exp(-mass * u_size / (2.0 * beta * Constants.hbar ** 2))
+            n0 = np.exp(-mass * u_size / (2.0 * beta * Constants.hbar**2))
             nx_tot += n0 * np.exp(-dV * beta / float(self.beads.nbeads))
             ncount += 1
 
@@ -1713,7 +1761,7 @@ class Properties(dobject):
 
         eps = abs(float(fd_delta))
         beta = 1.0 / (Constants.kb * self.ensemble.temp)
-        beta2 = beta ** 2
+        beta2 = beta**2
         qc = dstrip(self.beads.qc)
         q = dstrip(self.beads.q)
 
@@ -1762,6 +1810,9 @@ class Properties(dobject):
            computing finite-difference quantities. If it is negative, will be
            scaled down automatically to avoid discontinuities in the potential.
         """
+        # Ugly but works
+        if type(fd_delta) == str:
+            fd_delta = np.float(fd_delta)
 
         dbeta = abs(float(fd_delta))
         beta = 1.0 / (Constants.kb * self.ensemble.temp)
@@ -1810,8 +1861,8 @@ class Properties(dobject):
 
                 eps_prime = (
                     (1.0 + dbeta) * vplus + (1.0 - dbeta) * vminus - 2 * v0
-                ) / (dbeta ** 2 * beta)
-                eps_prime -= 0.5 * (3 * self.beads.natoms) / beta ** 2
+                ) / (dbeta**2 * beta)
+                eps_prime -= 0.5 * (3 * self.beads.natoms) / beta**2
 
                 break
 
@@ -1883,8 +1934,8 @@ class Properties(dobject):
 
                 eps_prime = (
                     (1.0 + dbeta) * vplus + (1.0 - dbeta) * vminus - 2 * v0
-                ) / (dbeta ** 2 * beta)
-                eps_prime -= 0.5 * (3 * self.beads.natoms) / beta ** 2
+                ) / (dbeta**2 * beta)
+                eps_prime -= 0.5 * (3 * self.beads.natoms) / beta**2
 
                 break
 
@@ -2476,7 +2527,6 @@ class Properties(dobject):
         )
 
     def get_chin_correction(self):
-
         f = dstrip(self.forces.f)
         m3 = dstrip(self.beads.m3)
         pots = self.forces.pots
@@ -2494,13 +2544,12 @@ class Properties(dobject):
             chin += (-pots[b] + pots[b + 1]) / 3.0
 
         chin *= -betaP
-        chin2 = chin ** 2
+        chin2 = chin**2
         chinexp = np.exp(chin)
 
         return np.asarray([chin, chin2, chinexp])
 
     def get_ti_correction(self):
-
         f = dstrip(self.forces.f)
         m3 = dstrip(self.beads.m3)
         #        pots = self.forces.pots    #
@@ -2515,7 +2564,7 @@ class Properties(dobject):
         ti *= (1.0 / 24.0) / self.nm.omegan2
 
         ti *= -betaP
-        ti2 = ti ** 2
+        ti2 = ti**2
         tiexp = np.exp(ti)
 
         return np.asarray([ti, ti2, tiexp])

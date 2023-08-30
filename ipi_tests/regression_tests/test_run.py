@@ -5,8 +5,8 @@ from argparse import RawTextHelpFormatter
 import time
 
 try:
-    from .runstools import Runner_regression
-    from ..test_tools import get_test_list
+    from ipi_tests.regression_tests.runstools import Runner_regression
+    from ipi_tests.test_tools import get_test_list
 except ImportError:
     from runstools import Runner_regression
     from ipi_tests.test_tools import get_test_list

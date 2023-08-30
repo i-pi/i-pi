@@ -1,0 +1,6 @@
+This can be run with the driver.x code as a client, by using the pswater potential.
+A command to launch the client is
+
+i-pi-driver -u -a driver -m pswater
+
+This is an example for CMD. Be warned, the current settings CANNOT prevent energy leakage from the internal degrees of freedom to the centroid. This is just an example of the functionality. 

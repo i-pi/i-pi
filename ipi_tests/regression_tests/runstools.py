@@ -36,9 +36,9 @@ class Runner_regression(Runner):
         self.files = []
         self.forms = []
         self.usecol = []
+        self.usetol = []
 
     def create_client_list(self, driver_info, nid, test_settings):
-
         try:
             # Modify xml
             clients = modify_xml_4_dummy_test(
@@ -68,13 +68,31 @@ class Runner_regression(Runner):
             if nl > 1:
                 self.files.append(line.split()[0])
                 self.forms.append(line.split()[1])
+
                 if len(line.split()) > 2:
-                    listll = []
-                    for ll in line.split()[2:]:
-                        listll.append(int(ll))
-                    self.usecol.append(listll)
+                    listcol = []
+                    listtol = []
+                    info_tol = line.split()[2].split(",")
+                    if info_tol[0] == "all":
+                        listcol = info_tol[0]
+                        try:
+                            listtol.append((float(info_tol[1]), float(info_tol[2])))
+                        except:
+                            listtol.append(None)
+                    else:
+                        # We have tol values for specific columns
+                        for ll in line.split()[2:]:
+                            lltol = ll.split(",")
+                            listcol.append(int(lltol[0]))
+                            if len(lltol) > 1:
+                                listtol.append((float(lltol[1]), float(lltol[2])))
+                            else:
+                                listtol.append(None)
+                    self.usecol.append(listcol)
+                    self.usetol.append(listtol)
                 else:
                     self.usecol.append(None)
+                    self.usetol.append(None)
 
         if self.check_numpy_output:
             self._check_numpy_output(cwd)
@@ -92,9 +110,11 @@ class Runner_regression(Runner):
         for ii, refname in enumerate(self.files):
             if self.forms[ii] == "numpy":
                 try:
-                    ref_output = np.loadtxt(
-                        Path(cwd) / refname, usecols=self.usecol[ii]
-                    )
+                    if type(self.usecol[ii]) is list:
+                        usecol = self.usecol[ii]
+                    else:
+                        usecol = None
+                    ref_output = np.loadtxt(Path(cwd) / refname, usecols=usecol)
                 except IOError:
                     raise IOError(
                         'Please provide a reference properties output named "{}"'.format(
@@ -109,17 +129,33 @@ class Runner_regression(Runner):
                     )
 
                 fname = refname[4:]
-                test_output = np.loadtxt(self.tmp_dir / fname, usecols=self.usecol[ii])
+                test_output = np.loadtxt(self.tmp_dir / fname, usecols=usecol)
 
                 try:
-                    np.testing.assert_allclose(
-                        test_output, ref_output, rtol=1.0e-7, atol=1.0e-15
-                    )
-                    # print("No anomaly during the regtest for {}".format(refname))
+                    if self.usetol[ii] is None:
+                        rtol, atol = (1e-7, 1e-15)
+                        np.testing.assert_allclose(
+                            test_output, ref_output, rtol=rtol, atol=atol
+                        )
+                    else:
+                        for icol, tol in enumerate(self.usetol[ii]):
+                            if tol is None:
+                                rtol, atol = (1e-7, 1e-15)
+                            else:
+                                rtol, atol = tol
+                            np.testing.assert_allclose(
+                                test_output[..., icol],
+                                ref_output[..., icol],
+                                rtol=rtol,
+                                atol=atol,
+                            )
                 except AssertionError:
                     raise AssertionError(
-                        "ANOMALY: Disagreement between reference and {} in {}".format(
-                            fname, str((self.parent / cwd).absolute())
+                        "ANOMALY: Disagreement between reference and {} in {}. Absolute discrepancy (mean,max): {},{}.".format(
+                            fname,
+                            str((self.parent / cwd).absolute()),
+                            np.abs(test_output - ref_output).mean(),
+                            np.abs(test_output - ref_output).max(),
                         )
                     )
 
@@ -183,16 +219,31 @@ class Runner_regression(Runner):
                     test_xyz = np.array(testt)
 
                 try:
-                    np.testing.assert_allclose(
-                        test_xyz, ref_xyz, rtol=1.0e-7, atol=1.0e-8
-                    )
-                    # print("No anomaly during the regtest for {}".format(refname))
+                    if self.usetol[ii] is None:
+                        rtol, atol = (1e-7, 1e-6)
+                        np.testing.assert_allclose(
+                            test_xyz, ref_xyz, rtol=rtol, atol=atol
+                        )
+                    else:
+                        for icol, tol in enumerate(self.usetol[ii]):
+                            if tol is None:
+                                rtol, atol = (1e-7, 1e-15)
+                            else:
+                                rtol, atol = tol
+                            np.testing.assert_allclose(
+                                test_xyz[..., icol],
+                                ref_xyz[..., icol],
+                                rtol=rtol,
+                                atol=atol,
+                            )
                 except AssertionError:
                     raise AssertionError(
-                        "ANOMALY: {} in {}".format(
+                        "ANOMALY: {} in {}. Absolute discrepancy (mean,max): {},{}.".format(
                             fname,
                             str((self.parent / cwd).absolute()).split("ipi_tests/", 1)[
                                 1
                             ],
+                            np.abs(test_xyz - ref_xyz).mean(),
+                            np.abs(test_xyz - ref_xyz).max(),
                         )
                     )

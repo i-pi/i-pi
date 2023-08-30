@@ -341,7 +341,6 @@ class Simulation(dobject):
 
             # does the "super motion" step
             if self.smotion is not None:
-                # TODO: We need a file where we store the exchanges
                 self.smotion.step(self.step)
 
             if softexit.triggered:
@@ -382,7 +381,6 @@ class Simulation(dobject):
 
                 # tracemalloc memory traces
                 if verbosity.debug:
-
                     snapshot = tracemalloc.take_snapshot()
                     top_stats = snapshot.statistics("lineno")
                     info(" # DEBUG # Top 10 memory allocations: ")

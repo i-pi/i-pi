@@ -41,6 +41,7 @@ class Elements(dict):
     """
 
     mass_list = {
+        "L": 1.0000 / Constants.amu,  # for cavity photon
         "X": 1.0000 / Constants.amu,
         "H": 1.00794,
         "Z": 1.382943,  # an interpolated H-D atom, based on y=1/sqrt(m) scaling
@@ -257,6 +258,7 @@ UnitMap = {
         "bar": 3.398827377e-9,
         "atmosphere": 3.44386184e-9,
         "pascal": 3.398827377e-14,
+        "ev/ang3": 0.0054456877,
     },
     "density": {"": 1.00, "automatic": 1.00, "atomic_unit": 1.00, "g/cm3": 162.67263},
     "force": {

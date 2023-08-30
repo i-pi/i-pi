@@ -54,7 +54,7 @@
       CHARACTER(LEN=4096) :: initbuffer      ! it's unlikely a string this large will ever be passed...
       CHARACTER(LEN=4096) :: string,string2,string3,trimmed  ! it's unlikely a string this large will ever be passed...
       DOUBLE PRECISION, ALLOCATABLE :: msgbuffer(:)
-      
+
       ! PARAMETERS OF THE SYSTEM (CELL, ATOM POSITIONS, ...)
       DOUBLE PRECISION sigma, eps, rc, rn, ks ! potential parameters
       DOUBLE PRECISION stiffness ! lennard-jones polymer
@@ -157,10 +157,14 @@
                   vstyle = 25
                ELSEIF (trim(cmdbuffer) == "doublewell_1D") THEN
                   vstyle = 24
-               ELSEIF (trim(cmdbuffer) == "harmonic_bath") THEN
+               ELSEIF (trim(cmdbuffer) == "morsedia") THEN
                   vstyle = 26
-               ELSEIF (trim(cmdbuffer) == "meanfield_bath") THEN
+               ELSEIF (trim(cmdbuffer) == "qtip4pf-sr") THEN
                   vstyle = 27
+               ELSEIF (trim(cmdbuffer) == "harmonic_bath") THEN
+                  vstyle = 28
+               ELSEIF (trim(cmdbuffer) == "meanfield_bath") THEN
+                  vstyle = 29
                ELSEIF (trim(cmdbuffer) == "gas") THEN
                   vstyle = 0  ! ideal gas
                ELSEIF (trim(cmdbuffer) == "dummy") THEN
@@ -183,7 +187,7 @@
             ccmd = 0
          ENDIF
       ENDDO
-      
+
       IF (vstyle == -1) THEN
          WRITE(*,*) " Error, type of potential not specified."
          CALL helpmessage
@@ -203,10 +207,10 @@
          ALLOCATE(seed(vseed))
          seed = 12345
          CALL RANDOM_SEED(put=seed)
-         isinit = .true.         
-      ELSEIF (6 == vstyle) THEN
+         isinit = .true.
+      ELSEIF (6 == vstyle .OR. 27 == vstyle) THEN
          IF (par_count /= 0) THEN
-            WRITE(*,*) "Error:  no initialization string needed for qtip4pf."
+            WRITE(*,*) "Error:  no initialization string needed for qtip4pf or qtip4p-sr."
             STOP "ENDED"
          ENDIF
          isinit = .true.
@@ -249,9 +253,9 @@
          ENDIF
          isinit = .true.
       ELSEIF (20 == vstyle) THEN !eckart
-         IF (par_count == 0) THEN ! defaults values 
+         IF (par_count == 0) THEN ! defaults values
             vpars(1) = 0.0d0
-            vpars(2) = 0.66047 
+            vpars(2) = 0.66047
             vpars(3) = (6*12)/( 1836 * (vpars(2)**2) *( (4.D0 * ATAN(1.0d0) )**2 ) )
             vpars(4) = 1836*(3800.0d0/219323d0)**2
          ELSEIF ( 4/= par_count) THEN
@@ -262,7 +266,7 @@
          isinit = .true.
 
       ELSEIF (23 == vstyle) THEN !MB
-         IF (par_count == 0) THEN ! defaults values 
+         IF (par_count == 0) THEN ! defaults values
             vpars(1) = 0.004737803248674678
          ELSEIF ( 1/= par_count) THEN
             WRITE(*,*) "Error: parameters not initialized correctly."
@@ -270,7 +274,7 @@
             STOP "ENDED"
          ENDIF
          isinit = .true.
-      ELSEIF (26 == vstyle) THEN !harmonic_bath
+      ELSEIF (28 == vstyle) THEN !harmonic_bath
          IF (par_count == 3) THEN ! defaults values 
             vpars(4) = 0
             vpars(5) = 0
@@ -288,7 +292,7 @@
          END IF
          vpars(3) = vpars(3) * 4.5563353e-06 !Change omega_c from invcm to a.u.
          isinit = .true.
-      ELSEIF (27 == vstyle) THEN !meanfield bath
+      ELSEIF (29 == vstyle) THEN !meanfield bath
          IF (par_count == 3) THEN ! defaults values 
             vpars(2) = 0
             vpars(3) = 0
@@ -326,8 +330,8 @@
       ELSEIF (vstyle == 10) THEN
          IF (par_count /= 0) THEN
             WRITE(*,*) "Error: no initialization string needed for LEPSM2."
-            STOP "ENDED" 
-         ENDIF   
+            STOP "ENDED"
+         ENDIF
          isinit = .true.
       ELSEIF (vstyle == 11) THEN
          IF (par_count .ne. 3) THEN
@@ -335,7 +339,7 @@
      &    Provide the three components of the electric field in V/nm"
             STOP "ENDED"
          ELSE
-            ! We take in an electric field in volts / nm.This must be converted 
+            ! We take in an electric field in volts / nm.This must be converted
             ! to Eh / (e a0).
             do i=1,3
              efield(i) = vpars(i) / 5.14220652d2
@@ -390,17 +394,29 @@
       ELSEIF (25 == vstyle) THEN !doublewell
          IF ( par_count /= 0 ) THEN
                  WRITE(*,*) "Error: no initialization string needed for doublewell."
-            STOP "ENDED" 
-         ENDIF   
+            STOP "ENDED"
+         ENDIF
          isinit = .true.
 
       ELSEIF (24 == vstyle) THEN !doublewell_1D
          IF ( par_count /= 0 ) THEN
                  WRITE(*,*) "Error: no initialization string needed for 1-dimensional doublewell."
-            STOP "ENDED" 
-         ENDIF   
+            STOP "ENDED"
+         ENDIF
+         isinit = .true.
+      ELSEIF (26 == vstyle) THEN
+         IF (par_count == 0) THEN ! defaults (OH stretch)
+             vpars(1) = 1.8323926 ! r0
+             vpars(2) = 0.18748511263179304 ! D
+             vpars(3) = 1.1562696428501682 ! a
+         ELSEIF ( 2/= par_count) THEN
+             WRITE(*,*) "Error: parameters not initialized correctly."
+             WRITE(*,*) "For morse potential use -o r0,D,a (in a.u.) "
+             STOP "ENDED"
+         ENDIF
          isinit = .true.
       ENDIF
+
 
       IF (verbose > 0) THEN
          WRITE(*,*) " DRIVER - Connecting to host ", trim(host)
@@ -484,18 +500,20 @@
             IF (vstyle == 0) THEN   ! ideal gas, so no calculation done
                pot = 0
                forces = 0.0d0
-               virial = 1.0d-200   
+               virial = 1.0d-200
                ! returns a tiny but non-zero stress, so it can
                ! bypass the check for zero virial that is used
                ! to avoid running constant-pressure simulations
                ! with a code that cannot compute the virial
             ELSEIF (vstyle == 99) THEN ! dummy output, useful to test that i-PI "just runs"
                call random_number(pot)
-               pot = pot - 0.5                
+               pot = pot - 0.5
                call random_number(forces)
                forces = forces - 0.5
                call random_number(virial)
                virial = virial - 0.5
+               call random_number(dip)
+               dip = dip - 0.5 
             ELSEIF (vstyle == 3) THEN ! 1D harmonic potential, so only uses the first position variable
                pot = 0.5*ks*atoms(1,1)**2
                forces = 0.0d0
@@ -506,14 +524,20 @@
                    pot = 0.0d0
                    forces = 0.0d0
                    virial = 0.0d0
-               DO i=1,nat 
+               DO i=1,nat
                    pot = pot + 0.5*ks*atoms(i,1)**2 + 0.5*ks*atoms(i,2)**2 + 0.5*ks*atoms(i,3)**2
                    forces(i,1) = -ks*atoms(i,1)
                    forces(i,2) = -ks*atoms(i,2)
                    forces(i,3) = -ks*atoms(i,3)
-                   virial(i,1) = forces(i,1)*atoms(i,1)
-                   virial(i,2) = forces(i,2)*atoms(i,2)
-                   virial(i,3) = forces(i,3)*atoms(i,3)
+                   virial(1,1) = virial(1,1) + forces(i,1)*atoms(i,1)
+                   virial(1,2) = virial(1,2) + forces(i,1)*atoms(i,2)
+                   virial(1,3) = virial(1,3) + forces(i,1)*atoms(i,3)
+                   virial(2,1) = virial(2,1) + forces(i,2)*atoms(i,1)
+                   virial(2,2) = virial(2,2) + forces(i,2)*atoms(i,2)
+                   virial(2,3) = virial(2,3) + forces(i,2)*atoms(i,3)
+                   virial(3,1) = virial(3,1) + forces(i,3)*atoms(i,1)
+                   virial(3,2) = virial(3,2) + forces(i,3)*atoms(i,2)
+                   virial(3,3) = virial(3,3) + forces(i,3)*atoms(i,3)
                 enddo
             ELSEIF (vstyle == 7) THEN ! linear potential in x position of the 1st atom
                pot = ks*atoms(1,1)
@@ -527,6 +551,12 @@
                   STOP "ENDED"
                ENDIF
                CALL getmorse(vpars(1), vpars(2), vpars(3), atoms, pot, forces)
+            ELSEIF (vstyle == 26) THEN ! Morse potential with 2 atoms.
+               IF (nat/=2) THEN
+                   WRITE(*,*) "Expecting 2 atom for 3D Morse "
+                   STOP "ENDED"
+               ENDIF
+               CALL getmorsedia(vpars(1), vpars(2), vpars(3), atoms, pot, forces)
             ELSEIF (vstyle == 5) THEN ! Zundel potential.
                IF (nat/=7) THEN
                   WRITE(*,*) "Expecting 7 atoms for Zundel potential, O O H H H H H "
@@ -579,7 +609,7 @@
                vpars(1) = cell_h(1,1)
                vpars(2) = cell_h(2,2)
                vpars(3) = cell_h(3,3)
-               IF (cell_h(1,2).gt.1d-10 .or. cell_h(1,3).gt.1d-12  .or. cell_h(2,3).gt.1d-12) THEN                       
+               IF (cell_h(1,2).gt.1d-10 .or. cell_h(1,3).gt.1d-12  .or. cell_h(2,3).gt.1d-12) THEN
                   WRITE(*,*) " qtip4pf PES only works with orthorhombic cells", cell_h(1,2), cell_h(1,3), cell_h(2,3)
                   STOP "ENDED"
                ENDIF
@@ -588,8 +618,13 @@
                DO i=1, nat, 3
                   dip = dip -1.1128d0 * atoms(i,:) + 0.5564d0 * (atoms(i+1,:) + atoms(i+2,:))
                ENDDO
-               ! do not compute the virial term
-            ELSEIF (vstyle == 11) THEN ! efield potential.             
+            ELSEIF (vstyle == 27) THEN ! short-range qtip4pf potential.
+               IF (mod(nat,3)/=0) THEN
+                  WRITE(*,*) " Expecting water molecules O H H O H H O H H but got ", nat, "atoms"
+                  STOP "ENDED"
+               ENDIF
+               CALL qtip4pf_sr(atoms,nat,forces,pot,virial)
+            ELSEIF (vstyle == 11) THEN ! efield potential.
                IF (mod(nat,3)/=0) THEN
                   WRITE(*,*) " Expecting water molecules O H H O H H O H H but got ", nat, "atoms"
                   STOP "ENDED"
@@ -603,7 +638,7 @@
 
                dip=0.0
                vecdiff=0.0
-               ! lets fold the atom positions back to center in case the water travelled far away. 
+               ! lets fold the atom positions back to center in case the water travelled far away.
                ! this avoids problems if the water is splic across (virtual) periodic boundaries
                ! OH_1
                call vector_separation(cell_h, cell_ih, atoms(2,:), atoms(1,:), vecdiff, dist)
@@ -620,7 +655,7 @@
                call pot_nasa(atoms, forces, pot)
                call dms_nasa(atoms, charges, dummy) ! MR: trying to print out the right charges
                dip(:)=atoms(1,:)*charges(1)+atoms(2,:)*charges(2)+atoms(3,:)*charges(3)
-               ! MR: the above line looks like it provides correct results in eAngstrom for dipole! 
+               ! MR: the above line looks like it provides correct results in eAngstrom for dipole!
                pot = pot*0.0015946679     ! pot_nasa gives kcal/mol
                forces = forces * (-0.00084329756) ! pot_nasa gives V in kcal/mol/angstrom
                ! do not compute the virial term
@@ -636,12 +671,12 @@
                   STOP "ENDED"
                END IF
                CALL LEPS_M2(4, atoms, pot, forces)
-               
+
             ELSEIF (vstyle == 20) THEN ! eckart potential.
                CALL geteckart(nat,vpars(1), vpars(2), vpars(3),vpars(4), atoms, pot, forces)
-            ELSEIF (vstyle == 26) THEN ! harmonic_bath.
+            ELSEIF (vstyle == 28) THEN ! harmonic_bath.
                CALL get_harmonic_bath(nat,vpars(1),vpars(2),vpars(3),vpars(4),vpars(5),vpars(6),atoms, pot, forces)
-            ELSEIF (vstyle == 27) THEN ! meanfield_bath.
+            ELSEIF (vstyle == 29) THEN ! meanfield_bath.
                CALL get_meanfield_harmonic_bath(nat,vpars(1),vpars(2),vpars(3),vpars(4),atoms, pot, forces,friction)
             ELSEIF (vstyle == 23) THEN ! MB.
                IF (nat/=1) THEN
@@ -718,7 +753,7 @@
  125  format(es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a)
  126  format(es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a)
 
-            IF (vstyle == 27) THEN ! returns meanfield friction
+            IF (vstyle == 29) THEN ! returns meanfield friction
                 WRITE(initbuffer,'(a)') "{"
                 WRITE(32,'(a)') '{'
                 WRITE(string,'(a)') '"friction": ['
@@ -784,7 +819,8 @@
                 CALL writebuffer(socket,initbuffer,cbuf)
                 IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ",  &
      &          initbuffer
-            ELSEIF (vstyle==5 .or. vstyle==6 .or. vstyle==8) THEN ! returns the dipole through initbuffer
+!            ELSEIF (vstyle==5 .or. vstyle==6 .or. vstyle==8 .or. vstyle==99) THEN ! returns the  dipole through initbuffer
+            ELSEIF (vstyle==5 .or. vstyle==6 .or. vstyle==8) THEN ! returns the  dipole through initbuffer
                WRITE(initbuffer, '(a,3x,f15.8,a,f15.8,a,f15.8, &
      &         3x,a)') '{"dipole": [',dip(1),",",dip(2),",",dip(3),"]}"
                cbuf = LEN_TRIM(initbuffer)
@@ -810,7 +846,7 @@
          ENDIF
       ENDDO
       IF (nat > 0) DEALLOCATE(atoms, forces, msgbuffer, friction)
- 
+
     CONTAINS
       SUBROUTINE helpmessage
          ! Help banner
@@ -821,10 +857,10 @@
          WRITE(*,*) " For LJ potential use -o sigma,epsilon,cutoff "
          WRITE(*,*) " For SG potential use -o cutoff "
          WRITE(*,*) " For 1D/3D harmonic oscillator use -o k "
-         WRITE(*,*) " For 1D morse oscillator use -o r0,D,a"
-         WRITE(*,*) " For qtip4pf-efield use -o Ex,Ey,Ez with Ei in V/nm"         
+         WRITE(*,*) " For 1D morse oscillators use -o r0,D,a"
+         WRITE(*,*) " For qtip4pf-efield use -o Ex,Ey,Ez with Ei in V/nm"
          WRITE(*,*) " For ljpolymer use -o n_monomer,sigma,epsilon,cutoff "
-         WRITE(*,*) " For the ideal gas, qtip4pf, zundel, ch4hcbe, nasa, doublewell or doublewell_1D no options are needed! "
+         WRITE(*,*) " For the ideal gas, qtip4pf, qtip4p-sr, zundel, ch4hcbe, nasa, doublewell or doublewell_1D no options are needed! "
        END SUBROUTINE helpmessage
 
    END PROGRAM

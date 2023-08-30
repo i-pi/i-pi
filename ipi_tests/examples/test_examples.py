@@ -3,8 +3,11 @@ import pytest
 import argparse
 from argparse import RawTextHelpFormatter
 import time
-from .exampletools import find_examples, Runner_examples
 
+try:
+    from .exampletools import find_examples, Runner_examples
+except:
+    from exampletools import find_examples, Runner_examples
 
 """ Test that examples are not broken. Doesn't not check that output is correct."""
 
@@ -35,7 +38,6 @@ def test_example(ex, verbose=False):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(
         formatter_class=RawTextHelpFormatter,
         description=""
@@ -55,6 +57,7 @@ if __name__ == "__main__":
         "\n"
         "type: python test_examples.py -f <folder_path> \n"
         "example  python test_examples.py -f examples/MBPOL/splitting> \n"
+        "Note that the folder path is referenced to the i-pi root folder  \n"
         "\n"
         "example: python test_examples.py examples/lammps/h2o-geop\n"
         "This script will recursively search for examples.\n"
@@ -67,7 +70,7 @@ if __name__ == "__main__":
         "--folder",
         type=str,
         nargs="+",
-        help="Folder(s) of the example to test. Example: -f examples/MBPOL/splitting",
+        help="Folder(s) of the example to test. Do not give absolute path. The path should be referenced to the i-pi root directory. Example: -f examples/MBPOL/splitting",
     )
     parser.add_argument(
         "--test_all", action="store_true", help="Folder of the example to test"

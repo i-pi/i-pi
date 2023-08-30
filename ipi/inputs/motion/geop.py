@@ -48,7 +48,7 @@ class InputGeop(InputDictionary):
                 "dtype": str,
                 "default": "lbfgs",
                 "help": "The geometry optimization algorithm to be used",
-                "options": ["sd", "cg", "bfgs", "bfgstrm", "lbfgs"],
+                "options": ["sd", "cg", "bfgs", "bfgstrm", "lbfgs", "damped_bfgs"],
             },
         )
     }
@@ -230,6 +230,10 @@ class InputGeop(InputDictionary):
             self.old_direction.store(geop.d)
             self.ls_options.store(geop.ls_options)
             self.old_force.store(geop.old_f)
+        if geop.mode == "damped_bfgs":
+            self.old_direction.store(geop.d)
+            self.invhessian_bfgs.store(geop.invhessian)
+            self.biggest_step.store(geop.big_step)
 
     def fetch(self):
         rv = super(InputGeop, self).fetch()

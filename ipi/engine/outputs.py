@@ -51,11 +51,9 @@ class OutputMaker(dobject):
         self.f_start = f_start
 
     def bind(self, system):
-
         self.system = system
 
     def get_output(self, filename="out", mode=None):
-
         if self.prefix != "":
             filename = self.prefix + "." + filename
         rout = BaseOutput(filename)
@@ -192,12 +190,16 @@ class PropertyOutput(BaseOutput):
             key = getkey(what)
             prop = self.system.properties.property_dict[key]
 
-            if "size" in prop and prop["size"] > 1:
-                ohead += "cols.  %3d-%-3d" % (icol, icol + prop["size"] - 1)
-                icol += prop["size"]
-            else:
+            if "size" not in prop or prop["size"] == 1:
                 ohead += "column %3d    " % (icol)
                 icol += 1
+            else:
+                if (type(prop["size"]) is str) or (prop["size"] <= 0):
+                    raise RuntimeError("ERROR: property %s has undefined size." % key)
+                elif prop["size"] > 1:
+                    ohead += "cols.  %3d-%-3d" % (icol, icol + prop["size"] - 1)
+                    icol += prop["size"]
+
             ohead += " --> %s " % (what)
             if "help" in prop:
                 ohead += ": " + prop["help"]
@@ -346,7 +348,6 @@ class TrajectoryOutput(BaseOutput):
             "forces_sc",
             "momenta",
         ]:
-
             # must write out trajectories for each bead, so must create b streams
 
             # prepare format string for file name

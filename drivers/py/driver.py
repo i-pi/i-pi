@@ -123,6 +123,30 @@ def run_driver(unix=False, address="", port=12345, driver=Dummy_driver()):
         elif header == Message("GETFORCE"):
             sock.sendall(Message("FORCEREADY"))
 
+            # sanity check in the returned values (catches bugs and inconsistencies in the implementation)
+            if not isinstance(force, np.ndarray) and force.dtype == np.float64:
+                raise ValueError(
+                    "driver returned forces with the wrong type: we need a "
+                    "numpy.ndarray containing 64-bit floating points values"
+                )
+
+            if not isinstance(vir, np.ndarray) and vir.dtype == np.float64:
+                raise ValueError(
+                    "driver returned virial with the wrong type: we need a "
+                    "numpy.ndarray containing 64-bit floating points values"
+                )
+
+            if len(force.flatten()) != len(pos.flatten()):
+                raise ValueError(
+                    "driver returned forces with the wrong size: number of "
+                    "atoms and dimensions must match positions"
+                )
+
+            if len(vir.flatten()) != 9:
+                raise ValueError(
+                    "driver returned a virial tensor which does not have 9 components"
+                )
+
             send_data(sock, np.float64(pot))
             send_data(sock, np.int32(nat))
             send_data(sock, force)
@@ -137,7 +161,6 @@ def run_driver(unix=False, address="", port=12345, driver=Dummy_driver()):
 
 
 if __name__ == "__main__":
-
     parser = argparse.ArgumentParser(description=description)
 
     parser.add_argument(

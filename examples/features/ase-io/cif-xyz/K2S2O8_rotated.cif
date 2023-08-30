@@ -1,0 +1,37 @@
+data_image0
+_chemical_formula_structural       K2O8S2
+_chemical_formula_sum              "K2 O8 S2"
+_cell_length_a       5.099999999999999
+_cell_length_b       6.83
+_cell_length_c       5.4
+_cell_angle_alpha    106.9
+_cell_angle_beta     90.17
+_cell_angle_gamma    102.6
+
+_space_group_name_H-M_alt    "P 1"
+_space_group_IT_number       1
+
+loop_
+  _space_group_symop_operation_xyz
+  'x, y, z'
+
+loop_
+  _atom_site_type_symbol
+  _atom_site_label
+  _atom_site_symmetry_multiplicity
+  _atom_site_fract_x
+  _atom_site_fract_y
+  _atom_site_fract_z
+  _atom_site_occupancy
+  K   K1        1.0  0.18599999999999997  0.806  0.48599999999999993  1.0000
+  K   K2        1.0  0.814  0.19399999999999995  0.5140000000000001  1.0000
+  O   O1        1.0  0.08600000000000001  0.08900000000000001  0.069  1.0000
+  O   O2        1.0  0.9139999999999997  0.9109999999999999  0.9309999999999998  1.0000
+  O   O3        1.0  0.30599999999999994  0.22799999999999992  0.7019999999999998  1.0000
+  O   O4        1.0  0.6939999999999998  0.7719999999999999  0.298  1.0000
+  O   O5        1.0  0.534  0.236  0.097  1.0000
+  O   O6        1.0  0.466  0.764  0.903  1.0000
+  O   O7        1.0  0.21400000000000002  0.45000000000000007  0.11099999999999999  1.0000
+  O   O8        1.0  0.7859999999999999  0.5500000000000002  0.8890000000000001  1.0000
+  S   S1        1.0  0.258  0.241  0.019000000000000006  1.0000
+  S   S2        1.0  0.742  0.759  0.981  1.0000

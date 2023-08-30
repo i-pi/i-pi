@@ -5,6 +5,7 @@
 # See the "licenses" directory for full license information.
 
 
+from ipi import ipi_global_settings
 from ipi.utils.depend import *
 from ipi.utils.inputvalue import *
 from ipi.utils.units import *
@@ -124,6 +125,14 @@ class InputSimulation(Input):
                 "options": ["md", "paratemp", "static"],
             },
         ),
+        "floatformat": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "default": "%16.8e",
+                "help": "A format for all printed floats.",
+            },
+        ),
     }
 
     dynamic = {
@@ -161,6 +170,10 @@ class InputSimulation(Input):
             iforcefields.InputFFsGDML,
             {"help": iforcefields.InputFFsGDML.default_help},
         ),
+        "ffcavphsocket": (
+            iforcefields.InputFFCavPhSocket,
+            {"help": iforcefields.InputFFCavPhSocket.default_help},
+        ),
     }
 
     default_help = "This is the top level class that deals with the running of the simulation, including holding the simulation specific properties such as the time step and outputting the data."
@@ -182,6 +195,7 @@ class InputSimulation(Input):
         self.total_time.store(simul.ttime)
         self.smotion.store(simul.smotion)
         self.threading.store(simul.threading)
+        self.floatformat.store(ipi_global_settings["floatformat"])
 
         # this we pick from the messages class. kind of a "global" but it seems to
         # be the best way to pass around the (global) information on the level of output.
@@ -238,6 +252,10 @@ class InputSimulation(Input):
                     _iobj = iforcefields.InputFFCommittee()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("ffcommittee", _iobj)
+                elif isinstance(_obj, eforcefields.FFCavPhSocket):
+                    _iobj = iforcefields.InputFFCavPhSocket()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffcavphsocket", _iobj)
                 elif isinstance(_obj, System):
                     _iobj = InputSystem()
                     _iobj.store(_obj)
@@ -260,19 +278,28 @@ class InputSimulation(Input):
 
         super(InputSimulation, self).fetch()
 
+        # We fetch format and store it in the global variable
+        ipi_global_settings["floatformat"] = self.floatformat.fetch()
+        try:
+            _ = ipi_global_settings["floatformat"] % 1.0
+        except:
+            print("Error: <simulation> has invalid floatformat attribute.")
+            exit(-1)
+
         # small hack: initialize here the verbosity level -- we really assume to have
         # just one simulation object
         verbosity.level = self.verbosity.fetch()
 
         syslist = []
         fflist = []
-        for (k, v) in self.extra:
+        for k, v in self.extra:
             if k == "system":
                 syslist.append(v.fetch())
             elif k == "system_template":
-                syslist += (
-                    v.fetch()
-                )  # this will actually generate automatically a bunch of system objects with the desired properties set automatically to many values
+                # This will actually generate automatically a bunch
+                # of system objects with the desired properties set
+                # automatically to many values.
+                syslist += v.fetch()
             elif (
                 k == "ffsocket"
                 or k == "fflj"
@@ -282,6 +309,7 @@ class InputSimulation(Input):
                 or k == "ffsgdml"
                 or k == "ffyaff"
                 or k == "ffcommittee"
+                or k == "ffcavphsocket"
             ):
                 info(" # @simulation: Fetching" + k, verbosity.low)
                 fflist.append(v.fetch())

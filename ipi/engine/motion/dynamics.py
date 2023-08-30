@@ -80,7 +80,8 @@ class Dynamics(Motion):
                 thermostat.__class__.__name__ is ("ThermoPILE_G" or "ThermoNMGLEG ")
             ) and (len(fixatoms) > 0):
                 softexit.trigger(
-                    "!! Sorry, fixed atoms and global thermostat on the centroid not supported. Use a local thermostat. !!"
+                    status="bad",
+                    message="!! Sorry, fixed atoms and global thermostat on the centroid not supported. Use a local thermostat. !!",
                 )
             self.thermostat = thermostat
 
@@ -225,15 +226,11 @@ class Dynamics(Motion):
                     raise ValueError(
                         "The barostat and its mode have to be specified for constant-p integrators"
                     )
-                if self.ensemble.pext < 0:
-                    raise ValueError(
-                        "Negative or unspecified pressure for a constant-p integrator"
-                    )
+                if np.allclose(self.ensemble.pext, -12345):
+                    raise ValueError("Unspecified pressure for a constant-p integrator")
             elif self.enstype == "nst":
-                if np.trace(self.ensemble.stressext) < 0:
-                    raise ValueError(
-                        "Negative or unspecified stress for a constant-s integrator"
-                    )
+                if np.allclose(self.ensemble.stressext.diagonal(), -12345):
+                    raise ValueError("Unspecified stress for a constant-s integrator")
 
     def get_ntemp(self):
         """Returns the PI simulation temperature (P times the physical T)."""
@@ -366,7 +363,7 @@ class DummyIntegrator(dobject):
             dens = 0
             for i in range(3):
                 pcom = p[:, i:na3:3].sum()
-                dens += pcom ** 2
+                dens += pcom**2
                 pcom /= Mnb
                 self.beads.p[:, i:na3:3] -= m * pcom
 
@@ -433,7 +430,6 @@ class NVEIntegrator(DummyIntegrator):
         mk = int(self.nmts[index] / 2)
 
         for i in range(mk):  # do nmts/2 full sub-steps
-
             self.pstep(index)
             self.pconstraints()
             if index == self.nmtslevels - 1:
@@ -534,7 +530,6 @@ class NVTIntegrator(NVEIntegrator):
             self.pconstraints()
 
         elif self.splitting == "baoab":
-
             self.mtsprop_ba(0)
             # thermostat is applied for dt
             self.tstep()
@@ -703,7 +698,6 @@ class SCIntegrator(NVTIntegrator):
         )
 
     def step(self, step=None):
-
         # the |f|^2 term is considered to be slowest (for large enough P) and is integrated outside everything.
         # if nmts is not specified, this is just the same as doing the full SC integration
 
@@ -722,7 +716,6 @@ class SCIntegrator(NVTIntegrator):
             self.pconstraints()
 
         elif self.splitting == "baoab":
-
             self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
             self.mtsprop_ba(0)
             # thermostat is applied for dt
@@ -765,7 +758,6 @@ class SCNPTIntegrator(SCIntegrator):
         self.barostat.thermostat.step()
 
     def step(self, step=None):
-
         # the |f|^2 term is considered to be slowest (for large enough P) and is integrated outside everything.
         # if nmts is not specified, this is just the same as doing the full SC integration
 
@@ -786,7 +778,6 @@ class SCNPTIntegrator(SCIntegrator):
             self.pconstraints()
 
         elif self.splitting == "baoab":
-
             self.barostat.pscstep()
             self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
             self.mtsprop_ba(0)

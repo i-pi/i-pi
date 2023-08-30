@@ -11,7 +11,8 @@ import os
 
 def get_dynmat(h, m3, nbeads=1):
     """Computes the dynamical matrix.
-    If nbeads > 1 the reduced form with shape = (3*natoms, 3*natoms*nbeads) is expected"""
+    If nbeads > 1 the reduced form with shape = (3*natoms, 3*natoms*nbeads) is expected
+    """
 
     # Check dimensions
 

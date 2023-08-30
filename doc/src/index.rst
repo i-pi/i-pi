@@ -25,15 +25,9 @@ instances of an external code, acting as clients. Since the main focus
 is on performing *ab initio* PIMD – where the cost of the force
 evaluation is overwhelming relative to the ionic dynamics – clarity has
 been privileged over speed. Still, the implementation of i-PI is
-efficient enough that it can be used with empirical forcefields to
-perform simple benchmarks and preparatory simulations.
-
-The documentation including the python help strings of the keywords is
-best accessed through the latex-generated PDF file that can be compiled from the code
-repository for the most recent version or downloaded from here (static
-version updated periodically): `manual-pdf`_
-
-.. _manual-pdf: ./_static/manual.pdf
+efficient enough that, by tuning the socket parameters and avoiding 
+excessive I/O it can be used to run empirical forcefields with 
+tens of thousands of atoms with only a small overhead. 
 
 This documentation is structured as follows:
 
@@ -45,7 +39,9 @@ This documentation is structured as follows:
    user-guide
    tutorials
    input-reference
+   units
    troubleshooting
    faq
    contributing
    bibliography
+

@@ -40,7 +40,7 @@ except ImportError as e:
 
 class SCPhononsMover(Motion):
     """
-    Self consistent phonons method.
+    Self-consistent phonons method.
     """
 
     def __init__(
@@ -105,7 +105,6 @@ class SCPhononsMover(Motion):
             self.prefix = "scphonons"
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
-
         super(SCPhononsMover, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
 
         # Raises error if nparallel is not a factor of max_steps
@@ -189,7 +188,8 @@ class SCPhononsMover(Motion):
     def step(self, step=None):
         if self.isc == self.max_iter:
             softexit.trigger(
-                " @SCP: Reached maximum iterations. Terminating the SCP calculation."
+                status="bad",
+                message=" @SCP: Reached maximum iterations. Terminating the SCP calculation.",
             )
         if self.imc == 0:
             self.phononator.reset()
@@ -341,7 +341,6 @@ class SCPhononator(DummyPhononator):
             )
             # Creates a list of configurations that are to be sampled.
             while self.dm.imc <= self.dm.max_steps:
-
                 irng = (self.dm.isc) * self.dm.max_steps // 2 + (self.dm.imc + 1) // 2
                 x = self.dm.fginv(self.dm.random_sequence[irng])
 
@@ -461,14 +460,13 @@ class SCPhononator(DummyPhononator):
         #  as a proxy.
 
         if self.precheck:
-
             # Calculates the force, the error and the
             # batch weights.
             f, f_err, batch_w = self.weighted_force()
             fnm = np.dot(self.dm.V.T, f)
 
             # Assumes error = standard error.
-            fnm_err = np.sqrt(np.dot(self.dm.V.T ** 2, f_err ** 2))
+            fnm_err = np.sqrt(np.dot(self.dm.V.T**2, f_err**2))
             fnm[self.z] = 0.0
 
             if np.all(np.abs(fnm) < fnm_err):
@@ -483,7 +481,6 @@ class SCPhononator(DummyPhononator):
         # factor to move in the direction of the force.
 
         elif self.dm.displace_mode == "sd":
-
             # Calculates the force, the error and the
             # batch weights.
             f, f_err, batch_w = self.weighted_force()
@@ -516,7 +513,6 @@ class SCPhononator(DummyPhononator):
         # to move in the direction of the force.
 
         if self.dm.displace_mode == "ik":
-
             # Calculates the force, the error and the
             # batch weights.
             f, f_err, batch_w = self.weighted_force()
@@ -545,7 +541,6 @@ class SCPhononator(DummyPhononator):
         # significant force components.
 
         elif self.dm.displace_mode == "nmik":
-
             # Calculates the force, the error and the
             # batch weights.
             f, f_err, batch_w = self.weighted_force()
@@ -568,7 +563,7 @@ class SCPhononator(DummyPhononator):
             # Estimates the error.
             fnm = np.dot(self.dm.V.T, f)
             fnm[self.z] = 0.0
-            fnm_err = np.sqrt(np.dot(self.dm.V.T ** 2, f_err ** 2))
+            fnm_err = np.sqrt(np.dot(self.dm.V.T**2, f_err**2))
 
             # Zeros the displacement along "insignificant" normal modes.
             iKfnm = self.dm.iw2 * fnm
@@ -598,17 +593,14 @@ class SCPhononator(DummyPhononator):
             )
 
         elif self.dm.displace_mode == "rnmik":
-
             scale_forces = 1.0 * self.dm.tau
 
             # Outer Optimization Loop
             while True:
-
                 # Inner Optimization Loop
                 w = 1.0
 
                 while True:
-
                     # Calculates the force, the error and the
                     # batch weights.
                     f, f_err, batch_w = self.weighted_force()
@@ -626,7 +618,7 @@ class SCPhononator(DummyPhononator):
                     # Computes the force along the normal modes.
                     fnm = np.dot(self.dm.V.T, f)
                     fnm[self.z] = 0.0
-                    fnm_err = np.sqrt(np.dot(self.dm.V.T ** 2, f_err ** 2))
+                    fnm_err = np.sqrt(np.dot(self.dm.V.T**2, f_err**2))
 
                     # Breaks if all the forces are statistically insignificant.
                     if np.all(np.abs(fnm) < fnm_err):
@@ -691,7 +683,7 @@ class SCPhononator(DummyPhononator):
                 f_err = f_err
                 fnm = np.dot(self.dm.V.T, f)
                 fnm[self.z] = 0.0
-                fnm_err = np.sqrt(np.dot(self.dm.V.T ** 2, f_err ** 2))
+                fnm_err = np.sqrt(np.dot(self.dm.V.T**2, f_err**2))
 
                 # Breaks if all the forces are statistically insignificant.
                 if np.all(np.abs(fnm) < fnm_err):
@@ -718,7 +710,7 @@ class SCPhononator(DummyPhononator):
         """
 
         # Creates new variable names for easier referencing.
-        qp, i = self.dm.beads.q, self.dm.isc - 1
+        qp, Kp, i = self.dm.beads.q, self.dm.K, self.dm.isc - 1
 
         # Takes the set of forces calculated at the previous step for (self.q, self.iD)
         avg_f = dstrip(self.f[i]).copy()[-1] * 0.0
@@ -727,7 +719,6 @@ class SCPhononator(DummyPhononator):
         batch_w = np.zeros(self.dm.isc)
 
         for i in range(self.dm.isc):
-
             # Calculates the harmonic force.
             f = self.f[i]
             x = self.x[i]
@@ -739,14 +730,14 @@ class SCPhononator(DummyPhononator):
 
             # Simply multiplies the forces by the weights and averages.
             V1 = np.sum(rw)
-            V2 = np.sum(rw ** 2)
+            V2 = np.sum(rw**2)
             avg_fi = np.sum(rw * (f - fh), axis=0) / V1
             var_fi = np.sum(rw * (f - fh - avg_fi) ** 2, axis=0) / (V1 - V2 / V1)
             avg_f += sw * avg_fi
-            var_f += sw ** 2 * var_fi
+            var_f += sw**2 * var_fi
             norm += sw
 
-        return avg_f / norm, np.sqrt(var_f / norm ** 2 / self.dm.max_steps), batch_w
+        return avg_f / norm, np.sqrt(var_f / norm**2 / self.dm.max_steps), batch_w
 
     def weighted_hessian(self):
         """

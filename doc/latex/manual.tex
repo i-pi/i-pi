@@ -229,12 +229,13 @@ The implementation is based on a client-server paradigm, where \ipi
 acts as the server and deals with the propagation of the nuclear dynamics,
 whereas the calculation of the potential energy, forces and the potential
 energy part of the pressure virial is delegated to one or more instances
-of an external code, acting as clients. Since the main focus is on
-performing \emph{ab initio} PIMD -- where the cost of the force evaluation
-is overwhelming relative to the ionic dynamics -- clarity has been
-privileged over speed. Still, the implementation of \ipi is efficient
-enough that it can be used with empirical forcefields to perform simple
-benchmarks and preparatory simulations.
+of an external code, acting as clients. 
+i-PI was originally designed to perform \emph{ab initio} PIMD - where the 
+cost of the force evaluation is overwhelming relative to the ionic dynamics. 
+However, it has since grown to do much more than that. The implementation of \ipi
+is efficient enough that it can be used with empirical forcefields and machine-learned 
+potentials without incurring a large overhead. If you experience very large overheads, 
+please contact the developers! It is likely that some easy solutions are possible.
 
 
 \section{Manual structure}
@@ -484,8 +485,11 @@ e.g. \texttt{forces\{ev/ang\}}.
 Examples of such inputs can be found in \texttt{examples/lammps/*/init.xyz} . An example for PDB can be found in \texttt{examples/qespresso/h2o/init.pdb} .
 The code then behaves in the following way, depending on the user's choice:
 \begin{itemize}
-\item If no units are specified in the input, i-PI tries to guess from the comment line of the structure file and it nothing is present, assumes atomic units, or angstrom for PDB files.
-\item If units are specified in both input and structure file and they match, conversion happens just once. If they do not match, an error is raised and i-PI stops.
+\item If no units are specified in the input, i-PI tries to guess from the comment line of the structure file. 
+      If nothing is present, assumes atomic units, or angstrom for PDB files. Files processed using the ASE interface are
+      interpreted using the ASE conventional form, e.g. XYZ or CIF files are assumed to be in angstrom.  
+\item If units are specified in both input and structure file and they match, conversion happens just once. 
+      If they do not match, an error is raised and i-PI stops.
 \end{itemize}
 
 
@@ -1936,55 +1940,7 @@ possibly followed by their attributes.
 \textbf{\underline{field}} names both bold and underlined.
 \emph{\small Other supplementary information} will be in small font and italicized.
 
-\input{input_docs/simulation}
-\input{input_docs/forcefield}
-\input{input_docs/ffsocket}
-\input{input_docs/ffdebye}
-\input{input_docs/fflj}
-\input{input_docs/ffplumed}
-\input{input_docs/ffyaff}
-%\input{input_docs/ffquip}
-\input{input_docs/ffsgdml}
-\input{input_docs/ffcommittee}
-\input{input_docs/system}
-\input{input_docs/smotion}
-\input{input_docs/remd}
-\input{input_docs/meta}
-\input{input_docs/motion}
-\input{input_docs/dynamics}
-\input{input_docs/alchemy}
-\input{input_docs/atomswap}
-\input{input_docs/planetary}
-\input{input_docs/instanton}
-\input{input_docs/phonons}
-\input{input_docs/geop}
-\input{input_docs/neb}
-\input{input_docs/t_ramp}
-\input{input_docs/p_ramp}
-\input{input_docs/initializer}
-\input{input_docs/init_file}
-\input{input_docs/init_pos}
-\input{input_docs/init_mom}
-\input{input_docs/init_vel}
-\input{input_docs/init_lab}
-\input{input_docs/init_mass}
-\input{input_docs/init_cell}
-\input{input_docs/init_therm}
-\input{input_docs/ensembles}
-\input{input_docs/forces}
-\input{input_docs/forcecomponent}
-\input{input_docs/cell}
-\input{input_docs/beads}
-\input{input_docs/atoms}
-\input{input_docs/normalmodes}
-\input{input_docs/nmfrequencies}
-\input{input_docs/barostats}
-\input{input_docs/thermostats}
-\input{input_docs/prng}
-\input{input_docs/output}
-\input{input_docs/checkpoint}
-\input{input_docs/properties}
-\input{input_docs/trajectory}
+\input{input_ref_idx}
 
 \chapter{A simple tutorial}
 

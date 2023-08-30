@@ -26,7 +26,6 @@ def compute_acf(
     skip,
     der,
 ):
-
     # stores the arguments
     ifile = str(input_file)
     ofile = str(output_prefix)
@@ -34,7 +33,7 @@ def compute_acf(
     bsize = int(block_length)
     npad = int(length_zeropadding)
     ftbox = str(spectral_windowing)
-    labels = str(labels)
+    labels = str(labels).split()
     timestep = str(timestep).split()
     fskip = int(skip)
 
@@ -103,7 +102,6 @@ def compute_acf(
         rr = read_file_raw("xyz", ff)
 
     while True:
-
         try:
             # Reads the data in blocks.
             for i in range(bsize):
@@ -135,9 +133,9 @@ def compute_acf(
 
             # Accumulates the (f)acfs and their squares.
             fvvacf += mfpvvacf
-            fvvacf2 += mfpvvacf ** 2
+            fvvacf2 += mfpvvacf**2
             vvacf += mvvacf
-            vvacf2 += mvvacf ** 2
+            vvacf2 += mvvacf**2
 
             nblocks += 1
 
@@ -147,18 +145,17 @@ def compute_acf(
 
     # Performs the block average of the Fourier transform.
     fvvacf = fvvacf / nblocks
-    fvvacf_err = np.sqrt(fvvacf2 / nblocks - fvvacf ** 2)
+    fvvacf_err = np.sqrt(fvvacf2 / nblocks - fvvacf**2)
 
     np.savetxt(ofile + "_facf.data", np.c_[omega, fvvacf, fvvacf_err][: mlag + npad])
 
     # Computes the inverse Fourier transform to get the vvac.
     vvacf = vvacf / nblocks
-    vvacf_err = np.sqrt(vvacf2 / nblocks - vvacf ** 2)
+    vvacf_err = np.sqrt(vvacf2 / nblocks - vvacf**2)
     np.savetxt(ofile + "_acf.data", np.c_[time, vvacf, vvacf_err][: mlag + npad])
 
 
 if __name__ == "__main__":
-
     # adds description of the program.
     parser = argparse.ArgumentParser(
         description="Given a xyz formatted vector, computes its autocorrelation function and its Fourier transform, Parses xyz formatted files with units specified accoridng to i-pi standards. Produces the result in atomic units."

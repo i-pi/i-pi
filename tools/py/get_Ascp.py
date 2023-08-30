@@ -63,7 +63,6 @@ def get_A(path2iipi):
     v_list = []
 
     for i in range(max_iter):
-
         try:
             # Imports the q, iD, x, f from the i^th  SCP iteration.
             # "0" stands for the SCP trial Hamiltonian.
@@ -89,7 +88,6 @@ def get_A(path2iipi):
 
     print("# Finished Import")
     for i in range(max_iter):
-
         try:
             # Imports the q, iD, x, f from the i^th  SCP iteration.
             iD0 = iD_list[i]
@@ -132,7 +130,6 @@ def get_A(path2iipi):
 
         # Inner loop over previous SCP steps
         for j in range(i + 1):
-
             try:
                 # Imports the q, iD of the j^th trial Hamiltonian.
                 # The idea is to reweight using samples drawn from the j <= i trial Hamiltonians.
@@ -157,7 +154,7 @@ def get_A(path2iipi):
                 + (0.50 * np.dot(iD, (x - q).T).T * (x - q)).sum(axis=1)
             )
             V1 = np.sum(w)
-            V2 = np.sum(w ** 2)
+            V2 = np.sum(w**2)
 
             # Calculates the average amd error (over the samples from the j^th batch of samples)
             # associated with the "anharmonic" component of the potential.
@@ -171,11 +168,11 @@ def get_A(path2iipi):
 
             # Accumulates the contribution to the average (and error) from the j^th batch.
             avg_dv += c * avg_dv_j
-            err_dv += c ** 2 * err_dv_j
+            err_dv += c**2 * err_dv_j
             norm += c
 
         avg_dv = np.nan_to_num(avg_dv / norm)
-        err_dv = np.nan_to_num(err_dv / norm ** 2 / len(w))
+        err_dv = np.nan_to_num(err_dv / norm**2 / len(w))
 
         # Calculates the SCP potential / free energy.
         A_scp = AH0 + avg_dv

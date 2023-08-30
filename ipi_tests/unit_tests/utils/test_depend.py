@@ -7,7 +7,6 @@ import time
 
 class A(dobject):
     def __init__(self):
-
         dself = dd(self)
 
         dself.scalar = depend_value(name="a_scalar", value=1)
@@ -31,14 +30,12 @@ class A(dobject):
 
 class B(dobject):
     def __init__(self):
-
         dself = dd(self)
 
         dself.scalar = depend_value(name="b_scalar", value=1)
         dself.vector = depend_array(name="b_vector", value=np.zeros(10))
 
     def bind(self, A):
-
         self.A = A
         dself = dd(self)
         dself.dscalar = depend_value(
@@ -87,7 +84,7 @@ def threadB(Aobj, Bobj):
         time.sleep(0.0001)
         Bobj.scalar = 4 + i
         Bobj.vector = np.sqrt(i)
-        print(Bobj.dvector[0])
+        # print(Bobj.dvector[0])
 
 
 # myB.dvector should always contain B.vector*B.scalar- A.scalar

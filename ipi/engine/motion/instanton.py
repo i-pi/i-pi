@@ -37,6 +37,7 @@ from ipi.utils.instools import (
 from ipi.utils.instools import print_instanton_hess, diag_banded, ms_pathway
 from ipi.utils.hesstools import get_hessian, clean_hessian, get_dynmat
 
+
 __all__ = ["InstantonMotion"]
 
 
@@ -325,7 +326,9 @@ class PesMapper(object):
             try:
                 from scipy.interpolate import interp1d
             except ImportError:
-                softexit.trigger("Scipy required to use  max_ms >0")
+                softexit.trigger(
+                    status="bad", message="Scipy required to use  max_ms >0"
+                )
 
             indexes = list()
             indexes.append(0)
@@ -344,12 +347,13 @@ class PesMapper(object):
             )
             if len(indexes) <= 2:
                 softexit.trigger(
-                    "Too few beads fulfill criteria. Please reduce max_ms or max_e"
+                    status="bad",
+                    message="Too few beads fulfill criteria. Please reduce max_ms or max_e",
                 )
         else:
             indexes = np.arange(self.dbeads.nbeads)
 
-        # Create reduced bead and force objects
+        # Create reduced bead and force object and evaluate forces
         reduced_b = Beads(self.dbeads.natoms, len(indexes))
         reduced_b.q[:] = full_q[indexes]
         reduced_b.m[:] = self.dbeads.m
@@ -362,6 +366,7 @@ class PesMapper(object):
         rpots = reduced_forces.pots  # reduced energy
         rforces = reduced_forces.f  # reduced gradient
 
+        # Interpolate if necessary to get full pot and forces
         if self.spline:
             red_mspath = full_mspath[indexes]
             spline = interp1d(red_mspath, rpots.T, kind="cubic")
@@ -722,6 +727,10 @@ class SpringMapper(object):
                 coef=self.coef,
             )
 
+    def set_coef(self, coef):
+        """Sets coefficients for non-uniform instanton calculation"""
+        self.coef = coef.reshape(-1, 1)
+
     def save(self, e, g):
         """Stores potential and forces in this class for convenience"""
         self.pot = e
@@ -855,6 +864,8 @@ class SpringMapper(object):
 
         return h
 
+    def __call__(self, x, ret=True, new_disc=True):
+        """Computes spring energy and gradient for instanton optimization step"""
 
 class Mapper(object):
     """Creation of the multi-dimensional function that is the proxy between all the energy and force components and the optimization algorithm.
@@ -1017,9 +1028,7 @@ class DummyOptimizer(dobject):
             if geop.options["discretization"].size == 0:
                 geop.options["discretization"] = np.ones(self.beads.nbeads + 1, float)
             else:
-                raise ValueError(
-                    "Discretization coefficients  does not match system size"
-                )
+                raise ValueError("Discretization coefficients do not match system size")
 
         self.options["max_ms"] = geop.options["max_ms"]
         self.options["max_e"] = geop.options["max_e"]
@@ -1080,6 +1089,7 @@ class DummyOptimizer(dobject):
 
         tolerances = self.options["tolerances"]
         d_u = self.forces.pot - self.optarrays["old_u"].sum()
+       # active_force = self.fix.get_active_vector(self.forces.f, 1) + self.im.f
 
         active_force = self.mapper.f
 
@@ -1219,13 +1229,19 @@ class DummyOptimizer(dobject):
         """General tasks that have to be performed before actual step"""
 
         if self.exit:
-            softexit.trigger("Geometry optimization converged. Exiting simulation")
+            softexit.trigger(
+                status="success",
+                message="Geometry optimization converged. Exiting simulation",
+            )
 
         if not self.init:
             self.initialize(step)
 
         if adaptative:
-            softexit.trigger("Adaptative discretization is not fully implemented")
+            softexit.trigger(
+                status="bad",
+                message="Adaptative discretization is not fully implemented",
+            )
             # new_coef = <implement_here>
             # self.mapper.set_coef(coef)
             raise NotImplementedError
@@ -1238,7 +1254,7 @@ class DummyOptimizer(dobject):
         return activearrays
 
     def step(self, step=None):
-        """Dummy simulationt step which does nothing."""
+        """Dummy simulation time step which does nothing."""
         pass
 
     def opt_coef(self, coef):
@@ -1252,13 +1268,15 @@ class DummyOptimizer(dobject):
         # c0   = 2*self.sm.dbeads.nbeads - 2*np.sum(coef)
         # coef = np.insert(coef,0,c0)
 
+        #self.im.set_coef(coef)
+
         fphys = self.gm.dforces.f * ((coef[1:] + coef[:-1]) / 2).reshape(-1, 1)
         e, gspring = self.sm(self.sm.dbeads.q)
         return np.amax(np.absolute(-gspring + fphys))
 
 
 class HessianOptimizer(DummyOptimizer):
-    """Instaton Rate calculation"""
+    """Instanton Rate calculation"""
 
     def bind(self, geop):
         # call bind function from DummyOptimizer
@@ -1283,7 +1301,10 @@ class HessianOptimizer(DummyOptimizer):
                     (self.beads.natoms * 3, self.beads.q.size), float
                 )
 
-            elif geop.optarrays["hessian"].size == 0 and geop.options["hessian_init"]:
+            elif (
+                geop.optarrays["hessian"].size == 0
+                and geop.options["hessian_init"] == "true"
+            ):
                 info(
                     " Initial hessian is not provided. We are going to compute it.",
                     verbosity.low,
@@ -1296,7 +1317,7 @@ class HessianOptimizer(DummyOptimizer):
                     (self.beads.q - self.beads.q[0]) == 0
                 ).all() and self.beads.nbeads > 1:
                     raise ValueError(
-                        """We need a initial hessian in order to create our initial
+                        """We need an initial hessian in order to create our initial
                     instanton geometry. Please provide a (1-bead) hessian or an initial instanton geometry."""
                     )
 
@@ -1396,6 +1417,7 @@ class HessianOptimizer(DummyOptimizer):
             self.optarrays["hessian"][:] = self.fix.get_full_vector(phys_hessian, 2)
             # self.optarrays["hessian"][:] = phys_hessian
 
+     #   self.gm.save(self.forces.pots, self.forces.f)
         self.update_old_pos_for()
 
         self.init = True
@@ -1470,6 +1492,7 @@ class HessianOptimizer(DummyOptimizer):
         f = self.fix.get_active_vector(self.mapper.gm.f, t=1)
         d_g = np.subtract(activearrays["old_f"], f)
 
+        # Update
         self.update_hessian(
             self.options["hessian_update"], activearrays["hessian"], new_x, d_x, d_g
         )
@@ -1486,7 +1509,15 @@ class HessianOptimizer(DummyOptimizer):
 
 
 class NicholsOptimizer(HessianOptimizer):
-    """Class that implements a nichols optimization. It can find first order saddle points or minimum"""
+    """Class that implements a nichols optimizations. It can find first order saddle points or minimum"""
+
+    def bind(self, geop):
+        # call bind function from HessianOptimizer
+        super(NicholsOptimizer, self).bind(geop)
+
+    def initialize(self, step):
+        # call initialize function from HessianOptimizer
+        super(NicholsOptimizer, self).initialize(step)
 
     def step(self, step=None):
         """Does one simulation step."""
@@ -1529,6 +1560,7 @@ class NicholsOptimizer(HessianOptimizer):
             self.options["hessian_asr"],
         )
 
+        # d,w =np.linalg.eigh(h1) #Cartesian
         info(
             "\n@Nichols: 1st freq {} cm^-1".format(
                 units.unit_to_user(
@@ -1553,6 +1585,8 @@ class NicholsOptimizer(HessianOptimizer):
             ),
             verbosity.medium,
         )
+        # info('@Nichols: 4th freq {} cm^-1'.format(units.unit_to_user('frequency','inversecm',np.sign(d[3])*np.sqrt(np.absolute(d[3])))),verbosity.medium)
+        # info('@Nichols: 8th freq {} cm^-1\n'.format(units.unit_to_user('frequency','inversecm',np.sign(d[7])*np.sqrt(np.absolute(d[7])))),verbosity.medium)
 
         # Find new movement direction
         if self.options["mode"] == "rate":
@@ -1586,10 +1620,18 @@ class NicholsOptimizer(HessianOptimizer):
 
 
 class NROptimizer(HessianOptimizer):
-    """Class that implements a Newton-Raphson optsmization. It can find first order saddle points or minimum"""
+    """Class that implements a Newton-Raphson optimizations. It can find first order saddle points or minima"""
+
+    def bind(self, geop):
+        # call bind function from HessianOptimizer
+        super(NROptimizer, self).bind(geop)
+
+    def initialize(self, step):
+        # call initialize function from HessianOptimizer
+        super(NROptimizer, self).initialize(step)
 
     def step(self, step=None):
-        """Does one simulaion step."""
+        """Does one simulation time step."""
         activearrays = self.pre_step(step)
 
         dyn_mat = get_dynmat(
@@ -1627,6 +1669,14 @@ class LanczosOptimizer(HessianOptimizer):
     """Class that implements a modified Nichols algorithm based on Lanczos diagonalization to avoid constructing and diagonalizing
     the full (3*natoms*nbeads)^2 matrix"""
 
+    def bind(self, geop):
+        # call bind function from HessianOptimizer
+        super(LanczosOptimizer, self).bind(geop)
+
+    def initialize(self, step):
+        # call initialize function from HessianOptimizer
+        super(LanczosOptimizer, self).initialize(step)
+
     def step(self, step=None):
         """Does one simulation step."""
 
@@ -1654,7 +1704,7 @@ class LanczosOptimizer(HessianOptimizer):
 
             d = diag_banded(h_up_band)
         else:
-            # FULL dimensional version
+            # FULL dimensions version
             h_0 = red2comp(
                 activearrays["hessian"],
                 self.sm.dbeads.nbeads,

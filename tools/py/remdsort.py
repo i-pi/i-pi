@@ -32,7 +32,6 @@ from ipi.utils.io.inputs import io_xml
 
 
 def main(inputfile, prefix="SRT_"):
-
     verbosity.level = "low"
     # opens & parses the input file
     ifile = open(inputfile, "r")
@@ -192,7 +191,6 @@ def main(inputfile, prefix="SRT_"):
     while True:
         # reads one line from index file
         try:
-
             for prop in lprop:
                 for isys in range(nsys):
                     sprop = prop[isys]
@@ -214,7 +212,7 @@ def main(inputfile, prefix="SRT_"):
                             ibuffer.append(straj["ifile"].readline())
                             ibuffer.append(straj["ifile"].readline())
                             traj[irep[isys]]["ofile"].write("".join(ibuffer))
-                        if straj["format"] == "xyz":
+                        if straj["format"] in ["xyz", "ase"]:
                             iline = straj["ifile"].readline()
                             nat = int(iline)
                             ibuffer.append(iline)

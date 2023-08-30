@@ -173,8 +173,7 @@ class ThermoLangevin(Thermostat):
 
     def get_S(self):
         """Calculates the coefficient of the white noise."""
-
-        return np.sqrt(Constants.kb * self.temp * (1 - self.T ** 2))
+        return np.sqrt(Constants.kb * self.temp * (1 - self.T**2))
 
     def __init__(self, temp=1.0, dt=1.0, tau=1.0, ethermo=0.0):
         """Initialises ThermoLangevin.
@@ -241,7 +240,7 @@ class ThermoPILE_L(Thermostat):
           required.
     """
 
-    def __init__(self, temp=1.0, dt=1.0, tau=1.0, ethermo=0.0, scale=1.0):
+    def __init__(self, temp=1.0, dt=1.0, tau=1.0, ethermo=0.0, scale=1.0, pilect=0.0):
         """Initialises ThermoPILE_L.
 
         Args:
@@ -252,6 +251,7 @@ class ThermoPILE_L(Thermostat):
               be non-zero if the thermostat is initialised from a checkpoint file.
            scale: A float used to reduce the intensity of the PILE thermostat if
               required.
+           pilect: centroid mode temperature (if different from ensemble and set by input)
 
         Raises:
            TypeError: Raised if the thermostat is used with any object other than
@@ -263,6 +263,10 @@ class ThermoPILE_L(Thermostat):
         dself = dd(self)
         dself.tau = depend_value(value=tau, name="tau")
         dself.pilescale = depend_value(value=scale, name="pilescale")
+        dself.pilect = depend_value(value=pilect, name="pilect")
+        dself.npilect = depend_value(
+            func=self.get_npilect, name="npilect", dependencies=[dself.pilect]
+        )
 
     def bind(
         self,
@@ -347,8 +351,16 @@ class ThermoPILE_L(Thermostat):
             # bind thermostat t to the it-th bead
 
             t.bind(pm=(nm.pnm[it, :], nm.dynm3[it, :]), prng=self.prng, fixdof=fixdof)
-            # pipes temp and dt
-            dpipe(dself.temp, dd(t).temp)
+            if it == 0:
+                # the following lines pipe a different temperature to the centroid, if requested
+                if self.pilect > 0.0:
+                    dpipe(dself.pilect, dd(t).temp)
+                else:
+                    dpipe(dself.temp, dd(t).temp)
+            else:
+                # pipes temp
+                dpipe(dself.temp, dd(t).temp)
+            # pipes dt
             dpipe(dself.dt, dd(t).dt)
 
             # for tau it is slightly more complex
@@ -399,6 +411,10 @@ class ThermoPILE_L(Thermostat):
             et += t.ethermo
         return et
 
+    def get_npilect(self):
+        """Multiplies centroid temperature by nbeads"""
+        return self.nm.nbeads * self.pilect
+
     def step(self):
         """Updates the bound momentum vector with a PILE thermostat."""
 
@@ -430,7 +446,6 @@ class ThermoSVR(Thermostat):
 
     def get_K(self):
         """Calculates the average kinetic energy per degree of freedom."""
-
         return Constants.kb * self.temp * 0.5
 
     def __init__(self, temp=1.0, dt=1.0, tau=1.0, ethermo=0.0):
@@ -470,11 +485,11 @@ class ThermoSVR(Thermostat):
         if (self.ndof - 1) % 2 == 0:
             rg = 2.0 * self.prng.gamma((self.ndof - 1) / 2)
         else:
-            rg = 2.0 * self.prng.gamma((self.ndof - 2) / 2) + self.prng.g ** 2
+            rg = 2.0 * self.prng.gamma((self.ndof - 2) / 2) + self.prng.g**2
 
         alpha2 = (
             self.et
-            + self.K / K * (1 - self.et) * (r1 ** 2 + rg)
+            + self.K / K * (1 - self.et) * (r1**2 + rg)
             + 2.0 * r1 * np.sqrt(self.K / K * self.et * (1 - self.et))
         )
         alpha = np.sqrt(alpha2)
@@ -493,7 +508,7 @@ class ThermoPILE_G(ThermoPILE_L):
     a global velocity rescaling thermostat.
     """
 
-    def __init__(self, temp=1.0, dt=1.0, tau=1.0, ethermo=0.0, scale=1.0):
+    def __init__(self, temp=1.0, dt=1.0, tau=1.0, ethermo=0.0, scale=1.0, pilect=0.0):
         """Initialises ThermoPILE_G.
 
         Args:
@@ -504,11 +519,17 @@ class ThermoPILE_G(ThermoPILE_L):
               be non-zero if the thermostat is initialised from a checkpoint file.
            scale: A float used to reduce the intensity of the PILE thermostat if
               required.
+           pilect: centroid mode temperature (if different from ensemble and set by input).
+              Default of 0.0 means it is not used and all modes have equal temperatures.
         """
 
         super(ThermoPILE_G, self).__init__(temp, dt, tau, ethermo)
         dself = dd(self)
         dself.pilescale = depend_value(value=scale, name="pilescale")
+        dself.pilect = depend_value(value=pilect, name="pilect")
+        dself.npilect = depend_value(
+            func=self.get_npilect, name="npilect", dependencies=[dself.pilect]
+        )
 
     def bind(self, beads=None, atoms=None, pm=None, nm=None, prng=None, fixdof=None):
         """Binds the appropriate degrees of freedom to the thermostat.
@@ -544,7 +565,12 @@ class ThermoPILE_G(ThermoPILE_L):
 
         t = self._thermos[0]
         t.bind(pm=(nm.pnm[0, :], nm.dynm3[0, :]), prng=self.prng, fixdof=fixdof)
-        dpipe(dself.temp, dd(t).temp)
+        # the next lines pipe a different temperatures to the centroid modes, if requested.
+        if self.pilect > 0.0:
+            dpipe(dself.pilect, dd(t).temp)
+        else:
+            dpipe(dself.temp, dd(t).temp)
+
         dpipe(dself.dt, dd(t).dt)
         dpipe(dself.tau, dd(t).tau)
         dself.ethermo.add_dependency(dd(t).ethermo)
@@ -917,7 +943,6 @@ class ThermoNMGLEG(ThermoNMGLE):
     """
 
     def __init__(self, temp=1.0, dt=1.0, A=None, C=None, tau=1.0, ethermo=0.0):
-
         super(ThermoNMGLEG, self).__init__(temp, dt, A, C, ethermo)
         dself.tau = depend_value(value=tau, name="tau")
 
@@ -1114,7 +1139,7 @@ class ThermoFFL(Thermostat):
     def get_S(self):
         """Calculates the coefficient of the white noise."""
 
-        return np.sqrt(Constants.kb * self.temp * (1 - self.T ** 2))
+        return np.sqrt(Constants.kb * self.temp * (1 - self.T**2))
 
     def __init__(self, temp=1.0, dt=1.0, tau=1.0, ethermo=0.0, flip="rescale"):
         """Initialises ThermoFFL.

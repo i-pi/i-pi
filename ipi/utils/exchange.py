@@ -165,10 +165,8 @@ def Evaluate_dVB(self, E_k_N, V, l, j):
         if l + 1 > m:  # l goes from 0 to N-1 so check for l+1
             pass  # dV[m,:] is initialized to zero vector already
         else:
-
             count = m * (m - 1) // 2
             for k in range(m, 0, -1):
-
                 if (
                     l + 1 >= m - k + 1 and l + 1 <= m
                 ):  # l goes from 0 to N-1 so check for l+1
