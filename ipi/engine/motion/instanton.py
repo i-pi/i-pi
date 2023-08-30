@@ -1291,7 +1291,9 @@ class HessianOptimizer(DummyOptimizer):
             self.options["hessian_asr"] = "none"
         #        self.output_maker = geop.output_maker
         self.options["hessian_init"] = geop.options["hessian_init"]
+        print("ALBERTO", self.options["hessian_init"])
         self.optarrays["initial_hessian"] = None
+        print(geop.optarrays["hessian"].size)
 
         if geop.optarrays["hessian"].size != (
             self.beads.natoms * 3 * self.beads.q.size
@@ -1302,10 +1304,7 @@ class HessianOptimizer(DummyOptimizer):
                     (self.beads.natoms * 3, self.beads.q.size), float
                 )
 
-            elif (
-                geop.optarrays["hessian"].size == 0
-                and geop.options["hessian_init"] == "true"
-            ):
+            elif geop.optarrays["hessian"].size == 0 and geop.options["hessian_init"]:
                 info(
                     " Initial hessian is not provided. We are going to compute it.",
                     verbosity.low,
