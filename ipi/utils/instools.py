@@ -382,10 +382,10 @@ class Fix(object):
         return activearrays
 
     def get_full_vector(self, vector, t):
-        """Set 0 the degrees of freedom (dof) corresponding to the fix atoms
+        """From an active vector (i.e the subarray corresponding to the active degrees-of-freedom ) return
+           the full dimensional array. All the entries a corresponding to fix degrees-of-freedom are 0 
         IN:
-            fixatoms   indexes of the fixed atoms
-            vector     vector to be reduced
+            vector     active vector
             t          type of array:
                 type=-1 : do nothing
                 type=0 : names (natoms )
@@ -395,7 +395,7 @@ class Fix(object):
                 type=4 : fric_hessian(nbeads,dof,dof,dof)
                 type=5 : eta(nbeads,dof,dof)
         OUT:
-            clean_vector  reduced vector
+            full_vector  full dimensional vector
         """
         if len(self.fixatoms) == 0 or t == -1:
             return vector

@@ -1161,8 +1161,8 @@ class DummyOptimizer(dobject):
                 else:
                     phys_hessian = current_hessian
 
-                self.optarrays["hessian"][:] = self.fix.get_full_vector(phys_hessian, 2)
-                # self.optarrays["hessian"][:] = phys_hessian #ALBERTO
+                #self.optarrays["hessian"][:] = self.fix.get_full_vector(phys_hessian, 2) #ALBERTO
+                self.optarrays["hessian"][:] = phys_hessian #ALBERTO
 
                 print_instanton_hess(
                     self.options["prefix"] + "_FINAL",
@@ -1276,7 +1276,6 @@ class HessianOptimizer(DummyOptimizer):
             self.options["hessian_asr"] = "none"
         #        self.output_maker = geop.output_maker
         self.options["hessian_init"] = geop.options["hessian_init"]
-        print("ALBERTO", self.options["hessian_init"])
         self.optarrays["initial_hessian"] = None
         print(geop.optarrays["hessian"].size)
 
@@ -1375,7 +1374,7 @@ class HessianOptimizer(DummyOptimizer):
         self.mapper.initialize(self.beads.q, self.forces)
 
         if self.options["hessian_init"]:
-            active_hessian = get_hessian(
+            full_hessian = get_hessian(
                 gm=self.mapper.gm,
                 x0=self.beads.q.copy(),
                 natoms=self.beads.natoms,
@@ -1384,17 +1383,15 @@ class HessianOptimizer(DummyOptimizer):
                 friction=self.options["frictionSD"],
             )
             if self.options["friction"] and self.options["frictionSD"]:
-                phys_hessian = active_hessian[0]
+                full_hessian = active_hessian[0]
                 friction_hessian = active_hessian[1]
-                self.optarrays["fric_hessian"][:] = self.fix.get_full_vector(
-                    friction_hessian, 4
-                )
-                # self.optarrays["fric_hessian"][:] = friction_hessian[:]  # ALBERTO
+                #self.optarrays["fric_hessian"][:] = self.fix.get_full_vector( friction_hessian, 4 ) #ALBERTO
+                self.optarrays["fric_hessian"][:] = friction_hessian[:]  
             else:
-                phys_hessian = active_hessian
+                phys_hessian = full_hessian
 
-            self.optarrays["hessian"][:] = self.fix.get_full_vector(phys_hessian, 2)
-            # self.optarrays["hessian"][:] = phys_hessian
+            #self.optarrays["hessian"][:] = self.fix.get_full_vector(phys_hessian, 2) #ALBERTO
+            self.optarrays["hessian"][:] = phys_hessian
 
         #   self.gm.save(self.forces.pots, self.forces.f)
         self.update_old_pos_for()
