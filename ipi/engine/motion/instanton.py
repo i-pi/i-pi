@@ -1383,8 +1383,8 @@ class HessianOptimizer(DummyOptimizer):
                 friction=self.options["frictionSD"],
             )
             if self.options["friction"] and self.options["frictionSD"]:
-                full_hessian = active_hessian[0]
-                friction_hessian = active_hessian[1]
+                phys_hessian = full_hessian[0]
+                friction_hessian = full_hessian[1]
                 # self.optarrays["fric_hessian"][:] = self.fix.get_full_vector( friction_hessian, 4 ) #ALBERTO
                 self.optarrays["fric_hessian"][:] = friction_hessian[:]
             else:

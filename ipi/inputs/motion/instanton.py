@@ -144,7 +144,7 @@ class InputInst(InputDictionary):
             {
                 "dtype": float,
                 "default": input_default(factory=np.ones, args=(0,)),
-                "help": "LT of friction. A two column data is expected. First column: w (a.u.). Second column: LT(eta)(w)",
+                "help": "Laplace Transform (LT) of friction. A two column data is expected. First column: w (a.u.). Second column: LT(eta)(w)",
             },
         ),
         "fric_spec_dens_ener": (
