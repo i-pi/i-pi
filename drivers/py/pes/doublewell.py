@@ -116,7 +116,9 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
 
     def check_dimensions(self, pos):
         """Functions that checks dimensions of the received position"""
-        assert pos.shape == (1, 3)
+        assert pos.shape == (1, 3), "We expect pos.shape (1,3), but we have {}".format(
+            pos.shape
+        )
 
     def SD(self, q):
         """Auxiliary function to compute friction tensor"""
