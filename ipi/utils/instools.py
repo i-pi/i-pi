@@ -383,7 +383,7 @@ class Fix(object):
 
     def get_full_vector(self, vector, t):
         """From an active vector (i.e the subarray corresponding to the active degrees-of-freedom ) return
-           the full dimensional array. All the entries a corresponding to fix degrees-of-freedom are 0 
+           the full dimensional array. All the entries a corresponding to fix degrees-of-freedom are 0
         IN:
             vector     active vector
             t          type of array:
