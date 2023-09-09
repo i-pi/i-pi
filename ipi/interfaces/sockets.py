@@ -428,7 +428,7 @@ class Driver(DriverSocket):
 
         # Machinery to return a string as an "extra" field.
         # Comment if you are using a ancient patched driver that does not return anything!
-        # Actually, you should really update your driver, you're like half a decade behind.
+        # Actually, you should really update your driver, you're like a decade behind.
         mlen = np.int32()
         mlen = self.recvall(mlen)
         if mlen > 0:
