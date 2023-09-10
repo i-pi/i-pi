@@ -6,8 +6,8 @@ the uncertainty in the potential correction is estimated from the spread of the
 members of the comittee, as in [Imbalzano 2021](http://doi.org/10.1021/acs.jctc.8b00959).
 
 Here we take as a simple example that does not require specialized ML software
-a simulation of water in which the members differ by the kspace cutoff and the
-details of the LJ potential.
+a simulation of water in which the members differ by the application of a small 
+LJ-like perturbation.
 The simulation prints out files that are needed to compute how the error in the 
 potential propagates on thermodynamic properties, specifically on the g(r).
 

@@ -15,7 +15,7 @@
   <ffcommittee name="committee">
     <alpha> 1.0 </alpha>
     <active_output> active </active_output>
-    <active_thresh units="electronvolt"> 1.3 </active_thresh>
+    <active_thresh units="electronvolt"> 0.05 </active_thresh>
     <ffsocket name='driver-1' mode='unix' matching="any" pbc="false">
         <address>h2o-comm.1</address> <latency> 2e-4 </latency>
     </ffsocket>
