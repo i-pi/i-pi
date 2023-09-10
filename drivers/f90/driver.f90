@@ -685,12 +685,12 @@
                ENDDO
 
                IF (vstyle == 31) THEN ! type 1
-                  CALL LJ_getall(rc, 3.0d0, 1d-4, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
+                  CALL LJ_getall(rc, 2.5d0, 2d-6, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
                ELSEIF (vstyle == 32) THEN ! type 2
-                  CALL LJ_getall(rc, 4.0d0, 2d-4, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
+                  CALL LJ_getall(rc, 2.1d0, 24d-6, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
                ELSEIF (vstyle == 33) THEN ! returns both as json
                   ! return both the committee members as a JSON extra string
-                  CALL LJ_getall(rc, 3.0d0, 1d-4, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
+                  CALL LJ_getall(rc, 2.5d0, 2d-6, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
                   
                   string1=""
                   write(string,'(f15.8)') pot
@@ -707,8 +707,8 @@
                   WRITE(string3, '("[", 8(f15.8,",") f15.8, "]")') reshape(virial, (/9/))
 
                   ! this is a ugly but easy way to compute both terms
-                  CALL LJ_getall(rc, 3.0d0, -1d-4, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
-                  CALL LJ_getall(rc, 4.0d0, 2d-4, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
+                  CALL LJ_getall(rc, 2.5d0, -2d-6, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
+                  CALL LJ_getall(rc, 2.1d0, 24d-6, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
 
                   write(string,'(f15.8)') pot
                   string1 = TRIM(string1) // TRIM(string)
@@ -733,8 +733,8 @@
                   initbuffer = TRIM(initbuffer) // '}'
 
                   ! and now make sure we are returning the ensemble mean
-                  CALL LJ_getall(rc, 4.0d0, -1d-4, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
-                  CALL LJ_getall(rc, 3.0d0, 0.5d-4, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
+                  CALL LJ_getall(rc, 2.1d0, -12d-6, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
+                  CALL LJ_getall(rc, 2.5d0, 1d-6, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
                ENDIF
             ELSEIF (vstyle == 11) THEN ! efield potential.
                IF (mod(nat,3)/=0) THEN
