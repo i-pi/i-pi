@@ -12,4 +12,4 @@ All the simulations here use an artificial committee model built by arbitrarily 
 
 `weighted_baseline` provides an example of how to use the uncertainty estimate to revert the predictions to a baseline model when the error becomes too large. The ML model in this case is meant to describe a correction over the baseline, which is smoothly suppressed if its uncertainty increases beyond a cutoff.  
 
-`json_committee` shows how to run this kind of simulations with a model that provides all the estimates in one go as part of a .json formatted `extras`` string
+`extra_json` shows how to run this kind of simulations with a model that provides all the estimates in one go as part of a .json formatted `extras`` string
