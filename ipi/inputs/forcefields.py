@@ -770,6 +770,15 @@ class InputFFCommittee(InputForceField):
             "help": "Output filename for structures that exceed the accuracy threshold of the model, to be used in active learning.",
         },
     )
+    fields["committee_type"] = (
+        InputValue,
+        {
+            "dtype": str,
+            "options": ["default", "single-extras"],
+            "default": "default",
+            "help": "Chooses the type of committee communication. Default is from several separate sockets. single-extras expects many values in the extras string from one socket.",
+        },
+    )
 
     def store(self, ff):
         """Store all the sub-forcefields"""
@@ -784,6 +793,7 @@ class InputFFCommittee(InputForceField):
         self.baseline_name.store(ff.baseline_name)
         self.active_thresh.store(ff.active_thresh)
         self.active_output.store(ff.active_out)
+        self.committee_type.store(ff.comm_type)
 
         for _ii, _obj in enumerate(_fflist):
             if self.extra[_ii] == 0:
@@ -840,6 +850,7 @@ class InputFFCommittee(InputForceField):
             baseline_name=self.baseline_name.fetch(),
             active_thresh=self.active_thresh.fetch(),
             active_out=self.active_output.fetch(),
+            comm_type=self.committee_type.fetch(),
         )
 
 
