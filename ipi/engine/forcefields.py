@@ -1147,6 +1147,7 @@ class FFCommittee(ForceField):
         req = super(FFCommittee, self).queue(
             atoms, cell, reqid, template=dict(ff_handles=ffh)
         )
+        req["t_dispatched"] = time.time()
         return req
 
     def check_finish(self, r):
@@ -1214,7 +1215,6 @@ class FFCommittee(ForceField):
         pots = np.array(pots)
         frcs = np.array(frcs).reshape(len(pots), -1)
         virs = np.array(virs).reshape(-1, 3, 3)
-        print("cc ", len(pots))
 
         # Computes the mean energetics
         mean_pot = np.mean(pots, axis=0)
@@ -1338,8 +1338,7 @@ class FFCommittee(ForceField):
 
         with self._threadlock:
             for r in self.requests:
-                if self.check_finish(r):
-                    r["t_dispatched"] = time.time()
+                if r["status"] != "Done" and self.check_finish(r):
                     r["t_finished"] = time.time()
                     self.gather(r)
                     r["status"] = "Done"

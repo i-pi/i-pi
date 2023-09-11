@@ -17,10 +17,10 @@
     <active_output> active </active_output>
     <active_thresh units="electronvolt"> 0.05 </active_thresh>
     <ffsocket name='driver-1' mode='unix' matching="any" pbc="false">
-        <address>h2o-comm.1</address> <latency> 2e-4 </latency>
+        <address>h2o-comm.1</address> <latency> 1e-3 </latency>
     </ffsocket>
     <ffsocket name='driver-2' mode='unix' matching="any" pbc="false">
-      <address>h2o-comm.2</address> <latency> 2e-4 </latency>
+      <address>h2o-comm.2</address> <latency> 1e-3 </latency>
     </ffsocket>
   </ffcommittee>
   <system>

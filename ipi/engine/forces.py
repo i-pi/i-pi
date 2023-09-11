@@ -164,7 +164,6 @@ class ForceBead:
             self._getallcount += 1
 
         # this is converting the distribution library requests into [ u, f, v ]  lists
-        # t_start = time.time()
         if self.request is None:
             self.request = self.queue()
 
