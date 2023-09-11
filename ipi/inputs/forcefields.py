@@ -777,6 +777,14 @@ class InputFFCommittee(InputForceField):
             "help": "Output filename for structures that exceed the accuracy threshold of the model, to be used in active learning.",
         },
     )
+    fields["parse_json"] = (
+        InputValue,
+        {
+            "dtype": bool,
+            "default": False,
+            "help": "Tell the model whether to parse extras string looking for committee values of potential, forces, and virials. Default: false.",
+        },
+    )
 
     def store(self, ff):
         """Store all the sub-forcefields"""
@@ -791,6 +799,7 @@ class InputFFCommittee(InputForceField):
         self.baseline_name.store(ff.baseline_name)
         self.active_thresh.store(ff.active_thresh)
         self.active_output.store(ff.active_out)
+        self.parse_json.store(ff.parse_json)
 
         for _ii, _obj in enumerate(_fflist):
             if self.extra[_ii] == 0:
@@ -847,6 +856,7 @@ class InputFFCommittee(InputForceField):
             baseline_name=self.baseline_name.fetch(),
             active_thresh=self.active_thresh.fetch(),
             active_out=self.active_output.fetch(),
+            parse_json=self.parse_json.fetch(),
         )
 
 

@@ -1083,6 +1083,7 @@ class FFCommittee(ForceField):
         baseline_uncertainty=-1.0,
         active_thresh=0.0,
         active_out=None,
+        parse_json=False,
     ):
         # force threaded mode as otherwise it cannot have threaded children
         super(FFCommittee, self).__init__(
@@ -1117,6 +1118,7 @@ class FFCommittee(ForceField):
         self.alpha = alpha
         self.active_thresh = active_thresh
         self.active_out = active_out
+        self.parse_json = parse_json
 
     def bind(self, output_maker):
         super(FFCommittee, self).bind(output_maker)
@@ -1179,7 +1181,7 @@ class FFCommittee(ForceField):
                     baseline_xtr = ff_r["result"][3]
                     com_handles.pop(i)
                     break
-        
+
         # Gathers the forcefield energetics and extras
         pots = []
         frcs = []
@@ -1188,13 +1190,17 @@ class FFCommittee(ForceField):
 
         for ff_r in com_handles:
             # if required, tries to extract multiple committe members from the extras JSON string
-            if "committee_pot" in ff_r["result"][3]:
+            if "committee_pot" in ff_r["result"][3] and self.parse_json:
                 pots += ff_r["result"][3]["committee_pot"]
                 if "committee_force" not in ff_r["result"][3]:
-                    raise ValueError("JSON extras for committe potential misses `committee_force` entry")
+                    raise ValueError(
+                        "JSON extras for committe potential misses `committee_force` entry"
+                    )
                 frcs += ff_r["result"][3]["committee_force"]
                 if "committee_virial" not in ff_r["result"][3]:
-                    raise ValueError("JSON extras for committe potential misses `committee_virial` entry")
+                    raise ValueError(
+                        "JSON extras for committe potential misses `committee_virial` entry"
+                    )
                 virs += ff_r["result"][3]["committee_virial"]
                 ff_r["result"][3].pop("committee_pot")
                 ff_r["result"][3].pop("committee_force")
@@ -1207,7 +1213,7 @@ class FFCommittee(ForceField):
                 xtrs.append(ff_r["result"][3])
         pots = np.array(pots)
         frcs = np.array(frcs).reshape(len(pots), -1)
-        virs = np.array(virs).reshape(-1,3,3)
+        virs = np.array(virs).reshape(-1, 3, 3)
 
         """
         if self.comm_type == "fudge single-extras":
@@ -1266,8 +1272,6 @@ class FFCommittee(ForceField):
         mean_pot = np.mean(pots, axis=0)
         mean_frc = np.mean(frcs, axis=0)
         mean_vir = np.mean(virs, axis=0)
-        # debug
-        # print("averages ", mean_pot, mean_frc, mean_vir, mean_pot.shape, mean_frc.shape, mean_vir.shape)
 
         # Rescales the committee energetics so that their standard deviation corresponds to the error
         rescaled_pots = np.asarray(
