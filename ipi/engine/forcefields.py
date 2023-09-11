@@ -1083,7 +1083,6 @@ class FFCommittee(ForceField):
         baseline_uncertainty=-1.0,
         active_thresh=0.0,
         active_out=None,
-        comm_type="default",
     ):
         # force threaded mode as otherwise it cannot have threaded children
         super(FFCommittee, self).__init__(
@@ -1118,7 +1117,6 @@ class FFCommittee(ForceField):
         self.alpha = alpha
         self.active_thresh = active_thresh
         self.active_out = active_out
-        self.comm_type = comm_type
 
     def bind(self, output_maker):
         super(FFCommittee, self).bind(output_maker)
@@ -1160,37 +1158,59 @@ class FFCommittee(ForceField):
     def gather(self, r):
         """Collects results from all sub-requests, and assemble the committee of models."""
 
-        if self.comm_type == "default":
-            r["result"] = [
-                0.0,
-                np.zeros(len(r["pos"]), float),
-                np.zeros((3, 3), float),
-                "",
-            ]
+        r["result"] = [
+            0.0,
+            np.zeros(len(r["pos"]), float),
+            np.zeros((3, 3), float),
+            "",
+        ]
 
-            # list of pointers to the forcefield requests. shallow copy so we can remove stuff
-            com_handles = r["ff_handles"].copy()
-            if self.baseline_name != "":
-                # looks for the baseline potential, store its value and drops it from the list
-                names = [ff.name for ff in self.fflist]
+        # list of pointers to the forcefield requests. shallow copy so we can remove stuff
+        com_handles = r["ff_handles"].copy()
+        if self.baseline_name != "":
+            # looks for the baseline potential, store its value and drops it from the list
+            names = [ff.name for ff in self.fflist]
 
-                for i, ff_r in enumerate(com_handles):
-                    if names[i] == self.baseline_name:
-                        baseline_pot = ff_r["result"][0]
-                        baseline_frc = ff_r["result"][1]
-                        baseline_vir = ff_r["result"][2]
-                        baseline_xtr = ff_r["result"][3]
-                        com_handles.pop(i)
-                        break
+            for i, ff_r in enumerate(com_handles):
+                if names[i] == self.baseline_name:
+                    baseline_pot = ff_r["result"][0]
+                    baseline_frc = ff_r["result"][1]
+                    baseline_vir = ff_r["result"][2]
+                    baseline_xtr = ff_r["result"][3]
+                    com_handles.pop(i)
+                    break
+        
+        # Gathers the forcefield energetics and extras
+        pots = []
+        frcs = []
+        virs = []
+        xtrs = []
 
-            # Gathers the forcefield energetics and extras
-            pots = [ff_r["result"][0] for ff_r in com_handles]
-            frcs = [ff_r["result"][1] for ff_r in com_handles]
-            virs = [ff_r["result"][2] for ff_r in com_handles]
-            xtrs = [ff_r["result"][3] for ff_r in com_handles]
-            print("quants normal ", pots, frcs, virs)
+        for ff_r in com_handles:
+            # if required, tries to extract multiple committe members from the extras JSON string
+            if "committee_pot" in ff_r["result"][3]:
+                pots += ff_r["result"][3]["committee_pot"]
+                if "committee_force" not in ff_r["result"][3]:
+                    raise ValueError("JSON extras for committe potential misses `committee_force` entry")
+                frcs += ff_r["result"][3]["committee_force"]
+                if "committee_virial" not in ff_r["result"][3]:
+                    raise ValueError("JSON extras for committe potential misses `committee_virial` entry")
+                virs += ff_r["result"][3]["committee_virial"]
+                ff_r["result"][3].pop("committee_pot")
+                ff_r["result"][3].pop("committee_force")
+                ff_r["result"][3].pop("committee_virial")
+                xtrs.append(ff_r["result"][3])
+            else:
+                pots.append(ff_r["result"][0])
+                frcs.append(ff_r["result"][1])
+                virs.append(ff_r["result"][2])
+                xtrs.append(ff_r["result"][3])
+        pots = np.array(pots)
+        frcs = np.array(frcs).reshape(len(pots), -1)
+        virs = np.array(virs).reshape(-1,3,3)
 
-        elif self.comm_type == "single-extras":
+        """
+        if self.comm_type == "fudge single-extras":
             # Check that we indeed have a single ff
             if len(self.fflist) != 1 and self.baseline_name == "":
                 raise ValueError(
@@ -1240,9 +1260,7 @@ class FFCommittee(ForceField):
             # debug
             # print("quants0 ", pots, frcs, virs, pots.shape, frcs.shape, virs.shape, pots.dtype, frcs.dtype, virs.dtype)
             # MR: from now on everything else should be the same, hopefully
-
-        else:
-            raise OptionError("Committee option is unknown. Check possible options.")
+        """
 
         # Computes the mean energetics
         mean_pot = np.mean(pots, axis=0)

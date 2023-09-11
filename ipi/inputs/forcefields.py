@@ -699,9 +699,16 @@ class InputFFCommittee(InputForceField):
                       of energy and forces. These are averaged, and the mean used as the 
                       actual forcefield. Statistics about the distribution are also returned
                       as extras fields, and can be printed for further postprocessing. 
+                      It is also possible for a single FF object to return a JSON-formatted
+                      string containing entries `committee_pot`, `committee_force` and 
+                      `committee_virial`, that contain multiple members at once. These
+                      will be unpacked and combined with whatever else is present. 
+
                       Also contains options to use it for uncertainty estimation and for
                       active learning in a ML context, based on a committee model.
-                      Implements the approaches discussed in DOI: 10.1063/5.0036522.
+                      Implements the approaches discussed in 
+                      [Musil et al.](http://doi.org/10.1021/acs.jctc.8b00959)
+                      and [Imbalzano et al.](http://doi.org/10.1063/5.0036522)
                       """
     default_label = "FFCOMMITTEE"
 
@@ -770,15 +777,6 @@ class InputFFCommittee(InputForceField):
             "help": "Output filename for structures that exceed the accuracy threshold of the model, to be used in active learning.",
         },
     )
-    fields["committee_type"] = (
-        InputValue,
-        {
-            "dtype": str,
-            "options": ["default", "single-extras"],
-            "default": "default",
-            "help": "Chooses the type of committee communication. Default is from several separate sockets. single-extras expects many values in the extras string from one socket.",
-        },
-    )
 
     def store(self, ff):
         """Store all the sub-forcefields"""
@@ -793,7 +791,6 @@ class InputFFCommittee(InputForceField):
         self.baseline_name.store(ff.baseline_name)
         self.active_thresh.store(ff.active_thresh)
         self.active_output.store(ff.active_out)
-        self.committee_type.store(ff.comm_type)
 
         for _ii, _obj in enumerate(_fflist):
             if self.extra[_ii] == 0:
@@ -850,7 +847,6 @@ class InputFFCommittee(InputForceField):
             baseline_name=self.baseline_name.fetch(),
             active_thresh=self.active_thresh.fetch(),
             active_out=self.active_output.fetch(),
-            comm_type=self.committee_type.fetch(),
         )
 
 
