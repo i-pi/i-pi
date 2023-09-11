@@ -19,6 +19,7 @@
     <ffsocket name='driver-combo' mode='unix' matching="any" pbc="false">
         <address>h2o-comm.json</address> <latency> 2e-4 </latency>
     </ffsocket>
+    <parse_json> True </parse_json>
   </ffcommittee>
   <system>
     <initialize nbeads='1'>

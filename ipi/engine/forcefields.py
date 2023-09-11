@@ -1214,59 +1214,7 @@ class FFCommittee(ForceField):
         pots = np.array(pots)
         frcs = np.array(frcs).reshape(len(pots), -1)
         virs = np.array(virs).reshape(-1, 3, 3)
-
-        """
-        if self.comm_type == "fudge single-extras":
-            # Check that we indeed have a single ff
-            if len(self.fflist) != 1 and self.baseline_name == "":
-                raise ValueError(
-                    "This type of committee expects a single socket, or one socket and one baseline"
-                )
-
-            r["result"] = [
-                0.0,
-                np.zeros(len(r["pos"]), float),
-                np.zeros((3, 3), float),
-                "",
-            ]
-
-            # list of pointers to the forcefield requests. shallow copy so we can remove stuff
-            com_handles = r["ff_handles"].copy()
-            if self.baseline_name != "":
-                # looks for the baseline potential, store its value and drops it from the list
-                names = [ff.name for ff in self.fflist]
-
-                for i, ff_r in enumerate(com_handles):
-                    if names[i] == self.baseline_name:
-                        baseline_pot = ff_r["result"][0]
-                        baseline_frc = ff_r["result"][1]
-                        baseline_vir = ff_r["result"][2]
-                        baseline_xtr = ff_r["result"][3]
-                        com_handles.pop(i)
-                        break
-
-            # Gathers the forcefield energetics from the extras field (!)
-            # debug
-            for ff_r in com_handles:
-                print("dict", ff_r["result"][3])
-            pots = np.squeeze(
-                np.array([ff_r["result"][3]["committee_pot"] for ff_r in com_handles])
-            )
-            frcs = np.squeeze(
-                np.array([ff_r["result"][3]["committee_force"] for ff_r in com_handles])
-            )
-            virs = np.squeeze(
-                np.array(
-                    [ff_r["result"][3]["committee_virial"] for ff_r in com_handles]
-                )
-            )
-            xtrs = [
-                ff_r["result"][3] for ff_r in com_handles
-            ]  # MR - no extras here kinda. not sure yet about this
-            # debug
-            # print("quants0 ", pots, frcs, virs, pots.shape, frcs.shape, virs.shape, pots.dtype, frcs.dtype, virs.dtype)
-            # MR: from now on everything else should be the same, hopefully
-        """
+        print("cc ", len(pots))
 
         # Computes the mean energetics
         mean_pot = np.mean(pots, axis=0)
