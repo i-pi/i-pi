@@ -867,6 +867,27 @@ class Properties(dobject):
                           energy <sc**2>, and 3) the average of the exponential of excess potential energy
                           <exp(-beta*sc)>, and 4-5) Suzuki-Chin and Takahashi-Imada 4th-order reweighing term""",
             },
+            "exchange_distinct_prob": {
+                "dimension": "undefined",
+                "size": 1,
+                "func": self.get_exchange_distinct_prob,
+                "help": "Probability of the distinguishable configuration of bosonic exchange.",
+                "longhelp": """Probability of the distinguishable configuration of bosonic exchange, the configuration 
+                               where each atom is has its own separate ring polymer. 
+                               A number between 0 and 1, tends to 1 in high temperatures, which indicates that 
+                               bosonic exchange is negligible""",
+            },
+            "exchange_full_prob": {
+                "dimension": "undefined",
+                "size": 1,
+                "func": self.get_exchange_longest_prob,
+                "help": "Scaled probability of the bosonic exchange configuration where all atoms are connected",
+                "longhelp": """Scaled probability of the bosonic exchange configuration where all atoms are connected:
+                               the probability of the configuration connecting the ring polymers of all the atoms into
+                               one large ring polymer, divided by 1/N, where N is the number of atoms. 
+                               A number between 0 and 1, tends to 1 in low temperatures, which indicates that 
+                               bosonic exchange is very strong""",
+            }
         }
 
     def bind(self, system):
@@ -2617,6 +2638,16 @@ class Properties(dobject):
             )
 
         return ti
+
+    def get_exchange_distinct_prob(self):
+        if not self.nm.exchange:
+            return 1.0
+        return self.nm.exchange.get_distinct_probability()
+
+    def get_exchange_longest_prob(self):
+        if not self.nm.exchange:
+            return 0.0
+        return self.nm.exchange.get_longest_probability()
 
 
 class Trajectories(dobject):

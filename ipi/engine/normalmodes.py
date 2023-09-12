@@ -41,6 +41,7 @@ class NormalModes(dobject):
        transform: A nm_trans object that contains the functions that are
           required for the normal mode transformation.
 
+
     Depend objects:
        mode: A string specifying how the bead masses are chosen.
        transform_method: A string specifying how to do the normal mode
@@ -116,6 +117,7 @@ class NormalModes(dobject):
         )
         dself.propagator = depend_value(name="propagator", value=propagator)
         dself.nm_freqs = depend_array(name="nm_freqs", value=np.asarray(freqs, float))
+        dself.exchange = depend_value(name="exchange", value=None)
 
     def copy(self, freqs=None):
         """Creates a new beads object from the original.
@@ -162,6 +164,7 @@ class NormalModes(dobject):
         self.natoms = beads.natoms
 
         self.bosons = self.resolve_bosons()
+        self.exchange = None
 
         # if ( (len(self.bosons) > 0) and (len(self.bosons) < self.natoms) ):
         # raise(IOError("@NormalModes : Currently, only full bosonic/distinguishable simulations are allowed"))
@@ -754,10 +757,10 @@ class NormalModes(dobject):
         betaP = 1.0 / (self.nbeads * units.Constants.kb * self.ensemble.temp)
         # positions of only the boson atoms
         q = self.beads.q.reshape((self.nbeads, self.natoms, 3))[:, self.bosons, :]
-        exchange_potential = ExchangePotential(
+        self.exchange = ExchangePotential(
             len(self.bosons), q, self.nbeads, boson_mass, self.omegan2, betaP
         )
-        return exchange_potential.get_vspring_and_fspring()
+        return self.exchange.get_vspring_and_fspring()
 
     def get_fspring(self):
         """

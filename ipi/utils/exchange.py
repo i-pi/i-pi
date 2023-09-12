@@ -282,3 +282,19 @@ class ExchangePotential(dobject):
         F[0, :, :] = np.einsum("ljk,jl->lk", force_from_neighbors, connection_probs)
 
         return F
+
+    def get_distinct_probability(self):
+        """
+        Evaluate the probability of the configuration where all the particles are separate.
+        """
+        return ((1.0 / np.math.factorial(self._N)) *
+                np.exp(-self._betaP *
+                       (np.trace(self._E_from_to) - self.V_all())))
+
+    def get_longest_probability(self):
+        """
+        Evaluate the probability of a configuration where all the particles are connected,
+        divided by 1/N. Notice that there are (N-1)! permutations of this topology
+        (all represented by the cycle 0,1,...,N-1,0); this cancels the division by 1/N.
+        """
+        return np.exp(-self._betaP * (self._E_from_to[0,-1] - self.V_all()))
