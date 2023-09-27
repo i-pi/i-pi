@@ -154,7 +154,7 @@ class DriverSocket(socket.socket):
 
         blen = dest.itemsize * dest.size
         if blen > len(self._buf):
-            self._buf.resize(blen)
+            self._buf = np.zeros(blen, np.byte)
         bpos = 0
         ntimeout = 0
 
@@ -182,10 +182,12 @@ class DriverSocket(socket.socket):
 
             bpos += bpart
 
-        if np.isscalar(dest):
-            return np.fromstring(self._buf[0:blen], dest.dtype)[0]
-        else:
+        if hasattr(dest, 'shape'):
             return np.fromstring(self._buf[0:blen], dest.dtype).reshape(dest.shape)
+        else:
+            return np.fromstring(self._buf[0:blen], dest.dtype)[0]
+        
+            
 
 
 class Driver(DriverSocket):

@@ -35,14 +35,13 @@ def main(fn_input, options):
     """Loads and runs the simulation stored in `fn_input`."""
 
     # optionally profile this run - set up
-    # ~ if do_yappi:
-    # ~ try:
-    # ~ import yappi
-    #~ yappi.start(builtins=True, profile_threads=True)
-    # ~ except ImportError:
-    # ~ print 'Profiling with yappi was enabled but could not be imported.'
-    # ~ print "Profiling with yappi was enabled but could not be imported."
-    #~ sys.exit(1)
+    if options.do_yappi:
+        try:
+            import yappi
+            yappi.set_clock_type("cpu")
+            yappi.start(builtins=True, profile_threads=True)
+        except ImportError:
+            raise ImportError('Profiling requires the `yappi` package.')            
 
     # construct simulation based on input file
     simulation = Simulation.load_from_xml(fn_input, request_banner=True, custom_verbosity=options.verbosity)
