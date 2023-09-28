@@ -47,14 +47,14 @@ class Softexit(object):
         self.exiting = False
         self._doloop = [False]
 
-    def register_function(self, func):
+    def register_function(self, func, *args, **kwargs):
         """Adds another function to flist.
 
         Args:
            func: The function to be added to flist.
         """
 
-        self.flist.append(func)
+        self.flist.append((func, args, kwargs))
 
     def register_thread(self, thread, loop_control=None):
         """Adds a thread to the monitored list.
@@ -100,9 +100,9 @@ class Softexit(object):
             )
 
             # calls all the registered emergency softexit procedures
-            for f in self.flist:
+            for f, a, ka in self.flist:
                 try:
-                    f()
+                    f(*a, **ka)
                 except RuntimeError as err:
                     print("Error running emergency softexit, ", err)
                     pass

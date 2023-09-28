@@ -135,7 +135,7 @@
     <total_steps> 40 </total_steps>
     <total_time> 86000 </total_time>
     <prng><seed> 31415 </seed></prng>
-     <ffsocket name='qtip4pf' mode='unix'>
+     <ffsocket name='qtip4pf' mode='unix' pbc='false'>
         <address> qtip4pf </address>
     </ffsocket>
     <system>

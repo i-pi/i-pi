@@ -30,14 +30,14 @@ if not dir_root in sys.path:
 from ipi.utils.softexit import softexit
 from ipi.engine.simulation import Simulation
 
-def profile_exit():
+def profile_exit(prefix="profile"):
     # write out the outputs of the profiler
     import yappi            
     yappi.stop()
     yappi.get_thread_stats().print_all()
     yfs = yappi.get_func_stats()
-    yfs.save("profile.kgrind", type="callgrind")
-    ypo = open("profile.yappi", "w")
+    yfs.save(prefix+".kgrind", type="callgrind")
+    ypo = open(prefix+".yappi", "w")
     yfs.print_all(out=ypo)
     ypo.close()
 
@@ -49,11 +49,11 @@ def main(fn_input, options):
     if options.do_yappi:
         try:
             import yappi
-            yappi.set_clock_type("cpu")
+            yappi.set_clock_type(options.yappi_clock)
             yappi.start(builtins=True, profile_threads=True)
             # register the output function for the profiler so it is 
             # called whatever the way i-PI ends
-            softexit.register_function(profile_exit)
+            softexit.register_function(profile_exit, prefix=options.yappi_prefix)
         except ImportError:
             raise ImportError('Profiling requires the `yappi` package.')            
 
@@ -83,7 +83,14 @@ if __name__ == '__main__':
 
     parser.add_option('-p', '--profile',
                       action='store_true', dest='do_yappi', default=False,
-                      help='Profile this run using Yappi.')
+                      help='Profile this run using yappi.')
+
+    parser.add_option('--profiler-clock', dest='yappi_clock', default="cpu",
+                      choices=['cpu', 'wall'],
+                      help='Type of profiling timing.')
+    
+    parser.add_option('--profiler-output', dest='yappi_prefix', default="profile",                      
+                      help='Prefix for profiler files.')
 
     parser.add_option('-V', '--verbosity', dest='verbosity', default=None,
                       choices=['quiet', 'low', 'medium', 'high', 'debug'],
