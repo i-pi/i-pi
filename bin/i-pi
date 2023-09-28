@@ -30,6 +30,17 @@ if not dir_root in sys.path:
 from ipi.utils.softexit import softexit
 from ipi.engine.simulation import Simulation
 
+def profile_exit():
+    # write out the outputs of the profiler
+    import yappi            
+    yappi.stop()
+    yappi.get_thread_stats().print_all()
+    yfs = yappi.get_func_stats()
+    yfs.save("profile.kgrind", type="callgrind")
+    ypo = open("profile.yappi", "w")
+    yfs.print_all(out=ypo)
+    ypo.close()
+
 
 def main(fn_input, options):
     """Loads and runs the simulation stored in `fn_input`."""
@@ -40,6 +51,9 @@ def main(fn_input, options):
             import yappi
             yappi.set_clock_type("cpu")
             yappi.start(builtins=True, profile_threads=True)
+            # register the output function for the profiler so it is 
+            # called whatever the way i-PI ends
+            softexit.register_function(profile_exit)
         except ImportError:
             raise ImportError('Profiling requires the `yappi` package.')            
 
@@ -48,19 +62,6 @@ def main(fn_input, options):
 
     # run the simulation
     simulation.run()
-
-    # optionally profile this run - wrap up
-    # TODO
-    # We do not get to this if the run is ctrl interrupted and exits cleanly.
-    # Maybe the profiler should be global and cleaned up on exit?
-    if options.do_yappi:
-        yappi.stop()
-        yappi.get_thread_stats().print_all()
-        yfs = yappi.get_func_stats()
-        yfs.save("profile.kgrind", type="callgrind")
-        ypo = open("profile.yappi", "w")
-        yfs.print_all(out=ypo)
-        ypo.close()
 
     # It seems that checkpoints are written by the following.
     # TODO: Have them written when simulation.run() finishes instead.
