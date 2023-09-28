@@ -631,15 +631,17 @@ class depend_array(np.ndarray, depend_base):
             A logical stating whether a __get__ instruction based
             on index would return a scalar.
         """
-
-        if np.isscalar(index) and depth <= 1:
+        
+        if hasattr(index, "__len__"):
+            if len(index) == depth and isinstance(index, tuple):
+                # if the index is a tuple check it does not contain slices
+                for i in index:
+                    if isinstance(i, slice):
+                        return False
+                return True
+        elif depth<=1:
             return True
-        elif isinstance(index, tuple) and len(index) == depth:
-            # if the index is a tuple check it does not contain slices
-            for i in index:
-                if not np.isscalar(i):
-                    return False
-            return True
+        
         return False
 
     def __getitem__(self, index):
@@ -782,8 +784,7 @@ def dstrip(da):
 
     # only bother to strip dependencies if the array actually IS a depend_array
     if isinstance(da, depend_array):
-        result = da.view(np.ndarray)
-        return result
+        return da.view(np.ndarray)
     else:
         return da
 
