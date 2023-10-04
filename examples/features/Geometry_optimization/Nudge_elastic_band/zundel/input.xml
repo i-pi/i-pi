@@ -1,5 +1,5 @@
-<simulation mode='static' verbosity='debug'>
-  <total_steps> 600 </total_steps>
+<simulation mode='static' verbosity='low'>
+  <total_steps> 10 </total_steps> <!--the calculation converges in  208 steps-->
   <ffsocket mode='unix' name='zundel'>
     <latency> 1.0e-2 </latency>
     <slots> 4 </slots>

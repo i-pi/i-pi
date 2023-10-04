@@ -27,3 +27,10 @@ gnuplot plot-bells.plt
 ```
 
 You can extract certain path as a single .xyz file using `tools/bash/get-certain-path.sh`.
+
+Important Note:
+   The code randomly crashes here with some versions of Numpy based on OpenBLAS.
+   If this happens, use Numpy based on MKL, e.g. from Anaconda.
+   YL (23Aug23) Tested numpy versions 1.21.5, 1.24.2
+
+ 
