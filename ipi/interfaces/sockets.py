@@ -182,12 +182,10 @@ class DriverSocket(socket.socket):
 
             bpos += bpart
 
-        if hasattr(dest, 'shape'):
+        if hasattr(dest, "shape"):
             return np.fromstring(self._buf[0:blen], dest.dtype).reshape(dest.shape)
         else:
             return np.fromstring(self._buf[0:blen], dest.dtype)[0]
-        
-            
 
 
 class Driver(DriverSocket):
@@ -302,10 +300,12 @@ class Driver(DriverSocket):
         if self.status & Status.NeedsInit:
             try:
                 # combines all messages in one to reduce latency
-                self.sendall(Message("init")+
-                             np.int32(rid)+
-                             np.int32(len(pars))+
-                             pars.encode())
+                self.sendall(
+                    Message("init")
+                    + np.int32(rid)
+                    + np.int32(len(pars))
+                    + pars.encode()
+                )
             except:
                 self.get_status()
                 return
@@ -324,15 +324,16 @@ class Driver(DriverSocket):
         """
 
         if self.status & Status.Ready:
-            try:                
+            try:
                 # reduces latency by combining all messages in one
-                self.sendall(Message("posdata")+ # header
-                             h_ih[0].tobytes()+ # cell
-                             h_ih[1].tobytes()+ # inverse cell
-                             np.int32(len(pos) // 3).tobytes()+ # length of position array
-                             pos.tobytes() # positions
-                             )
-                
+                self.sendall(
+                    Message("posdata")
+                    + h_ih[0].tobytes()  # header
+                    + h_ih[1].tobytes()  # cell
+                    + np.int32(len(pos) // 3).tobytes()  # inverse cell
+                    + pos.tobytes()  # length of position array  # positions
+                )
+
                 self.status = Status.Up | Status.Busy
             except:
                 print("Error in sendall, resetting status")

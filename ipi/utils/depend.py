@@ -632,7 +632,7 @@ class depend_array(np.ndarray, depend_base):
             A logical stating whether a __get__ instruction based
             on index would return a scalar.
         """
-        
+
         if hasattr(index, "__len__"):
             if len(index) == depth and isinstance(index, tuple):
                 # if the index is a tuple check it does not contain slices
@@ -640,9 +640,9 @@ class depend_array(np.ndarray, depend_base):
                     if isinstance(i, slice):
                         return False
                 return True
-        elif depth<=1:
+        elif depth <= 1:
             return True
-        
+
         return False
 
     def __getitem__(self, index):
