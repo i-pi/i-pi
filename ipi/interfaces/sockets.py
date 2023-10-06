@@ -301,10 +301,11 @@ class Driver(DriverSocket):
 
         if self.status & Status.NeedsInit:
             try:
-                self.sendall(Message("init"))
-                self.sendall(np.int32(rid))
-                self.sendall(np.int32(len(pars)))
-                self.sendall(pars.encode())
+                # combines all messages in one to reduce latency
+                self.sendall(Message("init")+
+                             np.int32(rid)+
+                             np.int32(len(pars))+
+                             pars.encode())
             except:
                 self.get_status()
                 return
@@ -323,12 +324,15 @@ class Driver(DriverSocket):
         """
 
         if self.status & Status.Ready:
-            try:
-                self.sendall(Message("posdata"))
-                self.sendall(h_ih[0])
-                self.sendall(h_ih[1])
-                self.sendall(np.int32(len(pos) // 3))
-                self.sendall(pos)
+            try:                
+                # reduces latency by combining all messages in one
+                self.sendall(Message("posdata")+ # header
+                             h_ih[0].tobytes()+ # cell
+                             h_ih[1].tobytes()+ # inverse cell
+                             np.int32(len(pos) // 3).tobytes()+ # length of position array
+                             pos.tobytes() # positions
+                             )
+                
                 self.status = Status.Up | Status.Busy
             except:
                 print("Error in sendall, resetting status")

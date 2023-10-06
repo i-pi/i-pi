@@ -262,8 +262,9 @@ class depend_base(object):
 
         self._tainted[:] = True
         for item in self._dependants:
-            if not item()._tainted[0]:
-                item().taint()
+            item = item()
+            if not item._tainted[0]:
+                item.taint()
         if self._synchro is not None:
             for v in list(self._synchro.synced.values()):
                 if (not v._tainted[0]) and (v is not self):
