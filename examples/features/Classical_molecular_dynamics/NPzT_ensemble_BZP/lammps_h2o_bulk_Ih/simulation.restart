@@ -1,4 +1,4 @@
-<simulation>
+<simulation verbosity='medium'>
    <prng>
       <seed>31415</seed>
       <state shape='(624)'>
@@ -131,16 +131,17 @@
       <set_pos>416</set_pos>
    </prng>
    <output prefix='simulation'>
-      <properties shape='(6)'>
+      <properties shape='(6)' stride='2'>
        [ step, time{picosecond}, conserved, cell_abcABC, volume, 
          virial_md ]
       </properties>
       <trajectory filename='xc' stride='10' format='pdb' cell_units='angstrom'>x_centroid{angstrom}</trajectory>
       <checkpoint stride='2000'>1</checkpoint>
    </output>
-   <total_steps>100</total_steps>
+   <total_steps>200</total_steps>
    <ffsocket mode='unix' name='lammps'>
       <address>lammps_ice</address>
+      <latency>  1.00000000e-03</latency>
    </ffsocket>
    <system>
       <forces>
