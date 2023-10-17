@@ -87,7 +87,7 @@ if __name__ == '__main__':
 
     parser.add_option('--profiler-clock', dest='yappi_clock', default="cpu",
                       choices=['cpu', 'wall'],
-                      help='Type of profiling timing.')
+                      help='Type of profiling timing: `wall` for wall-clock timing, and `cpu` for CPU timing.')
     
     parser.add_option('--profiler-output', dest='yappi_prefix', default="profile",                      
                       help='Prefix for profiler files.')
