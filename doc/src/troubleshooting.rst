@@ -300,5 +300,6 @@ you can try.
    you can contact the developers - your setup might have revealed some 
    kind of bottleneck. It will help us if you can also generate a profiler
    output from your run (possibly with only a small number of steps). 
-   You can generate a profiler log by running with the `-p` option. 
+   You can generate a profiler log by running i-PI with `-p` option,
+   e.g. `i-pi -p input.xml`. 
    You will need to install the `yappi` profiler.
