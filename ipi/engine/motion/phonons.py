@@ -95,6 +95,13 @@ class DynMatrixMover(Motion):
                 "Calculation not possible for number of beads greater than one."
             )
 
+        # prints out the nuclear masses
+        m = self.beads.m3[-1]
+        outfile = self.output_maker.get_output(self.prefix + ".masses", "w")
+        outfile.write("# Nuclear masses (atomic units)" + "\n")
+        outfile.write("\n".join(map(str, m)))
+        outfile.close_stream()
+
         self.ism = 1 / np.sqrt(dstrip(self.beads.m3[-1]))
         self.m = dstrip(self.beads.m)
         self.phcalc.bind(self)

@@ -288,6 +288,34 @@ class Properties(dobject):
                 "size": 6,
                 "func": (lambda: np.asarray(h2abc_deg(self.cell.h))),
             },
+            "Efield": {
+                "dimension": "atomic_unit",
+                "help": "The external applied electric field (cartesian axes).",
+                "size": 3,
+                "func": (lambda: dd(self.ensemble.eda).Efield(self.ensemble.time)),
+            },
+            "Efieldmod": {
+                "dimension": "atomic_unit",
+                "help": "The modulus of the external applied electric field.",
+                "func": (lambda: norm(dd(self.ensemble.eda).Efield(self.ensemble.time))),
+            },
+            "Eenvelope": {
+                "dimension": "atomic_unit",
+                "help": "The (gaussian) envelope function of the external applied electric field.",
+                "func": (lambda: dd(self.ensemble.eda.Electric_Field).Eenvelope(self.ensemble.time) ),
+            },
+            "polarization": {
+                "dimension": "polarization",
+                "help": "The polarization of the system (cartesian axes).",
+                "size": 3,
+                "func": (lambda: self.ensemble.eda.dipole / self.cell.V ),
+            },
+            "dipole": {
+                "dimension": "electric-dipole",
+                "help": "The electric dipole of the system (cartesian axes).",
+                "size": 3,
+                "func": (lambda: self.ensemble.eda.dipole ),
+            },
             "conserved": {
                 "dimension": "energy",
                 "help": "The value of the conserved energy quantity per bead.",
@@ -2652,10 +2680,26 @@ class Trajectories(dobject):
                 "help": "The momentum trajectories. Will print out one file per bead, unless the bead attribute is set by the user.",
                 "func": (lambda: 1.0 * self.system.beads.p),
             },
+            "bec": {
+                "dimension": "number",
+                "help": "The BEC tensors in cartesian coordinates.",
+                "func": (lambda: self.system.ensemble.eda.Born_Charges.bec), #((self.system.beads.natoms,9)) ), # .flatten()
+            },
+            "extra": {
+                "dimension": "number",
+                "help": "The extra string passed by the driver.",
+                "func": (lambda bead=0: self.system.forces.extras["raw"][bead]), #((self.system.beads.natoms,9)) ), # .flatten()
+            },
             "forces": {
                 "dimension": "force",
                 "help": "The force trajectories. Will print out one file per bead, unless the bead attribute is set by the user.",
                 "func": (lambda: 1.0 * self.system.forces.f),
+            },
+            "Eforces": {
+                "dimension": "force",
+                "help": "The Electric field contribution to the forces (to be added to the 'forces' trajectories to get the total forces)",
+                "func": (lambda: self.system.motion.integrator.EDAforces \
+                         if hasattr(self.system.motion.integrator,'EDAforces') else np.zeros((self.system.beads.natoms*3)) ),
             },
             "forces_sc": {
                 "dimension": "force",

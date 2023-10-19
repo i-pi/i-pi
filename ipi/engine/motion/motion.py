@@ -51,7 +51,7 @@ class Motion(dobject):
         else:
             self.fixatoms = fixatoms
 
-        self.beads = self.cell = self.forces = self.prng = self.nm = None
+        self.beads = self.cell = self.forces = self.prng = self.nm = self.enstype = None
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         """Binds beads, cell, bforce, and prng to the calculator.

@@ -12,7 +12,7 @@ import re
 from ipi.utils.messages import verbosity, info
 
 
-__all__ = ["Constants", "Elements", "unit_to_internal", "unit_to_user"]
+__all__ = ["Constants", "Elements", "unit_to_internal", "unit_to_user","UnitMap"]
 
 
 class Constants(object):
@@ -28,6 +28,7 @@ class Constants(object):
     kb = 1.0
     hbar = 1.0
     amu = 1822.8885
+    e   = 1.0 # elementary charge, electron charge = - |e|
 
 
 class Elements(dict):
@@ -221,6 +222,28 @@ UnitMap = {
         "inversecm": 4.5563353e-06,
         "hertz*rad": 2.4188843e-17,
         "hertz": 1.5198298e-16,
+        "hz": 1.5198298e-16,
+        "thz": 1.5198298e-4,
+    },
+    "electric-field": {  # Hartree/Bohr radius
+        # 1Hartree = 27.2113862459 eV 
+        #    1Bohr = 0.5291772109  A
+        "": 1.00,
+        "automatic": 1.00,
+        "atomic_unit": 1.00,
+        "ev/a": 0.019446903811441516 #0.5291772109/27.2113862459
+    },
+    "polarization": {  # electron charge/Bohr radius^2
+        "": 1.00,
+        "automatic": 1.00,
+        "atomic_unit": 1.00,
+        "c/m^2": 57.214766
+    },
+    "electric-dipole": {  # electron charge/Bohr radius^2
+        "": 1.00,
+        "automatic": 1.00,
+        "atomic_unit": 1.00,
+        # "cm": still to be computed
     },
     "ms-momentum": {  # TODO fill up units here (mass-scaled momentum)
         "": 1.00,

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import socket
 import argparse
+from datetime import datetime
 import numpy as np
 
 try:
@@ -68,6 +69,8 @@ def run_driver(unix=False, address="", port=12345, driver=Dummy_driver()):
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.connect((address, port))
 
+    print(" @Opened socket")
+
     f_init = False
     f_data = False
     f_verbose = False
@@ -81,6 +84,7 @@ def run_driver(unix=False, address="", port=12345, driver=Dummy_driver()):
     pot = 0.0
     force = np.zeros(0, float)
     vir = np.zeros((3, 3), float)
+    print(" @Entering the for loop")
     while True:  # ah the infinite loop!
         header = sock.recv(HDRLEN)
 
@@ -109,8 +113,8 @@ def run_driver(unix=False, address="", port=12345, driver=Dummy_driver()):
             nat = recv_data(sock, np.int32())
             if len(pos) == 0:
                 # shapes up the position array
-                pos.resize((nat, 3))
-                force.resize((nat, 3))
+                pos.resize((nat, 3),refcheck=False)
+                force.resize((nat, 3),refcheck=False)
             else:
                 if len(pos) != nat:
                     raise RuntimeError("Atom number changed during i-PI run")
@@ -160,6 +164,12 @@ def run_driver(unix=False, address="", port=12345, driver=Dummy_driver()):
 
 
 if __name__ == "__main__":
+
+    print("\n @You have called 'driver.py'")
+    now = datetime.now()
+    dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
+    print("\n @Date and time: {:s}\n".format(dt_string))
+
     parser = argparse.ArgumentParser(description=description)
 
     parser.add_argument(
@@ -201,9 +211,15 @@ if __name__ == "__main__":
         """,
     )
 
+    print("\n @Reading the input parameters:")
     args = parser.parse_args()
 
-    if args.mode in __drivers__:
+    print("\t\t   unix: {:s}".format("true" if args.unix else "false"))
+    print("\t\taddress: {:s}".format(args.address))
+    print("\t\t   mode: {:s}".format(args.mode))
+    print("\t\t   port: {:d}".format(args.port))
+
+    if args.mode in __drivers__:        
         d_f = __drivers__[args.mode](args.param)
     elif args.mode == "dummy":
         d_f = Dummy_driver(args.param)

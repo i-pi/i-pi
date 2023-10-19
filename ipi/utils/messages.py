@@ -8,7 +8,6 @@
 import traceback
 import sys
 
-
 __all__ = ["Verbosity", "verbosity", "banner", "info", "warning"]
 
 
@@ -120,6 +119,7 @@ def banner():
 
     """
     )
+
 
 
 def info(text="", show=True):

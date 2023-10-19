@@ -152,9 +152,27 @@ class DriverSocket(socket.socket):
            The data read from the socket to be read into dest.
         """
 
+        #
+        # added refcheck=False after the following error occurred:
+        #
+        # Exception has occurred: ValueError
+        # cannot resize an array that references or is referenced
+        # by another array in this way.
+        # Use the np.resize function or refcheck=False"
+        #   File "/home/elia/Google-Drive/google-personal/i-pi-sabia/ipi/interfaces/sockets.py", line 158, in recvall
+        #     self._buf.resize(blen) #,refcheck=False)
+        #   File "/home/elia/Google-Drive/google-personal/i-pi-sabia/ipi/interfaces/sockets.py", line 380 (now 393), in getforce
+        #     mu = self.recvall(mu)
+        #   File "/home/elia/Google-Drive/google-personal/i-pi-sabia/ipi/interfaces/sockets.py", line 463 (now 476), in dispatch
+        #     r["result"] = self.getforce()
+        #
+        # ES: read this discussion https://stackoverflow.com/questions/24034839/valueerror-resizing-an-ndarray
+        # It seems that this problem occur only when one uses a debugger, like I am doing
+        # 
+        
         blen = dest.itemsize * dest.size
         if blen > len(self._buf):
-            self._buf.resize(blen)
+            self._buf.resize(blen,refcheck=False) 
         bpos = 0
         ntimeout = 0
 
@@ -416,6 +434,8 @@ class Driver(DriverSocket):
                 )
 
             mxtradict["raw"] = mxtra
+        else :
+            mxtradict["raw"] = ""
 
         return [mu, mf, mvir, mxtradict]
 

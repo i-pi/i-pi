@@ -51,7 +51,7 @@ class InputDynamics(InputDictionary):
                 "dtype": str,
                 "default": "nve",
                 "help": "The ensemble that will be sampled during the simulation. ",
-                "options": ["nve", "nvt", "npt", "nst", "sc", "scnpt"],
+                "options": ["nve", "nvt", "npt", "nst", "sc", "scnpt", "eda-nve","eda-nvt"],
             },
         ),
         "splitting": (
