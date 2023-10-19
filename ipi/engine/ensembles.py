@@ -90,7 +90,7 @@ class Ensemble(dobject):
         Esigma=None,
         bec=None,
         cdip=True,
-        tacc=0.0,
+        # tacc=0.0,
         cbec=False,
     ):
         """Initialises Ensemble.
@@ -166,9 +166,9 @@ class Ensemble(dobject):
         dself.bec    = depend_array(name="bec"   ,value=bec    if bec    is not None else np.zeros(0))
         dself.cbec   = depend_array(name="cbec"   ,value=cbec)
         dself.cdip   = depend_array(name="cdip"   ,value=cdip)
-        dself.tacc   = depend_array(name="tacc"   ,value=tacc)
+        # dself.tacc   = depend_array(name="tacc"   ,value=tacc)
 
-        self.eda = EDA(tacc,Eamp,Efreq,Ephase,Epeak,Esigma,cdip,cbec,bec)
+        self.eda = EDA(Eamp,Efreq,Ephase,Epeak,Esigma,cdip,cbec,bec)
 
     def copy(self):
         return Ensemble(
@@ -188,7 +188,7 @@ class Ensemble(dobject):
             Esigma=self.Esigma,
             bec=self.bec,
             cdip=self.cdip,
-            tacc=self.tacc,
+            # tacc=self.tacc,
             cBEC=self.cBEC,
             )
 
@@ -704,12 +704,12 @@ class EDA(dobject):
 
     integrators = ["eda-nve","eda-nvt"]
 
-    def __init__(self,tacc,Eamp,Efreq,Ephase,Epeak,Esigma,cdip,cbec,bec,**kwargv):
+    def __init__(self,Eamp,Efreq,Ephase,Epeak,Esigma,cdip,cbec,bec,**kwargv):
         super(EDA,self).__init__(**kwargv)
         self.Electric_Field = ElectricField(Eamp,Efreq,Ephase,Epeak,Esigma)
         self.Dipole         = Dipole(cdip)
         self.Born_Charges   = BEC(cbec,bec)
-        self.tacc           = depend_value(name="tacc" ,value=tacc)
+        # self.tacc           = depend_value(name="tacc" ,value=tacc)
         pass
 
     def bind(self,ensemble,enstype):
@@ -740,11 +740,12 @@ class EDA(dobject):
         dpipe(dfrom=dself.time,dto=dself.cptime)
 
         dep = [dself.dipole,dself.Efield,dself.time]
-        dself.EDAenergy     = depend_value(name="EDAenergy",     func=self._get_EDAenergy,    value=0.0,dependencies=dep)
-        dself.TderEDAenergy = depend_value(name="TderEDAenergy", func=self._get_TderEDAenergy,value=0.0,dependencies=dep)
-        dself.Eenthalpy     = depend_value(name="Eenthalpy",     func=self._get_Eenthalpy,    value=0.0,dependencies=dep)
+        # dself.EDAenergy     = depend_value(name="EDAenergy",     func=self._get_EDAenergy,    value=0.0,dependencies=dep)
+        # dself.TderEDAenergy = depend_value(name="TderEDAenergy", func=self._get_TderEDAenergy,value=0.0,dependencies=dep)
+        # dself.Eenthalpy     = depend_value(name="Eenthalpy",     func=self._get_Eenthalpy,    value=0.0,dependencies=dep)
 
-        dself.Tconserved = depend_value(name="Tconserved", func=self._get_Tconserved,value=0.0,dependencies=[dself.Eenthalpy,dself.tacc,dself.time,dself.cptime])
+        # dself.tacc
+        dself.Tconserved = depend_value(name="Tconserved", func=self._get_Tconserved,value=0.0,dependencies=[dself.Eenthalpy,dself.time,dself.cptime])
 
         pass
 
@@ -753,29 +754,29 @@ class EDA(dobject):
         self.Electric_Field.store(eda.Electric_Field)
         self.Dipole.store(eda.Dipole)
         self.Born_Charges.store(eda.bec)
-        self.tacc.store(eda.tacc)
+        # self.tacc.store(eda.tacc)
         pass        
 
-    def _get_EDAenergy(self,time=None):
-        """EDA contribution to the enthalpy"""
-        return float( np.dot( self.dipole , dd(self.Electric_Field).Efield(time) ))
+    # def _get_EDAenergy(self,time=None):
+    #     """EDA contribution to the enthalpy"""
+    #     return float( np.dot( self.dipole , dd(self.Electric_Field).Efield(time) ))
     
-    def _get_TderEDAenergy(self,time=None): # ES: to be modified
-        """Time derivative of EDAenergy"""
-        #self._check_time(msg="calling")
-        return float( np.dot( self.dipole , dd(self.Electric_Field).TderEfield(time) ))
+    # def _get_TderEDAenergy(self,time=None): # ES: to be modified
+    #     """Time derivative of EDAenergy"""
+    #     #self._check_time(msg="calling")
+    #     return float( np.dot( self.dipole , dd(self.Electric_Field).TderEfield(time) ))
 
-    def _get_Eenthalpy(self,time=None):
-        """Electric enthalpy"""
-        return self.econs - dd(self).EDAenergy(time)
+    # def _get_Eenthalpy(self,time=None):
+    #     """Electric enthalpy"""
+    #     return self.econs - dd(self).EDAenergy(time)
               
-    def _get_Tconserved(self,time=None):
-        """Conserved quantity for time-dependent systems"""
-        # tacc is added and not subtracted because it is defined using EDAenergy
-        # but EDAenergy is subtracted the energy
-        # # so we have two minus signs 
-        self._check_time(msg="calling",time=time)
-        return dd(self).Eenthalpy(time) + self.tacc
+    # def _get_Tconserved(self,time=None):
+    #     """Conserved quantity for time-dependent systems"""
+    #     # tacc is added and not subtracted because it is defined using EDAenergy
+    #     # but EDAenergy is subtracted the energy
+    #     # # so we have two minus signs 
+    #     self._check_time(msg="calling",time=time)
+    #     return dd(self).Eenthalpy(time) + self.tacc
 
     def _check_time(self,msg="coding",time=None):
         """Check that self.cptime is equal to self.ensemble.time.

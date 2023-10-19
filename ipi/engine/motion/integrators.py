@@ -350,35 +350,13 @@ class NPTIntegrator(NVTIntegrator):
         # self.pconstraints()
 
 class EDAIntegrator(DummyIntegrator):
-    """Integrator object for simulations using the electric dipole approximation when an external electric field is applied.
-
-    The electric field has to be assumed:
-        1) homogeneous all over the system
-        2) slowly varying.
-    The first assumption need to be done in order for the Electric Dipole Approximation to be valid.
-    The second one in stead is neeed in order to DFT calculations to be reliable, 
-    since they are performed without any external electric field applied 
-    (to keep the KS equations simple(r) and computationally affordable).
-
+    """Integrator object for simulations using the Electric Dipole Approximation (EDA)
+    when an external electric field is applied.
     """
 
     # author: Elia Stocco
-    # motivation: deal with time-dependent external potential, in particular the EDA potential (have a look at EDAIntegrator)
+    # motivation: deal with time-dependent external potential
     # information: not included in __all__
-
-    # the conversion factor for the polarization from C/m^2 to atomic unit
-    # 1e    = 1.602176634×10−19 C
-    # 1Bohr = 5.291772109×10−11 m
-    # C/m^2 = (5.291772109×10−11)^2/1.602176634×10−19 = 1.7478E-2 
-    # from_Cm2_to_atomic = 1.7478E-2 
-    # from_atomic_to_Cm2 = 57.214766
-
-    # threshold for the comparison between the ionic polarization computed by the driven and the one computed by i-pi
-    # pay attention that they could be numerically different but anyway equivalent due to a different branch mapping
-    # thr_pol_comparison  = 1.0
-
-    # if true, _check = _check_dipole, otherwise a check of the polarizations values is performed too
-    # _check_flag = False
 
     def __init__(self):
         super(EDAIntegrator,self).__init__()
@@ -392,13 +370,6 @@ class EDAIntegrator(DummyIntegrator):
         dep = [dd(self.ensemble).time,dd(self.ensemble.eda).cptime,dd(self.ensemble.eda).bec,dd(self.ensemble.eda).Efield]
         dself.EDAforces  = depend_array(name="forces"  , func=self._forces              ,\
                                         value=np.zeros((self.beads.nbeads,self.beads.natoms*3)),dependencies=dep)
-        dself.EDAxforces = depend_array(name="xforces" , func=lambda:self._forces_component("x") ,\
-                                        value=np.zeros((self.beads.nbeads,self.beads.natoms))  ,dependencies=[dd(self).EDAforces])
-        dself.EDAyforces = depend_array(name="yforces" , func=lambda:self._forces_component("y") ,\
-                                        value=np.zeros((self.beads.nbeads,self.beads.natoms))  ,dependencies=[dd(self).EDAforces])
-        dself.EDAzforces = depend_array(name="zforces" , func=lambda:self._forces_component("z") ,\
-                                        value=np.zeros((self.beads.nbeads,self.beads.natoms))  ,dependencies=[dd(self).EDAforces])
-        
         dself.dt = depend_value(name="dt", value=0.0)
         dpipe(dfrom=dd(motion).dt,dto=dself.dt)
 
@@ -411,86 +382,33 @@ class EDAIntegrator(DummyIntegrator):
 
     def _forces(self):
         """Compute the EDA contribution to the forces due to the polarization"""
-        # ES: if 'nbeads' > 1, then we will have to fix something here
+        # if 'nbeads' > 1, then we will have to fix something here
         Z = self.ensemble.eda.bec
         E = dd(self.ensemble.eda).Efield(self.ensemble.eda.time)
         forces = Constants.e * Z @ E
         return forces 
-        # return forces.reshape((self.beads.nbeads,-1))
     
-    def _forces_component(self,xyz):
-        """Get a component of the EDA contribution to the forces"""
-        if xyz not in ["x","y","z"]:
-            raise ValueError("'xyz' can assume only the values ['x','y','z']")
-        if self.beads.nbeads != 1 :
-            raise ValueError("'_forces_component' implemented only for nbeads=1")
-        
-        f = self.EDAforces[0].reshape((-1,3))
-        if xyz == "x":
-            return f[:,0]
-        elif xyz == "y":
-            return f[:,1]
-        elif xyz == "z":
-            return f[:,2]
-        else :
-            raise ValueError("'xyz' can assume only the values ['x','y','z']")
-
 class EDANVEIntegrator(EDAIntegrator,NVEIntegrator):
-    """Integrator object for simulations with constant number of particles, energy, and volume, using the electric dipole approximation when an external electric field is applied.
-
-    The electric field has to be assumed:
-        1) homogeneous all over the system
-        2) slowly varying.
-    The first assumption need to be done in order for the Electric Dipole Approximation to be valid.
-    The second one in stead is neeed in order to DFT calculations to be reliable, 
-    since they are performed without any external electric field applied 
-    (to keep the KS equations simple(r) and computationally affordable).
-
+    """Integrator object for simulations with constant Number of particles, Volume, and Energy (NVE) 
+    using the Electric Dipole Approximation (EDA) when an external electric field is applied.
     """
 
     # author: Elia Stocco
-    # motivation: deal with time-dependent external potential, in particular the EDA potential (have a look at EDAIntegrator)
-
-    # order = True
-
-    # def pstep(self,level):
-    #     if self.order :
-    #         EDAIntegrator.pstep(self,level)
-    #         NVEIntegrator.pstep(self,level)
-    #         self.order = False
-    #     else :
-    #         NVEIntegrator.pstep(self,level) # the drive is called here
-    #         EDAIntegrator.pstep(self,level)
-    #         self.order = True
-    #     #self.cptime += self.pdt[level] # update cptime
-    #     pass
 
     def pstep(self,level):
         NVEIntegrator.pstep(self,level) # the driver is called here
         EDAIntegrator.pstep(self,level)
-        # self.ensemble.eda.tacc   += dd(self.ensemble.eda).TderEDAenergy(self.ensemble.eda.cptime) * self.pdt[level] # wrong
-        # self.ensemble.eda.cptime += self.pdt[level] # update cptime
         pass
 
     def step(self,step=None):
         super(EDANVEIntegrator,self).step(step)
-        self.ensemble.eda.tacc += dd(self.ensemble.eda).TderEDAenergy(self.ensemble.eda.time) * self.dt
 
 class EDANVTIntegrator(EDAIntegrator,NVTIntegrator):
-    """Integrator object for simulations with constant number of particles, temperature, and volume, using the electric dipole approximation when an external electric field is applied.
-
-    The electric field has to be assumed:
-        1) homogeneous all over the system
-        2) slowly varying.
-    The first assumption need to be done in order for the Electric Dipole Approximation to be valid.
-    The second one in stead is neeed in order to DFT calculations to be reliable, 
-    since they are performed without any external electric field applied 
-    (to keep the KS equations simple(r) and computationally affordable).
-
+    """Integrator object for simulations with constant Number of particles, Volume, and Temperature (NVT) 
+    using the Electric Dipole Approximation (EDA) when an external electric field is applied.
     """
 
     # author: Elia Stocco
-    # motivation: deal with time-dependent external potential, in particular the EDA potential (have a look at EDAIntegrator)
 
     order = True
 
@@ -503,7 +421,6 @@ class EDANVTIntegrator(EDAIntegrator,NVTIntegrator):
             NVTIntegrator.pstep(self,level) # the drive is called here
             EDAIntegrator.pstep(self,level)
             self.order = True
-        #self.cptime += self.pdt[level] # update cptime
         pass
 
 class NVTCCIntegrator(NVTIntegrator):

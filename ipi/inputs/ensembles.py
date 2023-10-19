@@ -231,7 +231,7 @@ class InputEnsemble(Input):
             Esigma=self.Esigma.fetch(),
             bec=self.bec.fetch(),
             cdip=self.cdip.fetch(),
-            tacc=self.tacc.fetch(),
+            # tacc=self.tacc.fetch(),
             cbec=self.cbec.fetch()
         )
 
