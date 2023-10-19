@@ -168,7 +168,10 @@ class Ensemble(dobject):
         dself.cdip   = depend_array(name="cdip"   ,value=cdip)
         # dself.tacc   = depend_array(name="tacc"   ,value=tacc)
 
-        self.eda = EDA(Eamp,Efreq,Ephase,Epeak,Esigma,cdip,cbec,bec)
+        try : 
+            self.eda = EDA(Eamp,Efreq,Ephase,Epeak,Esigma,cdip,cbec,bec)
+        except :
+            print("WARNING: 'EDA' object not instantiated")
 
     def copy(self):
         return Ensemble(
@@ -745,7 +748,7 @@ class EDA(dobject):
         # dself.Eenthalpy     = depend_value(name="Eenthalpy",     func=self._get_Eenthalpy,    value=0.0,dependencies=dep)
 
         # dself.tacc
-        dself.Tconserved = depend_value(name="Tconserved", func=self._get_Tconserved,value=0.0,dependencies=[dself.Eenthalpy,dself.time,dself.cptime])
+        # dself.Tconserved = depend_value(name="Tconserved", func=self._get_Tconserved,value=0.0,dependencies=[dself.Eenthalpy,dself.time,dself.cptime])
 
         pass
 
