@@ -168,10 +168,10 @@ class Ensemble(dobject):
         dself.cdip   = depend_array(name="cdip"   ,value=cdip)
         # dself.tacc   = depend_array(name="tacc"   ,value=tacc)
 
-        try : 
-            self.eda = EDA(Eamp,Efreq,Ephase,Epeak,Esigma,cdip,cbec,bec)
-        except :
-            print("WARNING: 'EDA' object not instantiated")
+        # try : 
+        #     self.eda = EDA(Eamp,Efreq,Ephase,Epeak,Esigma,cdip,cbec,bec)
+        # except :
+        #     print("WARNING: 'EDA' object not instantiated")
 
     def copy(self):
         return Ensemble(
