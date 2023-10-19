@@ -30,38 +30,38 @@ if not dir_root in sys.path:
 from ipi.utils.softexit import softexit
 from ipi.engine.simulation import Simulation
 
+def profile_exit(prefix="profile"):
+    # write out the outputs of the profiler
+    import yappi            
+    yappi.stop()
+    yappi.get_thread_stats().print_all()
+    yfs = yappi.get_func_stats()
+    yfs.save(prefix+".kgrind", type="callgrind")
+    ypo = open(prefix+".yappi", "w")
+    yfs.print_all(out=ypo)
+    ypo.close()
+
 
 def main(fn_input, options):
     """Loads and runs the simulation stored in `fn_input`."""
 
     # optionally profile this run - set up
-    # ~ if do_yappi:
-    # ~ try:
-    # ~ import yappi
-    #~ yappi.start(builtins=True, profile_threads=True)
-    # ~ except ImportError:
-    # ~ print 'Profiling with yappi was enabled but could not be imported.'
-    # ~ print "Profiling with yappi was enabled but could not be imported."
-    #~ sys.exit(1)
+    if options.do_yappi:
+        try:
+            import yappi
+            yappi.set_clock_type(options.yappi_clock)
+            yappi.start(builtins=True, profile_threads=True)
+            # register the output function for the profiler so it is 
+            # called whatever the way i-PI ends
+            softexit.register_function(profile_exit, prefix=options.yappi_prefix)
+        except ImportError:
+            raise ImportError('Profiling requires the `yappi` package.')            
 
     # construct simulation based on input file
     simulation = Simulation.load_from_xml(fn_input, request_banner=True, custom_verbosity=options.verbosity)
 
     # run the simulation
     simulation.run()
-
-    # optionally profile this run - wrap up
-    # TODO
-    # We do not get to this if the run is ctrl interrupted and exits cleanly.
-    # Maybe the profiler should be global and cleaned up on exit?
-    if options.do_yappi:
-        yappi.stop()
-        yappi.get_thread_stats().print_all()
-        yfs = yappi.get_func_stats()
-        yfs.save("profile.kgrind", type="callgrind")
-        ypo = open("profile.yappi", "w")
-        yfs.print_all(out=ypo)
-        ypo.close()
 
     # It seems that checkpoints are written by the following.
     # TODO: Have them written when simulation.run() finishes instead.
@@ -83,7 +83,14 @@ if __name__ == '__main__':
 
     parser.add_option('-p', '--profile',
                       action='store_true', dest='do_yappi', default=False,
-                      help='Profile this run using Yappi.')
+                      help='Profile this run using yappi.')
+
+    parser.add_option('--profiler-clock', dest='yappi_clock', default="cpu",
+                      choices=['cpu', 'wall'],
+                      help='Type of profiling timing: `wall` for wall-clock timing, and `cpu` for CPU timing.')
+    
+    parser.add_option('--profiler-output', dest='yappi_prefix', default="profile",                      
+                      help='Prefix for profiler files.')
 
     parser.add_option('-V', '--verbosity', dest='verbosity', default=None,
                       choices=['quiet', 'low', 'medium', 'high', 'debug'],
