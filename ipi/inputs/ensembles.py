@@ -166,7 +166,7 @@ class InputEnsemble(Input):
             },
         ),
         "bec": (
-            InputBEC, #InputBEC,
+            InputBEC,
             {   
                 "dtype": float,
                 "default": input_default(factory=np.zeros, args=(0,)),

@@ -34,6 +34,7 @@ __all__ = [
     "InputAttribute",
     "InputArray",
     "input_default",
+    "InputBEC"
 ]
 
 
@@ -1321,3 +1322,36 @@ class InputArray(InputValue):
         # if the shape is not specified, assume the array is linear.
         if self.shape.fetch() == (0,):
             self.shape.store((len(self.value),))
+
+class InputBEC(InputArray):
+
+    attribs = copy(InputArray.attribs)
+
+    attribs["mode"] = (
+        InputAttribute,
+        {
+            "dtype": str,
+            "default": "none",
+            "options": ["driver","manual","file","none"],
+            "help": "If 'mode' is 'DFPT', then the array is computed on the fly. " + InputArray.attribs["mode"][1]["help"],
+        },
+    )
+
+    def parse(self, xml=None, text=""):
+        """Reads the data for an array from an xml file.
+
+        Args:
+           xml: An xml_node object containing the all the data for the parent
+              tag.
+           text: The data held between the start and end tags.
+        """
+        Input.parse(self, xml=xml, text=text)
+        mode = self.mode.fetch()
+        if mode in InputArray.attribs["mode"][1]["options"]: # ['manual','file']
+            super(InputBEC, self).parse(xml,text)
+        elif mode == "none":
+            self.value = np.nan
+        elif mode == "fly" :
+            self.value = mode
+        else:
+            raise ValueError("error in InputBEC.parse")
