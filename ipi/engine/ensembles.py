@@ -168,6 +168,7 @@ class Ensemble(dobject):
         dself.cdip   = depend_array(name="cdip"   ,value=cdip)
         # dself.tacc   = depend_array(name="tacc"   ,value=tacc)
 
+        self.eda = EDA(Eamp,Efreq,Ephase,Epeak,Esigma,cdip,cbec,bec)
         # try : 
         #     self.eda = EDA(Eamp,Efreq,Ephase,Epeak,Esigma,cdip,cbec,bec)
         # except :
@@ -338,10 +339,12 @@ class BEC(dobject):
         self.forces  = ensemble.forces # is this a weakref??
         # self.first   = True
 
+        my_nbeads = 1 # self.nbeads
+
         dself = dd(self)        
         if self.cbec: 
             dself.bec = depend_array(name="bec",\
-                                     value=np.full((self.nbeads,3*self.natoms,3),np.nan),\
+                                     value=np.full((my_nbeads,3*self.natoms,3),np.nan),\
                                      # value=np.full((self.natoms,3,3),np.nan),\
                                      func=self._get_otf_BEC,\
                                      dependencies=[dd(eda).time,dd(ensemble.beads).q]) 
@@ -350,7 +353,7 @@ class BEC(dobject):
             dself.bec = depend_array(name="bec",value=temp)
         else :
             # dself.bec = depend_array(name="bec",value=np.full((self.natoms,3,3),np.nan)) 
-            dself.bec = depend_array(name="bec",value=np.full((self.nbeads,3*self.natoms,3),np.nan)) 
+            dself.bec = depend_array(name="bec",value=np.full((my_nbeads,3*self.natoms,3),np.nan)) 
 
         # self.first = False
         pass
@@ -495,7 +498,7 @@ class Dipole(dobject):
 
         self.forces = ensemble.forces # is this a weakref??
 
-        val = np.full(self.nbeads,np.zeros(3,dtype=float)) if self.nbeads > 1 else np.zeros(3,dtype=float)
+        val = np.zeros(3,dtype=float) # np.full(self.nbeads,np.zeros(3,dtype=float)) if self.nbeads > 1 else np.zeros(3,dtype=float)
         dself._dipole_ = depend_array(name="_dipole_", func=lambda:self._get_dipole(bead=0),value=val,dependencies=[dd(eda).time,dd(ensemble.beads).q])
 
         pass
@@ -742,7 +745,7 @@ class EDA(dobject):
         # experimental
         dpipe(dfrom=dself.time,dto=dself.cptime)
 
-        dep = [dself.dipole,dself.Efield,dself.time]
+        # dep = [dself.dipole,dself.Efield,dself.time]
         # dself.EDAenergy     = depend_value(name="EDAenergy",     func=self._get_EDAenergy,    value=0.0,dependencies=dep)
         # dself.TderEDAenergy = depend_value(name="TderEDAenergy", func=self._get_TderEDAenergy,value=0.0,dependencies=dep)
         # dself.Eenthalpy     = depend_value(name="Eenthalpy",     func=self._get_Eenthalpy,    value=0.0,dependencies=dep)
@@ -781,36 +784,36 @@ class EDA(dobject):
     #     self._check_time(msg="calling",time=time)
     #     return dd(self).Eenthalpy(time) + self.tacc
 
-    def _check_time(self,msg="coding",time=None):
-        """Check that self.cptime is equal to self.ensemble.time.
-        Pay attention that this is not always true all over the simulation!
-        These variable have to be equal only before and after the Integration procedure.
-        In fact, this method is called only in Dynamics.step, after self.integrator.step(step).
-        The two variable are also forces to be equal before the INtegration procedure at each step.
+    # def _check_time(self,msg="coding",time=None):
+    #     """Check that self.cptime is equal to self.ensemble.time.
+    #     Pay attention that this is not always true all over the simulation!
+    #     These variable have to be equal only before and after the Integration procedure.
+    #     In fact, this method is called only in Dynamics.step, after self.integrator.step(step).
+    #     The two variable are also forces to be equal before the INtegration procedure at each step.
 
-        This method should always return True, but perhaps future code changes could "break" this.
-        Better to be sure that everythin is fine :) """
+    #     This method should always return True, but perhaps future code changes could "break" this.
+    #     Better to be sure that everythin is fine :) """
 
-        coding = "Error in Ensemble._check_time: the 'continous' time 'Ensemble.cptime' does not match"+\
-                "Ensemble.time (up to a threshold).\nThis seems to be a coding error, not due to wrong input parameters."+\
-                "\nRead the description of the function in file ipi/engine/motion/dynamics.py."+\
-                "\nAnd then, if you still have problem, you can write me an email to stocco@fhi-berlin.mpg.de.\nBye :)"
+    #     coding = "Error in Ensemble._check_time: the 'continous' time 'Ensemble.cptime' does not match"+\
+    #             "Ensemble.time (up to a threshold).\nThis seems to be a coding error, not due to wrong input parameters."+\
+    #             "\nRead the description of the function in file ipi/engine/motion/dynamics.py."+\
+    #             "\nAnd then, if you still have problem, you can write me an email to stocco@fhi-berlin.mpg.de.\nBye :)"
         
-        calling = "Error in Ensemble._check_time: the 'continous' time 'Ensemble.cptime' does not match"+\
-                "Ensemble.time (up to a threshold).\nThis seems to be a coding error, not due to wrong input parameters."+\
-                "\nIt seems that you are trying to evaluate the time derivative of some variables in the wrong moment."+\
-                "\nRead the description of the function in file ipi/engine/motion/dynamics.py."+\
-                "\nAnd then, if you still have problem, you can write me an email to stocco@fhi-berlin.mpg.de.\nBye :)"
+    #     calling = "Error in Ensemble._check_time: the 'continous' time 'Ensemble.cptime' does not match"+\
+    #             "Ensemble.time (up to a threshold).\nThis seems to be a coding error, not due to wrong input parameters."+\
+    #             "\nIt seems that you are trying to evaluate the time derivative of some variables in the wrong moment."+\
+    #             "\nRead the description of the function in file ipi/engine/motion/dynamics.py."+\
+    #             "\nAnd then, if you still have problem, you can write me an email to stocco@fhi-berlin.mpg.de.\nBye :)"
         
-        messages = {"coding":coding,"calling":calling}
+    #     messages = {"coding":coding,"calling":calling}
         
-        # if the specified msg does not exists, the code will tell you and it will print the 'coding' error message
-        if msg not in messages.keys():
-            messages[msg] = "'{:s}' is not a valid message key for _check_time.\n".format(msg) + messages["coding"]
+    #     # if the specified msg does not exists, the code will tell you and it will print the 'coding' error message
+    #     if msg not in messages.keys():
+    #         messages[msg] = "'{:s}' is not a valid message key for _check_time.\n".format(msg) + messages["coding"]
 
-        thr_time_comparison = 0.1
-        if abs(self.cptime - self.time) > thr_time_comparison:
-            raise ValueError(messages[msg])
-        if time is not None and abs(time - self.time) > thr_time_comparison:
-            raise ValueError(messages[msg])
-        return True
+    #     thr_time_comparison = 0.1
+    #     if abs(self.cptime - self.time) > thr_time_comparison:
+    #         raise ValueError(messages[msg])
+    #     if time is not None and abs(time - self.time) > thr_time_comparison:
+    #         raise ValueError(messages[msg])
+    #     return True
