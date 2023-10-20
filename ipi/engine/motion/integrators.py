@@ -11,8 +11,6 @@ appropriate conserved energy quantity for the ensemble of choice.
 # See the "licenses" directory for full license information.
 
 import numpy as np
-
-from ipi.utils.messages import verbosity, warning
 from ipi.utils.depend import *
 from ipi.utils.units import Constants
 
