@@ -100,6 +100,7 @@ class BEC(dobject):
 
         return self.bec.reshape((self.nbeads, 3 * self.natoms, 3))
 
+
 class Dipole(dobject):
     def __init__(self, cdip):
         self.cdip = cdip
