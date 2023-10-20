@@ -13,15 +13,14 @@ appropriate conserved energy quantity for the ensemble of choice.
 
 import numpy as np
 
-from ipi.utils.messages import warning,verbosity
+from ipi.utils.messages import warning
 from ipi.utils.depend import dd
-from ipi.utils.units import Constants, UnitMap
+from ipi.utils.units import Constants
 from ipi.engine.thermostats import *
 from ipi.engine.barostats import *
 from ipi.engine.motion.alchemy import *
 from ipi.engine.forces import Forces, ScaledForceComponent
 from ipi.engine.eda import EDA
-import re
 
 __all__ = ["Ensemble", "ensemble_swap"]
 
