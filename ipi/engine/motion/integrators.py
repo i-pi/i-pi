@@ -18,7 +18,7 @@ from ipi.utils.units import Constants
 
 __all__ = ['DummyIntegrator', \
            'NVEIntegrator', 'NVTIntegrator', 'NPTIntegrator', \
-           'EDANVEIntegrator' , 'EDANVTIntegrator', \
+           'EDANVEIntegrator' , \
            'SCIntegrator', 'SCNPTIntegrator', 'NSTIntegrator', 'NVTCCIntegrator']
 
 class DummyIntegrator(dobject):
@@ -403,25 +403,25 @@ class EDANVEIntegrator(EDAIntegrator,NVEIntegrator):
     def step(self,step=None):
         super(EDANVEIntegrator,self).step(step)
 
-class EDANVTIntegrator(EDAIntegrator,NVTIntegrator):
-    """Integrator object for simulations with constant Number of particles, Volume, and Temperature (NVT) 
-    using the Electric Dipole Approximation (EDA) when an external electric field is applied.
-    """
+# class EDANVTIntegrator(EDAIntegrator,NVTIntegrator):
+#     """Integrator object for simulations with constant Number of particles, Volume, and Temperature (NVT) 
+#     using the Electric Dipole Approximation (EDA) when an external electric field is applied.
+#     """
 
-    # author: Elia Stocco
+#     # author: Elia Stocco
 
-    order = True
+#     order = True
 
-    def pstep(self,level):
-        if self.order :
-            EDAIntegrator.pstep(self,level)
-            NVTIntegrator.pstep(self,level)
-            self.order = False
-        else :
-            NVTIntegrator.pstep(self,level) # the drive is called here
-            EDAIntegrator.pstep(self,level)
-            self.order = True
-        pass
+#     def pstep(self,level):
+#         if self.order :
+#             EDAIntegrator.pstep(self,level)
+#             NVTIntegrator.pstep(self,level)
+#             self.order = False
+#         else :
+#             NVTIntegrator.pstep(self,level) # the drive is called here
+#             EDAIntegrator.pstep(self,level)
+#             self.order = True
+#         pass
 
 class NVTCCIntegrator(NVTIntegrator):
     """Integrator object for constant temperature simulations with constrained centroid.

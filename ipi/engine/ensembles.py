@@ -708,7 +708,7 @@ class ElectricField(dobject):
     
 class EDA(dobject):
 
-    integrators = ["eda-nve","eda-nvt"]
+    integrators = ["eda-nve"]
 
     def __init__(self,Eamp,Efreq,Ephase,Epeak,Esigma,cdip,cbec,bec,**kwargv):
         super(EDA,self).__init__(**kwargv)

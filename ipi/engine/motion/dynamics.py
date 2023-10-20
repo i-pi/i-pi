@@ -111,8 +111,8 @@ class Dynamics(Motion):
             self.integrator = SCNPTIntegrator()
         elif self.enstype == "eda-nve":
             self.integrator = EDANVEIntegrator()
-        elif self.enstype == "eda-nvt":
-            self.integrator = EDANVTIntegrator()
+        # elif self.enstype == "eda-nvt":
+        #     self.integrator = EDANVTIntegrator()
         else:
             self.integrator = DummyIntegrator()
 
