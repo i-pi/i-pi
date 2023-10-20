@@ -1,79 +1,149 @@
-"""Interface with e3nn to run machine learning electric dipole"""
+"""Interface with e3nn to run machine learned electric dipole"""
 
 import sys
-import os
-# import json5 as json
 import json
 import numpy as np
-from ase.io import read 
-from py.pes.dummy import Dummy_driver
-# import importlib
-from miscellaneous.elia.nn.functions import get_model
-from miscellaneous.elia.functions import str_to_bool
-from miscellaneous.elia.functions import add_default
+import warnings
+import importlib
+from .dummy import Dummy_driver
 
-# "args":["-m","e3nn_pol","-a","localhost","-p","0000","-u","-o",
-#            "/home/stoccoel/google-personal/miscellaneous/miscellaneous/elia/nn/water/instructions.json,/home/stoccoel/google-personal/miscellaneous/miscellaneous/elia/nn/water/LiNbO3/MD/start.xyz"],
+def recursive_copy(source_dict:dict, target_dict:dict)->dict:
+    """
+    Recursively copy keys and values from a source dictionary to a target dictionary, if they are not present in the target.
 
-# def str_to_bool(s):
-#     s = s.lower()  # Convert the string to lowercase for case-insensitive matching
-#     if s in ("1", "true", "yes", "on"):
-#         return True
-#     elif s in ("0", "false", "no", "off"):
-#         return False
-#     else:
-#         raise ValueError(f"Invalid boolean string: {s}")
+    This function takes two dictionaries, 'source_dict' and 'target_dict', and copies keys and values from 'source_dict' to 'target_dict'. If a key exists in both dictionaries and both values are dictionaries, the function recursively calls itself to copy nested keys and values. If a key does not exist in 'target_dict', it is added along with its corresponding value from 'source_dict'.
 
+    Args:
+        source_dict (dict): The source dictionary containing keys and values to be copied.
+        target_dict (dict): The target dictionary to which keys and values are copied if missing.
 
-# def get_class(module_name, class_name):
-#     try:
-#         # Import the module dynamically
-#         module = importlib.import_module(module_name)
+    Returns:
+        dict: The modified 'target_dict' with keys and values copied from 'source_dict'.
+
+    Example:
+        >>> dict_A = {"a": 1, "b": {"b1": 2, "b2": {"b2_1": 3}}, "c": 4}
+        >>> dict_B = {"a": 10, "b": {"b1": 20, "b2": {"b2_2": 30}}, "d": 40}
+        >>> result = recursive_copy(dict_A, dict_B)
+        >>> print(result)
+        {'a': 10, 'b': {'b1': 20, 'b2': {'b2_1': 3, 'b2_2': 30}}, 'd': 40}
+    """
+    for key, value in source_dict.items():
+        if isinstance(value, dict) and key in target_dict and isinstance(target_dict[key], dict):
+            recursive_copy(value, target_dict[key])
+        else:
+            if key not in target_dict:
+                target_dict[key] = value
+    return target_dict
+
+def add_default(dictionary: dict = None, default: dict = None) -> dict:
+    """
+    Add default key-value pairs to a dictionary if they are not present.
+
+    This function takes two dictionaries: 'dictionary' and 'default'. It checks each key in the 'default' dictionary, and if the key is not already present in the 'dictionary', it is added along with its corresponding value from the 'default' dictionary. If 'dictionary' is not provided, an empty dictionary is used as the base.
+
+    Args:
+        dictionary (dict, optional): The input dictionary to which default values are added. If None, an empty dictionary is used. Default is None.
+        default (dict): A dictionary containing the default key-value pairs to be added to 'dictionary'.
+
+    Returns:
+        dict: The modified 'dictionary' with default values added.
+
+    Raises:
+        ValueError: If 'dictionary' is not of type 'dict'.
+
+    Example:
+        >>> existing_dict = {'a': 1, 'b': 2}
+        >>> default_values = {'b': 0, 'c': 3}
+        >>> result = add_default(existing_dict, default_values)
+        >>> print(result)
+        {'a': 1, 'b': 2, 'c': 3}
+    """
+    if dictionary is None:
+        dictionary = {}
+
+    if not isinstance(dictionary, dict):
+        raise ValueError("'dictionary' has to be of 'dict' type")
+
+    return recursive_copy(source_dict=default, target_dict=dictionary)
+
+def get_class(module_name, class_name):
+    try:
+        # Import the module dynamically
+        module = importlib.import_module(module_name)
         
-#         # Get the class from the module
-#         class_obj = getattr(module, class_name)
+        # Get the class from the module
+        class_obj = getattr(module, class_name)
         
-#         # Create an instance of the class
-#         #instance = class_obj()
+        # Create an instance of the class
+        #instance = class_obj()
         
-#         return class_obj
+        return class_obj
     
-#     except ImportError:
-#         raise ValueError(f"Module '{module_name}' not found.")
-#     except AttributeError:
-#         raise ValueError(f"Class '{class_name}' not found in module '{module_name}'.")
-#     except Exception as e:
-#         raise ValueError(f"An error occurred: {e}")
-#     # return None
+    except ImportError:
+        raise ValueError(f"Module '{module_name}' not found.")
+    except AttributeError:
+        raise ValueError(f"Class '{class_name}' not found in module '{module_name}'.")
+    except Exception as e:
+        raise ValueError(f"An error occurred: {e}")
 
-# # Usage example
-# module_name = "my_module"  # Replace with your module's name
-# class_name = "MyClass"     # Replace with the class name you want to allocate
+def get_model(instructions,parameters:str):
 
-# instance = create_instance(module_name, class_name)
-# if instance:
-#     instance.some_method()  # Call a method on the allocated instance
+    import torch
 
+    if type(instructions) == str :
+
+        with open(instructions, "r") as json_file:
+            _instructions = json.load(json_file)
+        instructions = _instructions
+
+    # instructions['kwargs']["normalization"] = None
+
+    # wxtract values for the instructions
+    kwargs = instructions['kwargs']
+    cls    = instructions['class']
+    mod    = instructions['module']
+
+    # get the class to be instantiated
+    # Call the function and suppress the warning
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore") #, category=UserWarning)
+        class_obj = get_class(mod,cls)
+    
+    # instantiate class
+    #try :
+    model = class_obj(**kwargs)
+    if not model :
+        raise ValueError("Error instantiating class '{:s}' from module '{:s}'".format(cls,mod))
+    
+    try : 
+        N = model.n_parameters()
+        print("\tLoaded model has {:d} parameters".format(N))
+    except :
+        print("\tCannot count parameters")
+
+    # Load the parameters from the saved file
+    checkpoint = torch.load(parameters)
+
+    # Update the model's state dictionary with the loaded parameters
+    model.load_state_dict(checkpoint)
+    model.eval()
+
+    # Store the chemical species that will be used during the simulation.
+    model._symbols = instructions["chemical-symbols"]
+
+    return model
 
 class e3nn_pol(Dummy_driver):
 
     opts_default = {
         "compute-BEC" : True ,
         "print" : True,
-        "delete-files" : True,
-        "save" : {
-            "dipole" : "dipole.txt",
-            "BEC"    : "bec.txt"
-        }
     }
 
     def __init__(self, args=None):
         self.error_msg = """The parameters of 'e3nn_pol' are not correctly formatted. \
-            They should be two strings, separated by a comma."""
+            They should be two or three strings, separated by a comma."""
         super().__init__(args)
-
-        # self.dipole_file = "dipole.txt"
-        # self.bec_file    = "bec.txt"
 
     def check_arguments(self):
         """Check the arguments required to run the driver
@@ -97,12 +167,11 @@ class e3nn_pol(Dummy_driver):
         else:
             sys.exit(self.error_msg) # to be modified
 
-        print("\n\tThe driver is 'e3nn_pol'")
-        print("\n\tLoading model ...")
+        print("\tThe driver is 'e3nn_pol'")
+        print("\tLoading model ...")
         self.model = get_model(info_file,parameters_file)
 
         if opts_file is not None :
-
             try : 
                 # Open and read the JSON file
                 with open(opts_file, "r") as json_file:
@@ -117,15 +186,7 @@ class e3nn_pol(Dummy_driver):
             self.opts = add_default(None,self.opts_default)
         
         print("\tComputing BECs: {:s}".format("yes" if self.opts["compute-BEC"] else "no"))
-        print("\tInitialization completed\n")
-
-        if self.opts["delete-files"]: 
-            for file in [self.opts["save"]["dipole"],self.opts["save"]["BEC"]]:
-                if file is not None and os.path.exists(file):
-                    print("\tRemoving file '{:s}'".format(file))
-                    os.remove(file)
-        
-            print("\n")
+        print("\tInitialization completed")
 
         self.count = 0 
 
@@ -169,51 +230,5 @@ class e3nn_pol(Dummy_driver):
             dipole, X = self.model.get(cell=cell,pos=pos)
 
         extras["dipole"] = dipole.tolist()
-
-        # # get 'dipole' and 'BEC' tensors
-        # #with torch.no_grad():
-        # dipole,X = self.model.get(cell=cell,pos=pos,what="dipole",detach=not self.opts["compute-BEC"])
-        # dipole = dipole[0] # remove the 'batch_size' axis
-        # extras["dipole"] = dipole.tolist()
-
-        # # file = self.opts["save"]["dipole"]
-        # # if file is not None and str_to_bool(file):
-        # #     with open(file, 'a') as f:
-        # #         line = "{:d} : {:s}\n".format(self.count,dipole.detach().numpy().tostring())
-        # #         f.write(line)
-        # #         #np.savetxt(f, dipole.detach().numpy(),delimiter=" ")        
-
-        # if self.opts["compute-BEC"] :
-
-        #     N = len(X.pos.flatten())
-        #     bec = np.full((N,3),np.nan)
-
-        #     dipole[0].backward(retain_graph=True)#.flatten() # -> row 1 of BEC.txt
-        #     bec[:,0] = X.pos.grad.flatten().detach().detach().numpy()
-        #     X.pos.grad.data.zero_()
-
-        #     dipole[1].backward(retain_graph=True)#.flatten() # -> row 2 of BEC.txt
-        #     bec[:,1] = X.pos.grad.flatten().detach().detach().numpy()
-        #     X.pos.grad.data.zero_()
-
-        #     dipole[2].backward(retain_graph=True)#.flatten() # -> row 3 of BEC.txt
-        #     bec[:,2] = X.pos.grad.flatten().detach().detach().numpy()
-        #     X.pos.grad.data.zero_()
-
-        #     # Axis of bec :
-        #     #   1st: atoms index (0,1,2...)
-        #     #   2nd: atom coordinate (x,y,z)
-        #     #   3rd: dipole direction (x,y,z)
-        #     # bec = bec.T.reshape((-1,3,3)) 
-        #     bec = bec.T.reshape((-1,9)) 
-
-        #     extras["BEC"] = bec.tolist()
-
-        #     # file = self.opts["save"]["BEC"]
-        #     # if file is not None :
-        #     #     with open(file, 'a') as f:
-        #     #         line = "{:d} : {:s}\n".format(self.count,bec.flatten().tostring())
-        #     #         f.write(line)
-        #     #         # np.savetxt(f, bec.flatten(),delimiter=" ")
 
         return pot, force, vir, json.dumps(extras)
