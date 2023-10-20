@@ -225,7 +225,7 @@ class e3nn_pol(Dummy_driver):
         if self.opts["compute-BEC"] : 
             dipole, bec, X = self.model.get_value_and_jac(cell=cell,pos=pos)
             extras["BEC"] = bec.tolist()
-            print("sum rule:",bec.sum(dim=0))
+            # print("sum rule:",bec.sum(dim=0))
         else :
             dipole, X = self.model.get(cell=cell,pos=pos)
 
