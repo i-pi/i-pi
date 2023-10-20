@@ -1332,9 +1332,9 @@ class InputBEC(InputArray):
         {
             "dtype": str,
             "default": "none",
-            "options": ["driver", "manual", "file", "none"],
-            "help": "If 'mode' is 'DFPT', then the array is computed on the fly. "
-            + InputArray.attribs["mode"][1]["help"],
+            "options": ["manual", "file", "none"],
+            # "help": "If 'mode' is 'DFPT', then the array is computed on the fly. "
+            # + InputArray.attribs["mode"][1]["help"],
         },
     )
 
@@ -1352,7 +1352,7 @@ class InputBEC(InputArray):
             super(InputBEC, self).parse(xml, text)
         elif mode == "none":
             self.value = np.nan
-        elif mode == "fly":
-            self.value = mode
+        # elif mode == "fly":
+        #     self.value = mode
         else:
             raise ValueError("error in InputBEC.parse")

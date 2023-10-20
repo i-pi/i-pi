@@ -98,42 +98,7 @@ class BEC(dobject):
         A lambda function is also returned to perform fast matrix multiplication.
         """
 
-        raise ValueError("This function has to be re-written")
-        # self.first = True
-
-        N = len(self.bec)  # lenght of the BEC array
-        Na = self.natoms  # number of atoms
-
-        if N == Na:  # scalar BEC
-            Z = np.zeros((Na, 3, 3))
-            for i in range(Na):
-                for j in range(3):
-                    Z[i, j, j] = self.bec[i]
-                Z[i, :, :] = Z[i, :, :]
-            return Z  # self._lv2cart(Z)
-            # lambda a,b : a*b # element-wise (matrix) multplication (only the diagonal elements have been allocated)
-
-        elif N == 3 * Na:  # diagonal BEC
-            Z = np.zeros((Na, 3, 3))
-            temp = self.bec.reshape((Na, 3))
-            for i in range(Na):
-                for j in range(3):
-                    Z[i, j, j] = temp[i, j]
-                Z[i, :, :] = Z[i, :, :]
-            return  # self._lv2cart(Z)
-            # lambda a,b : a*b # element-wise (matrix) multplication (only the diagonal elements have been allocated)
-
-        elif N == 9 * Na:  # all-components BEC
-            Z = np.zeros((Na, 3, 3))
-            temp = self.bec.reshape((Na, 3, 3))
-            for i in range(Na):
-                Z[i, :, :] = temp[i, :, :]
-            return Z  # self._lv2cart(Z) # rows-by-columns (matrix) multplication (all the elements have been allocated)
-        # elif N == 0 and empty_is_okay:
-        #     return np.zeros((Na,3,3))
-        else:
-            raise ValueError("BEC tensor with wrong size!")
-
+        return self.bec.reshape((self.nbeads, 3 * self.natoms, 3))
 
 class Dipole(dobject):
     def __init__(self, cdip):
