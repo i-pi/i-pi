@@ -5,7 +5,13 @@ from .harmonic import Harmonic_driver
 from .rascal import Rascal_driver
 from .e3nn_pol import e3nn_pol
 
-__all__ = ["__drivers__", "Dummy_driver", "Harmonic_driver", "Rascal_driver", "e3nn_pol"]
+__all__ = [
+    "__drivers__",
+    "Dummy_driver",
+    "Harmonic_driver",
+    "Rascal_driver",
+    "e3nn_pol",
+]
 
 # dictionary linking strings
 __drivers__ = {

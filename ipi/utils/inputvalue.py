@@ -34,7 +34,7 @@ __all__ = [
     "InputAttribute",
     "InputArray",
     "input_default",
-    "InputBEC"
+    "InputBEC",
 ]
 
 
@@ -1323,8 +1323,8 @@ class InputArray(InputValue):
         if self.shape.fetch() == (0,):
             self.shape.store((len(self.value),))
 
-class InputBEC(InputArray):
 
+class InputBEC(InputArray):
     attribs = copy(InputArray.attribs)
 
     attribs["mode"] = (
@@ -1332,8 +1332,9 @@ class InputBEC(InputArray):
         {
             "dtype": str,
             "default": "none",
-            "options": ["driver","manual","file","none"],
-            "help": "If 'mode' is 'DFPT', then the array is computed on the fly. " + InputArray.attribs["mode"][1]["help"],
+            "options": ["driver", "manual", "file", "none"],
+            "help": "If 'mode' is 'DFPT', then the array is computed on the fly. "
+            + InputArray.attribs["mode"][1]["help"],
         },
     )
 
@@ -1347,11 +1348,11 @@ class InputBEC(InputArray):
         """
         Input.parse(self, xml=xml, text=text)
         mode = self.mode.fetch()
-        if mode in InputArray.attribs["mode"][1]["options"]: # ['manual','file']
-            super(InputBEC, self).parse(xml,text)
+        if mode in InputArray.attribs["mode"][1]["options"]:  # ['manual','file']
+            super(InputBEC, self).parse(xml, text)
         elif mode == "none":
             self.value = np.nan
-        elif mode == "fly" :
+        elif mode == "fly":
             self.value = mode
         else:
             raise ValueError("error in InputBEC.parse")

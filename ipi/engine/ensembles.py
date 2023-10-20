@@ -149,27 +149,43 @@ class Ensemble(dobject):
 
         # ES
 
-        if Epeak is not None and Epeak < 0 :
-            raise ValueError("Epeak < 0: the peak of the external electric field can only be positive")    
-        if Esigma is not None and Esigma < 0 :
-            raise ValueError("Esigma < 0: the standard deviation of the gaussian envelope function of the external electric field has to be positive") 
+        if Epeak is not None and Epeak < 0:
+            raise ValueError(
+                "Epeak < 0: the peak of the external electric field can only be positive"
+            )
+        if Esigma is not None and Esigma < 0:
+            raise ValueError(
+                "Esigma < 0: the standard deviation of the gaussian envelope function of the external electric field has to be positive"
+            )
 
         # Internal time counter
-        dself.time = depend_value(name="time",value=time)
+        dself.time = depend_value(name="time", value=time)
 
         #
-        dself.Eamp   = depend_array(name="Eamp"  ,value=Eamp   if Eamp   is not None else np.zeros(3))
-        dself.Efreq  = depend_value(name="Efreq" ,value=Efreq  if Efreq  is not None else 0.0 )
-        dself.Ephase = depend_value(name="Ephase",value=Ephase if Ephase is not None else 0.0 )
-        dself.Epeak  = depend_value(name="Epeak" ,value=Epeak  if Epeak  is not None else 0.0)
-        dself.Esigma = depend_value(name="Esigma",value=Esigma if Esigma is not None else np.inf)
-        dself.bec    = depend_array(name="bec"   ,value=bec    if bec    is not None else np.zeros(0))
-        dself.cbec   = depend_array(name="cbec"   ,value=cbec)
-        dself.cdip   = depend_array(name="cdip"   ,value=cdip)
+        dself.Eamp = depend_array(
+            name="Eamp", value=Eamp if Eamp is not None else np.zeros(3)
+        )
+        dself.Efreq = depend_value(
+            name="Efreq", value=Efreq if Efreq is not None else 0.0
+        )
+        dself.Ephase = depend_value(
+            name="Ephase", value=Ephase if Ephase is not None else 0.0
+        )
+        dself.Epeak = depend_value(
+            name="Epeak", value=Epeak if Epeak is not None else 0.0
+        )
+        dself.Esigma = depend_value(
+            name="Esigma", value=Esigma if Esigma is not None else np.inf
+        )
+        dself.bec = depend_array(
+            name="bec", value=bec if bec is not None else np.zeros(0)
+        )
+        dself.cbec = depend_array(name="cbec", value=cbec)
+        dself.cdip = depend_array(name="cdip", value=cdip)
         # dself.tacc   = depend_array(name="tacc"   ,value=tacc)
 
-        self.eda = EDA(Eamp,Efreq,Ephase,Epeak,Esigma,cdip,cbec,bec)
-        # try : 
+        self.eda = EDA(Eamp, Efreq, Ephase, Epeak, Esigma, cdip, cbec, bec)
+        # try :
         #     self.eda = EDA(Eamp,Efreq,Ephase,Epeak,Esigma,cdip,cbec,bec)
         # except :
         #     print("WARNING: 'EDA' object not instantiated")
@@ -194,7 +210,7 @@ class Ensemble(dobject):
             cdip=self.cdip,
             # tacc=self.tacc,
             cBEC=self.cBEC,
-            )
+        )
 
     def bind(
         self,
@@ -279,9 +295,8 @@ class Ensemble(dobject):
         for k in xlkin:
             self.add_xlkin(k)
 
-        dself.eda.bind(self,enstype)
+        dself.eda.bind(self, enstype)
 
-        
     def add_econs(self, e):
         self._elist.append(e)
         dd(self).econs.add_dependency(e)
@@ -323,4 +338,3 @@ class Ensemble(dobject):
 
         lpens *= -1.0 / (Constants.kb * self.temp * self.beads.nbeads)
         return lpens
-        

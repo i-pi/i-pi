@@ -167,7 +167,7 @@ class InputEnsemble(Input):
         ),
         "bec": (
             InputBEC,
-            {   
+            {
                 "dtype": float,
                 "default": input_default(factory=np.zeros, args=(0,)),
                 "help": "The Born Effective Charges tensors (cartesian coordinates)",
@@ -204,7 +204,6 @@ class InputEnsemble(Input):
         self.cdip.store(ens.cdip)
         self.cbec.store(ens.cbec)
 
-
     def fetch(self):
         """Creates an ensemble object.
 
@@ -232,7 +231,7 @@ class InputEnsemble(Input):
             bec=self.bec.fetch(),
             cdip=self.cdip.fetch(),
             # tacc=self.tacc.fetch(),
-            cbec=self.cbec.fetch()
+            cbec=self.cbec.fetch(),
         )
 
         return ens

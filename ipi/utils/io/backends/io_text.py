@@ -12,7 +12,6 @@ import sys
 __all__ = ["print_text"]
 
 
-
 def print_text(
     atoms, cell, filedesc=sys.stdout, title="", cell_conv=1.0, atoms_conv=1.0
 ):

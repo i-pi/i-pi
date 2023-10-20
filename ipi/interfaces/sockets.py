@@ -168,11 +168,11 @@ class DriverSocket(socket.socket):
         #
         # ES: read this discussion https://stackoverflow.com/questions/24034839/valueerror-resizing-an-ndarray
         # It seems that this problem occur only when one uses a debugger, like I am doing
-        # 
-        
+        #
+
         blen = dest.itemsize * dest.size
         if blen > len(self._buf):
-            self._buf.resize(blen,refcheck=False) 
+            self._buf.resize(blen, refcheck=False)
         bpos = 0
         ntimeout = 0
 
@@ -434,7 +434,7 @@ class Driver(DriverSocket):
                 )
 
             mxtradict["raw"] = mxtra
-        else :
+        else:
             mxtradict["raw"] = ""
 
         return [mu, mf, mvir, mxtradict]

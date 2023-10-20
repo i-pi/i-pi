@@ -113,8 +113,8 @@ def run_driver(unix=False, address="", port=12345, driver=Dummy_driver()):
             nat = recv_data(sock, np.int32())
             if len(pos) == 0:
                 # shapes up the position array
-                pos.resize((nat, 3),refcheck=False)
-                force.resize((nat, 3),refcheck=False)
+                pos.resize((nat, 3), refcheck=False)
+                force.resize((nat, 3), refcheck=False)
             else:
                 if len(pos) != nat:
                     raise RuntimeError("Atom number changed during i-PI run")
@@ -164,7 +164,6 @@ def run_driver(unix=False, address="", port=12345, driver=Dummy_driver()):
 
 
 if __name__ == "__main__":
-
     print(" @You have called 'driver.py'")
     now = datetime.now()
     dt_string = now.strftime("%d/%m/%Y %H:%M:%S")
@@ -219,7 +218,7 @@ if __name__ == "__main__":
     print("\t\t   mode: {:s}".format(args.mode))
     print("\t\t   port: {:d}".format(args.port))
 
-    if args.mode in __drivers__:        
+    if args.mode in __drivers__:
         d_f = __drivers__[args.mode](args.param)
     elif args.mode == "dummy":
         d_f = Dummy_driver(args.param)

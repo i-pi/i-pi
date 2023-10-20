@@ -121,7 +121,6 @@ def banner():
     )
 
 
-
 def info(text="", show=True):
     """Prints a message.
 
