@@ -294,11 +294,6 @@ class Properties(dobject):
                 "size": 3,
                 "func": (lambda: dd(self.ensemble.eda).Efield(self.ensemble.time)),
             },
-            "Efieldmod": {
-                "dimension": "atomic_unit",
-                "help": "The modulus of the external applied electric field.",
-                "func": (lambda: norm(dd(self.ensemble.eda).Efield(self.ensemble.time))),
-            },
             "Eenvelope": {
                 "dimension": "atomic_unit",
                 "help": "The (gaussian) envelope function of the external applied electric field.",
