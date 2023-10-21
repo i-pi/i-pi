@@ -66,6 +66,8 @@
       DOUBLE PRECISION, ALLOCATABLE :: friction(:,:)
       DOUBLE PRECISION volume
       DOUBLE PRECISION, PARAMETER :: fddx = 1.0d-5
+      DOUBLE PRECISION, ALLOCATABLE :: dip_der(:, :) ! Dipole derivative (water_dip_pol model)
+      DOUBLE PRECISION :: pol(3, 3) !Polarizability (water_dip_pol model)
 
       ! NEIGHBOUR LIST ARRAYS
       INTEGER, DIMENSION(:), ALLOCATABLE :: n_list, index_list
@@ -161,13 +163,15 @@
                   vstyle = 26
                ELSEIF (trim(cmdbuffer) == "qtip4pf-sr") THEN
                   vstyle = 27
+               ELSEIF (trim(cmdbuffer) == "water_dip_pol") THEN
+                  vstyle = 28
                ELSEIF (trim(cmdbuffer) == "gas") THEN
                   vstyle = 0  ! ideal gas
                ELSEIF (trim(cmdbuffer) == "dummy") THEN
                   vstyle = 99 ! returns non-zero but otherwise meaningless values
                ELSE
                   WRITE(*,*) " Unrecognized potential type ", trim(cmdbuffer)
-                  WRITE(*,*) " Use -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|morsedia|qtip4pf-sr] "
+                  WRITE(*,*) " Use -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|morsedia|qtip4pf-sr|water_dip_pol] "
                   STOP "ENDED"
                ENDIF
             ELSEIF (ccmd == 4) THEN
@@ -380,6 +384,10 @@
              WRITE(*,*) "Error: parameters not initialized correctly."
              WRITE(*,*) "For morse potential use -o r0,D,a (in a.u.) "
              STOP "ENDED"
+         ENDIF
+      ELSEIF (vstyle == 28) THEN !water dipole and polarizability
+         IF (par_count /= 1) THEN
+            vpars(1) = 1
          ENDIF
          isinit = .true.
       ENDIF
@@ -658,6 +666,15 @@
                CALL dw1d_friction(nat, atoms, friction)
                CALL dw1d_dipole(nat, atoms, dip)
 
+            ELSEIF (vstyle == 28) THEN   ! Sets force and potential to zero,
+                                         ! computes only dipole moment, its gradient, and polarizability.
+               pot = 0
+               forces = 0.0d0
+               DO i = 1, 3
+                  vpars(i+1) = cell_h(i, i)
+               ENDDO
+               IF (.NOT. ALLOCATED(dip_der)) ALLOCATE (dip_der(nat, 3))
+               CALL h2o_dipole(vpars(2:4), nat, atoms, vpars(1) /= 0, dip, dip_der, pol)
             ELSE
                IF ((allocated(n_list) .neqv. .true.)) THEN
                   IF (verbose > 0) WRITE(*,*) " Allocating neighbour lists."
@@ -756,6 +773,17 @@
                CALL writebuffer(socket,initbuffer,cbuf)
                IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ", &
      &         initbuffer
+            ELSEIF (vstyle==28) THEN ! returns the dipole, dipole derivative, and polarizability through initbuffer
+               WRITE(string, '(a,3x,f15.8,a,f15.8,a,f15.8, 3x,a)') '{"dipole": [',dip(1),",",dip(2),",",dip(3),"],"
+               initbuffer = TRIM(string)
+               WRITE(string2, *) "(a,3x,", 3*nat - 1, '(f15.8, ","),f15.8,3x,a)'
+               WRITE(string, string2) '"dipole_derivative": [',TRANSPOSE(dip_der),"],"
+               initbuffer = TRIM(initbuffer)//TRIM(string)
+               WRITE(string, '(a,3x, 8(f15.8, ","),f15.8,3x,a)') '"polarizability": [',pol,"]}"
+               initbuffer = TRIM(initbuffer)//TRIM(string)
+               cbuf = LEN_TRIM(initbuffer)
+               CALL writebuffer(socket,cbuf)
+               CALL writebuffer(socket,TRIM(initbuffer),cbuf)
             ELSE
                cbuf = 1 ! Size of the "extras" string
                CALL writebuffer(socket,cbuf) ! This would write out the "extras" string, but in this case we only use a dummy string.
@@ -776,7 +804,7 @@
     CONTAINS
       SUBROUTINE helpmessage
          ! Help banner
-         WRITE(*,*) " SYNTAX: driver.x [-u] -a address -p port -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|morsedia|qtip4pf-sr]"
+         WRITE(*,*) " SYNTAX: driver.x [-u] -a address -p port -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|morsedia|qtip4pf-sr|water_dip_pol]"
          WRITE(*,*) "         -o 'comma_separated_parameters' [-v] "
          WRITE(*,*) ""
          WRITE(*,*) " For LJ potential use -o sigma,epsilon,cutoff "
