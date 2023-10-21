@@ -10,7 +10,6 @@
 
 import sys
 import os
-from copy import deepcopy
 from math import ceil, floor
 import numpy as np
 import xml.etree.ElementTree as et
@@ -26,8 +25,6 @@ from ipi.utils.softexit import softexit
 from ipi.engine.simulation import Simulation
 import ipi.engine.outputs as eoutputs
 from ipi.engine.initializer import init_chk
-from ipi.engine.motion.constrained_dynamics import NVEConstrainedIntegrator
-from ipi.utils.messages import verbosity
 
 class NonEqmTraj(object):
 
