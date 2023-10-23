@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-"""Runs equilibrium and nonequilibrium trajectories based on equilibrium-nonequilibrium method for nonlinear spectroscopy.
+"""Runs nonequilibrium trajectories based on equilibrium-nonequilibrium method for nonlinear spectroscopy.
 """
 
 # This file is part of i-PI.
@@ -34,18 +34,7 @@ class NonEqmTraj(object):
        epsilon: Magnitude of the external electric field.
        tsteps: Number of nonequilibrium dynamics steps.
     """
-    @staticmethod
-    def load_from_xml(file_in):
-        """Loads input file `file_in` and constructs an object of class NonEqmTraj to store the 
-           relevant information.
-        """ 
-        tree = et.parse(file_in)
-        root = tree.getroot()
-        tsteps = int(root.find('./corr_steps').text)
-        epsilon = float(root.find('./epsilon').text)
-        return NonEqmTraj(epsilon, tsteps)
-
-    def __init__(self, epsilon=0.1, tsteps=100):
+    def __init__(self, epsilon, tsteps):
         """Initializes NonEqmTraj object.
 
         Args:
@@ -54,7 +43,6 @@ class NonEqmTraj(object):
         """
         self.epsilon = epsilon
         self.tsteps = tsteps
-
 
     def init_sim_single_step(self, sim):
         sim.tsteps = 1
@@ -67,7 +55,7 @@ class NonEqmTraj(object):
         """Gets relevant data from simulation into NonEqmTraj.
 
            Modifies sim.outputs elements by deleting everything that is not dipole or polarizability. This is
-           useful for nonequilibrium trajectories because we might want to print out more data from in the equilibrium
+           useful for nonequilibrium trajectories because we might want to print out more data in the equilibrium
            trajectory calculation.
     
            Also stores useful information like stride and filename of checkpoint/derivative outputs, which we read 
@@ -88,15 +76,8 @@ class NonEqmTraj(object):
             if (type(o) is eoutputs.TrajectoryOutput):
                 if o.what == "extras":
                     if (o.extra_type == "polarizability" or o.extra_type == "dipole"):
-                        if (o.extra_type == "polarizability"):
-                            self.pol_stride = o.stride
-                            self.pol_fn = self.remove_noneqm_suffix(o.filename)
-                        elif (o.extra_type == "dipole"):
-                            self.dip_stride = o.stride
-                            self.dip_fn = self.remove_noneqm_suffix(o.filename)
                         continue #Don't remove this element of output, we want to output dipoles and polarizabilities.
                     if o.extra_type == "dipole_derivative":
-                        self.der_stride = o.stride
                         self.der_fn = self.remove_noneqm_suffix(o.filename)
             #Store values that will help us loop over chk files.
             if (type(o) is eoutputs.CheckpointOutput):
@@ -118,10 +99,12 @@ class NonEqmTraj(object):
         sim.syslist[0].beads.p = new_beads.p + 0.5 * kick * self.epsilon * self.der[step]
         sim.step = 0
 
-    def run(self, sim):
+    def run(self, sim, t_first = None, t_last = None):
         """Runs nonequilibrium trajectories."""
 
         self.fetch_data_and_modify_simulation(sim)
+        t_first = ceil(self.tsteps/self.chk_stride) if t_first is None else t_first
+        t_last = floor(self.tsteps_eq/self.chk_stride) if t_last is None else t_last
         #Bead number formatting with pre-padded zeros (from ipi/engine/outputs.py).
         fmt_bead = (
             "{0:0"
@@ -129,7 +112,7 @@ class NonEqmTraj(object):
             + "d}"
         )
         self.der = np.transpose(np.array([np.loadtxt(self.der_fn + '_' + fmt_bead.format(b)) for b in range(self.nbeads)]), [1,0,2])
-        for step in range(ceil(self.tsteps/self.chk_stride), floor(self.tsteps_eq/self.chk_stride) + 1):
+        for step in range(t_first, t_last + 1):
             for kick in [-1, 1]:
                 self.prepare_for_run(sim, step, kick)
                 sim.run()
@@ -142,51 +125,56 @@ class NonEqmTraj(object):
                     softexit._thread.join(0.5)
                 #############################################################################################
 
-def main(fn_input, fn_spec_input, options):
+def main(fn_input, options):
     """Main procedure:
        1) Modifies fn_input and generates fn_input_noneqm.
        2) Runs nonequilibrium trajectories.
-       3) Closes the sockets and exits.
-    """ 
+    """
 
-    spec = NonEqmTraj.load_from_xml(fn_spec_input)
+    spec = NonEqmTraj(options.epsilon, options.tsteps)
     tree = et.parse(fn_input)
     root = tree.getroot()
     prefix = root.find('output').attrib['prefix']
     root.find('output').attrib['prefix'] = str(prefix) + '_noneqm'
-    tree.write(fn_input + '_noneqm')
+    fn_input_noneqm = fn_input + '_noneqm'
+    tree.write(fn_input_noneqm)
     
-    simulation = Simulation.load_from_xml(fn_input + '_noneqm', request_banner=False, custom_verbosity='quiet')
-    spec.run(simulation)
-    softexit.trigger(" @ SIMULATION: Exiting cleanly.")
+    simulation = Simulation.load_from_xml(fn_input_noneqm, request_banner=False, custom_verbosity=options.verbosity)
+    spec.run(simulation, options.tfirst, options.tlast)
+    softexit.trigger(status="success", message=" @ SIMULATION: Exiting cleanly.")
 
 
 if __name__ == '__main__':
 
-    # TODO: Use argparse once we move to Python 2.7.
-
     from optparse import OptionParser
 
     parser = OptionParser(usage='%prog [options] <input file>',
-                          description='The main i-PI executable used to run '
-                                      'a simulation, given an XML input file.'
+                          description='noneqm-traj runs nonequilibrium trajectories for 2D IR-Raman spectra'
                           )
 
     parser.add_option('-V', '--verbosity', dest='verbosity', default='quiet',
                       choices=['quiet', 'low', 'medium', 'high', 'debug'],
                       help='Define the verbosity level.')
 
+    parser.add_option('-e', '--epsilon', dest='epsilon', type="float", default=0.1,
+                      help='Epsilon parameter controlling the field strength.')
+    parser.add_option('-t', '--tsteps', dest='tsteps',  type="int", default=100,
+                      help='Number of time steps for nonequilibrium trajectories.')
+    parser.add_option('-i', '--tfirst', dest='tfirst', type="int", default=None,
+                      help='Index of first checkpoint file of equilibrium trajectory that will be used.')
+    parser.add_option('-f', '--tlast', dest='tlast', type="int", default=None,
+                      help='Index of last checkpoint file of equilibrium trajectory that will be used.')
     options, args = parser.parse_args()
 
     # make sure that we have exactly two input files and that they exist
     if len(args) == 0:
         parser.error('No input file name provided.')
-    elif len(args) == 1 or len(args) > 2:
-        parser.error('Provide two input file names: one for i-pi, one for spectra.')
+    elif len(args) > 1:
+        parser.error('Provide only one input file name.')
     else:
         for fn_in in args:
             if not os.path.exists(fn_in):
                 parser.error('Input file not found: {:s}'.format(fn_in))
 
     # Everything is ready. Go!
-    main(args[0], args[1], options)
+    main(args[0], options)
