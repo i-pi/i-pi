@@ -11,7 +11,7 @@ from xml.sax import parseString, parse
 from xml.sax.handler import ContentHandler
 
 import numpy as np
-
+from ipi import ipi_global_settings
 
 __all__ = [
     "xml_node",
@@ -544,8 +544,6 @@ def write_float(data):
     Returns:
         A formatted string.
     """
-
-    from ipi import ipi_global_settings
 
     return ipi_global_settings["floatformat"] % data
 

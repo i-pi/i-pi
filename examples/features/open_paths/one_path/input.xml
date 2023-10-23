@@ -7,14 +7,14 @@
     </output>
     <total_steps> 40 </total_steps>
     <prng><seed> 31415 </seed></prng>
-     <ffsocket name='lammps' mode='unix'>
+     <ffsocket name='qtip4pf' mode='unix' pbc='false'>
         <address> qtip4pf </address>
     </ffsocket>
     <system>
         <initialize nbeads='64'>
             <file mode='chk'> init.chk </file>
         </initialize>
-        <forces><force forcefield='lammps'> </force></forces>
+        <forces><force forcefield='qtip4pf'> </force></forces>
         <normal_modes>
             <open_paths> [47] </open_paths>
         </normal_modes>

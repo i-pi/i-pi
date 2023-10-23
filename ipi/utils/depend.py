@@ -268,8 +268,9 @@ class depend_base(object):
 
         self._tainted[:] = True
         for item in self._dependants:
-            if not item()._tainted[0]:
-                item().taint()
+            item = item()
+            if not item._tainted[0]:
+                item.taint()
         if self._synchro is not None:
             for v in list(self._synchro.synced.values()):
                 if (not v._tainted[0]) and (v is not self):
@@ -638,14 +639,16 @@ class depend_array(np.ndarray, depend_base):
             on index would return a scalar.
         """
 
-        if np.isscalar(index) and depth <= 1:
+        if hasattr(index, "__len__"):
+            if len(index) == depth and isinstance(index, tuple):
+                # if the index is a tuple check it does not contain slices
+                for i in index:
+                    if isinstance(i, slice):
+                        return False
+                return True
+        elif depth <= 1:
             return True
-        elif isinstance(index, tuple) and len(index) == depth:
-            # if the index is a tuple check it does not contain slices
-            for i in index:
-                if not np.isscalar(i):
-                    return False
-            return True
+
         return False
 
     def __getitem__(self, index):
@@ -788,14 +791,7 @@ def dstrip(da):
 
     # only bother to strip dependencies if the array actually IS a depend_array
     if isinstance(da, depend_array):
-        # if da._tainted[0]:
-        #    print "!!! WARNING dstrip called on tainted array WARNING !!!!!"
-        # I think we can safely assume that when we call dstrip the array has
-        # been cleared already but I am not 100% sure so better check - and in
-        # case raise the update
-        result = da.view(np.ndarray)
-        # result.flags.writeable = False
-        return result
+        return da.view(np.ndarray)
     else:
         return da
 
@@ -865,7 +861,7 @@ class dobject(object):
         """
 
         value = super(dobject, self).__getattribute__(name)
-        if issubclass(value.__class__, depend_base):
+        if isinstance(value, depend_base):
             value = value.__get__(self, self.__class__)
         return value
 
@@ -882,7 +878,7 @@ class dobject(object):
         except AttributeError:
             pass
         else:
-            if issubclass(obj.__class__, depend_base):
+            if isinstance(obj, depend_base):
                 return obj.__set__(self, value)
         return super(dobject, self).__setattr__(name, value)
 
@@ -902,7 +898,7 @@ class dobject(object):
 
 
 def dd(dobj):
-    if not issubclass(dobj.__class__, dobject):
+    if not isinstance(dobj, dobject):
         raise ValueError(
             "Cannot access a ddirect view of an object which is not a subclass of dobject"
         )

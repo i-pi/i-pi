@@ -135,14 +135,14 @@
     <total_steps> 40 </total_steps>
     <total_time> 86000 </total_time>
     <prng><seed> 31415 </seed></prng>
-     <ffsocket name='lammps' mode='unix'>
+     <ffsocket name='qtip4pf' mode='unix' pbc='false'>
         <address> qtip4pf </address>
     </ffsocket>
     <system>
         <initialize nbeads='64'>
             <file mode='chk'> init.chk </file>
         </initialize>
-        <forces><force forcefield='lammps'> </force></forces>
+        <forces><force forcefield='qtip4pf'> </force></forces>
         <normal_modes>
             <open_paths> [2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35, 38, 41, 44, 47, 50, 53, 56, 59, 62, 65, 68, 71, 74, 77, 80, 83, 86, 89, 92, 95, 98, 101, 104, 107, 110, 113, 116, 119, 122, 125, 128, 131, 134, 137, 140, 143, 146, 149, 152, 155, 158, 161, 164, 167, 170, 173, 176, 179, 182, 185, 188, 191] </open_paths>
         </normal_modes>
