@@ -303,12 +303,12 @@ class Properties(dobject):
                     )
                 ),
             },
-            "polarization": {
-                "dimension": "polarization",
-                "help": "The polarization of the system (cartesian axes).",
-                "size": 3,
-                "func": (lambda: self.ensemble.eda.dipole / self.cell.V),
-            },
+            # "polarization": {
+            #     "dimension": "polarization",
+            #     "help": "The polarization of the system (cartesian axes).",
+            #     "size": 3,
+            #     "func": (lambda: self.ensemble.eda.dipole / self.cell.V),
+            # },
             "dipole": {
                 "dimension": "electric-dipole",
                 "help": "The electric dipole of the system (cartesian axes).",
