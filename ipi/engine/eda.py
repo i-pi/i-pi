@@ -16,14 +16,14 @@ class BEC(dobject):
         self.nbeads = ensemble.beads.nbeads
         self.natoms = ensemble.beads.natoms
         self.forces = ensemble.forces
-        my_nbeads = 1  # self.nbeads
+        # my_nbeads = 1  # self.nbeads
 
         dself = dd(self)
         if self.cbec:
             dself.bec = depend_array(
                 name="bec",
                 value=np.full(
-                    (my_nbeads, 3 * self.natoms, 3), np.nan
+                    (self.nbeads, 3 * self.natoms, 3), np.nan
                 ),  # value=np.full((self.natoms,3,3),np.nan),\
                 func=self._get_otf_BEC,
                 dependencies=[dd(eda).time, dd(ensemble.beads).q],
@@ -34,7 +34,7 @@ class BEC(dobject):
         else:
             # dself.bec = depend_array(name="bec",value=np.full((self.natoms,3,3),np.nan))
             dself.bec = depend_array(
-                name="bec", value=np.full((my_nbeads, 3 * self.natoms, 3), np.nan)
+                name="bec", value=np.full((self.nbeads, 3 * self.natoms, 3), np.nan)
             )
 
         pass
@@ -112,12 +112,13 @@ class Dipole(dobject):
 
         self.forces = ensemble.forces  # is this a weakref??
 
-        val = np.zeros(
-            3, dtype=float
-        )  # np.full(self.nbeads,np.zeros(3,dtype=float)) if self.nbeads > 1 else np.zeros(3,dtype=float)
+        # val = np.zeros(
+        #     3, dtype=float
+        # )  
+        val = np.full((self.nbeads,3),np.nan) # if self.nbeads > 1 else np.zeros(3,dtype=float)
         dself._dipole_ = depend_array(
             name="_dipole_",
-            func=lambda: self._get_dipole(bead=0),
+            func=lambda: self._get_dipole(),
             value=val,
             dependencies=[dd(eda).time, dd(ensemble.beads).q],
         )
