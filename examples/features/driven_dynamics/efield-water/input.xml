@@ -1,0 +1,61 @@
+<simulation verbosity='high'>
+
+  <total_steps>500</total_steps>
+  <!-- maximum time in seconds (set it to smaller than the SLURM time limit) -->
+  <!-- <total_time> 3500 </total_time> --> 
+
+  <!-- communication using INET socket (for a cluster) -->
+  <!-- <ffsocket mode='inet' name='aims' pbc='False'>
+    <address>qe</address>
+    <port>27683</port>
+  </ffsocket> -->
+
+  <!-- communication using UNIX socket (for your laptop) -->
+  <ffsocket mode='unix' name='driver' pbc='False'> 
+    <address>driver</address>
+  </ffsocket>
+
+
+  <output prefix='i-pi'> <!-- the default format is 'xyz' -->
+    <trajectory filename='forces'>forces</trajectory>               <!--      total forces (a.u.): nuclear + q_e Z @ E(t) -->
+    <trajectory filename='Eforces'>Eforces</trajectory>             <!--     driven forces (a.u.): q_e Z @ E(t) -->
+    <trajectory filename='momenta'>momenta</trajectory>             <!--   nuclear momenta (a.u.): p -->
+    <trajectory filename='velocities'>velocities</trajectory>       <!--   nuclear momenta (a.u.): v -->
+    <trajectory filename='positions'>positions</trajectory>         <!-- nuclear positions (a.u.): R -->
+    <properties filename='properties.out' > [ step, time, conserved, kinetic_md, potential, Efield, Eenvelope ] </properties>
+  </output>
+
+  <prng>
+    <seed>10545</seed>
+  </prng>
+
+  <system>
+    <forces>
+      <force forcefield='driver' />
+    </forces>
+
+    <initialize nbeads='1'>
+      <file mode='xyz' units='atomic_unit' > start.xyz </file>                     <!-- ground state -->
+      <velocities mode='thermal' units='kelvin'> 0 </velocities>                   <!-- no initial velocities: the system get excitated by the Efield only -->
+      <cell mode="manual" units="atomic_unit">[ 20,0,0, 0,20,0, 0,0,20 ]</cell>    <!-- big cell: isolated system -->
+    </initialize>
+
+    <ensemble>
+      <temperature units='kelvin'>0</temperature>
+      <Eamp> [ 0 , 5e-2 , 0 ] </Eamp>             <!-- amplitude of the electric field pulse in a.u. -->
+      <Efreq units="thz"> 115 </Efreq>            <!-- frequency of the electric field pulse in THz -->
+      <Epeak units="picosecond"> 0.2 </Epeak>     <!-- peak of the electric field pulse -->
+      <Esigma units="picosecond"> 0.05 </Esigma>  <!-- width (standard deviation of the gaussian) of the electric field pulse -->
+      <cdip> True </cdip>                         <!-- whether the dipole is computed by the NN -->
+      <cbec> False </cbec>                        <!-- whether the BECs are computed by the NN -->
+      <bec mode="file"> bec.txt </bec>
+    </ensemble>
+
+     <motion mode='dynamics'> 
+      <dynamics mode='eda-nve'>                  <!-- Electric Dipole Approximation (EDA) on top of a NVE simulation -->
+        <timestep units='femtosecond'> 1 </timestep>
+      </dynamics>
+    </motion>
+
+  </system>
+</simulation>
