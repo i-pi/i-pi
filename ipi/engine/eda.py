@@ -131,10 +131,8 @@ class Dipole(dobject):
 
     def _get_dipole(self, bead=None):
         """Return the electric dipole of all the beads as a list of np.array"""
-        # self._check_dipole()
 
         # check that bead is a correct value
-        # N = self.beads.nbeads
         if bead is not None:
             if bead < 0:
                 raise ValueError("Error in '_get_dipole': 'beads' is negative.")
@@ -142,23 +140,16 @@ class Dipole(dobject):
                 raise ValueError(
                     "Error in '_get_dipole': 'beads' is greater than the number of beads."
                 )
-            if bead > 1:
-                raise ValueError(
-                    "The case with 'beads' != 0 has not been implemeted yet"
-                )
 
-        # if not self.cdip:
-        #     return np.asarray([0, 0, 0])
-        # else:
+        dipole = np.full((self.nbeads,3), np.nan)
         try :
             if "dipole" in self.forces.extras:
-                dipole = np.asarray(self.forces.extras["dipole"]).flatten()
-                if len(dipole) != 3:
-                    print("dipole:", dipole)
-                    raise ValueError("'dipole' has not length 3")
+                raws = [self.forces.extras["dipole"][i] for i in range(self.nbeads)]
+                for n,raw in enumerate(raws):
+                    if len(raw) != 3:
+                        raise ValueError("'dipole' has not length 3")
+                    dipole[n] = np.asarray(raw)
                 return dipole
-                # dipole = [ self.forces.extras["dipole"][i] for i in range(self.nbeads)]
-                # return dipole[0] if bead is None else dipole[bead]
 
             elif "raw" not in self.forces.extras:
                 raise ValueError("'raw' has to be in 'forces.extras'")
@@ -166,32 +157,30 @@ class Dipole(dobject):
             elif np.all(
                 ["Total dipole moment" in s for s in self.forces.extras["raw"]]
             ):
-                raw = [self.forces.extras["raw"][i] for i in range(self.nbeads)]
-                raw = raw[0] if bead is None else raw[bead]
-                factor = 1.0
-                if "[eAng]" in raw:
-                    factor = UnitMap["length"]["angstrom"]
+                raws = [self.forces.extras["raw"][i] for i in range(self.nbeads)]
+                for n,raw in enumerate(raws):
+                    factor = 1.0
+                    if "[eAng]" in raw:
+                        factor = UnitMap["length"]["angstrom"]
 
-                dipole = np.full(3, np.nan)
-                pattern = "[-+]?\d*\.\d+(?:[eE][-+]?\d+)?|\b[-+]?\d+\b"
-                matches = re.findall(pattern, raw)
-                if len(matches) != 3:
-                    raise ValueError(
-                        "wrong number of extracted values from the extra string: they should be 3."
-                    )
-                else:
-                    for n in range(3):
-                        dipole[n] = float(matches[n])
-                return float(factor) * dipole
+                    pattern = "[-+]?\d*\.\d+(?:[eE][-+]?\d+)?|\b[-+]?\d+\b"
+                    matches = list(re.findall(pattern, raw))
+                    if len(matches) != 3:
+                        raise ValueError(
+                            "wrong number of extracted values from the extra string: they should be 3."
+                        )
+                    else:
+                        dipole[n] = float(factor) * np.asarray(matches)
+                    return dipole
             else:
                 raise ValueError(
                     "Error in '_get_dipole': can not extract dipole from the extra string."
                 )
         except:
-            if bead is not None:
-                return np.full(3,np.nan)
-            else :
-                return np.full((self.nbeads,3),np.nan) 
+            # if bead is not None:
+            #     return np.full(3,np.nan)
+            # else :
+            return np.full((self.nbeads,3),np.nan) 
 
 
 class ElectricField(dobject):
