@@ -313,7 +313,9 @@ class Properties(dobject):
                 "dimension": "electric-dipole",
                 "help": "The electric dipole of the system (cartesian axes).",
                 "size": 3,
-                "func": (lambda: self.ensemble.eda.dipole),
+                "func": lambda bead="-1": self.ensemble.eda.dipole
+                    if int(bead) < 0
+                    else self.ensemble.eda.dipole[int(bead)],
             },
             "conserved": {
                 "dimension": "energy",
