@@ -1,6 +1,6 @@
 <simulation verbosity='high'>
 
-  <total_steps>10</total_steps>
+  <total_steps>100</total_steps>
 
   <ffsocket mode='unix' name='driver' pbc='False'> 
     <address>driver</address>
@@ -14,7 +14,7 @@
     <trajectory filename='velocities'>velocities</trajectory>       <!--   nuclear momenta (a.u.): v -->
     <trajectory filename='positions'>positions</trajectory>         <!-- nuclear positions (a.u.): R -->
     <!-- <trajectory format="text" filename='extra'>extra</trajectory> -->
-    <properties filename='properties.out' > [ step, time, conserved, kinetic_md, potential, Efield, Eenvelope ] </properties>
+    <properties filename='properties.out' > [ step, time, conserved, kinetic_md, potential, Efield, Eenvelope, dipole(0), dipole(1) ] </properties>
   </output>
 
   <prng>

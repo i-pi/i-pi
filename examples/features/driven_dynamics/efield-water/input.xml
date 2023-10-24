@@ -28,7 +28,7 @@
     <initialize nbeads='1'>
       <file mode='xyz' units='atomic_unit' > start.xyz </file>                     <!-- ground state -->
       <velocities mode='thermal' units='kelvin'> 0 </velocities>                   <!-- no initial velocities: the system get excitated by the Efield only -->
-      <cell mode="manual" units="atomic_unit">[ 20,0,0, 0,20,0, 0,0,20 ]</cell>    <!-- big cell: isolated system -->
+      <cell mode="manual" units="atomic_unit">[ 7,0,0, 0,7,0, 0,0,7 ]</cell>    <!-- big cell: isolated system -->
     </initialize>
 
     <ensemble>
