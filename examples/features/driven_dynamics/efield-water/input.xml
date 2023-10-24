@@ -1,22 +1,13 @@
 <simulation verbosity='high'>
 
   <total_steps>500</total_steps>
-  <!-- maximum time in seconds (set it to smaller than the SLURM time limit) -->
-  <!-- <total_time> 3500 </total_time> --> 
 
-  <!-- communication using INET socket (for a cluster) -->
-  <!-- <ffsocket mode='inet' name='aims' pbc='False'>
-    <address>qe</address>
-    <port>27683</port>
-  </ffsocket> -->
-
-  <!-- communication using UNIX socket (for your laptop) -->
   <ffsocket mode='unix' name='driver' pbc='False'> 
     <address>driver</address>
   </ffsocket>
 
 
-  <output prefix='i-pi'> <!-- the default format is 'xyz' -->
+  <output prefix='i-pi'>
     <trajectory filename='forces'>forces</trajectory>               <!--      total forces (a.u.): nuclear + q_e Z @ E(t) -->
     <trajectory filename='Eforces'>Eforces</trajectory>             <!--     driven forces (a.u.): q_e Z @ E(t) -->
     <trajectory filename='momenta'>momenta</trajectory>             <!--   nuclear momenta (a.u.): p -->
@@ -46,7 +37,6 @@
       <Efreq units="thz"> 115 </Efreq>            <!-- frequency of the electric field pulse in THz -->
       <Epeak units="picosecond"> 0.2 </Epeak>     <!-- peak of the electric field pulse -->
       <Esigma units="picosecond"> 0.05 </Esigma>  <!-- width (standard deviation of the gaussian) of the electric field pulse -->
-      <cdip> True </cdip>                         <!-- whether the dipole is computed by the NN -->
       <cbec> False </cbec>                        <!-- whether the BECs are computed by the NN -->
       <bec mode="file"> bec.txt </bec>
     </ensemble>
