@@ -517,6 +517,7 @@ class TrajectoryOutput(BaseOutput):
             "positions",
             "velocities",
             "forces",
+            "Eforces",
             "forces_sc",
             "momenta",
         ]:

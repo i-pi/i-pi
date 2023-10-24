@@ -89,7 +89,7 @@ class Ensemble(dobject):
         Epeak=None,
         Esigma=None,
         bec=None,
-        cdip=True,
+        # cdip=True,
         # tacc=0.0,
         cbec=False,
     ):
@@ -181,10 +181,10 @@ class Ensemble(dobject):
             name="bec", value=bec if bec is not None else np.zeros(0)
         )
         dself.cbec = depend_array(name="cbec", value=cbec)
-        dself.cdip = depend_array(name="cdip", value=cdip)
+        # dself.cdip = depend_array(name="cdip", value=cdip)
         # dself.tacc   = depend_array(name="tacc"   ,value=tacc)
 
-        self.eda = EDA(Eamp, Efreq, Ephase, Epeak, Esigma, cdip, cbec, bec)
+        self.eda = EDA(Eamp, Efreq, Ephase, Epeak, Esigma, cbec, bec) # cdip
         # try :
         #     self.eda = EDA(Eamp,Efreq,Ephase,Epeak,Esigma,cdip,cbec,bec)
         # except :
@@ -207,7 +207,7 @@ class Ensemble(dobject):
             Epeak=self.Epeak,
             Esigma=self.Esigma,
             bec=self.bec,
-            cdip=self.cdip,
+            # cdip=self.cdip,
             # tacc=self.tacc,
             cBEC=self.cBEC,
         )

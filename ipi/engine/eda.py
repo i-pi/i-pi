@@ -102,9 +102,9 @@ class BEC(dobject):
 
 
 class Dipole(dobject):
-    def __init__(self, cdip):
-        self.cdip = cdip
-        pass
+    # def __init__(self, cdip):
+    #     self.cdip = cdip
+    #     pass
 
     def bind(self, eda, ensemble):
         dself = dd(self)
@@ -126,7 +126,7 @@ class Dipole(dobject):
 
     def store(self, dipole):
         super(Dipole, self).store(dipole)
-        self.cdip.store(dipole.cdip)
+        # self.cdip.store(dipole.cdip)
         pass
 
     def _get_dipole(self, bead=None):
@@ -147,9 +147,10 @@ class Dipole(dobject):
                     "The case with 'beads' != 0 has not been implemeted yet"
                 )
 
-        if not self.cdip:
-            return np.asarray([0, 0, 0])
-        else:
+        # if not self.cdip:
+        #     return np.asarray([0, 0, 0])
+        # else:
+        try :
             if "dipole" in self.forces.extras:
                 dipole = np.asarray(self.forces.extras["dipole"]).flatten()
                 if len(dipole) != 3:
@@ -186,6 +187,11 @@ class Dipole(dobject):
                 raise ValueError(
                     "Error in '_get_dipole': can not extract dipole from the extra string."
                 )
+        except:
+            if bead is not None:
+                return np.full(3,np.nan)
+            else :
+                return np.full((self.nbeads,3),np.nan) 
 
 
 class ElectricField(dobject):
@@ -290,10 +296,10 @@ class ElectricField(dobject):
 class EDA(dobject):
     integrators = ["eda-nve"]
 
-    def __init__(self, Eamp, Efreq, Ephase, Epeak, Esigma, cdip, cbec, bec, **kwargv):
+    def __init__(self, Eamp, Efreq, Ephase, Epeak, Esigma, cbec, bec, **kwargv): # cdip
         super(EDA, self).__init__(**kwargv)
         self.Electric_Field = ElectricField(Eamp, Efreq, Ephase, Epeak, Esigma)
-        self.Dipole = Dipole(cdip)
+        self.Dipole = Dipole() # (cdip)
         self.Born_Charges = BEC(cbec, bec)
         pass
 

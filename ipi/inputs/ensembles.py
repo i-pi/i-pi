@@ -149,14 +149,14 @@ class InputEnsemble(Input):
                 "dimension": "time",
             },
         ),
-        "cdip": (
-            InputValue,
-            {
-                "dtype": bool,
-                "default": True,
-                "help": "Wheter the dipole is returned by the driver",
-            },
-        ),
+        # "cdip": (
+        #     InputValue,
+        #     {
+        #         "dtype": bool,
+        #         "default": True,
+        #         "help": "Wheter the dipole is returned by the driver",
+        #     },
+        # ),
         "cbec": (
             InputValue,
             {
@@ -201,7 +201,7 @@ class InputEnsemble(Input):
         self.Epeak.store(ens.Epeak)
         self.Esigma.store(ens.Esigma)
         self.bec.store(ens.bec)
-        self.cdip.store(ens.cdip)
+        # self.cdip.store(ens.cdip)
         self.cbec.store(ens.cbec)
 
     def fetch(self):
@@ -229,7 +229,7 @@ class InputEnsemble(Input):
             Epeak=self.Epeak.fetch(),
             Esigma=self.Esigma.fetch(),
             bec=self.bec.fetch(),
-            cdip=self.cdip.fetch(),
+            # cdip=self.cdip.fetch(),
             # tacc=self.tacc.fetch(),
             cbec=self.cbec.fetch(),
         )
