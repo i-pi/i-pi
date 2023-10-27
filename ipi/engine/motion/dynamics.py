@@ -134,6 +134,7 @@ class Dynamics(Motion):
         self.efield = efield
         self.bec = bec
         self.eda = EDA(self.efield, self.bec)  # cdip
+        pass
 
     def get_fixdof(self):
         """Calculate the number of fixed degrees of freedom, required for
@@ -246,6 +247,7 @@ class Dynamics(Motion):
             elif self.enstype == "nst":
                 if np.allclose(self.ensemble.stressext.diagonal(), -12345):
                     raise ValueError("Unspecified stress for a constant-s integrator")
+        pass
 
     def get_ntemp(self):
         """Returns the PI simulation temperature (P times the physical T)."""
@@ -403,402 +405,402 @@ class DummyIntegrator(dobject):
                 bp[self.fixatoms * 3 + 2] = 0.0
 
 
-class NVEIntegrator(DummyIntegrator):
-
-    """Integrator object for constant energy simulations.
-
-    Has the relevant conserved quantity and normal mode propagator for the
-    constant energy ensemble. Note that a temperature of some kind must be
-    defined so that the spring potential can be calculated.
-
-    Attributes:
-        ptime: The time taken in updating the velocities.
-        qtime: The time taken in updating the positions.
-        ttime: The time taken in applying the thermostat steps.
-
-    Depend objects:
-        econs: Conserved energy quantity. Depends on the bead kinetic and
-            potential energy, and the spring potential energy.
-    """
-
-    def pstep(self, level=0):
-        """Velocity Verlet momentum propagator."""
-
-        # halfdt/alpha
-        self.beads.p += self.forces.forces_mts(level) * self.pdt[level]
-        if level == 0:  # adds bias in the outer loop
-            self.beads.p += dstrip(self.bias.f) * self.pdt[level]
-
-    def qcstep(self):
-        """Velocity Verlet centroid position propagator."""
-        # dt/inmts
-        self.nm.qnm[0, :] += (
-            dstrip(self.nm.pnm)[0, :] / dstrip(self.beads.m3)[0] * self.qdt
-        )
-
-    # now the idea is that for BAOAB the MTS should work as follows:
-    # take the BAB MTS, and insert the O in the very middle. This might imply breaking a A step in two, e.g. one could have
-    # Bbabb(a/2) O (a/2)bbabB
-    def mtsprop_ba(self, index):
-        """Recursive MTS step"""
-
-        mk = int(self.nmts[index] / 2)
-
-        for i in range(mk):  # do nmts/2 full sub-steps
-            self.pstep(index)
-            self.pconstraints()
-            if index == self.nmtslevels - 1:
-                # call Q propagation for dt/alpha at the inner step
-                self.qcstep()
-                self.nm.free_qstep()
-                self.qcstep()
-                self.nm.free_qstep()
-
-            else:
-                self.mtsprop(index + 1)
-
-            self.pstep(index)
-            self.pconstraints()
-
-        if self.nmts[index] % 2 == 1:
-            # propagate p for dt/2alpha with force at level index
-            self.pstep(index)
-            self.pconstraints()
-            if index == self.nmtslevels - 1:
-                # call Q propagation for dt/alpha at the inner step
-                self.qcstep()
-                self.nm.free_qstep()
-            else:
-                self.mtsprop_ba(index + 1)
-
-    def mtsprop_ab(self, index):
-        """Recursive MTS step"""
-
-        if self.nmts[index] % 2 == 1:
-            if index == self.nmtslevels - 1:
-                # call Q propagation for dt/alpha at the inner step
-                self.qcstep()
-                self.nm.free_qstep()
-            else:
-                self.mtsprop_ab(index + 1)
-
-            # propagate p for dt/2alpha with force at level index
-            self.pstep(index)
-            self.pconstraints()
-
-        for i in range(int(self.nmts[index] / 2)):  # do nmts/2 full sub-steps
-            self.pstep(index)
-            self.pconstraints()
-            if index == self.nmtslevels - 1:
-                # call Q propagation for dt/alpha at the inner step
-                self.qcstep()
-                self.nm.free_qstep()
-                self.qcstep()
-                self.nm.free_qstep()
-            else:
-                self.mtsprop(index + 1)
-
-            self.pstep(index)
-            self.pconstraints()
-
-    def mtsprop(self, index):
-        # just calls the two pieces together
-        self.mtsprop_ba(index)
-        self.mtsprop_ab(index)
+# class NVEIntegrator(DummyIntegrator):
+
+#     """Integrator object for constant energy simulations.
+
+#     Has the relevant conserved quantity and normal mode propagator for the
+#     constant energy ensemble. Note that a temperature of some kind must be
+#     defined so that the spring potential can be calculated.
+
+#     Attributes:
+#         ptime: The time taken in updating the velocities.
+#         qtime: The time taken in updating the positions.
+#         ttime: The time taken in applying the thermostat steps.
+
+#     Depend objects:
+#         econs: Conserved energy quantity. Depends on the bead kinetic and
+#             potential energy, and the spring potential energy.
+#     """
+
+#     def pstep(self, level=0):
+#         """Velocity Verlet momentum propagator."""
+
+#         # halfdt/alpha
+#         self.beads.p += self.forces.forces_mts(level) * self.pdt[level]
+#         if level == 0:  # adds bias in the outer loop
+#             self.beads.p += dstrip(self.bias.f) * self.pdt[level]
+
+#     def qcstep(self):
+#         """Velocity Verlet centroid position propagator."""
+#         # dt/inmts
+#         self.nm.qnm[0, :] += (
+#             dstrip(self.nm.pnm)[0, :] / dstrip(self.beads.m3)[0] * self.qdt
+#         )
+
+#     # now the idea is that for BAOAB the MTS should work as follows:
+#     # take the BAB MTS, and insert the O in the very middle. This might imply breaking a A step in two, e.g. one could have
+#     # Bbabb(a/2) O (a/2)bbabB
+#     def mtsprop_ba(self, index):
+#         """Recursive MTS step"""
+
+#         mk = int(self.nmts[index] / 2)
+
+#         for i in range(mk):  # do nmts/2 full sub-steps
+#             self.pstep(index)
+#             self.pconstraints()
+#             if index == self.nmtslevels - 1:
+#                 # call Q propagation for dt/alpha at the inner step
+#                 self.qcstep()
+#                 self.nm.free_qstep()
+#                 self.qcstep()
+#                 self.nm.free_qstep()
+
+#             else:
+#                 self.mtsprop(index + 1)
+
+#             self.pstep(index)
+#             self.pconstraints()
+
+#         if self.nmts[index] % 2 == 1:
+#             # propagate p for dt/2alpha with force at level index
+#             self.pstep(index)
+#             self.pconstraints()
+#             if index == self.nmtslevels - 1:
+#                 # call Q propagation for dt/alpha at the inner step
+#                 self.qcstep()
+#                 self.nm.free_qstep()
+#             else:
+#                 self.mtsprop_ba(index + 1)
+
+#     def mtsprop_ab(self, index):
+#         """Recursive MTS step"""
+
+#         if self.nmts[index] % 2 == 1:
+#             if index == self.nmtslevels - 1:
+#                 # call Q propagation for dt/alpha at the inner step
+#                 self.qcstep()
+#                 self.nm.free_qstep()
+#             else:
+#                 self.mtsprop_ab(index + 1)
+
+#             # propagate p for dt/2alpha with force at level index
+#             self.pstep(index)
+#             self.pconstraints()
+
+#         for i in range(int(self.nmts[index] / 2)):  # do nmts/2 full sub-steps
+#             self.pstep(index)
+#             self.pconstraints()
+#             if index == self.nmtslevels - 1:
+#                 # call Q propagation for dt/alpha at the inner step
+#                 self.qcstep()
+#                 self.nm.free_qstep()
+#                 self.qcstep()
+#                 self.nm.free_qstep()
+#             else:
+#                 self.mtsprop(index + 1)
+
+#             self.pstep(index)
+#             self.pconstraints()
+
+#     def mtsprop(self, index):
+#         # just calls the two pieces together
+#         self.mtsprop_ba(index)
+#         self.mtsprop_ab(index)
 
-    def step(self, step=None):
-        """Does one simulation time step."""
+#     def step(self, step=None):
+#         """Does one simulation time step."""
 
-        self.mtsprop(0)
+#         self.mtsprop(0)
 
 
-class NVTIntegrator(NVEIntegrator):
+# class NVTIntegrator(NVEIntegrator):
 
-    """Integrator object for constant temperature simulations.
+#     """Integrator object for constant temperature simulations.
 
-    Has the relevant conserved quantity and normal mode propagator for the
-    constant temperature ensemble. Contains a thermostat object containing the
-    algorithms to keep the temperature constant.
+#     Has the relevant conserved quantity and normal mode propagator for the
+#     constant temperature ensemble. Contains a thermostat object containing the
+#     algorithms to keep the temperature constant.
 
-    Attributes:
-        thermostat: A thermostat object to keep the temperature constant.
-    """
+#     Attributes:
+#         thermostat: A thermostat object to keep the temperature constant.
+#     """
 
-    def tstep(self):
-        """Velocity Verlet thermostat step"""
+#     def tstep(self):
+#         """Velocity Verlet thermostat step"""
 
-        self.thermostat.step()
+#         self.thermostat.step()
 
-    def step(self, step=None):
-        """Does one simulation time step."""
+#     def step(self, step=None):
+#         """Does one simulation time step."""
 
-        if self.splitting == "obabo":
-            # thermostat is applied for dt/2
-            self.tstep()
-            self.pconstraints()
+#         if self.splitting == "obabo":
+#             # thermostat is applied for dt/2
+#             self.tstep()
+#             self.pconstraints()
 
-            # forces are integerated for dt with MTS.
-            self.mtsprop(0)
+#             # forces are integerated for dt with MTS.
+#             self.mtsprop(0)
 
-            # thermostat is applied for dt/2
-            self.tstep()
-            self.pconstraints()
+#             # thermostat is applied for dt/2
+#             self.tstep()
+#             self.pconstraints()
 
-        elif self.splitting == "baoab":
-            self.mtsprop_ba(0)
-            # thermostat is applied for dt
-            self.tstep()
-            self.pconstraints()
-            self.mtsprop_ab(0)
+#         elif self.splitting == "baoab":
+#             self.mtsprop_ba(0)
+#             # thermostat is applied for dt
+#             self.tstep()
+#             self.pconstraints()
+#             self.mtsprop_ab(0)
 
 
-class NVTCCIntegrator(NVTIntegrator):
-    """Integrator object for constant temperature simulations with constrained centroid.
+# class NVTCCIntegrator(NVTIntegrator):
+#     """Integrator object for constant temperature simulations with constrained centroid.
 
-    Has the relevant conserved quantity and normal mode propagator for the
-    constant temperature ensemble. Contains a thermostat object containing the
-    algorithms to keep the temperature constant.
+#     Has the relevant conserved quantity and normal mode propagator for the
+#     constant temperature ensemble. Contains a thermostat object containing the
+#     algorithms to keep the temperature constant.
 
-    Attributes:
-        thermostat: A thermostat object to keep the temperature constant.
-    """
+#     Attributes:
+#         thermostat: A thermostat object to keep the temperature constant.
+#     """
 
-    def pstep(self):
-        """Velocity Verlet momenta propagator."""
+#     def pstep(self):
+#         """Velocity Verlet momenta propagator."""
 
-        # propagates in NM coordinates
-        self.nm.pnm += dstrip(self.nm.fnm) * (self.dt * 0.5)
-        # self.beads.p += dstrip(self.forces.f)*(self.dt*0.5)
-        # also adds the bias force
-        # self.beads.p += dstrip(self.bias.f)*(self.dt*0.5)
+#         # propagates in NM coordinates
+#         self.nm.pnm += dstrip(self.nm.fnm) * (self.dt * 0.5)
+#         # self.beads.p += dstrip(self.forces.f)*(self.dt*0.5)
+#         # also adds the bias force
+#         # self.beads.p += dstrip(self.bias.f)*(self.dt*0.5)
 
-    def step(self, step=None):
-        """Does one simulation time step."""
+#     def step(self, step=None):
+#         """Does one simulation time step."""
 
-        self.thermostat.step()
-        self.pconstraints()
-        # NB we only have to take into account the energy balance of zeroing centroid velocity when we had added energy through the thermostat
-        self.ensemble.eens += 0.5 * np.dot(
-            self.nm.pnm[0], self.nm.pnm[0] / self.nm.dynm3[0]
-        )
-        self.nm.pnm[0, :] = 0.0
+#         self.thermostat.step()
+#         self.pconstraints()
+#         # NB we only have to take into account the energy balance of zeroing centroid velocity when we had added energy through the thermostat
+#         self.ensemble.eens += 0.5 * np.dot(
+#             self.nm.pnm[0], self.nm.pnm[0] / self.nm.dynm3[0]
+#         )
+#         self.nm.pnm[0, :] = 0.0
 
-        self.pstep()
-        self.nm.pnm[0, :] = 0.0
-        self.pconstraints()
+#         self.pstep()
+#         self.nm.pnm[0, :] = 0.0
+#         self.pconstraints()
 
-        # self.qcstep() # for the moment I just avoid doing the centroid step.
-        self.nm.free_qstep()
+#         # self.qcstep() # for the moment I just avoid doing the centroid step.
+#         self.nm.free_qstep()
 
-        self.pstep()
-        self.nm.pnm[0, :] = 0.0
-        self.pconstraints()
+#         self.pstep()
+#         self.nm.pnm[0, :] = 0.0
+#         self.pconstraints()
 
-        self.thermostat.step()
-        self.ensemble.eens += 0.5 * np.dot(
-            self.nm.pnm[0], self.nm.pnm[0] / self.nm.dynm3[0]
-        )
-        self.nm.pnm[0, :] = 0.0
-        self.pconstraints()
+#         self.thermostat.step()
+#         self.ensemble.eens += 0.5 * np.dot(
+#             self.nm.pnm[0], self.nm.pnm[0] / self.nm.dynm3[0]
+#         )
+#         self.nm.pnm[0, :] = 0.0
+#         self.pconstraints()
 
 
-class NPTIntegrator(NVTIntegrator):
+# class NPTIntegrator(NVTIntegrator):
 
-    """Integrator object for constant pressure simulations.
+#     """Integrator object for constant pressure simulations.
 
-    Has the relevant conserved quantity and normal mode propagator for the
-    constant pressure ensemble. Contains a thermostat object containing the
-    algorithms to keep the temperature constant, and a barostat to keep the
-    pressure constant.
-    """
+#     Has the relevant conserved quantity and normal mode propagator for the
+#     constant pressure ensemble. Contains a thermostat object containing the
+#     algorithms to keep the temperature constant, and a barostat to keep the
+#     pressure constant.
+#     """
 
-    # should be enough to redefine these functions, and the step() from NVTIntegrator should do the trick
+#     # should be enough to redefine these functions, and the step() from NVTIntegrator should do the trick
 
-    def pstep(self, level=0):
-        """Velocity Verlet monemtum propagator."""
+#     def pstep(self, level=0):
+#         """Velocity Verlet monemtum propagator."""
 
-        if np.array_equiv(self.forces.vir, np.zeros(len(self.forces.vir))):
-            raise ValueError(
-                "Seems like no stress tensor was computed by the client. Stopping barostat!"
-            )
-        self.barostat.pstep(level)
-        super(NPTIntegrator, self).pstep(level)
-        # self.pconstraints()
+#         if np.array_equiv(self.forces.vir, np.zeros(len(self.forces.vir))):
+#             raise ValueError(
+#                 "Seems like no stress tensor was computed by the client. Stopping barostat!"
+#             )
+#         self.barostat.pstep(level)
+#         super(NPTIntegrator, self).pstep(level)
+#         # self.pconstraints()
 
-    def qcstep(self):
-        """Velocity Verlet centroid position propagator."""
+#     def qcstep(self):
+#         """Velocity Verlet centroid position propagator."""
 
-        self.barostat.qcstep()
+#         self.barostat.qcstep()
 
-    def tstep(self):
-        """Velocity Verlet thermostat step"""
+#     def tstep(self):
+#         """Velocity Verlet thermostat step"""
 
-        self.thermostat.step()
-        self.barostat.thermostat.step()
-        # self.pconstraints()
+#         self.thermostat.step()
+#         self.barostat.thermostat.step()
+#         # self.pconstraints()
 
 
-class NSTIntegrator(NPTIntegrator):
+# class NSTIntegrator(NPTIntegrator):
 
-    """Ensemble object for constant pressure simulations.
+#     """Ensemble object for constant pressure simulations.
 
-    Has the relevant conserved quantity and normal mode propagator for the
-    constant pressure ensemble. Contains a thermostat object containing the
-    algorithms to keep the temperature constant, and a barostat to keep the
-    pressure constant.
+#     Has the relevant conserved quantity and normal mode propagator for the
+#     constant pressure ensemble. Contains a thermostat object containing the
+#     algorithms to keep the temperature constant, and a barostat to keep the
+#     pressure constant.
 
-    Attributes:
-    barostat: A barostat object to keep the pressure constant.
+#     Attributes:
+#     barostat: A barostat object to keep the pressure constant.
 
-    Depend objects:
-    econs: Conserved energy quantity. Depends on the bead and cell kinetic
-    and potential energy, the spring potential energy, the heat
-    transferred to the beads and cell thermostat, the temperature and
-    the cell volume.
-    pext: External pressure.
-    """
+#     Depend objects:
+#     econs: Conserved energy quantity. Depends on the bead and cell kinetic
+#     and potential energy, the spring potential energy, the heat
+#     transferred to the beads and cell thermostat, the temperature and
+#     the cell volume.
+#     pext: External pressure.
+#     """
 
 
-class SCIntegrator(NVTIntegrator):
-    """Integrator object for constant temperature simulations.
+# class SCIntegrator(NVTIntegrator):
+#     """Integrator object for constant temperature simulations.
 
-    Has the relevant conserved quantity and normal mode propagator for the
-    constant temperature ensemble. Contains a thermostat object containing the
-    algorithms to keep the temperature constant.
+#     Has the relevant conserved quantity and normal mode propagator for the
+#     constant temperature ensemble. Contains a thermostat object containing the
+#     algorithms to keep the temperature constant.
 
-    Attributes:
-        thermostat: A thermostat object to keep the temperature constant.
+#     Attributes:
+#         thermostat: A thermostat object to keep the temperature constant.
 
-    Depend objects:
-        econs: Conserved energy quantity. Depends on the bead kinetic and
-            potential energy, the spring potential energy and the heat
-            transferred to the thermostat.
-    """
+#     Depend objects:
+#         econs: Conserved energy quantity. Depends on the bead kinetic and
+#             potential energy, the spring potential energy and the heat
+#             transferred to the thermostat.
+#     """
 
-    def bind(self, mover):
-        """Binds ensemble beads, cell, bforce, bbias and prng to the dynamics.
+#     def bind(self, mover):
+#         """Binds ensemble beads, cell, bforce, bbias and prng to the dynamics.
 
-        This takes a beads object, a cell object, a forcefield object and a
-        random number generator object and makes them members of the ensemble.
-        It also then creates the objects that will hold the data needed in the
-        ensemble algorithms and the dependency network. Note that the conserved
-        quantity is defined in the init, but as each ensemble has a different
-        conserved quantity the dependencies are defined in bind.
+#         This takes a beads object, a cell object, a forcefield object and a
+#         random number generator object and makes them members of the ensemble.
+#         It also then creates the objects that will hold the data needed in the
+#         ensemble algorithms and the dependency network. Note that the conserved
+#         quantity is defined in the init, but as each ensemble has a different
+#         conserved quantity the dependencies are defined in bind.
 
-        Args:
-        beads: The beads object from whcih the bead positions are taken.
-        nm: A normal modes object used to do the normal modes transformation.
-        cell: The cell object from which the system box is taken.
-        bforce: The forcefield object from which the force and virial are
-            taken.
-        prng: The random number generator object which controls random number
-            generation.
-        """
+#         Args:
+#         beads: The beads object from whcih the bead positions are taken.
+#         nm: A normal modes object used to do the normal modes transformation.
+#         cell: The cell object from which the system box is taken.
+#         bforce: The forcefield object from which the force and virial are
+#             taken.
+#         prng: The random number generator object which controls random number
+#             generation.
+#         """
 
-        super(SCIntegrator, self).bind(mover)
-        self.ensemble.add_econs(dd(self.forces).potsc)
-        self.ensemble.add_xlpot(dd(self.forces).potsc)
+#         super(SCIntegrator, self).bind(mover)
+#         self.ensemble.add_econs(dd(self.forces).potsc)
+#         self.ensemble.add_xlpot(dd(self.forces).potsc)
 
-    def pstep(self, level=0):
-        """Velocity Verlet monemtum propagator."""
-
-        if level == 0:
-            # bias goes in the outer loop
-            self.beads.p += dstrip(self.bias.f) * self.pdt[level]
-        # just integrate the Trotter force scaled with the SC coefficients, which is a cheap approx to the SC force
-        self.beads.p += (
-            self.forces.forces_mts(level)
-            * (1.0 + self.forces.coeffsc_part_1)
-            * self.pdt[level]
-        )
-
-    def step(self, step=None):
-        # the |f|^2 term is considered to be slowest (for large enough P) and is integrated outside everything.
-        # if nmts is not specified, this is just the same as doing the full SC integration
-
-        if self.splitting == "obabo":
-            # thermostat is applied for dt/2
-            self.tstep()
-            self.pconstraints()
-
-            # forces are integerated for dt with MTS.
-            self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
-            self.mtsprop(0)
-            self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
-
-            # thermostat is applied for dt/2
-            self.tstep()
-            self.pconstraints()
-
-        elif self.splitting == "baoab":
-            self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
-            self.mtsprop_ba(0)
-            # thermostat is applied for dt
-            self.tstep()
-            self.pconstraints()
-            self.mtsprop_ab(0)
-            self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
-
-
-class SCNPTIntegrator(SCIntegrator):
-    """Integrator object for constant pressure Suzuki-Chin simulations.
-
-    Has the relevant conserved quantity and normal mode propagator for the
-    constant pressure ensemble. Contains a thermostat object containing the
-    algorithms to keep the temperature constant, and a barostat to keep the
-    pressure constant.
-    """
-
-    # should be enough to redefine these functions, and the step() from NVTIntegrator should do the trick
-    def pstep(self, level=0):
-        """Velocity Verlet monemtum propagator."""
-
-        if np.array_equiv(self.forces.vir, np.zeros(len(self.forces.vir))):
-            raise ValueError(
-                "Seems like no stress tensor was computed by the client. Stopping barostat!"
-            )
-
-        self.barostat.pstep(level)
-        super(SCNPTIntegrator, self).pstep(level)
-
-    def qcstep(self):
-        """Velocity Verlet centroid position propagator."""
-
-        self.barostat.qcstep()
-
-    def tstep(self):
-        """Velocity Verlet thermostat step"""
-
-        self.thermostat.step()
-        self.barostat.thermostat.step()
-
-    def step(self, step=None):
-        # the |f|^2 term is considered to be slowest (for large enough P) and is integrated outside everything.
-        # if nmts is not specified, this is just the same as doing the full SC integration
-
-        if self.splitting == "obabo":
-            # thermostat is applied for dt/2
-            self.tstep()
-            self.pconstraints()
-
-            # forces are integerated for dt with MTS.
-            self.barostat.pscstep()
-            self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
-            self.mtsprop(0)
-            self.barostat.pscstep()
-            self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
-
-            # thermostat is applied for dt/2
-            self.tstep()
-            self.pconstraints()
-
-        elif self.splitting == "baoab":
-            self.barostat.pscstep()
-            self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
-            self.mtsprop_ba(0)
-            # thermostat is applied for dt
-            self.tstep()
-            self.pconstraints()
-            self.mtsprop_ab(0)
-            self.barostat.pscstep()
-            self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
+#     def pstep(self, level=0):
+#         """Velocity Verlet monemtum propagator."""
+
+#         if level == 0:
+#             # bias goes in the outer loop
+#             self.beads.p += dstrip(self.bias.f) * self.pdt[level]
+#         # just integrate the Trotter force scaled with the SC coefficients, which is a cheap approx to the SC force
+#         self.beads.p += (
+#             self.forces.forces_mts(level)
+#             * (1.0 + self.forces.coeffsc_part_1)
+#             * self.pdt[level]
+#         )
+
+#     def step(self, step=None):
+#         # the |f|^2 term is considered to be slowest (for large enough P) and is integrated outside everything.
+#         # if nmts is not specified, this is just the same as doing the full SC integration
+
+#         if self.splitting == "obabo":
+#             # thermostat is applied for dt/2
+#             self.tstep()
+#             self.pconstraints()
+
+#             # forces are integerated for dt with MTS.
+#             self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
+#             self.mtsprop(0)
+#             self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
+
+#             # thermostat is applied for dt/2
+#             self.tstep()
+#             self.pconstraints()
+
+#         elif self.splitting == "baoab":
+#             self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
+#             self.mtsprop_ba(0)
+#             # thermostat is applied for dt
+#             self.tstep()
+#             self.pconstraints()
+#             self.mtsprop_ab(0)
+#             self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
+
+
+# class SCNPTIntegrator(SCIntegrator):
+#     """Integrator object for constant pressure Suzuki-Chin simulations.
+
+#     Has the relevant conserved quantity and normal mode propagator for the
+#     constant pressure ensemble. Contains a thermostat object containing the
+#     algorithms to keep the temperature constant, and a barostat to keep the
+#     pressure constant.
+#     """
+
+#     # should be enough to redefine these functions, and the step() from NVTIntegrator should do the trick
+#     def pstep(self, level=0):
+#         """Velocity Verlet monemtum propagator."""
+
+#         if np.array_equiv(self.forces.vir, np.zeros(len(self.forces.vir))):
+#             raise ValueError(
+#                 "Seems like no stress tensor was computed by the client. Stopping barostat!"
+#             )
+
+#         self.barostat.pstep(level)
+#         super(SCNPTIntegrator, self).pstep(level)
+
+#     def qcstep(self):
+#         """Velocity Verlet centroid position propagator."""
+
+#         self.barostat.qcstep()
+
+#     def tstep(self):
+#         """Velocity Verlet thermostat step"""
+
+#         self.thermostat.step()
+#         self.barostat.thermostat.step()
+
+#     def step(self, step=None):
+#         # the |f|^2 term is considered to be slowest (for large enough P) and is integrated outside everything.
+#         # if nmts is not specified, this is just the same as doing the full SC integration
+
+#         if self.splitting == "obabo":
+#             # thermostat is applied for dt/2
+#             self.tstep()
+#             self.pconstraints()
+
+#             # forces are integerated for dt with MTS.
+#             self.barostat.pscstep()
+#             self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
+#             self.mtsprop(0)
+#             self.barostat.pscstep()
+#             self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
+
+#             # thermostat is applied for dt/2
+#             self.tstep()
+#             self.pconstraints()
+
+#         elif self.splitting == "baoab":
+#             self.barostat.pscstep()
+#             self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
+#             self.mtsprop_ba(0)
+#             # thermostat is applied for dt
+#             self.tstep()
+#             self.pconstraints()
+#             self.mtsprop_ab(0)
+#             self.barostat.pscstep()
+#             self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5

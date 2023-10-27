@@ -23,17 +23,17 @@ class BEC(dobject):
         # my_nbeads = 1  # self.nbeads
 
         dself = dd(self)
-        if self.cbec:
+        if self.enstype in EDA.integrators and self.cbec:
             dself.bec = depend_array(
                 name="bec",
                 value=np.full(
                     (self.nbeads, 3 * self.natoms, 3), np.nan
                 ),  # value=np.full((self.natoms,3,3),np.nan),\
-                func=self._get_otf_BEC,
+                func=self._get_driver_BEC,
                 dependencies=[dd(eda).time, dd(ensemble.beads).q],
             )
         elif self.enstype in EDA.integrators:
-            temp = self._get_static_BEC()  # reshape the BEC once and for all
+            temp = self._get_fixed_BEC()  # reshape the BEC once and for all
             dself.bec = depend_array(name="bec", value=temp)
         else:
             # dself.bec = depend_array(name="bec",value=np.full((self.natoms,3,3),np.nan))
@@ -47,29 +47,29 @@ class BEC(dobject):
         super(BEC, self).store(bec)
         self.cbec.store(bec.cbec)
 
-    def _get_otf_BEC(self, bead=None):
-        """Return the BEC tensors (in cartesian coordinates), when computed on the fly (otf) by the driver"""
+    def _get_driver_BEC(self, bead=None):
+        """Return the BEC tensors (in cartesian coordinates), when computed by the driver"""
 
-        msg = "Error in '_get_otf_BEC'"
+        msg = "Error in '_get_driver_BEC'"
 
         if bead is not None:
             if bead < 0:
-                raise ValueError("Error in '_get_otf_BEC': 'bead' is negative")
+                raise ValueError("Error in '_get_driver_BEC': 'bead' is negative")
             if bead >= self.nbeads:
                 raise ValueError(
-                    "Error in '_get_otf_BEC': 'bead' is greater than the number of beads"
+                    "Error in '_get_driver_BEC': 'bead' is greater than the number of beads"
                 )
         else:
             if self.nbeads != 1:
                 raise ValueError(
-                    "Error in '_get_otf_BEC': EDA integration has not implemented yet for 'nbeads' > 1"
+                    "Error in '_get_driver_BEC': EDA integration has not implemented yet for 'nbeads' > 1"
                 )
 
         if self.cbec:
             if "BEC" not in self.forces.extras:
                 raise ValueError(
                     msg
-                    + ": BEC tensors are not returned to i-PI (or at least not accessible in '_get_otf_BEC')."
+                    + ": BEC tensors are not returned to i-PI (or at least not accessible in '_get_driver_BEC')."
                 )
         else:
             raise ValueError(
@@ -95,14 +95,21 @@ class BEC(dobject):
 
         return BEC
 
-    def _get_static_BEC(self):
+    def _get_fixed_BEC(self):
         """Return the BEC tensors (in cartesian coordinates).
         The BEC tensor are stored in a compact form.
         This method trasform the BEC tensors into another data structure, suitable for computation.
         A lambda function is also returned to perform fast matrix multiplication.
         """
-
-        return self.bec.reshape((self.nbeads, 3 * self.natoms, 3))
+        try : 
+            return self.bec.reshape((self.nbeads, 3 * self.natoms, 3))
+        except:
+            line = "Error in '_get_fixed_BEC': i-PI is going to stop.\n" +\
+                    "The BEC tensor is: " + str(self.bec) + \
+                    "\nPay attention that in 'input.xml' you should have the following line:\n" +\
+                    "\t'<bec mode=\"file\"> filepath </bec>'\n" + \
+                    "The default mode could be 'none'. Please change it."
+            raise ValueError(line)
 
 
 class ElectricDipole(dobject):
@@ -206,12 +213,12 @@ class ElectricField(dobject):
         )
 
         # these will be overwritten
-        dself.Eenvelope = depend_value(
-            name="Eenvelope", value=1.0, func=self._get_Eenvelope
-        )
-        dself.Efield = depend_array(
-            name="Efield", value=np.zeros(3, float), func=self._get_Efield
-        )
+        # dself.Eenvelope = depend_value(
+        #     name="Eenvelope", value=1.0, func=self._get_Eenvelope
+        # )
+        # dself.Efield = depend_array(
+        #     name="Efield", value=np.zeros(3, float), func=self._get_Efield
+        # )
 
     def bind(self, eda, enstype):
         self.enstype = enstype
@@ -239,7 +246,7 @@ class ElectricField(dobject):
             dself.Efield = depend_array(
                 name="Efield",
                 value=np.zeros(3, float),
-                func=lambda time=None: np.zeros(3, float),
+                func=lambda time=None : np.zeros(3, float)
             )
         pass
 
@@ -252,12 +259,13 @@ class ElectricField(dobject):
         self.sigma.store(ef.sigma)
         pass
 
-    def _get_Efield(self, time=None):
+    def _get_Efield(self,time=None):
         """Get the value of the external electric field (cartesian axes)"""
         if time is None:
-            raise ValueError(
-                "Hey man! Don't you think it's better to specify the time you want to evaluate the electric field?"
-            )
+            time = self.mts_time
+        #     raise ValueError(
+        #         "Hey man! Don't you think it's better to specify the time you want to evaluate the electric field?"
+        #     )
         if hasattr(time, "__len__"):
             return np.outer(self._get_Ecos(time) * dd(self).Eenvelope(time), self.amp)
         else:
@@ -299,11 +307,11 @@ class EDA(dobject):
         self.enstype = enstype
         dself = dd(self)
 
-        dself.econs = depend_value(name="econs", value=0.0)
+        # dself.econs = depend_value(name="econs", value=0.0)
         dself.time = depend_value(name="time", value=0.0)
         dself.mts_time = depend_value(name="mts_time", value=0.0)
 
-        dpipe(dfrom=dd(ensemble).econs, dto=dself.econs)
+        # dpipe(dfrom=dd(ensemble).econs, dto=dself.econs)
         dpipe(dfrom=dd(ensemble).time, dto=dself.time)
 
         self.Electric_Field.bind(self, enstype)
@@ -325,8 +333,7 @@ class EDA(dobject):
 
         dpipe(dfrom=dd(self.Born_Charges).bec, dto=dself.bec)
         dpipe(dfrom=dd(self.Electric_Dipole).dipole, dto=dself.dipole)
-        # dpipe(dfrom=dself.time, dto=dself.mts_time)
-
+    
         pass
 
     def store(self, eda):

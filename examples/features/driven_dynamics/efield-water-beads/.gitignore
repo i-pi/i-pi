@@ -2,3 +2,7 @@ i-pi.*
 \#*
 RESTART
 *.sh
+H2O.scf.in
+outdir/
+*.out
+*.xyz

@@ -33,17 +33,18 @@
 
     <ensemble>
       <temperature units='kelvin'>0</temperature>
-      <Eamp> [ 0 , 5e-2 , 0 ] </Eamp>             <!-- amplitude of the electric field pulse in a.u. -->
-      <Efreq units="thz"> 115 </Efreq>            <!-- frequency of the electric field pulse in THz -->
-      <Epeak units="picosecond"> 0.2 </Epeak>     <!-- peak of the electric field pulse -->
-      <Esigma units="picosecond"> 0.05 </Esigma>  <!-- width (standard deviation of the gaussian) of the electric field pulse -->
-      <cbec> False </cbec>                        <!-- whether the BECs are computed by the NN -->
-      <bec mode="file"> bec.txt </bec>
     </ensemble>
 
      <motion mode='dynamics'> 
       <dynamics mode='eda-nve'>                  <!-- Electric Dipole Approximation (EDA) on top of a NVE simulation -->
         <timestep units='femtosecond'> 1 </timestep>
+        <efield>
+          <amp> [ 0 , 5e-2 , 0 ] </amp>             <!-- amplitude of the electric field pulse in a.u. -->
+          <freq units="thz"> 115 </freq>            <!-- frequency of the electric field pulse in THz -->
+          <peak units="picosecond"> 0.2 </peak>     <!-- peak of the electric field pulse -->
+          <sigma units="picosecond"> 0.05 </sigma>  <!-- width (standard deviation of the gaussian) of the electric field pulse -->
+        </efield>
+        <bec mode="none"> bec.txt </bec>
       </dynamics>
     </motion>
 

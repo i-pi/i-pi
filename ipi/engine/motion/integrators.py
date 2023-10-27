@@ -377,34 +377,40 @@ class EDAIntegrator(DummyIntegrator):
         super().bind(motion)
 
         dself = dd(self)
+        dself.time = depend_value("time", 0.0)
+        dself.mts_time = depend_value("mts_time", 0.0)
+
+        dpipe(dfrom=dd(self.eda).time, dto=dself.time)
+        dpipe(dto=dd(self.eda).mts_time, dfrom=dself.mts_time)
 
         dep = [
-            dd(self.ensemble).time,
-            # dd(self.ensemble.eda).mts_time,
+            dself.time,
+            dself.mts_time,
             dd(self.eda).bec,
-            # dd(self.ensemble.eda).Efield,
+            dd(self.eda).Efield,
         ]
         dself.EDAforces = depend_array(
             name="forces",
-            func=self._forces,
+            func=self._eda_forces,
             value=np.zeros((self.beads.nbeads, self.beads.natoms * 3)),
             dependencies=dep,
         )
-        dself.dt = depend_value(name="dt", value=0.0)
-        dpipe(dfrom=dd(motion).dt, dto=dself.dt)
-
         pass
 
     def pstep(self, level=0):
         """Velocity Verlet momentum propagator."""
+        if level == 0:
+            self.mts_time = dstrip(self.time)
+
         self.beads.p += self.EDAforces * self.pdt[level]
+        self.mts_time += dstrip(self.pdt[level])
         pass
 
-    def _forces(self):
+    def _eda_forces(self):
         """Compute the EDA contribution to the forces due to the polarization"""
         # if 'nbeads' > 1, then we will have to fix something here
         Z = self.eda.bec
-        E = self.eda.Efield(self.ensemble.time)
+        E = self.eda.Efield  # (self.mts_time)
         forces = Constants.e * Z @ E
         return forces
 
@@ -417,8 +423,10 @@ class EDANVEIntegrator(EDAIntegrator, NVEIntegrator):
     # author: Elia Stocco
 
     def pstep(self, level):
-        NVEIntegrator.pstep(self, level)  # the driver is called here
-        EDAIntegrator.pstep(self, level)
+        NVEIntegrator.pstep(
+            self, level
+        )  # the driver is called here: add nuclear and electronic forces (DFT)
+        EDAIntegrator.pstep(self, level)  # add the driving forces, i.e. q_e Z @ E(t)
         pass
 
     def step(self, step=None):

@@ -292,16 +292,12 @@ class Properties(dobject):
                 "dimension": "atomic_unit",
                 "help": "The external applied electric field (cartesian axes).",
                 "size": 3,
-                "func": (lambda: dd(self.ensemble.eda).Efield(self.ensemble.time)),
+                "func": (lambda: self.motion.eda.Efield),
             },
             "Eenvelope": {
                 "dimension": "atomic_unit",
                 "help": "The (gaussian) envelope function of the external applied electric field.",
-                "func": (
-                    lambda: dd(self.ensemble.eda.Electric_Field).Eenvelope(
-                        self.ensemble.time
-                    )
-                ),
+                "func": (lambda: self.motion.eda.Electric_Field.Eenvelope),
             },
             # "polarization": {
             #     "dimension": "polarization",
@@ -314,9 +310,9 @@ class Properties(dobject):
                 "help": "The electric dipole of the system (cartesian axes).",
                 "size": 3,
                 "func": (
-                    lambda bead="-1": self.ensemble.eda.dipole.mean(axis=0)
+                    lambda bead="-1": self.motion.eda.dipole.mean(axis=0)
                     if int(bead) < 0
-                    else self.ensemble.eda.dipole[int(bead)]
+                    else self.motion.eda.dipole[int(bead)]
                 ),
             },
             "conserved": {
@@ -2687,7 +2683,7 @@ class Trajectories(dobject):
                 "dimension": "number",
                 "help": "The BEC tensors in cartesian coordinates.",
                 "func": (
-                    lambda: self.system.ensemble.eda.Born_Charges.bec
+                    lambda: self.system.motion.eda.Born_Charges.bec
                 ),  # ((self.system.beads.natoms,9)) ), # .flatten()
             },
             "extra": {

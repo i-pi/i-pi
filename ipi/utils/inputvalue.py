@@ -33,7 +33,6 @@ __all__ = [
     "InputAttribute",
     "InputArray",
     "input_default",
-    "InputTensor",
 ]
 
 
@@ -1364,41 +1363,3 @@ class InputArray(InputValue):
         # if the shape is not specified, assume the array is linear.
         if self.shape.fetch() == (0,):
             self.shape.store((len(self.value),))
-
-
-class InputTensor(InputArray):
-    attribs = copy(InputArray.attribs)
-
-    # attribs["shape"] = (
-    #     InputAttribute,
-    #     {"dtype": tuple, "help": "The shape of the tensor.", "default": (0,0)},
-    # )
-    attribs["mode"] = (
-        InputAttribute,
-        {
-            "dtype": str,
-            "default": "none",
-            "options": ["manual", "file", "none", "otf"],
-            "help": "If 'mode' is 'otf', then the array is computed on the fly. If 'none', then the array is empty."
-            + InputArray.attribs["mode"][1]["help"],
-        },
-    )
-
-    def parse(self, xml=None, text=""):
-        """Reads the data for an array from an xml file.
-
-        Args:
-           xml: An xml_node object containing the all the data for the parent
-              tag.
-           text: The data held between the start and end tags.
-        """
-        Input.parse(self, xml=xml, text=text)
-        mode = self.mode.fetch()
-        if mode in InputArray.attribs["mode"][1]["options"]:  # ['manual','file']
-            super().parse(xml, text)
-        elif mode == "none":
-            self.value = np.nan
-        elif mode == "otf":
-            self.value = np.nan
-        else:
-            raise ValueError("error in InputTensor.parse")

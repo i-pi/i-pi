@@ -14,6 +14,8 @@ from ipi.inputs.thermostats import *
 from ipi.engine.cell import Cell
 from ipi.inputs.cell import *
 from copy import copy
+from ipi.utils.depend import dd, dpipe
+from ipi.utils.depend import dobject, depend_array, depend_value
 
 
 __all__ = ["InputElectricField", "InputBEC"]
@@ -75,13 +77,18 @@ class InputElectricField(Input):
     default_help = "Simulates an external time dependent electric field"
     default_label = "Efield"
 
-    def __init__(self, *argv, **kargw):
-        super().__init__(*argv, **kargw)
-        pass
+    # def __init__(self, *argv, **kargw):
+    #     super().__init__(*argv, **kargw)
+    #     pass
 
-    def store(self, Efield):
-        for k in self.fields.keys():
-            getattr(self, k).store(getattr(Efield, k))
+    def store(self, Efield: ElectricField):
+        self.amp.store(Efield.amp)
+        self.freq.store(Efield.freq)
+        self.phase.store(Efield.phase)
+        self.peak.store(Efield.peak)
+        self.sigma.store(Efield.sigma)
+        # for k in self.fields.keys():
+        #     getattr(self, k).store(getattr(Efield, k))
         return
 
     def fetch(self):
@@ -94,24 +101,57 @@ class InputElectricField(Input):
         )
 
 
-class InputBEC(InputTensor):
+class InputBEC(Input):
+    attribs = copy(InputArray.attribs)
 
-    """Born Effective Charges field input class."""
+    attribs["mode"] = (
+        InputAttribute,
+        {
+            "dtype": str,
+            "default": "none",
+            "options": ["driver", "manual", "file", "none"],
+            "help": "If 'mode' is 'DFPT', then the array is computed on the fly. "
+            + InputArray.attribs["mode"][1]["help"],
+        },
+    )
 
-    attribs = copy(InputTensor.attribs)
+    def __init__(self, *argv, **kargw):
+        super().__init__()
+        self.bec = InputArray(*argv, **kargw)  # depend_array("bec",0.0)
+        # super().__init__(*argv, **kargw)
+        pass
 
-    default_help = "Simulates an external time dependent electric field"
-    default_label = "Efield"
+    def parse(self, xml=None, text=""):
+        """Reads the data for an array from an xml file.
 
-    # def __init__(self,*argv, **kargw):
-    #     super().__init__(*argv, **kargw)
-    #     pass
+        Args:
+           xml: An xml_node object containing the all the data for the parent
+              tag.
+           text: The data held between the start and end tags.
+        """
+        Input.parse(self, xml=xml, text=text)
+        mode = self.mode.fetch()
+        if mode in ["manual", "file"]:  # ['manual','file']
+            self.bec.parse(xml, text)
+        elif mode == "none":
+            self.bec.value = np.full((0, 0), np.nan)
+        elif mode == "driver":
+            self.bec.value = np.full((0, 0), np.nan)
+        else:
+            raise ValueError("error in InputBEC.parse")
 
-    def store(self, BEC):
-        for k in self.fields.keys():
-            getattr(self, k).store(getattr(BEC, k))
+    def store(self, bec):
+        if isinstance(bec, BEC):
+            self.bec.store(bec.bec)
+            # super().store(bec.bec,"number")
+        else:
+            # self.bec.store(bec.bec)
+            super().store(bec)
+        # self.bec.store(bec)
         return
 
     def fetch(self):
         super().fetch()
-        return BEC(cbec=self.mode == "otf", bec=self.value.reshape((-1, 3)))
+        return BEC(
+            cbec=self.mode.fetch() == "driver", bec=self.bec.fetch().reshape((-1, 3))
+        )
