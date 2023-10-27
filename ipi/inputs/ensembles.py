@@ -105,50 +105,50 @@ class InputEnsemble(Input):
                 "help": "The internal time for this system",
             },
         ),
-        "Eamp": (
-            InputArray,
-            {
-                "dtype": float,
-                "default": np.zeros(3),
-                "help": "The amplitude of the external electric field (in cartesian coordinates)",
-                "dimension": "electric-field",
-            },
-        ),
-        "Efreq": (
-            InputValue,
-            {
-                "dtype": float,
-                "default": 0.0,
-                "help": "The pulsation of the external electric field",
-                "dimension": "frequency",
-            },
-        ),
-        "Ephase": (
-            InputValue,
-            {
-                "dtype": float,
-                "default": 0.0,
-                "help": "The phase of the external electric field (in rad)",
-            },
-        ),
-        "Epeak": (
-            InputValue,
-            {
-                "dtype": float,
-                "default": 0.0,
-                "help": "The time when the external electric field gets its maximum value",
-                "dimension": "time",
-            },
-        ),
-        "Esigma": (
-            InputValue,
-            {
-                "dtype": float,
-                "default": np.inf,
-                "help": "The standard deviations (time) of the gaussian envelope function of the external electric field",
-                "dimension": "time",
-            },
-        ),
+        # "amp": (
+        #     InputArray,
+        #     {
+        #         "dtype": float,
+        #         "default": np.zeros(3),
+        #         "help": "The amplitude of the external electric field (in cartesian coordinates)",
+        #         "dimension": "electric-field",
+        #     },
+        # ),
+        # "freq": (
+        #     InputValue,
+        #     {
+        #         "dtype": float,
+        #         "default": 0.0,
+        #         "help": "The pulsation of the external electric field",
+        #         "dimension": "frequency",
+        #     },
+        # ),
+        # "phase": (
+        #     InputValue,
+        #     {
+        #         "dtype": float,
+        #         "default": 0.0,
+        #         "help": "The phase of the external electric field (in rad)",
+        #     },
+        # ),
+        # "peak": (
+        #     InputValue,
+        #     {
+        #         "dtype": float,
+        #         "default": 0.0,
+        #         "help": "The time when the external electric field gets its maximum value",
+        #         "dimension": "time",
+        #     },
+        # ),
+        # "sigma": (
+        #     InputValue,
+        #     {
+        #         "dtype": float,
+        #         "default": np.inf,
+        #         "help": "The standard deviations (time) of the gaussian envelope function of the external electric field",
+        #         "dimension": "time",
+        #     },
+        # ),
         # "cdip": (
         #     InputValue,
         #     {
@@ -157,22 +157,22 @@ class InputEnsemble(Input):
         #         "help": "Wheter the dipole is returned by the driver",
         #     },
         # ),
-        "cbec": (
-            InputValue,
-            {
-                "dtype": bool,
-                "default": False,
-                "help": "Wheter the BEC tensors are computed on the fly by the driver, or read from file and kept fixed during the dynamics",
-            },
-        ),
-        "bec": (
-            InputBEC,
-            {
-                "dtype": float,
-                "default": input_default(factory=np.zeros, args=(0,)),
-                "help": "The Born Effective Charges tensors (cartesian coordinates)",
-            },
-        ),
+        # "cbec": (
+        #     InputValue,
+        #     {
+        #         "dtype": bool,
+        #         "default": False,
+        #         "help": "Wheter the BEC tensors are computed on the fly by the driver, or read from file and kept fixed during the dynamics",
+        #     },
+        # ),
+        # "bec": (
+        #     InputBEC,
+        #     {
+        #         "dtype": float,
+        #         "default": input_default(factory=np.zeros, args=(0,)),
+        #         "help": "The Born Effective Charges tensors (cartesian coordinates)",
+        #     },
+        # ),
     }
     dynamic = {}
 
@@ -195,14 +195,14 @@ class InputEnsemble(Input):
         self.bias_weights.store(ens.bweights)
         self.hamiltonian_weights.store(ens.hweights)
         self.time.store(ens.time)
-        self.Eamp.store(ens.Eamp)
-        self.Efreq.store(ens.Efreq)
-        self.Ephase.store(ens.Ephase)
-        self.Epeak.store(ens.Epeak)
-        self.Esigma.store(ens.Esigma)
-        self.bec.store(ens.bec)
-        # self.cdip.store(ens.cdip)
-        self.cbec.store(ens.cbec)
+        # self.amp.store(ens.amp)
+        # self.freq.store(ens.freq)
+        # self.phase.store(ens.phase)
+        # self.peak.store(ens.peak)
+        # self.sigma.store(ens.sigma)
+        # self.bec.store(ens.bec)
+        # # self.cdip.store(ens.cdip)
+        # self.cbec.store(ens.cbec)
 
     def fetch(self):
         """Creates an ensemble object.
@@ -223,15 +223,15 @@ class InputEnsemble(Input):
             bweights=self.bias_weights.fetch(),
             hweights=self.hamiltonian_weights.fetch(),
             time=self.time.fetch(),
-            Eamp=self.Eamp.fetch(),
-            Efreq=self.Efreq.fetch(),
-            Ephase=self.Ephase.fetch(),
-            Epeak=self.Epeak.fetch(),
-            Esigma=self.Esigma.fetch(),
-            bec=self.bec.fetch(),
+            # amp=self.amp.fetch(),
+            # freq=self.freq.fetch(),
+            # phase=self.phase.fetch(),
+            # peak=self.peak.fetch(),
+            # sigma=self.sigma.fetch(),
+            # bec=self.bec.fetch(),
             # cdip=self.cdip.fetch(),
             # tacc=self.tacc.fetch(),
-            cbec=self.cbec.fetch(),
+            # cbec=self.cbec.fetch(),
         )
 
         return ens

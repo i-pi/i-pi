@@ -18,6 +18,7 @@ from ipi.engine.thermostats import Thermostat
 from ipi.engine.barostats import Barostat
 from ipi.utils.softexit import softexit
 from ipi.engine.motion.integrators import *
+from ipi.engine.eda import EDA
 
 # __all__ = ['Dynamics', 'NVEIntegrator', 'NVTIntegrator', 'NPTIntegrator', 'NSTIntegrator', 'SCIntegrator`']
 
@@ -58,6 +59,8 @@ class Dynamics(Motion):
         fixcom=False,
         fixatoms=None,
         nmts=None,
+        efield=None,
+        bec=None,
     ):
         """Initialises a "dynamics" motion object.
 
@@ -125,6 +128,12 @@ class Dynamics(Motion):
             self.fixatoms = np.zeros(0, int)
         else:
             self.fixatoms = fixatoms
+
+        # repr(efield)
+        # repr(bec)
+        self.efield = efield
+        self.bec = bec
+        self.eda = EDA(self.efield, self.bec)  # cdip
 
     def get_fixdof(self):
         """Calculate the number of fixed degrees of freedom, required for
@@ -200,9 +209,6 @@ class Dynamics(Motion):
             nmts=len(self.nmts),
         )
 
-        # now that the timesteps are decided, we proceed to bind the integrator.
-        self.integrator.bind(self)
-
         self.ensemble.add_econs(dthrm.ethermo)
         self.ensemble.add_econs(dbaro.ebaro)
 
@@ -210,6 +216,11 @@ class Dynamics(Motion):
         self.ensemble.add_xlpot(dbaro.pot)
         self.ensemble.add_xlpot(dbaro.cell_jacobian)
         self.ensemble.add_xlkin(dbaro.kin)
+
+        self.eda.bind(self.ensemble, self.enstype)
+
+        # now that the timesteps are decided, we proceed to bind the integrator.
+        self.integrator.bind(self)
 
         # applies constraints immediately after initialization.
         self.integrator.pconstraints()

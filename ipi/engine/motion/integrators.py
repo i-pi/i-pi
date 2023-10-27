@@ -68,6 +68,7 @@ class DummyIntegrator(dobject):
         self.fixcom = motion.fixcom
         self.fixatoms = motion.fixatoms
         self.enstype = motion.enstype
+        self.eda = motion.eda
 
         dself = dd(self)
         dmotion = dd(motion)
@@ -369,19 +370,19 @@ class EDAIntegrator(DummyIntegrator):
     # information: not included in __all__
 
     def __init__(self):
-        super(EDAIntegrator, self).__init__()
+        super().__init__()
 
     def bind(self, motion):
         """bind variables"""
-        super(EDAIntegrator, self).bind(motion)
+        super().bind(motion)
 
         dself = dd(self)
 
         dep = [
             dd(self.ensemble).time,
-            dd(self.ensemble.eda).cptime,
-            dd(self.ensemble.eda).bec,
-            dd(self.ensemble.eda).Efield,
+            # dd(self.ensemble.eda).mts_time,
+            dd(self.eda).bec,
+            # dd(self.ensemble.eda).Efield,
         ]
         dself.EDAforces = depend_array(
             name="forces",
@@ -402,8 +403,8 @@ class EDAIntegrator(DummyIntegrator):
     def _forces(self):
         """Compute the EDA contribution to the forces due to the polarization"""
         # if 'nbeads' > 1, then we will have to fix something here
-        Z = self.ensemble.eda.bec
-        E = dd(self.ensemble.eda).Efield(self.ensemble.eda.time)
+        Z = self.eda.bec
+        E = self.eda.Efield(self.ensemble.time)
         forces = Constants.e * Z @ E
         return forces
 

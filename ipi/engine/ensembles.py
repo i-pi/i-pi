@@ -83,15 +83,15 @@ class Ensemble(dobject):
         bweights=None,
         hweights=None,
         time=0.0,
-        Eamp=None,
-        Efreq=None,
-        Ephase=None,
-        Epeak=None,
-        Esigma=None,
-        bec=None,
+        # amp=None,
+        # freq=None,
+        # phase=None,
+        # peak=None,
+        # sigma=None,
+        # bec=None,
         # cdip=True,
         # tacc=0.0,
-        cbec=False,
+        # cbec=False,
     ):
         """Initialises Ensemble.
 
@@ -149,44 +149,44 @@ class Ensemble(dobject):
 
         # ES
 
-        if Epeak is not None and Epeak < 0:
-            raise ValueError(
-                "Epeak < 0: the peak of the external electric field can only be positive"
-            )
-        if Esigma is not None and Esigma < 0:
-            raise ValueError(
-                "Esigma < 0: the standard deviation of the gaussian envelope function of the external electric field has to be positive"
-            )
+        # if peak is not None and peak < 0:
+        #     raise ValueError(
+        #         "peak < 0: the peak of the external electric field can only be positive"
+        #     )
+        # if sigma is not None and sigma < 0:
+        #     raise ValueError(
+        #         "sigma < 0: the standard deviation of the gaussian envelope function of the external electric field has to be positive"
+        #     )
 
         # Internal time counter
         dself.time = depend_value(name="time", value=time)
 
         #
-        dself.Eamp = depend_array(
-            name="Eamp", value=Eamp if Eamp is not None else np.zeros(3)
-        )
-        dself.Efreq = depend_value(
-            name="Efreq", value=Efreq if Efreq is not None else 0.0
-        )
-        dself.Ephase = depend_value(
-            name="Ephase", value=Ephase if Ephase is not None else 0.0
-        )
-        dself.Epeak = depend_value(
-            name="Epeak", value=Epeak if Epeak is not None else 0.0
-        )
-        dself.Esigma = depend_value(
-            name="Esigma", value=Esigma if Esigma is not None else np.inf
-        )
-        dself.bec = depend_array(
-            name="bec", value=bec if bec is not None else np.zeros(0)
-        )
-        dself.cbec = depend_array(name="cbec", value=cbec)
+        # dself.amp = depend_array(
+        #     name="amp", value=amp if amp is not None else np.zeros(3)
+        # )
+        # dself.freq = depend_value(
+        #     name="freq", value=freq if freq is not None else 0.0
+        # )
+        # dself.phase = depend_value(
+        #     name="phase", value=phase if phase is not None else 0.0
+        # )
+        # dself.peak = depend_value(
+        #     name="peak", value=peak if peak is not None else 0.0
+        # )
+        # dself.sigma = depend_value(
+        #     name="sigma", value=sigma if sigma is not None else np.inf
+        # )
+        # dself.bec = depend_array(
+        #     name="bec", value=bec if bec is not None else np.zeros(0)
+        # )
+        # dself.cbec = depend_array(name="cbec", value=cbec)
         # dself.cdip = depend_array(name="cdip", value=cdip)
         # dself.tacc   = depend_array(name="tacc"   ,value=tacc)
 
-        self.eda = EDA(Eamp, Efreq, Ephase, Epeak, Esigma, cbec, bec) # cdip
+        # self.eda = EDA(amp, freq, phase, peak, sigma, cbec, bec) # cdip
         # try :
-        #     self.eda = EDA(Eamp,Efreq,Ephase,Epeak,Esigma,cdip,cbec,bec)
+        #     self.eda = EDA(amp,freq,phase,peak,sigma,cdip,cbec,bec)
         # except :
         #     print("WARNING: 'EDA' object not instantiated")
 
@@ -201,15 +201,15 @@ class Ensemble(dobject):
             bweights=dstrip(self.bweights).copy(),
             hweights=dstrip(self.hweights).copy(),
             time=self.time,
-            Eamp=self.Eamp,
-            Efreq=self.Efreq,
-            Ephase=self.Ephase,
-            Epeak=self.Epeak,
-            Esigma=self.Esigma,
-            bec=self.bec,
+            # amp=self.amp,
+            # freq=self.freq,
+            # phase=self.phase,
+            # peak=self.peak,
+            # sigma=self.sigma,
+            # bec=self.bec,
             # cdip=self.cdip,
             # tacc=self.tacc,
-            cBEC=self.cBEC,
+            # cBEC=self.cBEC,
         )
 
     def bind(
@@ -295,7 +295,7 @@ class Ensemble(dobject):
         for k in xlkin:
             self.add_xlkin(k)
 
-        dself.eda.bind(self, enstype)
+        # dself.eda.bind(self, enstype)
 
     def add_econs(self, e):
         self._elist.append(e)

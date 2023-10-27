@@ -25,7 +25,6 @@ import numpy as np
 from ipi.utils.io.inputs.io_xml import *
 from ipi.utils.units import unit_to_internal, unit_to_user
 
-
 __all__ = [
     "Input",
     "InputDictionary",
@@ -34,7 +33,7 @@ __all__ = [
     "InputAttribute",
     "InputArray",
     "input_default",
-    "InputBEC",
+    "InputTensor",
 ]
 
 
@@ -196,6 +195,49 @@ class Input(object):
         self._defwrite = ""
         if self._default is not None:
             self._defwrite = self.write(name="%%NAME%%")
+
+    def __repr__(self):
+        """
+        Return a string representation of the object suitable for debugging.
+
+        This method generates a string that lists all non-private attributes of the object.
+
+        Returns:
+            str: A string representation of the object.
+        """
+        string = f"{type(self)}:\n"
+        keys = sorted(self.__dict__.keys())
+
+        def get_str(obj):
+            if isinstance(obj, Input):
+                return str(obj)
+            else:
+                return repr(obj)
+
+        def new_str(k):
+            return "\t{:s}= {:s}\n".format(k, get_str(self.__dict__[k]))
+
+        for k in keys:
+            if not k.startswith("_"):
+                string += new_str(k)
+        for k in keys:
+            if k.startswith("_"):
+                string += new_str(k)
+        return string
+
+    def __str__(self):
+        """
+        Return a human-readable string representation of the object.
+
+        This method returns a user-friendly string that represents the object's main value.
+
+        Returns:
+            str: A human-readable string representation of the object's value.
+        """
+        if hasattr(self, "value"):
+            return f"{type(self)}: {self.value}"
+        else:
+            return f"{type(self)}: /"
 
     def set_default(self):
         """Sets the default value of the object."""
@@ -1324,17 +1366,21 @@ class InputArray(InputValue):
             self.shape.store((len(self.value),))
 
 
-class InputBEC(InputArray):
+class InputTensor(InputArray):
     attribs = copy(InputArray.attribs)
 
+    # attribs["shape"] = (
+    #     InputAttribute,
+    #     {"dtype": tuple, "help": "The shape of the tensor.", "default": (0,0)},
+    # )
     attribs["mode"] = (
         InputAttribute,
         {
             "dtype": str,
             "default": "none",
-            "options": ["manual", "file", "none"],
-            # "help": "If 'mode' is 'DFPT', then the array is computed on the fly. "
-            # + InputArray.attribs["mode"][1]["help"],
+            "options": ["manual", "file", "none", "otf"],
+            "help": "If 'mode' is 'otf', then the array is computed on the fly. If 'none', then the array is empty."
+            + InputArray.attribs["mode"][1]["help"],
         },
     )
 
@@ -1349,10 +1395,10 @@ class InputBEC(InputArray):
         Input.parse(self, xml=xml, text=text)
         mode = self.mode.fetch()
         if mode in InputArray.attribs["mode"][1]["options"]:  # ['manual','file']
-            super(InputBEC, self).parse(xml, text)
+            super().parse(xml, text)
         elif mode == "none":
             self.value = np.nan
-        # elif mode == "fly":
-        #     self.value = mode
+        elif mode == "otf":
+            self.value = np.nan
         else:
-            raise ValueError("error in InputBEC.parse")
+            raise ValueError("error in InputTensor.parse")

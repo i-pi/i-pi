@@ -7,6 +7,7 @@
 import numpy as np
 import ipi.engine.thermostats
 import ipi.engine.barostats
+from ipi.engine.eda import ElectricField, BEC
 from ipi.utils.inputvalue import (
     InputDictionary,
     InputAttribute,
@@ -16,6 +17,7 @@ from ipi.utils.inputvalue import (
 )
 from ipi.inputs.barostats import InputBaro
 from ipi.inputs.thermostats import InputThermo
+from ipi.inputs.eda import InputElectricField, InputBEC
 
 
 __all__ = ["InputDynamics"]
@@ -97,6 +99,28 @@ class InputDynamics(InputDictionary):
                 "help": "Number of iterations for each MTS level (including the outer loop, that should in most cases have just one iteration).",
             },
         ),
+        "efield": (
+            InputElectricField,
+            {
+                "default": input_default(factory=ElectricField),
+                # "help": ElectricField.default_help,
+            },
+        ),
+        "bec": (
+            # InputBEC,
+            # {
+            #     # "dtype": float,
+            #     # "dimension" : "number",
+            #     "default": input_default(factory=BEC),
+            #     # "help": ElectricField.default_help,
+            # },
+            InputBEC,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.zeros, args=(0,)),
+                "help": "The Born Effective Charges tensors (cartesian coordinates)",
+            },
+        ),
     }
 
     dynamic = {}
@@ -120,6 +144,8 @@ class InputDynamics(InputDictionary):
         self.barostat.store(dyn.barostat)
         self.nmts.store(dyn.nmts)
         self.splitting.store(dyn.splitting)
+        self.efield.store(dyn.efield)
+        self.bec.store(dyn.bec)
 
     def fetch(self):
         """Creates an ensemble object.
@@ -132,4 +158,5 @@ class InputDynamics(InputDictionary):
         rv = super(InputDynamics, self).fetch()
         rv["mode"] = self.mode.fetch()
         rv["splitting"] = self.splitting.fetch()
+        print(self)
         return rv
