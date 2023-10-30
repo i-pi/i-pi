@@ -52,6 +52,7 @@ class InputElectricField(Input):
                 "dtype": float,
                 "default": 0.0,
                 "help": "The phase of the external electric field (in rad)",
+                "dimension": "number",
             },
         ),
         "peak": (
@@ -120,10 +121,25 @@ class InputBEC(Input):
             InputArray,
             {
                 "dtype": float,
+                "dimension" : "number",
                 "default": np.zeros(0),
+                "help" : "The Born Effective Charges tensors (cartesian coordinates)"
             },
         )
     }
+
+    default_help = "Deals with the Born Effective Charges tensors"
+    default_label = "BEC"
+
+    def __init__(self, *argc, **kargw):
+        """Initializes InputBEC.
+
+        Just calls the parent initialization function with appropriate arguments.
+        """
+        super().__init__(*argc, **kargw)
+        # super(type(self.bec),self.bec).__init__(*argc, **kargw)
+        self._dimension = self.bec._dimension
+        pass
 
     def parse(self, xml=None, text=""):
         """Reads the data for an array from an xml file.
