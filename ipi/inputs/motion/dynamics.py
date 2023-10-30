@@ -109,9 +109,9 @@ class InputDynamics(InputDictionary):
         "bec": (
             InputBEC,
             {
-                # "dtype": float,
+                "dtype": float,
                 "default": input_default(factory=BEC),
-                # "dimension" : "number",
+                "dimension" : "number",
                 "help": "The Born Effective Charges tensors (cartesian coordinates)",
             },
         ),

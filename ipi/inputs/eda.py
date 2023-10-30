@@ -102,7 +102,13 @@ class InputElectricField(Input):
         )
 
 
-class InputBEC(Input):
+class InputBEC(InputArray):
+    """BEC input class.
+
+    Class to set the Born Effective Charges. 
+    The rationale oif the functioning of this class is the same as in InputCell.
+    """
+
     attribs = copy(InputArray.attribs)
 
     attribs["mode"] = (
@@ -116,30 +122,19 @@ class InputBEC(Input):
         },
     )
 
-    fields = {
-        "bec": (
-            InputArray,
-            {
-                "dtype": float,
-                "dimension" : "number",
-                "default": np.zeros(0),
-                "help" : "The Born Effective Charges tensors (cartesian coordinates)"
-            },
-        )
-    }
-
     default_help = "Deals with the Born Effective Charges tensors"
     default_label = "BEC"
 
-    def __init__(self, *argc, **kargw):
+    def __init__(self, help=None, dimension=None, units=None, default=None, dtype=None):
         """Initializes InputBEC.
 
         Just calls the parent initialization function with appropriate arguments.
         """
-        super().__init__(*argc, **kargw)
-        # super(type(self.bec),self.bec).__init__(*argc, **kargw)
-        self._dimension = self.bec._dimension
-        pass
+        super().__init__(help=help, dimension="number", default=default, dtype=float)
+
+    def store(self, bec):
+        super(InputBEC,self).store(bec.bec)
+
 
     def parse(self, xml=None, text=""):
         """Reads the data for an array from an xml file.
@@ -152,16 +147,17 @@ class InputBEC(Input):
         Input.parse(self, xml=xml, text=text)
         mode = self.mode.fetch()
         if mode in ["manual", "file"]:  # ['manual','file']
-            self.bec.parse(xml, text)
+            super().parse(xml, text)
+            # self.parse(xml, text)
         elif mode == "none":
-            self.bec.value = np.full((0, 0), np.nan)
+            self.value = np.full((0, 0), np.nan)
         elif mode == "driver":
-            self.bec.value = np.full((0, 0), np.nan)
+            self.value = np.full((0, 0), np.nan)
         else:
             raise ValueError("error in InputBEC.parse")
 
     def fetch(self):
-        super().fetch()
+        bec = super(InputBEC, self).fetch()
         return BEC(
-            cbec=self.mode.fetch() == "driver", bec=self.bec.fetch().reshape((-1, 3))
+            cbec=self.mode.fetch() == "driver", bec=bec.reshape((-1, 3))
         )
