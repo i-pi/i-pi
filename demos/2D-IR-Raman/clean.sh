@@ -1,1 +1,1 @@
-rm *_noneqm simulation* out* log.lammps RESTART *.dat EXIT \#*
+rm *_noneqm simulation* out* log.lammps RESTART *.dat \#*
