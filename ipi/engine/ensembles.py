@@ -294,7 +294,6 @@ class Ensemble(dobject):
         for k in xlkin:
             self.add_xlkin(k)
 
-
     def add_econs(self, e):
         self._elist.append(e)
         dd(self).econs.add_dependency(e)
