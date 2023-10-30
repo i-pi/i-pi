@@ -2684,14 +2684,14 @@ class Trajectories(dobject):
                 "help": "The BEC tensors in cartesian coordinates.",
                 "func": (
                     lambda: self.system.motion.eda.Born_Charges.bec
-                ),  # ((self.system.beads.natoms,9)) ), # .flatten()
+                ),
             },
             "extra": {
                 "dimension": "number",
                 "help": "The extra string passed by the driver.",
                 "func": (
                     lambda bead=0: self.system.forces.extras["raw"][bead]
-                ),  # ((self.system.beads.natoms,9)) ), # .flatten()
+                ),
             },
             "forces": {
                 "dimension": "force",
