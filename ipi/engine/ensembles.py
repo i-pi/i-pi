@@ -220,7 +220,6 @@ class Ensemble(dobject):
         bforce,
         fflist,
         output_maker,
-        enstype,
         elist=[],
         xlpot=[],
         xlkin=[],
@@ -295,7 +294,6 @@ class Ensemble(dobject):
         for k in xlkin:
             self.add_xlkin(k)
 
-        # dself.eda.bind(self, enstype)
 
     def add_econs(self, e):
         self._elist.append(e)

@@ -13,6 +13,7 @@ appropriate conserved energy quantity for the ensemble of choice.
 import numpy as np
 from ipi.utils.depend import *
 from ipi.utils.units import Constants
+from ipi.engine.eda import EDA
 
 __all__ = [
     "DummyIntegrator",
@@ -68,7 +69,8 @@ class DummyIntegrator(dobject):
         self.fixcom = motion.fixcom
         self.fixatoms = motion.fixatoms
         self.enstype = motion.enstype
-        self.eda = motion.eda
+        if motion.enstype in EDA.integrators:
+            self.eda = motion.eda
 
         dself = dd(self)
         dmotion = dd(motion)

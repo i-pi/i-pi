@@ -7,7 +7,7 @@
 import numpy as np
 import ipi.engine.thermostats
 import ipi.engine.barostats
-from ipi.engine.eda import ElectricField, BEC
+from ipi.engine.eda import ElectricField, BEC, EDA
 from ipi.utils.inputvalue import (
     InputDictionary,
     InputAttribute,
@@ -138,8 +138,9 @@ class InputDynamics(InputDictionary):
         self.barostat.store(dyn.barostat)
         self.nmts.store(dyn.nmts)
         self.splitting.store(dyn.splitting)
-        self.efield.store(dyn.efield)
-        self.bec.store(dyn.bec)
+        if dyn.enstype in EDA.integrators:
+            self.efield.store(dyn.efield)
+            self.bec.store(dyn.bec)
 
     def fetch(self):
         """Creates an ensemble object.

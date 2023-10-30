@@ -131,9 +131,10 @@ class Dynamics(Motion):
 
         # repr(efield)
         # repr(bec)
-        self.efield = efield
-        self.bec = bec
-        self.eda = EDA(self.efield, self.bec)  # cdip
+        if self.enstype in EDA.integrators :
+            self.efield = efield
+            self.bec = bec
+            self.eda = EDA(self.efield, self.bec)  # cdip
         pass
 
     def get_fixdof(self):
@@ -218,7 +219,8 @@ class Dynamics(Motion):
         self.ensemble.add_xlpot(dbaro.cell_jacobian)
         self.ensemble.add_xlkin(dbaro.kin)
 
-        self.eda.bind(self.ensemble, self.enstype)
+        if self.enstype in EDA.integrators : 
+            self.eda.bind(self.ensemble, self.enstype)
 
         # now that the timesteps are decided, we proceed to bind the integrator.
         self.integrator.bind(self)

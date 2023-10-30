@@ -106,7 +106,6 @@ class System(dobject):
             self.forces,
             self.simul.fflist,
             simul.output_maker,
-            self.motion.enstype,
         )
         self.motion.bind(
             self.ensemble,
