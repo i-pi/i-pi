@@ -13,6 +13,7 @@
     <trajectory filename='momenta'>momenta</trajectory>             <!--   nuclear momenta (a.u.): p -->
     <trajectory filename='velocities'>velocities</trajectory>       <!--   nuclear momenta (a.u.): v -->
     <trajectory filename='positions'>positions</trajectory>         <!-- nuclear positions (a.u.): R -->
+    <trajectory format="txt" filename='bec'>bec</trajectory>         <!-- nuclear positions (a.u.): R -->
     <properties filename='properties.out' > [ step, time, conserved, kinetic_md, potential, Efield, Eenvelope ] </properties>
   </output>
 
@@ -44,7 +45,7 @@
           <peak units="picosecond"> 0.2 </peak>     <!-- peak of the electric field pulse -->
           <sigma units="picosecond"> 0.05 </sigma>  <!-- width (standard deviation of the gaussian) of the electric field pulse -->
         </efield>
-        <bec mode="none"> bec.txt </bec>
+        <bec mode="file"> bec.txt </bec>
       </dynamics>
     </motion>
 

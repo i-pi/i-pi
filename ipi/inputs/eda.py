@@ -115,11 +115,15 @@ class InputBEC(Input):
         },
     )
 
-    def __init__(self, *argv, **kargw):
-        super().__init__()
-        self.bec = InputArray(*argv, **kargw)  # depend_array("bec",0.0)
-        # super().__init__(*argv, **kargw)
-        pass
+    fields = {
+        "bec": (
+            InputArray,
+            {
+                "dtype" : float,
+                "default": np.zeros(0),
+            },
+        )
+    }
 
     def parse(self, xml=None, text=""):
         """Reads the data for an array from an xml file.
@@ -139,16 +143,6 @@ class InputBEC(Input):
             self.bec.value = np.full((0, 0), np.nan)
         else:
             raise ValueError("error in InputBEC.parse")
-
-    def store(self, bec):
-        if isinstance(bec, BEC):
-            self.bec.store(bec.bec)
-            # super().store(bec.bec,"number")
-        else:
-            # self.bec.store(bec.bec)
-            super().store(bec)
-        # self.bec.store(bec)
-        return
 
     def fetch(self):
         super().fetch()

@@ -107,17 +107,9 @@ class InputDynamics(InputDictionary):
             },
         ),
         "bec": (
-            # InputBEC,
-            # {
-            #     # "dtype": float,
-            #     # "dimension" : "number",
-            #     "default": input_default(factory=BEC),
-            #     # "help": ElectricField.default_help,
-            # },
             InputBEC,
             {
-                "dtype": float,
-                "default": input_default(factory=np.zeros, args=(0,)),
+                "default": input_default(factory=BEC),
                 "help": "The Born Effective Charges tensors (cartesian coordinates)",
             },
         ),
