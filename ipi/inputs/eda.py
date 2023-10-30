@@ -105,7 +105,7 @@ class InputElectricField(Input):
 class InputBEC(InputArray):
     """BEC input class.
 
-    Class to set the Born Effective Charges. 
+    Class to set the Born Effective Charges.
     The rationale oif the functioning of this class is the same as in InputCell.
     """
 
@@ -133,8 +133,7 @@ class InputBEC(InputArray):
         super().__init__(help=help, dimension="number", default=default, dtype=float)
 
     def store(self, bec):
-        super(InputBEC,self).store(bec.bec)
-
+        super(InputBEC, self).store(bec.bec)
 
     def parse(self, xml=None, text=""):
         """Reads the data for an array from an xml file.
@@ -158,6 +157,4 @@ class InputBEC(InputArray):
 
     def fetch(self):
         bec = super(InputBEC, self).fetch()
-        return BEC(
-            cbec=self.mode.fetch() == "driver", bec=bec.reshape((-1, 3))
-        )
+        return BEC(cbec=self.mode.fetch() == "driver", bec=bec.reshape((-1, 3)))

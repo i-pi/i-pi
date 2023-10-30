@@ -44,7 +44,7 @@ from ipi.inputs import (
     outputs,
     motion,
     smotion,
-    eda
+    eda,
 )
 
 src_dir = "../"
