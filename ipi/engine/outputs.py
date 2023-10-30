@@ -348,7 +348,7 @@ class TrajectoryOutput(BaseOutput):
             "extras_component",
             "forces_sc",
             "momenta",
-            "bec"
+            "bec",
         ]:
             # must write out trajectories for each bead, so must create b streams
 

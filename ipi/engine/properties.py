@@ -2682,16 +2682,12 @@ class Trajectories(dobject):
             "bec": {
                 "dimension": "number",
                 "help": "The BEC tensors in cartesian coordinates.",
-                "func": (
-                    lambda: self.system.motion.eda.Born_Charges.bec
-                ),
+                "func": (lambda: self.system.motion.eda.Born_Charges.bec),
             },
             "extra": {
                 "dimension": "number",
                 "help": "The extra string passed by the driver.",
-                "func": (
-                    lambda bead=0: self.system.forces.extras["raw"][bead]
-                ),
+                "func": (lambda bead=0: self.system.forces.extras["raw"][bead]),
             },
             "forces": {
                 "dimension": "force",
