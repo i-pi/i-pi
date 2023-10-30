@@ -149,9 +149,9 @@ class InputBEC(InputArray):
             super().parse(xml, text)
             # self.parse(xml, text)
         elif mode == "none":
-            self.value = np.full((0, 0), np.nan)
+            self.value = np.full((0, 3), np.nan)
         elif mode == "driver":
-            self.value = np.full((0, 0), np.nan)
+            self.value = np.full((0, 3), np.nan)
         else:
             raise ValueError("error in InputBEC.parse")
 

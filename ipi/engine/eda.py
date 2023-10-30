@@ -11,7 +11,7 @@ class BEC(dobject):
     def __init__(self, cbec=None, bec=None):
         self.cbec = cbec
         if bec is None:
-            bec = np.nan
+            bec = np.full((0, 3), np.nan)
         dd(self).bec = depend_array(name="bec", value=bec)
         pass
 
