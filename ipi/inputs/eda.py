@@ -119,7 +119,7 @@ class InputBEC(Input):
         "bec": (
             InputArray,
             {
-                "dtype" : float,
+                "dtype": float,
                 "default": np.zeros(0),
             },
         )
