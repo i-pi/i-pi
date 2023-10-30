@@ -6,8 +6,8 @@
 ! Date: 03 April 2022
 ! Description: Simple test program to call stand-alone
 !              Implements water dipole and polarizability 
-!              functions for qTIP4P/f model similar to 
-!              P. Hamm, J. Chem. Phys. 141, 184201 (2014).
+!              functions for qTIP4P/f model described in
+!              T. Begusic, G. A. Blake, Nat. Commun. 14, 1950 (2023)
 !
 ! NOTES:
 ! (1) ATOMIC UNITS ARE USED THROUGHOUT
