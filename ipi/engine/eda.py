@@ -101,14 +101,17 @@ class BEC(dobject):
         This method trasform the BEC tensors into another data structure, suitable for computation.
         A lambda function is also returned to perform fast matrix multiplication.
         """
-        try : 
+        try:
             return self.bec.reshape((self.nbeads, 3 * self.natoms, 3))
         except:
-            line = "Error in '_get_fixed_BEC': i-PI is going to stop.\n" +\
-                    "The BEC tensor is: " + str(self.bec) + \
-                    "\nPay attention that in 'input.xml' you should have the following line:\n" +\
-                    "\t'<bec mode=\"file\"> filepath </bec>'\n" + \
-                    "The default mode could be 'none'. Please change it."
+            line = (
+                "Error in '_get_fixed_BEC': i-PI is going to stop.\n"
+                + "The BEC tensor is: "
+                + str(self.bec)
+                + "\nPay attention that in 'input.xml' you should have the following line:\n"
+                + "\t'<bec mode=\"file\"> filepath </bec>'\n"
+                + "The default mode could be 'none'. Please change it."
+            )
             raise ValueError(line)
 
 
@@ -246,7 +249,7 @@ class ElectricField(dobject):
             dself.Efield = depend_array(
                 name="Efield",
                 value=np.zeros(3, float),
-                func=lambda time=None : np.zeros(3, float)
+                func=lambda time=None: np.zeros(3, float),
             )
         pass
 
@@ -259,7 +262,7 @@ class ElectricField(dobject):
         self.sigma.store(ef.sigma)
         pass
 
-    def _get_Efield(self,time=None):
+    def _get_Efield(self, time=None):
         """Get the value of the external electric field (cartesian axes)"""
         if time is None:
             time = self.mts_time
@@ -333,7 +336,7 @@ class EDA(dobject):
 
         dpipe(dfrom=dd(self.Born_Charges).bec, dto=dself.bec)
         dpipe(dfrom=dd(self.Electric_Dipole).dipole, dto=dself.dipole)
-    
+
         pass
 
     def store(self, eda):
