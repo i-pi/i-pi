@@ -110,7 +110,7 @@ class InputBEC(Input):
             "dtype": str,
             "default": "none",
             "options": ["driver", "manual", "file", "none"],
-            "help": "If 'mode' is 'DFPT', then the array is computed on the fly. "
+            "help": "If 'mode' is 'driver', then the array is computed on the fly. "
             + InputArray.attribs["mode"][1]["help"],
         },
     )
