@@ -53,6 +53,7 @@
       INTEGER cbuf, rid, length
       CHARACTER(LEN=4096) :: initbuffer      ! it's unlikely a string this large will ever be passed...
       CHARACTER(LEN=4096) :: string,string2,trimmed  ! it's unlikely a string this large will ever be passed...
+      CHARACTER(LEN=30000) :: longbuffer, longstring
       DOUBLE PRECISION, ALLOCATABLE :: msgbuffer(:)
 
       ! PARAMETERS OF THE SYSTEM (CELL, ATOM POSITIONS, ...)
@@ -775,15 +776,15 @@
      &         initbuffer
             ELSEIF (vstyle==28) THEN ! returns the dipole, dipole derivative, and polarizability through initbuffer
                WRITE(string, '(a,3x,f15.8,a,f15.8,a,f15.8, 3x,a)') '{"dipole": [',dip(1),",",dip(2),",",dip(3),"],"
-               initbuffer = TRIM(string)
+               longbuffer = TRIM(string)
                WRITE(string2, *) "(a,3x,", 3*nat - 1, '(f15.8, ","),f15.8,3x,a)'
-               WRITE(string, string2) '"dipole_derivative": [',TRANSPOSE(dip_der),"],"
-               initbuffer = TRIM(initbuffer)//TRIM(string)
+               WRITE(longstring, string2) '"dipole_derivative": [',TRANSPOSE(dip_der),"],"
+               longbuffer = TRIM(longbuffer)//TRIM(longstring)
                WRITE(string, '(a,3x, 8(f15.8, ","),f15.8,3x,a)') '"polarizability": [',pol,"]}"
-               initbuffer = TRIM(initbuffer)//TRIM(string)
-               cbuf = LEN_TRIM(initbuffer)
+               longbuffer = TRIM(longbuffer)//TRIM(string)
+               cbuf = LEN_TRIM(longbuffer)
                CALL writebuffer(socket,cbuf)
-               CALL writebuffer(socket,TRIM(initbuffer),cbuf)
+               CALL writebuffer(socket,TRIM(longbuffer),cbuf)
             ELSE
                cbuf = 1 ! Size of the "extras" string
                CALL writebuffer(socket,cbuf) ! This would write out the "extras" string, but in this case we only use a dummy string.

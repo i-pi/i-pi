@@ -122,7 +122,7 @@ class ResponseFunction():
         r_t *= self.beta / (c * self.epsilon)
         r_t = np.gradient(r_t, self.step_print * self.delta_t, axis=0, edge_order=2) 
 
-        np.savetxt(self.out_name + self.op[0] + '_' + self.op[1] + '_neq_2d.dat', r_t)
+        np.savetxt(self.out_name + self.op[0] + '_' + self.op[1] + '_neq_2d.dat', r_t, fmt='%.5e')
 
 if __name__ == '__main__':
     from optparse import OptionParser
