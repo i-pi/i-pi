@@ -11,11 +11,8 @@ from ipi.engine.eda import ElectricField, BEC
 from ipi.engine.barostats import *
 from ipi.utils.inputvalue import *
 from ipi.inputs.thermostats import *
-from ipi.engine.cell import Cell
 from ipi.inputs.cell import *
 from copy import copy
-from ipi.utils.depend import dd, dpipe
-from ipi.utils.depend import dobject, depend_array, depend_value
 
 
 __all__ = ["InputElectricField", "InputBEC"]

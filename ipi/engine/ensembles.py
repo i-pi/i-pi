@@ -20,7 +20,6 @@ from ipi.engine.thermostats import *
 from ipi.engine.barostats import *
 from ipi.engine.motion.alchemy import *
 from ipi.engine.forces import Forces, ScaledForceComponent
-from ipi.engine.eda import EDA
 
 __all__ = ["Ensemble", "ensemble_swap"]
 
