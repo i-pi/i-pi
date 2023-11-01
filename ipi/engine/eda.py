@@ -226,8 +226,9 @@ class ElectricField(dobject):
     def bind(self, eda, enstype):
         self.enstype = enstype
         dself = dd(self)
-        dself.mts_time = depend_value(name="mts_time", value=0.0)
-        dpipe(dfrom=dd(eda).mts_time, dto=dd(self).mts_time)
+        # dself.mts_time = depend_value(name="mts_time", value=0.0)
+        # dpipe(dfrom=dd(eda).mts_time, dto=dd(self).mts_time)
+        dself.mts_time = dd(eda).mts_time
 
         # same dependencies for Eenvelope and its time derivative
         dep = [dself.mts_time, dself.peak, dself.sigma]

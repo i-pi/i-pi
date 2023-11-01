@@ -379,11 +379,14 @@ class EDAIntegrator(DummyIntegrator):
         super().bind(motion)
 
         dself = dd(self)
-        dself.time = depend_value("time", 0.0)
-        dself.mts_time = depend_value("mts_time", 0.0)
+        # dself.time = depend_value("time", 0.0)
+        # dself.mts_time = depend_value("mts_time", 0.0)
 
-        dpipe(dfrom=dd(self.eda).time, dto=dself.time)
-        dpipe(dto=dd(self.eda).mts_time, dfrom=dself.mts_time)
+        # dpipe(dfrom=dd(self.eda).time, dto=dself.time)
+        # dpipe(dto=dd(self.eda).mts_time, dfrom=dself.mts_time)
+
+        dself.time = dd(self.eda).time
+        dself.mts_time = dd(self.eda).mts_time
 
         dep = [
             dself.time,
