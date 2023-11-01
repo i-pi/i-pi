@@ -8,8 +8,8 @@ that apply an algorithm that updates the positions of the nuclei, and of an exte
 code that acts as a client and computes the electronic energy and forces.
 
 This is typically a patched version of an electronic structure code, but a
-simple self-contained Fortran driver that implements Lennard-Jones and
-Silvera-Goldman potentials is included for test purposes.
+simple self-contained Fortran driver that implements several simple interatomic
+potentials is included for test purposes.
 
 i-PI was originally developed to simulate the quantum mechanical nature of light
 nuclei by performing path integral molecular dynamics simulations,
@@ -20,7 +20,7 @@ strategies, from replica exchange to geometry optimization.
 Quick Setup and Test
 --------------------
 
-To use i-PI with already existing drivers, install and update using Pip:
+To use i-PI with an existing driver, install and update using Pip:
 
 Last version::
 ```bash
@@ -46,6 +46,7 @@ instructions. It is assumed that i-PI will
 be run from a Linux environment, with a recent version of Python, Numpy and
 gfortran, and that the terminal is initially in the i-pi package directory (the
 directory containing this file), which you can obtain by cloning the repository
+
 ```bash
 git clone https://github.com/i-pi/i-pi.git
 ```
@@ -63,18 +64,23 @@ make
 cd ../..
 ```
 
-### Run one of the examples
+### Examples and demos
 
-This will first start the wrapper in the background, redirecting the output to
+The `examples` and `demos` folders contain inputs for many different types of
+calculations based on i-PI. Examples are typically minimal use-cases of specific
+features, while demos are more structured, tutorial-like examples that show how
+to realize more complex setups, and also provide a brief discussion of the 
+underlying algorithms.
+
+To run these examples, you should typically start i-PI, redirecting the output to
 a log file, and then run a couple of instances of the driver code. The progress
-of the wrapper is followed by monitoring the log file with the `tail` Linux
-command.
+of the wrapper is followed by monitoring the log file with the `tail` Linux command.
 
 Optionally, you can make a copy of the directory with the example somewhere
-else if you want to keep the i-PI directory clean.
+else if you want to keep the i-PI directory clean. For example
 
 ```bash
-cd examples/tutorial/tutorial-1/
+cd demos/para-h2-tutorial/tutorial-1/
 i-pi tutorial-1.xml > log &
 i-pi-driver -h localhost -p 31415 -m sg -o 15 &
 i-pi-driver -h localhost -p 31415 -m sg -o 15 &

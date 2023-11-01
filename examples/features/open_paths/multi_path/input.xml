@@ -1,0 +1,161 @@
+<simulation verbosity='medium'>
+    <output prefix='simulation'>
+        <properties stride='8' filename='out'>  [ step, time{picosecond}, conserved , potential, kinetic_cv(2), kinetic_cv(1)] </properties>
+        <properties stride='8' filename='002.q'>  [ atom_x_path(002)] </properties>
+        <properties stride='8' filename='002.f'>  [ atom_f_path(002)] </properties>
+        <properties stride='8' filename='005.q'>  [ atom_x_path(005)] </properties>
+        <properties stride='8' filename='005.f'>  [ atom_f_path(005)] </properties>
+        <properties stride='8' filename='008.q'>  [ atom_x_path(008)] </properties>
+        <properties stride='8' filename='008.f'>  [ atom_f_path(008)] </properties>
+        <properties stride='8' filename='011.q'>  [ atom_x_path(011)] </properties>
+        <properties stride='8' filename='011.f'>  [ atom_f_path(011)] </properties>
+        <properties stride='8' filename='014.q'>  [ atom_x_path(014)] </properties>
+        <properties stride='8' filename='014.f'>  [ atom_f_path(014)] </properties>
+        <properties stride='8' filename='017.q'>  [ atom_x_path(017)] </properties>
+        <properties stride='8' filename='017.f'>  [ atom_f_path(017)] </properties>
+        <properties stride='8' filename='020.q'>  [ atom_x_path(020)] </properties>
+        <properties stride='8' filename='020.f'>  [ atom_f_path(020)] </properties>
+        <properties stride='8' filename='023.q'>  [ atom_x_path(023)] </properties>
+        <properties stride='8' filename='023.f'>  [ atom_f_path(023)] </properties>
+        <properties stride='8' filename='026.q'>  [ atom_x_path(026)] </properties>
+        <properties stride='8' filename='026.f'>  [ atom_f_path(026)] </properties>
+        <properties stride='8' filename='029.q'>  [ atom_x_path(029)] </properties>
+        <properties stride='8' filename='029.f'>  [ atom_f_path(029)] </properties>
+        <properties stride='8' filename='032.q'>  [ atom_x_path(032)] </properties>
+        <properties stride='8' filename='032.f'>  [ atom_f_path(032)] </properties>
+        <properties stride='8' filename='035.q'>  [ atom_x_path(035)] </properties>
+        <properties stride='8' filename='035.f'>  [ atom_f_path(035)] </properties>
+        <properties stride='8' filename='038.q'>  [ atom_x_path(038)] </properties>
+        <properties stride='8' filename='038.f'>  [ atom_f_path(038)] </properties>
+        <properties stride='8' filename='041.q'>  [ atom_x_path(041)] </properties>
+        <properties stride='8' filename='041.f'>  [ atom_f_path(041)] </properties>
+        <properties stride='8' filename='044.q'>  [ atom_x_path(044)] </properties>
+        <properties stride='8' filename='044.f'>  [ atom_f_path(044)] </properties>
+        <properties stride='8' filename='047.q'>  [ atom_x_path(047)] </properties>
+        <properties stride='8' filename='047.f'>  [ atom_f_path(047)] </properties>
+        <properties stride='8' filename='050.q'>  [ atom_x_path(050)] </properties>
+        <properties stride='8' filename='050.f'>  [ atom_f_path(050)] </properties>
+        <properties stride='8' filename='053.q'>  [ atom_x_path(053)] </properties>
+        <properties stride='8' filename='053.f'>  [ atom_f_path(053)] </properties>
+        <properties stride='8' filename='056.q'>  [ atom_x_path(056)] </properties>
+        <properties stride='8' filename='056.f'>  [ atom_f_path(056)] </properties>
+        <properties stride='8' filename='059.q'>  [ atom_x_path(059)] </properties>
+        <properties stride='8' filename='059.f'>  [ atom_f_path(059)] </properties>
+        <properties stride='8' filename='062.q'>  [ atom_x_path(062)] </properties>
+        <properties stride='8' filename='062.f'>  [ atom_f_path(062)] </properties>
+        <properties stride='8' filename='065.q'>  [ atom_x_path(065)] </properties>
+        <properties stride='8' filename='065.f'>  [ atom_f_path(065)] </properties>
+        <properties stride='8' filename='068.q'>  [ atom_x_path(068)] </properties>
+        <properties stride='8' filename='068.f'>  [ atom_f_path(068)] </properties>
+        <properties stride='8' filename='071.q'>  [ atom_x_path(071)] </properties>
+        <properties stride='8' filename='071.f'>  [ atom_f_path(071)] </properties>
+        <properties stride='8' filename='074.q'>  [ atom_x_path(074)] </properties>
+        <properties stride='8' filename='074.f'>  [ atom_f_path(074)] </properties>
+        <properties stride='8' filename='077.q'>  [ atom_x_path(077)] </properties>
+        <properties stride='8' filename='077.f'>  [ atom_f_path(077)] </properties>
+        <properties stride='8' filename='080.q'>  [ atom_x_path(080)] </properties>
+        <properties stride='8' filename='080.f'>  [ atom_f_path(080)] </properties>
+        <properties stride='8' filename='083.q'>  [ atom_x_path(083)] </properties>
+        <properties stride='8' filename='083.f'>  [ atom_f_path(083)] </properties>
+        <properties stride='8' filename='086.q'>  [ atom_x_path(086)] </properties>
+        <properties stride='8' filename='086.f'>  [ atom_f_path(086)] </properties>
+        <properties stride='8' filename='089.q'>  [ atom_x_path(089)] </properties>
+        <properties stride='8' filename='089.f'>  [ atom_f_path(089)] </properties>
+        <properties stride='8' filename='092.q'>  [ atom_x_path(092)] </properties>
+        <properties stride='8' filename='092.f'>  [ atom_f_path(092)] </properties>
+        <properties stride='8' filename='095.q'>  [ atom_x_path(095)] </properties>
+        <properties stride='8' filename='095.f'>  [ atom_f_path(095)] </properties>
+        <properties stride='8' filename='098.q'>  [ atom_x_path(098)] </properties>
+        <properties stride='8' filename='098.f'>  [ atom_f_path(098)] </properties>
+        <properties stride='8' filename='101.q'>  [ atom_x_path(101)] </properties>
+        <properties stride='8' filename='101.f'>  [ atom_f_path(101)] </properties>
+        <properties stride='8' filename='104.q'>  [ atom_x_path(104)] </properties>
+        <properties stride='8' filename='104.f'>  [ atom_f_path(104)] </properties>
+        <properties stride='8' filename='107.q'>  [ atom_x_path(107)] </properties>
+        <properties stride='8' filename='107.f'>  [ atom_f_path(107)] </properties>
+        <properties stride='8' filename='110.q'>  [ atom_x_path(110)] </properties>
+        <properties stride='8' filename='110.f'>  [ atom_f_path(110)] </properties>
+        <properties stride='8' filename='113.q'>  [ atom_x_path(113)] </properties>
+        <properties stride='8' filename='113.f'>  [ atom_f_path(113)] </properties>
+        <properties stride='8' filename='116.q'>  [ atom_x_path(116)] </properties>
+        <properties stride='8' filename='116.f'>  [ atom_f_path(116)] </properties>
+        <properties stride='8' filename='119.q'>  [ atom_x_path(119)] </properties>
+        <properties stride='8' filename='119.f'>  [ atom_f_path(119)] </properties>
+        <properties stride='8' filename='122.q'>  [ atom_x_path(122)] </properties>
+        <properties stride='8' filename='122.f'>  [ atom_f_path(122)] </properties>
+        <properties stride='8' filename='125.q'>  [ atom_x_path(125)] </properties>
+        <properties stride='8' filename='125.f'>  [ atom_f_path(125)] </properties>
+        <properties stride='8' filename='128.q'>  [ atom_x_path(128)] </properties>
+        <properties stride='8' filename='128.f'>  [ atom_f_path(128)] </properties>
+        <properties stride='8' filename='131.q'>  [ atom_x_path(131)] </properties>
+        <properties stride='8' filename='131.f'>  [ atom_f_path(131)] </properties>
+        <properties stride='8' filename='134.q'>  [ atom_x_path(134)] </properties>
+        <properties stride='8' filename='134.f'>  [ atom_f_path(134)] </properties>
+        <properties stride='8' filename='137.q'>  [ atom_x_path(137)] </properties>
+        <properties stride='8' filename='137.f'>  [ atom_f_path(137)] </properties>
+        <properties stride='8' filename='140.q'>  [ atom_x_path(140)] </properties>
+        <properties stride='8' filename='140.f'>  [ atom_f_path(140)] </properties>
+        <properties stride='8' filename='143.q'>  [ atom_x_path(143)] </properties>
+        <properties stride='8' filename='143.f'>  [ atom_f_path(143)] </properties>
+        <properties stride='8' filename='146.q'>  [ atom_x_path(146)] </properties>
+        <properties stride='8' filename='146.f'>  [ atom_f_path(146)] </properties>
+        <properties stride='8' filename='149.q'>  [ atom_x_path(149)] </properties>
+        <properties stride='8' filename='149.f'>  [ atom_f_path(149)] </properties>
+        <properties stride='8' filename='152.q'>  [ atom_x_path(152)] </properties>
+        <properties stride='8' filename='152.f'>  [ atom_f_path(152)] </properties>
+        <properties stride='8' filename='155.q'>  [ atom_x_path(155)] </properties>
+        <properties stride='8' filename='155.f'>  [ atom_f_path(155)] </properties>
+        <properties stride='8' filename='158.q'>  [ atom_x_path(158)] </properties>
+        <properties stride='8' filename='158.f'>  [ atom_f_path(158)] </properties>
+        <properties stride='8' filename='161.q'>  [ atom_x_path(161)] </properties>
+        <properties stride='8' filename='161.f'>  [ atom_f_path(161)] </properties>
+        <properties stride='8' filename='164.q'>  [ atom_x_path(164)] </properties>
+        <properties stride='8' filename='164.f'>  [ atom_f_path(164)] </properties>
+        <properties stride='8' filename='167.q'>  [ atom_x_path(167)] </properties>
+        <properties stride='8' filename='167.f'>  [ atom_f_path(167)] </properties>
+        <properties stride='8' filename='170.q'>  [ atom_x_path(170)] </properties>
+        <properties stride='8' filename='170.f'>  [ atom_f_path(170)] </properties>
+        <properties stride='8' filename='173.q'>  [ atom_x_path(173)] </properties>
+        <properties stride='8' filename='173.f'>  [ atom_f_path(173)] </properties>
+        <properties stride='8' filename='176.q'>  [ atom_x_path(176)] </properties>
+        <properties stride='8' filename='176.f'>  [ atom_f_path(176)] </properties>
+        <properties stride='8' filename='179.q'>  [ atom_x_path(179)] </properties>
+        <properties stride='8' filename='179.f'>  [ atom_f_path(179)] </properties>
+        <properties stride='8' filename='182.q'>  [ atom_x_path(182)] </properties>
+        <properties stride='8' filename='182.f'>  [ atom_f_path(182)] </properties>
+        <properties stride='8' filename='185.q'>  [ atom_x_path(185)] </properties>
+        <properties stride='8' filename='185.f'>  [ atom_f_path(185)] </properties>
+        <properties stride='8' filename='188.q'>  [ atom_x_path(188)] </properties>
+        <properties stride='8' filename='188.f'>  [ atom_f_path(188)] </properties>
+        <properties stride='8' filename='191.q'>  [ atom_x_path(191)] </properties>
+        <properties stride='8' filename='191.f'>  [ atom_f_path(191)] </properties>
+        <trajectory stride='8' filename='xc' format='xyz'> x_centroid </trajectory>
+        <checkpoint stride='4000'/>
+    </output>
+    <total_steps> 40 </total_steps>
+    <total_time> 86000 </total_time>
+    <prng><seed> 31415 </seed></prng>
+     <ffsocket name='qtip4pf' mode='unix' pbc='false'>
+        <address> qtip4pf </address>
+    </ffsocket>
+    <system>
+        <initialize nbeads='64'>
+            <file mode='chk'> init.chk </file>
+        </initialize>
+        <forces><force forcefield='qtip4pf'> </force></forces>
+        <normal_modes>
+            <open_paths> [2, 5, 8, 11, 14, 17, 20, 23, 26, 29, 32, 35, 38, 41, 44, 47, 50, 53, 56, 59, 62, 65, 68, 71, 74, 77, 80, 83, 86, 89, 92, 95, 98, 101, 104, 107, 110, 113, 116, 119, 122, 125, 128, 131, 134, 137, 140, 143, 146, 149, 152, 155, 158, 161, 164, 167, 170, 173, 176, 179, 182, 185, 188, 191] </open_paths>
+        </normal_modes>
+        <ensemble>
+            <temperature units='kelvin'> 300 </temperature>
+        </ensemble>
+        <motion mode='dynamics'>
+        <dynamics mode='nvt'>
+            <thermostat mode='pile_g'>
+                <tau units='femtosecond'> 1e1 </tau>
+            </thermostat>
+            <timestep units='femtosecond'> 0.25 </timestep>
+        </dynamics>
+        </motion>
+    </system>
+</simulation>

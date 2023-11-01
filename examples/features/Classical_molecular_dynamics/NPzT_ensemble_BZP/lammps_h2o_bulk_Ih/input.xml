@@ -1,0 +1,39 @@
+<simulation verbosity="medium">
+  <output prefix="simulation">
+    <properties stride="2" filename="out"> [ step, time{picosecond}, conserved , cell_abcABC, volume, virial_md ] </properties>
+    <trajectory stride="10" filename="xc" format="pdb" cell_units="angstrom"> x_centroid{angstrom}</trajectory>
+    <checkpoint stride="2000"/>
+  </output>
+  <total_steps> 200</total_steps>
+  <prng><seed>31415</seed></prng>
+  <ffsocket name="lammps" mode="unix">
+      <address>lammps_ice</address> <latency> 1e-3 </latency>
+  </ffsocket>
+  <system>
+    <initialize nbeads="1">
+      <file mode="xyz"> ice_96.xyz </file>
+      <velocities mode="thermal" units="kelvin"> 200 </velocities>
+    </initialize>
+    <forces><force forcefield="lammps"> </force></forces>
+    <ensemble>
+      <temperature units="kelvin"> 200 </temperature>
+      <stress units="megapascal"> [ 1, 0, 0, 0, 1, 0, 0, 0, 1 ] </stress>
+    </ensemble>
+    <motion mode="dynamics">
+        <dynamics mode="nst">
+          <barostat mode="anisotropic">
+          <tau units="femtosecond"> 200 </tau>
+          <thermostat mode="langevin">
+            <tau units="femtosecond"> 100</tau>
+          </thermostat>
+          <h0> [ 25.6156, 0, 0, 0, 29.5783, 0, 0, 0, 27.8867 ]</h0>
+          <hfix> [ offdiagonal ] </hfix>          
+          </barostat>
+          <thermostat mode="langevin">
+               <tau units="femtosecond"> 100 </tau>
+          </thermostat>
+          <timestep units="femtosecond"> 0.25 </timestep>
+        </dynamics>
+    </motion>
+  </system>
+</simulation>

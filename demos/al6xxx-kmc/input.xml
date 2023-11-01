@@ -1,0 +1,47 @@
+<!--- To run with a reasonable LJ potential for testing purposes, use
+  i-pi-driver -m lj -u -h al6xxx -o 5.0,0.1,12.0
+-->
+<simulation verbosity='low'>
+    <output prefix='simulation'>
+        <properties stride='1' filename='out'> [ step, time{picosecond}, potential] </properties>
+        <properties stride='1' filename='vac'> [ step, time{picosecond}, atom_x{angstrom}(123), atom_x{angstrom}(124) ] </properties>
+        <trajectory filename='pos' stride='1' cell_units='angstrom' format='xyz' bead='0'> positions{angstrom} </trajectory>
+    </output>
+    <total_steps> 2 </total_steps>
+    <prng> <seed> 12345 </seed> </prng>
+    <ffsocket name='lmpserial' mode='unix'>
+        <address> localhost_0_0 </address> <latency> 1e-3 </latency>
+        <activelist> [0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,110,111,112,113,114,115,116,117,118,119,120,121,122] </activelist>
+    </ffsocket>
+    <system>
+        <initialize nbeads='1'>
+            <file mode='xyz' units='angstrom'> init.xyz </file>
+            <velocities mode='thermal' units='kelvin'> 0 </velocities>
+        </initialize>
+        <forces>
+            <force forcefield='lmpserial'> </force>
+        </forces>
+        <motion mode='al-kmc'>
+            <al6xxx_kmc>
+               <optimizer mode='lbfgs'> 
+                    <ls_options> <iter> 3 </iter> </ls_options>
+               </optimizer>
+               <a0 units='angstrom'> 4.057 </a0>
+               <nstep> 5 </nstep>
+               <ncell> 5 </ncell>
+               <nsi> 6 </nsi>
+               <nmg> 6 </nmg>
+               <nvac> 2 </nvac>
+               <neval> 8 </neval>
+	           <diffusion_barrier_al units='electronvolt'> 0.52  </diffusion_barrier_al> <!-- Mantina2009 dHm -->
+               <diffusion_prefactor_al units='terahertz'> 16.6 </diffusion_prefactor_al> <!-- Mantina2009 v*  -->
+	           <ecache_file> KMC_ECACHE </ecache_file>
+               <qcache_file> KMC_QCACHE </qcache_file>
+               <max_cache_len> 100 </max_cache_len>   
+           </al6xxx_kmc>    
+        </motion>
+        <ensemble>
+            <temperature units='kelvin'>300</temperature>
+        </ensemble>
+    </system>
+</simulation>
