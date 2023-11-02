@@ -215,19 +215,9 @@ class ElectricField(dobject):
             name="sigma", value=sigma if sigma is not None else np.inf
         )
 
-        # these will be overwritten
-        # dself.Eenvelope = depend_value(
-        #     name="Eenvelope", value=1.0, func=self._get_Eenvelope
-        # )
-        # dself.Efield = depend_array(
-        #     name="Efield", value=np.zeros(3, float), func=self._get_Efield
-        # )
-
     def bind(self, eda, enstype):
         self.enstype = enstype
         dself = dd(self)
-        # dself.mts_time = depend_value(name="mts_time", value=0.0)
-        # dpipe(dfrom=dd(eda).mts_time, dto=dd(self).mts_time)
         dself.mts_time = dd(eda).mts_time
 
         # same dependencies for Eenvelope and its time derivative
@@ -266,12 +256,6 @@ class ElectricField(dobject):
     def _get_Efield(self):
         """Get the value of the external electric field (cartesian axes)"""
         time = dstrip(self.mts_time)
-        print("!!_get_Efield,time:",time)
-        # if time is None:
-        #     time = self.mts_time
-        #     raise ValueError(
-        #         "Hey man! Don't you think it's better to specify the time you want to evaluate the electric field?"
-        #     )
         if hasattr(time, "__len__"):
             return np.outer(self._get_Ecos(time) * self.Eenvelope, self.amp)
         else:
@@ -280,12 +264,12 @@ class ElectricField(dobject):
     def _Eenvelope_is_on(self):
         return self.peak > 0.0 and self.sigma != np.inf
 
-    def _get_Eenvelope(self, time=None):
+    def _get_Eenvelope(self):
         time = dstrip(self.mts_time)
         """Get the gaussian envelope function of the external electric field"""
         # https://en.wikipedia.org/wiki/Normal_distribution
         if self._Eenvelope_is_on():
-            x = self.mts_time if time is None else time  # indipendent variable
+            x = time  # indipendent variable
             u = self.peak  # mean value
             s = self.sigma  # standard deviation
             return np.exp(
@@ -294,9 +278,9 @@ class ElectricField(dobject):
         else:
             return 1.0
 
-    def _get_Ecos(self,time):
+    def _get_Ecos(self, time):
         """Get the sinusoidal part of the external electric field"""
-        # it's easier to define a function and compute this 'cos' 
+        # it's easier to define a function and compute this 'cos'
         # again everytime instead of define a 'depend_value'
         return np.cos(self.freq * time + self.phase)
 
@@ -304,51 +288,28 @@ class ElectricField(dobject):
 class EDA(dobject):
     integrators = ["eda-nve"]
 
-    def __init__(self, efield: ElectricField, bec: BEC, **kwargv):  # cdip
+    def __init__(self, efield: ElectricField, bec: BEC, **kwargv):
         super(EDA, self).__init__(**kwargv)
-        self.Electric_Field = efield  # ElectricField(amp, freq, phase, peak, sigma)
-        self.Electric_Dipole = ElectricDipole()  # (cdip)
-        self.Born_Charges = bec  # BEC(bec)
+        self.Electric_Field = efield
+        self.Electric_Dipole = ElectricDipole()
+        self.Born_Charges = bec
         pass
 
     def bind(self, ensemble, enstype):
         self.enstype = enstype
         dself = dd(self)
 
-        # dself.econs = depend_value(name="econs", value=0.0)
-        # dself.time = depend_value(name="time", value=0.0)
         dself.mts_time = depend_value(name="mts_time", value=0.0)
-
-        # dpipe(dfrom=dd(ensemble).econs, dto=dself.econs)
-        # dpipe(dfrom=dd(ensemble).time, dto=dself.time)
         dself.time = dd(ensemble).time
 
         self.Electric_Field.bind(self, enstype)
         self.Electric_Dipole.bind(self, ensemble)
         self.Born_Charges.bind(self, ensemble, enstype)
 
-        # for easier access
-        # this has to be changed
-        # dself.Efield = depend_array(
-        #     name="Efield",
-        #     value=np.full(dd(self.Electric_Field).Efield.shape, np.nan),
-        #     # func=lambda : self.Electric_Field.Efield,
-        # )
-        # dself.bec = depend_array(
-        #     name="bec", value=np.full(dd(self.Born_Charges).bec.shape, np.nan)
-        # )
-        # dself.dipole = depend_array(
-        #     name="dipole", value=np.full(dd(self.Electric_Dipole).dipole.shape, np.nan)
-        # )
-
-        # dpipe(dfrom=dd(self.Electric_Field).Efield, dto=dself.Efield)
-        # dpipe(dfrom=dd(self.Born_Charges).bec, dto=dself.bec)
-        # dpipe(dfrom=dd(self.Electric_Dipole).dipole, dto=dself.dipole)
-
-        dself.Efield    = dd(self.Electric_Field).Efield
+        dself.Efield = dd(self.Electric_Field).Efield
         dself.Eenvelope = dd(self.Electric_Field).Eenvelope
-        dself.bec       = dd(self.Born_Charges).bec
-        dself.dipole    = dd(self.Electric_Dipole).dipole
+        dself.bec = dd(self.Born_Charges).bec
+        dself.dipole = dd(self.Electric_Dipole).dipole
 
         pass
 

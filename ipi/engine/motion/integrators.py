@@ -32,7 +32,6 @@ class DummyIntegrator(dobject):
     """No-op integrator for (PI)MD"""
 
     def __init__(self):
-        # super(TimeDependentIntegrator,self).__init__()
         pass
 
     def get_qdt(self):
@@ -196,7 +195,6 @@ class NVEIntegrator(DummyIntegrator):
     def pstep(self, level=0):
         """Velocity Verlet momentum propagator."""
 
-        # print(" # NVEIntegrator.pstep")
         # halfdt/alpha
         a = self.forces.forces_mts(level) * self.pdt[level]
         self.beads.p += a
@@ -215,7 +213,6 @@ class NVEIntegrator(DummyIntegrator):
     # Bbabb(a/2) O (a/2)bbabB
     def mtsprop_ba(self, index):
         """Recursive MTS step"""
-
         mk = int(self.nmts[index] / 2)
 
         for i in range(mk):  # do nmts/2 full sub-steps
@@ -247,7 +244,6 @@ class NVEIntegrator(DummyIntegrator):
 
     def mtsprop_ab(self, index):
         """Recursive MTS step"""
-
         if self.nmts[index] % 2 == 1:
             if index == self.nmtslevels - 1:
                 # call Q propagation for dt/alpha at the inner step
@@ -282,7 +278,6 @@ class NVEIntegrator(DummyIntegrator):
 
     def step(self, step=None):
         """Does one simulation time step."""
-        print("NVEIntegrator.step")
         self.mtsprop(0)
 
 
@@ -378,11 +373,6 @@ class EDAIntegrator(DummyIntegrator):
         super().bind(motion)
 
         dself = dd(self)
-        # dself.time = depend_value("time", 0.0)
-        # dself.mts_time = depend_value("mts_time", 0.0)
-
-        # dpipe(dfrom=dd(self.eda).time, dto=dself.time)
-        # dpipe(dto=dd(self.eda).mts_time, dfrom=dself.mts_time)
 
         dself.time = dd(self.eda).time
         dself.mts_time = dd(self.eda).mts_time
@@ -403,10 +393,6 @@ class EDAIntegrator(DummyIntegrator):
 
     def pstep(self, level=0):
         """Velocity Verlet momentum propagator."""
-        # if level == 0:
-        #     self.mts_time = dstrip(self.time)
-
-        print("pstep, level:",level,",mts_time:",self.mts_time)
         self.beads.p += self.EDAforces * self.pdt[level]
         if dstrip(self.mts_time) == dstrip(self.time):
             # it's the first time that 'pstep' is called
@@ -418,16 +404,16 @@ class EDAIntegrator(DummyIntegrator):
 
     def _eda_forces(self):
         """Compute the EDA contribution to the forces due to the polarization"""
-        print("_eda_forces")
         Z = dstrip(self.eda.bec)
         E = dstrip(self.eda.Efield)
         forces = Constants.e * Z @ E
         return forces
 
-    def step(self,step=None):
-        print("EDAIntegrator.step")
-        if len(self.nmts) > 1 :
-            raise ValueError("EDAIntegrator is not implemented with the Multiple Time Step algorithm (yet).")
+    def step(self, step=None):
+        if len(self.nmts) > 1:
+            raise ValueError(
+                "EDAIntegrator is not implemented with the Multiple Time Step algorithm (yet)."
+            )
         super().step(step)
 
 
