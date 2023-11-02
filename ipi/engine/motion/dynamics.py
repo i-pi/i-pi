@@ -131,10 +131,12 @@ class Dynamics(Motion):
 
         # repr(efield)
         # repr(bec)
+        self.eda_on = False
         if self.enstype in EDA.integrators:
             self.efield = efield
             self.bec = bec
             self.eda = EDA(self.efield, self.bec)  # cdip
+            self.eda_on = True
         pass
 
     def get_fixdof(self):
@@ -259,8 +261,26 @@ class Dynamics(Motion):
     def step(self, step=None):
         """Advances the dynamics by one time step"""
 
+        if self.eda_on : 
+            # Set these variable equal to each others to avoid that small mismatch
+            # in their values (due to floating point errors) after 'self.integrator.step(step)'
+            # will accumulate over time and give rise to problems
+            print("!!new step:",self.ensemble.time)
+            # self.integrator.mts_time = dstrip(self.ensemble.time)
+
         self.integrator.step(step)
         self.ensemble.time += self.dt  # increments internal time
+
+        if self.eda_on :
+            # Check that these variable are the same.
+            # If they are not the same, then there is a bug in the code
+            dt = abs ( self.ensemble.time - self.integrator.mts_time )
+            if dt > 1e-12:
+                raise ValueError("The time at which the Electric Field is evaluated is not properly updated!")
+
+        # if self.eda_on : 
+        #     # 'mts_time' is updated here because I need t
+        #     self.integrator.mts_time = dstrip(self.ensemble.time)
 
 
 class DummyIntegrator(dobject):

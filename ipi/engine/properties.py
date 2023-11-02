@@ -297,7 +297,7 @@ class Properties(dobject):
             "Eenvelope": {
                 "dimension": "atomic_unit",
                 "help": "The (gaussian) envelope function of the external applied electric field.",
-                "func": (lambda: self.motion.eda.Electric_Field.Eenvelope),
+                "func": (lambda: self.motion.eda.Eenvelope),
             },
             "dipole": {
                 "dimension": "electric-dipole",

@@ -282,7 +282,7 @@ class NVEIntegrator(DummyIntegrator):
 
     def step(self, step=None):
         """Does one simulation time step."""
-        # print(" # NVEIntegrator.step")
+        print("NVEIntegrator.step")
         self.mtsprop(0)
 
 
@@ -369,7 +369,6 @@ class EDAIntegrator(DummyIntegrator):
 
     # author: Elia Stocco
     # motivation: deal with time-dependent external potential
-    # information: not included in __all__
 
     def __init__(self):
         super().__init__()
@@ -404,20 +403,32 @@ class EDAIntegrator(DummyIntegrator):
 
     def pstep(self, level=0):
         """Velocity Verlet momentum propagator."""
-        if level == 0:
-            self.mts_time = dstrip(self.time)
+        # if level == 0:
+        #     self.mts_time = dstrip(self.time)
 
+        print("pstep, level:",level,",mts_time:",self.mts_time)
         self.beads.p += self.EDAforces * self.pdt[level]
-        self.mts_time += dstrip(self.pdt[level])
+        if dstrip(self.mts_time) == dstrip(self.time):
+            # it's the first time that 'pstep' is called
+            # then we need to update 'mts_time'
+            self.mts_time += dstrip(self.dt)
+            # the next time this condition will be 'False'
+            # so we will avoid to re-compute the EDAforces
         pass
 
     def _eda_forces(self):
         """Compute the EDA contribution to the forces due to the polarization"""
-        # if 'nbeads' > 1, then we will have to fix something here
-        Z = self.eda.bec
-        E = self.eda.Efield  # (self.mts_time)
+        print("_eda_forces")
+        Z = dstrip(self.eda.bec)
+        E = dstrip(self.eda.Efield)
         forces = Constants.e * Z @ E
         return forces
+
+    def step(self,step=None):
+        print("EDAIntegrator.step")
+        if len(self.nmts) > 1 :
+            raise ValueError("EDAIntegrator is not implemented with the Multiple Time Step algorithm (yet).")
+        super().step(step)
 
 
 class EDANVEIntegrator(EDAIntegrator, NVEIntegrator):
@@ -428,14 +439,17 @@ class EDANVEIntegrator(EDAIntegrator, NVEIntegrator):
     # author: Elia Stocco
 
     def pstep(self, level):
+        # NVEIntegrator does not use 'super()' within 'pstep'
+        # then we can not use 'super()' here.
+        # We need to call the 'pstep' methods explicitly.
         NVEIntegrator.pstep(
             self, level
         )  # the driver is called here: add nuclear and electronic forces (DFT)
         EDAIntegrator.pstep(self, level)  # add the driving forces, i.e. q_e Z @ E(t)
         pass
 
-    def step(self, step=None):
-        super(EDANVEIntegrator, self).step(step)
+    # def step(self, step=None):
+    #     super().step(step)
 
 
 # class EDANVTIntegrator(EDAIntegrator,NVTIntegrator):
