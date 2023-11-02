@@ -1,5 +1,5 @@
 import numpy as np
-from ipi.utils.depend import dd, dpipe, dstrip
+from ipi.utils.depend import dd, dstrip
 from ipi.utils.depend import dobject, depend_array, depend_value
 from ipi.utils.units import UnitMap
 import re
