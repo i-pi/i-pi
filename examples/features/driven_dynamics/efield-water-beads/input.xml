@@ -13,9 +13,9 @@
     <trajectory filename='momenta'>momenta</trajectory>             <!--   nuclear momenta (a.u.): p -->
     <trajectory filename='velocities'>velocities</trajectory>       <!--   nuclear momenta (a.u.): v -->
     <trajectory filename='positions'>positions</trajectory>         <!-- nuclear positions (a.u.): R -->
-    <trajectory format="txt" filename='bec'>bec</trajectory> 
+    <!-- <trajectory format="txt" filename='bec'>bec</trajectory>  -->
     <!-- <trajectory format="text" filename='extra'>extra</trajectory> -->
-    <properties filename='properties.out' > [ step, time, conserved, kinetic_md, potential, Efield, Eenvelope, dipole(0), dipole(1) ] </properties>
+    <properties filename='properties.out' > [ step, time, conserved, kinetic_md, potential, dipole(0), dipole(1), Efield, Eenvelope ] </properties>
   </output>
 
   <prng>
