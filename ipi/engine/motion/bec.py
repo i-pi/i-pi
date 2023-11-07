@@ -1,8 +1,6 @@
 __all__ = ["BECTensorsCalculator"]
 
 import numpy as np
-from numpy.linalg import norm
-
 
 from ipi.engine.motion import Motion
 from ipi.utils.depend import *
