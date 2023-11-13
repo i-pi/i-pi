@@ -336,49 +336,6 @@ class depend_base(object):
 
         raise ValueError("Undefined get function for base depend class")
 
-    def __repr__(self):
-        """
-        Return a string representation of the object suitable for debugging.
-
-        This method generates a string that lists all non-private attributes of the object.
-
-        Returns:
-            str: A string representation of the object.
-        """
-        string = f"{type(self)}:\n"
-        keys = sorted(self.__dict__.keys())
-
-        def get_str(obj):
-            if isinstance(obj, dobject) or isinstance(obj, depend_base):
-                return str(obj)
-            else:
-                return repr(obj)
-
-        def new_str(k):
-            return "\t{:s}= {:s}\n".format(k, get_str(self.__dict__[k]))
-
-        for k in keys:
-            if not k.startswith("_"):
-                string += new_str(k)
-        for k in keys:
-            if k.startswith("_"):
-                string += new_str(k)
-        return string
-
-    def __str__(self):
-        """
-        Return a human-readable string representation of the object.
-
-        This method returns a user-friendly string that represents the object's main value.
-
-        Returns:
-            str: A human-readable string representation of the object's value.
-        """
-        if hasattr(self, "value"):
-            return f"{type(self)}: {self.value}"
-        else:
-            return f"{type(self)}: /"
-
 
 class depend_value(depend_base):
 
@@ -938,49 +895,6 @@ class dobject(object):
                 newone._direct, member, deepcopy(getattr(self._direct, member), memo)
             )
         return newone
-
-    def __repr__(self):
-        """
-        Return a string representation of the object suitable for debugging.
-
-        This method generates a string that lists all non-private attributes of the object.
-
-        Returns:
-            str: A string representation of the object.
-        """
-        string = f"{type(self)}:\n"
-        keys = sorted(self.__dict__.keys())
-
-        def get_str(obj):
-            if isinstance(obj, dobject) or isinstance(obj, depend_base):
-                return str(obj)
-            else:
-                return repr(obj)
-
-        def new_str(k):
-            return "\t{:s}= {:s}\n".format(k, get_str(self.__dict__[k]))
-
-        for k in keys:
-            if not k.startswith("_"):
-                string += new_str(k)
-        for k in keys:
-            if k.startswith("_"):
-                string += new_str(k)
-        return string
-
-    def __str__(self):
-        """
-        Return a human-readable string representation of the object.
-
-        This method returns a user-friendly string that represents the object's main value.
-
-        Returns:
-            str: A human-readable string representation of the object's value.
-        """
-        if hasattr(self, "value"):
-            return f"{type(self)}: {self.value}"
-        else:
-            return f"{type(self)}: /"
 
 
 def dd(dobj):
