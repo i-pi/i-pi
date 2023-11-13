@@ -261,8 +261,8 @@ class Dynamics(Motion):
     def step(self, step=None):
         """Advances the dynamics by one time step"""
 
-        if self.eda_on:
-            self.integrator.mts_time = dstrip(self.ensemble.time)
+        # if self.eda_on:
+        #     self.integrator.mts_time = dstrip(self.ensemble.time)
 
         self.integrator.step(step)
         self.ensemble.time += self.dt  # increments internal time
