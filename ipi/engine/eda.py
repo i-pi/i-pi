@@ -299,7 +299,7 @@ class EDA(dobject):
         self.enstype = enstype
         dself = dd(self)
 
-        dself.mts_time = depend_value(name="mts_time", value=0.0)
+        dself.mts_time = depend_value(name="mts_time", value=dstrip(ensemble).time)
         dself.time = dd(ensemble).time
 
         self.Electric_Field.bind(self, enstype)
