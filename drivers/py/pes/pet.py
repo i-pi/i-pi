@@ -4,7 +4,6 @@ import sys, os
 import numpy as np
 from .dummy import Dummy_driver
 
-from ipi.utils.mathtools import det_ut3x3
 from ipi.utils.units import unit_to_internal, unit_to_user
 
 try:

@@ -1,8 +1,8 @@
+import sys
 import numpy as np
 from ipi.utils.units import unit_to_internal, unit_to_user
 from .dummy import Dummy_driver
 
-from ase import Atoms
 from ase.io import read
 
 from mace.calculators import MACECalculator
