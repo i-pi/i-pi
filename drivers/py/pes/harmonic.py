@@ -3,6 +3,11 @@
 import sys
 from .dummy import Dummy_driver
 
+__DRIVER_NAME__ = (
+    "harmonic"  # this is how the driver will be referred to in the input files
+)
+__DRIVER_CLASS__ = "Harmonic_driver"
+
 
 class Harmonic_driver(Dummy_driver):
     def __init__(self, args=None):

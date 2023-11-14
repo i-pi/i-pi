@@ -11,6 +11,11 @@ try:
 except:
     RascalCalc = None
 
+__DRIVER_NAME__ = (
+    "rascal"  # this is how the driver will be referred to in the input files
+)
+__DRIVER_CLASS__ = "Rascal_driver"
+
 
 class Rascal_driver(Dummy_driver):
     def __init__(self, args=None):
