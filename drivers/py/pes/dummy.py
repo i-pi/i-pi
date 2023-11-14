@@ -1,5 +1,5 @@
 # this is how the driver will be referred to in the input files
-__DRIVER_NAME__ = "dummy"  
+__DRIVER_NAME__ = "dummy"
 __DRIVER_CLASS__ = "Dummy_driver"
 
 

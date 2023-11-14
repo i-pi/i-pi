@@ -3,7 +3,7 @@
 import sys
 from .dummy import Dummy_driver
 
-__DRIVER_NAME__ = "harmonic" 
+__DRIVER_NAME__ = "harmonic"
 __DRIVER_CLASS__ = "Harmonic_driver"
 
 
