@@ -3,10 +3,6 @@ import socket
 import argparse
 import numpy as np
 
-from pes.dummy import Dummy_driver
-from pes import Dummy_driver
-from pes import *
-
 try:
     from pes import *
 except ImportError:
