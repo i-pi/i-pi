@@ -7,9 +7,7 @@ from ase.io import read
 
 from mace.calculators import MACECalculator
 
-__DRIVER_NAME__ = (
-    "mace"  # this is how the driver will be referred to in the input files
-)
+__DRIVER_NAME__ = "mace"
 __DRIVER_CLASS__ = "MACE_driver"
 
 
