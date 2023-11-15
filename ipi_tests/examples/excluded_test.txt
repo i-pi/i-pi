@@ -17,6 +17,6 @@ clients/yaff/mil53_ffsocket
 clients/ffsgdml/benzene-pimd.10 
 clients/ffsgdml/benzene-scpimd.10 
 
-features/Metadynamics/zundel-remd-metad 
-features/Metadynamics/zundel-metad
-features/Metadynamics/zundel-wte
+features/metadynamics/pimd_metadynamics
+features/metadynamics/wte_metadynamics
+features/metadynamics/remd_metadynamics
