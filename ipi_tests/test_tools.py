@@ -339,7 +339,7 @@ class Runner(object):
 
                 # print("client", client, "cmd:", cmd)
                 driver = sp.Popen(
-                    cmd, cwd=(cwd), shell=True  # , stdout=sp.PIPE, stderr=sp.PIPE
+                    cmd, cwd=(cwd), shell=True, stdout=sp.PIPE, stderr=sp.PIPE
                 )
 
                 drivers.append(driver)
