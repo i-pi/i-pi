@@ -22,7 +22,7 @@ if dir_root not in sys.path:
 main_folder = Path(__file__).resolve().parents[2] / "ipi_tests"
 test_folder = {
     "all": main_folder,
-    "example": main_folder / "examples",
+    "examples": main_folder / "examples",
     "regtests": main_folder / "regression_tests",
     "unit": main_folder / "unit_tests",
 }
@@ -37,13 +37,13 @@ if __name__ == "__main__":
         "type: i-pi-tests \n"
         "\n"
         "for running only the tests that checks the integrity of the examples inputs \n"
-        "type: i-pi-style -t example  \n"
+        "type: i-pi-tests -t examples  \n"
         "\n"
         "for running the regression tests  \n"
-        "type: i-pi-style -t regtests \n"
+        "type: i-pi-tests -t regtests \n"
         "\n"
         "and for running the unitary tests  \n"
-        "type: i-pi-style -t unit \n",
+        "type: i-pi-tests -t unit \n",
     )
 
     parser.add_argument(
@@ -51,7 +51,7 @@ if __name__ == "__main__":
         "--tests",
         type=str,
         default="all",
-        choices=["all", "example", "regtests", "unit"],
+        choices=["all", "examples", "regtests", "unit"],
         help="Specifies which tests are going to be called.",
     )
 
