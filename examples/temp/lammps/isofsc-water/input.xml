@@ -6,7 +6,7 @@
     <properties stride='40' filename='isosc'> [ step, ti_weight, chin_weight, isotope_zetasc_4th(1.1253;O), isotope_zetasc_4th(1.9985;H) ] </properties>
     <trajectory filename='pos' stride='1000' bead='0' cell_units='angstrom'> positions{angstrom} </trajectory>
   </output>
-  <total_steps>400000</total_steps>
+  <total_steps>400</total_steps>
   <prng>
     <seed>32345</seed>
   </prng>
