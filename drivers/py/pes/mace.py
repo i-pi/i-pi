@@ -5,7 +5,10 @@ from .dummy import Dummy_driver
 
 from ase.io import read
 
-from mace.calculators import MACECalculator
+try:
+    from mace.calculators import MACECalculator
+except:
+    MACECalculator = None
 
 __DRIVER_NAME__ = "mace"
 __DRIVER_CLASS__ = "MACE_driver"
