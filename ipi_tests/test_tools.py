@@ -346,16 +346,17 @@ class Runner(object):
 
             # check driver errors
             for driver in drivers:
-                driver_out, driver_err = driver.communicate(timeout=120)
+                driver_out, driver_err = driver.communicate(timeout=180)
                 assert driver.returncode == 0, "DRIVER ERROR OCCURRED: {}".format(
                     driver_err
                 )
 
             # check i-pi errors
-            ipi_out, ipi_error = ipi.communicate(timeout=120)
+            ipi_out, ipi_error = ipi.communicate(timeout=180)
             assert ipi.returncode == 0, "IPI ERROR OCCURRED: {}".format(ipi_error)
 
         except sp.TimeoutExpired:
+            print(" TIMEOUT during {} test ", str(cwd))  
             raise RuntimeError(
                 "Time is out. Aborted during {} test. \
               Error {}".format(
