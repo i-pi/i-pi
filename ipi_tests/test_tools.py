@@ -283,6 +283,7 @@ class Runner(object):
                 stdout=sp.PIPE,
                 stderr=sp.PIPE,
             )
+
             if len(clients) > 0:
                 f_connected = False
                 for client in clients:
@@ -338,27 +339,21 @@ class Runner(object):
 
                 # print("client", client, "cmd:", cmd)
                 driver = sp.Popen(
-                    cmd, cwd=(cwd), shell=True, stdout=sp.PIPE, stderr=sp.PIPE
+                    cmd, cwd=(cwd), shell=True  # , stdout=sp.PIPE, stderr=sp.PIPE
                 )
 
                 drivers.append(driver)
 
             # check driver errors
             for driver in drivers:
-                print("waiting for driver")
                 driver_out, driver_err = driver.communicate(timeout=120)
                 assert driver.returncode == 0, "DRIVER ERROR OCCURRED: {}".format(
                     driver_err
                 )
-                print("driver finished", driver_err, driver_out)
 
             # check i-pi errors
-            print("waiting for i-pi")
-            ipi_error = ipi.communicate(timeout=120)[1].decode("ascii")
-            if ipi_error != "":
-                print(ipi_error)
-            print("ipi finished")
-            assert "" == ipi_error, "IPI ERROR OCCURRED: {}".format(ipi_error)
+            ipi_out, ipi_error = ipi.communicate(timeout=120)
+            assert ipi.returncode == 0, "IPI ERROR OCCURRED: {}".format(ipi_error)
 
         except sp.TimeoutExpired:
             raise RuntimeError(
