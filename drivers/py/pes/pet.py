@@ -7,13 +7,13 @@ from .dummy import Dummy_driver
 from ipi.utils.units import unit_to_internal, unit_to_user
 
 try:
-    from ase.io import read
-except:
-    raise ImportError("The PET driver has an ASE dependency")
-
-try:
     sys.path.append(os.getcwd() + "/pet/src")
     from single_struct_calculator import SingleStructCalculator as PETCalc
+
+    try:
+        from ase.io import read
+    except:
+        raise ImportError("The PET driver has an ASE dependency")
 except:
     PETCalc = None
 
