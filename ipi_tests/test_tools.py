@@ -303,7 +303,7 @@ class Runner(object):
                         return "Could not find the i-PI UNIX socket"
 
             # Run drivers by defining cmd2 which will be called, eventually
-            driver = list()
+            drivers = list()
 
             for client in clients:
                 if client[1] == "unix":
@@ -335,12 +335,22 @@ class Runner(object):
                             cmd += " {} {}".format(
                                 client[ll], ",".join(client[ll + 1 :][:])
                             )
-                # print("cmd:", cmd)
-                driver.append(
-                    sp.Popen(cmd, cwd=(cwd), shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
+
+                # print("client", client, "cmd:", cmd)
+                driver = sp.Popen(
+                    cmd, cwd=(cwd), shell=True, stdout=sp.PIPE, stderr=sp.PIPE
                 )
 
-            # Check errors
+                drivers.append(driver)
+
+            # check driver errors
+            for driver in drivers:
+                driver_out, driver_err = driver.communicate(timeout=120)
+                assert driver.returncode == 0, "DRIVER ERROR OCCURRED: {}".format(
+                    driver_err
+                )
+
+            # check i-pi errors
             ipi_error = ipi.communicate(timeout=120)[1].decode("ascii")
             if ipi_error != "":
                 print(ipi_error)
