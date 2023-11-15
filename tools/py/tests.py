@@ -59,7 +59,7 @@ if __name__ == "__main__":
     tests = args.tests
     print(test_folder[args.tests])
     exit_code = pytest.main(
-        ["--tb=long", "--capture=no", "-ra", "-vv", str(test_folder[args.tests])]
+        ["--tb=line", "--capture=no", "-ra", "-v", str(test_folder[args.tests])]
     )
 
     if exit_code != 0:
