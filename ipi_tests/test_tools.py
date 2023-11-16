@@ -251,7 +251,7 @@ class Runner(object):
         try:
             # Create temp file and copy files
             self.tmp_dir = Path(tempfile.mkdtemp())
-            print("\nTest folder: {}".format(cwd))
+            print("\ntest folder: {}".format(cwd))
             print("temp folder: {}".format(self.tmp_dir))
 
             # files = os.listdir(self.parent / cwd)
@@ -340,26 +340,29 @@ class Runner(object):
 
                 # print("client", client, "cmd:", cmd)
                 driver = sp.Popen(
-                    cmd, cwd=(cwd), shell=True, stdin=sp.DEVNULL,
-                    stdout=sp.PIPE, stderr=sp.PIPE,
+                    cmd,
+                    cwd=(cwd),
+                    shell=True,
+                    stdin=sp.DEVNULL,
+                    stdout=sp.PIPE,
+                    stderr=sp.PIPE,
                 )
 
                 drivers.append(driver)
-            
+
             # check i-pi errors
             ipi_out, ipi_error = ipi.communicate(timeout=60)
             assert ipi.returncode == 0, "i-PI error occurred: {}".format(ipi_error)
-            
+
             # check driver errors
             for driver in drivers:
-                driver.kill() 
+                driver.kill()  # if i-PI has ended, we can kill the drivers
                 driver_out, driver_err = driver.communicate(timeout=60)
                 assert driver.returncode == 0, "Driver error occurred: {}".format(
                     driver_err
                 )
 
         except sp.TimeoutExpired:
-        
             ipi.kill()
             try:
                 ipi_out, ipi_error = ipi.communicate(timeout=2)
@@ -369,12 +372,13 @@ class Runner(object):
 
             drivers[0].kill()
             try:
-                driver_out, driver_err = drivers[0].communicate(timeout=2)                
+                driver_out, driver_err = drivers[0].communicate(timeout=2)
             except:
                 driver_out, driver_err = "", "Could not get outputs from drivers"
                 pass
-            
-            print("Timeout during {} test \
+
+            print(
+                "Timeout during {} test \
               **** i-PI output **** \
               stdout {} \
               stderr {} \
@@ -382,10 +386,9 @@ class Runner(object):
               stdout {} \
               stderr {} \
               ".format(
-                    str(cwd), 
-                    ipi_out, ipi_error,
-                    driver_out, driver_err
-                ) )
+                    str(cwd), ipi_out, ipi_error, driver_out, driver_err
+                )
+            )
             raise
 
             raise RuntimeError(
