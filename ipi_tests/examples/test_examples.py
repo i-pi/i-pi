@@ -27,13 +27,16 @@ def test_example(ex, verbose=False):
     t0 = time.time()
     nid = examples.index(ex)
     runner = Runner_examples(Path("."))
+    print("Running example")
     error_msg = runner.run(ex, nid)
     print("Time for this example: {:4.1f} s \n".format(time.time() - t0))
 
-    if verbose:
+    if verbose: 
+        print("ERROR ", error_msg)
         return error_msg
 
     if error_msg != None:
+        print("RAISING ERROR ", error_msg)
         raise RuntimeError
 
 
