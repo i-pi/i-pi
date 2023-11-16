@@ -280,8 +280,8 @@ class Runner(object):
                 self.call_ipi,
                 cwd=(self.tmp_dir),
                 shell=True,
-                stdout=sp.PIPE,
-                stderr=sp.PIPE,
+                #stdout=sp.PIPE,
+                #stderr=sp.PIPE,
             )
 
             if len(clients) > 0:
@@ -339,7 +339,7 @@ class Runner(object):
 
                 # print("client", client, "cmd:", cmd)
                 driver = sp.Popen(
-                    cmd, cwd=(cwd), shell=True, stdout=sp.PIPE, stderr=sp.PIPE
+                    cmd, cwd=(cwd), shell=True, #stdout=sp.PIPE, stderr=sp.PIPE
                 )
 
                 drivers.append(driver)
