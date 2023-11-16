@@ -766,12 +766,15 @@
      &         "    !write!=> extra: empty"
             ENDIF
             hasdata = .false.
+         ELSEIF (trim(header) == "EXIT") THEN
+            EXIT
          ELSE
             WRITE(*,*) " Unexpected header ", header
             STOP "ENDED"
          ENDIF
       ENDDO
       IF (nat > 0) DEALLOCATE(atoms, forces, msgbuffer, friction)
+      STOP
 
     CONTAINS
       SUBROUTINE helpmessage
