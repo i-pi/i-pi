@@ -356,7 +356,7 @@ class Runner(object):
             assert ipi.returncode == 0, "IPI ERROR OCCURRED: {}".format(ipi_error)
 
         except sp.TimeoutExpired:
-            print(" TIMEOUT during {} test ", str(cwd))  
+            print(" TIMEOUT during {} test ", str(cwd))
             raise RuntimeError(
                 "Time is out. Aborted during {} test. \
               Error {}".format(

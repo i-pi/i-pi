@@ -14,7 +14,7 @@
     <address>isofsc-water</address>
   </ffsocket>
   <system>
-    <initialize nbeads='24'>
+    <initialize nbeads='8'>
       <file mode='pdb'> init.pdb </file>
       <velocities mode='thermal' units='kelvin'> 300 </velocities>
     </initialize>
