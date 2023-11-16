@@ -359,12 +359,15 @@ class Runner(object):
             assert ipi.returncode == 0, "i-PI error occurred: {}".format(ipi_error)
 
         except sp.TimeoutExpired:
-            
+        
+            ipi.kill()
             try:
                 ipi_out, ipi_error = ipi.communicate(timeout=2)
             except:
                 ipi_out, ipi_error = "", "Could not get outputs from ipi"
                 pass
+
+            drivers[0].kill()
             try:
                 driver_out, driver_err = drivers[0].communicate(timeout=2)                
             except:
@@ -373,11 +376,11 @@ class Runner(object):
 
             print("Timeout during {} test \
               **** i-PI output **** \
-              Error {} \
-              Output {} \
+              stdout {} \
+              stderr {} \
               **** driver output **** \
-              Error {} \
-              Output {} \
+              stdout {} \
+              stderr {} \
               ".format(
                     str(cwd), 
                     ipi_out, ipi_error,

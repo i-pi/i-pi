@@ -375,7 +375,8 @@ class TrajectoryOutput(BaseOutput):
         try:
             if hasattr(self.out, "__getitem__"):
                 for o in self.out:
-                    o.close()
+                    if o is not None:
+                        o.close()
             else:
                 self.out.close()
         except AttributeError:
