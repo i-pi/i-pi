@@ -341,21 +341,22 @@ class Runner(object):
                 # print("client", client, "cmd:", cmd)
                 driver = sp.Popen(
                     cmd, cwd=(cwd), shell=True, stdin=sp.DEVNULL,
-                #stdout=sp.PIPE, stderr=sp.PIPE,
+                    stdout=sp.PIPE, stderr=sp.PIPE,
                 )
 
                 drivers.append(driver)
-
+            
+            # check i-pi errors
+            ipi_out, ipi_error = ipi.communicate(timeout=60)
+            assert ipi.returncode == 0, "i-PI error occurred: {}".format(ipi_error)
+            
             # check driver errors
             for driver in drivers:
+                driver.kill() 
                 driver_out, driver_err = driver.communicate(timeout=60)
                 assert driver.returncode == 0, "Driver error occurred: {}".format(
                     driver_err
                 )
-
-            # check i-pi errors
-            ipi_out, ipi_error = ipi.communicate(timeout=60)
-            assert ipi.returncode == 0, "i-PI error occurred: {}".format(ipi_error)
 
         except sp.TimeoutExpired:
         

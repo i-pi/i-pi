@@ -789,6 +789,8 @@
      &         "    !write!=> extra: empty"
             ENDIF
             hasdata = .false.
+         ELSEIF (trim(header) == "EXIT") THEN
+            EXIT
          ELSE
             WRITE(*,*) " Unexpected header ", header
             STOP "ENDED"
@@ -798,6 +800,7 @@
       IF (nat>0 .and. (vstyle==24 .or. vstyle==25)) THEN
          DEALLOCATE(friction)
       ENDIF
+      STOP
 
     CONTAINS
       SUBROUTINE helpmessage
