@@ -341,8 +341,7 @@ class Runner(object):
                 # print("client", client, "cmd:", cmd)
                 driver = sp.Popen(
                     cmd, cwd=(cwd), shell=True, stdin=sp.DEVNULL,
-                stdout=sp.PIPE,
-                stderr=sp.PIPE,
+                #stdout=sp.PIPE, stderr=sp.PIPE,
                 )
 
                 drivers.append(driver)
