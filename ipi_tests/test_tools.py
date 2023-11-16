@@ -373,7 +373,7 @@ class Runner(object):
             except:
                 driver_out, driver_err = "", "Could not get outputs from drivers"
                 pass
-
+            
             print("Timeout during {} test \
               **** i-PI output **** \
               stdout {} \
@@ -386,6 +386,7 @@ class Runner(object):
                     ipi_out, ipi_error,
                     driver_out, driver_err
                 ) )
+            raise
 
             raise RuntimeError(
                 "Time is out. Aborted during {} test.".format(
