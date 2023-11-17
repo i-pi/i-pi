@@ -121,6 +121,7 @@ class Simulation(dobject):
         tsteps=1000,
         ttime=0,
         threads=False,
+        safe_stride=1,
     ):
         """Initialises Simulation class.
 
@@ -143,6 +144,7 @@ class Simulation(dobject):
         self.prng = prng
         self.mode = mode
         self.threading = threads
+        self.safe_stride = safe_stride
         dself = dd(self)
 
         self.syslist = syslist
@@ -311,9 +313,11 @@ class Simulation(dobject):
             if softexit.triggered:
                 break
 
-            self.chk.store()
+            # save a consistent state of the simulation that will be saved as a RESTART file in case of premature (soft) exit
+            if self.step%self.safe_stride ==0:
+                self.chk.store()
 
-            if self.threading:
+            if len(self.syslist)>0 and self.threading:
                 stepthreads = []
                 # steps through all the systems
                 for s in self.syslist:
@@ -350,10 +354,11 @@ class Simulation(dobject):
             if self.threading:
                 stepthreads = []
                 for o in self.outputs:
-                    st = threading.Thread(target=o.write, name=o.filename)
-                    st.daemon = True
-                    st.start()
-                    stepthreads.append(st)
+                    if o.active(): # don't start a thread if it's not needed
+                        st = threading.Thread(target=o.write, name=o.filename)
+                        st.daemon = True
+                        st.start()
+                        stepthreads.append(st)
 
                 for st in stepthreads:
                     while st.is_alive():

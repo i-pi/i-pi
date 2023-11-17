@@ -44,7 +44,6 @@ class InputSimulation(Input):
        step: An integer giving the current simulation step. Defaults to 0.
        total_steps: The total number of steps. Defaults to 1000
        total_time:  The wall clock time limit. Defaults to 0 (no limit).
-       paratemp: A helper object for parallel tempering simulations
 
     Dynamic fields:
        system: Holds the data needed to specify the state of a single system.
@@ -122,8 +121,16 @@ class InputSimulation(Input):
                 "dtype": str,
                 "default": "md",
                 "help": "What kind of simulation should be run.",
-                "options": ["md", "paratemp", "static"],
+                "options": ["md", "static"],
             },
+        ),
+        "safe_stride": (
+            InputValue,
+            {"dtype": int, "default": 1, "help": 
+"""Consistent simulation states will be saved every this number of steps. 
+Saving state entails a small overhead, so you may want to set this to the smallest output
+frequency in your simulation to make i-PI faster. Use at your own risk!
+"""},
         ),
         "floatformat": (
             InputAttribute,
@@ -213,6 +220,7 @@ class InputSimulation(Input):
             raise ValueError("Invalid verbosity level")
 
         self.mode.store(simul.mode)
+        self.safe_stride.store(simul.safe_stride)
 
         _fflist = [v for k, v in sorted(simul.fflist.items())]
         if len(self.extra) != len(_fflist) + len(simul.syslist):
@@ -331,6 +339,7 @@ class InputSimulation(Input):
             tsteps=self.total_steps.fetch(),
             ttime=self.total_time.fetch(),
             threads=self.threading.fetch(),
+            safe_stride=self.safe_stride.fetch(),
         )
 
         return rsim
