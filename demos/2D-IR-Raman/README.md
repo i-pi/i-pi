@@ -5,6 +5,7 @@ This example demonstrates the use of equilibrium-nonequilibrium ring-polymer mol
 For theory of equilibrium-nonequilibrium RPMD, see
 1. T. Begusic, X. Tao, G. A. Blake, T. F. Miller III, "Equilibrium–nonequilibrium ring-polymer molecular dynamics for nonlinear spectroscopy", J. Chem. Phys. 156, 131102 (2022).
 2. T. Begusic, G. A. Blake, "Two-dimensional infrared-Raman spectroscopy as a probe of water’s tetrahedrality", Nat. Commun. 14, 1950 (2023).
+
 The code provided here can be used to reproduce the results of ref 2.
 
 Briefly, the goal is to compute the response function R(t_1, t_2) according to eq 2 of ref 2, for which we need a backward equilibrium trajectory and two forward nonequilibrium (kicked) trajectories starting from an initial condition sampled according to the thermal distribution. In practice, the equilibrium part is computed by running a single long trajectory and nonequilibrium trajectories are started from points along the equilibrium trajectory. We then average over all "nonequilibrium events". The nonequilibrium part of the calculation is implemented in the enclosed script noneqm-traj.py and the computation of the response function is implemented in noneqm-response.py. This example runs on a periodic box of 64 water molecules at 300 K.
@@ -24,7 +25,7 @@ water_dip_pol option from the i-PI f90 driver.
 Usage
 -----
 
-1. Run all trajectories using the provided run.sh script 
+Run all trajectories and compute the response function using the provided run.sh script 
 
 ```bash
 ./run.sh
@@ -32,20 +33,14 @@ Usage
 
 This takes about 2 minutes to finish.
 
-2. Compute the response function with
-
-```bash
-./noneqm-response.py input.xml -e 0.1 -t 40
-```
-
 The output is found in dip_pol_neq_2d.dat file. It contains R(t_1, t_2) for 10 fs along both axes.
 
 Step-by-step explanation
 -------------------------
 
-Equilibrium part:
+**Equilibrium part:**
 
-The equilibrium trajectory that we run is mostly an ordinary RPMD trajectory with 4 beads. The main difference is that it also computes propeties (dipole moment, polarizability, and dipole gradient) by using a driver that sends these to i-PI inside the extras string of the socket (option 'water_dip_pol' of i-PI f90 driver). To print these out, we added
+The equilibrium trajectory that we run is mostly an ordinary RPMD trajectory with 4 beads. The main difference is that it also computes properties (dipole moment, polarizability, and dipole gradient) by using a driver that sends these to i-PI inside the extras string of the socket (option 'water_dip_pol' of i-PI f90 driver). To print these out, we added
 ```xml
 <trajectory filename='dip' stride='4' extra_type='dipole'> extras </trajectory>
 <trajectory filename='dip_der' stride='20' extra_type='dipole_derivative'> extras </trajectory>    
@@ -63,9 +58,9 @@ $lmp < in.lmp &> out_lammps &
 i-pi-driver -u -h h2o-dipole -m water_dip_pol -o 1 &> out
 wait
 ```
-where $lmp is the lammps executable. Note that i-pi-driver option water_dip_pol accepts one argument that is 1 if we want to compute dipole gradient or 0 if not.
+where $lmp is the lammps executable. Note that i-pi-driver option water_dip_pol accepts one argument that is 1 if we want to compute the gradient of the dipole moment's z-component or 0 if not.
 
-Nonequilibrium part:
+**Nonequilibrium part**:
 
 For every checkpoint file we created in the previous step, we will restart two trajectories: One trajectory will be started with (q, p - epsilon * dip_der / 2) 
 and another trajectory will use (q, p + epsilon * dip_der / 2), where q and p are the position and momentum vectors.
@@ -94,11 +89,11 @@ the first few checkpoint files. The script is set to ensure that we have same ma
 corresponds to the checkpoint file simulation.chk_2 (printed at step 40 of equilibrium dynamics). In total, we will run 9 chk files x 2 trajectories = 18 nonequilibrium trajectories.
 The properties of these trajectories are printed in simulation_noneqm.dip/pol_X (X is the bead number).
 
-noneqm-traj.py script also accepts optional parameters -i (--tfirst) and -f (--tlast) if the user wants to specify the starting and ending (included) checkpoint files (see ./noneqm-traj.py --help).
+noneqm-traj.py script also accepts optional parameters -i (--tfirst) and -f (--tlast) if the user wants to specify the starting and ending (included) checkpoint files (see ./noneqm-traj.py --help). This might be useful if the simulation cost requires us to split the simulation into chunks.
 
 As a sanity check, you can see that the dipole moment (e.g., of bead 0) is same at step 40 of equilibrium trajectory (line 22 of simulation.dip_0), at step 0 of the first nonequilibrium trajectory (line 2 of simulation_noneqm.dip_0), and at step 0 of the second nonequilibrium trajectory (line 24 of simulation_noneqm.dip_0). This is because at time zero the nonequilibrium trajectories have the same position. Because of the kicks, all these trajectories (and dipoles/polarizabilities) become different after the first step.
 
-Response function:
+**Response function**:
 
 noneqm-response.py uses the outputs of above calculations to evaluate R(t_1, t_2). In this example, the second interaction is with a dipole moment (this was determined by using a dipole gradient to perform the momentum kicks). We can still choose the type of spectroscopy we want to simulate by setting the operators that we wish to correlate. To simulate IR-IR-Raman sequence (as in ref 2), we will set dipole moment for time t_1 and polarizability for time t_2. Alternatively, we could also simulate Raman-IR-IR sequence by switching dipole and polarizability.
 
@@ -132,7 +127,7 @@ How to obtain meaningful results?
 ---------------------------------
 
 1) Our example here uses only NVE trajectories. To sample from the thermal distribution, we need to perform this type of calculation starting from many initial conditions sampled from the appropriate ensemble (e.g., NVT).
-2) Here we run a very short equilibrium trajectory, which allows us to average over only 9 nonequilibrium events. Also, taking only 20 steps as the stride for nonequilibrium trajectory calculations makes little sense.
+2) Here we run a very short equilibrium trajectory, which allows us to average over only 9 nonequilibrium events. Also, taking only 20 steps as the stride for nonequilibrium trajectory calculations makes little sense. A more reasonable value for liquid water would be around 1000 steps.
 3) To compute a meaningful 2D spectra of liquid water, t_1 and t_2 times should be on the order of 100 fs - few ps.
 
 For example, ref 2 (MD results) used:
@@ -140,7 +135,7 @@ For example, ref 2 (MD results) used:
 2) Equilibrium trajectories were 25 ps (100,000 steps) long and checkpoint/dipole-derivative stride was 1000 steps (250 fs), resulting in about 100 nonequilibrium events.
 3) Nonequilibrium trajectories were 1000 steps (250 fs) long.
 
-An example of a reasonably converged calculation for 125 fs long response function is available in file dip_pol_neq_2d.converged.
+An example of a reasonably converged calculation for 125 fs long response function is available in file dip_pol_neq_2d.converged. Corresponding input.xml and run.sh files can be found in inputs_for_converged_calculation directory.
 
 
 How to compute a spectrum from the response function?

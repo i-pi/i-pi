@@ -150,11 +150,17 @@ class ResponseFunction:
         r_t *= self.beta / (c * self.epsilon)
         r_t = np.gradient(r_t, self.step_print * self.delta_t, axis=0, edge_order=2)
 
+        fn_out = self.out_name + self.op[0] + "_" + self.op[1] + "_neq_2d.dat"
         np.savetxt(
-            self.out_name + self.op[0] + "_" + self.op[1] + "_neq_2d.dat",
+            fn_out,
             r_t,
             fmt="%.5e",
+            header="Two-time response function. Time step: "
+            + str(self.step_print * self.delta_t)
+            + " au. Rows: t1 time. Columns: t2 time. Units: au.",
         )
+
+        print("Response function computed successfully. Generated file " + fn_out + ".")
 
 
 if __name__ == "__main__":
@@ -163,7 +169,8 @@ if __name__ == "__main__":
     parser = OptionParser(
         usage="%prog [options] <input file>",
         description="noneqm-response comutes response function of "
-        "2D IR-Raman spectra from equilibrium and nonequilibrium trajectories",
+        "2D IR-Raman spectra from equilibrium and nonequilibrium trajectories. "
+        "Rows of the output file correspond to different t1 times, columns correspond to t2 times.",
     )
     parser.add_option(
         "-e",

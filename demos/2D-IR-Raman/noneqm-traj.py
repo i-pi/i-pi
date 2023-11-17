@@ -26,6 +26,7 @@ from ipi.utils.softexit import softexit
 from ipi.engine.simulation import Simulation
 import ipi.engine.outputs as eoutputs
 from ipi.engine.initializer import init_chk
+from ipi.utils.messages import verbosity, info
 
 
 class NonEqmTraj(object):
@@ -110,8 +111,21 @@ class NonEqmTraj(object):
         """Runs nonequilibrium trajectories."""
 
         self.fetch_data_and_modify_simulation(sim)
-        t_first = ceil(self.tsteps / self.chk_stride) if t_first is None else t_first
-        t_last = floor(self.tsteps_eq / self.chk_stride) if t_last is None else t_last
+
+        t_min = ceil(self.tsteps / self.chk_stride)
+        t_max = floor(self.tsteps_eq / self.chk_stride)
+
+        t_first = t_min if t_first is None else t_first
+        t_last = t_max if t_last is None else t_last
+        if (t_first < t_min) or (t_first > t_last):
+            sys.exit(
+                "t_first should be greater than or equal to "
+                + str(t_min)
+                + " and less than t_last"
+            )
+        if t_last > t_max:
+            sys.exit("t_last should be less than or equal to " + str(t_max))
+
         # Bead number formatting with pre-padded zeros (from ipi/engine/outputs.py).
         fmt_bead = (
             "{0:0" + str(int(1 + np.floor(np.log(self.nbeads) / np.log(10)))) + "d}"
@@ -136,6 +150,14 @@ class NonEqmTraj(object):
                 softexit._doloop[0] = False
                 while softexit._thread.is_alive():
                     softexit._thread.join(0.5)
+                    # Print out a message saying that this trajectory finished.
+                    info(
+                        "Trajectory "
+                        + str(step)
+                        + ["(-)", "(+)"][(kick + 1) // 2]
+                        + " finished successfully.",
+                        verbosity.quiet,
+                    )
                 #############################################################################################
 
 
@@ -172,7 +194,7 @@ if __name__ == "__main__":
         "-V",
         "--verbosity",
         dest="verbosity",
-        default="quiet",
+        default=None,
         choices=["quiet", "low", "medium", "high", "debug"],
         help="Define the verbosity level.",
     )
@@ -183,7 +205,8 @@ if __name__ == "__main__":
         dest="epsilon",
         type="float",
         default=0.1,
-        help="Epsilon parameter controlling the field strength.",
+        help="Epsilon parameter controlling the field strength."
+        "For a given epsilon and time step delta_t of dynamics (both in au), the electric field is E = epsilon/delta_t in atomic units of [Eh/(e a0)] = 51.422 [V/Angstrom].",
     )
     parser.add_option(
         "-t",
