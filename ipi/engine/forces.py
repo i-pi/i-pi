@@ -172,8 +172,10 @@ class ForceBead(dobject):
             self.request = self.queue()
 
         # sleeps until the request has been evaluated
-        while self.request["status"] != "Done":
-            if self.request["status"] == "Exit" or softexit.triggered:
+        request = self.request
+        latency = self.ff.latency
+        while request["status"] != "Done":
+            if request["status"] == "Exit" or softexit.triggered:
                 # now, this is tricky. we are stuck here and we cannot return meaningful results.
                 # if we return, we may as well output wrong numbers, or mess up things.
                 # so we can only call soft-exit and wait until that is done. then kill the thread
@@ -182,23 +184,24 @@ class ForceBead(dobject):
                     message=" @ FORCES : cannot return so will die off here"
                 )
                 while softexit.exiting:
-                    time.sleep(self.ff.latency)
+                    time.sleep(latency)
                 sys.exit()
-            time.sleep(self.ff.latency)
+            time.sleep(latency)
+
         # print diagnostics about the elapsed time
         info(
             "# forcefield %s evaluated in %f (queue) and %f (dispatched) sec."
             % (
                 self.ff.name,
-                self.request["t_finished"] - self.request["t_queued"],
-                self.request["t_finished"] - self.request["t_dispatched"],
+                request["t_finished"] - request["t_queued"],
+                request["t_finished"] - request["t_dispatched"],
             ),
             verbosity.debug,
         )
 
         # data has been collected, so the request can be released and a slot
         # freed up for new calculations
-        result = self.request["result"]
+        result = request["result"]
 
         # reduce the reservation count (and wait for all calls to return)
         with self._threadlock:
@@ -206,11 +209,11 @@ class ForceBead(dobject):
 
         # releases just once, but wait for all requests to be complete
         if self._getallcount == 0:
-            self.ff.release(self.request)
+            self.ff.release(request)
             self.request = None
         else:
             while self._getallcount > 0:
-                time.sleep(self.ff.latency)
+                time.sleep(latency)
 
         return result
 
@@ -1071,10 +1074,11 @@ class Forces(dobject):
         """Submits all the required force calculations to the forcefields."""
 
         for ff in self.mforces:
+            mts_weights = ff.mts_weights
             # forces with no MTS specification are applied at the outer level
-            if (len(ff.mts_weights) == 0 and level == 0) or (
-                len(ff.mts_weights) > level
-                and ff.mts_weights[level] != 0
+            if (len(mts_weights) == 0 and level == 0) or (
+                len(mts_weights) > level
+                and mts_weights[level] != 0
                 and ff.weight != 0
             ):
                 # do not queue forces which have zero weight
@@ -1085,17 +1089,20 @@ class Forces(dobject):
 
         self.queue_mts(level)
         fk = np.zeros((self.nbeads, 3 * self.natoms))
-        for index in range(len(self.mforces)):
+        mforces = self.mforces     
+        for index in range(len(mforces)):
             # forces with no MTS specification are applied at the outer level
-            if (len(self.mforces[index].mts_weights) == 0 and level == 0) or (
-                len(self.mforces[index].mts_weights) > level
-                and self.mforces[index].mts_weights[level] != 0
-                and self.mforces[index].weight != 0
+            weight = dstrip(mforces[index].weight)
+            mts_weights = mforces[index].mts_weights
+            if (len(mts_weights) == 0 and level == 0) or (
+                len(mts_weights) > level
+                and mts_weights[level] != 0
+                and weight != 0
             ):
                 fk += (
-                    self.mforces[index].weight
-                    * self.mforces[index].mts_weights[level]
-                    * self.mrpc[index].b2tob1(dstrip(self.mforces[index].f))
+                    weight
+                    * mts_weights[level]
+                    * self.mrpc[index].b2tob1(dstrip(mforces[index].f))
                 )
         return fk
 
