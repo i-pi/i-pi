@@ -265,13 +265,13 @@ class depend_base(object):
             item = item()
             if not item._tainted[0]:
                 item.taint()
-        if self._synchro is not None:
-            for v in list(self._synchro.synced.values()):
-                if (not v._tainted[0]) and (v is not self):
+        if self._synchro is None:
+            self._tainted[:] = taintme
+        else:
+            for v in self._synchro.synced.values():
+                if not (v is self or v._tainted[0]):
                     v.taint(taintme=True)
             self._tainted[:] = taintme and (not self._name == self._synchro.manual)
-        else:
-            self._tainted[:] = taintme
 
     def tainted(self):
         """Returns tainted flag."""

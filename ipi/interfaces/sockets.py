@@ -199,8 +199,9 @@ class DriverSocket(socket.socket):
                 raise Disconnected()
             bpos += bpart
 
-        if hasattr(dest, "shape"):
-            return np.frombuffer(self._buf[0:blen], dest.dtype).reshape(dest.shape)
+        if dest.ndim > 0:
+            dest[:] = np.frombuffer(self._buf[0:blen], dest.dtype).reshape(dest.shape)
+            return dest  # tmp.copy() #np.frombuffer(self._buf[0:blen], dest.dtype).reshape(dest.shape).copy()
         else:
             return np.frombuffer(self._buf[0:blen], dest.dtype)[0]
 
@@ -703,7 +704,8 @@ class InterfaceSocket(object):
                 self.clients.remove(c)
                 # requeue jobs that have been left hanging
                 for [k, j, tc] in self.jobs[:]:
-                    if tc.done() and j is c:
+                    tc.result()
+                    if j is c:
                         self.jobs = [
                             w for w in self.jobs if not (w[0] is k and w[1] is j)
                         ]  # removes pair in a robust way
@@ -903,13 +905,11 @@ class InterfaceSocket(object):
         """
 
         if r["status"] == "Done":
-            if ct.done():
-                #            while ct.is_alive():  # we can wait for end of thread
-                #                ct.join()
-                self.jobs = [
-                    w for w in self.jobs if not (w[0] is r and w[1] is c)
-                ]  # removes pair in a robust way
-                return 1
+            ct.result()
+            self.jobs = [
+                w for w in self.jobs if not (w[0] is r and w[1] is c)
+            ]  # removes pair in a robust way
+            return 1
 
         if (
             self.timeout > 0
