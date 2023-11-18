@@ -22,6 +22,8 @@ import json
 from ipi.utils.messages import verbosity, warning, info
 from ipi.utils.softexit import softexit
 
+from concurrent.futures import ThreadPoolExecutor
+
 
 __all__ = ["InterfaceSocket"]
 
@@ -38,6 +40,22 @@ def Message(mystr):
 
     # convert to bytestream since we'll be sending this over a socket
     return str.ljust(str.upper(mystr), HDRLEN).encode()
+
+
+MESSAGE = {
+    msg: Message(msg)
+    for msg in [
+        "exit",
+        "status",
+        "ready",
+        "havedata",
+        "init",
+        "needinit",
+        "posdata",
+        "getforce",
+        "forceready",
+    ]
+}
 
 
 class Disconnected(Exception):
@@ -129,7 +147,7 @@ class DriverSocket(socket.socket):
         Args:
            msg: The message to send through the socket.
         """
-        return self.sendall(Message(msg))
+        return self.sendall(MESSAGE[msg])
 
     def recv_msg(self, length=HDRLEN):
         """Get the next message send through the socket.
@@ -183,9 +201,9 @@ class DriverSocket(socket.socket):
             bpos += bpart
 
         if hasattr(dest, "shape"):
-            return np.fromstring(self._buf[0:blen], dest.dtype).reshape(dest.shape)
+            return np.frombuffer(self._buf[0:blen], dest.dtype).reshape(dest.shape)
         else:
-            return np.fromstring(self._buf[0:blen], dest.dtype)[0]
+            return np.frombuffer(self._buf[0:blen], dest.dtype)[0]
 
 
 class Driver(DriverSocket):
@@ -227,7 +245,7 @@ class Driver(DriverSocket):
             trd.daemon = True
             trd.start()
 
-        self.sendall(Message("exit"))
+        self.send_msg("exit")
         self.status = Status.Disconnected
 
         super(DriverSocket, self).shutdown(how)
@@ -246,7 +264,7 @@ class Driver(DriverSocket):
                 # Using the recommended 60 s.
                 readable, writable, errored = select.select([], [self], [], 60)
                 if self in writable:
-                    self.sendall(Message("status"))
+                    self.send_msg("status")
                     self.waitstatus = True
             except socket.error:
                 return Status.Disconnected
@@ -266,11 +284,11 @@ class Driver(DriverSocket):
 
         if not len(reply) == HDRLEN:
             return Status.Disconnected
-        elif reply == Message("ready"):
+        elif reply == MESSAGE["ready"]:
             return Status.Up | Status.Ready
-        elif reply == Message("needinit"):
+        elif reply == MESSAGE["needinit"]:
             return Status.Up | Status.NeedsInit
-        elif reply == Message("havedata"):
+        elif reply == MESSAGE["havedata"]:
             return Status.Up | Status.HasData
         else:
             warning(" @SOCKET:    Unrecognized reply: " + str(reply), verbosity.low)
@@ -301,7 +319,7 @@ class Driver(DriverSocket):
             try:
                 # combines all messages in one to reduce latency
                 self.sendall(
-                    Message("init")
+                    MESSAGE["init"]
                     + np.int32(rid)
                     + np.int32(len(pars))
                     + pars.encode()
@@ -327,7 +345,7 @@ class Driver(DriverSocket):
             try:
                 # reduces latency by combining all messages in one
                 self.sendall(
-                    Message("posdata")
+                    MESSAGE["posdata"]
                     + h_ih[0].tobytes()  # header
                     + h_ih[1].tobytes()  # cell
                     + np.int32(len(pos) // 3).tobytes()  # inverse cell
@@ -354,7 +372,7 @@ class Driver(DriverSocket):
         """
 
         if self.status & Status.HasData:
-            self.sendall(Message("getforce"))
+            self.send_msg("getforce")
             reply = ""
             while True:
                 try:
@@ -370,7 +388,7 @@ class Driver(DriverSocket):
                         verbosity.low,
                     )
                     raise Disconnected()
-                if reply == Message("forceready"):
+                if reply == MESSAGE["forceready"]:
                     break
                 else:
                     warning(
@@ -529,6 +547,7 @@ class InterfaceSocket(object):
         timeout=1.0,
         match_mode="auto",
         exit_on_disconnect=False,
+        max_workers=128,
     ):
         """Initialises interface.
 
@@ -543,6 +562,7 @@ class InterfaceSocket(object):
               wait before updating the client list. Defaults to 1e-3.
            timeout: Length of time waiting for data from a client before we assume
               the connection is dead and disconnect the client.
+            max_workers: Maximum number of threads launched concurrently
 
         Raises:
            NameError: Raised if mode is not 'unix' or 'inet'.
@@ -558,6 +578,7 @@ class InterfaceSocket(object):
         self.match_mode = match_mode  # heuristics to match jobs and active clients
         self.requests = None  # these will be linked to the request list of the FFSocket object using the interface
         self.exit_on_disconnect = exit_on_disconnect
+        self.max_workers = max_workers
 
     def open(self):
         """Creates a new socket.
@@ -604,6 +625,7 @@ class InterfaceSocket(object):
         # these are the two main objects the socket interface should worry about and manage
         self.clients = []  # list of active clients (working or ready to compute)
         self.jobs = []  # list of jobs
+        self.executor = ThreadPoolExecutor(max_workers=self.max_workers)
 
     def close(self):
         """Closes down the socket."""
@@ -864,12 +886,13 @@ class InterfaceSocket(object):
                 ),
                 verbosity.high,
             )
-            fc_thread = threading.Thread(
-                target=fc.dispatch, name="DISPATCH", kwargs={"r": r}
-            )
+            # fc_thread = threading.Thread(
+            #    target=fc.dispatch, name="DISPATCH", kwargs={"r": r}
+            # )
+            fc_thread = self.executor.submit(fc.dispatch, r=r)
             self.jobs.append([r, fc, fc_thread])
-            fc_thread.daemon = True
-            fc_thread.start()
+            # fc_thread.daemon = True
+            # fc_thread.start()
             return True
 
         return False
@@ -880,12 +903,13 @@ class InterfaceSocket(object):
         """
 
         if r["status"] == "Done":
-            while ct.is_alive():  # we can wait for end of thread
-                ct.join()
-            self.jobs = [
-                w for w in self.jobs if not (w[0] is r and w[1] is c)
-            ]  # removes pair in a robust way
-            return 1
+            if ct.done():
+                #            while ct.is_alive():  # we can wait for end of thread
+                #                ct.join()
+                self.jobs = [
+                    w for w in self.jobs if not (w[0] is r and w[1] is c)
+                ]  # removes pair in a robust way
+                return 1
 
         if (
             self.timeout > 0

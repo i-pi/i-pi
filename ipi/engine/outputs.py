@@ -74,7 +74,7 @@ class BaseOutput(object):
 
         self.stride = stride
         self.filename = filename
-        self.out = None        
+        self.out = None
 
     def softexit(self):
         """Emergency call when i-pi must exit quickly"""
@@ -120,12 +120,11 @@ class BaseOutput(object):
 
         if self.out is not None:
             return self.out.write(data)
-    
+
     def active(self):
-        """ Whether we will output at this step """
+        """Whether we will output at this step"""
 
         return (self.system.simul.step + 1) % self.stride == 0
-        
 
 
 class PropertyOutput(BaseOutput):
@@ -164,7 +163,7 @@ class PropertyOutput(BaseOutput):
 
         if outlist is None:
             outlist = np.zeros(0, np.dtype("|U1024"))
-        self.outlist = np.asarray(outlist, np.dtype("|U1024"))        
+        self.outlist = np.asarray(outlist, np.dtype("|U1024"))
         self.flush = flush
         self.nout = 0
 
@@ -177,7 +176,7 @@ class PropertyOutput(BaseOutput):
 
         # Checks as soon as possible if some asked-for properties are
         # missing or mispelled
-        
+
         for what in self.outlist:
             key = getkey(what)
             if key not in list(system.properties.property_dict.keys()):
@@ -188,7 +187,6 @@ class PropertyOutput(BaseOutput):
                 raise KeyError(key + " is not a recognized property")
 
         super(PropertyOutput, self).bind(mode, system)
-
 
     def print_header(self):
         # print nice header if information is available on the properties
@@ -601,17 +599,17 @@ class CheckpointOutput(BaseOutput):
            simul: A simulation object to be bound.
         """
 
-        self.simul = simul        
+        self.simul = simul
         import ipi.inputs.simulation as isimulation
 
         self.status = isimulation.InputSimulation()
         self.status.store(simul)
 
     def active(self):
-        """ Whether we will output at this step """
-        
+        """Whether we will output at this step"""
+
         return (self.simul.step + 1) % self.stride == 0
-    
+
     def store(self):
         """Stores the current simulation status.
 

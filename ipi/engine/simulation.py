@@ -314,10 +314,10 @@ class Simulation(dobject):
                 break
 
             # save a consistent state of the simulation that will be saved as a RESTART file in case of premature (soft) exit
-            if self.step%self.safe_stride ==0:
+            if self.step % self.safe_stride == 0:
                 self.chk.store()
 
-            if len(self.syslist)>0 and self.threading:
+            if len(self.syslist) > 0 and self.threading:
                 stepthreads = []
                 # steps through all the systems
                 for s in self.syslist:
@@ -354,7 +354,7 @@ class Simulation(dobject):
             if self.threading:
                 stepthreads = []
                 for o in self.outputs:
-                    if o.active(): # don't start a thread if it's not needed
+                    if o.active():  # don't start a thread if it's not needed
                         st = threading.Thread(target=o.write, name=o.filename)
                         st.daemon = True
                         st.start()

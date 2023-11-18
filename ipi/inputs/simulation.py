@@ -126,11 +126,14 @@ class InputSimulation(Input):
         ),
         "safe_stride": (
             InputValue,
-            {"dtype": int, "default": 1, "help": 
-"""Consistent simulation states will be saved every this number of steps. 
+            {
+                "dtype": int,
+                "default": 1,
+                "help": """Consistent simulation states will be saved every this number of steps. 
 Saving state entails a small overhead, so you may want to set this to the smallest output
 frequency in your simulation to make i-PI faster. Use at your own risk!
-"""},
+""",
+            },
         ),
         "floatformat": (
             InputAttribute,

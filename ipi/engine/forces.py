@@ -566,10 +566,12 @@ class ScaledForceComponent(dobject):
         self.force_extras = self.bf.force_extras
 
     def get_pots(self):
-        return (self.scaling * self.bf.pots
+        return (
+            self.scaling * self.bf.pots
             if self.scaling != 0
-            else np.zeros(self.bf.nbeads))
-    
+            else np.zeros(self.bf.nbeads)
+        )
+
     def get_vir(self):
         """Sums the virial of each replica.
 
@@ -1080,9 +1082,7 @@ class Forces(dobject):
             mts_weights = ff.mts_weights
             # forces with no MTS specification are applied at the outer level
             if (len(mts_weights) == 0 and level == 0) or (
-                len(mts_weights) > level
-                and mts_weights[level] != 0
-                and ff.weight != 0
+                len(mts_weights) > level and mts_weights[level] != 0 and ff.weight != 0
             ):
                 # do not queue forces which have zero weight
                 ff.queue()
@@ -1092,15 +1092,13 @@ class Forces(dobject):
 
         self.queue_mts(level)
         fk = np.zeros((self.nbeads, 3 * self.natoms))
-        mforces = self.mforces     
+        mforces = self.mforces
         for index in range(len(mforces)):
-            # forces with no MTS specification are applied at the outer level            
+            # forces with no MTS specification are applied at the outer level
             weight = dstrip(mforces[index].weight)
             mts_weights = mforces[index].mts_weights
             if (len(mts_weights) == 0 and level == 0) or (
-                len(mts_weights) > level
-                and mts_weights[level] != 0
-                and weight != 0
+                len(mts_weights) > level and mts_weights[level] != 0 and weight != 0
             ):
                 fk += (
                     weight
