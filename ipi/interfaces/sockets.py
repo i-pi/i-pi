@@ -197,7 +197,6 @@ class DriverSocket(socket.socket):
 
             if not timeout and bpart == 0:
                 raise Disconnected()
-
             bpos += bpart
 
         if hasattr(dest, "shape"):
@@ -405,6 +404,7 @@ class Driver(DriverSocket):
 
         mlen = np.int32()
         mlen = self.recvall(mlen)
+
         mf = np.zeros(3 * mlen, np.float64)
         mf = self.recvall(mf)
 
@@ -441,7 +441,6 @@ class Driver(DriverSocket):
                 )
 
             mxtradict["raw"] = mxtra
-
         return [mu, mf, mvir, mxtradict]
 
     def dispatch(self, r):
@@ -493,9 +492,10 @@ class Driver(DriverSocket):
             raise InvalidSize
 
         # If only a piece of the system is active, resize forces and reassign
-        rftemp = r["result"][1]
-        r["result"][1] = np.zeros(len(r["pos"]), dtype=np.float64)
-        r["result"][1][r["active"]] = rftemp
+        if len(r["active"]) != len(r["pos"]):
+            rftemp = r["result"][1]
+            r["result"][1] = np.zeros(len(r["pos"]), dtype=np.float64)
+            r["result"][1][r["active"]] = rftemp
         r["t_finished"] = time.time()
         self.lastreq = r["id"]  #
 
@@ -701,9 +701,7 @@ class InterfaceSocket(object):
                 self.clients.remove(c)
                 # requeue jobs that have been left hanging
                 for [k, j, tc] in self.jobs[:]:
-                    if tc.is_alive():
-                        tc.join(2)
-                    if j is c:
+                    if tc.done() and j is c:
                         self.jobs = [
                             w for w in self.jobs if not (w[0] is k and w[1] is j)
                         ]  # removes pair in a robust way
