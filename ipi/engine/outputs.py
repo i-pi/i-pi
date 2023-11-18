@@ -555,7 +555,7 @@ class TrajectoryOutput(BaseOutput):
             os.fsync(stream)
 
 
-class CheckpointOutput(BaseOutput):
+class CheckpointOutput(dobject):
 
     """Class dealing with outputting checkpoints.
 
@@ -586,7 +586,8 @@ class CheckpointOutput(BaseOutput):
            step: The number of checkpoint files that have been created so far.
         """
 
-        super(CheckpointOutput, self).__init__(filename, stride)
+        self.filename = filename
+        self.stride = stride
         self.step = depend_value(name="step", value=step)
         self.overwrite = overwrite
         self._storing = False

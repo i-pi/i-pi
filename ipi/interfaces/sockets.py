@@ -269,8 +269,10 @@ class Driver(DriverSocket):
                 return Status.Disconnected
 
         try:
-            reply = self.recv(HDRLEN)
-            self.waitstatus = False  # got some kind of reply
+            readable, writable, errored = select.select([self], [], [], 60)
+            if self in readable:
+                reply = self.recv_msg(HDRLEN)
+                self.waitstatus = False  # got some kind of reply
         except socket.timeout:
             warning(" @SOCKET:   Timeout in status recv!", verbosity.debug)
             return Status.Up | Status.Busy | Status.Timeout
