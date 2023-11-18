@@ -411,7 +411,8 @@ class NVEIntegrator(DummyIntegrator):
 
         # halfdt/alpha
         self.beads.p += self.forces.forces_mts(level) * self.pdt[level]
-        if level == 0:  # adds bias in the outer loop
+        if level == 0 and self.ensemble.has_bias:  # adds bias in the outer loop
+            print("adding bias force")
             self.beads.p += dstrip(self.bias.f) * self.pdt[level]
 
     def qcstep(self):

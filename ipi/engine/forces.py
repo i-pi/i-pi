@@ -524,16 +524,14 @@ class ScaledForceComponent(dobject):
         dself.f = depend_array(
             name="f",
             func=lambda: self.scaling * self.bf.f
-            if scaling != 0
+            if self.scaling != 0
             else np.zeros((self.bf.nbeads, 3 * self.bf.natoms)),
             value=np.zeros((self.bf.nbeads, 3 * self.bf.natoms)),
             dependencies=[dd(self.bf).f, dself.scaling],
         )
         dself.pots = depend_array(
             name="pots",
-            func=lambda: self.scaling * self.bf.pots
-            if scaling != 0
-            else np.zeros(self.bf.nbeads),
+            func=self.get_pots,
             value=np.zeros(self.bf.nbeads),
             dependencies=[dd(self.bf).pots, dself.scaling],
         )
@@ -567,6 +565,11 @@ class ScaledForceComponent(dobject):
         self.mts_weights = self.bf.mts_weights
         self.force_extras = self.bf.force_extras
 
+    def get_pots(self):
+        return (self.scaling * self.bf.pots
+            if self.scaling != 0
+            else np.zeros(self.bf.nbeads))
+    
     def get_vir(self):
         """Sums the virial of each replica.
 
@@ -1091,7 +1094,7 @@ class Forces(dobject):
         fk = np.zeros((self.nbeads, 3 * self.natoms))
         mforces = self.mforces     
         for index in range(len(mforces)):
-            # forces with no MTS specification are applied at the outer level
+            # forces with no MTS specification are applied at the outer level            
             weight = dstrip(mforces[index].weight)
             mts_weights = mforces[index].mts_weights
             if (len(mts_weights) == 0 and level == 0) or (
