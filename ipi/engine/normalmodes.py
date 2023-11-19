@@ -167,7 +167,7 @@ class NormalModes:
 
         # stores a reference to the bound beads and ensemble objects
         self.ensemble = ensemble
-        dpipe(dd(motion).dt, self._dt)
+        dpipe(motion._dt, self._dt)
 
         # sets up what's necessary to perform nm transformation.
         if self.nbeads == 1:  # classical trajectory! don't waste time doing anything!
@@ -302,7 +302,7 @@ class NormalModes:
         )
 
         self._dt = depend_value(name="dt", value=1.0)
-        dpipe(dd(self.motion).dt, self._dt)
+        dpipe(self.motion._dt, self._dt)
         self._prop_pq = depend_array(
             name="prop_pq",
             value=np.zeros((self.beads.nbeads, 2, 2)),

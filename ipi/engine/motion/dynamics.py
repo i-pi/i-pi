@@ -68,10 +68,9 @@ class Dynamics(Motion):
         """
 
         super(Dynamics, self).__init__(fixcom=fixcom, fixatoms=fixatoms)
-        dself = dd(self)  # noqa
 
         # initialize time step. this is the master time step that covers a full time step
-        dd(self).dt = depend_value(name="dt", value=timestep)
+        self._dt = depend_value(name="dt", value=timestep)
 
         if thermostat is None:
             self.thermostat = Thermostat()
@@ -86,9 +85,9 @@ class Dynamics(Motion):
             self.thermostat = thermostat
 
         if nmts is None or len(nmts) == 0:
-            dd(self).nmts = depend_array(name="nmts", value=np.asarray([1], int))
+            self._nmts = depend_array(name="nmts", value=np.asarray([1], int))
         else:
-            dd(self).nmts = depend_array(name="nmts", value=np.asarray(nmts, int))
+            self._nmts = depend_array(name="nmts", value=np.asarray(nmts, int))
 
         if barostat is None:
             self.barostat = Barostat()
@@ -113,7 +112,7 @@ class Dynamics(Motion):
             self.integrator = DummyIntegrator()
 
         # splitting mode for the integrators
-        dd(self).splitting = depend_value(name="splitting", value=splitting)
+        self._splitting = depend_value(name="splitting", value=splitting)
 
         # constraints
         self.fixcom = fixcom
@@ -161,13 +160,12 @@ class Dynamics(Motion):
             )
 
         # Strips off depend machinery for easier referencing.
-        dself = dd(self)
         dthrm = dd(self.thermostat)
         dbaro = dd(self.barostat)
         dens = dd(self.ensemble)
 
         # n times the temperature (for path integral partition function)
-        dself.ntemp = depend_value(
+        self._ntemp = depend_value(
             name="ntemp", func=self.get_ntemp, dependencies=[dens.temp]
         )
 
@@ -175,13 +173,13 @@ class Dynamics(Motion):
         fixdof = self.get_fixdof()
 
         # first makes sure that the thermostat has the correct temperature and timestep, then proceeds with binding it.
-        dpipe(dself.ntemp, dthrm.temp)
+        dpipe(self._ntemp, dthrm.temp)
 
         # depending on the kind, the thermostat might work in the normal mode or the bead representation.
         self.thermostat.bind(beads=self.beads, nm=self.nm, prng=prng, fixdof=fixdof)
 
         # first makes sure that the barostat has the correct stress and timestep, then proceeds with binding it.
-        dpipe(dself.ntemp, dbaro.temp)
+        dpipe(self._ntemp, dbaro.temp)
         dpipe(dens.pext, dbaro.pext)
         dpipe(dens.stressext, dbaro.stressext)
         self.barostat.bind(
@@ -243,7 +241,10 @@ class Dynamics(Motion):
         self.ensemble.time += self.dt  # increments internal time
 
 
-class DummyIntegrator(dobject):
+inject_depend_properties(Dynamics, ["dt", "nmts", "splitting", "ntemp"])
+
+
+class DummyIntegrator:
     """No-op integrator for (PI)MD"""
 
     def __init__(self):
@@ -284,41 +285,38 @@ class DummyIntegrator(dobject):
         self.fixatoms = motion.fixatoms
         self.enstype = motion.enstype
 
-        dself = dd(self)
-        dmotion = dd(motion)
-
         # no need to dpipe these are really just references
-        dself.splitting = dmotion.splitting
-        dself.dt = dmotion.dt
-        dself.nmts = dmotion.nmts
+        self._splitting = motion._splitting
+        self._dt = motion._dt
+        self._nmts = motion._nmts
 
         # total number of iteration in the inner-most MTS loop
-        dself.inmts = depend_value(name="inmts", func=lambda: np.prod(self.nmts))
-        dself.nmtslevels = depend_value(name="nmtslevels", func=lambda: len(self.nmts))
+        self._inmts = depend_value(name="inmts", func=lambda: np.prod(self.nmts))
+        self._nmtslevels = depend_value(name="nmtslevels", func=lambda: len(self.nmts))
         # these are the time steps to be used for the different parts of the integrator
-        dself.qdt = depend_value(
+        self._qdt = depend_value(
             name="qdt",
             func=self.get_qdt,
-            dependencies=[dself.splitting, dself.dt, dself.inmts],
+            dependencies=[self._splitting, self._dt, self._inmts],
         )  # positions
-        dself.pdt = depend_array(
+        self._pdt = depend_array(
             name="pdt",
             func=self.get_pdt,
             value=np.zeros(len(self.nmts)),
-            dependencies=[dself.splitting, dself.dt, dself.nmts],
+            dependencies=[self._splitting, self._dt, self._nmts],
         )  # momenta
-        dself.tdt = depend_value(
+        self._tdt = depend_value(
             name="tdt",
             func=self.get_tdt,
-            dependencies=[dself.splitting, dself.dt, dself.nmts],
+            dependencies=[self._splitting, self._dt, self._nmts],
         )  # thermostat
 
-        dpipe(dself.qdt, self.nm._dt)
-        dpipe(dself.dt, dd(self.barostat).dt)
-        dpipe(dself.qdt, dd(self.barostat).qdt)
-        dpipe(dself.pdt, dd(self.barostat).pdt)
-        dpipe(dself.tdt, dd(self.barostat).tdt)
-        dpipe(dself.tdt, dd(self.thermostat).dt)
+        dpipe(self._qdt, self.nm._dt)
+        dpipe(self._dt, dd(self.barostat).dt)
+        dpipe(self._qdt, dd(self.barostat).qdt)
+        dpipe(self._pdt, dd(self.barostat).pdt)
+        dpipe(self._tdt, dd(self.barostat).tdt)
+        dpipe(self._tdt, dd(self.thermostat).dt)
 
         if motion.enstype == "sc" or motion.enstype == "scnpt":
             # coefficients to get the (baseline) trotter to sc conversion
@@ -385,6 +383,12 @@ class DummyIntegrator(dobject):
                 bp[self.fixatoms * 3] = 0.0
                 bp[self.fixatoms * 3 + 1] = 0.0
                 bp[self.fixatoms * 3 + 2] = 0.0
+
+
+inject_depend_properties(
+    DummyIntegrator,
+    ["splitting", "nmts", "dt", "inmts", "nmtslevels", "qdt", "pdt", "tdt"],
+)
 
 
 class NVEIntegrator(DummyIntegrator):
@@ -680,8 +684,8 @@ class SCIntegrator(NVTIntegrator):
         """
 
         super(SCIntegrator, self).bind(mover)
-        self.ensemble.add_econs(dd(self.forces).potsc)
-        self.ensemble.add_xlpot(dd(self.forces).potsc)
+        self.ensemble.add_econs(self.forces._potsc)
+        self.ensemble.add_xlpot(self.forces._potsc)
 
     def pstep(self, level=0):
         """Velocity Verlet monemtum propagator."""
