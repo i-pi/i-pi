@@ -174,12 +174,12 @@ class Barostat(dobject):
         dself.kstress = depend_value(
             name="kstress",
             func=self.get_kstress,
-            dependencies=[dd(beads).q, dd(beads).qc, dd(beads).pc, dd(forces).f],
+            dependencies=[dd(beads).q, dd(beads).qc, dd(beads).pc, forces._f],
         )
         dself.stress = depend_value(
             name="stress",
             func=self.get_stress,
-            dependencies=[dself.kstress, dd(cell).V, dd(forces).vir],
+            dependencies=[dself.kstress, dd(cell).V, forces._vir],
         )
 
         dself.pot = depend_value(name="pot", value=0.0)
@@ -195,8 +195,8 @@ class Barostat(dobject):
             dependencies=[
                 dd(beads).q,
                 dd(beads).qc,
-                dd(forces).fsc_part_2,
-                dd(forces).f,
+                forces._fsc_part_2,
+                forces._f,
             ],
         )
 
@@ -206,8 +206,8 @@ class Barostat(dobject):
             dependencies=[
                 dself.kstress_sc,
                 dd(self.cell).V,
-                dd(forces).vir,
-                dd(forces).virssc_part_2,
+                forces._vir,
+                forces._virssc_part_2,
             ],
         )
 

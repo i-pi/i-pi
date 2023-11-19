@@ -186,10 +186,10 @@ class Ensemble(dobject):
 
         dself.econs = depend_value(name="econs", func=self.get_econs)
         # dependencies of the conserved quantity
-        dself.econs.add_dependency(dd(self.nm).kin)
-        dself.econs.add_dependency(dd(self.forces).pot)
-        dself.econs.add_dependency(dd(self.bias).pot)
-        dself.econs.add_dependency(dd(self.nm).vspring)
+        dself.econs.add_dependency(self.nm._kin)
+        dself.econs.add_dependency(self.forces._pot)
+        dself.econs.add_dependency(self.bias._pot)
+        dself.econs.add_dependency(self.nm._vspring)
         dself.econs.add_dependency(dself.eens)
 
         # pipes the weights to the list of weight vectors
@@ -199,7 +199,7 @@ class Ensemble(dobject):
                 warning(
                     "The weight given to forces used in an ensemble bias are given a weight determined by bias_weight"
                 )
-            dpipe(dself.bweights, dd(fc).weight, i)
+            dpipe(dself.bweights, fc._weight, i)
             i += 1
 
         # add Hamiltonian REM bias components
@@ -219,8 +219,8 @@ class Ensemble(dobject):
         for ic in range(len(self.forces.mforces)):
             sfc = ScaledForceComponent(self.forces.mforces[ic], 1.0)
             self.bias.add_component(self.forces.mbeads[ic], self.forces.mrpc[ic], sfc)
-            dd(sfc).scaling._func = lambda i=ic: self.hweights[i] - 1
-            dd(sfc).scaling.add_dependency(dself.hweights)
+            sfc._scaling._func = lambda i=ic: self.hweights[i] - 1
+            sfc._scaling.add_dependency(dself.hweights)
 
         self._elist = []
 
@@ -230,10 +230,10 @@ class Ensemble(dobject):
         dself.lpens = depend_value(
             name="lpens", func=self.get_lpens, dependencies=[dself.temp]
         )
-        dself.lpens.add_dependency(dd(self.nm).kin)
-        dself.lpens.add_dependency(dd(self.forces).pot)
-        dself.lpens.add_dependency(dd(self.bias).pot)
-        dself.lpens.add_dependency(dd(self.nm).vspring)
+        dself.lpens.add_dependency(self.nm._kin)
+        dself.lpens.add_dependency(self.forces._pot)
+        dself.lpens.add_dependency(self.bias._pot)
+        dself.lpens.add_dependency(self.nm._vspring)
 
         # extended Lagrangian terms for the ensemble
         self._xlpot = []

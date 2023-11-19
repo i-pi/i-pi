@@ -60,7 +60,7 @@ class ForceRequest(dict):
         return self is y
 
 
-class ForceField(dobject):
+class ForceField:
 
     """Base forcefield class.
 

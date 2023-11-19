@@ -331,7 +331,7 @@ class ThermoPILE_L(Thermostat):
             name="tauk",
             value=np.zeros(nm.nbeads - 1, float),
             func=self.get_tauk,
-            dependencies=[dself.pilescale, dd(nm).dynomegak],
+            dependencies=[dself.pilescale, nm._dynomegak],
         )
 
         # must pipe all the dependencies in such a way that values for the nm thermostats

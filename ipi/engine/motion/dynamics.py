@@ -164,7 +164,6 @@ class Dynamics(Motion):
         dself = dd(self)
         dthrm = dd(self.thermostat)
         dbaro = dd(self.barostat)
-        dnm = dd(self.nm)  # noqa
         dens = dd(self.ensemble)
 
         # n times the temperature (for path integral partition function)
@@ -314,7 +313,7 @@ class DummyIntegrator(dobject):
             dependencies=[dself.splitting, dself.dt, dself.nmts],
         )  # thermostat
 
-        dpipe(dself.qdt, dd(self.nm).dt)
+        dpipe(dself.qdt, self.nm._dt)
         dpipe(dself.dt, dd(self.barostat).dt)
         dpipe(dself.qdt, dd(self.barostat).qdt)
         dpipe(dself.pdt, dd(self.barostat).pdt)

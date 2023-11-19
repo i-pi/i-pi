@@ -16,7 +16,7 @@ import threading
 import time
 from copy import deepcopy
 
-from ipi.utils.depend import depend_value, dobject, dd, dpipe
+from ipi.utils.depend import depend_value, dobject, dd, dpipe, inject_depend_properties
 from ipi.utils.io.inputs.io_xml import xml_parse_file
 from ipi.utils.messages import verbosity, info, warning, banner
 from ipi.utils.softexit import softexit
@@ -27,7 +27,7 @@ import ipi.inputs.simulation as isimulation
 __all__ = ["Simulation"]
 
 
-class Simulation(dobject):
+class Simulation:
     """Main simulation object.
 
     Contains all the references and the main dynamics loop. Also handles the
@@ -144,8 +144,7 @@ class Simulation(dobject):
         self.prng = prng
         self.mode = mode
         self.threading = threads
-        self.safe_stride = safe_stride
-        dself = dd(self)
+        self.safe_stride = safe_stride        
 
         self.syslist = syslist
         for s in syslist:
@@ -166,7 +165,7 @@ class Simulation(dobject):
 
         self.outtemplate = outputs
 
-        dself.step = depend_value(name="step", value=step)
+        self._step = depend_value(name="step", value=step)
         self.tsteps = tsteps
         self.ttime = ttime
         self.smotion = smotion
@@ -405,3 +404,5 @@ class Simulation(dobject):
                 break
 
         self.rollback = False
+
+inject_depend_properties(Simulation, ["step"])

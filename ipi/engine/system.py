@@ -117,7 +117,7 @@ class System(dobject):
             simul.output_maker,
         )
 
-        dpipe(dd(self.nm).omegan2, dd(self.forces).omegan2)
+        dpipe(self.nm._omegan2, self.forces._omegan2)
 
         self.init.init_stage2(self)
 
