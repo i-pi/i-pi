@@ -199,29 +199,25 @@ class NormalModes:
         )
 
         # must overwrite the functions
-        dd(self.beads).q._func = {
-            "qnm": (lambda: self.transform.nm2b(dstrip(self.qnm)))
-        }
-        dd(self.beads).p._func = {
-            "pnm": (lambda: self.transform.nm2b(dstrip(self.pnm)))
-        }
-        dd(self.beads).q.add_synchro(sync_q)
-        dd(self.beads).p.add_synchro(sync_p)
+        self.beads._q._func = {"qnm": (lambda: self.transform.nm2b(dstrip(self.qnm)))}
+        self.beads._p._func = {"pnm": (lambda: self.transform.nm2b(dstrip(self.pnm)))}
+        self.beads._q.add_synchro(sync_q)
+        self.beads._p.add_synchro(sync_p)
 
         # also within the "atomic" interface to beads
         for b in range(self.nbeads):
-            dd(self.beads._blist[b]).q._func = {
+            self.beads._blist[b]._q._func = {
                 "qnm": (lambda: self.transform.nm2b(dstrip(self.qnm)))
             }
-            dd(self.beads._blist[b]).p._func = {
+            self.beads._blist[b]._p._func = {
                 "pnm": (lambda: self.transform.nm2b(dstrip(self.pnm)))
             }
-            dd(self.beads._blist[b]).q.add_synchro(sync_q)
-            dd(self.beads._blist[b]).p.add_synchro(sync_p)
+            self.beads._blist[b]._q.add_synchro(sync_q)
+            self.beads._blist[b]._p.add_synchro(sync_p)
 
         # finally, we mark the beads as those containing the set positions
-        dd(self.beads).q.update_man()
-        dd(self.beads).p.update_man()
+        self.beads._q.update_man()
+        self.beads._p.update_man()
 
         # forces can be converted in nm representation, but here it makes no sense to set up a sync mechanism,
         # as they always get computed in the bead rep
@@ -248,7 +244,7 @@ class NormalModes:
 
         # create path-frequencies related properties
         self._omegan = depend_value(
-            name="omegan", func=self.get_omegan, dependencies=[dd(self.ensemble).temp]
+            name="omegan", func=self.get_omegan, dependencies=[self.ensemble._temp]
         )
         self._omegan2 = depend_value(
             name="omegan2", func=self.get_omegan2, dependencies=[self._omegan]
@@ -292,7 +288,7 @@ class NormalModes:
             name="dynm3",
             value=np.zeros((self.nbeads, 3 * self.natoms), float),
             func=self.get_dynm3,
-            dependencies=[self._nm_factor, dd(self.beads).m3],
+            dependencies=[self._nm_factor, self.beads._m3],
         )
         self._dynomegak = depend_array(
             name="dynomegak",
@@ -327,7 +323,7 @@ class NormalModes:
             name="kins",
             value=np.zeros(self.nbeads, float),
             func=self.get_kins,
-            dependencies=[self._pnm, dd(self.beads).sm3, self._nm_factor],
+            dependencies=[self._pnm, self.beads._sm3, self._nm_factor],
         )
         self._kin = depend_value(
             name="kin", func=self.get_kin, dependencies=[self._kins]
@@ -336,7 +332,7 @@ class NormalModes:
             name="kstress",
             value=np.zeros((3, 3), float),
             func=self.get_kstress,
-            dependencies=[self._pnm, dd(self.beads).sm3, self._nm_factor],
+            dependencies=[self._pnm, self.beads._sm3, self._nm_factor],
         )
 
         # Array that holds both vspring and fspring for bosons
@@ -356,7 +352,7 @@ class NormalModes:
                 self._qnm,
                 self._omegak,
                 self._o_omegak,
-                dd(self.beads).m3,
+                self.beads._m3,
                 self._vspring_and_fspring_B,
             ],
         )
@@ -366,7 +362,7 @@ class NormalModes:
             name="fspringnm",
             value=np.zeros((self.nbeads, 3 * self.natoms), float),
             func=self.get_fspringnm,
-            dependencies=[self._qnm, self._omegak, dd(self.beads).m3],
+            dependencies=[self._qnm, self._omegak, self.beads._m3],
         )
 
         # spring forces on beads, transformed from normal modes

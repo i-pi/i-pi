@@ -12,7 +12,7 @@ forcefields which govern the interaction potential.
 
 import threading
 
-from ipi.utils.depend import *
+from ipi.utils.depend import dpipe
 from ipi.utils.units import *
 from ipi.utils.prng import *
 from ipi.utils.io import *
@@ -27,7 +27,7 @@ from ipi.engine.properties import Properties, Trajectories
 __all__ = ["System"]
 
 
-class System(dobject):
+class System:
 
     """Physical system object.
 

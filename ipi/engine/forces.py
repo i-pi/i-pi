@@ -101,7 +101,7 @@ class ForceBead:
         self.ff = ff
 
         # ufvx depends on the atomic positions and on the cell
-        self._ufvx.add_dependency(dd(self.atoms).q)
+        self._ufvx.add_dependency(self.atoms._q)
         self._ufvx.add_dependency(dd(self.cell).h)
 
         # potential and virial are to be extracted very simply from ufvx
@@ -709,13 +709,13 @@ class Forces:
 
             # the beads positions for this force components are obtained
             # automatically, when needed, as a contraction of the full beads
-            dd(newbeads).q._func = make_rpc(newrpc, beads)
+            newbeads._q._func = make_rpc(newrpc, beads)
             for b in newbeads:
                 # must update also indirect access to the beads coordinates
-                dd(b).q._func = dd(newbeads).q._func
+                b._q._func = newbeads._q._func
 
             # makes newbeads.q depend from beads.q
-            dd(beads).q.add_dependant(dd(newbeads).q)
+            beads._q.add_dependant(newbeads._q)
 
             # now we create a new forcecomponent which is bound to newbeads!
             newforce.bind(newbeads, cell, fflist, output_maker=self.output_maker)
@@ -784,7 +784,7 @@ class Forces:
             name="potssc",
             value=np.zeros(self.nbeads, float),
             dependencies=[
-                dd(self.beads).m,
+                self.beads._m,
                 self._f,
                 self._pots,
                 self._alpha,
@@ -815,7 +815,7 @@ class Forces:
         self._fvir_4th_order = depend_value(
             name="fvir_4th_order",
             value=[None, None],
-            dependencies=[dd(self.beads).m, self._f, self._pots],
+            dependencies=[self.beads._m, self._f, self._pots],
             func=self.fvir_4th_order_combine,
         )
 
@@ -953,7 +953,7 @@ class Forces:
             # the value of the contracted bead, so that it's marked as NOT
             # tainted - it should not be as it's an internal of the force and
             # therefore get copied
-            dd(mself.beads).q.set(mreff.beads.q, manual=False)
+            mself.beads._q.set(mreff.beads.q, manual=False)
             for b in range(mself.nbeads):
                 mself._forces[b]._ufvx.set(
                     deepcopy(mreff._forces[b]._ufvx._value), manual=False
@@ -995,7 +995,7 @@ class Forces:
             assert mself.nbeads == len(mextra), msg
             mxlist = mextra[:]
 
-            dd(mself.beads).q.set(mq, manual=False)
+            mself.beads._q.set(mq, manual=False)
             for b in range(mself.nbeads):
                 ufvx = [mv[b], mf[b], vir, mxlist[b]]
                 mself._forces[b]._ufvx.set(ufvx, manual=False)

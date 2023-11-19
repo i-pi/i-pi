@@ -10,7 +10,7 @@ prepares them for output.
 import numpy as np
 
 from ipi.utils.messages import verbosity, info, warning
-from ipi.utils.depend import *
+from ipi.utils.depend import dstrip
 from ipi.utils.units import Constants, unit_to_internal
 from ipi.utils.mathtools import logsumlog, h2abc_deg
 from ipi.utils.io.inputs import io_xml
@@ -200,7 +200,7 @@ def help_rst(idict, standalone=True):
     return rstr
 
 
-class Properties(dobject):
+class Properties:
 
     """A proxy to compute and output properties of the system.
 
@@ -2619,7 +2619,7 @@ class Properties(dobject):
         return ti
 
 
-class Trajectories(dobject):
+class Trajectories:
 
     """A simple class to take care of output of trajectory data.
 

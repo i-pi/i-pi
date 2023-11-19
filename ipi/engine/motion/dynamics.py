@@ -162,11 +162,10 @@ class Dynamics(Motion):
         # Strips off depend machinery for easier referencing.
         dthrm = dd(self.thermostat)
         dbaro = dd(self.barostat)
-        dens = dd(self.ensemble)
 
         # n times the temperature (for path integral partition function)
         self._ntemp = depend_value(
-            name="ntemp", func=self.get_ntemp, dependencies=[dens.temp]
+            name="ntemp", func=self.get_ntemp, dependencies=[self.ensemble._temp]
         )
 
         # fixed degrees of freedom count
@@ -180,8 +179,8 @@ class Dynamics(Motion):
 
         # first makes sure that the barostat has the correct stress and timestep, then proceeds with binding it.
         dpipe(self._ntemp, dbaro.temp)
-        dpipe(dens.pext, dbaro.pext)
-        dpipe(dens.stressext, dbaro.stressext)
+        dpipe(self.ensemble._pext, dbaro.pext)
+        dpipe(self.ensemble._stressext, dbaro.stressext)
         self.barostat.bind(
             beads,
             nm,

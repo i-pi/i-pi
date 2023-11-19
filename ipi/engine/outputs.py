@@ -43,7 +43,7 @@ class OutputList(list):
         self.prefix = prefix
 
 
-class OutputMaker(dobject):
+class OutputMaker:
     """Class to create floating outputs with an appropriate prefix"""
 
     def __init__(self, prefix="", f_start=False):
@@ -555,7 +555,7 @@ class TrajectoryOutput(BaseOutput):
             os.fsync(stream)
 
 
-class CheckpointOutput(dobject):
+class CheckpointOutput:
 
     """Class dealing with outputting checkpoints.
 
@@ -588,7 +588,7 @@ class CheckpointOutput(dobject):
 
         self.filename = filename
         self.stride = stride
-        self.step = depend_value(name="step", value=step)
+        self._step = depend_value(name="step", value=step)
         self.overwrite = overwrite
         self._storing = False
         self._continued = False
@@ -672,3 +672,6 @@ class CheckpointOutput(dobject):
 
         # Do not use backed up file open on subsequent writes.
         self._continued = True
+
+
+inject_depend_properties(CheckpointOutput, ["step"])
