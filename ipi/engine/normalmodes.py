@@ -901,4 +901,36 @@ class NormalModes:
 
         return kmd
 
-inject_depend_properties(NormalModes, ["nmts", "dt", "mode", "transform_method", "propagator", "nm_freqs", "qnm", "pnm", "fnm", "omegan", "omegan2", "omegak", "omegak2", "o_omegak", "nm_factor", "o_nm_factor", "dynm3", "dynomegak", "prop_pq", "o_prop_pq", "kins", "kin", "kstress", "vspring", "vspring_and_fspring_B", "fspring", "fspringnm"])
+
+inject_depend_properties(
+    NormalModes,
+    [
+        "nmts",
+        "dt",
+        "mode",
+        "transform_method",
+        "propagator",
+        "nm_freqs",
+        "qnm",
+        "pnm",
+        "fnm",
+        "omegan",
+        "omegan2",
+        "omegak",
+        "omegak2",
+        "o_omegak",
+        "nm_factor",
+        "o_nm_factor",
+        "dynm3",
+        "dynomegak",
+        "prop_pq",
+        "o_prop_pq",
+        "kins",
+        "kin",
+        "kstress",
+        "vspring",
+        "vspring_and_fspring_B",
+        "fspring",
+        "fspringnm",
+    ],
+)

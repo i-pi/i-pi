@@ -144,7 +144,7 @@ class Simulation:
         self.prng = prng
         self.mode = mode
         self.threading = threads
-        self.safe_stride = safe_stride        
+        self.safe_stride = safe_stride
 
         self.syslist = syslist
         for s in syslist:
@@ -404,5 +404,6 @@ class Simulation:
                 break
 
         self.rollback = False
+
 
 inject_depend_properties(Simulation, ["step"])

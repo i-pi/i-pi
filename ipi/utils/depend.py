@@ -44,7 +44,7 @@ __all__ = [
     "dcopy",
     "dstrip",
     "depraise",
-    "inject_depend_properties"
+    "inject_depend_properties",
 ]
 
 
@@ -921,10 +921,10 @@ class ddirect(object):
         member objects."""
 
         return object.__setattr__(object.__getattribute__(self, "dobj"), name, value)
-    
+
 
 def inject_depend_property(cls, attr_name):
-    private_name = f'_{attr_name}'
+    private_name = f"_{attr_name}"
 
     def getter(self):
         return getattr(self, private_name).__get__(self, self.__class__)
@@ -934,9 +934,10 @@ def inject_depend_property(cls, attr_name):
 
     setattr(cls, attr_name, property(getter, setter))
 
+
 def inject_depend_properties(cls, attr_names):
-        if not isinstance(attr_names, list):
-            attr_names = [attr_names]
-        
-        for attr_name in attr_names:
-            inject_depend_property(cls, attr_name)
+    if not isinstance(attr_names, list):
+        attr_names = [attr_names]
+
+    for attr_name in attr_names:
+        inject_depend_property(cls, attr_name)

@@ -72,7 +72,7 @@ class ForceBead:
 
     def __init__(self):
         """Initialises ForceBead."""
-        
+
         # ufvx is a list [ u, f, vir, extra ]  which stores the results of the force calculation
         self._ufvx = depend_value(name="ufvx", func=self.get_all)
         self._threadlock = threading.Lock()
@@ -99,7 +99,7 @@ class ForceBead:
         self.atoms = atoms
         self.cell = cell
         self.ff = ff
-        
+
         # ufvx depends on the atomic positions and on the cell
         self._ufvx.add_dependency(dd(self.atoms).q)
         self._ufvx.add_dependency(dd(self.cell).h)
@@ -256,7 +256,11 @@ class ForceBead:
 
         return self.ufvx[3]
 
-inject_depend_properties(ForceBead, ["ufvx", "pot", "vir", "f", "extra", "fx", "fy", "fz"])
+
+inject_depend_properties(
+    ForceBead, ["ufvx", "pot", "vir", "f", "extra", "fx", "fy", "fz"]
+)
+
 
 class ForceComponent:
     """Computes one component (e.g. bonded interactions) of the force.
@@ -511,7 +515,11 @@ class ForceComponent:
             vir += v
         return vir
 
-inject_depend_properties(ForceComponent, ["weight", "f", "pots", "pot", "virs", "vir", "extras"])
+
+inject_depend_properties(
+    ForceComponent, ["weight", "f", "pots", "pot", "virs", "vir", "extras"]
+)
+
 
 class ScaledForceComponent:
     def __init__(self, baseforce, scaling=1):
@@ -588,7 +596,12 @@ class ScaledForceComponent:
     def queue(self):
         pass  # this should be taken care of when the force/potential/etc is accessed
 
-inject_depend_properties(ScaledForceComponent, ["weight", "scaling", "f", "pots", "pot", "virs", "vir", "extras"])
+
+inject_depend_properties(
+    ScaledForceComponent,
+    ["weight", "scaling", "f", "pots", "pot", "virs", "vir", "extras"],
+)
+
 
 class Forces:
 
@@ -781,8 +794,7 @@ class Forces:
         )
 
         self._potsc = depend_value(
-            name="potsc", dependencies=[self._potssc], 
-            func=(lambda: self.potssc.sum())
+            name="potsc", dependencies=[self._potssc], func=(lambda: self.potssc.sum())
         )
 
         # The coefficients of the physical and the |f|^2 terms
@@ -943,7 +955,9 @@ class Forces:
             # therefore get copied
             dd(mself.beads).q.set(mreff.beads.q, manual=False)
             for b in range(mself.nbeads):
-                mself._forces[b]._ufvx.set(deepcopy(mreff._forces[b]._ufvx._value), manual=False)
+                mself._forces[b]._ufvx.set(
+                    deepcopy(mreff._forces[b]._ufvx._value), manual=False
+                )
                 mself._forces[b]._ufvx.taint(taintme=False)
 
     def transfer_forces_manual(
@@ -1487,4 +1501,32 @@ class Forces:
         rc[1::2] = (1.0 - self.alpha) / self.omegan2 / 9.0
         return np.asmatrix(rc).T
 
-inject_depend_properties(Forces, [ "f", "pots", "virs", "extras", "pot", "vir", "alpha", "nmtslevels", "omegan2", "potssc", "potsc", "coeffsc_part_1", "coeffsc_part_2", "fvir_4th_order", "f_4th_order", "fsc_part_1", "fsc_part_2", "fsc", "vir_4th_order", "virssc_part_1", "virssc_part_2", "virssc", "potsc"])
+
+inject_depend_properties(
+    Forces,
+    [
+        "f",
+        "pots",
+        "virs",
+        "extras",
+        "pot",
+        "vir",
+        "alpha",
+        "nmtslevels",
+        "omegan2",
+        "potssc",
+        "potsc",
+        "coeffsc_part_1",
+        "coeffsc_part_2",
+        "fvir_4th_order",
+        "f_4th_order",
+        "fsc_part_1",
+        "fsc_part_2",
+        "fsc",
+        "vir_4th_order",
+        "virssc_part_1",
+        "virssc_part_2",
+        "virssc",
+        "potsc",
+    ],
+)
