@@ -16,7 +16,7 @@ import threading
 import time
 from copy import deepcopy
 
-from ipi.utils.depend import depend_value, dobject, dd, dpipe, inject_depend_properties
+from ipi.utils.depend import depend_value, dobject, dpipe, inject_depend_properties
 from ipi.utils.io.inputs.io_xml import xml_parse_file
 from ipi.utils.messages import verbosity, info, warning, banner
 from ipi.utils.softexit import softexit
@@ -220,7 +220,7 @@ class Simulation:
             ):  # checkpoints are output per simulation
                 dco.bind(self)
                 dpipe(
-                    dd(dco).step, dd(o).step
+                    dco._step, o._step
                 )  # makes sure that the checkpoint step is updated also in the template
                 self.outputs.append(dco)
             else:  # properties and trajectories are output per system

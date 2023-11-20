@@ -17,7 +17,7 @@ from ipi.utils.mathtools import *
 __all__ = ["Cell"]
 
 
-class Cell(dobject):
+class Cell:
 
     """Base class to represent the simulation cell in a periodic system.
 
@@ -43,16 +43,14 @@ class Cell(dobject):
         if h is None:
             h = np.zeros((3, 3), float)
 
-        dself = dd(self)  # gets a direct-access view to self
-
-        dself.h = depend_array(name="h", value=h)
-        dself.ih = depend_array(
+        self._h = depend_array(name="h", value=h)
+        self._ih = depend_array(
             name="ih",
             value=np.zeros((3, 3), float),
             func=self.get_ih,
-            dependencies=[dself.h],
+            dependencies=[self._h],
         )
-        dself.V = depend_value(name="V", func=self.get_volume, dependencies=[dself.h])
+        self._V = depend_value(name="V", func=self.get_volume, dependencies=[self._h])
 
     def copy(self):
         return Cell(dstrip(self.h).copy())
@@ -130,3 +128,6 @@ class Cell(dobject):
         for i in range(3):
             s[i] -= round(s[i])
         return np.dot(self.h, s)
+
+
+inject_depend_properties(Cell, ["h", "ih", "V"])

@@ -161,7 +161,6 @@ class Dynamics(Motion):
 
         # Strips off depend machinery for easier referencing.
         dthrm = dd(self.thermostat)
-        dbaro = dd(self.barostat)
 
         # n times the temperature (for path integral partition function)
         self._ntemp = depend_value(
@@ -178,9 +177,9 @@ class Dynamics(Motion):
         self.thermostat.bind(beads=self.beads, nm=self.nm, prng=prng, fixdof=fixdof)
 
         # first makes sure that the barostat has the correct stress and timestep, then proceeds with binding it.
-        dpipe(self._ntemp, dbaro.temp)
-        dpipe(self.ensemble._pext, dbaro.pext)
-        dpipe(self.ensemble._stressext, dbaro.stressext)
+        dpipe(self._ntemp, self.barostat._temp)
+        dpipe(self.ensemble._pext, self.barostat._pext)
+        dpipe(self.ensemble._stressext, self.barostat._stressext)
         self.barostat.bind(
             beads,
             nm,
@@ -196,12 +195,12 @@ class Dynamics(Motion):
         self.integrator.bind(self)
 
         self.ensemble.add_econs(dthrm.ethermo)
-        self.ensemble.add_econs(dbaro.ebaro)
+        self.ensemble.add_econs(self.barostat._ebaro)
 
         # adds the potential, kinetic energy and the cell Jacobian to the ensemble
-        self.ensemble.add_xlpot(dbaro.pot)
-        self.ensemble.add_xlpot(dbaro.cell_jacobian)
-        self.ensemble.add_xlkin(dbaro.kin)
+        self.ensemble.add_xlpot(self.barostat._pot)
+        self.ensemble.add_xlpot(self.barostat._cell_jacobian)
+        self.ensemble.add_xlkin(self.barostat._kin)
 
         # applies constraints immediately after initialization.
         self.integrator.pconstraints()
@@ -298,6 +297,11 @@ class DummyIntegrator:
             func=self.get_qdt,
             dependencies=[self._splitting, self._dt, self._inmts],
         )  # positions
+        self._qdt_on_m = depend_array(
+            name="qdt_on_m",
+            value=np.zeros(3 * self.beads.natoms),
+            func=lambda: self.qdt / dstrip(self.beads.m3)[0],
+        )
         self._pdt = depend_array(
             name="pdt",
             func=self.get_pdt,
@@ -311,10 +315,10 @@ class DummyIntegrator:
         )  # thermostat
 
         dpipe(self._qdt, self.nm._dt)
-        dpipe(self._dt, dd(self.barostat).dt)
-        dpipe(self._qdt, dd(self.barostat).qdt)
-        dpipe(self._pdt, dd(self.barostat).pdt)
-        dpipe(self._tdt, dd(self.barostat).tdt)
+        dpipe(self._dt, self.barostat._dt)
+        dpipe(self._qdt, self.barostat._qdt)
+        dpipe(self._pdt, self.barostat._pdt)
+        dpipe(self._tdt, self.barostat._tdt)
         dpipe(self._tdt, dd(self.thermostat).dt)
 
         if motion.enstype == "sc" or motion.enstype == "scnpt":
@@ -386,7 +390,7 @@ class DummyIntegrator:
 
 inject_depend_properties(
     DummyIntegrator,
-    ["splitting", "nmts", "dt", "inmts", "nmtslevels", "qdt", "pdt", "tdt"],
+    ["splitting", "nmts", "dt", "inmts", "nmtslevels", "qdt", "pdt", "tdt", "qdt_on_m"],
 )
 
 
@@ -412,16 +416,14 @@ class NVEIntegrator(DummyIntegrator):
         """Velocity Verlet momentum propagator."""
 
         # halfdt/alpha
-        self.beads.p += self.forces.forces_mts(level) * self.pdt[level]
+        self.beads.p[:] += dstrip(self.forces.forces_mts(level)) * self.pdt[level]
         if level == 0 and self.ensemble.has_bias:  # adds bias in the outer loop
-            self.beads.p += dstrip(self.bias.f) * self.pdt[level]
+            self.beads.p[:] += dstrip(self.bias.f) * self.pdt[level]
 
     def qcstep(self):
         """Velocity Verlet centroid position propagator."""
         # dt/inmts
-        self.nm.qnm[0, :] += (
-            dstrip(self.nm.pnm)[0, :] / dstrip(self.beads.m3)[0] * self.qdt
-        )
+        self.nm.qnm[0, :] += dstrip(self.nm.pnm)[0, :] * dstrip(self.qdt_on_m)
 
     # now the idea is that for BAOAB the MTS should work as follows:
     # take the BAB MTS, and insert the O in the very middle. This might imply breaking a A step in two, e.g. one could have

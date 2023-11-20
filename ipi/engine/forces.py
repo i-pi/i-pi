@@ -102,7 +102,7 @@ class ForceBead:
 
         # ufvx depends on the atomic positions and on the cell
         self._ufvx.add_dependency(self.atoms._q)
-        self._ufvx.add_dependency(dd(self.cell).h)
+        self._ufvx.add_dependency(self.cell._h)
 
         # potential and virial are to be extracted very simply from ufvx
         self._pot = depend_value(
