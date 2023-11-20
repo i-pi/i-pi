@@ -7,7 +7,6 @@ import time
 
 class A:
     def __init__(self):
-
         self._scalar = depend_value(name="a_scalar", value=1)
         self._vector = depend_array(name="a_vector", value=np.zeros(10))
 
@@ -26,11 +25,12 @@ class A:
     def get_vector(self):
         return self.vector * self.dscalar
 
+
 inject_depend_properties(A, ["scalar", "vector", "dscalar", "dvector"])
+
 
 class B:
     def __init__(self):
-
         self._scalar = depend_value(name="b_scalar", value=1)
         self._vector = depend_array(name="b_vector", value=np.zeros(10))
 
@@ -52,6 +52,7 @@ class B:
 
     def get_vector(self):
         return self.vector * self.dscalar
+
 
 inject_depend_properties(B, ["scalar", "vector", "dscalar", "dvector"])
 
