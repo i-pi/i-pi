@@ -23,9 +23,7 @@ __all__ = ["SCPhononsMover"]
 import os
 import numpy as np
 from ipi.engine.motion.motion import Motion
-from ipi.utils.depend import *
 
-# from ipi.utils import units
 from ipi.utils.phonontools import apply_asr
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, info
@@ -200,7 +198,7 @@ class SCPhononsMover(Motion):
             self.phononator.displace()
 
 
-class DummyPhononator(dobject):
+class DummyPhononator:
     """No-op phononator"""
 
     def __init__(self):

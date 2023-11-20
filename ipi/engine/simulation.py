@@ -15,7 +15,7 @@ import os
 import time
 from copy import deepcopy
 
-from ipi.utils.depend import depend_value, dobject, dpipe, inject_depend_properties
+from ipi.utils.depend import depend_value, dpipe, inject_depend_properties
 from ipi.utils.io.inputs.io_xml import xml_parse_file
 from ipi.utils.messages import verbosity, info, warning, banner
 from ipi.utils.softexit import softexit
