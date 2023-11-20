@@ -1,9 +1,7 @@
 <simulation verbosity='medium' threading='false' safe_stride='100'>
-    <ffsocket mode='unix' name='driver' pbc='false'>
-         <latency>  0.50000000e-04</latency>
-         <address> dummy </address>
-         <exit_on_disconnect> False </exit_on_disconnect>
-   </ffsocket>
+    <fflj name='dummy' pbc='False'>
+      <parameters>{eps: 0.0, sigma: 1.0}</parameters>
+   </fflj>
    <total_steps>10000</total_steps>
    <output prefix='simulation'>
       <trajectory stride='10000' filename='pos'> positions </trajectory>
@@ -14,7 +12,7 @@
    </prng>
    <system>
       <forces> 
-          <force forcefield='driver' weight='0.0'> </force>
+          <force forcefield='dummy' weight='0.0'> </force>
       </forces>
       <initialize nbeads='1'>
         <file mode='xyz'> init.xyz</file>
