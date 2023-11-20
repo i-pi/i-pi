@@ -190,7 +190,10 @@ class ConstrainedDynamics(Dynamics):
         self.csolver.bind(beads)
 
 
-class ConstraintSolverBase(dobject):
+inject_depend_properties(ConstrainedDynamics, ["dt", "nmts", "splitting"])
+
+
+class ConstraintSolverBase:
     """Empty base class for the constraint solver. Provides the interface
     that must be used to offer constraint functionalities to an integrator.
     """
@@ -229,7 +232,7 @@ class ConstraintSolverBase(dobject):
         raise NotImplementedError()
 
 
-inject_depend_properties(ConstrainedDynamics, ["dt", "nmts", "splitting"])
+inject_depend_properties(ConstraintSolverBase, ["dt"])
 
 
 class ConstraintSolver(ConstraintSolverBase):
@@ -267,7 +270,6 @@ class ConstraintSolver(ConstraintSolverBase):
         (sparsely).
         """
 
-        #        m3 = dstrip(self.beads.m3[0])
         p = dstrip(self.beads.p[0]).copy()
         self.beads.p.hold()
 

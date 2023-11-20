@@ -68,7 +68,7 @@ class Thermostat:
               Defaults to 0.0. Will be non-zero if the thermostat is
               initialised from a checkpoint file.
         """
-        
+
         self._temp = depend_value(name="temp", value=temp)
         self._dt = depend_value(name="dt", value=dt)
         self._ethermo = depend_value(name="ethermo", value=ethermo)
@@ -111,8 +111,8 @@ class Thermostat:
             self._p = beads.p.flatten()
             self._m = beads.m3.flatten()
         elif atoms is not None:
-            self._p = dd(atoms).p
-            self._m = dd(atoms).m3
+            self._p = atoms._p
+            self._m = atoms._m3
         elif pm is not None:
             self._p = pm[
                 0
@@ -186,7 +186,7 @@ class ThermoLangevin(Thermostat):
         """
 
         super(ThermoLangevin, self).__init__(temp, dt, ethermo)
-        
+
         self._dt = depend_value(value=dt, name="dt")
         self._tau = depend_value(value=tau, name="tau")
         self._T = depend_value(
@@ -215,7 +215,11 @@ class ThermoLangevin(Thermostat):
         self.p = p
         self.ethermo = et
 
-inject_depend_properties(Thermostat, ["temp", "dt", "ethermo", "p", "m", "sm", "dt", "tau", "T", "S"])
+
+inject_depend_properties(
+    Thermostat, ["temp", "dt", "ethermo", "p", "m", "sm", "dt", "tau", "T", "S"]
+)
+
 
 class ThermoPILE_L(Thermostat):
 
@@ -419,9 +423,11 @@ class ThermoPILE_L(Thermostat):
         for t in self._thermos:
             t.step()
         self.nm.pnm.resume()
-        dd(self).ethermo.resume()
+        self._ethermo.resume()
+
 
 inject_depend_properties(ThermoPILE_L, ["pilescale", "pilect", "npilect", "tauk"])
+
 
 class ThermoSVR(Thermostat):
 
@@ -457,7 +463,7 @@ class ThermoSVR(Thermostat):
         """
 
         super(ThermoSVR, self).__init__(temp, dt, ethermo)
-        
+
         self._tau = depend_value(value=tau, name="tau")
         self._et = depend_value(
             name="et", func=self.get_et, dependencies=[self._tau, self._dt]
@@ -574,7 +580,9 @@ class ThermoPILE_G(ThermoPILE_L):
             t.ethermo = prev_ethermo / nm.nbeads
         self._ethermo._func = self.get_ethermo
 
+
 inject_depend_properties(ThermoSVR, ["et", "K", "pilescale", "pilect", "npilect"])
+
 
 class ThermoGLE(Thermostat):
 
@@ -699,7 +707,7 @@ class ThermoGLE(Thermostat):
 
         super(ThermoGLE, self).bind(
             beads=beads, atoms=atoms, pm=pm, prng=prng, fixdof=fixdof
-        )        
+        )
 
         # allocates, initializes or restarts an array of s's
         if self.s.shape != (self.ns + 1, len(self._m)):
@@ -733,7 +741,9 @@ class ThermoGLE(Thermostat):
 
         self.p = self.s[0] * self.sm
 
+
 inject_depend_properties(ThermoGLE, ["A", "C"])
+
 
 class ThermoNMGLE(Thermostat):
 
@@ -920,7 +930,9 @@ class ThermoNMGLE(Thermostat):
             et += t.ethermo
         return et
 
+
 inject_depend_properties(ThermoNMGLE, ["A", "C"])
+
 
 class ThermoNMGLEG(ThermoNMGLE):
 
@@ -970,7 +982,7 @@ class ThermoNMGLEG(ThermoNMGLE):
         dpipe(self._dt, t._dt)
         dpipe(self._tau, t._tau)
 
-        dd(self).ethermo.add_dependency(t._ethermo)
+        self._ethermo.add_dependency(t._ethermo)
         self._thermos.append(t)
 
 
@@ -1108,7 +1120,9 @@ class ThermoCL(Thermostat):
 
         self.idstep = not self.idstep
 
+
 inject_depend_properties(ThermoCL, ["idtau", "intau", "apat", "lgT", "inT", "idT"])
+
 
 class ThermoFFL(Thermostat):
 
@@ -1149,7 +1163,7 @@ class ThermoFFL(Thermostat):
         """
 
         super(ThermoFFL, self).__init__(temp, dt, ethermo)
-        
+
         self._dt = depend_value(value=dt, name="dt")
         self._tau = depend_value(value=tau, name="tau")
         self._T = depend_value(
@@ -1218,7 +1232,9 @@ class ThermoFFL(Thermostat):
         self.p = p
         self.ethermo = et
 
+
 inject_depend_properties(ThermoFFL, "flip")
+
 
 class MultiThermo(Thermostat):
     def __init__(self, temp=1.0, dt=1.0, ethermo=0.0, thermolist=None):
@@ -1231,7 +1247,7 @@ class MultiThermo(Thermostat):
               Defaults to 0.0. Will be non-zero if the thermostat is
               initialised from a checkpoint file.
         """
-        
+
         self.tlist = thermolist
         self._temp = depend_value(name="temp", value=temp)
         self._dt = depend_value(name="dt", value=dt)
@@ -1252,9 +1268,9 @@ class MultiThermo(Thermostat):
         # just binds all the sub-thermostats
         for t in self.tlist:
             t.bind(beads=beads, atoms=atoms, pm=pm, nm=nm, prng=prng, fixdof=fixdof)
-            dd(self).ethermo.add_dependency(t._ethermo)
+            self._ethermo.add_dependency(t._ethermo)
 
-        dd(self).ethermo._func = self.get_ethermo
+        self._ethermo._func = self.get_ethermo
 
     def step(self):
         """Steps through all sub-thermostats."""
