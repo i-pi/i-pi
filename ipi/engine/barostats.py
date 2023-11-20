@@ -140,7 +140,7 @@ class Barostat:
         self.thermostat = thermostat
 
         # temperature to the thermostat
-        dpipe(self._temp, dd(self.thermostat).temp)
+        dpipe(self._temp, self.thermostat._temp)
         self._pext = depend_value(name="pext", value=-1.0)
         self._stressext = depend_array(name="stressext", value=-np.ones((3, 3), float))
 
@@ -218,7 +218,7 @@ class Barostat:
         self._qdt = depend_value(name="qdt", value=self.dt)
         self._pdt = depend_array(name="pdt", value=np.zeros(nmts, float))
         self._tdt = depend_value(name="tdt", value=self.dt)
-        dpipe(self._tdt, dd(self.thermostat).dt)
+        dpipe(self._tdt, self.thermostat._dt)
 
     # THESE SHOULD NOT BE USED ANYMORE
     def get_kstress(self):
@@ -537,7 +537,7 @@ class BaroBZP(Barostat):
                 self._pot,
                 self.cell._V,
                 self._temp,
-                dd(self.thermostat).ethermo,
+                self.thermostat._ethermo,
             ],
         )
 
@@ -742,7 +742,7 @@ class BaroSCBZP(Barostat):
                 self._kin,
                 self._pot,
                 self._cell_jacobian,
-                dd(self.thermostat).ethermo,
+                self.thermostat._ethermo,
             ],
         )
 
@@ -1012,7 +1012,7 @@ class BaroRGB(Barostat):
                 self._kin,
                 self._pot,
                 self._cell_jacobian,
-                dd(self.thermostat).ethermo,
+                self.thermostat._ethermo,
             ],
         )
 
@@ -1299,7 +1299,7 @@ class BaroMTK(Barostat):
                 self._kin,
                 self._pot,
                 self._cell_jacobian,
-                dd(self.thermostat).ethermo,
+                self.thermostat._ethermo,
             ],
         )
 

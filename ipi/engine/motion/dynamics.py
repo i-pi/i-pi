@@ -159,9 +159,6 @@ class Dynamics(Motion):
                 "The number of mts levels for the integrator does not agree with the mts_weights of the force components."
             )
 
-        # Strips off depend machinery for easier referencing.
-        dthrm = dd(self.thermostat)
-
         # n times the temperature (for path integral partition function)
         self._ntemp = depend_value(
             name="ntemp", func=self.get_ntemp, dependencies=[self.ensemble._temp]
@@ -171,7 +168,7 @@ class Dynamics(Motion):
         fixdof = self.get_fixdof()
 
         # first makes sure that the thermostat has the correct temperature and timestep, then proceeds with binding it.
-        dpipe(self._ntemp, dthrm.temp)
+        dpipe(self._ntemp, self.thermostat._temp)
 
         # depending on the kind, the thermostat might work in the normal mode or the bead representation.
         self.thermostat.bind(beads=self.beads, nm=self.nm, prng=prng, fixdof=fixdof)
@@ -194,7 +191,7 @@ class Dynamics(Motion):
         # now that the timesteps are decided, we proceed to bind the integrator.
         self.integrator.bind(self)
 
-        self.ensemble.add_econs(dthrm.ethermo)
+        self.ensemble.add_econs(self.thermostat._ethermo)
         self.ensemble.add_econs(self.barostat._ebaro)
 
         # adds the potential, kinetic energy and the cell Jacobian to the ensemble
@@ -319,7 +316,7 @@ class DummyIntegrator:
         dpipe(self._qdt, self.barostat._qdt)
         dpipe(self._pdt, self.barostat._pdt)
         dpipe(self._tdt, self.barostat._tdt)
-        dpipe(self._tdt, dd(self.thermostat).dt)
+        dpipe(self._tdt, self.thermostat._dt)
 
         if motion.enstype == "sc" or motion.enstype == "scnpt":
             # coefficients to get the (baseline) trotter to sc conversion
