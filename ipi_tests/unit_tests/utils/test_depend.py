@@ -5,20 +5,19 @@ import threading
 import time
 
 
-class A(dobject):
+class A:
     def __init__(self):
-        dself = dd(self)
 
-        dself.scalar = depend_value(name="a_scalar", value=1)
-        dself.vector = depend_array(name="a_vector", value=np.zeros(10))
+        self._scalar = depend_value(name="a_scalar", value=1)
+        self._vector = depend_array(name="a_vector", value=np.zeros(10))
 
-        dself.dscalar = depend_value(
-            name="d_scalar", func=self.get_scalar, dependencies=[dself.scalar]
+        self._dscalar = depend_value(
+            name="d_scalar", func=self.get_scalar, dependencies=[self._scalar]
         )
-        dself.dvector = depend_value(
+        self._dvector = depend_value(
             name="d_vector",
             func=self.get_vector,
-            dependencies=[dself.dscalar, self.vector],
+            dependencies=[self._dscalar, self._vector],
         )
 
     def get_scalar(self):
@@ -27,26 +26,25 @@ class A(dobject):
     def get_vector(self):
         return self.vector * self.dscalar
 
+inject_depend_properties(A, ["scalar", "vector", "dscalar", "dvector"])
 
-class B(dobject):
+class B:
     def __init__(self):
-        dself = dd(self)
 
-        dself.scalar = depend_value(name="b_scalar", value=1)
-        dself.vector = depend_array(name="b_vector", value=np.zeros(10))
+        self._scalar = depend_value(name="b_scalar", value=1)
+        self._vector = depend_array(name="b_vector", value=np.zeros(10))
 
     def bind(self, A):
         self.A = A
-        dself = dd(self)
-        dself.dscalar = depend_value(
+        self._dscalar = depend_value(
             name="db_scalar",
             func=self.get_scalar,
-            dependencies=[dself.scalar, dd(A).dscalar],
+            dependencies=[self._scalar, A._dscalar],
         )
-        dself.dvector = depend_value(
+        self._dvector = depend_value(
             name="db_vector",
             func=self.get_vector,
-            dependencies=[dself.dscalar, self.vector],
+            dependencies=[self._dscalar, self._vector],
         )
 
     def get_scalar(self):
@@ -55,6 +53,7 @@ class B(dobject):
     def get_vector(self):
         return self.vector * self.dscalar
 
+inject_depend_properties(B, ["scalar", "vector", "dscalar", "dvector"])
 
 myA = A()
 

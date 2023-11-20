@@ -21,7 +21,7 @@ class MultiMotion(Motion):
               motion will be constrained or not. Defaults to False.
         """
 
-        dself._dt = depend_value(name="dt", func=self.get_totdt)
+        self._dt = depend_value(name="dt", func=self.get_totdt)
         self.mlist = motionlist
         for m in self.mlist:
             m._dt.add_dependant(self._dt)

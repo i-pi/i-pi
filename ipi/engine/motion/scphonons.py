@@ -24,6 +24,7 @@ import os
 import numpy as np
 from ipi.engine.motion.motion import Motion
 
+from ipi.utils.depend import dstrip
 from ipi.utils.phonontools import apply_asr
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, info

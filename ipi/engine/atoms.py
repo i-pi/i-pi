@@ -47,11 +47,11 @@ class Atom:
               list. Note that indices start from 0.
         """
 
-        self._p = system.p[3 * index : 3 * index + 3]
-        self._q = system.q[3 * index : 3 * index + 3]
-        self._m = system.m[index : index + 1]
-        self._name = system.names[index : index + 1]
-        self._m3 = system.m3[3 * index : 3 * index + 3]
+        self.p = system.p[3 * index : 3 * index + 3]
+        self.q = system.q[3 * index : 3 * index + 3]
+        self.m = system.m[index : index + 1]
+        self.name = system.names[index : index + 1]
+        self.m3 = system.m3[3 * index : 3 * index + 3]
 
     @property
     def kin(self):
@@ -73,7 +73,7 @@ class Atom:
         return ks / self.m
 
 
-inject_depend_properties(Atom, ["p", "q", "m", "m3", "name"])
+# inject_depend_properties(Atom, ["p", "q", "m", "m3", "name"])
 
 
 class Atoms:

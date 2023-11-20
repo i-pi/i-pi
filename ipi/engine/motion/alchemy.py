@@ -12,7 +12,7 @@ appropriate conserved energy quantity.
 import numpy as np
 
 from ipi.engine.motion import Motion
-from ipi.utils.depend import inject_depend_properties
+from ipi.utils.depend import inject_depend_properties, depend_value, dstrip
 from ipi.utils.units import Constants
 
 
