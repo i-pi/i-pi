@@ -12,7 +12,6 @@ choosing which properties to initialise, and which properties to output.
 
 import tracemalloc
 import os
-import threading
 import time
 from copy import deepcopy
 
@@ -23,6 +22,7 @@ from ipi.utils.softexit import softexit
 import ipi.engine.outputs as eoutputs
 import ipi.inputs.simulation as isimulation
 
+from concurrent.futures import ThreadPoolExecutor
 
 __all__ = ["Simulation"]
 
@@ -236,6 +236,11 @@ class Simulation(dobject):
                         no.print_header()
                     isys += 1
 
+        if self.threading:
+            self.executor = ThreadPoolExecutor(
+                max_workers=max(len(self.syslist), len(self.outputs))
+            )
+
         self.chk = eoutputs.CheckpointOutput("RESTART", 1, True, 0)
         self.chk.bind(self)
 
@@ -280,19 +285,14 @@ class Simulation(dobject):
             if self.threading:
                 stepthreads = []
                 for o in self.outputs:
-                    st = threading.Thread(target=o.write, name=o.filename)
-                    st.daemon = True
-                    st.start()
+                    st = self.executor.submit(o.write)
                     stepthreads.append(st)
 
                 for st in stepthreads:
-                    while st.is_alive():
-                        # This is necessary as join() without timeout prevents main from receiving signals.
-                        st.join(2.0)
+                    st.result()
             else:
                 for o in self.outputs:
-                    o.write()  # threaded output seems to cause random hang-ups. should make things properly thread-safe
-
+                    o.write()
             self.step = 0
 
         steptime = 0.0
@@ -322,19 +322,11 @@ class Simulation(dobject):
                 # steps through all the systems
                 for s in self.syslist:
                     # creates separate threads for the different systems
-                    st = threading.Thread(
-                        target=s.motion.step, name=s.prefix, kwargs={"step": self.step}
-                    )
-                    st.daemon = True
+                    st = self.executor.submit(s.motion.step, step=self.step)
                     stepthreads.append(st)
 
                 for st in stepthreads:
-                    st.start()
-
-                for st in stepthreads:
-                    while st.is_alive():
-                        # This is necessary as join() without timeout prevents main from receiving signals.
-                        st.join(2.0)
+                    st.result()
             else:
                 for s in self.syslist:
                     s.motion.step(step=self.step)
@@ -355,15 +347,11 @@ class Simulation(dobject):
                 stepthreads = []
                 for o in self.outputs:
                     if o.active():  # don't start a thread if it's not needed
-                        st = threading.Thread(target=o.write, name=o.filename)
-                        st.daemon = True
-                        st.start()
+                        st = self.executor.submit(o.write)
                         stepthreads.append(st)
 
                 for st in stepthreads:
-                    while st.is_alive():
-                        # This is necessary as join() without timeout prevents main from receiving signals.
-                        st.join(2.0)
+                    st.result()
             else:
                 for o in self.outputs:
                     o.write()
