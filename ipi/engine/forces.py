@@ -878,7 +878,7 @@ class Forces:
         )
 
         self._virsc = depend_value(
-            name="potsc",
+            name="virsc",
             dependencies=[self._potssc],
             func=(lambda: np.sum(self.virssc, axis=0)),
         )
@@ -1527,6 +1527,6 @@ inject_depend_properties(
         "virssc_part_1",
         "virssc_part_2",
         "virssc",
-        "potsc",
+        "virsc",
     ],
 )
