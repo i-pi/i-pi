@@ -19,6 +19,7 @@ from ipi.engine.barostats import Barostat
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import warning, verbosity
 
+
 class Dynamics(Motion):
 
     """self (path integral) molecular dynamics class.
@@ -117,8 +118,6 @@ class Dynamics(Motion):
             self.fixatoms = np.zeros(0, int)
         else:
             self.fixatoms = fixatoms
-        
-        self._stresscheck = True
 
     def get_fixdof(self):
         """Calculate the number of fixed degrees of freedom, required for
@@ -322,6 +321,9 @@ class DummyIntegrator:
             self.coeffsc = np.ones((self.beads.nbeads, 3 * self.beads.natoms), float)
             self.coeffsc[::2] /= -3.0
             self.coeffsc[1::2] /= 3.0
+
+        # check stress tensor
+        self._stresscheck = True
 
     def pstep(self):
         """Dummy momenta propagator which does nothing."""
@@ -602,8 +604,13 @@ class NPTIntegrator(NVTIntegrator):
     def pstep(self, level=0):
         """Velocity Verlet monemtum propagator."""
 
-        if self._stresscheck and np.array_equiv(dstrip(self.forces.vir), np.zeros(len(self.forces.vir))):
-            warning("Seems like no stress tensor was computed by the forcefield.", verbosity.low)
+        if self._stresscheck and np.array_equiv(
+            dstrip(self.forces.vir), np.zeros(len(self.forces.vir))
+        ):
+            warning(
+                "Seems like no stress tensor was computed by the forcefield.",
+                verbosity.low,
+            )
         self._stresscheck = False
 
         self.barostat.pstep(level)
@@ -738,8 +745,13 @@ class SCNPTIntegrator(SCIntegrator):
     def pstep(self, level=0):
         """Velocity Verlet monemtum propagator."""
 
-        if self._stresscheck and np.array_equiv(dstrip(self.forces.vir), np.zeros(len(self.forces.vir))):
-            warning("Seems like no stress tensor was computed by the forcefield.", verbosity.low)
+        if self._stresscheck and np.array_equiv(
+            dstrip(self.forces.vir), np.zeros(len(self.forces.vir))
+        ):
+            warning(
+                "Seems like no stress tensor was computed by the forcefield.",
+                verbosity.low,
+            )
         self._stresscheck = False
 
         self.barostat.pstep(level)
