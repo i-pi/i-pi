@@ -603,10 +603,10 @@ class NPTIntegrator(NVTIntegrator):
     def pstep(self, level=0):
         """Velocity Verlet monemtum propagator."""
 
-        if np.array_equiv(self.forces.vir, np.zeros(len(self.forces.vir))):
-            raise ValueError(
-                "Seems like no stress tensor was computed by the client. Stopping barostat!"
-            )
+        #if np.array_equiv(self.forces.vir, np.zeros(len(self.forces.vir))):
+        #    raise ValueError(
+        #        "Seems like no stress tensor was computed by the client. Stopping barostat!"
+        #    )
         self.barostat.pstep(level)
         super(NPTIntegrator, self).pstep(level)
         # self.pconstraints()
@@ -739,10 +739,10 @@ class SCNPTIntegrator(SCIntegrator):
     def pstep(self, level=0):
         """Velocity Verlet monemtum propagator."""
 
-        if np.array_equiv(self.forces.vir, np.zeros(len(self.forces.vir))):
-            raise ValueError(
-                "Seems like no stress tensor was computed by the client. Stopping barostat!"
-            )
+        #if np.array_equiv(self.forces.vir, np.zeros(len(self.forces.vir))):
+        #    raise ValueError(
+        #        "Seems like no stress tensor was computed by the client. Stopping barostat!"
+        #    )
 
         self.barostat.pstep(level)
         super(SCNPTIntegrator, self).pstep(level)
