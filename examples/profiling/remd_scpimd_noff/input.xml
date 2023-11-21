@@ -32,8 +32,8 @@
               <force forcefield ="dummy.2"  nbeads='2' weight='0.0'/>
             </forces>
             <motion mode="dynamics">
-              <dynamics mode="npt">
-                <barostat mode='isotropic'>
+              <dynamics mode="scnpt">
+                <barostat mode='sc-isotropic'>
                   <tau units='femtosecond'> 200</tau>
                   <thermostat mode='langevin'>
                     <tau units='femtosecond'> 100</tau>

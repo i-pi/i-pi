@@ -773,8 +773,6 @@ class BaroSCBZP(Barostat):
     def pstep(self, level=0):
         """Propagates the momentum of the barostat."""
 
-        # self.pscstep()
-
         # we are assuming then that p the coupling between p^2 and dp/dt only involves the fast force
         dt = self.pdt[
             level

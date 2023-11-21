@@ -1447,7 +1447,6 @@ class Forces:
             warning("ERROR: Suzuki-Chin factorization requires even number of beads!")
             exit()
 
-        print("GETTING POTSSC")
         # this evaluates the square forces contribution to the SC potential (only the difference with the Trotter potential is returned)
         return self.coeffsc_part_1.T * dstrip(
             self.pots
