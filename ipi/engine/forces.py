@@ -849,7 +849,7 @@ class Forces:
         )
 
         # The high order component of the Suzuki-Chin virial.
-        self._virs_4th_order = depend_array(
+        self._vir_4th_order = depend_array(
             name="vir_4th_order",
             value=np.zeros((self.nbeads, 3, 3), float),
             dependencies=[self._fvir_4th_order],
@@ -866,7 +866,7 @@ class Forces:
         self._virssc_part_2 = depend_array(
             name="virssc_part_2",
             value=np.zeros((self.nbeads, 3, 3), float),
-            dependencies=[self._coeffsc_part_2, self._virs_4th_order],
+            dependencies=[self._coeffsc_part_2, self._vir_4th_order],
             func=self.get_virssc_part_2,
         )
 
@@ -1474,7 +1474,7 @@ class Forces:
     def get_virssc_part_2(self):
         """Obtains the quadratic component of Suzuki-Chin correction to the virial."""
         return self.coeffsc_part_2.reshape((self.beads.nbeads, 1, 1)) * dstrip(
-            self.virs_4th_order
+            self.vir_4th_order
         )
 
     def get_fsc(self):
