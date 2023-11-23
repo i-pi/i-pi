@@ -607,9 +607,14 @@ class NPTIntegrator(NVTIntegrator):
             dstrip(self.forces.vir), np.zeros(len(self.forces.vir))
         ):
             warning(
-                "Seems like no stress tensor was computed by the forcefield.",
+                "Forcefield returned a zero stress tensor. NPT simulation will likely make no sense",
                 verbosity.low,
             )
+            if verbosity.medium:
+                raise ValueError(
+                    "Zero stress terminates simulation for medium verbosity and above."
+                )
+
         self._stresscheck = False
 
         self.barostat.pstep(level)
@@ -748,9 +753,14 @@ class SCNPTIntegrator(SCIntegrator):
             dstrip(self.forces.vir), np.zeros(len(self.forces.vir))
         ):
             warning(
-                "Seems like no stress tensor was computed by the forcefield.",
+                "Forcefield returned a zero stress tensor. NPT simulation will likely make no sense",
                 verbosity.low,
             )
+            if verbosity.medium:
+                raise ValueError(
+                    "Zero stress terminates simulation for medium verbosity and above."
+                )
+
         self._stresscheck = False
 
         self.barostat.pstep(level)

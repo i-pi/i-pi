@@ -103,7 +103,7 @@ class InputSimulation(Input):
             InputAttribute,
             {
                 "dtype": str,
-                "default": "low",
+                "default": "medium",
                 "options": ["quiet", "low", "medium", "high", "debug"],
                 "help": "The level of output on stdout.",
             },
