@@ -101,15 +101,25 @@ This is a minimal example of how to implement dependencies in a class
 
    class DObject:
       def __init__(self):
-         # new pattern. the depend objects are created with _name...
+         # depend objects are created using an underscore prefix. 
+         # this is a "primitive" value that doesn't depend on anything
          self._scalar = depend_value(value=1, name="scalar")
-         self._double = depend_value(func=lambda: 2*self.scalar, name="double", dependencies=[self._scalar])
 
+         # this is a dependent object. the definition contains a function that
+         # is called to determine the value, and specification of what objects
+         # it depend on
+         self._double = depend_value(func=lambda: 2*self.scalar, name="double", 
+                                     dependencies=[self._scalar])
+
+   # after the definition of a class, this helper function should be called to
+   # create property getters and setters (use the names with no leading underscore)
    dproperties(DObject, ["scalar", "double"])
 
    myobj = DObject()
+   # "primitive values" can be set manually
    myobj.scalar = 4
-   print(myobj.double)
+   # dependent objects will be computed automatically on demand
+   print(myobj.double) # prints `8`
 
 This choice makes implementation slightly more complex when the physical
 observables are first introduced as variables, as one has to take care
