@@ -130,4 +130,4 @@ class Cell:
         return np.dot(self.h, s)
 
 
-inject_depend_properties(Cell, ["h", "ih", "V"])
+dproperties(Cell, ["h", "ih", "V"])

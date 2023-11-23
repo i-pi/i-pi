@@ -285,7 +285,7 @@ class Ensemble:
         return lpens
 
 
-inject_depend_properties(
+dproperties(
     Ensemble,
     [
         "temp",

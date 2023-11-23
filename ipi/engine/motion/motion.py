@@ -7,7 +7,7 @@
 
 import numpy as np
 
-from ipi.utils.depend import depend_value, inject_depend_properties
+from ipi.utils.depend import depend_value, dproperties
 
 
 class Motion:
@@ -84,4 +84,4 @@ class Motion:
         pass
 
 
-inject_depend_properties(Motion, "dt")
+dproperties(Motion, "dt")

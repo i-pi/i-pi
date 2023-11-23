@@ -216,7 +216,7 @@ class ThermoLangevin(Thermostat):
         self.ethermo = et
 
 
-inject_depend_properties(
+dproperties(
     Thermostat, ["temp", "dt", "ethermo", "p", "m", "sm", "dt", "tau", "T", "S"]
 )
 
@@ -426,7 +426,7 @@ class ThermoPILE_L(Thermostat):
         self._ethermo.resume()
 
 
-inject_depend_properties(ThermoPILE_L, ["pilescale", "pilect", "npilect", "tauk"])
+dproperties(ThermoPILE_L, ["pilescale", "pilect", "npilect", "tauk"])
 
 
 class ThermoSVR(Thermostat):
@@ -581,7 +581,7 @@ class ThermoPILE_G(ThermoPILE_L):
         self._ethermo._func = self.get_ethermo
 
 
-inject_depend_properties(ThermoSVR, ["et", "K", "pilescale", "pilect", "npilect"])
+dproperties(ThermoSVR, ["et", "K", "pilescale", "pilect", "npilect"])
 
 
 class ThermoGLE(Thermostat):
@@ -742,7 +742,7 @@ class ThermoGLE(Thermostat):
         self.p = self.s[0] * self.sm
 
 
-inject_depend_properties(ThermoGLE, ["A", "C"])
+dproperties(ThermoGLE, ["A", "C"])
 
 
 class ThermoNMGLE(Thermostat):
@@ -931,7 +931,7 @@ class ThermoNMGLE(Thermostat):
         return et
 
 
-inject_depend_properties(ThermoNMGLE, ["A", "C"])
+dproperties(ThermoNMGLE, ["A", "C"])
 
 
 class ThermoNMGLEG(ThermoNMGLE):
@@ -1121,7 +1121,7 @@ class ThermoCL(Thermostat):
         self.idstep = not self.idstep
 
 
-inject_depend_properties(ThermoCL, ["idtau", "intau", "apat", "lgT", "inT", "idT"])
+dproperties(ThermoCL, ["idtau", "intau", "apat", "lgT", "inT", "idT"])
 
 
 class ThermoFFL(Thermostat):
@@ -1233,7 +1233,7 @@ class ThermoFFL(Thermostat):
         self.ethermo = et
 
 
-inject_depend_properties(ThermoFFL, "flip")
+dproperties(ThermoFFL, "flip")
 
 
 class MultiThermo(Thermostat):

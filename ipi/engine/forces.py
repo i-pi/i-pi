@@ -257,9 +257,7 @@ class ForceBead:
         return self.ufvx[3]
 
 
-inject_depend_properties(
-    ForceBead, ["ufvx", "pot", "vir", "f", "extra", "fx", "fy", "fz"]
-)
+dproperties(ForceBead, ["ufvx", "pot", "vir", "f", "extra", "fx", "fy", "fz"])
 
 
 class ForceComponent:
@@ -516,9 +514,7 @@ class ForceComponent:
         return vir
 
 
-inject_depend_properties(
-    ForceComponent, ["weight", "f", "pots", "pot", "virs", "vir", "extras"]
-)
+dproperties(ForceComponent, ["weight", "f", "pots", "pot", "virs", "vir", "extras"])
 
 
 class ScaledForceComponent:
@@ -597,7 +593,7 @@ class ScaledForceComponent:
         pass  # this should be taken care of when the force/potential/etc is accessed
 
 
-inject_depend_properties(
+dproperties(
     ScaledForceComponent,
     ["weight", "scaling", "f", "pots", "pot", "virs", "vir", "extras"],
 )
@@ -1501,7 +1497,7 @@ class Forces:
         return np.asmatrix(rc).T
 
 
-inject_depend_properties(
+dproperties(
     Forces,
     [
         "f",

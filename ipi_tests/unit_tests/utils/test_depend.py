@@ -26,7 +26,7 @@ class A:
         return self.vector * self.dscalar
 
 
-inject_depend_properties(A, ["scalar", "vector", "dscalar", "dvector"])
+dproperties(A, ["scalar", "vector", "dscalar", "dvector"])
 
 
 class B:
@@ -54,7 +54,7 @@ class B:
         return self.vector * self.dscalar
 
 
-inject_depend_properties(B, ["scalar", "vector", "dscalar", "dvector"])
+dproperties(B, ["scalar", "vector", "dscalar", "dvector"])
 
 myA = A()
 

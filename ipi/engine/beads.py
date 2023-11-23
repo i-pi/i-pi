@@ -346,7 +346,7 @@ class Beads:
         self._blist[index].names[:] = value.names
 
 
-inject_depend_properties(
+dproperties(
     Beads,
     [
         "p",

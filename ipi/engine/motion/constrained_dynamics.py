@@ -190,7 +190,7 @@ class ConstrainedDynamics(Dynamics):
         self.csolver.bind(beads)
 
 
-inject_depend_properties(ConstrainedDynamics, ["dt", "nmts", "splitting"])
+dproperties(ConstrainedDynamics, ["dt", "nmts", "splitting"])
 
 
 class ConstraintSolverBase:
@@ -232,7 +232,7 @@ class ConstraintSolverBase:
         raise NotImplementedError()
 
 
-inject_depend_properties(ConstraintSolverBase, ["dt"])
+dproperties(ConstraintSolverBase, ["dt"])
 
 
 class ConstraintSolver(ConstraintSolverBase):
@@ -389,7 +389,7 @@ class ConstrainedIntegrator(DummyIntegrator):
         self.csolver.proj_manifold()
 
 
-inject_depend_properties(ConstrainedIntegrator, ["nsteps_geo", "nsteps_o"])
+dproperties(ConstrainedIntegrator, ["nsteps_geo", "nsteps_o"])
 
 
 class NVEConstrainedIntegrator(ConstrainedIntegrator):

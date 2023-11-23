@@ -73,7 +73,7 @@ class Atom:
         return ks / self.m
 
 
-# inject_depend_properties(Atom, ["p", "q", "m", "m3", "name"])
+# dproperties(Atom, ["p", "q", "m", "m3", "name"])
 
 
 class Atoms:
@@ -273,4 +273,4 @@ class Atoms:
         return ks
 
 
-inject_depend_properties(Atoms, ["p", "q", "m", "m3", "names", "M", "kin", "kstress"])
+dproperties(Atoms, ["p", "q", "m", "m3", "names", "M", "kin", "kstress"])

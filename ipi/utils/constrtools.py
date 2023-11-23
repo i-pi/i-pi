@@ -157,9 +157,7 @@ class ConstraintBase:
             return spla.cho_factor(self.Gram)
 
 
-inject_depend_properties(
-    ConstraintBase, ["m3", "q", "g", "qprev", "Dg", "Gram", "GramChol"]
-)
+dproperties(ConstraintBase, ["m3", "q", "g", "qprev", "Dg", "Gram", "GramChol"])
 
 
 class ValueConstraintBase(ConstraintBase):
@@ -200,7 +198,7 @@ class ValueConstraintBase(ConstraintBase):
         self._Dg.add_dependency(self._constraint_values)
 
 
-inject_depend_properties(ValueConstraintBase, ["constraint_values"])
+dproperties(ValueConstraintBase, ["constraint_values"])
 
 
 class RigidBondConstraint(ValueConstraintBase):
@@ -444,9 +442,7 @@ class EckartConstraint(ConstraintBase):
         return r
 
 
-inject_depend_properties(
-    EckartConstraint, ["mtot", "qref", "qref_com", "qref_rel", "mqref_rel"]
-)
+dproperties(EckartConstraint, ["mtot", "qref", "qref_com", "qref_rel", "mqref_rel"])
 
 
 class ConstraintList(ConstraintBase):
@@ -539,4 +535,4 @@ class ConstraintList(ConstraintBase):
         return np.unique(iai)
 
 
-inject_depend_properties(ConstraintList, ["dq", "dqprev"])
+dproperties(ConstraintList, ["dq", "dqprev"])

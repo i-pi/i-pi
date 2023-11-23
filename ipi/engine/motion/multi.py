@@ -5,7 +5,7 @@
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
-from ipi.utils.depend import depend_value, inject_depend_properties
+from ipi.utils.depend import depend_value, dproperties
 from ipi.engine.motion import Motion
 
 
@@ -71,4 +71,4 @@ class MultiMotion(Motion):
             m.bind(ens, beads, nm, cell, bforce, prng, omaker)
 
 
-inject_depend_properties(MultiMotion, "dt")
+dproperties(MultiMotion, "dt")

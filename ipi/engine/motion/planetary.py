@@ -278,4 +278,4 @@ class Planetary(Motion):
         )
 
 
-inject_depend_properties(Planetary, "dt")
+dproperties(Planetary, "dt")

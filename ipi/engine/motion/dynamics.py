@@ -234,7 +234,7 @@ class Dynamics(Motion):
         self.ensemble.time += self.dt  # increments internal time
 
 
-inject_depend_properties(Dynamics, ["dt", "nmts", "splitting", "ntemp"])
+dproperties(Dynamics, ["dt", "nmts", "splitting", "ntemp"])
 
 
 class DummyIntegrator:
@@ -386,7 +386,7 @@ class DummyIntegrator:
                 bp[self.fixatoms * 3 + 2] = 0.0
 
 
-inject_depend_properties(
+dproperties(
     DummyIntegrator,
     ["splitting", "nmts", "dt", "inmts", "nmtslevels", "qdt", "pdt", "tdt", "qdt_on_m"],
 )

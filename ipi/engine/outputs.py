@@ -674,4 +674,4 @@ class CheckpointOutput:
         self._continued = True
 
 
-inject_depend_properties(CheckpointOutput, ["step"])
+dproperties(CheckpointOutput, ["step"])

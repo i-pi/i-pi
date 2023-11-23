@@ -12,7 +12,7 @@ appropriate conserved energy quantity.
 import numpy as np
 
 from ipi.engine.motion import Motion
-from ipi.utils.depend import inject_depend_properties, depend_value, dstrip
+from ipi.utils.depend import dproperties, depend_value, dstrip
 from ipi.utils.units import Constants
 
 
@@ -159,4 +159,4 @@ class AlchemyMC(Motion):
                 self.ealc += -difspring
 
 
-inject_depend_properties(AlchemyMC, ["ealc"])
+dproperties(AlchemyMC, ["ealc"])

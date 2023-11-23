@@ -90,8 +90,26 @@ value of a “depend” object has been calculated, its value is cached, so
 further references to that quantity will not need to evaluate the
 function that calculates it. Furthermore, the code keeps track of when
 any of the dependencies of the variable are updated, and makes sure that
-the quantity is automatically recomputed when it is needed (i.e., when
+the quantity is automatically when it is needed (i.e., when
 the quantity is assessed again).
+
+This is a minimal example of how to implement dependencies in a class
+
+.. code-block:: python
+
+   from ipi.utils.depend import depend_value, dproperties
+
+   class DObject:
+      def __init__(self):
+         # new pattern. the depend objects are created with _name...
+         self._scalar = depend_value(value=1, name="scalar")
+         self._double = depend_value(func=lambda: 2*self.scalar, name="double", dependencies=[self._scalar])
+
+   dproperties(DObject, ["scalar", "double"])
+
+   myobj = DObject()
+   myobj.scalar = 4
+   print(myobj.double)
 
 This choice makes implementation slightly more complex when the physical
 observables are first introduced as variables, as one has to take care

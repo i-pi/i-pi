@@ -134,4 +134,4 @@ class AtomSwap(Motion):
                 self.ealc += -(new_energy - old_energy)
 
 
-inject_depend_properties(AtomSwap, ["ealc"])
+dproperties(AtomSwap, ["ealc"])

@@ -898,7 +898,7 @@ class NormalModes:
         return kmd
 
 
-inject_depend_properties(
+dproperties(
     NormalModes,
     [
         "nmts",

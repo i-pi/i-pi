@@ -390,7 +390,7 @@ class Barostat:
         pass
 
 
-inject_depend_properties(
+dproperties(
     Barostat,
     [
         "dt",
@@ -614,7 +614,7 @@ class BaroBZP(Barostat):
         self.cell.h *= expq
 
 
-inject_depend_properties(BaroBZP, ["p", "m"])
+dproperties(BaroBZP, ["p", "m"])
 
 
 class BaroSCBZP(Barostat):
@@ -830,7 +830,7 @@ class BaroSCBZP(Barostat):
         self.cell.h *= expq
 
 
-inject_depend_properties(BaroSCBZP, ["p", "m"])
+dproperties(BaroSCBZP, ["p", "m"])
 
 
 class BaroRGB(Barostat):
@@ -1134,7 +1134,7 @@ class BaroRGB(Barostat):
         self.cell.h = np.dot(expq, self.cell.h)
 
 
-inject_depend_properties(BaroRGB, ["p", "m", "p6", "hmask", "m6"])
+dproperties(BaroRGB, ["p", "m", "p6", "hmask", "m6"])
 
 
 class BaroMTK(Barostat):
@@ -1422,4 +1422,4 @@ class BaroMTK(Barostat):
         self.cell.h = np.dot(expq, self.cell.h)
 
 
-inject_depend_properties(BaroMTK, ["p", "m", "p6", "hmask", "m6"])
+dproperties(BaroMTK, ["p", "m", "p6", "hmask", "m6"])
