@@ -129,6 +129,17 @@ used, in the integrator of the dynamics or in the evaluation of physical
 properties, one does not need to take care of book-keeping and the code
 can be clean, transparent and readable.
 
+Force evaluation
+~~~~~~~~~~~~~~~~
+
+Within i-PI, the evaluation of the forces plays a crucial role, as it is
+the step requiring communication with the client code. In order to have
+a flexible infrastructure that makes it possible to perform simulations
+with advanced techniques such as ring-polymer
+contraction :cite:`mark-mano08jcp`, the force evaluation
+machinery in i-PI might appear complicated at first, and deserves a
+brief discussion.
+
 .. figure:: ../figures/ipi-forces.*
    :width: 90.0%
 
@@ -141,16 +152,6 @@ can be clean, transparent and readable.
    client to compute the long-range electrostatic interactions,
    contracted on a single bead :cite:`mark-mano08jcp`).
 
-Force evaluation
-~~~~~~~~~~~~~~~~
-
-Within i-PI, the evaluation of the forces plays a crucial role, as it is
-the step requiring communication with the client code. In order to have
-a flexible infrastructure that makes it possible to perform simulations
-with advanced techniques such as ring-polymer
-contraction :cite:`mark-mano08jcp`, the force evaluation
-machinery in i-PI might appear complicated at first, and deserves a
-brief discussion.
 
 A scheme of the objects involved in the calculation of the forces is
 presented in Figure `1.3 <#fig:forces>`__. The infrastracture comprises
@@ -161,7 +162,7 @@ component of the force for an individual bead: i-PI is built to hide the
 path integral infrastructure from the client, and so beads must be
 transferred individually.
 
-Let us discuss for clarity a practical example – a calculation of an
+Let us discuss for clarity a practical example: a calculation of an
 empirical water model where the bonded interactions are computed on 32
 beads by the program A, and the non-bonded interactions are computed by
 client B, ring-polymer contracted on 8 beads. Each client “type” is
