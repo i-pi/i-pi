@@ -76,12 +76,9 @@ class Dynamics(Motion):
         if thermostat is None:
             self.thermostat = Thermostat()
         else:
-            if (
-                thermostat.__class__.__name__
-                is (
-                    "ThermoNMGLEG "
-                )  # MR: Leaving it only on NMGLEG for the moment - addressing that case later.
-            ) and (len(fixatoms) > 0):
+            if (thermostat.__class__.__name__ is ("ThermoNMGLEG")) and (
+                len(fixatoms) > 0
+            ):  # MR: Leaving it only on ThermoNMGLEG for the moment -- will address it later
                 softexit.trigger(
                     status="bad",
                     message="!! Sorry, fixed atoms and global thermostat on the centroid with NMGLE. Use a local thermostat. !!",
