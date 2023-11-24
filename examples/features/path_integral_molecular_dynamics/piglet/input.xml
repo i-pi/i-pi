@@ -7,8 +7,8 @@
   <prng>
     <seed> 32343 </seed>
   </prng>
-  <ffsocket name='lmpserial' mode='unix'>
-    <address> h2o-piglet.4 </address>
+  <ffsocket name='qtip4pf' mode='unix' pbc='false'>
+    <address> h2o-piglet </address>
   </ffsocket>
   <system>
     <initialize nbeads='4'>
@@ -16,7 +16,7 @@
       <velocities mode='thermal' units='kelvin'> 298 </velocities>
     </initialize>
     <forces>
-      <force forcefield='lmpserial'/>
+      <force forcefield='qtip4pf'/>
     </forces>
     <ensemble>
       <temperature units='kelvin'> 298 </temperature>
