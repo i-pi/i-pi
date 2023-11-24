@@ -287,6 +287,7 @@ class ThermoPILE_L(Thermostat):
         prng=None,
         bindcentroid=True,
         fixdof=None,
+        fixcom=None,
     ):
         """Binds the appropriate degrees of freedom to the thermostat.
 
@@ -702,7 +703,16 @@ class ThermoGLE(Thermostat):
 
         self.s = np.zeros(0)
 
-    def bind(self, beads=None, atoms=None, pm=None, nm=None, prng=None, fixdof=None):
+    def bind(
+        self,
+        beads=None,
+        atoms=None,
+        pm=None,
+        nm=None,
+        prng=None,
+        fixdof=None,
+        fixcom=None,
+    ):
         """Binds the appropriate degrees of freedom to the thermostat.
 
         This takes an object with degrees of freedom, and makes their momentum
@@ -832,7 +842,16 @@ class ThermoNMGLE(Thermostat):
         else:
             dself.C = depend_value(value=C.copy(), name="C")
 
-    def bind(self, beads=None, atoms=None, pm=None, nm=None, prng=None, fixdof=None):
+    def bind(
+        self,
+        beads=None,
+        atoms=None,
+        pm=None,
+        nm=None,
+        prng=None,
+        fixdof=None,
+        fixcom=None,
+    ):
         """Binds the appropriate degrees of freedom to the thermostat.
 
         This takes an object with degrees of freedom, and makes their momentum
@@ -971,7 +990,16 @@ class ThermoNMGLEG(ThermoNMGLE):
         super(ThermoNMGLEG, self).__init__(temp, dt, A, C, ethermo)
         dself.tau = depend_value(value=tau, name="tau")
 
-    def bind(self, beads=None, atoms=None, pm=None, nm=None, prng=None, fixdof=None):
+    def bind(
+        self,
+        beads=None,
+        atoms=None,
+        pm=None,
+        nm=None,
+        prng=None,
+        fixdof=None,
+        fixcom=None,
+    ):
         """Binds the appropriate degrees of freedom to the thermostat.
 
         This takes an object with degrees of freedom, and makes their momentum
@@ -1279,7 +1307,16 @@ class MultiThermo(Thermostat):
             et += t.ethermo
         return et
 
-    def bind(self, beads=None, atoms=None, pm=None, nm=None, prng=None, fixdof=None):
+    def bind(
+        self,
+        beads=None,
+        atoms=None,
+        pm=None,
+        nm=None,
+        prng=None,
+        fixdof=None,
+        fixcom=None,
+    ):
         """Binds the appropriate degrees of freedom to the thermostat."""
 
         # just binds all the sub-thermostats
