@@ -77,7 +77,10 @@ class Dynamics(Motion):
             self.thermostat = Thermostat()
         else:
             if (
-                thermostat.__class__.__name__ is ("ThermoNMGLEG ")  # MR: Leaving it only on NMGLEG for the moment - addressing that case later.
+                thermostat.__class__.__name__
+                is (
+                    "ThermoNMGLEG "
+                )  # MR: Leaving it only on NMGLEG for the moment - addressing that case later.
             ) and (len(fixatoms) > 0):
                 softexit.trigger(
                     status="bad",
@@ -179,7 +182,9 @@ class Dynamics(Motion):
         dpipe(dself.ntemp, dthrm.temp)
 
         # depending on the kind, the thermostat might work in the normal mode or the bead representation.
-        self.thermostat.bind(beads=self.beads, nm=self.nm, prng=prng, fixdof=fixdof, fixcom=self.fixcom)
+        self.thermostat.bind(
+            beads=self.beads, nm=self.nm, prng=prng, fixdof=fixdof, fixcom=self.fixcom
+        )
 
         # first makes sure that the barostat has the correct stress and timestep, then proceeds with binding it.
         dpipe(dself.ntemp, dbaro.temp)

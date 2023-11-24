@@ -74,7 +74,16 @@ class Thermostat(dobject):
         dself.dt = depend_value(name="dt", value=dt)
         dself.ethermo = depend_value(name="ethermo", value=ethermo)
 
-    def bind(self, beads=None, atoms=None, pm=None, nm=None, prng=None, fixdof=None, fixcom=None):
+    def bind(
+        self,
+        beads=None,
+        atoms=None,
+        pm=None,
+        nm=None,
+        prng=None,
+        fixdof=None,
+        fixcom=None,
+    ):
         """Binds the appropriate degrees of freedom to the thermostat.
 
         This takes an object with degrees of freedom, and makes their momentum
@@ -532,7 +541,16 @@ class ThermoPILE_G(ThermoPILE_L):
             func=self.get_npilect, name="npilect", dependencies=[dself.pilect]
         )
 
-    def bind(self, beads=None, atoms=None, pm=None, nm=None, prng=None, fixdof=None, fixcom=None):
+    def bind(
+        self,
+        beads=None,
+        atoms=None,
+        pm=None,
+        nm=None,
+        prng=None,
+        fixdof=None,
+        fixcom=None,
+    ):
         """Binds the appropriate degrees of freedom to the thermostat.
 
         This takes a beads object with degrees of freedom, and makes its momentum
@@ -566,9 +584,9 @@ class ThermoPILE_G(ThermoPILE_L):
 
         # Needed for global thermostat and fixed dofs
         if fixcom:
-           fixdof0 = fixdof 
+            fixdof0 = fixdof
         else:
-           fixdof0 = fixdof / nm.nbeads
+            fixdof0 = fixdof / nm.nbeads
 
         t = self._thermos[0]
         t.bind(pm=(nm.pnm[0, :], nm.dynm3[0, :]), prng=self.prng, fixdof=fixdof0)
