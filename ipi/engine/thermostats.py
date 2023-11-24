@@ -354,7 +354,7 @@ class ThermoPILE_L(Thermostat):
             if it == 0:
                 # the following lines pipe a different temperature to the centroid, if requested
                 if self.pilect > 0.0:
-                    dpipe(dself.pilect, dd(t).temp)
+                    dpipe(dself.npilect, dd(t).temp)
                 else:
                     dpipe(dself.temp, dd(t).temp)
             else:
@@ -567,7 +567,7 @@ class ThermoPILE_G(ThermoPILE_L):
         t.bind(pm=(nm.pnm[0, :], nm.dynm3[0, :]), prng=self.prng, fixdof=fixdof)
         # the next lines pipe a different temperatures to the centroid modes, if requested.
         if self.pilect > 0.0:
-            dpipe(dself.pilect, dd(t).temp)
+            dpipe(dself.npilect, dd(t).temp)
         else:
             dpipe(dself.temp, dd(t).temp)
 
