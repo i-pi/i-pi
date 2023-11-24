@@ -571,7 +571,7 @@ class ThermoPILE_G(ThermoPILE_L):
            fixdof0 = fixdof / nm.nbeads
 
         t = self._thermos[0]
-        t.bind(pm=(nm.pnm[0, :], nm.dynm3[0, :]), prng=self.prng, fixdof=fixdof)
+        t.bind(pm=(nm.pnm[0, :], nm.dynm3[0, :]), prng=self.prng, fixdof=fixdof0)
         # the next lines pipe a different temperatures to the centroid modes, if requested.
         if self.pilect > 0.0:
             dpipe(dself.pilect, dd(t).temp)
@@ -953,7 +953,7 @@ class ThermoNMGLEG(ThermoNMGLE):
         super(ThermoNMGLEG, self).__init__(temp, dt, A, C, ethermo)
         dself.tau = depend_value(value=tau, name="tau")
 
-    def bind(self, beads=None, atoms=None, pm=None, nm=None, prng=None, fixdof=None):
+    def bind(self, beads=None, atoms=None, pm=None, nm=None, prng=None, fixdof=None, fixcom=None):
         """Binds the appropriate degrees of freedom to the thermostat.
 
         This takes an object with degrees of freedom, and makes their momentum
