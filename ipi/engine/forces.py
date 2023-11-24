@@ -1120,14 +1120,17 @@ class Forces:
         # calculates the finite displacement.
         fbase = dstrip(self.f)
         eps = self.mforces[index].epsilon
-        foverm = np.sqrt((fbase / self.beads.m3 * fbase / self.beads.m3).sum() / (self.nbeads * self.natoms))
-        if np.abs(foverm)>1e-20:
+        foverm = np.sqrt(
+            (fbase / self.beads.m3 * fbase / self.beads.m3).sum()
+            / (self.nbeads * self.natoms)
+        )
+        if np.abs(foverm) > 1e-20:
             delta = np.abs(eps) / np.sqrt(
                 (fbase / self.beads.m3 * fbase / self.beads.m3).sum()
                 / (self.nbeads * self.natoms)
             )
-        else: # defaults to eps if otherwise we'd get an 1/0
-            delta = np.abs(eps) 
+        else:  # defaults to eps if otherwise we'd get an 1/0
+            delta = np.abs(eps)
         dq = delta * fbase / self.beads.m3
 
         # stores the force component.
