@@ -1120,10 +1120,14 @@ class Forces:
         # calculates the finite displacement.
         fbase = dstrip(self.f)
         eps = self.mforces[index].epsilon
-        delta = np.abs(eps) / np.sqrt(
-            (fbase / self.beads.m3 * fbase / self.beads.m3).sum()
-            / (self.nbeads * self.natoms)
-        )
+        foverm = np.sqrt((fbase / self.beads.m3 * fbase / self.beads.m3).sum() / (self.nbeads * self.natoms))
+        if np.abs(foverm)>1e-20:
+            delta = np.abs(eps) / np.sqrt(
+                (fbase / self.beads.m3 * fbase / self.beads.m3).sum()
+                / (self.nbeads * self.natoms)
+            )
+        else: # defaults to eps if otherwise we'd get an 1/0
+            delta = np.abs(eps) 
         dq = delta * fbase / self.beads.m3
 
         # stores the force component.
@@ -1141,11 +1145,11 @@ class Forces:
             # This makes the FD incorrect. A fix could be to ALWAYS compute the odd and the even
             # beads on two different ring polymers of P / 2 beads, but centered difference + RPC
             # seems to be a neater solution. Anyway, the cost of a CNT-DIFF in comparison to a FWD-DIFF
-            # is marginal in when RPC + MTS is used.
+            # is marginal when RPC + MTS is used.
 
             if self.mforces[index].nbeads != self.nbeads:
                 warning(
-                    "ERROR: high order PIMD + RPC works with a centered finite difference only! (Uness you find an elegant solution :))"
+                    "ERROR: high order PIMD + RPC works with a centered finite difference only! (Unless you find an elegant solution :))"
                 )
                 exit()
 
