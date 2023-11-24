@@ -1,4 +1,4 @@
-<simulation verbosity='medium' threading='false' safe_stride='100'>
+<simulation verbosity='low' threading='false' safe_stride='100'>
     <ffsocket mode='unix' name='driver' pbc='false'>
          <latency>  1.00000000e-04</latency>
          <address> gas </address>

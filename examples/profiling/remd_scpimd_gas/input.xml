@@ -1,7 +1,9 @@
 <simulation verbosity='low' threading='true' safe_stride='100'>
-    <fflj name='dummy.1' pbc='False'>
-      <parameters>{eps: 0.0, sigma: 1.0}</parameters>
-   </fflj>
+    <ffsocket mode='unix' name='dummy.1' pbc='false'>
+         <latency>  1.00000000e-04</latency>
+         <address> gas </address>
+         <exit_on_disconnect> False </exit_on_disconnect>
+   </ffsocket>
     <fflj name='dummy.2' pbc='False'>
       <parameters>{eps: 0.0, sigma: 1.0}</parameters>
    </fflj>
@@ -30,8 +32,8 @@
               <velocities mode="thermal" units="kelvin"> TEMPERATURE </velocities>
             </initialize>
             <forces>
-              <force forcefield ="dummy.1"  weight='0.0'/>
-              <force forcefield ="dummy.2"  nbeads='2' weight='0.0'/>
+              <force forcefield ="dummy.1"  weight='1.0'/>
+              <force forcefield ="dummy.2"  nbeads='2' weight='1.0'/>
             </forces>
             <motion mode="dynamics">
               <dynamics mode="scnpt">
