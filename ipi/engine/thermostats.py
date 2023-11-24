@@ -953,7 +953,7 @@ class ThermoNMGLEG(ThermoNMGLE):
         super(ThermoNMGLEG, self).__init__(temp, dt, A, C, ethermo)
         dself.tau = depend_value(value=tau, name="tau")
 
-    def bind(self, beads=None, atoms=None, pm=None, nm=None, prng=None, fixdof=None, fixcom=None):
+    def bind(self, beads=None, atoms=None, pm=None, nm=None, prng=None, fixdof=None):
         """Binds the appropriate degrees of freedom to the thermostat.
 
         This takes an object with degrees of freedom, and makes their momentum
