@@ -74,7 +74,7 @@ class Dynamics(Motion):
         if thermostat is None:
             self.thermostat = Thermostat()
         else:
-            if (thermostat.__class__.__name__ is ("ThermoNMGLEG")) and (
+            if (thermostat.__class__.__name__ is "ThermoNMGLEG") and (
                 len(fixatoms) > 0
             ):  # MR: Leaving it only on ThermoNMGLEG for the moment -- will address it later
                 softexit.trigger(
