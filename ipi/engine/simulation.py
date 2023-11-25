@@ -97,9 +97,9 @@ class Simulation(dobject):
         simulation.bind(read_only)
 
         # echo the input file if verbose enough
-        if verbosity.level > 0:
+        if verbosity.low:
             print(" # i-PI loaded input file: ", fn_input)
-        if verbosity.level > 1:
+        elif verbosity.medium:
             print(" --- begin input file content ---")
             ifile = open(fn_input, "r")
             for line in ifile.readlines():

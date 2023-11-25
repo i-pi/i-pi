@@ -17,9 +17,7 @@ from ipi.utils.depend import *
 from ipi.engine.thermostats import Thermostat
 from ipi.engine.barostats import Barostat
 from ipi.utils.softexit import softexit
-
-
-# __all__ = ['Dynamics', 'NVEIntegrator', 'NVTIntegrator', 'NPTIntegrator', 'NSTIntegrator', 'SCIntegrator`']
+from ipi.utils.messages import warning, verbosity
 
 
 class Dynamics(Motion):
@@ -327,6 +325,9 @@ class DummyIntegrator(dobject):
             self.coeffsc[::2] /= -3.0
             self.coeffsc[1::2] /= 3.0
 
+        # check stress tensor
+        self._stresscheck = True
+
     def pstep(self):
         """Dummy momenta propagator which does nothing."""
         pass
@@ -602,10 +603,20 @@ class NPTIntegrator(NVTIntegrator):
     def pstep(self, level=0):
         """Velocity Verlet monemtum propagator."""
 
-        if np.array_equiv(self.forces.vir, np.zeros(len(self.forces.vir))):
-            raise ValueError(
-                "Seems like no stress tensor was computed by the client. Stopping barostat!"
+        if self._stresscheck and np.array_equiv(
+            dstrip(self.forces.vir), np.zeros(len(self.forces.vir))
+        ):
+            warning(
+                "Forcefield returned a zero stress tensor. NPT simulation will likely make no sense",
+                verbosity.low,
             )
+            if verbosity.medium:
+                raise ValueError(
+                    "Zero stress terminates simulation for medium verbosity and above."
+                )
+
+        self._stresscheck = False
+
         self.barostat.pstep(level)
         super(NPTIntegrator, self).pstep(level)
         # self.pconstraints()
@@ -738,10 +749,19 @@ class SCNPTIntegrator(SCIntegrator):
     def pstep(self, level=0):
         """Velocity Verlet monemtum propagator."""
 
-        if np.array_equiv(self.forces.vir, np.zeros(len(self.forces.vir))):
-            raise ValueError(
-                "Seems like no stress tensor was computed by the client. Stopping barostat!"
+        if self._stresscheck and np.array_equiv(
+            dstrip(self.forces.vir), np.zeros(len(self.forces.vir))
+        ):
+            warning(
+                "Forcefield returned a zero stress tensor. NPT simulation will likely make no sense",
+                verbosity.low,
             )
+            if verbosity.medium:
+                raise ValueError(
+                    "Zero stress terminates simulation for medium verbosity and above."
+                )
+
+        self._stresscheck = False
 
         self.barostat.pstep(level)
         super(SCNPTIntegrator, self).pstep(level)
