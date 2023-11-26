@@ -107,12 +107,13 @@ This is a minimal example of how to implement dependencies in a class
 
          # this is a dependent object. the definition contains a function that
          # is called to determine the value, and specification of what objects
-         # it depend on
+         # it depend on. 
          self._double = depend_value(func=lambda: 2*self.scalar, name="double", 
                                      dependencies=[self._scalar])
 
    # after the definition of a class, this helper function should be called to
    # create property getters and setters (use the names with no leading underscore)
+   # note that property accessors are added to the class, not to the instances
    dproperties(DObject, ["scalar", "double"])
 
    myobj = DObject()
@@ -128,6 +129,46 @@ them. However, the advantage is that when the physical quantities are
 used, in the integrator of the dynamics or in the evaluation of physical
 properties, one does not need to take care of book-keeping and the code
 can be clean, transparent and readable.
+
+It is also possible to define dependencies between different objects, in 
+which case it's necessary to make sure that the compute function has access, 
+at runtime, to the value of the other object. A typical usage pattern is
+
+.. code-block:: python
+
+   # NB: this is meant to be run after the previous code snippet
+   from ipi.utils.depend import depend_array
+   import numpy as np
+
+   class DOther:
+      def __init__(self):
+         
+         # depend arrays must be initialized with storage space
+         self._vec = depend_array(value=np.ones(4), name="vec") 
+
+      def bind(self, factor):
+
+         self.factor = factor # stores a reference to the object holding the value
+         self._scaled = depend_array(value=np.ones(4), name="vec",
+                                    func=self.get_scaled, dependencies=[self._vec])
+
+         # dependencies (or dependants) can also be added after object creation
+         self._scaled.add_dependency(self.factor._double)
+
+      def get_scaled(self):
+         # computes a scaled version of the vector
+         return self.vec*self.factor.double
+
+   dproperties(DOther, ["vec", "scaled"])
+
+   myoth = DOther() # creates the object
+   myoth.bind(myobj) # makes connections
+   
+   myoth.vec = np.asarray([0,1,2,3])
+   print(myoth.scaled) # prints [0,8,16,24]
+
+   myoth.vec[3] = 0 # depend_arrays can be accessed as normal np.ndarray
+   print(myoth.scaled) # prints [0,8,16,0]
 
 Force evaluation
 ~~~~~~~~~~~~~~~~
@@ -280,8 +321,8 @@ Features in version 1.0
    molecular dynamics
    (CMD) :cite:`cao-voth93jcp,cao-voth94jcp`.
 
-Features added in version 2.0
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   Features added in version 2.0
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Further details can be found in Ref. :cite:`Kapil:2019ju`.
 
