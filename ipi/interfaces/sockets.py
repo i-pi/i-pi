@@ -345,6 +345,7 @@ class Driver(DriverSocket):
         Raises:
            InvalidStatus: Raised if the status is not Ready.
         """
+        global TIMEOUT  # we need to update TIMEOUT in case of sendall failure
 
         if self.status & Status.Ready:
             try:
@@ -363,7 +364,6 @@ class Driver(DriverSocket):
                     verbosity.quiet,
                 )
                 self.status = Status.Timeout
-                global TIMEOUT
                 TIMEOUT *= 2
                 return
             except Exception as exc:
