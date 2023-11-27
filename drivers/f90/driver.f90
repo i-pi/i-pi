@@ -450,11 +450,14 @@
                ALLOCATE(msgbuffer(3*nat))
                ALLOCATE(atoms(nat,3), datoms(nat,3))
                ALLOCATE(forces(nat,3))
-               ALLOCATE(friction(3*nat,3*nat))
+
+               IF (vstyle==24 .or. vstyle==25) THEN
+                  ALLOCATE(friction(3*nat,3*nat))
+                  friction = 0.0d0
+               ENDIF
                atoms = 0.0d0
                datoms = 0.0d0
                forces = 0.0d0
-               friction = 0.0d0
                msgbuffer = 0.0d0
             ENDIF
 
@@ -771,7 +774,10 @@
             STOP "ENDED"
          ENDIF
       ENDDO
-      IF (nat > 0) DEALLOCATE(atoms, forces, msgbuffer, friction)
+      IF (nat > 0) DEALLOCATE(atoms, forces, msgbuffer)
+      IF (nat>0 .and. (vstyle==24 .or. vstyle==25)) THEN
+         DEALLOCATE(friction)
+      ENDIF
 
     CONTAINS
       SUBROUTINE helpmessage

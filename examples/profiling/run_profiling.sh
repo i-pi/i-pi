@@ -43,7 +43,7 @@ sed 's/init\.xyz/test-'$natoms'\.xyz/g' input.xml > test-$natoms.xml
 
 # Run i-pi and i-pi-driver in the background
 time i-pi test-$natoms.xml $profiler_options &> test-$natoms.log &
-sleep 1
+sleep 2
 i-pi-driver -m gas -u -a gas &
 
 # Wait for all background processes to finish
