@@ -425,7 +425,7 @@
             IF (verbose > 0) WRITE(*,*) " Initializing system from wrapper, using ", trim(initbuffer)
             isinit=.true. ! We actually do nothing with this string, thanks anyway. Could be used to pass some information (e.g. the input parameters, or the index of the replica, from the driver
          ELSEIF (trim(header) == "POSDATA") THEN  ! The driver is sending the positions of the atoms. Here is where we do the calculation!
-
+            
             ! Parses the flow of data from the socket
             CALL readbuffer(socket, mtxbuf, 9)  ! Cell matrix
             IF (verbose > 1) WRITE(*,*) "    !read!=> cell: ", mtxbuf
@@ -459,10 +459,11 @@
                datoms = 0.0d0
                forces = 0.0d0
                msgbuffer = 0.0d0
-            ENDIF
+               IF (verbose > 1) WRITE(*,*) " Allocation successful "
+            ENDIF            
 
             CALL readbuffer(socket, msgbuffer, nat*3)
-            IF (verbose > 1) WRITE(*,*) "    !read!=> positions: ", msgbuffer
+            IF (verbose > 1) WRITE(*,*) "    !read!=> positions: ", msgbuffer(0:2), " ..."
             DO i = 1, nat
                atoms(i,:) = msgbuffer(3*(i-1)+1:3*i)
             ENDDO
@@ -713,7 +714,7 @@
             CALL writebuffer(socket,nat)  ! Writing the number of atoms
             IF (verbose > 1) WRITE(*,*) "    !write!=> nat:", nat
             CALL writebuffer(socket,msgbuffer,3*nat) ! Writing the forces
-            IF (verbose > 1) WRITE(*,*) "    !write!=> forces:", msgbuffer
+            IF (verbose > 1) WRITE(*,*) "    !write!=> forces:", msgbuffer(0:2), " ..."
             CALL writebuffer(socket,reshape(virial,(/9/)),9)  ! Writing the virial tensor, NOT divided by the volume
             IF (verbose > 1) WRITE(*,*) "    !write!=> strss: ", reshape(virial,(/9/))
 

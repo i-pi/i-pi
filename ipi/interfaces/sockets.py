@@ -30,7 +30,7 @@ __all__ = ["InterfaceSocket"]
 
 HDRLEN = 12
 UPDATEFREQ = 10
-TIMEOUT = 0.02
+TIMEOUT = 0.1
 SERVERTIMEOUT = 5.0 * TIMEOUT
 NTIMEOUT = 20
 
@@ -274,6 +274,9 @@ class Driver(DriverSocket):
             if self in readable:
                 reply = self.recv_msg(HDRLEN)
                 self.waitstatus = False  # got some kind of reply
+            else:
+                warning(" @SOCKET: Couldn't find readable socket", verbosity.quiet)
+                return Status.Disconnected
         except socket.timeout:
             warning(" @SOCKET:   Timeout in status recv!", verbosity.debug)
             return Status.Up | Status.Busy | Status.Timeout
@@ -347,18 +350,27 @@ class Driver(DriverSocket):
             try:
                 # reduces latency by combining all messages in one
                 self.sendall(
-                    MESSAGE["posdata"]
-                    + h_ih[0].tobytes()  # header
-                    + h_ih[1].tobytes()  # cell
-                    + np.int32(len(pos) // 3).tobytes()  # inverse cell
-                    + pos.tobytes()  # length of position array  # positions
+                    MESSAGE["posdata"]  # header
+                    + h_ih[0].tobytes()  # cell
+                    + h_ih[1].tobytes()  # inverse cell
+                    + np.int32(len(pos) // 3).tobytes()  # length of position array
+                    + pos.tobytes()  # positions
                 )
-
                 self.status = Status.Up | Status.Busy
-            except:
-                print("Error in sendall, resetting status")
-                self.get_status()
+            except socket.timeout:
+                warning(
+                    f"Timeout in sendall: resetting status and increasing timeout",
+                    verbosity.quiet,
+                )
+                self.status = Status.Timeout
+                global TIMEOUT
+                TIMEOUT *= 2
                 return
+            except Exception as exc:
+                warning(
+                    f"Other exception during posdata receive: {exc}", verbosity.quiet
+                )
+                raise exc
         else:
             raise InvalidStatus("Status in sendpos was " + self.status)
 
