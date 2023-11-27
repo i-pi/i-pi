@@ -359,7 +359,7 @@ class Driver(DriverSocket):
                 self.status = Status.Up | Status.Busy
             except socket.timeout:
                 warning(
-                    f"Timeout in sendall: resetting status and increasing timeout",
+                    f"Timeout in sendall: resetting status and increasing timeout to {TIMEOUT}s",
                     verbosity.quiet,
                 )
                 self.status = Status.Timeout
