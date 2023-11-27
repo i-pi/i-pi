@@ -125,7 +125,7 @@ class InputSimulation(Input):
             },
         ),
         "safe_stride": (
-            InputValue,
+            InputAttribute,
             {
                 "dtype": int,
                 "default": 1,
