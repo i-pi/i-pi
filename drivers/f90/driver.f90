@@ -31,7 +31,7 @@
          USE LJPolymer
          USE SG
          USE PSWATER
-         USE F90SOCKETS, ONLY : open_socket, writebuffer, readbuffer
+         USE F90SOCKETS, ONLY : open_socket, writebuffer, readbuffer, f_sleep
       IMPLICIT NONE
 
       ! SOCKET VARIABLES
@@ -58,6 +58,7 @@
       ! PARAMETERS OF THE SYSTEM (CELL, ATOM POSITIONS, ...)
       DOUBLE PRECISION sigma, eps, rc, rn, ks ! potential parameters
       DOUBLE PRECISION stiffness ! lennard-jones polymer
+      DOUBLE PRECISION sleep_seconds
       INTEGER n_monomer ! lennard-jones polymer
       INTEGER nat
       DOUBLE PRECISION pot, dpot, dist
@@ -189,14 +190,22 @@
          CALL helpmessage
          STOP "ENDED"
       ELSEIF (0 == vstyle) THEN
-         IF (par_count /= 0) THEN
-            WRITE(*,*) "Error: no initialization string needed for ideal gas."
+         IF (par_count == 0) THEN
+            sleep_seconds = 0.0
+         ELSEIF (par_count == 1) THEN
+            sleep_seconds = vpars(1)
+         ELSE
+            WRITE(*,*) "Error: only an optional delay parameters needed for ideal gas."
             STOP "ENDED"
          ENDIF
          isinit = .true.
       ELSEIF (99 == vstyle) THEN
-         IF (par_count /= 0) THEN
-            WRITE(*,*) "Error: no initialization string needed for dummy output."
+         IF (par_count == 0) THEN
+            sleep_seconds = 0.0
+         ELSEIF (par_count == 1) THEN
+            sleep_seconds = vpars(1)
+         ELSE
+            WRITE(*,*) "Error: only an optional delay parameters needed for dummy output."
             STOP "ENDED"
          ENDIF
          CALL RANDOM_SEED(size=vseed)
@@ -469,6 +478,10 @@
             ENDDO
 
             IF (vstyle == 0) THEN   ! ideal gas, so no calculation done
+               IF (sleep_seconds > 0) THEN
+                  ! artificial delay
+                  CALL f_sleep(sleep_seconds)
+               ENDIF
                pot = 0
                forces = 0.0d0
                virial = 1.0d-200
@@ -477,6 +490,10 @@
                ! to avoid running constant-pressure simulations
                ! with a code that cannot compute the virial
             ELSEIF (vstyle == 99) THEN ! dummy output, useful to test that i-PI "just runs"
+               IF (sleep_seconds > 0) THEN
+                  ! artificial delay
+                  CALL f_sleep(sleep_seconds)
+               ENDIF
                call random_number(pot)
                pot = pot - 0.5
                call random_number(forces)
@@ -792,7 +809,8 @@
          WRITE(*,*) " For 1D morse oscillators use -o r0,D,a"
          WRITE(*,*) " For qtip4pf-efield use -o Ex,Ey,Ez with Ei in V/nm"
          WRITE(*,*) " For ljpolymer use -o n_monomer,sigma,epsilon,cutoff "
-         WRITE(*,*) " For the ideal gas, qtip4pf, qtip4p-sr, zundel, ch4hcbe, nasa, doublewell or doublewell_1D no options are needed! "
+         WRITE(*,*) " For gas, dummy, use the optional -o sleep_seconds to add a delay"
+         WRITE(*,*) " For the ideal qtip4pf, qtip4p-sr, zundel, ch4hcbe, nasa, doublewell or doublewell_1D no options are needed! "
        END SUBROUTINE helpmessage
 
    END PROGRAM
