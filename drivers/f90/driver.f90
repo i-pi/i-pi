@@ -590,6 +590,7 @@
                ! do not compute the virial term
 
             ELSEIF (vstyle == 6) THEN ! qtip4pf potential.
+               IF (verbose > 1) WRITE(*,*) "TIP4Pf potential"               
                IF (mod(nat,3)/=0) THEN
                   WRITE(*,*) " Expecting water molecules O H H O H H O H H but got ", nat, "atoms"
                   STOP "ENDED"
@@ -602,6 +603,7 @@
                   STOP "ENDED"
                ENDIF
                CALL qtip4pf(vpars(1:3),atoms,nat,forces,pot,virial)
+               IF (verbose > 1) WRITE(*,*) "TIP4Pf potential computed"
                dip(:) = 0.0
                DO i=1, nat, 3
                   dip = dip -1.1128d0 * atoms(i,:) + 0.5564d0 * (atoms(i+1,:) + atoms(i+2,:))
@@ -765,7 +767,7 @@
      &          cbuf
                 CALL writebuffer(socket,initbuffer,cbuf)
                 IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ",  &
-     &          initbuffer
+     &          initbuffer(1:cbuf)
 !            ELSEIF (vstyle==5 .or. vstyle==6 .or. vstyle==8 .or. vstyle==99) THEN ! returns the  dipole through initbuffer
             ELSEIF (vstyle==5 .or. vstyle==6 .or. vstyle==8) THEN ! returns the  dipole through initbuffer
                WRITE(initbuffer, '(a,3x,f15.8,a,f15.8,a,f15.8, &
@@ -776,7 +778,7 @@
      &         "    !write!=> extra_length: ", cbuf
                CALL writebuffer(socket,initbuffer,cbuf)
                IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ", &
-     &         initbuffer
+     &         initbuffer(1:cbuf)
             ELSE
                cbuf = 1 ! Size of the "extras" string
                CALL writebuffer(socket,cbuf) ! This would write out the "extras" string, but in this case we only use a dummy string.

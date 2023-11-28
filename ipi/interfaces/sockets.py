@@ -33,6 +33,7 @@ UPDATEFREQ = 10
 TIMEOUT = 0.1
 SERVERTIMEOUT = 5.0 * TIMEOUT
 NTIMEOUT = 20
+SELECTTIMEOUT = 60
 
 
 def Message(mystr):
@@ -261,8 +262,9 @@ class Driver(DriverSocket):
         if not self.waitstatus:
             try:
                 # This can sometimes hang with no timeout.
-                # Using the recommended 60 s.
-                readable, writable, errored = select.select([], [self], [], 60)
+                readable, writable, errored = select.select(
+                    [], [self], [], SELECTTIMEOUT
+                )
                 if self in writable:
                     self.send_msg("status")
                     self.waitstatus = True
@@ -270,13 +272,17 @@ class Driver(DriverSocket):
                 return Status.Disconnected
 
         try:
-            readable, writable, errored = select.select([self], [], [], 60)
+            readable, writable, errored = select.select([self], [], [], SELECTTIMEOUT)
             if self in readable:
                 reply = self.recv_msg(HDRLEN)
                 self.waitstatus = False  # got some kind of reply
             else:
-                warning(" @SOCKET: Couldn't find readable socket", verbosity.quiet)
-                return Status.Disconnected
+                # This is usually due to VERY slow clients.
+                warning(
+                    f" @SOCKET: Couldn't find readable socket in {SELECTTIMEOUT}s, will try again",
+                    verbosity.low,
+                )
+                return Status.Busy
         except socket.timeout:
             warning(" @SOCKET:   Timeout in status recv!", verbosity.debug)
             return Status.Up | Status.Busy | Status.Timeout
@@ -360,7 +366,7 @@ class Driver(DriverSocket):
                 self.status = Status.Up | Status.Busy
             except socket.timeout:
                 warning(
-                    f"Timeout in sendall: resetting status and increasing timeout to {TIMEOUT}s",
+                    f"Timeout in sendall after {TIMEOUT}s: resetting status and increasing timeout",
                     verbosity.quiet,
                 )
                 self.status = Status.Timeout
