@@ -278,3 +278,28 @@ Mathematical errors
    the simulation box “explodes”. Make sure you have properly
    equilibrated the system before starting and that the timestep is
    short enough to not introduce very large integration errors.
+   
+   
+I-PI is slow!
+-------------
+
+i-PI is not designed to be highly efficient, but it should not be the 
+bottleneck in your calculations. Most of the time, if you see a major 
+slow-down, there is a problem with your setup. Here are some tricks
+you can try.
+
+-  *use a UNIX domain socket*: if you run on a single node, it is much 
+   faster to use `mode="unix"` in your `<ffsocket>` classes. This uses 
+   a shared-memory communication process, that avoids much of the 
+   network latency of a TCP/IP socket.
+-  *reduce I/O*: outputting hundreds of beads configurations at each time
+   step is going to be slow in any scenario, but particularly so when
+   using text files and Python. Reduce the output frequency using a larger
+   `stride`, and/or `flush` less often. 
+-  *profile i-PI*: if you still think i-PI is being unreasonably slow,
+   you can contact the developers - your setup might have revealed some 
+   kind of bottleneck. It will help us if you can also generate a profiler
+   output from your run (possibly with only a small number of steps). 
+   You can generate a profiler log by running i-PI with `-p` option,
+   e.g. `i-pi -p input.xml`. 
+   You will need to install the `yappi` profiler.

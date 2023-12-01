@@ -154,7 +154,7 @@ class DriverSocket(socket.socket):
 
         blen = dest.itemsize * dest.size
         if blen > len(self._buf):
-            self._buf.resize(blen)
+            self._buf = np.zeros(blen, np.byte)
         bpos = 0
         ntimeout = 0
 
@@ -182,10 +182,10 @@ class DriverSocket(socket.socket):
 
             bpos += bpart
 
-        if np.isscalar(dest):
-            return np.fromstring(self._buf[0:blen], dest.dtype)[0]
-        else:
+        if hasattr(dest, "shape"):
             return np.fromstring(self._buf[0:blen], dest.dtype).reshape(dest.shape)
+        else:
+            return np.fromstring(self._buf[0:blen], dest.dtype)[0]
 
 
 class Driver(DriverSocket):
@@ -299,10 +299,13 @@ class Driver(DriverSocket):
 
         if self.status & Status.NeedsInit:
             try:
-                self.sendall(Message("init"))
-                self.sendall(np.int32(rid))
-                self.sendall(np.int32(len(pars)))
-                self.sendall(pars.encode())
+                # combines all messages in one to reduce latency
+                self.sendall(
+                    Message("init")
+                    + np.int32(rid)
+                    + np.int32(len(pars))
+                    + pars.encode()
+                )
             except:
                 self.get_status()
                 return
@@ -322,11 +325,15 @@ class Driver(DriverSocket):
 
         if self.status & Status.Ready:
             try:
-                self.sendall(Message("posdata"))
-                self.sendall(h_ih[0])
-                self.sendall(h_ih[1])
-                self.sendall(np.int32(len(pos) // 3))
-                self.sendall(pos)
+                # reduces latency by combining all messages in one
+                self.sendall(
+                    Message("posdata")
+                    + h_ih[0].tobytes()  # header
+                    + h_ih[1].tobytes()  # cell
+                    + np.int32(len(pos) // 3).tobytes()  # inverse cell
+                    + pos.tobytes()  # length of position array  # positions
+                )
+
                 self.status = Status.Up | Status.Busy
             except:
                 print("Error in sendall, resetting status")

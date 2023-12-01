@@ -1,0 +1,33 @@
+<simulation verbosity='medium'>
+    <output prefix='simulation'>
+        <properties stride='8' filename='out'>  [ step, time{picosecond}, conserved , potential, kinetic_cv(2), kinetic_cv(1)] </properties>
+        <properties stride='8' filename='047.q'>  [ atom_x_path(047)] </properties>
+        <properties stride='8' filename='047.f'>  [ atom_f_path(047)] </properties>
+        <checkpoint stride='4000'/>
+    </output>
+    <total_steps> 40 </total_steps>
+    <prng><seed> 31415 </seed></prng>
+     <ffsocket name='qtip4pf' mode='unix' pbc='false'>
+        <address> qtip4pf </address>
+    </ffsocket>
+    <system>
+        <initialize nbeads='64'>
+            <file mode='chk'> init.chk </file>
+        </initialize>
+        <forces><force forcefield='qtip4pf'> </force></forces>
+        <normal_modes>
+            <open_paths> [47] </open_paths>
+        </normal_modes>
+        <ensemble>
+            <temperature units='kelvin'> 296 </temperature>
+        </ensemble>
+        <motion mode='dynamics'>
+        <dynamics mode='nvt'>
+            <thermostat mode='pile_g'>
+                <tau units='femtosecond'> 1e1 </tau>
+            </thermostat>
+            <timestep units='femtosecond'> 0.25 </timestep>
+        </dynamics>
+        </motion>
+    </system>
+</simulation>
