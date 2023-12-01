@@ -3,7 +3,8 @@ name: Publish Python 🐍 distribution 📦 to PyPI
 on:
   release:
     types: [created]
-    
+  workflow_dispatch:
+      
 jobs:
   build:
     name: Build distribution 📦
