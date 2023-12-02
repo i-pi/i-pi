@@ -57,7 +57,7 @@ def Message(mystr):
     return str.ljust(str.upper(mystr), HDRLEN).encode()
 
 
-def run_driver(unix=False, address="", port=12345, driver=Dummy_driver()):
+def run_driver(unix=False, address="", port=12345, driver=Dummy_driver(), f_verbose=False):
     """Minimal socket client for i-PI."""
 
     # Opens a socket to i-PI
@@ -70,7 +70,6 @@ def run_driver(unix=False, address="", port=12345, driver=Dummy_driver()):
 
     f_init = False
     f_data = False
-    f_verbose = False
 
     # initializes structure arrays
     cell = np.zeros((3, 3), float)
@@ -83,7 +82,8 @@ def run_driver(unix=False, address="", port=12345, driver=Dummy_driver()):
     vir = np.zeros((3, 3), float)
     while True:  # ah the infinite loop!
         header = sock.recv(HDRLEN)
-
+        if f_verbose:
+            print("Received ", header)
         if header == Message("STATUS"):
             # responds to a status request
             if not f_init:
@@ -200,13 +200,20 @@ if __name__ == "__main__":
         help="""Parameters required to run the driver. Comma-separated list of values
         """,
     )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        default=False,
+        help="Verbose output.",
+    )
 
     args = parser.parse_args()
 
     if args.mode in __drivers__:
-        d_f = __drivers__[args.mode](args.param)
+        d_f = __drivers__[args.mode](args.param, args.verbose)
     elif args.mode == "dummy":
-        d_f = Dummy_driver(args.param)
+        d_f = Dummy_driver(args.param, args.verbose)
     else:
         raise ValueError("Unsupported driver mode ", args.mode)
 
@@ -215,4 +222,5 @@ if __name__ == "__main__":
         address=args.address,
         port=args.port,
         driver=d_f,
+        f_verbose=args.verbose
     )
