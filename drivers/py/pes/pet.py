@@ -1,6 +1,6 @@
 """Interface with librascal to run machine learning potentials"""
 
-import sys, os
+import sys
 import numpy as np
 from .dummy import Dummy_driver
 
