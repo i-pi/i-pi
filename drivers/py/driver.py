@@ -57,7 +57,9 @@ def Message(mystr):
     return str.ljust(str.upper(mystr), HDRLEN).encode()
 
 
-def run_driver(unix=False, address="", port=12345, driver=Dummy_driver(), f_verbose=False):
+def run_driver(
+    unix=False, address="", port=12345, driver=Dummy_driver(), f_verbose=False
+):
     """Minimal socket client for i-PI."""
 
     # Opens a socket to i-PI
@@ -222,5 +224,5 @@ if __name__ == "__main__":
         address=args.address,
         port=args.port,
         driver=d_f,
-        f_verbose=args.verbose
+        f_verbose=args.verbose,
     )

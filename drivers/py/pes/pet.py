@@ -12,7 +12,7 @@ try:
 
     try:
         from ase.io import read
-    except ImportError:        
+    except ImportError:
         warning("The PET driver has an ASE dependency")
         raise
 except ImportError:
@@ -21,6 +21,7 @@ except ImportError:
 
 __DRIVER_NAME__ = "pet"
 __DRIVER_CLASS__ = "PET_driver"
+
 
 class PET_driver(Dummy_driver):
     def __init__(self, args=None, verbose=False):
@@ -54,7 +55,10 @@ Example: python driver.py -m pet -u -o model.json,template.xyz
 
         self.template_ase = read(self.template)
         self.template_ase.arrays["forces"] = np.zeros_like(self.template_ase.positions)
-        self.pet_calc = PETCalc(self.model_path, default_hypers_path=self.model_path+"/default_hypers.yaml")
+        self.pet_calc = PETCalc(
+            self.model_path,
+            default_hypers_path=self.model_path + "/default_hypers.yaml",
+        )
 
     def __call__(self, cell, pos):
         """Get energies, forces, and stresses from the PET model"""
