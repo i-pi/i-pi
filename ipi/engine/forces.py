@@ -954,7 +954,9 @@ class Forces(dobject):
           - new_q list of length equal to number of force type, containing the beads positions
           - new_v list of length equal to number of force type, containing the beads potential energy
           - new_f list of length equal to number of force type, containing the beads forces
-          - new_x list of length equal to number of force type, containing the beads extras
+          - new_extra list of length equal to number of force type, containing the beads extras.
+
+        new_q, new_v, and new_f are list of floats or numpy arrays  while new_extra is a list dictionaries
         """
         msg = "Unconsistent dimensions inside transfer_forces_manual"
         assert len(self.mforces) == len(new_q), msg
