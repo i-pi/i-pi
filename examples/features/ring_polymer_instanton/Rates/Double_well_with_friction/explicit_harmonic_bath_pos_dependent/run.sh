@@ -20,4 +20,4 @@
   sleep 3
 
 #Launch driver
-  python3 /home/yl899/codes/other_i-pi/sabia/i-pi/drivers/py/driver.py -m ${model} -o ${wb},${V0},${mass},${x0},${eta},${epsilon},${delta},${deltaQ},${wc} -u -a ${address} 
+   i-pi-driver-py -m ${model} -o ${wb},${V0},${mass},${x0},${eta},${epsilon},${delta},${deltaQ},${wc} -u -a ${address} 
