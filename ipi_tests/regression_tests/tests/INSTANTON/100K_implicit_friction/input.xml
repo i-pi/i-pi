@@ -5,7 +5,7 @@
    <total_steps>35      </total_steps>
    <ffsocket name="doublewell_1D" mode="unix" >
        <address> localhost </address> 
-       <port>33330</port> 
+       <port>33335</port> 
    </ffsocket>
    <system >
        <initialize nbeads='32'> 
