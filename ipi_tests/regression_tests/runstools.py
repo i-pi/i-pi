@@ -196,7 +196,10 @@ class Runner_regression(Runner):
                     ref_xyz = np.array(reff)
                 except IOError:
                     raise IOError(
-                        "Please provide a reference file named {} in {}".format(
+                        "Please provide a reference file named {} in {}\n \
+                         (Note that extension *out  appears in gitignore\n \
+                         so those files require to force the addition by\n \
+                         'git add -f <filename.out>') ".format(
                             refname, str((self.parent / cwd).absolute())
                         )
                     )
