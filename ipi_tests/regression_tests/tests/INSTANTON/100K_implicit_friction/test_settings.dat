@@ -1,6 +1,6 @@
 driver_model DW_friction
 driver_code python
-flags  -o 500 2085 1837.36223469 0 1.5 -1.0 0 1  
+flags  -o 500,2085,1837.36223469,0,1.5,-1.0,0,1  
 address localhost
 port 33335
 socket_mode unix
