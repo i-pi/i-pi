@@ -33,26 +33,26 @@
          USE PSWATER
          USE F90SOCKETS, ONLY : open_socket, writebuffer, readbuffer, f_sleep
       IMPLICIT NONE
-
+      
       ! SOCKET VARIABLES
       INTEGER, PARAMETER :: MSGLEN=12   ! length of the headers of the driver/wrapper communication protocol
       INTEGER socket, inet, port        ! socket ID & address of the server
       CHARACTER(LEN=1024) :: host
-
+      
       ! COMMAND LINE PARSING
       CHARACTER(LEN=1024) :: cmdbuffer
       INTEGER ccmd, vstyle, vseed
       INTEGER, ALLOCATABLE :: seed(:)
       INTEGER verbose
       INTEGER commas(4), par_count      ! stores the index of commas in the parameter string
-      DOUBLE PRECISION vpars(4)         ! array to store the parameters of the potential
-
+      DOUBLE PRECISION vpars(6)         ! array to store the parameters of the potential
+      
       ! SOCKET COMMUNICATION BUFFERS
       CHARACTER(LEN=12) :: header
       LOGICAL :: isinit=.false., hasdata=.false.
       INTEGER cbuf, rid, length
       CHARACTER(LEN=4096) :: initbuffer      ! it's unlikely a string this large will ever be passed...
-      CHARACTER(LEN=4096) :: string,string2,trimmed  ! it's unlikely a string this large will ever be passed...
+      CHARACTER(LEN=4096) :: string,string2,string3,trimmed  ! it's unlikely a string this large will ever be passed...
       DOUBLE PRECISION, ALLOCATABLE :: msgbuffer(:)
 
       ! PARAMETERS OF THE SYSTEM (CELL, ATOM POSITIONS, ...)
@@ -67,7 +67,7 @@
       DOUBLE PRECISION, ALLOCATABLE :: friction(:,:)
       DOUBLE PRECISION volume
       DOUBLE PRECISION, PARAMETER :: fddx = 1.0d-5
-
+      
       ! NEIGHBOUR LIST ARRAYS
       INTEGER, DIMENSION(:), ALLOCATABLE :: n_list, index_list
       DOUBLE PRECISION init_volume, init_rc ! needed to correctly adjust the cut-off radius for variable cell dynamics
@@ -77,7 +77,7 @@
       ! DMW
       DOUBLE PRECISION efield(3)
       INTEGER i, j
-
+      
       ! parse the command line parameters
       ! intialize defaults
       ccmd = 0
@@ -162,13 +162,17 @@
                   vstyle = 26
                ELSEIF (trim(cmdbuffer) == "qtip4pf-sr") THEN
                   vstyle = 27
+               ELSEIF (trim(cmdbuffer) == "harmonic_bath") THEN
+                  vstyle = 28
+               ELSEIF (trim(cmdbuffer) == "meanfield_bath") THEN
+                  vstyle = 29
                ELSEIF (trim(cmdbuffer) == "gas") THEN
                   vstyle = 0  ! ideal gas
                ELSEIF (trim(cmdbuffer) == "dummy") THEN
                   vstyle = 99 ! returns non-zero but otherwise meaningless values
                ELSE
                   WRITE(*,*) " Unrecognized potential type ", trim(cmdbuffer)
-                  WRITE(*,*) " Use -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|morsedia|qtip4pf-sr] "
+                  WRITE(*,*) " Use -m [duymmy|gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|harmonic_bath|meanfield_bath] "
                   STOP "ENDED"
                ENDIF
             ELSEIF (ccmd == 4) THEN
@@ -276,6 +280,39 @@
          ELSEIF ( 1/= par_count) THEN
             WRITE(*,*) "Error: parameters not initialized correctly."
             WRITE(*,*) "For MB potential up to 1 param can be specified"
+            STOP "ENDED"
+         ENDIF
+         isinit = .true.
+      ELSEIF (28 == vstyle) THEN !harmonic_bath
+         WRITE(*,*) "This driver implementation is deprecated. Please use the python driver version "
+         STOP "ENDED"
+         IF (par_count == 3) THEN ! defaults values 
+            vpars(4) = 0
+            vpars(5) = 0
+            vpars(6) = 1
+         ELSEIF (par_count /= 6) THEN 
+            WRITE(*,*) "Error: parameters not initialized correctly."
+            WRITE(*,*) "For harmonic bath use <bath_type> <friction (atomic units)> <omega_c (invcm)> eps(a.u.) delta (a.u.) deltaQ(a.u.)"
+            WRITE(*,*) "Available bath_type are: "
+            WRITE(*,*) "1 = Ohmic "
+            STOP "ENDED"
+         ENDIF
+         IF (vpars(1) /= 1) THEN
+             WRITE(*,*) "Only Ohmic bath implemented"
+             STOP "ENDED"
+         END IF
+         vpars(3) = vpars(3) * 4.5563353e-06 !Change omega_c from invcm to a.u.
+         isinit = .true.
+      ELSEIF (29 == vstyle) THEN !meanfield bath
+         WRITE(*,*) "This driver implementation is deprecated. Please use the python driver version "
+         STOP "ENDED"
+         IF (par_count == 3) THEN ! defaults values 
+            vpars(2) = 0
+            vpars(3) = 0
+            vpars(4) = 1
+         ELSEIF (par_count /= 4) THEN 
+            WRITE(*,*) "Error: parameters not initialized correctly."
+            WRITE(*,*) "For harmonic meanfield bath use  <friction (atomic units)> eps(a.u.) delta (a.u.) deltaQ(a.u.)"
             STOP "ENDED"
          ENDIF
          isinit = .true.
@@ -664,7 +701,10 @@
 
             ELSEIF (vstyle == 20) THEN ! eckart potential.
                CALL geteckart(nat,vpars(1), vpars(2), vpars(3),vpars(4), atoms, pot, forces)
-
+            ELSEIF (vstyle == 28) THEN ! harmonic_bath.
+               CALL get_harmonic_bath(nat,vpars(1),vpars(2),vpars(3),vpars(4),vpars(5),vpars(6),atoms, pot, forces)
+            ELSEIF (vstyle == 29) THEN ! meanfield_bath.
+               CALL get_meanfield_harmonic_bath(nat,vpars(1),vpars(2),vpars(3),vpars(4),atoms, pot, forces,friction)
             ELSEIF (vstyle == 23) THEN ! MB.
                IF (nat/=1) THEN
                   WRITE(*,*) "Expecting 1 atom for MB"
@@ -737,7 +777,45 @@
             CALL writebuffer(socket,reshape(virial,(/9/)),9)  ! Writing the virial tensor, NOT divided by the volume
             IF (verbose > 1) WRITE(*,*) "    !write!=> strss: ", reshape(virial,(/9/))
 
-            IF (vstyle==24 .or. vstyle==25) THEN ! returns fantasy friction
+ 125  format(es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a)
+ 126  format(es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a)
+
+            IF (vstyle == 29) THEN ! returns meanfield friction
+                WRITE(initbuffer,'(a)') "{"
+                WRITE(32,'(a)') '{'
+                WRITE(string,'(a)') '"friction": ['
+                WRITE(32,'(a)') '"friction": ['
+
+                string2 = TRIM(initbuffer) // TRIM(string)
+                initbuffer = TRIM(string2)
+                DO i=1,3*nat
+                    IF(i/=3*nat) THEN
+                        WRITE(string,125) ( friction(i,j), "," , j=1,3*nat)
+                        WRITE(32,125) ( friction(i,j), "," , j=1,3*nat)
+                    ELSE
+                        WRITE(string,126) ( friction(i,j), "," , j=1,3*nat-1)
+                        WRITE(string2,'(es21.14)') friction(i,3*nat)
+                        string3 = TRIM(string) // TRIM(string2)
+                        string = string3
+                        WRITE(32,126) ( friction(i,j), "," , j=1,3*nat-1)
+                        WRITE(32,'(es21.14)') friction(i,3*nat)
+                    ENDIF
+                    string2 = TRIM(initbuffer) // TRIM(string)
+                    initbuffer = TRIM(string2)
+                END DO
+                string =  TRIM(initbuffer) // ']}'
+                initbuffer = TRIM(string)
+                WRITE(32,'(a)') "]"
+                WRITE(32,'(a)') "}"
+
+                cbuf = LEN_TRIM(initbuffer)
+                CALL writebuffer(socket,cbuf)
+
+                IF (verbose > 1) WRITE(*,*) "!write!=> extra_length:", cbuf
+                CALL writebuffer(socket,initbuffer,cbuf)
+                IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ",  initbuffer
+
+            ELSEIF (vstyle==24 .or. vstyle==25) THEN ! returns fantasy friction
                 WRITE(initbuffer,'(a)') "{"
                 WRITE(string, '(a,3x,f15.8,a,f15.8,a,f15.8,&
      &          3x,a)') '"dipole": [',dip(1),",",dip(2),",",dip(3),"],"
@@ -802,7 +880,8 @@
     CONTAINS
       SUBROUTINE helpmessage
          ! Help banner
-         WRITE(*,*) " SYNTAX: driver.x [-u] -a address -p port -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|morsedia|qtip4pf-sr]"
+         WRITE(*,*) " SYNTAX: driver.x [-u] -h hostname -p port -m [dummy|gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|..."
+         WRITE(*,*) "...|MB|doublewell|doublewell_1D|harmonic_bath|meanfield_bath]"
          WRITE(*,*) "         -o 'comma_separated_parameters' [-v] "
          WRITE(*,*) ""
          WRITE(*,*) " For LJ potential use -o sigma,epsilon,cutoff "

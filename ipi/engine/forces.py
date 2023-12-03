@@ -957,7 +957,7 @@ class Forces:
                 mself._forces[b]._ufvx.taint(taintme=False)
 
     def transfer_forces_manual(
-        self, new_q, new_v, new_forces, new_x=None, vir=np.zeros((3, 3))
+        self, new_q, new_v, new_forces, new_extra=None, vir=np.zeros((3, 3))
     ):
         """Manual (and flexible) version of the transfer forces function.
         Instead of passing a force object, list with vectors are passed
@@ -965,35 +965,35 @@ class Forces:
           - new_q list of length equal to number of force type, containing the beads positions
           - new_v list of length equal to number of force type, containing the beads potential energy
           - new_f list of length equal to number of force type, containing the beads forces
-          - new_x list of length equal to number of force type, containing the beads extras
+          - new_extra list of length equal to number of force type, containing the beads extras.
+
+        new_q, new_v, and new_f are list of floats or numpy arrays  while new_extra is a list dictionaries
         """
         msg = "Unconsistent dimensions inside transfer_forces_manual"
         assert len(self.mforces) == len(new_q), msg
         assert len(self.mforces) == len(new_v), msg
         assert len(self.mforces) == len(new_forces), msg
-        if new_x == None:
-            new_x = [[None] * self.nbeads] * len(self.mforces)
-            info("WARNING: No extras information has been passed.", verbosity.debug)
-
-        assert len(self.mforces) == len(new_x), msg
-
+        if new_extra is None:
+            new_extra = [{} for i in range(len(self.mforces))]
         for k in range(len(self.mforces)):
             mv = new_v[k]
             mf = new_forces[k]
             mq = new_q[k]
-            mextra = new_x[k]
+            mextra = new_extra[k]
             mself = self.mforces[k]
 
             assert mq.shape == mf.shape, msg
             assert mq.shape[0] == mv.shape[0], msg
             assert mself.nbeads == mv.shape[0], msg
             assert mself.nbeads == mq.shape[0], msg
-            assert mself.nbeads == len(mextra), msg
-            mxlist = mextra[:]
 
             mself.beads._q.set(mq, manual=False)
-            for b in range(mself.nbeads):
-                ufvx = [mv[b], mf[b], vir, mxlist[b]]
+            for b in range(mself.nbeads):   
+                mx = {}
+                for key in mextra.keys():
+                    mx[key] = mextra[key][b]
+              
+                ufvx = [mv[b], mf[b], vir, mx]
                 mself._forces[b]._ufvx.set(ufvx, manual=False)
                 mself._forces[b]._ufvx.taint(taintme=False)
 

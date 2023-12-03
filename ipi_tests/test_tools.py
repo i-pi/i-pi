@@ -8,6 +8,7 @@ import time
 import glob
 
 clean_all = False
+debug = False
 
 fortran_driver_models = [
     "dummy",
@@ -28,8 +29,15 @@ fortran_driver_models = [
     "gas",
 ]
 
-# YL should do this automatically but for now I do it explicitly
-python_driver_models = ["dummy", "harmonic"]
+# We should do this automatically but for now we do it explicitly here
+python_driver_models = [
+    "dummy",
+    "harmonic",
+    "DW_friction",
+    "DW_explicit",
+    "rascal",
+    "DoubleWell",
+]
 
 
 def get_test_list(parent):
@@ -82,14 +90,12 @@ def get_test_settings(
                 block = lines[starts[client] : starts[client + 1]]
             else:
                 block = lines[starts[client] :]
-
             driver_code = "fortran"
             driver_model = "dummy"
             address_name = "localhost"
             port_number = 33333
             socket_mode = "unix"
             flaglist = {}
-
             for line in block:
                 if "driver_code" in line:
                     driver_code = line.split()[1]
@@ -109,8 +115,18 @@ def get_test_settings(
 
             # Checking that each driver has appropriate settings, if not, use default.
             if driver_code == "fortran" and driver_model not in fortran_driver_models:
+                print(
+                    "{} is not in fortran_driver_model list. We default to dummy".format(
+                        driver_model
+                    )
+                )
                 driver_model = "dummy"
             elif driver_code == "python" and driver_model not in python_driver_models:
+                print(
+                    "{} is not in python_driver_model list. We default to dummy".format(
+                        driver_model
+                    )
+                )
                 driver_model = "dummy"
             elif driver_code not in ["fortran", "python"]:
                 raise ValueError(
@@ -335,7 +351,8 @@ class Runner(object):
                             cmd += " {} {}".format(
                                 client[ll], ",".join(client[ll + 1 :][:])
                             )
-                # print("cmd:", cmd)
+                if debug:
+                    print(" Client call command:", cmd)
                 driver.append(
                     sp.Popen(cmd, cwd=(cwd), shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
                 )

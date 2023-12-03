@@ -1,9 +1,13 @@
 import numpy as np
 from pathlib import Path
-from ..test_tools import (
-    Runner,
-    modify_xml_4_dummy_test,
-)
+
+try:
+    from ..test_tools import (
+        Runner,
+        modify_xml_4_dummy_test,
+    )
+except ImportError:
+    from ipi_tests.test_tools import Runner, modify_xml_4_dummy_test
 
 
 class Runner_regression(Runner):
