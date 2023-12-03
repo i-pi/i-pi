@@ -28,7 +28,7 @@ class DoubleWell_driver(Dummy_driver):
 
     def check_arguments(self):
         """Function that checks the arguments required to run the driver"""
-        self.k = 1836 * (3800.0 / 219323.0) ** 2
+        self.k = 1837.36223469 * (3800.0 / 219323.0) ** 2
         if self.args == "":
             # We used Craig's values (J. Chem. Phys. 122, 084106, 2005)
             w_b = 500 * invcm2au  # Tc = 115K
@@ -75,7 +75,6 @@ class DoubleWell_driver(Dummy_driver):
 
         return pot, force, vir, extras
 
-
 class DoubleWell_with_friction_driver(DoubleWell_driver):
     """Adds to the double well potential the calculation of the friction tensor.
 
@@ -95,7 +94,7 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
     def check_arguments(self):
         """Function that checks the arguments required to run the driver"""
 
-        self.k = 1836 * (3800.0 / 219323.0) ** 2
+        self.k = 1837.36223469 * (3800.0 / 219323.0) ** 2
         try:
             arglist = self.args.split(",")
             param = list(map(float, arglist))
@@ -223,7 +222,6 @@ class Harmonic_Bath_explicit(object):
                 fx[i] -= (self.m * self.omega2[i] * aux).flatten()
 
         return pot_bath, fq_bath, fx
-
 
 class DoubleWell_with_explicit_bath_driver(Dummy_driver):
     """Adds to the double well potential an explicit harmonic bath. First dof correpond to the DW, the rest to the bath discretization

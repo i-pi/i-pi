@@ -476,7 +476,7 @@ class FrictionMapper(PesMapper):
             invcm2au = units.unit_to_internal("frequency", "inversecm", 1)
 
             # We perform the spline in inversecm for numerical reasons
-            freq = fric_spec_dens_data[:, 0] / invcm2au
+            freq = fric_spec_dens_data[:, 0] * invcm2au
             spline = self.interp1d(
                 freq,
                 fric_spec_dens_data[:, 1],
@@ -493,12 +493,11 @@ class FrictionMapper(PesMapper):
                 # norm = spline(fric_spec_dens_ener / invcm2au) * fric_spec_dens_ener
                 norm = spline(fric_spec_dens_ener / invcm2au)
 
-            fric_spec_dens = spline(self.omegak / invcm2au)
+            fric_spec_dens = spline(self.omegak)
             LT_fric_spec_dens = fric_spec_dens / norm
             # LT_fric_spec_dens = LT_friction(self.omegak / invcm2au, spline) / norm
 
         self.fric_LTwk = np.multiply(self.omegak, LT_fric_spec_dens)[:, np.newaxis]
-
         info(units.unit_to_user("frequency", "inversecm", self.omegak), verbosity.debug)
 
     def get_fric_rp_hessian(self, fric_hessian, eta, SD):
