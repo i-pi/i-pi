@@ -4,5 +4,5 @@
        sleep 2
 #Launch Driver
        #i-pi-driver -u -m harmonic_bath -o 1,1.674,500
-       i-pi-driver -u -m harmonic_bath -o 1,0.5,500
+       i-pi-driver -u -m harmonic_bath -o 1,1.5,500
   

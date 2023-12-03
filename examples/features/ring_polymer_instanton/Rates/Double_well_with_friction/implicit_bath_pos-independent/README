@@ -1,0 +1,7 @@
+
+Commands:
+ [i-pi]
+	i-pi input.xml
+ [driver]
+        i-pi-driver -u -m meanfield_bath -o 1.67432,0.05,0.00,0.5  
+  

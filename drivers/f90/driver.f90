@@ -275,6 +275,8 @@
          ENDIF
          isinit = .true.
       ELSEIF (28 == vstyle) THEN !harmonic_bath
+         WRITE(*,*) "This driver implementation is deprecated. Please use the python driver version "
+         STOP "ENDED"
          IF (par_count == 3) THEN ! defaults values 
             vpars(4) = 0
             vpars(5) = 0
@@ -293,6 +295,8 @@
          vpars(3) = vpars(3) * 4.5563353e-06 !Change omega_c from invcm to a.u.
          isinit = .true.
       ELSEIF (29 == vstyle) THEN !meanfield bath
+         WRITE(*,*) "This driver implementation is deprecated. Please use the python driver version "
+         STOP "ENDED"
          IF (par_count == 3) THEN ! defaults values 
             vpars(2) = 0
             vpars(3) = 0
