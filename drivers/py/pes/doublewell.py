@@ -75,6 +75,7 @@ class DoubleWell_driver(Dummy_driver):
 
         return pot, force, vir, extras
 
+
 class DoubleWell_with_friction_driver(DoubleWell_driver):
     """Adds to the double well potential the calculation of the friction tensor.
 
@@ -222,6 +223,7 @@ class Harmonic_Bath_explicit(object):
                 fx[i] -= (self.m * self.omega2[i] * aux).flatten()
 
         return pot_bath, fq_bath, fx
+
 
 class DoubleWell_with_explicit_bath_driver(Dummy_driver):
     """Adds to the double well potential an explicit harmonic bath. First dof correpond to the DW, the rest to the bath discretization
