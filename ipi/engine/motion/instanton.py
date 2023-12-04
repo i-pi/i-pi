@@ -20,7 +20,7 @@ from importlib import util
 from ipi.engine.beads import Beads
 from ipi.engine.normalmodes import NormalModes
 from ipi.engine.motion import Motion
-from ipi.utils.depend import dstrip, dobject
+from ipi.utils.depend import dstrip
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, info
 from ipi.utils import units
@@ -942,7 +942,7 @@ class Mapper(object):
             return e, g
 
 
-class DummyOptimizer(dobject):
+class DummyOptimizer:
     """Dummy class for all optimization classes"""
 
     def __init__(self):

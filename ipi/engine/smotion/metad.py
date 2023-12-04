@@ -8,7 +8,6 @@ Algorithms implemented by Robert Meissner and Riccardo Petraglia, 2016
 # See the "licenses" directory for full license information.
 
 from ipi.engine.smotion import Smotion
-from ipi.utils.depend import *
 
 
 __all__ = ["MetaDyn"]
@@ -90,7 +89,7 @@ class MetaDyn(Smotion):
                     for fc in s.ensemble.bias.mforces:
                         if fc.ffield == k:
                             for fb in fc._forces:
-                                dd(fb).ufvx.taint()
+                                fb._ufvx.taint()
                     meta_pot_after = s.ensemble.bias.pot
                     # updates the conserved quantity with the change in bias so that
                     # we remove the shift due to added hills

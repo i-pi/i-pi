@@ -23,7 +23,7 @@ from ipi.utils.exchange import *
 __all__ = ["NormalModes"]
 
 
-class NormalModes(dobject):
+class NormalModes:
 
     """Handles the path normal modes.
 
@@ -107,15 +107,14 @@ class NormalModes(dobject):
             bosons = []
         self.open_paths = np.asarray(open_paths, int)
         self.bosons = np.asarray(bosons, int)
-        dself = dd(self)
-        dself.nmts = depend_value(name="nmts", value=nmts)
-        dself.dt = depend_value(name="dt", value=dt)
-        dself.mode = depend_value(name="mode", value=mode)
-        dself.transform_method = depend_value(
+        self._nmts = depend_value(name="nmts", value=nmts)
+        self._dt = depend_value(name="dt", value=dt)
+        self._mode = depend_value(name="mode", value=mode)
+        self._transform_method = depend_value(
             name="transform_method", value=transform_method
         )
-        dself.propagator = depend_value(name="propagator", value=propagator)
-        dself.nm_freqs = depend_array(name="nm_freqs", value=np.asarray(freqs, float))
+        self._propagator = depend_value(name="propagator", value=propagator)
+        self._nm_freqs = depend_array(name="nm_freqs", value=np.asarray(freqs, float))
 
     def copy(self, freqs=None):
         """Creates a new beads object from the original.
@@ -166,11 +165,9 @@ class NormalModes(dobject):
         if len(self.bosons) > self.natoms:
             raise IOError
 
-        dself = dd(self)
-
         # stores a reference to the bound beads and ensemble objects
         self.ensemble = ensemble
-        dpipe(dd(motion).dt, dself.dt)
+        dpipe(motion._dt, self._dt)
 
         # sets up what's necessary to perform nm transformation.
         if self.nbeads == 1:  # classical trajectory! don't waste time doing anything!
@@ -188,13 +185,13 @@ class NormalModes(dobject):
         # must do a lot of piping to create "ex post" a synchronization between the beads and the nm
         sync_q = synchronizer()
         sync_p = synchronizer()
-        dself.qnm = depend_array(
+        self._qnm = depend_array(
             name="qnm",
             value=np.zeros((self.nbeads, 3 * self.natoms), float),
             func={"q": (lambda: self.transform.b2nm(dstrip(self.beads.q)))},
             synchro=sync_q,
         )
-        dself.pnm = depend_array(
+        self._pnm = depend_array(
             name="pnm",
             value=np.zeros((self.nbeads, 3 * self.natoms), float),
             func={"p": (lambda: self.transform.b2nm(dstrip(self.beads.p)))},
@@ -202,41 +199,37 @@ class NormalModes(dobject):
         )
 
         # must overwrite the functions
-        dd(self.beads).q._func = {
-            "qnm": (lambda: self.transform.nm2b(dstrip(self.qnm)))
-        }
-        dd(self.beads).p._func = {
-            "pnm": (lambda: self.transform.nm2b(dstrip(self.pnm)))
-        }
-        dd(self.beads).q.add_synchro(sync_q)
-        dd(self.beads).p.add_synchro(sync_p)
+        self.beads._q._func = {"qnm": (lambda: self.transform.nm2b(dstrip(self.qnm)))}
+        self.beads._p._func = {"pnm": (lambda: self.transform.nm2b(dstrip(self.pnm)))}
+        self.beads._q.add_synchro(sync_q)
+        self.beads._p.add_synchro(sync_p)
 
         # also within the "atomic" interface to beads
         for b in range(self.nbeads):
-            dd(self.beads._blist[b]).q._func = {
+            self.beads._blist[b]._q._func = {
                 "qnm": (lambda: self.transform.nm2b(dstrip(self.qnm)))
             }
-            dd(self.beads._blist[b]).p._func = {
+            self.beads._blist[b]._p._func = {
                 "pnm": (lambda: self.transform.nm2b(dstrip(self.pnm)))
             }
-            dd(self.beads._blist[b]).q.add_synchro(sync_q)
-            dd(self.beads._blist[b]).p.add_synchro(sync_p)
+            self.beads._blist[b]._q.add_synchro(sync_q)
+            self.beads._blist[b]._p.add_synchro(sync_p)
 
         # finally, we mark the beads as those containing the set positions
-        dd(self.beads).q.update_man()
-        dd(self.beads).p.update_man()
+        self.beads._q.update_man()
+        self.beads._p.update_man()
 
         # forces can be converted in nm representation, but here it makes no sense to set up a sync mechanism,
         # as they always get computed in the bead rep
         if self.forces is not None:
-            dself.fnm = depend_array(
+            self._fnm = depend_array(
                 name="fnm",
                 value=np.zeros((self.nbeads, 3 * self.natoms), float),
                 func=(lambda: self.transform.b2nm(dstrip(self.forces.f))),
-                dependencies=[dd(self.forces).f],
+                dependencies=[self.forces._f],
             )
         else:  # have a fall-back plan when we don't want to initialize a force mechanism, e.g. for ring-polymer initialization
-            dself.fnm = depend_array(
+            self._fnm = depend_array(
                 name="fnm",
                 value=np.zeros((self.nbeads, 3 * self.natoms), float),
                 func=(
@@ -250,135 +243,135 @@ class NormalModes(dobject):
             )
 
         # create path-frequencies related properties
-        dself.omegan = depend_value(
-            name="omegan", func=self.get_omegan, dependencies=[dd(self.ensemble).temp]
+        self._omegan = depend_value(
+            name="omegan", func=self.get_omegan, dependencies=[self.ensemble._temp]
         )
-        dself.omegan2 = depend_value(
-            name="omegan2", func=self.get_omegan2, dependencies=[dself.omegan]
+        self._omegan2 = depend_value(
+            name="omegan2", func=self.get_omegan2, dependencies=[self._omegan]
         )
-        dself.omegak = depend_array(
+        self._omegak = depend_array(
             name="omegak",
             value=np.zeros(self.beads.nbeads, float),
             func=self.get_omegak,
-            dependencies=[dself.omegan],
+            dependencies=[self._omegan],
         )
-        dself.omegak2 = depend_array(
+        self._omegak2 = depend_array(
             name="omegak2",
             value=np.zeros(self.beads.nbeads, float),
             func=(lambda: self.omegak**2),
-            dependencies=[dself.omegak],
+            dependencies=[self._omegak],
         )
 
         # Add o_omegak to calculate the freq in the case of open path
-        dself.o_omegak = depend_array(
+        self._o_omegak = depend_array(
             name="o_omegak",
             value=np.zeros(self.beads.nbeads, float),
             func=self.get_o_omegak,
-            dependencies=[dself.omegan],
+            dependencies=[self._omegan],
         )
 
         # sets up "dynamical" masses -- mass-scalings to give the correct RPMD/CMD dynamics
-        dself.nm_factor = depend_array(
+        self._nm_factor = depend_array(
             name="nm_factor",
             value=np.zeros(self.nbeads, float),
             func=self.get_nmm,
-            dependencies=[dself.nm_freqs, dself.mode],
+            dependencies=[self._nm_freqs, self._mode],
         )
         # add o_nm_factor for the dynamical mass in the case of open paths
-        dself.o_nm_factor = depend_array(
+        self._o_nm_factor = depend_array(
             name="nmm",
             value=np.zeros(self.nbeads, float),
             func=self.get_o_nmm,
-            dependencies=[dself.nm_freqs, dself.mode],
+            dependencies=[self._nm_freqs, self._mode],
         )
-        dself.dynm3 = depend_array(
+        self._dynm3 = depend_array(
             name="dynm3",
             value=np.zeros((self.nbeads, 3 * self.natoms), float),
             func=self.get_dynm3,
-            dependencies=[dself.nm_factor, dd(self.beads).m3],
+            dependencies=[self._nm_factor, self.beads._m3],
         )
-        dself.dynomegak = depend_array(
+        self._dynomegak = depend_array(
             name="dynomegak",
             value=np.zeros(self.nbeads, float),
             func=self.get_dynwk,
-            dependencies=[dself.nm_factor, dself.omegak],
+            dependencies=[self._nm_factor, self._omegak],
         )
 
-        dself.dt = depend_value(name="dt", value=1.0)
-        dpipe(dd(self.motion).dt, dself.dt)
-        dself.prop_pq = depend_array(
+        self._dt = depend_value(name="dt", value=1.0)
+        dpipe(self.motion._dt, self._dt)
+        self._prop_pq = depend_array(
             name="prop_pq",
             value=np.zeros((self.beads.nbeads, 2, 2)),
             func=self.get_prop_pq,
-            dependencies=[dself.omegak, dself.nm_factor, dself.dt, dself.propagator],
+            dependencies=[self._omegak, self._nm_factor, self._dt, self._propagator],
         )
-        dself.o_prop_pq = depend_array(
+        self._o_prop_pq = depend_array(
             name="o_prop_pq",
             value=np.zeros((self.beads.nbeads, 2, 2)),
             func=self.get_o_prop_pq,
             dependencies=[
-                dself.o_omegak,
-                dself.o_nm_factor,
-                dself.dt,
-                dself.propagator,
+                self._o_omegak,
+                self._o_nm_factor,
+                self._dt,
+                self._propagator,
             ],
         )
 
         # if the mass matrix is not the RPMD one, the MD kinetic energy can't be
         # obtained in the bead representation because the masses are all mixed up
-        dself.kins = depend_array(
+        self._kins = depend_array(
             name="kins",
             value=np.zeros(self.nbeads, float),
             func=self.get_kins,
-            dependencies=[dself.pnm, dd(self.beads).sm3, dself.nm_factor],
+            dependencies=[self._pnm, self.beads._sm3, self._nm_factor],
         )
-        dself.kin = depend_value(
-            name="kin", func=self.get_kin, dependencies=[dself.kins]
+        self._kin = depend_value(
+            name="kin", func=self.get_kin, dependencies=[self._kins]
         )
-        dself.kstress = depend_array(
+        self._kstress = depend_array(
             name="kstress",
             value=np.zeros((3, 3), float),
             func=self.get_kstress,
-            dependencies=[dself.pnm, dd(self.beads).sm3, dself.nm_factor],
+            dependencies=[self._pnm, self.beads._sm3, self._nm_factor],
         )
 
         # Array that holds both vspring and fspring for bosons
-        dself.vspring_and_fspring_B = depend_value(
+        self._vspring_and_fspring_B = depend_value(
             name="v_and_fs_B",
             value=[None, None],
             func=self.get_vspring_and_fspring_B,
-            dependencies=[dself.beads.q, dself.beads.m3, dself.omegan2],
+            dependencies=[self.beads.q, self.beads.m3, self._omegan2],
         )
 
         # spring energy, calculated in normal modes
-        dself.vspring = depend_value(
+        self._vspring = depend_value(
             name="vspring",
             value=0.0,
             func=self.get_vspring,
             dependencies=[
-                dself.qnm,
-                dself.omegak,
-                dself.o_omegak,
-                dd(self.beads).m3,
-                dself.vspring_and_fspring_B,
+                self._qnm,
+                self._omegak,
+                self._o_omegak,
+                self.beads._m3,
+                self._vspring_and_fspring_B,
             ],
         )
 
         # spring forces on normal modes
-        dself.fspringnm = depend_array(
+        self._fspringnm = depend_array(
             name="fspringnm",
             value=np.zeros((self.nbeads, 3 * self.natoms), float),
             func=self.get_fspringnm,
-            dependencies=[dself.qnm, dself.omegak, dd(self.beads).m3],
+            dependencies=[self._qnm, self._omegak, self.beads._m3],
         )
 
         # spring forces on beads, transformed from normal modes
-        dself.fspring = depend_array(
+        self._fspring = depend_array(
             name="fs",
             value=np.zeros((self.nbeads, 3 * self.natoms), float),
             # func=(lambda: self.transform.nm2b(dstrip(self.fspringnm))),
             func=self.get_fspring,
-            dependencies=[dself.fspringnm, dself.vspring_and_fspring_B],
+            dependencies=[self._fspringnm, self._vspring_and_fspring_B],
         )
 
     def get_fspringnm(self):
@@ -903,3 +896,37 @@ class NormalModes(dobject):
                     )
 
         return kmd
+
+
+dproperties(
+    NormalModes,
+    [
+        "nmts",
+        "dt",
+        "mode",
+        "transform_method",
+        "propagator",
+        "nm_freqs",
+        "qnm",
+        "pnm",
+        "fnm",
+        "omegan",
+        "omegan2",
+        "omegak",
+        "omegak2",
+        "o_omegak",
+        "nm_factor",
+        "o_nm_factor",
+        "dynm3",
+        "dynomegak",
+        "prop_pq",
+        "o_prop_pq",
+        "kins",
+        "kin",
+        "kstress",
+        "vspring",
+        "vspring_and_fspring_B",
+        "fspring",
+        "fspringnm",
+    ],
+)
