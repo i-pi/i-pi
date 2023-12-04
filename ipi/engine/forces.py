@@ -972,7 +972,7 @@ class Forces:
         assert len(self.mforces) == len(new_v), msg
         assert len(self.mforces) == len(new_forces), msg
         if new_x == None:
-            new_x = [[None] * self.nbeads] * len(self.mforces)
+            new_x = [{"raw": [None] * self.nbeads}] * len(self.mforces)
             info("WARNING: No extras information has been passed.", verbosity.debug)
 
         assert len(self.mforces) == len(new_x), msg
@@ -983,7 +983,6 @@ class Forces:
             mq = new_q[k]
             mextra = new_x[k]
             mself = self.mforces[k]
-
             assert mq.shape == mf.shape, msg
             assert mq.shape[0] == mv.shape[0], msg
             assert mself.nbeads == mv.shape[0], msg
