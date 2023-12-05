@@ -89,7 +89,7 @@ class InputForceField(Input):
             InputValue,
             {
                 "dtype": float,
-                "default": 0.01,
+                "default": 1e-4,
                 "help": "The number of seconds the polling thread will wait between exhamining the list of requests.",
             },
         ),

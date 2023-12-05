@@ -41,8 +41,7 @@ class AtomSwap(Motion):
         self.names = names
         self.nxc = nxc
 
-        dself = dd(self)
-        dself.ealc = depend_value(name="ealc")
+        self._ealc = depend_value(name="ealc")
         if ealc is not None:
             self.ealc = ealc
         else:
@@ -65,7 +64,7 @@ class AtomSwap(Motion):
         """
 
         super(AtomSwap, self).bind(ens, beads, cell, bforce, nm, prng, omaker)
-        self.ensemble.add_econs(dd(self).ealc)
+        self.ensemble.add_econs(self._ealc)
         self.dbeads = self.beads.copy()
         self.dcell = self.cell.copy()
         self.dforces = self.forces.copy(self.dbeads, self.dcell)
@@ -133,3 +132,6 @@ class AtomSwap(Motion):
                 self.forces.transfer_forces(self.dforces)
 
                 self.ealc += -(new_energy - old_energy)
+
+
+dproperties(AtomSwap, ["ealc"])

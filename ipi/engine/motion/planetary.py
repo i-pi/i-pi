@@ -70,12 +70,9 @@ class Planetary(Motion):
         self.nbeads = nbeads
         self.screen = screen
 
-        dself = dd(self)
-
         # the planetary step just computes constrained-centroid properties so it
         # should not advance the timer
-        dself.dt = depend_value(name="dt", value=0.0)
-        # dset(self, "dt", depend_value(name="dt", value = 0.0) )
+        self._dt = depend_value(name="dt", value=0.0)
         self.fixatoms = np.asarray([])
         self.fixcom = True
 
@@ -279,3 +276,6 @@ class Planetary(Motion):
             % (self.tmc / self.neval, self.tmtx / self.neval, self.tsave / self.neval),
             verbosity.high,
         )
+
+
+dproperties(Planetary, "dt")

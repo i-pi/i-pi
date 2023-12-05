@@ -90,8 +90,37 @@ value of a “depend” object has been calculated, its value is cached, so
 further references to that quantity will not need to evaluate the
 function that calculates it. Furthermore, the code keeps track of when
 any of the dependencies of the variable are updated, and makes sure that
-the quantity is automatically recomputed when it is needed (i.e., when
+the quantity is automatically when it is needed (i.e., when
 the quantity is assessed again).
+
+This is a minimal example of how to implement dependencies in a class
+
+.. code-block:: python
+
+   from ipi.utils.depend import depend_value, dproperties
+
+   class DObject:
+      def __init__(self):
+         # depend objects are created using an underscore prefix. 
+         # this is a "primitive" value that doesn't depend on anything
+         self._scalar = depend_value(value=1, name="scalar")
+
+         # this is a dependent object. the definition contains a function that
+         # is called to determine the value, and specification of what objects
+         # it depend on. 
+         self._double = depend_value(func=lambda: 2*self.scalar, name="double", 
+                                     dependencies=[self._scalar])
+
+   # after the definition of a class, this helper function should be called to
+   # create property getters and setters (use the names with no leading underscore)
+   # note that property accessors are added to the class, not to the instances
+   dproperties(DObject, ["scalar", "double"])
+
+   myobj = DObject()
+   # "primitive values" can be set manually
+   myobj.scalar = 4
+   # dependent objects will be computed automatically on demand
+   print(myobj.double) # prints `8`
 
 This choice makes implementation slightly more complex when the physical
 observables are first introduced as variables, as one has to take care
@@ -100,6 +129,57 @@ them. However, the advantage is that when the physical quantities are
 used, in the integrator of the dynamics or in the evaluation of physical
 properties, one does not need to take care of book-keeping and the code
 can be clean, transparent and readable.
+
+It is also possible to define dependencies between different objects, in 
+which case it's necessary to make sure that the compute function has access, 
+at runtime, to the value of the other object. A typical usage pattern is
+
+.. code-block:: python
+
+   # NB: this is meant to be run after the previous code snippet
+   from ipi.utils.depend import depend_array
+   import numpy as np
+
+   class DOther:
+      def __init__(self):
+         
+         # depend arrays must be initialized with storage space
+         self._vec = depend_array(value=np.ones(4), name="vec") 
+
+      def bind(self, factor):
+
+         self.factor = factor # stores a reference to the object holding the value
+         self._scaled = depend_array(value=np.ones(4), name="vec",
+                                    func=self.get_scaled, dependencies=[self._vec])
+
+         # dependencies (or dependants) can also be added after object creation
+         self._scaled.add_dependency(self.factor._double)
+
+      def get_scaled(self):
+         # computes a scaled version of the vector
+         return self.vec*self.factor.double
+
+   dproperties(DOther, ["vec", "scaled"])
+
+   myoth = DOther() # creates the object
+   myoth.bind(myobj) # makes connections
+   
+   myoth.vec = np.asarray([0,1,2,3])
+   print(myoth.scaled) # prints [0,8,16,24]
+
+   myoth.vec[3] = 0 # depend_arrays can be accessed as normal np.ndarray
+   print(myoth.scaled) # prints [0,8,16,0]
+
+Force evaluation
+~~~~~~~~~~~~~~~~
+
+Within i-PI, the evaluation of the forces plays a crucial role, as it is
+the step requiring communication with the client code. In order to have
+a flexible infrastructure that makes it possible to perform simulations
+with advanced techniques such as ring-polymer
+contraction :cite:`mark-mano08jcp`, the force evaluation
+machinery in i-PI might appear complicated at first, and deserves a
+brief discussion.
 
 .. figure:: ../figures/ipi-forces.*
    :width: 90.0%
@@ -113,16 +193,6 @@ can be clean, transparent and readable.
    client to compute the long-range electrostatic interactions,
    contracted on a single bead :cite:`mark-mano08jcp`).
 
-Force evaluation
-~~~~~~~~~~~~~~~~
-
-Within i-PI, the evaluation of the forces plays a crucial role, as it is
-the step requiring communication with the client code. In order to have
-a flexible infrastructure that makes it possible to perform simulations
-with advanced techniques such as ring-polymer
-contraction :cite:`mark-mano08jcp`, the force evaluation
-machinery in i-PI might appear complicated at first, and deserves a
-brief discussion.
 
 A scheme of the objects involved in the calculation of the forces is
 presented in Figure `1.3 <#fig:forces>`__. The infrastracture comprises
@@ -133,7 +203,7 @@ component of the force for an individual bead: i-PI is built to hide the
 path integral infrastructure from the client, and so beads must be
 transferred individually.
 
-Let us discuss for clarity a practical example – a calculation of an
+Let us discuss for clarity a practical example: a calculation of an
 empirical water model where the bonded interactions are computed on 32
 beads by the program A, and the non-bonded interactions are computed by
 client B, ring-polymer contracted on 8 beads. Each client “type” is
@@ -251,8 +321,8 @@ Features in version 1.0
    molecular dynamics
    (CMD) :cite:`cao-voth93jcp,cao-voth94jcp`.
 
-Features added in version 2.0
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   Features added in version 2.0
+   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Further details can be found in Ref. :cite:`Kapil:2019ju`.
 

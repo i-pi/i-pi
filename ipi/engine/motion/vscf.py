@@ -149,7 +149,7 @@ class NormalModeMover(Motion):
         self.calc.step(step)
 
 
-class DummyCalculator(dobject):
+class DummyCalculator:
     """No-op Calculator"""
 
     def __init__(self):

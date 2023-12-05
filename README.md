@@ -29,7 +29,7 @@ python -m pip install git+https://github.com/i-pi/i-pi.git
 
 Last Release::
 ```bash
-pip install -U i-PI
+pip install -U ipi
 ```
 
 Test with Pytest::
