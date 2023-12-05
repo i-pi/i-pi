@@ -116,7 +116,8 @@ class NormalModes:
         )
         self._propagator = depend_value(name="propagator", value=propagator)
         self._nm_freqs = depend_array(name="nm_freqs", value=np.asarray(freqs, float))
-        self.exchange = depend_value(name="exchange", value=None)
+        # TODO: should this be depend? Using mostly to store current values for the properties
+        self.exchange = None
 
     def copy(self, freqs=None):
         """Creates a new beads object from the original.
