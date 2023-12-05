@@ -1,6 +1,13 @@
 Metadynamics calculations using PLUMED
 ======================================
 
+There are three examples of different variations-on-a-theme of the use of `<ffplumed>`
+to perform metadynamics calculations with i-PI
+
+`pimd_metadynamics` : metadynamics using a centroid bias for a PIMD calculation
+`wte_metadynamics`  : well-tempered ensemble. requires a workaround to communicate the energy as a CV
+`remd_metadynamics` : replica exchange combined with metadynamics
+
 These examples can be run using the Zundel PES implemented in the i-pi driver,
 
 ```bash

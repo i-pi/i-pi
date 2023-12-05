@@ -8,8 +8,8 @@ that apply an algorithm that updates the positions of the nuclei, and of an exte
 code that acts as a client and computes the electronic energy and forces.
 
 This is typically a patched version of an electronic structure code, but a
-simple self-contained Fortran driver that implements Lennard-Jones and
-Silvera-Goldman potentials is included for test purposes.
+simple self-contained Fortran driver that implements several simple interatomic
+potentials is included for test purposes.
 
 i-PI was originally developed to simulate the quantum mechanical nature of light
 nuclei by performing path integral molecular dynamics simulations,
@@ -20,7 +20,7 @@ strategies, from replica exchange to geometry optimization.
 Quick Setup and Test
 --------------------
 
-To use i-PI with already existing drivers, install and update using Pip:
+To use i-PI with an existing driver, install and update using Pip:
 
 Last version::
 ```bash
@@ -29,7 +29,7 @@ python -m pip install git+https://github.com/i-pi/i-pi.git
 
 Last Release::
 ```bash
-pip install -U i-PI
+pip install -U ipi
 ```
 
 Test with Pytest::
@@ -46,6 +46,7 @@ instructions. It is assumed that i-PI will
 be run from a Linux environment, with a recent version of Python, Numpy and
 gfortran, and that the terminal is initially in the i-pi package directory (the
 directory containing this file), which you can obtain by cloning the repository
+
 ```bash
 git clone https://github.com/i-pi/i-pi.git
 ```

@@ -51,6 +51,11 @@
   END INTERFACE 
 
   INTERFACE
+    SUBROUTINE c_sleep(seconds) bind(C, name="c_sleep")
+        USE ISO_C_BINDING
+        REAL(C_DOUBLE), value :: seconds
+    END SUBROUTINE c_sleep
+
     SUBROUTINE open_csocket(psockfd, inet, port, host) BIND(C, name="open_socket")
       USE ISO_C_BINDING
     INTEGER(KIND=C_INT)                      :: psockfd, inet, port
@@ -58,7 +63,7 @@
 
     END SUBROUTINE open_csocket
 
-    
+
     SUBROUTINE writebuffer_csocket(psockfd, pdata, plen) BIND(C, name="writebuffer")
       USE ISO_C_BINDING
     INTEGER(KIND=C_INT)                      :: psockfd
@@ -67,6 +72,7 @@
 
     END SUBROUTINE writebuffer_csocket       
 
+
     SUBROUTINE readbuffer_csocket(psockfd, pdata, plen) BIND(C, name="readbuffer")
       USE ISO_C_BINDING
     INTEGER(KIND=C_INT)                      :: psockfd
@@ -74,10 +80,16 @@
     INTEGER(KIND=C_INT)                      :: plen
 
     END SUBROUTINE readbuffer_csocket   
+
   END INTERFACE
 
    CONTAINS
-   
+   SUBROUTINE f_sleep(sleep_seconds)
+      IMPLICIT NONE
+      DOUBLE PRECISION :: sleep_seconds
+      CALL c_sleep(sleep_seconds)
+   END SUBROUTINE 
+
    SUBROUTINE open_socket(psockfd, inet, port, host)      
       IMPLICIT NONE
       INTEGER, INTENT(IN) :: inet, port
@@ -199,4 +211,5 @@
 
       CALL readbuffer_csocket(psockfd, c_loc(fdata(1)), 8*plen)
   END SUBROUTINE
+
   END MODULE
