@@ -37,7 +37,11 @@ class MACE_driver(Dummy_driver):
         self.driver_model_path = arglist[1]
 
     def __call__(self, cell, pos):
-        """Get energies, forces, and stresses from the MACE model"""
+        """Get energies, forces, and stresses from the MACE model
+        This routine assumes that the client will take positions
+        in angstrom, and return energies in electronvolt, and forces
+        in ev/ang.
+        """
         pos_calc = unit_to_user("length", "angstrom", pos)
         cell_calc = unit_to_user("length", "angstrom", cell.T)
 
