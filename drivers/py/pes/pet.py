@@ -61,7 +61,12 @@ Example: python driver.py -m pet -u -o model.json,template.xyz
         )
 
     def __call__(self, cell, pos):
-        """Get energies, forces, and stresses from the PET model"""
+        """Get energies, forces, and stresses from the MACE model
+        This routine assumes that the client will take positions
+        in angstrom, and return energies in electronvolt, and forces
+        in ev/ang.
+        """
+
         pos_pet = unit_to_user("length", "angstrom", pos)
         # librascal expects ASE-format, cell-vectors-as-rows
         cell_pet = unit_to_user("length", "angstrom", cell.T)
