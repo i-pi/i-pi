@@ -11,14 +11,17 @@ try:
 except:
     RascalCalc = None
 
+__DRIVER_NAME__ = "rascal"
+__DRIVER_CLASS__ = "Rascal_driver"
+
 
 class Rascal_driver(Dummy_driver):
-    def __init__(self, args=None):
+    def __init__(self, args=None, verbose=False):
         self.error_msg = """Rascal driver requires specification of a .json model file fitted with librascal, 
                             and a template file that describes the chemical makeup of the structure. 
                             Example: python driver.py -m rascal -u -o model.json,template.xyz"""
 
-        super().__init__(args)
+        super().__init__(args, verbose)
 
         if RascalCalc is None:
             raise ImportError("Couldn't load librascal bindings")
