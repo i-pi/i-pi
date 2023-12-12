@@ -267,7 +267,7 @@ class Runner(object):
         try:
             # Create temp file and copy files
             self.tmp_dir = Path(tempfile.mkdtemp())
-            print("\nTest folder: {}".format(cwd))
+            print("\ntest folder: {}".format(cwd))
             print("temp folder: {}".format(self.tmp_dir))
 
             # files = os.listdir(self.parent / cwd)
@@ -296,9 +296,11 @@ class Runner(object):
                 self.call_ipi,
                 cwd=(self.tmp_dir),
                 shell=True,
+                stdin=sp.DEVNULL,
                 stdout=sp.PIPE,
                 stderr=sp.PIPE,
             )
+
             if len(clients) > 0:
                 f_connected = False
                 for client in clients:
@@ -319,7 +321,7 @@ class Runner(object):
                         return "Could not find the i-PI UNIX socket"
 
             # Run drivers by defining cmd2 which will be called, eventually
-            driver = list()
+            drivers = list()
 
             for client in clients:
                 if client[1] == "unix":
@@ -351,23 +353,65 @@ class Runner(object):
                             cmd += " {} {}".format(
                                 client[ll], ",".join(client[ll + 1 :][:])
                             )
+
                 if debug:
                     print(" Client call command:", cmd)
-                driver.append(
-                    sp.Popen(cmd, cwd=(cwd), shell=True, stdout=sp.PIPE, stderr=sp.PIPE)
+
+                driver = sp.Popen(
+                    cmd,
+                    cwd=(cwd),
+                    shell=True,
+                    stdin=sp.DEVNULL,
+                    stdout=sp.PIPE,
+                    stderr=sp.PIPE,
                 )
 
-            # Check errors
-            ipi_error = ipi.communicate(timeout=120)[1].decode("ascii")
-            if ipi_error != "":
-                print(ipi_error)
-            assert "" == ipi_error, "IPI ERROR OCCURRED: {}".format(ipi_error)
+                drivers.append(driver)
+
+            # check i-pi errors
+            ipi_out, ipi_error = ipi.communicate(timeout=60)
+            assert ipi.returncode == 0, "i-PI error occurred: {}".format(ipi_error)
+
+            # check driver errors
+            for driver in drivers:
+                driver.kill()  # if i-PI has ended, we can kill the drivers
+                driver_out, driver_err = driver.communicate(timeout=60)
+                assert driver.returncode == 0, "Driver error occurred: {}".format(
+                    driver_err
+                )
 
         except sp.TimeoutExpired:
+            ipi.kill()
+            try:
+                ipi_out, ipi_error = ipi.communicate(timeout=2)
+            except:
+                ipi_out, ipi_error = "", "Could not get outputs from ipi"
+                pass
+
+            drivers[0].kill()
+            try:
+                driver_out, driver_err = drivers[0].communicate(timeout=2)
+            except:
+                driver_out, driver_err = "", "Could not get outputs from drivers"
+                pass
+
+            print(
+                "Timeout during {} test \
+              **** i-PI output **** \
+              stdout {} \
+              stderr {} \
+              **** driver output **** \
+              stdout {} \
+              stderr {} \
+              ".format(
+                    str(cwd), ipi_out, ipi_error, driver_out, driver_err
+                )
+            )
+            raise
+
             raise RuntimeError(
-                "Time is out. Aborted during {} test. \
-              Error {}".format(
-                    str(cwd), ipi.communicate(timeout=2)[0]
+                "Time is out. Aborted during {} test.".format(
+                    str(cwd),
                 )
             )
 

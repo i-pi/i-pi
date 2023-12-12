@@ -1,4 +1,4 @@
-<simulation mode='static' verbosity='debug'>
+<simulation mode='static' verbosity='medium'>
   <total_steps> 10 </total_steps>
   <ffsocket mode='unix' name='zundel'>
     <latency> 1.0e-2 </latency>
