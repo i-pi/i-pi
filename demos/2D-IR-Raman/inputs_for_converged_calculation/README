@@ -1,0 +1,4 @@
+Here we provide an input.xml file and a run script that can be used to compute 
+a two-time response function of liquid water with 250 fs along t1 and t2. It uses classical MD (nbeads=1).
+The calculations should be repeated for many initial conditions sampled independently from an NVT ensemble
+until convergence is reached (corresponding dip_pol_2d_neq.dat files should be averaged to obtain the final result).
