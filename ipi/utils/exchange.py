@@ -6,9 +6,10 @@ Used in /engine/normalmodes.py
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 from ipi.utils.depend import *
+from ipi.utils.units import Constants
 
 import numpy as np
-
+import sys
 
 def kth_diag_indices(a, k):
     """
@@ -298,3 +299,34 @@ class ExchangePotential:
         (all represented by the cycle 0,1,...,N-1,0); this cancels the division by 1/N.
         """
         return np.exp(-self._betaP * (self._E_from_to[0,-1] - self.V_all()))
+
+    def get_kinetic_td(self):
+        """Implementation of the Hirshberg-Rizzi-Parrinello primitive
+        kinetic energy estimator for identical particles.
+        Corresponds to Eqns. (4)-(5) in SI of pnas.1913365116.
+        """
+        est = np.zeros(self._N + 1)
+
+        for m in range(1, self._N + 1):
+            sig = 0.0
+
+            # Numerical stability
+            # Xiong-Xiong method (arXiv.2206.08341)
+            e_tilde = sys.float_info.max
+            for k in range(m, 0, -1):
+                e_tilde = min(e_tilde, self._E_from_to[m - k, m - 1] + self._V[m - k])
+
+            # Estimator evaluation.
+            for k in range(m, 0, -1):
+                E_kn_val = self._E_from_to[m - k, m - 1]
+                sig += (est[m - k] - E_kn_val) * np.exp(-self._betaP * (E_kn_val + self._V[m - k] - e_tilde))
+
+            sig_denom_m = m * np.exp(-self._betaP * (self._V[m] - e_tilde))
+
+            est[m] = sig / sig_denom_m
+
+        # In general, the dimensionless factor is 0.5*d*N*P/beta
+        # factor = 1.5 * self._P * self._N * Constants.kb * self.ensemble.temp
+        factor = 1.5 * self._N / self._betaP
+
+        return factor + est[self._N] / self._P
