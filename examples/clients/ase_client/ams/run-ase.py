@@ -28,25 +28,29 @@ $AMSBIN/amspython run-ase.py
 
 """
 
+
 def main():
     init()
 
     use_stress = False
-    atoms = read('firstframe.xyz')
+    atoms = read("firstframe.xyz")
 
     sett = Settings()
-    sett.input.ams.Task = 'SinglePoint'
-    sett.input.ams.Properties.Gradients = 'True'
+    sett.input.ams.Task = "SinglePoint"
+    sett.input.ams.Properties.Gradients = "True"
     sett.input.ams.Properties.StressTensor = str(use_stress)
-    sett.input.forcefield.type = 'UFF'
+    sett.input.forcefield.type = "UFF"
     sett.runscript.nproc = 1
 
     with AMSCalculator(settings=sett, amsworker=True) as calc:
         atoms.set_calculator(calc)
-        client = SocketClient(unixsocket='driver-irpmd-16') # socket should match the one given in input.xml
+        client = SocketClient(
+            unixsocket="driver-irpmd-16"
+        )  # socket should match the one given in input.xml
         client.run(atoms, use_stress=use_stress)
 
     finish()
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()
