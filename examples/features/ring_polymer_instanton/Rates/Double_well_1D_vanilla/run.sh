@@ -5,12 +5,12 @@
   mass=1837.36223469
   x0=0.00
   address=localhost
-  model='DoubleWell'
+  model='DW'
 
 
 #Launch i-pi and wait
-  i-pi input.xml & 
+  i-pi input.xml &
   sleep 3
 
 #Launch driver
-   i-pi-driver-py -m ${model} -o ${wb},${V0},${mass},${x0} -u -a ${address} 
+   i-pi-py_driver -m ${model} -o ${wb},${V0},${mass},${x0} -u -a ${address}

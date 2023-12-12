@@ -13,9 +13,11 @@ friction = False
 SI = True
 fric_value = 0.165
 
+__DRIVER_NAME__ = "spline"
+__DRIVER_CLASS__ = "Spline_driver"
 
 class Spline_driver(Dummy_driver):
-    def __init__(self, args=None):
+    def __init__(self, args=None,verbose=None):
         self.error_msg = """\nspline driver requires specification of filename that contains 5 columns (pos, f1,f2,f3,e) to perform 3x1D spline.\nExample: python driver.py -m spline -u -o <filename>\n"""
         super(Spline_driver, self).__init__(args)
         self.get_spline()

@@ -11,12 +11,12 @@
   deltaQ=1
 
   address=localhost
-  model='DW_explicit'
+  model='DW_bath'
 
 
 #Launch i-pi and wait
-  i-pi input.xml & 
+  i-pi input.xml &
   sleep 3
 
 #Launch driver
-   i-pi-driver-py -m ${model} -o ${wb},${V0},${mass},${x0},${eta},${epsilon},${delta},${deltaQ},${wc} -u -a ${address} 
+   i-pi-driver-py -m ${model} -o ${wb},${V0},${mass},${x0},${eta},${epsilon},${delta},${deltaQ},${wc} -u -a ${address}
