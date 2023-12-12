@@ -1004,28 +1004,35 @@ class FFsGDML(ForceField):
 
         # --- Units ---
         transl_units_names = {
-            'Ang': 'angstrom',
-            'bohr': 'atomic_unit',
-            'millihartree': 'milliatomic_unit',
-            'eV': 'electronvolt',
-            'kcal/mol': 'kilocal/mol',
+            "Ang": "angstrom",
+            "bohr": "atomic_unit",
+            "millihartree": "milliatomic_unit",
+            "eV": "electronvolt",
+            "kcal/mol": "kilocal/mol",
         }
         if "r_unit" in self.model and "e_unit" in self.model:
             distanceUnits = transl_units_names["{}".format(self.model["r_unit"])]
             energyUnits = transl_units_names["{}".format(self.model["e_unit"])]
-            info(" @ForceField: The units used in the sGDML model are: "
-                 "distance --> {}, energy --> {}".format(distanceUnits, energyUnits)
-                 , verbosity.low)
+            info(
+                " @ForceField: The units used in the sGDML model are: "
+                "distance --> {}, energy --> {}".format(distanceUnits, energyUnits),
+                verbosity.low,
+            )
         else:
-            info(" @ForceField: IMPORTANT: Since the sGDML model doesn\'t have units for distance and energy it is "
-                 "assumed that the units are in Angstroms and kilocal/mol, respectively.", verbosity.low)
+            info(
+                " @ForceField: IMPORTANT: Since the sGDML model doesn't have units for distance and energy it is "
+                "assumed that the units are in Angstroms and kilocal/mol, respectively.",
+                verbosity.low,
+            )
             distanceUnits = "angstrom"
             energyUnits = "kilocal/mol"
 
         # --- Constants ---
         self.bohr_to_distanceUnits = unit_to_user("length", distanceUnits, 1)
         self.energyUnits_to_hartree = unit_to_internal("energy", energyUnits, 1)
-        self.forceUnits_to_hartreebohr = self.bohr_to_distanceUnits * self.energyUnits_to_hartree
+        self.forceUnits_to_hartreebohr = (
+            self.bohr_to_distanceUnits * self.energyUnits_to_hartree
+        )
 
         # --- Creates predictor ---
         self.predictor = GDMLPredict(self.model)
