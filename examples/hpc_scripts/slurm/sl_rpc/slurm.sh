@@ -65,7 +65,7 @@ sleep 10
 ############## LAMMPS ##############
 # It is recommended to run every client in its own subdirectory
 # These subdirectories should be prepared in advance
-cd full-sys
+cd full_sys
 #  Plain mpi run
 #  cp in.template.lmp in.lmp
 #  mpirun -np 2 ${LMP_EXE} -in in.lmp &
