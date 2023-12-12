@@ -1317,7 +1317,6 @@ class Properties:
         assert res == 0.0
         if self.nm.exchange:
             res += self.nm.exchange.get_kinetic_td()
-            # res += 1.5 * self.beads.nbeads * self.beads.natoms * Constants.kb * self.ensemble.temp
         return res
 
     def _kinetic_td_distinguishables(self, atom, iatom, latom):
