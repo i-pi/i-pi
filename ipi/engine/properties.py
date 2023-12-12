@@ -10,15 +10,10 @@ prepares them for output.
 import numpy as np
 
 from ipi.utils.messages import verbosity, info, warning
-from ipi.utils.depend import *
+from ipi.utils.depend import dstrip
 from ipi.utils.units import Constants, unit_to_internal
 from ipi.utils.mathtools import logsumlog, h2abc_deg
 from ipi.utils.io.inputs import io_xml
-from ipi.engine.atoms import *
-from ipi.engine.cell import *
-from ipi.engine.ensembles import *
-from ipi.engine.forces import *
-
 
 __all__ = ["Properties", "Trajectories", "getkey", "getall", "help_latex"]
 
@@ -200,7 +195,7 @@ def help_rst(idict, standalone=True):
     return rstr
 
 
-class Properties(dobject):
+class Properties:
 
     """A proxy to compute and output properties of the system.
 
@@ -1810,6 +1805,9 @@ class Properties(dobject):
            computing finite-difference quantities. If it is negative, will be
            scaled down automatically to avoid discontinuities in the potential.
         """
+        # Ugly but works
+        if type(fd_delta) == str:
+            fd_delta = np.float(fd_delta)
 
         dbeta = abs(float(fd_delta))
         beta = 1.0 / (Constants.kb * self.ensemble.temp)
@@ -2616,7 +2614,7 @@ class Properties(dobject):
         return ti
 
 
-class Trajectories(dobject):
+class Trajectories:
 
     """A simple class to take care of output of trajectory data.
 

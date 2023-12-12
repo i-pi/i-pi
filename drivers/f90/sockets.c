@@ -44,6 +44,12 @@ Functions:
 #include <sys/un.h>
 #include <netdb.h>
 
+#ifdef _WIN32
+    #include <windows.h>
+#else
+    #include <time.h>
+#endif
+
 void open_socket(int *psockfd, int* inet, int* port, const char* host)
 /* Opens a socket.
 
@@ -153,3 +159,16 @@ Args:
 }
 
 
+void c_sleep(double seconds) {
+    #ifdef _WIN32
+        // Windows: Convert seconds to milliseconds and use Sleep
+        Sleep((DWORD)(seconds * 1000.0));
+    #else
+        // Unix/Linux: Convert seconds to timespec and use nanosleep
+        struct timespec req, rem;
+        req.tv_sec = (time_t)seconds;
+        req.tv_nsec = (long)((seconds - req.tv_sec) * 1e9);
+        while (nanosleep(&req, &rem) == -1)
+            req = rem;
+    #endif
+}

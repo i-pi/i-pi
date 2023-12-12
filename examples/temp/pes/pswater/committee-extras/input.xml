@@ -1,0 +1,57 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'>  [ time{picosecond}, conserved, temperature{kelvin}, kinetic_md, kinetic_cv, kinetic_cv(O), kinetic_cv(H), potential ] </properties>
+    <trajectory filename='pos' format='xyz' stride='2'> positions{angstrom} </trajectory>
+    <trajectory filename='vel' format='xyz' stride='5'> velocities </trajectory>
+    <trajectory filename='for' format='xyz' stride='2'> forces </trajectory>
+    <trajectory filename='kin' format='xyz' stride='2'> kinetic_cv </trajectory>
+    <trajectory filename='pot' stride='2' extra_type='committee_pot'> extras </trajectory>
+    <trajectory filename='dip' stride='2' extra_type='committee_dipole'> extras </trajectory>
+    <trajectory filename='raw' stride='2' extra_type='committee_raw'> extras </trajectory>    
+    <checkpoint stride='100' filename='chk' overwrite='true'/>
+    <checkpoint stride='2000' filename='restart' overwrite='false'/>
+  </output>
+  <total_steps>1000</total_steps>
+  <prng>
+    <seed>23658</seed>
+  </prng>
+  <!-- committee model - in this case all is the same but this gives an idea of how to process extras from a ffcommittee -->
+  <ffcommittee name="committee">
+      <ffsocket mode='unix' pbc='false' name='driver'>
+        <address>driver</address>
+        <port>31400</port>
+        <latency>0.02</latency>
+        <timeout>400</timeout>
+      </ffsocket>
+      <ffsocket mode='unix' pbc='false' name='driver2'>
+        <!--<address>localhost</address>   -->
+        <address>driver2</address>
+        <port>31400</port>
+        <latency>0.02</latency>
+        <timeout>400</timeout>
+      </ffsocket>
+  </ffcommittee>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='xyz' units='angstrom'> h2o_3.xyz </file>
+      <cell mode='abc' units='angstrom'> [ 10.0, 10.0, 10.0 ] </cell>
+      <!--     <gle mode='chk'> restart.chk </gle> -->
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='committee' weight="1.0"/>
+    </forces>
+    <ensemble>
+      <temperature units='kelvin'>300</temperature>
+    </ensemble>
+    <motion mode='dynamics'>
+      <fixcom>True</fixcom>
+      <dynamics mode='nvt'>
+        <timestep units='femtosecond'>0.5</timestep>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100</tau>
+        </thermostat>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>

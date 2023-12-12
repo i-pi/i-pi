@@ -89,7 +89,7 @@ class InputForceField(Input):
             InputValue,
             {
                 "dtype": float,
-                "default": 0.01,
+                "default": 1e-4,
                 "help": "The number of seconds the polling thread will wait between exhamining the list of requests.",
             },
         ),
@@ -525,7 +525,7 @@ class InputFFPlumed(InputForceField):
         # if pstep > 0: pstep -= 1 # roll back plumed step before writing a restart
         # self.plumedstep.store(pstep)
         self.plumedstep.store(ff.plumedstep)
-        self.init_file.store(ff.init_file)
+        self.file.store(ff.init_file)
 
     def fetch(self):
         super(InputFFPlumed, self).fetch()
@@ -537,7 +537,7 @@ class InputFFPlumed(InputForceField):
             threaded=self.threaded.fetch(),
             plumeddat=self.plumeddat.fetch(),
             plumedstep=self.plumedstep.fetch(),
-            init_file=self.init_file.fetch(),
+            init_file=self.file.fetch(),
         )
 
 

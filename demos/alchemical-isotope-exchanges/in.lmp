@@ -1,0 +1,19 @@
+units		electron
+atom_style	full
+
+# q-TIP4P-f parameters
+pair_style      lj/cut/tip4p/long 1 2 1 1 0.278072379 17.007
+bond_style      class2 
+angle_style     harmonic
+kspace_style	pppm/tip4p 0.0001
+
+read_data	water_32_data.lmp
+pair_coeff  * * 0 0
+pair_coeff  1  1  0.000295147 5.96946
+
+neighbor	2.0 bin
+
+timestep	0.00025 # timestep is irrelevant: MD happens within i-PI
+fix 1 all ipi h2o-alchemical 32345 unix
+run		100000000
+

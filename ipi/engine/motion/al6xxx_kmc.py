@@ -13,7 +13,7 @@ import numpy as np
 import collections
 
 from ipi.engine.motion import Motion, GeopMotion
-from ipi.utils.depend import dstrip, depend_value, dd
+from ipi.utils.depend import dstrip, depend_value
 from ipi.engine.cell import Cell
 from ipi.utils.units import Constants
 import ipi.utils.io as io
@@ -164,7 +164,7 @@ class AlKMC(Motion):
         self.idx = idx
 
         # the KMC step is variable and so it cannot be stored as proper timing
-        dd(self).dt = depend_value(name="dt", value=0.0)
+        self._dt = depend_value(name="dt", value=0.0)
         self.fixatoms = np.asarray([])
         self.fixcom = True
         self.optimizer = [None] * self.neval
