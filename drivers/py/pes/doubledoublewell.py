@@ -4,11 +4,12 @@ import sys
 
 try:
     from .dummy import Dummy_driver
+    from .bath import Harmonic_Bath_explicit
 except:
     from dummy import Dummy_driver
+    from .bath import Harmonic_Bath_explicit
 import numpy as np
 from ipi.utils import units
-import json
 
 __DRIVER_NAME__ = "double_double_well"
 __DRIVER_CLASS__ = "DDW_with_explicit_bath_driver"

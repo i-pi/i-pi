@@ -1,14 +1,6 @@
 """ Harmonic Bath """
 
-import sys
-
-try:
-    from .dummy import Dummy_driver
-except:
-    from dummy import Dummy_driver
 import numpy as np
-from ipi.utils import units
-import json
 
 __DRIVER_NAME__ = None
 __DRIVER_CLASS__ = "driver_tools"

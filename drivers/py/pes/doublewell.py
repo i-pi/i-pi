@@ -9,7 +9,6 @@ except:
 
 import numpy as np
 from ipi.utils import units
-import json
 
 
 __DRIVER_NAME__ = "DW"
