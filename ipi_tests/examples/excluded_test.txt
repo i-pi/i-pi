@@ -11,11 +11,10 @@ clients/fhi_aims/zundel                        # dummy driver has an issue with 
 
 
 # Need of external dependency
-clients/ffsgdml/
 clients/yaff/mil53_ffyaff
 clients/yaff/mil53_ffsocket
-clients/ffsgdml/benzene-pimd.10
-clients/ffsgdml/benzene-scpimd.10
+clients/ffsgdml/benzene_pimd.10
+clients/ffsgdml/benzene_scpimd.10
 
 features/metadynamics/pimd_metadynamics
 features/metadynamics/wte_metadynamics
