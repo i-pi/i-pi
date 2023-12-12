@@ -162,7 +162,7 @@ class ReplicaExchange(Smotion):
                 if pxc > self.prng.u:  # really does the exchange
                     info(
                         " @ PT:  SWAPPING replicas % 5d and % 5d." % (i, j),
-                        verbosity.low,
+                        verbosity.high,
                     )
 
                     # if we have GLE thermostats, we also have to exchange rescale the s!!!
@@ -205,7 +205,7 @@ class ReplicaExchange(Smotion):
                     info(
                         " @ PT:  SWAP REJECTED BETWEEN replicas % 5d and % 5d."
                         % (i, j),
-                        verbosity.low,
+                        verbosity.high,
                     )
 
                 # tempi = copy(self.syslist[i].ensemble.temp)

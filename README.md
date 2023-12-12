@@ -29,7 +29,7 @@ python -m pip install git+https://github.com/i-pi/i-pi.git
 
 Last Release::
 ```bash
-pip install -U i-PI
+pip install -U ipi
 ```
 
 Test with Pytest::
@@ -99,7 +99,7 @@ You need to have the `pytest` package installed
 i-pi-test
 ```
 
-See more details in the README file inside the ipi_tests folder.
+See more details in the README file inside the `ipi_tests` folder.
 
 Contributing
 ------------

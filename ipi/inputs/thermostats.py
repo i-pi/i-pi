@@ -207,20 +207,20 @@ class InputThermoBase(Input):
         elif type(thermo) is ethermostats.ThermoGLE:
             self.mode.store("gle")
             self.A.store(thermo.A)
-            if dd(thermo).C._func is None:
+            if thermo._C._func is None:
                 self.C.store(thermo.C)
             self.s.store(thermo.s)
         elif type(thermo) is ethermostats.ThermoNMGLE:
             self.mode.store("nm_gle")
             self.A.store(thermo.A)
-            if dd(thermo).C._func is None:
+            if thermo._C._func is None:
                 self.C.store(thermo.C)
             self.s.store(thermo.s)
         elif type(thermo) is ethermostats.ThermoNMGLEG:
             self.mode.store("nm_gle_g")
             self.A.store(thermo.A)
             self.tau.store(thermo.tau)
-            if dd(thermo).C._func is None:
+            if thermo._C._func is None:
                 self.C.store(thermo.C)
             self.s.store(thermo.s)
         elif type(thermo) is ethermostats.ThermoCL:
