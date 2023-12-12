@@ -1,10 +1,11 @@
 """ Harmonic potential """
 
 import sys
+
 try:
-  from .dummy import Dummy_driver
+    from .dummy import Dummy_driver
 except:
-  from dummy import Dummy_driver
+    from dummy import Dummy_driver
 import numpy as np
 from ipi.utils import units
 import json
@@ -49,7 +50,7 @@ class DDW_with_explicit_bath_driver(Dummy_driver):
     !      DDW(q1,q2) = DW(q1) + DW(q2) + C(q1q2)^2
     """
 
-    def __init__(self, args=None,verbose=None):
+    def __init__(self, args=None, verbose=None):
         self.error_msg = """\nDW+explicit_bath driver expects 11 arguments.\n
         Example: python driver.py -m DoubleWell_with_explicit_bath -o wb1 (cm^-1) V1 (cm^-1) wb2 (cm^-1) V2 (cm^-1) coupling(au) mass delta(\AA) eta0  eps1 eps2  deltaQ omega_c(cm^-1)     \n
         python driver.py -m DoubleWell -o 500,2085,500,2085,0.1,1837,0.00,1,0,0,1,500\n"""

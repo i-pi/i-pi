@@ -1,12 +1,13 @@
 """ Harmonic potential """
 
 import sys
+
 try:
-  from .dummy import Dummy_driver
-  from .bath import Harmonic_Bath_explicit
+    from .dummy import Dummy_driver
+    from .bath import Harmonic_Bath_explicit
 except:
-  from dummy import Dummy_driver
-  from .bath import Harmonic_Bath_explicit
+    from dummy import Dummy_driver
+    from .bath import Harmonic_Bath_explicit
 
 import numpy as np
 from ipi.utils import units
@@ -40,7 +41,7 @@ class DoubleWell_with_explicit_bath_driver(Dummy_driver):
     !      If eps1=eps2=0 then sd(q) =1 and s(q) = q --->Spatially independent bath
     """
 
-    def __init__(self, args=None,verbose=None):
+    def __init__(self, args=None, verbose=None):
         self.error_msg = """\nDW+explicit_bath driver expects 9 arguments.\n
         Example: python driver.py -m DoubleWell_with_explicit_bath -o omega_b (cm^-1) V0 (cm^-1) mass delta(\AA) eta0  eps1 eps2  deltaQ omega_c(cm^-1)     \n
         python driver.py -m DoubleWell -o 500,2085,1837,0.00,1,0,0,1,500\n"""
@@ -99,5 +100,3 @@ class DoubleWell_with_explicit_bath_driver(Dummy_driver):
         extras = "empty"
 
         return pot, force, vir, extras
-
-

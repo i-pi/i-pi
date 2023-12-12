@@ -1,10 +1,11 @@
 """ Harmonic potential """
 
 import sys
+
 try:
-  from .dummy import Dummy_driver
+    from .dummy import Dummy_driver
 except:
-  from dummy import Dummy_driver
+    from dummy import Dummy_driver
 
 import numpy as np
 from ipi.utils import units
@@ -30,7 +31,7 @@ A2au = units.unit_to_internal("length", "angstrom", 1.0)
 
 
 class DoubleWell_driver(Dummy_driver):
-    def __init__(self, args=None,verbose=None):
+    def __init__(self, args=None, verbose=None):
         self.error_msg = """\nDW driver accepts 0 or 4 arguments.\nExample: python driver.py -m DoubleWell -o omega_b (cm^-1) V0 (cm^-1) mass(a.u) delta(angs) \n
         python driver.py -m DoubleWell -o 500,2085,1837,0.00 \n"""
         super(DoubleWell_driver, self).__init__(args)
@@ -83,5 +84,3 @@ class DoubleWell_driver(Dummy_driver):
         force = force3.reshape(pos.shape)
 
         return pot, force, vir, extras
-
-

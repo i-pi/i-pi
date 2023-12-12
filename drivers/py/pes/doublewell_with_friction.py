@@ -38,7 +38,7 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
     sd(q) = [1+eps1 exp( (q-0)^2 / (2deltaQ^2) ) ] + eps2 tanh(q/deltaQ)
     """
 
-    def __init__(self, args=None,verbose=None):
+    def __init__(self, args=None, verbose=None):
         self.error_msg = """\nDW+fric driver expects 8 arguments.\n
         Example: python driver.py -m DoubleWell_with_fric -o omega_b (cm^-1) V0 (cm^-1) mass delta(\AA) eta0  eps1 eps2  deltaQ      \n
         python driver.py -m DoubleWell -o 500,2085,1837,0.00,1,0,0,1\n"""

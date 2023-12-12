@@ -1,16 +1,17 @@
 """ Harmonic Bath """
 
 import sys
+
 try:
-  from .dummy import Dummy_driver
+    from .dummy import Dummy_driver
 except:
-  from dummy import Dummy_driver
+    from dummy import Dummy_driver
 import numpy as np
 from ipi.utils import units
 import json
 
 __DRIVER_NAME__ = None
-__DRIVER_CLASS__ = 'driver_tools'
+__DRIVER_CLASS__ = "driver_tools"
 
 
 class Harmonic_Bath_explicit(object):
@@ -79,5 +80,3 @@ class Harmonic_Bath_explicit(object):
                 fx[i] -= (self.m * self.omega2[i] * aux).flatten()
 
         return pot_bath, fq_bath, fx
-
-
