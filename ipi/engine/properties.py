@@ -1314,7 +1314,6 @@ class Properties:
         # TODO: verify that the atoms involves include a non empty proper susbset of the bosons
 
         res = self._kinetic_td_distinguishables(atom, iatom, latom)
-        assert res == 0.0
         if self.nm.exchange:
             res += self.nm.exchange.get_kinetic_td()
         return res
