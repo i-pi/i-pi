@@ -211,12 +211,12 @@ class ExchangePotential:
             * np.exp(
                 -self._betaP
                 * (
-                    # np.asarray([self.V_forward(u - 1) for u in range(self._N)])[np.newaxis, :]
+                    # np.asarray([self._V(u - 1) for u in range(self._N)])[np.newaxis, :]
                     self._V[np.newaxis, :-1]
                     # + np.asarray([(self._E_from_to[u, l] if l >= u else 0) for l in range(self._N)
                     #                   for u in range(self._N)]).reshape((self._N, self._N))
                     + self._E_from_to.T
-                    # + np.asarray([self.V_backward(l + 1) for l in range(self._N)])[:, np.newaxis]
+                    # + np.asarray([self._V_backward(l + 1) for l in range(self._N)])[:, np.newaxis]
                     + self._V_backward[1:, np.newaxis]
                     - self.V_all()
                 )
