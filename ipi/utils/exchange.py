@@ -330,3 +330,29 @@ class ExchangePotential:
         factor = 1.5 * self._N / self._betaP
 
         return factor + est[self._N] / self._P
+
+    def get_fermionic_avg_sign(self):
+        """
+        The average permutation sign as defined in Eq. (9) https://doi.org/10.1063/5.0008720,
+        which can be used to reweight observables to obtain fermionic statistics.
+        """
+        return self._get_fermionic_potential_exp() / np.exp(-self._betaP * self._V[-1])
+
+    def _get_fermionic_potential_exp(self):
+        """
+        Exponential of the fermionic pseudo-potential defined by
+        the recurrence relation in Eq. (5) of https://doi.org/10.1063/5.0008720.
+        Numerically unstable since it does not use log-sum-exp trick, seeing that the
+        sum of exponentials could be negative.
+        """
+        xi = -1
+        W = np.empty(self._N + 1, float)
+        W[0] = 1.0
+
+        for m in range(1, self._N + 1):
+            perm_sign = np.array([xi ** (k-1) for k in range(1, m + 1)])
+            W[m] = (1.0/m) * np.sum(perm_sign *
+                                    W[:m] *
+                                    np.exp(-self._betaP * self._E_from_to[:m, m - 1]))
+
+        return W[-1]

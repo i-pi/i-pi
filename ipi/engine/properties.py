@@ -882,6 +882,15 @@ class Properties:
                                one large ring polymer, divided by 1/N, where N is the number of atoms. 
                                A number between 0 and 1, tends to 1 in low temperatures, which indicates that 
                                bosonic exchange is very strong""",
+            },
+            "fermionic_avg_sign": {
+                "dimension": "undefined",
+                "size": 1,
+                "func": self.get_fermionic_avg_sign,
+                "help": "Average sign of exchange configuration, for reweighting fermionic observables",
+                "longhelp": """Average sign of exchange configuration, for reweighting fermionic observables.
+                               Decreases exponentially with beta and the number of particles, but if not too large,
+                               can be used to recover fermionic statistics from bosonic simulations""",
             }
         }
 
@@ -2658,6 +2667,11 @@ class Properties:
         if not self.nm.exchange:
             return 0.0
         return self.nm.exchange.get_longest_probability()
+
+    def get_fermionic_avg_sign(self):
+        if not self.nm.exchange:
+            return 0.0
+        return self.nm.exchange.get_fermionic_avg_sign()
 
 
 class Trajectories:
