@@ -1,0 +1,36 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <checkpoint stride='1000' filename='chk' overwrite='false'/>
+    <trajectory filename='dip' stride='4' extra_type='dipole'> extras </trajectory>
+    <trajectory filename='dip_der' stride='1000' extra_type='dipole_derivative'> extras </trajectory>    
+    <trajectory filename='pol' stride='4' extra_type='polarizability'> extras </trajectory>
+  </output>
+  <total_steps>100000</total_steps>
+  <prng>
+    <seed>32415</seed>
+  </prng>
+  <ffsocket name='lammps' mode='unix'>
+    <address> lammps </address> <latency> 0.0001 </latency>
+  </ffsocket>
+  <ffsocket name='dipole' mode='unix' pbc="false">
+    <address>h2o-dipole</address> <latency> 0.0001 </latency>
+  </ffsocket>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='xyz'> water_64.xyz </file>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='lammps'> </force>
+      <force forcefield='dipole'> </force>
+    </forces>
+    <motion mode='dynamics'>
+      <dynamics mode='nve' splitting='baoab'>
+        <timestep units='femtosecond'> 0.25 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units='kelvin'> 300 </temperature>
+    </ensemble>
+  </system>
+</simulation>
