@@ -350,7 +350,7 @@ class ExchangePotential:
         W[0] = 1.0
 
         for m in range(1, self._N + 1):
-            perm_sign = np.array([xi ** (k-1) for k in range(1, m + 1)])
+            perm_sign = np.array([xi ** (k-1) for k in range(m, 0, -1)])
             W[m] = (1.0/m) * np.sum(perm_sign *
                                     W[:m] *
                                     np.exp(-self._betaP * self._E_from_to[:m, m - 1]))
