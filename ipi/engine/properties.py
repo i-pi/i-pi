@@ -1296,7 +1296,7 @@ class Properties:
         return acv
 
     def get_kintd(self, atom=""):
-        """Calculates the quantum centroid virial kinetic energy estimator.
+        """Calculates the quantum primitive kinetic energy estimator.
 
         Args:
            atom: If given, specifies the atom to give the kinetic energy
@@ -1317,25 +1317,12 @@ class Properties:
             iatom = -1
             latom = atom
 
-        self._validate_indistinguishable_are_package_deal(iatom, latom)
-
-        res = self._kinetic_td_distinguishables(atom, iatom, latom)
-        if self.nm.exchange:
-            res += self.nm.exchange.get_kinetic_td()
-        return res
-
-    def _validate_indistinguishable_are_package_deal(self, iatom, latom):
-        """
-        Should not ask for a property of a subset of atoms of which some are indistinguishables
-        without including *all* the indistinguishable atoms.
-        Raise error in case of violation of this principle.
-        """
-        atoms_included = set()
+        # Should not ask for a property of a subset of atoms of which some are indistinguishables
+        # without including *all* the indistinguishable atoms.
+        atoms_included = set(range(self.beads.natoms))
         if iatom != -1:
-            assert latom == ""
             atoms_included = set([iatom])
-        else:
-            assert latom != ""
+        elif latom != "":
             atoms_included = set(filter(lambda i: latom == self.beads.names[i],
                                         range(self.beads.natoms)))
 
@@ -1347,7 +1334,33 @@ class Properties:
                              "bosons %s are included, but %s are missing"
                              % (bosons_included, bosons - bosons_included))
 
-    def _kinetic_td_distinguishables(self, atom, iatom, latom):
+
+        res, ncount = self._kinetic_td_distinguishables(atom, iatom, latom,
+                                                        skip_atom_indices=set(self.nm.bosons))
+        if bosons_included:
+            res += self.nm.exchange.get_kinetic_td()
+            ncount += len(bosons_included)
+
+        if ncount == 0:
+            warning(
+                "Couldn't find an atom which matched the argument of kinetic energy, setting to zero.",
+                verbosity.medium,
+            )
+
+        return res
+
+    def _kinetic_td_distinguishables(self, atom, iatom, latom, skip_atom_indices=None):
+        """
+        The total kinetic energy via the primitive estimator for distinguishable particles.
+
+        Args:
+           atom: If given, specifies the atom to give the kinetic energy
+              for. If not, the system kinetic energy is given.
+           iatom: Index of the atom specified (or -1)
+           latom: Label of the atom specified (or "")
+           skip_atom_indices:
+                atoms not to be considered in the distinguishable estimator (e.g. bosons)
+        """
         q = dstrip(self.beads.q)
         m = dstrip(self.beads.m)
         PkT32 = 1.5 * Constants.kb * self.ensemble.temp * self.beads.nbeads
@@ -1358,7 +1371,7 @@ class Properties:
             if atom != "" and iatom != i and latom != self.beads.names[i]:
                 continue
 
-            if i in self.nm.bosons:
+            if i in skip_atom_indices:
                 continue
 
             ktd = 0.0
@@ -1373,13 +1386,7 @@ class Properties:
             atd += ktd
             ncount += 1
 
-        if ncount == 0:
-            warning(
-                "Couldn't find an atom which matched the argument of kinetic energy, setting to zero.",
-                verbosity.medium,
-            )
-
-        return atd
+        return atd, ncount
 
     def get_sckinpr(self):
         """Calculates the quantum centroid virial kinetic energy estimator."""
