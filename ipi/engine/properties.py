@@ -891,7 +891,7 @@ class Properties:
                 "longhelp": """Average sign of exchange configuration, for reweighting fermionic observables.
                                Decreases exponentially with beta and the number of particles, but if not too large,
                                can be used to recover fermionic statistics from bosonic simulations""",
-            }
+            },
         }
 
     def bind(self, system):
@@ -1323,20 +1323,23 @@ class Properties:
         if iatom != -1:
             atoms_included = set([iatom])
         elif latom != "":
-            atoms_included = set(filter(lambda i: latom == self.beads.names[i],
-                                        range(self.beads.natoms)))
+            atoms_included = set(
+                filter(lambda i: latom == self.beads.names[i], range(self.beads.natoms))
+            )
 
         bosons = set(self.nm.bosons)
         bosons_included = bosons & atoms_included
 
         if bosons_included and not (bosons <= atoms_included):
-            raise IndexError("Cannot output property of a proper subset of the bosons: "
-                             "bosons %s are included, but %s are missing"
-                             % (bosons_included, bosons - bosons_included))
+            raise IndexError(
+                "Cannot output property of a proper subset of the bosons: "
+                "bosons %s are included, but %s are missing"
+                % (bosons_included, bosons - bosons_included)
+            )
 
-
-        res, ncount = self._kinetic_td_distinguishables(atom, iatom, latom,
-                                                        skip_atom_indices=set(self.nm.bosons))
+        res, ncount = self._kinetic_td_distinguishables(
+            atom, iatom, latom, skip_atom_indices=set(self.nm.bosons)
+        )
         if bosons_included:
             res += self.nm.exchange.get_kinetic_td()
             ncount += len(bosons_included)

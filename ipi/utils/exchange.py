@@ -5,11 +5,10 @@ Used in /engine/normalmodes.py
 # This file is part of i-PI.
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
-from ipi.utils.depend import *
-from ipi.utils.units import Constants
 
 import numpy as np
 import sys
+
 
 def kth_diag_indices(a, k):
     """
@@ -288,9 +287,9 @@ class ExchangePotential:
         """
         Evaluate the probability of the configuration where all the particles are separate.
         """
-        return ((1.0 / np.math.factorial(self._N)) *
-                np.exp(-self._betaP *
-                       (np.trace(self._E_from_to) - self.V_all())))
+        return (1.0 / np.math.factorial(self._N)) * np.exp(
+            -self._betaP * (np.trace(self._E_from_to) - self.V_all())
+        )
 
     def get_longest_probability(self):
         """
@@ -298,7 +297,7 @@ class ExchangePotential:
         divided by 1/N. Notice that there are (N-1)! permutations of this topology
         (all represented by the cycle 0,1,...,N-1,0); this cancels the division by 1/N.
         """
-        return np.exp(-self._betaP * (self._E_from_to[0,-1] - self.V_all()))
+        return np.exp(-self._betaP * (self._E_from_to[0, -1] - self.V_all()))
 
     def get_kinetic_td(self):
         """Implementation of the Hirshberg-Rizzi-Parrinello primitive
@@ -317,7 +316,9 @@ class ExchangePotential:
 
             for k in range(m, 0, -1):
                 E_kn_val = self._E_from_to[m - k, m - 1]
-                sig += (est[m - k] - E_kn_val) * np.exp(-self._betaP * (E_kn_val + self._V[m - k] - e_tilde))
+                sig += (est[m - k] - E_kn_val) * np.exp(
+                    -self._betaP * (E_kn_val + self._V[m - k] - e_tilde)
+                )
 
             sig_denom_m = m * np.exp(-self._betaP * (self._V[m] - e_tilde))
 
@@ -346,9 +347,9 @@ class ExchangePotential:
         W[0] = 1.0
 
         for m in range(1, self._N + 1):
-            perm_sign = np.array([xi ** (k-1) for k in range(m, 0, -1)])
-            W[m] = (1.0/m) * np.sum(perm_sign *
-                                    W[:m] *
-                                    np.exp(-self._betaP * self._E_from_to[:m, m - 1]))
+            perm_sign = np.array([xi ** (k - 1) for k in range(m, 0, -1)])
+            W[m] = (1.0 / m) * np.sum(
+                perm_sign * W[:m] * np.exp(-self._betaP * self._E_from_to[:m, m - 1])
+            )
 
         return W[-1]
