@@ -310,13 +310,11 @@ class ExchangePotential:
         for m in range(1, self._N + 1):
             sig = 0.0
 
-            # Numerical stability
-            # Xiong-Xiong method (arXiv.2206.08341)
+            # Numerical stability - Xiong-Xiong method (arXiv.2206.08341)
             e_tilde = sys.float_info.max
             for k in range(m, 0, -1):
                 e_tilde = min(e_tilde, self._E_from_to[m - k, m - 1] + self._V[m - k])
 
-            # Estimator evaluation.
             for k in range(m, 0, -1):
                 E_kn_val = self._E_from_to[m - k, m - 1]
                 sig += (est[m - k] - E_kn_val) * np.exp(-self._betaP * (E_kn_val + self._V[m - k] - e_tilde))
@@ -325,8 +323,6 @@ class ExchangePotential:
 
             est[m] = sig / sig_denom_m
 
-        # In general, the dimensionless factor is 0.5*d*N*P/beta
-        # factor = 1.5 * self._P * self._N * Constants.kb * self.ensemble.temp
         factor = 1.5 * self._N / self._betaP
 
         return factor + est[self._N] / self._P
