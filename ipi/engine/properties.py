@@ -1317,15 +1317,35 @@ class Properties:
             iatom = -1
             latom = atom
 
-        if len(self.nm.bosons) > 1 and iatom in self.nm.bosons:
-            raise IndexError("Cannot output kinetic energy of single boson %d" % iatom)
-
-        # TODO: verify that the atoms involves include a non empty proper susbset of the bosons
+        self._validate_indistinguishable_are_package_deal(iatom, latom)
 
         res = self._kinetic_td_distinguishables(atom, iatom, latom)
         if self.nm.exchange:
             res += self.nm.exchange.get_kinetic_td()
         return res
+
+    def _validate_indistinguishable_are_package_deal(self, iatom, latom):
+        """
+        Should not ask for a property of a subset of atoms of which some are indistinguishables
+        without including *all* the indistinguishable atoms.
+        Raise error in case of violation of this principle.
+        """
+        atoms_included = set()
+        if iatom != -1:
+            assert latom == ""
+            atoms_included = set([iatom])
+        else:
+            assert latom != ""
+            atoms_included = set(filter(lambda i: latom == self.beads.names[i],
+                                        range(self.beads.natoms)))
+
+        bosons = set(self.nm.bosons)
+        bosons_included = bosons & atoms_included
+
+        if bosons_included and not (bosons <= atoms_included):
+            raise IndexError("Cannot output property of a proper subset of the bosons: "
+                             "bosons %s are included, but %s are missing"
+                             % (bosons_included, bosons - bosons_included))
 
     def _kinetic_td_distinguishables(self, atom, iatom, latom):
         q = dstrip(self.beads.q)
