@@ -6,6 +6,7 @@ Used in /engine/normalmodes.py
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
+import math
 import numpy as np
 import sys
 
@@ -287,8 +288,9 @@ class ExchangePotential:
         """
         Evaluate the probability of the configuration where all the particles are separate.
         """
-        return (1.0 / np.math.factorial(self._N)) * np.exp(
+        return np.exp(
             -self._betaP * (np.trace(self._E_from_to) - self.V_all())
+            - math.log(np.math.factorial(self._N))  # (1.0 / np.math.factorial(self._N))
         )
 
     def get_longest_probability(self):
