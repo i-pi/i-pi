@@ -876,7 +876,7 @@ class Properties:
                 "dimension": "undefined",
                 "size": 1,
                 "func": self.get_exchange_longest_prob,
-                "help": "Scaled probability of the bosonic exchange configuration where all atoms are connected",
+                "help": "Scaled probability of the bosonic exchange configuration where all atoms are connected.",
                 "longhelp": """Scaled probability of the bosonic exchange configuration where all atoms are connected:
                                the probability of the configuration connecting the ring polymers of all the atoms into
                                one large ring polymer, divided by 1/N, where N is the number of atoms. 
@@ -887,7 +887,7 @@ class Properties:
                 "dimension": "undefined",
                 "size": 1,
                 "func": self.get_fermionic_avg_sign,
-                "help": "Average sign of exchange configuration, for reweighting fermionic observables",
+                "help": "Average sign of exchange configuration, for reweighting fermionic observables.",
                 "longhelp": """Average sign of exchange configuration, for reweighting fermionic observables.
                                Decreases exponentially with beta and the number of particles, but if not too large,
                                can be used to recover fermionic statistics from bosonic simulations""",
