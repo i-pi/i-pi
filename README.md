@@ -99,7 +99,7 @@ You need to have the `pytest` package installed
 i-pi-test
 ```
 
-See more details in the README file inside the ipi_tests folder.
+See more details in the README file inside the `ipi_tests` folder.
 
 Contributing
 ------------
