@@ -1,20 +1,22 @@
 """Interface with librascal to run machine learning potentials"""
 
-import sys, os
+import sys
 import numpy as np
 from .dummy import Dummy_driver
 
 from ipi.utils.units import unit_to_internal, unit_to_user
+from ipi.utils.messages import warning
 
 try:
-    sys.path.append(os.getcwd() + "/pet/src")
-    from single_struct_calculator import SingleStructCalculator as PETCalc
+    from pet import SingleStructCalculator as PETCalc
 
     try:
         from ase.io import read
-    except:
-        raise ImportError("The PET driver has an ASE dependency")
-except:
+    except ImportError:
+        warning("The PET driver has an ASE dependency")
+        raise
+except ImportError:
+    warning("Could not find or import the PET module")
     PETCalc = None
 
 __DRIVER_NAME__ = "pet"
@@ -22,15 +24,15 @@ __DRIVER_CLASS__ = "PET_driver"
 
 
 class PET_driver(Dummy_driver):
-    def __init__(self, args=None):
+    def __init__(self, args=None, verbose=False):
         self.error_msg = """
-The PET driver requires specification of a .json model file fitted with librascal, 
+The PET driver requires specification of a .json model file fitted with the PRT tools, 
 and a template file that describes the chemical makeup of the structure. 
 
 Example: python driver.py -m pet -u -o model.json,template.xyz
 """
 
-        super().__init__(args)
+        super().__init__(args, verbose)
 
         if PETCalc is None:
             raise ImportError("Couldn't load PET bindings")
@@ -46,17 +48,25 @@ Example: python driver.py -m pet -u -o model.json,template.xyz
             sys.exit(self.error_msg)
 
         if len(arglist) == 2:
-            self.model = arglist[0]
+            self.model_path = arglist[0]
             self.template = arglist[1]
         else:
             sys.exit(self.error_msg)
 
         self.template_ase = read(self.template)
         self.template_ase.arrays["forces"] = np.zeros_like(self.template_ase.positions)
-        self.pet_calc = PETCalc(self.model)
+        self.pet_calc = PETCalc(
+            self.model_path,
+            default_hypers_path=self.model_path + "/default_hypers.yaml",
+        )
 
     def __call__(self, cell, pos):
-        """Get energies, forces, and stresses from the PET model"""
+        """Get energies, forces, and stresses from the MACE model
+        This routine assumes that the client will take positions
+        in angstrom, and return energies in electronvolt, and forces
+        in ev/ang.
+        """
+
         pos_pet = unit_to_user("length", "angstrom", pos)
         # librascal expects ASE-format, cell-vectors-as-rows
         cell_pet = unit_to_user("length", "angstrom", cell.T)

@@ -15,17 +15,17 @@ __DRIVER_CLASS__ = "MACE_driver"
 
 
 class MACE_driver(Dummy_driver):
-    def __init__(self, args=None):
-        self.error_msg = """Rascal driver requires specification of a .json model file fitted with librascal,
+    def __init__(self, args=None, verbose=False):
+        self.error_msg = """MACE driver requires specification of a .json model,
                             and a template file that describes the chemical makeup of the structure.
-                            Example: python driver.py -m rascal -u -o model.json,template.xyz"""
+                            Example: python driver.py -m mace -u -o model.json,template.xyz"""
 
-        super().__init__(args)
+        super().__init__(args, verbose)
 
     def check_arguments(self):
-        """Check the arguments requMACECalculatorred to run the driver
+        """Check the arguments requuired to run the driver
 
-        This loads the potential and atoms template in librascal
+        This loads the potential and atoms template in MACE
         """
         try:
             arglist = self.args.split(",")
@@ -37,7 +37,11 @@ class MACE_driver(Dummy_driver):
         self.driver_model_path = arglist[1]
 
     def __call__(self, cell, pos):
-        """Get energies, forces, and stresses from the librascal model"""
+        """Get energies, forces, and stresses from the MACE model
+        This routine assumes that the client will take positions
+        in angstrom, and return energies in electronvolt, and forces
+        in ev/ang.
+        """
         pos_calc = unit_to_user("length", "angstrom", pos)
         cell_calc = unit_to_user("length", "angstrom", cell.T)
 
