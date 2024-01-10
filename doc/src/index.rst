@@ -36,12 +36,12 @@ This documentation is structured as follows:
 
    introduction
    getting-started
-   user-guide
-   tutorials
-   input-reference
    units
-   troubleshooting
+   user-guide
+   input-reference
+   tutorials
    faq
+   troubleshooting
    contributing
    bibliography
 
