@@ -234,7 +234,7 @@ electronvolt, then the properties output file would look something like:
 
    # column 1 –> step : The current simulation time step. # column 2 –>
    timepicosecond : The elapsed simulation time. # column 3 –>
-   potentialelectronvolt : The physical system potential energy.
+   potential{electronvolt} : The physical system potential energy.
    0.00000000e+00 0.00000000e+00 -1.32860475e+04 1.00000000e+00
    1.00000000e-03 -1.32865789e+04 ...
 
@@ -243,8 +243,8 @@ input file. The format of this tag is:
 
 .. code-block::
 
-   <properties stride= filename= flush= shape=> [ prop1nameunits(arg1;
-   ... ), prop2name...(...), ... ] </properties>
+   <properties stride= filename= flush= shape=> [ prop1name{units}(arg1;
+   ... ), prop2name{units}(...), ... ] </properties>
 
 e.g.
 
@@ -310,7 +310,7 @@ visualization packages such as VMD.
 Multiple trajectory files can be specified, each described by a separate
 tag within the section of the input file. The allowable file formats for
 the trajectory output files are the same as for the configuration input
-files, given in `3.1.2.1 <#configfile>`__.
+files, given in :ref:`configfile`.
 
 These tags have the format:
 
