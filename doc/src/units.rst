@@ -53,7 +53,7 @@ Lattice parameters
 ------------------
 
 The unit cell is defined internally by i-PI with the lattice vectors stored 
-in the columns - i.e. as a 3⨉3 array in which ``h[i,j]`` contains the i-th 
+in the columns - i.e. as a :math:`3\times 3` array in which ``h[i,j]`` contains the i-th 
 Cartesian component of the j-th lattice vector.
 Furthermore, the cell is constrained to be oriented with the first vector
 along the :math:`x` axis, the second vector within the :math:`xy` plane, and
