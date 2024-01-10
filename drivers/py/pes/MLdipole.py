@@ -1,3 +1,4 @@
+"""Interface with e3nn to run machine learned electric dipole"""
 import sys
 import json
 import numpy as np
@@ -8,44 +9,27 @@ from .dummy import Dummy_driver
 __DRIVER_NAME__ = "MLdipole"
 __DRIVER_CLASS__ = "MLdipole_driver"
 
+fmt = "%26.20f"  # output format for dipole and BEC
+
 # Some comments:
 # The 'MLdipole_driver' allows sending to i-PI the dipole and their derivatives w.r.t. nuclear positions to i-PI
-# You can "plug in" any (almost) kind of neural network by simply providing:
-# - a JSON file with the following keys (have a look at 'get_model'get_model'):
-#   - "module": the module where the class is provided
-#   - "class": the class name
-#   - "kwargs": the arguments to properly initialize the network
+# You can "plug in" (almost) any kind of neural network by simply providing:
+# - a JSON file with the following keys (have a look at the 'get_model' function):
+#   - "module": the module where the class is provided;
+#   - "class": the class name;
+#   - "kwargs": the arguments to properly initialize the network;
 # - a *.pth file with the parameters of the network.
 # - an optional JSON to modify the parameters contained in 'MLdipole_driver.opts_default'
 #
-# The only requirements that your network has to specify are:
+# The only requirements that your network has to satisfy are:
 # - it should have the 'get' and 'get_value_and_jac' methods defined,
-#       which provide respectively the dipole and the dipole+its jacobian w.r.t. nuclear positions
-# - since a '_symbols' attribute will be added to the network by 'get_model', no conflict should occur due to that
+#       which provide the dipole, and the dipole+its jacobian w.r.t. nuclear positions respectively;
+# - since a '_symbols' attribute will be added to the network by 'get_model', no conflict should occur due to that;
 # - the network should be aware of the atomic species "inside" the methods 'get' and 'get_value_and_jac' through the '_symbols' attribute.
-#
 
 
 def recursive_copy(source_dict: dict, target_dict: dict) -> dict:
-    """
-    Recursively copy keys and values from a source dictionary to a target dictionary, if they are not present in the target.
-
-    This function takes two dictionaries, 'source_dict' and 'target_dict', and copies keys and values from 'source_dict' to 'target_dict'. If a key exists in both dictionaries and both values are dictionaries, the function recursively calls itself to copy nested keys and values. If a key does not exist in 'target_dict', it is added along with its corresponding value from 'source_dict'.
-
-    Args:
-        source_dict (dict): The source dictionary containing keys and values to be copied.
-        target_dict (dict): The target dictionary to which keys and values are copied if missing.
-
-    Returns:
-        dict: The modified 'target_dict' with keys and values copied from 'source_dict'.
-
-    Example:
-        >>> dict_A = {"a": 1, "b": {"b1": 2, "b2": {"b2_1": 3}}, "c": 4}
-        >>> dict_B = {"a": 10, "b": {"b1": 20, "b2": {"b2_2": 30}}, "d": 40}
-        >>> result = recursive_copy(dict_A, dict_B)
-        >>> print(result)
-        {'a': 10, 'b': {'b1': 20, 'b2': {'b2_1': 3, 'b2_2': 30}}, 'd': 40}
-    """
+    """Recursively copy keys and values from a source dictionary to a target dictionary, if they are not present in the target."""
     for key, value in source_dict.items():
         if (
             isinstance(value, dict)
@@ -60,34 +44,11 @@ def recursive_copy(source_dict: dict, target_dict: dict) -> dict:
 
 
 def add_default(dictionary: dict = None, default: dict = None) -> dict:
-    """
-    Add default key-value pairs to a dictionary if they are not present.
-
-    This function takes two dictionaries: 'dictionary' and 'default'. It checks each key in the 'default' dictionary, and if the key is not already present in the 'dictionary', it is added along with its corresponding value from the 'default' dictionary. If 'dictionary' is not provided, an empty dictionary is used as the base.
-
-    Args:
-        dictionary (dict, optional): The input dictionary to which default values are added. If None, an empty dictionary is used. Default is None.
-        default (dict): A dictionary containing the default key-value pairs to be added to 'dictionary'.
-
-    Returns:
-        dict: The modified 'dictionary' with default values added.
-
-    Raises:
-        ValueError: If 'dictionary' is not of type 'dict'.
-
-    Example:
-        >>> existing_dict = {'a': 1, 'b': 2}
-        >>> default_values = {'b': 0, 'c': 3}
-        >>> result = add_default(existing_dict, default_values)
-        >>> print(result)
-        {'a': 1, 'b': 2, 'c': 3}
-    """
+    """Add default key-value pairs to a dictionary if they are not present."""
     if dictionary is None:
         dictionary = {}
-
     if not isinstance(dictionary, dict):
         raise ValueError("'dictionary' has to be of 'dict' type")
-
     return recursive_copy(source_dict=default, target_dict=dictionary)
 
 
@@ -95,15 +56,11 @@ def get_class(module_name, class_name):
     try:
         # Import the module dynamically
         module = importlib.import_module(module_name)
-
         # Get the class from the module
         class_obj = getattr(module, class_name)
-
         # Create an instance of the class
         # instance = class_obj()
-
         return class_obj
-
     except ImportError:
         raise ValueError(f"Module '{module_name}' not found.")
     except AttributeError:
@@ -115,17 +72,18 @@ def get_class(module_name, class_name):
 def get_model(instructions, parameters: str):
     import torch
 
-    if type(instructions) == str:
+    if isinstance(instructions, str):
         with open(instructions, "r") as json_file:
             _instructions = json.load(json_file)
         instructions = _instructions
 
+    # extract values for the instructions
     kwargs = instructions["kwargs"]
     cls = instructions["class"]
     mod = instructions["module"]
 
     # get the class to be instantiated
-    # call the function and suppress the warning
+    # Call the function and suppress the warning
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore")  # , category=UserWarning)
         class_obj = get_class(mod, cls)
@@ -141,7 +99,7 @@ def get_model(instructions, parameters: str):
         N = model.n_parameters()
         print("\tLoaded model has {:d} parameters".format(N))
     except:
-        print("\tCannot count parameters")
+        pass  # print("\tCannot count parameters")
 
     # Load the parameters from the saved file
     checkpoint = torch.load(parameters)
@@ -151,6 +109,8 @@ def get_model(instructions, parameters: str):
     model.eval()
 
     # Store the chemical species that will be used during the simulation.
+    if "chemical-symbols" not in instructions:
+        raise ValueError("'instructions' should contain the key 'chemical-symbols'")
     model._symbols = instructions["chemical-symbols"]
 
     return model
@@ -158,20 +118,27 @@ def get_model(instructions, parameters: str):
 
 class MLdipole_driver(Dummy_driver):
     opts_default = {
-        "compute-BEC": True,
-        "print": True,
+        "dipole": {
+            "send": True,  # whether to send the dipole to i-PI
+            "file": None,  # the file where the dipole will be saved (using np.savetxt)
+        },
+        "BEC": {
+            "compute": True,  # whether to compute the BEC
+            "send": True,  # whether to send the BEC to i-PI
+            "file": None,  # the file where the BEC will be saved (using np.savetxt)
+        },
+        "restart": False,  # whether remove the files (if already existing) where the dipole and BEC will be saved.
     }
 
     def __init__(self, args=None):
         self.error_msg = """The parameters of 'MLdipole_driver' are not correctly formatted. \
             They should be two or three strings, separated by a comma."""
+        self.opts = dict()
+        self.count = 0
         super().__init__(args)
 
     def check_arguments(self):
-        """Check the arguments required to run the driver
-
-        This loads the potential and atoms template in librascal
-        """
+        """Check the arguments required to run the driver."""
         try:
             arglist = self.args.split(",")
         except ValueError:
@@ -188,7 +155,7 @@ class MLdipole_driver(Dummy_driver):
         else:
             sys.exit(self.error_msg)  # to be modified
 
-        print("\tThe driver is 'MLdipole_driver'")
+        print("\n\tThe driver is 'MLdipole_driver'")
         print("\tLoading model ...")
         self.model = get_model(info_file, parameters_file)
 
@@ -207,33 +174,40 @@ class MLdipole_driver(Dummy_driver):
             self.opts = add_default(None, self.opts_default)
 
         print(
-            "\tComputing BECs: {:s}".format("yes" if self.opts["compute-BEC"] else "no")
+            "\tComputing BECs: {:s}".format(
+                "yes" if self.opts["BEC"]["compute"] else "no"
+            )
         )
-        print("\tInitialization completed")
+
+        if self.opts["BEC"]["file"] is not None:
+            file = self.opts["BEC"]["file"]
+            print("\tBECs will be saved to file '{:s}'".format(file))
+            if self.opts["restart"]:
+                print("\t'restart' is true: removing old file '{:s}'".format(file))
+
+        if self.opts["dipole"]["file"] is not None:
+            file = self.opts["BEC"]["file"]
+            print("\tdipole will be saved to file '{:s}'".format(file))
+            if self.opts["restart"]:
+                print("\t'restart' is true: removing old file '{:s}'".format(file))
 
         self.count = 0
-
+        print("\tInitialization completed.")
         pass
 
     def __call__(self, cell, pos):
         """Get energies, forces, stresses and extra quantities"""
 
-        self.count += 1
-
-        if self.opts["print"]:
-            print(" @calling 'MLdipole_driver' for the {:d}th time".format(self.count))
+        print("\n@calling 'MLdipole_driver': step {:d}".format(self.count + 1))
 
         # Check that if 'cell' has some np.inf values (isolated system)
         # the all the other elements are zero
         has_inf_values = np.any(np.isinf(cell))
         if has_inf_values:
             # print("The array contains inf values.")
-
             non_inf_mask = np.logical_not(np.isinf(cell))
-
             # Check if all non-inf values are zero
             all_non_inf_are_zero = np.all(cell[non_inf_mask] == 0)
-
             if not all_non_inf_are_zero:
                 raise ValueError(
                     "Error with 'cell': the the are both inf and non-zero values.\nIs this the cell of an isolated system?"
@@ -247,12 +221,48 @@ class MLdipole_driver(Dummy_driver):
         pot, force, vir, extras = super().__call__(cell, pos)
         extras = {}
 
-        if self.opts["compute-BEC"]:
-            dipole, bec, X = self.model.get_value_and_jac(cell=cell, pos=pos)
-            extras["BEC"] = bec.tolist()
+        # computing BEC tensors and dipole
+        if self.opts["BEC"]["compute"]:
+            dipole, bec, _ = self.model.get_value_and_jac(cell=cell, pos=pos)
+
+            # saving dipole to txt file
+            print("dipole:")
+            print(str(dipole.numpy().flatten()))
+
+            # add BEC to extras
+            if self.opts["BEC"]["send"]:
+                extras["BEC"] = bec.tolist()
+
+            # saving BEC to txt file
+            if self.opts["BEC"]["file"] is not None:
+                with open(self.opts["BEC"]["file"], "a") as f:
+                    np.savetxt(
+                        f, bec.numpy(), header="step {:d}".format(self.count), fmt=fmt
+                    )
+
+            # saving BEC to screen
+            print("BEC:")
+            print(str(bec.numpy()))
+
         else:
-            dipole, X = self.model.get(cell=cell, pos=pos)
+            # computing only dipole
+            dipole, _ = self.model.get(cell=cell, pos=pos)
 
-        extras["dipole"] = dipole.tolist()
+            # saving dipole to screen
+            print("dipole:")
+            print(str(dipole.numpy().flatten()))
 
+        # saving dipole to txt file
+        if self.opts["dipole"]["file"] is not None:
+            with open(self.opts["dipole"]["file"], "a") as f:
+                np.savetxt(f, dipole.numpy().reshape((1, 3)), fmt=fmt)
+
+        # add dipole to extras
+        if self.opts["dipole"]["send"]:
+            extras["dipole"] = dipole.tolist()
+
+        # increment the counter
+        self.count += 1
+
+        # return dipole (and BEC)
         return pot, force, vir, json.dumps(extras)
