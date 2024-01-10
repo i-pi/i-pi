@@ -83,8 +83,8 @@ specified by the following input file:
 To help detect any user error the recognized tag names, data types and
 acceptable options are all specified in the code in a specialized input
 class for each class of object. A full list of all the available tags
-and a brief description of their function is given in
-chapter `4 <#hierarchy>`__.
+and a brief description of their function is given in the
+`input reference <input-reference.rst>`_.
 
 .. _inputunits:
 
@@ -170,7 +170,7 @@ Initialization from checkpoint files
 
 i-PI gives the option to output the entire state of the simulation at a
 particular timestep as an xml input file, called a checkpoint file (see
-`3.2.3 <#checkpoints>`__ for details). As well as being a valid input for
+:ref:`checkpoints` for details). As well as being a valid input for
 i-PI, a checkpoint can also be used inside an tag to specify the
 configuration of the system, discarding other parameters of the
 simulation such as the current time step or the chosen ensemble. Input
@@ -204,7 +204,7 @@ files for system level properties, trajectory files for atom/bead level
 properties, and checkpoint files which save the state of the system and
 so can be used to restart the simulation from a particular point. For a
 brief overview of the format of each of these types of files, and some
-of their more common uses, see `5.1 <#part1>`__. To give a more in depth
+of their more common uses, see :ref:`part1`. To give a more in depth
 explanation of each of these files, they will now be considered in turn.
 
 .. _propertyfile:
@@ -415,7 +415,7 @@ initio* code that can compute inter-atomic forces for a given
 configuration.
 
 Once a communication channel has been established between the client and
-the server (see `3.3.3 <#sockets>`__), the two parties exchange minimal
+the server, the two parties exchange minimal
 information: i-PI sends the atomic positions and the cell parameters to
 the client, which computes energy, forces and virial and returns them to
 the server.
@@ -467,7 +467,7 @@ follows:
       client first returns an integer specifying the number of
       characters, and then the string, which will be output verbatim if
       this “extra” information is requested in the output section (see
-      `3.2.2 <#trajectories>`__). The string can be formatted in the
+      :ref:`trajectories`). The string can be formatted in the
       JSON format, in which case i-PI can extract and process individual
       fields, that can be printed separately to different files.
 
@@ -500,7 +500,7 @@ step. To avoid having clients idling for a substantial amount of time,
 :math:`m` should be a divisor of :math:`n`. The main advantage of this
 approach, compared to one that rigidly assigns one instance of the
 client to each bead, is that if each client is run as an independent job
-in a queue (see `2.3.3 <#hpc>`__), i-PI can start performing PIMD as
+in a queue (see :ref:`hpc`), i-PI can start performing PIMD as
 soon as a single job has started, and can carry on advancing the
 simulation even if one of the clients becomes unresponsive.
 
@@ -603,6 +603,8 @@ associated IP address – the four numbers separated by dots that are
 listed after “inet”, e.g. 192.168.1.254 for the eth0 interface in the
 example above.
 
+.. _fig-network:
+
 .. figure:: ../figures/ipi-network.*
    :width: 90.0%
 
@@ -610,7 +612,7 @@ example above.
    typically finds when running i-PI and the clients on a HPC system
    and/or on a local workstation.
 
-Figure `3.1 <#fig:network>`__ represents schematically a typical network
+The figure represents schematically a typical network
 layout for a HPC system and a local workstation. When running i-PI
 locally on a workstation, one can use the loopback interface (that can
 be referred to as “localhost” in the “address” field of both i-PI and
@@ -620,8 +622,8 @@ available on the node where the i-PI server runs are accessible from the
 compute nodes. This requires some trial and error, and possibly setting
 the “address” field dynamically from the job that launches i-PI. For
 instance, if one was running i-PI on the login node, and the clients on
-different compute nodes, as in Figure `2.1 <#fig:running>`__\ b, then on
-the HPC system described in Figure `3.1 <#fig:network>`__ one should set
+different compute nodes, as in panel b of the :ref:`i-PI running figure <fig-running>`, then on
+the HPC system described in this scheme one should set
 the address to that of the *ib1* interface – :math:`111.111.111.111` in
 the example above. If instead i-PI was launched in a job script, then
 the submission script would have to check for the IP address associated
@@ -630,8 +632,8 @@ set that address (e.g. :math:`111.111.111.200`) in the inputs of both
 i-PI and the clients that will be launched in the same (or separate)
 jobs.
 
-Running i-PI on a separate workstation
-(Figure `2.1 <#fig:running>`__\ c) gives maximum flexibility, but is
+Running i-PI on a separate workstation (panel c of :ref:`this figure <fig-running>`)
+gives maximum flexibility, but is
 also trickier as one has to reach the internet from the compute nodes,
 that are typically not directly connected to it. We discuss this more
 advanced setup in the next paragraph.
@@ -665,7 +667,7 @@ In the example above, if i-PI is running on a local workstation, one
 should run:
 
 from the job script that launches the client. For instance, with the
-network layout of Figure `3.1 <#fig:network>`__, and if the i-PI server
+network layout of :ref:`this figure <fig-network>`, and if the i-PI server
 is listening on port 12345 of the *eth0* interface, the tunnel should be
 created as:
 

@@ -19,8 +19,7 @@ as the system has installed:
 
 -  The Python numerical library NumPy
 
-See `2.3.1 <#runningsimulations>`__ for more details on how to launch
-i-PI.
+See :ref:`runningsimulations` for more details on how to launch i-PI.
 
 Additionally, most client codes will have their own requirements. Many
 of them, including the test client codes given in the “drivers”
@@ -30,7 +29,7 @@ electronic structure codes will also need to be linked with some
 mathematical libraries, such as BLAS, FFTW and LAPACK. Installation
 instructions for these codes should be provided as part of the code
 distribution and on the appropriate website, as given in
-`1.6.2 <#librarywebsites>`__. Patching for use with i-PI should not
+:ref:`librarywebsites`. Patching for use with i-PI should not
 introduce further dependencies.
 
 Using the setup.py module
@@ -306,7 +305,7 @@ The flags do the following:
 
 This code should be fairly simple to extend to other pair-wise
 interaction potentials, and examples of its use can be seen in the
-“examples” directory, as explained in `2.4 <#tests>`__.
+“examples” directory, as explained in :ref:`tests`.
 
 CP2K
 ^^^^
@@ -380,6 +379,8 @@ the fact that different HPC systems adopt a variety of solutions to have
 the different nodes communicate with each other and with the login
 nodes, and to queue and manage computational jobs.
 
+.. _fig-running:
+
 .. figure:: ../figures/ipi-running.*
    :width: 90.0%
 
@@ -391,7 +392,7 @@ nodes, and to queue and manage computational jobs.
    with the clients (that can run on one or multiple HPC systems) over
    the internet.
 
-Figure `2.1 <#fig:running>`__ represents schematically three different
+The figure represents schematically three different
 approaches to run i-PI on a HPC system:
 
 #. running both i-PI and multiple instances of the client as a single
@@ -428,7 +429,7 @@ approaches to run i-PI on a HPC system:
    the internet – which is not always possible when behind a firewall –
    and the compute nodes of the HPC centre must have an outgoing
    connection to the internet, which often requires ssh tunnelling
-   through a login node (see section `3.3 <#distrib>`__ for more
+   through a login node (see section :ref:`distrib` for more
    details).
 
 .. _tests:

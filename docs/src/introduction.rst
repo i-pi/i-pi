@@ -195,7 +195,7 @@ brief discussion.
 
 
 A scheme of the objects involved in the calculation of the forces is
-presented in Figure `1.3 <#fig:forces>`__. The infrastracture comprises
+presented in Figure :ref:`fig:forces`. The infrastracture comprises
 a force provider class that deals with the actual subdivision of work
 among the clients, and a sequence of objects that translate the request
 of the overall force of the system into atomic evaluations of one
@@ -259,7 +259,7 @@ atoms and cell parameters in one direction, and the forces, virial and
 potential in the other.
 
 For more details about sockets and communication, see
-`3.3 <#distrib>`__.
+:ref:`distrib`.
 
 Core features
 -------------
@@ -321,8 +321,9 @@ Features in version 1.0
    molecular dynamics
    (CMD) :cite:`cao-voth93jcp,cao-voth94jcp`.
 
-   Features added in version 2.0
-   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Features added in version 2.0
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Further details can be found in Ref. :cite:`Kapil:2019ju`.
 
@@ -459,7 +460,7 @@ at `www.fftw.org <www.fftw.org>`__,
 `www.netlib.org/lapack <www.netlib.org/lapack>`__ respectively.
 
 These codes do not come as part of the i-PI package, and must be
-downloaded separately. See chapter `2.2 <#clientinstall>`__ for more
+downloaded separately. See chapter :ref:`clientinstall` for more
 details of how to do this.
 
 i-PI resources

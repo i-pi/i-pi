@@ -32,7 +32,7 @@ hard-coded into it, and so all that is required is to create the
 the UNIX utility make.
 
 This client code can be used for several different problems (see
-`2.3.2.1 <#driver.x>`__), some of which are explored in the “examples”
+:ref:`driver.x`), some of which are explored in the “examples”
 directory, but for the current problem we will use the Silvera-Goldman
 potential with a cut-off radius of 15 :math:`a_0`. This is run using the
 following command:
@@ -49,7 +49,7 @@ hostname as “localhost”, “-o 15” sets the cut-off to 15 :math:`a_0`, and
 Note that usually this step will require setting up appropriate client
 code input files, possibly for an *ab initio* electronic structure code,
 and so is generally a more involved process. Refer to
-`2.3.2 <#runningclients>`__, and the documentation of the appropriate
+:ref:`runningclients`, and the documentation of the appropriate
 client code, for more details on how to do this step.
 
 Creating the xml input file
@@ -74,10 +74,11 @@ read in must start and end with a tag, as show below:
 xml syntax requires a set of hierarchially nested tags, each of which
 contain data and/or more tags. Also, i-PI itself requires certain tags
 to be present, and keeps track of which tags are supposed to be where.
-More information about which tags are available can be found in
-`4 <#hierarchy>`__, more information on xml syntax can be found in
-`3.1.1 <#ifilestructure>`__, and possible errors which can occur if the
-input file is not well formed can be found in `6 <#trouble>`__.
+More information about which tags are available can be found in the
+`input reference <input-reference.rst>`_, more information on xml syntax can be found in
+:ref:`ifilestructure`, and possible errors which can occur if the
+input file is not well formed can be found in the 
+`troubleshooting section <troubleshooting.rst>`_.
 
 For the sake of this first tutorial however, we will simply discuss the
 those tags which are needed for a single *NVT* equilibration run. The
@@ -198,7 +199,7 @@ file is given in, and so in this case is given by “angstrom”, which are
 the standard units of both xyz and pdb files. Note that if no units are
 specified then atomic units are assumed. For more information on the
 i-PI unit conversion libraries, and the available units, see
-`3.1.1.1 <#inputunits>`__.
+:ref:`inputunits`.
 
 The “units” attribute is now deprecated and will be removed in the
 future version of i-PI. The alternative, and the only one available in
@@ -455,7 +456,7 @@ What output gets written to file is specified by the tag. There are
 three types of files; properties files, trajectory files and checkpoint
 files, which are specified with , and tags respectively. For an in-depth
 discussion on these three types of output files see
-`3.2 <#outputfiles>`__, but for now let us just explain the rationale
+:ref:`outputfiles`, but for now let us just explain the rationale
 behind each of these output file types in turn.
 
 checkpoint files:
@@ -557,7 +558,7 @@ Running the simulation
 
 Now that we have a valid input file, we can run the test simulation. The
 “i-pi” script in the root directory is used to create an i-PI simulation
-from a xml input file. As explained in `2.3.1 <#runningsimulations>`__
+from a xml input file. As explained in :ref:`runningsimulations`
 this script is run (if we assume that we are in the “tutorial-1”
 directory) using:
 
