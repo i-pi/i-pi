@@ -319,9 +319,7 @@ class InputInitCell(InputInitBase):
 
         ibase = super(InputInitCell, self).fetch()
         if mode == "abc" or mode == "abcABC":
-            h = io_xml.read_array(
-                float, ibase.value
-            )
+            h = io_xml.read_array(float, ibase.value)
 
             if mode == "abc":
                 if h.size != 3:
