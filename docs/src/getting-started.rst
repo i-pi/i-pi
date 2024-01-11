@@ -14,7 +14,7 @@ compiled and installed. The ``i-pi`` file in the ``bin`` directory of
 the distribution is the main (executable) script, and can be run as long
 as the system has installed:
 
--  Python version 2.4 or greater (i-PI up to version v2.0 is not Python3
+-  Python version 3.6 or greater (starting from version 2.0, i-PI is not Python2
    compatible)
 
 -  The Python numerical library NumPy
@@ -81,6 +81,11 @@ Finally, the code can be installed using:
    > python setup.py install –prefix= 
 
 Either way, it will now be possible to run the code automatically, using
+
+.. code-block::
+
+   > i-pi input-file.xml
+
 
 i-PI download
 ~~~~~~~~~~~~~
@@ -205,6 +210,8 @@ is in a directory “new”, and a clean distribution is held in a directory
 
    > diff -rupN old/ new/ > changes.patch
 
+.. _runningsimulations:
+
 Running i-PI
 ------------
 
@@ -217,8 +224,6 @@ based on the forces produced by one’s favourite electronic
 structure/empirical force field code. However, it also makes running a
 simulation slightly more complicated, since the two components must be
 set up and started independently.
-
-.. _runningsimulations:
 
 Running the i-PI server
 ~~~~~~~~~~~~~~~~~~~~~~~
