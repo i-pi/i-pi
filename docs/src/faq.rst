@@ -46,14 +46,13 @@ In addition, i-PI can be installed through ``pip`` with the command
 
 .. code-block:: bash
 
-   $ pip install -U i-PI
+   $ pip install -U ipi
 
-And to test it with pytest
+And to test it (assuming all required packages are also installed)
 
 .. code-block:: bash
 
-   $ pip install pytest
-   $ pytest --pyargs ipi.tests
+   $ i-pi-tests
 
 
 How to run i-PI with the client code \<name\>?
