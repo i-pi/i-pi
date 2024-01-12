@@ -59,7 +59,7 @@ How to run i-PI with the client code \<name\>?
 ----------------------------------------------
 i-PI communicates with electronic structure and MD codes via socket communication protocol.
 For many popular codes (CP2K, FHI-aims, LAMMPS, Quantum ESPRESSO, VASP, etc.)
-we provide examples in ``<i-pi-root>/examples`` folder.
+we provide examples in ``<i-pi-root>/examples/clients`` folder.
 
 Another way of connecting to client codes is using the ASE client.
 This way you get access to wide variety of codes that are connected to ASE,
@@ -68,20 +68,15 @@ which may lead to a significant overhead in case of electronic structure calcula
 We recommend using the socket connection from the client code to ASE and then from ASE to i-PI, when possible. An example of a "double-socket" setup
 can be found in:
 
-``https://github.com/i-pi/i-pi/tree/master/examples/ASEClient``
+``https://github.com/i-pi/i-pi/tree/master/examples/clients/ase_client``
 
 How to run i-PI on a cluster?
 -----------------------------
 There are different ways of running i-PI on HPC systems,
-described in details in the manual.
-One simple setup, which assumes that i-PI and all client codes
-are launched from the same Slurm script, is given in ``examples/slurm/sl-rpc``.
-In this example, i-PI is launched in the background first,
-and then its hostname is passed to the input files of the clients.
-Clients can communicate to the same socket (identified by the same port number)
-or to different sockets (different port numbers) that i-PI has opened.
-The clients are subsequently launched from the same slurm script.
-
+described in details in the manual. Setups differ a lot depending
+on the type of calculation and the architecture of the system. 
+A few examples based on the Slurm submission system can be taken
+as the starting point, and can be found in ``examples/hpc_scripts``.
 Other setups are possible, please consult the manual.
 
 How to setup colored-noise thermostats with meaningful parameters?
