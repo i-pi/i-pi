@@ -117,7 +117,7 @@ Initialization errors
 -  *Number of beads \_\_ doesn’t match GLE parameter nb= \_\_*: The
    matrices used to define the generalized Langevin equations of motion
    do not have the correct first dimension. If matrices have been
-   downloaded from `<http://http://imx-cosmo.github.io/gle4md/>`_
+   downloaded from `<http://lab-cosmo.github.io/gle4md/>`_
    make sure that you have input the correct number of beads.
 
 -  *Initialization tries to match up structures with different atom
