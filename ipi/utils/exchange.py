@@ -43,7 +43,7 @@ class ExchangePotential:
         )
 
         # cycle energies:
-        # self._E_from_to[u, u] is the ring polymer energy of the cycle on particle indices u,...,v
+        # self._E_from_to[u, v] is the ring polymer energy of the cycle on particle indices u,...,v
         self._E_from_to = self._evaluate_cycle_energies()
 
         # prefix potentials:
