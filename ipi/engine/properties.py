@@ -866,8 +866,8 @@ class Properties:
                 "dimension": "undefined",
                 "size": 1,
                 "func": self.get_exchange_distinct_prob,
-                "help": "Probability of the distinguishable configuration of bosonic exchange.",
-                "longhelp": """Probability of the distinguishable configuration of bosonic exchange, the configuration 
+                "help": "Probability of the distinguishable ring polymer configuration.",
+                "longhelp": """Probability of the distinguishable ring polymer configuration, 
                                where each atom is has its own separate ring polymer. 
                                A number between 0 and 1, tends to 1 in high temperatures, which indicates that 
                                bosonic exchange is negligible""",
@@ -876,12 +876,10 @@ class Properties:
                 "dimension": "undefined",
                 "size": 1,
                 "func": self.get_exchange_longest_prob,
-                "help": "Scaled probability of the bosonic exchange configuration where all atoms are connected.",
-                "longhelp": """Scaled probability of the bosonic exchange configuration where all atoms are connected:
-                               the probability of the configuration connecting the ring polymers of all the atoms into
-                               one large ring polymer, divided by 1/N, where N is the number of atoms. 
-                               A number between 0 and 1, tends to 1 in low temperatures, which indicates that 
-                               bosonic exchange is very strong""",
+                "help": "Probability of the bosonic ring polymer configuration where all atoms are connected.",
+                "longhelp": """Probability of the ring polymer exchange configuration where all atoms are connected.
+                               It is divided by 1/N, so the number is between 0 and N,
+                               while the asymptotic value at low temperatures is 1."""
             },
             "fermionic_sign": {
                 "dimension": "undefined",
