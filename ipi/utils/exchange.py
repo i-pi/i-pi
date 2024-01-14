@@ -330,7 +330,7 @@ class ExchangePotential:
 
         return factor + est[self._N] / self._P
 
-    def get_fermionic_avg_sign(self):
+    def get_fermionic_sign(self):
         """
         The average permutation sign as defined in Eq. (9) https://doi.org/10.1063/5.0008720,
         which can be used to reweight observables to obtain fermionic statistics.

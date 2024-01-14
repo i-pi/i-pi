@@ -883,12 +883,12 @@ class Properties:
                                A number between 0 and 1, tends to 1 in low temperatures, which indicates that 
                                bosonic exchange is very strong""",
             },
-            "fermionic_avg_sign": {
+            "fermionic_sign": {
                 "dimension": "undefined",
                 "size": 1,
-                "func": self.get_fermionic_avg_sign,
-                "help": "Average sign of exchange configuration, for reweighting fermionic observables.",
-                "longhelp": """Average sign of exchange configuration, for reweighting fermionic observables.
+                "func": self.get_fermionic_sign,
+                "help": "Estimator for the fermionic sign, also used for reweighting fermionic observables.",
+                "longhelp": """Estimator for the fermionic sign, also used for reweighting fermionic observables.
                                Decreases exponentially with beta and the number of particles, but if not too large,
                                can be used to recover fermionic statistics from bosonic simulations""",
             },
@@ -2698,10 +2698,10 @@ class Properties:
             return 0.0
         return self.nm.exchange.get_longest_probability()
 
-    def get_fermionic_avg_sign(self):
+    def get_fermionic_sign(self):
         if not self.nm.exchange:
             return 0.0
-        return self.nm.exchange.get_fermionic_avg_sign()
+        return self.nm.exchange.get_fermionic_sign()
 
 
 class Trajectories:
