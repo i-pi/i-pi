@@ -872,7 +872,7 @@ class Properties:
                                A number between 0 and 1, tends to 1 in high temperatures, which indicates that 
                                bosonic exchange is negligible""",
             },
-            "exchange_full_prob": {
+            "exchange_all_prob": {
                 "dimension": "undefined",
                 "size": 1,
                 "func": self.get_exchange_longest_prob,
