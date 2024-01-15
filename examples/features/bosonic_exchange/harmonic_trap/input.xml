@@ -4,7 +4,7 @@ COMMAND(4)    i-pi-driver -u -h REGTEST_SOCKET -m harm3d -o 1.21647924E-8
 <simulation threading='False' verbosity='low'>
 
    <ffsocket mode='unix' name='driver'>
-       <address>localhost</address>
+       <address>bosons-trapped</address>
    </ffsocket>
    
    <total_steps> 100 </total_steps>
