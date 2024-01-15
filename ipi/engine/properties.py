@@ -879,7 +879,7 @@ class Properties:
                 "help": "Probability of the bosonic ring polymer configuration where all atoms are connected.",
                 "longhelp": """Probability of the ring polymer exchange configuration where all atoms are connected.
                                It is divided by 1/N, so the number is between 0 and N,
-                               while the asymptotic value at low temperatures is 1."""
+                               while the asymptotic value at low temperatures is 1.""",
             },
             "fermionic_sign": {
                 "dimension": "undefined",
