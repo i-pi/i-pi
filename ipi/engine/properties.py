@@ -2687,18 +2687,18 @@ class Properties:
         return ti
 
     def get_exchange_distinct_prob(self):
-        if not self.nm.exchange:
-            return 1.0
+        if self.nm.exchange is None:
+            raise Exception("No bosons found for exchange_distinct_prob")
         return self.nm.exchange.get_distinct_probability()
 
     def get_exchange_longest_prob(self):
-        if not self.nm.exchange:
-            return 0.0
+        if self.nm.exchange is None:
+            raise Exception("No bosons found for exchange_all_prob")
         return self.nm.exchange.get_longest_probability()
 
     def get_fermionic_sign(self):
-        if not self.nm.exchange:
-            return 0.0
+        if self.nm.exchange is None:
+            raise Exception("No bosons found for fermionic_sign")
         return self.nm.exchange.get_fermionic_sign()
 
 
