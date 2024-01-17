@@ -1093,6 +1093,10 @@ class Properties:
             iatom = -1
             latom = atom
 
+        bosons_included = self._atom_property_distinguishability_well_defined(iatom, latom)
+        if bosons_included:
+            raise IndexError("Quantum centroid virial kinetic energy estimator not applicable to bosons")
+
         f = dstrip(self.forces.f)
         # subtracts centroid
         q = dstrip(self.beads.q).copy()
@@ -1315,25 +1319,7 @@ class Properties:
             iatom = -1
             latom = atom
 
-        # Should not ask for a property of a subset of atoms some of which are indistinguishables
-        # without including *all* the indistinguishable atoms.
-        atoms_included = set(range(self.beads.natoms))
-        if iatom != -1:
-            atoms_included = set([iatom])
-        elif latom != "":
-            atoms_included = set(
-                filter(lambda i: latom == self.beads.names[i], range(self.beads.natoms))
-            )
-
-        bosons = set(self.nm.bosons)
-        bosons_included = bosons & atoms_included
-
-        if bosons_included and not (bosons <= atoms_included):
-            raise IndexError(
-                "Cannot output property of a proper subset of the bosons: "
-                "bosons %s are included, but %s are missing"
-                % (bosons_included, bosons - bosons_included)
-            )
+        bosons_included = self._atom_property_distinguishability_well_defined(iatom, latom)
 
         res, ncount = self._kinetic_td_distinguishables(
             atom, iatom, latom, skip_atom_indices=set(self.nm.bosons)
@@ -1349,6 +1335,29 @@ class Properties:
             )
 
         return res
+
+    def _atom_property_distinguishability_well_defined(self, iatom, latom):
+        """
+        Should not ask for a property of a subset of atoms some of which are indistinguishables
+        without including *all* the indistinguishable atoms.
+        Returns the bosons included in the property.
+        """
+        atoms_included = set(range(self.beads.natoms))
+        if iatom != -1:
+            atoms_included = set([iatom])
+        elif latom != "":
+            atoms_included = set(
+                filter(lambda i: latom == self.beads.names[i], range(self.beads.natoms))
+            )
+        bosons = set(self.nm.bosons)
+        bosons_included = bosons & atoms_included
+        if bosons_included and not (bosons <= atoms_included):
+            raise IndexError(
+                "Cannot output property of a proper subset of the bosons: "
+                "bosons %s are included, but %s are missing"
+                % (bosons_included, bosons - bosons_included)
+            )
+        return bosons_included
 
     def _kinetic_td_distinguishables(self, atom, iatom, latom, skip_atom_indices=None):
         """
