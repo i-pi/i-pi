@@ -35,6 +35,7 @@ This documentation is structured as follows:
    :maxdepth: 2
 
    introduction
+   features
    getting-started
    units
    user-guide
