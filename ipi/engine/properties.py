@@ -868,7 +868,7 @@ class Properties:
                 "func": self.get_exchange_distinct_prob,
                 "help": "Probability of the distinguishable ring polymer configuration.",
                 "longhelp": """Probability of the distinguishable ring polymer configuration, 
-                               where each atom is has its own separate ring polymer. 
+                               where each atom has its own separate ring polymer. 
                                A number between 0 and 1, tends to 1 in high temperatures, which indicates that 
                                bosonic exchange is negligible""",
             },
