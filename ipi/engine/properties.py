@@ -888,7 +888,8 @@ class Properties:
                 "help": "Estimator for the fermionic sign, also used for reweighting fermionic observables.",
                 "longhelp": """Estimator for the fermionic sign, also used for reweighting fermionic observables.
                                Decreases exponentially with beta and the number of particles, but if not too large,
-                               can be used to recover fermionic statistics from bosonic simulations""",
+                               can be used to recover fermionic statistics from bosonic simulations,
+                               see doi:10.1063/5.0008720.""",
             },
         }
 
