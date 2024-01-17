@@ -420,7 +420,7 @@ class NormalModes:
 
         if len(self.bosons) == 0:
             return None
-        
+
         masses = dstrip(self.beads.m)[self.bosons]
         if len(set(masses)) > 1:
             raise ValueError(

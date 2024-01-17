@@ -1093,9 +1093,13 @@ class Properties:
             iatom = -1
             latom = atom
 
-        bosons_included = self._atom_property_distinguishability_well_defined(iatom, latom)
+        bosons_included = self._atom_property_distinguishability_well_defined(
+            iatom, latom
+        )
         if bosons_included:
-            raise IndexError("Quantum centroid virial kinetic energy estimator not applicable to bosons")
+            raise IndexError(
+                "Quantum centroid virial kinetic energy estimator not applicable to bosons"
+            )
 
         f = dstrip(self.forces.f)
         # subtracts centroid
@@ -1319,7 +1323,9 @@ class Properties:
             iatom = -1
             latom = atom
 
-        bosons_included = self._atom_property_distinguishability_well_defined(iatom, latom)
+        bosons_included = self._atom_property_distinguishability_well_defined(
+            iatom, latom
+        )
 
         res, ncount = self._kinetic_td_distinguishables(
             atom, iatom, latom, skip_atom_indices=set(self.nm.bosons)
