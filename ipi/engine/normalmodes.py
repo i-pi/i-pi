@@ -166,8 +166,6 @@ class NormalModes:
         self.bosons = self.resolve_bosons()
         self.exchange = None
 
-        # if ( (len(self.bosons) > 0) and (len(self.bosons) < self.natoms) ):
-        # raise(IOError("@NormalModes : Currently, only full bosonic/distinguishable simulations are allowed"))
         if len(self.bosons) > self.natoms:
             raise IOError
 
