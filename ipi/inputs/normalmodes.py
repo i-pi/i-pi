@@ -95,7 +95,7 @@ class InputBosons(InputArray):
     )
 
     default_label = "BOSONS"
-    default_help = "Deals with the specification of which atoms are have bosonic indistinguishability."
+    default_help = "Deals with the specification of which atoms are have bosonic indistinguishability. The specified atoms participate in exchange interaction, which forms ring polymers that combine several particles together. The algorithm scales quadratically with the number of atoms and linearly with the number of beads."
 
     def __init__(self, help=None, default=None):
         """Initialises InputBosons.
