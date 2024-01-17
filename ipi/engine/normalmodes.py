@@ -166,9 +166,6 @@ class NormalModes:
         self.bosons = self.resolve_bosons()
         self.exchange = None
 
-        if len(self.bosons) > self.natoms:
-            raise IOError
-
         # stores a reference to the bound beads and ensemble objects
         self.ensemble = ensemble
         dpipe(motion._dt, self._dt)
