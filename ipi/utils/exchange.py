@@ -26,13 +26,21 @@ def kth_diag_indices(a, k):
 
 
 class ExchangePotential:
-    def __init__(self, nbosons, q, nbeads, bead_mass, spring_freq_squared, betaP):
+    def __init__(self, nbosons, nbeads, bead_mass, spring_freq_squared, betaP):
         assert nbosons > 0
         self._N = nbosons
         self._P = nbeads
         self._betaP = betaP
         self._spring_freq_squared = spring_freq_squared
         self._particle_mass = bead_mass
+
+        self._bead_diff_intra = None
+        self._bead_diff_inter_first_last_bead = None
+        self._E_from_to = None
+        self._V = None
+        self._V_backward = None
+
+    def set_coordinates(self, q):
         self._q = q
 
         # self._bead_diff_intra[j] = [r^{j+1}_0 - r^{j}_0, ..., r^{j+1}_{N-1} - r^{j}_{N-1}]

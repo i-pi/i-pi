@@ -107,7 +107,7 @@ class NormalModes:
         self.open_paths = np.asarray(open_paths, int)
         if bosons is None:
             bosons = np.zeros(0, int)
-        self.bosons = bosons
+        self._bosons = depend_value(name="bosons", value=bosons)
         self._nmts = depend_value(name="nmts", value=nmts)
         self._dt = depend_value(name="dt", value=dt)
         self._mode = depend_value(name="mode", value=mode)
@@ -116,8 +116,6 @@ class NormalModes:
         )
         self._propagator = depend_value(name="propagator", value=propagator)
         self._nm_freqs = depend_array(name="nm_freqs", value=np.asarray(freqs, float))
-        # TODO: should this be depend? Using mostly to store current values for the properties
-        self.exchange = None
 
     def copy(self, freqs=None):
         """Creates a new beads object from the original.
@@ -164,7 +162,6 @@ class NormalModes:
         self.natoms = beads.natoms
 
         self.bosons = self.resolve_bosons()
-        self.exchange = None
 
         # stores a reference to the bound beads and ensemble objects
         self.ensemble = ensemble
@@ -336,12 +333,19 @@ class NormalModes:
             dependencies=[self._pnm, self.beads._sm3, self._nm_factor],
         )
 
+        self._exchange = depend_value(
+            name="exchange",
+            value=None,
+            func=self.get_exchange,
+            dependencies=[self._bosons, self.beads.m3, self._omegan2],
+        )
+
         # Array that holds both vspring and fspring for bosons
         self._vspring_and_fspring_B = depend_value(
             name="v_and_fs_B",
             value=[None, None],
             func=self.get_vspring_and_fspring_B,
-            dependencies=[self.beads.q, self.beads.m3, self._omegan2],
+            dependencies=[self.beads.q, self._exchange],
         )
 
         # spring energy, calculated in normal modes
@@ -404,6 +408,19 @@ class NormalModes:
             raise ValueError("Invalid index for boson, got %s" % str(bosons_array))
 
         return bosons_array
+
+    def get_exchange(self):
+        masses = dstrip(self.beads.m)[self.bosons]
+        if len(set(masses)) > 1:
+            raise ValueError(
+                "Bosons must have the same mass, found %s for bosons %s"
+                % (str(masses), str(self.bosons))
+            )
+        boson_mass = masses[0]
+        betaP = 1.0 / (self.nbeads * units.Constants.kb * self.ensemble.temp)
+        return ExchangePotential(
+            len(self.bosons), self.nbeads, boson_mass, dstrip(self.omegan2), betaP
+        )
 
     def get_fspringnm(self):
         """Returns the spring force calculated in NM representation."""
@@ -736,21 +753,11 @@ class NormalModes:
         if len(self.bosons) == 0:
             return
 
-        masses = dstrip(self.beads.m)[self.bosons]
-        if len(set(masses)) > 1:
-            raise ValueError(
-                "Bosons must have the same mass, found %s for bosons %s"
-                % (str(masses), str(self.bosons))
-            )
-        boson_mass = masses[0]
-        betaP = 1.0 / (self.nbeads * units.Constants.kb * self.ensemble.temp)
         # positions of only the boson atoms
         q = dstrip(self.beads.q).reshape((self.nbeads, self.natoms, 3))[
             :, self.bosons, :
         ]
-        self.exchange = ExchangePotential(
-            len(self.bosons), q, self.nbeads, boson_mass, dstrip(self.omegan2), betaP
-        )
+        self.exchange.set_coordinates(q)
         return self.exchange.get_vspring_and_fspring()
 
     def get_fspring(self):
@@ -939,6 +946,7 @@ dproperties(
         "transform_method",
         "propagator",
         "nm_freqs",
+        "bosons",
         "qnm",
         "pnm",
         "fnm",
@@ -956,6 +964,7 @@ dproperties(
         "kins",
         "kin",
         "kstress",
+        "exchange",
         "vspring",
         "vspring_and_fspring_B",
         "fspring",
