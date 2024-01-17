@@ -1315,7 +1315,7 @@ class Properties:
             iatom = -1
             latom = atom
 
-        # Should not ask for a property of a subset of atoms of which some are indistinguishables
+        # Should not ask for a property of a subset of atoms some of which are indistinguishables
         # without including *all* the indistinguishable atoms.
         atoms_included = set(range(self.beads.natoms))
         if iatom != -1:
