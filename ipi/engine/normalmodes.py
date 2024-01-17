@@ -418,6 +418,9 @@ class NormalModes:
     def get_exchange(self):
         """Sets up an ExchangePotential object to compute bosonic springs"""
 
+        if len(self.bosons) == 0:
+            return None
+        
         masses = dstrip(self.beads.m)[self.bosons]
         if len(set(masses)) > 1:
             raise ValueError(
