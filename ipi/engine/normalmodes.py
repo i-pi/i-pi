@@ -359,28 +359,30 @@ class NormalModes:
             name="v_and_fs_distinguishables",
             value=[None, None],
             func=self.get_vspring_and_fspring_distiguishables,
-            dependencies=[self._qnm,
+            dependencies=[
+                self._qnm,
                 self._omegak,
                 self._o_omegak,
                 self.beads._m3,
-                self._fspringnm],
+                self._fspringnm,
+            ],
         )
 
         self._vspring_and_fspring = depend_value(
             name="v_and_fs_distinguishables",
             value=[None, None],
             func=self.get_vspring_and_fspring,
-            dependencies=[self._vspring_and_fspring_distinguishables,
-                          self._vspring_and_fspring_bosons],
+            dependencies=[
+                self._vspring_and_fspring_distinguishables,
+                self._vspring_and_fspring_bosons,
+            ],
         )
 
         self._vspring = depend_value(
             name="vspring",
             value=0.0,
             func=self.get_vspring,
-            dependencies=[
-                self._vspring_and_fspring
-            ],
+            dependencies=[self._vspring_and_fspring],
         )
 
         self._fspring = depend_array(
@@ -735,19 +737,19 @@ class NormalModes:
 
         if len(self.bosons) == 0:
             sqnm = dstrip(self.qnm) * dstrip(self.beads.sm3)
-            q2 = (sqnm ** 2).sum(axis=1)
+            q2 = (sqnm**2).sum(axis=1)
 
             vspring = (self.omegak2 * q2).sum()
 
             for j in self.open_paths:
                 vspring += (
-                        self.beads.m[j]
-                        * (self.o_omegak ** 2 - self.omegak ** 2)
-                        * (
-                                self.qnm[:, 3 * j] ** 2
-                                + self.qnm[:, 3 * j + 1] ** 2
-                                + self.qnm[:, 3 * j + 2] ** 2
-                        )
+                    self.beads.m[j]
+                    * (self.o_omegak**2 - self.omegak**2)
+                    * (
+                        self.qnm[:, 3 * j] ** 2
+                        + self.qnm[:, 3 * j + 1] ** 2
+                        + self.qnm[:, 3 * j + 2] ** 2
+                    )
                 ).sum()
 
             return vspring * 0.5
@@ -759,13 +761,13 @@ class NormalModes:
             notbosons = list(set(range(self.natoms)) - set(self.bosons))
             for j in notbosons:
                 vspring += (
-                        self.beads.m[j]
-                        * self.omegak ** 2
-                        * (
-                                self.qnm[:, 3 * j] ** 2
-                                + self.qnm[:, 3 * j + 1] ** 2
-                                + self.qnm[:, 3 * j + 2] ** 2
-                        )
+                    self.beads.m[j]
+                    * self.omegak**2
+                    * (
+                        self.qnm[:, 3 * j] ** 2
+                        + self.qnm[:, 3 * j + 1] ** 2
+                        + self.qnm[:, 3 * j + 2] ** 2
+                    )
                 ).sum()
 
             return vspring * 0.5
@@ -787,10 +789,15 @@ class NormalModes:
 
         if len(self.bosons) is self.natoms:
             vspring = self.vspring_and_fspring_bosons[0]
-            fspring = self.vspring_and_fspring_bosons[1].reshape((self.nbeads, 3 * self.natoms))
+            fspring = self.vspring_and_fspring_bosons[1].reshape(
+                (self.nbeads, 3 * self.natoms)
+            )
             return vspring, fspring
 
-        vspring = self.vspring_and_fspring_bosons[0] + self.vspring_and_fspring_distinguishables[0]
+        vspring = (
+            self.vspring_and_fspring_bosons[0]
+            + self.vspring_and_fspring_distinguishables[0]
+        )
 
         fspring = self.vspring_and_fspring_distinguishables[1]
         fspring = fspring.reshape((self.nbeads, self.natoms, 3))
@@ -798,7 +805,6 @@ class NormalModes:
 
         fspring = fspring.reshape((self.nbeads, 3 * self.natoms))
         return vspring, fspring
-
 
     def get_fspring(self):
         """Returns the spring force. Required for numerical propagation in free_babstep()."""
