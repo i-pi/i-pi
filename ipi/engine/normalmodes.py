@@ -340,43 +340,57 @@ class NormalModes:
             dependencies=[self._bosons, self.beads.m3, self._omegan2],
         )
 
-        # Array that holds both vspring and fspring for bosons
-        self._vspring_and_fspring_B = depend_value(
-            name="v_and_fs_B",
+        # spring forces on normal modes
+        self._fspringnm = depend_array(
+            name = "fspringnm",
+            value = np.zeros((self.nbeads, 3 * self.natoms), float),
+            func = self.get_fspringnm,
+            dependencies = [self._qnm, self._omegak, self.beads._m3],
+        )
+
+        self._vspring_and_fspring_distinguishables = depend_value(
+            name="v_and_fs_distinguishables",
             value=[None, None],
-            func=self.get_vspring_and_fspring_B,
+            func=self.get_vspring_and_fspring_distinguishables,
+            dependencies=[self._qnm,
+                    self._omegak,
+                    self._o_omegak,
+                    self.beads._m3,
+                    self.fspringnm],
+        )
+
+        self._vspring_and_fspring_bosons = depend_value(
+            name="v_and_fs_bosons",
+            value=[None, None],
+            func=self.get_vspring_and_fspring_bosons,
             dependencies=[self.beads.q, self._exchange],
         )
 
-        # spring energy, calculated in normal modes
+        self._vspring_and_fspring = depend_value(
+            name="vspring_and_fspring",
+            value=0.0,
+            func=self.get_vspring_and_fspring,
+            dependencies=[
+                self._vspring_and_fspring_distinguishables, self._vspring_and_fspring_bosons
+            ],
+        )
+
+        # spring energy
         self._vspring = depend_value(
             name="vspring",
             value=0.0,
             func=self.get_vspring,
             dependencies=[
-                self._qnm,
-                self._omegak,
-                self._o_omegak,
-                self.beads._m3,
-                self._vspring_and_fspring_B,
+                self._vspring_and_fspring
             ],
         )
 
-        # spring forces on normal modes
-        self._fspringnm = depend_array(
-            name="fspringnm",
-            value=np.zeros((self.nbeads, 3 * self.natoms), float),
-            func=self.get_fspringnm,
-            dependencies=[self._qnm, self._omegak, self.beads._m3],
-        )
-
-        # spring forces on beads, transformed from normal modes
+        # spring forces on beads
         self._fspring = depend_array(
             name="fs",
             value=np.zeros((self.nbeads, 3 * self.natoms), float),
-            # func=(lambda: self.transform.nm2b(dstrip(self.fspringnm))),
             func=self.get_fspring,
-            dependencies=[self._fspringnm, self._vspring_and_fspring_B],
+            dependencies=[self._vspring_and_fspring],
         )
 
     def resolve_bosons(self):
@@ -427,11 +441,28 @@ class NormalModes:
 
         return -self.beads.m3 * self.omegak[:, np.newaxis] ** 2 * self.qnm
 
-    def get_vspring(self):
-        """Returns the spring energy calculated in NM representation for distinguishable particles.
-        For bosons, get the first element of vspring_and_fspring_B[0]
-        For a mixture of both, calculate separately and combine.
-        """
+    def get_vspring_and_fspring(self):
+        """Returns the total spring energy and spring force."""
+
+        if len(self.bosons) == 0:
+            return self.vspring_and_fspring_distinguishables
+
+        if len(self.bosons) is self.natoms:
+            vspring = self.vspring_and_fspring_bosons[0]
+            fspring = self.vspring_and_fspring_bosons[1].reshape((self.nbeads, 3 * self.natoms))
+            return vspring, fspring
+
+        vspring = self.vspring_and_fspring_bosons[0] + self.vspring_and_fspring_distinguishables[1]
+
+        fspring = self.vspring_and_fspring_distinguishable[1]
+        fspring = fspring.reshape((self.nbeads, self.natoms, 3))
+        fspring[:, self.bosons, :] = self.vspring_and_fspring_B[1]
+
+        fspring = fspring.reshape((self.nbeads, 3 * self.natoms))
+        return vspring, fspring
+
+    def get_vspring_distinguishables(self):
+        """Returns the spring energy for distinguishable particles."""
 
         if self.nbeads == 1:
             return 0.0
@@ -455,8 +486,6 @@ class NormalModes:
 
             return vspring * 0.5
 
-        elif len(self.bosons) is self.natoms:
-            return self.vspring_and_fspring_B[0]
         else:
             # Sum over only those particles who are distinguishable.
             vspring = 0.0
@@ -746,7 +775,16 @@ class NormalModes:
                     dm3[k, a] = self.beads.m3[k, a] * self.o_nm_factor[k]
         return dm3
 
-    def get_vspring_and_fspring_B(self):
+    def get_vspring_and_fspring_distinguishables(self):
+        """
+        Returns the total spring potential for distinguishable particles,
+        and the spring force of all particles assuming they are distinguishable.
+        """
+        vspring = self.get_vspring_distinguishables()
+        fspring = self.transform.nm2b(dstrip(self.fspringnm))
+        return vspring, fspring
+
+    def get_vspring_and_fspring_bosons(self):
         """
         Calculates spring forces and potential, including exchange effects for the bosons present, if any.
         """
@@ -760,6 +798,11 @@ class NormalModes:
         self.exchange.set_coordinates(q)
         return self.exchange.get_vspring_and_fspring()
 
+    def get_vspring(self):
+        """Returns the total spring energy."""
+
+        return self.vspring_and_fspring[0]
+
     def get_fspring(self):
         """
         Returns the spring force. Required for numerical propagation in free_babstep().
@@ -768,16 +811,7 @@ class NormalModes:
         For a mixture of both, calculate separately and combine.
         """
 
-        if len(self.bosons) == 0:
-            return self.transform.nm2b(dstrip(self.fspringnm))
-        elif len(self.bosons) is self.natoms:
-            return self.vspring_and_fspring_B[1].reshape((self.nbeads, 3 * self.natoms))
-        else:
-            f_distinguishable = self.transform.nm2b(dstrip(self.fspringnm))
-            f_all = f_distinguishable.reshape((self.nbeads, self.natoms, 3))
-            f_all[:, self.bosons, :] = self.vspring_and_fspring_B[1]
-
-            return f_all.reshape((self.nbeads, 3 * self.natoms))
+        return self.vspring_and_fspring[1]
 
     def free_babstep(self):
         """
@@ -966,7 +1000,9 @@ dproperties(
         "kstress",
         "exchange",
         "vspring",
-        "vspring_and_fspring_B",
+        "vspring_and_fspring_distinguishables",
+        "vspring_and_fspring_bosons",
+        "vspring_and_fspring",
         "fspring",
         "fspringnm",
     ],
