@@ -1,6 +1,6 @@
 ipi=i-pi
 driver=i-pi-driver 
-sleep_time=10
+sleep_time=4
 
 ${ipi} input.xml > log.i-pi & 
 echo "# i-PI is running"
