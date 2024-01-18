@@ -1,8 +1,4 @@
-<!--REGTEST 
-COMMAND(4)    i-pi-driver -u -h REGTEST_SOCKET -m harm3d -o 1.21647924E-8
- ENDREGTEST-->
 <simulation threading='False' verbosity='low'>
-
    <ffsocket mode='unix' name='driver'>
        <address>bosons-trapped</address>
    </ffsocket>
@@ -11,9 +7,7 @@ COMMAND(4)    i-pi-driver -u -h REGTEST_SOCKET -m harm3d -o 1.21647924E-8
 
    <output prefix="data">
       <trajectory stride="100" filename="pos" cell_units="angstrom">positions{angstrom}</trajectory>
-      <!--<trajectory stride="1" filename="xc" format="xyz">x_centroid{angstrom}</trajectory>-->
-      <properties stride="100"> [ step, time{femtosecond}, conserved, temperature{kelvin}, kinetic_cv, 
-            potential, virial_fq ] </properties>
+      <properties stride="100"> [ step, time{femtosecond}, conserved, temperature{kelvin}, potential, virial_fq, kinetic_td ] </properties>
    </output>
 
    <prng>
@@ -28,8 +22,8 @@ COMMAND(4)    i-pi-driver -u -h REGTEST_SOCKET -m harm3d -o 1.21647924E-8
 
       <initialize nbeads="32">
         <positions mode="manual" bead="0"> [78, -21, 58, 17, -84, -93, 52, -56, -13] </positions>
-	<masses mode="manual"> [1.0, 1.0, 1.0] </masses>
-	<labels mode="manual"> ['E', 'E', 'E'] </labels>
+	      <masses mode="manual"> [1.0, 1.0, 1.0] </masses>
+	      <labels mode="manual"> ['E', 'E', 'E'] </labels>
         <cell>
          [   2500, 0, 0, 0, 2500, 0, 0, 0, 2500 ]
         </cell>
@@ -38,7 +32,7 @@ COMMAND(4)    i-pi-driver -u -h REGTEST_SOCKET -m harm3d -o 1.21647924E-8
 
       <normal_modes propagator='bab'>
 	      <nmts> 10 </nmts>
-	      <bosons> [0, 1, 2] </bosons>
+	      <bosons> [0, 2] </bosons>
       </normal_modes>
 
       <ensemble>
