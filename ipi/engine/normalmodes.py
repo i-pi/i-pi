@@ -723,7 +723,7 @@ class NormalModes:
 
                 # overrides open path forces
                 fspringnm[:, 3 * j : 3 * (j + 1)] = (
-                    -self.beads.m3[3 * j : 3 * (j + 1)]
+                    -self.beads.m3[:, 3 * j : 3 * (j + 1)]
                     * self.o_omegak[:, np.newaxis] ** 2
                     * qnm[:, 3 * j : 3 * (j + 1)]
                 )
