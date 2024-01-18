@@ -416,6 +416,8 @@ class NormalModes:
         return bosons_array
 
     def get_exchange(self):
+        """ Sets up an ExchangePotential object to compute bosonic springs"""
+
         masses = dstrip(self.beads.m)[self.bosons]
         if len(set(masses)) > 1:
             raise ValueError(
@@ -770,7 +772,7 @@ class NormalModes:
         if len(self.bosons) == 0:
             return self.vspring_and_fspring_distinguishables
 
-        if len(self.bosons) is self.natoms:
+        if len(self.bosons) == self.natoms:
             vspring = self.vspring_and_fspring_bosons[0]
             fspring = self.vspring_and_fspring_bosons[1].reshape(
                 (self.nbeads, 3 * self.natoms)
