@@ -416,7 +416,7 @@ class NormalModes:
         return bosons_array
 
     def get_exchange(self):
-        """ Sets up an ExchangePotential object to compute bosonic springs"""
+        """Sets up an ExchangePotential object to compute bosonic springs"""
 
         masses = dstrip(self.beads.m)[self.bosons]
         if len(set(masses)) > 1:
