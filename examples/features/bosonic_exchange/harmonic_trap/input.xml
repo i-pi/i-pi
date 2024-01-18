@@ -12,7 +12,7 @@ COMMAND(4)    i-pi-driver -u -h REGTEST_SOCKET -m harm3d -o 1.21647924E-8
    <output prefix="data">
       <trajectory stride="100" filename="pos" cell_units="angstrom">positions{angstrom}</trajectory>
       <!--<trajectory stride="1" filename="xc" format="xyz">x_centroid{angstrom}</trajectory>-->
-      <properties stride="100"> [ step, time{femtosecond}, conserved, temperature{kelvin}, kinetic_cv, 
+      <properties stride="100"> [ step, time{femtosecond}, conserved, temperature{kelvin}, 
             potential, virial_fq ] </properties>
    </output>
 
