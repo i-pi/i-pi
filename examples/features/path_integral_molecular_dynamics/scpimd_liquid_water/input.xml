@@ -8,7 +8,7 @@
   <prng>
     <seed>32415</seed>
   </prng>
-  <ffsocket name='lammps' mode='unix'>
+  <ffsocket name='qtip4pf' mode='unix' pbc='false'>
     <address> h2o-pimd+sc </address>
   </ffsocket>
   <system>
@@ -17,7 +17,7 @@
       <velocities mode='thermal' units='kelvin'> 300 </velocities>
     </initialize>
     <forces>
-      <force forcefield='lammps' fd_epsilon='-1e-3'> </force>
+      <force forcefield='qtip4pf' fd_epsilon='-1e-3'> </force>
     </forces>
     <motion mode='dynamics'>
       <dynamics mode='sc' splitting="baoab">

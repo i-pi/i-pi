@@ -8,10 +8,10 @@
   <prng>
     <seed>31415</seed>
   </prng>
-  <ffsocket name='lmp_short' mode='unix'>
+  <ffsocket name='short_range' mode='unix' pbc='false'>
     <address>h2o-pimd+mts.4_short</address>
   </ffsocket>
-  <ffsocket name='lmp_long' mode='unix'>
+  <ffsocket name='long_range' mode='unix' pbc='false'>
     <address>h2o-pimd+mts.4_long</address>
   </ffsocket>
   <system>
@@ -25,10 +25,10 @@
          Note that if the outer loop contains a *correction* to the inner loop the weights should be 
          [-1,1] (fast force) and [1,0] (slow force)
        -->
-      <force forcefield='lmp_short'>
+      <force forcefield='short_range'>
         <mts_weights>[0,1]</mts_weights>
       </force>
-      <force forcefield='lmp_long'>
+      <force forcefield='long_range'>
         <mts_weights>[1,0]</mts_weights>
       </force>
     </forces>
