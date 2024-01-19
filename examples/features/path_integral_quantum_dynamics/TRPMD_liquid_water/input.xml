@@ -10,7 +10,7 @@
   <prng>
     <seed>32415</seed>
   </prng>
-  <ffsocket name='lammps' mode='unix'>
+  <ffsocket name='qtip4pf' mode='unix' pbc='false'>
     <address> h2o-trpmd </address>
   </ffsocket>
   <system>
@@ -19,7 +19,7 @@
       <velocities mode='thermal' units='kelvin'> 300 </velocities>
     </initialize>
     <forces>
-      <force forcefield='lammps'> </force>
+      <force forcefield='qtip4pf'> </force>
     </forces>
     <motion mode='dynamics'>
       <dynamics mode='nvt'>
