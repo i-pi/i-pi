@@ -14,7 +14,7 @@ from ipi.utils.inputvalue import *
 from ipi.utils.units import *
 
 
-__all__ = ["InputNormalModes", "InputNMFrequencies"]
+__all__ = ["InputNormalModes", "InputNMFrequencies", "InputBosons"]
 
 
 class InputNMFrequencies(InputArray):
@@ -75,6 +75,60 @@ free particle, and all the normal modes will coincide at frequency wmax.
         return (self.style.fetch(), super(InputNMFrequencies, self).fetch())
 
 
+class InputBosons(InputArray):
+
+    """Storage class for the input of which atoms have bosonic idistinguishability.
+
+    Attributes:
+       shape: The shape of the array.
+    """
+
+    attribs = copy(InputArray.attribs)
+    attribs["id"] = (
+        InputAttribute,
+        {
+            "dtype": str,
+            "default": "index",
+            "options": ["index", "label"],
+            "help": "If 'id' is 'index', then bosonic atoms are specified a list of indices (zero-based). If 'id' is 'label' then specify a list of labels.",
+        },
+    )
+
+    default_label = "BOSONS"
+    default_help = "Deals with the specification of which atoms are have bosonic indistinguishability. The specified atoms participate in exchange interaction, which forms ring polymers that combine several particles together. The algorithm scales quadratically with the number of atoms and linearly with the number of beads. The implementation is based on Hirshberg et al.'s doi:10.1073/pnas.1913365116 and Feldman and Hirshberg's doi:10.1063/5.0173749."
+
+    def __init__(self, help=None, default=None):
+        """Initialises InputBosons.
+
+        Args:
+           help: A help string.
+           dimension: The dimensionality of the value.
+           default: A default value.
+           dtype: An optional data type. Defaults to None.
+        """
+
+        super(InputBosons, self).__init__(help=help, default=default, dtype=str)
+
+    def store(self, value):
+        """Converts the data to the appropriate data type, shape and units and
+        stores it.
+
+        Args:
+           value: The raw data to be stored.
+           id: The specification mode of the atoms.
+        """
+
+        self.id.store("index")
+        super(InputBosons, self).store(value)
+
+    def fetch(self):
+        """Returns the stored data in the user defined units."""
+
+        value = super(InputBosons, self).fetch()
+
+        return (value, self.id.fetch())
+
+
 class InputNormalModes(Input):
 
     """Storage class for NormalModes engine.
@@ -127,11 +181,10 @@ class InputNormalModes(Input):
             },
         ),
         "bosons": (
-            InputArray,
+            InputBosons,
             {
-                "dtype": int,
-                "default": np.zeros(0, int),
-                "help": "Indices of the atoms that are bosons (zero-based).",
+                "default": np.zeros(0, str),
+                "help": "Specify which atoms are bosons.",
             },
         ),
         "nmts": (

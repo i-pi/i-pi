@@ -90,11 +90,11 @@ The monitoring can be interrupted with CTRL+C when the run has finished (5000 st
 
 ### Run the automatic test suite
 
-The automatic test suite can be run by calling the i-pi-test script.
+The automatic test suite can be run by calling the i-pi-tests script.
 You need to have the `pytest` package installed
 
 ```
-i-pi-test
+i-pi-tests
 ```
 
 You may also need to install some dependencies, listed in `requirements.txt`.
