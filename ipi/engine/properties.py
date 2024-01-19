@@ -1408,7 +1408,7 @@ class Properties:
     def get_sckinpr(self):
         """Calculates the quantum centroid virial kinetic energy estimator."""
 
-        spring = self.beads.vpath * self.nm.omegan2 / self.beads.nbeads
+        spring = self.nm.vspring / self.beads.nbeads
         PkT32 = (
             1.5
             * Constants.kb
