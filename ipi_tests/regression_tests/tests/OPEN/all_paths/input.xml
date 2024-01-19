@@ -1,0 +1,35 @@
+<simulation verbosity='medium'>
+    <output prefix='simulation'>
+        <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved , potential, kinetic_cv(2), kinetic_cv(1), 
+            kinetic_td(2), kinetic_td(1), spring] </properties>
+        <properties stride='1' filename='002.q'>  [ atom_x_path(2)] </properties>
+        <properties stride='1' filename='002.f'>  [ atom_f_path(2)] </properties>
+        <trajectory stride='5' filename='pos' bead='0'>  positions </trajectory>
+    </output>
+    <total_steps> 10 </total_steps>
+    <prng><seed> 31415 </seed></prng>
+     <ffsocket name='pswater' mode='unix' pbc='false'>
+        <address> localhost </address>
+    </ffsocket>
+    <system>
+        <initialize nbeads='16'>
+            <file mode='xyz' units='angstrom'>init.xyz</file>
+           <cell> [   25.29166, 0, 0, 0, 25.29166, 0, 0, 0, 25.29166 ] </cell>
+        </initialize>
+        <forces><force forcefield='pswater'> </force></forces>
+        <normal_modes>
+            <open_paths> [0,1,2] </open_paths>
+        </normal_modes>
+        <ensemble>
+            <temperature units='kelvin'> 100 </temperature>
+        </ensemble>
+        <motion mode='dynamics'>
+        <dynamics mode='nvt'>
+            <thermostat mode='pile_g'>
+                <tau units='femtosecond'> 1e0 </tau>
+            </thermostat>
+            <timestep units='femtosecond'> 0.5 </timestep>
+        </dynamics>
+        </motion>
+    </system>
+</simulation>
