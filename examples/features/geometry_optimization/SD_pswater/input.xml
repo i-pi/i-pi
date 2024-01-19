@@ -7,7 +7,7 @@
   <prng>
     <seed> 32342 </seed>
   </prng>
-  <ffsocket name='qtip4pf' mode='unix' pbc='false'>
+  <ffsocket name='pswater' mode='unix' pbc='false'>
     <address> h2o-geop </address>
   </ffsocket>
   <system>
@@ -15,7 +15,7 @@
       <file mode='xyz'> init.xyz </file>
     </initialize>
     <forces>
-      <force forcefield='qtip4pf'> </force>
+      <force forcefield='pswater'> </force>
     </forces>
     <motion mode='minimize'>
       <optimizer mode='sd'>

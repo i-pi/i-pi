@@ -4,11 +4,11 @@
     <trajectory filename='xc' stride='4' format='xyz'> x_centroid{angstrom} </trajectory>
     <checkpoint filename='checkpoint' stride='4' overwrite='True'/>
   </output>
-  <total_steps>40000</total_steps>
+  <total_steps>4000</total_steps>
   <prng>
     <seed>31415</seed>
   </prng>
-  <ffcavphsocket name='lammps' mode='unix' pbc='True'>
+  <ffcavphsocket name='qtip4pf' mode='unix' pbc='False'>
     <address>h2o-cl-cavmd</address>
     <latency> 1e-3 </latency>
     <apply_photon> True </apply_photon>
@@ -25,7 +25,7 @@
       <velocities mode='thermal' units='kelvin'> 300 </velocities>
     </initialize>
     <forces>
-      <force forcefield='lammps'> </force>
+      <force forcefield='qtip4pf'> </force>
     </forces>
     <motion mode='dynamics'>
       <dynamics mode='nve'>

@@ -1,5 +1,5 @@
 ipi=i-pi
-driver="i-pi-driver -m pswater -u -a localhost"
+driver="i-pi-driver -m qtip4pf -u -a h2o-cl-cavmd"
 sleep_time=4
 
 ${ipi} input.xml > log.i-pi & 
