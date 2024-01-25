@@ -8,7 +8,6 @@ from ipi.utils.units import unit_to_internal, unit_to_user
 from ipi.utils.messages import warning
 
 try:
-    import ase
     from ase.io import read
 except ImportError:
     warning("Could not find or import the ASE module")

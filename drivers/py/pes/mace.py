@@ -1,9 +1,5 @@
 import sys
-import numpy as np
-from ipi.utils.units import unit_to_internal, unit_to_user
 from .ase import ASEDriver
-
-from ase.io import read
 
 try:
     from mace.calculators import MACECalculator
