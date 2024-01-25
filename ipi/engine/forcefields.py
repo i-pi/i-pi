@@ -704,8 +704,10 @@ class FFPlumed(ForceField):
             mycell.h *= unit_to_internal("length", self.init_file.units, 1.0)
 
         self.natoms = myatoms.natoms
+        self.plumed.cmd("setRealPrecision", 8)   # i-PI uses double precision
+        self.plumed.cmd("setMDEngine", "i-pi")
+        self.plumed.cmd("setPlumedDat", self.plumeddat)        
         self.plumed.cmd("setNatoms", self.natoms)
-        self.plumed.cmd("setPlumedDat", self.plumeddat)
         self.plumed.cmd("setTimestep", 1.0)
         self.plumed.cmd(
             "setMDEnergyUnits", 2625.4996
