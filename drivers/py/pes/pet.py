@@ -1,4 +1,4 @@
-"""Interface with librascal to run machine learning potentials"""
+"""Interface with PET to run machine learning potentials"""
 
 import sys
 import numpy as np
@@ -26,8 +26,9 @@ __DRIVER_CLASS__ = "PET_driver"
 class PET_driver(Dummy_driver):
     def __init__(self, args=None, verbose=False):
         self.error_msg = """
-The PET driver requires specification of a .json model file fitted with the PRT tools, 
-and a template file that describes the chemical makeup of the structure. 
+The PET driver requires specification of a .json model file fitted with 
+the PET tools, and a template file that describes the chemical makeup of 
+the structure. 
 
 Example: python driver.py -m pet -u -o model.json,template.xyz
 """
@@ -40,7 +41,7 @@ Example: python driver.py -m pet -u -o model.json,template.xyz
     def check_arguments(self):
         """Check the arguments required to run the driver
 
-        This loads the potential and atoms template in librascal
+        This loads the potential and atoms template in PET
         """
         try:
             arglist = self.args.split(",")
@@ -61,14 +62,14 @@ Example: python driver.py -m pet -u -o model.json,template.xyz
         )
 
     def __call__(self, cell, pos):
-        """Get energies, forces, and stresses from the MACE model
+        """Get energies, forces, and stresses from the PET model
         This routine assumes that the client will take positions
         in angstrom, and return energies in electronvolt, and forces
         in ev/ang.
         """
 
         pos_pet = unit_to_user("length", "angstrom", pos)
-        # librascal expects ASE-format, cell-vectors-as-rows
+        # PET expects ASE-format, cell-vectors-as-rows
         cell_pet = unit_to_user("length", "angstrom", cell.T)
         # applies the cell and positions to the template
         pet_structure = self.template_ase.copy()
