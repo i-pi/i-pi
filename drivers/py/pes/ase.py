@@ -9,7 +9,7 @@ from ipi.utils.messages import warning
 
 try:
     import ase
-    from ase.io import read    
+    from ase.io import read
 except ImportError:
     warning("Could not find or import the ASE module")
     MetatensorCalculator = None
@@ -24,9 +24,9 @@ and an ASE-readable template file that describes the chemical makeup of the stru
 Example: python driver.py -m ase -u -o template.xyz,model_parameters 
 """
 
+
 class ASEDriver(Dummy_driver):
     def __init__(self, args=None, verbose=False, error_msg=ERROR_MSG):
-        
         super().__init__(args, verbose, error_msg=error_msg)
 
     def check_arguments(self):
@@ -60,7 +60,7 @@ class ASEDriver(Dummy_driver):
         structure.positions[:] = pos
         structure.cell[:] = cell
         structure.calc = self.ase_calculator
-    
+
         # Do the actual calculation
         properties = structure.get_properties(["energy", "forces", "stress"])
         pot = properties["energy"]
@@ -68,9 +68,9 @@ class ASEDriver(Dummy_driver):
         stress = properties["stress"]
         if len(stress) == 6:
             # converts from voight notation
-            stress = np.array(stress[[0,5,4,5,1,3,4,3,2]])
+            stress = np.array(stress[[0, 5, 4, 5, 1, 3, 4, 3, 2]])
 
-        # converts to internal quantities                
+        # converts to internal quantities
         pot_ipi = np.asarray(
             unit_to_internal("energy", "electronvolt", pot), np.float64
         )

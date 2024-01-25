@@ -11,8 +11,9 @@ Harmonic driver requires specification of force constant.
 Example: python driver.py -m harmonic -u -o 1.3
 """
 
+
 class Harmonic_driver(Dummy_driver):
-    def __init__(self, args=None, verbose=False):        
+    def __init__(self, args=None, verbose=False):
         super(Harmonic_driver, self).__init__(args, verbose, error_msg=ERROR_MSG)
 
     def check_arguments(self):
