@@ -19,13 +19,8 @@ class Harmonic_driver(Dummy_driver):
     def check_arguments(self):
         """Function that checks the arguments required to run the driver"""
         try:
-            k = float(self.args[0])
-        except ValueError:
-            sys.exit(self.error_msg)
-
-        if len(k) == 1:
-            self.k = k[0]
-        else:
+            self.k = float(self.args[0])
+        except:
             sys.exit(self.error_msg)
 
     def __call__(self, cell, pos):
