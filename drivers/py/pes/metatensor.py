@@ -29,10 +29,10 @@ and an ASE-readable template file that describes the chemical makeup of the stru
 Example: python driver.py -m metatensor -u -o model.pt,template.xyz
 """
 
+
 class MetatensorDriver(ASEDriver):
     def __init__(self, args=None, verbose=False, error_msg=ERROR_MSG):
         super().__init__(args, verbose, error_msg)
-
 
     def check_arguments(self):
         """Check the arguments required to run the driver
@@ -44,7 +44,7 @@ class MetatensorDriver(ASEDriver):
             raise ImportError("Couldn't load metatensor bindings")
         super().check_arguments()
 
-        if len(self.args)<2:
+        if len(self.args) < 2:
             sys.exit(self.error_msg)
         self.model_path = self.args[1]
 

@@ -19,9 +19,11 @@ Rascal driver requires specification of a .json model file fitted with librascal
 and a template file that describes the chemical makeup of the structure. 
 Example: python driver.py -m rascal -u -o model.json,template.xyz
 """
+
+
 class Rascal_driver(Dummy_driver):
     def __init__(self, args=None, verbose=False):
-        super().__init__(args, verbose, error_msg = ERROR_MSG)
+        super().__init__(args, verbose, error_msg=ERROR_MSG)
 
         if RascalCalc is None:
             raise ImportError("Couldn't load librascal bindings")

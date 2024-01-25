@@ -20,6 +20,7 @@ and a template file that describes the chemical makeup of the structure.
 Example: python driver.py -m mace -u -o model.json,template.xyz
 """
 
+
 class MACE_driver(ASEDriver):
     def __init__(self, args=None, verbose=False):
         if MACECalculator is None:
@@ -35,9 +36,7 @@ class MACE_driver(ASEDriver):
 
         super().check_arguments()
 
-        if len(self.args)<2:
+        if len(self.args) < 2:
             sys.exit(self.error_msg)
 
-        self.ase_calculator = MACECalculator(
-            model_paths=self.args[1], device="cpu"
-        )
+        self.ase_calculator = MACECalculator(model_paths=self.args[1], device="cpu")
