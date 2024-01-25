@@ -1,10 +1,8 @@
 """Interface with metatensor to run machine learning potentials"""
 
 import sys
-import numpy as np
 from .ase import ASEDriver
 
-from ipi.utils.units import unit_to_internal, unit_to_user
 from ipi.utils.messages import warning
 
 try:
