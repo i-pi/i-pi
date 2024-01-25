@@ -7,12 +7,6 @@ from ipi.utils.messages import warning
 
 try:
     from metatensor.torch.atomistic.ase_calculator import MetatensorCalculator
-
-    try:
-        from ase.io import read
-    except ImportError:
-        warning("The metatensor driver has an ASE dependency")
-        raise
 except ImportError:
     warning("Could not find or import the metatensor module")
     MetatensorCalculator = None
