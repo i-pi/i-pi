@@ -45,7 +45,6 @@ class NumpyEncoder(json.JSONEncoder):
 
 
 class ForceRequest(dict):
-
     """An extension of the standard Python dict class which only has a == b
     if a is b == True, rather than if the elements of a and b are identical.
 
@@ -60,7 +59,6 @@ class ForceRequest(dict):
 
 
 class ForceField:
-
     """Base forcefield class.
 
     Gives the standard methods and quantities needed in all the forcefield
@@ -304,7 +302,6 @@ class ForceField:
 
 
 class FFSocket(ForceField):
-
     """Interface between the PIMD code and a socket for a single replica.
 
     Deals with an individual replica of the system, obtaining the potential
@@ -370,7 +367,6 @@ class FFSocket(ForceField):
 
 
 class FFLennardJones(ForceField):
-
     """Basic fully pythonic force provider.
 
     Computes LJ interactions without minimum image convention, cutoffs or
@@ -448,7 +444,6 @@ class FFLennardJones(ForceField):
 
 
 class FFdmd(ForceField):
-
     """Pythonic force provider.
 
     Computes DMD forces as in Bowman, .., Brown JCP 2003 DOI: 10.1063/1.1578475. It is a time dependent potential.
@@ -563,7 +558,6 @@ class FFdmd(ForceField):
 
 
 class FFDebye(ForceField):
-
     """Debye crystal harmonic reference potential
 
     Computes a harmonic forcefield.
@@ -819,7 +813,6 @@ class FFPlumed(ForceField):
 
 
 class FFYaff(ForceField):
-
     """Use Yaff as a library to construct a force field"""
 
     def __init__(
@@ -934,7 +927,6 @@ class FFYaff(ForceField):
 
 
 class FFsGDML(ForceField):
-
     """A symmetric Gradient Domain Machine Learning (sGDML) force field.
     Chmiela et al. Sci. Adv., 3(5), e1603015, 2017; Nat. Commun., 9(1), 3887, 2018.
     http://sgdml.org/doc/
@@ -1317,7 +1309,6 @@ class FFCommittee(ForceField):
 
 
 class PhotonDriver:
-
     """
     Photon driver for a single cavity mode
     """
@@ -1510,7 +1501,6 @@ class PhotonDriver:
 
 
 class FFCavPhSocket(FFSocket):
-
     """
     Socket for dealing with cavity photons interacting with molecules by
     Tao E. Li @ 2023-02-25

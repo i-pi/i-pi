@@ -18,7 +18,6 @@ __all__ = ["InputNormalModes", "InputNMFrequencies", "InputBosons"]
 
 
 class InputNMFrequencies(InputArray):
-
     """Storage class for NormalModes engine."""
 
     attribs = copy(InputArray.attribs)
@@ -76,7 +75,6 @@ free particle, and all the normal modes will coincide at frequency wmax.
 
 
 class InputBosons(InputArray):
-
     """Storage class for the input of which atoms have bosonic idistinguishability.
 
     Attributes:
@@ -130,7 +128,6 @@ class InputBosons(InputArray):
 
 
 class InputNormalModes(Input):
-
     """Storage class for NormalModes engine.
 
     Describes how normal-modes transformation and integration should be

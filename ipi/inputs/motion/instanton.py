@@ -28,7 +28,6 @@ __all__ = ["InputInst"]
 
 
 class InputInst(InputDictionary):
-
     """Instanton optimization options.
 
     Contains options related with instanton, such as method,

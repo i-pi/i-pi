@@ -60,7 +60,6 @@ def ensemble_swap(ens1, ens2):
 
 
 class Ensemble:
-
     """Base ensemble class.
 
     Defines the thermodynamic state of the system.

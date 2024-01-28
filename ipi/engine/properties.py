@@ -196,7 +196,6 @@ def help_rst(idict, standalone=True):
 
 
 class Properties:
-
     """A proxy to compute and output properties of the system.
 
     Takes the fundamental properties calculated during the simulation, and
@@ -331,9 +330,11 @@ class Properties:
                 "longhelp": """The physical system potential energy. With the optional argument 'bead'
                          will print the potential associated with the specified bead.""",
                 "func": (
-                    lambda bead="-1": self.forces.pot / self.beads.nbeads
-                    if int(bead) < 0
-                    else self.forces.pots[int(bead)]
+                    lambda bead="-1": (
+                        self.forces.pot / self.beads.nbeads
+                        if int(bead) < 0
+                        else self.forces.pots[int(bead)]
+                    )
                 ),
             },
             "bead_potentials": {
@@ -362,12 +363,11 @@ class Properties:
                        potential must be returned. The optional argument 'bead' will print the potential associated
                        with the specified bead. If the potential is weighed, the weight will be applied. """,
                 "func": (
-                    lambda index, bead="-1": self.forces.pots_component(
-                        int(index)
-                    ).sum()
-                    / self.beads.nbeads
-                    if int(bead) < 0
-                    else self.forces.pots_component(int(index))[int(bead)]
+                    lambda index, bead="-1": (
+                        self.forces.pots_component(int(index)).sum() / self.beads.nbeads
+                        if int(bead) < 0
+                        else self.forces.pots_component(int(index))[int(bead)]
+                    )
                 ),
             },
             "pot_component_raw": {
@@ -379,12 +379,12 @@ class Properties:
                        will print the potential associated with the specified bead. Potential weights
                        will not be applied. """,
                 "func": (
-                    lambda index, bead="-1": self.forces.pots_component(
-                        int(index), False
-                    ).sum()
-                    / self.beads.nbeads
-                    if int(bead) < 0
-                    else self.forces.pots_component(int(index), False)[int(bead)]
+                    lambda index, bead="-1": (
+                        self.forces.pots_component(int(index), False).sum()
+                        / self.beads.nbeads
+                        if int(bead) < 0
+                        else self.forces.pots_component(int(index), False)[int(bead)]
+                    )
                 ),
             },
             "forcemod": {
@@ -393,9 +393,11 @@ class Properties:
                 "longhelp": """The modulus of the force. With the optional argument 'bead'
                        will print the force associated with the specified bead.""",
                 "func": (
-                    lambda bead="-1": np.linalg.norm(self.forces.f) / self.beads.nbeads
-                    if int(bead) < 0
-                    else np.linalg.norm(self.forces.f[int(bead)])
+                    lambda bead="-1": (
+                        np.linalg.norm(self.forces.f) / self.beads.nbeads
+                        if int(bead) < 0
+                        else np.linalg.norm(self.forces.f[int(bead)])
+                    )
                 ),
             },
             "spring": {
@@ -2719,7 +2721,6 @@ class Properties:
 
 
 class Trajectories:
-
     """A simple class to take care of output of trajectory data.
 
     Attributes:
