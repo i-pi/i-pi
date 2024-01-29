@@ -311,7 +311,7 @@ class Planets(object):
 
         self.evals[:], self.evecs[:] = np.linalg.eigh(self.omega2, UPLO="L")
 
-        self.mask[:] = self.beta**2 * self.evals < 1e-14
+        self.mask[:] = self.beta ** 2 * self.evals < 1e-14
         self.evals[self.mask] = 0.0
         self.evals_sqrt[:] = np.sqrt(self.evals)
         np.fill_diagonal(self.omega, self.evals_sqrt)

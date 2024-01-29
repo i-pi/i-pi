@@ -169,7 +169,7 @@ class Planetary(Motion):
         fms = dstrip(dnm.fnm) / sm3
         fms[0, :] = 0
         qms[0, :] = 0
-        qms *= (dnm.omegak**2)[:, np.newaxis]
+        qms *= (dnm.omegak ** 2)[:, np.newaxis]
 
         self.omega2 += np.tensordot(fms, fms, axes=(0, 0))
         qffq = np.tensordot(fms, qms, axes=(0, 0))
@@ -184,7 +184,7 @@ class Planetary(Motion):
 
         q = np.array(self.dbeads[0].q).reshape(self.natoms, 3)
         sij = q[:, np.newaxis, :] - q
-        sij = sij.transpose().reshape(3, self.natoms**2)
+        sij = sij.transpose().reshape(3, self.natoms ** 2)
         # find minimum distances between atoms (rigorous for cubic cell)
         sij = np.matmul(self.dcell.ih, sij)
         sij -= np.around(sij)
@@ -193,7 +193,7 @@ class Planetary(Motion):
         # take square magnitudes of distances
         sij = np.sum(sij * sij, axis=2)
         # screen with Heaviside step function
-        sij = (sij < self.screen**2).astype(float)
+        sij = (sij < self.screen ** 2).astype(float)
         # sij = np.exp(-sij / (self.screen**2))
         # acount for 3 dimensions
         sij = np.concatenate((sij, sij, sij), axis=0)

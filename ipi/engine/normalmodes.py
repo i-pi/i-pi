@@ -258,7 +258,7 @@ class NormalModes:
         self._omegak2 = depend_array(
             name="omegak2",
             value=np.zeros(self.beads.nbeads, float),
-            func=(lambda: self.omegak**2),
+            func=(lambda: self.omegak ** 2),
             dependencies=[self._omegak],
         )
 
@@ -390,14 +390,14 @@ class NormalModes:
 
         if len(self.bosons) == 0:
             sqnm = dstrip(self.qnm) * dstrip(self.beads.sm3)
-            q2 = (sqnm**2).sum(axis=1)
+            q2 = (sqnm ** 2).sum(axis=1)
 
             vspring = (self.omegak2 * q2).sum()
 
             for j in self.open_paths:
                 vspring += (
                     self.beads.m[j]
-                    * (self.o_omegak**2 - self.omegak**2)
+                    * (self.o_omegak ** 2 - self.omegak ** 2)
                     * (
                         self.qnm[:, 3 * j] ** 2
                         + self.qnm[:, 3 * j + 1] ** 2
@@ -417,7 +417,7 @@ class NormalModes:
             for j in notbosons:
                 vspring += (
                     self.beads.m[j]
-                    * self.omegak**2
+                    * self.omegak ** 2
                     * (
                         self.qnm[:, 3 * j] ** 2
                         + self.qnm[:, 3 * j + 1] ** 2
@@ -439,7 +439,7 @@ class NormalModes:
     def get_omegan2(self):
         """Returns omegan**2."""
 
-        return self.omegan**2
+        return self.omegan ** 2
 
     def get_omegak(self):
         """Gets the normal mode frequencies.
@@ -569,7 +569,7 @@ class NormalModes:
                 )
             for b in range(1, self.nbeads):
                 sk = self.omegak[b] / self.nm_freqs[b - 1]
-                dmf[b] = sk**2
+                dmf[b] = sk ** 2
         elif self.mode == "pa-cmd":
             if len(self.nm_freqs) > 1:
                 warning(
@@ -594,7 +594,7 @@ class NormalModes:
                     ),
                     verbosity.medium,
                 )
-                dmf[b] = sk**2
+                dmf[b] = sk ** 2
         elif self.mode == "wmax-cmd":
             if len(self.nm_freqs) > 2:
                 warning(
@@ -611,9 +611,9 @@ class NormalModes:
                 sk = 1.0 / np.sqrt(
                     (wt) ** 2
                     * (1 + (wmax / self.omegak[1]) ** 2)
-                    / (wmax**2 + (self.omegak[b]) ** 2)
+                    / (wmax ** 2 + (self.omegak[b]) ** 2)
                 )
-                dmf[b] = sk**2
+                dmf[b] = sk ** 2
 
         return dmf
 
@@ -636,7 +636,7 @@ class NormalModes:
                 )
             for b in range(1, self.nbeads):
                 sk = self.o_omegak[b] / self.nm_freqs[b - 1]
-                dmf[b] = sk**2
+                dmf[b] = sk ** 2
         elif self.mode == "pa-cmd":
             if len(self.nm_freqs) > 1:
                 warning(
@@ -661,7 +661,7 @@ class NormalModes:
                     ),
                     verbosity.medium,
                 )
-                dmf[b] = sk**2
+                dmf[b] = sk ** 2
         elif self.mode == "wmax-cmd":
             if len(self.nm_freqs) > 2:
                 warning(
@@ -678,9 +678,9 @@ class NormalModes:
                 sk = 1.0 / np.sqrt(
                     (wt) ** 2
                     * (1 + (wmax / self.o_omegak[1]) ** 2)
-                    / (wmax**2 + (self.o_omegak[b]) ** 2)
+                    / (wmax ** 2 + (self.o_omegak[b]) ** 2)
                 )
-                dmf[b] = sk**2
+                dmf[b] = sk ** 2
 
         return dmf
 
@@ -851,7 +851,7 @@ class NormalModes:
         """
         # include the partially adiabatic CMD mass scaling
         pnm = dstrip(self.pnm) / dstrip(self.beads.sm3)
-        kmd = 0.5 * (pnm**2).sum(axis=1) / dstrip(self.nm_factor)
+        kmd = 0.5 * (pnm ** 2).sum(axis=1) / dstrip(self.nm_factor)
 
         return kmd
 

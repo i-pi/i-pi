@@ -153,7 +153,7 @@ def totalEnergy(prefix, temp, ss=0):
                     )
 
             ePA *= (
-                0.5 * nbeads * (Constants.kb * temperature) ** 2 / Constants.hbar**2
+                0.5 * nbeads * (Constants.kb * temperature) ** 2 / Constants.hbar ** 2
             )
             ePA += 0.5 * nbeads * (3 * natoms) * Constants.kb * temperature + U
             f2ePA = f2 * ePA
@@ -172,7 +172,7 @@ def totalEnergy(prefix, temp, ss=0):
             dE = (
                 3.0 * Constants.kb * temperature + ePA_av / float(ifr - skipSteps)
             ) * f2_av / float(ifr - skipSteps) - f2ePA_av / float(ifr - skipSteps)
-            dE *= Constants.hbar**2 / (
+            dE *= Constants.hbar ** 2 / (
                 24.0 * (nbeads * Constants.kb * temperature) ** 3
             )
 

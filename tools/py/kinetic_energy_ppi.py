@@ -102,8 +102,8 @@ def kineticEnergy(prefix, temp, ss=0, unit=""):
     const_1 = 0.5 * nbeads / (beta * Constants.hbar) ** 2
     const_2 = 1.5 * nbeads / beta
     const_3 = 1.5 / beta
-    const_4 = Constants.kb**2 / Constants.hbar**2
-    const_5 = Constants.hbar**2 * beta**3 / (24.0 * nbeads**3)
+    const_4 = Constants.kb ** 2 / Constants.hbar ** 2
+    const_5 = Constants.hbar ** 2 * beta ** 3 / (24.0 * nbeads ** 3)
 
     timeUnit, potentialEnergyUnit, time_index = extractUnits(
         iU

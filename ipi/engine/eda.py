@@ -324,3 +324,6 @@ class EDA:
         self.Electric_Dipole.store(eda.Electric_Dipole)
         self.Born_Charges.store(eda.bec)
         pass
+
+
+dproperties(EDA, ["mts_time", "time", "Efield", "Eenvelope", "bec", "dipole"])

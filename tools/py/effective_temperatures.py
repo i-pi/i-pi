@@ -64,7 +64,7 @@ def effectiveTemperatures(prefix, temp, ss=0):
     iOut = open(fn_out, "w")
 
     # Some constants
-    const = Constants.hbar**2 / (12.0 * (nbeads * Constants.kb * temperature) ** 3)
+    const = Constants.hbar ** 2 / (12.0 * (nbeads * Constants.kb * temperature) ** 3)
 
     iOut.write(
         "# Atom, Cartesian components of the effective temperature, average effective temperature (in Kelvin)\n"

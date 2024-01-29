@@ -133,9 +133,9 @@ def compute_acf(
 
             # Accumulates the (f)acfs and their squares.
             fvvacf += mfpvvacf
-            fvvacf2 += mfpvvacf**2
+            fvvacf2 += mfpvvacf ** 2
             vvacf += mvvacf
-            vvacf2 += mvvacf**2
+            vvacf2 += mvvacf ** 2
 
             nblocks += 1
 
@@ -145,13 +145,13 @@ def compute_acf(
 
     # Performs the block average of the Fourier transform.
     fvvacf = fvvacf / nblocks
-    fvvacf_err = np.sqrt(fvvacf2 / nblocks - fvvacf**2)
+    fvvacf_err = np.sqrt(fvvacf2 / nblocks - fvvacf ** 2)
 
     np.savetxt(ofile + "_facf.data", np.c_[omega, fvvacf, fvvacf_err][: mlag + npad])
 
     # Computes the inverse Fourier transform to get the vvac.
     vvacf = vvacf / nblocks
-    vvacf_err = np.sqrt(vvacf2 / nblocks - vvacf**2)
+    vvacf_err = np.sqrt(vvacf2 / nblocks - vvacf ** 2)
     np.savetxt(ofile + "_acf.data", np.c_[time, vvacf, vvacf_err][: mlag + npad])
 
 

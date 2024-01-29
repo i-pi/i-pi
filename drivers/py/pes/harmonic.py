@@ -26,7 +26,7 @@ class Harmonic_driver(Dummy_driver):
 
     def __call__(self, cell, pos):
         """Silly harmonic potential"""
-        pot = 0.5 * self.k * (pos**2).sum()
+        pot = 0.5 * self.k * (pos ** 2).sum()
         force = -self.k * pos  # makes a zero force with same shape as pos
         vir = cell * 0.0  # makes a zero virial with same shape as cell
         extras = "nada"

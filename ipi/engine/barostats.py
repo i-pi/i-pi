@@ -501,7 +501,7 @@ class BaroBZP(Barostat):
             value=np.atleast_1d(0.0),
             func=(
                 lambda: np.asarray(
-                    [self.tau**2 * 3 * self.beads.natoms * Constants.kb * self.temp]
+                    [self.tau ** 2 * 3 * self.beads.natoms * Constants.kb * self.temp]
                 )
             ),
             dependencies=[self._tau, self._temp],
@@ -564,8 +564,8 @@ class BaroBZP(Barostat):
         dt = self.pdt[
             level
         ]  # this is already set to be half a time step at the specified MTS depth
-        dt2 = dt**2
-        dt3 = dt**3 / 3.0
+        dt2 = dt ** 2
+        dt3 = dt ** 3 / 3.0
 
         # computes the pressure associated with the forces at each MTS level.
         press = np.trace(self.stress_mts(level)) / 3.0
@@ -707,7 +707,7 @@ class BaroSCBZP(Barostat):
             value=np.atleast_1d(0.0),
             func=(
                 lambda: np.asarray(
-                    [self.tau**2 * 3 * self.beads.natoms * Constants.kb * self.temp]
+                    [self.tau ** 2 * 3 * self.beads.natoms * Constants.kb * self.temp]
                 )
             ),
             dependencies=[self._tau, self._temp],
@@ -777,8 +777,8 @@ class BaroSCBZP(Barostat):
         dt = self.pdt[
             level
         ]  # this is already set to be half a time step at the specified MTS depth
-        dt2 = dt**2
-        dt3 = dt**3 / 3.0
+        dt2 = dt ** 2
+        dt3 = dt ** 3 / 3.0
 
         # computes the pressure associated with the forces at each MTS level and adds the +- 1/3 SC correction.
         press = np.trace(self.stress_mts_sc(level)) / 3.0
@@ -960,7 +960,7 @@ class BaroRGB(Barostat):
             value=np.atleast_1d(0.0),
             func=(
                 lambda: np.asarray(
-                    [self.tau**2 * self.beads.natoms * Constants.kb * self.temp]
+                    [self.tau ** 2 * self.beads.natoms * Constants.kb * self.temp]
                 )
             ),
             dependencies=[self._tau, self._temp],
@@ -1059,8 +1059,8 @@ class BaroRGB(Barostat):
         """Propagates the momenta for half a time step."""
 
         dt = self.pdt[level]
-        dt2 = dt**2
-        dt3 = dt**3 / 3.0
+        dt2 = dt ** 2
+        dt3 = dt ** 3 / 3.0
 
         hh0 = np.dot(self.cell.h, self.h0.ih)
         pi_ext = np.dot(hh0, np.dot(self.stressext, hh0.T)) * self.h0.V / self.cell.V
@@ -1255,7 +1255,7 @@ class BaroMTK(Barostat):
             value=np.atleast_1d(0.0),
             func=(
                 lambda: np.asarray(
-                    [self.tau**2 * self.beads.natoms * Constants.kb * self.temp]
+                    [self.tau ** 2 * self.beads.natoms * Constants.kb * self.temp]
                 )
             ),
             dependencies=[self._tau, self._temp],
@@ -1345,8 +1345,8 @@ class BaroMTK(Barostat):
         """Propagates the momenta for half a time step."""
 
         dt = self.pdt[level]
-        dt2 = dt**2
-        dt3 = dt**3 / 3.0
+        dt2 = dt ** 2
+        dt3 = dt ** 3 / 3.0
 
         pi_ext = (
             np.eye(3) * self.pext

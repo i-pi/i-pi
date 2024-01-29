@@ -431,10 +431,10 @@ class FFLennardJones(ForceField):
         f = np.zeros(q.shape)
         for i in range(1, nat):
             dij = q[i] - q[:i]
-            rij2 = (dij**2).sum(axis=1)
+            rij2 = (dij ** 2).sum(axis=1)
 
             x6 = (self.sigma2 / rij2) ** 3
-            x12 = x6**2
+            x12 = x6 ** 2
 
             v += (x12 - x6).sum()
             dij *= (self.sixepsfour * (2.0 * x12 - x6) / rij2)[:, np.newaxis]
@@ -1215,11 +1215,11 @@ class FFCommittee(ForceField):
             # and V_committee the committee error. Then
             # V = V_baseline + s_b^2/(s_c^2+s_b^2) V_committe
 
-            s_b2 = self.baseline_uncertainty**2
+            s_b2 = self.baseline_uncertainty ** 2
 
             nmodels = len(pots)
             uncertain_frc = (
-                self.alpha**2
+                self.alpha ** 2
                 * np.sum(
                     [
                         (pot - mean_pot) * (frc - mean_frc)
@@ -1230,7 +1230,7 @@ class FFCommittee(ForceField):
                 / (nmodels - 1)
             )
             uncertain_vir = (
-                self.alpha**2
+                self.alpha ** 2
                 * np.sum(
                     [
                         (pot - mean_pot) * (vir - mean_vir)
@@ -1419,7 +1419,7 @@ class PhotonDriver:
             total energy of photonic system
         """
         # calculate the photonic potential energy
-        e_ph = np.sum(0.5 * self.omega_klambda3**2 * self.pos_ph**2)
+        e_ph = np.sum(0.5 * self.omega_klambda3 ** 2 * self.pos_ph ** 2)
 
         # calculate the dot products between mode functions and dipole array
         d_dot_f_x = np.dot(self.ftilde_kx, dx_array)
@@ -1439,8 +1439,8 @@ class PhotonDriver:
 
         # calculate the dipole self-energy term
         dse = np.sum(
-            (self.varepsilon_k**2 / 2.0 / self.omega_k**2)
-            * (d_dot_f_x**2 + d_dot_f_y**2)
+            (self.varepsilon_k ** 2 / 2.0 / self.omega_k ** 2)
+            * (d_dot_f_x ** 2 + d_dot_f_y ** 2)
         )
 
         e_tot = e_ph + e_int_x + e_int_y + dse
@@ -1459,7 +1459,7 @@ class PhotonDriver:
             force array of all photonic dimensions (3*nphoton) [1x, 1y, 1z, 2x..]
         """
         # calculat the bare photonic contribution of the force
-        f_ph = -self.omega_klambda3**2 * self.pos_ph
+        f_ph = -self.omega_klambda3 ** 2 * self.pos_ph
 
         # calculate the dot products between mode functions and dipole array
         d_dot_f_x = np.dot(self.ftilde_kx, dx_array)
@@ -1498,8 +1498,8 @@ class PhotonDriver:
         elif self.ph_rep == "dense":
             Ekx = self.varepsilon_k * self.pos_ph[::3]
             Eky = self.varepsilon_k * self.pos_ph[1::3]
-        Ekx += self.varepsilon_k**2 / self.omega_k**2 * d_dot_f_x
-        Eky += self.varepsilon_k**2 / self.omega_k**2 * d_dot_f_y
+        Ekx += self.varepsilon_k ** 2 / self.omega_k ** 2 * d_dot_f_x
+        Eky += self.varepsilon_k ** 2 / self.omega_k ** 2 * d_dot_f_y
 
         # dimension of independent baths (xy grid points)
         coeff_x = np.dot(np.transpose(Ekx), self.ftilde_kx)

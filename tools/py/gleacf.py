@@ -95,7 +95,7 @@ def gleKernel(omega, Ap, Dp):
     dKer = np.zeros((ngrid, ngrid), float)
     omlist = omega.copy()
     omlist[0] = max(omlist[0], dw * 1e-1)
-    om2list = omlist**2
+    om2list = omlist ** 2
     y = 0
     if Ap[0, 0] < 2.0 * dw:
         print(
@@ -120,7 +120,7 @@ def gleKernel(omega, Ap, Dp):
         ow1 = omat[1, :] * w / omega_0
         o1cqp1 = np.dot(oinv, dCqp)[:, 1]
         x = 0
-        om2om0 = om2list / omega_0**2
+        om2om0 = om2list / omega_0 ** 2
         # keeps working in scaled coordinates at this point
         for oo0x in om2om0:
             dKer[x, y] = np.real(np.dot(ow1, o1cqp1 / (w2 + oo0x)))

@@ -90,7 +90,7 @@ class AlKMC(Motion):
         self.nvac = nvac
         self.nsi = nsi
         self.nmg = nmg
-        self.nsites = self.ncell**3
+        self.nsites = self.ncell ** 3
         self.natoms = self.nsites - self.nvac
         self.neval = neval
         self.diffusion_barrier_al = diffusion_barrier_al
@@ -147,7 +147,7 @@ class AlKMC(Motion):
         self.neigh = np.zeros((self.nsites, 12), int)
         nneigh = np.zeros(self.nsites, int)
         # could be done in a more analytic way but whatever, I'm too lazy
-        a02 = 1.01 * 0.5 * self.a0**2  # perhaps 1.01 it is not enough, must check!
+        a02 = 1.01 * 0.5 * self.a0 ** 2  # perhaps 1.01 it is not enough, must check!
         for i in range(self.nsites):  # determines the connectivity of the lattice
             rij = self.sites.copy().flatten()
             for j in range(self.nsites):
@@ -238,7 +238,7 @@ class AlKMC(Motion):
         if self.idx is None or len(self.idx) == 0:
             f_restart = False
             idx = np.asarray(
-                list(range(self.ncell**3)), int
+                list(range(self.ncell ** 3)), int
             )  # initialize random distribution of atoms
             self.prng.rng.shuffle(idx)
             self.idx = idx

@@ -26,7 +26,7 @@ from ipi.utils.io.inputs import io_xml
 
 
 def kernel(x, mean=0, sigma=1):
-    return np.exp(-((x - mean) ** 2) * (0.5 * sigma**2))
+    return np.exp(-((x - mean) ** 2) * (0.5 * sigma ** 2))
 
 
 def histo(data, delta, k, mean, sigma):
@@ -119,12 +119,12 @@ def get_np(path2iipi, bsize=20000, nskip=300, si=15.0, sf=-15.0, ns=10000):
     errnpz = np.std(np.asarray(nplistz), axis=0) / np.sqrt(n_block) / normz
     avgnpz = avgnpz / normz
 
-    avgpsqnpx = pxgrid**2 * avgnpx / pxstep
-    errpsqnpx = pxgrid**2 * errnpx / pxstep
-    avgpsqnpy = pygrid**2 * avgnpy / pystep
-    errpsqnpy = pygrid**2 * errnpy / pystep
-    avgpsqnpz = pzgrid**2 * avgnpz / pzstep
-    errpsqnpz = pzgrid**2 * errnpz / pzstep
+    avgpsqnpx = pxgrid ** 2 * avgnpx / pxstep
+    errpsqnpx = pxgrid ** 2 * errnpx / pxstep
+    avgpsqnpy = pygrid ** 2 * avgnpy / pystep
+    errpsqnpy = pygrid ** 2 * errnpy / pystep
+    avgpsqnpz = pzgrid ** 2 * avgnpz / pzstep
+    errpsqnpz = pzgrid ** 2 * errnpz / pzstep
 
     np.savetxt("np.data", np.c_[pxgrid, avgnpx, errnpx, avgnpy, errnpy, avgnpz, errnpz])
     np.savetxt(
@@ -139,17 +139,17 @@ def get_np(path2iipi, bsize=20000, nskip=300, si=15.0, sf=-15.0, ns=10000):
     psqmedz = 0.0
     psqmed2z = 0.0
     for i in range(n_block):
-        psqmedx = psqmedx + np.dot(pxgrid**2, np.asarray(nplistx)[i, :]) / normx
+        psqmedx = psqmedx + np.dot(pxgrid ** 2, np.asarray(nplistx)[i, :]) / normx
         psqmed2x = (
-            psqmed2x + (np.dot(pxgrid**2, np.asarray(nplistx)[i, :]) / normx) ** 2
+            psqmed2x + (np.dot(pxgrid ** 2, np.asarray(nplistx)[i, :]) / normx) ** 2
         )
-        psqmedy = psqmedy + np.dot(pygrid**2, np.asarray(nplisty)[i, :]) / normy
+        psqmedy = psqmedy + np.dot(pygrid ** 2, np.asarray(nplisty)[i, :]) / normy
         psqmed2y = (
-            psqmed2y + (np.dot(pygrid**2, np.asarray(nplisty)[i, :]) / normy) ** 2
+            psqmed2y + (np.dot(pygrid ** 2, np.asarray(nplisty)[i, :]) / normy) ** 2
         )
-        psqmedz = psqmedz + np.dot(pzgrid**2, np.asarray(nplistz)[i, :]) / normz
+        psqmedz = psqmedz + np.dot(pzgrid ** 2, np.asarray(nplistz)[i, :]) / normz
         psqmed2z = (
-            psqmed2z + (np.dot(pzgrid**2, np.asarray(nplistz)[i, :]) / normz) ** 2
+            psqmed2z + (np.dot(pzgrid ** 2, np.asarray(nplistz)[i, :]) / normz) ** 2
         )
 
     print("number of blocks", n_block)

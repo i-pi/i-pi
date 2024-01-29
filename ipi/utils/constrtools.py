@@ -238,7 +238,7 @@ class RigidBondConstraint(ValueConstraintBase):
             c_atoms = self.i3_indirect[i]
             c_dist = constraint_distances[i]
             # print q[c_atoms[0]], q[c_atoms[1]], c_dist
-            r[i] = np.sum((q[c_atoms[0]] - q[c_atoms[1]]) ** 2) - c_dist**2
+            r[i] = np.sum((q[c_atoms[0]] - q[c_atoms[1]]) ** 2) - c_dist ** 2
         if q[0] == float("inf"):
             ValueError("fgfgf")
             print("autsch")
