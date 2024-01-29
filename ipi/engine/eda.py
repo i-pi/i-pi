@@ -2,7 +2,6 @@ import numpy as np
 from ipi.utils.depend import dstrip
 from ipi.utils.depend import *
 from ipi.utils.units import UnitMap
-from ipi.engine.forces import Forces
 import re
 
 __all__ = ["BEC", "ElectricField", "EDA"]
@@ -301,7 +300,7 @@ class ElectricField:
 
 
 dproperties(
-    ElectricField, ["amp", "phase", "peak", "sigma", "freq", "Eenvelope", "Efield"]
+    ElectricField, ["amp", "phase", "peak", "sigma", "freq", "Eenvelope", "Efield","mts_time"]
 )
 
 
@@ -347,4 +346,4 @@ class EDA:
         pass
 
 
-dproperties(EDA, ["mts_time", "time", "Efield", "Eenvelope", "bec", "dipole"])
+dproperties(EDA, ["mts_time", "time"])

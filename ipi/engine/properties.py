@@ -286,12 +286,12 @@ class Properties:
                 "dimension": "atomic_unit",
                 "help": "The external applied electric field (cartesian axes).",
                 "size": 3,
-                "func": (lambda: self.motion.eda.Efield),
+                "func": (lambda: self.motion.eda.Electric_Field.Efield),
             },
             "Eenvelope": {
                 "dimension": "atomic_unit",
                 "help": "The (gaussian) envelope function of the external applied electric field.",
-                "func": (lambda: self.motion.eda.Eenvelope),
+                "func": (lambda: self.motion.eda.Electric_Field.Eenvelope),
             },
             "dipole": {
                 "dimension": "electric-dipole",
@@ -299,9 +299,9 @@ class Properties:
                 "size": 3,
                 "func": (
                     lambda bead="-1": (
-                        self.motion.eda.dipole.mean(axis=0)
+                        self.motion.eda.Electric_Dipole.dipole.mean(axis=0)
                         if int(bead) < 0
-                        else self.motion.eda.dipole[int(bead)]
+                        else self.motion.eda.Electric_Dipole.dipole[int(bead)]
                     )
                 ),
             },
@@ -2671,10 +2671,23 @@ class Trajectories:
                 "help": "The momentum trajectories. Will print out one file per bead, unless the bead attribute is set by the user.",
                 "func": (lambda: 1.0 * self.system.beads.p),
             },
-            "bec": {
+            "becx": {
                 "dimension": "number",
                 "help": "The BEC tensors in cartesian coordinates.",
-                "func": (lambda: self.system.motion.eda.Born_Charges.bec),
+                "func": (lambda bead="-1": self.system.motion.eda.Born_Charges.bec[0][:,0] if int(bead) < 0
+                        else self.system.motion.eda.Born_Charges.bec[int(bead)][:,0] ),
+            },
+            "becy": {
+                "dimension": "number",
+                "help": "The BEC tensors in cartesian coordinates.",
+                "func": (lambda bead="-1": self.system.motion.eda.Born_Charges.bec[0][:,1] if int(bead) < 0
+                        else self.system.motion.eda.Born_Charges.bec[int(bead)][:,1] ),
+            },
+            "becz": {
+                "dimension": "number",
+                "help": "The BEC tensors in cartesian coordinates.",
+                "func": (lambda bead="-1": self.system.motion.eda.Born_Charges.bec[0][:,2] if int(bead) < 0
+                        else self.system.motion.eda.Born_Charges.bec[int(bead)][:,2] ),
             },
             "forces": {
                 "dimension": "force",

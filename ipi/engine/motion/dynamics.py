@@ -124,12 +124,12 @@ class Dynamics(Motion):
         else:
             self.fixatoms = fixatoms
 
-        # self.eda_on = False
-        # if self.enstype in EDA.integrators:
-        self.efield = efield
-        self.bec = bec
-        self.eda = EDA(self.efield, self.bec)  # cdip
-        self.eda_on = self.enstype in EDA.integrators
+        self.eda_on = False
+        if self.enstype in EDA.integrators:
+            self.efield = efield
+            self.bec = bec
+            self.eda = EDA(self.efield, self.bec)  # cdip
+            self.eda_on = True # self.enstype in EDA.integrators
 
     def get_fixdof(self):
         """Calculate the number of fixed degrees of freedom, required for
@@ -880,8 +880,8 @@ class EDAIntegrator(DummyIntegrator):
 
     def _eda_forces(self):
         """Compute the EDA contribution to the forces due to the polarization"""
-        Z = dstrip(self.eda.bec)
-        E = dstrip(self.eda.Efield)
+        Z = dstrip(self.eda.Born_Charges.bec)
+        E = dstrip(self.eda.Electric_Field.Efield)
         forces = Constants.e * Z @ E
         return forces
 
@@ -892,6 +892,7 @@ class EDAIntegrator(DummyIntegrator):
             )
         super().step(step)
 
+dproperties(EDAIntegrator, ["EDAforces","mts_time","time"])
 
 class EDANVEIntegrator(EDAIntegrator, NVEIntegrator):
     """Integrator object for simulations with constant Number of particles, Volume, and Energy (NVE)

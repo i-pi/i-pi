@@ -350,7 +350,9 @@ class TrajectoryOutput(BaseOutput):
             "extras_component",
             "forces_sc",
             "momenta",
-            "bec",
+            "becx",
+            "becy",
+            "becz",
         ]:
             # must write out trajectories for each bead, so must create b streams
 
@@ -525,20 +527,23 @@ class TrajectoryOutput(BaseOutput):
             "Eforces",
             "forces_sc",
             "momenta",
+            "becx",
+            "becy",
+            "becz",
         ]:
             fatom = Atoms(self.system.beads.natoms)
             fatom.names[:] = self.system.beads.names
             fatom.q[:] = data[b]
-        elif key == "bec":
-            # if b != 0:
-            #     raise ValueError("printing of BEC implemented only for 'nbeads' = 0")
-            fatom = Atoms(3 * self.system.beads.natoms)
-            # fatom.names[:] = self.system.beads.names
-            dd(fatom).q = data[
-                b
-            ]  # .reshape((self.system.beads.natoms,9)) # ES: pay attention!
-        elif key == "extra":
-            fatom = data
+        # elif key == "bec":
+        #     # if b != 0:
+        #     #     raise ValueError("printing of BEC implemented only for 'nbeads' = 0")
+        #     fatom = Atoms(3 * self.system.beads.natoms)
+        #     # fatom.names[:] = self.system.beads.names
+        #     dd(fatom).q = data[
+        #         b
+        #     ]  # .reshape((self.system.beads.natoms,9)) # ES: pay attention!
+        # elif key == "extra":
+        #     fatom = data
         else:
             fatom = Atoms(self.system.beads.natoms)
             fatom.names[:] = self.system.beads.names
