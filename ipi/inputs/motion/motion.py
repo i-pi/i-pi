@@ -45,7 +45,6 @@ from ipi.engine.motion import (
     AlKMC,
     SCPhononsMover,
     NormalModeMover,
-    BECTensorsCalculator,
 )
 from ipi.utils.inputvalue import *
 from ipi.inputs.thermostats import *
@@ -64,7 +63,6 @@ from .atomswap import InputAtomSwap
 from .planetary import InputPlanetary
 from .ramp import InputTemperatureRamp, InputPressureRamp
 from .al6xxx_kmc import InputAlKMC
-from .bec import InputBECTensorsCalculator
 from ipi.utils.units import *
 
 __all__ = ["InputMotion"]
@@ -178,10 +176,6 @@ class InputMotionBase(Input):
         "vibrations": (
             InputDynMatrix,
             {"default": {}, "help": "Option for phonon computation"},
-        ),
-        "BEC": (
-            InputBECTensorsCalculator,
-            {"default": {}, "help": "Option for BEC computation"},
         ),
         "normalmodes": (
             InputNormalMode,
@@ -297,10 +291,6 @@ class InputMotionBase(Input):
         elif type(sc) is AlKMC:
             self.mode.store("al-kmc")
             self.al6xxx_kmc.store(sc)
-            tsc = 1
-        elif type(sc) is BECTensorsCalculator:
-            self.mode.store("BEC")
-            self.BEC.store(sc)
             tsc = 1
         else:
             raise ValueError("Cannot store Mover calculator of type " + str(type(sc)))
@@ -427,8 +417,6 @@ class InputMotionBase(Input):
                 fixatoms=self.fixatoms.fetch(),
                 **self.al6xxx_kmc.fetch()
             )
-        elif self.mode.fetch() == "BEC":
-            sc = BECTensorsCalculator(**self.BEC.fetch())
         else:
             sc = Motion()
             # raise ValueError("'" + self.mode.fetch() + "' is not a supported motion calculation mode.")

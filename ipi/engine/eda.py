@@ -1,6 +1,6 @@
 import numpy as np
 from ipi.utils.depend import dstrip
-from ipi.utils.depend import depend_array, depend_value
+from ipi.utils.depend import *
 from ipi.utils.units import UnitMap
 import re
 
@@ -113,6 +113,9 @@ class BEC:
             raise ValueError(line)
 
 
+dproperties(BEC, ["bec"])
+
+
 class ElectricDipole:
     # def __init__(self, cdip):
     #     self.cdip = cdip
@@ -121,7 +124,7 @@ class ElectricDipole:
     def bind(self, eda, ensemble):
         self._nbeads = depend_value(name="nbeads", value=ensemble.beads.nbeads)
 
-        self.forces = ensemble.forces  # is this a weakref??
+        self._forces = ensemble._forces  # is this a weakref??
 
         # val = np.zeros(
         #     3, dtype=float
@@ -195,6 +198,9 @@ class ElectricDipole:
             #     return np.full(3,np.nan)
             # else :
             return np.full((self.nbeads, 3), np.nan)
+
+
+dproperties(ElectricDipole, ["dipole", "nbeads", "forces"])
 
 
 class ElectricField:
@@ -278,6 +284,11 @@ class ElectricField:
         # it's easier to define a function and compute this 'cos'
         # again everytime instead of define a 'depend_value'
         return np.cos(self.freq * time + self.phase)
+
+
+dproperties(
+    ElectricField, ["amp", "phase", "peak", "sigma", "freq", "Eenvelope", "Efield"]
+)
 
 
 class EDA:
