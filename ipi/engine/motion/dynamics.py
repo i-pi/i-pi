@@ -124,7 +124,7 @@ class Dynamics(Motion):
             self.fixatoms = np.zeros(0, int)
         else:
             self.fixatoms = fixatoms
-        
+
         self.eda_on = False
         if self.enstype in EDA.integrators:
             self.efield = efield
