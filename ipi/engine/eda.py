@@ -1,18 +1,18 @@
 import numpy as np
-from ipi.utils.depend import dd, dstrip
-from ipi.utils.depend import dobject, depend_array, depend_value
+from ipi.utils.depend import dstrip
+from ipi.utils.depend import depend_array, depend_value
 from ipi.utils.units import UnitMap
 import re
 
 __all__ = ["BEC", "ElectricField", "EDA"]
 
 
-class BEC(dobject):
+class BEC:
     def __init__(self, cbec=None, bec=None):
         self.cbec = cbec
         if bec is None:
             bec = np.full((0, 3), np.nan)
-        dd(self).bec = depend_array(name="bec", value=bec)
+        self._bec = depend_array(name="bec", value=bec)
         pass
 
     def bind(self, eda, ensemble, enstype):
@@ -22,22 +22,20 @@ class BEC(dobject):
         self.forces = ensemble.forces
         # my_nbeads = 1  # self.nbeads
 
-        dself = dd(self)
         if self.enstype in EDA.integrators and self.cbec:
-            dself.bec = depend_array(
+            self._bec = depend_array(
                 name="bec",
                 value=np.full(
                     (self.nbeads, 3 * self.natoms, 3), np.nan
                 ),  # value=np.full((self.natoms,3,3),np.nan),\
                 func=self._get_driver_BEC,
-                dependencies=[dd(ensemble.beads).q],
+                dependencies=[ensemble.beads._q],
             )
         elif self.enstype in EDA.integrators:
             temp = self._get_fixed_BEC()  # reshape the BEC once and for all
-            dself.bec = depend_array(name="bec", value=temp)
+            self._bec = depend_array(name="bec", value=temp)
         else:
-            # dself.bec = depend_array(name="bec",value=np.full((self.natoms,3,3),np.nan))
-            dself.bec = depend_array(
+            self._bec = depend_array(
                 name="bec", value=np.full((self.nbeads, 3 * self.natoms, 3), np.nan)
             )
 
@@ -115,14 +113,13 @@ class BEC(dobject):
             raise ValueError(line)
 
 
-class ElectricDipole(dobject):
+class ElectricDipole:
     # def __init__(self, cdip):
     #     self.cdip = cdip
     #     pass
 
     def bind(self, eda, ensemble):
-        dself = dd(self)
-        dself.nbeads = depend_value(name="nbeads", value=ensemble.beads.nbeads)
+        self._nbeads = depend_value(name="nbeads", value=ensemble.beads.nbeads)
 
         self.forces = ensemble.forces  # is this a weakref??
 
@@ -132,11 +129,11 @@ class ElectricDipole(dobject):
         val = np.full(
             (self.nbeads, 3), np.nan
         )  # if self.nbeads > 1 else np.zeros(3,dtype=float)
-        dself.dipole = depend_array(
+        self._dipole = depend_array(
             name="dipole",
             func=lambda: self._get_dipole(),
             value=val,
-            dependencies=[dd(ensemble.beads).q],
+            dependencies=[ensemble.beads._q],
         )
 
         pass
@@ -200,36 +197,34 @@ class ElectricDipole(dobject):
             return np.full((self.nbeads, 3), np.nan)
 
 
-class ElectricField(dobject):
+class ElectricField:
     def __init__(self, amp=None, freq=None, phase=None, peak=None, sigma=None):
-        dself = dd(self)
-        dself.amp = depend_array(
+        self._amp = depend_array(
             name="amp", value=amp if amp is not None else np.zeros(3)
         )
-        dself.freq = depend_value(name="freq", value=freq if freq is not None else 0.0)
-        dself.phase = depend_value(
+        self._freq = depend_value(name="freq", value=freq if freq is not None else 0.0)
+        self._phase = depend_value(
             name="phase", value=phase if phase is not None else 0.0
         )
-        dself.peak = depend_value(name="peak", value=peak if peak is not None else 0.0)
-        dself.sigma = depend_value(
+        self._peak = depend_value(name="peak", value=peak if peak is not None else 0.0)
+        self._sigma = depend_value(
             name="sigma", value=sigma if sigma is not None else np.inf
         )
 
     def bind(self, eda, enstype):
         self.enstype = enstype
-        dself = dd(self)
-        dself.mts_time = dd(eda).mts_time
+        self._mts_time = eda._mts_time
 
         # same dependencies for Eenvelope and its time derivative
-        dep = [dself.mts_time, dself.peak, dself.sigma]
-        dself.Eenvelope = depend_value(
+        dep = [self._mts_time, self._peak, self._sigma]
+        self._Eenvelope = depend_value(
             name="Eenvelope", value=1.0, func=self._get_Eenvelope, dependencies=dep
         )
 
         if enstype in EDA.integrators:
             # with dependencies
-            dep = [dself.mts_time, dself.amp, dself.freq, dself.phase, dself.Eenvelope]
-            dself.Efield = depend_array(
+            dep = [self._mts_time, self._amp, self._freq, self._phase, self._Eenvelope]
+            self._Efield = depend_array(
                 name="Efield",
                 value=np.zeros(3, float),
                 func=self._get_Efield,
@@ -237,7 +232,7 @@ class ElectricField(dobject):
             )
         else:
             # no dependencies
-            dself.Efield = depend_array(
+            self._Efield = depend_array(
                 name="Efield",
                 value=np.zeros(3, float),
                 func=lambda time=None: np.zeros(3, float),
@@ -285,7 +280,7 @@ class ElectricField(dobject):
         return np.cos(self.freq * time + self.phase)
 
 
-class EDA(dobject):
+class EDA:
     integrators = ["eda-nve"]
 
     def __init__(self, efield: ElectricField, bec: BEC, **kwargv):
@@ -297,19 +292,18 @@ class EDA(dobject):
 
     def bind(self, ensemble, enstype):
         self.enstype = enstype
-        dself = dd(self)
 
-        dself.mts_time = depend_value(name="mts_time", value=dstrip(ensemble).time)
-        dself.time = dd(ensemble).time
+        self._mts_time = depend_value(name="mts_time", value=dstrip(ensemble).time)
+        self._time = ensemble._time
 
         self.Electric_Field.bind(self, enstype)
         self.Electric_Dipole.bind(self, ensemble)
         self.Born_Charges.bind(self, ensemble, enstype)
 
-        dself.Efield = dd(self.Electric_Field).Efield
-        dself.Eenvelope = dd(self.Electric_Field).Eenvelope
-        dself.bec = dd(self.Born_Charges).bec
-        dself.dipole = dd(self.Electric_Dipole).dipole
+        self._Efield = self.Electric_Field._Efield
+        self._Eenvelope = self.Electric_Field._Eenvelope
+        self._bec = self.Born_Charges._bec
+        self._dipole = self.Electric_Dipole._dipole
 
         pass
 
