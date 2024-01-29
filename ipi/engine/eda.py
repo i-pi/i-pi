@@ -177,7 +177,7 @@ class ElectricDipole:
                     if "[eAng]" in raw:
                         factor = UnitMap["length"]["angstrom"]
 
-                    pattern = "[-+]?\d*\.\d+(?:[eE][-+]?\d+)?|\b[-+]?\d+\b"
+                    pattern = r"[-+]?\d*\.\d+(?:[eE][-+]?\d+)?|\b[-+]?\d+\b"
                     matches = list(re.findall(pattern, raw))
                     if len(matches) != 3:
                         raise ValueError(
