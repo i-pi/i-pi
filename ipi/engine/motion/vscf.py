@@ -292,7 +292,7 @@ class IMF(DummyCalculator):
         norm = (alpha / np.pi) ** 0.25 * np.sqrt(
             1.0 / (2.0 ** (n) * np.math.factorial(n))
         )
-        psival = norm * np.exp(-alpha * q ** 2 / 2.0) * herfun(np.sqrt(alpha) * q)
+        psival = norm * np.exp(-alpha * q**2 / 2.0) * herfun(np.sqrt(alpha) * q)
 
         return psival
 
@@ -448,7 +448,7 @@ class IMF(DummyCalculator):
                 # Doubles the grid spacing, so that an estimate of the
                 # anharmonic free energy convergence is
                 # possible at default/input grid spacing
-                ffnmrms = self.fnmrms * 0.5 ** sampling_density_iter * 2.0
+                ffnmrms = self.fnmrms * 0.5**sampling_density_iter * 2.0
 
                 # Calculates the displacement in Cartesian coordinates.
                 nmd = ffnmrms * self.imm.nmrms[step]
@@ -477,14 +477,10 @@ class IMF(DummyCalculator):
                         - 0.50 * self.imm.w2[step] * (nmd * counter) ** 2
                         - v0
                     )
-                    df = (
-                        np.dot(
-                            dstrip(self.imm.dforces.f).copy()[0],
-                            np.real(self.imm.V.T[step]),
-                        )
-                        / self.nprim
-                        + self.imm.w2[step] * (nmd * counter)
-                    )
+                    df = np.dot(
+                        dstrip(self.imm.dforces.f).copy()[0],
+                        np.real(self.imm.V.T[step]),
+                    ) / self.nprim + self.imm.w2[step] * (nmd * counter)
 
                     # Adds to the list.
                     # Also stores the total energetics i.e. including
@@ -522,14 +518,10 @@ class IMF(DummyCalculator):
                         - 0.50 * self.imm.w2[step] * (nmd * counter) ** 2
                         - v0
                     )
-                    df = (
-                        np.dot(
-                            dstrip(self.imm.dforces.f).copy()[0],
-                            np.real(self.imm.V.T[step]),
-                        )
-                        / self.nprim
-                        + self.imm.w2[step] * (nmd * counter)
-                    )
+                    df = np.dot(
+                        dstrip(self.imm.dforces.f).copy()[0],
+                        np.real(self.imm.V.T[step]),
+                    ) / self.nprim + self.imm.w2[step] * (nmd * counter)
 
                     # Adds to the list.
                     # Also stores the total energetics i.e. including

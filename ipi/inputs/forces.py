@@ -13,7 +13,6 @@ __all__ = ["InputForces", "InputForceComponent"]
 
 
 class InputForceComponent(Input):
-
     """ForceComponent input class.
 
     Uses the forcefield object whose name is specified as the value of the
@@ -142,7 +141,6 @@ class InputForceComponent(Input):
 
 
 class InputForces(Input):
-
     """Deals with creating all the forcefield objects required in the
     simulation.
 

@@ -380,7 +380,7 @@ if not quiet:
     print(("{}".format(d10)))
 
 if case == "reactant":
-    Qtras = ((np.sum(m)) / (2 * np.pi * beta * hbar ** 2)) ** 1.5
+    Qtras = ((np.sum(m)) / (2 * np.pi * beta * hbar**2)) ** 1.5
 
     if asr == "poly":
         Qrot = (8 * np.pi * detI / ((hbar) ** 6 * (beta) ** 3)) ** 0.5
@@ -408,7 +408,7 @@ if case == "reactant":
     print("A file with the frequencies in atomic units was generated\n")
 
 elif case == "TS":
-    Qtras = ((np.sum(m)) / (2 * np.pi * beta * hbar ** 2)) ** 1.5
+    Qtras = ((np.sum(m)) / (2 * np.pi * beta * hbar**2)) ** 1.5
 
     if asr == "poly":
         Qrot = (8 * np.pi * detI / ((hbar) ** 6 * (beta) ** 3)) ** 0.5
@@ -436,11 +436,11 @@ elif case == "TS":
 
 elif case == "instanton":
     if mode == "rate":
-        Qtras = ((np.sum(m)) / (2 * np.pi * beta * hbar ** 2)) ** 1.5
+        Qtras = ((np.sum(m)) / (2 * np.pi * beta * hbar**2)) ** 1.5
 
         if asr == "poly" and not quiet:
             Qrot = (8 * np.pi * detI / ((hbar) ** 6 * (betaP) ** 3)) ** 0.5
-            Qrot /= nbeads ** 3
+            Qrot /= nbeads**3
         else:
             Qrot = 1.0
 
@@ -549,7 +549,7 @@ elif case == "instanton":
         print("BN {} a.u.".format(BN))
         print(
             "BN/(hbar^2 * betaN)  {}  (should be same as S/hbar) ".format(
-                (BN / ((hbar ** 2) * betaP))
+                (BN / ((hbar**2) * betaP))
             )
         )
         print("")

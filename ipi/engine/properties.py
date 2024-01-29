@@ -196,7 +196,6 @@ def help_rst(idict, standalone=True):
 
 
 class Properties:
-
     """A proxy to compute and output properties of the system.
 
     Takes the fundamental properties calculated during the simulation, and
@@ -299,9 +298,11 @@ class Properties:
                 "help": "The electric dipole of the system (cartesian axes).",
                 "size": 3,
                 "func": (
-                    lambda bead="-1": self.motion.eda.dipole.mean(axis=0)
-                    if int(bead) < 0
-                    else self.motion.eda.dipole[int(bead)]
+                    lambda bead="-1": (
+                        self.motion.eda.dipole.mean(axis=0)
+                        if int(bead) < 0
+                        else self.motion.eda.dipole[int(bead)]
+                    )
                 ),
             },
             "conserved": {
@@ -352,9 +353,11 @@ class Properties:
                 "longhelp": """The physical system potential energy. With the optional argument 'bead'
                          will print the potential associated with the specified bead.""",
                 "func": (
-                    lambda bead="-1": self.forces.pot / self.beads.nbeads
-                    if int(bead) < 0
-                    else self.forces.pots[int(bead)]
+                    lambda bead="-1": (
+                        self.forces.pot / self.beads.nbeads
+                        if int(bead) < 0
+                        else self.forces.pots[int(bead)]
+                    )
                 ),
             },
             "bead_potentials": {
@@ -383,12 +386,11 @@ class Properties:
                        potential must be returned. The optional argument 'bead' will print the potential associated
                        with the specified bead. If the potential is weighed, the weight will be applied. """,
                 "func": (
-                    lambda index, bead="-1": self.forces.pots_component(
-                        int(index)
-                    ).sum()
-                    / self.beads.nbeads
-                    if int(bead) < 0
-                    else self.forces.pots_component(int(index))[int(bead)]
+                    lambda index, bead="-1": (
+                        self.forces.pots_component(int(index)).sum() / self.beads.nbeads
+                        if int(bead) < 0
+                        else self.forces.pots_component(int(index))[int(bead)]
+                    )
                 ),
             },
             "pot_component_raw": {
@@ -400,12 +402,12 @@ class Properties:
                        will print the potential associated with the specified bead. Potential weights
                        will not be applied. """,
                 "func": (
-                    lambda index, bead="-1": self.forces.pots_component(
-                        int(index), False
-                    ).sum()
-                    / self.beads.nbeads
-                    if int(bead) < 0
-                    else self.forces.pots_component(int(index), False)[int(bead)]
+                    lambda index, bead="-1": (
+                        self.forces.pots_component(int(index), False).sum()
+                        / self.beads.nbeads
+                        if int(bead) < 0
+                        else self.forces.pots_component(int(index), False)[int(bead)]
+                    )
                 ),
             },
             "forcemod": {
@@ -414,9 +416,11 @@ class Properties:
                 "longhelp": """The modulus of the force. With the optional argument 'bead'
                        will print the force associated with the specified bead.""",
                 "func": (
-                    lambda bead="-1": np.linalg.norm(self.forces.f) / self.beads.nbeads
-                    if int(bead) < 0
-                    else np.linalg.norm(self.forces.f[int(bead)])
+                    lambda bead="-1": (
+                        np.linalg.norm(self.forces.f) / self.beads.nbeads
+                        if int(bead) < 0
+                        else np.linalg.norm(self.forces.f[int(bead)])
+                    )
                 ),
             },
             "spring": {
@@ -1755,7 +1759,7 @@ class Properties:
                 self.dbeads.q[b, 3 * i : 3 * (i + 1)] += self.opening(b) * u
             dV = self.dforces.pot - self.forces.pot
 
-            n0 = np.exp(-mass * u_size / (2.0 * beta * Constants.hbar ** 2))
+            n0 = np.exp(-mass * u_size / (2.0 * beta * Constants.hbar**2))
             nx_tot += n0 * np.exp(-dV * beta / float(self.beads.nbeads))
             ncount += 1
 
@@ -1777,7 +1781,7 @@ class Properties:
 
         eps = abs(float(fd_delta))
         beta = 1.0 / (Constants.kb * self.ensemble.temp)
-        beta2 = beta ** 2
+        beta2 = beta**2
         qc = dstrip(self.beads.qc)
         q = dstrip(self.beads.q)
 
@@ -1877,8 +1881,8 @@ class Properties:
 
                 eps_prime = (
                     (1.0 + dbeta) * vplus + (1.0 - dbeta) * vminus - 2 * v0
-                ) / (dbeta ** 2 * beta)
-                eps_prime -= 0.5 * (3 * self.beads.natoms) / beta ** 2
+                ) / (dbeta**2 * beta)
+                eps_prime -= 0.5 * (3 * self.beads.natoms) / beta**2
 
                 break
 
@@ -1950,8 +1954,8 @@ class Properties:
 
                 eps_prime = (
                     (1.0 + dbeta) * vplus + (1.0 - dbeta) * vminus - 2 * v0
-                ) / (dbeta ** 2 * beta)
-                eps_prime -= 0.5 * (3 * self.beads.natoms) / beta ** 2
+                ) / (dbeta**2 * beta)
+                eps_prime -= 0.5 * (3 * self.beads.natoms) / beta**2
 
                 break
 
@@ -2560,7 +2564,7 @@ class Properties:
             chin += (-pots[b] + pots[b + 1]) / 3.0
 
         chin *= -betaP
-        chin2 = chin ** 2
+        chin2 = chin**2
         chinexp = np.exp(chin)
 
         return np.asarray([chin, chin2, chinexp])
@@ -2580,7 +2584,7 @@ class Properties:
         ti *= (1.0 / 24.0) / self.nm.omegan2
 
         ti *= -betaP
-        ti2 = ti ** 2
+        ti2 = ti**2
         tiexp = np.exp(ti)
 
         return np.asarray([ti, ti2, tiexp])
@@ -2636,7 +2640,6 @@ class Properties:
 
 
 class Trajectories:
-
     """A simple class to take care of output of trajectory data.
 
     Attributes:
@@ -2682,9 +2685,11 @@ class Trajectories:
                 "dimension": "force",
                 "help": "The Electric field contribution to the forces (to be added to the 'forces' trajectories to get the total forces)",
                 "func": (
-                    lambda: self.system.motion.integrator.EDAforces
-                    if hasattr(self.system.motion.integrator, "EDAforces")
-                    else np.zeros((self.system.beads.natoms * 3))
+                    lambda: (
+                        self.system.motion.integrator.EDAforces
+                        if hasattr(self.system.motion.integrator, "EDAforces")
+                        else np.zeros((self.system.beads.natoms * 3))
+                    )
                 ),
             },
             "forces_sc": {

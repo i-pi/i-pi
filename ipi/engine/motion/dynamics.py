@@ -23,7 +23,6 @@ from ipi.utils.units import Constants
 
 
 class Dynamics(Motion):
-
     """self (path integral) molecular dynamics class.
 
     Gives the standard methods and attributes needed in all the
@@ -125,12 +124,12 @@ class Dynamics(Motion):
         else:
             self.fixatoms = fixatoms
 
-        self.eda_on = False
-        if self.enstype in EDA.integrators:
-            self.efield = efield
-            self.bec = bec
-            self.eda = EDA(self.efield, self.bec)  # cdip
-            self.eda_on = True
+        # self.eda_on = False
+        # if self.enstype in EDA.integrators:
+        self.efield = efield
+        self.bec = bec
+        self.eda = EDA(self.efield, self.bec)  # cdip
+        self.eda_on = self.enstype in EDA.integrators
 
     def get_fixdof(self):
         """Calculate the number of fixed degrees of freedom, required for
@@ -305,6 +304,8 @@ class DummyIntegrator:
         self.fixcom = motion.fixcom
         self.fixatoms = motion.fixatoms
         self.enstype = motion.enstype
+        if motion.enstype in EDA.integrators:
+            self.eda = motion.eda
 
         # no need to dpipe these are really just references
         self._splitting = motion._splitting
@@ -389,7 +390,7 @@ class DummyIntegrator:
             dens = 0
             for i in range(3):
                 pcom = p[:, i:na3:3].sum()
-                dens += pcom ** 2
+                dens += pcom**2
                 pcom /= Mnb
                 self.beads.p[:, i:na3:3] -= m * pcom
 
@@ -421,7 +422,6 @@ dproperties(
 
 
 class NVEIntegrator(DummyIntegrator):
-
     """Integrator object for constant energy simulations.
 
     Has the relevant conserved quantity and normal mode propagator for the
@@ -528,7 +528,6 @@ class NVEIntegrator(DummyIntegrator):
 
 
 class NVTIntegrator(NVEIntegrator):
-
     """Integrator object for constant temperature simulations.
 
     Has the relevant conserved quantity and normal mode propagator for the
@@ -618,7 +617,6 @@ class NVTCCIntegrator(NVTIntegrator):
 
 
 class NPTIntegrator(NVTIntegrator):
-
     """Integrator object for constant pressure simulations.
 
     Has the relevant conserved quantity and normal mode propagator for the
@@ -664,7 +662,6 @@ class NPTIntegrator(NVTIntegrator):
 
 
 class NSTIntegrator(NPTIntegrator):
-
     """Ensemble object for constant pressure simulations.
 
     Has the relevant conserved quantity and normal mode propagator for the
@@ -857,13 +854,13 @@ class EDAIntegrator(DummyIntegrator):
         self._mts_time = self.eda._mts_time
 
         dep = [
-            self.time,
-            self.mts_time,
-            self.eda._bec,
-            self.eda._Efield,
+            self._time,
+            self._mts_time,
+            self.eda.Born_Charges._bec,
+            self.eda.Electric_Field._Efield,
         ]
-        self.EDAforces = depend_array(
-            name="forces",
+        self._EDAforces = depend_array(
+            name="EDAforces",
             func=self._eda_forces,
             value=np.zeros((self.beads.nbeads, self.beads.natoms * 3)),
             dependencies=dep,

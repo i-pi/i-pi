@@ -59,7 +59,6 @@ def ensemble_swap(ens1, ens2):
 
 
 class Ensemble:
-
     """Base ensemble class.
 
     Defines the thermodynamic state of the system.
@@ -145,20 +144,8 @@ class Ensemble:
             hweights = np.ones(0)
         self.hweights = np.asarray(hweights)
 
-        # ES
-
-        # if peak is not None and peak < 0:
-        #     raise ValueError(
-        #         "peak < 0: the peak of the external electric field can only be positive"
-        #     )
-        # if sigma is not None and sigma < 0:
-        #     raise ValueError(
-        #         "sigma < 0: the standard deviation of the gaussian envelope function of the external electric field has to be positive"
-        #     )
-
         # Internal time counter
-        self._time = depend_value(name="time")
-        self.time = time
+        self._time = depend_value(name="time", value=time)
 
     def copy(self):
         return Ensemble(

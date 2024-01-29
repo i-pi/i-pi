@@ -2,6 +2,7 @@ import numpy as np
 from ipi.utils.depend import dstrip
 from ipi.utils.depend import *
 from ipi.utils.units import UnitMap
+from ipi.engine.forces import Forces
 import re
 
 __all__ = ["BEC", "ElectricField", "EDA"]
@@ -117,14 +118,17 @@ dproperties(BEC, ["bec"])
 
 
 class ElectricDipole:
-    # def __init__(self, cdip):
-    #     self.cdip = cdip
-    #     pass
+    def __init__(self):
+        # self._forces = Forces()
+        pass
 
     def bind(self, eda, ensemble):
         self._nbeads = depend_value(name="nbeads", value=ensemble.beads.nbeads)
 
-        self._forces = ensemble._forces  # is this a weakref??
+        self.ens = ensemble
+
+        # self.forces = ensemble.forces #dpipe(ensemble.forces,self._forces)
+        # self._forces = ensemble.forces  # is this a weakref??
 
         # val = np.zeros(
         #     3, dtype=float
@@ -160,21 +164,21 @@ class ElectricDipole:
 
         dipole = np.full((self.nbeads, 3), np.nan)
         try:
-            if "dipole" in self.forces.extras:
-                raws = [self.forces.extras["dipole"][i] for i in range(self.nbeads)]
+            if "dipole" in self.ens.forces.extras:
+                raws = [self.ens.forces.extras["dipole"][i] for i in range(self.nbeads)]
                 for n, raw in enumerate(raws):
                     if len(raw) != 3:
                         raise ValueError("'dipole' has not length 3")
                     dipole[n] = np.asarray(raw)
                 return dipole
 
-            elif "raw" not in self.forces.extras:
+            elif "raw" not in self.ens.forces.extras:
                 raise ValueError("'raw' has to be in 'forces.extras'")
 
             elif np.all(
-                ["Total dipole moment" in s for s in self.forces.extras["raw"]]
+                ["Total dipole moment" in s for s in self.ens.forces.extras["raw"]]
             ):
-                raws = [self.forces.extras["raw"][i] for i in range(self.nbeads)]
+                raws = [self.ens.forces.extras["raw"][i] for i in range(self.nbeads)]
                 for n, raw in enumerate(raws):
                     factor = 1.0
                     if "[eAng]" in raw:
@@ -216,6 +220,16 @@ class ElectricField:
         self._sigma = depend_value(
             name="sigma", value=sigma if sigma is not None else np.inf
         )
+        self._Efield = depend_array(
+            name="Efield",
+            value=np.zeros(3, float),
+            func=lambda: np.zeros(3, float),
+        )
+        self._Eenvelope = depend_value(
+            name="Eenvelope",
+            value=1.0,
+            func=lambda: np.zeros(3, float),
+        )
 
     def bind(self, eda, enstype):
         self.enstype = enstype
@@ -241,7 +255,7 @@ class ElectricField:
             self._Efield = depend_array(
                 name="Efield",
                 value=np.zeros(3, float),
-                func=lambda time=None: np.zeros(3, float),
+                func=lambda: np.zeros(3, float),
             )
         pass
 
@@ -299,6 +313,13 @@ class EDA:
         self.Electric_Field = efield
         self.Electric_Dipole = ElectricDipole()
         self.Born_Charges = bec
+        self._time = depend_value(name="time", value=0)
+        self._mts_time = depend_value(name="mts_time", value=0)
+
+        # self._Efield = ElectricField()
+        # # self._Eenvelope = self.Electric_Field._Eenvelope
+        # self._bec = BEC()
+        # self._dipole = ElectricDipole()
         pass
 
     def bind(self, ensemble, enstype):
@@ -311,10 +332,10 @@ class EDA:
         self.Electric_Dipole.bind(self, ensemble)
         self.Born_Charges.bind(self, ensemble, enstype)
 
-        self._Efield = self.Electric_Field._Efield
-        self._Eenvelope = self.Electric_Field._Eenvelope
-        self._bec = self.Born_Charges._bec
-        self._dipole = self.Electric_Dipole._dipole
+        # self._Efield = self.Electric_Field#._Efield
+        # self._Eenvelope = self.Electric_Field#._Eenvelope
+        # self._bec = self.Born_Charges#._bec
+        # self._dipole = self.Electric_Dipole#._dipole
 
         pass
 

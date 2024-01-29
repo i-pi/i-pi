@@ -36,7 +36,6 @@ __all__ = [
 
 
 class Thermostat:
-
     """Base thermostat class.
 
     Gives the standard methods and attributes needed in all the thermostat
@@ -152,7 +151,6 @@ class Thermostat:
 
 
 class ThermoLangevin(Thermostat):
-
     """Represents a langevin thermostat.
 
     Depend objects:
@@ -171,7 +169,7 @@ class ThermoLangevin(Thermostat):
 
     def get_S(self):
         """Calculates the coefficient of the white noise."""
-        return np.sqrt(Constants.kb * self.temp * (1 - self.T ** 2))
+        return np.sqrt(Constants.kb * self.temp * (1 - self.T**2))
 
     def __init__(self, temp=1.0, dt=1.0, tau=1.0, ethermo=0.0):
         """Initialises ThermoLangevin.
@@ -222,7 +220,6 @@ dproperties(
 
 
 class ThermoPILE_L(Thermostat):
-
     """Represents a PILE thermostat with a local centroid thermostat.
 
     Attributes:
@@ -430,7 +427,6 @@ dproperties(ThermoPILE_L, ["pilescale", "pilect", "npilect", "tauk"])
 
 
 class ThermoSVR(Thermostat):
-
     """Represents a stochastic velocity rescaling thermostat.
 
     Depend objects:
@@ -487,11 +483,11 @@ class ThermoSVR(Thermostat):
         if (self.ndof - 1) % 2 == 0:
             rg = 2.0 * self.prng.gamma((self.ndof - 1) / 2)
         else:
-            rg = 2.0 * self.prng.gamma((self.ndof - 2) / 2) + self.prng.g ** 2
+            rg = 2.0 * self.prng.gamma((self.ndof - 2) / 2) + self.prng.g**2
 
         alpha2 = (
             self.et
-            + self.K / K * (1 - self.et) * (r1 ** 2 + rg)
+            + self.K / K * (1 - self.et) * (r1**2 + rg)
             + 2.0 * r1 * np.sqrt(self.K / K * self.et * (1 - self.et))
         )
         alpha = np.sqrt(alpha2)
@@ -503,7 +499,6 @@ class ThermoSVR(Thermostat):
 
 
 class ThermoPILE_G(ThermoPILE_L):
-
     """Represents a PILE thermostat with a global centroid thermostat.
 
     Simply replaces the Langevin thermostat for the centroid normal mode with
@@ -585,7 +580,6 @@ dproperties(ThermoSVR, ["et", "K", "pilescale", "pilect", "npilect"])
 
 
 class ThermoGLE(Thermostat):
-
     """Represents a generalized Langevin equation thermostat.
 
     This is similar to a langevin thermostat, in that it uses Gaussian random
@@ -746,7 +740,6 @@ dproperties(ThermoGLE, ["A", "C"])
 
 
 class ThermoNMGLE(Thermostat):
-
     """Represents a 'normal-modes' generalized Langevin equation thermostat.
 
     An extension to the GLE thermostat which is applied in the
@@ -935,7 +928,6 @@ dproperties(ThermoNMGLE, ["A", "C"])
 
 
 class ThermoNMGLEG(ThermoNMGLE):
-
     """Represents a 'normal-modes' generalized Langevin equation thermostat + SVR.
 
     An extension to the above NMGLE thermostat which also adds a stochastic
@@ -987,7 +979,6 @@ class ThermoNMGLEG(ThermoNMGLE):
 
 
 class ThermoCL(Thermostat):
-
     """Represents a Langevin thermostat for systems driven by forces which are statistical
        in nature, i.e. they contain noise, and/or have an unwanted dissipative effect.
        This thermostat's dissipative term is modified to compensate for the inherent noise.
@@ -1125,7 +1116,6 @@ dproperties(ThermoCL, ["idtau", "intau", "apat", "lgT", "inT", "idT"])
 
 
 class ThermoFFL(Thermostat):
-
     """Represents a fast-forward langevin thermostat.
 
     Depend objects:
@@ -1146,7 +1136,7 @@ class ThermoFFL(Thermostat):
     def get_S(self):
         """Calculates the coefficient of the white noise."""
 
-        return np.sqrt(Constants.kb * self.temp * (1 - self.T ** 2))
+        return np.sqrt(Constants.kb * self.temp * (1 - self.T**2))
 
     def __init__(self, temp=1.0, dt=1.0, tau=1.0, ethermo=0.0, flip="rescale"):
         """Initialises ThermoFFL.

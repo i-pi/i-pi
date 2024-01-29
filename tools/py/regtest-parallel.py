@@ -394,7 +394,6 @@ def _file_is_test(path_to_test):
 
 
 class Test(threading.Thread):
-
     """Contains all the methods used to create, run and compare a test.
 
     Args:

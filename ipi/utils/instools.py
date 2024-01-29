@@ -174,11 +174,11 @@ def get_imvector(h, m3):
     OUT    imv    = eigenvector corresponding to the imaginary mode
     """
     info("@get_imvector", verbosity.high)
-    if h.size != m3.size ** 2:
+    if h.size != m3.size**2:
         raise ValueError(
             "@Get_imvector. Initial hessian size does not match system size."
         )
-    m = 1.0 / (m3 ** 0.5)
+    m = 1.0 / (m3**0.5)
     mm = np.outer(m, m)
     hm = np.multiply(h, mm)
 

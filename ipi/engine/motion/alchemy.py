@@ -20,7 +20,6 @@ from ipi.utils.units import Constants
 
 
 class AlchemyMC(Motion):
-
     """Monte Carlo alchemical exchanges class.
 
     Attributes:

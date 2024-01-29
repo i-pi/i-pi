@@ -16,7 +16,6 @@ __all__ = ["Constants", "Elements", "unit_to_internal", "unit_to_user", "UnitMap
 
 
 class Constants(object):
-
     """Class whose members are fundamental constants.
 
     Attributes:
@@ -32,7 +31,6 @@ class Constants(object):
 
 
 class Elements(dict):
-
     """Class which contains the mass of different elements.
 
     Attributes:

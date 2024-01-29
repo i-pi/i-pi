@@ -47,7 +47,6 @@ __all__ = [
 
 
 class synchronizer(object):
-
     """Class to implement synched objects.
 
     Holds the objects used to keep two or more objects in step with each other.
@@ -78,7 +77,6 @@ class synchronizer(object):
 
 # TODO put some error checks in the init to make sure that the object is initialized from consistent synchro and func states
 class depend_base(object):
-
     """Base class for dependency handling.
 
     Builds the majority of the machinery required for the different depend
@@ -337,7 +335,6 @@ class depend_base(object):
 
 
 class depend_value(depend_base):
-
     """Depend class for scalar values.
 
     Attributes:
@@ -417,7 +414,6 @@ class depend_value(depend_base):
 
 
 class depend_array(np.ndarray, depend_base):
-
     """Depend class for arrays.
 
     Differs from depend_value as arrays handle getting items in a different

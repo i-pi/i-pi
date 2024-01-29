@@ -18,7 +18,6 @@ __all__ = ["InputNormalModes", "InputNMFrequencies"]
 
 
 class InputNMFrequencies(InputArray):
-
     """Storage class for NormalModes engine."""
 
     attribs = copy(InputArray.attribs)
@@ -76,7 +75,6 @@ free particle, and all the normal modes will coincide at frequency wmax.
 
 
 class InputNormalModes(Input):
-
     """Storage class for NormalModes engine.
 
     Describes how normal-modes transformation and integration should be

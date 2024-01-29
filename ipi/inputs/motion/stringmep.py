@@ -32,7 +32,6 @@ __all__ = ["InputStringMEP"]
 
 
 class InputStringMEP(InputDictionary):
-
     """Options for string minimal energy path calculations.
 
     Contains options related to geometry optimization, such as method,

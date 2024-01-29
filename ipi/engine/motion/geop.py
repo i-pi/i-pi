@@ -182,7 +182,6 @@ class GeopMotion(Motion):
 
 
 class LineMapper(object):
-
     """Creation of the one-dimensional function that will be minimized.
     Used in steepest descent and conjugate gradient minimizers.
 
@@ -236,7 +235,6 @@ class LineMapper(object):
 
 
 class GradientMapper(object):
-
     """Creation of the multi-dimensional function that will be minimized.
     Used in the BFGS and L-BFGS minimizers.
 
@@ -483,9 +481,9 @@ class BFGSOptimizer(DummyOptimizer):
 
             # Restore dimensionality of d and invhessian
             self.d[:, self.gm.fixatoms_mask] = masked_d
-            self.invhessian[
-                np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)
-            ] = masked_invhessian
+            self.invhessian[np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)] = (
+                masked_invhessian
+            )
 
         else:
             fdf0 = (self.old_u, -self.old_f)
@@ -578,9 +576,9 @@ class BFGSTRMOptimizer(DummyOptimizer):
             )
 
             # Restore dimensionality of the hessian
-            self.hessian[
-                np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)
-            ] = masked_hessian
+            self.hessian[np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)] = (
+                masked_hessian
+            )
         else:
             # Make one step. ( A step is finished when a movement is accepted)
             BFGSTRM(
@@ -796,9 +794,9 @@ class Damped_BFGSOptimizer(DummyOptimizer):
             )
 
             # Restore dimensionality of the invhessian
-            self.invhessian[
-                np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)
-            ] = masked_invhessian
+            self.invhessian[np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)] = (
+                masked_invhessian
+            )
 
         else:
             fdf0 = (self.old_u, -self.old_f)

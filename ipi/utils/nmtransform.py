@@ -158,7 +158,6 @@ class nm_noop(object):
 
 
 class nm_trans(object):
-
     """Uses matrix multiplication to do normal mode transformations.
 
     Attributes:
@@ -230,7 +229,6 @@ class nm_trans(object):
 
 
 class nm_rescale(object):
-
     """Uses matrix multiplication to do ring polymer contraction or expansion
     between different numbers of beads.
 
@@ -331,7 +329,6 @@ class nm_rescale(object):
 class nm_fft(
     object
 ):  # ! TODO add (matrix-version) of the open path transformation here
-
     """Uses Fast Fourier transforms to do normal mode transformations.
 
     Attributes:

@@ -19,7 +19,6 @@ __all__ = ["InputElectricField", "InputBEC"]
 
 
 class InputElectricField(Input):
-
     """Electric field input class."""
 
     attribs = {}
