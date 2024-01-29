@@ -837,6 +837,7 @@ class SCNPTIntegrator(SCIntegrator):
             self.barostat.pscstep()
             self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
 
+
 class EDAIntegrator(DummyIntegrator):
     """Integrator object for simulations using the Electric Dipole Approximation (EDA)
     when an external electric field is applied.
