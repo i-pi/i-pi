@@ -129,7 +129,7 @@ class Dynamics(Motion):
             self.efield = efield
             self.bec = bec
             self.eda = EDA(self.efield, self.bec)  # cdip
-            self.eda_on = True # self.enstype in EDA.integrators
+            self.eda_on = True  # self.enstype in EDA.integrators
 
     def get_fixdof(self):
         """Calculate the number of fixed degrees of freedom, required for
@@ -892,7 +892,9 @@ class EDAIntegrator(DummyIntegrator):
             )
         super().step(step)
 
-dproperties(EDAIntegrator, ["EDAforces","mts_time","time"])
+
+dproperties(EDAIntegrator, ["EDAforces", "mts_time", "time"])
+
 
 class EDANVEIntegrator(EDAIntegrator, NVEIntegrator):
     """Integrator object for simulations with constant Number of particles, Volume, and Energy (NVE)

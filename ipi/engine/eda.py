@@ -300,7 +300,8 @@ class ElectricField:
 
 
 dproperties(
-    ElectricField, ["amp", "phase", "peak", "sigma", "freq", "Eenvelope", "Efield","mts_time"]
+    ElectricField,
+    ["amp", "phase", "peak", "sigma", "freq", "Eenvelope", "Efield", "mts_time"],
 )
 
 

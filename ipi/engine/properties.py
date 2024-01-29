@@ -2674,20 +2674,35 @@ class Trajectories:
             "becx": {
                 "dimension": "number",
                 "help": "The BEC tensors in cartesian coordinates.",
-                "func": (lambda bead="-1": self.system.motion.eda.Born_Charges.bec[0][:,0] if int(bead) < 0
-                        else self.system.motion.eda.Born_Charges.bec[int(bead)][:,0] ),
+                "func": (
+                    lambda bead="-1": (
+                        self.system.motion.eda.Born_Charges.bec[0][:, 0]
+                        if int(bead) < 0
+                        else self.system.motion.eda.Born_Charges.bec[int(bead)][:, 0]
+                    )
+                ),
             },
             "becy": {
                 "dimension": "number",
                 "help": "The BEC tensors in cartesian coordinates.",
-                "func": (lambda bead="-1": self.system.motion.eda.Born_Charges.bec[0][:,1] if int(bead) < 0
-                        else self.system.motion.eda.Born_Charges.bec[int(bead)][:,1] ),
+                "func": (
+                    lambda bead="-1": (
+                        self.system.motion.eda.Born_Charges.bec[0][:, 1]
+                        if int(bead) < 0
+                        else self.system.motion.eda.Born_Charges.bec[int(bead)][:, 1]
+                    )
+                ),
             },
             "becz": {
                 "dimension": "number",
                 "help": "The BEC tensors in cartesian coordinates.",
-                "func": (lambda bead="-1": self.system.motion.eda.Born_Charges.bec[0][:,2] if int(bead) < 0
-                        else self.system.motion.eda.Born_Charges.bec[int(bead)][:,2] ),
+                "func": (
+                    lambda bead="-1": (
+                        self.system.motion.eda.Born_Charges.bec[0][:, 2]
+                        if int(bead) < 0
+                        else self.system.motion.eda.Born_Charges.bec[int(bead)][:, 2]
+                    )
+                ),
             },
             "forces": {
                 "dimension": "force",
