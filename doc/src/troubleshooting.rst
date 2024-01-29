@@ -117,7 +117,7 @@ Initialization errors
 -  *Number of beads \_\_ doesn’t match GLE parameter nb= \_\_*: The
    matrices used to define the generalized Langevin equations of motion
    do not have the correct first dimension. If matrices have been
-   downloaded from `<http://http://imx-cosmo.github.io/gle4md/>`_
+   downloaded from `<http://lab-cosmo.github.io/gle4md/>`_
    make sure that you have input the correct number of beads.
 
 -  *Initialization tries to match up structures with different atom
@@ -292,10 +292,22 @@ you can try.
    faster to use `mode="unix"` in your `<ffsocket>` classes. This uses 
    a shared-memory communication process, that avoids much of the 
    network latency of a TCP/IP socket.
+-  *reduce latency*: if you have a VERY fast forcefield (with force 
+   evaluation below ~1ms) it might help to set the `<latency>` parameter
+   of `<ffsocket>` to a small value, 1e-4s or less
 -  *reduce I/O*: outputting hundreds of beads configurations at each time
    step is going to be slow in any scenario, but particularly so when
    using text files and Python. Reduce the output frequency using a larger
    `stride`, and/or `flush` less often. 
+-  *reduce the stride of internal checkpoints*: to guarantee that soft
+   exits leave the simulation in a state that can be restarted safely, 
+   i-PI stores the internal state of the simulation at each step. 
+   Particularly for complicated setups, the overhead can be substantial. 
+   You can reduce the frequency by which the internal state is stored using
+   the `safe_stride` attribute in the `<simulation>` tag. Note that doing
+   so increases the risk that the RESTART file saved upon soft exit will be
+   inconsistent with the sate of the outputs, so that restarting a simulaiton
+   will leave broken or discontinuous output files. 
 -  *profile i-PI*: if you still think i-PI is being unreasonably slow,
    you can contact the developers - your setup might have revealed some 
    kind of bottleneck. It will help us if you can also generate a profiler

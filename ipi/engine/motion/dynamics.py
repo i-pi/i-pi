@@ -21,6 +21,7 @@ from ipi.engine.motion.integrators import *
 from ipi.engine.eda import EDA
 
 # __all__ = ['Dynamics', 'NVEIntegrator', 'NVTIntegrator', 'NPTIntegrator', 'NSTIntegrator', 'SCIntegrator`']
+from ipi.utils.messages import warning, verbosity
 
 
 class Dynamics(Motion):
@@ -71,10 +72,9 @@ class Dynamics(Motion):
         """
 
         super(Dynamics, self).__init__(fixcom=fixcom, fixatoms=fixatoms)
-        dself = dd(self)  # noqa
 
         # initialize time step. this is the master time step that covers a full time step
-        dd(self).dt = depend_value(name="dt", value=timestep)
+        self._dt = depend_value(name="dt", value=timestep)
 
         if thermostat is None:
             self.thermostat = Thermostat()
@@ -89,9 +89,9 @@ class Dynamics(Motion):
             self.thermostat = thermostat
 
         if nmts is None or len(nmts) == 0:
-            dd(self).nmts = depend_array(name="nmts", value=np.asarray([1], int))
+            self._nmts = depend_array(name="nmts", value=np.asarray([1], int))
         else:
-            dd(self).nmts = depend_array(name="nmts", value=np.asarray(nmts, int))
+            self._nmts = depend_array(name="nmts", value=np.asarray(nmts, int))
 
         if barostat is None:
             self.barostat = Barostat()
@@ -120,7 +120,7 @@ class Dynamics(Motion):
             self.integrator = DummyIntegrator()
 
         # splitting mode for the integrators
-        dd(self).splitting = depend_value(name="splitting", value=splitting)
+        self._splitting = depend_value(name="splitting", value=splitting)
 
         # constraints
         self.fixcom = fixcom
@@ -177,31 +177,24 @@ class Dynamics(Motion):
                 "The number of mts levels for the integrator does not agree with the mts_weights of the force components."
             )
 
-        # Strips off depend machinery for easier referencing.
-        dself = dd(self)
-        dthrm = dd(self.thermostat)
-        dbaro = dd(self.barostat)
-        dnm = dd(self.nm)  # noqa
-        dens = dd(self.ensemble)
-
         # n times the temperature (for path integral partition function)
-        dself.ntemp = depend_value(
-            name="ntemp", func=self.get_ntemp, dependencies=[dens.temp]
+        self._ntemp = depend_value(
+            name="ntemp", func=self.get_ntemp, dependencies=[self.ensemble._temp]
         )
 
         # fixed degrees of freedom count
         fixdof = self.get_fixdof()
 
         # first makes sure that the thermostat has the correct temperature and timestep, then proceeds with binding it.
-        dpipe(dself.ntemp, dthrm.temp)
+        dpipe(self._ntemp, self.thermostat._temp)
 
         # depending on the kind, the thermostat might work in the normal mode or the bead representation.
         self.thermostat.bind(beads=self.beads, nm=self.nm, prng=prng, fixdof=fixdof)
 
         # first makes sure that the barostat has the correct stress and timestep, then proceeds with binding it.
-        dpipe(dself.ntemp, dbaro.temp)
-        dpipe(dens.pext, dbaro.pext)
-        dpipe(dens.stressext, dbaro.stressext)
+        dpipe(self._ntemp, self.barostat._temp)
+        dpipe(self.ensemble._pext, self.barostat._pext)
+        dpipe(self.ensemble._stressext, self.barostat._stressext)
         self.barostat.bind(
             beads,
             nm,
@@ -213,13 +206,16 @@ class Dynamics(Motion):
             nmts=len(self.nmts),
         )
 
-        self.ensemble.add_econs(dthrm.ethermo)
-        self.ensemble.add_econs(dbaro.ebaro)
+        # now that the timesteps are decided, we proceed to bind the integrator.
+        self.integrator.bind(self)
+
+        self.ensemble.add_econs(self.thermostat._ethermo)
+        self.ensemble.add_econs(self.barostat._ebaro)
 
         # adds the potential, kinetic energy and the cell Jacobian to the ensemble
-        self.ensemble.add_xlpot(dbaro.pot)
-        self.ensemble.add_xlpot(dbaro.cell_jacobian)
-        self.ensemble.add_xlkin(dbaro.kin)
+        self.ensemble.add_xlpot(self.barostat._pot)
+        self.ensemble.add_xlpot(self.barostat._cell_jacobian)
+        self.ensemble.add_xlkin(self.barostat._kin)
 
         if self.enstype in EDA.integrators:
             self.eda.bind(self.ensemble, self.enstype)

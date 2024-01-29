@@ -69,6 +69,14 @@ class InputInterfaceSocket(Input):
                 "help": "This gives the number of seconds between each check for new clients.",
             },
         ),
+        "max_workers": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": 128,
+                "help": "This gives the maximum number of job threads that are active simultaneously.",
+            },
+        ),
         "timeout": (
             InputValue,
             {
@@ -116,6 +124,7 @@ class InputInterfaceSocket(Input):
         self.slots.store(iface.slots)
         self.timeout.store(iface.timeout)
         self.pbc.store(iface.dopbc)
+        self.max_workers.store(iface.max_workers)
 
     def fetch(self):
         """Creates an InterfaceSocket object.
@@ -134,6 +143,7 @@ class InputInterfaceSocket(Input):
             latency=self.latency.fetch(),
             timeout=self.timeout.fetch(),
             dopbc=self.pbc.fetch(),
+            max_workers=self.max_workers.fetch(),
         )
 
     def check(self):

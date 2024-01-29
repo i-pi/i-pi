@@ -23,7 +23,7 @@ import numpy as np
 
 
 from ipi.engine.motion import Motion
-from ipi.utils.depend import *
+from ipi.utils.depend import dstrip
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, info
 
@@ -291,7 +291,7 @@ class DynMatrixMover(Motion):
             return r
 
 
-class DummyPhononCalculator(dobject):
+class DummyPhononCalculator:
 
     """No-op PhononCalculator"""
 

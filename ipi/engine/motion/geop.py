@@ -15,7 +15,7 @@ import numpy as np
 import time
 
 from ipi.engine.motion import Motion
-from ipi.utils.depend import dstrip, dobject
+from ipi.utils.depend import dstrip
 from ipi.utils.softexit import softexit
 from ipi.utils.mintools import min_brent, BFGS, BFGSTRM, L_BFGS, Damped_BFGS
 from ipi.utils.messages import verbosity, info
@@ -273,7 +273,7 @@ class GradientMapper(object):
         return e, g
 
 
-class DummyOptimizer(dobject):
+class DummyOptimizer:
     """Dummy class for all optimization classes"""
 
     def __init__(self):

@@ -1,11 +1,11 @@
 i-PI: a Universal Force Engine (test)
 ==============================
 
-A Python interface for ab initio path integral molecular dynamics simulations.
-i-PI is composed of a Python server (i-pi itself, that does not need to be
-compiled but only requires a relatively recent version of Python and Numpy)
-that apply an algorithm that updates the positions of the nuclei, and of an external
-code that acts as a client and computes the electronic energy and forces.
+A Python interface for ab initio path integral molecular dynamics simulations (and more).
+i-PI is a Python server (that does not need to be compiled and only requires a relatively 
+recent version of Python and Numpy) that applies an algorithm to update the positions of 
+the nuclei. One of many compatible external codes acts as client, and computes the 
+electronic energy and forces.
 
 This is typically a patched version of an electronic structure code, but a
 simple self-contained Fortran driver that implements several simple interatomic
@@ -17,10 +17,10 @@ and it implements most of the state-of-the-art methods to accelerate this kind o
 calculations. It has since grown to also provide all sorts of simulation 
 strategies, from replica exchange to geometry optimization. 
 
-Quick Setup and Test
---------------------
+Quick Setup
+-----------
 
-To use i-PI with an existing driver, install and update using Pip:
+To use i-PI with an existing driver, install and update using `pip`:
 
 Last version::
 ```bash
@@ -29,13 +29,7 @@ python -m pip install git+https://github.com/i-pi/i-pi.git
 
 Last Release::
 ```bash
-pip install -U i-PI
-```
-
-Test with Pytest::
-```bash
-pip install pytest
-pytest --pyargs ipi.tests
+pip install -U ipi
 ```
 
 Full installation
@@ -58,11 +52,16 @@ you always want to have i-PI available.
 
 ### Compile the driver code
 
+The built-in driver requires a FORTRAN compiler, and can be built as
+
 ```bash
 cd drivers/f90
 make
 cd ../..
 ```
+
+There is also a Python driver available in `drivers/py`, which however has limited
+functionalities. 
 
 ### Examples and demos
 
@@ -89,7 +88,6 @@ tail -f log
 
 The monitoring can be interrupted with CTRL+C when the run has finished (5000 steps).
 
-
 ### Run the automatic test suite
 
 The automatic test suite can be run by calling the i-pi-test script.
@@ -99,7 +97,9 @@ You need to have the `pytest` package installed
 i-pi-test
 ```
 
-See more details in the README file inside the ipi_tests folder.
+You may also need to install some dependencies, listed in `requirements.txt`.
+
+See more details in the README file inside the `ipi_tests` folder.
 
 Contributing
 ------------

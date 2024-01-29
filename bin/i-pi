@@ -34,7 +34,7 @@ def profile_exit(prefix="profile"):
     # write out the outputs of the profiler
     import yappi            
     yappi.stop()
-    yappi.get_thread_stats().print_all()
+    #yappi.get_thread_stats().print_all()
     yfs = yappi.get_func_stats()
     yfs.save(prefix+".kgrind", type="callgrind")
     ypo = open(prefix+".yappi", "w")

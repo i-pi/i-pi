@@ -79,7 +79,7 @@ class ConstrainedDynamics(Dynamics):
         """
 
         super(Dynamics, self).__init__(fixcom=fixcom, fixatoms=fixatoms)
-        dd(self).dt = depend_value(name="dt", value=timestep)
+        self._dt = depend_value(name="dt", value=timestep)
 
         if thermostat is None:
             self.thermostat = Thermostat()
@@ -87,9 +87,9 @@ class ConstrainedDynamics(Dynamics):
             self.thermostat = thermostat
 
         if nmts is None or len(nmts) == 0:
-            dd(self).nmts = depend_array(name="nmts", value=np.asarray([1], int))
+            self._nmts = depend_array(name="nmts", value=np.asarray([1], int))
         else:
-            dd(self).nmts = depend_array(name="nmts", value=np.asarray(nmts, int))
+            self._nmts = depend_array(name="nmts", value=np.asarray(nmts, int))
 
         if barostat is None:
             self.barostat = Barostat()
@@ -109,7 +109,7 @@ class ConstrainedDynamics(Dynamics):
             )
 
         # splitting mode for the integrators
-        dd(self).splitting = depend_value(name="splitting", value=splitting)
+        self._splitting = depend_value(name="splitting", value=splitting)
 
         # The list of constraints coming from the input is an actual list of independent
         # constraints, and should be treated as such
@@ -190,7 +190,10 @@ class ConstrainedDynamics(Dynamics):
         self.csolver.bind(beads)
 
 
-class ConstraintSolverBase(dobject):
+dproperties(ConstrainedDynamics, ["dt", "nmts", "splitting"])
+
+
+class ConstraintSolverBase:
     """Empty base class for the constraint solver. Provides the interface
     that must be used to offer constraint functionalities to an integrator.
     """
@@ -199,7 +202,7 @@ class ConstraintSolverBase(dobject):
         self.constraint_list = constraint_list
 
         # time step - will have to be linked to the dynamics time step
-        dd(self).dt = depend_value(name="dt", value=dt)
+        self._dt = depend_value(name="dt", value=dt)
 
     def bind(self, beads):
         if beads.nbeads > 1:
@@ -227,6 +230,9 @@ class ConstraintSolverBase(dobject):
         """
 
         raise NotImplementedError()
+
+
+dproperties(ConstraintSolverBase, ["dt"])
 
 
 class ConstraintSolver(ConstraintSolverBase):
@@ -264,7 +270,6 @@ class ConstraintSolver(ConstraintSolverBase):
         (sparsely).
         """
 
-        #        m3 = dstrip(self.beads.m3[0])
         p = dstrip(self.beads.p[0]).copy()
         self.beads.p.hold()
 
@@ -362,27 +367,29 @@ class ConstrainedIntegrator(DummyIntegrator):
         super(ConstrainedIntegrator, self).bind(motion)
 
         self.constraint_list = motion.constraint_list
-        dself = dd(self)
         if motion.nsteps_geo is None:
-            dself.nsteps_geo = depend_value(name="nsteps_geo", value=1)
+            self._nsteps_geo = depend_value(name="nsteps_geo", value=1)
         else:
-            dself.nsteps_geo = depend_value(name="nsteps_geo", value=motion.nsteps_geo)
-        print(self.nsteps_geo)
-        dself.qdt.add_dependency(dself.nsteps_geo)
+            self._nsteps_geo = depend_value(name="nsteps_geo", value=motion.nsteps_geo)
+
+        self._qdt.add_dependency(self._nsteps_geo)
         if motion.nsteps_o is None:
-            dself.nsteps_o = depend_value(name="nsteps_o", value=1)
+            self._nsteps_o = depend_value(name="nsteps_o", value=1)
         else:
-            dself.nsteps_o = depend_value(name="nsteps_o", value=motion.nsteps_o)
-        print(self.nsteps_o)
-        dself.tdt.add_dependency(dself.nsteps_o)
-        dd(self).csolver = motion.csolver
-        dpipe(dself.qdt, dd(self.csolver).dt)
+            self._nsteps_o = depend_value(name="nsteps_o", value=motion.nsteps_o)
+
+        self._tdt.add_dependency(self._nsteps_o)
+        self.csolver = motion.csolver
+        dpipe(self._qdt, self.csolver._dt)
 
     def proj_cotangent(self):
         self.csolver.proj_cotangent()
 
     def proj_manifold(self):
         self.csolver.proj_manifold()
+
+
+dproperties(ConstrainedIntegrator, ["nsteps_geo", "nsteps_o"])
 
 
 class NVEConstrainedIntegrator(ConstrainedIntegrator):

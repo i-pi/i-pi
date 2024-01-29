@@ -38,12 +38,11 @@ __all__ = [
     "depend_value",
     "depend_array",
     "synchronizer",
-    "dobject",
-    "dd",
     "dpipe",
     "dcopy",
     "dstrip",
     "depraise",
+    "dproperties",
 ]
 
 
@@ -271,13 +270,13 @@ class depend_base(object):
             item = item()
             if not item._tainted[0]:
                 item.taint()
-        if self._synchro is not None:
-            for v in list(self._synchro.synced.values()):
-                if (not v._tainted[0]) and (v is not self):
+        if self._synchro is None:
+            self._tainted[:] = taintme
+        else:
+            for v in self._synchro.synced.values():
+                if not (v is self or v._tainted[0]):
                     v.taint(taintme=True)
             self._tainted[:] = taintme and (not self._name == self._synchro.manual)
-        else:
-            self._tainted[:] = taintme
 
     def tainted(self):
         """Returns tainted flag."""
@@ -835,94 +834,29 @@ def depraise(exception):
     raise exception
 
 
-class dobject(object):
+def _inject_depend_property(cls, attr_name):
+    private_name = f"_{attr_name}"
 
-    """Class that allows standard notation to be used for depend objects.
+    def getter(self):
+        return getattr(self, private_name).__get__(self, self.__class__)
 
-    An extension of the standard library object that overloads __getattribute__
-    and __setattribute__, so that we can use the standard syntax for setting
-    and getting the depend object, i.e. foo = value, not foo.set(value).
+    def setter(self, value):
+        return getattr(self, private_name).__set__(self, value)
+
+    setattr(cls, attr_name, property(getter, setter))
+
+
+def dproperties(cls, attr_names):
     """
+    Adds to a class property wrappers to access its depend members.
+    Assumes that depend objects are named with an underscore prefix, and
+    creates getters and setters with the given names.
 
-    def __new__(cls, *args, **kwds):
-        """Initialize the object using __new__, because we do not want
-        to impose to derived classes to call the super __init__"""
+    If a class `A` contains a `_val` depend object, one should use
+    `dproperties(A, ["val"])`.
+    """
+    if not isinstance(attr_names, list):
+        attr_names = [attr_names]
 
-        obj = object.__new__(cls)
-        obj._direct = ddirect(obj)
-        return obj
-
-    def __getattribute__(self, name):
-        """Overrides standard __getattribute__().
-
-        This changes the standard __getattribute__() function of any class that
-        subclasses dobject such that depend objects are called with their own
-        __get__() function rather than the standard one.
-        """
-
-        value = super(dobject, self).__getattribute__(name)
-        if isinstance(value, depend_base):
-            value = value.__get__(self, self.__class__)
-        return value
-
-    def __setattr__(self, name, value):
-        """Overrides standard __setattribute__().
-
-        This changes the standard __setattribute__() function of any class that
-        subclasses dobject such that depend objects are called with their own
-        __set__() function rather than the standard one.
-        """
-
-        try:
-            obj = super(dobject, self).__getattribute__(name)
-        except AttributeError:
-            pass
-        else:
-            if isinstance(obj, depend_base):
-                return obj.__set__(self, value)
-        return super(dobject, self).__setattr__(name, value)
-
-    def __deepcopy__(self, memo):
-        """Overrides deepcopy behavior, so that _direct is not actually copied
-        but linked to a ddirect object"""
-
-        newone = type(self)()
-
-        for member in newone._direct.__dict__:
-            if member == "_direct":  # do not overwrite direct accessor
-                continue
-            setattr(
-                newone._direct, member, deepcopy(getattr(self._direct, member), memo)
-            )
-        return newone
-
-
-def dd(dobj):
-    if not isinstance(dobj, dobject):
-        raise ValueError(
-            "Cannot access a ddirect view of an object which is not a subclass of dobject"
-        )
-    return dobj._direct
-
-
-class ddirect(object):
-
-    """Gives a "view" of a depend object where one can directly access its
-    depend_base members."""
-
-    def __init__(self, dobj):
-        """Just stores a reference to the dobject we want to access"""
-
-        object.__setattr__(self, "dobj", dobj)
-
-    def __getattribute__(self, name):
-        """Overrides the dobject value access mechanism and returns the actual
-        member objects."""
-
-        return object.__getattribute__(object.__getattribute__(self, "dobj"), name)
-
-    def __setattr__(self, name, value):
-        """Overrides the dobject value access mechanism and returns the actual
-        member objects."""
-
-        return object.__setattr__(object.__getattribute__(self, "dobj"), name, value)
+    for attr_name in attr_names:
+        _inject_depend_property(cls, attr_name)

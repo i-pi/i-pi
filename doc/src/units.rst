@@ -1,11 +1,15 @@
-Internal units
-====================
+Internal units and conventions
+==============================
+
+Everything is a.u.
+------------------
 
 All the units used internally by i-PI are atomic units, as given below.
+*All* of them, even the temperature.
 By default, both input and output data are given in atomic units, but in
 most cases the default units can be overridden if one wishes so. For
-details on how to do this, see `3.1.1.1 <#inputunits>`__ and
-`3.2.1 <#propertyfile>`__.
+details on how to do this, see :ref:`inputunits` and
+:ref:`propertyfile`.
 
 .. container:: center
 
@@ -36,11 +40,26 @@ then behaves in the following way, depending on the user’s choice:
    is raised and i-PI stops.
 
 
-There are a few exceptions:
+There are a few exceptions, concerning quantities that are not used to describe the atomic-scale system, or I/O that is constrained by existing standards:
 
-  - The total simulation time, specified by the flag <total_time>, has to be provided  in seconds.
+  - Quantities that define run-time execution options, such as the simulation wall-clock time limit (specified by the flag <total_time>) or the latency of the forcefield socket (specified by the parameter <latency>), have to be provided in seconds.
   - The PDB standard defines units to be in angstrom, and so default units for PDB are angstrom.  
   - When using ASE format for I/O, the units are dictated by the ASE defaults. 
     So for example, the ASE extended xyz format  expects positions in angstroms.
     (See for example ``examples/ase-io/``)
+
+
+Lattice parameters
+------------------
+
+The unit cell is defined internally by i-PI with the lattice vectors stored 
+in the columns - i.e. as a :math:`3\times 3` array in which ``h[i,j]`` contains the i-th 
+Cartesian component of the j-th lattice vector.
+Furthermore, the cell is constrained to be oriented with the first vector
+along the :math:`x` axis, the second vector within the :math:`xy` plane, and
+the third in an arbitrary position (so that the cell is stored internally as an 
+upper-triangular matrix). 
+This is also reflected in how the cell parameters should be provided in 
+the input file: when given in an array format, the correct format is e.g.
+``<h units='angstrom'> [10, 1, 2, 0, 9, -1, 0, 0, 11] </h>``. 
 

@@ -24,6 +24,8 @@ def test_names():
     expected = ["O", "H", "H"]
     assert len(atoms.names) == 3
     for i, name in enumerate(atoms.names):
+        print(atoms[i])
+        print(atoms[i].q)
         assert name == expected[i]
         assert name == atoms[i].name
 
