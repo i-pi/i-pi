@@ -34,18 +34,16 @@ class EDAIntegrator(DummyIntegrator):
         """bind variables"""
         super().bind(motion)
 
-        dself = dd(self)
-
-        dself.time = dd(self.eda).time
-        dself.mts_time = dd(self.eda).mts_time
+        self._time = self.eda._time
+        self._mts_time = self.eda._mts_time
 
         dep = [
-            dself.time,
-            dself.mts_time,
-            dd(self.eda).bec,
-            dd(self.eda).Efield,
+            self.time,
+            self.mts_time,
+            self.eda._bec,
+            self.eda._Efield,
         ]
-        dself.EDAforces = depend_array(
+        self.EDAforces = depend_array(
             name="forces",
             func=self._eda_forces,
             value=np.zeros((self.beads.nbeads, self.beads.natoms * 3)),
