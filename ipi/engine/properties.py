@@ -2673,11 +2673,6 @@ class Trajectories:
                 "help": "The BEC tensors in cartesian coordinates.",
                 "func": (lambda: self.system.motion.eda.Born_Charges.bec),
             },
-            "extra": {
-                "dimension": "number",
-                "help": "The extra string passed by the driver.",
-                "func": (lambda bead=0: self.system.forces.extras["raw"][bead]),
-            },
             "forces": {
                 "dimension": "force",
                 "help": "The force trajectories. Will print out one file per bead, unless the bead attribute is set by the user.",

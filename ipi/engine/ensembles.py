@@ -14,7 +14,7 @@ appropriate conserved energy quantity for the ensemble of choice.
 import numpy as np
 
 from ipi.utils.messages import warning
-from ipi.utils.depend import dd
+from ipi.utils.depend import *
 from ipi.utils.units import Constants
 from ipi.engine.thermostats import *
 from ipi.engine.barostats import *
@@ -171,15 +171,6 @@ class Ensemble:
             bweights=dstrip(self.bweights).copy(),
             hweights=dstrip(self.hweights).copy(),
             time=self.time,
-            # amp=self.amp,
-            # freq=self.freq,
-            # phase=self.phase,
-            # peak=self.peak,
-            # sigma=self.sigma,
-            # bec=self.bec,
-            # cdip=self.cdip,
-            # tacc=self.tacc,
-            # cBEC=self.cBEC,
         )
 
     def bind(
