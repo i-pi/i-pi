@@ -16,9 +16,8 @@ from ipi.utils.units import Constants
 from ipi.engine.eda import EDA
 from ipi.engine.motion.dynamics import NVEIntegrator, DummyIntegrator
 
-__all__ = [
-    "EDANVEIntegrator"
-]
+__all__ = ["EDANVEIntegrator"]
+
 
 class EDAIntegrator(DummyIntegrator):
     """Integrator object for simulations using the Electric Dipole Approximation (EDA)
@@ -96,4 +95,3 @@ class EDANVEIntegrator(EDAIntegrator, NVEIntegrator):
         )  # the driver is called here: add nuclear and electronic forces (DFT)
         EDAIntegrator.pstep(self, level)  # add the driving forces, i.e. q_e Z @ E(t)
         pass
-
