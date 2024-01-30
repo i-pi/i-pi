@@ -28,7 +28,6 @@ __all__ = ["InputInst"]
 
 
 class InputInst(InputDictionary):
-
     """Instanton optimization options.
 
     Contains options related with instanton, such as method,
@@ -283,7 +282,7 @@ class InputInst(InputDictionary):
     dynamic = {}
 
     default_help = "A class for instanton calculations"
-    default_label = "instanton"
+    default_label = "INSTANTON"
 
     def store(self, geop):
         if geop == {}:

@@ -69,7 +69,6 @@ __all__ = ["InputMotion"]
 
 
 class InputMotionBase(Input):
-
     """Motion calculation input class.
 
     A class to encompass the different "motion" calculations.
@@ -164,7 +163,7 @@ class InputMotionBase(Input):
                 ),
                 "help": "This describes the location to read a trajectory file from. "
                 "Replay syntax allows using some POSIX wildcards in the filename "
-                "of trajectory files. If symbols *?[] are found in a filename, "
+                "of trajectory files. If symbols ?*[] are found in a filename, "
                 "the code expects to find exactly Nbeads files that match "
                 "the provided pattern. Bead indices will be read from the files, "
                 "and the files will be ordered ascendingly by their bead indices. "
@@ -424,7 +423,6 @@ class InputMotionBase(Input):
 
 
 class InputMotion(InputMotionBase):
-
     """Extends InputMotionBase to allow the definition of a multimotion"""
 
     attribs = copy(InputMotionBase.attribs)

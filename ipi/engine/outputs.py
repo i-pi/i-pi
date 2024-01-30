@@ -43,7 +43,7 @@ class OutputList(list):
         self.prefix = prefix
 
 
-class OutputMaker(dobject):
+class OutputMaker:
     """Class to create floating outputs with an appropriate prefix"""
 
     def __init__(self, prefix="", f_start=False):
@@ -69,9 +69,10 @@ class OutputMaker(dobject):
 class BaseOutput(object):
     """Base class for outputs. Deals with flushing upon close and little more"""
 
-    def __init__(self, filename="out"):
+    def __init__(self, filename="out", stride=1):
         """Initializes the class"""
 
+        self.stride = stride
         self.filename = filename
         self.out = None
 
@@ -93,9 +94,10 @@ class BaseOutput(object):
         self.mode = mode
         self.out = open_backup(self.filename, self.mode)
 
-    def bind(self, mode="w"):
+    def bind(self, mode="w", system=None):
         """Stores a reference to system and registers for exiting"""
 
+        self.system = system
         self.open_stream(mode)
         softexit.register_function(self.softexit)
 
@@ -119,9 +121,13 @@ class BaseOutput(object):
         if self.out is not None:
             return self.out.write(data)
 
+    def active(self):
+        """Whether we will output at this step"""
+
+        return (self.system.simul.step + 1) % self.stride == 0
+
 
 class PropertyOutput(BaseOutput):
-
     """Class dealing with outputting a set of properties to file.
 
     Does not do any calculation, just manages opening a file, getting data
@@ -152,12 +158,11 @@ class PropertyOutput(BaseOutput):
            outlist: A list of all the properties that should be output.
         """
 
-        super(PropertyOutput, self).__init__(filename)
+        super(PropertyOutput, self).__init__(filename, stride)
 
         if outlist is None:
             outlist = np.zeros(0, np.dtype("|U1024"))
         self.outlist = np.asarray(outlist, np.dtype("|U1024"))
-        self.stride = stride
         self.flush = flush
         self.nout = 0
 
@@ -170,7 +175,7 @@ class PropertyOutput(BaseOutput):
 
         # Checks as soon as possible if some asked-for properties are
         # missing or mispelled
-        self.system = system
+
         for what in self.outlist:
             key = getkey(what)
             if key not in list(system.properties.property_dict.keys()):
@@ -180,7 +185,7 @@ class PropertyOutput(BaseOutput):
                 )
                 raise KeyError(key + " is not a recognized property")
 
-        super(PropertyOutput, self).bind(mode)
+        super(PropertyOutput, self).bind(mode, system)
 
     def print_header(self):
         # print nice header if information is available on the properties
@@ -190,15 +195,16 @@ class PropertyOutput(BaseOutput):
             key = getkey(what)
             prop = self.system.properties.property_dict[key]
 
-            if "size" in prop:
+            if "size" not in prop or prop["size"] == 1:
+                ohead += "column %3d    " % (icol)
+                icol += 1
+            else:
                 if (type(prop["size"]) is str) or (prop["size"] <= 0):
                     raise RuntimeError("ERROR: property %s has undefined size." % key)
                 elif prop["size"] > 1:
                     ohead += "cols.  %3d-%-3d" % (icol, icol + prop["size"] - 1)
                     icol += prop["size"]
-            else:
-                ohead += "column %3d    " % (icol)
-                icol += 1
+
             ohead += " --> %s " % (what)
             if "help" in prop:
                 ohead += ": " + prop["help"]
@@ -218,7 +224,7 @@ class PropertyOutput(BaseOutput):
         if softexit.triggered:
             return  # don't write if we are about to exit!
 
-        if not (self.system.simul.step + 1) % self.stride == 0:
+        if not self.active():
             return
         self.out.write("  ")
         for what in self.outlist:
@@ -243,7 +249,6 @@ class PropertyOutput(BaseOutput):
 
 
 class TrajectoryOutput(BaseOutput):
-
     """Class dealing with outputting atom-based properties as a
     trajectory file.
 
@@ -293,9 +298,8 @@ class TrajectoryOutput(BaseOutput):
            extra_type: Specifies the type of extras string that is printed in the file
         """
 
-        self.filename = filename
+        super(TrajectoryOutput, self).__init__(filename, stride)
         self.what = what
-        self.stride = stride
         self.flush = flush
         self.ibead = ibead
         self.format = format
@@ -311,17 +315,16 @@ class TrajectoryOutput(BaseOutput):
            system: A System object to be bound.
         """
 
-        self.system = system
         # Checks as soon as possible if some asked-for trajs are missing or misspelled
         key = getkey(self.what)
-        if key not in list(self.system.trajs.traj_dict.keys()):
+        if key not in list(system.trajs.traj_dict.keys()):
             print(
                 "Computable trajectories list: ",
-                list(self.system.trajs.traj_dict.keys()),
+                list(system.trajs.traj_dict.keys()),
             )
             raise KeyError(key + " is not a recognized output trajectory")
 
-        super(TrajectoryOutput, self).bind(mode)
+        super(TrajectoryOutput, self).bind(mode, system)
 
     def print_header(self):
         """No headers for trajectory files"""
@@ -374,7 +377,8 @@ class TrajectoryOutput(BaseOutput):
         try:
             if hasattr(self.out, "__getitem__"):
                 for o in self.out:
-                    o.close()
+                    if o is not None:
+                        o.close()
             else:
                 self.out.close()
         except AttributeError:
@@ -388,7 +392,7 @@ class TrajectoryOutput(BaseOutput):
 
         if softexit.triggered:
             return  # don't write if we are about to exit!
-        if not (self.system.simul.step + 1) % self.stride == 0:
+        if not self.active():
             return
 
         doflush = False
@@ -550,8 +554,7 @@ class TrajectoryOutput(BaseOutput):
             os.fsync(stream)
 
 
-class CheckpointOutput(dobject):
-
+class CheckpointOutput:
     """Class dealing with outputting checkpoints.
 
     Saves the complete status of the simulation at regular intervals.
@@ -582,8 +585,8 @@ class CheckpointOutput(dobject):
         """
 
         self.filename = filename
-        self.step = depend_value(name="step", value=step)
         self.stride = stride
+        self._step = depend_value(name="step", value=step)
         self.overwrite = overwrite
         self._storing = False
         self._continued = False
@@ -600,6 +603,11 @@ class CheckpointOutput(dobject):
 
         self.status = isimulation.InputSimulation()
         self.status.store(simul)
+
+    def active(self):
+        """Whether we will output at this step"""
+
+        return (self.simul.step + 1) % self.stride == 0
 
     def store(self):
         """Stores the current simulation status.
@@ -638,7 +646,7 @@ class CheckpointOutput(dobject):
             )
             self.store()
 
-        if not (self.simul.step + 1) % self.stride == 0:
+        if not self.active():
             return
 
         # function to use to open files
@@ -662,3 +670,6 @@ class CheckpointOutput(dobject):
 
         # Do not use backed up file open on subsequent writes.
         self._continued = True
+
+
+dproperties(CheckpointOutput, ["step"])

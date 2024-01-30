@@ -32,8 +32,7 @@ __all__ = ["Forces", "ForceComponent"]
 fbuid = 0
 
 
-class ForceBead(dobject):
-
+class ForceBead:
     """Base force helper class.
 
     This is the object that computes forces for a single bead. This is the last
@@ -72,10 +71,9 @@ class ForceBead(dobject):
 
     def __init__(self):
         """Initialises ForceBead."""
-        dself = dd(self)
 
         # ufvx is a list [ u, f, vir, extra ]  which stores the results of the force calculation
-        dself.ufvx = depend_value(name="ufvx", func=self.get_all)
+        self._ufvx = depend_value(name="ufvx", func=self.get_all)
         self._threadlock = threading.Lock()
         self.request = None
         self._getallcount = 0
@@ -100,41 +98,40 @@ class ForceBead(dobject):
         self.atoms = atoms
         self.cell = cell
         self.ff = ff
-        dself = dd(self)
 
         # ufvx depends on the atomic positions and on the cell
-        dself.ufvx.add_dependency(dd(self.atoms).q)
-        dself.ufvx.add_dependency(dd(self.cell).h)
+        self._ufvx.add_dependency(self.atoms._q)
+        self._ufvx.add_dependency(self.cell._h)
 
         # potential and virial are to be extracted very simply from ufvx
-        dself.pot = depend_value(
-            name="pot", func=self.get_pot, dependencies=[dself.ufvx]
+        self._pot = depend_value(
+            name="pot", func=self.get_pot, dependencies=[self._ufvx]
         )
 
-        dself.vir = depend_array(
+        self._vir = depend_array(
             name="vir",
             value=np.zeros((3, 3), float),
             func=self.get_vir,
-            dependencies=[dself.ufvx],
+            dependencies=[self._ufvx],
         )
 
         # NB: the force requires a bit more work, to define shortcuts to xyz
         # slices without calculating the force at this point.
         fbase = np.zeros(atoms.natoms * 3, float)
-        dself.f = depend_array(
-            name="f", value=fbase, func=self.get_f, dependencies=[dself.ufvx]
+        self._f = depend_array(
+            name="f", value=fbase, func=self.get_f, dependencies=[self._ufvx]
         )
 
-        dself.extra = depend_value(
-            name="extra", func=self.get_extra, dependencies=[dself.ufvx]
+        self._extra = depend_value(
+            name="extra", func=self.get_extra, dependencies=[self._ufvx]
         )
 
-        dself.fx = depend_array(name="fx", value=fbase[0 : 3 * atoms.natoms : 3])
-        dself.fy = depend_array(name="fy", value=fbase[1 : 3 * atoms.natoms : 3])
-        dself.fz = depend_array(name="fz", value=fbase[2 : 3 * atoms.natoms : 3])
-        dcopy(dself.f, dself.fx)
-        dcopy(dself.f, dself.fy)
-        dcopy(dself.f, dself.fz)
+        self._fx = depend_array(name="fx", value=fbase[0 : 3 * atoms.natoms : 3])
+        self._fy = depend_array(name="fy", value=fbase[1 : 3 * atoms.natoms : 3])
+        self._fz = depend_array(name="fz", value=fbase[2 : 3 * atoms.natoms : 3])
+        dcopy(self._f, self._fx)
+        dcopy(self._f, self._fy)
+        dcopy(self._f, self._fz)
 
     def queue(self):
         """Sends the job to the interface queue directly.
@@ -145,7 +142,7 @@ class ForceBead(dobject):
         """
 
         with self._threadlock:
-            if self.request is None and dd(self).ufvx.tainted():
+            if self.request is None and self._ufvx.tainted():
                 self.request = self.ff.queue(self.atoms, self.cell, reqid=self.uid)
 
     def get_all(self):
@@ -172,8 +169,10 @@ class ForceBead(dobject):
             self.request = self.queue()
 
         # sleeps until the request has been evaluated
-        while self.request["status"] != "Done":
-            if self.request["status"] == "Exit" or softexit.triggered:
+        request = self.request
+        latency = self.ff.latency
+        while request["status"] != "Done":
+            if request["status"] == "Exit" or softexit.triggered:
                 # now, this is tricky. we are stuck here and we cannot return meaningful results.
                 # if we return, we may as well output wrong numbers, or mess up things.
                 # so we can only call soft-exit and wait until that is done. then kill the thread
@@ -182,23 +181,24 @@ class ForceBead(dobject):
                     message=" @ FORCES : cannot return so will die off here"
                 )
                 while softexit.exiting:
-                    time.sleep(self.ff.latency)
+                    time.sleep(latency)
                 sys.exit()
-            time.sleep(self.ff.latency)
+            time.sleep(latency)
+
         # print diagnostics about the elapsed time
         info(
             "# forcefield %s evaluated in %f (queue) and %f (dispatched) sec."
             % (
                 self.ff.name,
-                self.request["t_finished"] - self.request["t_queued"],
-                self.request["t_finished"] - self.request["t_dispatched"],
+                request["t_finished"] - request["t_queued"],
+                request["t_finished"] - request["t_dispatched"],
             ),
             verbosity.debug,
         )
 
         # data has been collected, so the request can be released and a slot
         # freed up for new calculations
-        result = self.request["result"]
+        result = request["result"]
 
         # reduce the reservation count (and wait for all calls to return)
         with self._threadlock:
@@ -206,11 +206,11 @@ class ForceBead(dobject):
 
         # releases just once, but wait for all requests to be complete
         if self._getallcount == 0:
-            self.ff.release(self.request)
+            self.ff.release(request)
             self.request = None
         else:
             while self._getallcount > 0:
-                time.sleep(self.ff.latency)
+                time.sleep(latency)
 
         return result
 
@@ -256,7 +256,10 @@ class ForceBead(dobject):
         return self.ufvx[3]
 
 
-class ForceComponent(dobject):
+dproperties(ForceBead, ["ufvx", "pot", "vir", "f", "extra", "fx", "fy", "fz"])
+
+
+class ForceComponent:
     """Computes one component (e.g. bonded interactions) of the force.
 
     Deals with splitting the bead representation into
@@ -318,7 +321,7 @@ class ForceComponent(dobject):
         self.ffield = ffield
         self.name = name
         self.nbeads = nbeads
-        self.weight = depend_value(name="weight", value=weight)
+        self._weight = depend_value(name="weight", value=weight)
         if mts_weights is None:
             self.mts_weights = np.asarray([])
         else:
@@ -344,7 +347,6 @@ class ForceComponent(dobject):
            fflist: A list of forcefield objects to use to calculate the potential,
               forces and virial for each replica.
         """
-        dself = dd(self)
 
         # stores a copy of the number of atoms and of beads
         self.natoms = beads.natoms
@@ -372,42 +374,42 @@ class ForceComponent(dobject):
             self._forces.append(new_force)
 
         # f is a big array which assembles the forces on individual beads
-        dself.f = depend_array(
+        self._f = depend_array(
             name="f",
             value=np.zeros((self.nbeads, 3 * self.natoms)),
             func=self.f_gather,
-            dependencies=[dd(self._forces[b]).f for b in range(self.nbeads)],
+            dependencies=[self._forces[b]._f for b in range(self.nbeads)],
         )
 
         # collection of pots, virs and extras from individual beads
-        dself.pots = depend_array(
+        self._pots = depend_array(
             name="pots",
             value=np.zeros(self.nbeads, float),
             func=self.pot_gather,
-            dependencies=[dd(self._forces[b]).pot for b in range(self.nbeads)],
+            dependencies=[self._forces[b]._pot for b in range(self.nbeads)],
         )
-        dself.virs = depend_array(
+        self._virs = depend_array(
             name="virs",
             value=np.zeros((self.nbeads, 3, 3), float),
             func=self.vir_gather,
-            dependencies=[dd(self._forces[b]).vir for b in range(self.nbeads)],
+            dependencies=[self._forces[b]._vir for b in range(self.nbeads)],
         )
-        dself.extras = depend_value(
+        self._extras = depend_value(
             name="extras",
             value=np.zeros(self.nbeads, float),
             func=self.extra_gather,
-            dependencies=[dd(self._forces[b]).extra for b in range(self.nbeads)],
+            dependencies=[self._forces[b]._extra for b in range(self.nbeads)],
         )
 
         # total potential and total virial
-        dself.pot = depend_value(
-            name="pot", func=(lambda: self.pots.sum()), dependencies=[dself.pots]
+        self._pot = depend_value(
+            name="pot", func=(lambda: self.pots.sum()), dependencies=[self._pots]
         )
-        dself.vir = depend_array(
+        self._vir = depend_array(
             name="vir",
             func=self.get_vir,
             value=np.zeros((3, 3)),
-            dependencies=[dself.virs],
+            dependencies=[self._virs],
         )
 
     def queue(self):
@@ -511,58 +513,67 @@ class ForceComponent(dobject):
         return vir
 
 
-class ScaledForceComponent(dobject):
+dproperties(ForceComponent, ["weight", "f", "pots", "pot", "virs", "vir", "extras"])
+
+
+class ScaledForceComponent:
     def __init__(self, baseforce, scaling=1):
         self.bf = baseforce
         self.name = baseforce.name
         self.ffield = baseforce.ffield
-        dself = dd(self)
-        dself.scaling = depend_value(name="scaling", value=scaling)
-        dself.f = depend_array(
+        self._scaling = depend_value(name="scaling", value=scaling)
+        self._f = depend_array(
             name="f",
-            func=lambda: self.scaling * self.bf.f
-            if scaling != 0
-            else np.zeros((self.bf.nbeads, 3 * self.bf.natoms)),
+            func=lambda: (
+                self.scaling * self.bf.f
+                if self.scaling != 0
+                else np.zeros((self.bf.nbeads, 3 * self.bf.natoms))
+            ),
             value=np.zeros((self.bf.nbeads, 3 * self.bf.natoms)),
-            dependencies=[dd(self.bf).f, dself.scaling],
+            dependencies=[self.bf._f, self._scaling],
         )
-        dself.pots = depend_array(
+        self._pots = depend_array(
             name="pots",
-            func=lambda: self.scaling * self.bf.pots
-            if scaling != 0
-            else np.zeros(self.bf.nbeads),
+            func=self.get_pots,
             value=np.zeros(self.bf.nbeads),
-            dependencies=[dd(self.bf).pots, dself.scaling],
+            dependencies=[self.bf._pots, self._scaling],
         )
-        dself.virs = depend_array(
+        self._virs = depend_array(
             name="virs",
             func=lambda: self.scaling * self.bf.virs,
             value=np.zeros((self.bf.nbeads, 3, 3)),
-            dependencies=[dd(self.bf).virs, dself.scaling],
+            dependencies=[self.bf._virs, self._scaling],
         )
-        dself.extras = depend_array(
+        self._extras = depend_array(
             name="extras",
             func=lambda: self.bf.extras,
             value=np.zeros(self.bf.nbeads),
-            dependencies=[dd(self.bf).extras],
+            dependencies=[self.bf._extras],
         )
 
         # total potential and total virial
-        dself.pot = depend_value(
-            name="pot", func=(lambda: self.pots.sum()), dependencies=[dself.pots]
+        self._pot = depend_value(
+            name="pot", func=(lambda: self.pots.sum()), dependencies=[self._pots]
         )
-        dself.vir = depend_array(
+        self._vir = depend_array(
             name="vir",
             func=self.get_vir,
             value=np.zeros((3, 3)),
-            dependencies=[dself.virs],
+            dependencies=[self._virs],
         )
 
         # pipes weight from the force, since the scaling is applied on top of that
-        self.weight = depend_value(name="weight", value=0)
-        dpipe(dd(self.bf).weight, dself.weight)
+        self._weight = depend_value(name="weight", value=0)
+        dpipe(self.bf._weight, self._weight)
         self.mts_weights = self.bf.mts_weights
         self.force_extras = self.bf.force_extras
+
+    def get_pots(self):
+        return (
+            self.scaling * self.bf.pots
+            if self.scaling != 0
+            else np.zeros(self.bf.nbeads)
+        )
 
     def get_vir(self):
         """Sums the virial of each replica.
@@ -583,8 +594,13 @@ class ScaledForceComponent(dobject):
         pass  # this should be taken care of when the force/potential/etc is accessed
 
 
-class Forces(dobject):
+dproperties(
+    ScaledForceComponent,
+    ["weight", "scaling", "f", "pots", "pot", "virs", "vir", "extras"],
+)
 
+
+class Forces:
     """Class that gathers all the forces together.
     Collects many forcefield instances and parallelizes getting the forces
     in a PIMD environment.
@@ -622,12 +638,10 @@ class Forces(dobject):
         self.mbeads.append(nbeads)
         self.mforces.append(nforces)
         self.nforces += 1
-        dself = dd(self)
-        dforces = dd(nforces)
-        dself.f.add_dependency(dforces.f)
-        dself.pots.add_dependency(dforces.pots)
-        dself.virs.add_dependency(dforces.virs)
-        dself.extras.add_dependency(dforces.extras)
+        self._f.add_dependency(nforces._f)
+        self._pots.add_dependency(nforces._pots)
+        self._virs.add_dependency(nforces._virs)
+        self._extras.add_dependency(nforces._extras)
 
     def bind(self, beads, cell, fcomponents, fflist, open_paths, output_maker):
         """Binds beads, cell and forces to the forcefield.
@@ -663,8 +677,6 @@ class Forces(dobject):
         self.mbeads = []
         self.mrpc = []
 
-        dself = dd(self)
-
         # a "function factory" to generate functions to automatically update
         # contracted paths
         def make_rpc(rpc, beads):
@@ -693,13 +705,13 @@ class Forces(dobject):
 
             # the beads positions for this force components are obtained
             # automatically, when needed, as a contraction of the full beads
-            dd(newbeads).q._func = make_rpc(newrpc, beads)
+            newbeads._q._func = make_rpc(newrpc, beads)
             for b in newbeads:
                 # must update also indirect access to the beads coordinates
-                dd(b).q._func = dd(newbeads).q._func
+                b._q._func = newbeads._q._func
 
             # makes newbeads.q depend from beads.q
-            dd(beads).q.add_dependant(dd(newbeads).q)
+            beads._q.add_dependant(newbeads._q)
 
             # now we create a new forcecomponent which is bound to newbeads!
             newforce.bind(newbeads, cell, fflist, output_maker=self.output_maker)
@@ -710,160 +722,160 @@ class Forces(dobject):
             self.mrpc.append(newrpc)
 
         # now must expose an interface that gives overall forces
-        dself.f = depend_array(
+        self._f = depend_array(
             name="f",
             value=np.zeros((self.nbeads, 3 * self.natoms)),
             func=self.f_combine,
-            dependencies=[dd(ff).f for ff in self.mforces],
+            dependencies=[ff._f for ff in self.mforces],
         )
 
         # collection of pots and virs from individual ff objects
-        dself.pots = depend_array(
+        self._pots = depend_array(
             name="pots",
             value=np.zeros(self.nbeads, float),
             func=self.pot_combine,
-            dependencies=[dd(ff).pots for ff in self.mforces],
+            dependencies=[ff._pots for ff in self.mforces],
         )
 
         # must take care of the virials!
-        dself.virs = depend_array(
+        self._virs = depend_array(
             name="virs",
             value=np.zeros((self.nbeads, 3, 3), float),
             func=self.vir_combine,
-            dependencies=[dd(ff).virs for ff in self.mforces],
+            dependencies=[ff._virs for ff in self.mforces],
         )
 
-        dself.extras = depend_value(
+        self._extras = depend_value(
             name="extras",
             value=np.zeros(self.nbeads, float),
             func=self.extra_combine,
-            dependencies=[dd(ff).extras for ff in self.mforces],
+            dependencies=[ff._extras for ff in self.mforces],
         )
 
         # total potential and total virial
-        dself.pot = depend_value(
-            name="pot", func=(lambda: self.pots.sum()), dependencies=[dself.pots]
+        self._pot = depend_value(
+            name="pot", func=(lambda: self.pots.sum()), dependencies=[self._pots]
         )
 
-        dself.vir = depend_array(
+        self._vir = depend_array(
             name="vir",
             func=self.get_vir,
             value=np.zeros((3, 3)),
-            dependencies=[dself.virs],
+            dependencies=[self._virs],
         )
 
         # SC forces and potential
-        dself.alpha = depend_value(name="alpha", value=0.0)
+        self._alpha = depend_value(name="alpha", value=0.0)
 
         # The number of MTS levels
-        dself.nmtslevels = depend_value(
+        self._nmtslevels = depend_value(
             name="nmtslevels", value=0, func=self.get_nmtslevels
         )
 
         # This will be piped from normalmodes
-        dself.omegan2 = depend_value(name="omegan2", value=0)
+        self._omegan2 = depend_value(name="omegan2", value=0)
 
         # The Suzuki-Chin difference potential
-        dself.potssc = depend_array(
+        self._potssc = depend_array(
             name="potssc",
             value=np.zeros(self.nbeads, float),
             dependencies=[
-                dd(self.beads).m,
-                dself.f,
-                dself.pots,
-                dself.alpha,
-                dself.omegan2,
+                self.beads._m,
+                self._f,
+                self._pots,
+                self._alpha,
+                self._omegan2,
             ],
             func=self.get_potssc,
         )
 
-        dself.potsc = depend_value(
-            name="potsc", dependencies=[dself.potssc], func=(lambda: self.potssc.sum())
+        self._potsc = depend_value(
+            name="potsc", dependencies=[self._potssc], func=(lambda: self.potssc.sum())
         )
 
         # The coefficients of the physical and the |f|^2 terms
-        dself.coeffsc_part_1 = depend_array(
+        self._coeffsc_part_1 = depend_array(
             name="coeffsc_part_1",
             value=np.zeros((self.nbeads, 1), float),
             func=self.get_coeffsc_part_1,
         )
 
-        dself.coeffsc_part_2 = depend_array(
+        self._coeffsc_part_2 = depend_array(
             name="coeffsc_part_2",
             value=np.zeros((self.nbeads, 1), float),
-            dependencies=[dself.alpha, dself.omegan2],
+            dependencies=[self._alpha, self._omegan2],
             func=self.get_coeffsc_part_2,
         )
 
         # A list that contains the high order component of the force and the virial
-        dself.fvir_4th_order = depend_value(
+        self._fvir_4th_order = depend_value(
             name="fvir_4th_order",
             value=[None, None],
-            dependencies=[dd(self.beads).m, dself.f, dself.pots],
+            dependencies=[self.beads._m, self._f, self._pots],
             func=self.fvir_4th_order_combine,
         )
 
         # The high order component of the Suzuki-Chin force.
-        dself.f_4th_order = depend_array(
+        self._f_4th_order = depend_array(
             name="f_4th_order",
             value=np.zeros((self.nbeads, 3 * self.natoms), float),
-            dependencies=[dself.fvir_4th_order],
+            dependencies=[self._fvir_4th_order],
             func=(lambda: self.fvir_4th_order[0]),
         )
 
-        dself.fsc_part_1 = depend_array(
+        self._fsc_part_1 = depend_array(
             name="fsc_part_1",
             value=np.zeros((self.nbeads, 3 * self.natoms), float),
-            dependencies=[dself.coeffsc_part_1, dself.f],
+            dependencies=[self._coeffsc_part_1, self._f],
             func=self.get_fsc_part_1,
         )
 
-        dself.fsc_part_2 = depend_array(
+        self._fsc_part_2 = depend_array(
             name="fsc_part_2",
             value=np.zeros((self.nbeads, 3 * self.natoms), float),
-            dependencies=[dself.coeffsc_part_2, dself.f_4th_order],
+            dependencies=[self._coeffsc_part_2, self._f_4th_order],
             func=self.get_fsc_part_2,
         )
 
-        dself.fsc = depend_array(
+        self._fsc = depend_array(
             name="fsc",
             value=np.zeros((self.nbeads, 3 * self.natoms), float),
-            dependencies=[dself.fsc_part_1, dself.fsc_part_2],
+            dependencies=[self._fsc_part_1, self._fsc_part_2],
             func=self.get_fsc,
         )
 
         # The high order component of the Suzuki-Chin virial.
-        dself.virs_4th_order = depend_array(
+        self._vir_4th_order = depend_array(
             name="vir_4th_order",
             value=np.zeros((self.nbeads, 3, 3), float),
-            dependencies=[dself.fvir_4th_order],
+            dependencies=[self._fvir_4th_order],
             func=(lambda: self.fvir_4th_order[1]),
         )
 
-        dself.virssc_part_1 = depend_array(
+        self._virssc_part_1 = depend_array(
             name="virssc_part_1",
             value=np.zeros((self.nbeads, 3, 3), float),
-            dependencies=[dself.coeffsc_part_1, dself.virs],
+            dependencies=[self._coeffsc_part_1, self._virs],
             func=self.get_virssc_part_1,
         )
 
-        dself.virssc_part_2 = depend_array(
+        self._virssc_part_2 = depend_array(
             name="virssc_part_2",
             value=np.zeros((self.nbeads, 3, 3), float),
-            dependencies=[dself.coeffsc_part_2, dself.virs_4th_order],
+            dependencies=[self._coeffsc_part_2, self._vir_4th_order],
             func=self.get_virssc_part_2,
         )
 
-        dself.virssc = depend_array(
+        self._virssc = depend_array(
             name="virssc",
             value=np.zeros((self.nbeads, 3, 3), float),
-            dependencies=[dself.virssc_part_1, dself.virssc_part_2],
+            dependencies=[self._virssc_part_1, self._virssc_part_2],
             func=self.get_virssc,
         )
 
-        dself.virsc = depend_value(
-            name="potsc",
-            dependencies=[dself.potssc],
+        self._virsc = depend_value(
+            name="virsc",
+            dependencies=[self._potssc],
             func=(lambda: np.sum(self.virssc, axis=0)),
         )
 
@@ -871,9 +883,9 @@ class Forces(dobject):
         # force is assembled from its components
 
         for fc in self.mforces:
-            dself.f.add_dependency(dd(fc).weight)
-            dself.pots.add_dependency(dd(fc).weight)
-            dself.virs.add_dependency(dd(fc).weight)
+            self._f.add_dependency(fc._weight)
+            self._pots.add_dependency(fc._weight)
+            self._virs.add_dependency(fc._weight)
 
     def copy(self, beads=None, cell=None):
         """Returns a copy of this force object that can be used to compute forces,
@@ -937,13 +949,12 @@ class Forces(dobject):
             # the value of the contracted bead, so that it's marked as NOT
             # tainted - it should not be as it's an internal of the force and
             # therefore get copied
-            dd(mself.beads).q.set(mreff.beads.q, manual=False)
+            mself.beads._q.set(mreff.beads.q, manual=False)
             for b in range(mself.nbeads):
-                dfkbref = dd(mreff._forces[b])
-                dfkbself = dd(mself._forces[b])
-
-                dfkbself.ufvx.set(deepcopy(dfkbref.ufvx._value), manual=False)
-                dfkbself.ufvx.taint(taintme=False)
+                mself._forces[b]._ufvx.set(
+                    deepcopy(mreff._forces[b]._ufvx._value), manual=False
+                )
+                mself._forces[b]._ufvx.taint(taintme=False)
 
     def transfer_forces_manual(
         self, new_q, new_v, new_forces, new_x=None, vir=np.zeros((3, 3))
@@ -980,12 +991,11 @@ class Forces(dobject):
             assert mself.nbeads == len(mextra), msg
             mxlist = mextra[:]
 
-            dd(mself.beads).q.set(mq, manual=False)
+            mself.beads._q.set(mq, manual=False)
             for b in range(mself.nbeads):
                 ufvx = [mv[b], mf[b], vir, mxlist[b]]
-                dfkbself = dd(mself._forces[b])
-                dfkbself.ufvx.set(ufvx, manual=False)
-                dfkbself.ufvx.taint(taintme=False)
+                mself._forces[b]._ufvx.set(ufvx, manual=False)
+                mself._forces[b]._ufvx.taint(taintme=False)
 
     def run(self):
         """Makes the socket start looking for driver codes.
@@ -1071,11 +1081,10 @@ class Forces(dobject):
         """Submits all the required force calculations to the forcefields."""
 
         for ff in self.mforces:
+            mts_weights = ff.mts_weights
             # forces with no MTS specification are applied at the outer level
-            if (len(ff.mts_weights) == 0 and level == 0) or (
-                len(ff.mts_weights) > level
-                and ff.mts_weights[level] != 0
-                and ff.weight != 0
+            if (len(mts_weights) == 0 and level == 0) or (
+                len(mts_weights) > level and mts_weights[level] != 0 and ff.weight != 0
             ):
                 # do not queue forces which have zero weight
                 ff.queue()
@@ -1085,17 +1094,18 @@ class Forces(dobject):
 
         self.queue_mts(level)
         fk = np.zeros((self.nbeads, 3 * self.natoms))
-        for index in range(len(self.mforces)):
+        mforces = self.mforces
+        for index in range(len(mforces)):
             # forces with no MTS specification are applied at the outer level
-            if (len(self.mforces[index].mts_weights) == 0 and level == 0) or (
-                len(self.mforces[index].mts_weights) > level
-                and self.mforces[index].mts_weights[level] != 0
-                and self.mforces[index].weight != 0
+            weight = dstrip(mforces[index].weight)
+            mts_weights = mforces[index].mts_weights
+            if (len(mts_weights) == 0 and level == 0) or (
+                len(mts_weights) > level and mts_weights[level] != 0 and weight != 0
             ):
                 fk += (
-                    self.mforces[index].weight
-                    * self.mforces[index].mts_weights[level]
-                    * self.mrpc[index].b2tob1(dstrip(self.mforces[index].f))
+                    weight
+                    * mts_weights[level]
+                    * self.mrpc[index].b2tob1(dstrip(mforces[index].f))
                 )
         return fk
 
@@ -1110,10 +1120,17 @@ class Forces(dobject):
         # calculates the finite displacement.
         fbase = dstrip(self.f)
         eps = self.mforces[index].epsilon
-        delta = np.abs(eps) / np.sqrt(
+        foverm = np.sqrt(
             (fbase / self.beads.m3 * fbase / self.beads.m3).sum()
             / (self.nbeads * self.natoms)
         )
+        if np.abs(foverm) > 1e-20:
+            delta = np.abs(eps) / np.sqrt(
+                (fbase / self.beads.m3 * fbase / self.beads.m3).sum()
+                / (self.nbeads * self.natoms)
+            )
+        else:  # defaults to eps if otherwise we'd get an 1/0
+            delta = np.abs(eps)
         dq = delta * fbase / self.beads.m3
 
         # stores the force component.
@@ -1131,11 +1148,11 @@ class Forces(dobject):
             # This makes the FD incorrect. A fix could be to ALWAYS compute the odd and the even
             # beads on two different ring polymers of P / 2 beads, but centered difference + RPC
             # seems to be a neater solution. Anyway, the cost of a CNT-DIFF in comparison to a FWD-DIFF
-            # is marginal in when RPC + MTS is used.
+            # is marginal when RPC + MTS is used.
 
             if self.mforces[index].nbeads != self.nbeads:
                 warning(
-                    "ERROR: high order PIMD + RPC works with a centered finite difference only! (Uness you find an elegant solution :))"
+                    "ERROR: high order PIMD + RPC works with a centered finite difference only! (Unless you find an elegant solution :))"
                 )
                 exit()
 
@@ -1459,7 +1476,7 @@ class Forces(dobject):
     def get_virssc_part_2(self):
         """Obtains the quadratic component of Suzuki-Chin correction to the virial."""
         return self.coeffsc_part_2.reshape((self.beads.nbeads, 1, 1)) * dstrip(
-            self.virs_4th_order
+            self.vir_4th_order
         )
 
     def get_fsc(self):
@@ -1485,3 +1502,33 @@ class Forces(dobject):
         rc[0::2] = self.alpha / self.omegan2 / 9.0
         rc[1::2] = (1.0 - self.alpha) / self.omegan2 / 9.0
         return np.asmatrix(rc).T
+
+
+dproperties(
+    Forces,
+    [
+        "f",
+        "pots",
+        "virs",
+        "extras",
+        "pot",
+        "vir",
+        "alpha",
+        "nmtslevels",
+        "omegan2",
+        "potssc",
+        "potsc",
+        "coeffsc_part_1",
+        "coeffsc_part_2",
+        "fvir_4th_order",
+        "f_4th_order",
+        "fsc_part_1",
+        "fsc_part_2",
+        "fsc",
+        "vir_4th_order",
+        "virssc_part_1",
+        "virssc_part_2",
+        "virssc",
+        "virsc",
+    ],
+)

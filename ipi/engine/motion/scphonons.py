@@ -23,9 +23,8 @@ __all__ = ["SCPhononsMover"]
 import os
 import numpy as np
 from ipi.engine.motion.motion import Motion
-from ipi.utils.depend import *
 
-# from ipi.utils import units
+from ipi.utils.depend import dstrip
 from ipi.utils.phonontools import apply_asr
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, info
@@ -200,7 +199,7 @@ class SCPhononsMover(Motion):
             self.phononator.displace()
 
 
-class DummyPhononator(dobject):
+class DummyPhononator:
     """No-op phononator"""
 
     def __init__(self):
@@ -710,7 +709,7 @@ class SCPhononator(DummyPhononator):
         """
 
         # Creates new variable names for easier referencing.
-        qp, i = self.dm.beads.q, self.dm.isc - 1
+        qp, Kp, i = self.dm.beads.q, self.dm.K, self.dm.isc - 1
 
         # Takes the set of forces calculated at the previous step for (self.q, self.iD)
         avg_f = dstrip(self.f[i]).copy()[-1] * 0.0

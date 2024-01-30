@@ -1,0 +1,36 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential,
+    pressure_cv{megapascal}] </properties>
+    <properties stride='4' filename='isotd'>     [ step, ti_weight, chin_weight, isotope_zetatd_4th(1.1253;O), isotope_zetatd_4th(1.9985;H) ] </properties>
+    <properties stride='40' filename='isosc'> [ step, ti_weight, chin_weight, isotope_zetasc_4th(1.1253;O), isotope_zetasc_4th(1.9985;H) ] </properties>
+    <trajectory filename='pos' stride='1000' bead='0' cell_units='angstrom'> positions{angstrom} </trajectory>
+  </output>
+  <total_steps>42</total_steps>
+  <prng>
+    <seed>32346</seed>
+  </prng>
+  <ffsocket name='lmpserial1' mode='unix'>
+    <address>isofsc-vapor</address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='8'>
+      <file mode='pdb'> init.pdb </file>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='lmpserial1'> </force>
+    </forces>
+    <ensemble>
+      <temperature units='kelvin'>300</temperature>
+    </ensemble>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <thermostat mode='pile_l'>
+          <tau units='femtosecond'>100</tau>
+        </thermostat>
+        <timestep units='femtosecond'> 0.25</timestep>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>

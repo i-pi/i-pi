@@ -20,7 +20,6 @@ __all__ = ["InputAtoms"]
 
 
 class InputAtoms(Input):
-
     """Atoms input class.
 
     Handles generating the appropriate atoms class from the xml input file,

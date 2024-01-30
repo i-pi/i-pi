@@ -14,7 +14,7 @@ import time
 import sys
 
 from ipi.engine.motion import Motion
-from ipi.utils.depend import dstrip, dobject
+from ipi.utils.depend import dstrip
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity, info
 from ipi.utils import units
@@ -329,7 +329,6 @@ class Fix(object):
 
 
 class GradientMapper(object):
-
     """Creation of the multi-dimensional function to compute the physical potential and forces
 
     Attributes:
@@ -660,7 +659,7 @@ class FullMapper(object):
         return e, g
 
 
-class DummyOptimizer(dobject):
+class DummyOptimizer:
     """Dummy class for all optimization classes"""
 
     def __init__(self):

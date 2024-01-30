@@ -27,7 +27,6 @@ __all__ = ["InputSimulation"]
 
 
 class InputSimulation(Input):
-
     """Simulation input class.
 
     Handles generating the appropriate forcefield class from the xml input file,
@@ -44,7 +43,6 @@ class InputSimulation(Input):
        step: An integer giving the current simulation step. Defaults to 0.
        total_steps: The total number of steps. Defaults to 1000
        total_time:  The wall clock time limit. Defaults to 0 (no limit).
-       paratemp: A helper object for parallel tempering simulations
 
     Dynamic fields:
        system: Holds the data needed to specify the state of a single system.
@@ -103,7 +101,7 @@ class InputSimulation(Input):
             InputAttribute,
             {
                 "dtype": str,
-                "default": "low",
+                "default": "medium",
                 "options": ["quiet", "low", "medium", "high", "debug"],
                 "help": "The level of output on stdout.",
             },
@@ -122,7 +120,18 @@ class InputSimulation(Input):
                 "dtype": str,
                 "default": "md",
                 "help": "What kind of simulation should be run.",
-                "options": ["md", "paratemp", "static"],
+                "options": ["md", "static"],
+            },
+        ),
+        "safe_stride": (
+            InputAttribute,
+            {
+                "dtype": int,
+                "default": 1,
+                "help": """Consistent simulation states will be saved every this number of steps. 
+Saving state entails a small overhead, so you may want to set this to the smallest output
+frequency in your simulation to make i-PI faster. Use at your own risk!
+""",
             },
         ),
         "floatformat": (
@@ -170,6 +179,10 @@ class InputSimulation(Input):
             iforcefields.InputFFsGDML,
             {"help": iforcefields.InputFFsGDML.default_help},
         ),
+        "ffcavphsocket": (
+            iforcefields.InputFFCavPhSocket,
+            {"help": iforcefields.InputFFCavPhSocket.default_help},
+        ),
     }
 
     default_help = "This is the top level class that deals with the running of the simulation, including holding the simulation specific properties such as the time step and outputting the data."
@@ -209,6 +222,7 @@ class InputSimulation(Input):
             raise ValueError("Invalid verbosity level")
 
         self.mode.store(simul.mode)
+        self.safe_stride.store(simul.safe_stride)
 
         _fflist = [v for k, v in sorted(simul.fflist.items())]
         if len(self.extra) != len(_fflist) + len(simul.syslist):
@@ -251,6 +265,10 @@ class InputSimulation(Input):
                     _iobj = iforcefields.InputFFCommittee()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("ffcommittee", _iobj)
+                elif isinstance(_obj, eforcefields.FFCavPhSocket):
+                    _iobj = iforcefields.InputFFCavPhSocket()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffcavphsocket", _iobj)
                 elif isinstance(_obj, System):
                     _iobj = InputSystem()
                     _iobj.store(_obj)
@@ -304,6 +322,7 @@ class InputSimulation(Input):
                 or k == "ffsgdml"
                 or k == "ffyaff"
                 or k == "ffcommittee"
+                or k == "ffcavphsocket"
             ):
                 info(" # @simulation: Fetching" + k, verbosity.low)
                 fflist.append(v.fetch())
@@ -322,6 +341,7 @@ class InputSimulation(Input):
             tsteps=self.total_steps.fetch(),
             ttime=self.total_time.fetch(),
             threads=self.threading.fetch(),
+            safe_stride=self.safe_stride.fetch(),
         )
 
         return rsim

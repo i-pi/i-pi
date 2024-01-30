@@ -149,7 +149,7 @@ class NormalModeMover(Motion):
         self.calc.step(step)
 
 
-class DummyCalculator(dobject):
+class DummyCalculator:
     """No-op Calculator"""
 
     def __init__(self):
@@ -1006,7 +1006,7 @@ class VSCF(IMF):
                     )
                     vigrid = np.asarray(
                         [
-                            np.asscalar(
+                            float(
                                 vspline(igrid[iinm])
                                 - 0.5 * self.imm.w2[self.inm] * igrid[iinm] ** 2
                                 - self.v0

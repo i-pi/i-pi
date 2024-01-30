@@ -7,13 +7,10 @@
 
 import numpy as np
 
-from ipi.utils.depend import depend_value
-from ipi.utils.depend import dd
-from ipi.utils.depend import dobject
+from ipi.utils.depend import depend_value, dproperties
 
 
-class Motion(dobject):
-
+class Motion:
     """Base motion calculation class.
 
     Gives the standard methods and attributes needed in all the
@@ -43,8 +40,7 @@ class Motion(dobject):
              initial positions.
         """
 
-        dself = dd(self)
-        dself.dt = depend_value(name="dt", value=0.0)
+        self._dt = depend_value(name="dt", value=0.0)
         self.fixcom = fixcom
         if fixatoms is None:
             self.fixatoms = np.zeros(0, int)
@@ -85,3 +81,6 @@ class Motion(dobject):
         """Dummy simulation time step which does nothing."""
 
         pass
+
+
+dproperties(Motion, "dt")

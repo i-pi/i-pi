@@ -12,7 +12,7 @@ appropriate conserved energy quantity.
 import numpy as np
 
 from ipi.engine.motion import Motion
-from ipi.utils.depend import *
+from ipi.utils.depend import dproperties, depend_value, dstrip
 from ipi.utils.units import Constants
 
 
@@ -20,7 +20,6 @@ from ipi.utils.units import Constants
 
 
 class AlchemyMC(Motion):
-
     """Monte Carlo alchemical exchanges class.
 
     Attributes:
@@ -46,8 +45,7 @@ class AlchemyMC(Motion):
         self.names = names
         self.nxc = nxc
 
-        dself = dd(self)
-        dself.ealc = depend_value(name="ealc")
+        self._ealc = depend_value(name="ealc")
         if ealc is not None:
             self.ealc = ealc
         else:
@@ -70,7 +68,7 @@ class AlchemyMC(Motion):
         """
 
         super(AlchemyMC, self).bind(ens, beads, cell, bforce, nm, prng, omaker)
-        self.ensemble.add_econs(dd(self).ealc)
+        self.ensemble.add_econs(self._ealc)
 
     def AXlist(self, atomtype):
         """This compile a list of atoms ready for exchanges."""
@@ -158,3 +156,6 @@ class AlchemyMC(Motion):
 
                 # adjusts the conserved quantity counter based on the change in spring energy
                 self.ealc += -difspring
+
+
+dproperties(AlchemyMC, ["ealc"])

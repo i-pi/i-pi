@@ -12,22 +12,22 @@ choosing which properties to initialise, and which properties to output.
 
 import tracemalloc
 import os
-import threading
 import time
 from copy import deepcopy
 
-from ipi.utils.depend import depend_value, dobject, dd, dpipe
+from ipi.utils.depend import depend_value, dpipe, dproperties
 from ipi.utils.io.inputs.io_xml import xml_parse_file
 from ipi.utils.messages import verbosity, info, warning, banner
 from ipi.utils.softexit import softexit
 import ipi.engine.outputs as eoutputs
 import ipi.inputs.simulation as isimulation
 
+from concurrent.futures import ThreadPoolExecutor
 
 __all__ = ["Simulation"]
 
 
-class Simulation(dobject):
+class Simulation:
     """Main simulation object.
 
     Contains all the references and the main dynamics loop. Also handles the
@@ -97,9 +97,9 @@ class Simulation(dobject):
         simulation.bind(read_only)
 
         # echo the input file if verbose enough
-        if verbosity.level > 0:
+        if verbosity.low:
             print(" # i-PI loaded input file: ", fn_input)
-        if verbosity.level > 1:
+        elif verbosity.medium:
             print(" --- begin input file content ---")
             ifile = open(fn_input, "r")
             for line in ifile.readlines():
@@ -121,6 +121,7 @@ class Simulation(dobject):
         tsteps=1000,
         ttime=0,
         threads=False,
+        safe_stride=1,
     ):
         """Initialises Simulation class.
 
@@ -143,7 +144,7 @@ class Simulation(dobject):
         self.prng = prng
         self.mode = mode
         self.threading = threads
-        dself = dd(self)
+        self.safe_stride = safe_stride
 
         self.syslist = syslist
         for s in syslist:
@@ -164,7 +165,7 @@ class Simulation(dobject):
 
         self.outtemplate = outputs
 
-        dself.step = depend_value(name="step", value=step)
+        self._step = depend_value(name="step", value=step)
         self.tsteps = tsteps
         self.ttime = ttime
         self.smotion = smotion
@@ -219,7 +220,7 @@ class Simulation(dobject):
             ):  # checkpoints are output per simulation
                 dco.bind(self)
                 dpipe(
-                    dd(dco).step, dd(o).step
+                    dco._step, o._step
                 )  # makes sure that the checkpoint step is updated also in the template
                 self.outputs.append(dco)
             else:  # properties and trajectories are output per system
@@ -233,6 +234,11 @@ class Simulation(dobject):
                     if f_start:  # starting of simulation, print headers (if any)
                         no.print_header()
                     isys += 1
+
+        if self.threading:
+            self.executor = ThreadPoolExecutor(
+                max_workers=max(len(self.syslist), len(self.outputs))
+            )
 
         self.chk = eoutputs.CheckpointOutput("RESTART", 1, True, 0)
         self.chk.bind(self)
@@ -278,19 +284,14 @@ class Simulation(dobject):
             if self.threading:
                 stepthreads = []
                 for o in self.outputs:
-                    st = threading.Thread(target=o.write, name=o.filename)
-                    st.daemon = True
-                    st.start()
+                    st = self.executor.submit(o.write)
                     stepthreads.append(st)
 
                 for st in stepthreads:
-                    while st.is_alive():
-                        # This is necessary as join() without timeout prevents main from receiving signals.
-                        st.join(2.0)
+                    st.result()
             else:
                 for o in self.outputs:
-                    o.write()  # threaded output seems to cause random hang-ups. should make things properly thread-safe
-
+                    o.write()
             self.step = 0
 
         steptime = 0.0
@@ -311,26 +312,20 @@ class Simulation(dobject):
             if softexit.triggered:
                 break
 
-            self.chk.store()
+            # save a consistent state of the simulation that will be saved as a RESTART file in case of premature (soft) exit
+            if self.step % self.safe_stride == 0:
+                self.chk.store()
 
-            if self.threading:
+            if len(self.syslist) > 0 and self.threading:
                 stepthreads = []
                 # steps through all the systems
                 for s in self.syslist:
                     # creates separate threads for the different systems
-                    st = threading.Thread(
-                        target=s.motion.step, name=s.prefix, kwargs={"step": self.step}
-                    )
-                    st.daemon = True
+                    st = self.executor.submit(s.motion.step, step=self.step)
                     stepthreads.append(st)
 
                 for st in stepthreads:
-                    st.start()
-
-                for st in stepthreads:
-                    while st.is_alive():
-                        # This is necessary as join() without timeout prevents main from receiving signals.
-                        st.join(2.0)
+                    st.result()
             else:
                 for s in self.syslist:
                     s.motion.step(step=self.step)
@@ -341,7 +336,6 @@ class Simulation(dobject):
 
             # does the "super motion" step
             if self.smotion is not None:
-                # TODO: We need a file where we store the exchanges
                 self.smotion.step(self.step)
 
             if softexit.triggered:
@@ -351,15 +345,12 @@ class Simulation(dobject):
             if self.threading:
                 stepthreads = []
                 for o in self.outputs:
-                    st = threading.Thread(target=o.write, name=o.filename)
-                    st.daemon = True
-                    st.start()
-                    stepthreads.append(st)
+                    if o.active():  # don't start a thread if it's not needed
+                        st = self.executor.submit(o.write)
+                        stepthreads.append(st)
 
                 for st in stepthreads:
-                    while st.is_alive():
-                        # This is necessary as join() without timeout prevents main from receiving signals.
-                        st.join(2.0)
+                    st.result()
             else:
                 for o in self.outputs:
                     o.write()
@@ -401,3 +392,6 @@ class Simulation(dobject):
                 break
 
         self.rollback = False
+
+
+dproperties(Simulation, ["step"])

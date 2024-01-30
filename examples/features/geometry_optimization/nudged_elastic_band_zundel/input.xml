@@ -1,0 +1,36 @@
+<simulation mode='static' verbosity='low'>
+  <total_steps> 10 </total_steps> <!--the calculation converges in  208 steps-->
+  <ffsocket mode='unix' name='zundel'>
+    <latency> 1.0e-2 </latency>
+    <slots> 4 </slots>
+    <port> 20614 </port>
+    <timeout> 600 </timeout>
+    <address> driver </address>
+  </ffsocket>
+  <output prefix='dbfgs'>
+    <trajectory stride='2' filename='pos' cell_units='angstrom'> positions{angstrom} </trajectory>
+    <trajectory stride='10' filename='for' cell_units='angstrom'> forces </trajectory>
+    <properties stride='1' filename='neb'> [step, bead_potentials] </properties>
+  </output>
+  <system>
+    <forces>
+      <force forcefield='zundel'/>
+    </forces>
+    <initialize nbeads='16'>
+      <file mode='xyz' units='angstrom'> init.xyz </file>
+      <cell> [25.29166, 0, 0, 0, 25.29166, 0, 0, 0, 25.29166] </cell>
+    </initialize>
+    <motion mode='neb'>
+      <neb_optimizer mode='damped_bfgs'>
+        <use_climb> True </use_climb>
+        <stage> neb </stage>
+        <tolerances>
+          <energy units="electronvolt"> 1.e-4 </energy>
+          <force units="ev/ang"> 1.e-2 </force>
+          <position> 1.e-3 </position>
+        </tolerances>
+        <biggest_step> 0.5 </biggest_step>
+      </neb_optimizer>
+    </motion>
+  </system>
+</simulation>

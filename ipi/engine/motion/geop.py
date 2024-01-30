@@ -15,7 +15,7 @@ import numpy as np
 import time
 
 from ipi.engine.motion import Motion
-from ipi.utils.depend import dstrip, dobject
+from ipi.utils.depend import dstrip
 from ipi.utils.softexit import softexit
 from ipi.utils.mintools import min_brent, BFGS, BFGSTRM, L_BFGS, Damped_BFGS
 from ipi.utils.messages import verbosity, info
@@ -182,7 +182,6 @@ class GeopMotion(Motion):
 
 
 class LineMapper(object):
-
     """Creation of the one-dimensional function that will be minimized.
     Used in steepest descent and conjugate gradient minimizers.
 
@@ -236,7 +235,6 @@ class LineMapper(object):
 
 
 class GradientMapper(object):
-
     """Creation of the multi-dimensional function that will be minimized.
     Used in the BFGS and L-BFGS minimizers.
 
@@ -273,7 +271,7 @@ class GradientMapper(object):
         return e, g
 
 
-class DummyOptimizer(dobject):
+class DummyOptimizer:
     """Dummy class for all optimization classes"""
 
     def __init__(self):
@@ -483,9 +481,9 @@ class BFGSOptimizer(DummyOptimizer):
 
             # Restore dimensionality of d and invhessian
             self.d[:, self.gm.fixatoms_mask] = masked_d
-            self.invhessian[
-                np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)
-            ] = masked_invhessian
+            self.invhessian[np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)] = (
+                masked_invhessian
+            )
 
         else:
             fdf0 = (self.old_u, -self.old_f)
@@ -578,9 +576,9 @@ class BFGSTRMOptimizer(DummyOptimizer):
             )
 
             # Restore dimensionality of the hessian
-            self.hessian[
-                np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)
-            ] = masked_hessian
+            self.hessian[np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)] = (
+                masked_hessian
+            )
         else:
             # Make one step. ( A step is finished when a movement is accepted)
             BFGSTRM(
@@ -796,9 +794,9 @@ class Damped_BFGSOptimizer(DummyOptimizer):
             )
 
             # Restore dimensionality of the invhessian
-            self.invhessian[
-                np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)
-            ] = masked_invhessian
+            self.invhessian[np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)] = (
+                masked_invhessian
+            )
 
         else:
             fdf0 = (self.old_u, -self.old_f)

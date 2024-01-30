@@ -10,15 +10,10 @@ prepares them for output.
 import numpy as np
 
 from ipi.utils.messages import verbosity, info, warning
-from ipi.utils.depend import *
+from ipi.utils.depend import dstrip
 from ipi.utils.units import Constants, unit_to_internal
 from ipi.utils.mathtools import logsumlog, h2abc_deg
 from ipi.utils.io.inputs import io_xml
-from ipi.engine.atoms import *
-from ipi.engine.cell import *
-from ipi.engine.ensembles import *
-from ipi.engine.forces import *
-
 
 __all__ = ["Properties", "Trajectories", "getkey", "getall", "help_latex"]
 
@@ -159,8 +154,48 @@ def help_latex(idict, standalone=True):
     return rstr
 
 
-class Properties(dobject):
+def help_rst(idict, standalone=True):
+    """Function to generate a REST formatted string.
 
+    Can be used in the manual to list the different available outputs.
+
+    Args:
+       idict: Either property_dict or traj_dict, to be used to
+          generate the help file.
+       standalone: A boolean giving whether the RST file produced will be a
+          stand-alone document, or will be intended as a section of a larger
+          document with cross-references between the different sections.
+
+    Returns:
+       A RST formatted string.
+    """
+
+    rstr = ""
+    for out in sorted(idict):
+        rstr += f"**{out}**:\n"
+        if "longhelp" in idict[out]:
+            rstr += " ".join(idict[out]["longhelp"].split())
+        else:
+            rstr += " ".join(idict[out]["help"].split())
+
+        # see if there are additional attributes to print out
+        xstr = ""
+        if (
+            "dimension" in idict[out]
+            and idict[out]["dimension"] != "undefined"
+            and len(idict[out]["dimension"]) > 0
+        ):  # doesn't print out dimension if not necessary.
+            xstr += "dimension: " + idict[out]["dimension"] + "; "
+        if "size" in idict[out]:
+            xstr += "size: " + str(idict[out]["size"]) + "; "
+
+        if len(xstr) > 0:
+            rstr += f"\n\n*{xstr.strip()}*"
+        rstr += "\n\n"
+    return rstr
+
+
+class Properties:
     """A proxy to compute and output properties of the system.
 
     Takes the fundamental properties calculated during the simulation, and
@@ -295,9 +330,11 @@ class Properties(dobject):
                 "longhelp": """The physical system potential energy. With the optional argument 'bead'
                          will print the potential associated with the specified bead.""",
                 "func": (
-                    lambda bead="-1": self.forces.pot / self.beads.nbeads
-                    if int(bead) < 0
-                    else self.forces.pots[int(bead)]
+                    lambda bead="-1": (
+                        self.forces.pot / self.beads.nbeads
+                        if int(bead) < 0
+                        else self.forces.pots[int(bead)]
+                    )
                 ),
             },
             "bead_potentials": {
@@ -326,12 +363,11 @@ class Properties(dobject):
                        potential must be returned. The optional argument 'bead' will print the potential associated
                        with the specified bead. If the potential is weighed, the weight will be applied. """,
                 "func": (
-                    lambda index, bead="-1": self.forces.pots_component(
-                        int(index)
-                    ).sum()
-                    / self.beads.nbeads
-                    if int(bead) < 0
-                    else self.forces.pots_component(int(index))[int(bead)]
+                    lambda index, bead="-1": (
+                        self.forces.pots_component(int(index)).sum() / self.beads.nbeads
+                        if int(bead) < 0
+                        else self.forces.pots_component(int(index))[int(bead)]
+                    )
                 ),
             },
             "pot_component_raw": {
@@ -343,12 +379,12 @@ class Properties(dobject):
                        will print the potential associated with the specified bead. Potential weights
                        will not be applied. """,
                 "func": (
-                    lambda index, bead="-1": self.forces.pots_component(
-                        int(index), False
-                    ).sum()
-                    / self.beads.nbeads
-                    if int(bead) < 0
-                    else self.forces.pots_component(int(index), False)[int(bead)]
+                    lambda index, bead="-1": (
+                        self.forces.pots_component(int(index), False).sum()
+                        / self.beads.nbeads
+                        if int(bead) < 0
+                        else self.forces.pots_component(int(index), False)[int(bead)]
+                    )
                 ),
             },
             "forcemod": {
@@ -357,9 +393,11 @@ class Properties(dobject):
                 "longhelp": """The modulus of the force. With the optional argument 'bead'
                        will print the force associated with the specified bead.""",
                 "func": (
-                    lambda bead="-1": np.linalg.norm(self.forces.f) / self.beads.nbeads
-                    if int(bead) < 0
-                    else np.linalg.norm(self.forces.f[int(bead)])
+                    lambda bead="-1": (
+                        np.linalg.norm(self.forces.f) / self.beads.nbeads
+                        if int(bead) < 0
+                        else np.linalg.norm(self.forces.f[int(bead)])
+                    )
                 ),
             },
             "spring": {
@@ -826,6 +864,35 @@ class Properties(dobject):
                           energy <sc**2>, and 3) the average of the exponential of excess potential energy
                           <exp(-beta*sc)>, and 4-5) Suzuki-Chin and Takahashi-Imada 4th-order reweighing term""",
             },
+            "exchange_distinct_prob": {
+                "dimension": "undefined",
+                "size": 1,
+                "func": self.get_exchange_distinct_prob,
+                "help": "Probability of the distinguishable ring polymer configuration.",
+                "longhelp": """Probability of the distinguishable ring polymer configuration, 
+                               where each atom has its own separate ring polymer. 
+                               A number between 0 and 1, tends to 1 in high temperatures, which indicates that 
+                               bosonic exchange is negligible""",
+            },
+            "exchange_all_prob": {
+                "dimension": "undefined",
+                "size": 1,
+                "func": self.get_exchange_longest_prob,
+                "help": "Probability of the bosonic ring polymer configuration where all atoms are connected.",
+                "longhelp": """Probability of the ring polymer exchange configuration where all atoms are connected.
+                               It is divided by 1/N, so the number is between 0 and N,
+                               while the asymptotic value at low temperatures is 1.""",
+            },
+            "fermionic_sign": {
+                "dimension": "undefined",
+                "size": 1,
+                "func": self.get_fermionic_sign,
+                "help": "Estimator for the fermionic sign, also used for reweighting fermionic observables.",
+                "longhelp": """Estimator for the fermionic sign, also used for reweighting fermionic observables.
+                               Decreases exponentially with beta and the number of particles, but if not too large,
+                               can be used to recover fermionic statistics from bosonic simulations,
+                               see doi:10.1063/5.0008720.""",
+            },
         }
 
     def bind(self, system):
@@ -1029,6 +1096,14 @@ class Properties(dobject):
             iatom = -1
             latom = atom
 
+        bosons_included = self._atom_property_distinguishability_well_defined(
+            iatom, latom
+        )
+        if bosons_included:
+            raise IndexError(
+                "Quantum centroid virial kinetic energy estimator not applicable to bosons"
+            )
+
         f = dstrip(self.forces.f)
         # subtracts centroid
         q = dstrip(self.beads.q).copy()
@@ -1064,6 +1139,7 @@ class Properties(dobject):
         # ~ ncount += 1
 
         if ncount == 0:
+            # TODO: don't warn if bosons are matched
             warning(
                 "Couldn't find an atom which matched the argument of kinetic energy, setting to zero.",
                 verbosity.medium,
@@ -1229,7 +1305,7 @@ class Properties(dobject):
         return acv
 
     def get_kintd(self, atom=""):
-        """Calculates the quantum centroid virial kinetic energy estimator.
+        """Calculates the quantum primitive kinetic energy estimator.
 
         Args:
            atom: If given, specifies the atom to give the kinetic energy
@@ -1250,6 +1326,60 @@ class Properties(dobject):
             iatom = -1
             latom = atom
 
+        bosons_included = self._atom_property_distinguishability_well_defined(
+            iatom, latom
+        )
+
+        res, ncount = self._kinetic_td_distinguishables(
+            atom, iatom, latom, skip_atom_indices=set(self.nm.bosons)
+        )
+        if bosons_included:
+            res += self.nm.exchange.get_kinetic_td()
+            ncount += len(bosons_included)
+
+        if ncount == 0:
+            warning(
+                "Couldn't find an atom which matched the argument of kinetic energy, setting to zero.",
+                verbosity.medium,
+            )
+
+        return res
+
+    def _atom_property_distinguishability_well_defined(self, iatom, latom):
+        """
+        Should not ask for a property of a subset of atoms some of which are indistinguishables
+        without including *all* the indistinguishable atoms.
+        Returns the bosons included in the property.
+        """
+        atoms_included = set(range(self.beads.natoms))
+        if iatom != -1:
+            atoms_included = set([iatom])
+        elif latom != "":
+            atoms_included = set(
+                filter(lambda i: latom == self.beads.names[i], range(self.beads.natoms))
+            )
+        bosons = set(self.nm.bosons)
+        bosons_included = bosons & atoms_included
+        if bosons_included and not (bosons <= atoms_included):
+            raise IndexError(
+                "Cannot output property of a proper subset of the bosons: "
+                "bosons %s are included, but %s are missing"
+                % (bosons_included, bosons - bosons_included)
+            )
+        return bosons_included
+
+    def _kinetic_td_distinguishables(self, atom, iatom, latom, skip_atom_indices=None):
+        """
+        The total kinetic energy via the primitive estimator for distinguishable particles.
+
+        Args:
+           atom: If given, specifies the atom to give the kinetic energy
+              for. If not, the system kinetic energy is given.
+           iatom: Index of the atom specified (or -1)
+           latom: Label of the atom specified (or "")
+           skip_atom_indices:
+                atoms not to be considered in the distinguishable estimator (e.g. bosons)
+        """
         q = dstrip(self.beads.q)
         m = dstrip(self.beads.m)
         PkT32 = 1.5 * Constants.kb * self.ensemble.temp * self.beads.nbeads
@@ -1258,6 +1388,9 @@ class Properties(dobject):
         ncount = 0
         for i in range(self.beads.natoms):
             if atom != "" and iatom != i and latom != self.beads.names[i]:
+                continue
+
+            if i in skip_atom_indices:
                 continue
 
             ktd = 0.0
@@ -1272,18 +1405,12 @@ class Properties(dobject):
             atd += ktd
             ncount += 1
 
-        if ncount == 0:
-            warning(
-                "Couldn't find an atom which matched the argument of kinetic energy, setting to zero.",
-                verbosity.medium,
-            )
-
-        return atd
+        return atd, ncount
 
     def get_sckinpr(self):
         """Calculates the quantum centroid virial kinetic energy estimator."""
 
-        spring = self.beads.vpath * self.nm.omegan2 / self.beads.nbeads
+        spring = self.nm.vspring / self.beads.nbeads
         PkT32 = (
             1.5
             * Constants.kb
@@ -1769,6 +1896,9 @@ class Properties(dobject):
            computing finite-difference quantities. If it is negative, will be
            scaled down automatically to avoid discontinuities in the potential.
         """
+        # Ugly but works
+        if type(fd_delta) == str:
+            fd_delta = np.float(fd_delta)
 
         dbeta = abs(float(fd_delta))
         beta = 1.0 / (Constants.kb * self.ensemble.temp)
@@ -2574,9 +2704,23 @@ class Properties(dobject):
 
         return ti
 
+    def get_exchange_distinct_prob(self):
+        if self.nm.exchange is None:
+            raise Exception("No bosons found for exchange_distinct_prob")
+        return self.nm.exchange.get_distinct_probability()
 
-class Trajectories(dobject):
+    def get_exchange_longest_prob(self):
+        if self.nm.exchange is None:
+            raise Exception("No bosons found for exchange_all_prob")
+        return self.nm.exchange.get_longest_probability()
 
+    def get_fermionic_sign(self):
+        if self.nm.exchange is None:
+            raise Exception("No bosons found for fermionic_sign")
+        return self.nm.exchange.get_fermionic_sign()
+
+
+class Trajectories:
     """A simple class to take care of output of trajectory data.
 
     Attributes:

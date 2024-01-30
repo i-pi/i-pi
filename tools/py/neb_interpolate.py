@@ -11,6 +11,8 @@ Arguments:
     --units             - i-pi-supported distance units to write output geometries.
     -al, --activelist   - whitespace-separated list of active atoms to read from the command line
     -af, --activefile   - a file with the space or linebreak separated list of active atoms.
+    -o, --output        - Name of the output xyz file (including extension). Default is "interpolated_path.xyz".
+    --dry               - a boolean flag to switch off output into file(s).
     EITHER
       --ini         - initial geometry (.xyz) if mode "endoints"
       --fin         - final geometry (.xyz) if mode "endpoints"
@@ -28,9 +30,11 @@ import os
 import numpy as np
 import sys
 import argparse
+from numpy.linalg import norm as npnorm
 
 from ipi.utils.io import read_file, read_file_raw, print_file
 from ipi.utils.io.io_units import auto_units
+from ipi.utils.units import Constants
 
 try:
     import scipy
@@ -52,20 +56,19 @@ def spline_resample(q, nbeads_old, nbeads_new, k=3):
     Returns:
         new_q - resampled coordinates
     """
-    from numpy.linalg import norm as npnorm
 
     if scipy is None:
-        print("spline interpolation requires scipy module.")
+        print("@spline_resample: spline interpolation requires scipy module.")
         raise (scipy_exception)
 
     if nbeads_new < 2:
-        raise RuntimeError("nbeads_new < 2.")
+        raise RuntimeError("@spline_resample: nbeads_new < 2.")
 
     # First, we calculate the current parameterization of the path
     # according to 3N-D Euclidean distances between adjacent beads.
     t = [0.0]
     current_t = 0.0
-    print("Cartesian 3N-D distances between old beads:")
+    print("@spline_resample: Cartesian 3N-dimensional distances between old beads:")
     for i in range(1, nbeads_old):
         dist = npnorm(q[i] - q[i - 1])
         print("\tfrom %3d to %3d : %.6f bohr" % (i - 1, i, dist))
@@ -76,7 +79,7 @@ def spline_resample(q, nbeads_old, nbeads_new, k=3):
 
     t = np.array(t)
     t /= t[-1]
-    print("Spline parameter 't' before resampling:")
+    print("@spline_resample: Spline parameter 't' before resampling:")
     print(t)
     print("t[i] - t[i-1]:")
     print(t - np.roll(t, 1))
@@ -105,7 +108,7 @@ def spline_resample(q, nbeads_old, nbeads_new, k=3):
     # Reshape the path back to the beads shape
     new_q = np.array(new_components).T
 
-    print("Cartesian 3N-D distances between NEW beads:")
+    print("@spline_resample: Cartesian 3N-dimensional distances between NEW beads:")
     for i in range(1, nbeads_new):
         dist = npnorm(new_q[i] - new_q[i - 1])
         print("\tfrom %3d to %3d : %.6f bohr" % (i - 1, i, dist))
@@ -197,6 +200,12 @@ if __name__ == "__main__":
         help="A file with atom indices to use, the others will be kept from bead 0. "
         "Atoms are counted from 0.",
     )
+    parser.add_argument(
+        "--dry",
+        type=bool,
+        default=False,
+        help="Flag to switch off all output to file(s)",
+    )
 
     args = parser.parse_args()
     mode = args.mode
@@ -222,6 +231,7 @@ if __name__ == "__main__":
                     except EOFError:  # finished reading file
                         break
                     inipos.append(ret["atoms"])
+                    inimasses = ret["atoms"].m
                     cell = ret["cell"]
                     if np.all(
                         cell.h == -np.eye(3)
@@ -251,6 +261,7 @@ if __name__ == "__main__":
                     try:
                         ret = read_file("xyz", fd_fin)
                         finpos.append(ret["atoms"])
+                        finmasses = ret["atoms"].m
                         cell2 = ret["cell"]
                         if np.any(cell2.h != cell.h):
                             print(
@@ -273,7 +284,16 @@ if __name__ == "__main__":
                 )
                 exit(-1)
         else:
-            print("Error: cannot find {}.".format(input_fin))
+            print("Error: cannot find {} file.".format(input_fin))
+            exit(-1)
+
+        if np.all(inimasses == finmasses):
+            masses = inimasses
+        else:
+            print(
+                "Error: initial and final masses differ. "
+                "Check that the input files have correct geometries and the same order of atoms."
+            )
             exit(-1)
 
         prototype = inipos
@@ -305,6 +325,15 @@ if __name__ == "__main__":
                     exit(-1)
 
                 natoms = path[0].natoms
+                masses = path[0].m
+                # Check that the masses in all frames are the same
+                for atoms in path:
+                    if np.any(atoms.m != masses):
+                        print(
+                            "Error: masses differ across XYZ frames. "
+                            "All frames should represent the same atomic system in the same order."
+                        )
+                        exit(-1)
             # Extract units information to write output with the same units as input
             with open(input_xyz, "r") as fd_xyz:
                 rr = read_file_raw("xyz", fd_xyz)
@@ -331,6 +360,7 @@ if __name__ == "__main__":
         cell = simulation.syslist[0].cell
         beads = simulation.syslist[0].motion.beads.copy()
         natoms = simulation.syslist[0].motion.beads.natoms
+        masses = simulation.syslist[0].motion.beads.m  # KF: not sure about this line
         nbeads_old = beads.nbeads
         if nbeads_old < 2:
             print("Error: at least 2 geometries are needed.")
@@ -344,6 +374,10 @@ if __name__ == "__main__":
     # Below this point, it shouldn't matter where the inputs came from.
     # =================================================================
     print("Imported structures: %d geometries, %d atoms each." % (nbeads_old, natoms))
+    print("Atomic masses:")
+    masses /= Constants.amu
+    for mm in masses:
+        print(mm)
 
     # Parse the arguments for the list of active atoms
     activelist = None
@@ -368,6 +402,22 @@ if __name__ == "__main__":
             fixmask[3 * activelist + 2] = 1
     else:
         fixmask = np.ones(3 * natoms, dtype=bool)
+
+    # Calculate distances in the mass-scaled space
+    print("q.shape:")
+    print(q.shape)
+    sqrtm = np.sqrt(masses)
+    sqrtm = np.column_stack((sqrtm, sqrtm, sqrtm)).flatten()  # We need the shape (3N)
+    mass_scaled_q = q[:, fixmask] * sqrtm[fixmask]
+    mass_scaled_t = 0
+    print("Distances between the old beads in the mass-scaled space:")
+    for i in range(1, nbeads_old):
+        dist = npnorm(mass_scaled_q[i] - mass_scaled_q[i - 1])
+        mass_scaled_t += dist
+        print(
+            "\tfrom %3d to %3d : %.6f bohr×√m, from start:  %6f"
+            % (i - 1, i, dist, mass_scaled_t)
+        )
 
     # Resample the path
     masked_new_q = spline_resample(q[:, fixmask], nbeads_old, nbeads_new, k)
@@ -399,18 +449,21 @@ if __name__ == "__main__":
         units = cell_units = args.units
 
     out_fname = args.output
-    with open(out_fname, "w") as fdout:
-        for i in range(nbeads_new):
-            print_file(
-                mode="xyz",
-                atoms=newpath[i],
-                cell=cell,
-                filedesc=fdout,
-                title="Bead: %d " % i,
-                key="positions",
-                dimension="length",
-                units=units,
-                cell_units=cell_units,
-            )
+    if not args.dry:
+        with open(out_fname, "w") as fdout:
+            for i in range(nbeads_new):
+                print_file(
+                    mode="xyz",
+                    atoms=newpath[i],
+                    cell=cell,
+                    filedesc=fdout,
+                    title="Bead: %d " % i,
+                    key="positions",
+                    dimension="length",
+                    units=units,
+                    cell_units=cell_units,
+                )
 
-    print("The new path is written to %s." % out_fname)
+        print("The new path is written to %s." % out_fname)
+    else:
+        print("Dry run, no files were written.")

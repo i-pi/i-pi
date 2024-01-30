@@ -17,7 +17,6 @@ from ipi.utils.units import Constants
 
 
 class AtomSwap(Motion):
-
     """Swap atom positions (typically useful to exchange species in
     a way that is compatible with the i-PI encapsulation paradigm.
 
@@ -41,8 +40,7 @@ class AtomSwap(Motion):
         self.names = names
         self.nxc = nxc
 
-        dself = dd(self)
-        dself.ealc = depend_value(name="ealc")
+        self._ealc = depend_value(name="ealc")
         if ealc is not None:
             self.ealc = ealc
         else:
@@ -65,7 +63,7 @@ class AtomSwap(Motion):
         """
 
         super(AtomSwap, self).bind(ens, beads, cell, bforce, nm, prng, omaker)
-        self.ensemble.add_econs(dd(self).ealc)
+        self.ensemble.add_econs(self._ealc)
         self.dbeads = self.beads.copy()
         self.dcell = self.cell.copy()
         self.dforces = self.forces.copy(self.dbeads, self.dcell)
@@ -111,6 +109,10 @@ class AtomSwap(Motion):
             while self.beads.names[axlist[i]] == self.beads.names[axlist[j]]:
                 j = self.prng.rng.randint(lenlist)  # makes sure we pick a real exchange
 
+            # map the "subset" indices back to the "absolute" atom indices
+            i = axlist[i]
+            j = axlist[j]
+
             old_energy = self.forces.pot
             # swap the atom positions
             self.dbeads.q[:] = self.beads.q[:]
@@ -129,3 +131,6 @@ class AtomSwap(Motion):
                 self.forces.transfer_forces(self.dforces)
 
                 self.ealc += -(new_energy - old_energy)
+
+
+dproperties(AtomSwap, ["ealc"])

@@ -16,7 +16,6 @@ __all__ = ["Constants", "Elements", "unit_to_internal", "unit_to_user"]
 
 
 class Constants(object):
-
     """Class whose members are fundamental constants.
 
     Attributes:
@@ -31,7 +30,6 @@ class Constants(object):
 
 
 class Elements(dict):
-
     """Class which contains the mass of different elements.
 
     Attributes:
@@ -41,6 +39,7 @@ class Elements(dict):
     """
 
     mass_list = {
+        "L": 1.0000 / Constants.amu,  # for cavity photon
         "X": 1.0000 / Constants.amu,
         "H": 1.00794,
         "Z": 1.382943,  # an interpolated H-D atom, based on y=1/sqrt(m) scaling

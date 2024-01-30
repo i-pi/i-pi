@@ -38,7 +38,6 @@ __all__ = [
 
 
 class input_default(object):
-
     """Contains information required to dynamically create objects.
 
     Used so that we can define mutable default input values to various tags
@@ -81,7 +80,6 @@ class input_default(object):
 
 
 class Input(object):
-
     """Base class for input handling.
 
     Has the generic methods for dealing with the xml input file. Parses the input
@@ -500,9 +498,9 @@ class Input(object):
             else:
                 rstr += r"\begin{ipifield}{" + name + "}%\n"
 
-        rstr += "{" + self._help + "}%\n"
+        rstr += "{" + self._help.replace("%", "\\%") + "}%\n"
 
-        rstr += "{" + self.detail_str() + "}%\n"
+        rstr += "{" + self.detail_str().replace("%", "\\%") + "}%\n"
 
         rstr += "{"
         # Prints out the attributes
@@ -520,9 +518,9 @@ class Input(object):
                             r"\ipiitem{"
                             + a
                             + "}%\n{"
-                            + self.__dict__[a]._help
+                            + self.__dict__[a]._help.replace("%", "\\%")
                             + "}%\n{"
-                            + self.__dict__[a].detail_str()
+                            + self.__dict__[a].detail_str().replace("%", "\\%")
                             + "}%\n"
                         )  # !!MUST ADD OTHER STUFF
         rstr += "}\n"
@@ -762,9 +760,119 @@ class Input(object):
         rstr += indent + "</" + name + ">\n"
         return rstr
 
+    def help_rst(self, name="", indent="", level=0, stop_level=None, standalone=True):
+        """Function to generate an rst formatted help file.
+
+        Args:
+           name: A string giving the name of the root node.
+           indent: The indent at the beginning of a line.
+           level: Current level of the hierarchy being considered.
+           stop_level: The depth to which information will be given. If not given,
+              all information will be given
+           standalone: Should this be generated as a single document or as part of
+              a linked set of RST files? (currently unused)
+
+        Returns:
+           An rst formatted string.
+        """
+
+        # stops when we've printed out the prerequisite number of levels
+        leaf_level = False
+        has_link_heuristics = not (
+            type(self) is InputValue
+            or type(self) is InputAttribute
+            or type(self) is InputArray
+            or type(self) is InputDictionary
+            or type(self) is InputRaw
+        )
+        if stop_level is not None:
+            if level > stop_level:
+                return ""
+            if level == stop_level:
+                leaf_level = True
+
+        # these are booleans which tell us whether there are any attributes
+        # and fields to print out
+        show_attribs = len(self.attribs) != 0
+        show_fields = (
+            not (len(self.instancefields) == 0 and len(self.dynamic) == 0)
+        ) and level != stop_level
+
+        rstr = ""
+        lindent = "   "  # increase of indentation with each layer
+
+        if level == 0:
+            rstr += "\n.. _" + name + ":\n"
+            rstr += "\n" + name + "\n" + ("-" * len(name))
+        else:
+            rstr += (
+                "\n"
+                + indent
+                + (f":ref:`{name}`" if has_link_heuristics else f"**{name}**")
+                + "\n"
+            )
+        # prints help string
+        rstr += "\n" + indent + " ".join(self._help.split()) + "\n"
+
+        # if possible, prints out the type of data that is being used
+        if issubclass(self.__class__, InputAttribute):
+            rstr += "\n" + indent + "*dtype*: " + self.type_print(self.type) + "\n"
+        # prints dimensionality of the object
+        if hasattr(self, "_dimension") and self._dimension != "undefined":
+            rstr += "\n" + indent + "*dimension*: " + self._dimension + "\n"
+        if hasattr(self, "_valid"):
+            if self._valid is not None:
+                rstr += "\n" + indent + "*options*: " + str(self._valid) + "\n"
+
+        if self._default is not None and issubclass(self.__class__, InputAttribute):
+            # We only print out the default if it has a well defined value.
+            # For classes such as InputCell, self._default is not the value,
+            # instead it is an object that is stored, putting the default value in
+            # self.value. For this reason we print out self.value at this stage,
+            # and not self._default
+            rstr += (
+                "\n"
+                + indent
+                + "*default*: "
+                + self.pprint(self.value, indent=indent, latex=False)
+                + "\n"
+            )
+
+        if show_attribs and len(self.attribs) > 0 and not leaf_level:
+            rstr += "\n" + indent + "ATTRIBUTES\n" + indent + "^^^^^^^^^^^" + "\n"
+            for a in self.attribs:
+                if a == "units" and self._dimension == "undefined":
+                    continue
+                # information about tags is found in tags beginning with the name
+                # of the attribute
+                rstr += self.__dict__[a].help_rst(
+                    a, lindent + indent, level + 1, stop_level
+                )
+
+        # repeats the above instructions for any fields or dynamic tags.
+        # these will only be printed if their level in the hierarchy is not above
+        # the user specified limit.
+        if (
+            show_fields
+            and (len(self.instancefields) > 0 or len(self.dynamic) > 0)
+            and not leaf_level
+        ):
+            rstr += "\n" + indent + "FIELDS\n" + indent + "^^^^^^^" + "\n"
+            for f in self.instancefields:
+                rstr += self.__dict__[f].help_rst(
+                    f, lindent + indent, level + 1, stop_level
+                )
+            for f, v in self.dynamic.items():
+                # we must create the object manually, as dynamic objects are
+                # not automatically added to the input object's dictionary
+                dummy_obj = v[0](**v[1])
+                rstr += dummy_obj.help_rst(f, lindent + indent, level + 1, stop_level)
+
+        rstr += "\n"
+        return rstr
+
 
 class InputDictionary(Input):
-
     """Class that returns the value of all the fields as a dictionary."""
 
     def __init__(
@@ -831,7 +939,6 @@ class InputDictionary(Input):
 
 
 class InputAttribute(Input):
-
     """Class for handling attribute data.
 
     Has the methods for dealing with attribute data of the form:
@@ -934,7 +1041,6 @@ class InputAttribute(Input):
 
 
 class InputValue(InputAttribute):
-
     """Class for handling scalar input.
 
     Has the methods for dealing with simple data tags of the form:
@@ -1071,7 +1177,6 @@ ELPERLINE = 5
 
 
 class InputArray(InputValue):
-
     """Class for handling array input.
 
     Has the methods for dealing with simple data tags of the form:

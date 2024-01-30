@@ -1,0 +1,40 @@
+<simulation verbosity='low' threading='False'>
+  <output prefix='simulation'>
+    <properties stride='20' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_md{electronvolt}, kinetic_cv{electronvolt}, potential{electronvolt} ] </properties>
+    <trajectory filename='vel' stride='20' bead='1' flush='200'> velocities </trajectory>
+    <trajectory filename='xc' stride='20' flush='200'> x_centroid{angstrom} </trajectory> 
+    <trajectory filename='vc' stride='20' flush='200' > v_centroid </trajectory> 
+  </output>
+  <total_steps>1000</total_steps>
+  <prng>
+    <seed>3337</seed>
+  </prng>
+  <ffsocket name='driver' mode='unix'>
+    <address>driver</address>
+  </ffsocket>
+  <system>
+  <normal_modes>
+     <frequencies style='pa-cmd' units="inversecm"> [13000]   </frequencies>
+  </normal_modes>
+    <initialize nbeads='16'>
+      <file mode='chk'> therm_checkpoint.chk </file>
+    </initialize>
+    <forces>
+      <force forcefield='driver'> </force>
+    </forces>
+    <motion mode='dynamics'>
+      <fixcom> False </fixcom>
+      <dynamics mode='nvt'>
+        <timestep units='femtosecond'> 0.05 </timestep>
+        <thermostat mode='pile_l'>
+          <tau units='femtosecond'> 100 </tau> 
+          <pile_lambda> 0.01 </pile_lambda> 
+          <pile_centroid_t units='kelvin'> 200 </pile_centroid_t> 
+        </thermostat> 
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units='kelvin'> 600 </temperature>
+    </ensemble>
+  </system>
+</simulation>

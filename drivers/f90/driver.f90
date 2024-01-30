@@ -31,14 +31,14 @@
          USE LJPolymer
          USE SG
          USE PSWATER
-         USE F90SOCKETS, ONLY : open_socket, writebuffer, readbuffer
+         USE F90SOCKETS, ONLY : open_socket, writebuffer, readbuffer, f_sleep
       IMPLICIT NONE
-      
+
       ! SOCKET VARIABLES
       INTEGER, PARAMETER :: MSGLEN=12   ! length of the headers of the driver/wrapper communication protocol
       INTEGER socket, inet, port        ! socket ID & address of the server
       CHARACTER(LEN=1024) :: host
-      
+
       ! COMMAND LINE PARSING
       CHARACTER(LEN=1024) :: cmdbuffer
       INTEGER ccmd, vstyle, vseed
@@ -46,18 +46,20 @@
       INTEGER verbose
       INTEGER commas(4), par_count      ! stores the index of commas in the parameter string
       DOUBLE PRECISION vpars(4)         ! array to store the parameters of the potential
-      
+
       ! SOCKET COMMUNICATION BUFFERS
       CHARACTER(LEN=12) :: header
       LOGICAL :: isinit=.false., hasdata=.false.
       INTEGER cbuf, rid, length
       CHARACTER(LEN=4096) :: initbuffer      ! it's unlikely a string this large will ever be passed...
       CHARACTER(LEN=4096) :: string,string2,trimmed  ! it's unlikely a string this large will ever be passed...
+      CHARACTER(LEN=30000) :: longbuffer, longstring ! used in water_dip_pol model to pass dipole-z derivative and polarizability.
       DOUBLE PRECISION, ALLOCATABLE :: msgbuffer(:)
-      
+
       ! PARAMETERS OF THE SYSTEM (CELL, ATOM POSITIONS, ...)
       DOUBLE PRECISION sigma, eps, rc, rn, ks ! potential parameters
       DOUBLE PRECISION stiffness ! lennard-jones polymer
+      DOUBLE PRECISION sleep_seconds
       INTEGER n_monomer ! lennard-jones polymer
       INTEGER nat
       DOUBLE PRECISION pot, dpot, dist
@@ -66,7 +68,9 @@
       DOUBLE PRECISION, ALLOCATABLE :: friction(:,:)
       DOUBLE PRECISION volume
       DOUBLE PRECISION, PARAMETER :: fddx = 1.0d-5
-      
+      DOUBLE PRECISION, ALLOCATABLE :: dipz_der(:, :) ! Dipole (z-component) derivative (water_dip_pol model)
+      DOUBLE PRECISION :: pol(3, 3) !Polarizability (water_dip_pol model)
+
       ! NEIGHBOUR LIST ARRAYS
       INTEGER, DIMENSION(:), ALLOCATABLE :: n_list, index_list
       DOUBLE PRECISION init_volume, init_rc ! needed to correctly adjust the cut-off radius for variable cell dynamics
@@ -76,7 +80,7 @@
       ! DMW
       DOUBLE PRECISION efield(3)
       INTEGER i, j
-      
+
       ! parse the command line parameters
       ! intialize defaults
       ccmd = 0
@@ -157,13 +161,19 @@
                   vstyle = 25
                ELSEIF (trim(cmdbuffer) == "doublewell_1D") THEN
                   vstyle = 24
+               ELSEIF (trim(cmdbuffer) == "morsedia") THEN
+                  vstyle = 26
+               ELSEIF (trim(cmdbuffer) == "qtip4pf-sr") THEN
+                  vstyle = 27
+               ELSEIF (trim(cmdbuffer) == "water_dip_pol") THEN
+                  vstyle = 28
                ELSEIF (trim(cmdbuffer) == "gas") THEN
                   vstyle = 0  ! ideal gas
                ELSEIF (trim(cmdbuffer) == "dummy") THEN
                   vstyle = 99 ! returns non-zero but otherwise meaningless values
                ELSE
                   WRITE(*,*) " Unrecognized potential type ", trim(cmdbuffer)
-                  WRITE(*,*) " Use -m [dummy|gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D] "
+                  WRITE(*,*) " Use -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|morsedia|qtip4pf-sr|water_dip_pol] "
                   STOP "ENDED"
                ENDIF
             ELSEIF (ccmd == 4) THEN
@@ -179,30 +189,38 @@
             ccmd = 0
          ENDIF
       ENDDO
-      
+
       IF (vstyle == -1) THEN
          WRITE(*,*) " Error, type of potential not specified."
          CALL helpmessage
          STOP "ENDED"
       ELSEIF (0 == vstyle) THEN
-         IF (par_count /= 0) THEN
-            WRITE(*,*) "Error: no initialization string needed for ideal gas."
+         IF (par_count == 0) THEN
+            sleep_seconds = 0.0
+         ELSEIF (par_count == 1) THEN
+            sleep_seconds = vpars(1)
+         ELSE
+            WRITE(*,*) "Error: only an optional delay parameters needed for ideal gas."
             STOP "ENDED"
          ENDIF
          isinit = .true.
       ELSEIF (99 == vstyle) THEN
-         IF (par_count /= 0) THEN
-            WRITE(*,*) "Error: no initialization string needed for dummy output."
+         IF (par_count == 0) THEN
+            sleep_seconds = 0.0
+         ELSEIF (par_count == 1) THEN
+            sleep_seconds = vpars(1)
+         ELSE
+            WRITE(*,*) "Error: only an optional delay parameters needed for dummy output."
             STOP "ENDED"
          ENDIF
          CALL RANDOM_SEED(size=vseed)
          ALLOCATE(seed(vseed))
          seed = 12345
          CALL RANDOM_SEED(put=seed)
-         isinit = .true.         
-      ELSEIF (6 == vstyle) THEN
+         isinit = .true.
+      ELSEIF (6 == vstyle .OR. 27 == vstyle) THEN
          IF (par_count /= 0) THEN
-            WRITE(*,*) "Error:  no initialization string needed for qtip4pf."
+            WRITE(*,*) "Error:  no initialization string needed for qtip4pf or qtip4p-sr."
             STOP "ENDED"
          ENDIF
          isinit = .true.
@@ -245,9 +263,9 @@
          ENDIF
          isinit = .true.
       ELSEIF (20 == vstyle) THEN !eckart
-         IF (par_count == 0) THEN ! defaults values 
+         IF (par_count == 0) THEN ! defaults values
             vpars(1) = 0.0d0
-            vpars(2) = 0.66047 
+            vpars(2) = 0.66047
             vpars(3) = (6*12)/( 1836 * (vpars(2)**2) *( (4.D0 * ATAN(1.0d0) )**2 ) )
             vpars(4) = 1836*(3800.0d0/219323d0)**2
          ELSEIF ( 4/= par_count) THEN
@@ -258,7 +276,7 @@
          isinit = .true.
 
       ELSEIF (23 == vstyle) THEN !MB
-         IF (par_count == 0) THEN ! defaults values 
+         IF (par_count == 0) THEN ! defaults values
             vpars(1) = 0.004737803248674678
          ELSEIF ( 1/= par_count) THEN
             WRITE(*,*) "Error: parameters not initialized correctly."
@@ -293,8 +311,8 @@
       ELSEIF (vstyle == 10) THEN
          IF (par_count /= 0) THEN
             WRITE(*,*) "Error: no initialization string needed for LEPSM2."
-            STOP "ENDED" 
-         ENDIF   
+            STOP "ENDED"
+         ENDIF
          isinit = .true.
       ELSEIF (vstyle == 11) THEN
          IF (par_count .ne. 3) THEN
@@ -302,7 +320,7 @@
      &    Provide the three components of the electric field in V/nm"
             STOP "ENDED"
          ELSE
-            ! We take in an electric field in volts / nm.This must be converted 
+            ! We take in an electric field in volts / nm.This must be converted
             ! to Eh / (e a0).
             do i=1,3
              efield(i) = vpars(i) / 5.14220652d2
@@ -357,17 +375,37 @@
       ELSEIF (25 == vstyle) THEN !doublewell
          IF ( par_count /= 0 ) THEN
                  WRITE(*,*) "Error: no initialization string needed for doublewell."
-            STOP "ENDED" 
-         ENDIF   
+            STOP "ENDED"
+         ENDIF
          isinit = .true.
 
       ELSEIF (24 == vstyle) THEN !doublewell_1D
          IF ( par_count /= 0 ) THEN
                  WRITE(*,*) "Error: no initialization string needed for 1-dimensional doublewell."
-            STOP "ENDED" 
-         ENDIF   
+            STOP "ENDED"
+         ENDIF
+         isinit = .true.
+      ELSEIF (26 == vstyle) THEN
+         IF (par_count == 0) THEN ! defaults (OH stretch)
+             vpars(1) = 1.8323926 ! r0
+             vpars(2) = 0.18748511263179304 ! D
+             vpars(3) = 1.1562696428501682 ! a
+         ELSEIF ( 2/= par_count) THEN
+             WRITE(*,*) "Error: parameters not initialized correctly."
+             WRITE(*,*) "For morse potential use -o r0,D,a (in a.u.) "
+             STOP "ENDED"
+         ENDIF
+      ELSEIF (vstyle == 28) THEN !water dipole and polarizability
+         IF (par_count == 0) THEN
+            vpars(1) = 1
+         ELSEIF (par_count /= 1 .OR. (vpars(1) /= 0 .AND. vpars(1) /= 1)) THEN
+            WRITE(*,*) "Error: parameters not initialized correctly."
+            WRITE(*,*) "For water_dip_pol use only -o 0 or -o 1."
+            vpars(1) = 1
+         ENDIF
          isinit = .true.
       ENDIF
+
 
       IF (verbose > 0) THEN
          WRITE(*,*) " DRIVER - Connecting to host ", trim(host)
@@ -409,7 +447,7 @@
             IF (verbose > 0) WRITE(*,*) " Initializing system from wrapper, using ", trim(initbuffer)
             isinit=.true. ! We actually do nothing with this string, thanks anyway. Could be used to pass some information (e.g. the input parameters, or the index of the replica, from the driver
          ELSEIF (trim(header) == "POSDATA") THEN  ! The driver is sending the positions of the atoms. Here is where we do the calculation!
-
+            
             ! Parses the flow of data from the socket
             CALL readbuffer(socket, mtxbuf, 9)  ! Cell matrix
             IF (verbose > 1) WRITE(*,*) "    !read!=> cell: ", mtxbuf
@@ -434,35 +472,49 @@
                ALLOCATE(msgbuffer(3*nat))
                ALLOCATE(atoms(nat,3), datoms(nat,3))
                ALLOCATE(forces(nat,3))
-               ALLOCATE(friction(3*nat,3*nat))
+
+               IF (vstyle==24 .or. vstyle==25) THEN
+                  ALLOCATE(friction(3*nat,3*nat))
+                  friction = 0.0d0
+               ENDIF
                atoms = 0.0d0
                datoms = 0.0d0
                forces = 0.0d0
-               friction = 0.0d0
                msgbuffer = 0.0d0
-            ENDIF
+               IF (verbose > 1) WRITE(*,*) " Allocation successful "
+            ENDIF            
 
             CALL readbuffer(socket, msgbuffer, nat*3)
-            IF (verbose > 1) WRITE(*,*) "    !read!=> positions: ", msgbuffer
+            IF (verbose > 1) WRITE(*,*) "    !read!=> positions: ", msgbuffer(0:2), " ..."
             DO i = 1, nat
                atoms(i,:) = msgbuffer(3*(i-1)+1:3*i)
             ENDDO
 
             IF (vstyle == 0) THEN   ! ideal gas, so no calculation done
+               IF (sleep_seconds > 0) THEN
+                  ! artificial delay
+                  CALL f_sleep(sleep_seconds)
+               ENDIF
                pot = 0
                forces = 0.0d0
-               virial = 1.0d-200   
+               virial = 1.0d-200
                ! returns a tiny but non-zero stress, so it can
                ! bypass the check for zero virial that is used
                ! to avoid running constant-pressure simulations
                ! with a code that cannot compute the virial
             ELSEIF (vstyle == 99) THEN ! dummy output, useful to test that i-PI "just runs"
+               IF (sleep_seconds > 0) THEN
+                  ! artificial delay
+                  CALL f_sleep(sleep_seconds)
+               ENDIF
                call random_number(pot)
-               pot = pot - 0.5                
+               pot = pot - 0.5
                call random_number(forces)
                forces = forces - 0.5
                call random_number(virial)
                virial = virial - 0.5
+               call random_number(dip)
+               dip = dip - 0.5 
             ELSEIF (vstyle == 3) THEN ! 1D harmonic potential, so only uses the first position variable
                pot = 0.5*ks*atoms(1,1)**2
                forces = 0.0d0
@@ -473,14 +525,20 @@
                    pot = 0.0d0
                    forces = 0.0d0
                    virial = 0.0d0
-               DO i=1,nat 
+               DO i=1,nat
                    pot = pot + 0.5*ks*atoms(i,1)**2 + 0.5*ks*atoms(i,2)**2 + 0.5*ks*atoms(i,3)**2
                    forces(i,1) = -ks*atoms(i,1)
                    forces(i,2) = -ks*atoms(i,2)
                    forces(i,3) = -ks*atoms(i,3)
-                   virial(i,1) = forces(i,1)*atoms(i,1)
-                   virial(i,2) = forces(i,2)*atoms(i,2)
-                   virial(i,3) = forces(i,3)*atoms(i,3)
+                   virial(1,1) = virial(1,1) + forces(i,1)*atoms(i,1)
+                   virial(1,2) = virial(1,2) + forces(i,1)*atoms(i,2)
+                   virial(1,3) = virial(1,3) + forces(i,1)*atoms(i,3)
+                   virial(2,1) = virial(2,1) + forces(i,2)*atoms(i,1)
+                   virial(2,2) = virial(2,2) + forces(i,2)*atoms(i,2)
+                   virial(2,3) = virial(2,3) + forces(i,2)*atoms(i,3)
+                   virial(3,1) = virial(3,1) + forces(i,3)*atoms(i,1)
+                   virial(3,2) = virial(3,2) + forces(i,3)*atoms(i,2)
+                   virial(3,3) = virial(3,3) + forces(i,3)*atoms(i,3)
                 enddo
             ELSEIF (vstyle == 7) THEN ! linear potential in x position of the 1st atom
                pot = ks*atoms(1,1)
@@ -494,6 +552,12 @@
                   STOP "ENDED"
                ENDIF
                CALL getmorse(vpars(1), vpars(2), vpars(3), atoms, pot, forces)
+            ELSEIF (vstyle == 26) THEN ! Morse potential with 2 atoms.
+               IF (nat/=2) THEN
+                   WRITE(*,*) "Expecting 2 atom for 3D Morse "
+                   STOP "ENDED"
+               ENDIF
+               CALL getmorsedia(vpars(1), vpars(2), vpars(3), atoms, pot, forces)
             ELSEIF (vstyle == 5) THEN ! Zundel potential.
                IF (nat/=7) THEN
                   WRITE(*,*) "Expecting 7 atoms for Zundel potential, O O H H H H H "
@@ -539,6 +603,7 @@
                ! do not compute the virial term
 
             ELSEIF (vstyle == 6) THEN ! qtip4pf potential.
+               IF (verbose > 1) WRITE(*,*) "TIP4Pf potential"               
                IF (mod(nat,3)/=0) THEN
                   WRITE(*,*) " Expecting water molecules O H H O H H O H H but got ", nat, "atoms"
                   STOP "ENDED"
@@ -546,17 +611,23 @@
                vpars(1) = cell_h(1,1)
                vpars(2) = cell_h(2,2)
                vpars(3) = cell_h(3,3)
-               IF (cell_h(1,2).gt.1d-10 .or. cell_h(1,3).gt.1d-12  .or. cell_h(2,3).gt.1d-12) THEN                       
+               IF (cell_h(1,2).gt.1d-10 .or. cell_h(1,3).gt.1d-12  .or. cell_h(2,3).gt.1d-12) THEN
                   WRITE(*,*) " qtip4pf PES only works with orthorhombic cells", cell_h(1,2), cell_h(1,3), cell_h(2,3)
                   STOP "ENDED"
                ENDIF
                CALL qtip4pf(vpars(1:3),atoms,nat,forces,pot,virial)
+               IF (verbose > 1) WRITE(*,*) "TIP4Pf potential computed"
                dip(:) = 0.0
                DO i=1, nat, 3
                   dip = dip -1.1128d0 * atoms(i,:) + 0.5564d0 * (atoms(i+1,:) + atoms(i+2,:))
                ENDDO
-               ! do not compute the virial term
-            ELSEIF (vstyle == 11) THEN ! efield potential.             
+            ELSEIF (vstyle == 27) THEN ! short-range qtip4pf potential.
+               IF (mod(nat,3)/=0) THEN
+                  WRITE(*,*) " Expecting water molecules O H H O H H O H H but got ", nat, "atoms"
+                  STOP "ENDED"
+               ENDIF
+               CALL qtip4pf_sr(atoms,nat,forces,pot,virial)
+            ELSEIF (vstyle == 11) THEN ! efield potential.
                IF (mod(nat,3)/=0) THEN
                   WRITE(*,*) " Expecting water molecules O H H O H H O H H but got ", nat, "atoms"
                   STOP "ENDED"
@@ -570,7 +641,7 @@
 
                dip=0.0
                vecdiff=0.0
-               ! lets fold the atom positions back to center in case the water travelled far away. 
+               ! lets fold the atom positions back to center in case the water travelled far away.
                ! this avoids problems if the water is splic across (virtual) periodic boundaries
                ! OH_1
                call vector_separation(cell_h, cell_ih, atoms(2,:), atoms(1,:), vecdiff, dist)
@@ -587,7 +658,7 @@
                call pot_nasa(atoms, forces, pot)
                call dms_nasa(atoms, charges, dummy) ! MR: trying to print out the right charges
                dip(:)=atoms(1,:)*charges(1)+atoms(2,:)*charges(2)+atoms(3,:)*charges(3)
-               ! MR: the above line looks like it provides correct results in eAngstrom for dipole! 
+               ! MR: the above line looks like it provides correct results in eAngstrom for dipole!
                pot = pot*0.0015946679     ! pot_nasa gives kcal/mol
                forces = forces * (-0.00084329756) ! pot_nasa gives V in kcal/mol/angstrom
                ! do not compute the virial term
@@ -603,7 +674,7 @@
                   STOP "ENDED"
                END IF
                CALL LEPS_M2(4, atoms, pot, forces)
-               
+
             ELSEIF (vstyle == 20) THEN ! eckart potential.
                CALL geteckart(nat,vpars(1), vpars(2), vpars(3),vpars(4), atoms, pot, forces)
 
@@ -623,6 +694,15 @@
                CALL dw1d_friction(nat, atoms, friction)
                CALL dw1d_dipole(nat, atoms, dip)
 
+            ELSEIF (vstyle == 28) THEN   ! Sets force and potential to zero,
+                                         ! computes only dipole moment, its gradient, and polarizability.
+               pot = 0
+               forces = 0.0d0
+               DO i = 1, 3
+                  vpars(i+1) = cell_h(i, i)
+               ENDDO
+               IF (.NOT. ALLOCATED(dipz_der)) ALLOCATE (dipz_der(nat, 3))
+               CALL h2o_dipole(vpars(2:4), nat, atoms, vpars(1) /= 0, dip, dipz_der, pol)
             ELSE
                IF ((allocated(n_list) .neqv. .true.)) THEN
                   IF (verbose > 0) WRITE(*,*) " Allocating neighbour lists."
@@ -675,7 +755,7 @@
             CALL writebuffer(socket,nat)  ! Writing the number of atoms
             IF (verbose > 1) WRITE(*,*) "    !write!=> nat:", nat
             CALL writebuffer(socket,msgbuffer,3*nat) ! Writing the forces
-            IF (verbose > 1) WRITE(*,*) "    !write!=> forces:", msgbuffer
+            IF (verbose > 1) WRITE(*,*) "    !write!=> forces:", msgbuffer(0:2), " ..."
             CALL writebuffer(socket,reshape(virial,(/9/)),9)  ! Writing the virial tensor, NOT divided by the volume
             IF (verbose > 1) WRITE(*,*) "    !write!=> strss: ", reshape(virial,(/9/))
 
@@ -709,8 +789,9 @@
      &          cbuf
                 CALL writebuffer(socket,initbuffer,cbuf)
                 IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ",  &
-     &          initbuffer
-            ELSEIF (vstyle==5 .or. vstyle==6 .or. vstyle==8) THEN ! returns the dipole through initbuffer
+     &          initbuffer(1:cbuf)
+!            ELSEIF (vstyle==5 .or. vstyle==6 .or. vstyle==8 .or. vstyle==99) THEN ! returns the  dipole through initbuffer
+            ELSEIF (vstyle==5 .or. vstyle==6 .or. vstyle==8) THEN ! returns the  dipole through initbuffer
                WRITE(initbuffer, '(a,3x,f15.8,a,f15.8,a,f15.8, &
      &         3x,a)') '{"dipole": [',dip(1),",",dip(2),",",dip(3),"]}"
                cbuf = LEN_TRIM(initbuffer)
@@ -719,7 +800,19 @@
      &         "    !write!=> extra_length: ", cbuf
                CALL writebuffer(socket,initbuffer,cbuf)
                IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ", &
-     &         initbuffer
+     &         initbuffer(1:cbuf)               
+               
+            ELSEIF (vstyle==28) THEN ! returns the dipole, dipole derivative, and polarizability through initbuffer
+               WRITE(string, '(a,3x,f15.8,a,f15.8,a,f15.8, 3x,a)') '{"dipole": [',dip(1),",",dip(2),",",dip(3),"],"
+               longbuffer = TRIM(string)
+               WRITE(string2, *) "(a,3x,", 3*nat - 1, '(f15.8, ","),f15.8,3x,a)'
+               WRITE(longstring, string2) '"dipole_derivative": [',TRANSPOSE(dipz_der),"],"
+               longbuffer = TRIM(longbuffer)//TRIM(longstring)
+               WRITE(string, '(a,3x, 8(f15.8, ","),f15.8,3x,a)') '"polarizability": [',pol,"]}"
+               longbuffer = TRIM(longbuffer)//TRIM(string)
+               cbuf = LEN_TRIM(longbuffer)
+               CALL writebuffer(socket,cbuf)
+               CALL writebuffer(socket,TRIM(longbuffer),cbuf)
             ELSE
                cbuf = 1 ! Size of the "extras" string
                CALL writebuffer(socket,cbuf) ! This would write out the "extras" string, but in this case we only use a dummy string.
@@ -730,26 +823,33 @@
      &         "    !write!=> extra: empty"
             ENDIF
             hasdata = .false.
+         ELSEIF (trim(header) == "EXIT") THEN
+            EXIT
          ELSE
             WRITE(*,*) " Unexpected header ", header
             STOP "ENDED"
          ENDIF
       ENDDO
-      IF (nat > 0) DEALLOCATE(atoms, forces, msgbuffer, friction)
- 
+      IF (nat > 0) DEALLOCATE(atoms, forces, msgbuffer)
+      IF (nat>0 .and. (vstyle==24 .or. vstyle==25)) THEN
+         DEALLOCATE(friction)
+      ENDIF
+      STOP
+
     CONTAINS
       SUBROUTINE helpmessage
          ! Help banner
-         WRITE(*,*) " SYNTAX: driver.x [-u] -a address -p port -m [dummy|gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D] "
+         WRITE(*,*) " SYNTAX: driver.x [-u] -a address -p port -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|morsedia|qtip4pf-sr|water_dip_pol]"
          WRITE(*,*) "         -o 'comma_separated_parameters' [-v] "
          WRITE(*,*) ""
          WRITE(*,*) " For LJ potential use -o sigma,epsilon,cutoff "
          WRITE(*,*) " For SG potential use -o cutoff "
          WRITE(*,*) " For 1D/3D harmonic oscillator use -o k "
-         WRITE(*,*) " For 1D morse oscillator use -o r0,D,a"
-         WRITE(*,*) " For qtip4pf-efield use -o Ex,Ey,Ez with Ei in V/nm"         
+         WRITE(*,*) " For 1D morse oscillators use -o r0,D,a"
+         WRITE(*,*) " For qtip4pf-efield use -o Ex,Ey,Ez with Ei in V/nm"
          WRITE(*,*) " For ljpolymer use -o n_monomer,sigma,epsilon,cutoff "
-         WRITE(*,*) " For the ideal gas, qtip4pf, zundel, ch4hcbe, nasa, doublewell or doublewell_1D no options are needed! "
+         WRITE(*,*) " For gas, dummy, use the optional -o sleep_seconds to add a delay"
+         WRITE(*,*) " For the ideal qtip4pf, qtip4p-sr, zundel, ch4hcbe, nasa, doublewell or doublewell_1D no options are needed! "
        END SUBROUTINE helpmessage
 
    END PROGRAM

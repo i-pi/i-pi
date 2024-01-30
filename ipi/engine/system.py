@@ -12,14 +12,8 @@ forcefields which govern the interaction potential.
 
 import threading
 
-from ipi.utils.depend import *
-from ipi.utils.units import *
-from ipi.utils.prng import *
-from ipi.utils.io import *
-from ipi.utils.io.inputs.io_xml import *
+from ipi.utils.depend import dpipe
 from ipi.utils.messages import verbosity, info
-from ipi.engine.atoms import *
-from ipi.engine.cell import *
 from ipi.engine.forces import Forces
 from ipi.engine.properties import Properties, Trajectories
 
@@ -27,8 +21,7 @@ from ipi.engine.properties import Properties, Trajectories
 __all__ = ["System"]
 
 
-class System(dobject):
-
+class System:
     """Physical system object.
 
     Contains all the physical information. Also handles stepping and output.
@@ -117,7 +110,7 @@ class System(dobject):
             simul.output_maker,
         )
 
-        dpipe(dd(self.nm).omegan2, dd(self.forces).omegan2)
+        dpipe(self.nm._omegan2, self.forces._omegan2)
 
         self.init.init_stage2(self)
 
