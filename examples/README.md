@@ -20,3 +20,7 @@ If you want to add an example for a new feature, please respect the folder struc
 - Keep the size of the example to the minimum. If you need large files to run the client (e.g. a pseudopotential, or the parameters of a ML potential) give instructions on how to download the file from a repository. If the file is shared by many examples, put it in `init_files` and make a symlink
 - Include a README that briefly explains what the example is about, and what a user should be aware of when running it (what it does, what special setup is needed, etc.)
 
+Notes on file naming conventions and formats:
+  - Please use lowercase names rather than Camel_Case
+  - Please use use underscores rather than hyphen 
+  - Please use driver whenever possible

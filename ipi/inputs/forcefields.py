@@ -40,7 +40,6 @@ __all__ = [
 
 
 class InputForceField(Input):
-
     """ForceField input class.
 
     Handles generating one instance of a particular forcefield class from the xml
@@ -89,7 +88,7 @@ class InputForceField(Input):
             InputValue,
             {
                 "dtype": float,
-                "default": 0.01,
+                "default": 1e-4,
                 "help": "The number of seconds the polling thread will wait between exhamining the list of requests.",
             },
         ),
@@ -146,7 +145,6 @@ class InputForceField(Input):
 
 
 class InputFFSocket(InputForceField):
-
     """Creates a ForceField object with a socket interface.
 
     Handles generating one instance of a socket interface forcefield class.

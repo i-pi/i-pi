@@ -18,8 +18,7 @@ from ipi.utils.depend import *
 __all__ = ["Atoms", "Atom"]
 
 
-class Atom(dobject):
-
+class Atom:
     """Represent an atom, with position, velocity, mass and related properties.
 
     This is actually only an interface to the Atoms class, i.e. only stores
@@ -46,13 +45,12 @@ class Atom(dobject):
            index: An integer giving the index of the required atom in the atoms
               list. Note that indices start from 0.
         """
-        dself = dd(self)  # direct access
 
-        dself.p = system.p[3 * index : 3 * index + 3]
-        dself.q = system.q[3 * index : 3 * index + 3]
-        dself.m = system.m[index : index + 1]
-        dself.name = system.names[index : index + 1]
-        dself.m3 = system.m3[3 * index : 3 * index + 3]
+        self.p = system.p[3 * index : 3 * index + 3]
+        self.q = system.q[3 * index : 3 * index + 3]
+        self.m = system.m[index : index + 1]
+        self.name = system.names[index : index + 1]
+        self.m3 = system.m3[3 * index : 3 * index + 3]
 
     @property
     def kin(self):
@@ -74,8 +72,10 @@ class Atom(dobject):
         return ks / self.m
 
 
-class Atoms(dobject):
+# dproperties(Atom, ["p", "q", "m", "m3", "name"])
 
+
+class Atoms:
     """Storage for the atoms' positions, masses and velocities.
 
     Everything is stored as 3*n sized contiguous arrays,
@@ -120,34 +120,32 @@ class Atoms(dobject):
 
         self.natoms = natoms
 
-        dself = dd(self)  # direct access
-
         if _prebind is None:
-            dself.q = depend_array(name="q", value=np.zeros(3 * natoms, float))
-            dself.p = depend_array(name="p", value=np.zeros(3 * natoms, float))
-            dself.m = depend_array(name="m", value=np.zeros(natoms, float))
-            dself.names = depend_array(
+            self._q = depend_array(name="q", value=np.zeros(3 * natoms, float))
+            self._p = depend_array(name="p", value=np.zeros(3 * natoms, float))
+            self._m = depend_array(name="m", value=np.zeros(natoms, float))
+            self._names = depend_array(
                 name="names", value=np.zeros(natoms, np.dtype("|U6"))
             )
         else:
-            dself.q = _prebind[0]
-            dself.p = _prebind[1]
-            dself.m = _prebind[2]
-            dself.names = _prebind[3]
+            self._q = _prebind[0]
+            self._p = _prebind[1]
+            self._m = _prebind[2]
+            self._names = _prebind[3]
 
-        dself.m3 = depend_array(
+        self._m3 = depend_array(
             name="m3",
             value=np.zeros(3 * natoms, float),
             func=self.mtom3,
-            dependencies=[dself.m],
+            dependencies=[self._m],
         )
 
-        dself.M = depend_value(name="M", func=self.get_msum, dependencies=[dself.m])
-        dself.kin = depend_value(
-            name="kin", func=self.get_kin, dependencies=[dself.p, dself.m3]
+        self._M = depend_value(name="M", func=self.get_msum, dependencies=[self._m])
+        self._kin = depend_value(
+            name="kin", func=self.get_kin, dependencies=[self._p, self._m3]
         )
-        dself.kstress = depend_value(
-            name="kstress", func=self.get_kstress, dependencies=[dself.p, dself.m]
+        self._kstress = depend_value(
+            name="kstress", func=self.get_kstress, dependencies=[self._p, self._m]
         )
 
     def copy(self):
@@ -271,3 +269,6 @@ class Atoms(dobject):
         ks[0, 2] = np.dot(px, pz / m)
         ks[1, 2] = np.dot(py, pz / m)
         return ks
+
+
+dproperties(Atoms, ["p", "q", "m", "m3", "names", "M", "kin", "kstress"])

@@ -19,7 +19,6 @@ from ipi.engine.ensembles import Ensemble
 from ipi.engine.motion import Motion
 from ipi.utils.io import read_file
 from ipi.utils.io.inputs.io_xml import xml_parse_file
-from ipi.utils.depend import dobject
 from ipi.utils.units import Constants, unit_to_internal
 from ipi.utils.nmtransform import nm_rescale
 from ipi.utils.messages import verbosity, warning, info
@@ -28,8 +27,7 @@ from ipi.utils.messages import verbosity, warning, info
 __all__ = ["Initializer", "InitBase", "InitIndexed", "InitFile"]
 
 
-class InitBase(dobject):
-
+class InitBase:
     """Base class for initializer objects.
 
     Reads data from a string or file.
@@ -60,7 +58,6 @@ class InitBase(dobject):
 
 
 class InitIndexed(InitBase):
-
     """Class to initialize objects which can be set for a particular bead.
 
     The same as init base, but can also optionally hold information about which
@@ -301,8 +298,7 @@ def set_vector(iif, dq, rq):
             dq[iif.bead, 3 * iif.index : 3 * (iif.index + 1)] = rq
 
 
-class Initializer(dobject):
-
+class Initializer:
     """Class that deals with the initialization of data.
 
     Holds functions that are required to initialize objects in the code.  Data
@@ -364,13 +360,9 @@ class Initializer(dobject):
         """
 
         if simul.beads.nbeads == 0:
-            fpos = (
-                fmom
-            ) = (
-                fmass
-            ) = (
-                flab
-            ) = fcell = False  # we don't have an explicitly defined beads object yet
+            fpos = fmom = fmass = flab = fcell = (
+                False  # we don't have an explicitly defined beads object yet
+            )
         else:
             fpos = fmom = fmass = flab = fcell = True
 

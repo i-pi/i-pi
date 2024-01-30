@@ -5,12 +5,11 @@
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
-from ipi.utils.depend import depend_value, dd
+from ipi.utils.depend import depend_value, dproperties
 from ipi.engine.motion import Motion
 
 
 class MultiMotion(Motion):
-
     """A class to hold multiple motion objects to be executed serially."""
 
     def __init__(self, motionlist=None):
@@ -21,11 +20,10 @@ class MultiMotion(Motion):
               motion will be constrained or not. Defaults to False.
         """
 
-        dself = dd(self)
-        dself.dt = depend_value(name="dt", func=self.get_totdt)
+        self._dt = depend_value(name="dt", func=self.get_totdt)
         self.mlist = motionlist
         for m in self.mlist:
-            dd(m).dt.add_dependant(dself.dt)
+            m._dt.add_dependant(self._dt)
         a = (  # noqa
             self.dt
         )  # DON'T ASK WHY BUT IF YOU DON'T DO THAT WEAKREFS TO SELF.DT WILL BE INVALIDATED
@@ -70,3 +68,6 @@ class MultiMotion(Motion):
 
         for m in self.mlist:
             m.bind(ens, beads, nm, cell, bforce, prng, omaker)
+
+
+dproperties(MultiMotion, "dt")

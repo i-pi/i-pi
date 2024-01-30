@@ -32,7 +32,6 @@ __all__ = ["InputNEB"]
 
 
 class InputNEB(InputDictionary):
-
     """Geometry optimization options for nudged elastic band (NEB) calculations.
 
     Contains options related with geometry optimization, such as method,

@@ -33,7 +33,6 @@ __all__ = ["InputGeop"]
 
 
 class InputGeop(InputDictionary):
-
     """Geometry optimization options.
 
     Contains options related with geometry optimization, such as method,

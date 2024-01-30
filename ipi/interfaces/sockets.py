@@ -22,15 +22,18 @@ import json
 from ipi.utils.messages import verbosity, warning, info
 from ipi.utils.softexit import softexit
 
+from concurrent.futures import ThreadPoolExecutor
+
 
 __all__ = ["InterfaceSocket"]
 
 
 HDRLEN = 12
 UPDATEFREQ = 10
-TIMEOUT = 0.02
+TIMEOUT = 0.1
 SERVERTIMEOUT = 5.0 * TIMEOUT
 NTIMEOUT = 20
+SELECTTIMEOUT = 60
 
 
 def Message(mystr):
@@ -40,22 +43,35 @@ def Message(mystr):
     return str.ljust(str.upper(mystr), HDRLEN).encode()
 
 
-class Disconnected(Exception):
+MESSAGE = {
+    msg: Message(msg)
+    for msg in [
+        "exit",
+        "status",
+        "ready",
+        "havedata",
+        "init",
+        "needinit",
+        "posdata",
+        "getforce",
+        "forceready",
+    ]
+}
 
+
+class Disconnected(Exception):
     """Disconnected: Raised if client has been disconnected."""
 
     pass
 
 
 class InvalidSize(Exception):
-
     """Disconnected: Raised if client returns forces with inconsistent number of atoms."""
 
     pass
 
 
 class InvalidStatus(Exception):
-
     """InvalidStatus: Raised if client has the wrong status.
 
     Shouldn't have to be used if the structure of the program is correct.
@@ -65,7 +81,6 @@ class InvalidStatus(Exception):
 
 
 class Status(object):
-
     """Simple class used to keep track of the status of the client.
 
     Uses bitwise or to give combinations of different status options.
@@ -93,7 +108,6 @@ class Status(object):
 
 
 class DriverSocket(socket.socket):
-
     """Deals with communication between the client and driver code.
 
     Deals with sending and receiving the data between the client and the driver
@@ -129,7 +143,7 @@ class DriverSocket(socket.socket):
         Args:
            msg: The message to send through the socket.
         """
-        return self.sendall(Message(msg))
+        return self.sendall(MESSAGE[msg])
 
     def recv_msg(self, length=HDRLEN):
         """Get the next message send through the socket.
@@ -179,17 +193,16 @@ class DriverSocket(socket.socket):
 
             if not timeout and bpart == 0:
                 raise Disconnected()
-
             bpos += bpart
 
-        if hasattr(dest, "shape"):
-            return np.fromstring(self._buf[0:blen], dest.dtype).reshape(dest.shape)
+        if dest.ndim > 0:
+            dest[:] = np.frombuffer(self._buf[0:blen], dest.dtype).reshape(dest.shape)
+            return dest  # tmp.copy() #np.frombuffer(self._buf[0:blen], dest.dtype).reshape(dest.shape).copy()
         else:
-            return np.fromstring(self._buf[0:blen], dest.dtype)[0]
+            return np.frombuffer(self._buf[0:blen], dest.dtype)[0]
 
 
 class Driver(DriverSocket):
-
     """Deals with communication between the client and driver code.
 
     Deals with sending and receiving the data from the driver code. Keeps track
@@ -227,7 +240,7 @@ class Driver(DriverSocket):
             trd.daemon = True
             trd.start()
 
-        self.sendall(Message("exit"))
+        self.send_msg("exit")
         self.status = Status.Disconnected
 
         super(DriverSocket, self).shutdown(how)
@@ -243,17 +256,27 @@ class Driver(DriverSocket):
         if not self.waitstatus:
             try:
                 # This can sometimes hang with no timeout.
-                # Using the recommended 60 s.
-                readable, writable, errored = select.select([], [self], [], 60)
+                readable, writable, errored = select.select(
+                    [], [self], [], SELECTTIMEOUT
+                )
                 if self in writable:
-                    self.sendall(Message("status"))
+                    self.send_msg("status")
                     self.waitstatus = True
             except socket.error:
                 return Status.Disconnected
 
         try:
-            reply = self.recv(HDRLEN)
-            self.waitstatus = False  # got some kind of reply
+            readable, writable, errored = select.select([self], [], [], SELECTTIMEOUT)
+            if self in readable:
+                reply = self.recv_msg(HDRLEN)
+                self.waitstatus = False  # got some kind of reply
+            else:
+                # This is usually due to VERY slow clients.
+                warning(
+                    f" @SOCKET: Couldn't find readable socket in {SELECTTIMEOUT}s, will try again",
+                    verbosity.low,
+                )
+                return Status.Busy
         except socket.timeout:
             warning(" @SOCKET:   Timeout in status recv!", verbosity.debug)
             return Status.Up | Status.Busy | Status.Timeout
@@ -266,11 +289,11 @@ class Driver(DriverSocket):
 
         if not len(reply) == HDRLEN:
             return Status.Disconnected
-        elif reply == Message("ready"):
+        elif reply == MESSAGE["ready"]:
             return Status.Up | Status.Ready
-        elif reply == Message("needinit"):
+        elif reply == MESSAGE["needinit"]:
             return Status.Up | Status.NeedsInit
-        elif reply == Message("havedata"):
+        elif reply == MESSAGE["havedata"]:
             return Status.Up | Status.HasData
         else:
             warning(" @SOCKET:    Unrecognized reply: " + str(reply), verbosity.low)
@@ -301,7 +324,7 @@ class Driver(DriverSocket):
             try:
                 # combines all messages in one to reduce latency
                 self.sendall(
-                    Message("init")
+                    MESSAGE["init"]
                     + np.int32(rid)
                     + np.int32(len(pars))
                     + pars.encode()
@@ -322,23 +345,32 @@ class Driver(DriverSocket):
         Raises:
            InvalidStatus: Raised if the status is not Ready.
         """
+        global TIMEOUT  # we need to update TIMEOUT in case of sendall failure
 
         if self.status & Status.Ready:
             try:
                 # reduces latency by combining all messages in one
                 self.sendall(
-                    Message("posdata")
-                    + h_ih[0].tobytes()  # header
-                    + h_ih[1].tobytes()  # cell
-                    + np.int32(len(pos) // 3).tobytes()  # inverse cell
-                    + pos.tobytes()  # length of position array  # positions
+                    MESSAGE["posdata"]  # header
+                    + h_ih[0].tobytes()  # cell
+                    + h_ih[1].tobytes()  # inverse cell
+                    + np.int32(len(pos) // 3).tobytes()  # length of position array
+                    + pos.tobytes()  # positions
                 )
-
                 self.status = Status.Up | Status.Busy
-            except:
-                print("Error in sendall, resetting status")
-                self.get_status()
+            except socket.timeout:
+                warning(
+                    f"Timeout in sendall after {TIMEOUT}s: resetting status and increasing timeout",
+                    verbosity.quiet,
+                )
+                self.status = Status.Timeout
+                TIMEOUT *= 2
                 return
+            except Exception as exc:
+                warning(
+                    f"Other exception during posdata receive: {exc}", verbosity.quiet
+                )
+                raise exc
         else:
             raise InvalidStatus("Status in sendpos was " + self.status)
 
@@ -354,7 +386,7 @@ class Driver(DriverSocket):
         """
 
         if self.status & Status.HasData:
-            self.sendall(Message("getforce"))
+            self.send_msg("getforce")
             reply = ""
             while True:
                 try:
@@ -370,7 +402,7 @@ class Driver(DriverSocket):
                         verbosity.low,
                     )
                     raise Disconnected()
-                if reply == Message("forceready"):
+                if reply == MESSAGE["forceready"]:
                     break
                 else:
                     warning(
@@ -387,6 +419,7 @@ class Driver(DriverSocket):
 
         mlen = np.int32()
         mlen = self.recvall(mlen)
+
         mf = np.zeros(3 * mlen, np.float64)
         mf = self.recvall(mf)
 
@@ -423,7 +456,6 @@ class Driver(DriverSocket):
                 )
 
             mxtradict["raw"] = mxtra
-
         return [mu, mf, mvir, mxtradict]
 
     def dispatch(self, r):
@@ -475,9 +507,10 @@ class Driver(DriverSocket):
             raise InvalidSize
 
         # If only a piece of the system is active, resize forces and reassign
-        rftemp = r["result"][1]
-        r["result"][1] = np.zeros(len(r["pos"]), dtype=np.float64)
-        r["result"][1][r["active"]] = rftemp
+        if len(r["active"]) != len(r["pos"]):
+            rftemp = r["result"][1]
+            r["result"][1] = np.zeros(len(r["pos"]), dtype=np.float64)
+            r["result"][1][r["active"]] = rftemp
         r["t_finished"] = time.time()
         self.lastreq = r["id"]  #
 
@@ -489,7 +522,6 @@ class Driver(DriverSocket):
 
 
 class InterfaceSocket(object):
-
     """Host server class.
 
     Deals with distribution of all the jobs between the different client servers
@@ -529,6 +561,7 @@ class InterfaceSocket(object):
         timeout=1.0,
         match_mode="auto",
         exit_on_disconnect=False,
+        max_workers=128,
     ):
         """Initialises interface.
 
@@ -543,6 +576,7 @@ class InterfaceSocket(object):
               wait before updating the client list. Defaults to 1e-3.
            timeout: Length of time waiting for data from a client before we assume
               the connection is dead and disconnect the client.
+            max_workers: Maximum number of threads launched concurrently
 
         Raises:
            NameError: Raised if mode is not 'unix' or 'inet'.
@@ -558,6 +592,7 @@ class InterfaceSocket(object):
         self.match_mode = match_mode  # heuristics to match jobs and active clients
         self.requests = None  # these will be linked to the request list of the FFSocket object using the interface
         self.exit_on_disconnect = exit_on_disconnect
+        self.max_workers = max_workers
 
     def open(self):
         """Creates a new socket.
@@ -604,6 +639,7 @@ class InterfaceSocket(object):
         # these are the two main objects the socket interface should worry about and manage
         self.clients = []  # list of active clients (working or ready to compute)
         self.jobs = []  # list of jobs
+        self.executor = ThreadPoolExecutor(max_workers=self.max_workers)
 
     def close(self):
         """Closes down the socket."""
@@ -679,8 +715,7 @@ class InterfaceSocket(object):
                 self.clients.remove(c)
                 # requeue jobs that have been left hanging
                 for [k, j, tc] in self.jobs[:]:
-                    if tc.is_alive():
-                        tc.join(2)
+                    tc.result()
                     if j is c:
                         self.jobs = [
                             w for w in self.jobs if not (w[0] is k and w[1] is j)
@@ -864,12 +899,13 @@ class InterfaceSocket(object):
                 ),
                 verbosity.high,
             )
-            fc_thread = threading.Thread(
-                target=fc.dispatch, name="DISPATCH", kwargs={"r": r}
-            )
+            # fc_thread = threading.Thread(
+            #    target=fc.dispatch, name="DISPATCH", kwargs={"r": r}
+            # )
+            fc_thread = self.executor.submit(fc.dispatch, r=r)
             self.jobs.append([r, fc, fc_thread])
-            fc_thread.daemon = True
-            fc_thread.start()
+            # fc_thread.daemon = True
+            # fc_thread.start()
             return True
 
         return False
@@ -880,8 +916,7 @@ class InterfaceSocket(object):
         """
 
         if r["status"] == "Done":
-            while ct.is_alive():  # we can wait for end of thread
-                ct.join()
+            ct.result()
             self.jobs = [
                 w for w in self.jobs if not (w[0] is r and w[1] is c)
             ]  # removes pair in a robust way

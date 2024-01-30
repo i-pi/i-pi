@@ -20,10 +20,9 @@ from ipi.utils.softexit import softexit
 from ipi.utils.messages import verbosity
 from ipi.utils.messages import info
 from ipi.interfaces.sockets import InterfaceSocket
-from ipi.utils.depend import dobject
 from ipi.utils.depend import dstrip
 from ipi.utils.io import read_file
-from ipi.utils.units import unit_to_internal, UnitMap
+from ipi.utils.units import unit_to_internal
 from ipi.utils.distance import vector_separation
 
 try:
@@ -46,7 +45,6 @@ class NumpyEncoder(json.JSONEncoder):
 
 
 class ForceRequest(dict):
-
     """An extension of the standard Python dict class which only has a == b
     if a is b == True, rather than if the elements of a and b are identical.
 
@@ -60,8 +58,7 @@ class ForceRequest(dict):
         return self is y
 
 
-class ForceField(dobject):
-
+class ForceField:
     """Base forcefield class.
 
     Gives the standard methods and quantities needed in all the forcefield
@@ -305,7 +302,6 @@ class ForceField(dobject):
 
 
 class FFSocket(ForceField):
-
     """Interface between the PIMD code and a socket for a single replica.
 
     Deals with an individual replica of the system, obtaining the potential
@@ -371,7 +367,6 @@ class FFSocket(ForceField):
 
 
 class FFLennardJones(ForceField):
-
     """Basic fully pythonic force provider.
 
     Computes LJ interactions without minimum image convention, cutoffs or
@@ -449,7 +444,6 @@ class FFLennardJones(ForceField):
 
 
 class FFdmd(ForceField):
-
     """Pythonic force provider.
 
     Computes DMD forces as in Bowman, .., Brown JCP 2003 DOI: 10.1063/1.1578475. It is a time dependent potential.
@@ -564,7 +558,6 @@ class FFdmd(ForceField):
 
 
 class FFDebye(ForceField):
-
     """Debye crystal harmonic reference potential
 
     Computes a harmonic forcefield.
@@ -820,7 +813,6 @@ class FFPlumed(ForceField):
 
 
 class FFYaff(ForceField):
-
     """Use Yaff as a library to construct a force field"""
 
     def __init__(
@@ -935,7 +927,6 @@ class FFYaff(ForceField):
 
 
 class FFsGDML(ForceField):
-
     """A symmetric Gradient Domain Machine Learning (sGDML) force field.
     Chmiela et al. Sci. Adv., 3(5), e1603015, 2017; Nat. Commun., 9(1), 3887, 2018.
     http://sgdml.org/doc/
@@ -962,6 +953,8 @@ class FFsGDML(ForceField):
         # a socket to the communication library is created or linked
         super(FFsGDML, self).__init__(latency, name, pars, dopbc, threaded=threaded)
 
+        from ipi.utils.units import unit_to_user
+
         # --- Load sGDML package ---
         try:
             from sgdml.predict import GDMLPredict
@@ -985,7 +978,7 @@ class FFsGDML(ForceField):
 
         # --- Load sGDML model file. ---
         try:
-            self.model = np.load(self.sGDML_model)
+            self.model = dict(np.load(self.sGDML_model, allow_pickle=True))
             info(
                 " @ForceField: sGDML model " + self.sGDML_model + " loaded",
                 verbosity.medium,
@@ -995,25 +988,43 @@ class FFsGDML(ForceField):
                 "ERROR: Reading sGDML model " + self.sGDML_model + " file failed."
             )
 
-        if "r_unit" in self.model and "e_unit" in self.model:
-            info(
-                " @ForceField: The units used in your sGDML model are"
-                + self.sGDML_model["r_unit"]
-                + " and "
-                + self.sGDML_model["r_unit"],
-                verbosity.low,
-            )
-
         info(
             " @ForceField: IMPORTANT: It is always assumed that the units in"
             + " the provided model file are in Angstroms and kcal/mol.",
             verbosity.low,
         )
 
+        # --- Units ---
+        transl_units_names = {
+            "Ang": "angstrom",
+            "bohr": "atomic_unit",
+            "millihartree": "milliatomic_unit",
+            "eV": "electronvolt",
+            "kcal/mol": "kilocal/mol",
+        }
+        if "r_unit" in self.model and "e_unit" in self.model:
+            distanceUnits = transl_units_names["{}".format(self.model["r_unit"])]
+            energyUnits = transl_units_names["{}".format(self.model["e_unit"])]
+            info(
+                " @ForceField: The units used in the sGDML model are: "
+                "distance --> {}, energy --> {}".format(distanceUnits, energyUnits),
+                verbosity.low,
+            )
+        else:
+            info(
+                " @ForceField: IMPORTANT: Since the sGDML model doesn't have units for distance and energy it is "
+                "assumed that the units are in Angstroms and kilocal/mol, respectively.",
+                verbosity.low,
+            )
+            distanceUnits = "angstrom"
+            energyUnits = "kilocal/mol"
+
         # --- Constants ---
-        self.bohr_to_ang = 1.0 / UnitMap["length"]["angstrom"]
-        self.kcalmol_to_hartree = UnitMap["energy"]["cal/mol"] * 1000.0
-        self.kcalmolang_to_hartreebohr = self.bohr_to_ang * self.kcalmol_to_hartree
+        self.bohr_to_distanceUnits = unit_to_user("length", distanceUnits, 1)
+        self.energyUnits_to_hartree = unit_to_internal("energy", energyUnits, 1)
+        self.forceUnits_to_hartreebohr = (
+            self.bohr_to_distanceUnits * self.energyUnits_to_hartree
+        )
 
         # --- Creates predictor ---
         self.predictor = GDMLPredict(self.model)
@@ -1038,11 +1049,11 @@ class FFsGDML(ForceField):
     def evaluate(self, r):
         """Evaluate the energy and forces."""
 
-        E, F = self.predictor.predict(r["pos"] * self.bohr_to_ang)
+        E, F = self.predictor.predict(r["pos"] * self.bohr_to_distanceUnits)
 
         r["result"] = [
-            E[0] * self.kcalmol_to_hartree,
-            F.flatten() * self.kcalmolang_to_hartreebohr,
+            E[0] * self.energyUnits_to_hartree,
+            F.flatten() * self.forceUnits_to_hartreebohr,
             np.zeros((3, 3), float),
             {"raw": ""},
         ]
@@ -1298,7 +1309,6 @@ class FFCommittee(ForceField):
 
 
 class PhotonDriver:
-
     """
     Photon driver for a single cavity mode
     """
@@ -1491,7 +1501,6 @@ class PhotonDriver:
 
 
 class FFCavPhSocket(FFSocket):
-
     """
     Socket for dealing with cavity photons interacting with molecules by
     Tao E. Li @ 2023-02-25

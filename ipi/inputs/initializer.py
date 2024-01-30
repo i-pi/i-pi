@@ -30,7 +30,6 @@ __all__ = [
 
 
 class InputInitBase(InputValue):
-
     """Base class to handle initialization.
 
     Attributes:
@@ -126,7 +125,6 @@ class InputInitBase(InputValue):
 
 
 class InputInitIndexed(InputInitBase):
-
     """Class to handle initialization of properties which the value of each
     bead and atom can be specified.
 
@@ -158,7 +156,6 @@ class InputInitIndexed(InputInitBase):
 
 
 class InputInitFile(InputInitBase):
-
     """Class to handle initialization from a file."""
 
     attribs = deepcopy(InputInitBase.attribs)
@@ -192,7 +189,6 @@ class InputInitFile(InputInitBase):
 
 
 class InputInitThermo(InputInitBase):
-
     """Class to handle initialization of the thermostat."""
 
     attribs = deepcopy(InputInitBase.attribs)
@@ -207,7 +203,6 @@ class InputInitThermo(InputInitBase):
 
 
 class InputInitPositions(InputInitIndexed):
-
     """Class to handle initialization of the positions."""
 
     attribs = deepcopy(InputInitIndexed.attribs)
@@ -224,7 +219,6 @@ class InputInitPositions(InputInitIndexed):
 
 
 class InputInitMomenta(InputInitPositions):
-
     """Class to handle initialization of the momenta."""
 
     attribs = deepcopy(InputInitPositions.attribs)
@@ -258,7 +252,6 @@ class InputInitMomenta(InputInitPositions):
 
 
 class InputInitVelocities(InputInitMomenta):
-
     """Class to handle initialization of the velocities."""
 
     attribs = deepcopy(InputInitMomenta.attribs)
@@ -268,7 +261,6 @@ class InputInitVelocities(InputInitMomenta):
 
 
 class InputInitMasses(InputInitPositions):
-
     """Class to handle initialization of the masses."""
 
     attribs = deepcopy(InputInitPositions.attribs)
@@ -278,7 +270,6 @@ class InputInitMasses(InputInitPositions):
 
 
 class InputInitLabels(InputInitPositions):
-
     """Class to handle initialization of the atom labels."""
 
     attribs = deepcopy(InputInitPositions.attribs)
@@ -290,7 +281,6 @@ class InputInitLabels(InputInitPositions):
 
 
 class InputInitCell(InputInitBase):
-
     """Class to handle initialization of the cell."""
 
     attribs = deepcopy(InputInitBase.attribs)
@@ -300,7 +290,7 @@ class InputInitCell(InputInitBase):
             "dtype": str,
             "default": "manual",
             "options": ["manual", "pdb", "chk", "abc", "abcABC"],
-            "help": "This decides whether the system box is created from a cell parameter matrix, or from the side lengths and angles between them. If 'mode' is 'manual', then 'cell' takes a 9-elements vector containing the cell matrix (row-major).  The 1st element define lattice vector a, the 2nd, 5th elements define lattice vector b, and the 3rd, 6th, 9th elements define lattice vector c. The other elements are ignored. If 'mode' is 'abcABC', then 'cell' takes an array of 6 floats, the first three being the length of the sides of the system parallelopiped, and the last three being the angles (in degrees) between those sides. Angle A corresponds to the angle between sides b and c, and so on for B and C. If mode is 'abc', then this is the same as for 'abcABC', but the cell is assumed to be orthorhombic. 'pdb' and 'chk' read the cell from a PDB or a checkpoint file, respectively.",
+            "help": "This decides whether the system box is created from a cell parameter matrix, or from the side lengths and angles between them. If 'mode' is 'manual', then 'cell' takes a 9-elements vector containing the cell matrix (row-major, lattice vectors stored in columns).  The 1st element define lattice vector a, the 2nd, 5th elements define lattice vector b, and the 3rd, 6th, 9th elements define lattice vector c. The other elements are ignored, as the cell must be aligned so that it is upper triangular. If 'mode' is 'abcABC', then 'cell' takes an array of 6 floats, the first three being the length of the sides of the system parallelopiped, and the last three being the angles (in degrees) between those sides. Angle A corresponds to the angle between sides b and c, and so on for B and C. If mode is 'abc', then this is the same as for 'abcABC', but the cell is assumed to be orthorhombic. 'pdb' and 'chk' read the cell from a PDB or a checkpoint file, respectively.",
         },
     )
 
@@ -319,9 +309,7 @@ class InputInitCell(InputInitBase):
 
         ibase = super(InputInitCell, self).fetch()
         if mode == "abc" or mode == "abcABC":
-            h = io_xml.read_array(
-                float, ibase.value
-            )  # As of numpy v1.20, numpy.float as well as similar aliases (including numpy.int) were deprecated
+            h = io_xml.read_array(float, ibase.value)
 
             if mode == "abc":
                 if h.size != 3:
@@ -358,7 +346,7 @@ class InputInitCell(InputInitBase):
 
             if not (h[3] == 0.0 and h[6] == 0.0 and h[7] == 0.0):
                 warning(
-                    "Cell vector matrix must be upper triangular, all elements below the diagonal being set to zero.",
+                    "Cell vector matrix must be upper triangular, all elements below the diagonal will be set to zero.",
                     verbosity.low,
                 )
                 h[3] = h[6] = h[7] = 0
@@ -368,7 +356,6 @@ class InputInitCell(InputInitBase):
 
 
 class InputInitializer(Input):
-
     """Input class to handle initialization.
 
     Attributes:

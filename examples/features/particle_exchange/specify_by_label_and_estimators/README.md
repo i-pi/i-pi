@@ -1,0 +1,3 @@
+Specifying bosons by labels and other estimator concers
+=================================================
+An example of how to specify which atoms participate in bosonic exchange not through their indices but in a list of labels. Here this indicates a mixture of distiguishable particles and bosons. The thermodynamic quantum kinetic energy estimator can be applied to a subset of the atoms, but it must not include some bosons but not others. Here, the value of 'kinetic_td' should always be the sum of 'kinetic_td(B)' (for the bosons) and 'kinetic_td(D)' (for the distinguishable particle). The centroid-virial quantum kinetic energy estimator cannot be applied to bosons; here it is applied to the distiguishable particle alone.
