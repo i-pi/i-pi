@@ -21,7 +21,6 @@ SOFTEXITLATENCY = 1.0  # seconds to sleep between checking for soft exit
 
 
 class Softexit(object):
-
     """Class to deal with stopping a simulation half way through.
 
     Provides a mechanism to end a simulation from any thread that has

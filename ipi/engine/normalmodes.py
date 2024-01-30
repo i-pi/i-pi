@@ -24,7 +24,6 @@ __all__ = ["NormalModes"]
 
 
 class NormalModes:
-
     """Handles the path normal modes.
 
     Normal-modes transformation, determination of path frequencies,
