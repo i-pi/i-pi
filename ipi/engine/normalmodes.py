@@ -24,6 +24,7 @@ __all__ = ["NormalModes"]
 
 
 class NormalModes:
+
     """Handles the path normal modes.
 
     Normal-modes transformation, determination of path frequencies,
@@ -413,9 +414,11 @@ class NormalModes:
             )
         boson_mass = masses[0]
         betaP = 1.0 / (self.nbeads * units.Constants.kb * self.ensemble.temp)
-        return ExchangePotential(
+        exchange_potential = ExchangePotential(
             len(self.bosons), self.nbeads, boson_mass, dstrip(self.omegan2), betaP
         )
+        exchange_potential.set_coordinates(self._bosons_coordinates())
+        return exchange_potential
 
     def get_omegan(self):
         """Returns the effective vibrational frequency for the interaction
@@ -745,10 +748,7 @@ class NormalModes:
 
         if len(self.bosons) > 0:
             # positions of only the boson atoms
-            qbosons = dstrip(self.beads.q).reshape((self.nbeads, self.natoms, 3))[
-                :, self.bosons, :
-            ]
-            self.exchange.set_coordinates(qbosons)
+            self.exchange.set_coordinates(self._bosons_coordinates())
             vspring_b, fspring_b = self.exchange.get_vspring_and_fspring()
 
             vspring += vspring_b
@@ -758,6 +758,11 @@ class NormalModes:
             ] = fspring_b
 
         return vspring, fspring
+
+    def _bosons_coordinates(self):
+        return dstrip(self.beads.q).reshape((self.nbeads, self.natoms, 3))[
+            :, self.bosons, :
+        ]
 
     def free_babstep(self):
         """
