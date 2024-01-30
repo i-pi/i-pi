@@ -499,7 +499,6 @@ class NVEConstrainedIntegrator(ConstrainedIntegrator):
 
 
 class NVTConstrainedIntegrator(NVEConstrainedIntegrator):
-
     """Constrained integrator object for constant temperature simulations.
 
     Has the relevant conserved quantity for the constant temperature

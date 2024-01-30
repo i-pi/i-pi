@@ -189,7 +189,6 @@ def simple_corr(A, B, **kwargs):
 
 
 class Planets(object):
-
     """
     Stores relevant trajectory info for planetary model simulation, calculates
     planetary dynamics and evaluates estimators and TCFs.

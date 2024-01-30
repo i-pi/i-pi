@@ -19,7 +19,6 @@ __all__ = ["InputRandom"]
 
 
 class InputRandom(Input):
-
     """Random input class.
 
     Handles generating the appropriate random number class from the xml

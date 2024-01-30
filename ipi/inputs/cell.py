@@ -15,7 +15,6 @@ __all__ = ["InputCell"]
 
 
 class InputCell(InputArray):
-
     """Cell input class.
 
     Handles generating the appropriate cell class from the xml input file,
