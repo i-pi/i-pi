@@ -15,7 +15,7 @@ from ipi.utils.units import Constants, unit_to_internal
 from ipi.utils.mathtools import logsumlog, h2abc_deg
 from ipi.utils.io.inputs import io_xml
 
-__all__ = ["Properties", "Trajectories", "getkey", "getall", "help_latex"]
+__all__ = ["Properties", "Trajectories", "getkey", "getall", "help_latex", "help_rst"]
 
 
 def getkey(pstring):
