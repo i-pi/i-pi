@@ -44,7 +44,7 @@ from ipi.inputs import (
     system,
     thermostats,
     motion,
-    smotion
+    smotion,
 )
 
 src_dir = "../"
