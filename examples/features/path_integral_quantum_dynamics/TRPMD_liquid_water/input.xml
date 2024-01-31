@@ -1,0 +1,37 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='4' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv{megapascal} ] </properties>
+    <trajectory filename='pos' stride='4'> positions </trajectory>
+    <trajectory filename='xc' stride='4'> x_centroid{angstrom} </trajectory>
+    <trajectory filename='vc' stride='4'> v_centroid </trajectory>
+    <checkpoint stride='4000'/>
+  </output>
+  <total_steps>40</total_steps>
+  <prng>
+    <seed>32415</seed>
+  </prng>
+  <ffsocket name='qtip4pf' mode='unix' pbc='false'>
+    <address> h2o-trpmd </address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='16'>
+      <file mode='xyz'> water_216.xyz </file>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='qtip4pf'> </force>
+    </forces>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <timestep units='femtosecond'> 0.25 </timestep>
+        <thermostat mode='pile_g'>
+          <tau units='femtosecond'> 100 </tau>
+          <pile_lambda> 0.5 </pile_lambda>
+        </thermostat>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units='kelvin'> 300 </temperature>
+    </ensemble>
+  </system>
+</simulation>

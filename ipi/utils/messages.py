@@ -21,7 +21,6 @@ VERB_TRACE = 5
 
 
 class Verbosity(object):
-
     """Class used to determine what to print to standard output.
 
     Attributes:

@@ -1,0 +1,30 @@
+<simulation mode='static' verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'>  [ step, potential ] </properties>
+    <trajectory filename='pos' stride='1'> positions </trajectory>
+  </output>
+  <total_steps> 1000 </total_steps>
+  <prng>
+    <seed> 32342 </seed>
+  </prng>
+  <ffsocket name='pswater' mode='unix' pbc='false'>
+    <address> h2o-geop </address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='xyz'> init.xyz </file>
+    </initialize>
+    <forces>
+      <force forcefield='pswater'> </force>
+    </forces>
+    <motion mode='minimize'>
+      <optimizer mode='sd'>
+        <tolerances>
+          <energy> 1e-5 </energy>
+          <force> 1e-5 </force>
+          <position> 1e-5 </position>
+        </tolerances>
+      </optimizer>
+    </motion>
+  </system>
+</simulation>

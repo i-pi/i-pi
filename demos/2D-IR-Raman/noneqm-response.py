@@ -56,7 +56,6 @@ class Initializer:
 
 
 class ResponseFunction:
-
     """Implements two-dimensional equilibrium-nonequilibrium response function.
     The result is (beta / epsilon) <(op2_{+}(t2) - op2_{-}(t2)) op1(-t1)>, where op1 = op[0], op2 = op[1],
     and op is given in input and has two components that are either dip (dipole) or pol (poalrizability).

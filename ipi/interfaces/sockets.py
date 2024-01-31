@@ -60,21 +60,18 @@ MESSAGE = {
 
 
 class Disconnected(Exception):
-
     """Disconnected: Raised if client has been disconnected."""
 
     pass
 
 
 class InvalidSize(Exception):
-
     """Disconnected: Raised if client returns forces with inconsistent number of atoms."""
 
     pass
 
 
 class InvalidStatus(Exception):
-
     """InvalidStatus: Raised if client has the wrong status.
 
     Shouldn't have to be used if the structure of the program is correct.
@@ -84,7 +81,6 @@ class InvalidStatus(Exception):
 
 
 class Status(object):
-
     """Simple class used to keep track of the status of the client.
 
     Uses bitwise or to give combinations of different status options.
@@ -112,7 +108,6 @@ class Status(object):
 
 
 class DriverSocket(socket.socket):
-
     """Deals with communication between the client and driver code.
 
     Deals with sending and receiving the data between the client and the driver
@@ -208,7 +203,6 @@ class DriverSocket(socket.socket):
 
 
 class Driver(DriverSocket):
-
     """Deals with communication between the client and driver code.
 
     Deals with sending and receiving the data from the driver code. Keeps track
@@ -528,7 +522,6 @@ class Driver(DriverSocket):
 
 
 class InterfaceSocket(object):
-
     """Host server class.
 
     Deals with distribution of all the jobs between the different client servers
