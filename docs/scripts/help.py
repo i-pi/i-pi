@@ -36,7 +36,6 @@ from ipi.inputs import (
     forcefields,
     forces,
     initializer,
-    interface,
     normalmodes,
     outputs,
     prng,
