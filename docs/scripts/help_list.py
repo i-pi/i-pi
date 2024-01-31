@@ -88,6 +88,5 @@ def help_list(
         rst_output = open(prefix + ".rst", "w")
         rst_output.write(help_rst(idict, standalone=standalone))
 
-
 if __name__ == "__main__":
     help_list(options.opt, options.prefix, not options.ref)

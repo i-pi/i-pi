@@ -55,3 +55,4 @@ for opt in list_objects:
     os.rename(
         "input_ref_sections/" + opt + ".rst", "input_ref_sections/" + opt + ".inc"
     )
+    ref_includes.write(f".. include:: input_ref_sections/{opt}.inc\n")
