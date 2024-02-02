@@ -82,7 +82,7 @@ input file is not well formed can be found in the
 
 For the sake of this first tutorial however, we will simply discuss the
 those tags which are needed for a single *NVT* equilibration run. The
-most important tags are :ref:`initialize`, :ref:`ensemble`, :ref:`modion`, 
+most important tags are :ref:`initialize`, :ref:`ensemble`, :ref:`motion`,
 :ref:`dynamics`, “total_steps”, and :ref:`forces`. These correspond to
 the tag to initialize the atom configurations (initialize), the tag
 ensemble defines the properties of the statistical ensemble considered
@@ -95,7 +95,7 @@ total number is defined in the total_step tags.). In theory it would be
 possible to join many force with different way into the tag forces, even
 though each of those forces needs a force field socket (ffsocket tag)
 that specify who is in charge of computing the forces and sending them
-to i-PI. Note that the attribute “forcefield” of the :ref:`forcecomponent` tag must
+to i-PI. Note that the attribute “forcefield” of the :ref:`force` tag must
 correspond to the attribute “name” of one of the :ref:`ffsocket` tag. All the
 tags that define the actual simulation must be within the :ref:`system` block.
 We will also discuss :ref:`outputs`, which is used to define what output data is
@@ -184,7 +184,7 @@ programs such as VMD, and so it is generally advised when making your
 own input files to use such software to make sure that the configuration
 is as expected.
 
-To use a configuration file the :ref:`file` tag in  :ref:`initializer` should be used. This will take an
+To use a configuration file the :ref:`file` tag in  :ref:`initialize` should be used. This will take an
 input file with a given name and use it to initialize all relevant data.
 Both of these formats have the atom positions and labels, so this will
 initialize the positions, labels and masses of all the particles in the
@@ -531,7 +531,7 @@ to a different file to the others. One example of when this might be
 necessary is if there were an output property which was more expensive
 to calculate than the others, and so it would be impractical to output
 it every time step. With i-PI this is easy to do, all that is required
-is to add another tag with a different filename.
+is to add another :ref:`properties` tag with a different filename.
 
 For demonstration purposes, we will choose to print out the forces
 acting on one tagged bead, since this requires an argument to be passed
@@ -676,7 +676,7 @@ and pressure to the list of computed properties so that we can check
 that the ensemble is being sampled correctly. Putting this together this
 gives:
 
-Finally, we must change the and the tags so that the correct ensemble is
+Finally, we must change the :ref:`ensemble` and :ref:`dynamics` the tags so that the correct ensemble is
 sampled. The first thing that must be done is adding a “pressure” tag in
 the ensemble:
 
