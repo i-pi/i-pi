@@ -220,7 +220,7 @@ force evaluation into individual components and individual beads is
 accomplished by a chain of three objects, Forces, ForceComponent and
 ForceBead. is the main force Forces evaluator, that is built from the
 prototypes listed within the :ref:`forces` field of the :ref:`system`. 
-Each item within the tag
+Each :ref:`forcecomponent`  item within the :ref:`forces` tag
 describe one component of the force – in our example one ForceComponent
 bound to a forcefield of type A, evaluated on 32 beads, and one
 ForceComponent bound to type B, evaluated on 8 beads. Forces contains
