@@ -74,10 +74,10 @@ read in must start and end with a tag, as show below:
 xml syntax requires a set of hierarchially nested tags, each of which
 contain data and/or more tags. Also, i-PI itself requires certain tags
 to be present, and keeps track of which tags are supposed to be where.
-More information about which tags are available can be found in 
+More information about which tags are available can be found in
 `input tags <input-tags.rst>`_, more information on xml syntax can be found in
 :ref:`ifilestructure`, and possible errors which can occur if the
-input file is not well formed can be found in the 
+input file is not well formed can be found in the
 `troubleshooting section <troubleshooting.rst>`_.
 
 For the sake of this first tutorial however, we will simply discuss the
@@ -684,11 +684,11 @@ the ensemble:
    <ensemble> <pressure> 0 </pressure> ... </ensemble>
 
 Then, we must also specify the constant pressure algorithm, using the
-tag within the dynamics environment. Do not forget to change the mode
-attribute of the dynamics from “nvt” to “npt”. 
+tag :ref:`barostat` within the dynamics environment. Do not forget to change the mode
+attribute of the dynamics from “nvt” to “npt”.
 This example uses a stochastic barostat to apply pressure
 to an isotropic system, which can be specified with the option “isotropic”.
-See the documentation of the object and the examples to see how to apply 
+See the documentation of the :ref:`barostat` object and the examples to see how to apply
 an anisotropic stress, or to allow for cell shape fluctuations.
 
 The isotropic barostat also requires a thermostat to deal with the
@@ -727,7 +727,7 @@ were used previously.
 
 Firstly, the original input file “tutorial-1.xml” needs to be modified
 so that it will do a *NPT* simulation instead of *NVT*. This involves
-modifying the “total_steps” :ref:`output` and :ref:`ensemble` tags as above. 
+modifying the “total_steps” :ref:`output` and :ref:`ensemble` tags as above.
 Next, we replace the tag :ref:`initialize` section with:
 
 Note that the “mode” attribute has been set to “chk” to specify that the
@@ -775,7 +775,7 @@ internet socket. These are optimized for local communication between
 processes on a single computer, and so for the current problem they will
 be much faster than internet sockets.
 
-To specify this, we simply set the “mode” attribute of the :ref:`ffsocket` tag 
+To specify this, we simply set the “mode” attribute of the :ref:`ffsocket` tag
 to “unix”:
 
 .. code-block::
