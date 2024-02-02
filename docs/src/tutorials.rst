@@ -238,7 +238,7 @@ configuration file we must specify them separately. To initialize just
 the cell parameters, we use the :ref:`cell` tag. These could in theory be set using
 a separate file, but here we will initialize them manually. Taking a
 cubic cell with cell parameter 17.847 angstroms, we can specify this
-using the tag in three different ways:
+using the :ref:`cell` tag in three different ways:
 
 .. code-block::
 
@@ -266,16 +266,33 @@ Note the use of the different “mode” attributes, “manual”, “abcABC” 
 takes the length of the three unit vectors and the angles between them
 in degrees, and the last assumes an orthorhombic cell and so only takes
 the length of the three unit vectors as arguments. We will take the last
-version for brevity, giving as our final section:
+version for brevity, giving as our final :ref:`initialize` section:
 
-The pdb file is specified in a similar way, except that no tag needs be
+.. code-block::
+
+  <initialize nbeads='4'>
+    <file mode='xyz'> our_ref.xyz </file>
+    <cell mode='abc' units='angstrom'>
+      [17.847, 17.847, 17.847]
+    </cell>
+    ...
+  </initialize>
+
+The pdb file is specified in a similar way, except that no :ref:`cell` tag needs be
 specified and the “mode” tag should be set to “pdb” (the units should be
 specified into the pdb file as shown in the example above):
+
+.. code-block::
+
+  <initialize nbeads='4'>
+    <file mode='pdb'> our_ref.pdb </file>
+    ...
+  </initialize>
 
 As well as initializing all the atom positions, this section can also be
 used to set the atom velocities. Rather than setting these manually, it
 is usually simpler to sample these randomly from a Maxwell-Boltzmann
-distribution. This can be done using the tag by setting the “mode”
+distribution. This can be done using the :ref:`velocities` tag by setting the “mode”
 attribute to “thermal”. This then takes an argument specifying the
 temperature to initialize the velocities to. With this, the final
 :ref:`initialize` section is:
