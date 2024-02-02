@@ -1,4 +1,4 @@
-Input file reference
+Input file tags 
 ====================
 
 This chapter gives a complete list of the tags that can be specified in

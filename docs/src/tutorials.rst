@@ -74,8 +74,8 @@ read in must start and end with a tag, as show below:
 xml syntax requires a set of hierarchially nested tags, each of which
 contain data and/or more tags. Also, i-PI itself requires certain tags
 to be present, and keeps track of which tags are supposed to be where.
-More information about which tags are available can be found in the
-`input reference <input-reference.rst>`_, more information on xml syntax can be found in
+More information about which tags are available can be found in 
+`input tags <input-tags.rst>`_, more information on xml syntax can be found in
 :ref:`ifilestructure`, and possible errors which can occur if the
 input file is not well formed can be found in the 
 `troubleshooting section <troubleshooting.rst>`_.
@@ -716,7 +716,7 @@ also, giving:
    </thermostat> <tau units=’femtosecond’> 250 </tau> </barostat> ...
    </dynamics> ... </motion> ... </system>
 
-with the rest of the and tag being the same as before.
+with the rest of the :ref:`ensemble` and :ref:`dynamics` tags being the same as before.
 
 Initialization from RESTART
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -727,8 +727,8 @@ were used previously.
 
 Firstly, the original input file “tutorial-1.xml” needs to be modified
 so that it will do a *NPT* simulation instead of *NVT*. This involves
-modifying the “total_steps”, and tags as above. Next, we replace the tag
-section with:
+modifying the “total_steps” :ref:`output` and :ref:`ensemble` tags as above. 
+Next, we replace the tag :ref:`initialize` section with:
 
 Note that the “mode” attribute has been set to “chk” to specify that the
 file is a checkpoint file. This will then use the RESTART file to
@@ -775,8 +775,8 @@ internet socket. These are optimized for local communication between
 processes on a single computer, and so for the current problem they will
 be much faster than internet sockets.
 
-To specify this, we simply set the “mode” attribute of the tag to
-“unix”:
+To specify this, we simply set the “mode” attribute of the :ref:`ffsocket` tag 
+to “unix”:
 
 .. code-block::
 
