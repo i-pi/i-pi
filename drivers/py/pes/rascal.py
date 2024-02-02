@@ -14,14 +14,16 @@ except:
 __DRIVER_NAME__ = "rascal"
 __DRIVER_CLASS__ = "Rascal_driver"
 
+ERROR_MSG = """
+Rascal driver requires specification of a .json model file fitted with librascal, 
+and a template file that describes the chemical makeup of the structure. 
+Example: python driver.py -m rascal -u -o model.json,template.xyz
+"""
+
 
 class Rascal_driver(Dummy_driver):
     def __init__(self, args=None, verbose=False):
-        self.error_msg = """Rascal driver requires specification of a .json model file fitted with librascal, 
-                            and a template file that describes the chemical makeup of the structure. 
-                            Example: python driver.py -m rascal -u -o model.json,template.xyz"""
-
-        super().__init__(args, verbose)
+        super().__init__(args, verbose, error_msg=ERROR_MSG)
 
         if RascalCalc is None:
             raise ImportError("Couldn't load librascal bindings")
@@ -32,7 +34,7 @@ class Rascal_driver(Dummy_driver):
         This loads the potential and atoms template in librascal
         """
         try:
-            arglist = self.args.split(",")
+            arglist = self.args
         except ValueError:
             sys.exit(self.error_msg)
 
