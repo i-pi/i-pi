@@ -38,8 +38,11 @@ This documentation is structured as follows:
    features
    getting-started
    units
-   user-guide
+   input-files
    input-reference
+   output-files
+   output-reference
+   distributed
    tutorials
    faq
    troubleshooting
