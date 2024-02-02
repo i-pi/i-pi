@@ -716,7 +716,7 @@ also, giving:
    </thermostat> <tau units=’femtosecond’> 250 </tau> </barostat> ...
    </dynamics> ... </motion> ... </system>
 
-with the rest of the and tag being the same as before.
+with the rest of the :ref:`ensemble` and :ref:`dynamics` tags being the same as before.
 
 Initialization from RESTART
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -727,8 +727,8 @@ were used previously.
 
 Firstly, the original input file “tutorial-1.xml” needs to be modified
 so that it will do a *NPT* simulation instead of *NVT*. This involves
-modifying the “total_steps”, and tags as above. Next, we replace the tag
-section with:
+modifying the “total_steps” :ref:`output` and :ref:`ensemble` tags as above. 
+Next, we replace the tag :ref:`initialize` section with:
 
 Note that the “mode” attribute has been set to “chk” to specify that the
 file is a checkpoint file. This will then use the RESTART file to
@@ -775,8 +775,8 @@ internet socket. These are optimized for local communication between
 processes on a single computer, and so for the current problem they will
 be much faster than internet sockets.
 
-To specify this, we simply set the “mode” attribute of the tag to
-“unix”:
+To specify this, we simply set the “mode” attribute of the :ref:`ffsocket` tag 
+to “unix”:
 
 .. code-block::
 
