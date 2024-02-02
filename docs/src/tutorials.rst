@@ -74,8 +74,8 @@ read in must start and end with a tag, as show below:
 xml syntax requires a set of hierarchially nested tags, each of which
 contain data and/or more tags. Also, i-PI itself requires certain tags
 to be present, and keeps track of which tags are supposed to be where.
-More information about which tags are available can be found in the
-`input reference <input-reference.rst>`_, more information on xml syntax can be found in
+More information about which tags are available can be found in 
+`input tags <input-tags.rst>`_, more information on xml syntax can be found in
 :ref:`ifilestructure`, and possible errors which can occur if the
 input file is not well formed can be found in the 
 `troubleshooting section <troubleshooting.rst>`_.

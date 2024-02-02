@@ -39,9 +39,9 @@ This documentation is structured as follows:
    getting-started
    units
    input-files
-   input-reference
+   input-tags
    output-files
-   output-reference
+   output-tags
    distributed
    tutorials
    faq
