@@ -207,7 +207,8 @@ Let us discuss for clarity a practical example: a calculation of an
 empirical water model where the bonded interactions are computed on 32
 beads by the program A, and the non-bonded interactions are computed by
 client B, ring-polymer contracted on 8 beads. Each client “type” is
-associated with a object in the input. In the case of a interface, the
+associated with a :ref:`forcefield` object in the input. In the case of a
+:ref:`ffsocket` interface, the
 forcefield object specifies the address to which a client should
 connect, and so multiple clients of type A or B can connect to i-PI at
 the same time. Each forcefield object deals with queueing force
@@ -218,7 +219,8 @@ On the force evaluation side, the task of splitting the request of a
 force evaluation into individual components and individual beads is
 accomplished by a chain of three objects, Forces, ForceComponent and
 ForceBead. is the main force Forces evaluator, that is built from the
-prototypes listed within the field of . Each item within the tag
+prototypes listed within the :ref:`forces` field of the :ref:`system`. 
+Each :ref:`forcecomponent`  item within the :ref:`forces` tag
 describe one component of the force – in our example one ForceComponent
 bound to a forcefield of type A, evaluated on 32 beads, and one
 ForceComponent bound to type B, evaluated on 8 beads. Forces contains
