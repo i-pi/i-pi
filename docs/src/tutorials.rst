@@ -278,14 +278,21 @@ is usually simpler to sample these randomly from a Maxwell-Boltzmann
 distribution. This can be done using the tag by setting the “mode”
 attribute to “thermal”. This then takes an argument specifying the
 temperature to initialize the velocities to. With this, the final
-section is:
+:ref:`initialize` section is:
+
+.. code-block::
+
+  <initialize nbeads='4'>
+         <file mode='pdb'> our_ref.pdb </file>
+         <velocities mode='thermal' units='kelvin'> 25 </velocities>
+  </initialize>
 
 Creating the server socket
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Next let us consider the and the sections, which deals with
+Next let us consider the :ref:`ffsocket` and the :ref:`forces` sections, which deals with
 communication with the client codes. Since in this example we do not use
-ring-polymer contraction, we only need to specify a single tag:
+ring-polymer contraction, we only need to specify a single :ref:`ffsocket` tag:
 
 .. code-block::
 
@@ -298,7 +305,7 @@ respectively. To match up with the client socket specified above, we
 will take an internet socket on the hostname localhost and use port
 number 31415.
 
-This gives the final section:
+This gives the final :ref:`ffsocket` section:
 
 .. code-block::
 
@@ -329,18 +336,19 @@ For the sake of this tutorial, the “force” tag must be empty.
 Generating the correct dynamics
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-The next section that we will need is , which determines the computation
+The next section that we will need is :ref:`motion`, which determines the computation
 i-pi will perform. Since we wish to do a molecular dynamics, the
 attribute “mode” of the “motion” tag must be equal to “dynamics”. The
-details of the dynamics integration are given within . Since we wish to
+details of the dynamics integration are given within :ref:`dynamics`. Since we wish to
 do a *NVT* simulation, we set the “mode” attribute to “nvt” (note that
 we use lower case, and that the tags are case sensitive), and must
 specify the temperature using the appropriate tag:
 
 .. code-block::
 
-   <motion mode=’dynamics’> <dynamics mode=’nvt’> ... </dynamics>
-   </motion>
+  <motion mode=’dynamics’>
+    <dynamics mode=’nvt’> ... </dynamics>
+  </motion>
 
 This defines the computation that will be performed. We also must decide
 which integration algorithm to use, and how large the time step should
@@ -352,12 +360,14 @@ femtosecond, giving:
 
 .. code-block::
 
-   <dynamics mode=’nvt’> ... <timestep units=’femtosecond’> 1
-   </timestep> </dynamics>
+  <dynamics mode=’nvt’>
+       ...
+       <timestep units=’femtosecond’> 1 </timestep>
+  </dynamics>
 
 Finally, while the microcanonical part of the integrator is initialized
 automatically, there are several different options for the constant
-temperature sampling algorithm, specified by . For simplicity we will
+temperature sampling algorithm, specified by :ref:`thermostat`. For simplicity we will
 use (the global version of) the path-integral Langevin equation (PILE)
 algorithm :cite:`ceri+10jcp`, which is specifically designed
 for path integral simulations. This is specified by the “mode” tag
@@ -370,12 +380,21 @@ number of steps to run the simulation for. Equilibrating the system is
 likely to take around 5 picoseconds, so we will take 5000 time steps,
 using:
 
-The temperature must be specified within the :
+.. code-block::
+
+  <total_steps> 5000 </total_steps>
+
+The temperature must be specified within the :ref:`ensemble`:
 
 .. code-block::
 
-   <system> ... <ensemble> <temperature units=’kelvin’> 300
-   </temperature> </ensemble> ... </system>
+   <system>
+       ...
+       <ensemble>
+           <temperature units=’kelvin’> 300 </temperature>
+       </ensemble>
+       ...
+   </system>
 
 Customizing the output
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -387,7 +406,7 @@ different output options, so to avoid confusion let us go through them
 one at a time.
 
 Firstly, the amount of data sent to standard output can be adjusted with
-the “verbosity” attribute of :
+the “verbosity” attribute of :ref:`simulation`:
 
 .. code-block::
 
@@ -453,9 +472,10 @@ CID:
 CTOT:
    The total number of connected client codes.
 
-What output gets written to file is specified by the tag. There are
+What output gets written to file is specified by the :ref:`output` tag. There are
 three types of files; properties files, trajectory files and checkpoint
-files, which are specified with , and tags respectively. For an in-depth
+files, which are specified with :ref:`properties`, :ref:`trajectory` and :ref:`checkpoint`
+tags respectively. For an in-depth
 discussion on these three types of output files see
 :ref:`outputfiles`, but for now let us just explain the rationale
 behind each of these output file types in turn.
@@ -484,7 +504,7 @@ properties files:
 Now that we know what each input file is used for, let us take an
 example of an output section and show how the xml input section works.
 The default output, i.e. what would be output if nothing was set by the
-user, would be generated with the following section:
+user, would be generated with the following :ref:`output` section:
 
 This creates 6 files: “i-pi.md”, “i-pi.pos_0.xyz”, “i-pi.pos_1.xyz”,
 “i-pi.pos_2.xyz”, “i-pi.pos_3.xyz” and “i-pi.checkpoint”. “i-pi.md” is
@@ -523,8 +543,8 @@ to output the properties every time step, to check for conserved
 quantity jumps, and to output the trajectory in pdb format. To do this
 we would set the “stride” and “format” tags, as shown below:
 
-Note that we have added a “cell_units” attribute to the tag, so that the
-cell parameters are consistent with the position output.
+Note that we have added a “cell_units” attribute to the :ref:`trajectory`
+tag, so that the cell parameters are consistent with the position output.
 
 Finally, let us suppose that we wished to output another output property
 to a different file to the others. One example of when this might be
