@@ -4,7 +4,7 @@ Output files
 ============
 
 i-PI uses a very flexible mechanism to specify how and how often atomic
-configurations and physical properties should be output. Within the tag
+configurations and physical properties should be output. Within the :ref:`outputs` tag
 of the xml input file the user can specify multiple tags, each one of
 which will correspond to a particular output file. Each file is managed
 separately by the code, so what is output to a particular file and how
@@ -57,7 +57,7 @@ electronvolt, then the properties output file would look something like:
    0.00000000e+00 0.00000000e+00 -1.32860475e+04 1.00000000e+00
    1.00000000e-03 -1.32865789e+04 ...
 
-The properties that are output are determined by the tag in the xml
+The properties that are output are determined by the :ref:`properties` tag in the xml
 input file. The format of this tag is:
 
 .. code-block::
@@ -124,15 +124,21 @@ the bead positions. In contrast to properties files, they output data
 for all atomic degrees of freedom, in a format that can be read by
 visualization packages such as VMD.
 
-Multiple trajectory files can be specified, each described by a separate
-tag within the section of the input file. The allowable file formats for
+Multiple trajectory files can be specified, each described by a separate :ref:`trajectory`
+tag within the :ref:`outputs` section of the input file. The allowable file formats for
 the trajectory output files are the same as for the configuration input
 files, given in :ref:`configfile`.
 
 These tags have the format:
 
-This is very similar to the tag, except that it has the additional tags
-“format” and “cell_units”, and only one *traj_name* quantity can be
+.. code-block::
+
+    <trajectory stride=`' filename=`' format=`' cell_units=`' flush=`' bead=`'>
+         traj_name{units}(arg1;...)
+    </trajectory>
+
+This is very similar to the :ref:`properties` tag, except that it has the additional 
+tags “format” and “cell_units”, and only one *traj_name* quantity can be
 specified per file. ‘format’ specifies the format of the output file,
 and ‘cell_units’ specifies the units in which the cell dimensions are
 output. Depending on the quantity being output, the trajectory may
@@ -157,13 +163,14 @@ can later be used as input files, with all the information required to
 restore the state of the system to the point at which the file was
 created.
 
-This is specified by the tag which has the syntax:
+This is specified by the :ref:`checkpoint` tag which has the syntax:
 
 .. code-block::
 
    <checkpoint stride= filename= overwrite=> step </checkpoint>
 
-Again, this is similar to the and tags, but instead of having a value
+Again, this is similar to the :ref:`properties` and 
+:ref:`trajectory` tags, but instead of having a value
 which specifies what to output, the value simply gives a number to
 identify the current checkpoint file. There is also one additional
 attribute, “overwrite”, which specifies whether each new checkpoint file

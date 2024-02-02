@@ -65,8 +65,8 @@ partly defined by the pressure, and so on. To make this dependence clear
 in the code the global simulation object which holds all the data
 contains an ensemble object, which contains a pressure variable.
 
-Therefore the input file is specified by having a tag, containing an
-tag, which itself contains a “pressure” tag, which will contain a float
+Therefore the input file is specified by having a :ref:`simulation` tag, containing an
+:ref:`ensemble` tag, which itself contains a :ref:`pressure` tag, which will contain a float
 value corresponding to the external pressure. In this manner, the class
 structure can be constructed iteratively.
 
@@ -116,7 +116,7 @@ in the units.py module.
 Initialization section
 ----------------------
 
-The input file can contain a tag, which contains a number of fields that
+The input file can contain a :ref:`initializer` tag, which contains a number of fields that
 determine the starting values of the various quantities that define the
 state of the simulation – atomic positions, cell parameters, velocities,
 …. These fields (:ref:`positions`, :ref:`velocities`, :ref:`cell`, 
@@ -131,7 +131,7 @@ Configuration files
 Instead of initializing the atom positions manually, the starting
 configuration can be specified through a separate data file. The name of
 the configuration file is specified within one of the possible fields of
-an tag. The file format is specified with the “mode” attribute. The
+an :ref:`initializer` tag. The file format is specified with the “mode” attribute. The
 currently accepted file formats are:
 
 -  pdb
@@ -144,7 +144,7 @@ the last of which will be described in the next section.
 
 Depending on the field name, the values read from the external file will
 be used to initialize one component of the simulation or another (e.g.
-the positions or the velocities). The tag can be used as a shortcut to
+the positions or the velocities). The :ref:`initfile` tag can be used as a shortcut to
 initialize the atom positions, labels, masses and possibly the cell
 parameters at the same time. For instance,
 
@@ -161,8 +161,8 @@ is equivalent to
    <labels mode="pdb"> init.pdb </labels> <masses mode="pdb"> init.pdb
    </masses> <cell mode="pdb"> init.pdb </cell> </initialize>
 
-In practice, the using the tag will only read the information that can
-be inferred from the given file type, so for an ‘xyz’ file, the cell
+In practice, the using the :ref:`initfile` tag will only read the information that can
+be inferred from the given file type, so for an ‘xyz’ file that does not contain a cell, the cell
 parameters will not be initialized.
 
 Initialization from checkpoint files
@@ -171,7 +171,7 @@ Initialization from checkpoint files
 i-PI gives the option to output the entire state of the simulation at a
 particular timestep as an xml input file, called a checkpoint file (see
 :ref:`checkpoints` for details). As well as being a valid input for
-i-PI, a checkpoint can also be used inside an tag to specify the
+i-PI, a checkpoint can also be used inside an :ref:`initializer` tag to specify the
 configuration of the system, discarding other parameters of the
 simulation such as the current time step or the chosen ensemble. Input
 from a checkpoint is selected by using “chk” as the value of the “mode”
