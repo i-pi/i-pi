@@ -196,7 +196,6 @@ class InputConstraint(InputConstraintBase):
 
 
 class InputConstrainedDynamics(InputDictionary):
-
     """Dynamics input class.
 
     Handles generating the appropriate ensemble class from the xml input file,

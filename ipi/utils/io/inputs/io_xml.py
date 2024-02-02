@@ -37,7 +37,6 @@ __all__ = [
 
 
 class xml_node(object):
-
     """Class to handle a particular xml tag.
 
     Tags are generally written in the form
@@ -73,7 +72,6 @@ class xml_node(object):
 
 
 class xml_handler(ContentHandler):
-
     """Class giving general xml_reading methods.
 
     Uses the standard python xml_reader to read the different kinds of data.

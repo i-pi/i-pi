@@ -13,6 +13,7 @@ be installed in the Python module directory, or the i-pi
 main directory must be added to the PYTHONPATH environment variable.
 
 """
+
 # Y. Litman 2017
 
 import os

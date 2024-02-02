@@ -128,7 +128,6 @@ class BaseOutput(object):
 
 
 class PropertyOutput(BaseOutput):
-
     """Class dealing with outputting a set of properties to file.
 
     Does not do any calculation, just manages opening a file, getting data
@@ -250,7 +249,6 @@ class PropertyOutput(BaseOutput):
 
 
 class TrajectoryOutput(BaseOutput):
-
     """Class dealing with outputting atom-based properties as a
     trajectory file.
 
@@ -557,7 +555,6 @@ class TrajectoryOutput(BaseOutput):
 
 
 class CheckpointOutput:
-
     """Class dealing with outputting checkpoints.
 
     Saves the complete status of the simulation at regular intervals.

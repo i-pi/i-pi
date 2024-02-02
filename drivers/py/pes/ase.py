@@ -25,6 +25,8 @@ Example: python driver.py -m ase -u -o template.xyz,model_parameters
 
 
 class ASEDriver(Dummy_driver):
+    """Abstract base class using an arbitrary ASE calculator as i-pi driver"""
+
     def __init__(self, args=None, verbose=False, error_msg=ERROR_MSG):
         super().__init__(args, verbose, error_msg=error_msg)
 

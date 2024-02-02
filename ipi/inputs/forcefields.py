@@ -40,7 +40,6 @@ __all__ = [
 
 
 class InputForceField(Input):
-
     """ForceField input class.
 
     Handles generating one instance of a particular forcefield class from the xml
@@ -146,7 +145,6 @@ class InputForceField(Input):
 
 
 class InputFFSocket(InputForceField):
-
     """Creates a ForceField object with a socket interface.
 
     Handles generating one instance of a socket interface forcefield class.

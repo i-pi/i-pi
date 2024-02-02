@@ -4,7 +4,7 @@ __DRIVER_CLASS__ = "Dummy_driver"
 
 
 class Dummy_driver(object):
-    """A dummy class providing the structure of a PES for the python driver."""
+    """Base class providing the structure of a PES for the python driver."""
 
     def __init__(
         self, args="", verbose=False, error_msg="Invalid arguments for the PES"

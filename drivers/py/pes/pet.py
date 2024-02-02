@@ -1,4 +1,4 @@
-"""Interface with PET to run machine learning potentials"""
+"""Interface with [PET](https://github.com/serfg/pet) models to run machine learning potentials"""
 
 import sys
 import numpy as np

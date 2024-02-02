@@ -18,7 +18,6 @@ __all__ = ["InputAtomSwap"]
 
 
 class InputAtomSwap(InputDictionary):
-
     """Atomswap input class.
 
     Monte Carlo swaps of atoms types
