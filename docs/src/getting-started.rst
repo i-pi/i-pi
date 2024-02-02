@@ -18,7 +18,7 @@ as the system has installed:
    compatible)
 
 -  The Python numerical library NumPy
-
+src/getting-started.rst-
 See :ref:`runningsimulations` for more details on how to launch i-PI.
 
 Additionally, most client codes will have their own requirements. Many
@@ -71,8 +71,18 @@ Otherwise, one can install i-PI in a local Python path. If such path
 does not exist yet, one must create directories for the package to go
 into, using:
 
+.. code-block::
+
+    > mkdir ~/bin
+    > mkdir ~/lib/py_vers
+    > mkdir ~/lib/py_vers/site-packages
+
 Next, you must tell Python where to find this library, by appending to
 the Linux environment variable PYTHONPATH, using:
+
+.. code-block::
+
+    export PYTHONPATH=$PYTHONPATH:~/lib/py_vers/site-packages/
 
 Finally, the code can be installed using:
 
@@ -140,12 +150,20 @@ With Python 2.4/2.5 the process is a little more involved. First you
 must explicitly install the package in the directory of choice, “np_dir”
 say, with the following command:
 
+.. code-block::
+
+   > python setup.py install --prefix=np_dir
+
 Next, you must tell Python where to find this library, by appending to
 the Linux environment variable PYTHONPATH. If you are using Python
 version “py_vers”, then the NumPy libraries will have been installed in
 the directory “np_dir/lib/py_vers/site-packages”, or a close analogue of
 this. In the above case the following command will allow the Python
 interpreter to find the NumPy libraries:
+
+.. code-block::
+
+   > export PYTHONPATH=$PYTHONPATH:np_dir/lib/py_vers/site-packages
 
 Now Python scripts can import the NumPy libraries using:
 
@@ -233,6 +251,10 @@ i-PI simulations are run using the i-pi Python script found in the
 automatically starts a simulation as specified by the data held in it.
 If the input file is called “input_file.xml”, then i-PI is run using:
 
+.. code-block::
+
+    > python i-pi input_file.xml
+
 This reads in the input data, initializes all the internally used
 objects, and then creates the server socket. The code will then wait
 until at least one client code has connected to the server before
@@ -319,8 +341,37 @@ To use CP2K as the client code using an internet domain socket on the
 host address “host_address” and on the port number “port” the following
 lines must be added to its input file:
 
+.. code-block::
+
+    &GLOBAL
+       ...
+       RUN_TYPE DRIVER
+       ...
+    &END GLOBAL
+
+    &MOTION
+       ...
+       &DRIVER
+          HOST host_address
+          PORT port
+       &END DRIVER
+       ...
+    &END MOTION
+
 If instead a unix domain socket is required then the following
 modification is necessary:
+
+.. code-block::
+
+    &MOTION
+       ...
+       &DRIVER
+          HOST host_address
+          PORT port
+          UNIX
+       &END DRIVER
+       ...
+    &END MOTION
 
 The rest of the input file should be the same as for a standard CP2K
 calculation, as explained at `www.cp2k.org/ <www.cp2k.org/>`__.
@@ -332,9 +383,27 @@ To use Quantum-Espresso as the client code using an internet domain
 socket on the host address “host_address” and on the port number “port”
 the following lines must be added to its input file:
 
+.. code-block::
+
+    &CONTROL
+       ...
+       calculation=`driver'
+       srvaddress=`host_address:port'
+       ...
+    /
+
 If instead a unix domain socket is required then the following
 modification is necessary:
 
+.. code-block::
+
+    &CONTROL
+       ...
+       calculation=`driver'
+       srvaddress=`UNIX:socket_name:port'
+       ...
+    /
+    
 The rest of the input file should be the same as for a standard Quantum
 Espresso calculation, as explained at
 `www.quantum-espresso.org/ <www.quantum-espresso.org/>`__.
@@ -346,8 +415,16 @@ To use LAMMPS as the client code using an internet domain socket on the
 host address “host_address” and on the port number “port” the following
 lines must be added to its input file:
 
+.. code-block::
+
+    fix  1 all ipi host_address port
+
 If instead a unix domain socket is required then the following
 modification is necessary:
+
+.. code-block::
+
+    fix  1 all ipi host_address port unix
 
 The rest of the input file should be the same as for a standard LAMMPS
 calculation, as explained at http://lammps.sandia.gov/index.html. Note
@@ -362,13 +439,25 @@ To use FHI-aims as the client code using an internet domain socket on
 the host address “host_address” and on the port number “port” the
 following lines must be added to its ``control.in`` file:
 
+.. code-block::
+
+    use_pimd_wrapper host_address port
+
 If instead a unix domain socket is required then the following
 modification is necessary:
+
+.. code-block::
+
+    use_pimd_wrapper UNIX:host_address port
 
 One can also communicate different electronic-structure quantities to
 i-PI through the ``extra`` string from FHI-aims. In this case the
 following lines can be added to the ``control.in`` file:
 
+.. code-block::
+
+    communicate_pimd_wrapper option
+    
 where option can be, e.g.,
 ``dipole, hirshfeld, workfunction, friction``.
 
@@ -405,6 +494,11 @@ approaches to run i-PI on a HPC system:
    first, as a serial background job, then wait a few seconds for it to
    load and create a socket
 
+
+    .. code-block::
+
+        > python i-pi input_file.xml &> log & wait 10    
+
    Then, one should launch with mpirun or any system-specific mechanism
    one or more independent instances of the client code. Note that not
    all queing systems allow launching several mpirun instances from a
@@ -413,6 +507,10 @@ approaches to run i-PI on a HPC system:
 #. running i-PI and the clients on the HPC system, but in separate jobs.
    Since i-PI consumes very little resources, one should ideally launch
    it interactively on a login node
+   
+   .. code-block::
+
+        > nohup python i-pi input_file.xml < /dev/null &> log &
 
    or alternative on a queue with a very long wall-clock time. Then,
    multiple instances of the client can be run as independent jobs: as
