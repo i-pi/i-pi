@@ -1,4 +1,4 @@
-i-PI: a Universal Force Engine (test)
+i-PI: a Universal Force Engine
 ==============================
 
 A Python interface for ab initio path integral molecular dynamics simulations (and more).
