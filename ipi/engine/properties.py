@@ -196,6 +196,7 @@ def help_rst(idict, standalone=True):
 
 
 class Properties:
+
     """A proxy to compute and output properties of the system.
 
     Takes the fundamental properties calculated during the simulation, and
@@ -2640,6 +2641,7 @@ class Properties:
 
 
 class Trajectories:
+    
     """A simple class to take care of output of trajectory data.
 
     Attributes:

@@ -19,6 +19,7 @@ __all__ = ["Atoms", "Atom"]
 
 
 class Atom:
+
     """Represent an atom, with position, velocity, mass and related properties.
 
     This is actually only an interface to the Atoms class, i.e. only stores
@@ -76,6 +77,7 @@ class Atom:
 
 
 class Atoms:
+
     """Storage for the atoms' positions, masses and velocities.
 
     Everything is stored as 3*n sized contiguous arrays,
@@ -85,8 +87,8 @@ class Atoms:
        natoms: The number of atoms.
 
     Depend objects:
-       p: An array giving the components of the atom momenta.
-       q: An array giving the components of the atom position.
+       p: An array giving the components of the atom position.
+       q: An array giving the components of the atom momenta.
        m: An array giving the atom masses.
        names: An array giving the atom names.
        m3: An array of 3*n elements where each element of m has been copied

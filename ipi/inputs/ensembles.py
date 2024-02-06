@@ -126,14 +126,6 @@ class InputEnsemble(Input):
         self.bias_weights.store(ens.bweights)
         self.hamiltonian_weights.store(ens.hweights)
         self.time.store(ens.time)
-        # self.amp.store(ens.amp)
-        # self.freq.store(ens.freq)
-        # self.phase.store(ens.phase)
-        # self.peak.store(ens.peak)
-        # self.sigma.store(ens.sigma)
-        # self.bec.store(ens.bec)
-        # # self.cdip.store(ens.cdip)
-        # self.cbec.store(ens.cbec)
 
     def fetch(self):
         """Creates an ensemble object.
@@ -154,15 +146,6 @@ class InputEnsemble(Input):
             bweights=self.bias_weights.fetch(),
             hweights=self.hamiltonian_weights.fetch(),
             time=self.time.fetch(),
-            # amp=self.amp.fetch(),
-            # freq=self.freq.fetch(),
-            # phase=self.phase.fetch(),
-            # peak=self.peak.fetch(),
-            # sigma=self.sigma.fetch(),
-            # bec=self.bec.fetch(),
-            # cdip=self.cdip.fetch(),
-            # tacc=self.tacc.fetch(),
-            # cbec=self.cbec.fetch(),
         )
 
         return ens

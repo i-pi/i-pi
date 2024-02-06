@@ -33,6 +33,7 @@ except ImportError:
 
 
 class ConstrainedDynamics(Dynamics):
+    
     """Constrained molecular dynamics class.
 
     Provides the basic infrastructure to use constraints in molecular dynamics simulations.

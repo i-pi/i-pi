@@ -21,6 +21,7 @@ from ipi.engine.barostats import *
 from ipi.engine.motion.alchemy import *
 from ipi.engine.forces import Forces, ScaledForceComponent
 
+
 __all__ = ["Ensemble", "ensemble_swap"]
 
 # IMPORTANT - THIS MUST BE KEPT UP-TO-DATE WHEN THE ENSEMBLE CLASS IS CHANGED
@@ -59,6 +60,7 @@ def ensemble_swap(ens1, ens2):
 
 
 class Ensemble:
+    
     """Base ensemble class.
 
     Defines the thermodynamic state of the system.

@@ -36,6 +36,7 @@ __all__ = [
 
 
 class Thermostat:
+
     """Base thermostat class.
 
     Gives the standard methods and attributes needed in all the thermostat
@@ -151,6 +152,7 @@ class Thermostat:
 
 
 class ThermoLangevin(Thermostat):
+
     """Represents a langevin thermostat.
 
     Depend objects:
@@ -220,6 +222,7 @@ dproperties(
 
 
 class ThermoPILE_L(Thermostat):
+
     """Represents a PILE thermostat with a local centroid thermostat.
 
     Attributes:
@@ -427,6 +430,7 @@ dproperties(ThermoPILE_L, ["pilescale", "pilect", "npilect", "tauk"])
 
 
 class ThermoSVR(Thermostat):
+
     """Represents a stochastic velocity rescaling thermostat.
 
     Depend objects:
@@ -499,6 +503,7 @@ class ThermoSVR(Thermostat):
 
 
 class ThermoPILE_G(ThermoPILE_L):
+
     """Represents a PILE thermostat with a global centroid thermostat.
 
     Simply replaces the Langevin thermostat for the centroid normal mode with
@@ -580,6 +585,7 @@ dproperties(ThermoSVR, ["et", "K", "pilescale", "pilect", "npilect"])
 
 
 class ThermoGLE(Thermostat):
+
     """Represents a generalized Langevin equation thermostat.
 
     This is similar to a langevin thermostat, in that it uses Gaussian random
@@ -740,6 +746,7 @@ dproperties(ThermoGLE, ["A", "C"])
 
 
 class ThermoNMGLE(Thermostat):
+
     """Represents a 'normal-modes' generalized Langevin equation thermostat.
 
     An extension to the GLE thermostat which is applied in the
@@ -928,6 +935,7 @@ dproperties(ThermoNMGLE, ["A", "C"])
 
 
 class ThermoNMGLEG(ThermoNMGLE):
+    
     """Represents a 'normal-modes' generalized Langevin equation thermostat + SVR.
 
     An extension to the above NMGLE thermostat which also adds a stochastic

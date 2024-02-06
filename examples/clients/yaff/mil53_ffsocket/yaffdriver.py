@@ -65,6 +65,7 @@ class MySocket(object):
 
 
 class YAFFDriver(object):
+    
     """
     Use Yaff as a driver that calculates forces for i-PI
     """

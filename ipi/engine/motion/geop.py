@@ -182,6 +182,7 @@ class GeopMotion(Motion):
 
 
 class LineMapper(object):
+
     """Creation of the one-dimensional function that will be minimized.
     Used in steepest descent and conjugate gradient minimizers.
 
@@ -235,6 +236,7 @@ class LineMapper(object):
 
 
 class GradientMapper(object):
+    
     """Creation of the multi-dimensional function that will be minimized.
     Used in the BFGS and L-BFGS minimizers.
 

@@ -23,6 +23,7 @@ __all__ = ["Replay"]
 
 
 class Replay(Motion):
+    
     """Calculator object that just loads snapshots from an external file in sequence.
 
     Has the relevant conserved quantity and normal mode propagator for the

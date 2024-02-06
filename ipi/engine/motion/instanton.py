@@ -329,6 +329,7 @@ class Fix(object):
 
 
 class GradientMapper(object):
+    
     """Creation of the multi-dimensional function to compute the physical potential and forces
 
     Attributes:

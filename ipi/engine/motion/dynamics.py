@@ -23,6 +23,7 @@ from ipi.utils.units import Constants
 
 
 class Dynamics(Motion):
+
     """self (path integral) molecular dynamics class.
 
     Gives the standard methods and attributes needed in all the
@@ -422,6 +423,7 @@ dproperties(
 
 
 class NVEIntegrator(DummyIntegrator):
+
     """Integrator object for constant energy simulations.
 
     Has the relevant conserved quantity and normal mode propagator for the
@@ -528,6 +530,7 @@ class NVEIntegrator(DummyIntegrator):
 
 
 class NVTIntegrator(NVEIntegrator):
+
     """Integrator object for constant temperature simulations.
 
     Has the relevant conserved quantity and normal mode propagator for the
@@ -617,6 +620,7 @@ class NVTCCIntegrator(NVTIntegrator):
 
 
 class NPTIntegrator(NVTIntegrator):
+
     """Integrator object for constant pressure simulations.
 
     Has the relevant conserved quantity and normal mode propagator for the
@@ -662,6 +666,7 @@ class NPTIntegrator(NVTIntegrator):
 
 
 class NSTIntegrator(NPTIntegrator):
+    
     """Ensemble object for constant pressure simulations.
 
     Has the relevant conserved quantity and normal mode propagator for the

@@ -28,6 +28,7 @@ __all__ = ["Initializer", "InitBase", "InitIndexed", "InitFile"]
 
 
 class InitBase:
+
     """Base class for initializer objects.
 
     Reads data from a string or file.
@@ -58,6 +59,7 @@ class InitBase:
 
 
 class InitIndexed(InitBase):
+
     """Class to initialize objects which can be set for a particular bead.
 
     The same as init base, but can also optionally hold information about which
@@ -299,6 +301,7 @@ def set_vector(iif, dq, rq):
 
 
 class Initializer:
+    
     """Class that deals with the initialization of data.
 
     Holds functions that are required to initialize objects in the code.  Data

@@ -17,6 +17,7 @@ from ipi.utils.units import Constants
 
 
 class AtomSwap(Motion):
+    
     """Swap atom positions (typically useful to exchange species in
     a way that is compatible with the i-PI encapsulation paradigm.
 

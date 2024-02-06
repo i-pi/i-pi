@@ -11,6 +11,7 @@ from ipi.utils.depend import depend_value, dproperties
 
 
 class Motion:
+    
     """Base motion calculation class.
 
     Gives the standard methods and attributes needed in all the

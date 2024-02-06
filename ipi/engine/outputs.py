@@ -128,6 +128,7 @@ class BaseOutput(object):
 
 
 class PropertyOutput(BaseOutput):
+
     """Class dealing with outputting a set of properties to file.
 
     Does not do any calculation, just manages opening a file, getting data
@@ -249,6 +250,7 @@ class PropertyOutput(BaseOutput):
 
 
 class TrajectoryOutput(BaseOutput):
+
     """Class dealing with outputting atom-based properties as a
     trajectory file.
 
@@ -534,16 +536,6 @@ class TrajectoryOutput(BaseOutput):
             fatom = Atoms(self.system.beads.natoms)
             fatom.names[:] = self.system.beads.names
             fatom.q[:] = data[b]
-        # elif key == "bec":
-        #     # if b != 0:
-        #     #     raise ValueError("printing of BEC implemented only for 'nbeads' = 0")
-        #     fatom = Atoms(3 * self.system.beads.natoms)
-        #     # fatom.names[:] = self.system.beads.names
-        #     dd(fatom).q = data[
-        #         b
-        #     ]  # .reshape((self.system.beads.natoms,9)) # ES: pay attention!
-        # elif key == "extra":
-        #     fatom = data
         else:
             fatom = Atoms(self.system.beads.natoms)
             fatom.names[:] = self.system.beads.names
@@ -573,6 +565,7 @@ class TrajectoryOutput(BaseOutput):
 
 
 class CheckpointOutput:
+    
     """Class dealing with outputting checkpoints.
 
     Saves the complete status of the simulation at regular intervals.

@@ -21,6 +21,7 @@ __all__ = ["Beads"]
 
 
 class Beads:
+    
     """Storage for the beads positions and velocities.
 
     Everything is stored as (nbeads,3*natoms) sized contiguous arrays,

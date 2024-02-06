@@ -16,4 +16,3 @@ regtest-ref
 /build
 /dist
 *.egg-info/
-.vscode/
