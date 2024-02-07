@@ -30,7 +30,6 @@ from ipi.utils.messages import verbosity, info
 
 
 class NonEqmTraj(object):
-    
     """Class containing the details of equilibrium-nonequilibrium 2D spectra simulation.
 
     Attributes:
