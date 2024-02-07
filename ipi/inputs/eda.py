@@ -1,4 +1,4 @@
-"""Creates objects that deal with constant pressure and stress simulations."""
+"""Creates objects that deal external time dependent electric field and Born Effective Charges (BEC)."""
 
 # This file is part of i-PI.
 # i-PI Copyright (C) 2014-2015 i-PI developers
