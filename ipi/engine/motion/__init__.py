@@ -7,7 +7,7 @@
 # See the "licenses" directory for full license information.
 
 
-from .motion import Motion
+from .motion import Motion, EDA, ElectricField, BEC
 from .dynamics import Dynamics
 from .constrained_dynamics import ConstrainedDynamics
 from .replay import Replay
@@ -24,4 +24,3 @@ from .planetary import Planetary
 from .atomswap import AtomSwap
 from .ramp import TemperatureRamp, PressureRamp
 from .al6xxx_kmc import AlKMC
-from .motion import EDA, ElectricField, BEC
