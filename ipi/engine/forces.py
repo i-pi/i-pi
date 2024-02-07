@@ -33,7 +33,6 @@ fbuid = 0
 
 
 class ForceBead:
-
     """Base force helper class.
 
     This is the object that computes forces for a single bead. This is the last
@@ -602,7 +601,6 @@ dproperties(
 
 
 class Forces:
-    
     """Class that gathers all the forces together.
     Collects many forcefield instances and parallelizes getting the forces
     in a PIMD environment.

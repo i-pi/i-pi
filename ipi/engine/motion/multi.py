@@ -10,7 +10,6 @@ from ipi.engine.motion import Motion
 
 
 class MultiMotion(Motion):
-    
     """A class to hold multiple motion objects to be executed serially."""
 
     def __init__(self, motionlist=None):

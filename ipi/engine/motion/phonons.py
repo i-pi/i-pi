@@ -29,7 +29,6 @@ from ipi.utils.messages import verbosity, info
 
 
 class DynMatrixMover(Motion):
-    
     """Dynamic matrix calculation routine by finite difference."""
 
     def __init__(
@@ -94,7 +93,6 @@ class DynMatrixMover(Motion):
             raise ValueError(
                 "Calculation not possible for number of beads greater than one."
             )
-
 
         self.ism = 1 / np.sqrt(dstrip(self.beads.m3[-1]))
         self.m = dstrip(self.beads.m)
@@ -286,7 +284,6 @@ class DynMatrixMover(Motion):
 
 
 class DummyPhononCalculator:
-
     """No-op PhononCalculator"""
 
     def __init__(self):
@@ -306,7 +303,6 @@ class DummyPhononCalculator:
 
 
 class FDPhononCalculator(DummyPhononCalculator):
-    
     """Finite difference phonon evaluator."""
 
     def bind(self, dm):
@@ -373,7 +369,6 @@ class FDPhononCalculator(DummyPhononCalculator):
 
 
 class NMFDPhononCalculator(FDPhononCalculator):
-    
     """Normal mode finite difference phonon evaluator."""
 
     def bind(self, dm):
@@ -426,7 +421,6 @@ class NMFDPhononCalculator(FDPhononCalculator):
 
 
 class ENMFDPhononCalculator(NMFDPhononCalculator):
-    
     """Energy scaled normal mode finite difference phonon evaluator."""
 
     def step(self, step=None):

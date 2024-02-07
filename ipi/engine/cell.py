@@ -18,7 +18,6 @@ __all__ = ["Cell"]
 
 
 class Cell:
-    
     """Base class to represent the simulation cell in a periodic system.
 
     This class has the base attributes required for either flexible or
