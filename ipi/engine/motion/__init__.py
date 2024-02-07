@@ -7,7 +7,7 @@
 # See the "licenses" directory for full license information.
 
 
-from .motion import Motion, EDA, ElectricField, BEC
+from .motion import Motion
 from .dynamics import Dynamics
 from .constrained_dynamics import ConstrainedDynamics
 from .replay import Replay

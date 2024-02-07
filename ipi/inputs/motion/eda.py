@@ -7,7 +7,7 @@
 
 import numpy as np
 
-from ipi.engine.eda import ElectricField, BEC
+from ipi.engine.motion.eda import ElectricField, BEC
 from ipi.engine.barostats import *
 from ipi.utils.inputvalue import *
 from ipi.inputs.thermostats import *
