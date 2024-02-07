@@ -8,6 +8,7 @@ __all__ = ["BEC", "ElectricField", "EDA"]
 
 
 class BEC:
+    """Class to handle the Born Effective Charge tensors when performing driven dynamics (with 'eda-nve')"""
     def __init__(self, cbec=None, bec=None):
         self.cbec = cbec
         if bec is None:
@@ -117,6 +118,7 @@ dproperties(BEC, ["bec"])
 
 
 class ElectricDipole:
+    """Class to handle the electric dipole of the system when performing driven dynamics (with 'eda-nve')"""
     def __init__(self):
         # self._forces = Forces()
         pass
@@ -207,6 +209,7 @@ dproperties(ElectricDipole, ["dipole", "nbeads", "forces"])
 
 
 class ElectricField:
+    """Class to handle the time dependent electric field when performing driven dynamics (with 'eda-nve')"""
     def __init__(self, amp=None, freq=None, phase=None, peak=None, sigma=None):
         self._amp = depend_array(
             name="amp", value=amp if amp is not None else np.zeros(3)
@@ -306,6 +309,7 @@ dproperties(
 
 
 class EDA:
+    """Class to handle in a compact way 'BEC', 'ElectricDipole', and 'ElectricField' objects when performing driven dynamics (with 'eda-nve')"""
     integrators = ["eda-nve"]
 
     def __init__(self, efield: ElectricField, bec: BEC, **kwargv):
