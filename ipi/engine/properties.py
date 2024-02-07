@@ -284,18 +284,18 @@ class Properties:
             },
             "Efield": {
                 "dimension": "atomic_unit",
-                "help": "The external applied electric field (cartesian axes).",
+                "help": "The external applied electric field (x,y,z components in cartesian axes).",
                 "size": 3,
                 "func": (lambda: self.motion.eda.Electric_Field.Efield),
             },
             "Eenvelope": {
                 "dimension": "atomic_unit",
-                "help": "The (gaussian) envelope function of the external applied electric field.",
+                "help": "The (gaussian) envelope function of the external applied electric field (values go from 0 to 1).",
                 "func": (lambda: self.motion.eda.Electric_Field.Eenvelope),
             },
             "dipole": {
                 "dimension": "electric-dipole",
-                "help": "The electric dipole of the system (cartesian axes).",
+                "help": "The electric dipole of the system (x,y,z components in cartesian axes).",
                 "size": 3,
                 "func": (
                     lambda bead="-1": (
