@@ -2778,7 +2778,7 @@ class Trajectories:
             "becx": {
                 # Have a look to the documentation in the 'BEC' class
                 "dimension": "number",
-                "help": "The x component of the BEC tensors in cartesian coordinates.",
+                "help": "The x component of the Born Effective Charges in cartesian coordinates.",
                 "func": (
                     lambda bead="-1": (
                         self.system.motion.eda.Born_Charges.bec[0][:, 0]
@@ -2790,7 +2790,7 @@ class Trajectories:
             "becy": {
                 # Have a look to the documentation in the 'BEC' class
                 "dimension": "number",
-                "help": "The y component of the BEC tensors in cartesian coordinates.",
+                "help": "The y component of the Born Effective Charges in cartesian coordinates.",
                 "func": (
                     lambda bead="-1": (
                         self.system.motion.eda.Born_Charges.bec[0][:, 1]
@@ -2802,7 +2802,7 @@ class Trajectories:
             "becz": {
                 # Have a look to the documentation in the 'BEC' class
                 "dimension": "number",
-                "help": "The z component of the BEC tensors in cartesian coordinates.",
+                "help": "The z component of the Born Effective Charges in cartesian coordinates.",
                 "func": (
                     lambda bead="-1": (
                         self.system.motion.eda.Born_Charges.bec[0][:, 2]
