@@ -117,7 +117,9 @@ class InputDynamics(InputDictionary):
             InputElectricField,
             {
                 "default": input_default(factory=ElectricField),
-                # "help": ElectricField.default_help,
+                "help": "The external electric field parameters:"+\
+                    "plane-wave parameters (intensity/amplitude, angular frequency, and phase) and "+\
+                    "gaussian envelope function parameters (peak time/mean of the gaussian, and pulse duration/standard deviation of the gaussian)",
             },
         ),
         "bec": (
