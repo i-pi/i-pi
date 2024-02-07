@@ -82,15 +82,6 @@ class Ensemble:
         bweights=None,
         hweights=None,
         time=0.0,
-        # amp=None,
-        # freq=None,
-        # phase=None,
-        # peak=None,
-        # sigma=None,
-        # bec=None,
-        # cdip=True,
-        # tacc=0.0,
-        # cbec=False,
     ):
         """Initialises Ensemble.
 
