@@ -125,9 +125,9 @@ class Dynamics(Motion):
         else:
             self.fixatoms = fixatoms
 
-        self.eda_on = False # whether the dynamics is driven or not
+        self.eda_on = False  # whether the dynamics is driven or not
         if self.enstype in EDA.integrators:
-            # if the dynamics is driven, allocate necessary objects  
+            # if the dynamics is driven, allocate necessary objects
             self.efield = efield
             self.bec = bec
             self.eda = EDA(self.efield, self.bec)
@@ -884,9 +884,9 @@ class EDAIntegrator(DummyIntegrator):
 
     def _eda_forces(self):
         """Compute the EDA contribution to the forces, i.e. `q_e Z^* @ E(t)`"""
-        Z = dstrip(self.eda.Born_Charges.bec) # tensor of shape (nbeads,3xNatoms,3)
-        E = dstrip(self.eda.Electric_Field.Efield) # vector of shape (3)
-        forces = Constants.e * Z @ E # array of shape (nbeads,3xNatoms)
+        Z = dstrip(self.eda.Born_Charges.bec)  # tensor of shape (nbeads,3xNatoms,3)
+        E = dstrip(self.eda.Electric_Field.Efield)  # vector of shape (3)
+        forces = Constants.e * Z @ E  # array of shape (nbeads,3xNatoms)
         return forces
 
     def step(self, step=None):

@@ -22,7 +22,6 @@ class BEC:
     # The BEC tensors Z^* can be given to i-PI by an external driven through the etxra strings in the forces
     # of they can be kept fixed during the dynamics: in this case you can provide them through a txt file.
 
-
     def __init__(self, cbec=None, bec=None):
         self.cbec = cbec
         if bec is None:
@@ -39,9 +38,7 @@ class BEC:
         if self.enstype in EDA.integrators and self.cbec:
             self._bec = depend_array(
                 name="bec",
-                value=np.full(
-                    (self.nbeads, 3 * self.natoms, 3), np.nan
-                ),
+                value=np.full((self.nbeads, 3 * self.natoms, 3), np.nan),
                 func=self._get_driver_BEC,
                 dependencies=[ensemble.beads._q],
             )
@@ -132,6 +129,7 @@ dproperties(BEC, ["bec"])
 
 class ElectricDipole:
     """Class to handle the electric dipole of the system when performing driven dynamics (with 'eda-nve')"""
+
     def __init__(self):
         pass
 
@@ -140,9 +138,7 @@ class ElectricDipole:
 
         self.ens = ensemble
 
-        val = np.full(
-            (self.nbeads, 3), np.nan
-        )
+        val = np.full((self.nbeads, 3), np.nan)
         self._dipole = depend_array(
             name="dipole",
             func=lambda: self._get_dipole(),
@@ -212,6 +208,7 @@ dproperties(ElectricDipole, ["dipole", "nbeads", "forces"])
 
 class ElectricField:
     """Class to handle the time dependent electric field when performing driven dynamics (with 'eda-nve')"""
+
     def __init__(self, amp=None, freq=None, phase=None, peak=None, sigma=None):
         self._amp = depend_array(
             name="amp", value=amp if amp is not None else np.zeros(3)
@@ -308,6 +305,7 @@ dproperties(
 
 class EDA:
     """Class to handle in a compact way 'BEC', 'ElectricDipole', and 'ElectricField' objects when performing driven dynamics (with 'eda-nve')"""
+
     integrators = ["eda-nve"]
 
     def __init__(self, efield: ElectricField, bec: BEC, **kwargv):
