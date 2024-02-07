@@ -231,11 +231,11 @@ UnitMap = {
         "atomic_unit": 1.00,
         "ev/a": 0.019446903811441516,  # 0.5291772109/27.2113862459
     },
-    "electric-dipole": {  # electron charge/Bohr radius^2
+    "electric-dipole": {  # electron charge * Bohr
         "": 1.00,
         "automatic": 1.00,
         "atomic_unit": 1.00,
-        # "cm": still to be computed
+        "eang" : 1.8897261, # electron charge * angstrom
     },
     "ms-momentum": {  # TODO fill up units here (mass-scaled momentum)
         "": 1.00,
