@@ -74,18 +74,12 @@ class InputElectricField(Input):
     default_help = "Simulates an external time dependent electric field"
     default_label = "Efield"
 
-    # def __init__(self, *argv, **kargw):
-    #     super().__init__(*argv, **kargw)
-    #     pass
-
     def store(self, Efield: ElectricField):
         self.amp.store(Efield.amp)
         self.freq.store(Efield.freq)
         self.phase.store(Efield.phase)
         self.peak.store(Efield.peak)
         self.sigma.store(Efield.sigma)
-        # for k in self.fields.keys():
-        #     getattr(self, k).store(getattr(Efield, k))
         return
 
     def fetch(self):
@@ -141,9 +135,8 @@ class InputBEC(InputArray):
         """
         Input.parse(self, xml=xml, text=text)
         mode = self.mode.fetch()
-        if mode in ["manual", "file"]:  # ['manual','file']
+        if mode in ["manual", "file"]:
             super().parse(xml, text)
-            # self.parse(xml, text)
         elif mode == "none":
             self.value = np.full((0, 3), np.nan)
         elif mode == "driver":
