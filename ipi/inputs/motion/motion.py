@@ -64,12 +64,12 @@ from .planetary import InputPlanetary
 from .ramp import InputTemperatureRamp, InputPressureRamp
 from .al6xxx_kmc import InputAlKMC
 from ipi.utils.units import *
-from ipi.engine.eda import ElectricField, BEC
+from ipi.engine.motion import ElectricField, BEC
 from ipi.engine.barostats import *
 from ipi.inputs.cell import *
 
 
-__all__ = ["InputMotion","InputElectricField", "InputBEC"]
+__all__ = ["InputMotion", "InputElectricField", "InputBEC"]
 
 
 class InputMotionBase(Input):
@@ -471,6 +471,7 @@ class InputMotion(InputMotionBase):
             motion = super(InputMotion, self).fetch()
 
         return motion
+
 
 class InputElectricField(Input):
     """Electric field input class."""
