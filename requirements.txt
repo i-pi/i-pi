@@ -1,6 +1,4 @@
 black>=23.1
-mkl
-blas=*=mkl
 numpy
 pathlib
 pytest

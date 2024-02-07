@@ -28,20 +28,20 @@ from optparse import OptionParser
 
 
 from ipi.inputs import (
+    atoms,
     barostats,
+    beads,
     cell,
-    simulation,
-    system,
     ensembles,
-    thermostats,
     forcefields,
     forces,
-    atoms,
-    beads,
-    prng,
     initializer,
     normalmodes,
     outputs,
+    prng,
+    simulation,
+    system,
+    thermostats,
     motion,
     smotion,
 )
@@ -182,8 +182,8 @@ def help(
 ):
     """Writes the help file.
 
-    Will write an xml file 'prefix.xml' if xml=True and a latex file 'prefix.tex'
-    if latex=True. Will write out tags to a depth equal to the value of levels,
+    Will write an xml file 'prefix.xml' if xml=True, a latex file 'prefix.tex'
+    if latex=True or rst if rst=True. Will write out tags to a depth equal to the value of levels,
     if it is specified, and will print using a root tag as specified by
     the value of option. The output will be given by prefix.tex and/or
     prefix.xml, if latex and/or xml is True respectively. Can also print out
