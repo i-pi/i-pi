@@ -847,9 +847,6 @@ class EDAIntegrator(DummyIntegrator):
     when an external electric field is applied.
     """
 
-    # author: Elia Stocco
-    # motivation: deal with time-dependent external potential
-
     def __init__(self):
         super().__init__()
 
@@ -907,8 +904,6 @@ class EDANVEIntegrator(EDAIntegrator, NVEIntegrator):
     """Integrator object for simulations with constant Number of particles, Volume, and Energy (NVE)
     using the Electric Dipole Approximation (EDA) when an external electric field is applied.
     """
-
-    # author: Elia Stocco
 
     def pstep(self, level):
         # NVEIntegrator does not use 'super()' within 'pstep'
