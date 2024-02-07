@@ -21,14 +21,13 @@ class BEC:
         self.nbeads = ensemble.beads.nbeads
         self.natoms = ensemble.beads.natoms
         self.forces = ensemble.forces
-        # my_nbeads = 1  # self.nbeads
 
         if self.enstype in EDA.integrators and self.cbec:
             self._bec = depend_array(
                 name="bec",
                 value=np.full(
                     (self.nbeads, 3 * self.natoms, 3), np.nan
-                ),  # value=np.full((self.natoms,3,3),np.nan),\
+                ),
                 func=self._get_driver_BEC,
                 dependencies=[ensemble.beads._q],
             )
@@ -120,7 +119,6 @@ dproperties(BEC, ["bec"])
 class ElectricDipole:
     """Class to handle the electric dipole of the system when performing driven dynamics (with 'eda-nve')"""
     def __init__(self):
-        # self._forces = Forces()
         pass
 
     def bind(self, eda, ensemble):
@@ -128,15 +126,9 @@ class ElectricDipole:
 
         self.ens = ensemble
 
-        # self.forces = ensemble.forces #dpipe(ensemble.forces,self._forces)
-        # self._forces = ensemble.forces  # is this a weakref??
-
-        # val = np.zeros(
-        #     3, dtype=float
-        # )
         val = np.full(
             (self.nbeads, 3), np.nan
-        )  # if self.nbeads > 1 else np.zeros(3,dtype=float)
+        )
         self._dipole = depend_array(
             name="dipole",
             func=lambda: self._get_dipole(),
@@ -148,13 +140,12 @@ class ElectricDipole:
 
     def store(self, dipole):
         super().store(dipole)
-        # self.cdip.store(dipole.cdip)
         pass
 
     def _get_dipole(self, bead=None):
         """Return the electric dipole of all the beads as a list of np.array"""
 
-        # check that bead is a correct value
+        # check that 'bead' is correct
         if bead is not None:
             if bead < 0:
                 raise ValueError("Error in '_get_dipole': 'beads' is negative.")
@@ -199,9 +190,6 @@ class ElectricDipole:
                     "Error in '_get_dipole': can not extract dipole from the extra string."
                 )
         except:
-            # if bead is not None:
-            #     return np.full(3,np.nan)
-            # else :
             return np.full((self.nbeads, 3), np.nan)
 
 
@@ -237,14 +225,13 @@ class ElectricField:
         self.enstype = enstype
         self._mts_time = eda._mts_time
 
-        # same dependencies for Eenvelope and its time derivative
         dep = [self._mts_time, self._peak, self._sigma]
         self._Eenvelope = depend_value(
             name="Eenvelope", value=1.0, func=self._get_Eenvelope, dependencies=dep
         )
 
         if enstype in EDA.integrators:
-            # with dependencies
+            # dynamics is not driven --> add dependencies to the electric field
             dep = [self._mts_time, self._amp, self._freq, self._phase, self._Eenvelope]
             self._Efield = depend_array(
                 name="Efield",
@@ -253,7 +240,7 @@ class ElectricField:
                 dependencies=dep,
             )
         else:
-            # no dependencies
+            # dynamics is not driven --> no dependencies for the electric field
             self._Efield = depend_array(
                 name="Efield",
                 value=np.zeros(3, float),
@@ -284,7 +271,6 @@ class ElectricField:
     def _get_Eenvelope(self):
         time = dstrip(self.mts_time)
         """Get the gaussian envelope function of the external electric field"""
-        # https://en.wikipedia.org/wiki/Normal_distribution
         if self._Eenvelope_is_on():
             x = time  # indipendent variable
             u = self.peak  # mean value
@@ -297,8 +283,6 @@ class ElectricField:
 
     def _get_Ecos(self, time):
         """Get the sinusoidal part of the external electric field"""
-        # it's easier to define a function and compute this 'cos'
-        # again everytime instead of define a 'depend_value'
         return np.cos(self.freq * time + self.phase)
 
 
@@ -319,28 +303,15 @@ class EDA:
         self.Born_Charges = bec
         self._time = depend_value(name="time", value=0)
         self._mts_time = depend_value(name="mts_time", value=0)
-
-        # self._Efield = ElectricField()
-        # # self._Eenvelope = self.Electric_Field._Eenvelope
-        # self._bec = BEC()
-        # self._dipole = ElectricDipole()
         pass
 
     def bind(self, ensemble, enstype):
         self.enstype = enstype
-
         self._mts_time = depend_value(name="mts_time", value=dstrip(ensemble).time)
         self._time = ensemble._time
-
         self.Electric_Field.bind(self, enstype)
         self.Electric_Dipole.bind(self, ensemble)
         self.Born_Charges.bind(self, ensemble, enstype)
-
-        # self._Efield = self.Electric_Field#._Efield
-        # self._Eenvelope = self.Electric_Field#._Eenvelope
-        # self._bec = self.Born_Charges#._bec
-        # self._dipole = self.Electric_Dipole#._dipole
-
         pass
 
     def store(self, eda):
