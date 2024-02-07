@@ -125,12 +125,16 @@ class Dynamics(Motion):
         else:
             self.fixatoms = fixatoms
 
-        self.eda_on = False
+        self.eda_on = False # whether the dynamics is driven or not
         if self.enstype in EDA.integrators:
+            # if the dynamics is driven, allocate necessary objects  
             self.efield = efield
             self.bec = bec
-            self.eda = EDA(self.efield, self.bec)  # cdip
-            self.eda_on = True  # self.enstype in EDA.integrators
+            self.eda = EDA(self.efield, self.bec)
+            self.eda_on = True
+        else:
+            # otherwise, keep the class clean and avoid allocating useless things
+            pass
 
     def get_fixdof(self):
         """Calculate the number of fixed degrees of freedom, required for
