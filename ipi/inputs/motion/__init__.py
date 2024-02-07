@@ -7,4 +7,4 @@
 # See the "licenses" directory for full license information.
 
 
-from .motion import InputMotion
+from .motion import InputMotion, InputElectricField, InputBEC

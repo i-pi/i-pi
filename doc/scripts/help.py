@@ -44,7 +44,6 @@ from ipi.inputs import (
     outputs,
     motion,
     smotion,
-    eda,
 )
 
 src_dir = "../"
@@ -117,7 +116,6 @@ objects = {
     "properties": outputs.InputProperties(),
     "checkpoint": outputs.InputCheckpoint(),
     "trajectory": outputs.InputTrajectory(),
-    "bec": eda.InputBEC(),
 }
 
 usage = "usage: python %prog [options]"

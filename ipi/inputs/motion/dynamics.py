@@ -7,7 +7,7 @@
 import numpy as np
 import ipi.engine.thermostats
 import ipi.engine.barostats
-from ipi.engine.eda import ElectricField, BEC, EDA
+from ipi.engine.motion import ElectricField, BEC, EDA
 from ipi.utils.inputvalue import (
     InputDictionary,
     InputAttribute,
@@ -17,7 +17,7 @@ from ipi.utils.inputvalue import (
 )
 from ipi.inputs.barostats import InputBaro
 from ipi.inputs.thermostats import InputThermo
-from ipi.inputs.eda import InputElectricField, InputBEC
+from ipi.inputs.motion import InputElectricField, InputBEC
 
 
 __all__ = ["InputDynamics"]
