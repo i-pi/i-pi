@@ -214,7 +214,9 @@ class Dynamics(Motion):
         self.ensemble.add_xlpot(self.barostat._cell_jacobian)
         self.ensemble.add_xlkin(self.barostat._kin)
 
-        if self.enstype in EDA.integrators:
+        # self.eda has not been allocated if 'self.eda_on' == False
+        # Attention: call 'self.eda.bind' before 'self.integrator.bind'
+        if self.eda_on:
             self.eda.bind(self.ensemble, self.enstype)
 
         # now that the timesteps are decided, we proceed to bind the integrator.
