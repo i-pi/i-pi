@@ -231,12 +231,6 @@ UnitMap = {
         "atomic_unit": 1.00,
         "ev/a": 0.019446903811441516,  # 0.5291772109/27.2113862459
     },
-    "polarization": {  # electron charge/Bohr radius^2
-        "": 1.00,
-        "automatic": 1.00,
-        "atomic_unit": 1.00,
-        "c/m^2": 57.214766,
-    },
     "electric-dipole": {  # electron charge/Bohr radius^2
         "": 1.00,
         "automatic": 1.00,
