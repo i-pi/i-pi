@@ -51,8 +51,23 @@ class InputDynamics(InputDictionary):
             {
                 "dtype": str,
                 "default": "nve",
-                "help": "The ensemble that will be sampled during the simulation. ",
-                "options": ["nve", "nvt", "npt", "nst", "sc", "scnpt", "eda-nve"],
+                "help": """The ensemble that will be sampled during the simulation.
+                nve: constant-energy-volume; nvt: constant-temperature-volume;
+                npt: constant-temperature-pressure(isotropic); nst: constant-temperature-stress(anisotropic);
+                sc: Suzuki-Chin high-order NVT; scnpt: Suzuki-Chin high-order NpT;
+                nvt-cc: constrained-centroid NVT;
+                eda-nve: time-dependent-field driven NVE
+                 """,
+                "options": [
+                    "nve",
+                    "nvt",
+                    "npt",
+                    "nst",
+                    "sc",
+                    "scnpt",
+                    "nvt-cc",
+                    "eda-nve",
+                ],
             },
         ),
         "splitting": (

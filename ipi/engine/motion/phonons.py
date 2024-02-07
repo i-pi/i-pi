@@ -169,7 +169,9 @@ class DynMatrixMover(Motion):
 
         # prints eigenvectors
         outfile = self.output_maker.get_output(self.prefix + ".eigvec", "w")
-        outfile.write("# Eigenvector  matrix (normalized)" + "\n")
+        outfile.write(
+            "# Eigenvector  matrix from the dynamical matrix (normalized)" + "\n"
+        )
         for i in range(activedof):
             outfile.write(" ".join(map(str, eigsys[1][i])) + "\n")
         outfile.close_stream()
@@ -182,7 +184,7 @@ class DynMatrixMover(Motion):
             eigmode[:, i] /= np.sqrt(np.dot(eigmode[:, i], eigmode[:, i]))
         outfile = self.output_maker.get_output(self.prefix + ".mode", "w")
 
-        outfile.write("# Phonon modes (mass-scaled)" + "\n")
+        outfile.write("# Phonon modes (cartesian space and normalized)" + "\n")
         for i in range(activedof):
             outfile.write(" ".join(map(str, eigmode[i])) + "\n")
         outfile.close_stream()

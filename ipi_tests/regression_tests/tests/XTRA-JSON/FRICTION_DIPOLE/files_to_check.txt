@@ -1,4 +1,4 @@
-        filename                                       format            use_column
+        filename                                       format            icol[,rtol,atol] ...
 --------------------------------------------------------------------------------------------
 ref_simulation.out                                      numpy
 ref_simulation.dip_0                                    numpy
@@ -6,9 +6,9 @@ ref_simulation.dip_1                                    numpy
 ref_simulation.dip_2                                    numpy
 ref_simulation.dip_3                                    numpy
 ref_simulation.dip_4                                    numpy
-ref_simulation.friction_0                               numpy              0 1 2
-ref_simulation.friction_1                               numpy              0 1 2
-ref_simulation.friction_2                               numpy              0 1 2
-ref_simulation.friction_3                               numpy              0 1 2
-ref_simulation.friction_4                               numpy              0 1 2
-ref_simulation.friction_5                               numpy              0 1 2
+ref_simulation.friction_0                               numpy              0,1e-8,1e-8 1,1e-8,1e-8 2,1e-8,1e-8
+ref_simulation.friction_1                               numpy              0,1e-8,1e-8 1,1e-8,1e-8 2,1e-8,1e-8
+ref_simulation.friction_2                               numpy              0,1e-8,1e-8 1,1e-8,1e-8 2,1e-8,1e-8
+ref_simulation.friction_3                               numpy              0,1e-8,1e-8 1,1e-8,1e-8 2,1e-8,1e-8
+ref_simulation.friction_4                               numpy              0,1e-8,1e-8 1,1e-8,1e-8 2,1e-8,1e-8
+ref_simulation.friction_5                               numpy              0,1e-8,1e-8 1,1e-8,1e-8 2,1e-8,1e-8

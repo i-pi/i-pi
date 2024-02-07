@@ -1,0 +1,7 @@
+Tested PIMD for indistinguishable particles (Bosonic & Fermionic)
+----------------------------------------------------------------------
+- Values of kinetic energy estimators (virial_fq, kinetic_td) for
+	- Four bosons
+	- A mixtures of two bosons and two distinguishable particles
+	 
+

@@ -18,12 +18,12 @@ define run_vasp
 endef
 
 h2o:
-	cd water-1-npt-md-vasp; $(IPI) input.xml & sleep 5; \
+	cd water_1_npt_md_vasp; $(IPI) input.xml & sleep 5; \
 	$(call run_vasp,1) \
 	wait
 
 dia:
-	cd dia-npt-pimd-vasp; $(IPI) input.xml & sleep 5; \
+	cd dia_npt_pimd_vasp; $(IPI) input.xml & sleep 5; \
 	$(call run_vasp,4) \
 	wait
 
