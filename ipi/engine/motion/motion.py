@@ -13,7 +13,7 @@ from ipi.utils.depend import *
 from ipi.utils.units import UnitMap
 import re
 
-__all__ = ["Motion","BEC", "ElectricField", "EDA"]
+__all__ = ["Motion", "BEC", "ElectricField", "EDA"]
 
 
 class Motion:
@@ -90,6 +90,7 @@ class Motion:
 
 
 dproperties(Motion, "dt")
+
 
 class BEC:
     """Class to handle the Born Effective Charge tensors when performing driven dynamics (with 'eda-nve')"""
