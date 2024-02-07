@@ -110,6 +110,7 @@ class Dynamics(Motion):
         elif self.enstype == "scnpt":
             self.integrator = SCNPTIntegrator()
         elif self.enstype == "eda-nve":
+            # NVE integrator with an external time-dependent driving (electric field)
             self.integrator = EDANVEIntegrator()
         else:
             self.integrator = DummyIntegrator()
