@@ -9,6 +9,20 @@ __all__ = ["BEC", "ElectricField", "EDA"]
 
 class BEC:
     """Class to handle the Born Effective Charge tensors when performing driven dynamics (with 'eda-nve')"""
+
+    # The BEC tensors Z^* are defined as the derivative of the electric dipole of the system w.r.t. nuclear positions
+    # in units of the elementary charge, i.e. Z^*_{ij} = 1/q_e \frac{\partial d_i }{\partial R_j}
+    # The dipole is a vector of shape (3), while the nuclear positions have shape (3xNatoms)
+    # The BEC tensors have then shape (3xNatoms,3).
+    # A tensor of this shape is stored for each bead --> self._bec.shape = (self.nbeads, 3 * self.natoms, 3)
+    #
+    # If an external time-dependent electric field E(t) is applied, this couples to the dipole of the system,
+    # and the resulting additional term to the forces is given by q_e Z^* @ E(t) --> have a look at EDAIntegrator._eda_forces
+    #
+    # The BEC tensors Z^* can be given to i-PI by an external driven through the etxra strings in the forces
+    # of they can be kept fixed during the dynamics: in this case you can provide them through a txt file.
+
+
     def __init__(self, cbec=None, bec=None):
         self.cbec = cbec
         if bec is None:
