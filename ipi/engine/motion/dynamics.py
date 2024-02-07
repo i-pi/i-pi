@@ -883,10 +883,10 @@ class EDAIntegrator(DummyIntegrator):
         pass
 
     def _eda_forces(self):
-        """Compute the EDA contribution to the forces due to the polarization"""
-        Z = dstrip(self.eda.Born_Charges.bec)
-        E = dstrip(self.eda.Electric_Field.Efield)
-        forces = Constants.e * Z @ E
+        """Compute the EDA contribution to the forces, i.e. `q_e Z^* @ E(t)`"""
+        Z = dstrip(self.eda.Born_Charges.bec) # tensor of shape (nbeads,3xNatoms,3)
+        E = dstrip(self.eda.Electric_Field.Efield) # vector of shape (3)
+        forces = Constants.e * Z @ E # array of shape (nbeads,3xNatoms)
         return forces
 
     def step(self, step=None):
