@@ -34,7 +34,7 @@ class Rascal_driver(Dummy_driver):
         This loads the potential and atoms template in librascal
         """
         arglist = self.args
-        
+
         if len(arglist) == 2:
             self.model = arglist[0]
             self.template = arglist[1]

@@ -44,7 +44,7 @@ Example: python driver.py -m pet -u -o model.json,template.xyz
         This loads the potential and atoms template in PET
         """
         arglist = self.args
-        
+
         if len(arglist) == 2:
             self.model_path = arglist[0]
             self.template = arglist[1]
