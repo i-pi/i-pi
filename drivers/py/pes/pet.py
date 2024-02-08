@@ -27,7 +27,7 @@ class PET_driver(Dummy_driver):
     def __init__(self, args=None, verbose=False):
         self.error_msg = """
 The PET driver requires specification of a .json model file fitted with 
-the PET tools, and a template file that describes the chemical makeup of 
+    the PET tools, and a template file that describes the chemical makeup of 
 the structure. 
 
 Example: python driver.py -m pet -u -o model.json,template.xyz
@@ -43,11 +43,8 @@ Example: python driver.py -m pet -u -o model.json,template.xyz
 
         This loads the potential and atoms template in PET
         """
-        try:
-            arglist = self.args.split(",")
-        except ValueError:
-            sys.exit(self.error_msg)
-
+        arglist = self.args
+        
         if len(arglist) == 2:
             self.model_path = arglist[0]
             self.template = arglist[1]
