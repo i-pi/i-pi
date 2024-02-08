@@ -2780,10 +2780,8 @@ class Trajectories:
                 "dimension": "number",
                 "help": "The x component of the Born Effective Charges in cartesian coordinates.",
                 "func": (
-                    lambda bead="-1": (
-                        self.system.motion.eda.Born_Charges.bec[0][:, 0]
-                        if int(bead) < 0
-                        else self.system.motion.eda.Born_Charges.bec[int(bead)][:, 0]
+                    lambda: np.asarray(
+                        [bec[:, 0] for bec in self.system.motion.eda.Born_Charges.bec]
                     )
                 ),
             },
@@ -2792,10 +2790,8 @@ class Trajectories:
                 "dimension": "number",
                 "help": "The y component of the Born Effective Charges in cartesian coordinates.",
                 "func": (
-                    lambda bead="-1": (
-                        self.system.motion.eda.Born_Charges.bec[0][:, 1]
-                        if int(bead) < 0
-                        else self.system.motion.eda.Born_Charges.bec[int(bead)][:, 1]
+                    lambda: np.asarray(
+                        [bec[:, 1] for bec in self.system.motion.eda.Born_Charges.bec]
                     )
                 ),
             },
@@ -2804,10 +2800,8 @@ class Trajectories:
                 "dimension": "number",
                 "help": "The z component of the Born Effective Charges in cartesian coordinates.",
                 "func": (
-                    lambda bead="-1": (
-                        self.system.motion.eda.Born_Charges.bec[0][:, 2]
-                        if int(bead) < 0
-                        else self.system.motion.eda.Born_Charges.bec[int(bead)][:, 2]
+                    lambda: np.asarray(
+                        [bec[:, 2] for bec in self.system.motion.eda.Born_Charges.bec]
                     )
                 ),
             },
