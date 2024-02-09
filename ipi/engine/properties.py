@@ -289,7 +289,7 @@ class Properties:
                 "func": (
                     lambda: (
                         self.motion.eda.Electric_Field.Efield
-                        if self.system.motion.eda_on
+                        if self.motion.eda_on
                         else np.zeros(3)
                     )
                 ),
@@ -300,7 +300,7 @@ class Properties:
                 "func": (
                     lambda: (
                         self.motion.eda.Electric_Field.Eenvelope
-                        if self.system.motion.eda_on
+                        if self.motion.eda_on
                         else 0.0
                     )
                 ),
@@ -315,7 +315,7 @@ class Properties:
                         if int(bead) < 0
                         else (
                             self.motion.eda.Electric_Dipole.dipole[int(bead)]
-                            if self.system.motion.eda_on
+                            if self.motion.eda_on
                             else np.zeros(3)
                         )
                     )
