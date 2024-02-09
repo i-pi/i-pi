@@ -286,12 +286,24 @@ class Properties:
                 "dimension": "atomic_unit",
                 "help": "The external applied electric field (x,y,z components in cartesian axes).",
                 "size": 3,
-                "func": (lambda: self.motion.eda.Electric_Field.Efield),
+                "func": (
+                    lambda: (
+                        self.motion.eda.Electric_Field.Efield
+                        if self.system.motion.eda_on
+                        else np.zeros(3)
+                    )
+                ),
             },
             "Eenvelope": {
                 "dimension": "atomic_unit",
                 "help": "The (gaussian) envelope function of the external applied electric field (values go from 0 to 1).",
-                "func": (lambda: self.motion.eda.Electric_Field.Eenvelope),
+                "func": (
+                    lambda: (
+                        self.motion.eda.Electric_Field.Eenvelope
+                        if self.system.motion.eda_on
+                        else 0.0
+                    )
+                ),
             },
             "dipole": {
                 "dimension": "electric-dipole",
@@ -301,7 +313,11 @@ class Properties:
                     lambda bead="-1": (
                         self.motion.eda.Electric_Dipole.dipole.mean(axis=0)
                         if int(bead) < 0
-                        else self.motion.eda.Electric_Dipole.dipole[int(bead)]
+                        else (
+                            self.motion.eda.Electric_Dipole.dipole[int(bead)]
+                            if self.system.motion.eda_on
+                            else np.zeros(3)
+                        )
                     )
                 ),
             },
@@ -2779,31 +2795,19 @@ class Trajectories:
                 # Have a look at the documentation in the 'BEC' class
                 "dimension": "number",
                 "help": "The x component of the Born Effective Charges in cartesian coordinates.",
-                "func": (
-                    lambda: np.asarray(
-                        [bec[:, 0] for bec in self.system.motion.eda.Born_Charges.bec]
-                    )
-                ),
+                "func": (lambda: self._get_bec("x")),
             },
             "becy": {
                 # Have a look at the documentation in the 'BEC' class
                 "dimension": "number",
                 "help": "The y component of the Born Effective Charges in cartesian coordinates.",
-                "func": (
-                    lambda: np.asarray(
-                        [bec[:, 1] for bec in self.system.motion.eda.Born_Charges.bec]
-                    )
-                ),
+                "func": (lambda: self._get_bec("y")),
             },
             "becz": {
                 # Have a look at the documentation in the 'BEC' class
                 "dimension": "number",
                 "help": "The z component of the Born Effective Charges in cartesian coordinates.",
-                "func": (
-                    lambda: np.asarray(
-                        [bec[:, 2] for bec in self.system.motion.eda.Born_Charges.bec]
-                    )
-                ),
+                "func": (lambda: self._get_bec("z")),
             },
             "forces": {
                 "dimension": "force",
@@ -2821,7 +2825,7 @@ class Trajectories:
                 "func": (
                     lambda: (
                         self.system.motion.integrator.EDAforces
-                        if hasattr(self.system.motion.integrator, "EDAforces")
+                        if self.system.motion.eda_on
                         else np.zeros((self.system.beads.natoms * 3))
                     )
                 ),
@@ -3162,3 +3166,21 @@ class Trajectories:
         else:
             dimension = ""
         return value, dimension, unit
+
+    def _get_bec(self, xyz):
+        """Return a component (xyz = x, y, or z) of the Born Effective Charge Tensors."""
+        # allocate empty BECs
+        shape = (self.system.beads.nbeads, self.system.beads.natoms * 3)
+        bec = np.full(shape, np.nan)
+        # check whether `self.system.motion.eda`` has been allocated
+        if self.system.motion.eda_on:
+            # get all the BECs
+            BEC = self.system.motion.eda.Born_Charges.bec
+            # convert the component into numerical index
+            xyz2index = {"x": 0, "y": 1, "z": 2}
+            index = xyz2index[xyz]
+            # get the `xyz` component of the BECs for all the beads
+            bec = np.asarray([bec[:, index] for bec in BEC])
+            # `reshape` should not be necessary, but it guarantees the shape to be correct
+            bec = bec.reshape(shape)
+        return bec
