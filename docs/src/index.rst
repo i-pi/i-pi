@@ -35,10 +35,14 @@ This documentation is structured as follows:
    :maxdepth: 2
 
    introduction
+   features
    getting-started
    units
-   user-guide
-   input-reference
+   input-files
+   input-tags
+   output-files
+   output-tags
+   distributed
    tutorials
    faq
    troubleshooting

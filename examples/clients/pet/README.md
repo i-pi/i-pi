@@ -14,7 +14,15 @@ wget https://zenodo.org/records/10250171/files/methane.pet_small.zip
 unzip methane.pet_small.zip
 ```
 
-After having obtained the potential file, the example can be run as usual
+A version of the PET code that is compatible with this example can be 
+obtained with 
+
+```bash
+pip install git+https://github.com/serfg/pet@83454c6
+```
+
+After having obtained the potential file, and a compatible version of PET,
+the example can be run as usual
 
 ```bash
 i-pi input.xml &> log.ipi &
