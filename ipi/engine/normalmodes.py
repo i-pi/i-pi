@@ -332,12 +332,7 @@ class NormalModes:
             func=self.get_kstress,
             dependencies=[self._pnm, self.beads._sm3, self._nm_factor],
         )
-        
-        if len(self.bosons) > 0:
-            self.exchange_potential = ExchangePotential(self.nbeads, len(self.bosons))
-        else:
-            self.exchange_potential = None
-
+                
         self._exchange = depend_value(
             name="exchange",
             value=None,
@@ -358,6 +353,14 @@ class NormalModes:
                 self.beads._q,
             ],
         )
+
+        if len(self.bosons) > 0:
+            self.exchange_potential = ExchangePotential(self.nbeads, len(self.bosons))
+            self.exchange_potential.bind(self.beads, self.ensemble)            
+            dpipe(self._omegan2, self.exchange_potential._omegan2)
+            dpipe(self._bosons, self.exchange_potential._bosons)
+        else:
+            self.exchange_potential = None
 
         # just return split potential and force for ease of access
         self._vspring = depend_value(
