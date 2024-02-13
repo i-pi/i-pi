@@ -8,6 +8,8 @@ Used in /engine/normalmodes.py
 
 import math
 import numpy as np
+from ipi.utils.depend import *
+import ipi.utils.units as units
 import sys
 
 
@@ -26,12 +28,10 @@ def kth_diag_indices(a, k):
 
 
 class ExchangePotential:
-    def __init__(self, nbosons, nbeads, bead_mass, spring_freq_squared, betaP):
+    def __init__(self, nbeads, nbosons, bead_mass):
         assert nbosons > 0
         self._N = nbosons
         self._P = nbeads
-        self._betaP = betaP
-        self._spring_freq_squared = spring_freq_squared
         self._particle_mass = bead_mass
 
         self._bead_diff_intra = None
@@ -39,6 +39,31 @@ class ExchangePotential:
         self._E_from_to = None
         self._V = None
         self._V_backward = None
+
+        # creates a placeholder for omegan2
+        self.omegan2 = depend_value("omegan2", value=0.0)
+
+    
+    def bind(self, beads, ensemble):
+        self.beads = beads
+        self.nm = normalmodes
+        self.ensemble = ensemble
+        self.nbeads -
+
+        self.betaP = depend_value("betaP",
+                                   func=lambda: 1.0 / (self.beads.nbeads * units.Constants.kb * self.ensemble.temp),
+                                   dependencies = [self.ensemble._temp]
+                                   )
+        
+        dpipe(self.nm._omegan2, self._omegan2)
+
+        self._V = depend_value("V", func=self._evaluate_prefix_V,
+                               dependencies=[self.beads._q, self._betaP])
+        
+        self._vspring_and_fspring = depend_value("vspring_and_fspring", 
+                                                 func=self.get_vspring_and_fspring,
+                                                 dependencies=[]
+                                                 )
 
     def set_coordinates(self, q):
         self._q = q
@@ -80,13 +105,13 @@ class ExchangePotential:
         """
         Helper function: the term for the spring constant as used in spring potential expressions
         """
-        return 0.5 * self._particle_mass * self._spring_freq_squared
+        return 0.5 * self._particle_mass * self.omegan2
 
     def _spring_force_prefix(self):
         """
         Helper function: the term for the spring constant as used in spring force expressions
         """
-        return (-1.0) * self._particle_mass * self._spring_freq_squared
+        return (-1.0) * self._particle_mass * self.omegan2
 
     def _evaluate_cycle_energies(self):
         """
@@ -142,12 +167,12 @@ class ExchangePotential:
 
             # sig = 0.0
             # for u in range(m):
-            #   sig += np.exp(- self._betaP *
+            #   sig += np.exp(- self.betaP *
             #                (V[u] + self._E_from_to[u, m - 1] - Elong) # V until u-1, then cycle from u to m
             #                 )
-            sig = np.sum(np.exp(-self._betaP * (subdivision_potentials - Elong)))
+            sig = np.sum(np.exp(-self.betaP * (subdivision_potentials - Elong)))
             assert sig != 0.0 and np.isfinite(sig)
-            V[m] = Elong - np.log(sig / m) / self._betaP
+            V[m] = Elong - np.log(sig / m) / self.betaP
 
         return V
 
@@ -167,14 +192,14 @@ class ExchangePotential:
 
             # sig = 0.0
             # for p in range(l, self._N):
-            #     sig += 1 / (p + 1) * np.exp(- self._betaP * (self._E_from_to[l, p] + RV[p + 1]
+            #     sig += 1 / (p + 1) * np.exp(- self.betaP * (self._E_from_to[l, p] + RV[p + 1]
             #                                                 - Elong))
             sig = np.sum(
                 np.reciprocal(np.arange(l + 1.0, self._N + 1))
-                * np.exp(-self._betaP * (subdivision_potentials - Elong))
+                * np.exp(-self.betaP * (subdivision_potentials - Elong))
             )
             assert sig != 0.0 and np.isfinite(sig)
-            RV[l] = Elong - np.log(sig) / self._betaP
+            RV[l] = Elong - np.log(sig) / self.betaP
 
         # V^[1,N]
         RV[0] = self._V[-1]
@@ -209,7 +234,7 @@ class ExchangePotential:
         # for u in range(0, self._N):
         #     for l in range(u, self._N):
         #         connection_probs[l][u] = 1 / (l + 1) * \
-        #                np.exp(- self._betaP *
+        #                np.exp(- self.betaP *
         #                        (self._V[u] + self._E_from_to[u, l] + self._V_backward[l+1]
         #                         - self.V_all()))
         tril_indices = np.tril_indices(self._N, k=0)
@@ -217,7 +242,7 @@ class ExchangePotential:
             # np.asarray([1 / (l + 1) for l in range(self._N)])[:, np.newaxis] *
             np.reciprocal(np.arange(1.0, self._N + 1))[:, np.newaxis]
             * np.exp(
-                -self._betaP
+                -self.betaP
                 * (
                     # np.asarray([self._V(u - 1) for u in range(self._N)])[np.newaxis, :]
                     self._V[np.newaxis, :-1]
@@ -233,12 +258,12 @@ class ExchangePotential:
 
         # direct link probabilities:
         # for l in range(self._N - 1):
-        #     connection_probs[l][l+1] = 1 - (np.exp(- self._betaP * (self._V[l + 1] + self._V_backward[l + 1] -
+        #     connection_probs[l][l+1] = 1 - (np.exp(- self.betaP * (self._V[l + 1] + self._V_backward[l + 1] -
         #                                         self.V_all())))
         superdiagonal_indices = kth_diag_indices(connection_probs, k=1)
         connection_probs[superdiagonal_indices] = 1 - (
             np.exp(
-                -self._betaP * (self._V[1:-1] + self._V_backward[1:-1] - self.V_all())
+                -self.betaP * (self._V[1:-1] + self._V_backward[1:-1] - self.V_all())
             )
         )
 
@@ -297,7 +322,7 @@ class ExchangePotential:
         Evaluate the probability of the configuration where all the particles are separate.
         """
         return np.exp(
-            -self._betaP * (np.trace(self._E_from_to) - self.V_all())
+            -self.betaP * (np.trace(self._E_from_to) - self.V_all())
             - math.log(np.math.factorial(self._N))  # (1.0 / np.math.factorial(self._N))
         )
 
@@ -307,7 +332,7 @@ class ExchangePotential:
         divided by 1/N. Notice that there are (N-1)! permutations of this topology
         (all represented by the cycle 0,1,...,N-1,0); this cancels the division by 1/N.
         """
-        return np.exp(-self._betaP * (self._E_from_to[0, -1] - self.V_all()))
+        return np.exp(-self.betaP * (self._E_from_to[0, -1] - self.V_all()))
 
     def get_kinetic_td(self):
         """Implementation of the Hirshberg-Rizzi-Parrinello primitive
@@ -327,14 +352,14 @@ class ExchangePotential:
             for k in range(m, 0, -1):
                 E_kn_val = self._E_from_to[m - k, m - 1]
                 sig += (est[m - k] - E_kn_val) * np.exp(
-                    -self._betaP * (E_kn_val + self._V[m - k] - e_tilde)
+                    -self.betaP * (E_kn_val + self._V[m - k] - e_tilde)
                 )
 
-            sig_denom_m = m * np.exp(-self._betaP * (self._V[m] - e_tilde))
+            sig_denom_m = m * np.exp(-self.betaP * (self._V[m] - e_tilde))
 
             est[m] = sig / sig_denom_m
 
-        factor = 1.5 * self._N / self._betaP
+        factor = 1.5 * self._N / self.betaP
 
         return factor + est[self._N] / self._P
 
@@ -343,7 +368,7 @@ class ExchangePotential:
         The average permutation sign as defined in Eq. (9) https://doi.org/10.1063/5.0008720,
         which can be used to reweight observables to obtain fermionic statistics.
         """
-        return self._get_fermionic_potential_exp() / np.exp(-self._betaP * self._V[-1])
+        return self._get_fermionic_potential_exp() / np.exp(-self.betaP * self._V[-1])
 
     def _get_fermionic_potential_exp(self):
         """
@@ -359,7 +384,7 @@ class ExchangePotential:
         for m in range(1, self._N + 1):
             perm_sign = np.array([xi ** (k - 1) for k in range(m, 0, -1)])
             W[m] = (1.0 / m) * np.sum(
-                perm_sign * W[:m] * np.exp(-self._betaP * self._E_from_to[:m, m - 1])
+                perm_sign * W[:m] * np.exp(-self.betaP * self._E_from_to[:m, m - 1])
             )
 
         return W[-1]

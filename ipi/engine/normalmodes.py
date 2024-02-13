@@ -332,6 +332,11 @@ class NormalModes:
             func=self.get_kstress,
             dependencies=[self._pnm, self.beads._sm3, self._nm_factor],
         )
+        
+        if len(self.bosons) > 0:
+            self.exchange_potential = ExchangePotential(self.nbeads, len(self.bosons))
+        else:
+            self.exchange_potential = None
 
         self._exchange = depend_value(
             name="exchange",
