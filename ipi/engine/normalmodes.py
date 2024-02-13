@@ -334,11 +334,18 @@ class NormalModes:
             dependencies=[self._pnm, self.beads._sm3, self._nm_factor],
         )
 
+        self._qbosons = depend_array(
+            name="qbosons",
+            value=np.zeros((self.beads.nbeads, len(self.bosons), 3)),
+            func=self.get_qbosons,
+            dependencies=[self._bosons, self.beads._q],
+        )
+
         self._exchange = depend_value(
             name="exchange",
             value=None,
             func=self.get_exchange,
-            dependencies=[self._bosons, self.beads._m3, self._omegan2],
+            dependencies=[self._bosons, self.beads._m3, self._omegan2, self._qbosons],
         )
 
         self._vspring_and_fspring = depend_value(
@@ -400,6 +407,11 @@ class NormalModes:
 
         return bosons_array
 
+    def get_qbosons(self):
+        return dstrip(self.beads.q).reshape((self.nbeads, self.natoms, 3))[
+            :, self.bosons, :
+        ]
+
     def get_exchange(self):
         """Sets up an ExchangePotential object to compute bosonic springs"""
 
@@ -417,7 +429,7 @@ class NormalModes:
         exchange_potential = ExchangePotential(
             len(self.bosons), self.nbeads, boson_mass, dstrip(self.omegan2), betaP
         )
-        exchange_potential.set_coordinates(self._bosons_coordinates())
+        exchange_potential.set_coordinates(self.beads.q, self.beads, self.bosons)
         return exchange_potential
 
     def get_omegan(self):
@@ -694,9 +706,10 @@ class NormalModes:
     def get_vspring_and_fspring(self):
         """Returns the total spring energy and spring force."""
 
-        # classical simulation - do nothing!
         vspring, fspring = 0.0, np.zeros_like(self.qnm)
+
         if self.nbeads == 1:
+            # classical simulation - do nothing!
             return vspring, fspring
 
         if len(self.bosons) < self.natoms:
@@ -747,8 +760,7 @@ class NormalModes:
             fspring += self.transform.nm2b(fspringnm)
 
         if len(self.bosons) > 0:
-            # positions of only the boson atoms
-            self.exchange.set_coordinates(self._bosons_coordinates())
+            self.exchange.set_coordinates(self.beads.q, self.beads, self.bosons)
             vspring_b, fspring_b = self.exchange.get_vspring_and_fspring()
 
             vspring += vspring_b
@@ -758,11 +770,6 @@ class NormalModes:
             ] = fspring_b
 
         return vspring, fspring
-
-    def _bosons_coordinates(self):
-        return dstrip(self.beads.q).reshape((self.nbeads, self.natoms, 3))[
-            :, self.bosons, :
-        ]
 
     def free_babstep(self):
         """
@@ -942,6 +949,7 @@ dproperties(
         "kins",
         "kin",
         "kstress",
+        "qbosons",
         "exchange",
         "vspring",
         "vspring_and_fspring_bosons",

@@ -6,6 +6,7 @@ Used in /engine/normalmodes.py
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
+from ipi.utils.depend import *
 import math
 import numpy as np
 import sys
@@ -40,14 +41,44 @@ class ExchangePotential:
         self._V = None
         self._V_backward = None
 
-    def set_coordinates(self, q):
+    def get_qbosons(self):
+        return dstrip(self.beads.q).reshape((self.beads.nbeads, self.beads.natoms, 3))[
+               :, self.bosons, :
+               ]
+
+    def get_bead_diff_intra(self):
+        return np.diff(self.qbosons, axis=0)
+
+    def get_bead_diff_inter_first_last_bead(self):
+        return self.qbosons[0, :, np.newaxis, :] - self.qbosons[self._P - 1, np.newaxis, :, :]
+
+    def set_coordinates(self, q, beads, bosons):
+        # TODO: move
+        self.beads = beads
+        self.bosons = bosons
         self._q = q
 
+        self._qbosons = depend_array(
+            name="qbosons",
+            value=np.empty((self._P, self._N, 3), float),
+            func=self.get_qbosons,
+            dependencies=[self.beads._q]
+        )
+
         # self._bead_diff_intra[j] = [r^{j+1}_0 - r^{j}_0, ..., r^{j+1}_{N-1} - r^{j}_{N-1}]
-        self._bead_diff_intra = np.diff(self._q, axis=0)
+        self._bead_diff_intra = depend_array(
+            name="bead_diff_intra",
+            value=np.empty((self._P - 1, self._N, 3), float),
+            func=self.get_bead_diff_intra,
+            dependencies=[self._qbosons]
+        )
+
         # self._bead_dist_inter_first_last_bead[l][m] = r^0_{l} - r^{P-1}_{m}
-        self._bead_diff_inter_first_last_bead = (
-            self._q[0, :, np.newaxis, :] - self._q[self._P - 1, np.newaxis, :, :]
+        self._bead_diff_inter_first_last_bead = depend_array(
+            name="bead_diff_inter_first_last_bead",
+            value=np.empty((self._N, self._N, 3), float),
+            func=self.get_bead_diff_inter_first_last_bead,
+            dependencies=[self._qbosons]
         )
 
         # cycle energies:
@@ -96,9 +127,9 @@ class ExchangePotential:
         # using column-major (Fortran order) because uses of the array are mostly within the same column
         Emks = np.zeros((self._N, self._N), dtype=float, order="F")
 
-        intra_spring_energies = np.sum(self._bead_diff_intra**2, axis=(0, -1))
+        intra_spring_energies = np.sum(self.bead_diff_intra**2, axis=(0, -1))
         spring_energy_first_last_bead_array = np.sum(
-            self._bead_diff_inter_first_last_bead**2, axis=-1
+            self.bead_diff_inter_first_last_bead**2, axis=-1
         )
 
         # for m in range(self._N):
@@ -191,6 +222,9 @@ class ExchangePotential:
         """
         F = np.zeros((self._P, self._N, 3), float)
 
+        bead_diff_intra = dstrip(self.bead_diff_intra)
+        bead_diff_inter_first_last_bead = dstrip(self.bead_diff_inter_first_last_bead)
+
         # force on intermediate beads
         #
         # for j in range(1, self._P - 1):
@@ -198,8 +232,8 @@ class ExchangePotential:
         #         F[j, l, :] = self._spring_force_prefix() * (-self._bead_diff_intra[j][l] +
         #                                                     self._bead_diff_intra[j - 1][l])
         F[1:-1, :, :] = self._spring_force_prefix() * (
-            -self._bead_diff_intra[1:, :]
-            + np.roll(self._bead_diff_intra, axis=0, shift=1)[1:, :]
+            -bead_diff_intra[1:, :]
+            + np.roll(bead_diff_intra, axis=0, shift=1)[1:, :]
         )
 
         # force on endpoint beads
@@ -248,7 +282,7 @@ class ExchangePotential:
         #     force_from_neighbor = np.empty((self._N, 3))
         #     for next_l in range(max(l + 1, self._N)):
         #         force_from_neighbor[next_l, :] = self._spring_force_prefix() * \
-        #                         (-self._bead_diff_inter_first_last_bead[next_l, l] + self._bead_diff_intra[-1, l])
+        #                         (-bead_diff_inter_first_last_bead[next_l, l] + bead_diff_intra[-1, l])
         #     F[-1, l, :] = sum(connection_probs[l][next_l] * force_from_neighbor[next_l]
         #                       for next_l in range(self._N))
         #
@@ -256,11 +290,11 @@ class ExchangePotential:
         # for l in range(self._N):
         #     force_from_neighbors = np.empty((self._N, 3))
         #     force_from_neighbors[:, :] = self._spring_force_prefix() * \
-        #                         (-self._bead_diff_inter_first_last_bead[:, l] + self._bead_diff_intra[-1, l])
+        #                         (-bead_diff_inter_first_last_bead[:, l] + bead_diff_intra[-1, l])
         #     F[-1, l, :] = np.dot(connection_probs[l][:], force_from_neighbors)
         force_from_neighbors = self._spring_force_prefix() * (
-            -np.transpose(self._bead_diff_inter_first_last_bead, axes=(1, 0, 2))
-            + self._bead_diff_intra[-1, :, np.newaxis]
+            -np.transpose(bead_diff_inter_first_last_bead, axes=(1, 0, 2))
+            + bead_diff_intra[-1, :, np.newaxis]
         )
         # F[-1, l, k] = sum_{j}{force_from_neighbors[l][j][k] * connection_probs[l,j]}
         F[-1, :, :] = np.einsum("ljk,lj->lk", force_from_neighbors, connection_probs)
@@ -279,13 +313,13 @@ class ExchangePotential:
         #
         # for l in range(self._N):
         #     force_from_neighbors = np.empty((self._N, 3))
-        #     force_from_neighbors[:, :] = self._spring_force_prefix() * \
-        #                              (-self._bead_diff_intra[0, l] + self._bead_diff_inter_first_last_bead[l, :])
+        #     force_from_neighbors[:, :] = self.spring_force_prefix() * \
+        #                              (-bead_diff_intra[0, l] + bead_diff_inter_first_last_bead[l, :])
         #     F[0, l, :] = np.dot(connection_probs[:, l], force_from_neighbors)
         #
         force_from_neighbors = self._spring_force_prefix() * (
-            self._bead_diff_inter_first_last_bead
-            - self._bead_diff_intra[0, :, np.newaxis]
+            bead_diff_inter_first_last_bead
+            - bead_diff_intra[0, :, np.newaxis]
         )
         # F[0, l, k] = sum_{j}{force_from_neighbors[l][j][k] * connection_probs[j,l]}
         F[0, :, :] = np.einsum("ljk,jl->lk", force_from_neighbors, connection_probs)
@@ -363,3 +397,12 @@ class ExchangePotential:
             )
 
         return W[-1]
+
+dproperties(
+    ExchangePotential,
+    [
+        "qbosons",
+        "bead_diff_intra",
+        "bead_diff_inter_first_last_bead",
+    ],
+)
