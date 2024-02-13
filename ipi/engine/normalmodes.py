@@ -118,10 +118,10 @@ class NormalModes:
         self._nm_freqs = depend_array(name="nm_freqs", value=np.asarray(freqs, float))
 
     def copy(self, freqs=None):
-        """Creates a new beads object from the original.
+        """Creates a new NormalModes object from the original.
 
         Returns:
-           A Beads object with the same q, p, m and names arrays as the original.
+           A NormalModes object with the same arrays as the original.
         """
 
         if freqs is None:

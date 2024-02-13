@@ -39,7 +39,7 @@ Input errors
 -  *Invalid literal for int() with base 10: \_\_* or *Invalid literal
    for float(): \_\_* or *\_\_ does not represent a bool value*: The
    data input by the user does not have the correct data type. See
-   section `3.1.1 <#ifilestructure>`__ for what constitutes a valid
+   section :ref:`ifilestructure` for what constitutes a valid
    integer/float/boolean value.
 
 -  *Error in list syntax: could not locate delimiters*: The array input

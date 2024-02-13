@@ -1,6 +1,6 @@
 """Help script which automatically generates the manual files.
 
-Creates a latex file, corresponding to a section of the manual, for each of
+Creates an rst file, corresponding to a section of the manual, for each of
 the classes specified in help.py. It uses help.py to generate information
 about the tags for each class, and will include cross-references so that the
 title of each tag corresponding to a different class will also be a hyperlink
@@ -30,7 +30,7 @@ if not os.path.exists("input_ref_sections"):
 ref_includes = open("input_ref_idx.inc", "w")
 
 # help(rst=True, prefix="manual")
-for opt in objects:
+for opt in sorted(objects):
     help(
         rst=True,
         levels=1,

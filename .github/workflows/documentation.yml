@@ -19,13 +19,13 @@ jobs:
       - name: install dependencies
         run: |
           pip install --upgrade pip
-          pip install -r doc/requirements.txt
+          pip install -r docs/requirements.txt
 
           sudo apt-get update
           sudo apt-get install -y texlive-latex-extra texlive-lang-greek latexmk
       - name: build documentation
         run: |
-          cd doc
+          cd docs
           make html
           make latexpdf
 
@@ -35,5 +35,5 @@ jobs:
         uses: peaceiris/actions-gh-pages@v3
         with:
           github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./doc/_build/html/
+          publish_dir: ./docs/_build/html/
           force_orphan: true

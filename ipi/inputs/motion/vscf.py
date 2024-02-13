@@ -239,7 +239,7 @@ class InputNormalMode(InputDictionary):
 
     dynamic = {}
 
-    default_help = "Fill in."
+    default_help = "Vibrational self-consistent field class. Approximates the vibrational eigenstates and eigenvalues of a system by performing a normal mode expansion of the potential energy surface."
     default_label = "PHONONS"
 
     def store(self, nm):
