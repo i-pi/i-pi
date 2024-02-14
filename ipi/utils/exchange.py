@@ -138,6 +138,24 @@ class ExchangePotential:
             dependencies=[self._betaP, self._prefix_V, self._cycle_energies],
         )
 
+        self._fermionic_sign = depend_value(
+            name="fermionic_sign",
+            func=self.get_fermionic_sign,
+            dependencies=[self._betaP, self._prefix_V, self._cycle_energies],
+        )
+
+        self._longest_probability = depend_value(
+            name="longest_probability",
+            func=self.get_longest_probability,
+            dependencies=[self._betaP, self._prefix_V, self._cycle_energies],
+        )
+
+        self._distinct_probability = depend_value(
+            name="distinct_probability",
+            func=self.get_distinct_probability,
+            dependencies=[self._betaP, self._prefix_V, self._cycle_energies],
+        )
+
     def get_boson_mass(self):
 
         masses = dstrip(self.beads.m)[self.bosons]
@@ -364,8 +382,7 @@ class ExchangePotential:
         Evaluate the probability of the configuration where all the particles are separate.
         """
         return np.exp(
-            -self.betaP
-            * (np.trace(self.cycle_energies) - self.prefix_V[self.nbosons]())
+            -self.betaP * (np.trace(self.cycle_energies) - self.prefix_V[self.nbosons])
             - math.log(
                 np.math.factorial(self.nbosons)
             )  # (1.0 / np.math.factorial(self.nbosons))
@@ -378,7 +395,7 @@ class ExchangePotential:
         (all represented by the cycle 0,1,...,N-1,0); this cancels the division by 1/N.
         """
         return np.exp(
-            -self.betaP * (self.cycle_energies[0, -1] - self.prefix_V[self.nbosons]())
+            -self.betaP * (self.cycle_energies[0, -1] - self.prefix_V[self.nbosons])
         )
 
     def get_kinetic_td(self):
@@ -456,5 +473,8 @@ dproperties(
         "suffix_V",
         "vspring_and_fspring",
         "kinetic_td",
+        "distinct_probability",
+        "longest_probability",
+        "fermionic_sign",
     ],
 )
