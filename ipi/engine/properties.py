@@ -1334,7 +1334,7 @@ class Properties:
             atom, iatom, latom, skip_atom_indices=set(self.nm.bosons)
         )
         if bosons_included:
-            res += self.nm.exchange_potential.get_kinetic_td()
+            res += self.nm.exchange_potential.kinetic_td
             ncount += len(bosons_included)
 
         if ncount == 0:

@@ -729,10 +729,6 @@ class NormalModes:
             fspring += self.transform.nm2b(fspringnm)
 
         if len(self.bosons) > 0:
-            # positions of only the boson atoms
-            qbosons = dstrip(self.beads.q).reshape((self.nbeads, self.natoms, 3))[
-                :, self.bosons, :
-            ]
             vspring_b, fspring_b = self.exchange_potential.vspring_and_fspring
 
             vspring += vspring_b

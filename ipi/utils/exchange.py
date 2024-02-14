@@ -116,6 +116,7 @@ class ExchangePotential:
             dependencies=[self._cycle_energies, self._betaP],
         )
 
+        # this is the main quantity used outside this
         self._vspring_and_fspring = depend_value(
             name="vspring_and_fspring",
             func=self.get_vspring_and_fspring,
@@ -128,6 +129,13 @@ class ExchangePotential:
                 self._cycle_energies,
                 self._bead_diff_inter_first_last_bead,
             ],
+        )
+
+        # properties
+        self._kinetic_td = depend_value(
+            name="kinetic_td",
+            func=self.get_kinetic_td,
+            dependencies=[self._betaP, self._prefix_V, self._cycle_energies],
         )
 
     def get_boson_mass(self):
@@ -447,5 +455,6 @@ dproperties(
         "prefix_V",
         "suffix_V",
         "vspring_and_fspring",
+        "kinetic_td",
     ],
 )
