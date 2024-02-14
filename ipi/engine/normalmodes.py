@@ -332,13 +332,6 @@ class NormalModes:
             func=self.get_kstress,
             dependencies=[self._pnm, self.beads._sm3, self._nm_factor],
         )
-                
-        self._exchange = depend_value(
-            name="exchange",
-            value=None,
-            func=self.get_exchange,
-            dependencies=[self._bosons, self.beads._m3, self._omegan2],
-        )
 
         self._vspring_and_fspring = depend_value(
             name="v_and_fs",
@@ -349,16 +342,18 @@ class NormalModes:
                 self._omegak,
                 self._o_omegak,
                 self.beads._m3,
-                self._exchange,
                 self.beads._q,
             ],
         )
 
         if len(self.bosons) > 0:
             self.exchange_potential = ExchangePotential(self.nbeads, len(self.bosons))
-            self.exchange_potential.bind(self.beads, self.ensemble)            
+            self.exchange_potential.bind(self.beads, self.ensemble)
             dpipe(self._omegan2, self.exchange_potential._omegan2)
             dpipe(self._bosons, self.exchange_potential._bosons)
+            self._vspring_and_fspring.add_dependency(
+                self.exchange_potential._vspring_and_fspring
+            )
         else:
             self.exchange_potential = None
 
@@ -406,24 +401,6 @@ class NormalModes:
             raise ValueError("Invalid index for boson, got %s" % str(bosons_array))
 
         return bosons_array
-
-    def get_exchange(self):
-        """Sets up an ExchangePotential object to compute bosonic springs"""
-
-        if len(self.bosons) == 0:
-            return None
-
-        masses = dstrip(self.beads.m)[self.bosons]
-        if len(set(masses)) > 1:
-            raise ValueError(
-                "Bosons must have the same mass, found %s for bosons %s"
-                % (str(masses), str(self.bosons))
-            )
-        boson_mass = masses[0]
-        betaP = 1.0 / (self.nbeads * units.Constants.kb * self.ensemble.temp)
-        return ExchangePotential(
-            len(self.bosons), self.nbeads, boson_mass, dstrip(self.omegan2), betaP
-        )
 
     def get_omegan(self):
         """Returns the effective vibrational frequency for the interaction
@@ -756,8 +733,7 @@ class NormalModes:
             qbosons = dstrip(self.beads.q).reshape((self.nbeads, self.natoms, 3))[
                 :, self.bosons, :
             ]
-            self.exchange.set_coordinates(qbosons)
-            vspring_b, fspring_b = self.exchange.get_vspring_and_fspring()
+            vspring_b, fspring_b = self.exchange_potential.vspring_and_fspring
 
             vspring += vspring_b
             # overwrites the spring forces for the bosonic particles
