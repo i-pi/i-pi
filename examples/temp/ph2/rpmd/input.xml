@@ -1,0 +1,30 @@
+<simulation verbosity='high'>
+   <output prefix='run_YYY/testXXX'>
+      <trajectory stride='1' filename='vel'> v_centroid </trajectory>
+      <properties stride='1'> [ step, time{picosecond}, conserved{kelvin}, temperature{kelvin}, kinetic_cv{kelvin}, potential{kelvin}, pressure_cv{megapascal}] </properties>
+   </output>
+  <total_steps>8000</total_steps>
+  <prng>
+    <seed>31415</seed>
+  </prng>
+  <ffsocket name='sgdriver' mode='unix'>
+    <address>run-YYY-XXX</address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='24'>
+        <file mode="chk"> run_YYY/RESTART </file>
+        <velocities mode='thermal' units='kelvin'> 25 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='sgdriver'> </force>
+    </forces>
+    <motion mode='dynamics'>
+      <dynamics mode='nve'>
+        <timestep units='femtosecond'> 1 </timestep>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units='kelvin'>25</temperature>
+    </ensemble>
+  </system>
+</simulation>
