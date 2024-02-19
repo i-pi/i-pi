@@ -176,9 +176,9 @@ class ExchangePotential:
         # using column-major (Fortran order) because uses of the array are mostly within the same column
         Emks = np.zeros((self.nbosons, self.nbosons), dtype=float, order="F")
 
-        intra_spring_energies = np.sum(dstrip(self.bead_diff_intra)**2, axis=(0, -1))
+        intra_spring_energies = np.sum(dstrip(self.bead_diff_intra) ** 2, axis=(0, -1))
         spring_energy_first_last_bead_array = np.sum(
-            dstrip(self.bead_diff_inter_first_last_bead)**2, axis=-1
+            dstrip(self.bead_diff_inter_first_last_bead) ** 2, axis=-1
         )
 
         spring_potential_prefix = 0.5 * self.boson_m * self.omegan2
@@ -325,12 +325,7 @@ class ExchangePotential:
         superdiagonal_indices = kth_diag_indices(connection_probs, k=1)
         connection_probs[superdiagonal_indices] = 1 - (
             np.exp(
-                -self.betaP
-                * (
-                    prefix_V[1:-1]
-                    + suffix_V[1:-1]
-                    - prefix_V[self.nbosons]
-                )
+                -self.betaP * (prefix_V[1:-1] + suffix_V[1:-1] - prefix_V[self.nbosons])
             )
         )
 
@@ -390,7 +385,11 @@ class ExchangePotential:
         Evaluate the probability of the configuration where all the particles are separate.
         """
         return np.exp(
-            -self.betaP * (np.trace(dstrip(self.cycle_energies)) - dstrip(self.prefix_V)[self.nbosons])
+            -self.betaP
+            * (
+                np.trace(dstrip(self.cycle_energies))
+                - dstrip(self.prefix_V)[self.nbosons]
+            )
             - math.log(
                 np.math.factorial(self.nbosons)
             )  # (1.0 / np.math.factorial(self.nbosons))
@@ -403,7 +402,8 @@ class ExchangePotential:
         (all represented by the cycle 0,1,...,N-1,0); this cancels the division by 1/N.
         """
         return np.exp(
-            -self.betaP * (dstrip(self.cycle_energies)[0, -1] - dstrip(self.prefix_V)[self.nbosons])
+            -self.betaP
+            * (dstrip(self.cycle_energies)[0, -1] - dstrip(self.prefix_V)[self.nbosons])
         )
 
     def get_kinetic_td(self):
@@ -422,9 +422,7 @@ class ExchangePotential:
             # Numerical stability - Xiong-Xiong method (arXiv.2206.08341)
             e_tilde = sys.float_info.max
             for k in range(m, 0, -1):
-                e_tilde = min(
-                    e_tilde, cycle_energies[m - k, m - 1] + prefix_V[m - k]
-                )
+                e_tilde = min(e_tilde, cycle_energies[m - k, m - 1] + prefix_V[m - k])
 
             for k in range(m, 0, -1):
                 E_kn_val = cycle_energies[m - k, m - 1]
@@ -463,7 +461,9 @@ class ExchangePotential:
         for m in range(1, self.nbosons + 1):
             perm_sign = np.array([xi ** (k - 1) for k in range(m, 0, -1)])
             W[m] = (1.0 / m) * np.sum(
-                perm_sign * W[:m] * np.exp(-self.betaP * dstrip(self.cycle_energies)[:m, m - 1])
+                perm_sign
+                * W[:m]
+                * np.exp(-self.betaP * dstrip(self.cycle_energies)[:m, m - 1])
             )
 
         return W[-1]
