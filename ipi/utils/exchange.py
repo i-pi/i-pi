@@ -67,7 +67,7 @@ class ExchangePotential:
             dependencies=[self.beads._q, self.bosons],
         )
 
-        # self._bead_diff_intra[j] = [r^{j+1}_0 - r^{j}_0, ..., r^{j+1}_{N-1} - r^{j}_{N-1}]
+        # self.bead_diff_intra[j] = [r^{j+1}_0 - r^{j}_0, ..., r^{j+1}_{N-1} - r^{j}_{N-1}]
         self._bead_diff_intra = depend_array(
             name="bead_diff_intra",
             value=np.zeros((self.nbeads - 1, self.nbosons, 3)),
@@ -75,7 +75,7 @@ class ExchangePotential:
             dependencies=[self._qbosons],
         )
 
-        # self._bead_dist_inter_first_last_bead[l][m] = r^0_{l} - r^{P-1}_{m}
+        # self.bead_dist_inter_first_last_bead[l][m] = r^0_{l} - r^{P-1}_{m}
         self._bead_diff_inter_first_last_bead = depend_array(
             name="bead_diff_inter_first_last_bead",
             value=np.zeros((self.nbosons, self.nbosons, 3)),
@@ -157,7 +157,9 @@ class ExchangePotential:
         )
 
     def get_boson_mass(self):
-
+        """
+        Ensures that all the bosons have the same mass, and returns it.
+        """
         masses = dstrip(self.beads.m)[self.bosons]
         if len(set(masses)) > 1:
             raise ValueError(
