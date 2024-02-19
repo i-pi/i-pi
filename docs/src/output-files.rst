@@ -230,8 +230,8 @@ information from the header (such as units, and the description of each
 property) as a separate dictionary
 
 .. code-block::
-   from ipi import read_output
 
+   from ipi import read_output
    data, info = read_output("simulation.out")
 
 Trajectory files can be read with `ipi.read_trajectory`. This reads the 

@@ -16,9 +16,8 @@ as the system has installed:
 
 -  Python version 3.6 or greater (starting from version 2.0, i-PI is not Python2
    compatible)
-
 -  The Python numerical library NumPy
-src/getting-started.rst-
+
 See :ref:`runningsimulations` for more details on how to launch i-PI.
 
 Additionally, most client codes will have their own requirements. Many
