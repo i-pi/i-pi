@@ -123,6 +123,7 @@ def read_trajectory(
     file_handle = open(filename, "r")
     bohr2angstrom = unit_to_user("length", "angstrom", 1.0)
     comment_regex = re.compile(r"(\w+)\{([^}]+)\}")
+    step_regex = re.compile(r"Step:\s+(\d+)")
 
     frames = []
     while True:
@@ -135,6 +136,13 @@ def read_trajectory(
                 cell_units=cell_units,
             )
 
+            frame = ase.Atoms(
+                ret["atoms"].names,
+                positions=ret["atoms"].q.reshape((-1, 3)) * bohr2angstrom,
+                cell=ret["cell"].h.T * bohr2angstrom,
+                pbc=True,
+            )
+
             # parse comment to get the property
             matches = comment_regex.findall(ret["comment"])
 
@@ -144,21 +152,20 @@ def read_trajectory(
             else:  # defaults to reading positions
                 what = "positions"
 
-            frames.append(
-                ase.Atoms(
-                    ret["atoms"].names,
-                    positions=ret["atoms"].q.reshape((-1, 3)) * bohr2angstrom,
-                    cell=ret["cell"].h.T * bohr2angstrom,
-                    pbc=True,
-                )
-            )
+            # ... and the step
+            matches = step_regex.findall(ret["comment"])
+            if len(matches) >= 1:
+                frame.info["step"] = int(matches[-1][0])
+
             # if we have forces, set positions to zero (that data is missing!) and set forces instead
             if what == "forces":
                 # set forces and convert to eV/angstrom
-                frames[-1].positions *= 0
-                frames[-1].arrays["forces"] = ret["atoms"].q.reshape(
-                    (-1, 3)
-                ) * unit_to_user("force", "ev/ang", 1.0)
+                frame.positions *= 0
+                frame.arrays["forces"] = ret["atoms"].q.reshape((-1, 3)) * unit_to_user(
+                    "force", "ev/ang", 1.0
+                )
+
+            frames.append(frame)
 
         except EOFError:
             break
