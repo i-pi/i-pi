@@ -80,13 +80,13 @@ class ForceField:
     """
 
     def __init__(
-        self,
-        latency=1.0,
-        name="",
-        pars=None,
-        dopbc=True,
-        active=np.array([-1]),
-        threaded=False,
+            self,
+            latency=1.0,
+            name="",
+            pars=None,
+            dopbc=True,
+            active=np.array([-1]),
+            threaded=False,
     ):
         """Initialises ForceField.
 
@@ -314,14 +314,14 @@ class FFSocket(ForceField):
     """
 
     def __init__(
-        self,
-        latency=1.0,
-        name="",
-        pars=None,
-        dopbc=True,
-        active=np.array([-1]),
-        threaded=True,
-        interface=None,
+            self,
+            latency=1.0,
+            name="",
+            pars=None,
+            dopbc=True,
+            active=np.array([-1]),
+            threaded=True,
+            interface=None,
     ):
         """Initialises FFSocket.
 
@@ -427,10 +427,10 @@ class FFLennardJones(ForceField):
         f = np.zeros(q.shape)
         for i in range(1, nat):
             dij = q[i] - q[:i]
-            rij2 = (dij**2).sum(axis=1)
+            rij2 = (dij ** 2).sum(axis=1)
 
             x6 = (self.sigma2 / rij2) ** 3
-            x12 = x6**2
+            x12 = x6 ** 2
 
             v += (x12 - x6).sum()
             dij *= (self.sixepsfour * (2.0 * x12 - x6) / rij2)[:, np.newaxis]
@@ -460,16 +460,16 @@ class FFdmd(ForceField):
     """
 
     def __init__(
-        self,
-        latency=1.0e-3,
-        name="",
-        coupling=None,
-        freq=0.0,
-        dtdmd=0.0,
-        dmdstep=0,
-        pars=None,
-        dopbc=False,
-        threaded=False,
+            self,
+            latency=1.0e-3,
+            name="",
+            coupling=None,
+            freq=0.0,
+            dtdmd=0.0,
+            dmdstep=0,
+            pars=None,
+            dopbc=False,
+            threaded=False,
     ):
         """Initialises FFdmd.
 
@@ -531,7 +531,7 @@ class FFdmd(ForceField):
             #            rij = np.sqrt((dij ** 2).sum(axis=1))
             # KF's implementation:
             dij, rij = vector_separation(cell_h, cell_ih, q[i], q[:i])
-            cij = self.coupling[i * (i - 1) // 2 : i * (i + 1) // 2]
+            cij = self.coupling[i * (i - 1) // 2: i * (i + 1) // 2]
             prefac = np.dot(
                 cij, rij
             )  # for each i it has the distances to all indexes previous
@@ -573,15 +573,15 @@ class FFDebye(ForceField):
     """
 
     def __init__(
-        self,
-        latency=1.0,
-        name="",
-        H=None,
-        xref=None,
-        vref=0.0,
-        pars=None,
-        dopbc=False,
-        threaded=False,
+            self,
+            latency=1.0,
+            name="",
+            H=None,
+            xref=None,
+            vref=0.0,
+            pars=None,
+            dopbc=False,
+            threaded=False,
     ):
         """Initialises FFDebye.
 
@@ -660,15 +660,15 @@ class FFPlumed(ForceField):
     """
 
     def __init__(
-        self,
-        latency=1.0e-3,
-        name="",
-        pars=None,
-        dopbc=False,
-        threaded=False,
-        init_file="",
-        plumeddat="",
-        plumedstep=0,
+            self,
+            latency=1.0e-3,
+            name="",
+            pars=None,
+            dopbc=False,
+            threaded=False,
+            init_file="",
+            plumeddat="",
+            plumedstep=0,
     ):
         """Initialises FFPlumed.
 
@@ -818,21 +818,21 @@ class FFYaff(ForceField):
     """Use Yaff as a library to construct a force field"""
 
     def __init__(
-        self,
-        latency=1.0,
-        name="",
-        threaded=False,
-        yaffpara=None,
-        yaffsys=None,
-        yafflog="yaff.log",
-        rcut=18.89726133921252,
-        alpha_scale=3.5,
-        gcut_scale=1.1,
-        skin=0,
-        smooth_ei=False,
-        reci_ei="ewald",
-        pars=None,
-        dopbc=False,
+            self,
+            latency=1.0,
+            name="",
+            threaded=False,
+            yaffpara=None,
+            yaffsys=None,
+            yafflog="yaff.log",
+            rcut=18.89726133921252,
+            alpha_scale=3.5,
+            gcut_scale=1.1,
+            skin=0,
+            smooth_ei=False,
+            reci_ei="ewald",
+            pars=None,
+            dopbc=False,
     ):
         """Initialises FFYaff and enables a basic Yaff force field.
 
@@ -936,13 +936,13 @@ class FFsGDML(ForceField):
     """
 
     def __init__(
-        self,
-        latency=1.0,
-        name="",
-        threaded=False,
-        sGDML_model=None,
-        pars=None,
-        dopbc=False,
+            self,
+            latency=1.0,
+            name="",
+            threaded=False,
+            sGDML_model=None,
+            pars=None,
+            dopbc=False,
     ):
         """Initialises FFsGDML
 
@@ -1069,20 +1069,21 @@ class FFCommittee(ForceField):
     committee of potentials, and implements the weighted baseline method."""
 
     def __init__(
-        self,
-        latency=1.0,
-        name="",
-        pars=None,
-        dopbc=True,
-        active=np.array([-1]),
-        threaded=True,
-        fflist=[],
-        ffweights=[],
-        alpha=1.0,
-        baseline_name="",
-        baseline_uncertainty=-1.0,
-        active_thresh=0.0,
-        active_out=None,
+            self,
+            latency=1.0,
+            name="",
+            pars=None,
+            dopbc=True,
+            active=np.array([-1]),
+            threaded=True,
+            fflist=[],
+            ffweights=[],
+            alpha=1.0,
+            baseline_name="",
+            baseline_uncertainty=-1.0,
+            active_thresh=0.0,
+            active_out=None,
+            comm_type="default",
     ):
         # force threaded mode as otherwise it cannot have threaded children
         super(FFCommittee, self).__init__(
@@ -1117,6 +1118,7 @@ class FFCommittee(ForceField):
         self.alpha = alpha
         self.active_thresh = active_thresh
         self.active_out = active_out
+        self.comm_type = comm_type
 
     def bind(self, output_maker):
         super(FFCommittee, self).bind(output_maker)
@@ -1158,33 +1160,76 @@ class FFCommittee(ForceField):
     def gather(self, r):
         """Collects results from all sub-requests, and assemble the committee of models."""
 
-        r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]
+        if (self.comm_type == "default"):
+            r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]
 
-        # list of pointers to the forcefield requests. shallow copy so we can remove stuff
-        com_handles = r["ff_handles"].copy()
-        if self.baseline_name != "":
-            # looks for the baseline potential, store its value and drops it from the list
-            names = [ff.name for ff in self.fflist]
+            # list of pointers to the forcefield requests. shallow copy so we can remove stuff
+            com_handles = r["ff_handles"].copy()
+            if self.baseline_name != "":
+                # looks for the baseline potential, store its value and drops it from the list
+                names = [ff.name for ff in self.fflist]
 
-            for i, ff_r in enumerate(com_handles):
-                if names[i] == self.baseline_name:
-                    baseline_pot = ff_r["result"][0]
-                    baseline_frc = ff_r["result"][1]
-                    baseline_vir = ff_r["result"][2]
-                    baseline_xtr = ff_r["result"][3]
-                    com_handles.pop(i)
-                    break
+                for i, ff_r in enumerate(com_handles):
+                    if names[i] == self.baseline_name:
+                        baseline_pot = ff_r["result"][0]
+                        baseline_frc = ff_r["result"][1]
+                        baseline_vir = ff_r["result"][2]
+                        baseline_xtr = ff_r["result"][3]
+                        com_handles.pop(i)
+                        break
 
-        # Gathers the forcefield energetics and extras
-        pots = [ff_r["result"][0] for ff_r in com_handles]
-        frcs = [ff_r["result"][1] for ff_r in com_handles]
-        virs = [ff_r["result"][2] for ff_r in com_handles]
-        xtrs = [ff_r["result"][3] for ff_r in com_handles]
+            # Gathers the forcefield energetics and extras
+            pots = [ff_r["result"][0] for ff_r in com_handles]
+            frcs = [ff_r["result"][1] for ff_r in com_handles]
+            virs = [ff_r["result"][2] for ff_r in com_handles]
+            xtrs = [ff_r["result"][3] for ff_r in com_handles]
+            print("quants normal ", pots, frcs, virs)
+
+        elif (self.comm_type == "single-extras"):
+            # Check that we indeed have a single ff
+            if (len(self.fflist) != 1 and self.baseline_name == ""):
+                raise ValueError(
+                    "This type of committee expects a single socket, or one socket and one baseline"
+                )
+
+            r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]
+
+            # list of pointers to the forcefield requests. shallow copy so we can remove stuff
+            com_handles = r["ff_handles"].copy()
+            if self.baseline_name != "":
+                # looks for the baseline potential, store its value and drops it from the list
+                names = [ff.name for ff in self.fflist]
+
+                for i, ff_r in enumerate(com_handles):
+                    if names[i] == self.baseline_name:
+                        baseline_pot = ff_r["result"][0]
+                        baseline_frc = ff_r["result"][1]
+                        baseline_vir = ff_r["result"][2]
+                        baseline_xtr = ff_r["result"][3]
+                        com_handles.pop(i)
+                        break
+
+            # Gathers the forcefield energetics from the extras field (!)
+            # debug
+            for ff_r in com_handles:
+                print("dict", ff_r["result"][3])
+            pots = np.squeeze(np.array([ff_r["result"][3]["committee_pot"] for ff_r in com_handles]))
+            frcs = np.squeeze(np.array([ff_r["result"][3]["committee_force"] for ff_r in com_handles]))
+            virs = np.squeeze(np.array([ff_r["result"][3]["committee_virial"] for ff_r in com_handles]))
+            xtrs = [ff_r["result"][3] for ff_r in com_handles] # MR - no extras here kinda. not sure yet about this
+            # debug
+            # print("quants0 ", pots, frcs, virs, pots.shape, frcs.shape, virs.shape, pots.dtype, frcs.dtype, virs.dtype)
+            # MR: from now on everything else should be the same, hopefully
+
+        else:
+            raise OptionError("Committee option is unknown. Check possible options.")
 
         # Computes the mean energetics
         mean_pot = np.mean(pots, axis=0)
         mean_frc = np.mean(frcs, axis=0)
         mean_vir = np.mean(virs, axis=0)
+        # debug
+        # print("averages ", mean_pot, mean_frc, mean_vir, mean_pot.shape, mean_frc.shape, mean_vir.shape)
 
         # Rescales the committee energetics so that their standard deviation corresponds to the error
         rescaled_pots = np.asarray(
@@ -1209,43 +1254,43 @@ class FFCommittee(ForceField):
             # and V_committee the committee error. Then
             # V = V_baseline + s_b^2/(s_c^2+s_b^2) V_committe
 
-            s_b2 = self.baseline_uncertainty**2
+            s_b2 = self.baseline_uncertainty ** 2
 
             nmodels = len(pots)
             uncertain_frc = (
-                self.alpha**2
-                * np.sum(
-                    [
-                        (pot - mean_pot) * (frc - mean_frc)
-                        for pot, frc in zip(pots, frcs)
-                    ],
-                    axis=0,
-                )
-                / (nmodels - 1)
+                    self.alpha ** 2
+                    * np.sum(
+                [
+                    (pot - mean_pot) * (frc - mean_frc)
+                    for pot, frc in zip(pots, frcs)
+                ],
+                axis=0,
+            )
+                    / (nmodels - 1)
             )
             uncertain_vir = (
-                self.alpha**2
-                * np.sum(
-                    [
-                        (pot - mean_pot) * (vir - mean_vir)
-                        for pot, vir in zip(pots, virs)
-                    ],
-                    axis=0,
-                )
-                / (nmodels - 1)
+                    self.alpha ** 2
+                    * np.sum(
+                [
+                    (pot - mean_pot) * (vir - mean_vir)
+                    for pot, vir in zip(pots, virs)
+                ],
+                axis=0,
+            )
+                    / (nmodels - 1)
             )
 
             # Computes the final average energetics
             final_pot = baseline_pot + mean_pot * s_b2 / (s_b2 + var_pot)
             final_frc = (
-                baseline_frc
-                + mean_frc * s_b2 / (s_b2 + var_pot)
-                - 2.0 * mean_pot * s_b2 / (s_b2 + var_pot) ** 2 * uncertain_frc
+                    baseline_frc
+                    + mean_frc * s_b2 / (s_b2 + var_pot)
+                    - 2.0 * mean_pot * s_b2 / (s_b2 + var_pot) ** 2 * uncertain_frc
             )
             final_vir = (
-                baseline_vir
-                + mean_vir * s_b2 / (s_b2 + var_pot)
-                - 2.0 * mean_pot * s_b2 / (s_b2 + var_pot) ** 2 * uncertain_vir
+                    baseline_vir
+                    + mean_vir * s_b2 / (s_b2 + var_pot)
+                    - 2.0 * mean_pot * s_b2 / (s_b2 + var_pot) ** 2 * uncertain_vir
             )
 
             # Sets the output of the committee model.
@@ -1368,10 +1413,10 @@ class PhotonDriver:
         # construct varepsilon array for all photons
         self.varepsilon_k = self.E0
         self.varepsilon_klambda = (
-            self.E0 * self.omega_klambda / np.min(self.omega_klambda)
+                self.E0 * self.omega_klambda / np.min(self.omega_klambda)
         )
         self.varepsilon_klambda3 = (
-            self.E0 * self.omega_klambda3 / np.min(self.omega_klambda3)
+                self.E0 * self.omega_klambda3 / np.min(self.omega_klambda3)
         )
 
         # cavity mode function acting on the dipole moment
@@ -1392,7 +1437,7 @@ class PhotonDriver:
         """
         if self.apply_photon:
             pos_at = pos[: -self.n_photon_3]
-            pos_ph = pos[-self.n_photon_3 :]
+            pos_ph = pos[-self.n_photon_3:]
             self.pos_ph = pos_ph
         else:
             pos_at = pos
@@ -1412,7 +1457,7 @@ class PhotonDriver:
             total energy of photonic system
         """
         # calculate the photonic potential energy
-        e_ph = np.sum(0.5 * self.omega_klambda3**2 * self.pos_ph**2)
+        e_ph = np.sum(0.5 * self.omega_klambda3 ** 2 * self.pos_ph ** 2)
 
         # calculate the dot products between mode functions and dipole array
         d_dot_f_x = np.dot(self.ftilde_kx, dx_array)
@@ -1421,10 +1466,10 @@ class PhotonDriver:
         # calculate the light-matter interaction
         if self.ph_rep == "loose":
             e_int_x = np.sum(
-                self.varepsilon_k * d_dot_f_x * self.pos_ph[: self.n_mode * 3 : 3]
+                self.varepsilon_k * d_dot_f_x * self.pos_ph[: self.n_mode * 3: 3]
             )
             e_int_y = np.sum(
-                self.varepsilon_k * d_dot_f_y * self.pos_ph[1 + self.n_mode * 3 :: 3]
+                self.varepsilon_k * d_dot_f_y * self.pos_ph[1 + self.n_mode * 3:: 3]
             )
         elif self.ph_rep == "dense":
             e_int_x = np.sum(self.varepsilon_k * d_dot_f_x * self.pos_ph[::3])
@@ -1432,8 +1477,8 @@ class PhotonDriver:
 
         # calculate the dipole self-energy term
         dse = np.sum(
-            (self.varepsilon_k**2 / 2.0 / self.omega_k**2)
-            * (d_dot_f_x**2 + d_dot_f_y**2)
+            (self.varepsilon_k ** 2 / 2.0 / self.omega_k ** 2)
+            * (d_dot_f_x ** 2 + d_dot_f_y ** 2)
         )
 
         e_tot = e_ph + e_int_x + e_int_y + dse
@@ -1452,7 +1497,7 @@ class PhotonDriver:
             force array of all photonic dimensions (3*nphoton) [1x, 1y, 1z, 2x..]
         """
         # calculat the bare photonic contribution of the force
-        f_ph = -self.omega_klambda3**2 * self.pos_ph
+        f_ph = -self.omega_klambda3 ** 2 * self.pos_ph
 
         # calculate the dot products between mode functions and dipole array
         d_dot_f_x = np.dot(self.ftilde_kx, dx_array)
@@ -1460,8 +1505,8 @@ class PhotonDriver:
 
         # calculate the force due to light-matter interactions
         if self.ph_rep == "loose":
-            f_ph[: self.n_mode * 3 : 3] -= self.varepsilon_k * d_dot_f_x
-            f_ph[self.n_mode * 3 + 1 :: 3] -= self.varepsilon_k * d_dot_f_y
+            f_ph[: self.n_mode * 3: 3] -= self.varepsilon_k * d_dot_f_x
+            f_ph[self.n_mode * 3 + 1:: 3] -= self.varepsilon_k * d_dot_f_y
         elif self.ph_rep == "dense":
             f_ph[::3] -= self.varepsilon_k * d_dot_f_x
             f_ph[1::3] -= self.varepsilon_k * d_dot_f_y
@@ -1486,13 +1531,13 @@ class PhotonDriver:
 
         # cavity force on x direction
         if self.ph_rep == "loose":
-            Ekx = self.varepsilon_k * self.pos_ph[: self.n_mode * 3 : 3]
-            Eky = self.varepsilon_k * self.pos_ph[self.n_mode * 3 + 1 :: 3]
+            Ekx = self.varepsilon_k * self.pos_ph[: self.n_mode * 3: 3]
+            Eky = self.varepsilon_k * self.pos_ph[self.n_mode * 3 + 1:: 3]
         elif self.ph_rep == "dense":
             Ekx = self.varepsilon_k * self.pos_ph[::3]
             Eky = self.varepsilon_k * self.pos_ph[1::3]
-        Ekx += self.varepsilon_k**2 / self.omega_k**2 * d_dot_f_x
-        Eky += self.varepsilon_k**2 / self.omega_k**2 * d_dot_f_y
+        Ekx += self.varepsilon_k ** 2 / self.omega_k ** 2 * d_dot_f_x
+        Eky += self.varepsilon_k ** 2 / self.omega_k ** 2 * d_dot_f_y
 
         # dimension of independent baths (xy grid points)
         coeff_x = np.dot(np.transpose(Ekx), self.ftilde_kx)
@@ -1512,19 +1557,19 @@ class FFCavPhSocket(FFSocket):
     """
 
     def __init__(
-        self,
-        latency=1.0,
-        name="",
-        pars=None,
-        dopbc=False,
-        active=np.array([-1]),
-        threaded=True,
-        interface=None,
-        charge_array=None,
-        apply_photon=True,
-        E0=1e-4,
-        omega_c=0.01,
-        ph_rep="loose",
+            self,
+            latency=1.0,
+            name="",
+            pars=None,
+            dopbc=False,
+            active=np.array([-1]),
+            threaded=True,
+            interface=None,
+            charge_array=None,
+            apply_photon=True,
+            E0=1e-4,
+            omega_c=0.01,
+            ph_rep="loose",
     ):
         """Initialises FFCavPhFPSocket.
 
@@ -1589,7 +1634,7 @@ class FFCavPhSocket(FFSocket):
 
         dx_array, dy_array, dz_array = [], [], []
         for idx in range(n_bath):
-            pos_bath = pos[ndim_local * idx : ndim_local * (idx + 1)]
+            pos_bath = pos[ndim_local * idx: ndim_local * (idx + 1)]
             # check the dimension of charge array
             if np.size(pos_bath[::3]) != np.size(charge_array_bath):
                 softexit.trigger(
@@ -1672,8 +1717,8 @@ class FFCavPhSocket(FFSocket):
         # 2. for atomic coordinates, we now evaluate their atomic forces
         for idx in range(self.n_independent_bath):
             pbcpos_local = pbcpos_atoms[
-                ndim_local * idx : ndim_local * (idx + 1)
-            ].copy()
+                           ndim_local * idx: ndim_local * (idx + 1)
+                           ].copy()
             iactive_local = self.iactive[0:ndim_local]
             # Let's try to do PBC for the small regions
             if self.dopbc:
@@ -1739,7 +1784,7 @@ class FFCavPhSocket(FFSocket):
         for idx, newreq in enumerate(newreq_lst):
             u, f, vir, extra = newreq["result"]
             result_tot[0] += u
-            result_tot[1][ndim_local * idx : ndim_local * (idx + 1)] = f
+            result_tot[1][ndim_local * idx: ndim_local * (idx + 1)] = f
             result_tot[2] += vir
             result_tot[3][idx] = extra
 
@@ -1752,8 +1797,8 @@ class FFCavPhSocket(FFSocket):
             )
             # check the size of photon modes + molecules to match the total number of particles
             if (
-                self.ph.n_photon + self.n_independent_bath * self.charge_array.size
-                != int(len(pbcpos) // 3)
+                    self.ph.n_photon + self.n_independent_bath * self.charge_array.size
+                    != int(len(pbcpos) // 3)
             ):
                 softexit.trigger(
                     "Total number of photons + molecules does not match total number of particles"
