@@ -186,8 +186,7 @@
                   vstyle = 99 ! returns non-zero but otherwise meaningless values
                ELSE
                   WRITE(*,*) " Unrecognized potential type ", trim(cmdbuffer)
-                  WRITE(*,*) " Use -m
-                  [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json] "
+                  WRITE(*,*) " Use -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json|qtip4pf-c-1-delta|qtip4pf-c-2-delta] "
                   STOP "ENDED"
                ENDIF
             ELSEIF (ccmd == 4) THEN
@@ -933,6 +932,7 @@
                cbuf = LEN_TRIM(longbuffer)
                CALL writebuffer(socket,cbuf)
                CALL writebuffer(socket,TRIM(longbuffer),cbuf)
+               IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ", &               
      &         initbuffer
             ELSEIF (vstyle==62) THEN ! returns committee data
                cbuf = LEN_TRIM(initbuffer)
