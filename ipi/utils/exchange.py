@@ -80,8 +80,8 @@ class ExchangePotential:
             name="bead_diff_inter_first_last_bead",
             value=np.zeros((self.nbosons, self.nbosons, 3)),
             func=lambda: (
-                self.qbosons[0, :, np.newaxis, :]
-                - self.qbosons[self.nbeads - 1, np.newaxis, :, :]
+                dstrip(self.qbosons)[0, :, np.newaxis, :]
+                - dstrip(self.qbosons)[self.nbeads - 1, np.newaxis, :, :]
             ),
             dependencies=[self._qbosons],
         )
