@@ -4,6 +4,7 @@ broken/ffdebye/single_particle
 broken/lammps/h2o-constraints
 broken/lammps/isof-vapor                                                           # Isotope-zeta-sc is stopping the termination of the run
 broken/lammps/isof-water                                                           # Isotope-zeta-sc is stopping the termination of the run
+temp/ph2/rpmd   # long and complicated  
 
 # Needs infrastructure fixing
 
