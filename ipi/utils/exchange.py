@@ -33,15 +33,17 @@ class ExchangePotential:
         self.nbosons = nbosons
         self.nbeads = nbeads
 
-        # creates a placeholder for omegan2 and bosons, will be bound further down the line
+    def bind(self, beads, ensemble, nm):
+        self.beads = beads
+        self.ensemble = ensemble
+
         self._omegan2 = depend_value(name="omegan2", value=0.0)
+        dpipe(nm._omegan2, self._omegan2)
+
         self._bosons = depend_array(
             name="bosons", value=np.zeros(self.nbosons, dtype=int)
         )
-
-    def bind(self, beads, ensemble):
-        self.beads = beads
-        self.ensemble = ensemble
+        dpipe(nm._bosons, self._bosons)
 
         self._betaP = depend_value(
             "betaP",

@@ -348,9 +348,7 @@ class NormalModes:
 
         if len(self.bosons) > 0:
             self.exchange_potential = ExchangePotential(self.nbeads, len(self.bosons))
-            self.exchange_potential.bind(self.beads, self.ensemble)
-            dpipe(self._omegan2, self.exchange_potential._omegan2)
-            dpipe(self._bosons, self.exchange_potential._bosons)
+            self.exchange_potential.bind(self.beads, self.ensemble, self)
             self._vspring_and_fspring.add_dependency(
                 self.exchange_potential._vspring_and_fspring
             )
