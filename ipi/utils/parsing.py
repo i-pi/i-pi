@@ -144,8 +144,8 @@ def read_trajectory(
                         if len(data_frame) > 0:
                             try:
                                 data_processed = np.loadtxt(data_frame)
-                                is_array = True
                             except:
+                                is_array = False
                                 data_processed = "\n".join(data_frame)
                             data_list.append(data_processed)
                             data_frame = []
@@ -164,8 +164,8 @@ def read_trajectory(
                 if len(data_frame) > 0:
                     try:
                         data_processed = np.loadtxt(data_frame)
-                        is_array = True
                     except:
+                        is_array = False
                         data_processed = "\n".join(data_frame)
                     data_list.append(data_processed)
                 if is_array:
