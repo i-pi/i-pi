@@ -103,8 +103,10 @@ def read_trajectory(
     """Reads a file in i-PI format and returns it in ASE format.
 
     `format` can be `xyz` (i-PI formatted), `pdb`, `binary`, `json`, `ase`, and if not specified it'll
-    be inferred from the filename extension.
-    units can be inferred from the file content, or specified with `units` and `cell_units`
+    be inferred from the filename extension. `extras` will read a trajectory containing the additional
+    data returned from a calculator; will try to read as a float array, and if it fails it'll resort
+    to returning a list of raw strings.
+    units can be inferred from the file content, or specified with `dimension`, `units` and `cell_units`
     """
 
     if ase is None:
@@ -128,44 +130,89 @@ def read_trajectory(
     frames = []
     while True:
         try:
-            ret = read_file(
-                format,
-                file_handle,
-                dimension=dimension,
-                units=units,
-                cell_units=cell_units,
-            )
+            if format == "extras":
+                file = open(filename, "r")
+                step_regex = re.compile(r"#EXTRAS\((\w+)\)# *Step:\s+(\d+)")
+                step_list = []
+                data_list = []
+                data_frame = []
+                is_array = True
+                property_name = ""
+                for line in file:
+                    matches = step_regex.findall(line)
+                    if len(matches) > 0:
+                        if len(data_frame) > 0:
+                            try:
+                                data_processed = np.loadtxt(data_frame)
+                                isarray = True
+                            except:
+                                data_processed = "\n".join(data_frame)
+                            data_list.append(data_processed)
+                            data_frame = []
 
-            frame = ase.Atoms(
-                ret["atoms"].names,
-                positions=ret["atoms"].q.reshape((-1, 3)) * bohr2angstrom,
-                cell=ret["cell"].h.T * bohr2angstrom,
-                pbc=True,
-            )
+                        # Found a new step, update current_step and initialize the list for data
+                        step_list.append(int(matches[0][1]))
+                        if property_name == "":
+                            property_name = matches[0][0]
+                        elif property_name != matches[0][0]:
+                            raise ValueError(
+                                f"Inconsistent property {matches[0][0]} found in extras containing {property_name}"
+                            )
+                    else:
+                        data_frame.append(line)
 
-            # parse comment to get the property
-            matches = comment_regex.findall(ret["comment"])
-
-            # get what we have found
-            if len(matches) >= 2:
-                what = matches[-2][0]
-            else:  # defaults to reading positions
-                what = "positions"
-
-            # ... and the step
-            matches = step_regex.findall(ret["comment"])
-            if len(matches) >= 1:
-                frame.info["step"] = int(matches[-1][0])
-
-            # if we have forces, set positions to zero (that data is missing!) and set forces instead
-            if what == "forces":
-                # set forces and convert to eV/angstrom
-                frame.positions *= 0
-                frame.arrays["forces"] = ret["atoms"].q.reshape((-1, 3)) * unit_to_user(
-                    "force", "ev/ang", 1.0
+                if len(data_frame) > 0:
+                    try:
+                        data_processed = np.loadtxt(data_frame)
+                        isarray = True
+                    except:
+                        data_processed = "\n".join(data_frame)
+                    data_list.append(data_processed)
+                if isarray:
+                    data_list = np.array(data_list).squeeze()
+                return {
+                    "step": np.asarray(step_list, dtype=int),
+                    property_name: data_list,
+                }
+            else:
+                ret = read_file(
+                    format,
+                    file_handle,
+                    dimension=dimension,
+                    units=units,
+                    cell_units=cell_units,
                 )
 
-            frames.append(frame)
+                frame = ase.Atoms(
+                    ret["atoms"].names,
+                    positions=ret["atoms"].q.reshape((-1, 3)) * bohr2angstrom,
+                    cell=ret["cell"].h.T * bohr2angstrom,
+                    pbc=True,
+                )
+
+                # parse comment to get the property
+                matches = comment_regex.findall(ret["comment"])
+
+                # get what we have found
+                if len(matches) >= 2:
+                    what = matches[-2][0]
+                else:  # defaults to reading positions
+                    what = "positions"
+
+                # ... and the step
+                matches = step_regex.findall(ret["comment"])
+                if len(matches) >= 1:
+                    frame.info["step"] = int(matches[-1][0])
+
+                # if we have forces, set positions to zero (that data is missing!) and set forces instead
+                if what == "forces":
+                    # set forces and convert to eV/angstrom
+                    frame.positions *= 0
+                    frame.arrays["forces"] = ret["atoms"].q.reshape(
+                        (-1, 3)
+                    ) * unit_to_user("force", "ev/ang", 1.0)
+
+                frames.append(frame)
 
         except EOFError:
             break
