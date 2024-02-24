@@ -144,7 +144,7 @@ def read_trajectory(
                         if len(data_frame) > 0:
                             try:
                                 data_processed = np.loadtxt(data_frame)
-                                isarray = True
+                                is_array = True
                             except:
                                 data_processed = "\n".join(data_frame)
                             data_list.append(data_processed)
@@ -164,11 +164,11 @@ def read_trajectory(
                 if len(data_frame) > 0:
                     try:
                         data_processed = np.loadtxt(data_frame)
-                        isarray = True
+                        is_array = True
                     except:
                         data_processed = "\n".join(data_frame)
                     data_list.append(data_processed)
-                if isarray:
+                if is_array:
                     data_list = np.array(data_list).squeeze()
                 return {
                     "step": np.asarray(step_list, dtype=int),
