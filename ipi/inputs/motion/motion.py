@@ -45,6 +45,7 @@ from ipi.engine.motion import (
     AlKMC,
     SCPhononsMover,
     NormalModeMover,
+    DrivenDynamics
 )
 from ipi.utils.inputvalue import *
 from ipi.inputs.thermostats import *
@@ -63,6 +64,7 @@ from .atomswap import InputAtomSwap
 from .planetary import InputPlanetary
 from .ramp import InputTemperatureRamp, InputPressureRamp
 from .al6xxx_kmc import InputAlKMC
+from .driven_dynamics import InputDrivenDynamics
 from ipi.utils.units import *
 
 __all__ = ["InputMotion"]
@@ -247,6 +249,10 @@ class InputMotionBase(Input):
         elif type(sc) is Dynamics:
             self.mode.store("dynamics")
             self.dynamics.store(sc)
+            tsc = 1
+        elif type(sc) is DrivenDynamics:
+            self.mode.store("driven_dynamics")
+            self.driven_dynamics.store(sc)
             tsc = 1
         elif type(sc) is ConstrainedDynamics:
             self.mode.store("constrained_dynamics")
