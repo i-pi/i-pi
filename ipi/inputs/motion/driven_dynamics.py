@@ -55,7 +55,12 @@ class InputDrivenDynamics(InputDynamics):
     default_help = "Holds all the information for a driven dynamics."
     default_label = "DRIVEN_DYNAMICS"
 
+    def __init__(self, *argc, **argv):
+        super().__init__(*argc, **argv)
+
     def store(self, dyn):
+        if dyn == {}:
+            return
         super().store(dyn)
         self.efield.store(dyn.efield)
         self.bec.store(dyn.bec)
