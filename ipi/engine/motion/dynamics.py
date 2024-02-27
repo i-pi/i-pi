@@ -19,7 +19,6 @@ from ipi.engine.barostats import Barostat
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import warning, verbosity
 from ipi.engine.motion.eda import EDA
-from ipi.utils.units import Constants
 
 
 class Dynamics(Motion):
