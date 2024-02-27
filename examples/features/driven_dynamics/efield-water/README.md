@@ -129,18 +129,7 @@ where the array that has to be provided in `input.xml` is just the "flattened" v
 In this example the energy and forces of the isolated water molecule are provided by the ```pswater``` model, but you are free to use your favorite DFT code.
  
 ## How to run
-Let's assume that you have the ```i-PI``` code in th folder ```i_pi_path```.
-Let's source all the necessary ```i-PI``` enviromental variable:
-```bash
-source ${i_pi_path}/env.sh
-```
-
-Let's run ```i-PI```:
-```bash
-i-pi input.xml  > i-pi.out &
-```
-
-Let's run the driver (using a UNIX socket) for the energy and forces:
+Run ```i-PI``` as usual, and then call the driver (using a UNIX socket) for the energy and forces:
 ```bash
 i-pi-driver -u -a driver -m pswater # > pswater.out &
 ```
