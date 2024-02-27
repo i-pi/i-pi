@@ -109,9 +109,9 @@ class Dynamics(Motion):
             self.integrator = SCIntegrator()
         elif self.enstype == "scnpt":
             self.integrator = SCNPTIntegrator()
-        elif self.enstype == "eda-nve":
-            # NVE integrator with an external time-dependent driving (electric field)
-            self.integrator = EDANVEIntegrator()
+        # elif self.enstype == "eda-nve":
+        #     # NVE integrator with an external time-dependent driving (electric field)
+        #     self.integrator = EDANVEIntegrator()
         else:
             self.integrator = DummyIntegrator()
 
@@ -125,16 +125,16 @@ class Dynamics(Motion):
         else:
             self.fixatoms = fixatoms
 
-        self.eda_on = False  # whether the dynamics is driven or not
-        if self.enstype in EDA.integrators:
-            # if the dynamics is driven, allocate necessary objects
-            self.efield = efield
-            self.bec = bec
-            self.eda = EDA(self.efield, self.bec)
-            self.eda_on = True
-        else:
-            # otherwise, keep the class clean and avoid allocating useless things
-            pass
+        # self.eda_on = False  # whether the dynamics is driven or not
+        # if self.enstype in EDA.integrators:
+        #     # if the dynamics is driven, allocate necessary objects
+        #     self.efield = efield
+        #     self.bec = bec
+        #     self.eda = EDA(self.efield, self.bec)
+        #     self.eda_on = True
+        # else:
+        #     # otherwise, keep the class clean and avoid allocating useless things
+        #     pass
 
     def get_fixdof(self):
         """Calculate the number of fixed degrees of freedom, required for
@@ -214,10 +214,10 @@ class Dynamics(Motion):
         self.ensemble.add_xlpot(self.barostat._cell_jacobian)
         self.ensemble.add_xlkin(self.barostat._kin)
 
-        # self.eda has not been allocated if 'self.eda_on' == False
-        # Attention: call 'self.eda.bind' before 'self.integrator.bind'
-        if self.eda_on:
-            self.eda.bind(self.ensemble, self.enstype)
+        # # self.eda has not been allocated if 'self.eda_on' == False
+        # # Attention: call 'self.eda.bind' before 'self.integrator.bind'
+        # if self.eda_on:
+        #     self.eda.bind(self.ensemble, self.enstype)
 
         # now that the timesteps are decided, we proceed to bind the integrator.
         self.integrator.bind(self)
@@ -258,14 +258,14 @@ class Dynamics(Motion):
         self.integrator.step(step)
         self.ensemble.time += self.dt  # increments internal time
 
-        if self.eda_on:
-            # Check that these variable are the same.
-            # If they are not the same, then there is a bug in the code
-            dt = abs(self.ensemble.time - self.integrator.mts_time)
-            if dt > 1e-12:
-                raise ValueError(
-                    "The time at which the Electric Field is evaluated is not properly updated!"
-                )
+        # if self.eda_on:
+        #     # Check that these variable are the same.
+        #     # If they are not the same, then there is a bug in the code
+        #     dt = abs(self.ensemble.time - self.integrator.mts_time)
+        #     if dt > 1e-12:
+        #         raise ValueError(
+        #             "The time at which the Electric Field is evaluated is not properly updated!"
+        #         )
 
 
 dproperties(Dynamics, ["dt", "nmts", "splitting", "ntemp"])
@@ -842,75 +842,75 @@ class SCNPTIntegrator(SCIntegrator):
             self.beads.p += dstrip(self.forces.fsc_part_2) * self.dt * 0.5
 
 
-class EDAIntegrator(DummyIntegrator):
-    """Integrator object for simulations using the Electric Dipole Approximation (EDA)
-    when an external electric field is applied.
-    """
+# class EDAIntegrator(DummyIntegrator):
+#     """Integrator object for simulations using the Electric Dipole Approximation (EDA)
+#     when an external electric field is applied.
+#     """
 
-    def __init__(self):
-        super().__init__()
+#     def __init__(self):
+#         super().__init__()
 
-    def bind(self, motion):
-        """bind variables"""
-        super().bind(motion)
+#     def bind(self, motion):
+#         """bind variables"""
+#         super().bind(motion)
 
-        self._time = self.eda._time
-        self._mts_time = self.eda._mts_time
+#         self._time = self.eda._time
+#         self._mts_time = self.eda._mts_time
 
-        dep = [
-            self._time,
-            self._mts_time,
-            self.eda.Born_Charges._bec,
-            self.eda.Electric_Field._Efield,
-        ]
-        self._EDAforces = depend_array(
-            name="EDAforces",
-            func=self._eda_forces,
-            value=np.zeros((self.beads.nbeads, self.beads.natoms * 3)),
-            dependencies=dep,
-        )
-        pass
+#         dep = [
+#             self._time,
+#             self._mts_time,
+#             self.eda.Born_Charges._bec,
+#             self.eda.Electric_Field._Efield,
+#         ]
+#         self._EDAforces = depend_array(
+#             name="EDAforces",
+#             func=self._eda_forces,
+#             value=np.zeros((self.beads.nbeads, self.beads.natoms * 3)),
+#             dependencies=dep,
+#         )
+#         pass
 
-    def pstep(self, level=0):
-        """Velocity Verlet momentum propagator."""
-        self.beads.p += self.EDAforces * self.pdt[level]
-        if dstrip(self.mts_time) == dstrip(self.time):
-            # it's the first time that 'pstep' is called
-            # then we need to update 'mts_time'
-            self.mts_time += dstrip(self.dt)
-            # the next time this condition will be 'False'
-            # so we will avoid to re-compute the EDAforces
-        pass
+#     def pstep(self, level=0):
+#         """Velocity Verlet momentum propagator."""
+#         self.beads.p += self.EDAforces * self.pdt[level]
+#         if dstrip(self.mts_time) == dstrip(self.time):
+#             # it's the first time that 'pstep' is called
+#             # then we need to update 'mts_time'
+#             self.mts_time += dstrip(self.dt)
+#             # the next time this condition will be 'False'
+#             # so we will avoid to re-compute the EDAforces
+#         pass
 
-    def _eda_forces(self):
-        """Compute the EDA contribution to the forces, i.e. `q_e Z^* @ E(t)`"""
-        Z = dstrip(self.eda.Born_Charges.bec)  # tensor of shape (nbeads,3xNatoms,3)
-        E = dstrip(self.eda.Electric_Field.Efield)  # vector of shape (3)
-        forces = Constants.e * Z @ E  # array of shape (nbeads,3xNatoms)
-        return forces
+#     def _eda_forces(self):
+#         """Compute the EDA contribution to the forces, i.e. `q_e Z^* @ E(t)`"""
+#         Z = dstrip(self.eda.Born_Charges.bec)  # tensor of shape (nbeads,3xNatoms,3)
+#         E = dstrip(self.eda.Electric_Field.Efield)  # vector of shape (3)
+#         forces = Constants.e * Z @ E  # array of shape (nbeads,3xNatoms)
+#         return forces
 
-    def step(self, step=None):
-        if len(self.nmts) > 1:
-            raise ValueError(
-                "EDAIntegrator is not implemented with the Multiple Time Step algorithm (yet)."
-            )
-        super().step(step)
-
-
-dproperties(EDAIntegrator, ["EDAforces", "mts_time", "time"])
+#     def step(self, step=None):
+#         if len(self.nmts) > 1:
+#             raise ValueError(
+#                 "EDAIntegrator is not implemented with the Multiple Time Step algorithm (yet)."
+#             )
+#         super().step(step)
 
 
-class EDANVEIntegrator(EDAIntegrator, NVEIntegrator):
-    """Integrator object for simulations with constant Number of particles, Volume, and Energy (NVE)
-    using the Electric Dipole Approximation (EDA) when an external electric field is applied.
-    """
+# dproperties(EDAIntegrator, ["EDAforces", "mts_time", "time"])
 
-    def pstep(self, level):
-        # NVEIntegrator does not use 'super()' within 'pstep'
-        # then we can not use 'super()' here.
-        # We need to call the 'pstep' methods explicitly.
-        NVEIntegrator.pstep(
-            self, level
-        )  # the driver is called here: add nuclear and electronic forces (DFT)
-        EDAIntegrator.pstep(self, level)  # add the driving forces, i.e. q_e Z @ E(t)
-        pass
+
+# class EDANVEIntegrator(EDAIntegrator, NVEIntegrator):
+#     """Integrator object for simulations with constant Number of particles, Volume, and Energy (NVE)
+#     using the Electric Dipole Approximation (EDA) when an external electric field is applied.
+#     """
+
+#     def pstep(self, level):
+#         # NVEIntegrator does not use 'super()' within 'pstep'
+#         # then we can not use 'super()' here.
+#         # We need to call the 'pstep' methods explicitly.
+#         NVEIntegrator.pstep(
+#             self, level
+#         )  # the driver is called here: add nuclear and electronic forces (DFT)
+#         EDAIntegrator.pstep(self, level)  # add the driving forces, i.e. q_e Z @ E(t)
+#         pass
