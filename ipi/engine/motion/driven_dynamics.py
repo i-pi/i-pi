@@ -48,7 +48,7 @@ class DrivenDynamics(Dynamics):
         efield=None,
         bec=None,
         *argc,
-        **argv,        
+        **argv,
     ):
         """Initialises a "dynamics" motion object.
 
@@ -58,7 +58,7 @@ class DrivenDynamics(Dynamics):
                 motion will be constrained or not. Defaults to False.
         """
 
-        super().__init__(*argc,**argv)
+        super().__init__(*argc, **argv)
 
         if self.enstype == "eda-nve":
             # NVE integrator with an external time-dependent driving (electric field)
@@ -66,18 +66,15 @@ class DrivenDynamics(Dynamics):
         else:
             self.integrator = DummyIntegrator()
 
-
         # if the dynamics is driven, allocate necessary objects
         self.efield = efield
         self.bec = bec
         self.eda = EDA(self.efield, self.bec)
 
-
-
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
 
-        super().bind( ens, beads, nm, cell, bforce, prng, omaker)
-        
+        super().bind(ens, beads, nm, cell, bforce, prng, omaker)
+
         self.eda.bind(self.ensemble, self.enstype)
 
         # now that the timesteps are decided, we proceed to bind the integrator.
@@ -85,7 +82,6 @@ class DrivenDynamics(Dynamics):
 
         # applies constraints immediately after initialization.
         self.integrator.pconstraints()
-
 
     def step(self, step=None):
         """Advances the dynamics by one time step"""

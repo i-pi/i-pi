@@ -45,7 +45,7 @@ from ipi.engine.motion import (
     AlKMC,
     SCPhononsMover,
     NormalModeMover,
-    DrivenDynamics
+    DrivenDynamics,
 )
 from ipi.utils.inputvalue import *
 from ipi.inputs.thermostats import *

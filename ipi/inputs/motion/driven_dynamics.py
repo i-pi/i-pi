@@ -21,7 +21,7 @@ class InputDrivenDynamics(InputDynamics):
     Attributes: same of InputDynamics
 
     Fields: same of InputDynamics
-        
+
     """
 
     fields = {
@@ -49,7 +49,7 @@ class InputDrivenDynamics(InputDynamics):
 
     attribs = {}
     attribs.update(InputDynamics.attribs)
-    
+
     dynamic = {}
 
     default_help = "Holds all the information for a driven dynamics."
