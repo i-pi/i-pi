@@ -7,7 +7,6 @@
 import numpy as np
 import ipi.engine.thermostats
 import ipi.engine.barostats
-from ipi.engine.motion.eda import ElectricField, BEC, EDA
 from ipi.utils.inputvalue import (
     InputDictionary,
     InputAttribute,
@@ -17,7 +16,6 @@ from ipi.utils.inputvalue import (
 )
 from ipi.inputs.barostats import InputBaro
 from ipi.inputs.thermostats import InputThermo
-from ipi.inputs.motion.eda import InputElectricField, InputBEC
 
 
 __all__ = ["InputDynamics"]
@@ -113,24 +111,6 @@ class InputDynamics(InputDictionary):
                 "help": "Number of iterations for each MTS level (including the outer loop, that should in most cases have just one iteration).",
             },
         ),
-        "efield": (
-            InputElectricField,
-            {
-                "default": input_default(factory=ElectricField),
-                "help": "The external electric field parameters:"
-                + "plane-wave parameters (intensity/amplitude, angular frequency, and phase) and "
-                + "gaussian envelope function parameters (peak time/mean of the gaussian, and pulse duration/standard deviation of the gaussian)",
-            },
-        ),
-        "bec": (
-            InputBEC,
-            {
-                "dtype": float,
-                "default": input_default(factory=BEC),
-                "dimension": "number",
-                "help": "The Born Effective Charges tensors (cartesian coordinates)",
-            },
-        ),
     }
 
     dynamic = {}
@@ -154,9 +134,6 @@ class InputDynamics(InputDictionary):
         self.barostat.store(dyn.barostat)
         self.nmts.store(dyn.nmts)
         self.splitting.store(dyn.splitting)
-        if dyn.enstype in EDA.integrators:
-            self.efield.store(dyn.efield)
-            self.bec.store(dyn.bec)
 
     def fetch(self):
         """Creates an ensemble object.
