@@ -38,7 +38,7 @@
       <temperature units='kelvin'>1</temperature>
     </ensemble>
 
-    <motion mode='dynamics'> 
+    <motion mode='driven_dynamics'> 
       <dynamics mode='eda-nve'>                  <!-- Electric Dipole Approximation (EDA) on top of a NVE simulation -->
         <timestep units='femtosecond'> 1 </timestep>
         <efield>
