@@ -39,7 +39,7 @@
     </ensemble>
 
     <motion mode='driven_dynamics'> 
-      <dynamics mode='eda-nve'>                  <!-- Electric Dipole Approximation (EDA) on top of a NVE simulation -->
+      <driven_dynamics mode='eda-nve'>                  <!-- Electric Dipole Approximation (EDA) on top of a NVE simulation -->
         <timestep units='femtosecond'> 1 </timestep>
         <efield>
           <amp> [ 0 , 5e-2 , 0 ] </amp>             <!-- amplitude of the electric field pulse in a.u. -->
@@ -48,7 +48,7 @@
           <sigma units="picosecond"> 0.05 </sigma>  <!-- width (standard deviation of the gaussian) of the electric field pulse -->
         </efield>
         <bec mode="file"> bec.txt  </bec>
-      </dynamics>
+      </driven_dynamics>
     </motion>
 
   </system>
