@@ -1,16 +1,16 @@
 metatensor - i-PI example
 ========================
 
-Runs a _very_ contrieved example of a metatensor model. 
-The model is just a hard-coded Einstein crystal model for a
-chunk of diamond. No periodic boundary conditions, no ability
-to work with a different number of atoms or just a differently
-oriented sample. Really, this is just to show how to run the
-driver. Given that metatensor model takes a torchsript file
-for a model, the very same machinery can be used for actual
-ML potentials, or torchscript-implemented models. 
+Runs an example of a metatensor model, implementing a basic Lennard-Jones model
+with the parameters for Nickel.
+
+This driver can be used with any model following the [metatensor atomistic
+models](https://lab-cosmo.github.io/metatensor/latest/atomistic/index.html)
+interface. This can be used for classical force-fields, but it more intended for
+machine learning potentials.
+
 
 ```bash
 i-pi input.xml; sleep 1 &
-i-pi-py_driver -a metatensor -u -m metatensor -o initial.xyz,harmonic-model.pt
+i-pi-py_driver -a metatensor -u -m metatensor -o nickel.xyz,nickel-lj.pt
 ```
