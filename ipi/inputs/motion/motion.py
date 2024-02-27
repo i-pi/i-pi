@@ -64,7 +64,6 @@ from .atomswap import InputAtomSwap
 from .planetary import InputPlanetary
 from .ramp import InputTemperatureRamp, InputPressureRamp
 from .al6xxx_kmc import InputAlKMC
-from .driven_dynamics import InputDrivenDynamics
 from ipi.utils.units import *
 
 __all__ = ["InputMotion"]
