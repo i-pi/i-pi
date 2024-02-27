@@ -14,6 +14,7 @@ from ipi.utils.depend import dstrip
 from ipi.utils.units import Constants, unit_to_internal
 from ipi.utils.mathtools import logsumlog, h2abc_deg
 from ipi.utils.io.inputs import io_xml
+from ipi.engine.motion.driven_dynamics import DrivenDynamics
 
 __all__ = ["Properties", "Trajectories", "getkey", "getall", "help_latex"]
 
@@ -289,7 +290,7 @@ class Properties:
                 "func": (
                     lambda: (
                         self.motion.eda.Electric_Field.Efield
-                        if self.motion.eda_on
+                        if isinstance(self.motion, DrivenDynamics)
                         else np.zeros(3)
                     )
                 ),
@@ -300,7 +301,7 @@ class Properties:
                 "func": (
                     lambda: (
                         self.motion.eda.Electric_Field.Eenvelope
-                        if self.motion.eda_on
+                        if isinstance(self.motion, DrivenDynamics)
                         else 0.0
                     )
                 ),
@@ -315,7 +316,7 @@ class Properties:
                         if int(bead) < 0
                         else (
                             self.motion.eda.Electric_Dipole.dipole[int(bead)]
-                            if self.motion.eda_on
+                            if isinstance(self.motion, DrivenDynamics)
                             else np.zeros(3)
                         )
                     )
@@ -2825,7 +2826,7 @@ class Trajectories:
                 "func": (
                     lambda: (
                         self.system.motion.integrator.EDAforces
-                        if self.system.motion.eda_on
+                        if isinstance(self.system.motion, DrivenDynamics)
                         else np.zeros((self.system.beads.natoms * 3))
                     )
                 ),
@@ -3173,7 +3174,7 @@ class Trajectories:
         shape = (self.system.beads.nbeads, self.system.beads.natoms * 3)
         bec = np.full(shape, np.nan)
         # check whether `self.system.motion.eda`` has been allocated
-        if self.system.motion.eda_on:
+        if isinstance(self.system.motion, DrivenDynamics):
             # get all the BECs
             BEC = self.system.motion.eda.Born_Charges.bec
             # convert the component into numerical index
