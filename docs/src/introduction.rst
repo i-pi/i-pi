@@ -10,7 +10,7 @@ to produce trajectories which can be used to efficiently explore the
 phase space. This can be used to calculate many equilibrium and
 dynamical properties and to study systems from isolated gas molecules to
 condensed phase bulk materials.
-
+ 
 However, while this technique has been very successful, in most MD
 implementations the assumption is made that the nuclei behave as
 classical particles, which for light nuclei such as hydrogen is often a
@@ -194,8 +194,8 @@ brief discussion.
    contracted on a single bead :cite:`mark-mano08jcp`).
 
 
-A scheme of the objects involved in the calculation of the forces is
-presented in Figure `1.3 <#fig:forces>`__. The infrastracture comprises
+This figure provides an overall scheme of the objects involved in the calculation 
+of the forces. The infrastracture comprises
 a force provider class that deals with the actual subdivision of work
 among the clients, and a sequence of objects that translate the request
 of the overall force of the system into atomic evaluations of one
@@ -207,7 +207,8 @@ Let us discuss for clarity a practical example: a calculation of an
 empirical water model where the bonded interactions are computed on 32
 beads by the program A, and the non-bonded interactions are computed by
 client B, ring-polymer contracted on 8 beads. Each client “type” is
-associated with a object in the input. In the case of a interface, the
+associated with a :ref:`forcefield` object in the input. In the case of a
+:ref:`ffsocket` interface, the
 forcefield object specifies the address to which a client should
 connect, and so multiple clients of type A or B can connect to i-PI at
 the same time. Each forcefield object deals with queueing force
@@ -218,7 +219,8 @@ On the force evaluation side, the task of splitting the request of a
 force evaluation into individual components and individual beads is
 accomplished by a chain of three objects, Forces, ForceComponent and
 ForceBead. is the main force Forces evaluator, that is built from the
-prototypes listed within the field of . Each item within the tag
+prototypes listed within the :ref:`forces` field of the :ref:`system`. 
+Each :ref:`forcecomponent`  item within the :ref:`forces` tag
 describe one component of the force – in our example one ForceComponent
 bound to a forcefield of type A, evaluated on 32 beads, and one
 ForceComponent bound to type B, evaluated on 8 beads. Forces contains
@@ -259,153 +261,7 @@ atoms and cell parameters in one direction, and the forces, virial and
 potential in the other.
 
 For more details about sockets and communication, see
-`3.3 <#distrib>`__.
-
-Core features
--------------
-
-i-PI includes a large number of advanced molecular dynamics features,
-with an obvious focus on path integral molecular dynamics, but also
-several methods for sampling classical trajectories.
-
-Features in version 1.0
-~~~~~~~~~~~~~~~~~~~~~~~
-
--  molecular dynamics and PIMD in the *NVE*, *NVT* and *NPT* ensembles,
-   with the high-frequency internal vibrations of the path propagated in
-   the normal-mode representation :cite:`ceri+10jcp` to
-   allow for longer time steps;
-
--  ring polymer
-   contraction :cite:`mark-mano08jcp,mark-mano08cpl`,
-   implemented by exposing multiple socket interfaces to deal with short
-   and long-range components of the potential energy separately;
-   treating different components that have different computational cost
-   and characteristic time scale separately can reduce substantially the
-   overall effort associated with a simulation
-
--  efficient stochastic velocity rescaling
-   :cite:`buss+07jcp` and path integral Langevin equation
-   thermostats :cite:`ceri+10jcp` to sample efficiently the
-   canonical ensemble;
-
--  various generalized Langevin equation (GLE) thermostats, including
-   the optimal sampling :cite:`ceri+09prl,ceri+10jctc`,
-   quantum  :cite:`ceri+09prl2`, and
-   :math:`\delta` :cite:`ceri-parr10pcs` thermostats; the
-   parameters for different GLE flavors and the conditions in which they
-   should be applied can be obtained from a separate
-   website :cite:`gle4md`;
-
--  mixed path integral–generalized Langevin equation techniques for
-   accelerated convergence, including both
-   PI+GLE :cite:`ceri+11jcp` and the more recent and
-   effective version PIGLET :cite:`ceri-mano12prl`; these
-   techniques reduce the number of path integral replicas needed, while
-   allowing for systematic convergence;
-
--  all the standard estimators for structural properties, the quantum
-   kinetic energy, pressure, etc.;
-
--  more sophisticated estimators such as the scaled-coordinate heat
-   capacity estimator :cite:`yama05jcp`, estimators to
-   obtain isotope fractionation free energies by re-weighting a
-   simulation of the most abundant
-   isotope :cite:`ceri-mark13jcp`, and a displaced-path
-   estimator for the particle momentum
-   distribution :cite:`lin+10prl`;
-
--  the infrastructure that is needed to perform approximate quantum
-   dynamics calculations such as ring polymer molecular dynamics
-   (RPMD) :cite:`crai-mano04jcp,habe+13arpc` and centroid
-   molecular dynamics
-   (CMD) :cite:`cao-voth93jcp,cao-voth94jcp`.
-
-   Features added in version 2.0
-   ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-Further details can be found in Ref. :cite:`Kapil:2019ju`.
-
--  reweighted fourth-order path integral MD (M. Ceriotti, G.A.R.
-   Brain) :cite:`ceri+12prsa,jang-voth01jcp`; this method
-   makes it possible to obtain fourth-order statistics by re-weighting
-   second-order trajectories; attention should be paid to avoid
-   statistical inefficiencies;
-
--  finite-differences implementation of fourth-order path integrals (V.
-   Kapil, M. Ceriotti) :cite:`kapi+16jcp2`; this schemes
-   enables explicit fourth-order path integral simulations, that
-   converge faster than conventional Trotter methods;
-
--  perturbed path integrals (I.
-   Poltavsky) :cite:`polt-tkat16cs`; essentially, a
-   truncated cumulant expansion of fourth-order reweighting, that often
-   enables fast convergence avoiding statistical instability;
-
--  open path integrals and momentum distribution estimators (V. Kapil,
-   A. Cuzzocrea, M. Ceriotti) :cite:`kapi+18jpcb`; makes it
-   possible to compute the particle momentum distribution including
-   quantum fluctuations of nuclei;
-
--  quantum alchemical transformations (B. Cheng)
-   :cite:`liu+13jpcc,chen+16jpcl`; Monte Carlo exchanges
-   between isotopes of different mass, useful to sample isotope
-   propensity for different molecules or environments;
-
--  direct isotope fractionation estimators (B. Cheng, M. Ceriotti)
-    :cite:`chen-ceri14jcp`; avoid thermodynamic integration
-   to obtain isotope fractionation ratios;
-
--  spatially localized ring polymer contraction (M. Rossi, M. Ceriotti)
-   :cite:`litm+17jcp`; simple contraction scheme for weakly
-   bound molecules, e.g. on surfaces;
-
--  ring polymer instantons (Y. Litman, J.O. Richardson, M. Rossi);
-   evaluation of reaction rates and tunnelling splittings for molecular
-   rearrangements and chemical reactions;
-
--  thermodynamic integration (M. Rossi, M. Ceriotti)
-   :cite:`ross+16prl`; classical scheme to compute free
-   energy differences;
-
--  geometry optimizers for minimization and saddle point search (B.
-   Helfrecht, R. Petraglia, Y. Litman, M. Rossi)
-   :cite:`ross+16prl`
-
--  harmonic vibrations through finite differences (V. Kapil, S.
-   Bienvenue) :cite:`ross+16prl`; simple evaluation of the
-   harmonic Hessian;
-
--  multiple time stepping (V. Kapil, M. Ceriotti)
-   :cite:`kapi+16jcp`; accelerated simulations by separating
-   slow and fast degrees of freedom into different components of the
-   potential energy;
-
--  metadynamics through a PLUMED interface (G. Tribello, M. Ceriotti);
-   simulation of rare events and free energy calculations;
-
--  replica exchange MD (R. Petraglia, R. Meissner, M.
-   Ceriotti) :cite:`petr+15jcc`; accelerated convergence of
-   averages by performing Monte Carlo exchanges of configurations
-   between parallel calculations
-
--  thermostatted RPMD :cite:`ross+14jcp`, including
-   optimized-GLE TRPMD :cite:`ross+18jcp`; reduces
-   well-known artifacts in the simulation of dynamical properties by
-   path integral methods;
-
--  dynamical corrections to Langevin trajectories (M. Rossi, V. Kapil,
-   M. Ceriotti) :cite:`ross+18jcp`; eliminates the artifacts
-   introduced into dynamical properties by the presence of thermostats;
-
--  fast forward Langevin thermostat (M. Hijazi, D. M. Wilkins, M.
-   Ceriotti); a simple scheme to reduce the impact of strongly-damped
-   Langevin thermostats on sampling efficiency;
-   :cite:`hija+18jcp`
-
--  Langevin sampling for noisy and/or dissipative forces (J. Kessler, T.
-   D. Kühne); suitable to stabilize and correct the artifacts that are
-   introduced in MD trajectories by different extrapolation schemes;
+:ref:`distrib`.
 
 Licence and credits
 -------------------
@@ -459,7 +315,7 @@ at `www.fftw.org <www.fftw.org>`__,
 `www.netlib.org/lapack <www.netlib.org/lapack>`__ respectively.
 
 These codes do not come as part of the i-PI package, and must be
-downloaded separately. See chapter `2.2 <#clientinstall>`__ for more
+downloaded separately. See chapter :ref:`clientinstall` for more
 details of how to do this.
 
 i-PI resources
