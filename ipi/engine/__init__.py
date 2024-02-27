@@ -13,7 +13,6 @@ __all__ = [
     "simulation",
     "forces",
     "ensembles",
-    "eda",
     "properties",
     "thermostats",
     "barostats",
