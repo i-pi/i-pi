@@ -87,6 +87,8 @@ class DrivenDynamics(Dynamics):
         """Advances the dynamics by one time step"""
 
         super().step(step)
+        # self.integrator.step(step)
+        # self.ensemble.time += self.dt  # increments internal time
 
         # Check that these variable are the same.
         # If they are not the same, then there is a bug in the code
@@ -309,7 +311,7 @@ class EDAIntegrator(DummyIntegrator):
             raise ValueError(
                 "EDAIntegrator is not implemented with the Multiple Time Step algorithm (yet)."
             )
-        super().step(step)
+        super().step(0)
 
 
 dproperties(EDAIntegrator, ["EDAforces", "mts_time", "time"])
@@ -328,4 +330,9 @@ class EDANVEIntegrator(EDAIntegrator, NVEIntegrator):
             self, level
         )  # the driver is called here: add nuclear and electronic forces (DFT)
         EDAIntegrator.pstep(self, level)  # add the driving forces, i.e. q_e Z @ E(t)
+        pass
+
+    def step(self, step):
+        NVEIntegrator.pstep(self, level=0)
+        EDAIntegrator.pstep(self, level=0)
         pass
