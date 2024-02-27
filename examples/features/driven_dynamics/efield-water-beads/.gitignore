@@ -1,7 +1,0 @@
-i-pi.*
-\#*
-RESTART
-H2O.scf.in
-outdir/
-*.out
-*.xyz
