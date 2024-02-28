@@ -1,7 +1,7 @@
 # Light-driven water molecule
 This example provide a way to excite a vibrational mode of an **isolated water molecule** by using a **THz electric field**.
 
-## The physics behid this example
+## The physics behind this example
 This example perform an ```NVE``` simulation of an isolated water molecule.
 The provided initial configuration (```start.xyz```) is the ground state of the system, and no initial velocities are provided.
 Then, by integrating the Hamilton's equations of motion, we expect the molecule to stay in the initial configuration (forever). 
