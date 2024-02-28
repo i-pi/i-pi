@@ -1073,6 +1073,7 @@ class FFCommittee(ForceField):
         # force threaded mode as otherwise it cannot have threaded children
         super(FFCommittee, self).__init__(
             latency=latency,
+            offset=offset,
             name=name,
             pars=pars,
             dopbc=dopbc,
