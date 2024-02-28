@@ -92,6 +92,15 @@ class InputForceField(Input):
                 "help": "The number of seconds the polling thread will wait between exhamining the list of requests.",
             },
         ),
+        "offset": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 0.0,
+                "dimension": "energy",
+                "help": "A constant offset that is subtracted from the forcefield energy. Useful when there is a large core energy contribution that is constant throughout a simulation and hides significant changes in the 10th digit.",
+            },
+        ),
         "parameters": (
             InputValue,
             {"dtype": dict, "default": {}, "help": "The parameters of the force field"},
@@ -120,6 +129,7 @@ class InputForceField(Input):
         Input.store(self, ff)
         self.name.store(ff.name)
         self.latency.store(ff.latency)
+        self.offset.store(ff.offset)
         self.parameters.store(ff.pars)
         self.pbc.store(ff.dopbc)
         self.activelist.store(ff.active)
@@ -138,6 +148,7 @@ class InputForceField(Input):
             pars=self.parameters.fetch(),
             name=self.name.fetch(),
             latency=self.latency.fetch(),
+            offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
             active=self.activelist.fetch(),
             threaded=self.threaded.fetch(),
@@ -286,6 +297,7 @@ class InputFFSocket(InputForceField):
             pars=self.parameters.fetch(),
             name=self.name.fetch(),
             latency=self.latency.fetch(),
+            offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
             active=self.activelist.fetch(),
             threaded=self.threaded.fetch(),
@@ -342,6 +354,7 @@ class InputFFLennardJones(InputForceField):
             pars=self.parameters.fetch(),
             name=self.name.fetch(),
             latency=self.latency.fetch(),
+            offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
             threaded=self.threaded.fetch(),
         )
@@ -417,6 +430,7 @@ class InputFFdmd(InputForceField):
             pars=self.parameters.fetch(),
             name=self.name.fetch(),
             latency=self.latency.fetch(),
+            offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
             threaded=self.threaded.fetch(),
         )
@@ -478,6 +492,7 @@ class InputFFDebye(InputForceField):
             vref=self.v_reference.fetch(),
             name=self.name.fetch(),
             latency=self.latency.fetch(),
+            offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
             threaded=self.threaded.fetch(),
         )
@@ -531,6 +546,7 @@ class InputFFPlumed(InputForceField):
         return FFPlumed(
             name=self.name.fetch(),
             latency=self.latency.fetch(),
+            offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
             threaded=self.threaded.fetch(),
             plumeddat=self.plumeddat.fetch(),
@@ -650,6 +666,7 @@ class InputFFYaff(InputForceField):
             reci_ei=self.reci_ei.fetch(),
             name=self.name.fetch(),
             latency=self.latency.fetch(),
+            offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
             threaded=self.threaded.fetch(),
         )
@@ -686,6 +703,7 @@ class InputFFsGDML(InputForceField):
             sGDML_model=self.sGDML_model.fetch(),
             name=self.name.fetch(),
             latency=self.latency.fetch(),
+            offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
             threaded=self.threaded.fetch(),
         )
@@ -848,6 +866,7 @@ class InputFFCommittee(InputForceField):
             pars=self.parameters.fetch(),
             name=self.name.fetch(),
             latency=self.latency.fetch(),
+            offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
             fflist=fflist,
             ffweights=self.weights.fetch(),
@@ -959,6 +978,7 @@ class InputFFCavPhSocket(InputFFSocket):
             pars=self.parameters.fetch(),
             name=self.name.fetch(),
             latency=self.latency.fetch(),
+            offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
             active=self.activelist.fetch(),
             threaded=self.threaded.fetch(),
