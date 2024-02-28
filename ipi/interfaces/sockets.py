@@ -503,6 +503,8 @@ class Driver(DriverSocket):
             self.status = Status.Disconnected
             return
 
+        r["result"][0] -= r["offset"]
+
         if len(r["result"][1]) != len(r["pos"][r["active"]]):
             raise InvalidSize
 
@@ -572,8 +574,6 @@ class InterfaceSocket(object):
            slots: An optional integer giving the maximum allowed backlog of
               queueing clients. Defaults to 4.
            mode: An optional string giving the type of socket. Defaults to 'unix'.
-           latency: An optional float giving the time in seconds the socket will
-              wait before updating the client list. Defaults to 1e-3.
            timeout: Length of time waiting for data from a client before we assume
               the connection is dead and disconnect the client.
             max_workers: Maximum number of threads launched concurrently
@@ -593,6 +593,7 @@ class InterfaceSocket(object):
         self.requests = None  # these will be linked to the request list of the FFSocket object using the interface
         self.exit_on_disconnect = exit_on_disconnect
         self.max_workers = max_workers
+        self.offset = 0.0  # a constant energy offset added to the results returned by the driver (hacky but simple)
 
     def open(self):
         """Creates a new socket.
@@ -884,6 +885,11 @@ class InterfaceSocket(object):
 
             # makes sure the request is marked as running and the client included in the jobs list
             fc.locked = fc.lastreq is r["id"]
+
+            r["offset"] = (
+                self.offset
+            )  # transmits with the request an offset value for the energy (typically zero)
+
             r["status"] = "Running"
             self.prlist.remove(r)
             info(

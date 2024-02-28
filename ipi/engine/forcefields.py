@@ -353,6 +353,7 @@ class FFSocket(ForceField):
         else:
             self.socket = interface
         self.socket.requests = self.requests
+        self.socket.offset = self.offset
 
     def poll(self):
         """Function to check the status of the client calculations."""
