@@ -397,7 +397,7 @@ class FFEval(ForceField):
     def evaluate(self, request):
         request["result"] = [
             0.0,
-            np.zeros(len(r["pos"]), float),
+            np.zeros(len(request["pos"]), float),
             np.zeros((3, 3), float),
             {"raw": ""},
         ]
