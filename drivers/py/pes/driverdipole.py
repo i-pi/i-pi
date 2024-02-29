@@ -7,20 +7,20 @@ import warnings
 import importlib
 from .dummy import Dummy_driver
 
-__DRIVER_NAME__ = "MLdipole"
-__DRIVER_CLASS__ = "MLdipole_driver"
+__DRIVER_NAME__ = "driverdipole"
+__DRIVER_CLASS__ = "driverdipole_driver"
 
 fmt = "%26.20f"  # output format for dipole and BEC
 
 # Some comments:
-# The 'MLdipole_driver' allows sending to i-PI the dipole and their derivatives w.r.t. nuclear positions to i-PI
+# The 'driverdipole_driver' allows sending to i-PI the dipole and their derivatives w.r.t. nuclear positions to i-PI
 # You can "plug in" (almost) any kind of neural network by simply providing:
 # - a JSON file with the following keys (have a look at the 'get_model' function):
 #   - "module": the module where the class is provided;
 #   - "class": the class name;
 #   - "kwargs": the arguments to properly initialize the network;
 # - a *.pth file with the parameters of the network.
-# - an optional JSON to modify the parameters contained in 'MLdipole_driver.opts_default'
+# - an optional JSON to modify the parameters contained in 'driverdipole_driver.opts_default'
 #
 # The only requirements that your network has to satisfy are:
 # - it should have the 'get' and 'get_value_and_jac' methods defined,
@@ -117,7 +117,7 @@ def get_model(instructions, parameters: str):
     return model
 
 
-class MLdipole_driver(Dummy_driver):
+class driverdipole_driver(Dummy_driver):
     opts_default = {
         "dipole": {
             "send": True,  # whether to send the dipole to i-PI
@@ -132,7 +132,7 @@ class MLdipole_driver(Dummy_driver):
     }
 
     def __init__(self, args=None):
-        self.error_msg = """The parameters of 'MLdipole_driver' are not correctly formatted. \
+        self.error_msg = """The parameters of 'driverdipole_driver' are not correctly formatted. \
             They should be two or three strings, separated by a comma."""
         self.opts = dict()
         self.count = 0
@@ -156,7 +156,7 @@ class MLdipole_driver(Dummy_driver):
         else:
             sys.exit(self.error_msg)  # to be modified
 
-        print("\n\tThe driver is 'MLdipole_driver'")
+        print("\n\tThe driver is 'driverdipole_driver'")
         print("\tLoading model ...")
         self.model = get_model(info_file, parameters_file)
 
@@ -199,7 +199,7 @@ class MLdipole_driver(Dummy_driver):
     def __call__(self, cell, pos):
         """Get energies, forces, stresses and extra quantities"""
 
-        print("\n@calling 'MLdipole_driver': step {:d}".format(self.count + 1))
+        print("\n@calling 'driverdipole_driver': step {:d}".format(self.count + 1))
 
         # Check that if 'cell' has some np.inf values (isolated system)
         # the all the other elements are zero
