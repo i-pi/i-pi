@@ -55,7 +55,6 @@ Example: python driver.py -m pet -u -o model.json,template.xyz
         self.template_ase.arrays["forces"] = np.zeros_like(self.template_ase.positions)
         self.pet_calc = PETCalc(
             self.model_path,
-            default_hypers_path=self.model_path + "/default_hypers.yaml",
         )
 
     def __call__(self, cell, pos):
