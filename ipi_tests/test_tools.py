@@ -18,6 +18,9 @@ fortran_driver_models = [
     "morse",
     "zundel",
     "qtip4pf",
+    "qtip4pf-c-json",
+    "qtip4pf-c-1",
+    "qtip4pf-c-2",
     "pswater",
     "eckart",
     "ch4hcbe",
@@ -192,7 +195,7 @@ def modify_xml_4_dummy_test(
         clients.append([model, "unix", address, port])
 
         for key in driver_info["flag"][s].keys():
-            if "-" in key:
+            if "-o" in key:
                 for k, v in driver_info["flag"][s].items():
                     clients[s].append(k)
                     clients[s].extend(v)
@@ -206,7 +209,7 @@ def modify_xml_4_dummy_test(
                 clients.append([model, "unix", address, port])
 
                 for key in driver_info["flag"][remaining_client_idx].keys():
-                    if "-" in key:
+                    if "-o" in key:
                         for k, v in driver_info["flag"][remaining_client_idx].items():
                             clients[remaining_client_idx].append(k)
                             clients[remaining_client_idx].extend(v)
@@ -323,9 +326,9 @@ class Runner(object):
                 cmd = clientcall
 
                 # Add extra flags if necessary
-                if any("-" in str(s) for s in client):
+                if any("-o" in str(s) for s in client):
                     flag_indeces = [
-                        i for i, elem in enumerate(client) if "-" in str(elem)
+                        i for i, elem in enumerate(client) if "-o" in str(elem)
                     ]
                     for i, ll in enumerate(flag_indeces):
                         if i < len(flag_indeces) - 1:
@@ -356,10 +359,12 @@ class Runner(object):
 
             # check driver errors
             for driver in drivers:
-                driver.kill()  # if i-PI has ended, we can kill the drivers
+                # if i-PI has ended, we can wait for the driver to quit
                 driver_out, driver_err = driver.communicate(timeout=60)
-                assert driver.returncode == 0, "Driver error occurred: {}".format(
-                    driver_err
+                assert (
+                    driver.returncode == 0
+                ), "Driver error occurred: {}\n Driver Output: {}".format(
+                    driver_err, driver_out
                 )
 
         except sp.TimeoutExpired:

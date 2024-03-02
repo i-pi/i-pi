@@ -62,6 +62,8 @@ To add a new regression test please provide:
      tests/NVE/NVE_1/harmonic_python/test_settings.dat
      tests/NVE/NVE_1/harmonic/test_settings.dat
 
+     If your regtest uses a new driver mode, please add it to the ``fortran_driver_models`` list in the `i-pi/ipi_tests/test_tools.py` file.
+
    * file_to_check.txt specifying the files serving as reference with their
      respective filenames. For an existing example, please see:
 

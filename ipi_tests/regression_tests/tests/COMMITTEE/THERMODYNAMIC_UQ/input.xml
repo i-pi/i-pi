@@ -1,29 +1,26 @@
-<simulation verbosity='medium'>
+<simulation verbosity='low' threading='false'>
   <output prefix='simulation'>
-    <properties stride='10' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, potential, volume ] </properties>
-    <trajectory filename='pos' stride='10'> positions </trajectory>
-    <trajectory filename='committee_pot' stride='5' extra_type='committee_pot'> extras </trajectory>
-    <trajectory filename='committee_force' stride='10' extra_type='committee_force'> extras </trajectory> 
-    <trajectory filename='committee_virial' stride='10' extra_type='committee_virial'> extras </trajectory> 
-    <trajectory filename='committee_sigma' stride='10' extra_type='committee_uncertainty'> extras </trajectory>
+    <properties stride='2' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, potential, pressure_md{bar}, volume ] </properties>
+    <trajectory filename='pos' stride='2'> positions </trajectory>
+    <trajectory filename='committee_pot' stride='2' extra_type='committee_pot'> extras </trajectory>
+    <trajectory filename='committee_force' stride='2' extra_type='committee_force'> extras </trajectory> 
+    <trajectory filename='committee_virial' stride='2' extra_type='committee_virial'> extras </trajectory> 
+    <trajectory filename='committee_sigma' stride='2' extra_type='committee_uncertainty'> extras </trajectory>
     <checkpoint stride='200'/>
   </output>
-  <total_steps>100</total_steps>
+  <total_steps>10</total_steps>
   <prng>
     <seed>31415</seed>
   </prng>
   <ffcommittee name="committee">
     <alpha> 1.0 </alpha>
     <active_output> active </active_output>
-    <active_thresh units="electronvolt"> 1.3 </active_thresh>
-    <ffsocket name='lammps-1' mode='unix' matching="any">
-        <address>h2o-comm.1</address> <latency> 2e-4 </latency>
+    <active_thresh units="electronvolt"> 0.05 </active_thresh>
+    <ffsocket name='driver-1' mode='unix' matching="any" pbc="false">
+        <address>h2o-comm.1</address> <latency> 1e-3 </latency>
     </ffsocket>
-    <ffsocket name='lammps-2' mode='unix' matching="any">
-      <address>h2o-comm.2</address> <latency> 2e-4 </latency>
-    </ffsocket>
-    <ffsocket name='lammps-3' mode='unix' matching="any">
-      <address>h2o-comm.3</address> <latency> 2e-4 </latency>
+    <ffsocket name='driver-2' mode='unix' matching="any" pbc="false">
+      <address>h2o-comm.2</address> <latency> 1e-3 </latency>
     </ffsocket>
   </ffcommittee>
   <system>

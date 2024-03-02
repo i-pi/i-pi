@@ -8,7 +8,6 @@ and the restart files.
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
-
 import os
 
 import numpy as np
@@ -506,6 +505,8 @@ class TrajectoryOutput(BaseOutput):
                 except:
                     stream.write("%s" % data[self.extra_type][b])
                 stream.write("\n")
+            elif self.extra_type == "raw":
+                stream.write(str(data))
             else:
                 raise KeyError(
                     "Extra type '"

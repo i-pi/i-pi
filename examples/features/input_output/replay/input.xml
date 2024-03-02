@@ -12,7 +12,8 @@
   </prng>
   <!-- dummy forcefield -->  
   <fflj name='lj' pbc='False'>
-      <parameters> { eps:0.0, sigma:1.0 } </parameters>
+      <parameters> { eps:1.0, sigma:1.0 } </parameters>
+      <offset> 8.46888016e+01 </offset>
   </fflj>
   <system>
     <initialize nbeads='1'>

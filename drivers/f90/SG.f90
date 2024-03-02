@@ -243,10 +243,6 @@
             DOUBLE PRECISION, DIMENSION(3) :: fij, rij
             DOUBLE PRECISION r2, pot_ij, pot_lr, vir_lr, volume
 
-            forces = 0.0d0
-            pot = 0.0d0
-            virial = 0.0d0
-
             start = 1
 
             DO i = 1, natoms - 1
