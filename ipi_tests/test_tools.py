@@ -18,6 +18,9 @@ fortran_driver_models = [
     "morse",
     "zundel",
     "qtip4pf",
+    "qtip4pf-c-json",
+    "qtip4pf-c-1",
+    "qtip4pf-c-2",
     "pswater",
     "eckart",
     "ch4hcbe",
@@ -308,6 +311,7 @@ class Runner(object):
             drivers = list()
 
             for client in clients:
+
                 if client[1] == "unix":
                     clientcall = call_driver + " -m {} {} {} -u ".format(
                         client[0], address_key, client[2]
@@ -325,7 +329,7 @@ class Runner(object):
                 # Add extra flags if necessary
                 if any("-" in str(s) for s in client):
                     flag_indeces = [
-                        i for i, elem in enumerate(client) if "-" in str(elem)
+                        i for i, elem in enumerate(client) if "-" in str(elem) and " " in str(elem)
                     ]
                     for i, ll in enumerate(flag_indeces):
                         if i < len(flag_indeces) - 1:
