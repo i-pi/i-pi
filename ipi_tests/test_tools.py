@@ -359,10 +359,12 @@ class Runner(object):
 
             # check driver errors
             for driver in drivers:
-                driver.kill()  # if i-PI has ended, we can kill the drivers
+                # if i-PI has ended, we can wait for the driver to quit
                 driver_out, driver_err = driver.communicate(timeout=60)
-                assert driver.returncode == 0, "Driver error occurred: {}".format(
-                    driver_err
+                assert (
+                    driver.returncode == 0
+                ), "Driver error occurred: {}\n Driver Output: {}".format(
+                    driver_err, driver_out
                 )
 
         except sp.TimeoutExpired:
