@@ -195,7 +195,7 @@ def modify_xml_4_dummy_test(
         clients.append([model, "unix", address, port])
 
         for key in driver_info["flag"][s].keys():
-            if "-" in key:
+            if "-o" in key:
                 for k, v in driver_info["flag"][s].items():
                     clients[s].append(k)
                     clients[s].extend(v)
@@ -209,7 +209,7 @@ def modify_xml_4_dummy_test(
                 clients.append([model, "unix", address, port])
 
                 for key in driver_info["flag"][remaining_client_idx].keys():
-                    if "-" in key:
+                    if "-o" in key:
                         for k, v in driver_info["flag"][remaining_client_idx].items():
                             clients[remaining_client_idx].append(k)
                             clients[remaining_client_idx].extend(v)
@@ -326,11 +326,9 @@ class Runner(object):
                 cmd = clientcall
 
                 # Add extra flags if necessary
-                if any("-" in str(s) for s in client):
+                if any("-o" in str(s) for s in client):
                     flag_indeces = [
-                        i
-                        for i, elem in enumerate(client)
-                        if "-" in str(elem) and " " in str(elem)
+                        i for i, elem in enumerate(client) if "-o" in str(elem)
                     ]
                     for i, ll in enumerate(flag_indeces):
                         if i < len(flag_indeces) - 1:
