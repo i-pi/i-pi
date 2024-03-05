@@ -132,18 +132,18 @@ class InputInst(InputDictionary):
         ),
         "friction": (
             InputValue,
-            {"dtype": bool, "default": False, "help": "Activates Friction."},
+            {"dtype": bool, "default": False, "help": "Activates Friction. Add additional terms to the RP related to a position-independent frictional force. See Eq. 20 in J. Chem. Phys. 156, 194106 (2022)"},
         ),
         "frictionSD": (
             InputValue,
-            {"dtype": bool, "default": True, "help": "Activates SD Friction."},
+            {"dtype": bool, "default": True, "help": "Activates SD Friction. Add additional terms to the RP related to a position-dependent frictional force. See Eq. 32 in J. Chem. Phys. 156, 194106 (2022)"},
         ),
         "fric_spec_dens": (
             InputArray,
             {
                 "dtype": float,
                 "default": input_default(factory=np.ones, args=(0,)),
-                "help": "Laplace Transform (LT) of friction. A two column data is expected. First column: w (cm^-1). Second column: LT(eta)(w)",
+                "help": "Laplace Transform (LT) of friction. A two column data is expected. First column: w (cm^-1). Second column: LT(eta)(w). See Eq. 11 in J. Chem. Phys. 156, 194106 (2022). Note that within the separable coupling approximation the frequency dependence of the friction tensor is position independent.",
             },
         ),
         "fric_spec_dens_ener": (
