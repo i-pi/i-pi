@@ -298,13 +298,11 @@ class Barostat:
             # adds the bias. NB: don't += we don't want to overwrite the force
             fall = fall + dstrip(self.bias.f)
 
-        q_qc = (q - qc).reshape(-1,3)
-        fall = fall.reshape(-1,3)
+        q_qc = (q - qc).reshape(-1, 3)
+        fall = fall.reshape(-1, 3)
         for i in range(3):
             for j in range(i, 3):
-                kst[i, j] -= noddot(
-                    q_qc[:,i], fall[:,j]
-                )
+                kst[i, j] -= noddot(q_qc[:, i], fall[:, j])
 
         if level == self.nmtslevels - 1:
             for i in range(3):
@@ -561,7 +559,7 @@ class BaroBZP(Barostat):
         # we are assuming then that p the coupling between p^2 and dp/dt only involves the fast force
         dt = self.pdt[
             level
-        ]  # this is already set to be half a time step at the specified MTS depth        
+        ]  # this is already set to be half a time step at the specified MTS depth
 
         # computes the pressure associated with the forces at each MTS level.
         press = np.trace(self.stress_mts(level)) / 3.0
@@ -572,7 +570,8 @@ class BaroBZP(Barostat):
             nbeads = self.beads.nbeads
             press = 0
             self.p += (
-                3.0 * dt
+                3.0
+                * dt
                 * (
                     self.cell.V * (press - nbeads * self.pext)
                     + Constants.kb * self.temp
@@ -580,17 +579,12 @@ class BaroBZP(Barostat):
             )
 
             pc = dstrip(self.beads.pc)
-            fc = (
-                np.sum(dstrip(self.forces.forces_mts(level)), axis=0) 
-                / nbeads
-            )
+            fc = np.sum(dstrip(self.forces.forces_mts(level)), axis=0) / nbeads
             fc_m = fc / dstrip(self.beads.m3)[0]
 
-            dt2 = dt*dt*self.beads.nbeads
-            dt3 = dt/3.0
-            self.p += (
-                noddot(pc, fc_m) + dt3 * noddot(fc, fc_m)                
-            ) * dt2
+            dt2 = dt * dt * self.beads.nbeads
+            dt3 = dt / 3.0
+            self.p += (noddot(pc, fc_m) + dt3 * noddot(fc, fc_m)) * dt2
 
     def qcstep(self):
         """Propagates the centroid position and momentum and the volume."""
@@ -603,11 +597,9 @@ class BaroBZP(Barostat):
 
         m = dstrip(self.beads.m3)[0]
 
-        self.nm.qnm[0, :] =  ( 
-          (dstrip(self.nm.qnm)[0, :] * expq) +
-          ((expq - expp) / (2.0 * v)) *
-          (dstrip(self.nm.pnm)[0, :] / m)
-        )
+        self.nm.qnm[0, :] = (dstrip(self.nm.qnm)[0, :] * expq) + (
+            (expq - expp) / (2.0 * v)
+        ) * (dstrip(self.nm.pnm)[0, :] / m)
         self.nm.pnm[0, :] *= expp
 
         self.cell.h *= expq

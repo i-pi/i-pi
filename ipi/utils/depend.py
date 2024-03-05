@@ -44,7 +44,7 @@ __all__ = [
     "depraise",
     "dproperties",
     "ddot",
-    "noddot"
+    "noddot",
 ]
 
 
@@ -237,7 +237,7 @@ class depend_base(object):
            taintme: A boolean giving whether self should be tainted at the end.
               True by default.
         """
-        
+
         # propagates dependency
         for item in self._dependants:
             item = item()
@@ -258,7 +258,7 @@ class depend_base(object):
                         if not item._tainted[0]:
                             item.taint()
             self._tainted[0] = taintme and (not self._name == self._synchro.manual)
-    
+
     def tainted(self):
         """Returns tainted flag."""
 

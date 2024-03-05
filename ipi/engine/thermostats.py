@@ -411,7 +411,7 @@ class ThermoPILE_L(Thermostat):
 
     def step(self):
         """Updates the bound momentum vector with a PILE thermostat."""
-        
+
         # super-cool! just loop over the thermostats! it's as easy as that!
         for t in self._thermos:
             t.step()
