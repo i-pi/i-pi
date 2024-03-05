@@ -24,7 +24,7 @@ class Harmonic_driver(Dummy_driver):
             self.k = float(self.args[0])
             self.type = "isotropic"
         elif len(self.args) == 3:
-            self.k = np.asarray(list(map(float,self.args)))
+            self.k = np.asarray(list(map(float, self.args)))
             self.type = "non-isotropic"
         else:
             sys.exit(self.error_msg)
