@@ -19,16 +19,12 @@ class Harmonic_driver(Dummy_driver):
 
     def check_arguments(self):
         """Function that checks the arguments required to run the driver"""
-        try:
-            k = list(map(float, self.args.split(",")))
-        except ValueError:
-            sys.exit(self.error_msg)
 
-        if len(k) == 1:
-            self.k = k[0]
+        if len(self.args) == 1:
+            self.k = float(self.args[0])
             self.type = "isotropic"
-        elif len(k) == 3:
-            self.k = k
+        elif len(self.args) == 3:
+            self.k = np.asarray(list(map(float,self.args)))
             self.type = "non-isotropic"
         else:
             sys.exit(self.error_msg)
