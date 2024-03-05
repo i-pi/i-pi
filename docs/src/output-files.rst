@@ -235,8 +235,9 @@ property) as a separate dictionary
    data, info = read_output("simulation.out")
 
 Trajectory files can be read with `ipi.read_trajectory`. This reads the 
-trajectory output into a list of `ase.Atoms` objects, converting positions to
-and cell to angstrom, and moving other properties to arrays and converting 
+trajectory output into a list of `ase.Atoms` objects (hence this functionality
+has a dependency on `ase`), converting positions and cell to angstrom, and 
+moving other properties to arrays and converting 
 them to ASE units (e.g. forces are in eV/Å). `extras` output files (that
 contain either numerical data, or raw strings, returned by the driver code
 in addition to energy and forces) can be processed by using `format='extras'`
