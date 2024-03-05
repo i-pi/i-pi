@@ -336,7 +336,6 @@ class ThermoPILE_L(Thermostat):
             return lambda: self.tauk[k - 1]
 
         it = 0
-        nm.pnm.hold()
         for t in self._thermos:
             if t is None:
                 it += 1
@@ -368,7 +367,6 @@ class ThermoPILE_L(Thermostat):
                 t._tau.add_dependency(self._tauk)
                 t._tau._func = make_taugetter(it)
             self._ethermo.add_dependency(t._ethermo)
-            self._ethermo.hold()  # will manually update ethermo when needed!
             it += 1
 
         # since the ethermo will be "delegated" to the normal modes thermostats,
@@ -413,13 +411,10 @@ class ThermoPILE_L(Thermostat):
 
     def step(self):
         """Updates the bound momentum vector with a PILE thermostat."""
-
-        self.nm.pnm.hold()
+        
         # super-cool! just loop over the thermostats! it's as easy as that!
         for t in self._thermos:
             t.step()
-        self.nm.pnm.resume()
-        self._ethermo.resume()
 
 
 dproperties(ThermoPILE_L, ["pilescale", "pilect", "npilect", "tauk"])

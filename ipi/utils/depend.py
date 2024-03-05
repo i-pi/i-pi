@@ -109,7 +109,6 @@ class depend_base(object):
         dependants=None,
         dependencies=None,
         tainted=None,
-        active=None,
     ):
         """Initialises depend_base.
 
@@ -137,14 +136,10 @@ class depend_base(object):
             dependants: An optional list containing objects that depend on self.
             dependencies: An optional list containing objects that self
                 depends upon.
-            active: An optional boolean to indicate if this object is evaluated
-                (is active) or on hold.
         """
 
         if tainted is None:
             tainted = np.array([True], bool)
-        if active is None:
-            active = np.array([True], bool)
         if dependants is None:
             dependants = []
         if dependencies is None:
@@ -153,7 +148,6 @@ class depend_base(object):
         self._tainted = tainted
         self._func = func
         self._name = name
-        self._active = active
         self._threadlock = threading.RLock()
         self._dependants = []
         self._synchro = None
@@ -189,18 +183,6 @@ class depend_base(object):
             setattr(newone, member, deepcopy(getattr(self, member), memo))
 
         return newone
-
-    def hold(self):
-        """Sets depend object as on hold."""
-        self._active[:] = False
-
-    def resume(self):
-        """Sets depend object as active again."""
-        self._active[:] = True
-        if self._func is None:
-            self.taint(taintme=False)
-        else:
-            self.taint(taintme=True)
 
     def add_synchro(self, synchro=None):
         """Links depend object to a synchronizer."""
@@ -255,9 +237,6 @@ class depend_base(object):
            taintme: A boolean giving whether self should be tainted at the end.
               True by default.
         """
-
-        if not self._active:
-            return
 
         for item in self._dependants:
             item = item()
@@ -346,7 +325,6 @@ class depend_value(depend_base):
         dependants=None,
         dependencies=None,
         tainted=None,
-        active=None,
     ):
         """Initialises depend_value.
 
@@ -367,7 +345,7 @@ class depend_value(depend_base):
 
         self._value = value
         super(depend_value, self).__init__(
-            name, synchro, func, dependants, dependencies, tainted, active
+            name, synchro, func, dependants, dependencies, tainted
         )
 
     def get(self):
@@ -431,7 +409,6 @@ class depend_array(np.ndarray, depend_base):
         dependencies=None,
         tainted=None,
         base=None,
-        active=None,
     ):
         """Creates a new array from a template.
 
@@ -456,7 +433,6 @@ class depend_array(np.ndarray, depend_base):
         dependencies=None,
         tainted=None,
         base=None,
-        active=None,
     ):
         """Initialises depend_array.
 
@@ -479,7 +455,7 @@ class depend_array(np.ndarray, depend_base):
         """
 
         super(depend_array, self).__init__(
-            name, synchro, func, dependants, dependencies, tainted, active
+            name, synchro, func, dependants, dependencies, tainted
         )
 
         if base is None:
@@ -525,7 +501,6 @@ class depend_array(np.ndarray, depend_base):
                     obj._dependants,
                     None,
                     obj._tainted,
-                    obj._active,
                 )
                 self._bval = obj._bval
         else:
@@ -599,7 +574,6 @@ class depend_array(np.ndarray, depend_base):
             dependants=self._dependants,
             tainted=self._tainted,
             base=self._bval,
-            active=self._active,
         )
 
     def flatten(self):
@@ -670,7 +644,6 @@ class depend_array(np.ndarray, depend_base):
                 dependants=self._dependants,
                 tainted=self._tainted,
                 base=self._bval,
-                active=self._active,
             )
 
     def __getslice__(self, i, j):
