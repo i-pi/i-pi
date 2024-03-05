@@ -11,7 +11,6 @@ import numpy as np
 
 from ipi.utils.messages import verbosity, warning
 
-
 __all__ = [
     "matrix_exp",
     "stab_cholesky",
@@ -492,3 +491,33 @@ def gaussian_inv(x):
             z = x
         k = np.log(-np.log(z))
         return np.sign(y) * np.polyval([c8, c7, c6, c5, c4, c3, c2, c1, c0], k)
+
+
+def LT_friction(freqs, spectral_density_over_w, forceit=False):
+    """Computes laplace transform of an harmonic bath spectral density.
+    spectral_density_over_w ( J(w)/w ) is a provided as a function (spline)
+    For numerical reasons the  spline  expects frequencies in invcm"""
+    import scipy.integrate as integrate
+
+    if freqs[1] < 1e-4 or np.amax(freqs) > 1e4:  # assumes invcm units
+        if not forceit:
+            raise ValueError(
+                "Problem computing laplace transform. freq outside tested region {} {}".format(
+                    freqs[1], np.amax(freqs)
+                )
+            )
+
+    integral = np.zeros(freqs.size)
+    for n, wk in enumerate(freqs):
+        if wk != 0:
+
+            def f(w):
+                return spectral_density_over_w(w) * (wk / (wk**2 + w**2))
+
+            # if np.mod(n,100)==0:
+            #        print('{} over {}'.format(n,freqs.size))
+            integral[n] = integrate.quad(
+                f, 0, np.inf, limit=100000, epsrel=1e-4, epsabs=1e-7
+            )[0]
+
+    return 2 * integral / np.pi

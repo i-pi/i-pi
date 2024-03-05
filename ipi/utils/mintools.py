@@ -1532,10 +1532,9 @@ def L_BFGS_nls(
     return (x, fx, xi, qlist, glist)
 
 
-def nichols(f0, f1, d, dynmax, m3, big_step, mode=1):
+def nichols(f0, d, dynmax, m3, big_step, mode=1):
     """Find new movement direction. JCP 92,340 (1990)
-    IN    f0      = physical forces        (n,)
-          f1      = spring forces
+    IN    f       = physical + spring forces        (n,)
           d       = dynmax eigenvalues
           dynmax  = dynmax       (n x n-m) with m = # external modes
           m3      = mass vector
@@ -1555,9 +1554,9 @@ def nichols(f0, f1, d, dynmax, m3, big_step, mode=1):
     # Resize
     ndim = f0.size
     shape = f0.shape
-    f = (f0 + f1).reshape((1, ndim)) / m3.reshape(
-        (1, ndim)
-    ) ** 0.5  # From cartesian base to mass-weighted base
+    f = (
+        f0.reshape((1, ndim)) / m3.reshape((1, ndim)) ** 0.5
+    )  # From cartesian base to mass-weighted base
 
     # Change of basis to eigenvector space
     d = d[:, np.newaxis]  # dimension nx1

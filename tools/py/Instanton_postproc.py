@@ -134,6 +134,12 @@ if asr not in list(["poly", "linear", "crystal", "none"]):
         "We can not indentify asr case. The valid cases are: 'poly', 'crystal' , 'linear' and 'none'"
     )
 
+if asr == "poly":
+    nzeros = 6
+elif asr == "crystal":
+    nzeros = 3
+else:
+    nzeros = 0
 if asr == "linear":
     raise NotImplementedError("Sum rules for linear molecules is not implemented")
 
@@ -388,12 +394,6 @@ if case == "reactant":
         Qrot = 1.0
 
     outfile = open("freq.dat", "w")
-    if asr == "poly":
-        nzeros = 6
-    elif asr == "crystal":
-        nzeros = 3
-    else:
-        nzeros = 0
     aux = np.zeros(nzeros)
     dd = np.concatenate((aux, d))
     np.savetxt(outfile, dd.reshape(1, dd.size))
@@ -458,7 +458,7 @@ elif case == "instanton":
                 )
             logQvib = (
                 -np.sum(np.log(betaP * hbar * np.sqrt(np.absolute(np.delete(d, 1)))))
-                + 6 * np.log(nbeads)
+                + nzeros * np.log(nbeads)
                 + np.log(nbeads)
             )
         else:
