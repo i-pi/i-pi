@@ -202,10 +202,10 @@ class ThermoLangevin(Thermostat):
 
         p /= sm
 
-        deltah = np.dot(p, p) * 0.5
+        deltah = noddot(p, p) * 0.5
         p *= self.T
         p += self.S * self.prng.gvec(len(p))
-        deltah -= np.dot(p, p) * 0.5
+        deltah -= noddot(p, p) * 0.5
 
         p *= sm
 

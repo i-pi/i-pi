@@ -321,8 +321,6 @@ class Barostat:
         kst = np.zeros((3, 3), float)
         q = dstrip(self.beads.q)
         qc = dstrip(self.beads.qc)
-        # pc = dstrip(self.beads.pc)
-        # m = dstrip(self.beads.m)
         na3 = 3 * self.beads.natoms
         fall = dstrip(self.forces.fsc_part_2)
 
@@ -563,9 +561,7 @@ class BaroBZP(Barostat):
         # we are assuming then that p the coupling between p^2 and dp/dt only involves the fast force
         dt = self.pdt[
             level
-        ]  # this is already set to be half a time step at the specified MTS depth
-        dt2 = dt**2
-        dt3 = dt**3 / 3.0
+        ]  # this is already set to be half a time step at the specified MTS depth        
 
         # computes the pressure associated with the forces at each MTS level.
         press = np.trace(self.stress_mts(level)) / 3.0
@@ -573,25 +569,28 @@ class BaroBZP(Barostat):
 
         # integerates the kinetic part of the pressure with the force at the inner-most level.
         if level == self.nmtslevels - 1:
+            nbeads = self.beads.nbeads
             press = 0
             self.p += (
                 3.0 * dt
                 * (
-                    self.cell.V * (press - self.beads.nbeads * self.pext)
+                    self.cell.V * (press - nbeads * self.pext)
                     + Constants.kb * self.temp
                 )
             )
 
             pc = dstrip(self.beads.pc)
             fc = (
-                np.sum(dstrip(self.forces.forces_mts(level)), axis=0)
-                / self.beads.nbeads
+                np.sum(dstrip(self.forces.forces_mts(level)), axis=0) 
+                / nbeads
             )
             fc_m = fc / dstrip(self.beads.m3)[0]
 
+            dt2 = dt*dt*self.beads.nbeads
+            dt3 = dt/3.0
             self.p += (
-                dt2 * noddot(pc, fc_m) + dt3 * noddot(fc, fc_m)
-            ) * self.beads.nbeads
+                noddot(pc, fc_m) + dt3 * noddot(fc, fc_m)                
+            ) * dt2
 
     def qcstep(self):
         """Propagates the centroid position and momentum and the volume."""

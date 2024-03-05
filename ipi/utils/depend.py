@@ -237,20 +237,28 @@ class depend_base(object):
            taintme: A boolean giving whether self should be tainted at the end.
               True by default.
         """
-
+        
+        # propagates dependency
         for item in self._dependants:
             item = item()
             if not item._tainted[0]:
                 item.taint()
-        if self._synchro is None:
-            self._tainted[:] = taintme
-        else:
-            self._tainted[:] = True        
-            for v in self._synchro.synced.values():
-                if not (v is self or v._tainted[0]):
-                    v.taint(taintme=True)
-            self._tainted[:] = taintme and (not self._name == self._synchro.manual)
 
+        if self._synchro is None:
+            self._tainted[0] = taintme
+        else:
+            self._tainted[0] = False
+            for v in self._synchro.synced.values():
+                if not v._tainted[0]:
+                    v._tainted[0] = v._name != self._synchro.manual
+                    # do the propagation on the dependants here
+                    # so we don't iterate multiple times over synchro
+                    for item in v._dependants:
+                        item = item()
+                        if not item._tainted[0]:
+                            item.taint()
+            self._tainted[0] = taintme and (not self._name == self._synchro.manual)
+    
     def tainted(self):
         """Returns tainted flag."""
 
