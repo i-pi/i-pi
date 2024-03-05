@@ -255,7 +255,6 @@ class InstantonMotion(Motion):
 
 
 class PesMapper(object):
-
     """Creation of the multi-dimensional function to compute the physical potential and forces
 
     Attributes:
@@ -408,7 +407,6 @@ class PesMapper(object):
 
 
 class FrictionMapper(PesMapper):
-
     """Creation of the multi-dimensional function to compute the physical potential and forces,
     as well as the friction terms"""
 

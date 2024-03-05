@@ -29,7 +29,6 @@ A2au = units.unit_to_internal("length", "angstrom", 1.0)
 
 
 class DDW_with_explicit_bath_driver(Dummy_driver):
-
     """Adds to a double-double well (DDW) potential coupled to two (explicit) harmonic baths.
            pos[0:2] = DDW
            pos[2:n//2+1] = bath1
