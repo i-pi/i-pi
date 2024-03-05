@@ -132,11 +132,19 @@ class InputInst(InputDictionary):
         ),
         "friction": (
             InputValue,
-            {"dtype": bool, "default": False, "help": "Activates Friction. Add additional terms to the RP related to a position-independent frictional force. See Eq. 20 in J. Chem. Phys. 156, 194106 (2022)"},
+            {
+                "dtype": bool,
+                "default": False,
+                "help": "Activates Friction. Add additional terms to the RP related to a position-independent frictional force. See Eq. 20 in J. Chem. Phys. 156, 194106 (2022)",
+            },
         ),
         "frictionSD": (
             InputValue,
-            {"dtype": bool, "default": True, "help": "Activates SD Friction. Add additional terms to the RP related to a position-dependent frictional force. See Eq. 32 in J. Chem. Phys. 156, 194106 (2022)"},
+            {
+                "dtype": bool,
+                "default": True,
+                "help": "Activates SD Friction. Add additional terms to the RP related to a position-dependent frictional force. See Eq. 32 in J. Chem. Phys. 156, 194106 (2022)",
+            },
         ),
         "fric_spec_dens": (
             InputArray,
