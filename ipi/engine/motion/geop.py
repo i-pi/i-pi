@@ -481,9 +481,9 @@ class BFGSOptimizer(DummyOptimizer):
 
             # Restore dimensionality of d and invhessian
             self.d[:, self.gm.fixatoms_mask] = masked_d
-            self.invhessian[np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)] = (
-                masked_invhessian
-            )
+            self.invhessian[
+                np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)
+            ] = masked_invhessian
 
         else:
             fdf0 = (self.old_u, -self.old_f)
@@ -576,9 +576,9 @@ class BFGSTRMOptimizer(DummyOptimizer):
             )
 
             # Restore dimensionality of the hessian
-            self.hessian[np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)] = (
-                masked_hessian
-            )
+            self.hessian[
+                np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)
+            ] = masked_hessian
         else:
             # Make one step. ( A step is finished when a movement is accepted)
             BFGSTRM(
@@ -794,9 +794,9 @@ class Damped_BFGSOptimizer(DummyOptimizer):
             )
 
             # Restore dimensionality of the invhessian
-            self.invhessian[np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)] = (
-                masked_invhessian
-            )
+            self.invhessian[
+                np.ix_(self.gm.fixatoms_mask, self.gm.fixatoms_mask)
+            ] = masked_invhessian
 
         else:
             fdf0 = (self.old_u, -self.old_f)

@@ -360,9 +360,13 @@ class Initializer:
         """
 
         if simul.beads.nbeads == 0:
-            fpos = fmom = fmass = flab = fcell = (
-                False  # we don't have an explicitly defined beads object yet
-            )
+            fpos = (
+                fmom
+            ) = (
+                fmass
+            ) = (
+                flab
+            ) = fcell = False  # we don't have an explicitly defined beads object yet
         else:
             fpos = fmom = fmass = flab = fcell = True
 
