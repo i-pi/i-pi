@@ -43,6 +43,8 @@ __all__ = [
     "dstrip",
     "depraise",
     "dproperties",
+    "ddot",
+    "noddot"
 ]
 
 
@@ -257,7 +259,6 @@ class depend_base(object):
         if not self._active:
             return
 
-        self._tainted[:] = True
         for item in self._dependants:
             item = item()
             if not item._tainted[0]:
@@ -265,6 +266,7 @@ class depend_base(object):
         if self._synchro is None:
             self._tainted[:] = taintme
         else:
+            self._tainted[:] = True        
             for v in self._synchro.synced.values():
                 if not (v is self or v._tainted[0]):
                     v.taint(taintme=True)
@@ -748,17 +750,17 @@ class depend_array(np.ndarray, depend_base):
 # overwrite np.dot and other similar functions.
 
 # ** np.dot
-__dp_dot = np.dot
+noddot = np.dot
 
 
-def dep_dot(da, db):
+def ddot(da, db):
     a = dstrip(da)
     b = dstrip(db)
 
-    return __dp_dot(a, b)
+    return noddot(a, b)
 
 
-np.dot = dep_dot
+np.dot = noddot
 
 # ENDS NUMPY FUNCTIONS OVERRIDE
 
