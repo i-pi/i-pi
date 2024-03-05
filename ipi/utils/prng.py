@@ -19,7 +19,6 @@ __all__ = ["Random"]
 
 
 class Random(object):
-
     """Class to interface with the standard pseudo-random number generator.
 
     Initialises the standard numpy pseudo-random number generator from a seed

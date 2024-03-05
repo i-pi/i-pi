@@ -1,4 +1,5 @@
 """Backport of importlib.import_module from 3.x."""
+
 # While not critical (and in no way guaranteed!), it would be nice to keep this
 # code compatible with Python 2.3.
 import sys

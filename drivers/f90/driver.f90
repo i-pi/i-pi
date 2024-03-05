@@ -33,12 +33,12 @@
          USE PSWATER
          USE F90SOCKETS, ONLY : open_socket, writebuffer, readbuffer, f_sleep
       IMPLICIT NONE
-      
+
       ! SOCKET VARIABLES
       INTEGER, PARAMETER :: MSGLEN=12   ! length of the headers of the driver/wrapper communication protocol
       INTEGER socket, inet, port        ! socket ID & address of the server
       CHARACTER(LEN=1024) :: host
-      
+
       ! COMMAND LINE PARSING
       CHARACTER(LEN=1024) :: cmdbuffer
       INTEGER ccmd, vstyle, vseed
@@ -51,10 +51,9 @@
       CHARACTER(LEN=12) :: header
       LOGICAL :: isinit=.false., hasdata=.false.
       INTEGER cbuf, rid, length
-      CHARACTER(LEN=4096) :: initbuffer      ! it's unlikely a string this large will ever be passed...
-
-      CHARACTER(LEN=4096) :: string,string2,string3,trimmed  ! it's unlikely a string this large will ever be passed...
-      CHARACTER(LEN=30000) :: longbuffer, longstring ! used in water_dip_pol model to pass dipole-z derivative and polarizability.
+      CHARACTER(LEN=65536) :: initbuffer      ! it's unlikely a string this large will ever be passed...      
+      CHARACTER(LEN=65536) :: string,string1,string2,string3,trimmed  ! it's unlikely a string this large will ever be passed...
+      CHARACTER(LEN=30000) :: longbuffer, longstring ! used in water_dip_pol model to pass dipole-z derivative and polarizability
       DOUBLE PRECISION, ALLOCATABLE :: msgbuffer(:)
 
       ! PARAMETERS OF THE SYSTEM (CELL, ATOM POSITIONS, ...)
@@ -127,6 +126,9 @@
             ELSEIF (ccmd == 2) THEN
                READ(cmdbuffer,*) port
             ELSEIF (ccmd == 3) THEN
+               IF (verbose>0) THEN  
+                  WRITE(*,*) "Running potential type ", trim(cmdbuffer)
+               ENDIF 
                IF (trim(cmdbuffer) == "lj") THEN
                   vstyle = 1
                ELSEIF (trim(cmdbuffer) == "sg") THEN
@@ -134,7 +136,7 @@
                ELSEIF (trim(cmdbuffer) == "harm") THEN
                   vstyle = 3
                ELSEIF (trim(cmdbuffer) == "harm3d") THEN
-                  vstyle = 30
+                  vstyle = 40
                ELSEIF (trim(cmdbuffer) == "morse") THEN
                   vstyle = 4
                ELSEIF (trim(cmdbuffer) == "zundel") THEN
@@ -173,13 +175,23 @@
                   vstyle = 29
                ELSEIF (trim(cmdbuffer) == "water_dip_pol") THEN
                   vstyle = 31
+               ELSEIF (trim(cmdbuffer) == "qtip4pf-c-1") THEN
+                  vstyle = 60
+               ELSEIF (trim(cmdbuffer) == "qtip4pf-c-2") THEN
+                  vstyle = 61
+               ELSEIF (trim(cmdbuffer) == "qtip4pf-c-json") THEN
+                  vstyle = 62
+               ELSEIF (trim(cmdbuffer) == "qtip4pf-c-1-delta") THEN
+                  vstyle = 63
+               ELSEIF (trim(cmdbuffer) == "qtip4pf-c-2-delta") THEN
+                  vstyle = 64
                ELSEIF (trim(cmdbuffer) == "gas") THEN
                   vstyle = 0  ! ideal gas
                ELSEIF (trim(cmdbuffer) == "dummy") THEN
                   vstyle = 99 ! returns non-zero but otherwise meaningless values
                ELSE
                   WRITE(*,*) " Unrecognized potential type ", trim(cmdbuffer)
-                  WRITE(*,*) " Use -m [dummy|gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|morsedia|qtip4pf-sr|water_dip_polharmonic_bath|meanfield_bath] "
+                  WRITE(*,*) " Use -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json|qtip4pf-c-1-delta|qtip4pf-c-2-delta|harmonic_bath|meanfield_bath] "
                   STOP "ENDED"
                ENDIF
             ELSEIF (ccmd == 4) THEN
@@ -394,7 +406,7 @@
          ENDIF
          ks = vpars(1)
          isinit = .true.
-      ELSEIF (vstyle == 30) THEN
+      ELSEIF (vstyle == 40) THEN
          IF (par_count /= 1) THEN
             WRITE(*,*) "Error: parameters not initialized correctly."
             WRITE(*,*) "For 3D harmonic potential use -o k "
@@ -560,7 +572,7 @@
                forces(1,1) = -ks*atoms(1,1)
                virial = 0.0d0
                virial(1,1) = forces(1,1)*atoms(1,1)
-            ELSEIF (vstyle == 30) THEN ! 3D harmonic potential
+            ELSEIF (vstyle == 40) THEN ! 3D harmonic potential
                    pot = 0.0d0
                    forces = 0.0d0
                    virial = 0.0d0
@@ -666,6 +678,111 @@
                   STOP "ENDED"
                ENDIF
                CALL qtip4pf_sr(atoms,nat,forces,pot,virial)
+            ELSEIF (vstyle .ge. 60 .and. vstyle .le. 64 ) THEN 
+               ! qtip4pf committee potential. adds two different types of (small)
+               ! LJ potentials just to have variations on a theme
+
+               IF (mod(nat,3)/=0) THEN
+                  WRITE(*,*) " Expecting water molecules O H H O H H O H H but got ", nat, "atoms"
+                  STOP "ENDED"
+               ENDIF
+               vpars(1) = cell_h(1,1)
+               vpars(2) = cell_h(2,2)
+               vpars(3) = cell_h(3,3)
+               IF (cell_h(1,2).gt.1d-10 .or. cell_h(1,3).gt.1d-12  .or. cell_h(2,3).gt.1d-12) THEN
+                  WRITE(*,*) " qtip4pf PES only works with orthorhombic cells", cell_h(1,2), cell_h(1,3), cell_h(2,3)
+                  STOP "ENDED"
+               ENDIF
+               IF (vstyle == 63 .or. vstyle == 64) THEN
+                  pot = 0.0
+                  forces = 0.0
+                  virial = 0.0
+               ELSE
+                  CALL qtip4pf(vpars(1:3),atoms,nat,forces,pot,virial)
+               ENDIF 
+
+               ! adds a small LJ potential to give different committee values
+               ! we have to replicate the code to make neighbor lists
+               rc = 12.0d0  ! hardcoded cutoff
+               IF ((allocated(n_list) .neqv. .true.)) THEN
+                  IF (verbose > 0) WRITE(*,*) " Allocating neighbour lists. Cutoff ", rc
+                  ALLOCATE(n_list(nat*(nat-1)/2))
+                  ALLOCATE(index_list(nat))
+                  ALLOCATE(last_atoms(nat,3))
+                  last_atoms = 0.0d0
+                  rn = rc*1.2
+                  CALL nearest_neighbours(rn, nat, atoms, cell_h, cell_ih, index_list, n_list)
+                  last_atoms = atoms
+                  init_volume = volume
+                  init_rc = rc
+               ENDIF
+
+               ! Checking to see if we need to re-calculate the neighbour list
+               rc = init_rc*(volume/init_volume)**(1.0/3.0)
+               DO i = 1, nat
+                  CALL separation(cell_h, cell_ih, atoms(i,:), last_atoms(i,:), displacement)
+                  ! Note that displacement is the square of the distance moved by atom i since the last time the neighbour list was created.
+                  IF (4*displacement > (rn-rc)*(rn-rc)) THEN
+                     IF (verbose > 0) WRITE(*,*) " Recalculating neighbour lists"
+                     CALL nearest_neighbours(rn, nat, atoms, cell_h, cell_ih, index_list, n_list)
+                     last_atoms = atoms
+                     rn = 1.2*rc
+                     EXIT
+                  ENDIF
+               ENDDO
+
+               IF (vstyle == 60 .or. vstyle == 63) THEN ! type 1
+                  CALL LJ_getall(rc, 2.5d0, 2d-6, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
+               ELSEIF (vstyle == 61 .or. vstyle == 64) THEN ! type 2
+                  CALL LJ_getall(rc, 2.1d0, 24d-6, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
+               ELSEIF (vstyle == 62) THEN ! returns both as json
+                  ! return both the committee members as a JSON extra string
+                  CALL LJ_getall(rc, 2.5d0, 2d-6, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
+                  
+                  string1=""
+                  write(string,'(f15.8)') pot
+                  string1 = TRIM(string) // ", "
+
+                  string2="[ "
+                  DO i=1,nat-1
+                     WRITE(string,'(*(f15.8,","))') forces(i,:)
+                     string2 = TRIM(string2) // TRIM(string)
+                  END DO
+                  write(string,'((f15.8,","), (f15.8,","), f15.8)') forces(nat,:)
+                  string2 = TRIM(string2) // TRIM(string) // " ], "                  
+               
+                  WRITE(string3, '("[", 8(f15.8,",") f15.8, "]")') reshape(virial, (/9/))
+
+                  ! this is a ugly but easy way to compute both terms
+                  CALL LJ_getall(rc, 2.5d0, -2d-6, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
+                  CALL LJ_getall(rc, 2.1d0, 24d-6, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
+
+                  write(string,'(f15.8)') pot
+                  string1 = TRIM(string1) // TRIM(string)
+
+                  string2 = TRIM(string2) // "[ "
+                  DO i=1,nat-1
+                     WRITE(string,'(*(f15.8,","))') forces(i,:)
+                     string2 = TRIM(string2) // TRIM(string)
+                  END DO
+                  write(string,'((f15.8,","), (f15.8,","), f15.8)') forces(nat,:)
+                  string2 = TRIM(string2) // TRIM(string) // " ] "
+
+                  WRITE(string, '("[", 8(f15.8,",") f15.8, "]")') reshape(virial, (/9/))
+                  string3 = TRIM(string3) // ", " // TRIM(string)
+
+                  initbuffer = '{ "committee_pot" : [' 
+                  initbuffer = TRIM(initbuffer) // trim(string1)
+                  initbuffer = TRIM(initbuffer) // '],  "committee_force" : [ '
+                  initbuffer = TRIM(initbuffer) // trim(string2) // ' ], '
+                  initbuffer = TRIM(initbuffer) // '"committee_virial" : ['//  trim(string3) // ' ] '
+
+                  initbuffer = TRIM(initbuffer) // '}'
+
+                  ! and now make sure we are returning the ensemble mean
+                  CALL LJ_getall(rc, 2.1d0, -12d-6, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
+                  CALL LJ_getall(rc, 2.5d0, 1d-6, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
+               ENDIF
             ELSEIF (vstyle == 11) THEN ! efield potential.
                IF (mod(nat,3)/=0) THEN
                   WRITE(*,*) " Expecting water molecules O H H O H H O H H but got ", nat, "atoms"
@@ -772,6 +889,10 @@
                   ENDIF
                ENDDO
 
+               ! zeroes out forces and al the rest
+               forces = 0.0d0
+               pot = 0.0d0
+               virial = 0.0d0               
                IF (vstyle == 1) THEN
                   CALL LJ_getall(rc, sigma, eps, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
                ELSEIF (vstyle == 2) THEN
@@ -893,6 +1014,12 @@
                cbuf = LEN_TRIM(longbuffer)
                CALL writebuffer(socket,cbuf)
                CALL writebuffer(socket,TRIM(longbuffer),cbuf)
+               IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ", &               
+     &         initbuffer
+            ELSEIF (vstyle==62) THEN ! returns committee data
+               cbuf = LEN_TRIM(initbuffer)
+               CALL writebuffer(socket,cbuf)
+               CALL writebuffer(socket,initbuffer,cbuf)
             ELSE
                cbuf = 1 ! Size of the "extras" string
                CALL writebuffer(socket,cbuf) ! This would write out the "extras" string, but in this case we only use a dummy string.

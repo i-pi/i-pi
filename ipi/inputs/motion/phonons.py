@@ -33,7 +33,6 @@ __all__ = ["InputDynMatrix"]
 
 
 class InputDynMatrix(InputDictionary):
-
     """Dynamic matrix calculation options.
 
     Contains options related with finite difference computation of force constats.
@@ -109,7 +108,7 @@ class InputDynMatrix(InputDictionary):
 
     dynamic = {}
 
-    default_help = "Fill in."
+    default_help = "Dynamical matrix Class. It calculates phonon modes and frequencies in solids as well as normal vibrational modes and frequencies of aperiodic systems."
     default_label = "PHONONS"
 
     def store(self, phonons):

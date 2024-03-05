@@ -8,7 +8,6 @@ and the restart files.
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
-
 import os
 
 import numpy as np
@@ -128,7 +127,6 @@ class BaseOutput(object):
 
 
 class PropertyOutput(BaseOutput):
-
     """Class dealing with outputting a set of properties to file.
 
     Does not do any calculation, just manages opening a file, getting data
@@ -250,7 +248,6 @@ class PropertyOutput(BaseOutput):
 
 
 class TrajectoryOutput(BaseOutput):
-
     """Class dealing with outputting atom-based properties as a
     trajectory file.
 
@@ -508,6 +505,8 @@ class TrajectoryOutput(BaseOutput):
                 except:
                     stream.write("%s" % data[self.extra_type][b])
                 stream.write("\n")
+            elif self.extra_type == "raw":
+                stream.write(str(data))
             else:
                 raise KeyError(
                     "Extra type '"
@@ -557,7 +556,6 @@ class TrajectoryOutput(BaseOutput):
 
 
 class CheckpointOutput:
-
     """Class dealing with outputting checkpoints.
 
     Saves the complete status of the simulation at regular intervals.

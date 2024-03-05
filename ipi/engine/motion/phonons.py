@@ -29,7 +29,6 @@ from ipi.utils.messages import verbosity, info
 
 
 class DynMatrixMover(Motion):
-
     """Dynamic matrix calculation routine by finite difference."""
 
     def __init__(
@@ -170,7 +169,9 @@ class DynMatrixMover(Motion):
 
         # prints eigenvectors
         outfile = self.output_maker.get_output(self.prefix + ".eigvec", "w")
-        outfile.write("# Eigenvector  matrix (normalized)" + "\n")
+        outfile.write(
+            "# Eigenvector  matrix from the dynamical matrix (normalized)" + "\n"
+        )
         for i in range(activedof):
             outfile.write(" ".join(map(str, eigsys[1][i])) + "\n")
         outfile.close_stream()
@@ -183,7 +184,7 @@ class DynMatrixMover(Motion):
             eigmode[:, i] /= np.sqrt(np.dot(eigmode[:, i], eigmode[:, i]))
         outfile = self.output_maker.get_output(self.prefix + ".mode", "w")
 
-        outfile.write("# Phonon modes (mass-scaled)" + "\n")
+        outfile.write("# Phonon modes (cartesian space and normalized)" + "\n")
         for i in range(activedof):
             outfile.write(" ".join(map(str, eigmode[i])) + "\n")
         outfile.close_stream()
@@ -285,7 +286,6 @@ class DynMatrixMover(Motion):
 
 
 class DummyPhononCalculator:
-
     """No-op PhononCalculator"""
 
     def __init__(self):
@@ -305,7 +305,6 @@ class DummyPhononCalculator:
 
 
 class FDPhononCalculator(DummyPhononCalculator):
-
     """Finite difference phonon evaluator."""
 
     def bind(self, dm):
@@ -372,7 +371,6 @@ class FDPhononCalculator(DummyPhononCalculator):
 
 
 class NMFDPhononCalculator(FDPhononCalculator):
-
     """Normal mode finite difference phonon evaluator."""
 
     def bind(self, dm):
@@ -425,7 +423,6 @@ class NMFDPhononCalculator(FDPhononCalculator):
 
 
 class ENMFDPhononCalculator(NMFDPhononCalculator):
-
     """Energy scaled normal mode finite difference phonon evaluator."""
 
     def step(self, step=None):

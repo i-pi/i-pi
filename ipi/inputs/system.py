@@ -104,7 +104,6 @@ class InputSysTemplate(Input):
 
 
 class InputSystem(Input):
-
     """Physical system input class.
 
     Handles generating the appropriate forcefield class from the xml input file,

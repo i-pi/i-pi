@@ -1,0 +1,7 @@
+
+Open path tests
+----------------------------------------------------------------------
+These tests verify that the simulation of open path simulations work
+as intended. Tests are based on a well-established implementation that
+has been verified on analytical results for harmonic oscillators
+

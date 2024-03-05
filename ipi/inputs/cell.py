@@ -15,7 +15,6 @@ __all__ = ["InputCell"]
 
 
 class InputCell(InputArray):
-
     """Cell input class.
 
     Handles generating the appropriate cell class from the xml input file,
@@ -25,7 +24,12 @@ class InputCell(InputArray):
 
     attribs = copy(InputArray.attribs)
 
-    default_help = "Deals with the cell parameters. Takes as array which can be used to initialize the cell vector matrix."
+    default_help = """
+Describes with the cell parameters. Takes as array which can be used to initialize the cell vector matrix.
+N.B.: the cell parameters are stored with the lattice vectors in the columns, and the cell must be oriented
+in such a way that the array is upper-triangular (i.e. with the first vector aligned along x and the second
+vector in the xy plane).     
+"""
     default_label = "CELL"
 
     def __init__(self, help=None, dimension=None, units=None, default=None, dtype=None):
@@ -60,3 +64,13 @@ class InputCell(InputArray):
         h.shape = (3, 3)
 
         return Cell(h=h)
+
+    def check(self):
+        """Checks for optional parameters."""
+
+        super(InputCell, self).check()
+
+        h = self.value.reshape(9)
+
+        if (h[[3, 6, 7]] ** 2).sum() > 1e-20:
+            raise ValueError("The cell matrix must be upper triangular.")

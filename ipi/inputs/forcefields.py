@@ -40,7 +40,6 @@ __all__ = [
 
 
 class InputForceField(Input):
-
     """ForceField input class.
 
     Handles generating one instance of a particular forcefield class from the xml
@@ -93,6 +92,15 @@ class InputForceField(Input):
                 "help": "The number of seconds the polling thread will wait between exhamining the list of requests.",
             },
         ),
+        "offset": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 0.0,
+                "dimension": "energy",
+                "help": "A constant offset that is subtracted from the forcefield energy. Useful when there is a large core energy contribution that is constant throughout a simulation and hides significant changes in the 10th digit.",
+            },
+        ),
         "parameters": (
             InputValue,
             {"dtype": dict, "default": {}, "help": "The parameters of the force field"},
@@ -121,6 +129,7 @@ class InputForceField(Input):
         Input.store(self, ff)
         self.name.store(ff.name)
         self.latency.store(ff.latency)
+        self.offset.store(ff.offset)
         self.parameters.store(ff.pars)
         self.pbc.store(ff.dopbc)
         self.activelist.store(ff.active)
@@ -139,6 +148,7 @@ class InputForceField(Input):
             pars=self.parameters.fetch(),
             name=self.name.fetch(),
             latency=self.latency.fetch(),
+            offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
             active=self.activelist.fetch(),
             threaded=self.threaded.fetch(),
@@ -146,7 +156,6 @@ class InputForceField(Input):
 
 
 class InputFFSocket(InputForceField):
-
     """Creates a ForceField object with a socket interface.
 
     Handles generating one instance of a socket interface forcefield class.
@@ -288,6 +297,7 @@ class InputFFSocket(InputForceField):
             pars=self.parameters.fetch(),
             name=self.name.fetch(),
             latency=self.latency.fetch(),
+            offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
             active=self.activelist.fetch(),
             threaded=self.threaded.fetch(),
@@ -344,6 +354,7 @@ class InputFFLennardJones(InputForceField):
             pars=self.parameters.fetch(),
             name=self.name.fetch(),
             latency=self.latency.fetch(),
+            offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
             threaded=self.threaded.fetch(),
         )
@@ -419,6 +430,7 @@ class InputFFdmd(InputForceField):
             pars=self.parameters.fetch(),
             name=self.name.fetch(),
             latency=self.latency.fetch(),
+            offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
             threaded=self.threaded.fetch(),
         )
@@ -480,6 +492,7 @@ class InputFFDebye(InputForceField):
             vref=self.v_reference.fetch(),
             name=self.name.fetch(),
             latency=self.latency.fetch(),
+            offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
             threaded=self.threaded.fetch(),
         )
@@ -533,6 +546,7 @@ class InputFFPlumed(InputForceField):
         return FFPlumed(
             name=self.name.fetch(),
             latency=self.latency.fetch(),
+            offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
             threaded=self.threaded.fetch(),
             plumeddat=self.plumeddat.fetch(),
@@ -652,6 +666,7 @@ class InputFFYaff(InputForceField):
             reci_ei=self.reci_ei.fetch(),
             name=self.name.fetch(),
             latency=self.latency.fetch(),
+            offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
             threaded=self.threaded.fetch(),
         )
@@ -688,6 +703,7 @@ class InputFFsGDML(InputForceField):
             sGDML_model=self.sGDML_model.fetch(),
             name=self.name.fetch(),
             latency=self.latency.fetch(),
+            offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
             threaded=self.threaded.fetch(),
         )
@@ -701,9 +717,16 @@ class InputFFCommittee(InputForceField):
                       of energy and forces. These are averaged, and the mean used as the 
                       actual forcefield. Statistics about the distribution are also returned
                       as extras fields, and can be printed for further postprocessing. 
+                      It is also possible for a single FF object to return a JSON-formatted
+                      string containing entries `committee_pot`, `committee_force` and 
+                      `committee_virial`, that contain multiple members at once. These
+                      will be unpacked and combined with whatever else is present. 
+
                       Also contains options to use it for uncertainty estimation and for
                       active learning in a ML context, based on a committee model.
-                      Implements the approaches discussed in DOI: 10.1063/5.0036522.
+                      Implements the approaches discussed in 
+                      [Musil et al.](http://doi.org/10.1021/acs.jctc.8b00959)
+                      and [Imbalzano et al.](http://doi.org/10.1063/5.0036522)
                       """
     default_label = "FFCOMMITTEE"
 
@@ -772,6 +795,14 @@ class InputFFCommittee(InputForceField):
             "help": "Output filename for structures that exceed the accuracy threshold of the model, to be used in active learning.",
         },
     )
+    fields["parse_json"] = (
+        InputValue,
+        {
+            "dtype": bool,
+            "default": False,
+            "help": "Tell the model whether to parse extras string looking for committee values of potential, forces, and virials. Default: false.",
+        },
+    )
 
     def store(self, ff):
         """Store all the sub-forcefields"""
@@ -786,6 +817,7 @@ class InputFFCommittee(InputForceField):
         self.baseline_name.store(ff.baseline_name)
         self.active_thresh.store(ff.active_thresh)
         self.active_output.store(ff.active_out)
+        self.parse_json.store(ff.parse_json)
 
         for _ii, _obj in enumerate(_fflist):
             if self.extra[_ii] == 0:
@@ -834,6 +866,7 @@ class InputFFCommittee(InputForceField):
             pars=self.parameters.fetch(),
             name=self.name.fetch(),
             latency=self.latency.fetch(),
+            offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
             fflist=fflist,
             ffweights=self.weights.fetch(),
@@ -842,6 +875,7 @@ class InputFFCommittee(InputForceField):
             baseline_name=self.baseline_name.fetch(),
             active_thresh=self.active_thresh.fetch(),
             active_out=self.active_output.fetch(),
+            parse_json=self.parse_json.fetch(),
         )
 
 
@@ -944,6 +978,7 @@ class InputFFCavPhSocket(InputFFSocket):
             pars=self.parameters.fetch(),
             name=self.name.fetch(),
             latency=self.latency.fetch(),
+            offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
             active=self.activelist.fetch(),
             threaded=self.threaded.fetch(),

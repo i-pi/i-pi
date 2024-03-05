@@ -33,7 +33,6 @@ fbuid = 0
 
 
 class ForceBead:
-
     """Base force helper class.
 
     This is the object that computes forces for a single bead. This is the last
@@ -165,7 +164,6 @@ class ForceBead:
             self._getallcount += 1
 
         # this is converting the distribution library requests into [ u, f, v ]  lists
-        # t_start = time.time()
         if self.request is None:
             self.request = self.queue()
 
@@ -525,9 +523,11 @@ class ScaledForceComponent:
         self._scaling = depend_value(name="scaling", value=scaling)
         self._f = depend_array(
             name="f",
-            func=lambda: self.scaling * self.bf.f
-            if self.scaling != 0
-            else np.zeros((self.bf.nbeads, 3 * self.bf.natoms)),
+            func=lambda: (
+                self.scaling * self.bf.f
+                if self.scaling != 0
+                else np.zeros((self.bf.nbeads, 3 * self.bf.natoms))
+            ),
             value=np.zeros((self.bf.nbeads, 3 * self.bf.natoms)),
             dependencies=[self.bf._f, self._scaling],
         )
@@ -600,7 +600,6 @@ dproperties(
 
 
 class Forces:
-
     """Class that gathers all the forces together.
     Collects many forcefield instances and parallelizes getting the forces
     in a PIMD environment.

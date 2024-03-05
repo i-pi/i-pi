@@ -45,7 +45,6 @@ class NumpyEncoder(json.JSONEncoder):
 
 
 class ForceRequest(dict):
-
     """An extension of the standard Python dict class which only has a == b
     if a is b == True, rather than if the elements of a and b are identical.
 
@@ -60,7 +59,6 @@ class ForceRequest(dict):
 
 
 class ForceField:
-
     """Base forcefield class.
 
     Gives the standard methods and quantities needed in all the forcefield
@@ -72,6 +70,8 @@ class ForceField:
         name: The name of the forcefield.
         latency: A float giving the number of seconds the socket will wait
             before updating the client list.
+        offset: A float giving a constant value that is subtracted from the return
+            value of the forcefield
         requests: A list of all the jobs to be given to the client codes.
         dopbc: A boolean giving whether or not to apply the periodic boundary
             conditions before sending the positions to the client code.
@@ -84,6 +84,7 @@ class ForceField:
     def __init__(
         self,
         latency=1.0,
+        offset=0.0,
         name="",
         pars=None,
         dopbc=True,
@@ -95,6 +96,8 @@ class ForceField:
         Args:
             latency: The number of seconds the socket will wait before updating
                 the client list.
+            offset: A constant offset subtracted from the energy value given by the
+                client.
             name: The name of the forcefield.
             pars: A dictionary used to initialize the forcefield, if required.
                 Of the form {'name1': value1, 'name2': value2, ... }.
@@ -110,6 +113,7 @@ class ForceField:
 
         self.name = name
         self.latency = latency
+        self.offset = offset
         self.requests = []
         self.dopbc = dopbc
         self.active = active
@@ -220,7 +224,7 @@ class ForceField:
                 if r["status"] == "Queued":
                     r["t_dispatched"] = time.time()
                     r["result"] = [
-                        0.0,
+                        0.0 - self.offset,
                         np.zeros(len(r["pos"]), float),
                         np.zeros((3, 3), float),
                         {"raw": ""},
@@ -304,7 +308,6 @@ class ForceField:
 
 
 class FFSocket(ForceField):
-
     """Interface between the PIMD code and a socket for a single replica.
 
     Deals with an individual replica of the system, obtaining the potential
@@ -319,6 +322,7 @@ class FFSocket(ForceField):
     def __init__(
         self,
         latency=1.0,
+        offset=0.0,
         name="",
         pars=None,
         dopbc=True,
@@ -341,12 +345,15 @@ class FFSocket(ForceField):
         """
 
         # a socket to the communication library is created or linked
-        super(FFSocket, self).__init__(latency, name, pars, dopbc, active, threaded)
+        super(FFSocket, self).__init__(
+            latency, offset, name, pars, dopbc, active, threaded
+        )
         if interface is None:
             self.socket = InterfaceSocket()
         else:
             self.socket = interface
         self.socket.requests = self.requests
+        self.socket.offset = self.offset
 
     def poll(self):
         """Function to check the status of the client calculations."""
@@ -369,8 +376,36 @@ class FFSocket(ForceField):
         self.socket.close()
 
 
-class FFLennardJones(ForceField):
+class FFEval(ForceField):
+    """General class for models that provide a self.evaluate(request)
+    to compute the potential, force and virial.
+    """
 
+    def poll(self):
+        """Polls the forcefield checking if there are requests that should
+        be answered, and if necessary evaluates the associated forces and energy."""
+
+        # We have to be thread-safe, as in multi-system mode this might get
+        # called by many threads at once.
+        with self._threadlock:
+            for r in self.requests:
+                if r["status"] == "Queued":
+                    r["status"] = "Running"
+                    r["t_dispatched"] = time.time()
+                    self.evaluate(r)
+                    r["result"][0] -= self.offset  # subtract constant offset
+
+    def evaluate(self, request):
+        request["result"] = [
+            0.0,
+            np.zeros(len(request["pos"]), float),
+            np.zeros((3, 3), float),
+            {"raw": ""},
+        ]
+        request["status"] = "Done"
+
+
+class FFLennardJones(FFEval):
     """Basic fully pythonic force provider.
 
     Computes LJ interactions without minimum image convention, cutoffs or
@@ -386,7 +421,15 @@ class FFLennardJones(ForceField):
                          'start': starting time}.
     """
 
-    def __init__(self, latency=1.0e-3, name="", pars=None, dopbc=False, threaded=False):
+    def __init__(
+        self,
+        latency=1.0e-3,
+        offset=0.0,
+        name="",
+        pars=None,
+        dopbc=False,
+        threaded=False,
+    ):
         """Initialises FFLennardJones.
 
         Args:
@@ -401,24 +444,11 @@ class FFLennardJones(ForceField):
 
         # a socket to the communication library is created or linked
         super(FFLennardJones, self).__init__(
-            latency, name, pars, dopbc=dopbc, threaded=threaded
+            latency, offset, name, pars, dopbc=dopbc, threaded=threaded
         )
         self.epsfour = float(self.pars["eps"]) * 4
         self.sixepsfour = 6 * self.epsfour
         self.sigma2 = float(self.pars["sigma"]) * float(self.pars["sigma"])
-
-    def poll(self):
-        """Polls the forcefield checking if there are requests that should
-        be answered, and if necessary evaluates the associated forces and energy."""
-
-        # We have to be thread-safe, as in multi-system mode this might get
-        # called by many threads at once.
-        with self._threadlock:
-            for r in self.requests:
-                if r["status"] == "Queued":
-                    r["status"] = "Running"
-                    r["t_dispatched"] = time.time()
-                    self.evaluate(r)
 
     def evaluate(self, r):
         """Just a silly function evaluating a non-cutoffed, non-pbc and
@@ -447,8 +477,7 @@ class FFLennardJones(ForceField):
         r["status"] = "Done"
 
 
-class FFdmd(ForceField):
-
+class FFdmd(FFEval):
     """Pythonic force provider.
 
     Computes DMD forces as in Bowman, .., Brown JCP 2003 DOI: 10.1063/1.1578475. It is a time dependent potential.
@@ -467,6 +496,7 @@ class FFdmd(ForceField):
     def __init__(
         self,
         latency=1.0e-3,
+        offset=0.0,
         name="",
         coupling=None,
         freq=0.0,
@@ -483,7 +513,9 @@ class FFdmd(ForceField):
         """
 
         # a socket to the communication library is created or linked
-        super(FFdmd, self).__init__(latency, name, pars, dopbc=dopbc, threaded=threaded)
+        super(FFdmd, self).__init__(
+            latency, offset, name, pars, dopbc=dopbc, threaded=threaded
+        )
 
         if coupling is None:
             raise ValueError("Must provide the couplings for DMD.")
@@ -499,19 +531,6 @@ class FFdmd(ForceField):
         self.freq = freq
         self.dtdmd = dtdmd
         self.dmdstep = dmdstep
-
-    def poll(self):
-        """Polls the forcefield checking if there are requests that should
-        be answered, and if necessary evaluates the associated forces and energy."""
-
-        # We have to be thread-safe, as in multi-system mode this might get
-        # called by many threads at once.
-        with self._threadlock:
-            for r in self.requests:
-                if r["status"] == "Queued":
-                    r["status"] = "Running"
-                    r["t_dispatched"] = time.time()
-                    self.evaluate(r)  # MR BAD
 
     def evaluate(self, r):
         """Evaluating dmd: pbc: YES,
@@ -562,8 +581,7 @@ class FFdmd(ForceField):
         self.dmdstep += 1
 
 
-class FFDebye(ForceField):
-
+class FFDebye(FFEval):
     """Debye crystal harmonic reference potential
 
     Computes a harmonic forcefield.
@@ -581,6 +599,7 @@ class FFDebye(ForceField):
     def __init__(
         self,
         latency=1.0,
+        offset=0.0,
         name="",
         H=None,
         xref=None,
@@ -597,7 +616,7 @@ class FFDebye(ForceField):
 
         # a socket to the communication library is created or linked
         # NEVER DO PBC -- forces here are computed without.
-        super(FFDebye, self).__init__(latency, name, pars, dopbc=False)
+        super(FFDebye, self).__init__(latency, offset, name, pars, dopbc=False)
 
         if H is None:
             raise ValueError("Must provide the Hessian for the Debye crystal.")
@@ -615,17 +634,6 @@ class FFDebye(ForceField):
             " @ForceField: Hamiltonian eigenvalues: " + " ".join(map(str, eigsys[0])),
             verbosity.medium,
         )
-
-    def poll(self):
-        """Polls the forcefield checking if there are requests that should
-        be answered, and if necessary evaluates the associated forces and energy."""
-
-        # we have to be thread-safe, as in multi-system mode this might get called by many threads at once
-        with self._threadlock:
-            for r in self.requests:
-                if r["status"] == "Queued":
-                    r["status"] = "Running"
-                    self.evaluate(r)
 
     def evaluate(self, r):
         """A simple evaluator for a harmonic Debye crystal potential."""
@@ -650,7 +658,7 @@ class FFDebye(ForceField):
         r["t_finished"] = time.time()
 
 
-class FFPlumed(ForceField):
+class FFPlumed(FFEval):
     """Direct PLUMED interface
 
     Computes forces from a PLUMED input.
@@ -668,6 +676,7 @@ class FFPlumed(ForceField):
     def __init__(
         self,
         latency=1.0e-3,
+        offset=0.0,
         name="",
         pars=None,
         dopbc=False,
@@ -688,7 +697,7 @@ class FFPlumed(ForceField):
                 "Cannot find plumed libraries to link to a FFPlumed object/"
             )
         super(FFPlumed, self).__init__(
-            latency, name, pars, dopbc=False, threaded=threaded
+            latency, offset, name, pars, dopbc=False, threaded=threaded
         )
         self.plumed = plumed.Plumed()
         self.plumeddat = plumeddat
@@ -704,8 +713,10 @@ class FFPlumed(ForceField):
             mycell.h *= unit_to_internal("length", self.init_file.units, 1.0)
 
         self.natoms = myatoms.natoms
-        self.plumed.cmd("setNatoms", self.natoms)
+        self.plumed.cmd("setRealPrecision", 8)  # i-PI uses double precision
+        self.plumed.cmd("setMDEngine", "i-pi")
         self.plumed.cmd("setPlumedDat", self.plumeddat)
+        self.plumed.cmd("setNatoms", self.natoms)
         self.plumed.cmd("setTimestep", 1.0)
         self.plumed.cmd(
             "setMDEnergyUnits", 2625.4996
@@ -724,20 +735,6 @@ class FFPlumed(ForceField):
         self.masses = dstrip(myatoms.m)
         self.lastq = np.zeros(3 * self.natoms)
         self.system_force = None  # reference to physical force calculator
-
-    def poll(self):
-        """Polls the forcefield checking if there are requests that should
-        be answered, and if necessary evaluates the associated forces and energy."""
-
-        # We have to be thread-safe, as in multi-system mode this might get
-        # called by many threads at once.
-        with self._threadlock:
-            for r in self.requests:
-                if r["status"] == "Queued":
-                    r["status"] = "Running"
-                    r["t_dispatched"] = time.time()
-                    self.evaluate(r)
-                    r["t_finished"] = time.time()
 
     def evaluate(self, r):
         """A wrapper function to call the PLUMED evaluation routines
@@ -818,13 +815,13 @@ class FFPlumed(ForceField):
         return True
 
 
-class FFYaff(ForceField):
-
+class FFYaff(FFEval):
     """Use Yaff as a library to construct a force field"""
 
     def __init__(
         self,
         latency=1.0,
+        offset=0.0,
         name="",
         threaded=False,
         yaffpara=None,
@@ -862,7 +859,9 @@ class FFYaff(ForceField):
         import atexit
 
         # a socket to the communication library is created or linked
-        super(FFYaff, self).__init__(latency, name, pars, dopbc, threaded=threaded)
+        super(FFYaff, self).__init__(
+            latency, offset, name, pars, dopbc, threaded=threaded
+        )
 
         # A bit weird to use keyword argument for a required argument, but this
         # is also done in the code above.
@@ -904,17 +903,6 @@ class FFYaff(ForceField):
 
         log._active = False
 
-    def poll(self):
-        """Polls the forcefield checking if there are requests that should
-        be answered, and if necessary evaluates the associated forces and energy."""
-
-        # we have to be thread-safe, as in multi-system mode this might get called by many threads at once
-        with self._threadlock:
-            for r in self.requests:
-                if r["status"] == "Queued":
-                    r["status"] = "Running"
-                    self.evaluate(r)
-
     def evaluate(self, r):
         """Evaluate the energy and forces with the Yaff force field."""
 
@@ -930,11 +918,9 @@ class FFYaff(ForceField):
 
         r["result"] = [e, -gpos.ravel(), -vtens, {"raw": ""}]
         r["status"] = "Done"
-        r["t_finished"] = time.time()
 
 
-class FFsGDML(ForceField):
-
+class FFsGDML(FFEval):
     """A symmetric Gradient Domain Machine Learning (sGDML) force field.
     Chmiela et al. Sci. Adv., 3(5), e1603015, 2017; Nat. Commun., 9(1), 3887, 2018.
     http://sgdml.org/doc/
@@ -944,6 +930,7 @@ class FFsGDML(ForceField):
     def __init__(
         self,
         latency=1.0,
+        offset=0.0,
         name="",
         threaded=False,
         sGDML_model=None,
@@ -959,7 +946,9 @@ class FFsGDML(ForceField):
         """
 
         # a socket to the communication library is created or linked
-        super(FFsGDML, self).__init__(latency, name, pars, dopbc, threaded=threaded)
+        super(FFsGDML, self).__init__(
+            latency, offset, name, pars, dopbc, threaded=threaded
+        )
 
         from ipi.utils.units import unit_to_user
 
@@ -1043,17 +1032,6 @@ class FFsGDML(ForceField):
         )
         self.predictor.prepare_parallel(n_bulk=1)
 
-    def poll(self):
-        """Polls the forcefield checking if there are requests that should
-        be answered, and if necessary evaluates the associated forces and energy."""
-
-        # we have to be thread-safe, as in multi-system mode this might get called by many threads at once
-        with self._threadlock:
-            for r in self.requests:
-                if r["status"] == "Queued":
-                    r["status"] = "Running"
-                    self.evaluate(r)
-
     def evaluate(self, r):
         """Evaluate the energy and forces."""
 
@@ -1077,6 +1055,7 @@ class FFCommittee(ForceField):
     def __init__(
         self,
         latency=1.0,
+        offset=0.0,
         name="",
         pars=None,
         dopbc=True,
@@ -1089,10 +1068,12 @@ class FFCommittee(ForceField):
         baseline_uncertainty=-1.0,
         active_thresh=0.0,
         active_out=None,
+        parse_json=False,
     ):
         # force threaded mode as otherwise it cannot have threaded children
         super(FFCommittee, self).__init__(
             latency=latency,
+            offset=offset,
             name=name,
             pars=pars,
             dopbc=dopbc,
@@ -1123,6 +1104,7 @@ class FFCommittee(ForceField):
         self.alpha = alpha
         self.active_thresh = active_thresh
         self.active_out = active_out
+        self.parse_json = parse_json
 
     def bind(self, output_maker):
         super(FFCommittee, self).bind(output_maker)
@@ -1151,6 +1133,7 @@ class FFCommittee(ForceField):
         req = super(FFCommittee, self).queue(
             atoms, cell, reqid, template=dict(ff_handles=ffh)
         )
+        req["t_dispatched"] = time.time()
         return req
 
     def check_finish(self, r):
@@ -1164,7 +1147,12 @@ class FFCommittee(ForceField):
     def gather(self, r):
         """Collects results from all sub-requests, and assemble the committee of models."""
 
-        r["result"] = [0.0, np.zeros(len(r["pos"]), float), np.zeros((3, 3), float), ""]
+        r["result"] = [
+            0.0,
+            np.zeros(len(r["pos"]), float),
+            np.zeros((3, 3), float),
+            "",
+        ]
 
         # list of pointers to the forcefield requests. shallow copy so we can remove stuff
         com_handles = r["ff_handles"].copy()
@@ -1182,10 +1170,37 @@ class FFCommittee(ForceField):
                     break
 
         # Gathers the forcefield energetics and extras
-        pots = [ff_r["result"][0] for ff_r in com_handles]
-        frcs = [ff_r["result"][1] for ff_r in com_handles]
-        virs = [ff_r["result"][2] for ff_r in com_handles]
-        xtrs = [ff_r["result"][3] for ff_r in com_handles]
+        pots = []
+        frcs = []
+        virs = []
+        xtrs = []
+
+        for ff_r in com_handles:
+            # if required, tries to extract multiple committe members from the extras JSON string
+            if "committee_pot" in ff_r["result"][3] and self.parse_json:
+                pots += ff_r["result"][3]["committee_pot"]
+                if "committee_force" not in ff_r["result"][3]:
+                    raise ValueError(
+                        "JSON extras for committe potential misses `committee_force` entry"
+                    )
+                frcs += ff_r["result"][3]["committee_force"]
+                if "committee_virial" not in ff_r["result"][3]:
+                    raise ValueError(
+                        "JSON extras for committe potential misses `committee_virial` entry"
+                    )
+                virs += ff_r["result"][3]["committee_virial"]
+                ff_r["result"][3].pop("committee_pot")
+                ff_r["result"][3].pop("committee_force")
+                ff_r["result"][3].pop("committee_virial")
+                xtrs.append(ff_r["result"][3])
+            else:
+                pots.append(ff_r["result"][0])
+                frcs.append(ff_r["result"][1])
+                virs.append(ff_r["result"][2])
+                xtrs.append(ff_r["result"][3])
+        pots = np.array(pots)
+        frcs = np.array(frcs).reshape(len(pots), -1)
+        virs = np.array(virs).reshape(-1, 3, 3)
 
         # Computes the mean energetics
         mean_pot = np.mean(pots, axis=0)
@@ -1309,15 +1324,14 @@ class FFCommittee(ForceField):
 
         with self._threadlock:
             for r in self.requests:
-                if self.check_finish(r):
-                    r["t_dispatched"] = time.time()
+                if r["status"] != "Done" and self.check_finish(r):
                     r["t_finished"] = time.time()
                     self.gather(r)
+                    r["result"][0] -= self.offset
                     r["status"] = "Done"
 
 
 class PhotonDriver:
-
     """
     Photon driver for a single cavity mode
     """
@@ -1510,7 +1524,6 @@ class PhotonDriver:
 
 
 class FFCavPhSocket(FFSocket):
-
     """
     Socket for dealing with cavity photons interacting with molecules by
     Tao E. Li @ 2023-02-25
@@ -1522,6 +1535,7 @@ class FFCavPhSocket(FFSocket):
     def __init__(
         self,
         latency=1.0,
+        offset=0.0,
         name="",
         pars=None,
         dopbc=False,
@@ -1561,7 +1575,7 @@ class FFCavPhSocket(FFSocket):
 
         # a socket to the communication library is created or linked
         super(FFCavPhSocket, self).__init__(
-            latency, name, pars, dopbc, active, threaded, interface
+            latency, offset, name, pars, dopbc, active, threaded, interface
         )
 
         # definition of independent baths
@@ -1782,6 +1796,8 @@ class FFCavPhSocket(FFSocket):
             result_tot[1][:ndim_tot:3] += fx_cav
             result_tot[1][1:ndim_tot:3] += fy_cav
             result_tot[1][ndim_tot:] = f_ph
+
+        result_tot[0] -= self.offset
 
         # At this moment, we have sucessfully gathered the CavMD forces
         newreq = ForceRequest(

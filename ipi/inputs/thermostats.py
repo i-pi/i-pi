@@ -22,7 +22,6 @@ __all__ = ["InputThermo"]
 
 
 class InputThermoBase(Input):
-
     """Thermostat input class.
 
     Handles generating the appropriate thermostat class from the xml input file,
@@ -341,7 +340,6 @@ class InputThermoBase(Input):
 
 
 class InputThermo(InputThermoBase):
-
     """Extends InputThermoBase to allow the definition of a multithermo"""
 
     attribs = copy(InputThermoBase.attribs)

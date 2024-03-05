@@ -60,21 +60,18 @@ MESSAGE = {
 
 
 class Disconnected(Exception):
-
     """Disconnected: Raised if client has been disconnected."""
 
     pass
 
 
 class InvalidSize(Exception):
-
     """Disconnected: Raised if client returns forces with inconsistent number of atoms."""
 
     pass
 
 
 class InvalidStatus(Exception):
-
     """InvalidStatus: Raised if client has the wrong status.
 
     Shouldn't have to be used if the structure of the program is correct.
@@ -84,7 +81,6 @@ class InvalidStatus(Exception):
 
 
 class Status(object):
-
     """Simple class used to keep track of the status of the client.
 
     Uses bitwise or to give combinations of different status options.
@@ -112,7 +108,6 @@ class Status(object):
 
 
 class DriverSocket(socket.socket):
-
     """Deals with communication between the client and driver code.
 
     Deals with sending and receiving the data between the client and the driver
@@ -208,7 +203,6 @@ class DriverSocket(socket.socket):
 
 
 class Driver(DriverSocket):
-
     """Deals with communication between the client and driver code.
 
     Deals with sending and receiving the data from the driver code. Keeps track
@@ -434,7 +428,7 @@ class Driver(DriverSocket):
 
         # Machinery to return a string as an "extra" field.
         # Comment if you are using a ancient patched driver that does not return anything!
-        # Actually, you should really update your driver, you're like half a decade behind.
+        # Actually, you should really update your driver, you're like a decade behind.
         mlen = np.int32()
         mlen = self.recvall(mlen)
         if mlen > 0:
@@ -509,6 +503,8 @@ class Driver(DriverSocket):
             self.status = Status.Disconnected
             return
 
+        r["result"][0] -= r["offset"]
+
         if len(r["result"][1]) != len(r["pos"][r["active"]]):
             raise InvalidSize
 
@@ -528,7 +524,6 @@ class Driver(DriverSocket):
 
 
 class InterfaceSocket(object):
-
     """Host server class.
 
     Deals with distribution of all the jobs between the different client servers
@@ -579,8 +574,6 @@ class InterfaceSocket(object):
            slots: An optional integer giving the maximum allowed backlog of
               queueing clients. Defaults to 4.
            mode: An optional string giving the type of socket. Defaults to 'unix'.
-           latency: An optional float giving the time in seconds the socket will
-              wait before updating the client list. Defaults to 1e-3.
            timeout: Length of time waiting for data from a client before we assume
               the connection is dead and disconnect the client.
             max_workers: Maximum number of threads launched concurrently
@@ -600,6 +593,7 @@ class InterfaceSocket(object):
         self.requests = None  # these will be linked to the request list of the FFSocket object using the interface
         self.exit_on_disconnect = exit_on_disconnect
         self.max_workers = max_workers
+        self.offset = 0.0  # a constant energy offset added to the results returned by the driver (hacky but simple)
 
     def open(self):
         """Creates a new socket.
@@ -891,6 +885,11 @@ class InterfaceSocket(object):
 
             # makes sure the request is marked as running and the client included in the jobs list
             fc.locked = fc.lastreq is r["id"]
+
+            r["offset"] = (
+                self.offset
+            )  # transmits with the request an offset value for the energy (typically zero)
+
             r["status"] = "Running"
             self.prlist.remove(r)
             info(
