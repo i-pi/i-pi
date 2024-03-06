@@ -358,22 +358,22 @@ class depend_value(depend_base):
 
     def get(self):
         """Returns value, after recalculating if necessary.
-
-        Overwrites the standard method of getting value, so that value
-        is recalculated if tainted.
         """
 
-        with self._threadlock:
-            if self._tainted[0]:
+        return self.__get__(self, self.__class__)
+
+    def __get__(self, instance, owner):
+        """Overwrites standard get function
+        
+        Returns a cached value, recomputing only if the value is tainted.
+        """
+
+        if self._tainted[0]:
+            with self._threadlock:
                 self.update_auto()
                 self.taint(taintme=False)
 
         return self._value
-
-    def __get__(self, instance, owner):
-        """Overwrites standard get function."""
-
-        return self.get()
 
     def set(self, value, manual=True):
         """Alters value and taints dependencies.
@@ -385,7 +385,6 @@ class depend_value(depend_base):
 
         with self._threadlock:
             self._value = value
-            # self.taint(taintme=False)
             if manual:
                 self.update_man()
 
@@ -636,8 +635,8 @@ class depend_array(np.ndarray, depend_base):
            index: A slice variable giving the appropriate slice to be read.
         """
 
-        with self._threadlock:
-            if self._tainted[0]:
+        if self._tainted[0]:
+            with self._threadlock:
                 self.update_auto()
                 self.taint(taintme=False)
 
@@ -670,8 +669,8 @@ class depend_array(np.ndarray, depend_base):
         # It is worth duplicating this code that is also used in __getitem__ as this
         # is called most of the time, and we avoid creating a load of copies pointing to the same depend_array
 
-        with self._threadlock:
-            if self._tainted[0]:
+        if self._tainted[0]:
+            with self._threadlock:
                 self.update_auto()
                 self.taint(taintme=False)
 
