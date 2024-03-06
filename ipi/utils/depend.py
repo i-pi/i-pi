@@ -357,14 +357,13 @@ class depend_value(depend_base):
         )
 
     def get(self):
-        """Returns value, after recalculating if necessary.
-        """
+        """Returns value, after recalculating if necessary."""
 
         return self.__get__(self, self.__class__)
 
     def __get__(self, instance, owner):
         """Overwrites standard get function
-        
+
         Returns a cached value, recomputing only if the value is tainted.
         """
 
@@ -641,17 +640,9 @@ class depend_array(np.ndarray, depend_base):
                 self.taint(taintme=False)
 
         if self.__scalarindex(index, self.ndim):
-            return dstrip(self)[index]
+            return self.view(np.ndarray)[index]
         else:
-            return depend_array(
-                dstrip(self)[index],
-                name=self._name,
-                synchro=self._synchro,
-                func=self._func,
-                dependants=self._dependants,
-                tainted=self._tainted,
-                base=self._bval,
-            )
+            return super(depend_array, self).__getitem__(index)
 
     def __getslice__(self, i, j):
         """Overwrites standard get function."""
@@ -781,7 +772,7 @@ def dpipe(dfrom, dto, item=-1):
     """
 
     if item < 0:
-        dto._func = lambda: dfrom.get()
+        dto._func = lambda: dfrom.__get__(dfrom, dfrom.__class__)
     else:
         dto._func = lambda i=item: dfrom.__getitem__(i)
     dto.add_dependency(dfrom)

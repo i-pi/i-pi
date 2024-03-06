@@ -600,7 +600,7 @@ class BaroBZP(Barostat):
         self.nm.qnm[0, :] = (dstrip(self.nm.qnm)[0, :] * expq) + (
             (expq - expp) / (2.0 * v)
         ) * (dstrip(self.nm.pnm)[0, :] / m)
-        self.nm.pnm[0, :] *= expp
+        self.nm.pnm[0, :] = expp * dstrip(self.nm.pnm)[0, :]
 
         self.cell.h *= expq
 
