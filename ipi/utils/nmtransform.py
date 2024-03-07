@@ -8,7 +8,7 @@
 import numpy as np
 
 from ipi.utils.depend import dstrip
-from ipi.utils.messages import verbosity, info
+from ipi.utils.messages import verbosity, info, warning
 
 
 __all__ = [
@@ -377,9 +377,15 @@ class nm_fft(
         except ImportError:  # Uses standard numpy fft library if nothing better
             # is available
             info(
-                "Import of PyFFTW unsuccessful, using NumPy library instead",
-                verbosity.medium,
+                "Import of PyFFTW unsuccessful, using NumPy library instead. ",
+                verbosity.low,
             )
+            if self.beads > 1:
+                warning(
+                    "Install PyFFTW to avoid slow normal-modes integration",
+                    verbosity.low,
+                )
+
             self.qdummy = np.zeros((nbeads, 3 * natoms), dtype="float32")
             self.qnmdummy = np.zeros((nbeads // 2 + 1, 3 * natoms), dtype="complex64")
 
