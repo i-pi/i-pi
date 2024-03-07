@@ -141,7 +141,7 @@ class SCPhononsMover(Motion):
         self.m = dstrip(self.beads.m).copy()
 
         # Initializes mass related arrays.
-        self.m3 = dstrip(self.beads.m3[-1])
+        self.m3 = dstrip(self.beads.m3)[-1]
         self.im3 = np.divide(1.0, self.m3)
         self.sqm3 = np.sqrt(self.m3)
         self.isqm3 = np.sqrt(self.im3)
@@ -712,8 +712,8 @@ class SCPhononator(DummyPhononator):
         qp, Kp, i = self.dm.beads.q, self.dm.K, self.dm.isc - 1
 
         # Takes the set of forces calculated at the previous step for (self.q, self.iD)
-        avg_f = dstrip(self.f[i]).copy()[-1] * 0.0
-        var_f = dstrip(self.f[i]).copy()[-1] * 0.0
+        avg_f = dstrip(self.f[i])[-1] * 0.0
+        var_f = dstrip(self.f[i])[-1] * 0.0
         norm = 0.0
         batch_w = np.zeros(self.dm.isc)
 
@@ -747,7 +747,7 @@ class SCPhononator(DummyPhononator):
         qp, iDp, Kp, i = self.dm.beads.q, self.dm.iD, self.dm.K, self.dm.isc - 1
 
         # Takes the set of forces calculated at the previous step for (self.q, self.iD)
-        avg_K = dstrip(self.dm.iD).copy() * 0.0
+        avg_K = self.dm.iD * 0.0
         norm = 0.0
 
         for i in range(self.dm.isc):
