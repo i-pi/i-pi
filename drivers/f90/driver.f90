@@ -45,8 +45,8 @@
       INTEGER, ALLOCATABLE :: seed(:)
       INTEGER verbose
       INTEGER commas(4), par_count      ! stores the index of commas in the parameter string
-      DOUBLE PRECISION vpars(4)         ! array to store the parameters of the potential
-
+      DOUBLE PRECISION vpars(6)         ! array to store the parameters of the potential
+      
       ! SOCKET COMMUNICATION BUFFERS
       CHARACTER(LEN=12) :: header
       LOGICAL :: isinit=.false., hasdata=.false.
@@ -68,6 +68,7 @@
       DOUBLE PRECISION, ALLOCATABLE :: friction(:,:)
       DOUBLE PRECISION volume
       DOUBLE PRECISION, PARAMETER :: fddx = 1.0d-5
+
       DOUBLE PRECISION, ALLOCATABLE :: dipz_der(:, :) ! Dipole (z-component) derivative (water_dip_pol model)
       DOUBLE PRECISION :: pol(3, 3) !Polarizability (water_dip_pol model)
 
@@ -80,7 +81,7 @@
       ! DMW
       DOUBLE PRECISION efield(3)
       INTEGER i, j
-
+      
       ! parse the command line parameters
       ! intialize defaults
       ccmd = 0
@@ -168,8 +169,12 @@
                   vstyle = 26
                ELSEIF (trim(cmdbuffer) == "qtip4pf-sr") THEN
                   vstyle = 27
-               ELSEIF (trim(cmdbuffer) == "water_dip_pol") THEN
+               ELSEIF (trim(cmdbuffer) == "harmonic_bath") THEN
                   vstyle = 28
+               ELSEIF (trim(cmdbuffer) == "meanfield_bath") THEN
+                  vstyle = 29
+               ELSEIF (trim(cmdbuffer) == "water_dip_pol") THEN
+                  vstyle = 31
                ELSEIF (trim(cmdbuffer) == "qtip4pf-c-1") THEN
                   vstyle = 60
                ELSEIF (trim(cmdbuffer) == "qtip4pf-c-2") THEN
@@ -186,7 +191,7 @@
                   vstyle = 99 ! returns non-zero but otherwise meaningless values
                ELSE
                   WRITE(*,*) " Unrecognized potential type ", trim(cmdbuffer)
-                  WRITE(*,*) " Use -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json|qtip4pf-c-1-delta|qtip4pf-c-2-delta] "
+                  WRITE(*,*) " Use -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json|qtip4pf-c-1-delta|qtip4pf-c-2-delta|harmonic_bath|meanfield_bath] "
                   STOP "ENDED"
                ENDIF
             ELSEIF (ccmd == 4) THEN
@@ -294,6 +299,39 @@
          ELSEIF ( 1/= par_count) THEN
             WRITE(*,*) "Error: parameters not initialized correctly."
             WRITE(*,*) "For MB potential up to 1 param can be specified"
+            STOP "ENDED"
+         ENDIF
+         isinit = .true.
+      ELSEIF (28 == vstyle) THEN !harmonic_bath
+         WRITE(*,*) "This driver implementation is deprecated. Please use the python driver version "
+         STOP "ENDED"
+         IF (par_count == 3) THEN ! defaults values 
+            vpars(4) = 0
+            vpars(5) = 0
+            vpars(6) = 1
+         ELSEIF (par_count /= 6) THEN 
+            WRITE(*,*) "Error: parameters not initialized correctly."
+            WRITE(*,*) "For harmonic bath use <bath_type> <friction (atomic units)> <omega_c (invcm)> eps(a.u.) delta (a.u.) deltaQ(a.u.)"
+            WRITE(*,*) "Available bath_type are: "
+            WRITE(*,*) "1 = Ohmic "
+            STOP "ENDED"
+         ENDIF
+         IF (vpars(1) /= 1) THEN
+             WRITE(*,*) "Only Ohmic bath implemented"
+             STOP "ENDED"
+         END IF
+         vpars(3) = vpars(3) * 4.5563353e-06 !Change omega_c from invcm to a.u.
+         isinit = .true.
+      ELSEIF (29 == vstyle) THEN !meanfield bath
+         WRITE(*,*) "This driver implementation is deprecated. Please use the python driver version "
+         STOP "ENDED"
+         IF (par_count == 3) THEN ! defaults values 
+            vpars(2) = 0
+            vpars(3) = 0
+            vpars(4) = 1
+         ELSEIF (par_count /= 4) THEN 
+            WRITE(*,*) "Error: parameters not initialized correctly."
+            WRITE(*,*) "For harmonic meanfield bath use  <friction (atomic units)> eps(a.u.) delta (a.u.) deltaQ(a.u.)"
             STOP "ENDED"
          ENDIF
          isinit = .true.
@@ -408,7 +446,7 @@
              WRITE(*,*) "For morse potential use -o r0,D,a (in a.u.) "
              STOP "ENDED"
          ENDIF
-      ELSEIF (vstyle == 28) THEN !water dipole and polarizability
+      ELSEIF (vstyle == 31) THEN !water dipole and polarizability
          IF (par_count == 0) THEN
             vpars(1) = 1
          ELSEIF (par_count /= 1 .OR. (vpars(1) /= 0 .AND. vpars(1) /= 1)) THEN
@@ -769,6 +807,9 @@
                atoms(3,:)=vecdiff(:)
                ! O in center
                atoms(1,:)=0.d0
+
+
+
                atoms = atoms*0.52917721d0    ! pot_nasa wants angstrom
                call pot_nasa(atoms, forces, pot)
                call dms_nasa(atoms, charges, dummy) ! MR: trying to print out the right charges
@@ -792,7 +833,10 @@
 
             ELSEIF (vstyle == 20) THEN ! eckart potential.
                CALL geteckart(nat,vpars(1), vpars(2), vpars(3),vpars(4), atoms, pot, forces)
-
+            ELSEIF (vstyle == 28) THEN ! harmonic_bath.
+               CALL get_harmonic_bath(nat,vpars(1),vpars(2),vpars(3),vpars(4),vpars(5),vpars(6),atoms, pot, forces)
+            ELSEIF (vstyle == 29) THEN ! meanfield_bath.
+               CALL get_meanfield_harmonic_bath(nat,vpars(1),vpars(2),vpars(3),vpars(4),atoms, pot, forces,friction)
             ELSEIF (vstyle == 23) THEN ! MB.
                IF (nat/=1) THEN
                   WRITE(*,*) "Expecting 1 atom for MB"
@@ -809,7 +853,7 @@
                CALL dw1d_friction(nat, atoms, friction)
                CALL dw1d_dipole(nat, atoms, dip)
 
-            ELSEIF (vstyle == 28) THEN   ! Sets force and potential to zero,
+            ELSEIF (vstyle == 31) THEN   ! Sets force and potential to zero,
                                          ! computes only dipole moment, its gradient, and polarizability.
                pot = 0
                forces = 0.0d0
@@ -878,7 +922,45 @@
             CALL writebuffer(socket,reshape(virial,(/9/)),9)  ! Writing the virial tensor, NOT divided by the volume
             IF (verbose > 1) WRITE(*,*) "    !write!=> strss: ", reshape(virial,(/9/))
 
-            IF (vstyle==24 .or. vstyle==25) THEN ! returns fantasy friction
+ 125  format(es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a)
+ 126  format(es21.14,a,es21.14,a,es21.14,a,es21.14,a,es21.14,a)
+
+            IF (vstyle == 29) THEN ! returns meanfield friction
+                WRITE(initbuffer,'(a)') "{"
+                WRITE(32,'(a)') '{'
+                WRITE(string,'(a)') '"friction": ['
+                WRITE(32,'(a)') '"friction": ['
+
+                string2 = TRIM(initbuffer) // TRIM(string)
+                initbuffer = TRIM(string2)
+                DO i=1,3*nat
+                    IF(i/=3*nat) THEN
+                        WRITE(string,125) ( friction(i,j), "," , j=1,3*nat)
+                        WRITE(32,125) ( friction(i,j), "," , j=1,3*nat)
+                    ELSE
+                        WRITE(string,126) ( friction(i,j), "," , j=1,3*nat-1)
+                        WRITE(string2,'(es21.14)') friction(i,3*nat)
+                        string3 = TRIM(string) // TRIM(string2)
+                        string = string3
+                        WRITE(32,126) ( friction(i,j), "," , j=1,3*nat-1)
+                        WRITE(32,'(es21.14)') friction(i,3*nat)
+                    ENDIF
+                    string2 = TRIM(initbuffer) // TRIM(string)
+                    initbuffer = TRIM(string2)
+                END DO
+                string =  TRIM(initbuffer) // ']}'
+                initbuffer = TRIM(string)
+                WRITE(32,'(a)') "]"
+                WRITE(32,'(a)') "}"
+
+                cbuf = LEN_TRIM(initbuffer)
+                CALL writebuffer(socket,cbuf)
+
+                IF (verbose > 1) WRITE(*,*) "!write!=> extra_length:", cbuf
+                CALL writebuffer(socket,initbuffer,cbuf)
+                IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ",  initbuffer
+
+            ELSEIF (vstyle==24 .or. vstyle==25) THEN ! returns fantasy friction
                 WRITE(initbuffer,'(a)') "{"
                 WRITE(string, '(a,3x,f15.8,a,f15.8,a,f15.8,&
      &          3x,a)') '"dipole": [',dip(1),",",dip(2),",",dip(3),"],"
@@ -921,7 +1003,7 @@
                IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ", &
      &         initbuffer(1:cbuf)               
                
-            ELSEIF (vstyle==28) THEN ! returns the dipole, dipole derivative, and polarizability through initbuffer
+            ELSEIF (vstyle==31) THEN ! returns the dipole, dipole derivative, and polarizability through initbuffer
                WRITE(string, '(a,3x,f15.8,a,f15.8,a,f15.8, 3x,a)') '{"dipole": [',dip(1),",",dip(2),",",dip(3),"],"
                longbuffer = TRIM(string)
                WRITE(string2, *) "(a,3x,", 3*nat - 1, '(f15.8, ","),f15.8,3x,a)'
@@ -964,7 +1046,9 @@
     CONTAINS
       SUBROUTINE helpmessage
          ! Help banner
-         WRITE(*,*) " SYNTAX: driver.x [-u] -a address -p port -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json]"
+
+         WRITE(*,*) " SYNTAX: driver.x [-u] -h hostname -p port -m [dummy|gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|..."
+         WRITE(*,*) "...|MB|doublewell|doublewell_1D|harmonic_bath|meanfield_bath|morsedia|qtip4pf-sr|water_dip_pol]"
          WRITE(*,*) "         -o 'comma_separated_parameters' [-v] "
          WRITE(*,*) ""
          WRITE(*,*) " For LJ potential use -o sigma,epsilon,cutoff "
