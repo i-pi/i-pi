@@ -759,9 +759,9 @@ class NormalModes:
             )
 
             # Free ring polymer dynamics are done with smaller time step detlat = dt/nmts
-            dt = self.dt / dstrip(self.nmts)
+            dt = self.dt / self.nmts
 
-            for j in range(0, dstrip(self.nmts)):
+            for j in range(0, self.nmts):
                 self.beads.p += 0.5 * dt * self.fspring
                 self.beads.q += dt * self.beads.p / dstrip(self.beads.m3)
                 # The depend machinery will take care of automatically calculating
