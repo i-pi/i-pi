@@ -380,7 +380,7 @@ class nm_fft(
                 "Import of PyFFTW unsuccessful, using NumPy library instead. ",
                 verbosity.low,
             )
-            if self.beads > 1:
+            if self.nbeads > 1:
                 warning(
                     "Install PyFFTW to avoid slow normal-modes integration",
                     verbosity.low,
