@@ -1096,7 +1096,7 @@ class Forces:
         mforces = self.mforces
         for index in range(len(mforces)):
             # forces with no MTS specification are applied at the outer level
-            weight = dstrip(mforces[index].weight)
+            weight = mforces[index].weight
             mts_weights = mforces[index].mts_weights
             if (len(mts_weights) == 0 and level == 0) or (
                 len(mts_weights) > level and mts_weights[level] != 0 and weight != 0

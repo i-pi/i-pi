@@ -751,11 +751,7 @@ def dstrip(da):
         A ndarray with the same value as deparray.
     """
 
-    # only bother to strip dependencies if the array actually IS a depend_array
-    if isinstance(da, depend_array):
-        return da.view(np.ndarray)
-    else:
-        return da
+    return da.view(np.ndarray)
 
 
 def dpipe(dfrom, dto, item=-1):
@@ -801,7 +797,7 @@ def _inject_depend_property(cls, attr_name):
     private_name = f"_{attr_name}"
 
     def getter(self):
-        return getattr(self, private_name).__get__(self, self.__class__)
+        return getattr(self, private_name).__get__(self, cls)
 
     def setter(self, value):
         return getattr(self, private_name).__set__(self, value)

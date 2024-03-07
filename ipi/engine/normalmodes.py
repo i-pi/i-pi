@@ -160,6 +160,9 @@ class NormalModes:
         self.nbeads = beads.nbeads
         self.natoms = beads.natoms
 
+        # storage space for the propagator
+        self.pq_buffer = np.zeros((2, self.natoms * 3), float)
+
         self.bosons = self.resolve_bosons()
 
         # stores a reference to the bound beads and ensemble objects
@@ -798,7 +801,6 @@ class NormalModes:
                     "@Normalmodes : Bosonic forces not compatible right now with the exact or Cayley propagators."
                 )
 
-            pq = np.zeros((2, self.natoms * 3), float)
             sm = dstrip(self.beads.sm3)
             prop_pq = dstrip(self.prop_pq)
             o_prop_pq = dstrip(self.o_prop_pq)
@@ -806,17 +808,14 @@ class NormalModes:
             qnm = dstrip(self.qnm) * sm
 
             for k in range(1, self.nbeads):
-                pq[0, :] = pnm[k]
-                pq[1, :] = qnm[k]
-                pq = np.dot(prop_pq[k], pq)
-                qnm[k] = pq[1, :]
-                pnm[k] = pq[0, :]
+                self.pq_buffer[0, :] = pnm[k]
+                self.pq_buffer[1, :] = qnm[k]
+                pnm[k], qnm[k] = np.dot(prop_pq[k], self.pq_buffer)
 
             for k in range(1, self.nbeads):
-                pq[0, :] = pnm[k]
-                pq[1, :] = qnm[k]
-                qnm[k] = pq[1, :]
-                pnm[k] = pq[0, :]
+                self.pq_buffer[0, :] = pnm[k]
+                self.pq_buffer[1, :] = qnm[k]
+                pnm[k], qnm[k] = self.pq_buffer
 
             # now for open paths we recover the initial conditions (that have not yet been overwritten)
             # and do open path propagation

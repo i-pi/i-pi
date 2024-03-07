@@ -197,20 +197,15 @@ class ThermoLangevin(Thermostat):
     def step(self):
         """Updates the bound momentum vector with a langevin thermostat."""
 
-        p = dstrip(self.p).copy()
         sm = dstrip(self.sm)
+        p = dstrip(self.p) / sm
 
-        p /= sm
+        deltah = noddot(p, p)
+        p = p * self.T + self.S * self.prng.gvec(len(p))
+        deltah -= noddot(p, p)
 
-        deltah = noddot(p, p) * 0.5
-        p *= self.T
-        p += self.S * self.prng.gvec(len(p))
-        deltah -= noddot(p, p) * 0.5
-
-        p *= sm
-
-        self.p = p
-        self.ethermo += deltah
+        self.p[:] = p * sm
+        self.ethermo += deltah * 0.5
 
 
 dproperties(
