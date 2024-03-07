@@ -130,6 +130,47 @@ class InputInst(InputDictionary):
                 "help": "Allows to specified non uniform time discretization as proposed in J. Chem. Phys. 134, 184107 (2011)",
             },
         ),
+        "friction": (
+            InputValue,
+            {
+                "dtype": bool,
+                "default": False,
+                "help": "Activates Friction. Add additional terms to the RP related to a position-independent frictional force. See Eq. 20 in J. Chem. Phys. 156, 194106 (2022)",
+            },
+        ),
+        "frictionSD": (
+            InputValue,
+            {
+                "dtype": bool,
+                "default": True,
+                "help": "Activates SD Friction. Add additional terms to the RP related to a position-dependent frictional force. See Eq. 32 in J. Chem. Phys. 156, 194106 (2022)",
+            },
+        ),
+        "fric_spec_dens": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.ones, args=(0,)),
+                "help": "Laplace Transform (LT) of friction. A two column data is expected. First column: w (cm^-1). Second column: LT(eta)(w). See Eq. 11 in J. Chem. Phys. 156, 194106 (2022). Note that within the separable coupling approximation the frequency dependence of the friction tensor is position independent.",
+            },
+        ),
+        "fric_spec_dens_ener": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 0.0,
+                "help": "Energy at which the LT of the friction tensor is evaluated in the client code",
+                "dimension": "energy",
+            },
+        ),
+        "eta": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.eye, args=(0,)),
+                "help": "Friction Tensor. Only to be used when frictionSD is disabled.",
+            },
+        ),
         "alt_out": (
             InputValue,
             {
@@ -167,9 +208,8 @@ class InputInst(InputDictionary):
         "hessian_init": (
             InputValue,
             {
-                "dtype": str,
-                "default": "false",
-                "options": ["true", "false"],
+                "dtype": bool,
+                "default": False,
                 "help": "How to initialize the hessian if it is not fully provided.",
             },
         ),
@@ -197,6 +237,14 @@ class InputInst(InputDictionary):
                 "default": "none",
                 "options": ["none", "poly", "crystal"],
                 "help": "Removes the zero frequency vibrational modes depending on the symmetry of the system.",
+            },
+        ),
+        "fric_hessian": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.eye, args=(0,)),
+                "help": "(Approximate) friction second derivative from which a friction Hessian can be built.",
             },
         ),
         # L-BFGS
@@ -271,9 +319,8 @@ class InputInst(InputDictionary):
         "hessian_final": (
             InputValue,
             {
-                "dtype": str,
-                "default": "false",
-                "options": ["false", "true"],
+                "dtype": bool,
+                "default": False,
                 "help": "Decide if we are going to compute the final big-hessian by finite difference.",
             },
         ),
@@ -303,6 +350,11 @@ class InputInst(InputDictionary):
         self.max_e.store(options["max_e"])
         self.max_ms.store(options["max_ms"])
         self.discretization.store(options["discretization"])
+        self.friction.store(options["friction"])
+        self.frictionSD.store(options["frictionSD"])
+        if options["friction"]:
+            self.fric_spec_dens.store(options["fric_spec_dens"])
+            self.fric_spec_dens_ener.store(options["fric_spec_dens_ener"])
         self.alt_out.store(options["save"])
         self.prefix.store(options["prefix"])
         self.delta.store(optarrays["delta"])
@@ -320,6 +372,11 @@ class InputInst(InputDictionary):
             self.hessian.store(optarrays["hessian"])
             self.hessian_update.store(options["hessian_update"])
             self.hessian_asr.store(options["hessian_asr"])
+            if options["friction"]:
+                if options["frictionSD"]:
+                    self.fric_hessian.store(optarrays["fric_hessian"])
+                else:
+                    self.eta.store(options["eta0"])
         elif geop.options["opt"] == "lbfgs":
             self.qlist_lbfgs.store(optarrays["qlist"])
             self.glist_lbfgs.store(optarrays["glist"])
