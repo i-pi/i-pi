@@ -753,9 +753,10 @@ def dstrip(da):
 
     try:
         return da.view(np.ndarray)
-    except: # TODO: remove all remaining stray dstrip so we don't need to check here
+    except:  # TODO: remove all remaining stray dstrip so we don't need to check here
         warning("dstrip should only be called on `depend_array`s", verbosity.low)
         return da
+
 
 def dpipe(dfrom, dto, item=-1):
     """Synchonizes two depend objects.
