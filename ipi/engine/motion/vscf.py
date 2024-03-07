@@ -128,10 +128,10 @@ class NormalModeMover(Motion):
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         super(NormalModeMover, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
-        
+
         # TODO - A LOT OF THESE DEFINITIONS ARE NOT USING DEPEND OBJECTS CORRECTLY
         # MANY OF THESE SHOUD BE LINKED THROUGH DPIPE, NOT DEREFERENCED. THIS WOULD
-        # BREAK IF USED WITH REPLICA EXCHANGE FOR INSTANCE. 
+        # BREAK IF USED WITH REPLICA EXCHANGE FOR INSTANCE.
 
         self.temp = self.ensemble.temp
 
@@ -633,20 +633,18 @@ class IMF(DummyCalculator):
 
         # Done converging wrt size of SHO basis.
         # Calculates the harmonic free and internal energy.
-        Ahar = -logsumexp(
-            [
-                -1.0 * np.sqrt(self.imm.w2[step]) * (0.5 + i) / self.imm.temp
-                for i in range(nnbasis)
-            ]
-        ) * self.imm.temp
+        Ahar = (
+            -logsumexp(
+                [
+                    -1.0 * np.sqrt(self.imm.w2[step]) * (0.5 + i) / self.imm.temp
+                    for i in range(nnbasis)
+                ]
+            )
+            * self.imm.temp
+        )
         Zhar = np.sum(
             [
-                np.exp(
-                    -1.0
-                    * np.sqrt(self.imm.w2[step])
-                    * (0.5 + i)
-                    / self.imm.temp
-                )
+                np.exp(-1.0 * np.sqrt(self.imm.w2[step]) * (0.5 + i) / self.imm.temp)
                 for i in range(nnbasis)
             ]
         )
@@ -656,10 +654,7 @@ class IMF(DummyCalculator):
                     np.sqrt(self.imm.w2[step])
                     * (0.5 + i)
                     * np.exp(
-                        -1.0
-                        * np.sqrt(self.imm.w2[step])
-                        * (0.5 + i)
-                        / self.imm.temp
+                        -1.0 * np.sqrt(self.imm.w2[step]) * (0.5 + i) / self.imm.temp
                     )
                     for i in range(nnbasis)
                 ]
