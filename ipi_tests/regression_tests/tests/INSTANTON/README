@@ -5,3 +5,4 @@ numpy-accessible outputs.
 
 These have been tested against Yair Litman's in-the-house independent implementation (2020).
 
+Implicit bath has been tested against explicit bath calculations (Dec 2023)

@@ -176,7 +176,9 @@ def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):
         return d, w
 
 
-def get_hessian(gm, x0, natoms, nbeads=1, fixatoms=[], d=0.001):
+def get_hessian(
+    gm, x0, natoms, nbeads=1, fixatoms=[], d=0.001, new_disc=False, friction=False
+):
     """Compute the physical hessian given a function to evaluate energy and forces (gm).
     The intermediate steps are written as a temporary files so the full hessian calculations is only ONE step.
 
@@ -190,16 +192,21 @@ def get_hessian(gm, x0, natoms, nbeads=1, fixatoms=[], d=0.001):
     OUT    h       = physical hessian ( (natoms-len(fixatoms) )*3 , nbeads*( natoms-len(fixatoms) )*3)
     """
 
-    # TODO What about the case you have numerical gradients?
-
     info(" @get_hessian: Computing hessian", verbosity.low)
-    ii = (natoms - len(fixatoms)) * 3
+    fixdofs = list()
+    for i in fixatoms:
+        fixdofs.extend([3 * i, 3 * i + 1, 3 * i + 2])
+    ii = natoms * 3
+    activedof = np.delete(np.arange(ii), fixdofs)
+    ncalc = ii - len(fixdofs)
     if x0.size != natoms * 3 * nbeads:
         raise ValueError(
             "The position vector is not consistent with the number of atoms/beads."
         )
 
     h = np.zeros((ii, ii * nbeads), float)
+    if friction:
+        eta_h = np.zeros((nbeads, ii, ii, ii), float)
 
     # Check if there is a temporary file:
     i0 = -1
@@ -219,32 +226,80 @@ def get_hessian(gm, x0, natoms, nbeads=1, fixatoms=[], d=0.001):
                 break
             else:
                 continue
+    if friction:
+        for i in range(ii, -1, -1):
+            try:
+                b = np.loadtxt("hessianEta_" + str(i) + ".tmp")
+            except IOError:
+                pass
+            else:
+                eta_h[:] = b.reshape((nbeads, ii, ii, ii))
+                i0 = i
+                print(
+                    (
+                        "We have found a temporary file ( hessianEta_"
+                        + str(i)
+                        + ".tmp). "
+                    )
+                )
+                if (
+                    b.shape == eta_h.shape
+                ):  # Check that the last temporary file was properly written
+                    break
+                else:
+                    continue
 
     # Start calculation:
     for j in range(i0 + 1, ii):
-        info(
-            " @get_hessian: Computing hessian: %d of %d" % ((j + 1), ii), verbosity.low
-        )
-        x = x0.copy()
+        if j in fixdofs:
+            continue
+        else:
+            ndone = len(activedof[activedof < j])
+            info(
+                " @get_hessian: Computing hessian: %d of %d" % (ndone + 1, ncalc),
+                verbosity.low,
+            )
+            x = x0.copy()
 
-        x[:, j] = x0[:, j] + d
-        e, f1 = gm(x, new_disc=False)
-        x[:, j] = x0[:, j] - d
-        e, f2 = gm(x, new_disc=False)
-        g = (f1 - f2) / (2 * d)
+            # PLUS
+            x[:, j] = x0[:, j] + d
+            e, f1 = gm(x, new_disc)
+            if friction:
+                eta1 = gm.eta
 
-        h[j, :] = g.flatten()
+            # Minus
+            x[:, j] = x0[:, j] - d
+            e, f2 = gm(x, new_disc)
+            if friction:
+                eta2 = gm.eta
 
-        f = open("hessian_" + str(j) + ".tmp", "w")
-        np.savetxt(f, h)
-        f.close()
+            # COMBINE
+            g = (f1 - f2) / (2 * d)
+            h[j, :] = g.flatten()
+            f = open("hessian_" + str(j) + ".tmp", "w")
+            np.savetxt(f, h)
+            f.close()
+
+            if friction:
+                eta_h[:, :, :, j] = (eta1 - eta2) / (2 * d)
+                f = open("hessianEta_" + str(j) + ".tmp", "w")
+                np.savetxt(f, eta_h.flatten())
+                f.close()
 
     u, g = gm(x0)  # Keep the mapper updated
 
     for i in range(ii):
         try:
+            os.remove("hessianEta_" + str(i) + ".tmp")
+        except OSError:
+            pass
+
+        try:
             os.remove("hessian_" + str(i) + ".tmp")
         except OSError:
             pass
 
-    return h
+    if not friction:
+        return h
+    else:
+        return h, eta_h

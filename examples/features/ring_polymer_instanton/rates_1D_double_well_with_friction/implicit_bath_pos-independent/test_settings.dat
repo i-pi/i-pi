@@ -1,0 +1,4 @@
+#Settings file for automatic test
+driver_model DW_friction
+driver_code python
+flags  -o 500 2085 1837 0 0.5 0 0 1  
