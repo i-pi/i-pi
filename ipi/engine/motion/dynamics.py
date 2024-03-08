@@ -257,15 +257,6 @@ class Dynamics(Motion):
         self.integrator.step(step)
         self.ensemble.time += self.dt  # increments internal time
 
-        # if self.eda_on:
-        #     # Check that these variable are the same.
-        #     # If they are not the same, then there is a bug in the code
-        #     dt = abs(self.ensemble.time - self.integrator.mts_time)
-        #     if dt > 1e-12:
-        #         raise ValueError(
-        #             "The time at which the Electric Field is evaluated is not properly updated!"
-        #         )
-
 
 dproperties(Dynamics, ["dt", "nmts", "splitting", "ntemp"])
 
