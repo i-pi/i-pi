@@ -8,6 +8,7 @@ import time
 import glob
 
 clean_all = False
+debug = False
 
 fortran_driver_models = [
     "dummy",
@@ -18,6 +19,9 @@ fortran_driver_models = [
     "morse",
     "zundel",
     "qtip4pf",
+    "qtip4pf-c-json",
+    "qtip4pf-c-1",
+    "qtip4pf-c-2",
     "pswater",
     "eckart",
     "ch4hcbe",
@@ -28,8 +32,15 @@ fortran_driver_models = [
     "gas",
 ]
 
-# YL should do this automatically but for now I do it explicitly
-python_driver_models = ["dummy", "harmonic"]
+# We should do this automatically but for now we do it explicitly here
+python_driver_models = [
+    "dummy",
+    "harmonic",
+    "DW_friction",
+    "DW_explicit",
+    "rascal",
+    "DoubleWell",
+]
 
 
 def get_test_list(parent):
@@ -82,14 +93,12 @@ def get_test_settings(
                 block = lines[starts[client] : starts[client + 1]]
             else:
                 block = lines[starts[client] :]
-
             driver_code = "fortran"
             driver_model = "dummy"
             address_name = "localhost"
             port_number = 33333
             socket_mode = "unix"
             flaglist = {}
-
             for line in block:
                 if "driver_code" in line:
                     driver_code = line.split()[1]
@@ -109,8 +118,18 @@ def get_test_settings(
 
             # Checking that each driver has appropriate settings, if not, use default.
             if driver_code == "fortran" and driver_model not in fortran_driver_models:
+                print(
+                    "{} is not in fortran_driver_model list. We default to dummy".format(
+                        driver_model
+                    )
+                )
                 driver_model = "dummy"
             elif driver_code == "python" and driver_model not in python_driver_models:
+                print(
+                    "{} is not in python_driver_model list. We default to dummy".format(
+                        driver_model
+                    )
+                )
                 driver_model = "dummy"
             elif driver_code not in ["fortran", "python"]:
                 raise ValueError(
@@ -192,7 +211,7 @@ def modify_xml_4_dummy_test(
         clients.append([model, "unix", address, port])
 
         for key in driver_info["flag"][s].keys():
-            if "-" in key:
+            if "-o" in key:
                 for k, v in driver_info["flag"][s].items():
                     clients[s].append(k)
                     clients[s].extend(v)
@@ -206,7 +225,7 @@ def modify_xml_4_dummy_test(
                 clients.append([model, "unix", address, port])
 
                 for key in driver_info["flag"][remaining_client_idx].keys():
-                    if "-" in key:
+                    if "-o" in key:
                         for k, v in driver_info["flag"][remaining_client_idx].items():
                             clients[remaining_client_idx].append(k)
                             clients[remaining_client_idx].extend(v)
@@ -323,9 +342,9 @@ class Runner(object):
                 cmd = clientcall
 
                 # Add extra flags if necessary
-                if any("-" in str(s) for s in client):
+                if any("-o" in str(s) for s in client):
                     flag_indeces = [
-                        i for i, elem in enumerate(client) if "-" in str(elem)
+                        i for i, elem in enumerate(client) if "-o" in str(elem)
                     ]
                     for i, ll in enumerate(flag_indeces):
                         if i < len(flag_indeces) - 1:
@@ -338,7 +357,9 @@ class Runner(object):
                                 client[ll], ",".join(client[ll + 1 :][:])
                             )
 
-                # print("client", client, "cmd:", cmd)
+                if debug:
+                    print(" Client call command:", cmd)
+
                 driver = sp.Popen(
                     cmd,
                     cwd=(cwd),
@@ -356,10 +377,12 @@ class Runner(object):
 
             # check driver errors
             for driver in drivers:
-                driver.kill()  # if i-PI has ended, we can kill the drivers
+                # if i-PI has ended, we can wait for the driver to quit
                 driver_out, driver_err = driver.communicate(timeout=60)
-                assert driver.returncode == 0, "Driver error occurred: {}".format(
-                    driver_err
+                assert (
+                    driver.returncode == 0
+                ), "Driver error occurred: {}\n Driver Output: {}".format(
+                    driver_err, driver_out
                 )
 
         except sp.TimeoutExpired:

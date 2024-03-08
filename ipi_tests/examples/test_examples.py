@@ -16,7 +16,8 @@ excluded_file = Path(__file__).resolve().parent / "excluded_test.txt"
 
 examples = []
 examples = find_examples(examples_folder, excluded_file, examples)
-print("We have found {} examples".format(len(examples)))
+if __name__ != "__main__":
+    print("We have found {} examples".format(len(examples)))
 
 
 @pytest.mark.parametrize("ex", examples)
@@ -56,7 +57,7 @@ if __name__ == "__main__":
         "included in the 'excluded_test.txt' file\n"
         "\n"
         "type: python test_examples.py -f <folder_path> \n"
-        "example  python test_examples.py -f examples/MBPOL/splitting> \n"
+        "example  python test_examples.py -f examples/features/ring_polymer_instanton examples/hpc_scripts/slurm  \n"
         "Note that the folder path is referenced to the i-pi root folder  \n"
         "\n"
         "example: python test_examples.py examples/lammps/h2o-geop\n"
@@ -86,8 +87,9 @@ if __name__ == "__main__":
     try:
         for folder in args.folder:
             path = Path(__file__).resolve().parents[2] / folder
-            examples = find_examples(path, excluded_file, examples)
-        print("We will run tests in:")
+            print("Looking for examples inside {}".format(str(path)))
+            examples.extend(find_examples(path, excluded_file, examples))
+        print("\nWe will run tests in:")
         for i in examples:
             print(i)
         print("")

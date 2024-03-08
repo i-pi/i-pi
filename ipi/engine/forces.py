@@ -164,7 +164,6 @@ class ForceBead:
             self._getallcount += 1
 
         # this is converting the distribution library requests into [ u, f, v ]  lists
-        # t_start = time.time()
         if self.request is None:
             self.request = self.queue()
 
@@ -972,7 +971,7 @@ class Forces:
         assert len(self.mforces) == len(new_v), msg
         assert len(self.mforces) == len(new_forces), msg
         if new_x == None:
-            new_x = [[None] * self.nbeads] * len(self.mforces)
+            new_x = [{"raw": [None] * self.nbeads}] * len(self.mforces)
             info("WARNING: No extras information has been passed.", verbosity.debug)
 
         assert len(self.mforces) == len(new_x), msg
@@ -983,17 +982,17 @@ class Forces:
             mq = new_q[k]
             mextra = new_x[k]
             mself = self.mforces[k]
-
             assert mq.shape == mf.shape, msg
             assert mq.shape[0] == mv.shape[0], msg
             assert mself.nbeads == mv.shape[0], msg
             assert mself.nbeads == mq.shape[0], msg
-            assert mself.nbeads == len(mextra), msg
-            mxlist = mextra[:]
 
             mself.beads._q.set(mq, manual=False)
             for b in range(mself.nbeads):
-                ufvx = [mv[b], mf[b], vir, mxlist[b]]
+                mx = {}
+                for key in mextra.keys():
+                    mx[key] = mextra[key][b]
+                ufvx = [mv[b], mf[b], vir, mx]
                 mself._forces[b]._ufvx.set(ufvx, manual=False)
                 mself._forces[b]._ufvx.taint(taintme=False)
 

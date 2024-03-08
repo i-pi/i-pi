@@ -1,0 +1,52 @@
+<simulation verbosity='low' threading='false'>
+  <output prefix='simulation'>
+      <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, potential, pressure_md{bar}, volume ] </properties>
+    <trajectory filename='pos' stride='2'> positions </trajectory>
+    <trajectory filename='committee_pot' stride='2' extra_type='committee_pot'> extras </trajectory>
+    <trajectory filename='committee_force' stride='2' extra_type='committee_force'> extras </trajectory> 
+    <trajectory filename='committee_virial' stride='2' extra_type='committee_virial'> extras </trajectory> 
+    <trajectory filename='committee_sigma' stride='2' extra_type='committee_uncertainty'> extras </trajectory>
+    <checkpoint stride='200'/>
+  </output>
+  <total_steps>10</total_steps>
+  <prng>
+    <seed>31415</seed>
+  </prng>
+  <ffcommittee name="committee">
+    <alpha> 1.0 </alpha>
+    <active_output> active </active_output>
+    <active_thresh units="electronvolt"> 0.05 </active_thresh>
+    <ffsocket name='driver-combo' mode='unix' matching="any" pbc="false">
+        <address>localhost</address> <latency> 1e-3 </latency>
+    </ffsocket>
+    <parse_json> True </parse_json>
+  </ffcommittee>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='xyz'> water_216.xyz </file>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='committee'> </force>
+    </forces>
+    <motion mode='dynamics'>
+      <dynamics mode='npt'>
+        <barostat mode='isotropic'>
+          <tau units='femtosecond'> 200</tau>
+          <thermostat mode='langevin'>
+            <tau units='femtosecond'> 100</tau>
+          </thermostat>
+          <h0> [ 25.6156, 0, 0, 0, 29.5783, 0, 0, 0, 27.8867 ]</h0>
+        </barostat>
+        <timestep units='femtosecond'> 0.5 </timestep>
+        <thermostat mode='svr'>
+          <tau units='femtosecond'> 10 </tau>
+        </thermostat>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units='kelvin'> 300 </temperature>
+       <pressure units='megapascal'> 10 </pressure>          
+    </ensemble>
+  </system>
+</simulation>

@@ -23,8 +23,9 @@ for loader, module_name, is_pkg in pkgutil.iter_modules(__path__):
         __drivers__[driver_name] = getattr(module, driver_class)
         globals()[driver_class] = getattr(module, driver_class)  # add class to globals
     else:
-        raise ImportError(
-            f"PES module `{module_name}` does not define __DRIVER_CLASS__ and __DRIVER_NAME__"
-        )
+        if driver_class != "driver_tools":
+            raise ImportError(
+                f"PES module `{module_name}` does not define __DRIVER_CLASS__ and __DRIVER_NAME__"
+            )
 
 __all__.append("__drivers__")
