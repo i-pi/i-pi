@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Output files &#8212; i-PI 2.6.3 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="_static/agogo.css?v=3ace793a" />
+    <link rel="stylesheet" type="text/css" href="_static/custom_styles.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=bbbb9706"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Output file tags" href="output-tags.html" />
+    <link rel="prev" title="Input file tags" href="input-tags.html" /> 
+  </head><body>
+    <div class="header-wrapper" role="banner">
+      <div class="header">
+          <p class="logo"><a href="index.html">
+            <img class="logo" src="_static/ipi-logo.svg" alt="Logo"/>
+          </a></p>
+        <div class="headertitle"><a
+          href="index.html">i-PI 2.6.3 documentation</a></div>
+        <div class="rel" role="navigation" aria-label="related navigation">
+          <a href="input-tags.html" title="Input file tags"
+             accesskey="P">previous</a> |
+          <a href="output-tags.html" title="Output file tags"
+             accesskey="N">next</a> |
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="sidebar">
+          
+          <h3>Table of Contents</h3>
+          <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features.html">Core features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="units.html">Internal units and conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input-files.html">Input files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input-tags.html">Input file tags</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Output files</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#properties">Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#trajectory-files">Trajectory files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#checkpoint-files">Checkpoint files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#reading-output-files">Reading output files</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="output-tags.html">Output file tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="distributed.html">Distributed execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">A simple tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently asked questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bibliography.html">Bibliography</a></li>
+</ul>
+
+          <div role="search">
+            <h3 style="margin-top: 1.5em;">Search</h3>
+            <form class="search" action="search.html" method="get">
+                <input type="text" name="q" />
+                <input type="submit" value="Go" />
+            </form>
+          </div>
+
+        </div>
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="output-files">
+<span id="outputfiles"></span><h1>Output files<a class="headerlink" href="#output-files" title="Permalink to this heading">¶</a></h1>
+<p>i-PI uses a very flexible mechanism to specify how and how often atomic
+configurations and physical properties should be output. Within the <a class="reference internal" href="output-tags.html#outputs"><span class="std std-ref">Output file tags</span></a> tag
+of the xml input file the user can specify multiple tags, each one of
+which will correspond to a particular output file. Each file is managed
+separately by the code, so what is output to a particular file and how
+often can be adjusted for different files independently.</p>
+<p>For example, some of the possible output properties require more than
+one force evaluation per time step to calculate, and so can considerably
+increase the computational cost of a simulation unless they are computed
+once every several time steps. On the other hand, for properties such as
+the conserved energy quantity it is easy, and often useful, to output
+them every time step as they are simple to compute and do not take long
+to output to file.</p>
+<p>There are three types of output file that can be specified; property
+files for system level properties, trajectory files for atom/bead level
+properties, and checkpoint files which save the state of the system and
+so can be used to restart the simulation from a particular point. For a
+brief overview of the format of each of these types of files, and some
+of their more common uses, see <a class="reference internal" href="tutorials.html#part1"><span class="std std-ref">Part 1 - NVT Equilibration run</span></a>. To give a more in depth
+explanation of each of these files, they will now be considered in turn.</p>
+<section id="properties">
+<span id="propertyfile"></span><h2>Properties<a class="headerlink" href="#properties" title="Permalink to this heading">¶</a></h2>
+<p>This is the output file for all the system and simulation level
+properties, such as the total energy and the time elapsed. It is
+designed to track a small number of important properties throughout a
+simulation run, and as such has been formatted to be used as input for
+plotting programs such as gnuplot.</p>
+<p>The file starts with a header, which describes the properties being
+written in the different columns and their output units. This is
+followed by the actual data. Each line corresponds to one instant of the
+simulation. The file is fixed formatted, with two blank characters at
+the start of each row, then the data in the same order as the header
+row. By default, each column is 16 characters wide and every float is
+written in exponential format with 8 digits after the decimal point.</p>
+<p>For example, if we had asked for the current time step, the total
+simulation time in picoseconds, and the potential energy in
+electronvolt, then the properties output file would look something like:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># column 1 –&gt; step : The current simulation time step. # column 2 –&gt;</span>
+<span class="n">timepicosecond</span> <span class="p">:</span> <span class="n">The</span> <span class="n">elapsed</span> <span class="n">simulation</span> <span class="n">time</span><span class="o">.</span> <span class="c1"># column 3 –&gt;</span>
+<span class="n">potential</span><span class="p">{</span><span class="n">electronvolt</span><span class="p">}</span> <span class="p">:</span> <span class="n">The</span> <span class="n">physical</span> <span class="n">system</span> <span class="n">potential</span> <span class="n">energy</span><span class="o">.</span>
+<span class="mf">0.00000000e+00</span> <span class="mf">0.00000000e+00</span> <span class="o">-</span><span class="mf">1.32860475e+04</span> <span class="mf">1.00000000e+00</span>
+<span class="mf">1.00000000e-03</span> <span class="o">-</span><span class="mf">1.32865789e+04</span> <span class="o">...</span>
+</pre></div>
+</div>
+<p>The properties that are output are determined by the <a class="reference internal" href="input-tags.html#properties"><span class="std std-ref">properties</span></a> tag in the xml
+input file. The format of this tag is:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">properties</span> <span class="n">stride</span><span class="o">=</span> <span class="n">filename</span><span class="o">=</span> <span class="n">flush</span><span class="o">=</span> <span class="n">shape</span><span class="o">=&gt;</span> <span class="p">[</span> <span class="n">prop1name</span><span class="p">{</span><span class="n">units</span><span class="p">}(</span><span class="n">arg1</span><span class="p">;</span>
+<span class="o">...</span> <span class="p">),</span> <span class="n">prop2name</span><span class="p">{</span><span class="n">units</span><span class="p">}(</span><span class="o">...</span><span class="p">),</span> <span class="o">...</span> <span class="p">]</span> <span class="o">&lt;/</span><span class="n">properties</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<p>e.g.</p>
+<p>The attributes have the following meanings:</p>
+<dl class="simple">
+<dt>stride</dt><dd><p>The number of steps between each output to file</p>
+</dd>
+<dt>filename</dt><dd><p>The name of the output file</p>
+</dd>
+<dt>flush</dt><dd><p>The number of output lines between buffer flushes</p>
+</dd>
+<dt>shape</dt><dd><p>The number of properties in the list.</p>
+</dd>
+</dl>
+<p>The tag data is an array of strings, each of which contains three
+different parts:</p>
+<ul>
+<li><p>The property name, which describes which type of property is to be
+output. This is a mandatory part of the string.</p></li>
+<li><p>The units that the property will be output in. These are specified
+between curly brackets. If this is not specified, then the property
+will be output in atomic units. Note that some properties can only be
+output in atomic units.</p></li>
+<li><p>The arguments to be passed to the function. These are specified
+between standard brackets, with each argument separated by a
+semi-colon. These may or may not be mandatory depending on the
+property, as some arguments have well defined default values. The
+arguments can be specified by either of two different syntaxes,
+(name1=arg1; …) or (arg1; …).</p>
+<p>The first syntax uses keyword arguments. The above example would set
+the variable with the name “name1” the value “arg1”. The second
+syntax uses positional arguments. This syntax relies on the arguments
+being specified in the correct order, as defined in the relevant
+function in the property.py module, since the user has not specified
+which variable to assign the value to.</p>
+<p>The two syntaxes may be mixed, but positional arguments must be
+specified first otherwise undefined behaviour will result. If no
+arguments are specified, then the defaults as defined in the
+properties.py module will be used.</p>
+</li>
+</ul>
+<p>See also the documentation of the <a class="reference internal" href="input-tags.html#properties"><span class="std std-ref">properties</span></a> tag, and
+the full <a class="reference internal" href="output-tags.html#property-list"><span class="std std-ref">List of available properties</span></a>.</p>
+</section>
+<section id="trajectory-files">
+<span id="trajectories"></span><h2>Trajectory files<a class="headerlink" href="#trajectory-files" title="Permalink to this heading">¶</a></h2>
+<p>These are the output files for atomic or bead level properties, such as
+the bead positions. In contrast to properties files, they output data
+for all atomic degrees of freedom, in a format that can be read by
+visualization packages such as VMD.</p>
+<p>Multiple trajectory files can be specified, each described by a separate <a class="reference internal" href="input-tags.html#trajectory"><span class="std std-ref">trajectory</span></a>
+tag within the <a class="reference internal" href="output-tags.html#outputs"><span class="std std-ref">Output file tags</span></a> section of the input file. The allowable file formats for
+the trajectory output files are the same as for the configuration input
+files, given in <a class="reference internal" href="input-files.html#configfile"><span class="std std-ref">Configuration files</span></a>.</p>
+<p>These tags have the format:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>&lt;trajectory stride=`&#39; filename=`&#39; format=`&#39; cell_units=`&#39; flush=`&#39; bead=`&#39;&gt;
+     traj_name{units}(arg1;...)
+&lt;/trajectory&gt;
+</pre></div>
+</div>
+<p>This is very similar to the <a class="reference internal" href="input-tags.html#properties"><span class="std std-ref">properties</span></a> tag, except that it has the additional
+tags “format” and “cell_units”, and only one <em>traj_name</em> quantity can be
+specified per file. ‘format’ specifies the format of the output file,
+and ‘cell_units’ specifies the units in which the cell dimensions are
+output. Depending on the quantity being output, the trajectory may
+consist of just one file per time step (e.g. the position of the
+centroid) or of several files, one for each bead, whose name will be
+automatically determined by appending the bead index to the specified
+“filename” attribute (e.g. the beads position). In the latter case it is
+also possible to output the quantity computed for a single bead by
+specifying its (zero-based) index in the “bead” attribute.</p>
+<p>See also the <a class="reference internal" href="input-tags.html#trajectory"><span class="std std-ref">trajectory</span></a> tag, and the full
+<a class="reference internal" href="output-tags.html#trajectory-list"><span class="std std-ref">List of available trajectory files</span></a>.</p>
+</section>
+<section id="checkpoint-files">
+<span id="checkpoints"></span><h2>Checkpoint files<a class="headerlink" href="#checkpoint-files" title="Permalink to this heading">¶</a></h2>
+<p>As well as the above output files, the state of the system at a
+particular time step can also be saved to file. These checkpoint files
+can later be used as input files, with all the information required to
+restore the state of the system to the point at which the file was
+created.</p>
+<p>This is specified by the <a class="reference internal" href="input-tags.html#checkpoint"><span class="std std-ref">checkpoint</span></a> tag which has the syntax:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">checkpoint</span> <span class="n">stride</span><span class="o">=</span> <span class="n">filename</span><span class="o">=</span> <span class="n">overwrite</span><span class="o">=&gt;</span> <span class="n">step</span> <span class="o">&lt;/</span><span class="n">checkpoint</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<p>Again, this is similar to the <a class="reference internal" href="input-tags.html#properties"><span class="std std-ref">properties</span></a> and
+<a class="reference internal" href="input-tags.html#trajectory"><span class="std std-ref">trajectory</span></a> tags, but instead of having a value
+which specifies what to output, the value simply gives a number to
+identify the current checkpoint file. There is also one additional
+attribute, “overwrite”, which specifies whether each new checkpoint file
+overwrites the old one, or whether all checkpoint files are kept. If
+they are kept, they will be written not to the file “filename”, but
+instead an index based on the value of “step” will be appended to it to
+distinguish between different files.</p>
+<p>If the ‘step’ parameter is not specified, the following syntax can also
+be used:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">checkpoint</span> <span class="n">stride</span><span class="o">=</span> <span class="n">filename</span><span class="o">=</span> <span class="n">overwrite</span><span class="o">=/&gt;</span>
+</pre></div>
+</div>
+<section id="soft-exit-and-restart">
+<h3>Soft exit and RESTART<a class="headerlink" href="#soft-exit-and-restart" title="Permalink to this heading">¶</a></h3>
+<p>As well as outputting checkpoint files during a simulation run, i-PI
+also creates a checkpoint automatically at the end of the simulation,
+with file name “RESTART”. In the same way as the checkpoint files
+discussed above, it contains the full state of the simulation. It can be
+used to seamlessly restart the simulation if the user decides that a
+longer run is needed to gather sufficient statistics, or if i-PI is
+terminated before the desired number of steps have been completed.</p>
+<p>i-PI will try to generate a RESTART file when it terminates, either
+because <em>total_time</em> has elapsed, or because it received a (soft) kill
+signal by the operating system. A soft exit can also be forced by
+creating an empty file named “EXIT” in the directory in which i-PI is
+running.</p>
+<p>An important point to note is that since each time step is split into
+several parts, it is only at the end of each step that all the variables
+are consistent with each other in such a way that the simulation can be
+restarted from them without changing the dynamics. Thus if a soft exit
+call is made during a step, then the restart file that is created must
+correspond to the state of the system <em>before</em> that step began. To this
+end, the state of the system is saved at the start of every step.</p>
+<p>In order to restart i-PI from a file named “RESTART” one simply has to
+run</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">python</span> <span class="n">i</span><span class="o">-</span><span class="n">pi</span> <span class="n">RESTART</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="reading-output-files">
+<h2>Reading output files<a class="headerlink" href="#reading-output-files" title="Permalink to this heading">¶</a></h2>
+<p>It can be useful to parse the output files of i-PI into a format that can
+be readily manipulated in a custom Python script. To this end, i-PI provides
+a few utilities. <cite>ipi.read_output</cite> that can be used to parse a property output
+file, that returns data blocks as a dictionary of numpy array, and additional
+information from the header (such as units, and the description of each
+property) as a separate dictionary</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ipi</span> <span class="kn">import</span> <span class="n">read_output</span>
+<span class="n">data</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">read_output</span><span class="p">(</span><span class="s2">&quot;simulation.out&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Trajectory files can be read with <cite>ipi.read_trajectory</cite>. This reads the
+trajectory output into a list of <cite>ase.Atoms</cite> objects (hence this functionality
+has a dependency on <cite>ase</cite>), converting positions and cell to angstrom, and
+moving other properties to arrays and converting
+them to ASE units (e.g. forces are in eV/Å). <cite>extras</cite> output files (that
+contain either numerical data, or raw strings, returned by the driver code
+in addition to energy and forces) can be processed by using <cite>format=’extras’</cite>
+and an option: the call will then return a dictionary with an entry having the
+name of the type of extra (if present) and either a list of the raw strings,
+or a numpy array with the data. A second dictionary entry contains the list
+of step numbers.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ipi</span> <span class="kn">import</span> <span class="n">read_trajectory</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">read_trajectory</span><span class="p">(</span><span class="s2">&quot;simulation.dipoles&quot;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;extras&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <div role="navigation" aria-label="related navigaton">
+            <a href="input-tags.html" title="Input file tags"
+              >previous</a> |
+            <a href="output-tags.html" title="Output file tags"
+              >next</a> |
+            <a href="genindex.html" title="General Index"
+              >index</a>
+          </div>
+          <div role="note" aria-label="source link">
+              <br/>
+              <a href="_sources/output-files.rst.txt"
+                rel="nofollow">Show Source</a>
+          </div>
+        </div>
+
+        <div class="right">
+          
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2021, The i-PI developers.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
+    </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+  </body>
+</html>

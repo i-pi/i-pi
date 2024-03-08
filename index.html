@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Welcome to i-PI’s documentation! &#8212; i-PI 2.6.3 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="_static/agogo.css?v=3ace793a" />
+    <link rel="stylesheet" type="text/css" href="_static/custom_styles.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=bbbb9706"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Introduction" href="introduction.html" /> 
+  </head><body>
+    <div class="header-wrapper" role="banner">
+      <div class="header">
+          <p class="logo"><a href="#">
+            <img class="logo" src="_static/ipi-logo.svg" alt="Logo"/>
+          </a></p>
+        <div class="headertitle"><a
+          href="#">i-PI 2.6.3 documentation</a></div>
+        <div class="rel" role="navigation" aria-label="related navigation">
+          <a href="introduction.html" title="Introduction"
+             accesskey="N">next</a> |
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="sidebar">
+          
+          <h3>Table of Contents</h3>
+          <ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features.html">Core features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="units.html">Internal units and conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input-files.html">Input files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input-tags.html">Input file tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output-files.html">Output files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output-tags.html">Output file tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="distributed.html">Distributed execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">A simple tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently asked questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bibliography.html">Bibliography</a></li>
+</ul>
+
+          <div role="search">
+            <h3 style="margin-top: 1.5em;">Search</h3>
+            <form class="search" action="search.html" method="get">
+                <input type="text" name="q" />
+                <input type="submit" value="Go" />
+            </form>
+          </div>
+
+        </div>
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="welcome-to-i-pi-s-documentation">
+<h1>Welcome to i-PI’s documentation!<a class="headerlink" href="#welcome-to-i-pi-s-documentation" title="Permalink to this heading">¶</a></h1>
+<p>i-PI is a interface for advanced molecular simulations written in
+Python, designed to be used together with an <em>ab initio</em> evaluation of
+the interactions between the atoms. The main goal is to decouple the
+problem of evolving the ionic positions to sample the appropriate
+thermodynamic ensemble and the problem of computing the inter-atomic
+forces. i-PI was initially developed for Path Integral Molecular
+Dynamics (PIMD) simulations, and contains probably the most
+comprehensive array of PIMD techniques. Since v2.0, however, it also
+contains several general-purpose methods for molecular simulations,
+ranging from phonon calculators to replica exchange molecular dynamics.</p>
+<figure class="align-default" id="id1">
+<a class="reference internal image-reference" href="_images/ipi-scheme.svg"><img alt="_images/ipi-scheme.svg" src="_images/ipi-scheme.svg" width="90.0%" /></a>
+<figcaption>
+<p><span class="caption-text">Schematic representation of the functioning of i-PI.</span><a class="headerlink" href="#id1" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+<p>The implementation is based on a client-server paradigm, where i-PI acts
+as the server and deals with the propagation of the nuclear dynamics,
+whereas the calculation of the potential energy, forces and the
+potential energy part of the pressure virial is delegated to one or more
+instances of an external code, acting as clients. Since the main focus
+is on performing <em>ab initio</em> PIMD – where the cost of the force
+evaluation is overwhelming relative to the ionic dynamics – clarity has
+been privileged over speed. Still, the implementation of i-PI is
+efficient enough that, by tuning the socket parameters and avoiding
+excessive I/O it can be used to run empirical forcefields with
+tens of thousands of atoms with only a small overhead.</p>
+<p>This documentation is structured as follows:</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#path-integral-molecular-dynamics">Path Integral Molecular Dynamics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#implementation">Implementation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#licence-and-credits">Licence and credits</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#on-line-resources">On-line resources</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="features.html">Core features</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="features.html#bosonic-and-fermionic-path-integral-molecular-dynamics">Bosonic and Fermionic Path Integral Molecular Dynamics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#cavity-molecular-dynamics-for-polaritonics">Cavity Molecular Dynamics for Polaritonics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#committee-models">Committee models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#replica-exchange-md">Replica Exchange MD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#thermodynamic-integrations">Thermodynamic integrations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#finite-differences-suzuki-chin-pimd">Finite-differences Suzuki-Chin PIMD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#reweighting-based-high-order-pimd">Reweighting-based high-order PIMD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#perturbed-path-integrals">Perturbed Path Integrals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#open-path-integrals">Open Path Integrals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#geometry-optimization">Geometry Optimization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#finite-differences-vibrational-analysis">Finite-differences Vibrational Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#multiple-time-step-integrators">Multiple Time Step integrators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#ring-polymer-instantons">Ring-polymer instantons</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#thermostatted-rpmd">Thermostatted RPMD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#fast-forward-langevin-thermostat">Fast-Forward Langevin Thermostat</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#ring-polymer-contraction">Ring-Polymer Contraction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#direct-estimators-for-isotope-fractionation">Direct Estimators for Isotope Fractionation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#free-energy-perturbation-estimators-for-isotope-fractionation">Free-energy Perturbation Estimators for Isotope Fractionation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#quantum-alchemical-transformation">Quantum Alchemical Transformation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#langevin-sampling-for-noisy-or-dissipative-forces">Langevin Sampling for Noisy or Dissipative Forces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#path-integral-gles">Path Integral GLEs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#generalized-langevin-equation-thermostats">Generalized Langevin Equation Thermostats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#path-integral-langevin-equation-thermostats">Path-Integral Langevin Equation Thermostats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#path-integrals-at-constant-pressure">Path Integrals at Constant Pressure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#path-integral-molecular-dynamics">Path Integral Molecular Dynamics</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="getting-started.html#installing-i-pi">Installing i-PI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started.html#installing-clients">Installing clients</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started.html#running-i-pi">Running i-PI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started.html#testing-the-install">Testing the install</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="units.html">Internal units and conventions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="units.html#everything-is-a-u">Everything is a.u.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="units.html#lattice-parameters">Lattice parameters</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="input-files.html">Input files</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="input-files.html#input-file-format-and-structure">Input file format and structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-files.html#initialization-section">Initialization section</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="input-tags.html">Input file tags</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#al6xxx-kmc">al6xxx_kmc</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#alchemy">alchemy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#atoms">atoms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#atomswap">atomswap</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#barostat">barostat</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#beads">beads</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#bias">bias</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#bosons">bosons</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#cell">cell</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#checkpoint">checkpoint</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#constrained-dynamics">constrained_dynamics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#constraint">constraint</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#csolver">csolver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#dmd">dmd</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#dynamics">dynamics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#ensemble">ensemble</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#ffcavphsocket">ffcavphsocket</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#ffcommittee">ffcommittee</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#ffdebye">ffdebye</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#ffdmd">ffdmd</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#fflj">fflj</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#ffplumed">ffplumed</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#ffsgdml">ffsgdml</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#ffsocket">ffsocket</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#ffyaff">ffyaff</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#file">file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#force">force</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#forcefield">forcefield</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#forces">forces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#frequencies">frequencies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#gle">gle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#h0">h0</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#init-cell">init_cell</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#initialize">initialize</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#instanton">instanton</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#labels">labels</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#masses">masses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#metad">metad</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#momenta">momenta</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#motion">motion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#neb-optimizer">neb_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#normal-modes">normal_modes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#normalmodes">normalmodes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#optimizer">optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#output">output</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#p-ramp">p_ramp</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#planetary">planetary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#positions">positions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#prng">prng</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#properties">properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#remd">remd</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#scp">scp</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#simulation">simulation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#smotion">smotion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#string-optimizer">string_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#system">system</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#system-template">system_template</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#t-ramp">t_ramp</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#thermostat">thermostat</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#trajectory">trajectory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#velocities">velocities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#vibrations">vibrations</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="output-files.html">Output files</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="output-files.html#properties">Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="output-files.html#trajectory-files">Trajectory files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="output-files.html#checkpoint-files">Checkpoint files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="output-files.html#reading-output-files">Reading output files</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="output-tags.html">Output file tags</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="output-tags.html#list-of-available-properties">List of available properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="output-tags.html#list-of-available-trajectory-files">List of available trajectory files</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="distributed.html">Distributed execution</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="distributed.html#communication-protocol">Communication protocol</a></li>
+<li class="toctree-l2"><a class="reference internal" href="distributed.html#parallelization">Parallelization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="distributed.html#sockets">Sockets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="distributed.html#running-i-pi-over-the-network">Running i-PI over the network</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">A simple tutorial</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorials.html#part-1-nvt-equilibration-run">Part 1 - <em>NVT</em> Equilibration run</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials.html#part-2-npt-simulation">Part 2 - <em>NPT</em> simulation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials.html#part-3-a-fully-converged-simulation">Part 3 - A fully converged simulation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently asked questions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="faq.html#where-to-ask-for-help">Where to ask for help?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="faq.html#which-units-does-i-pi-use">Which units does i-PI use?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="faq.html#how-to-build-i-pi">How to build i-PI?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="faq.html#how-to-run-i-pi-with-the-client-code-name">How to run i-PI with the client code &lt;name&gt;?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="faq.html#how-to-run-i-pi-on-a-cluster">How to run i-PI on a cluster?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="faq.html#how-to-setup-colored-noise-thermostats-with-meaningful-parameters">How to setup colored-noise thermostats with meaningful parameters?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="faq.html#how-to-perform-geometry-optimization">How to perform geometry optimization?</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#input-errors">Input errors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#initialization-errors">Initialization errors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#output-errors">Output errors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#socket-errors">Socket errors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#mathematical-errors">Mathematical errors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#i-pi-is-slow">I-PI is slow!</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#useful-resources">Useful resources</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#what-we-expect-from-a-contribution">What we expect from a contribution</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#creating-a-regression-test">Creating a regression test</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#adding-features-involving-a-client-code">Adding features involving a client code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#getting-recognition-for-your-contribution">Getting recognition for your contribution</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#contributing-with-a-bug-report">Contributing with a bug report</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#questions-related-to-i-pi-usage">Questions related to i-PI usage</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="bibliography.html">Bibliography</a></li>
+</ul>
+</div>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <div role="navigation" aria-label="related navigaton">
+            <a href="introduction.html" title="Introduction"
+              >next</a> |
+            <a href="genindex.html" title="General Index"
+              >index</a>
+          </div>
+          <div role="note" aria-label="source link">
+              <br/>
+              <a href="_sources/index.rst.txt"
+                rel="nofollow">Show Source</a>
+          </div>
+        </div>
+
+        <div class="right">
+          
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2021, The i-PI developers.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
+    </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+  </body>
+</html>

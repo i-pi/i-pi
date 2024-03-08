@@ -1,0 +1,423 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Introduction &#8212; i-PI 2.6.3 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="_static/agogo.css?v=3ace793a" />
+    <link rel="stylesheet" type="text/css" href="_static/custom_styles.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=bbbb9706"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Core features" href="features.html" />
+    <link rel="prev" title="Welcome to i-PI’s documentation!" href="index.html" /> 
+  </head><body>
+    <div class="header-wrapper" role="banner">
+      <div class="header">
+          <p class="logo"><a href="index.html">
+            <img class="logo" src="_static/ipi-logo.svg" alt="Logo"/>
+          </a></p>
+        <div class="headertitle"><a
+          href="index.html">i-PI 2.6.3 documentation</a></div>
+        <div class="rel" role="navigation" aria-label="related navigation">
+          <a href="index.html" title="Welcome to i-PI’s documentation!"
+             accesskey="P">previous</a> |
+          <a href="features.html" title="Core features"
+             accesskey="N">next</a> |
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="sidebar">
+          
+          <h3>Table of Contents</h3>
+          <ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Introduction</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#path-integral-molecular-dynamics">Path Integral Molecular Dynamics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#implementation">Implementation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#licence-and-credits">Licence and credits</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#on-line-resources">On-line resources</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="features.html">Core features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="units.html">Internal units and conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input-files.html">Input files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input-tags.html">Input file tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output-files.html">Output files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output-tags.html">Output file tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="distributed.html">Distributed execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">A simple tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently asked questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bibliography.html">Bibliography</a></li>
+</ul>
+
+          <div role="search">
+            <h3 style="margin-top: 1.5em;">Search</h3>
+            <form class="search" action="search.html" method="get">
+                <input type="text" name="q" />
+                <input type="submit" value="Go" />
+            </form>
+          </div>
+
+        </div>
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="introduction">
+<h1>Introduction<a class="headerlink" href="#introduction" title="Permalink to this heading">¶</a></h1>
+<section id="path-integral-molecular-dynamics">
+<h2>Path Integral Molecular Dynamics<a class="headerlink" href="#path-integral-molecular-dynamics" title="Permalink to this heading">¶</a></h2>
+<p>Molecular dynamics (MD) is a technique used to study the properties of a
+system of interacting particles by applying Newton’s equations of motion
+to produce trajectories which can be used to efficiently explore the
+phase space. This can be used to calculate many equilibrium and
+dynamical properties and to study systems from isolated gas molecules to
+condensed phase bulk materials.</p>
+<p>However, while this technique has been very successful, in most MD
+implementations the assumption is made that the nuclei behave as
+classical particles, which for light nuclei such as hydrogen is often a
+very poor approximation as the effect of zero-point energy (ZPE) and
+quantum tunnelling can be large. For example, even at room temperature
+the vibrational frequency of an OH stretch in water is over 15 times
+larger than the available thermal energy, and so this motion will be
+highly quantized. The current state-of-the-art method to include nuclear
+quantum effects (NQE) in the calculation of static properties of
+condensed phase systems is path integral molecular dynamics (PIMD).</p>
+<p>PIMD generates the quantum-mechanical ensemble of a system of
+interacting particles by using MD in an extended phase space. This is
+derived from the path integral formalism
+<span id="id1">[<a class="reference internal" href="bibliography.html#id359"><span>FH64</span></a>]</span>, which relates the statistics of a
+collection of quantum particles to those of a set of classical ring
+polymers, a ring polymer being a number of replicas of a particle
+coupled by harmonic springs. This so-called classical isomorphism is
+exact in the limit as the number of replicas goes to infinity, but in
+practice is converged numerically with only a finite number.</p>
+<p>This then allows quantum phase space averages to be calculated from
+classical trajectories, with only about an order of magnitude more
+computing time than would be required for standard MD. Also, since PIMD
+is simply classical MD in an extended phase space, many of the
+techniques developed to improve the scope and efficiency of MD
+simulations can be applied straightforwardly to the equivalent PIMD
+calculations <span id="id2">[<a class="reference internal" href="bibliography.html#id199"><span>CPMM10</span></a>,<a class="reference internal" href="bibliography.html#id768"><span>MHT99</span></a>]</span>. Finally, several
+techniques designed specifically for PIMD simulations are now available
+to increase the rate of convergence with respect to the number of
+replicas used
+<span id="id3">[<a class="reference internal" href="bibliography.html#id756"><span>MM08</span></a>,<a class="reference internal" href="bibliography.html#id202"><span>CMP11</span></a>,<a class="reference internal" href="bibliography.html#id1125"><span>Suz95</span></a>,<a class="reference internal" href="bibliography.html#id235"><span>Chi97</span></a>,<a class="reference internal" href="bibliography.html#id205"><span>CBRM11</span></a>,<a class="reference internal" href="bibliography.html#id899"><span>PerezT11</span></a>]</span>,
+further reducing the computational overhead of the method. All of these
+facts mean that it is now feasible to do PIMD simulations with thousands
+of molecules, or even to use <em>ab initio</em> electronic structure
+calculations to propagate the dynamics for small systems.</p>
+<p>Furthermore, the framework used to run PIMD simulations can be adapted
+to generate approximate quantum dynamical information
+<span id="id4">[<a class="reference internal" href="bibliography.html#id173"><span>CV93</span></a>,<a class="reference internal" href="bibliography.html#id174"><span>CV94</span></a>,<a class="reference internal" href="bibliography.html#id256"><span>CM04</span></a>,<a class="reference internal" href="bibliography.html#id135"><span>BM06</span></a>]</span>,
+and so can also be used to calculate correlation functions. While
+real-time quantum coherences cannot be captured, the inclusion of
+quantum statistical information and the rapid decoherence observed in
+condensed phase systems mean that in many cases very accurate results
+can be obtained from such approximate treatments of quantum dynamics
+<span id="id5">[<a class="reference internal" href="bibliography.html#id480"><span>HMMM13</span></a>]</span>.</p>
+</section>
+<section id="implementation">
+<h2>Implementation<a class="headerlink" href="#implementation" title="Permalink to this heading">¶</a></h2>
+<section id="automated-evaluation-depend-objects">
+<h3>Automated evaluation (depend objects)<a class="headerlink" href="#automated-evaluation-depend-objects" title="Permalink to this heading">¶</a></h3>
+<p>i-PI uses a caching mechanism with automatic value updating to make the
+code used to propagate the dynamics as simple and clear as possible.
+Every physical quantity that is referenced in the code is created using
+a “depend” object class, which is given the parameters on which it
+depends and a function used to calculate its value.</p>
+<figure class="align-default" id="id10">
+<a class="reference internal image-reference" href="_images/ipi-depend.svg"><img alt="_images/ipi-depend.svg" src="_images/ipi-depend.svg" width="90.0%" /></a>
+<figcaption>
+<p><span class="caption-text">Schematic overview of the functioning of the
+<em>depend</em> class used as the base for properties and physical
+quantities in i-PI. A few “primitive” quantities – such as atomic
+positions or momenta – can be modified directly. For most properties,
+one defines a function that can compute that property based on the
+value of other properties. Whenever one property is modified, all the
+quantities that depend on it are marked as tainted, so that when the
+value of one of the properties is used, the function can be invoked
+and the updated value obtained. If a quantity is not marked as
+tainted, the cached value is returned instead.</span><a class="headerlink" href="#id10" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+<p>“Depend” objects can be called to get the physical quantity they
+represent. However, they have further functionality. Firstly, once the
+value of a “depend” object has been calculated, its value is cached, so
+further references to that quantity will not need to evaluate the
+function that calculates it. Furthermore, the code keeps track of when
+any of the dependencies of the variable are updated, and makes sure that
+the quantity is automatically when it is needed (i.e., when
+the quantity is assessed again).</p>
+<p>This is a minimal example of how to implement dependencies in a class</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span> <span class="nn">ipi.utils.depend</span> <span class="kn">import</span> <span class="n">depend_value</span><span class="p">,</span> <span class="n">dproperties</span>
+
+<span class="k">class</span> <span class="nc">DObject</span><span class="p">:</span>
+   <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+      <span class="c1"># depend objects are created using an underscore prefix.</span>
+      <span class="c1"># this is a &quot;primitive&quot; value that doesn&#39;t depend on anything</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_scalar</span> <span class="o">=</span> <span class="n">depend_value</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;scalar&quot;</span><span class="p">)</span>
+
+      <span class="c1"># this is a dependent object. the definition contains a function that</span>
+      <span class="c1"># is called to determine the value, and specification of what objects</span>
+      <span class="c1"># it depend on.</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_double</span> <span class="o">=</span> <span class="n">depend_value</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="mi">2</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">scalar</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;double&quot;</span><span class="p">,</span>
+                                  <span class="n">dependencies</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_scalar</span><span class="p">])</span>
+
+<span class="c1"># after the definition of a class, this helper function should be called to</span>
+<span class="c1"># create property getters and setters (use the names with no leading underscore)</span>
+<span class="c1"># note that property accessors are added to the class, not to the instances</span>
+<span class="n">dproperties</span><span class="p">(</span><span class="n">DObject</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;scalar&quot;</span><span class="p">,</span> <span class="s2">&quot;double&quot;</span><span class="p">])</span>
+
+<span class="n">myobj</span> <span class="o">=</span> <span class="n">DObject</span><span class="p">()</span>
+<span class="c1"># &quot;primitive values&quot; can be set manually</span>
+<span class="n">myobj</span><span class="o">.</span><span class="n">scalar</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="c1"># dependent objects will be computed automatically on demand</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">myobj</span><span class="o">.</span><span class="n">double</span><span class="p">)</span> <span class="c1"># prints `8`</span>
+</pre></div>
+</div>
+<p>This choice makes implementation slightly more complex when the physical
+observables are first introduced as variables, as one has to take care
+of stating their dependencies as well as the function that computes
+them. However, the advantage is that when the physical quantities are
+used, in the integrator of the dynamics or in the evaluation of physical
+properties, one does not need to take care of book-keeping and the code
+can be clean, transparent and readable.</p>
+<p>It is also possible to define dependencies between different objects, in
+which case it’s necessary to make sure that the compute function has access,
+at runtime, to the value of the other object. A typical usage pattern is</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># NB: this is meant to be run after the previous code snippet</span>
+<span class="kn">from</span> <span class="nn">ipi.utils.depend</span> <span class="kn">import</span> <span class="n">depend_array</span>
+<span class="kn">import</span> <span class="nn">numpy</span> <span class="k">as</span> <span class="nn">np</span>
+
+<span class="k">class</span> <span class="nc">DOther</span><span class="p">:</span>
+   <span class="k">def</span> <span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+      <span class="c1"># depend arrays must be initialized with storage space</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_vec</span> <span class="o">=</span> <span class="n">depend_array</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">4</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;vec&quot;</span><span class="p">)</span>
+
+   <span class="k">def</span> <span class="nf">bind</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">factor</span><span class="p">):</span>
+
+      <span class="bp">self</span><span class="o">.</span><span class="n">factor</span> <span class="o">=</span> <span class="n">factor</span> <span class="c1"># stores a reference to the object holding the value</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_scaled</span> <span class="o">=</span> <span class="n">depend_array</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">4</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;vec&quot;</span><span class="p">,</span>
+                                 <span class="n">func</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">get_scaled</span><span class="p">,</span> <span class="n">dependencies</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_vec</span><span class="p">])</span>
+
+      <span class="c1"># dependencies (or dependants) can also be added after object creation</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_scaled</span><span class="o">.</span><span class="n">add_dependency</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">factor</span><span class="o">.</span><span class="n">_double</span><span class="p">)</span>
+
+   <span class="k">def</span> <span class="nf">get_scaled</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+      <span class="c1"># computes a scaled version of the vector</span>
+      <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">vec</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">factor</span><span class="o">.</span><span class="n">double</span>
+
+<span class="n">dproperties</span><span class="p">(</span><span class="n">DOther</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;vec&quot;</span><span class="p">,</span> <span class="s2">&quot;scaled&quot;</span><span class="p">])</span>
+
+<span class="n">myoth</span> <span class="o">=</span> <span class="n">DOther</span><span class="p">()</span> <span class="c1"># creates the object</span>
+<span class="n">myoth</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">myobj</span><span class="p">)</span> <span class="c1"># makes connections</span>
+
+<span class="n">myoth</span><span class="o">.</span><span class="n">vec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">myoth</span><span class="o">.</span><span class="n">scaled</span><span class="p">)</span> <span class="c1"># prints [0,8,16,24]</span>
+
+<span class="n">myoth</span><span class="o">.</span><span class="n">vec</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span> <span class="c1"># depend_arrays can be accessed as normal np.ndarray</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">myoth</span><span class="o">.</span><span class="n">scaled</span><span class="p">)</span> <span class="c1"># prints [0,8,16,0]</span>
+</pre></div>
+</div>
+</section>
+<section id="force-evaluation">
+<h3>Force evaluation<a class="headerlink" href="#force-evaluation" title="Permalink to this heading">¶</a></h3>
+<p>Within i-PI, the evaluation of the forces plays a crucial role, as it is
+the step requiring communication with the client code. In order to have
+a flexible infrastructure that makes it possible to perform simulations
+with advanced techniques such as ring-polymer
+contraction <span id="id6">[<a class="reference internal" href="bibliography.html#id756"><span>MM08</span></a>]</span>, the force evaluation
+machinery in i-PI might appear complicated at first, and deserves a
+brief discussion.</p>
+<figure class="align-default" id="id11">
+<a class="reference internal image-reference" href="_images/ipi-forces.svg"><img alt="_images/ipi-forces.svg" src="_images/ipi-forces.svg" width="90.0%" /></a>
+<figcaption>
+<p><span class="caption-text">Schematic representation of the different objects that
+are involved in the evaluation of the forces. The multiple layers and
+complex structure are necessary to give the possibility of
+decomposing the evaluation of the forces between multiple different
+clients and using different imaginary time partitioning (e.g. one can
+compute the bonded interactions using one client, and use a different
+client to compute the long-range electrostatic interactions,
+contracted on a single bead <span id="id7">[<a class="reference internal" href="bibliography.html#id756"><span>MM08</span></a>]</span>).</span><a class="headerlink" href="#id11" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+<p>This figure provides an overall scheme of the objects involved in the calculation
+of the forces. The infrastracture comprises
+a force provider class that deals with the actual subdivision of work
+among the clients, and a sequence of objects that translate the request
+of the overall force of the system into atomic evaluations of one
+component of the force for an individual bead: i-PI is built to hide the
+path integral infrastructure from the client, and so beads must be
+transferred individually.</p>
+<p>Let us discuss for clarity a practical example: a calculation of an
+empirical water model where the bonded interactions are computed on 32
+beads by the program A, and the non-bonded interactions are computed by
+client B, ring-polymer contracted on 8 beads. Each client “type” is
+associated with a <a class="reference internal" href="input-tags.html#forcefield"><span class="std std-ref">forcefield</span></a> object in the input. In the case of a
+<a class="reference internal" href="input-tags.html#ffsocket"><span class="std std-ref">ffsocket</span></a> interface, the
+forcefield object specifies the address to which a client should
+connect, and so multiple clients of type A or B can connect to i-PI at
+the same time. Each forcefield object deals with queueing force
+evaluation requests and computing them in a first-in-first-out fashion,
+possibly executing multiple requests in parallel.</p>
+<p>On the force evaluation side, the task of splitting the request of a
+force evaluation into individual components and individual beads is
+accomplished by a chain of three objects, Forces, ForceComponent and
+ForceBead. is the main force Forces evaluator, that is built from the
+prototypes listed within the <a class="reference internal" href="input-tags.html#forces"><span class="std std-ref">forces</span></a> field of the <a class="reference internal" href="input-tags.html#system"><span class="std std-ref">system</span></a>.
+Each <span class="xref std std-ref">forcecomponent</span>  item within the <a class="reference internal" href="input-tags.html#forces"><span class="std std-ref">forces</span></a> tag
+describe one component of the force – in our example one ForceComponent
+bound to a forcefield of type A, evaluated on 32 beads, and one
+ForceComponent bound to type B, evaluated on 8 beads. Forces contains
+the machinery that automatically contracts the actual ring polymer to
+the number of beads required by each component, and combines the various
+components with the given weights to provide the overall force, energy
+and virial where required. Note that in order to support ring polymer
+contraction (RPC), the RPC procedure is executed even if no contraction
+was required (i.e. even if all clients contain the full amount of
+beads). ForceComponent is a very simple helper class that associates
+with each bead a ForceBead object, that is the entity in charge of
+filing force requests to the appropriate ForceField object and waiting
+for completion of the evaluation.</p>
+</section>
+<section id="communication-protocol">
+<h3>Communication protocol<a class="headerlink" href="#communication-protocol" title="Permalink to this heading">¶</a></h3>
+<p>Since i-PI is designed to be used with a wide range of codes and
+platforms, it has to rely on a simple and robust method for
+communicating between the server and client. Even though other choices
+are possible, and it should be relatively simple to implement other
+means of communication, the preferred approach relies on sockets as the
+underlying infrastructure. Both Internet and Unix domain sockets can be
+used: the latter allow for fast communication on a single node, whereas
+the former make it possible to realise a distributed computing paradigm,
+with clients running on different nodes or even on different HPC
+facilities. In order to facilitate implementation of the socket
+communication in client codes, a simple set of C wrappers to the
+standard libraries socket implementation is provided as part of the i-PI
+distribution, that can be used in any programming language that can be
+linked with C code.</p>
+<p>As far as the communication protocol is concerned, the guiding principle
+has been keeping it to the lowest common denominator, and avoiding any
+feature that may be code-specific. Only a minimal amount of information
+is transferred between the client and the server; the position of the
+atoms and cell parameters in one direction, and the forces, virial and
+potential in the other.</p>
+<p>For more details about sockets and communication, see
+<a class="reference internal" href="distributed.html#distrib"><span class="std std-ref">Distributed execution</span></a>.</p>
+</section>
+</section>
+<section id="licence-and-credits">
+<h2>Licence and credits<a class="headerlink" href="#licence-and-credits" title="Permalink to this heading">¶</a></h2>
+<p>Most of this code is distributed under the GPL licence. For more details
+see <a class="reference external" href="www.gnu.org/licences/gpl.html">www.gnu.org/licences/gpl.html</a>.
+So that they can easily be incorporated in other codes, the files in the
+directory “drivers” are all held under the MIT licence. For more details
+see <a class="reference external" href="https://fedoraproject.org/wiki/Licensing:MIT">https://fedoraproject.org/wiki/Licensing:MIT</a>.</p>
+<p>If you use this code in any future publications, please cite this using
+<span id="id8">[<a class="reference internal" href="bibliography.html#id208"><span>CMM14</span></a>]</span> for v1 and
+<span id="id9">[<a class="reference internal" href="bibliography.html#id596"><span>KRM+19</span></a>]</span> for v2.</p>
+<section id="contributors">
+<h3>Contributors<a class="headerlink" href="#contributors" title="Permalink to this heading">¶</a></h3>
+<p>i-PI was originally written by M. Ceriotti and J. More at Oxford
+University, together with D. Manolopoulos. Several people contributed to
+its further development. Developers who implemented a specific feature
+are acknowledged above.</p>
+</section>
+</section>
+<section id="on-line-resources">
+<h2>On-line resources<a class="headerlink" href="#on-line-resources" title="Permalink to this heading">¶</a></h2>
+<section id="python-resources">
+<h3>Python resources<a class="headerlink" href="#python-resources" title="Permalink to this heading">¶</a></h3>
+<p>For help with Python programming, see
+<a class="reference external" href="www.python.org">www.python.org</a>. For information about the NumPy
+mathematical library, see <a class="reference external" href="www.numpy.org">www.numpy.org</a>, and for
+worked examples of its capabilities see
+<a class="reference external" href="www.scipy.org/Tentative_NumPy_Tutorial">www.scipy.org/Tentative_NumPy_Tutorial</a>.
+Finally, see <a class="reference external" href="http://hgomersall.github.io/pyFFTW/">http://hgomersall.github.io/pyFFTW/</a> for documentation on
+the Python FFTW library that is currently implemented with i-PI.</p>
+</section>
+<section id="client-code-resources">
+<span id="librarywebsites"></span><h3>Client code resources<a class="headerlink" href="#client-code-resources" title="Permalink to this heading">¶</a></h3>
+<p>Several codes provide out-of-the-box an i-PI interface, including CP2K,
+DFTB+, Lammps, Quantum ESPRESSO, Siesta, FHI-aims, Yaff, deMonNano, TBE.
+If you are interested in interfacing your code to i-PI please get in
+touch, we are always glad to help!</p>
+<p>There are several Fortran and C libraries that most client codes will
+probably need to run, such as FFTW, BLAS and LAPACK. These can be found
+at <a class="reference external" href="www.fftw.org">www.fftw.org</a>,
+<a class="reference external" href="www.netlib.org/blas">www.netlib.org/blas</a> and
+<a class="reference external" href="www.netlib.org/lapack">www.netlib.org/lapack</a> respectively.</p>
+<p>These codes do not come as part of the i-PI package, and must be
+downloaded separately. See chapter <a class="reference internal" href="getting-started.html#clientinstall"><span class="std std-ref">Installing clients</span></a> for more
+details of how to do this.</p>
+</section>
+<section id="i-pi-resources">
+<h3>i-PI resources<a class="headerlink" href="#i-pi-resources" title="Permalink to this heading">¶</a></h3>
+<p>For more information about i-PI and to download the source code go to
+<a class="reference external" href="http://ipi-code.org/">http://ipi-code.org/</a>.</p>
+<p>In <a class="reference external" href="http://gle4md.org/">http://gle4md.org/</a> one can also obtain colored-noise parameters to
+run Path Integral with Generalized Langevin Equation thermostat
+(PI+GLE/PIGLET) calculations.</p>
+</section>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <div role="navigation" aria-label="related navigaton">
+            <a href="index.html" title="Welcome to i-PI’s documentation!"
+              >previous</a> |
+            <a href="features.html" title="Core features"
+              >next</a> |
+            <a href="genindex.html" title="General Index"
+              >index</a>
+          </div>
+          <div role="note" aria-label="source link">
+              <br/>
+              <a href="_sources/introduction.rst.txt"
+                rel="nofollow">Show Source</a>
+          </div>
+        </div>
+
+        <div class="right">
+          
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2021, The i-PI developers.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
+    </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+  </body>
+</html>

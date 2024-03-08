@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Internal units and conventions &#8212; i-PI 2.6.3 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="_static/agogo.css?v=3ace793a" />
+    <link rel="stylesheet" type="text/css" href="_static/custom_styles.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=bbbb9706"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Input files" href="input-files.html" />
+    <link rel="prev" title="Getting started" href="getting-started.html" /> 
+  </head><body>
+    <div class="header-wrapper" role="banner">
+      <div class="header">
+          <p class="logo"><a href="index.html">
+            <img class="logo" src="_static/ipi-logo.svg" alt="Logo"/>
+          </a></p>
+        <div class="headertitle"><a
+          href="index.html">i-PI 2.6.3 documentation</a></div>
+        <div class="rel" role="navigation" aria-label="related navigation">
+          <a href="getting-started.html" title="Getting started"
+             accesskey="P">previous</a> |
+          <a href="input-files.html" title="Input files"
+             accesskey="N">next</a> |
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="sidebar">
+          
+          <h3>Table of Contents</h3>
+          <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features.html">Core features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Internal units and conventions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#everything-is-a-u">Everything is a.u.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#lattice-parameters">Lattice parameters</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="input-files.html">Input files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input-tags.html">Input file tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output-files.html">Output files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output-tags.html">Output file tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="distributed.html">Distributed execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">A simple tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently asked questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bibliography.html">Bibliography</a></li>
+</ul>
+
+          <div role="search">
+            <h3 style="margin-top: 1.5em;">Search</h3>
+            <form class="search" action="search.html" method="get">
+                <input type="text" name="q" />
+                <input type="submit" value="Go" />
+            </form>
+          </div>
+
+        </div>
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="internal-units-and-conventions">
+<h1>Internal units and conventions<a class="headerlink" href="#internal-units-and-conventions" title="Permalink to this heading">¶</a></h1>
+<section id="everything-is-a-u">
+<h2>Everything is a.u.<a class="headerlink" href="#everything-is-a-u" title="Permalink to this heading">¶</a></h2>
+<p>All the units used internally by i-PI are atomic units, as given below.
+<em>All</em> of them, even the temperature.
+By default, both input and output data are given in atomic units, but in
+most cases the default units can be overridden if one wishes so. For
+details on how to do this, see <a class="reference internal" href="input-files.html#inputunits"><span class="std std-ref">Overriding default units</span></a> and
+<a class="reference internal" href="output-files.html#propertyfile"><span class="std std-ref">Properties</span></a>.</p>
+<div class="center docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Unit</p></th>
+<th class="head"><p>Name</p></th>
+<th class="head"><p>S.I. Value</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Length</p></td>
+<td><p>Bohr radius</p></td>
+<td><p>5.2917721e-11 m</p></td>
+</tr>
+<tr class="row-odd"><td><p>Time</p></td>
+<td><p>N.A.</p></td>
+<td><p>2.4188843e-17 s</p></td>
+</tr>
+<tr class="row-even"><td><p>Mass</p></td>
+<td><p>Electron mass</p></td>
+<td><p>9.1093819e-31 kg</p></td>
+</tr>
+<tr class="row-odd"><td><p>Temperature</p></td>
+<td><p>Hartree</p></td>
+<td><p>315774.66 K</p></td>
+</tr>
+<tr class="row-even"><td><p>Energy</p></td>
+<td><p>Hartree</p></td>
+<td><p>4.3597438e-18 J</p></td>
+</tr>
+<tr class="row-odd"><td><p>Pressure</p></td>
+<td><p>N.A.</p></td>
+<td><p>2.9421912e13 Pa</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+<p>Regarding the specification of these units in the i-PI input files, the
+user is able to specify units both in the i-PI input file or in the
+structure file. If the structure file is of the .xyz format, the units
+specifications should be present in the comment line. Examples of such
+inputs can be found in <code class="docutils literal notranslate"><span class="pre">examples/pes-regtest/io-units/</span></code> . The code
+then behaves in the following way, depending on the user’s choice:</p>
+<ul class="simple">
+<li><p>If no units are specified in the input, i-PI tries to guess from the
+comment line of the structure file and it nothing is present, assumes
+atomic units, except for the cases discussed below.</p></li>
+<li><p>If units are specified in both input and structure file and they
+match, conversion happens just once. If they do not match, an error
+is raised and i-PI stops.</p></li>
+</ul>
+<p>There are a few exceptions, concerning quantities that are not used to describe the atomic-scale system, or I/O that is constrained by existing standards:</p>
+<blockquote>
+<div><ul class="simple">
+<li><p>Quantities that define run-time execution options, such as the simulation wall-clock time limit (specified by the flag &lt;total_time&gt;) or the latency of the forcefield socket (specified by the parameter &lt;latency&gt;), have to be provided in seconds.</p></li>
+<li><p>The PDB standard defines units to be in angstrom, and so default units for PDB are angstrom.</p></li>
+<li><p>When using ASE format for I/O, the units are dictated by the ASE defaults.
+So for example, the ASE extended xyz format  expects positions in angstroms.
+(See for example <code class="docutils literal notranslate"><span class="pre">examples/ase-io/</span></code>)</p></li>
+</ul>
+</div></blockquote>
+</section>
+<section id="lattice-parameters">
+<h2>Lattice parameters<a class="headerlink" href="#lattice-parameters" title="Permalink to this heading">¶</a></h2>
+<p>The unit cell is defined internally by i-PI with the lattice vectors stored
+in the columns - i.e. as a <span class="math notranslate nohighlight">\(3\times 3\)</span> array in which <code class="docutils literal notranslate"><span class="pre">h[i,j]</span></code> contains the i-th
+Cartesian component of the j-th lattice vector.
+Furthermore, the cell is constrained to be oriented with the first vector
+along the <span class="math notranslate nohighlight">\(x\)</span> axis, the second vector within the <span class="math notranslate nohighlight">\(xy\)</span> plane, and
+the third in an arbitrary position (so that the cell is stored internally as an
+upper-triangular matrix).
+This is also reflected in how the cell parameters should be provided in
+the input file: when given in an array format, the correct format is e.g.
+<code class="docutils literal notranslate"><span class="pre">&lt;h</span> <span class="pre">units='angstrom'&gt;</span> <span class="pre">[10,</span> <span class="pre">1,</span> <span class="pre">2,</span> <span class="pre">0,</span> <span class="pre">9,</span> <span class="pre">-1,</span> <span class="pre">0,</span> <span class="pre">0,</span> <span class="pre">11]</span> <span class="pre">&lt;/h&gt;</span></code>.</p>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <div role="navigation" aria-label="related navigaton">
+            <a href="getting-started.html" title="Getting started"
+              >previous</a> |
+            <a href="input-files.html" title="Input files"
+              >next</a> |
+            <a href="genindex.html" title="General Index"
+              >index</a>
+          </div>
+          <div role="note" aria-label="source link">
+              <br/>
+              <a href="_sources/units.rst.txt"
+                rel="nofollow">Show Source</a>
+          </div>
+        </div>
+
+        <div class="right">
+          
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2021, The i-PI developers.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
+    </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+  </body>
+</html>

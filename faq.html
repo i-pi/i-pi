@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Frequently asked questions &#8212; i-PI 2.6.3 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=a746c00c" />
+    <link rel="stylesheet" type="text/css" href="_static/agogo.css?v=3ace793a" />
+    <link rel="stylesheet" type="text/css" href="_static/custom_styles.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=bbbb9706"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Troubleshooting" href="troubleshooting.html" />
+    <link rel="prev" title="A simple tutorial" href="tutorials.html" /> 
+  </head><body>
+    <div class="header-wrapper" role="banner">
+      <div class="header">
+          <p class="logo"><a href="index.html">
+            <img class="logo" src="_static/ipi-logo.svg" alt="Logo"/>
+          </a></p>
+        <div class="headertitle"><a
+          href="index.html">i-PI 2.6.3 documentation</a></div>
+        <div class="rel" role="navigation" aria-label="related navigation">
+          <a href="tutorials.html" title="A simple tutorial"
+             accesskey="P">previous</a> |
+          <a href="troubleshooting.html" title="Troubleshooting"
+             accesskey="N">next</a> |
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a>
+        </div>
+       </div>
+    </div>
+
+    <div class="content-wrapper">
+      <div class="content">
+        <div class="sidebar">
+          
+          <h3>Table of Contents</h3>
+          <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Introduction</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features.html">Core features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="units.html">Internal units and conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input-files.html">Input files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input-tags.html">Input file tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output-files.html">Output files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output-tags.html">Output file tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="distributed.html">Distributed execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">A simple tutorial</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Frequently asked questions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#where-to-ask-for-help">Where to ask for help?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#which-units-does-i-pi-use">Which units does i-PI use?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#how-to-build-i-pi">How to build i-PI?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#how-to-run-i-pi-with-the-client-code-name">How to run i-PI with the client code &lt;name&gt;?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#how-to-run-i-pi-on-a-cluster">How to run i-PI on a cluster?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#how-to-setup-colored-noise-thermostats-with-meaningful-parameters">How to setup colored-noise thermostats with meaningful parameters?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#how-to-perform-geometry-optimization">How to perform geometry optimization?</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bibliography.html">Bibliography</a></li>
+</ul>
+
+          <div role="search">
+            <h3 style="margin-top: 1.5em;">Search</h3>
+            <form class="search" action="search.html" method="get">
+                <input type="text" name="q" />
+                <input type="submit" value="Go" />
+            </form>
+          </div>
+
+        </div>
+        <div class="document">
+            
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+            
+  <section id="frequently-asked-questions">
+<h1>Frequently asked questions<a class="headerlink" href="#frequently-asked-questions" title="Permalink to this heading">¶</a></h1>
+<section id="where-to-ask-for-help">
+<h2>Where to ask for help?<a class="headerlink" href="#where-to-ask-for-help" title="Permalink to this heading">¶</a></h2>
+<p>There is distinction between questions and bugs.
+If your question is related to running i-PI, using or understanding its features
+(also if you think that something is not documented enough),
+the best way to ask is to post your question on the i-PI forum: <a class="reference external" href="https://groups.google.com/g/ipi-users">https://groups.google.com/g/ipi-users</a>.
+In the forum, everything discussed will be available to other members of the community in the future!</p>
+<p>If you are seeing an actual bug,
+please consider reporting an issue on Github: <a class="reference external" href="https://github.com/i-pi/i-pi/issues">https://github.com/i-pi/i-pi/issues</a>.</p>
+</section>
+<section id="which-units-does-i-pi-use">
+<h2>Which units does i-PI use?<a class="headerlink" href="#which-units-does-i-pi-use" title="Permalink to this heading">¶</a></h2>
+<p>Atomic units are used everywhere inside the code.
+The exact values are listed in the manual section “Internal units”.
+For I/O operations, various units are accepted.
+The XML tags responsible for physical settings accept the attribute <code class="docutils literal notranslate"><span class="pre">units=&lt;unit&gt;</span></code>.
+If nothing is specified, i-PI will assume atomic units.
+Many of the provided examples have these tags,
+and the reference section of the manual contains a full list.
+Another way to use units is related to input <code class="docutils literal notranslate"><span class="pre">.xyz</span></code> files. i-PI can accept declarations of these units in the <code class="docutils literal notranslate"><span class="pre">.xyz</span></code> comment line. One example is:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># CELL(abcABC): a b c alpha beta gamma cell{units} positions/forces/velocities{units}</span>
+</pre></div>
+</div>
+<p>Another place worth looking at is <code class="docutils literal notranslate"><span class="pre">&lt;i-pi-root&gt;/ipi/utils/units.py</span></code>,
+which contains definitions and values for non-default units,
+such as <code class="docutils literal notranslate"><span class="pre">electronvolt</span></code>, <code class="docutils literal notranslate"><span class="pre">inversecm</span></code> etc.</p>
+</section>
+<section id="how-to-build-i-pi">
+<h2>How to build i-PI?<a class="headerlink" href="#how-to-build-i-pi" title="Permalink to this heading">¶</a></h2>
+<p>i-PI is a Python code, and as such, strictly speaking, does not need to be compiled and installed.
+<code class="docutils literal notranslate"><span class="pre">&lt;i-pi-root&gt;/bin/i-pi</span></code> file is an executable.
+<code class="docutils literal notranslate"><span class="pre">source</span> <span class="pre">&lt;i-pi-root&gt;/env.sh</span></code> ensures that necessary paths are added to PATH, PYTHONPATH etc.
+However, it is often more convenient to install the package to the system’s Python modules path,
+so that it is accessible by all users and can be run without specifying the path to the Python script.
+For this purpose we have included a module in the root directory of the i-PI distribution, <code class="docutils literal notranslate"><span class="pre">setup.py</span></code>,
+which handles creating a package with the executable and all the modules which are necessary for it to run.
+Detailed explanation can be found in the manual.</p>
+<p>In addition, i-PI can be installed through <code class="docutils literal notranslate"><span class="pre">pip</span></code> with the command</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-U<span class="w"> </span>ipi
+</pre></div>
+</div>
+<p>And to test it (assuming all required packages are also installed)</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>i-pi-tests
+</pre></div>
+</div>
+</section>
+<section id="how-to-run-i-pi-with-the-client-code-name">
+<h2>How to run i-PI with the client code &lt;name&gt;?<a class="headerlink" href="#how-to-run-i-pi-with-the-client-code-name" title="Permalink to this heading">¶</a></h2>
+<p>i-PI communicates with electronic structure and MD codes via socket communication protocol.
+For many popular codes (CP2K, FHI-aims, LAMMPS, Quantum ESPRESSO, VASP, etc.)
+we provide examples in <code class="docutils literal notranslate"><span class="pre">&lt;i-pi-root&gt;/examples/clients</span></code> folder.</p>
+<p>Another way of connecting to client codes is using the ASE client.
+This way you get access to wide variety of codes that are connected to ASE,
+but for some of them current implementation requires restarting the client code after each step,
+which may lead to a significant overhead in case of electronic structure calculations.
+We recommend using the socket connection from the client code to ASE and then from ASE to i-PI, when possible. An example of a “double-socket” setup
+can be found in:</p>
+<p><code class="docutils literal notranslate"><span class="pre">https://github.com/i-pi/i-pi/tree/master/examples/clients/ase_client</span></code></p>
+</section>
+<section id="how-to-run-i-pi-on-a-cluster">
+<h2>How to run i-PI on a cluster?<a class="headerlink" href="#how-to-run-i-pi-on-a-cluster" title="Permalink to this heading">¶</a></h2>
+<p>There are different ways of running i-PI on HPC systems,
+described in details in the manual. Setups differ a lot depending
+on the type of calculation and the architecture of the system.
+A few examples based on the Slurm submission system can be taken
+as the starting point, and can be found in <code class="docutils literal notranslate"><span class="pre">examples/hpc_scripts</span></code>.
+Other setups are possible, please consult the manual.</p>
+</section>
+<section id="how-to-setup-colored-noise-thermostats-with-meaningful-parameters">
+<h2>How to setup colored-noise thermostats with meaningful parameters?<a class="headerlink" href="#how-to-setup-colored-noise-thermostats-with-meaningful-parameters" title="Permalink to this heading">¶</a></h2>
+<p>If you have an application that will profit from colored noise thermostats, you can download the parameters from <a class="reference external" href="http://gle4md.org">http://gle4md.org</a>.
+This website contains sets of input parameters optimized for a variety of conditions. You can choose i-PI syntax, such that you will only have
+to copy-paste that section inside the i-PI input file.
+Also the <code class="docutils literal notranslate"><span class="pre">&lt;i-pi-root&gt;/examples</span></code> (especially withing <code class="docutils literal notranslate"><span class="pre">lammps</span></code>) folder demonstrates the syntax for various thermostats.</p>
+</section>
+<section id="how-to-perform-geometry-optimization">
+<h2>How to perform geometry optimization?<a class="headerlink" href="#how-to-perform-geometry-optimization" title="Permalink to this heading">¶</a></h2>
+<p>Several examples of geometry optimizaion, including fixing certain atoms,
+are present in the <code class="docutils literal notranslate"><span class="pre">&lt;i-pi-root&gt;/examples</span></code> folder.
+The folders with names *geop* correspond to geometry optimization.
+Note that the optimization algorithms that involve line search have two sets of convergence parameters:
+one for line search and another for the main algorithm.</p>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+    <div class="footer-wrapper">
+      <div class="footer">
+        <div class="left">
+          <div role="navigation" aria-label="related navigaton">
+            <a href="tutorials.html" title="A simple tutorial"
+              >previous</a> |
+            <a href="troubleshooting.html" title="Troubleshooting"
+              >next</a> |
+            <a href="genindex.html" title="General Index"
+              >index</a>
+          </div>
+          <div role="note" aria-label="source link">
+              <br/>
+              <a href="_sources/faq.rst.txt"
+                rel="nofollow">Show Source</a>
+          </div>
+        </div>
+
+        <div class="right">
+          
+    <div class="footer" role="contentinfo">
+    &#169; Copyright 2021, The i-PI developers.
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 7.1.2.
+    </div>
+        </div>
+        <div class="clearer"></div>
+      </div>
+    </div>
+
+  </body>
+</html>
