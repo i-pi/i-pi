@@ -218,3 +218,36 @@ run
 
    > python i-pi RESTART
 
+
+Reading output files
+--------------------
+
+It can be useful to parse the output files of i-PI into a format that can
+be readily manipulated in a custom Python script. To this end, i-PI provides
+a few utilities. `ipi.read_output` that can be used to parse a property output 
+file, that returns data blocks as a dictionary of numpy array, and additional
+information from the header (such as units, and the description of each
+property) as a separate dictionary
+
+.. code-block::
+
+   from ipi import read_output
+   data, info = read_output("simulation.out")
+
+Trajectory files can be read with `ipi.read_trajectory`. This reads the 
+trajectory output into a list of `ase.Atoms` objects (hence this functionality
+has a dependency on `ase`), converting positions and cell to angstrom, and 
+moving other properties to arrays and converting 
+them to ASE units (e.g. forces are in eV/Å). `extras` output files (that
+contain either numerical data, or raw strings, returned by the driver code
+in addition to energy and forces) can be processed by using `format='extras'`
+and an option: the call will then return a dictionary with an entry having the
+name of the type of extra (if present) and either a list of the raw strings, 
+or a numpy array with the data. A second dictionary entry contains the list
+of step numbers. 
+
+.. code-block::
+
+   from ipi import read_trajectory
+   data = read_trajectory("simulation.dipoles", format="extras")
+
