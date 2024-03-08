@@ -107,9 +107,6 @@ class EDAIntegrator(DummyIntegrator):
     when an external electric field is applied.
     """
 
-    def __init__(self):
-        super().__init__()
-
     def bind(self, motion):
         """bind variables"""
         super().bind(motion)
