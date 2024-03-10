@@ -287,26 +287,26 @@ class Barostat:
         associated with the forces at a MTS level.
         """
 
-        kst = np.zeros((3, 3), float)
         q = dstrip(self.beads.q)
         qc = dstrip(self.beads.qc)
-        pc = dstrip(self.beads.pc)
-        m = dstrip(self.beads.m)
-        na3 = 3 * self.beads.natoms
         fall = dstrip(self.forces.forces_mts(level))
+        # q = self.beads._q.__get__().view(np.ndarray)
+        # qc = self.beads._qc.__get__().view(np.ndarray)
+        # fall = dstrip(self.forces.forces_mts(level))
         if level == 0 and self.bias is not None:
             # adds the bias. NB: don't += we don't want to overwrite the force
             fall = fall + dstrip(self.bias.f)
 
-        q_qc = (q - qc).reshape(-1, 3)
-        fall = fall.reshape(-1, 3)
-        for i in range(3):
-            for j in range(i, 3):
-                kst[i, j] -= noddot(q_qc[:, i], fall[:, j])
+        kst = -noddot((q - qc).reshape(-1, 3).T, fall.reshape(-1, 3))
 
         if level == self.nmtslevels - 1:
+            pc = dstrip(self.beads.pc)
+            m = dstrip(self.beads.m)
+            # m = self.beads._q.__get__().view(np.ndarray)
+            # pc = self.beads._qc.__get__().view(np.ndarray)
+
             for i in range(3):
-                kst[i, i] += noddot(pc[i:na3:3], pc[i:na3:3] / m) * self.beads.nbeads
+                kst[i, i] += noddot(pc[i::3], pc[i::3] / m) * self.beads.nbeads
 
         return kst
 

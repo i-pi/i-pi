@@ -361,7 +361,7 @@ class depend_value(depend_base):
 
         return self.__get__(self, self.__class__)
 
-    def __get__(self, instance, owner):
+    def __get__(self, instance=None, owner=None):
         """Overwrites standard get function
 
         Returns a cached value, recomputing only if the value is tainted.
@@ -654,7 +654,7 @@ class depend_array(np.ndarray, depend_base):
 
         return self.__getitem__(slice(None, None, None))
 
-    def __get__(self, instance, owner):
+    def __get__(self, instance=None, owner=None):
         """Overwrites standard get function."""
 
         # It is worth duplicating this code that is also used in __getitem__ as this
