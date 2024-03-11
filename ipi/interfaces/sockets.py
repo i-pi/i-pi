@@ -131,6 +131,7 @@ class DriverSocket(socket.socket):
             sock.family, sock.type, sock.proto, fileno=socket.dup(sock.fileno())
         )
         self.settimeout(sock.gettimeout())
+
         self._buf = np.zeros(0, np.byte)
         if socket:
             self.peername = self.getpeername()
@@ -245,8 +246,8 @@ class Driver(DriverSocket):
 
         super(DriverSocket, self).shutdown(how)
 
-    def _getstatus(self):
-        """Gets driver status.
+    def _getstatus_select(self):
+        """Gets driver status. Uses socket.select to make sure one can read/write on the socket.
 
         Returns:
            An integer labelling the status via bitwise or of the relevant members
@@ -298,6 +299,48 @@ class Driver(DriverSocket):
         else:
             warning(" @SOCKET:    Unrecognized reply: " + str(reply), verbosity.low)
             return Status.Up
+
+    def _getstatus_direct(self):
+        """Gets driver status. Relies of blocking send/recv, which might lead to timeouts
+
+        Returns:
+           An integer labelling the status via bitwise or of the relevant members
+           of Status.
+        """
+
+        if not self.waitstatus:
+            try:
+                self.send_msg("status")
+                self.waitstatus = True
+            except socket.error:
+                return Status.Disconnected
+        try:
+            reply = self.recv_msg(HDRLEN)
+            self.waitstatus = False  # got some kind of reply
+        except socket.timeout:
+            warning(" @SOCKET:   Timeout in status recv!", verbosity.debug)
+            return Status.Up | Status.Busy | Status.Timeout
+        except:
+            warning(
+                " @SOCKET:   Other socket exception. Disconnecting client and trying to carry on.",
+                verbosity.debug,
+            )
+            return Status.Disconnected
+
+        if not len(reply) == HDRLEN:
+            return Status.Disconnected
+        elif reply == MESSAGE["ready"]:
+            return Status.Up | Status.Ready
+        elif reply == MESSAGE["needinit"]:
+            return Status.Up | Status.NeedsInit
+        elif reply == MESSAGE["havedata"]:
+            return Status.Up | Status.HasData
+        else:
+            warning(" @SOCKET:    Unrecognized reply: " + str(reply), verbosity.low)
+            return Status.Up
+
+    # depending on the system either _select or _direct can be slightly faster
+    _getstatus = _getstatus_select
 
     def get_status(self):
         """Sets (and returns) the client internal status. Wait for an answer if
