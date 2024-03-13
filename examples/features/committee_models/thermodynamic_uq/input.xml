@@ -8,7 +8,7 @@
     <trajectory filename='committee_sigma' stride='10' extra_type='committee_uncertainty'> extras </trajectory>
     <checkpoint stride='200'/>
   </output>
-  <total_steps>1000</total_steps>
+  <total_steps>100</total_steps>
   <prng>
     <seed>31415</seed>
   </prng>
