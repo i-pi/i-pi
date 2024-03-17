@@ -26,9 +26,9 @@ __DRIVER_CLASS__ = "PET_driver"
 class PET_driver(Dummy_driver):
     def __init__(self, args=None, verbose=False):
         self.error_msg = """
-The PET driver requires specification of a .json model file fitted with 
-    the PET tools, and a template file that describes the chemical makeup of 
-the structure. 
+The PET driver requires specification of a .json model file fitted with
+the PET tools, and a template file that describes the chemical makeup of
+the structure.
 
 Example: python driver.py -m pet -u -o model.json,template.xyz
 """
