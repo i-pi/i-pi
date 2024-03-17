@@ -25,7 +25,6 @@ import numpy as np
 from ipi.utils.io.inputs.io_xml import *
 from ipi.utils.units import unit_to_internal, unit_to_user
 
-
 __all__ = [
     "Input",
     "InputDictionary",

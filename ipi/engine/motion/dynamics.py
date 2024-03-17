@@ -18,6 +18,7 @@ from ipi.engine.thermostats import Thermostat
 from ipi.engine.barostats import Barostat
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import warning, verbosity
+from ipi.engine.motion.eda import EDA
 
 
 class Dynamics(Motion):
@@ -55,6 +56,8 @@ class Dynamics(Motion):
         fixcom=False,
         fixatoms=None,
         nmts=None,
+        efield=None,
+        bec=None,
     ):
         """Initialises a "dynamics" motion object.
 
@@ -105,6 +108,9 @@ class Dynamics(Motion):
             self.integrator = SCIntegrator()
         elif self.enstype == "scnpt":
             self.integrator = SCNPTIntegrator()
+        # elif self.enstype == "eda-nve":
+        #     # NVE integrator with an external time-dependent driving (electric field)
+        #     self.integrator = EDANVEIntegrator()
         else:
             self.integrator = DummyIntegrator()
 
@@ -117,6 +123,17 @@ class Dynamics(Motion):
             self.fixatoms = np.zeros(0, int)
         else:
             self.fixatoms = fixatoms
+
+        # self.eda_on = False  # whether the dynamics is driven or not
+        # if self.enstype in EDA.integrators:
+        #     # if the dynamics is driven, allocate necessary objects
+        #     self.efield = efield
+        #     self.bec = bec
+        #     self.eda = EDA(self.efield, self.bec)
+        #     self.eda_on = True
+        # else:
+        #     # otherwise, keep the class clean and avoid allocating useless things
+        #     pass
 
     def get_fixdof(self):
         """Calculate the number of fixed degrees of freedom, required for
@@ -195,6 +212,14 @@ class Dynamics(Motion):
         self.ensemble.add_xlpot(self.barostat._pot)
         self.ensemble.add_xlpot(self.barostat._cell_jacobian)
         self.ensemble.add_xlkin(self.barostat._kin)
+
+        # # self.eda has not been allocated if 'self.eda_on' == False
+        # # Attention: call 'self.eda.bind' before 'self.integrator.bind'
+        # if self.eda_on:
+        #     self.eda.bind(self.ensemble, self.enstype)
+
+        # now that the timesteps are decided, we proceed to bind the integrator.
+        self.integrator.bind(self)
 
         # applies constraints immediately after initialization.
         self.integrator.pconstraints()
@@ -276,6 +301,8 @@ class DummyIntegrator:
         self.fixcom = motion.fixcom
         self.fixatoms = motion.fixatoms
         self.enstype = motion.enstype
+        if motion.enstype in EDA.integrators:
+            self.eda = motion.eda
 
         # no need to dpipe these are really just references
         self._splitting = motion._splitting

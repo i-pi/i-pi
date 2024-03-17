@@ -8,7 +8,6 @@
 import traceback
 import sys
 
-
 __all__ = ["Verbosity", "verbosity", "banner", "info", "warning"]
 
 

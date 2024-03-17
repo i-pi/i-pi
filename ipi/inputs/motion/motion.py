@@ -45,6 +45,7 @@ from ipi.engine.motion import (
     AlKMC,
     SCPhononsMover,
     NormalModeMover,
+    DrivenDynamics,
 )
 from ipi.utils.inputvalue import *
 from ipi.inputs.thermostats import *
@@ -63,6 +64,7 @@ from .atomswap import InputAtomSwap
 from .planetary import InputPlanetary
 from .ramp import InputTemperatureRamp, InputPressureRamp
 from .al6xxx_kmc import InputAlKMC
+from .driven_dynamics import InputDrivenDynamics
 from ipi.utils.units import *
 
 __all__ = ["InputMotion"]
@@ -96,6 +98,7 @@ class InputMotionBase(Input):
                     "neb",
                     "string",
                     "dynamics",
+                    "driven_dynamics",
                     "constrained_dynamics",
                     "t_ramp",
                     "p_ramp",
@@ -147,6 +150,10 @@ class InputMotionBase(Input):
         "dynamics": (
             InputDynamics,
             {"default": {}, "help": "Option for (path integral) molecular dynamics"},
+        ),
+        "driven_dynamics": (
+            InputDrivenDynamics,
+            {"default": {}, "help": "Option for driven molecular dynamics"},
         ),
         "constrained_dynamics": (
             InputConstrainedDynamics,
@@ -242,6 +249,10 @@ class InputMotionBase(Input):
         elif type(sc) is StringMover:
             self.mode.store("string")
             self.string_optimizer.store(sc)
+            tsc = 1
+        elif type(sc) is DrivenDynamics:
+            self.mode.store("driven_dynamics")
+            self.driven_dynamics.store(sc)
             tsc = 1
         elif type(sc) is Dynamics:
             self.mode.store("dynamics")
@@ -350,6 +361,12 @@ class InputMotionBase(Input):
                 fixcom=self.fixcom.fetch(),
                 fixatoms=self.fixatoms.fetch(),
                 **self.string_optimizer.fetch()
+            )
+        elif self.mode.fetch() == "driven_dynamics":
+            sc = DrivenDynamics(
+                fixcom=self.fixcom.fetch(),
+                fixatoms=self.fixatoms.fetch(),
+                **self.driven_dynamics.fetch()
             )
         elif self.mode.fetch() == "dynamics":
             sc = Dynamics(
