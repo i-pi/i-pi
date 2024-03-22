@@ -30,25 +30,11 @@ class InputRandom(Input):
     Attributes:
        seed: An optional integer giving a seed to initialise the random number
           generator from. Defaults to 123456.
-       state: An optional array giving the state of the random number generator.
-          Defaults to an empty array.
-       has_gauss: An optional integer giving whether there is a stored
-          Gaussian number or not. Defaults to 0.
-       gauss: An optional float giving the stored Gaussian number. Defaults to
-          0.0.
-       set_pos: An optional integer giving the position in the state array
-          that is being read from. Defaults to 0.
+       state: An optional string giving the state of the random number generator.s          
+       n_threads: An optional integer giving whether to use threaded evaluation. Defaults to 1.       
     """
 
-    fields = {
-        "seed": (
-            InputValue,
-            {
-                "dtype": int,
-                "default": 123456,
-                "help": "This is the seed number used to generate the initial state of the random number generator.",
-            },
-        ),
+    attribs = {
         "n_threads": (
             InputValue,
             {
@@ -60,6 +46,16 @@ if the arrays are very large.
 """,
             },
         ),
+    }
+    fields = {
+        "seed": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": 123456,
+                "help": "This is the seed number used to generate the initial state of the random number generator.",
+            },
+        ),        
         "state": (
             InputValue,
             {
