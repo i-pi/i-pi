@@ -344,7 +344,7 @@ class nm_fft(
        natoms: The number of atoms.
     """
 
-    def __init__(self, nbeads, natoms, open_paths=None):
+    def __init__(self, nbeads, natoms, open_paths=None, n_threads=1, single_precision=False):
         """Initializes nm_trans.
 
         Args:
@@ -354,6 +354,8 @@ class nm_fft(
 
         self.nbeads = nbeads
         self.natoms = natoms
+        self.n_threads = n_threads
+        self.single_precision = single_precision
         if open_paths is None:
             open_paths = []
         self._open = open_paths
@@ -364,19 +366,18 @@ class nm_fft(
             import pyfftw
 
             info("Import of PyFFTW successful", verbosity.medium)
-            self.qdummy = pyfftw.n_byte_align_empty((nbeads, 3 * natoms), 16, "float64")
+            self.qdummy = pyfftw.n_byte_align_empty((nbeads, 3 * natoms), 16,  "float32" if self.single_precision else "float64")
             self.qnmdummy = pyfftw.n_byte_align_empty(
-                (nbeads // 2 + 1, 3 * natoms), 16, "complex128"
+                (nbeads // 2 + 1, 3 * natoms), 16, "complex64" if self.single_precision else "complex128"
             )
-
-            n_threads = 1
-            pyfftw.config.NUM_THREADS = n_threads
+            
+            pyfftw.config.NUM_THREADS = self.n_threads
 
             self.pyfftw_fw = pyfftw.FFTW(
-                   self.qdummy, self.qnmdummy, axes=(0,), direction="FFTW_FORWARD", threads=n_threads
+                   self.qdummy, self.qnmdummy, axes=(0,), direction="FFTW_FORWARD", threads=self.n_threads
                 )
             self.pyfftw_bw = pyfftw.FFTW(
-                   self.qnmdummy, self.qdummy, axes=(0,), direction="FFTW_BACKWARD", threads=n_threads
+                   self.qnmdummy, self.qdummy, axes=(0,), direction="FFTW_BACKWARD", threads=self.n_threads
                 )
 
             # wrapping these calls into functions has negligible overhead and makes profiling easier
@@ -399,8 +400,8 @@ class nm_fft(
                     verbosity.low,
                 )
 
-            self.qdummy = np.zeros((nbeads, 3 * natoms), dtype="float64")
-            self.qnmdummy = np.zeros((nbeads // 2 + 1, 3 * natoms), dtype="complex128")
+            self.qdummy = np.zeros((nbeads, 3 * natoms), dtype="float32" if self.single_precision else "float64")
+            self.qnmdummy = np.zeros((nbeads // 2 + 1, 3 * natoms), dtype="complex64" if self.single_precision else "complex128")
 
             def dummy_fft(self):
                 self.qnmdummy = np.fft.rfft(self.qdummy, axis=0)
@@ -475,24 +476,19 @@ class nm_fft(
         nmodes = nbeads // 2
         odd = nbeads - 2 * nmodes  # 0 if even, 1 if odd
 
+        isqrt2 = np.sqrt(0.5)
         qnm_complex = self.qnmdummy 
-        qnm_complex[0, :] = qnm[0, :]
+        qnm_complex[0, :] = qnm[0, :]        
         if not odd:
-            (qnm_complex[1:-1, :].real, qnm_complex[1:-1, :].imag) = (
-                qnm[1:nmodes, :],
-                qnm[self.nbeads : nmodes : -1, :],
-            )
-            qnm_complex[1:-1, :] /= np.sqrt(2)
+            qnm_complex[1:-1, :].real = qnm[1:nmodes, :] * isqrt2
+            qnm_complex[1:-1, :].imag = qnm[nbeads : nmodes : -1, :] * isqrt2
             qnm_complex[nmodes, :] = qnm[nmodes, :]
         else:
-            (qnm_complex[1:, :].real, qnm_complex[1:, :].imag) = (
-                qnm[1 : nmodes + 1, :],
-                qnm[self.nbeads : nmodes : -1, :],
-            )
-            qnm_complex[1:, :] /= np.sqrt(2)
+            qnm_complex[1:, :].real =qnm[1 : nmodes + 1, :] * isqrt2
+            qnm_complex[1:, :].imag= qnm[nbeads : nmodes : -1, :]  * isqrt2
 
         self.ifft()
-        q = self.qdummy * np.sqrt(self.nbeads)
+        q = self.qdummy * np.sqrt(nbeads)
         for (
             io
         ) in (

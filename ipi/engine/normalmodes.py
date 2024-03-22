@@ -87,6 +87,8 @@ class NormalModes:
         bosons=None,
         dt=1.0,
         nmts=1,
+        fft_threads=1,
+        fft_float32=False
     ):
         """Initializes NormalModes.
 
@@ -115,6 +117,8 @@ class NormalModes:
         )
         self._propagator = depend_value(name="propagator", value=propagator)
         self._nm_freqs = depend_array(name="nm_freqs", value=np.asarray(freqs, float))
+        self.fft_threads = fft_threads
+        self.fft_float32 = fft_float32
 
     def copy(self, freqs=None):
         """Creates a new NormalModes object from the original.
@@ -135,6 +139,8 @@ class NormalModes:
             self.bosons,
             self.dt,
             self.nmts,
+            self.fft_threads,
+            self.fft_float32
         )
         return newnm
 
@@ -174,7 +180,8 @@ class NormalModes:
             self.transform = nmtransform.nm_noop(nbeads=self.nbeads)
         elif self.transform_method == "fft":
             self.transform = nmtransform.nm_fft(
-                nbeads=self.nbeads, natoms=self.natoms, open_paths=self.open_paths
+                nbeads=self.nbeads, natoms=self.natoms, open_paths=self.open_paths,
+                n_threads=self.fft_threads, single_precision=self.fft_float32
             )
         elif self.transform_method == "matrix":
             self.transform = nmtransform.nm_trans(

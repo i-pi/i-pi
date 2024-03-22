@@ -159,6 +159,24 @@ class InputNormalModes(Input):
                 "options": ["exact", "cayley", "bab"],
             },
         ),
+        "fft_threads": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": 1,
+                "help": "The number of threads to be used for the FFT.",
+                "dimension": None,
+            },
+        ),
+        "fft_float32": (
+            InputValue,
+            {
+                "dtype": bool,
+                "default": False,
+                "help": "Whether to use single precision FFT.",
+                "dimension": None,
+            },
+        ),
     }
 
     fields = {
@@ -200,11 +218,13 @@ class InputNormalModes(Input):
 
     def store(self, nm):
         self.transform.store(nm.transform_method)
+        self.fft_threads.store(nm.fft_threads)
+        self.fft_float32.store(nm.fft_float32)
         self.frequencies.store((nm.mode, nm.nm_freqs))
         self.propagator.store(nm.propagator)
         self.open_paths.store(nm.open_paths)
         self.bosons.store(nm.bosons)
-        self.nmts.store(nm.nmts)
+        self.nmts.store(nm.nmts)        
 
     def fetch(self):
         mode, freqs = self.frequencies.fetch()
@@ -216,4 +236,6 @@ class InputNormalModes(Input):
             open_paths=self.open_paths.fetch(),
             bosons=self.bosons.fetch(),
             nmts=self.nmts.fetch(),
+            fft_threads=self.fft_threads.fetch(),
+            fft_float32=self.fft_float32.fetch(),
         )
