@@ -77,7 +77,7 @@ try:
             A pseudo-random number from a uniform distribution from 0-1.
         """
 
-        return self.rng.random_sample()
+        return torch.rand((1,), generator=self.rng).item()
 
     @property
     def g(self):
@@ -87,7 +87,7 @@ try:
             A pseudo-random number from a normal Gaussian distribution.
         """
 
-        return torch.randn(1, generator=self.rng).item()
+        return torch.randn((1,), generator=self.rng).item()
 
     def gamma(self, k, theta=1.0):
         """Interface to the standard gamma() function.
@@ -102,7 +102,7 @@ try:
         """
 
         gamma_dist = torch.distributions.Gamma(k, theta)
-        return gamma_dist.sample(1, generator=self.rng).item()
+        return gamma_dist.sample((1,)).item()
 
     def gvec(self, shape):
         """Interface to the standard_normal array function.
