@@ -352,19 +352,17 @@ class DummyIntegrator:
         if self.fixcom:
             na3 = self.beads.natoms * 3
             nb = self.beads.nbeads
-            p = dstrip(self.beads.p)
-            m = dstrip(self.beads.m3)[:, 0:na3:3]
+            p = dstrip(self.beads.p).reshape((nb,na,3))
+            m3 = dstrip(self.beads.m3).reshape((nb,na,3))
             M = self.beads[0].M
             Mnb = M * nb
 
-            dens = 0
-            for i in range(3):
-                pcom = p[:, i:na3:3].sum()
-                dens += pcom**2
-                pcom /= Mnb
-                self.beads.p[:, i:na3:3] -= m * pcom
+            pcom = p.sum(axis=1)
+            dens = (pcom@pcom)*0.5/Mnb # COM kinetic energy
+            pcom /= Mnb
+            self.beads.p -= (m3*pcom).reshape(nb,-1)
 
-            self.ensemble.eens += dens * 0.5 / Mnb
+            self.ensemble.eens += dens
 
         if len(self.fixatoms) > 0:
             for bp in self.beads.p:
