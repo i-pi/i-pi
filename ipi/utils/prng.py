@@ -14,11 +14,113 @@ it had not been stopped.
 
 import numpy as np
 
-
 __all__ = ["Random"]
 
+try: 
+  import torch
+  
+  class Random(object):
+    """Class to interface with the standard pseudo-random number generator.
 
-class Random(object):
+    Initialises the standard numpy pseudo-random number generator from a seed
+    at the beginning of the simulation, and keeps track of the state so that
+    it can be output to the checkpoint files throughout the simulation.
+
+    Attributes:
+        rng: The random number generator to be used.
+        seed: The seed number to start the generator.
+        state: A tuple of five objects giving the current state of the random
+            number generator. The first is the type of random number generator,
+            here 'MT19937', the second is an array of 624 integers, the third
+            is the current position in the array that is being read from, the
+            fourth gives whether it has a gaussian random number stored, and
+            the fifth is this stored Gaussian random number, or else the last
+            Gaussian random number returned.
+    """
+
+    def __init__(self, seed=12345, state=None):
+        """Initialises Random.
+
+        Args:
+            seed: An optional seed giving an integer to initialise the state with.
+            state: An optional state tuple to initialise the state with.
+        """
+
+        self.rng = torch.Generator()
+        self.seed = seed
+        if state is None:            
+            self.rng = self.rng.manual_seed(seed)
+        else:
+            self.state = state
+
+    def get_state(self):
+        """Interface to the standard get_state() function."""
+
+        return self.rng.get_state()
+
+    def set_state(self, value):
+        """Interface to the standard set_state() function.
+
+        Should only be used with states generated from another similar random
+        number generator, such as one from a previous run.
+        """
+
+        return self.rng.set_state(value)
+
+    state = property(get_state, set_state)
+
+    @property
+    def u(self):
+        """Interface to the standard random_sample() function.
+
+        Returns:
+            A pseudo-random number from a uniform distribution from 0-1.
+        """
+
+        return self.rng.random_sample()
+
+    @property
+    def g(self):
+        """Interface to the standard standard_normal() function.
+
+        Returns:
+            A pseudo-random number from a normal Gaussian distribution.
+        """
+
+        return torch.randn(1, generator=self.rng).item()
+
+    def gamma(self, k, theta=1.0):
+        """Interface to the standard gamma() function.
+
+        Args:
+            k: Shape parameter for the gamma distribution.
+            theta: Mean of the distribution.
+
+        Returns:
+            A random number from a gamma distribution with a shape k and a
+            mean value theta.
+        """
+
+        gamma_dist = torch.distributions.Gamma(k, theta)
+        return gamma_dist.sample(1, generator=self.rng).item()
+
+    def gvec(self, shape):
+        """Interface to the standard_normal array function.
+
+        Args:
+            shape: The shape of the array to be returned.
+
+        Returns:
+            An array with the required shape where each element is taken from
+            a normal Gaussian distribution.
+        """
+
+        if not hasattr(shape, "__len__"):
+            shape=(shape,)
+        return torch.randn(size=shape, generator=self.rng).numpy()
+
+except:
+  class Random(object):
     """Class to interface with the standard pseudo-random number generator.
 
     Initialises the standard numpy pseudo-random number generator from a seed

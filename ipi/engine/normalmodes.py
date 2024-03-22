@@ -767,7 +767,7 @@ class NormalModes:
                 # The depend machinery will take care of automatically calculating
                 # the forces at the updated positions.
                 self.beads.p += 0.5 * dt * self.fspring
-
+    
     def free_qstep(self):
         """Position propagator for the free ring polymer.
 
@@ -804,33 +804,34 @@ class NormalModes:
             # goes in mass-scaled coordinates and detach arrays
             sm = dstrip(self.beads.sm3)
             prop_pq = dstrip(self.prop_pq)
-            o_prop_pq = dstrip(self.o_prop_pq)
             pnm = dstrip(self.pnm) / sm
             qnm = dstrip(self.qnm) * sm
 
             # uses the buffer to apply the propagator in one go
-            self.pq_buffer[0,1:] = pnm[1:]
-            self.pq_buffer[1,1:] = qnm[1:]
+            pq_buffer = self.pq_buffer
+            pq_buffer[0,1:] = pnm[1:]
+            pq_buffer[1,1:] = qnm[1:]
 
             for k in range(1, self.nbeads):
-                pnm[k], qnm[k] = np.dot(prop_pq[k], self.pq_buffer[:,k])
-#            pnm[1:], qnm[1:] = np.einsum("pab,bpn->apn", prop_pq[1:], self.pq_buffer[:,1:])
+                pnm[k], qnm[k] = np.dot(prop_pq[k], pq_buffer[:,k])            
 
             # now for open paths we recover the initial conditions (that have not yet been overwritten)
             # and do open path propagation
-            pq = np.zeros(2)
-            for j in self.open_paths:
-                for a in range(3 * j, 3 * (j + 1)):
-                    for k in range(1, self.nbeads):
-                        pq[0] = self.pnm[k, a] / sm[k, a]
-                        pq[1] = self.qnm[k, a] * sm[k, a]
-                        pq = np.dot(o_prop_pq[k], pq)
-                        qnm[k, a] = pq[1]
-                        pnm[k, a] = pq[0]
+            if len(self.open_paths)>0:
+                o_prop_pq = dstrip(self.o_prop_pq)                
+                pq = np.zeros(2)
+                for j in self.open_paths:
+                    for a in range(3 * j, 3 * (j + 1)):
+                        for k in range(1, self.nbeads):
+                            pq[0] = self.pnm[k, a] / sm[k, a]
+                            pq[1] = self.qnm[k, a] * sm[k, a]
+                            pq = np.dot(o_prop_pq[k], pq)
+                            qnm[k, a] = pq[1]
+                            pnm[k, a] = pq[0]
 
             # back to non-scaled coordinates, and update the actual arrays
-            self.pnm = pnm * sm
-            self.qnm = qnm / sm
+            self.pnm[:] = pnm * sm
+            self.qnm[:] = qnm / sm
 
     def get_kins(self):
         """Gets the MD kinetic energy for all the normal modes.
