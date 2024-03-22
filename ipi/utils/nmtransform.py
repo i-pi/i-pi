@@ -368,12 +368,25 @@ class nm_fft(
             self.qnmdummy = pyfftw.n_byte_align_empty(
                 (nbeads // 2 + 1, 3 * natoms), 16, "complex64"
             )
-            self.fft = pyfftw.FFTW(
-                self.qdummy, self.qnmdummy, axes=(0,), direction="FFTW_FORWARD"
-            )
-            self.ifft = pyfftw.FFTW(
-                self.qnmdummy, self.qdummy, axes=(0,), direction="FFTW_BACKWARD"
-            )
+
+            n_threads = 4
+            pyfftw.config.NUM_THREADS = n_threads
+
+            self.pyfftw_fw = pyfftw.FFTW(
+                   self.qdummy, self.qnmdummy, axes=(0,), direction="FFTW_FORWARD", threads=n_threads
+                )
+            self.pyfftw_bw = pyfftw.FFTW(
+                   self.qnmdummy, self.qdummy, axes=(0,), direction="FFTW_BACKWARD", threads=n_threads
+                )
+
+            # wrapping these calls into functions has negligible overhead and makes profiling easier
+            def call_fft(self):
+                self.pyfftw_fw()
+            def call_ifft(self):
+                self.pyfftw_bw()
+
+            self.fft = lambda: call_fft(self)
+            self.ifft = lambda: call_ifft(self)
         except ImportError:  # Uses standard numpy fft library if nothing better
             # is available
             info(
@@ -461,7 +474,7 @@ class nm_fft(
         nmodes = self.nbeads // 2
         odd = self.nbeads - 2 * nmodes  # 0 if even, 1 if odd
 
-        qnm_complex = np.zeros((nmodes + 1, len(qnm[0, :])), complex)
+        qnm_complex = self.qnmdummy 
         qnm_complex[0, :] = qnm[0, :]
         if not odd:
             (qnm_complex[1:-1, :].real, qnm_complex[1:-1, :].imag) = (
@@ -477,9 +490,7 @@ class nm_fft(
             )
             qnm_complex[1:, :] /= np.sqrt(2)
 
-        self.qnmdummy[:] = qnm_complex
         self.ifft()
-        q = np.zeros(qnm.shape)
         q = self.qdummy * np.sqrt(self.nbeads)
         for (
             io
