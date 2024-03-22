@@ -124,8 +124,8 @@ class Random(object):
 
         self.rng[0].standard_normal(out=out)
 
-    def gfill_parallel(self, out):
-        """Fills a pre-allocated array serially
+    def gfill_threaded(self, out):
+        """Fills a pre-allocated array in parallel
         
         Args:
             out: The array to be filled.
