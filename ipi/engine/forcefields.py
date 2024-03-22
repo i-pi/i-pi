@@ -21,7 +21,7 @@ from ipi.utils.messages import verbosity
 from ipi.utils.messages import info
 from ipi.interfaces.sockets import InterfaceSocket
 from ipi.utils.depend import dstrip
-from ipi.utils.io import read_file
+from ipi.utils.io import read_file, NumpyEncoder
 from ipi.utils.units import unit_to_internal
 from ipi.utils.distance import vector_separation
 
@@ -29,19 +29,6 @@ try:
     import plumed
 except ImportError:
     plumed = None
-
-
-class NumpyEncoder(json.JSONEncoder):
-    """Special json encoder for numpy types"""
-
-    def default(self, obj):
-        if isinstance(obj, np.integer):
-            return int(obj)
-        elif isinstance(obj, np.floating):
-            return float(obj)
-        elif isinstance(obj, np.ndarray):
-            return obj.tolist()
-        return json.JSONEncoder.default(self, obj)
 
 
 class ForceRequest(dict):

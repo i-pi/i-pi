@@ -14,6 +14,7 @@ units from the file, but it can be overridden.
 import sys
 import os
 import io
+import json
 import numpy as np
 
 from ipi.utils.messages import info, verbosity
@@ -29,6 +30,7 @@ __all__ = [
     "read_file",
     "netstring_encoded_savez",
     "netstring_encoded_loadz",
+    "NumpyEncoder"
 ]
 
 mode_map = {
@@ -43,6 +45,17 @@ io_map = {
     "iter": "iter_%s",
 }
 
+class NumpyEncoder(json.JSONEncoder):
+    """Special json encoder for numpy types"""
+
+    def default(self, obj):
+        if isinstance(obj, np.integer):
+            return int(obj)
+        elif isinstance(obj, np.floating):
+            return float(obj)
+        elif isinstance(obj, np.ndarray):
+            return obj.tolist()
+        return json.JSONEncoder.default(self, obj)
 
 @cached
 def _get_io_function(mode, io):

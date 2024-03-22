@@ -13,13 +13,12 @@ it had not been stopped.
 
 
 import numpy as np
+import multiprocessing
+import concurrent.futures
 
 __all__ = ["Random"]
 
-try: 
-  import torch
-  
-  class Random(object):
+class Random(object):
     """Class to interface with the standard pseudo-random number generator.
 
     Initialises the standard numpy pseudo-random number generator from a seed
@@ -38,25 +37,36 @@ try:
             Gaussian random number returned.
     """
 
-    def __init__(self, seed=12345, state=None):
+    def __init__(self, seed=12345, state=None, n_threads=1):
         """Initialises Random.
 
         Args:
             seed: An optional seed giving an integer to initialise the state with.
             state: An optional state tuple to initialise the state with.
+            n_threads: Whether to use multi-threaded generation (only useful if 
+                    arrays to be filled are large!)
         """
 
-        self.rng = torch.Generator()
         self.seed = seed
-        if state is None:            
-            self.rng = self.rng.manual_seed(seed)
+        self.rng = [ np.random.Generator(np.random.MT19937(s))
+                    for s in np.random.SeedSequence(seed).spawn(n_threads)]
+
+        self.n_threads = n_threads
+        if self.n_threads == 1:
+            self.gvec = self.gvec_serial
+            self.gfill = self.gfill_serial
         else:
+            self.executor = concurrent.futures.ThreadPoolExecutor(n_threads)
+            self.gvec = self.gvec_threaded
+            self.gfill = self.gfill_threaded
+
+        if state is not None:
             self.state = state
 
     def get_state(self):
         """Interface to the standard get_state() function."""
 
-        return self.rng.get_state()
+        return [r.bit_generator.state for r in self.rng]
 
     def set_state(self, value):
         """Interface to the standard set_state() function.
@@ -65,7 +75,8 @@ try:
         number generator, such as one from a previous run.
         """
 
-        return self.rng.set_state(value)
+        for r,s in zip(self.rng, value):
+            r.bit_generator.state = s
 
     state = property(get_state, set_state)
 
@@ -77,7 +88,7 @@ try:
             A pseudo-random number from a uniform distribution from 0-1.
         """
 
-        return torch.rand((1,), generator=self.rng).item()
+        return self.rng[0].uniform()
 
     @property
     def g(self):
@@ -87,7 +98,7 @@ try:
             A pseudo-random number from a normal Gaussian distribution.
         """
 
-        return torch.randn((1,), generator=self.rng).item()
+        return self.rng[0].standard_normal()
 
     def gamma(self, k, theta=1.0):
         """Interface to the standard gamma() function.
@@ -101,110 +112,36 @@ try:
             mean value theta.
         """
 
-        gamma_dist = torch.distributions.Gamma(k, theta)
-        return gamma_dist.sample((1,)).item()
+        return self.rng[0].gamma(k, theta)
 
-    def gvec(self, shape):
-        """Interface to the standard_normal array function.
 
+    def gfill_serial(self, out):
+        """Fills a pre-allocated array serially
+        
         Args:
-            shape: The shape of the array to be returned.
-
-        Returns:
-            An array with the required shape where each element is taken from
-            a normal Gaussian distribution.
+            out: The array to be filled.
         """
 
-        if not hasattr(shape, "__len__"):
-            shape=(shape,)
-        return torch.randn(size=shape, generator=self.rng).numpy()
+        self.rng[0].standard_normal(out=out)
 
-except:
-  class Random(object):
-    """Class to interface with the standard pseudo-random number generator.
-
-    Initialises the standard numpy pseudo-random number generator from a seed
-    at the beginning of the simulation, and keeps track of the state so that
-    it can be output to the checkpoint files throughout the simulation.
-
-    Attributes:
-        rng: The random number generator to be used.
-        seed: The seed number to start the generator.
-        state: A tuple of five objects giving the current state of the random
-            number generator. The first is the type of random number generator,
-            here 'MT19937', the second is an array of 624 integers, the third
-            is the current position in the array that is being read from, the
-            fourth gives whether it has a gaussian random number stored, and
-            the fifth is this stored Gaussian random number, or else the last
-            Gaussian random number returned.
-    """
-
-    def __init__(self, seed=12345, state=None):
-        """Initialises Random.
-
+    def gfill_parallel(self, out):
+        """Fills a pre-allocated array serially
+        
         Args:
-            seed: An optional seed giving an integer to initialise the state with.
-            state: An optional state tuple to initialise the state with.
+            out: The array to be filled.
         """
 
-        self.rng = np.random.mtrand.RandomState(seed=seed)
-        self.seed = seed
-        if state is None:
-            self.rng.seed(seed)
+        step_size = np.ceil(len(out)/self.n_threads).astype(int)
+        if step_size < 100:
+            self.gfill_serial(out)
         else:
-            self.state = state
+            # threaded execution
+            futures = {}
+            for i in range(self.n_threads):
+                futures[self.executor.submit(self.rng[i].standard_normal, out=out[step_size*i:step_size*(i+1)])] = i
+            concurrent.futures.wait(futures)
 
-    def get_state(self):
-        """Interface to the standard get_state() function."""
-
-        return self.rng.get_state()
-
-    def set_state(self, value):
-        """Interface to the standard set_state() function.
-
-        Should only be used with states generated from another similar random
-        number generator, such as one from a previous run.
-        """
-
-        return self.rng.set_state(value)
-
-    state = property(get_state, set_state)
-
-    @property
-    def u(self):
-        """Interface to the standard random_sample() function.
-
-        Returns:
-            A pseudo-random number from a uniform distribution from 0-1.
-        """
-
-        return self.rng.random_sample()
-
-    @property
-    def g(self):
-        """Interface to the standard standard_normal() function.
-
-        Returns:
-            A pseudo-random number from a normal Gaussian distribution.
-        """
-
-        return self.rng.standard_normal()
-
-    def gamma(self, k, theta=1.0):
-        """Interface to the standard gamma() function.
-
-        Args:
-            k: Shape parameter for the gamma distribution.
-            theta: Mean of the distribution.
-
-        Returns:
-            A random number from a gamma distribution with a shape k and a
-            mean value theta.
-        """
-
-        return self.rng.gamma(k, theta)
-
-    def gvec(self, shape):
+    def gvec_serial(self, shape):
         """Interface to the standard_normal array function.
 
         Args:
@@ -215,4 +152,23 @@ except:
             a normal Gaussian distribution.
         """
 
-        return self.rng.standard_normal(shape)
+        rvec = np.empty(shape=shape)
+        self.gfill_serial(rvec)        
+        return rvec
+
+    def gvec_threaded(self, shape):
+        """Interface to the standard_normal array function.
+
+        Args:
+            shape: The shape of the array to be returned.
+
+        Returns:
+            An array with the required shape where each element is taken from
+            a normal Gaussian distribution.
+        """
+
+        rvec = np.empty(shape=shape)
+        self.gfill_parallel(rvec)
+
+        return rvec
+
