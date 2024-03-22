@@ -168,7 +168,7 @@ class Random(object):
         """
 
         rvec = np.empty(shape=shape)
-        self.gfill_parallel(rvec)
+        self.gfill_threaded(rvec)
 
         return rvec
 
