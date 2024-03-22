@@ -360,7 +360,7 @@ class DummyIntegrator:
             pcom = p.sum(axis=1)
             dens = (pcom**2).sum()*0.5/Mnb # COM kinetic energy
             pcom /= Mnb
-            self.beads.p -= (m3*pcom).reshape(nb,-1)
+            self.beads.p -= (m3*pcom.reshape(nb,-1,3)).reshape(nb,-1)
 
             self.ensemble.eens += dens
 
