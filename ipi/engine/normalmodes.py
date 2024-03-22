@@ -812,7 +812,9 @@ class NormalModes:
             self.pq_buffer[0,1:] = pnm[1:]
             self.pq_buffer[1,1:] = qnm[1:]
 
-            pnm[1:], qnm[1:] = np.einsum("pab,bpn->apn", prop_pq[1:], self.pq_buffer[:,1:])
+            for k in range(1, self.nbeads):
+                pnm[k], qnm[k] = np.dot(prop_pq[k], self.pq_buffer[:,k])
+#            pnm[1:], qnm[1:] = np.einsum("pab,bpn->apn", prop_pq[1:], self.pq_buffer[:,1:])
 
             # now for open paths we recover the initial conditions (that have not yet been overwritten)
             # and do open path propagation
