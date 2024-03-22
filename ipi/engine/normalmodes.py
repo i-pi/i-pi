@@ -801,6 +801,7 @@ class NormalModes:
                     "@Normalmodes : Bosonic forces not compatible right now with the exact or Cayley propagators."
                 )
 
+            # goes in mass-scaled coordinates and detach arrays
             sm = dstrip(self.beads.sm3)
             prop_pq = dstrip(self.prop_pq)
             o_prop_pq = dstrip(self.o_prop_pq)
@@ -828,6 +829,8 @@ class NormalModes:
                         pq = np.dot(o_prop_pq[k], pq)
                         qnm[k, a] = pq[1]
                         pnm[k, a] = pq[0]
+
+            # back to non-scaled coordinates, and update the actual arrays
             self.pnm = pnm * sm
             self.qnm = qnm / sm
 

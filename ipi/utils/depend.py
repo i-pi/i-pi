@@ -730,8 +730,10 @@ def ddot(da, db):
 
     return noddot(a, b)
 
-
-np.dot = noddot
+# activate this to have safe dstripping
+np.dot = ddot
+# activate this if you want to assume dot will almost always be applied on dstripped vectors
+# np.dot = noddot
 
 # ENDS NUMPY FUNCTIONS OVERRIDE
 
