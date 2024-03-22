@@ -364,12 +364,12 @@ class nm_fft(
             import pyfftw
 
             info("Import of PyFFTW successful", verbosity.medium)
-            self.qdummy = pyfftw.n_byte_align_empty((nbeads, 3 * natoms), 16, "float32")
+            self.qdummy = pyfftw.n_byte_align_empty((nbeads, 3 * natoms), 16, "float64")
             self.qnmdummy = pyfftw.n_byte_align_empty(
-                (nbeads // 2 + 1, 3 * natoms), 16, "complex64"
+                (nbeads // 2 + 1, 3 * natoms), 16, "complex128"
             )
 
-            n_threads = 4
+            n_threads = 1
             pyfftw.config.NUM_THREADS = n_threads
 
             self.pyfftw_fw = pyfftw.FFTW(
@@ -399,8 +399,8 @@ class nm_fft(
                     verbosity.low,
                 )
 
-            self.qdummy = np.zeros((nbeads, 3 * natoms), dtype="float32")
-            self.qnmdummy = np.zeros((nbeads // 2 + 1, 3 * natoms), dtype="complex64")
+            self.qdummy = np.zeros((nbeads, 3 * natoms), dtype="float64")
+            self.qnmdummy = np.zeros((nbeads // 2 + 1, 3 * natoms), dtype="complex128")
 
             def dummy_fft(self):
                 self.qnmdummy = np.fft.rfft(self.qdummy, axis=0)
@@ -464,15 +464,16 @@ class nm_fft(
               in the normal mode representation.
         """
 
-        if self.nbeads == 1:
+        nbeads = self.nbeads
+        if nbeads == 1:
             return qnm
-        if self.nbeads == 2:
+        if nbeads == 2:
             self.qnmdummy[:] = qnm
             self.ifft()
-            return self.qdummy * np.sqrt(self.nbeads)
+            return self.qdummy * np.sqrt(nbeads)
 
-        nmodes = self.nbeads // 2
-        odd = self.nbeads - 2 * nmodes  # 0 if even, 1 if odd
+        nmodes = nbeads // 2
+        odd = nbeads - 2 * nmodes  # 0 if even, 1 if odd
 
         qnm_complex = self.qnmdummy 
         qnm_complex[0, :] = qnm[0, :]
