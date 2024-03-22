@@ -357,10 +357,9 @@ class DummyIntegrator:
             M = self.beads[0].M
             Mnb = M * nb
 
-            pcom = p.sum(axis=1)
-            dens = (pcom**2).sum()*0.5/Mnb # COM kinetic energy
-            pcom /= Mnb
-            self.beads.p -= (m3*pcom.reshape(nb,-1,3)).reshape(nb,-1)
+            vcom = p.sum(axis=(0,1))/Mnb
+            dens = (vcom**2).sum()*0.5*Mnb # COM kinetic energy
+            self.beads.p -= (m3*vcom).reshape(nb,-1)
 
             self.ensemble.eens += dens
 
