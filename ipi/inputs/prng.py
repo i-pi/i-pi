@@ -30,8 +30,8 @@ class InputRandom(Input):
     Attributes:
        seed: An optional integer giving a seed to initialise the random number
           generator from. Defaults to 123456.
-       state: An optional string giving the state of the random number generator.s          
-       n_threads: An optional integer giving whether to use threaded evaluation. Defaults to 1.       
+       state: An optional string giving the state of the random number generator.s
+       n_threads: An optional integer giving whether to use threaded evaluation. Defaults to 1.
     """
 
     attribs = {
@@ -55,7 +55,7 @@ if the arrays are very large.
                 "default": 123456,
                 "help": "This is the seed number used to generate the initial state of the random number generator.",
             },
-        ),        
+        ),
         "state": (
             InputValue,
             {
@@ -78,7 +78,7 @@ if the arrays are very large.
         """
 
         super(InputRandom, self).store(prng)
-        self.seed.store(prng.seed)        
+        self.seed.store(prng.seed)
         self.state.store(json.dumps(prng.state, cls=NumpyEncoder))
         self.n_threads.store(prng.n_threads)
 
@@ -93,6 +93,8 @@ if the arrays are very large.
 
         super(InputRandom, self).fetch()
         if not self.state._explicit:
-            return Random(seed=self.seed.fetch(),n_threads=self.n_threads.fetch())
+            return Random(seed=self.seed.fetch(), n_threads=self.n_threads.fetch())
         else:
-            return Random(state=json.loads(self.state.fetch()),n_threads=self.n_threads.fetch())
+            return Random(
+                state=json.loads(self.state.fetch()), n_threads=self.n_threads.fetch()
+            )

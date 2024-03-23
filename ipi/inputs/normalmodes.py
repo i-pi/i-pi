@@ -224,7 +224,7 @@ class InputNormalModes(Input):
         self.propagator.store(nm.propagator)
         self.open_paths.store(nm.open_paths)
         self.bosons.store(nm.bosons)
-        self.nmts.store(nm.nmts)        
+        self.nmts.store(nm.nmts)
 
     def fetch(self):
         mode, freqs = self.frequencies.fetch()

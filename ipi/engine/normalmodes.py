@@ -88,7 +88,7 @@ class NormalModes:
         dt=1.0,
         nmts=1,
         fft_threads=1,
-        fft_float32=False
+        fft_float32=False,
     ):
         """Initializes NormalModes.
 
@@ -140,7 +140,7 @@ class NormalModes:
             self.dt,
             self.nmts,
             self.fft_threads,
-            self.fft_float32
+            self.fft_float32,
         )
         return newnm
 
@@ -180,8 +180,11 @@ class NormalModes:
             self.transform = nmtransform.nm_noop(nbeads=self.nbeads)
         elif self.transform_method == "fft":
             self.transform = nmtransform.nm_fft(
-                nbeads=self.nbeads, natoms=self.natoms, open_paths=self.open_paths,
-                n_threads=self.fft_threads, single_precision=self.fft_float32
+                nbeads=self.nbeads,
+                natoms=self.natoms,
+                open_paths=self.open_paths,
+                n_threads=self.fft_threads,
+                single_precision=self.fft_float32,
             )
         elif self.transform_method == "matrix":
             self.transform = nmtransform.nm_trans(
@@ -774,7 +777,7 @@ class NormalModes:
                 # The depend machinery will take care of automatically calculating
                 # the forces at the updated positions.
                 self.beads.p += 0.5 * dt * self.fspring
-    
+
     def free_qstep(self):
         """Position propagator for the free ring polymer.
 
@@ -816,16 +819,16 @@ class NormalModes:
 
             # uses the buffer to apply the propagator in one go
             pq_buffer = self.pq_buffer
-            pq_buffer[0,1:] = pnm[1:]
-            pq_buffer[1,1:] = qnm[1:]
+            pq_buffer[0, 1:] = pnm[1:]
+            pq_buffer[1, 1:] = qnm[1:]
 
             for k in range(1, self.nbeads):
-                pnm[k], qnm[k] = np.dot(prop_pq[k], pq_buffer[:,k])            
+                pnm[k], qnm[k] = np.dot(prop_pq[k], pq_buffer[:, k])
 
             # now for open paths we recover the initial conditions (that have not yet been overwritten)
             # and do open path propagation
-            if len(self.open_paths)>0:
-                o_prop_pq = dstrip(self.o_prop_pq)                
+            if len(self.open_paths) > 0:
+                o_prop_pq = dstrip(self.o_prop_pq)
                 pq = np.zeros(2)
                 for j in self.open_paths:
                     for a in range(3 * j, 3 * (j + 1)):

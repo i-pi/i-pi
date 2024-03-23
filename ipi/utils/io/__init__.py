@@ -30,7 +30,7 @@ __all__ = [
     "read_file",
     "netstring_encoded_savez",
     "netstring_encoded_loadz",
-    "NumpyEncoder"
+    "NumpyEncoder",
 ]
 
 mode_map = {
@@ -45,6 +45,7 @@ io_map = {
     "iter": "iter_%s",
 }
 
+
 class NumpyEncoder(json.JSONEncoder):
     """Special json encoder for numpy types"""
 
@@ -56,6 +57,7 @@ class NumpyEncoder(json.JSONEncoder):
         elif isinstance(obj, np.ndarray):
             return obj.tolist()
         return json.JSONEncoder.default(self, obj)
+
 
 @cached
 def _get_io_function(mode, io):

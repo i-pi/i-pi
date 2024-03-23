@@ -18,6 +18,9 @@ import concurrent.futures
 
 __all__ = ["Random"]
 
+_MIN_STEP_THREADED = 100  # minimum stride to use multithreaded prng
+
+
 class Random(object):
     """Class to interface with the standard pseudo-random number generator.
 
@@ -43,13 +46,15 @@ class Random(object):
         Args:
             seed: An optional seed giving an integer to initialise the state with.
             state: An optional state tuple to initialise the state with.
-            n_threads: Whether to use multi-threaded generation (only useful if 
+            n_threads: Whether to use multi-threaded generation (only useful if
                     arrays to be filled are large!)
         """
 
         self.seed = seed
-        self.rng = [ np.random.Generator(np.random.MT19937(s))
-                    for s in np.random.SeedSequence(seed).spawn(n_threads)]
+        self.rng = [
+            np.random.Generator(np.random.MT19937(s))
+            for s in np.random.SeedSequence(seed).spawn(n_threads)
+        ]
 
         self.n_threads = n_threads
         if self.n_threads == 1:
@@ -75,7 +80,7 @@ class Random(object):
         number generator, such as one from a previous run.
         """
 
-        for r,s in zip(self.rng, value):
+        for r, s in zip(self.rng, value):
             r.bit_generator.state = s
 
     state = property(get_state, set_state)
@@ -114,10 +119,9 @@ class Random(object):
 
         return self.rng[0].gamma(k, theta)
 
-
     def gfill_serial(self, out):
         """Fills a pre-allocated array serially
-        
+
         Args:
             out: The array to be filled.
         """
@@ -126,19 +130,25 @@ class Random(object):
 
     def gfill_threaded(self, out):
         """Fills a pre-allocated array in parallel
-        
+
         Args:
             out: The array to be filled.
         """
 
-        step_size = np.ceil(len(out)/self.n_threads).astype(int)
-        if step_size < 100:
+        step_size = np.ceil(len(out) / self.n_threads).astype(int)
+        if step_size < _MIN_STEP_THREADED:
+            # falls back to serial if the vector is too small
             self.gfill_serial(out)
         else:
             # threaded execution
             futures = {}
             for i in range(self.n_threads):
-                futures[self.executor.submit(self.rng[i].standard_normal, out=out[step_size*i:step_size*(i+1)])] = i
+                futures[
+                    self.executor.submit(
+                        self.rng[i].standard_normal,
+                        out=out[step_size * i : step_size * (i + 1)],
+                    )
+                ] = i
             concurrent.futures.wait(futures)
 
     def gvec_serial(self, shape):
@@ -153,7 +163,7 @@ class Random(object):
         """
 
         rvec = np.empty(shape=shape)
-        self.gfill_serial(rvec)        
+        self.gfill_serial(rvec)
         return rvec
 
     def gvec_threaded(self, shape):
@@ -171,4 +181,3 @@ class Random(object):
         self.gfill_threaded(rvec)
 
         return rvec
-

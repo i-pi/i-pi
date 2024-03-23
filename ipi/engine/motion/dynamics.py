@@ -353,14 +353,14 @@ class DummyIntegrator:
             na3 = self.beads.natoms * 3
             nb = self.beads.nbeads
             p = dstrip(self.beads.p)
-            m3 = dstrip(self.beads.m3).reshape((-1,3))
+            m3 = dstrip(self.beads.m3).reshape((-1, 3))
             M = self.beads[0].M
             Mnb = M * nb
 
-            vcom = p.reshape(-1,3).sum(axis=0)/Mnb            
-            self.beads.p -= (m3*vcom).reshape(nb,-1)
+            vcom = p.reshape(-1, 3).sum(axis=0) / Mnb
+            self.beads.p -= (m3 * vcom).reshape(nb, -1)
 
-            self.ensemble.eens += (vcom**2).sum()*0.5*Mnb # COM kinetic energy
+            self.ensemble.eens += (vcom**2).sum() * 0.5 * Mnb  # COM kinetic energy
 
         if len(self.fixatoms) > 0:
             for bp in self.beads.p:
