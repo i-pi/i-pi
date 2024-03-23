@@ -732,9 +732,9 @@ def ddot(da, db):
 
 
 # activate this to have safe dstripping
-np.dot = ddot
+# np.dot = ddot
 # activate this if you want to assume dot will almost always be applied on dstripped vectors
-# np.dot = noddot
+np.dot = noddot
 
 # ENDS NUMPY FUNCTIONS OVERRIDE
 

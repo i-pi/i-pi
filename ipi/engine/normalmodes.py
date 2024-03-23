@@ -824,7 +824,7 @@ class NormalModes:
                 # goes in mass-scaled coordinates and then applies
                 pq_buffer[0] = pnm[k] / sm[k]
                 pq_buffer[1] = qnm[k] * sm[k]
-                pnm[k], qnm[k] = np.dot(prop_pq[k], pq_buffer)
+                pnm[k], qnm[k] = noddot(prop_pq[k], pq_buffer)
 
             # now for open paths we recover the initial conditions (that have not yet been overwritten)
             # and do open path propagation
