@@ -841,8 +841,8 @@ class NormalModes:
                             pnm[k, a] = pq[0]
 
             # back to non-scaled coordinates, and update the actual arrays
-            self.pnm[:] = pnm * sm
-            self.qnm[:] = qnm / sm
+            self.pnm[1:] = pnm[1:] * sm[1:]
+            self.qnm[1:] = qnm[1:] / sm[1:]
 
     def get_kins(self):
         """Gets the MD kinetic energy for all the normal modes.

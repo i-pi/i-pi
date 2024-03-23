@@ -221,7 +221,6 @@ class ThermoLangevin(Thermostat):
         # the change in kinetic energy is computed to accumulate the work made
         # by the thermostat
 
-        sm = dstrip(self.sm)
         # goes in a single step to mass scaled coordinates and applies damping
         p = dstrip(self.p) * dstrip(self.T_on_sm)
 
@@ -229,7 +228,9 @@ class ThermoLangevin(Thermostat):
         p += self.S * self.prng.gvec(len(p))  # random part (in ms coordinates)
         deltah -= noddot(p, p)  # new energy
 
-        self.p[:] = p * sm  # back to physical momentum and updates actual p
+        self.p[:] = p * dstrip(
+            self.sm
+        )  # back to physical momentum and updates actual p
         self.ethermo += deltah * 0.5
 
 
