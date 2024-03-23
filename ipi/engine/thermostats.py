@@ -150,6 +150,9 @@ class Thermostat:
         pass
 
 
+dproperties(Thermostat, ["temp", "dt", "ethermo", "p", "m", "sm", "dt"])
+
+
 class ThermoLangevin(Thermostat):
     """Represents a langevin thermostat.
 
@@ -170,6 +173,10 @@ class ThermoLangevin(Thermostat):
     def get_S(self):
         """Calculates the coefficient of the white noise."""
         return np.sqrt(Constants.kb * self.temp * (1 - self.T**2))
+
+    def get_T_on_sm(self):
+        """Calculates the combined mass scaling and thermostat damping."""
+        return self.T / dstrip(self.sm)
 
     def __init__(self, temp=1.0, dt=1.0, tau=1.0, ethermo=0.0):
         """Initialises ThermoLangevin.
@@ -194,26 +201,42 @@ class ThermoLangevin(Thermostat):
             name="S", func=self.get_S, dependencies=[self._temp, self._T]
         )
 
+    def bind(self, beads=None, atoms=None, pm=None, nm=None, prng=None, fixdof=None):
+        """Binds the appropriate degrees of freedom to the thermostat."""
+
+        super(ThermoLangevin, self).bind(beads, atoms, pm, nm, prng, fixdof)
+
+        self._T_on_sm = depend_value(
+            name="T_on_sm", func=self.get_T_on_sm, dependencies=[self._T, self._sm]
+        )
+
     def step(self):
         """Updates the bound momentum vector with a langevin thermostat."""
 
+        # This performs the following steps
+        # p <- p*exp(-dt/tau)+xi sqrt(C(1-exp-2dt/tau))
+        # where dt is the thermostat time step (half of the MD step)
+        # and C is the equilibrium fluctuations. to have a single
+        # coefficient (and facilitate computing the kinetic energy)
+        # the change in kinetic energy is computed to accumulate the work made
+        # by the thermostat
+
         sm = dstrip(self.sm)
-        p = dstrip(self.p) / sm
+        # goes in a single step to mass scaled coordinates and applies damping
+        p = dstrip(self.p) * dstrip(self.T_on_sm)
 
-        deltah = noddot(p, p)
-        p = p * self.T + self.S * self.prng.gvec(len(p))
-        deltah -= noddot(p, p)
+        deltah = noddot(p, p) / (self.T**2)  # must correct for the "pre-damping"
+        p += self.S * self.prng.gvec(len(p))  # random part (in ms coordinates)
+        deltah -= noddot(p, p)  # new energy
 
-        self.p[:] = p * sm
+        self.p[:] = p * sm  # back to physical momentum and updates actual p
         self.ethermo += deltah * 0.5
 
 
-dproperties(
-    Thermostat, ["temp", "dt", "ethermo", "p", "m", "sm", "dt", "tau", "T", "S"]
-)
+dproperties(ThermoLangevin, ["tau", "T", "S", "T_on_sm"])
 
 
-class ThermoPILE_L(Thermostat):
+class ThermoPILE_L(ThermoLangevin):
     """Represents a PILE thermostat with a local centroid thermostat.
 
     Attributes:
@@ -415,7 +438,7 @@ class ThermoPILE_L(Thermostat):
 dproperties(ThermoPILE_L, ["pilescale", "pilect", "npilect", "tauk"])
 
 
-class ThermoSVR(Thermostat):
+class ThermoSVR(ThermoLangevin):
     """Represents a stochastic velocity rescaling thermostat.
 
     Depend objects:
@@ -568,7 +591,7 @@ class ThermoPILE_G(ThermoPILE_L):
 dproperties(ThermoSVR, ["et", "K", "pilescale", "pilect", "npilect"])
 
 
-class ThermoGLE(Thermostat):
+class ThermoGLE(ThermoLangevin):
     """Represents a generalized Langevin equation thermostat.
 
     This is similar to a langevin thermostat, in that it uses Gaussian random
@@ -728,7 +751,7 @@ class ThermoGLE(Thermostat):
 dproperties(ThermoGLE, ["A", "C"])
 
 
-class ThermoNMGLE(Thermostat):
+class ThermoNMGLE(ThermoLangevin):
     """Represents a 'normal-modes' generalized Langevin equation thermostat.
 
     An extension to the GLE thermostat which is applied in the
@@ -967,7 +990,7 @@ class ThermoNMGLEG(ThermoNMGLE):
         self._thermos.append(t)
 
 
-class ThermoCL(Thermostat):
+class ThermoCL(ThermoLangevin):
     """Represents a Langevin thermostat for systems driven by forces which are statistical
        in nature, i.e. they contain noise, and/or have an unwanted dissipative effect.
        This thermostat's dissipative term is modified to compensate for the inherent noise.
@@ -1104,7 +1127,7 @@ class ThermoCL(Thermostat):
 dproperties(ThermoCL, ["idtau", "intau", "apat", "lgT", "inT", "idT"])
 
 
-class ThermoFFL(Thermostat):
+class ThermoFFL(ThermoLangevin):
     """Represents a fast-forward langevin thermostat.
 
     Depend objects:

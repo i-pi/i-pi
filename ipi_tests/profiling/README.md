@@ -23,4 +23,5 @@ Examples include:
 
 `pimd_npt_noff`, `pimd_npt_gas`, `pimd_npt_gas_inet` simple NPT path integral calculations, with different tyles of no-op forcefields
 
-`pimd-32_npt_noff`, `pimd-32_npt_noff-threads` as above, but with 32 beads, with and without multithreading for FFT and PRNG
+`pimd-32_npt_noff`, `pimd-32_npt_noff-threads` as above, but with 32 beads, with and without multithreading for FFT and PRNG. 
+           run setting `OMP_NUM_THREADS` to a value consistent with the thread information in the input.xml file (2 by default)

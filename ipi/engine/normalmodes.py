@@ -167,7 +167,7 @@ class NormalModes:
         self.natoms = beads.natoms
 
         # storage space for the propagator
-        self.pq_buffer = np.zeros((2, self.nbeads, self.natoms * 3), float)
+        self.pq_buffer = np.zeros((2, self.natoms * 3), float)
 
         self.bosons = self.resolve_bosons()
 
@@ -811,19 +811,20 @@ class NormalModes:
                     "@Normalmodes : Bosonic forces not compatible right now with the exact or Cayley propagators."
                 )
 
-            # goes in mass-scaled coordinates and detach arrays
+            # detach arrays
             sm = dstrip(self.beads.sm3)
             prop_pq = dstrip(self.prop_pq)
-            pnm = dstrip(self.pnm) / sm
-            qnm = dstrip(self.qnm) * sm
+            pnm = dstrip(self.pnm)
+            qnm = dstrip(self.qnm)
 
             # uses the buffer to apply the propagator in one go
             pq_buffer = self.pq_buffer
-            pq_buffer[0, 1:] = pnm[1:]
-            pq_buffer[1, 1:] = qnm[1:]
 
             for k in range(1, self.nbeads):
-                pnm[k], qnm[k] = np.dot(prop_pq[k], pq_buffer[:, k])
+                # goes in mass-scaled coordinates and then applies
+                pq_buffer[0] = pnm[k] / sm[k]
+                pq_buffer[1] = qnm[k] * sm[k]
+                pnm[k], qnm[k] = np.dot(prop_pq[k], pq_buffer)
 
             # now for open paths we recover the initial conditions (that have not yet been overwritten)
             # and do open path propagation
