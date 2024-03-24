@@ -141,6 +141,7 @@ class ForceBead:
         all the jobs to be sent at once, allowing them to be parallelized.
         """
 
+        # only dispatches a request if the forcefield needs it
         with self._threadlock:
             if self.request is None and self._ufvx.tainted():
                 self.request = self.ff.queue(self.atoms, self.cell, reqid=self.uid)
@@ -1092,8 +1093,11 @@ class Forces:
         """Fetches ONLY the forces associated with a given MTS level."""
 
         self.queue_mts(level)
+
         fk = np.zeros((self.nbeads, 3 * self.natoms))
+        
         mforces = self.mforces
+        mrpc = self.mrpc
         for index in range(len(mforces)):
             # forces with no MTS specification are applied at the outer level
             weight = mforces[index].weight
@@ -1104,7 +1108,7 @@ class Forces:
                 fk += (
                     weight
                     * mts_weights[level]
-                    * self.mrpc[index].b2tob1(dstrip(mforces[index].f))
+                    * mrpc[index].b2tob1(dstrip(mforces[index].f))
                 )
         return fk
 

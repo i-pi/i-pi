@@ -192,7 +192,6 @@ class ThermoLangevin(Thermostat):
 
         super(ThermoLangevin, self).__init__(temp, dt, ethermo)
 
-        self._dt = depend_value(value=dt, name="dt")
         self._tau = depend_value(value=tau, name="tau")
         self._T = depend_value(
             name="T", func=self.get_T, dependencies=[self._tau, self._dt]
@@ -237,7 +236,7 @@ class ThermoLangevin(Thermostat):
 dproperties(ThermoLangevin, ["tau", "T", "S", "T_on_sm"])
 
 
-class ThermoPILE_L(ThermoLangevin):
+class ThermoPILE_L(Thermostat):
     """Represents a PILE thermostat with a local centroid thermostat.
 
     Attributes:
@@ -436,10 +435,10 @@ class ThermoPILE_L(ThermoLangevin):
             t.step()
 
 
-dproperties(ThermoPILE_L, ["pilescale", "pilect", "npilect", "tauk"])
+dproperties(ThermoPILE_L, ["tau", "pilescale", "pilect", "npilect", "tauk"])
 
 
-class ThermoSVR(ThermoLangevin):
+class ThermoSVR(Thermostat):
     """Represents a stochastic velocity rescaling thermostat.
 
     Depend objects:
@@ -510,6 +509,7 @@ class ThermoSVR(ThermoLangevin):
         self.ethermo += K * (1 - alpha2)
         self.p *= alpha
 
+dproperties(ThermoSVR, ["tau", "et", "K"]) 
 
 class ThermoPILE_G(ThermoPILE_L):
     """Represents a PILE thermostat with a global centroid thermostat.
@@ -589,10 +589,7 @@ class ThermoPILE_G(ThermoPILE_L):
         self._ethermo._func = self.get_ethermo
 
 
-dproperties(ThermoSVR, ["et", "K", "pilescale", "pilect", "npilect"])
-
-
-class ThermoGLE(ThermoLangevin):
+class ThermoGLE(Thermostat):
     """Represents a generalized Langevin equation thermostat.
 
     This is similar to a langevin thermostat, in that it uses Gaussian random
@@ -749,10 +746,10 @@ class ThermoGLE(ThermoLangevin):
         self.p = self.s[0] * self.sm
 
 
-dproperties(ThermoGLE, ["A", "C"])
+dproperties(ThermoGLE, ["A", "C", "T", "S"])
 
 
-class ThermoNMGLE(ThermoLangevin):
+class ThermoNMGLE(Thermostat):
     """Represents a 'normal-modes' generalized Langevin equation thermostat.
 
     An extension to the GLE thermostat which is applied in the
@@ -901,7 +898,7 @@ class ThermoNMGLE(ThermoLangevin):
             # pipes temp and dt
             dpipe(self._temp, t._temp)
             dpipe(self._dt, t._dt)
-
+            
             # here we pipe the A and C of individual NM to the "master" arrays
             t._A.add_dependency(self._A)
             t._A._func = make_Agetter(it)
@@ -937,7 +934,7 @@ class ThermoNMGLE(ThermoLangevin):
         return et
 
 
-dproperties(ThermoNMGLE, ["A", "C"])
+dproperties(ThermoNMGLE, ["A", "C", "T", "S"])
 
 
 class ThermoNMGLEG(ThermoNMGLE):
@@ -990,8 +987,9 @@ class ThermoNMGLEG(ThermoNMGLE):
         self._ethermo.add_dependency(t._ethermo)
         self._thermos.append(t)
 
+dproperties(ThermoNMGLE, ["tau"])    
 
-class ThermoCL(ThermoLangevin):
+class ThermoCL(Thermostat):
     """Represents a Langevin thermostat for systems driven by forces which are statistical
        in nature, i.e. they contain noise, and/or have an unwanted dissipative effect.
        This thermostat's dissipative term is modified to compensate for the inherent noise.
@@ -1125,7 +1123,7 @@ class ThermoCL(ThermoLangevin):
         self.idstep = not self.idstep
 
 
-dproperties(ThermoCL, ["idtau", "intau", "apat", "lgT", "inT", "idT"])
+dproperties(ThermoCL, ["tau", "idtau", "intau", "apat", "lgT", "inT", "idT"])
 
 
 class ThermoFFL(ThermoLangevin):

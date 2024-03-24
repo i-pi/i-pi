@@ -816,6 +816,10 @@ class NormalModes:
             prop_pq = dstrip(self.prop_pq)
             pnm = dstrip(self.pnm)
             qnm = dstrip(self.qnm)
+            if len(self.open_paths) > 0:
+                # if there are open paths, make a copy to preserve the original values
+                pnm = pnm.copy()
+                qnm = qnm.copy()
 
             # uses the buffer to apply the propagator in one go
             pq_buffer = self.pq_buffer
@@ -827,7 +831,8 @@ class NormalModes:
                 pnm[k], qnm[k] = noddot(prop_pq[k], pq_buffer)
 
             # now for open paths we recover the initial conditions (that have not yet been overwritten)
-            # and do open path propagation
+            # and do open path propagation. NB this will be slow, will probably need some optimization
+            # to run large calculations with this 
             if len(self.open_paths) > 0:
                 o_prop_pq = dstrip(self.o_prop_pq)
                 pq = np.zeros(2)
