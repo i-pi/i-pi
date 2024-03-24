@@ -33,3 +33,12 @@ It demonstrates the use of i-PI with a ML potential, through LAMMPS patched with
 -----------
 
 This example shows how one can use i-PI to compute 2D spectrum corresponding to a hybrid IR-Raman pulse sequence. The example contains additional scripts that run i-PI in a slightly different way than in the original executable, as well as processing scripts for computing the appropriate spectroscopic response function.
+
+Solid-liquid free energy with uncertainty quantification
+--------------------------------------------------------
+
+This example shows how to perform an interface-pinning simulation of a liquid/solid coexistence supercell. 
+Pinning is achieved using an order parameter computed by Plumed, and the model is a committee of ML potentials.
+Statistical reweighting is used to compute the error on the difference in chemical potential between
+water and ice at the set temperature. Repeating the simulation at multiple temperatures can be used to determine
+the melting point.
