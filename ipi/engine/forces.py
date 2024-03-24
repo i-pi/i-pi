@@ -139,12 +139,16 @@ class ForceBead:
         Allows the ForceBead object to ask for the ufvx list of each replica
         directly without going through the get_all function. This allows
         all the jobs to be sent at once, allowing them to be parallelized.
+
+        Returns True if a calculation is running
         """
 
         # only dispatches a request if the forcefield needs it
         with self._threadlock:
-            if self.request is None and self._ufvx.tainted():
+            is_tainted = self._ufvx.tainted()
+            if self.request is None and is_tainted:
                 self.request = self.ff.queue(self.atoms, self.cell, reqid=self.uid)
+        return is_tainted
 
     def get_all(self):
         """Driver routine.
@@ -166,7 +170,7 @@ class ForceBead:
 
         # this is converting the distribution library requests into [ u, f, v ]  lists
         if self.request is None:
-            self.request = self.queue()
+            self.queue()
 
         # sleeps until the request has been evaluated
         request = self.request
@@ -413,13 +417,19 @@ class ForceComponent:
         )
 
     def queue(self):
-        """Submits all the required force calculations to the interface."""
+        """Submits all the required force calculations to the interface.
+        
+        Returns True if calculations are running, False if nothing is tainted
+        """
 
         # this should be called in functions which access u,v,f for ALL the beads,
         # before accessing them. it is basically pre-queueing so that the
         # distributed-computing magic can work
+
+        is_tainted = False
         for b in range(self.nbeads):
-            self._forces[b].queue()
+            is_tainted = is_tainted or self._forces[b].queue()
+        return is_tainted
 
     def pot_gather(self):
         """Obtains the potential energy for each replica.
@@ -667,7 +677,10 @@ class Forces:
         self.cell = cell
         self.bound = True
         self.nforces = len(fcomponents)
+        
+        # prepares force components
         self.fcomp = fcomponents
+
         self.ff = fflist
         self.open_paths = open_paths
         self.output_maker = output_maker
@@ -1022,9 +1035,11 @@ class Forces:
     def queue(self):
         """Submits all the required force calculations to the forcefields."""
 
+        is_tainted = False
         for ff in self.mforces:
             if ff.weight != 0:  # do not compute forces which have zero weight
-                ff.queue()
+                is_tainted = is_tainted or ff.queue()
+        return is_tainted
 
     def get_vir(self):
         """Sums the virial of each forcefield.
