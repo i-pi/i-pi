@@ -296,7 +296,8 @@ class Barostat:
         qqc = (dstrip(beads.q) - dstrip(beads.qc)).reshape(-1, 3)
         fall = fall.reshape(-1, 3)
 
-        kst = -noddot(qqc.T, fall)  # np.zeros((3,3))
+        kst = -noddot(qqc.T, fall)  
+        # kst = np.zeros((3,3))
         # kst[0] = -noddot(qqc[:,0], fall)
         # kst[1,1:] = -noddot(qqc[:,1], fall[:,1:])
         # kst[2,2] = -noddot(qqc[:,2], fall[:,2])
