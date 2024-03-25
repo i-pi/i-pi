@@ -170,9 +170,9 @@ class SCPhononsMover(Motion):
         if self.random_type == "file":
             self.random_sequence = np.loadtxt("SOBOL-RNG")
         elif self.random_type == "pseudo":
-            self.random_sequence = self.prng.rng[0].uniform( size=(
-                self.max_steps * self.max_iter, self.dof
-            ))
+            self.random_sequence = self.prng.rng[0].uniform(
+                size=(self.max_steps * self.max_iter, self.dof)
+            )
         elif self.random_type == "sobol":
             self.random_sequence = np.asarray(
                 [

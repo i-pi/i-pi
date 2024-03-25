@@ -320,7 +320,7 @@ class NormalModes:
         # mass-scaled propagator
         self._prop_pq_ms = depend_array(
             name="prop_pq_ms",
-            value=np.zeros((2,2,self.beads.nbeads, 3*self.beads.natoms)),
+            value=np.zeros((2, 2, self.beads.nbeads, 3 * self.beads.natoms)),
             func=self.get_prop_pq_ms,
             dependencies=[self._prop_pq, self.beads._m3],
         )
@@ -337,16 +337,18 @@ class NormalModes:
             ],
         )
 
-        #mass-scaled propagator
+        # mass-scaled propagator
         self._o_prop_pq_ms = depend_array(
             name="o_prop_pq_ms",
-            value=np.zeros((2,2,self.beads.nbeads, 3*len(self.open_paths))),
+            value=np.zeros((2, 2, self.beads.nbeads, 3 * len(self.open_paths))),
             func=self.get_o_prop_pq_ms,
             dependencies=[self._o_prop_pq, self.beads._m3],
         )
-        
-        self.open_paths_coords = np.array([[3*i,3*i+1,3*i+2] for i in self.open_paths]).flatten()
-        
+
+        self.open_paths_coords = np.array(
+            [[3 * i, 3 * i + 1, 3 * i + 2] for i in self.open_paths]
+        ).flatten()
+
         # if the mass matrix is not the RPMD one, the MD kinetic energy can't be
         # obtained in the bead representation because the masses are all mixed up
         self._kins = depend_array(
@@ -518,14 +520,14 @@ class NormalModes:
         return pqk
 
     def get_prop_pq_ms(self):
-        """ Combines the propagator with the atom masses to make a single array
+        """Combines the propagator with the atom masses to make a single array
         that can be multiplied to propagate the normal modes dynamics"""
 
-        pq_ms = np.zeros((2, 2, self.nbeads, self.natoms*3))
-        pq_ms[:] = np.moveaxis(dstrip(self.prop_pq),0,-1)[:,:,:,np.newaxis] 
-        pq_ms[0,1] *= dstrip(self.beads.m3)
-        pq_ms[1,0] /= dstrip(self.beads.m3)
-        
+        pq_ms = np.zeros((2, 2, self.nbeads, self.natoms * 3))
+        pq_ms[:] = np.moveaxis(dstrip(self.prop_pq), 0, -1)[:, :, :, np.newaxis]
+        pq_ms[0, 1] *= dstrip(self.beads.m3)
+        pq_ms[1, 0] /= dstrip(self.beads.m3)
+
         return pq_ms
 
     def get_o_prop_pq(self):
@@ -568,14 +570,15 @@ class NormalModes:
         return pqk
 
     def get_o_prop_pq_ms(self):
-        """ Combines the propagator with the atom masses to make a single array
-        that can be multiplied to propagate the normal modes dynamics. Open path version"""
+        """Combines the propagator with the atom masses to make a single array
+        that can be multiplied to propagate the normal modes dynamics. Open path version
+        """
 
         pq_ms = np.zeros((2, 2, self.nbeads, len(self.open_paths_coords)))
-        pq_ms[:] = np.moveaxis(dstrip(self.o_prop_pq),0,-1)[:,:,:,np.newaxis] 
-        pq_ms[0,1] *= dstrip(self.beads.m3[:,self.open_paths_coords])
-        pq_ms[1,0] /= dstrip(self.beads.m3[:,self.open_paths_coords])
-        
+        pq_ms[:] = np.moveaxis(dstrip(self.o_prop_pq), 0, -1)[:, :, :, np.newaxis]
+        pq_ms[0, 1] *= dstrip(self.beads.m3[:, self.open_paths_coords])
+        pq_ms[1, 0] /= dstrip(self.beads.m3[:, self.open_paths_coords])
+
         return pq_ms
 
     def get_nmm(self):
@@ -882,17 +885,23 @@ class NormalModes:
             qnm = dstrip(self.qnm)
 
             prop_pq_ms = dstrip(self.prop_pq_ms)
-            new_pnm = pnm[1:] * prop_pq_ms[0,0,1:] + qnm[1:] * prop_pq_ms[0,1,1:]
-            new_qnm = pnm[1:] * prop_pq_ms[1,0,1:] + qnm[1:] * prop_pq_ms[1,1,1:]
-            
+            new_pnm = pnm[1:] * prop_pq_ms[0, 0, 1:] + qnm[1:] * prop_pq_ms[0, 1, 1:]
+            new_qnm = pnm[1:] * prop_pq_ms[1, 0, 1:] + qnm[1:] * prop_pq_ms[1, 1, 1:]
+
             # now for open paths we recover the initial conditions (that have not yet been overwritten)
             # and do open path propagation. NB this will be slow, will probably need some optimization
-            # to run large calculations with this 
-            if len(self.open_paths) > 0:                
+            # to run large calculations with this
+            if len(self.open_paths) > 0:
                 o_prop_pq_ms = dstrip(self.o_prop_pq_ms)
                 opc = self.open_paths_coords
-                new_pnm[:, opc] = pnm[1:, opc] * o_prop_pq_ms[0,0,1:] + qnm[1:, opc] * o_prop_pq_ms[0,1,1:]
-                new_qnm[:, opc] = pnm[1:, opc] * o_prop_pq_ms[1,0,1:] + qnm[1:, opc] * o_prop_pq_ms[1,1,1:]
+                new_pnm[:, opc] = (
+                    pnm[1:, opc] * o_prop_pq_ms[0, 0, 1:]
+                    + qnm[1:, opc] * o_prop_pq_ms[0, 1, 1:]
+                )
+                new_qnm[:, opc] = (
+                    pnm[1:, opc] * o_prop_pq_ms[1, 0, 1:]
+                    + qnm[1:, opc] * o_prop_pq_ms[1, 1, 1:]
+                )
                 """
                 pq = np.zeros(2)
                 for j in self.open_paths:
@@ -903,12 +912,11 @@ class NormalModes:
                             pq = np.dot(o_prop_pq[k], pq)
                             new_pnm[k, a] = pq[0] * sm[k,a]
                             new_qnm[k, a] = pq[1] / sm[k,a]
-                """         
+                """
             # updates the "real" vectors
             self.pnm[1:] = new_pnm
             self.qnm[1:] = new_qnm
 
-            
     def get_kins(self):
         """Gets the MD kinetic energy for all the normal modes.
 

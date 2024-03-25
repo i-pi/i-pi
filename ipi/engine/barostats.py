@@ -263,7 +263,9 @@ class Barostat:
         pc = dstrip(self.beads.pc)
         m = dstrip(self.beads.m)
         na3 = 3 * self.beads.natoms
-        fall = dstrip(self.forces.mts_forces[level].f) * (1 + self.forces.coeffsc_part_1)
+        fall = dstrip(self.forces.mts_forces[level].f) * (
+            1 + self.forces.coeffsc_part_1
+        )
         if self.bias is None or level != 0:
             ball = fall * 0.00
         else:
@@ -296,7 +298,7 @@ class Barostat:
         qqc = (dstrip(beads.q) - dstrip(beads.qc)).reshape(-1, 3)
         fall = fall.reshape(-1, 3)
 
-        kst = -noddot(qqc.T, fall)  
+        kst = -noddot(qqc.T, fall)
         # kst = np.zeros((3,3))
         # kst[0] = -noddot(qqc[:,0], fall)
         # kst[1,1:] = -noddot(qqc[:,1], fall[:,1:])

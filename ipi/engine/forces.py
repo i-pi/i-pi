@@ -418,7 +418,7 @@ class ForceComponent:
 
     def queue(self):
         """Submits all the required force calculations to the interface.
-        
+
         Returns True if calculations are running, False if nothing is tainted
         """
 
@@ -609,24 +609,34 @@ dproperties(
     ["weight", "scaling", "f", "pots", "pot", "virs", "vir", "extras"],
 )
 
+
 class MTSForces:
-    """ Single-purpose class to compute the MTS forces at a given level """
+    """Single-purpose class to compute the MTS forces at a given level"""
+
     def __init__(self, parent, level):
         self.nbeads = parent.nbeads
-        self.natoms = parent.natoms        
+        self.natoms = parent.natoms
         self.mforces = parent.mforces
         self.mrpc = parent.mrpc
         self.level = level
 
-        self._f = depend_array(name="f", value=np.zeros((self.nbeads, 3*self.natoms)),
-            func=self.get_forces_mts)
+        self._f = depend_array(
+            name="f",
+            value=np.zeros((self.nbeads, 3 * self.natoms)),
+            func=self.get_forces_mts,
+        )
 
-        self._virs = depend_array(name="virs", value=np.zeros((self.nbeads,3,3)),
-            func=self.get_virs_mts)
-        
-        self._vir = depend_array(name="vir", value=np.zeros((3,3)),
-            func=self.get_vir_mts, dependencies=[self._virs])
-                
+        self._virs = depend_array(
+            name="virs", value=np.zeros((self.nbeads, 3, 3)), func=self.get_virs_mts
+        )
+
+        self._vir = depend_array(
+            name="vir",
+            value=np.zeros((3, 3)),
+            func=self.get_vir_mts,
+            dependencies=[self._virs],
+        )
+
         for ff in self.mforces:
             # add dependencies from the forces that actually depend on this
             mts_weights = ff.mts_weights
@@ -658,7 +668,7 @@ class MTSForces:
         self.queue_mts()
 
         fk = np.zeros((self.nbeads, 3 * self.natoms))
-        
+
         mforces = self.mforces
         mrpc = self.mrpc
         for index in range(len(mforces)):
@@ -674,18 +684,18 @@ class MTSForces:
                     * mrpc[index].b2tob1(dstrip(mforces[index].f))
                 )
         return fk
-        
+
     def get_vir_mts(self):
         """Fetches ONLY the total virial associated with a given MTS level."""
         return np.sum(dstrip(self.virs), axis=0)
 
     def get_virs_mts(self):
         """Fetches ONLY the total virial associated with a given MTS level."""
-        
+
         self.queue_mts()
         level = self.level
         mforces = self.mforces
-        mrpc = self.mrpc        
+        mrpc = self.mrpc
         rp = np.zeros((self.nbeads, 3, 3), float)
         for index in range(len(mforces)):
             if (
@@ -695,14 +705,12 @@ class MTSForces:
             ):
                 dmvirs = dstrip(mforces[index].virs)
                 dv = mrpc[index].b2tob1(dmvirs)
-                rp += (
-                    mforces[index].weight
-                    * mforces[index].mts_weights[level]
-                    * dv
-                )
+                rp += mforces[index].weight * mforces[index].mts_weights[level] * dv
         return rp
 
+
 dproperties(MTSForces, ["f", "vir", "virs"])
+
 
 class Forces:
     """Class that gathers all the forces together.
@@ -771,7 +779,7 @@ class Forces:
         self.cell = cell
         self.bound = True
         self.nforces = len(fcomponents)
-        
+
         # prepares force components
         self.fcomp = fcomponents
 
@@ -880,9 +888,7 @@ class Forces:
         )
 
         if len(self.mforces) > 0:
-            self.mts_forces = [
-                MTSForces(self, i) for i in range(self.nmtslevels)
-            ]
+            self.mts_forces = [MTSForces(self, i) for i in range(self.nmtslevels)]
 
         # This will be piped from normalmodes
         self._omegan2 = depend_value(name="omegan2", value=0)

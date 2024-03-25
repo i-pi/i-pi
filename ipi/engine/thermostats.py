@@ -509,7 +509,9 @@ class ThermoSVR(Thermostat):
         self.ethermo += K * (1 - alpha2)
         self.p *= alpha
 
-dproperties(ThermoSVR, ["tau", "et", "K"]) 
+
+dproperties(ThermoSVR, ["tau", "et", "K"])
+
 
 class ThermoPILE_G(ThermoPILE_L):
     """Represents a PILE thermostat with a global centroid thermostat.
@@ -898,7 +900,7 @@ class ThermoNMGLE(Thermostat):
             # pipes temp and dt
             dpipe(self._temp, t._temp)
             dpipe(self._dt, t._dt)
-            
+
             # here we pipe the A and C of individual NM to the "master" arrays
             t._A.add_dependency(self._A)
             t._A._func = make_Agetter(it)
@@ -987,7 +989,9 @@ class ThermoNMGLEG(ThermoNMGLE):
         self._ethermo.add_dependency(t._ethermo)
         self._thermos.append(t)
 
-dproperties(ThermoNMGLE, ["tau"])    
+
+dproperties(ThermoNMGLE, ["tau"])
+
 
 class ThermoCL(Thermostat):
     """Represents a Langevin thermostat for systems driven by forces which are statistical

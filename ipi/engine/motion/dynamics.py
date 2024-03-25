@@ -603,7 +603,7 @@ class NPTIntegrator(NVTIntegrator):
                 "Forcefield returned a zero stress tensor. NPT simulation will likely make no sense",
                 verbosity.low,
             )
-            #if verbosity.medium: will uncomment one day
+            # if verbosity.medium: will uncomment one day
             #    raise ValueError(
             #        "Zero stress terminates simulation for medium verbosity and above."
             #    )
