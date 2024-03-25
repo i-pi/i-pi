@@ -11,7 +11,8 @@ Prerequisites
 
 Besides a recent version of i-PI, this demonstration requires some external dependencies.
 In particular you will need to install [Plumed](https://plumed.org), making sure to enable
-the Python interface and the `crystallization` module.
+the Python interface and the `crystallization` module - prebuilt versions from conda do not
+include this module.
 
 ```
 ./configure ---enable-python --enable-modules +crystallization
@@ -20,8 +21,32 @@ make
 
 You may need to install additional packages, follow the documentation of Plumed.
 
-The MLIP used in this example is XXXXXXXXXX MATTHIAS INCLUDE HERE INSTRUCTION TO DOWNLOAD
-AND INSTALL/CONFIGURE
+The MLIP used in this example is a [BPNN](https://doi.org/10.1103/PhysRevLett.98.146401)-type neural network, 
+using [SOAP](https://doi.org/10.1103/PhysRevB.87.184115) descriptors and Radial Spectrum descriptors as input.
+
+In order to install the necessary packages for the MLIP we provide a setup script.
+IMPORTANT: We recommend to install the packages in a fresh virtual environment.
+
+```
+./install_dependencies.sh
+```
+
+The install script will install [rascaline](https://github.com/Luthaf/rascaline) the atomic 
+descriptor library, [metatensor](https://github.com/lab-cosmo/metatensor) for metadata handling 
+and [torch](https://pytorch.org/) for the neural network training. 
+
+Install from within the `./demos/ensemble-deltamu` directory.
+
+Running the simulation
+----------------------
+
+The simulations can be run using the provided `run_rascaline.sh` script.
+Change the variables `PLUMED_PATH` and `IPI_PATH` to the paths were the source of
+Plumed and i-PI are located. Then simply run the provided script.
+
+```
+./run_rascaline.sh
+```
 
 
 Interface pinning
@@ -95,7 +120,81 @@ in the predictions that estimates the uncertainty in the energy prediction.
 You can read [Musil2019] for an early application to atomistic modeling, and [Kellner2024] for
 a description of the model used here, that uses weight sharing to reduce the cost of evaluation. 
 
-[** installation instructions for the model **]
+This demo uses the functionality of the i-pi `ff-committe` to interface with the MLIP, specifically 
+using a driver that returns ALL the committee members as entries in a JSON-formatted
+string. In here we exemplary highlight the utility of this functionality,
+using a "Shallow Ensembles" Machine Learning interatomic potential.
+A Shallow Ensemble is a committee of neural networks, where each
+committee member implicitely shares the weights up to the last layer.
+
+Passing the committee members predictions as a JSON string allows for
+the efficient computation of committee predictions, as the recomputation of 
+intermediate results (in particular the embeddings of the atomic environments 
+and their gradients) can be avoided using only one calculator.
+
+
+Interfacing a custom MLIP code with the `ff-committee` driver:
+--------------------------------------------------------------
+
+To interface a custom MLIP code that yields efficiently an ensemble of predictions,
+with the `ff-committee` driver, the JSON extras dict of the respective i-pi calculator 
+must be formatted as follows:
+
+```json
+{
+    "committee_pot": [pot_committee_1, pot_committee_2, ..., pot_committee_N],
+    "committee_force": [pot_force_atom_1_x_committee_1, ..., pot_force_atom_1_x_committee_N, 
+                        pot_force_atom_1_y_committee_1, ..., ...,
+                        pot_force_atom_N_z_committee_N],
+    "committee_virial": [virial_xx_committee_1, ..., virial_xx_committee_N, 
+                        ..., virial_xy_committee_1, ..., ...,virial_zz_committee_N]
+}
+```
+
+Or, suppose the committee are obtained as numpy arrays of shape (N_atoms, 3),
+
+```python
+
+# force_list is a list of numpy arrays of shape (N_atoms, 3)
+# virial_list is a list of numpy arrays of shape (3, 3)
+# pots is a numpy array of shape (N_committee, 1)
+
+forces = np.stack([f.flatten() for f in force_list ] )
+virials = np.stack([v.flatten() for v in virial_list ] )
+
+# new arrays of shape (N_committee, N_components)
+
+extras = {
+    "committee_pot": pot_list.tolist(),
+    "committee_force": forces.tolist(),
+    "committee_virial": virials.tolist()
+}
+```
+
+where `pot1`, `pot2`, ..., `potN` are the energies predicted by each committee,
+
+IMPORTANT: Since the committee predictions in the extras dict no longer pass through the
+unit conversion of the driver, make sure that the calculator instance of your MLIP returns
+i-pi units (Hartree, Bohr, etc.) and not ASE units (eV, Angstrom, etc.).
+
+IMPORTANT: Dependent on the exact architecture details of the MLIP, obtaining committee
+forces and virials from a weight-shared ensemble might introduce a computational overhead.
+It is therefore also possible to only return the committee energies and compute
+the forces from the mean energies, which is not more expensive than computing the forces of
+a single committee when using a weight-shared ensemble.
+
+The calculator then should only return the committee energies in the extras dict.
+
+```python
+
+extras = {
+    "committee_pot": pot_list.tolist()
+}
+```
+
+
+
+
 
 
 
