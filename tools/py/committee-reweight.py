@@ -223,7 +223,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "pot_file",
         type=str,
-        help="The file containing the potentials. Rows = frames, columns = potentials",
+        help="The file containing the potentials, in Hartree. Rows = frames, columns = potentials",
     )
     parser.add_argument(
         "obs_file",
