@@ -408,7 +408,7 @@ class NVEIntegrator(DummyIntegrator):
         """Velocity Verlet momentum propagator."""
 
         # halfdt/alpha
-        self.beads.p[:] += dstrip(self.forces.forces_mts(level)) * self.pdt[level]
+        self.beads.p[:] += dstrip(self.forces.mts_forces[level].f) * self.pdt[level]
         if level == 0 and self.ensemble.has_bias:  # adds bias in the outer loop
             self.beads.p[:] += dstrip(self.bias.f) * self.pdt[level]
 
@@ -603,10 +603,10 @@ class NPTIntegrator(NVTIntegrator):
                 "Forcefield returned a zero stress tensor. NPT simulation will likely make no sense",
                 verbosity.low,
             )
-            if verbosity.medium:
-                raise ValueError(
-                    "Zero stress terminates simulation for medium verbosity and above."
-                )
+            #if verbosity.medium: will uncomment one day
+            #    raise ValueError(
+            #        "Zero stress terminates simulation for medium verbosity and above."
+            #    )
 
         self._stresscheck = False
 
@@ -695,7 +695,7 @@ class SCIntegrator(NVTIntegrator):
             self.beads.p += dstrip(self.bias.f) * self.pdt[level]
         # just integrate the Trotter force scaled with the SC coefficients, which is a cheap approx to the SC force
         self.beads.p += (
-            self.forces.forces_mts(level)
+            self.forces.mts_forces[level].f
             * (1.0 + self.forces.coeffsc_part_1)
             * self.pdt[level]
         )

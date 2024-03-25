@@ -263,7 +263,7 @@ class Barostat:
         pc = dstrip(self.beads.pc)
         m = dstrip(self.beads.m)
         na3 = 3 * self.beads.natoms
-        fall = dstrip(self.forces.forces_mts(level)) * (1 + self.forces.coeffsc_part_1)
+        fall = dstrip(self.forces.mts_forces[level].f) * (1 + self.forces.coeffsc_part_1)
         if self.bias is None or level != 0:
             ball = fall * 0.00
         else:
@@ -287,7 +287,7 @@ class Barostat:
         associated with the forces at a MTS level.
         """
 
-        fall = dstrip(self.forces.forces_mts(level))
+        fall = dstrip(self.forces.mts_forces[level].f)
         if level == 0 and self.bias is not None:
             # adds the bias. NB: don't += we don't want to overwrite the force
             fall = fall + dstrip(self.bias.f)
@@ -357,7 +357,7 @@ class Barostat:
         return (
             self.kstress_mts_sc(level)
             + np.sum(
-                self.forces.virs_mts(level)
+                self.forces.mts_forces[level].virs
                 * (1 + self.forces.coeffsc_part_1).reshape((self.beads.nbeads, 1, 1)),
                 axis=0,
             )
@@ -374,7 +374,7 @@ class Barostat:
             bvir[:] = self.bias.vir
 
         return (
-            self.kstress_mts(level) + self.forces.vir_mts(level) + bvir
+            self.kstress_mts(level) + self.forces.mts_forces[level].vir + bvir
         ) / self.cell.V
 
     def pstep(self, level=0):
@@ -581,7 +581,7 @@ class BaroBZP(Barostat):
             )
 
             pc = dstrip(self.beads.pc)
-            fc = np.sum(dstrip(self.forces.forces_mts(level)), axis=0) / nbeads
+            fc = np.sum(dstrip(self.forces.mts_forces[level].f), axis=0) / nbeads
             fc_m = fc / dstrip(self.beads.m3)[0]
 
             dt2 = dt * dt * self.beads.nbeads
@@ -791,7 +791,7 @@ class BaroSCBZP(Barostat):
             pc = dstrip(self.beads.pc)
             fc = (
                 np.sum(
-                    dstrip(self.forces.forces_mts(level))
+                    dstrip(self.forces.mts_forces[level].f)
                     * (1 + self.forces.coeffsc_part_1),
                     axis=0,
                 )
@@ -1070,7 +1070,7 @@ class BaroRGB(Barostat):
 
             pc = dstrip(self.beads.pc).reshape(self.beads.natoms, 3)
             fc = (
-                np.sum(dstrip(self.forces.forces_mts(level)), axis=0).reshape(
+                np.sum(dstrip(self.forces.mts_forces[level].f), axis=0).reshape(
                     self.beads.natoms, 3
                 )
                 / self.beads.nbeads
@@ -1358,7 +1358,7 @@ class BaroMTK(Barostat):
 
             pc = dstrip(self.beads.pc).reshape(self.beads.natoms, 3)
             fc = (
-                np.sum(dstrip(self.forces.forces_mts(level)), axis=0).reshape(
+                np.sum(dstrip(self.forces.mts_forces[level].f), axis=0).reshape(
                     self.beads.natoms, 3
                 )
                 / self.beads.nbeads

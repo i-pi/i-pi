@@ -1,0 +1,21 @@
+# column   1     --> step : The current simulation time step.
+# column   2     --> time{picosecond} : The elapsed simulation time.
+# column   3     --> conserved : The value of the conserved energy quantity per bead.
+# column   4     --> temperature{kelvin} : The current temperature, as obtained from the MD kinetic energy.
+# column   5     --> kinetic_cv : The centroid-virial quantum kinetic energy of the physical system.
+# column   6     --> potential : The physical system potential energy.
+# column   7     --> pressure_cv{megapascal} : The quantum estimator for pressure of the physical system.
+# column   8     --> pot_component(0) : The contribution to the system potential from one of the force components. 
+# column   9     --> pot_component(1) : The contribution to the system potential from one of the force components. 
+# column  10     --> volume : The volume of the cell box.
+    0.00000000e+00     0.00000000e+00     2.60655344e+00     3.06943821e+02     9.23443312e-01     1.67030261e+00    -3.28286104e+03     1.67030261e+00    -2.20174839e+00     4.37369880e+04   
+    1.00000000e+00     1.00000000e-03     2.56342540e+00     4.36557581e+02     9.23443312e-01     1.23181868e+00    -2.68420058e+03     1.23181868e+00    -2.54643850e+00     4.37232766e+04   
+    2.00000000e+00     2.00000000e-03     2.49557887e+00     6.17258098e+02     9.23443312e-01     5.83969002e-01    -7.91343755e+02     5.83969002e-01    -2.97243253e+00     4.36889969e+04   
+    3.00000000e+00     3.00000000e-03     2.49544491e+00     5.73947278e+02     9.23443312e-01     7.02333545e-01     2.27157296e+03     7.02333545e-01    -2.58527652e+00     4.36468688e+04   
+    4.00000000e+00     4.00000000e-03     2.60982305e+00     4.02576496e+02     9.23443312e-01     1.34840467e+00     4.55397793e+03     1.34840467e+00    -1.75112147e+00     4.36240790e+04   
+    5.00000000e+00     5.00000000e-03     2.55285728e+00     4.83559847e+02     9.23443312e-01     1.02569189e+00     3.70506479e+03     1.02569189e+00    -2.05691920e+00     4.36399433e+04   
+    6.00000000e+00     6.00000000e-03     2.47522569e+00     6.43950578e+02     9.23443312e-01     4.17521421e-01     6.96579915e+02     4.17521421e-01    -2.78146163e+00     4.36875507e+04   
+    7.00000000e+00     7.00000000e-03     2.51926669e+00     5.53079428e+02     9.23443312e-01     7.14206971e-01    -1.86855963e+03     7.14206971e-01    -2.61301468e+00     4.37406112e+04   
+    8.00000000e+00     8.00000000e-03     2.58303634e+00     3.59243355e+02     9.23443312e-01     1.37129332e+00    -3.06247957e+03     1.37129332e+00    -1.99921595e+00     4.37784787e+04   
+    9.00000000e+00     9.00000000e-03     2.58507489e+00     3.37841442e+02     9.23443312e-01     1.43760745e+00    -3.13677101e+03     1.43760745e+00    -1.85651379e+00     4.37881766e+04   
+    1.00000000e+01     1.00000000e-02     2.52911502e+00     4.99666594e+02     9.23443312e-01     8.81889745e-01    -2.08098594e+03     8.81889745e-01    -2.22203351e+00     4.37766328e+04   
