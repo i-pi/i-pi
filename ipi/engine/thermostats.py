@@ -1127,7 +1127,7 @@ class ThermoCL(Thermostat):
         self.idstep = not self.idstep
 
 
-dproperties(ThermoCL, ["tau", "idtau", "intau", "apat", "lgT", "inT", "idT"])
+dproperties(ThermoCL, ["tau", "T", "S", "idtau", "intau", "apat", "lgT", "inT", "idT"])
 
 
 class ThermoFFL(ThermoLangevin):
