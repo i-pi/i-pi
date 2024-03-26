@@ -13,7 +13,6 @@ it had not been stopped.
 
 
 import numpy as np
-import multiprocessing
 import concurrent.futures
 
 __all__ = ["Random"]
