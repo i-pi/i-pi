@@ -350,7 +350,6 @@ class DummyIntegrator:
         """
 
         if self.fixcom:
-            na3 = self.beads.natoms * 3
             nb = self.beads.nbeads
             p = dstrip(self.beads.p)
             m3 = dstrip(self.beads.m3).reshape((-1, 3))

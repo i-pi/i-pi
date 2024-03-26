@@ -9,7 +9,6 @@ state vector.
 # See the "licenses" directory for full license information.
 
 
-import numpy as np
 import json
 
 from ipi.utils.prng import *

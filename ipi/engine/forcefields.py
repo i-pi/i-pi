@@ -21,7 +21,7 @@ from ipi.utils.messages import verbosity
 from ipi.utils.messages import info
 from ipi.interfaces.sockets import InterfaceSocket
 from ipi.utils.depend import dstrip
-from ipi.utils.io import read_file, NumpyEncoder
+from ipi.utils.io import read_file
 from ipi.utils.units import unit_to_internal
 from ipi.utils.distance import vector_separation
 
