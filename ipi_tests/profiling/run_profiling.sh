@@ -1,9 +1,11 @@
 #!/bin/bash
-# usage: run_profile.sh [-p] natoms
+# usage: run_profile.sh [-p] natoms [ndriver]
 # run a mock simulation using an natoms box, -p activates yappi profiling
 
 # Default value for natoms
 natoms=8
+# Default value for ndriver
+ndrivers=1
 # Default profiler options
 profiler_options=""
 
@@ -24,6 +26,10 @@ shift $((OPTIND-1))
 if [ $# -gt 0 ]; then
     natoms=$1
 fi
+if [ $# -gt 1 ]; then
+    ndrivers=$2
+fi
+
 
 # Set profiler options if -p flag was used
 if [ "$profiler_flag" = true ]; then
@@ -43,10 +49,13 @@ sed 's/init\.xyz/test-'$natoms'\.xyz/g' input.xml > test-$natoms.xml
 
 # Run i-pi and i-pi-driver in the background
 time i-pi test-$natoms.xml $profiler_options &> test-$natoms.log &
-for i in `seq 1 10`
-do
-  sleep 1
-  i-pi-driver -m gas -u -a gas
+sleep 1
+echo "running profiling for ${natoms} atoms with ${ndrivers} drivers"
+sleep 0.5
+for i in `seq 1 $ndrivers`
+do # tries both unix and inet
+  i-pi-driver -m gas -u -a gas &
+  i-pi-driver -m gas -a localhost -p 12345 &
 done
 
 # Wait for all background processes to finish

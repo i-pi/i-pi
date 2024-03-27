@@ -237,7 +237,7 @@ class StringClimbGrMapper(object):
         rbf -= 2 * np.dot(rbf, tau) * tau
 
         # Return the potential energy and gradient of the climbing bead
-        e = dstrip(self.rforces.pot.copy())
+        e = self.rforces.pot
         g = -rbf
         info("@STRING_CLIMB: StringClimbGrMapper finished.", vrb.debug)
         return e, g

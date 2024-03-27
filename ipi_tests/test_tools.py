@@ -19,6 +19,7 @@ fortran_driver_models = [
     "morse",
     "zundel",
     "qtip4pf",
+    "qtip4pf-sr",
     "qtip4pf-c-json",
     "qtip4pf-c-1",
     "qtip4pf-c-2",

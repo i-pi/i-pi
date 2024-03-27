@@ -31,19 +31,6 @@ except ImportError:
     plumed = None
 
 
-class NumpyEncoder(json.JSONEncoder):
-    """Special json encoder for numpy types"""
-
-    def default(self, obj):
-        if isinstance(obj, np.integer):
-            return int(obj)
-        elif isinstance(obj, np.floating):
-            return float(obj)
-        elif isinstance(obj, np.ndarray):
-            return obj.tolist()
-        return json.JSONEncoder.default(self, obj)
-
-
 class ForceRequest(dict):
     """An extension of the standard Python dict class which only has a == b
     if a is b == True, rather than if the elements of a and b are identical.

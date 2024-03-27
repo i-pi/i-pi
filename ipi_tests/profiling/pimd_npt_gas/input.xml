@@ -1,0 +1,41 @@
+<simulation verbosity='low' threading='false' safe_stride='100'>
+    <ffsocket mode='unix' name='driver' pbc='false'>
+         <latency>  1.00000000e-04</latency>
+         <address> gas </address>
+         <exit_on_disconnect> False </exit_on_disconnect>
+   </ffsocket>
+   <total_steps>4000</total_steps>
+   <output prefix='simulation'>
+      <trajectory stride='1000' filename='pos'> positions </trajectory>
+      <properties stride='1000'> [ step, time, conserved, temperature, kinetic_md, potential, pressure_md, volume ] </properties>
+   </output>
+   <prng>
+      <seed>18885</seed>
+   </prng>
+   <system>
+      <forces> 
+          <force forcefield='driver' weight='1.0'> </force>
+      </forces>
+      <initialize nbeads='2'>
+        <file mode='xyz'> init.xyz</file>
+        <cell> [10.0, 0, 0, 0, 10.0, 0, 0, 0, 10.0] </cell>
+        <masses mode='manual'> [1.0] </masses>
+        <velocities mode='thermal'> 1 </velocities>
+      </initialize>
+      <ensemble>
+          <temperature> 1 </temperature>
+          <pressure> 1 </pressure>
+      </ensemble>
+      <motion mode='dynamics'>
+        <fixcom> False </fixcom>
+        <dynamics mode='npt'>
+            <timestep> 0.1 </timestep>
+            <thermostat mode='pile_l'> <tau> 1 </tau> </thermostat>
+            <barostat mode='isotropic'>
+                <tau> 10 </tau>
+                <thermostat mode='langevin'> <tau> 10 </tau> </thermostat>
+            </barostat>
+        </dynamics>
+      </motion>
+  </system>
+</simulation>

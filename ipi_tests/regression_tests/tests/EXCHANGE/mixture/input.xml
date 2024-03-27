@@ -4,11 +4,11 @@
     <address>localhost</address>
   </ffsocket>
    
-   <total_steps> 1000 </total_steps>
+   <total_steps> 100 </total_steps>
 
    <output prefix="simulation">
-      <trajectory stride="100" filename="pos" cell_units="angstrom">positions{angstrom}</trajectory>
-      <properties stride="100"> [ step, time{femtosecond}, conserved, temperature{kelvin}, virial_fq, kinetic_td] </properties>
+      <trajectory stride="10" filename="pos" cell_units="angstrom">positions{angstrom}</trajectory>
+      <properties stride="10"> [ step, time{femtosecond}, conserved, temperature{kelvin}, virial_fq, kinetic_td] </properties>
    </output>
 
    <prng>

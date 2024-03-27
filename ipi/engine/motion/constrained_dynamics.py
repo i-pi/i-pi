@@ -271,7 +271,6 @@ class ConstraintSolver(ConstraintSolverBase):
         """
 
         p = dstrip(self.beads.p[0]).copy()
-        self.beads.p.hold()
 
         for constr in self.constraint_list:
             dg = dstrip(constr.Dg)
@@ -285,7 +284,6 @@ class ConstraintSolver(ConstraintSolverBase):
 
             p[ic] -= np.dot(np.transpose(dg), x)
         self.beads.p[0] = p
-        self.beads.p.resume()
 
     def proj_manifold(self):
         """Iteratively enforce the constraints onto the positions by finding

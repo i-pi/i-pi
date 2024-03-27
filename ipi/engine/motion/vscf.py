@@ -128,6 +128,11 @@ class NormalModeMover(Motion):
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         super(NormalModeMover, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
+
+        # TODO - A LOT OF THESE DEFINITIONS ARE NOT USING DEPEND OBJECTS CORRECTLY
+        # MANY OF THESE SHOUD BE LINKED THROUGH DPIPE, NOT DEREFERENCED. THIS WOULD
+        # BREAK IF USED WITH REPLICA EXCHANGE FOR INSTANCE.
+
         self.temp = self.ensemble.temp
 
         # Raises error for nbeads not equal to 1.
@@ -203,7 +208,7 @@ class IMF(DummyCalculator):
         # Calculates the normal mode frequencies.
         # TODO : Should also handle soft modes.
         self.imm.w = self.imm.w2 * 0
-        self.imm.w[self.imm.nz :] = np.sqrt(dstrip(self.imm.w2[self.imm.nz :]))
+        self.imm.w[self.imm.nz :] = np.sqrt(self.imm.w2[self.imm.nz :])
 
         self.imm.V = self.imm.U.copy()
         for i in range(len(self.imm.V)):
@@ -319,9 +324,9 @@ class IMF(DummyCalculator):
         evals, evecs = np.linalg.eigh(h)
 
         # Calculates the free and internal energy
-        A = -logsumexp(-1.0 * evals / dstrip(self.imm.temp)) * dstrip(self.imm.temp)
-        E = np.sum(evals * np.exp(-1.0 * evals / dstrip(self.imm.temp))) / np.sum(
-            np.exp(-1.0 * evals / dstrip(self.imm.temp))
+        A = -logsumexp(-1.0 * evals / self.imm.temp) * self.imm.temp
+        E = np.sum(evals * np.exp(-1.0 * evals / self.imm.temp)) / np.sum(
+            np.exp(-1.0 * evals / self.imm.temp)
         )
 
         if return_eigsys:
@@ -628,20 +633,18 @@ class IMF(DummyCalculator):
 
         # Done converging wrt size of SHO basis.
         # Calculates the harmonic free and internal energy.
-        Ahar = -logsumexp(
-            [
-                -1.0 * np.sqrt(self.imm.w2[step]) * (0.5 + i) / dstrip(self.imm.temp)
-                for i in range(nnbasis)
-            ]
-        ) * dstrip(self.imm.temp)
+        Ahar = (
+            -logsumexp(
+                [
+                    -1.0 * np.sqrt(self.imm.w2[step]) * (0.5 + i) / self.imm.temp
+                    for i in range(nnbasis)
+                ]
+            )
+            * self.imm.temp
+        )
         Zhar = np.sum(
             [
-                np.exp(
-                    -1.0
-                    * np.sqrt(self.imm.w2[step])
-                    * (0.5 + i)
-                    / dstrip(self.imm.temp)
-                )
+                np.exp(-1.0 * np.sqrt(self.imm.w2[step]) * (0.5 + i) / self.imm.temp)
                 for i in range(nnbasis)
             ]
         )
@@ -651,10 +654,7 @@ class IMF(DummyCalculator):
                     np.sqrt(self.imm.w2[step])
                     * (0.5 + i)
                     * np.exp(
-                        -1.0
-                        * np.sqrt(self.imm.w2[step])
-                        * (0.5 + i)
-                        / dstrip(self.imm.temp)
+                        -1.0 * np.sqrt(self.imm.w2[step]) * (0.5 + i) / self.imm.temp
                     )
                     for i in range(nnbasis)
                 ]

@@ -150,6 +150,9 @@ class Thermostat:
         pass
 
 
+dproperties(Thermostat, ["temp", "dt", "ethermo", "p", "m", "sm", "dt"])
+
+
 class ThermoLangevin(Thermostat):
     """Represents a langevin thermostat.
 
@@ -171,6 +174,10 @@ class ThermoLangevin(Thermostat):
         """Calculates the coefficient of the white noise."""
         return np.sqrt(Constants.kb * self.temp * (1 - self.T**2))
 
+    def get_T_on_sm(self):
+        """Calculates the combined mass scaling and thermostat damping."""
+        return self.T / dstrip(self.sm)
+
     def __init__(self, temp=1.0, dt=1.0, tau=1.0, ethermo=0.0):
         """Initialises ThermoLangevin.
 
@@ -185,7 +192,6 @@ class ThermoLangevin(Thermostat):
 
         super(ThermoLangevin, self).__init__(temp, dt, ethermo)
 
-        self._dt = depend_value(value=dt, name="dt")
         self._tau = depend_value(value=tau, name="tau")
         self._T = depend_value(
             name="T", func=self.get_T, dependencies=[self._tau, self._dt]
@@ -194,29 +200,40 @@ class ThermoLangevin(Thermostat):
             name="S", func=self.get_S, dependencies=[self._temp, self._T]
         )
 
+    def bind(self, beads=None, atoms=None, pm=None, nm=None, prng=None, fixdof=None):
+        """Binds the appropriate degrees of freedom to the thermostat."""
+
+        super(ThermoLangevin, self).bind(beads, atoms, pm, nm, prng, fixdof)
+
+        self._T_on_sm = depend_value(
+            name="T_on_sm", func=self.get_T_on_sm, dependencies=[self._T, self._sm]
+        )
+
     def step(self):
         """Updates the bound momentum vector with a langevin thermostat."""
 
-        et = dstrip(self.ethermo)
-        p = dstrip(self.p).copy()
-        sm = dstrip(self.sm)
+        # This performs the following steps
+        # p <- p*exp(-dt/tau)+xi sqrt(C(1-exp-2dt/tau))
+        # where dt is the thermostat time step (half of the MD step)
+        # and C is the equilibrium fluctuations. to have a single
+        # coefficient (and facilitate computing the kinetic energy)
+        # the change in kinetic energy is computed to accumulate the work made
+        # by the thermostat
 
-        p /= sm
+        # goes in a single step to mass scaled coordinates and applies damping
+        p = dstrip(self.p) * dstrip(self.T_on_sm)
 
-        et += np.dot(p, p) * 0.5
-        p *= self.T
-        p += self.S * self.prng.gvec(len(p))
-        et -= np.dot(p, p) * 0.5
+        deltah = noddot(p, p) / (self.T**2)  # must correct for the "pre-damping"
+        p += self.S * self.prng.gvec(len(p))  # random part (in ms coordinates)
+        deltah -= noddot(p, p)  # new energy
 
-        p *= sm
+        self.p[:] = p * dstrip(
+            self.sm
+        )  # back to physical momentum and updates actual p
+        self.ethermo += deltah * 0.5
 
-        self.p = p
-        self.ethermo = et
 
-
-dproperties(
-    Thermostat, ["temp", "dt", "ethermo", "p", "m", "sm", "dt", "tau", "T", "S"]
-)
+dproperties(ThermoLangevin, ["tau", "T", "S", "T_on_sm"])
 
 
 class ThermoPILE_L(Thermostat):
@@ -337,7 +354,6 @@ class ThermoPILE_L(Thermostat):
             return lambda: self.tauk[k - 1]
 
         it = 0
-        nm.pnm.hold()
         for t in self._thermos:
             if t is None:
                 it += 1
@@ -369,7 +385,6 @@ class ThermoPILE_L(Thermostat):
                 t._tau.add_dependency(self._tauk)
                 t._tau._func = make_taugetter(it)
             self._ethermo.add_dependency(t._ethermo)
-            self._ethermo.hold()  # will manually update ethermo when needed!
             it += 1
 
         # since the ethermo will be "delegated" to the normal modes thermostats,
@@ -415,15 +430,12 @@ class ThermoPILE_L(Thermostat):
     def step(self):
         """Updates the bound momentum vector with a PILE thermostat."""
 
-        self.nm.pnm.hold()
         # super-cool! just loop over the thermostats! it's as easy as that!
         for t in self._thermos:
             t.step()
-        self.nm.pnm.resume()
-        self._ethermo.resume()
 
 
-dproperties(ThermoPILE_L, ["pilescale", "pilect", "npilect", "tauk"])
+dproperties(ThermoPILE_L, ["tau", "pilescale", "pilect", "npilect", "tauk"])
 
 
 class ThermoSVR(Thermostat):
@@ -496,6 +508,9 @@ class ThermoSVR(Thermostat):
 
         self.ethermo += K * (1 - alpha2)
         self.p *= alpha
+
+
+dproperties(ThermoSVR, ["tau", "et", "K"])
 
 
 class ThermoPILE_G(ThermoPILE_L):
@@ -574,9 +589,6 @@ class ThermoPILE_G(ThermoPILE_L):
         for t in self._thermos:
             t.ethermo = prev_ethermo / nm.nbeads
         self._ethermo._func = self.get_ethermo
-
-
-dproperties(ThermoSVR, ["et", "K", "pilescale", "pilect", "npilect"])
 
 
 class ThermoGLE(Thermostat):
@@ -736,7 +748,7 @@ class ThermoGLE(Thermostat):
         self.p = self.s[0] * self.sm
 
 
-dproperties(ThermoGLE, ["A", "C"])
+dproperties(ThermoGLE, ["A", "C", "T", "S"])
 
 
 class ThermoNMGLE(Thermostat):
@@ -924,7 +936,7 @@ class ThermoNMGLE(Thermostat):
         return et
 
 
-dproperties(ThermoNMGLE, ["A", "C"])
+dproperties(ThermoNMGLE, ["A", "C", "T", "S"])
 
 
 class ThermoNMGLEG(ThermoNMGLE):
@@ -976,6 +988,9 @@ class ThermoNMGLEG(ThermoNMGLE):
 
         self._ethermo.add_dependency(t._ethermo)
         self._thermos.append(t)
+
+
+dproperties(ThermoNMGLE, ["tau"])
 
 
 class ThermoCL(Thermostat):
@@ -1112,10 +1127,10 @@ class ThermoCL(Thermostat):
         self.idstep = not self.idstep
 
 
-dproperties(ThermoCL, ["idtau", "intau", "apat", "lgT", "inT", "idT"])
+dproperties(ThermoCL, ["tau", "T", "S", "idtau", "intau", "apat", "lgT", "inT", "idT"])
 
 
-class ThermoFFL(Thermostat):
+class ThermoFFL(ThermoLangevin):
     """Represents a fast-forward langevin thermostat.
 
     Depend objects:

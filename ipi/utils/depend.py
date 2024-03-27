@@ -43,6 +43,8 @@ __all__ = [
     "dstrip",
     "depraise",
     "dproperties",
+    "ddot",
+    "noddot",
 ]
 
 
@@ -107,7 +109,6 @@ class depend_base(object):
         dependants=None,
         dependencies=None,
         tainted=None,
-        active=None,
     ):
         """Initialises depend_base.
 
@@ -135,14 +136,10 @@ class depend_base(object):
             dependants: An optional list containing objects that depend on self.
             dependencies: An optional list containing objects that self
                 depends upon.
-            active: An optional boolean to indicate if this object is evaluated
-                (is active) or on hold.
         """
 
         if tainted is None:
             tainted = np.array([True], bool)
-        if active is None:
-            active = np.array([True], bool)
         if dependants is None:
             dependants = []
         if dependencies is None:
@@ -151,7 +148,6 @@ class depend_base(object):
         self._tainted = tainted
         self._func = func
         self._name = name
-        self._active = active
         self._threadlock = threading.RLock()
         self._dependants = []
         self._synchro = None
@@ -187,18 +183,6 @@ class depend_base(object):
             setattr(newone, member, deepcopy(getattr(self, member), memo))
 
         return newone
-
-    def hold(self):
-        """Sets depend object as on hold."""
-        self._active[:] = False
-
-    def resume(self):
-        """Sets depend object as active again."""
-        self._active[:] = True
-        if self._func is None:
-            self.taint(taintme=False)
-        else:
-            self.taint(taintme=True)
 
     def add_synchro(self, synchro=None):
         """Links depend object to a synchronizer."""
@@ -254,21 +238,26 @@ class depend_base(object):
               True by default.
         """
 
-        if not self._active:
-            return
-
-        self._tainted[:] = True
+        # propagates dependency
         for item in self._dependants:
             item = item()
             if not item._tainted[0]:
                 item.taint()
+
         if self._synchro is None:
-            self._tainted[:] = taintme
+            self._tainted[0] = taintme
         else:
+            self._tainted[0] = False
             for v in self._synchro.synced.values():
-                if not (v is self or v._tainted[0]):
-                    v.taint(taintme=True)
-            self._tainted[:] = taintme and (not self._name == self._synchro.manual)
+                if not v._tainted[0]:
+                    v._tainted[0] = v._name != self._synchro.manual
+                    # do the propagation on the dependants here
+                    # so we don't iterate multiple times over synchro
+                    for item in v._dependants:
+                        item = item()
+                        if not item._tainted[0]:
+                            item.taint()
+            self._tainted[0] = taintme and (not self._name == self._synchro.manual)
 
     def tainted(self):
         """Returns tainted flag."""
@@ -344,7 +333,6 @@ class depend_value(depend_base):
         dependants=None,
         dependencies=None,
         tainted=None,
-        active=None,
     ):
         """Initialises depend_value.
 
@@ -365,27 +353,26 @@ class depend_value(depend_base):
 
         self._value = value
         super(depend_value, self).__init__(
-            name, synchro, func, dependants, dependencies, tainted, active
+            name, synchro, func, dependants, dependencies, tainted
         )
 
     def get(self):
-        """Returns value, after recalculating if necessary.
+        """Returns value, after recalculating if necessary."""
 
-        Overwrites the standard method of getting value, so that value
-        is recalculated if tainted.
+        return self.__get__(self, self.__class__)
+
+    def __get__(self, instance=None, owner=None):
+        """Overwrites standard get function
+
+        Returns a cached value, recomputing only if the value is tainted.
         """
 
-        with self._threadlock:
-            if self._tainted[0]:
+        if self._tainted[0]:
+            with self._threadlock:
                 self.update_auto()
                 self.taint(taintme=False)
 
         return self._value
-
-    def __get__(self, instance, owner):
-        """Overwrites standard get function."""
-
-        return self.get()
 
     def set(self, value, manual=True):
         """Alters value and taints dependencies.
@@ -397,7 +384,6 @@ class depend_value(depend_base):
 
         with self._threadlock:
             self._value = value
-            # self.taint(taintme=False)
             if manual:
                 self.update_man()
 
@@ -429,7 +415,6 @@ class depend_array(np.ndarray, depend_base):
         dependencies=None,
         tainted=None,
         base=None,
-        active=None,
     ):
         """Creates a new array from a template.
 
@@ -454,7 +439,6 @@ class depend_array(np.ndarray, depend_base):
         dependencies=None,
         tainted=None,
         base=None,
-        active=None,
     ):
         """Initialises depend_array.
 
@@ -477,7 +461,7 @@ class depend_array(np.ndarray, depend_base):
         """
 
         super(depend_array, self).__init__(
-            name, synchro, func, dependants, dependencies, tainted, active
+            name, synchro, func, dependants, dependencies, tainted
         )
 
         if base is None:
@@ -523,7 +507,6 @@ class depend_array(np.ndarray, depend_base):
                     obj._dependants,
                     None,
                     obj._tainted,
-                    obj._active,
                 )
                 self._bval = obj._bval
         else:
@@ -597,7 +580,6 @@ class depend_array(np.ndarray, depend_base):
             dependants=self._dependants,
             tainted=self._tainted,
             base=self._bval,
-            active=self._active,
         )
 
     def flatten(self):
@@ -652,24 +634,15 @@ class depend_array(np.ndarray, depend_base):
            index: A slice variable giving the appropriate slice to be read.
         """
 
-        with self._threadlock:
-            if self._tainted[0]:
+        if self._tainted[0]:
+            with self._threadlock:
                 self.update_auto()
                 self.taint(taintme=False)
 
         if self.__scalarindex(index, self.ndim):
-            return dstrip(self)[index]
+            return self.view(np.ndarray)[index]
         else:
-            return depend_array(
-                dstrip(self)[index],
-                name=self._name,
-                synchro=self._synchro,
-                func=self._func,
-                dependants=self._dependants,
-                tainted=self._tainted,
-                base=self._bval,
-                active=self._active,
-            )
+            return super(depend_array, self).__getitem__(index)
 
     def __getslice__(self, i, j):
         """Overwrites standard get function."""
@@ -681,14 +654,14 @@ class depend_array(np.ndarray, depend_base):
 
         return self.__getitem__(slice(None, None, None))
 
-    def __get__(self, instance, owner):
+    def __get__(self, instance=None, owner=None):
         """Overwrites standard get function."""
 
         # It is worth duplicating this code that is also used in __getitem__ as this
         # is called most of the time, and we avoid creating a load of copies pointing to the same depend_array
 
-        with self._threadlock:
-            if self._tainted[0]:
+        if self._tainted[0]:
+            with self._threadlock:
                 self.update_auto()
                 self.taint(taintme=False)
 
@@ -748,17 +721,20 @@ class depend_array(np.ndarray, depend_base):
 # overwrite np.dot and other similar functions.
 
 # ** np.dot
-__dp_dot = np.dot
+noddot = np.dot
 
 
-def dep_dot(da, db):
+def ddot(da, db):
     a = dstrip(da)
     b = dstrip(db)
 
-    return __dp_dot(a, b)
+    return noddot(a, b)
 
 
-np.dot = dep_dot
+# activate this to have safe dstripping
+# np.dot = ddot
+# activate this if you want to assume dot will almost always be applied on dstripped vectors
+np.dot = noddot
 
 # ENDS NUMPY FUNCTIONS OVERRIDE
 
@@ -778,10 +754,10 @@ def dstrip(da):
         A ndarray with the same value as deparray.
     """
 
-    # only bother to strip dependencies if the array actually IS a depend_array
-    if isinstance(da, depend_array):
+    try:
         return da.view(np.ndarray)
-    else:
+    except:  # TODO: remove all remaining stray dstrip so we don't need to check here
+        warning("dstrip should only be called on `depend_array`s", verbosity.low)
         return da
 
 
@@ -799,7 +775,7 @@ def dpipe(dfrom, dto, item=-1):
     """
 
     if item < 0:
-        dto._func = lambda: dfrom.get()
+        dto._func = lambda: dfrom.__get__(dfrom, dfrom.__class__)
     else:
         dto._func = lambda i=item: dfrom.__getitem__(i)
     dto.add_dependency(dfrom)
@@ -828,7 +804,7 @@ def _inject_depend_property(cls, attr_name):
     private_name = f"_{attr_name}"
 
     def getter(self):
-        return getattr(self, private_name).__get__(self, self.__class__)
+        return getattr(self, private_name).__get__(self, cls)
 
     def setter(self, value):
         return getattr(self, private_name).__set__(self, value)

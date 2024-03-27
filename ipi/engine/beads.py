@@ -208,12 +208,14 @@ class Beads:
     def get_qc(self):
         """Gets the centroid coordinates."""
 
-        return np.dot(np.ones(self.nbeads, float), dstrip(self.q)) / float(self.nbeads)
+        return np.sum(dstrip(self.q), axis=0) / self.nbeads
+        # return np.dot(np.ones(self.nbeads, float), dstrip(self.q)) / float(self.nbeads)
 
     def get_pc(self):
         """Gets the centroid momenta."""
 
-        return np.dot(np.ones(self.nbeads, float), dstrip(self.p)) / float(self.nbeads)
+        return np.sum(dstrip(self.p), axis=0) / self.nbeads
+        # return np.dot(np.ones(self.nbeads, float), dstrip(self.p)) / float(self.nbeads)
 
     def kin_gather(self):
         """Gets the kinetic energy for all the replicas.
