@@ -25,10 +25,10 @@
           <pressure> 1 </pressure>
       </ensemble>
       <motion mode='dynamics'>
-        <fixcom> True </fixcom>
+        <fixcom> False </fixcom>
         <dynamics mode='npt'>
             <timestep> 0.01 </timestep>
-            <thermostat mode='langevin'> <tau> 1 </tau> </thermostat>
+            <thermostat mode='svr'> <tau> 1 </tau> </thermostat>
             <barostat mode='isotropic'>
                 <tau> 10 </tau>
                 <thermostat mode='langevin'> <tau> 10 </tau> </thermostat>
