@@ -134,7 +134,8 @@ class Random(object):
             out: The array to be filled.
         """
 
-        step_size = np.ceil(len(out) / self.n_threads).astype(int)
+        out_flat = out.flatten()
+        step_size = np.ceil(len(out_flat) / self.n_threads).astype(int)
         if step_size < _MIN_STEP_THREADED:
             # falls back to serial if the vector is too small
             self.gfill_serial(out)
@@ -145,7 +146,7 @@ class Random(object):
                 futures[
                     self.executor.submit(
                         self.rng[i].standard_normal,
-                        out=out[step_size * i : step_size * (i + 1)],
+                        out=out_flat[step_size * i : step_size * (i + 1)],
                     )
                 ] = i
             concurrent.futures.wait(futures)

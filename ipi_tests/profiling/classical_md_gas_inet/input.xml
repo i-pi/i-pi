@@ -1,7 +1,8 @@
 <simulation verbosity='medium' threading='false' safe_stride='100'>
-    <ffsocket mode='unix' name='driver' pbc='false'>
+    <ffsocket mode='inet' name='driver' pbc='false'>
          <latency>  1.00000000e-04</latency>
-         <address> gas </address>
+         <address> localhost </address>
+         <port> 12345 </port>
          <exit_on_disconnect> False </exit_on_disconnect>
    </ffsocket>
    <total_steps>10000</total_steps>
