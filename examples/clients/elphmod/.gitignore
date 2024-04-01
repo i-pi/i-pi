@@ -1,0 +1,9 @@
+*.Wmat
+*.epmatwp
+*.ifc
+*.pdf
+*.pickle
+*.wigner
+*.xyz
+*_hr.dat
+RESTART
