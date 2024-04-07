@@ -115,8 +115,12 @@ class Dynamics(Motion):
         self.fixcom = fixcom
         if fixatoms is None:
             self.fixatoms = np.zeros(0, int)
+            self.fixatoms3 = np.zeros(0, int)
         else:
             self.fixatoms = fixatoms
+            self.fixatoms3 = np.array(
+                [[3 * i, 3 * i + 1, 3 * i + 2] for i in self.fixatoms]
+            ).flatten()
 
     def get_fixdof(self):
         """Calculate the number of fixed degrees of freedom, required for
@@ -275,6 +279,7 @@ class DummyIntegrator:
         self.barostat = motion.barostat
         self.fixcom = motion.fixcom
         self.fixatoms = motion.fixatoms
+        self.fixatoms3 = motion.fixatoms3
         self.enstype = motion.enstype
 
         # no need to dpipe these are really just references
@@ -349,35 +354,26 @@ class DummyIntegrator:
         connected to the centroid is chosen.
         """
 
+        beads = self.beads
         if self.fixcom:
-            nb = self.beads.nbeads
-            p = dstrip(self.beads.p)
-            m3 = dstrip(self.beads.m3).reshape((-1, 3))
-            M = self.beads[0].M
+            nb = beads.nbeads
+            p = dstrip(beads.p)
+            m3 = dstrip(beads.m3).reshape((-1, 3))
+            M = beads[0].M
             Mnb = M * nb
 
-            vcom = p.reshape(-1, 3).sum(axis=0) / Mnb
-            self.beads.p -= (m3 * vcom).reshape(nb, -1)
+            vcom = np.sum(p.reshape(-1, 3), axis=0) / Mnb
+            beads.p -= (m3 * vcom).reshape(nb, -1)
 
-            self.ensemble.eens += (vcom**2).sum() * 0.5 * Mnb  # COM kinetic energy
+            self.ensemble.eens += np.sum(vcom**2) * 0.5 * Mnb  # COM kinetic energy
 
         if len(self.fixatoms) > 0:
-            for bp in self.beads.p:
-                m = dstrip(self.beads.m)
-                self.ensemble.eens += 0.5 * np.dot(
-                    bp[self.fixatoms * 3], bp[self.fixatoms * 3] / m[self.fixatoms]
-                )
-                self.ensemble.eens += 0.5 * np.dot(
-                    bp[self.fixatoms * 3 + 1],
-                    bp[self.fixatoms * 3 + 1] / m[self.fixatoms],
-                )
-                self.ensemble.eens += 0.5 * np.dot(
-                    bp[self.fixatoms * 3 + 2],
-                    bp[self.fixatoms * 3 + 2] / m[self.fixatoms],
-                )
-                bp[self.fixatoms * 3] = 0.0
-                bp[self.fixatoms * 3 + 1] = 0.0
-                bp[self.fixatoms * 3 + 2] = 0.0
+            m3 = dstrip(beads.m3)
+            p = dstrip(beads.p)
+            fixatoms3 = self.fixatoms3
+
+            self.ensemble.eens += 0.5 * np.sum(p[:, fixatoms3] ** 2 / m3[:, fixatoms3])
+            beads.p[:, fixatoms3] = 0.0
 
 
 dproperties(

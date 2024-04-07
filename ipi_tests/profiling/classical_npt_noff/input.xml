@@ -1,11 +1,11 @@
-<simulation verbosity='low' threading='false' safe_stride='100'>
+<simulation verbosity='medium' threading='false' safe_stride='100'>
     <fflj name='dummy' pbc='False'>
       <parameters>{eps: 0.0, sigma: 1.0}</parameters>
    </fflj>
-   <total_steps>10000</total_steps>
+   <total_steps>4000</total_steps>
    <output prefix='simulation'>
-      <trajectory stride='10000' filename='pos'> positions </trajectory>
-      <properties stride='10000'> [ step, time, conserved, temperature, kinetic_md, potential, pressure_md, volume ] </properties>
+      <trajectory stride='1000' filename='pos'> positions </trajectory>
+      <properties stride='1000'> [ step, time, conserved, temperature, kinetic_md, potential, pressure_md, volume ] </properties>
    </output>
    <prng>
       <seed>18885</seed>
