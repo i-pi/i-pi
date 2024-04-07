@@ -37,7 +37,7 @@
       ! SOCKET VARIABLES
       INTEGER, PARAMETER :: MSGLEN=12   ! length of the headers of the driver/wrapper communication protocol
       INTEGER socket, inet, port        ! socket ID & address of the server
-      CHARACTER(LEN=1024) :: host
+      CHARACTER(LEN=1024) :: host, sockets_prefix="/tmp/ipi_"
 
       ! COMMAND LINE PARSING
       CHARACTER(LEN=1024) :: cmdbuffer
@@ -111,6 +111,8 @@
             ccmd = 3
          ELSEIF (cmdbuffer == "-o") THEN ! reads the parameters
             ccmd = 4
+         ELSEIF (cmdbuffer == "-S") THEN ! reads the socket prefix
+            ccmd = 5
          ELSEIF (cmdbuffer == "-v") THEN ! flag for verbose standard output
             verbose = 1
          ELSEIF (cmdbuffer == "-vv") THEN ! flag for verbose standard output
@@ -205,6 +207,8 @@
                   par_count = par_count + 1
                ENDDO
                READ(cmdbuffer(commas(par_count)+1:),*) vpars(par_count)
+            ELSEIF (ccmd == 5) THEN
+               sockets_prefix = trim(cmdbuffer)//achar(0)
             ENDIF
             ccmd = 0
          ENDIF
@@ -470,7 +474,7 @@
       ENDIF
 
       ! Calls the interface to the POSIX sockets library to open a communication channel
-      CALL open_socket(socket, inet, port, host)
+      CALL open_socket(socket, inet, port, host, sockets_prefix)
       nat = -1
       DO WHILE (.true.) ! Loops forever (or until the wrapper ends!)
 
@@ -1048,8 +1052,8 @@
     CONTAINS
       SUBROUTINE helpmessage
          ! Help banner
-         WRITE(*,*) " SYNTAX: driver.x [-u] -a address -p port -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|harmonic_bath|meanfield_bath|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json|qtip4pf-c-1-delta|qtip4pf-c-2-delta|qtip4pf-c-json-delta]"
-         WRITE(*,*) "         -o 'comma_separated_parameters' [-v] "
+         WRITE(*,*) " SYNTAX: driver.x [-u] -a address [-p port] -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|harmonic_bath|meanfield_bath|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json|qtip4pf-c-1-delta|qtip4pf-c-2-delta|qtip4pf-c-json-delta]"
+         WRITE(*,*) "         -o 'comma_separated_parameters' [-S sockets_prefix] [-v] "
          WRITE(*,*) ""
          WRITE(*,*) " For LJ potential use -o sigma,epsilon,cutoff "
          WRITE(*,*) " For SG potential use -o cutoff "

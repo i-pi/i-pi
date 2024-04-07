@@ -59,14 +59,19 @@ def Message(mystr):
 
 
 def run_driver(
-    unix=False, address="", port=12345, driver=Dummy_driver(), f_verbose=False
+    unix=False,
+    address="",
+    port=12345,
+    driver=Dummy_driver(),
+    f_verbose=False,
+    sockets_prefix="/tmp/ipi_",
 ):
     """Minimal socket client for i-PI."""
 
     # Opens a socket to i-PI
     if unix:
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        sock.connect("/tmp/ipi_" + address)
+        sock.connect(sockets_prefix + address)
     else:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         # this reduces latency for the small messages passed by the i-PI protocol
@@ -180,6 +185,13 @@ if __name__ == "__main__":
         type=str,
         default="localhost",
         help="Host name (for INET sockets) or name of the UNIX domain socket to connect to.",
+    )
+    parser.add_argument(
+        "-S",
+        "--sockets_prefix",
+        type=str,
+        default="/tmp/ipi_",
+        help="Prefix used for the unix domain sockets. Ignored when using TCP/IP sockets.",
     )
     parser.add_argument(
         "-p",

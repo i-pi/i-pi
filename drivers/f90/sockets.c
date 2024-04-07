@@ -51,7 +51,7 @@ Functions:
     #include <time.h>
 #endif
 
-void open_socket(int *psockfd, int* inet, int* port, const char* host)
+void open_socket(int *psockfd, int* inet, int* port, const char* host, const char* sockets_prefix)
 /* Opens a socket.
 
 Note that fortran passes an extra argument for the string length, but this is
@@ -107,8 +107,8 @@ Args:
       // fills up details of the socket addres
       memset(&serv_addr, 0, sizeof(serv_addr));
       serv_addr.sun_family = AF_UNIX;
-      strcpy(serv_addr.sun_path, "/tmp/ipi_");
-      strcpy(serv_addr.sun_path+9, host);
+      strcpy(serv_addr.sun_path, sockets_prefix);
+      strcpy(serv_addr.sun_path+strlen(sockets_prefix), host);
       // creates a unix socket
   
       // creates the socket

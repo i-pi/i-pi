@@ -30,12 +30,13 @@ IPI_PATH=
 ## Input file
 IPI_INPUT=input.xml
 
-## Driver command
-IPI_DRIVER="i-pi-driver -a slurm-one-node -m zundel -u -v"
-DRIVER_INPUT=driver.in  # ignored for the example
-
 ## Determines the address of the Unix-domain socket used in the input
 IPI_ADDRESS=$(grep '<address>' $IPI_INPUT | sed 's/[^>]*>[[:space:]]*//; s/[[:space:]]*<.*//')
+
+## Driver command
+IPI_DRIVER="i-pi-driver -a $IPI_ADDRESS -m zundel -u -v"
+DRIVER_INPUT=driver.in  # ignored for the example
+
 
 ## We create a UUID to make sure there are no name clashes with other processes,
 ## or with previous failed runs that left socket files behind

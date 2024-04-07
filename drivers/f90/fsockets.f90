@@ -56,10 +56,10 @@
         REAL(C_DOUBLE), value :: seconds
     END SUBROUTINE c_sleep
 
-    SUBROUTINE open_csocket(psockfd, inet, port, host) BIND(C, name="open_socket")
+    SUBROUTINE open_csocket(psockfd, inet, port, host, sockets_prefix) BIND(C, name="open_socket")
       USE ISO_C_BINDING
     INTEGER(KIND=C_INT)                      :: psockfd, inet, port
-    CHARACTER(KIND=C_CHAR), DIMENSION(*)     :: host
+    CHARACTER(KIND=C_CHAR), DIMENSION(*)     :: host, sockets_prefix
 
     END SUBROUTINE open_csocket
 
@@ -90,15 +90,17 @@
       CALL c_sleep(sleep_seconds)
    END SUBROUTINE 
 
-   SUBROUTINE open_socket(psockfd, inet, port, host)      
+   SUBROUTINE open_socket(psockfd, inet, port, host, sockets_prefix)      
       IMPLICIT NONE
       INTEGER, INTENT(IN) :: inet, port
       INTEGER, INTENT(OUT) :: psockfd
-      CHARACTER(LEN=1024), INTENT(IN) :: host
+      CHARACTER(LEN=1024), INTENT(IN) :: host, sockets_prefix
       CHARACTER(LEN=1,KIND=C_CHAR) :: chost(1024)
+      CHARACTER(LEN=1,KIND=C_CHAR) :: csock(1024)
 
       CALL fstr2cstr(host, chost)
-      CALL open_csocket(psockfd, inet, port, host)
+      CALL fstr2cstr(sockets_prefix, csock)
+      CALL open_csocket(psockfd, inet, port, chost, csock)
    END SUBROUTINE
 
    SUBROUTINE fstr2cstr(fstr, cstr, plen)
