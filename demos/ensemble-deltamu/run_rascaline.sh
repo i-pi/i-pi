@@ -5,17 +5,10 @@ export OMP_NUM_THREADS=1
 ipi=i-pi
 driver=i-pi-py_driver
 
-# ----- SET THE PLUMED AND IPI SOURCE PATHS -----
-PLUMED_PATH=/Users/matthiaskellner/Documents/PhD/packages/ipi-feature/plumed-2.8.3
-IPI_PATH=/Users/matthiaskellner/Documents/PhD/packages/ipi-feature/i-pi
-
 rm /tmp/ipi*
-source  $PLUMED_PATH/sourceme.sh
-
 plumed_path=$(which plumed)
 echo "Plumed is located at: $plumed_path"
 
-export PLUMED_KERNEL=$PLUMED_PATH/src/lib/libplumedKernel.dylib
 export MLIP_DIR=$PWD/H2O/driver/
 
 sleep_time=2
