@@ -33,7 +33,7 @@ class DoubleWell_driver(Dummy_driver):
     def __init__(self, args=None, verbose=None):
         self.error_msg = """\nDW driver accepts 0 or 4 arguments.\nExample: python driver.py -m DoubleWell -o omega_b (cm^-1) V0 (cm^-1) mass(a.u) delta(angs) \n
         python driver.py -m DoubleWell -o 500,2085,1837,0.00 \n"""
-        super(DoubleWell_driver, self).__init__(args)
+        super(DoubleWell_driver, self).__init__(args, error_msg=self.error_msg)
 
     def check_arguments(self):
         """Function that checks the arguments required to run the driver"""

@@ -44,8 +44,12 @@ class DoubleWell_with_explicit_bath_driver(Dummy_driver):
         self.error_msg = """\nDW+explicit_bath driver expects 9 arguments.\n
         Example: python driver.py -m DoubleWell_with_explicit_bath -o omega_b (cm^-1) V0 (cm^-1) mass delta(\AA) eta0  eps1 eps2  deltaQ omega_c(cm^-1)     \n
         python driver.py -m DoubleWell -o 500,2085,1837,0.00,1,0,0,1,500\n"""
-        self.args = args
-        self.check_arguments()
+        super(DoubleWell_with_explicit_bath_driver, self).__init__(
+            args, error_msg=self.error_msg
+        )
+        # self.args = args
+        # self.check_arguments()
+
         self.init = False
 
     def check_arguments(self):
