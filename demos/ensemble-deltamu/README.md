@@ -1,4 +1,4 @@
-Solid-liquid free energy with uncertainty quantification
+conSolid-liquid free energy with uncertainty quantification
 ========================================================
 
 This example demonstrates a rather sophisticated setup to compute the $\Delta\mu_{SL}$ 
@@ -28,6 +28,8 @@ In order to install the necessary packages for the MLIP we provide a setup scrip
 IMPORTANT: We recommend to install the packages in a fresh virtual environment.
 
 ```
+conda create --name deltamu
+conda activate deltamu
 ./install_dependencies.sh
 ```
 
