@@ -756,8 +756,11 @@ class SpringMapper(object):
             #    #g[i, :] +=  self.omega2 * (self.dbeads.q[i, :] - self.dbeads.q[i - 1, :])
             #    g[i, :] += self.dbeads.m3[i, :] * self.omega2 * (self.dbeads.q[i, :] - self.dbeads.q[i - 1, :])
             gq_k = np.dot(self.C, self.dbeads.q)
-            e = 0.5 * np.sum( np.power(self.omegak,2)[:, np.newaxis] * (self.dbeads.m3 * np.power(gq_k, 2)) )
-            
+            e = 0.5 * np.sum(
+                np.power(self.omegak, 2)[:, np.newaxis]
+                * (self.dbeads.m3 * np.power(gq_k, 2))
+            )
+
             g = self.dbeads.m3[0] * np.dot(
                 self.C.T, gq_k * (self.omegak**2)[:, np.newaxis]
             )
@@ -1611,20 +1614,22 @@ class NROptimizer(HessianOptimizer):
         activearrays = self.pre_step(step)
 
         dyn_mat = get_dynmat(
-            activearrays["hessian"], self.sm.dbeads.m3, self.sm.dbeads.nbeads
+            activearrays["hessian"],
+            self.mapper.sm.dbeads.m3,
+            self.mapper.sm.dbeads.nbeads,
         )
         h_up_band = banded_hessian(
-            dyn_mat, self.sm, masses=False, shift=0.0000001
+            dyn_mat, self.mapper.sm, masses=False, shift=0.0000001
         )  # create upper band matrix
 
         fff = activearrays["old_f"] * (self.mapper.coef[1:] + self.mapper.coef[:-1]) / 2
-        f = (fff + self.sm.f).reshape(
-            self.sm.dbeads.natoms * 3 * self.sm.dbeads.nbeads, 1
+        f = (fff + self.mapper.sm.f).reshape(
+            self.mapper.sm.dbeads.natoms * 3 * self.mapper.sm.dbeads.nbeads, 1
         )
-        f = np.multiply(f, self.sm.dbeads.m3.reshape(f.shape) ** -0.5)
+        f = np.multiply(f, self.mapper.sm.dbeads.m3.reshape(f.shape) ** -0.5)
 
-        d_x = invmul_banded(h_up_band, f).reshape(self.sm.dbeads.q.shape)
-        d_x = np.multiply(d_x, self.sm.dbeads.m3**-0.5)
+        d_x = invmul_banded(h_up_band, f).reshape(self.mapper.sm.dbeads.q.shape)
+        d_x = np.multiply(d_x, self.mapper.sm.dbeads.m3**-0.5)
 
         # Rescale step if necessary
         if np.amax(np.absolute(d_x)) > activearrays["big_step"]:
