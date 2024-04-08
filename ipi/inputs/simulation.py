@@ -147,7 +147,7 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
             {
                 "dtype": str,
                 "default": "/tmp/ipi_",
-                "help": "A prefix prepended to all Unix-domain sockets.",
+                "help": "A prefix prepended to the `address` value to form the UNIX-domain socket location.",
             },
         ),
     }

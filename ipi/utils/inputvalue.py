@@ -829,12 +829,15 @@ class Input(object):
             # For classes such as InputCell, self._default is not the value,
             # instead it is an object that is stored, putting the default value in
             # self.value. For this reason we print out self.value at this stage,
-            # and not self._default
+            # and not self._default. We also escape underscores that might appear
+            # in the default string value.
             rstr += (
                 "\n"
                 + indent
                 + "*default*: "
-                + self.pprint(self.value, indent=indent, latex=False)
+                + self.pprint(self.value, indent=indent, latex=False).replace(
+                    "_", r"\_"
+                )
                 + "\n"
             )
 
