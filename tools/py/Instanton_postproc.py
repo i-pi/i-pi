@@ -393,11 +393,11 @@ if case == "reactant":
     else:
         Qrot = 1.0
 
-    outfile = open("freq.dat", "w")
-    aux = np.zeros(nzeros)
-    dd = np.concatenate((aux, d))
-    np.savetxt(outfile, dd.reshape(1, dd.size))
-    outfile.close()
+    # outfile = open("freq.dat", "w")
+    # aux = np.zeros(nzeros)
+    # dd = np.concatenate((aux, d))
+    # np.savetxt(outfile, dd.reshape(1, dd.size))
+    # outfile.close()
 
     # logQvib    = -np.sum( np.log( 2*np.sinh( (beta*hbar*np.sqrt(d)/2.0) )  ))   #Limit n->inf
     logQvib_rp = -get_rp_freq(d, nbeadsR, temp)
