@@ -745,6 +745,9 @@ class SpringMapper(object):
             e = 0.00
             g = np.zeros(self.dbeads.q.shape, float)
 
+            for i in range(self.dbeads.nbeads - 1):
+                dq = self.dbeads.q[i + 1, :] - self.dbeads.q[i, :]
+                e += self.omega2 * 0.5 * np.dot(self.dbeads.m3[0] * dq, dq)
             # OLD reference
             # for i in range(self.dbeads.nbeads - 1):
             #    dq = self.dbeads.q[i + 1, :] - self.dbeads.q[i, :]
