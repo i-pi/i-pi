@@ -46,8 +46,7 @@ class DoubleWell_driver(Dummy_driver):
             self.delta = 00
         else:
             try:
-                arglist = self.args.split(",")
-                param = list(map(float, arglist))
+                param = list(map(float, self.args))
                 assert len(param) == 4
                 w_b = param[0] * invcm2au
                 v0 = param[1] * invcm2au

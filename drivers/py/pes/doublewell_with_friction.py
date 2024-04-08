@@ -50,8 +50,9 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
 
         self.k = 1837.36223469 * (3800.0 / 219323.0) ** 2
         try:
-            arglist = self.args.split(",")
-            param = list(map(float, arglist))
+            param = list(map(float, self.args))
+            # arglist = self.args.split(",")
+            # param = list(map(float, arglist))
             assert len(param) == 8
             w_b = param[0] * invcm2au
             v0 = param[1] * invcm2au

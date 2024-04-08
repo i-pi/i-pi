@@ -62,8 +62,7 @@ class DDW_with_explicit_bath_driver(Dummy_driver):
         """Function that checks the arguments required to run the driver"""
 
         try:
-            arglist = self.args.split(",")
-            param = list(map(float, arglist))
+            param = list(map(float, self.args))
             assert len(param) == 12
             wb1 = param[0] * invcm2au
             v1 = param[1] * invcm2au
