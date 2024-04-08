@@ -42,11 +42,9 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
         self.error_msg = """\nDW+fric driver expects 8 arguments.\n
         Example: python driver.py -m DoubleWell_with_fric -o omega_b (cm^-1) V0 (cm^-1) mass delta(\AA) eta0  eps1 eps2  deltaQ      \n
         python driver.py -m DoubleWell -o 500,2085,1837,0.00,1,0,0,1\n"""
-        super(DoubleWell_with_friction_driver, self).__init__(
-            args, error_msg=self.error_msg
-        )
-        # self.args = args
-        # self.check_arguments()
+        self.args = args.split(",")
+        self.verbose = verbose
+        self.check_arguments()
 
     def check_arguments(self):
         """Function that checks the arguments required to run the driver"""
