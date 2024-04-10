@@ -25,6 +25,8 @@ monolayer tantalum disulfide. Running `make` performs the following steps:
 2. Based on these data, we can build a supercell model and set up the driver
    with `make driver` or `python3 driver.py`. This will create files with the
    driver object (`driver.pickle`) and initial ionic positions (`driver.xyz`).
+   Note that the dummy `driver.xyz` required for testing will be overwritten.
+   Git will show the file as modified (or deleted after running `make clean`).
    Setting up the driver only once in a separate script is more efficient when
    launching it multiple times later.
 
