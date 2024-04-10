@@ -301,7 +301,8 @@ class Driver(DriverSocket):
             return Status.Up
 
     def _getstatus_direct(self):
-        """Gets driver status. Relies of blocking send/recv, which might lead to timeouts
+        """Gets driver status. Relies on blocking send/recv, which might lead to 
+        timeouts with slow networks.
 
         Returns:
            An integer labelling the status via bitwise or of the relevant members
@@ -340,6 +341,7 @@ class Driver(DriverSocket):
             return Status.Up
 
     # depending on the system either _select or _direct can be slightly faster
+    # if you're network limited it might be worth experimenting changing this
     _getstatus = _getstatus_select
 
     def get_status(self):
