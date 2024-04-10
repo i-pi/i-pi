@@ -90,6 +90,7 @@ Args:
       sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
       if (sockfd < 0) { perror("Error opening socket"); exit(-1); }
 
+      // set TCP_NODELAY=1 to disable Nagle's algorithm as it slows down the small transactions for i-PI
       flag = 1;
       int result = setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(int));
       if (result < 0) { perror("Error setting TCP_NODELAY"); }
