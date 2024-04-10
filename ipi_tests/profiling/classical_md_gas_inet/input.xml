@@ -5,7 +5,7 @@
          <port> 12345 </port>
          <exit_on_disconnect> False </exit_on_disconnect>
    </ffsocket>
-   <total_steps>10000</total_steps>
+   <total_steps>4000</total_steps>
    <output prefix='simulation'>
       <trajectory stride='1000' filename='pos'> positions </trajectory>
       <properties stride='1000'> [ step, time, conserved, temperature, kinetic_md, potential, pressure_md, volume ] </properties>
