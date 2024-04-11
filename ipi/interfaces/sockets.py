@@ -301,7 +301,7 @@ class Driver(DriverSocket):
             return Status.Up
 
     def _getstatus_direct(self):
-        """Gets driver status. Relies on blocking send/recv, which might lead to 
+        """Gets driver status. Relies on blocking send/recv, which might lead to
         timeouts with slow networks.
 
         Returns:
