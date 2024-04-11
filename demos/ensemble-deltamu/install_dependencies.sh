@@ -1,13 +1,18 @@
 #!/bin/bash
 
-conda install -c conda-forge rust python=3.10
-conda install --strict-channel-priority -c plumed/label/masterclass-2022 -c conda-forge plumed py-plumed
+#macOS related flag
+export MACOSX_DEPLOYMENT_TARGET=11
+
+#purge the pip cache
+pip cache purge
+
+conda install -c conda-forge rust=1.74 python=3.10
 
 git clone -b move-rascaline git@github.com:bananenpampe/H2O.git
 
 # pip installs
-pip install cmake numpy
-pip install --extra-index-url https://download.pytorch.org/whl/cpu torch==2.2.0
+pip install cmake==3.29.0 numpy
+pip install --extra-index-url https://download.pytorch.org/whl/cpu torch==2.0.1
 
 export RASCALINE_COMMIT=55ad1f14363812639c865801a6d517d8c5f363f6
 export METATENSOR_OPERATIONS_COMMIT=646f1f49c1d9cc18c3fa0d62e2c15e630b8d9d8c
@@ -30,5 +35,7 @@ pip install -r requirements.txt
 # modifies the i_pi drivers
 cp ./H2O/ipi_driver/lightning.py ../../drivers/py/pes/
 
-export PLUMED_KERNEL=$PWD/plumed-masterclass-2022/lib/libplumedKernel.so
+# export PLUMED_KERNEL=$PWD/plumed-masterclass-2022/lib/libplumedKernel.so
 export MLIP_DIR=$PWD/H2O/driver/
+
+pip install -e ../../.
