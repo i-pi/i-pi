@@ -185,13 +185,15 @@
                   vstyle = 63
                ELSEIF (trim(cmdbuffer) == "qtip4pf-c-2-delta") THEN
                   vstyle = 64
+               ELSEIF (trim(cmdbuffer) == "qtip4pf-c-json-delta") THEN
+                  vstyle = 65
                ELSEIF (trim(cmdbuffer) == "gas") THEN
                   vstyle = 0  ! ideal gas
                ELSEIF (trim(cmdbuffer) == "dummy") THEN
                   vstyle = 99 ! returns non-zero but otherwise meaningless values
                ELSE
                   WRITE(*,*) " Unrecognized potential type ", trim(cmdbuffer)
-                  WRITE(*,*) " Use -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json|qtip4pf-c-1-delta|qtip4pf-c-2-delta|harmonic_bath|meanfield_bath] "
+                  WRITE(*,*) " Use -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|harmonic_bath|meanfield_bath|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json|qtip4pf-c-1-delta|qtip4pf-c-2-delta|qtip4pf-c-json-delta] "
                   STOP "ENDED"
                ENDIF
             ELSEIF (ccmd == 4) THEN
@@ -678,7 +680,7 @@
                   STOP "ENDED"
                ENDIF
                CALL qtip4pf_sr(atoms,nat,forces,pot,virial)
-            ELSEIF (vstyle .ge. 60 .and. vstyle .le. 64 ) THEN 
+            ELSEIF (vstyle .ge. 60 .and. vstyle .le. 65 ) THEN 
                ! qtip4pf committee potential. adds two different types of (small)
                ! LJ potentials just to have variations on a theme
 
@@ -693,7 +695,7 @@
                   WRITE(*,*) " qtip4pf PES only works with orthorhombic cells", cell_h(1,2), cell_h(1,3), cell_h(2,3)
                   STOP "ENDED"
                ENDIF
-               IF (vstyle == 63 .or. vstyle == 64) THEN
+               IF (vstyle == 63 .or. vstyle == 64 .or. vstyle == 65) THEN
                   pot = 0.0
                   forces = 0.0
                   virial = 0.0
@@ -735,7 +737,7 @@
                   CALL LJ_getall(rc, 2.5d0, 2d-6, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
                ELSEIF (vstyle == 61 .or. vstyle == 64) THEN ! type 2
                   CALL LJ_getall(rc, 2.1d0, 24d-6, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
-               ELSEIF (vstyle == 62) THEN ! returns both as json
+               ELSEIF (vstyle == 62 .or. vstyle == 65) THEN ! returns both as json
                   ! return both the committee members as a JSON extra string
                   CALL LJ_getall(rc, 2.5d0, 2d-6, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
                   
@@ -1016,7 +1018,7 @@
                CALL writebuffer(socket,TRIM(longbuffer),cbuf)
                IF (verbose > 1) WRITE(*,*) "    !write!=> extra: ", &               
      &         initbuffer
-            ELSEIF (vstyle==62) THEN ! returns committee data
+            ELSEIF (vstyle==62 .or. vstyle==65) THEN ! returns committee data
                cbuf = LEN_TRIM(initbuffer)
                CALL writebuffer(socket,cbuf)
                CALL writebuffer(socket,initbuffer,cbuf)
@@ -1046,9 +1048,7 @@
     CONTAINS
       SUBROUTINE helpmessage
          ! Help banner
-
-         WRITE(*,*) " SYNTAX: driver.x [-u] -h hostname -p port -m [dummy|gas|lj|sg|harm|harm3d|morse|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|..."
-         WRITE(*,*) "...|MB|doublewell|doublewell_1D|harmonic_bath|meanfield_bath|morsedia|qtip4pf-sr|water_dip_pol]"
+         WRITE(*,*) " SYNTAX: driver.x [-u] -a address -p port -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|harmonic_bath|meanfield_bath|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json|qtip4pf-c-1-delta|qtip4pf-c-2-delta|qtip4pf-c-json-delta]"
          WRITE(*,*) "         -o 'comma_separated_parameters' [-v] "
          WRITE(*,*) ""
          WRITE(*,*) " For LJ potential use -o sigma,epsilon,cutoff "
@@ -1058,7 +1058,7 @@
          WRITE(*,*) " For qtip4pf-efield use -o Ex,Ey,Ez with Ei in V/nm"
          WRITE(*,*) " For ljpolymer use -o n_monomer,sigma,epsilon,cutoff "
          WRITE(*,*) " For gas, dummy, use the optional -o sleep_seconds to add a delay"
-         WRITE(*,*) " For the ideal qtip4pf, qtip4p-sr, zundel, ch4hcbe, nasa, doublewell or doublewell_1D no options are needed! "
+         WRITE(*,*) " For the ideal, qtip4pf*, zundel, ch4hcbe, nasa, doublewell or doublewell_1D no options are needed! "
        END SUBROUTINE helpmessage
 
    END PROGRAM
