@@ -235,9 +235,6 @@
             DOUBLE PRECISION, DIMENSION(3) :: fij, rij, rhar1, rhar2, fhar1, fhar2
             DOUBLE PRECISION r2, pot_ij, pot_lr, vir_lr, volume, pot_har1, r21, stiffness, x0
 
-            forces = 0.0d0
-            pot = 0.0d0
-            virial = 0.0d0
             x0=sigma
 
             start = 1

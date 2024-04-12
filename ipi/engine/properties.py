@@ -15,7 +15,7 @@ from ipi.utils.units import Constants, unit_to_internal
 from ipi.utils.mathtools import logsumlog, h2abc_deg
 from ipi.utils.io.inputs import io_xml
 
-__all__ = ["Properties", "Trajectories", "getkey", "getall", "help_latex"]
+__all__ = ["Properties", "Trajectories", "getkey", "getall", "help_latex", "help_rst"]
 
 
 def getkey(pstring):
@@ -1334,7 +1334,7 @@ class Properties:
             atom, iatom, latom, skip_atom_indices=set(self.nm.bosons)
         )
         if bosons_included:
-            res += self.nm.exchange.get_kinetic_td()
+            res += self.nm.exchange_potential.kinetic_td
             ncount += len(bosons_included)
 
         if ncount == 0:
@@ -2705,19 +2705,19 @@ class Properties:
         return ti
 
     def get_exchange_distinct_prob(self):
-        if self.nm.exchange is None:
+        if self.nm.exchange_potential is None:
             raise Exception("No bosons found for exchange_distinct_prob")
-        return self.nm.exchange.get_distinct_probability()
+        return self.nm.exchange_potential.distinct_probability
 
     def get_exchange_longest_prob(self):
-        if self.nm.exchange is None:
+        if self.nm.exchange_potential is None:
             raise Exception("No bosons found for exchange_all_prob")
-        return self.nm.exchange.get_longest_probability()
+        return self.nm.exchange_potential.longest_probability
 
     def get_fermionic_sign(self):
-        if self.nm.exchange is None:
+        if self.nm.exchange_potential is None:
             raise Exception("No bosons found for fermionic_sign")
-        return self.nm.exchange.get_fermionic_sign()
+        return self.nm.exchange_potential.fermionic_sign
 
 
 class Trajectories:

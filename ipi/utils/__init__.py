@@ -11,6 +11,7 @@ __all__ = [
     "mathtools",
     "prng",
     "inputvalue",
+    "parsing",
     "nmtransform",
     "messages",
     "softexit",

@@ -164,7 +164,7 @@ class InputSCPhonons(InputDictionary):
 
     dynamic = {}
 
-    default_help = "Fill in."
+    default_help = "Self-consistent phonons class. It variationally optimizes the free energy to calculate the best harmonic approximation to a system."
     default_label = "SCPHONONS"
 
     def store(self, phonons):

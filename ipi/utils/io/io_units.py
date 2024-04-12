@@ -125,7 +125,4 @@ def process_units(
     atoms.names[:] = names
     atoms.m[:] = masses
 
-    return {
-        "atoms": atoms,
-        "cell": cell,
-    }
+    return {"atoms": atoms, "cell": cell, "comment": comment}

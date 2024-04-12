@@ -175,15 +175,12 @@
             DOUBLE PRECISION, DIMENSION(3) :: fij, rij
             DOUBLE PRECISION r2, pot_ij, pot_lr, vir_lr, volume
 
-            forces = 0.0d0
-            pot = 0.0d0
-            virial = 0.0d0
-
             start = 1
 
             DO i = 1, natoms - 1
                ! Only loops over the neigbour list, not all the atoms.
                DO j = start, index_list(i)
+                  
                   CALL vector_separation(cell_h, cell_ih, atoms(i,:), atoms(n_list(j),:), rij, r2)
                   IF (r2 < rc*rc) THEN ! Only calculates contributions between neighbouring particles.
                      CALL LJ_fij(sigma, eps, rij, sqrt(r2), pot_ij, fij)

@@ -1,0 +1,7 @@
+        filename                                       format
+-------------------------------------------------------------------
+ref_simulation.instanton_FINAL_15.xyz                    xyz
+ref_simulation.instanton_FINAL_forces_15.xyz             xyz
+ref_simulation.instanton_FINAL.hess_15                  numpy   all,1.e-7,1e-6
+ref_simulation.instantonfric_FINAL.hess_15              numpy   all,1.e-7,1e-6
+ref_simulation.out                                      numpy   
