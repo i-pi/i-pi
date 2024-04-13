@@ -1,6 +1,6 @@
 <simulation verbosity="low" threading="True">
    <output prefix="pinning">
-    <properties stride='50' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, potential{electronvolt}, pressure_cv{megapascal}, volume{angstrom3}, cell_h{angstrom} ] </properties>
+       <properties stride='50' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, potential{electronvolt}, pressure_cv{megapascal}, volume{angstrom3}, cell_h{angstrom}, bias{electronvolt} ] </properties>
     <trajectory filename='committee_pot' stride='50' extra_type='committee_pot'> extras </trajectory>       
     <trajectory filename="pos" stride="1000" cell_units="angstrom" format="xyz"> positions{angstrom} </trajectory>
     <trajectory filename='extra' stride='1000'> extras </trajectory>
