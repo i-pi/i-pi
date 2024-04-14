@@ -11,7 +11,7 @@ conda install -c conda-forge rust=1.74 python=3.10
 #install plumed and pyplumed from i-pi-demo channel with crystallization enabled
 conda install --strict-channel-priority -c plumed/label/ipi-demo -c conda-forge plumed py-plumed
 
-git clone -b move-rascaline git@github.com:bananenpampe/H2O.git
+git clone -b i-pi-demo git@github.com:bananenpampe/H2O.git
 
 # pip installs
 pip install cmake==3.29.0 numpy
