@@ -41,4 +41,5 @@ cp ./H2O/ipi_driver/lightning.py ../../drivers/py/pes/
 # export PLUMED_KERNEL=$PWD/plumed-masterclass-2022/lib/libplumedKernel.so
 export MLIP_DIR=$PWD/H2O/driver/
 
+. ../../env.sh
 pip install -e ../../.
