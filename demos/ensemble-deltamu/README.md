@@ -225,8 +225,25 @@ value for the pinning potential).
 $ tail -n +1000 COLVAR | awk '{print $3-165}' > QQbar
 ```
 
+The ensemble of physical potentials is printed out by i-PI into 
+`pinning.committee_pot_0`, with some comment lines that can be eliminated for simplicity
 
+```bash
+$ grep -v \# pinning.committee_pot_0 | tail -n +1000 > POTS
+```
 
+NB: it is important that the two files are "synchronized", i.e. they use the same stride 
+and start at the same point.
 
+You can inspect the two files separately, or run the data analysis using the `i-pi-committee-reweight`
+script, that performs a CEA (or direct reweighting) analysis based on these two files
 
+```bash
+$ i-pi-committee-reweight POTS QQbar --kt 0.00088670724
+```
 
+This will write out average and standard deviation of $\langle Q(A) - \bar{Q} \rangle$, as well
+as the values for each ensemble. 
+By repeating this analysis for several temperatures, one can fit a linear relation linking $\Delta \mu$ 
+to $T$, obtain the intercept and therefore an ensemble of melting temperatures, from which one can obtain
+mean and standard error. 
