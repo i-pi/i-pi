@@ -1,9 +1,9 @@
-<simulation verbosity="low" threading="True">
+<simulation verbosity="medium" threading="True" safe_stride="10">
    <output prefix="pinning">
-    <properties stride='10' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, potential{electronvolt}, pressure_cv{megapascal}, volume{angstrom3}, cell_h{angstrom} ] </properties>
+       <properties stride='10' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, potential{electronvolt}, ensemble_bias{electronvolt}, pressure_cv{megapascal}, volume{angstrom3}, cell_h{angstrom} ] </properties>
     <trajectory filename='committee_pot' stride='10' extra_type='committee_pot'> extras </trajectory> 
     <trajectory filename="pos" stride="1000" cell_units="angstrom" format="xyz"> positions{angstrom} </trajectory>
-    <trajectory filename='extra' stride='100'> extras </trajectory>    
+    <trajectory filename='extra' stride='1000'> extras </trajectory>    
     <checkpoint stride='2500'></checkpoint>
    </output>
    <total_steps> 1000000  </total_steps>
