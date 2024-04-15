@@ -131,6 +131,7 @@ class DriverSocket(socket.socket):
             sock.family, sock.type, sock.proto, fileno=socket.dup(sock.fileno())
         )
         self.settimeout(sock.gettimeout())
+
         self._buf = np.zeros(0, np.byte)
         if socket:
             self.peername = self.getpeername()
@@ -245,8 +246,8 @@ class Driver(DriverSocket):
 
         super(DriverSocket, self).shutdown(how)
 
-    def _getstatus(self):
-        """Gets driver status.
+    def _getstatus_select(self):
+        """Gets driver status. Uses socket.select to make sure one can read/write on the socket.
 
         Returns:
            An integer labelling the status via bitwise or of the relevant members
@@ -298,6 +299,50 @@ class Driver(DriverSocket):
         else:
             warning(" @SOCKET:    Unrecognized reply: " + str(reply), verbosity.low)
             return Status.Up
+
+    def _getstatus_direct(self):
+        """Gets driver status. Relies on blocking send/recv, which might lead to
+        timeouts with slow networks.
+
+        Returns:
+           An integer labelling the status via bitwise or of the relevant members
+           of Status.
+        """
+
+        if not self.waitstatus:
+            try:
+                self.send_msg("status")
+                self.waitstatus = True
+            except socket.error:
+                return Status.Disconnected
+        try:
+            reply = self.recv_msg(HDRLEN)
+            self.waitstatus = False  # got some kind of reply
+        except socket.timeout:
+            warning(" @SOCKET:   Timeout in status recv!", verbosity.debug)
+            return Status.Up | Status.Busy | Status.Timeout
+        except:
+            warning(
+                " @SOCKET:   Other socket exception. Disconnecting client and trying to carry on.",
+                verbosity.debug,
+            )
+            return Status.Disconnected
+
+        if not len(reply) == HDRLEN:
+            return Status.Disconnected
+        elif reply == MESSAGE["ready"]:
+            return Status.Up | Status.Ready
+        elif reply == MESSAGE["needinit"]:
+            return Status.Up | Status.NeedsInit
+        elif reply == MESSAGE["havedata"]:
+            return Status.Up | Status.HasData
+        else:
+            warning(" @SOCKET:    Unrecognized reply: " + str(reply), verbosity.low)
+            return Status.Up
+
+    # depending on the system either _select or _direct can be slightly faster
+    # if you're network limited it might be worth experimenting changing this
+    _getstatus = _getstatus_select
 
     def get_status(self):
         """Sets (and returns) the client internal status. Wait for an answer if
@@ -618,7 +663,15 @@ class InterfaceSocket(object):
 
         elif self.mode == "inet":
             self.server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-            self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+
+            try:
+                self.server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+                # TCP_NODELAY is set because Nagle's algorithm slows down a lot
+                # the communication pattern of i-PI
+                self.server.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            except OSError as e:
+                warning(f"Error setting socket options {e}")
+
             self.server.bind((self.address, self.port))
             info(
                 "Created inet socket with address "

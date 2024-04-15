@@ -1,4 +1,4 @@
-<simulation verbosity='low' threading='false' safe_stride='100'>
+<simulation verbosity='medium' threading='false' safe_stride='100'>
     <ffsocket mode='unix' name='driver' pbc='false'>
          <latency>  1.00000000e-04</latency>
          <address> gas </address>
@@ -6,8 +6,8 @@
    </ffsocket>
    <total_steps>10000</total_steps>
    <output prefix='simulation'>
-      <trajectory stride='10000' filename='pos'> positions </trajectory>
-      <properties stride='10000'> [ step, time, conserved, temperature, kinetic_md, potential, pressure_md, volume ] </properties>
+      <trajectory stride='1000' filename='pos'> positions </trajectory>
+      <properties stride='1000'> [ step, time, conserved, temperature, kinetic_md, potential, pressure_md, volume ] </properties>
    </output>
    <prng>
       <seed>18885</seed>
