@@ -8,15 +8,15 @@
    </ffsocket>
    <ffplumed name="plumed-200K">
          <file mode="xyz">./h5o2+.xyz</file>
-         <plumeddat> plumed-200K/plumed.dat </plumeddat>
+         <plumeddat> plumed_200K/plumed.dat </plumeddat>
    </ffplumed>
    <ffplumed name="plumed-250K">
          <file mode="xyz">./h5o2+.xyz</file>
-         <plumeddat> plumed-250K/plumed.dat </plumeddat>
+         <plumeddat> plumed_250K/plumed.dat </plumeddat>
    </ffplumed>
    <ffplumed name="plumed-320K">
          <file mode="xyz">./h5o2+.xyz</file>
-         <plumeddat> plumed-320K/plumed.dat </plumeddat>
+         <plumeddat> plumed_320K/plumed.dat </plumeddat>
    </ffplumed>
    <total_steps>20000</total_steps>
    <output prefix="data">
