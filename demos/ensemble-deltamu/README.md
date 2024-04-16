@@ -222,14 +222,14 @@ In our case, we want to compute the correction to $y= (Q(A) - \bar{Q})$; discard
 value for the pinning potential). 
 
 ```bash
-$ tail -n +1000 COLVAR | awk '{print $3-165}' > QQbar
+$ tail -n +2000 COLVAR | awk '{print $3-165}' > QQbar
 ```
 
 The ensemble of physical potentials is printed out by i-PI into 
 `pinning.committee_pot_0`, with some comment lines that can be eliminated for simplicity
 
 ```bash
-$ grep -v \# pinning.committee_pot_0 | tail -n +1000 > POTS
+$ grep -v \# pinning.committee_pot_0 | tail -n +2000 > POTS
 ```
 
 NB: it is important that the two files are "synchronized", i.e. they use the same stride 
