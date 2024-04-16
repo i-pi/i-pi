@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
 
+"""See [documentation](https://janberges.github.io/elphmod/modules/md.html)."""
+
 import elphmod
 
 el = elphmod.el.Model("model", rydberg=True)

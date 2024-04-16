@@ -7,9 +7,8 @@ for the symmetric one, using the approximation of a linearized electron-lattice
 coupling. This realizes *model III* by Schobert *et al.*, [SciPost Phys. **16**,
 046 (2024)](https://doi.org/10.21468/SciPostPhys.16.2.046).
 
-elphmod can be installed with `pip` or from `conda-forge`. Since we need the
-Python driver `ipi._driver`, i-PI must be installed with `pip` or `setuptools`;
-running `source env.sh` is not enough. For plotting, `matplotlib` is required.
+The Python packages `elphmod` and `matplotlib` (for plotting only) are required.
+Both can be installed with `pip` or from `conda-forge`.
 
 This example performs the structural optimization of a charge-density wave in
 monolayer tantalum disulfide. Running `make` performs the following steps:
@@ -27,14 +26,13 @@ monolayer tantalum disulfide. Running `make` performs the following steps:
    driver object (`driver.pickle`) and initial ionic positions (`driver.xyz`).
    Note that the dummy `driver.xyz` required for testing will be overwritten.
    Git will show the file as modified (or deleted after running `make clean`).
-   Setting up the driver only once in a separate script is more efficient when
-   launching it multiple times later.
 
 3. Now we are ready to run i-PI and the driver, which will communicate via a
    Unix domain socket, and perform the optimization with `make run`. This will
    start i-PI in the background, wait until it is ready, and start the driver
-   with `python3 run.py`. i-PI will output the potential energies (`run.out`),
-   positions (`run.pos_0.xyz`), and forces (`run.for_0.xyz`) for all steps.
+   with `i-pi-driver-py -u -m elphmod -o driver.pickle`. i-PI will output the
+   potential energies (`run.out`), positions (`run.pos_0.xyz`), and forces
+   (`run.for_0.xyz`) for all steps.
 
 4. Finally, we can view the trajectory with `make plot` or `python3 plot.py`.
    This should open an interactive figure and finally create `plot.pdf`, where

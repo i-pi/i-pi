@@ -19,10 +19,10 @@ model $(MODEL): model.py
 driver $(DRIVER): driver.py $(MODEL)
 	python3 $<
 
-run $(RUN): run.py input.xml $(DRIVER)
-	$(IPI) $(word 2,$^) &
+run $(RUN): input.xml $(DRIVER)
+	$(IPI) $< &
 	sleep 5
-	python3 $<
+	i-pi-driver-py -u -m elphmod -o $(word 2,$^)
 	wait
 
 plot $(PLOT): plot.py $(RUN)
