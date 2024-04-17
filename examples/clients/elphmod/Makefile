@@ -4,7 +4,7 @@
 # i-PI Copyright (C) 2014-2024 i-PI developers
 # See the "licenses" directory for full license information.
 
-.PHONY: all model driver run plot clean
+.PHONY: all model driver run run2 plot clean
 all: plot
 
 IPI = i-pi
@@ -23,6 +23,12 @@ run $(RUN): input.xml $(DRIVER)
 	$(IPI) $< &
 	sleep 5
 	i-pi-driver-py -u -m elphmod -o $(word 2,$^)
+	wait
+
+run2: input.xml run.py $(DRIVER)
+	$(IPI) $< &
+	sleep 5
+	python3 $(word 2,$^)
 	wait
 
 plot $(PLOT): plot.py $(RUN)

@@ -38,3 +38,14 @@ monolayer tantalum disulfide. Running `make` performs the following steps:
    This should open an interactive figure and finally create `plot.pdf`, where
    arrows indicate atomic displacements. Since we have used a simplistic model,
    the periodic lattice distortion differs from the expected 3-by-3 pattern.
+
+Note that saving the driver to an intermediate file `driver.pickle` has two
+advantages: First, when running it through `i-pi-driver-py`, only a single
+parameter (the filename) has to be specified on the command line, rather than
+all details of the flexible setup in `driver.py`. Second, setting up the driver
+can be quite time consuming, so it is more efficient to do this only once when
+launching it multiple times later.
+
+It is alternatively possible to run the driver through the module `ipi._driver`,
+which is however only available if i-PI has been installed using `setuptools`,
+e.g., through `pip`. This can be tested with `make run2` or `python3 run.py`.

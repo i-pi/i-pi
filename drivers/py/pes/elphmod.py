@@ -1,5 +1,6 @@
 """Interface with [elphmod](https://github.com/janberges/elphmod) MD driver."""
 
+import sys
 from .dummy import Dummy_driver
 
 __DRIVER_NAME__ = "elphmod"
