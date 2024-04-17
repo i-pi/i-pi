@@ -428,7 +428,7 @@ class ForceComponent:
 
         is_tainted = False
         for b in range(self.nbeads):
-            is_tainted = is_tainted or self._forces[b].queue()
+            is_tainted = self._forces[b].queue() or is_tainted
         return is_tainted
 
     def pot_gather(self):
@@ -1143,7 +1143,7 @@ class Forces:
         is_tainted = False
         for ff in self.mforces:
             if ff.weight != 0:  # do not compute forces which have zero weight
-                is_tainted = is_tainted or ff.queue()
+                is_tainted = ff.queue() or is_tainted
         return is_tainted
 
     def get_vir(self):
