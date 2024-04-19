@@ -1,0 +1,22 @@
+<simulation>
+  <output prefix='run'>
+    <properties stride='1' filename='out'>[step, potential]</properties>
+    <trajectory stride='1' filename='pos'>positions</trajectory>
+    <trajectory stride='1' filename='for'>forces</trajectory>
+  </output>
+  <ffsocket name='elphmod' mode='unix' pbc='false'>
+    <address>localhost</address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='xyz'>driver.xyz</file>
+    </initialize>
+    <forces>
+      <force forcefield='elphmod'></force>
+    </forces>
+    <motion mode='minimize'>
+      <optimizer mode='bfgs'></optimizer>
+      <fixcom>True</fixcom>
+    </motion>
+  </system>
+</simulation>

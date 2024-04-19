@@ -121,8 +121,12 @@ class Dynamics(Motion):
         self.fixcom = fixcom
         if fixatoms is None:
             self.fixatoms = np.zeros(0, int)
+            self.fixatoms3 = np.zeros(0, int)
         else:
             self.fixatoms = fixatoms
+            self.fixatoms3 = np.array(
+                [[3 * i, 3 * i + 1, 3 * i + 2] for i in self.fixatoms]
+            ).flatten()
 
         # self.eda_on = False  # whether the dynamics is driven or not
         # if self.enstype in EDA.integrators:
@@ -300,6 +304,7 @@ class DummyIntegrator:
         self.barostat = motion.barostat
         self.fixcom = motion.fixcom
         self.fixatoms = motion.fixatoms
+        self.fixatoms3 = motion.fixatoms3
         self.enstype = motion.enstype
         if motion.enstype in EDA.integrators:
             self.eda = motion.eda
@@ -376,40 +381,26 @@ class DummyIntegrator:
         connected to the centroid is chosen.
         """
 
+        beads = self.beads
         if self.fixcom:
-            na3 = self.beads.natoms * 3
-            nb = self.beads.nbeads
-            p = dstrip(self.beads.p)
-            m = dstrip(self.beads.m3)[:, 0:na3:3]
-            M = self.beads[0].M
+            nb = beads.nbeads
+            p = dstrip(beads.p)
+            m3 = dstrip(beads.m3).reshape((-1, 3))
+            M = beads[0].M
             Mnb = M * nb
 
-            dens = 0
-            for i in range(3):
-                pcom = p[:, i:na3:3].sum()
-                dens += pcom**2
-                pcom /= Mnb
-                self.beads.p[:, i:na3:3] -= m * pcom
+            vcom = np.sum(p.reshape(-1, 3), axis=0) / Mnb
+            beads.p -= (m3 * vcom).reshape(nb, -1)
 
-            self.ensemble.eens += dens * 0.5 / Mnb
+            self.ensemble.eens += np.sum(vcom**2) * 0.5 * Mnb  # COM kinetic energy
 
         if len(self.fixatoms) > 0:
-            for bp in self.beads.p:
-                m = dstrip(self.beads.m)
-                self.ensemble.eens += 0.5 * np.dot(
-                    bp[self.fixatoms * 3], bp[self.fixatoms * 3] / m[self.fixatoms]
-                )
-                self.ensemble.eens += 0.5 * np.dot(
-                    bp[self.fixatoms * 3 + 1],
-                    bp[self.fixatoms * 3 + 1] / m[self.fixatoms],
-                )
-                self.ensemble.eens += 0.5 * np.dot(
-                    bp[self.fixatoms * 3 + 2],
-                    bp[self.fixatoms * 3 + 2] / m[self.fixatoms],
-                )
-                bp[self.fixatoms * 3] = 0.0
-                bp[self.fixatoms * 3 + 1] = 0.0
-                bp[self.fixatoms * 3 + 2] = 0.0
+            m3 = dstrip(beads.m3)
+            p = dstrip(beads.p)
+            fixatoms3 = self.fixatoms3
+
+            self.ensemble.eens += 0.5 * np.sum(p[:, fixatoms3] ** 2 / m3[:, fixatoms3])
+            beads.p[:, fixatoms3] = 0.0
 
 
 dproperties(
@@ -439,7 +430,7 @@ class NVEIntegrator(DummyIntegrator):
         """Velocity Verlet momentum propagator."""
 
         # halfdt/alpha
-        self.beads.p[:] += dstrip(self.forces.forces_mts(level)) * self.pdt[level]
+        self.beads.p[:] += dstrip(self.forces.mts_forces[level].f) * self.pdt[level]
         if level == 0 and self.ensemble.has_bias:  # adds bias in the outer loop
             self.beads.p[:] += dstrip(self.bias.f) * self.pdt[level]
 
@@ -634,10 +625,10 @@ class NPTIntegrator(NVTIntegrator):
                 "Forcefield returned a zero stress tensor. NPT simulation will likely make no sense",
                 verbosity.low,
             )
-            if verbosity.medium:
-                raise ValueError(
-                    "Zero stress terminates simulation for medium verbosity and above."
-                )
+            # if verbosity.medium: will uncomment one day
+            #    raise ValueError(
+            #        "Zero stress terminates simulation for medium verbosity and above."
+            #    )
 
         self._stresscheck = False
 
@@ -726,7 +717,7 @@ class SCIntegrator(NVTIntegrator):
             self.beads.p += dstrip(self.bias.f) * self.pdt[level]
         # just integrate the Trotter force scaled with the SC coefficients, which is a cheap approx to the SC force
         self.beads.p += (
-            self.forces.forces_mts(level)
+            self.forces.mts_forces[level].f
             * (1.0 + self.forces.coeffsc_part_1)
             * self.pdt[level]
         )

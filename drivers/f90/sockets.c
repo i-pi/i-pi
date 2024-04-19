@@ -41,6 +41,7 @@ Functions:
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#include <netinet/tcp.h>
 #include <sys/un.h>
 #include <netdb.h>
 
@@ -67,7 +68,7 @@ Args:
 */
 
 {
-   int sockfd, ai_err;
+   int sockfd, ai_err, flag;
 
    if (*inet>0)
    {  // creates an internet socket
@@ -88,7 +89,12 @@ Args:
       // creates socket
       sockfd = socket(res->ai_family, res->ai_socktype, res->ai_protocol);
       if (sockfd < 0) { perror("Error opening socket"); exit(-1); }
-    
+
+      // set TCP_NODELAY=1 to disable Nagle's algorithm as it slows down the small transactions for i-PI
+      flag = 1;
+      int result = setsockopt(sockfd, IPPROTO_TCP, TCP_NODELAY, (char *)&flag, sizeof(int));
+      if (result < 0) { perror("Error setting TCP_NODELAY"); }
+
       // makes connection
       if (connect(sockfd, res->ai_addr, res->ai_addrlen) < 0) 
       { perror("Error opening INET socket: wrong port or server unreachable"); exit(-1); }

@@ -139,11 +139,16 @@ class ForceBead:
         Allows the ForceBead object to ask for the ufvx list of each replica
         directly without going through the get_all function. This allows
         all the jobs to be sent at once, allowing them to be parallelized.
+
+        Returns True if a calculation is running
         """
 
+        # only dispatches a request if the forcefield needs it
         with self._threadlock:
-            if self.request is None and self._ufvx.tainted():
+            is_tainted = self._ufvx.tainted()
+            if self.request is None and is_tainted:
                 self.request = self.ff.queue(self.atoms, self.cell, reqid=self.uid)
+        return is_tainted
 
     def get_all(self):
         """Driver routine.
@@ -165,7 +170,7 @@ class ForceBead:
 
         # this is converting the distribution library requests into [ u, f, v ]  lists
         if self.request is None:
-            self.request = self.queue()
+            self.queue()
 
         # sleeps until the request has been evaluated
         request = self.request
@@ -412,13 +417,19 @@ class ForceComponent:
         )
 
     def queue(self):
-        """Submits all the required force calculations to the interface."""
+        """Submits all the required force calculations to the interface.
+
+        Returns True if calculations are running, False if nothing is tainted
+        """
 
         # this should be called in functions which access u,v,f for ALL the beads,
         # before accessing them. it is basically pre-queueing so that the
         # distributed-computing magic can work
+
+        is_tainted = False
         for b in range(self.nbeads):
-            self._forces[b].queue()
+            is_tainted = self._forces[b].queue() or is_tainted
+        return is_tainted
 
     def pot_gather(self):
         """Obtains the potential energy for each replica.
@@ -599,6 +610,108 @@ dproperties(
 )
 
 
+class MTSForces:
+    """Single-purpose class to compute the MTS forces at a given level"""
+
+    def __init__(self, parent, level):
+        self.nbeads = parent.nbeads
+        self.natoms = parent.natoms
+        self.mforces = parent.mforces
+        self.mrpc = parent.mrpc
+        self.level = level
+
+        self._f = depend_array(
+            name="f",
+            value=np.zeros((self.nbeads, 3 * self.natoms)),
+            func=self.get_forces_mts,
+        )
+
+        self._virs = depend_array(
+            name="virs", value=np.zeros((self.nbeads, 3, 3)), func=self.get_virs_mts
+        )
+
+        self._vir = depend_array(
+            name="vir",
+            value=np.zeros((3, 3)),
+            func=self.get_vir_mts,
+            dependencies=[self._virs],
+        )
+
+        for ff in self.mforces:
+            # add dependencies from the forces that actually depend on this
+            mts_weights = ff.mts_weights
+            if (len(mts_weights) == 0 and level == 0) or (
+                len(mts_weights) > level and mts_weights[level] != 0
+            ):
+                self._f.add_dependency(ff._f)
+                self._f.add_dependency(ff._weight)
+                self._virs.add_dependency(ff._virs)
+                self._virs.add_dependency(ff._weight)
+
+    def queue_mts(self):
+        """Submits all the required force calculations to the forcefields."""
+
+        level = self.level
+        for ff in self.mforces:
+            mts_weights = ff.mts_weights
+            # forces with no MTS specification are applied at the outer level
+            if (len(mts_weights) == 0 and level == 0) or (
+                len(mts_weights) > level and mts_weights[level] != 0 and ff.weight != 0
+            ):
+                # do not queue forces which have zero weight
+                ff.queue()
+
+    def get_forces_mts(self):
+        """Fetches ONLY the forces associated with a given MTS level."""
+
+        level = self.level
+        self.queue_mts()
+
+        fk = np.zeros((self.nbeads, 3 * self.natoms))
+
+        mforces = self.mforces
+        mrpc = self.mrpc
+        for index in range(len(mforces)):
+            # forces with no MTS specification are applied at the outer level
+            weight = mforces[index].weight
+            mts_weights = mforces[index].mts_weights
+            if (len(mts_weights) == 0 and level == 0) or (
+                len(mts_weights) > level and mts_weights[level] != 0 and weight != 0
+            ):
+                fk += (
+                    weight
+                    * mts_weights[level]
+                    * mrpc[index].b2tob1(dstrip(mforces[index].f))
+                )
+        return fk
+
+    def get_vir_mts(self):
+        """Fetches ONLY the total virial associated with a given MTS level."""
+        return np.sum(dstrip(self.virs), axis=0)
+
+    def get_virs_mts(self):
+        """Fetches ONLY the total virial associated with a given MTS level."""
+
+        self.queue_mts()
+        level = self.level
+        mforces = self.mforces
+        mrpc = self.mrpc
+        rp = np.zeros((self.nbeads, 3, 3), float)
+        for index in range(len(mforces)):
+            if (
+                len(mforces[index].mts_weights) > level
+                and mforces[index].mts_weights[level] != 0
+                and mforces[index].weight != 0
+            ):
+                dmvirs = dstrip(mforces[index].virs)
+                dv = mrpc[index].b2tob1(dmvirs)
+                rp += mforces[index].weight * mforces[index].mts_weights[level] * dv
+        return rp
+
+
+dproperties(MTSForces, ["f", "vir", "virs"])
+
+
 class Forces:
     """Class that gathers all the forces together.
     Collects many forcefield instances and parallelizes getting the forces
@@ -666,7 +779,10 @@ class Forces:
         self.cell = cell
         self.bound = True
         self.nforces = len(fcomponents)
+
+        # prepares force components
         self.fcomp = fcomponents
+
         self.ff = fflist
         self.open_paths = open_paths
         self.output_maker = output_maker
@@ -770,6 +886,9 @@ class Forces:
         self._nmtslevels = depend_value(
             name="nmtslevels", value=0, func=self.get_nmtslevels
         )
+
+        if len(self.mforces) > 0:
+            self.mts_forces = [MTSForces(self, i) for i in range(self.nmtslevels)]
 
         # This will be piped from normalmodes
         self._omegan2 = depend_value(name="omegan2", value=0)
@@ -1021,9 +1140,11 @@ class Forces:
     def queue(self):
         """Submits all the required force calculations to the forcefields."""
 
+        is_tainted = False
         for ff in self.mforces:
             if ff.weight != 0:  # do not compute forces which have zero weight
-                ff.queue()
+                is_tainted = ff.queue() or is_tainted
+        return is_tainted
 
     def get_vir(self):
         """Sums the virial of each forcefield.
@@ -1075,38 +1196,6 @@ class Forces:
                 "Cannot fetch extras for a component that has not been computed because of zero weight"
             )
         return self.mforces[index].extras
-
-    def queue_mts(self, level):
-        """Submits all the required force calculations to the forcefields."""
-
-        for ff in self.mforces:
-            mts_weights = ff.mts_weights
-            # forces with no MTS specification are applied at the outer level
-            if (len(mts_weights) == 0 and level == 0) or (
-                len(mts_weights) > level and mts_weights[level] != 0 and ff.weight != 0
-            ):
-                # do not queue forces which have zero weight
-                ff.queue()
-
-    def forces_mts(self, level):
-        """Fetches ONLY the forces associated with a given MTS level."""
-
-        self.queue_mts(level)
-        fk = np.zeros((self.nbeads, 3 * self.natoms))
-        mforces = self.mforces
-        for index in range(len(mforces)):
-            # forces with no MTS specification are applied at the outer level
-            weight = dstrip(mforces[index].weight)
-            mts_weights = mforces[index].mts_weights
-            if (len(mts_weights) == 0 and level == 0) or (
-                len(mts_weights) > level and mts_weights[level] != 0 and weight != 0
-            ):
-                fk += (
-                    weight
-                    * mts_weights[level]
-                    * self.mrpc[index].b2tob1(dstrip(mforces[index].f))
-                )
-        return fk
 
     def forcesvirs_4th_order(self, index):
         """Fetches the 4th order |f^2| correction to the force vector and the virial associated with a given component."""
@@ -1295,30 +1384,6 @@ class Forces:
         # returns the 4th order |f^2| correction.
         return [f_4th_order, v_4th_order]
 
-    def vir_mts(self, level):
-        """Fetches ONLY the total virial associated with a given MTS level."""
-        return np.sum(self.virs_mts(level), axis=0)
-
-    def virs_mts(self, level):
-        """Fetches ONLY the total virial associated with a given MTS level."""
-
-        self.queue_mts(level)
-        rp = np.zeros((self.beads.nbeads, 3, 3), float)
-        for index in range(len(self.mforces)):
-            if (
-                len(self.mforces[index].mts_weights) > level
-                and self.mforces[index].mts_weights[level] != 0
-                and self.mforces[index].weight != 0
-            ):
-                dmvirs = dstrip(self.mforces[index].virs)
-                dv = self.mrpc[index].b2tob1(dmvirs)
-                rp += (
-                    self.mforces[index].weight
-                    * self.mforces[index].mts_weights[level]
-                    * dv
-                )
-        return rp
-
     def get_nmtslevels(self):
         """Returns the total number of mts levels."""
 
@@ -1354,7 +1419,7 @@ class Forces:
 
         for k in range(self.nforces):
             if self.mforces[k].weight != 0 and self.mforces[k].mts_weights.sum() != 0:
-                fv = dstrip(self.forcesvirs_4th_order(k))
+                fv = self.forcesvirs_4th_order(k)
                 rf += self.mforces[k].weight * self.mforces[k].mts_weights.sum() * fv[0]
                 rv += self.mforces[k].weight * self.mforces[k].mts_weights.sum() * fv[1]
         return [rf, rv]

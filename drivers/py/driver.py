@@ -69,6 +69,8 @@ def run_driver(
         sock.connect("/tmp/ipi_" + address)
     else:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        # this reduces latency for the small messages passed by the i-PI protocol
+        sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
         sock.connect((address, port))
 
     f_init = False
