@@ -20,6 +20,8 @@ make
 ```
 
 You may need to install additional packages, follow the documentation of Plumed.
+The install script discussed below will try to install Plumed in the conda environment
+but you mileage may vary. You may also need to set manually `PLUMED_PATH` to detect it. 
 
 The MLIP used in this example is a [BPNN](https://doi.org/10.1103/PhysRevLett.98.146401)-type neural network, 
 using [SOAP](https://doi.org/10.1103/PhysRevB.87.184115) descriptors and Radial Spectrum descriptors as input.
@@ -38,6 +40,7 @@ descriptor library, [metatensor](https://github.com/lab-cosmo/metatensor) for me
 and [torch](https://pytorch.org/) for the neural network training. 
 
 Install from within the `./demos/ensemble-deltamu` directory.
+
 
 Running the simulation
 ----------------------
@@ -111,6 +114,7 @@ to complete the analysis
 PRINT STRIDE=50 ARG=m6.*,res.bias FILE=COLVAR
 FLUSH STRIDE=50
 ```
+
 
 (Shallow) ensembles
 -------------------
@@ -222,14 +226,14 @@ In our case, we want to compute the correction to $y= (Q(A) - \bar{Q})$; discard
 value for the pinning potential). 
 
 ```bash
-$ tail -n +2000 COLVAR | awk '{print $3-165}' > QQbar
+tail -n +2000 COLVAR | awk '{print $3-165}' > QQbar
 ```
 
 The ensemble of physical potentials is printed out by i-PI into 
 `pinning.committee_pot_0`, with some comment lines that can be eliminated for simplicity
 
 ```bash
-$ grep -v \# pinning.committee_pot_0 | tail -n +2000 > POTS
+grep -v \# pinning.committee_pot_0 | tail -n +2000 > POTS
 ```
 
 NB: it is important that the two files are "synchronized", i.e. they use the same stride 
@@ -239,11 +243,11 @@ You can inspect the two files separately, or run the data analysis using the `i-
 script, that performs a CEA (or direct reweighting) analysis based on these two files
 
 ```bash
-$ i-pi-committee-reweight POTS QQbar --kt 0.00088670724
+i-pi-committee-reweight POTS QQbar --kt 0.00091837535
 ```
 
 This will write out average and standard deviation of $\langle Q(A) - \bar{Q} \rangle$, as well
-as the values for each ensemble. 
+as the values for each ensemble.
 By repeating this analysis for several temperatures, one can fit a linear relation linking $\Delta \mu$ 
 to $T$, obtain the intercept and therefore an ensemble of melting temperatures, from which one can obtain
 mean and standard error. 
