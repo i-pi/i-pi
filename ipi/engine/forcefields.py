@@ -721,7 +721,6 @@ class FFPlumed(FFEval):
             self.plumed.cmd("setRestart", 1)
         self.plumed.cmd("init")
 
-        ipi_name = lambda name: "ipi_" + name.replace(".", "_")
         self.plumed_data = {}
         for x in plumedextras:
             rank = np.zeros(1, dtype=np.int_)
