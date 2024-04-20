@@ -644,6 +644,7 @@ class FFDebye(FFEval):
         r["status"] = "Done"
         r["t_finished"] = time.time()
 
+
 class FFPlumed(FFEval):
     """Direct PLUMED interface
 
@@ -719,21 +720,21 @@ class FFPlumed(FFEval):
             self.plumedrestart = True
             self.plumed.cmd("setRestart", 1)
         self.plumed.cmd("init")
-                
-        ipi_name = lambda name : "ipi_"+name.replace(".","_")
+
+        ipi_name = lambda name: "ipi_" + name.replace(".", "_")
         self.plumed_data = {}
         for x in plumedextras:
-            rank = np.zeros( 1, dtype=np.int_ )    
-            self.plumed.cmd(f"getDataRank {x}", rank )
-            if rank[0]>1:
+            rank = np.zeros(1, dtype=np.int_)
+            self.plumed.cmd(f"getDataRank {x}", rank)
+            if rank[0] > 1:
                 raise ValueError("Cannot retrieve varibles with rank > 1")
-            shape = np.zeros( rank[0], dtype=np.int_ )
-            if shape[0]>1:
-                raise ValueError("Cannot retrieve varibles with size > 1")            
-            self.plumed.cmd(f"getDataShape {x}", shape )   
+            shape = np.zeros(rank[0], dtype=np.int_)
+            if shape[0] > 1:
+                raise ValueError("Cannot retrieve varibles with size > 1")
+            self.plumed.cmd(f"getDataShape {x}", shape)
             self.plumed_data[x] = np.zeros(shape, dtype=np.double)
-            self.plumed.cmd(f"setMemoryForData {x}", self.plumed_data[x] )
-            
+            self.plumed.cmd(f"setMemoryForData {x}", self.plumed_data[x])
+
         self.charges = dstrip(myatoms.q) * 0.0
         self.masses = dstrip(myatoms.m)
         self.lastq = np.zeros(3 * self.natoms)
@@ -775,7 +776,7 @@ class FFPlumed(FFEval):
         self.plumed.cmd("setVirial", vir)
         self.plumed.cmd("prepareCalc")
         self.plumed.cmd("performCalcNoUpdate")
-        
+
         bias = np.zeros(1, float)
         self.plumed.cmd("getBias", bias)
         v = bias[0]

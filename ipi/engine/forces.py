@@ -1448,7 +1448,7 @@ class Forces:
 
         re = {}
         for k in range(self.nforces):
-            # combines the extras from the different force components            
+            # combines the extras from the different force components
             for e, v in self.mforces[k].extras.items():
                 if e in self.mforces[k].force_extras:
                     # extras that are tagged as force_extras are treated exactly as if they were an energy/force/stress

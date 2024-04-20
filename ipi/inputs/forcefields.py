@@ -523,8 +523,11 @@ class InputFFPlumed(InputForceField):
         ),
         "plumedextras": (
             InputArray,
-            {"dtype": str, "default": input_default(factory=np.zeros, args=(0, str)),
-                "help": "List of variables defined in the PLUMED input, that should be transferred to i-PI as `extras` fields." },
+            {
+                "dtype": str,
+                "default": input_default(factory=np.zeros, args=(0, str)),
+                "help": "List of variables defined in the PLUMED input, that should be transferred to i-PI as `extras` fields.",
+            },
         ),
     }
 
@@ -563,7 +566,7 @@ unless you include a <metad> tag, that triggers the log update. """
             plumeddat=self.plumeddat.fetch(),
             plumedstep=self.plumedstep.fetch(),
             plumedextras=self.plumedextras.fetch(),
-            init_file=self.file.fetch(),            
+            init_file=self.file.fetch(),
         )
 
 
