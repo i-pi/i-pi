@@ -346,13 +346,14 @@ class TrajectoryOutput(BaseOutput):
             "forces",
             "extras",
             "extras_component",
+            "extras_bias",
             "forces_sc",
             "momenta",
         ]:
             # must write out trajectories for each bead, so must create b streams
 
             # prepare format string for file name
-            if getkey(self.what) == "extras" or getkey(self.what) == "extras_component":
+            if getkey(self.what)[:6] == "extras":
                 fmt_fn = self.filename + "_" + fmt_bead
             else:
                 fmt_fn = self.filename + "_" + fmt_bead + "." + self.format
@@ -477,7 +478,7 @@ class TrajectoryOutput(BaseOutput):
         """
 
         key = getkey(what)
-        if key in ["extras", "extras_component"]:
+        if key in ["extras", "extras_component", "extras_bias"]:
             stream.write(
                 " #%s(%s)# Step:  %10d  Bead:  %5d  \n"
                 % (key.upper(), self.extra_type, self.system.simul.step + 1, b)

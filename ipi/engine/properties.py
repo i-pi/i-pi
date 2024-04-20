@@ -1122,21 +1122,6 @@ class Properties:
         acv = np.dot(q.flatten(), f.flatten())
         acv *= -0.5 / self.beads.nbeads
         acv += ncount * 1.5 * Constants.kb * self.ensemble.temp
-        # ~ acv = 0.0
-        # ~ ncount = 0
-        # ~
-        # ~ for i in range(self.beads.natoms):
-        # ~ if (atom != "" and iatom != i and latom != self.beads.names[i]):
-        # ~ continue
-        # ~
-        # ~ kcv = 0.0
-        # ~ k = 3*i
-        # ~ for b in range(self.beads.nbeads):
-        # ~ kcv += q[b,k]* f[b,k] + q[b,k+1]* f[b,k+1] + q[b,k+2]* f[b,k+2]
-        # ~ kcv *= -0.5/self.beads.nbeads
-        # ~ kcv += 1.5*Constants.kb*self.ensemble.temp
-        # ~ acv += kcv
-        # ~ ncount += 1
 
         if ncount == 0:
             # TODO: don't warn if bosons are matched
@@ -2852,6 +2837,10 @@ class Trajectories:
                 "help": """The additional data returned by the client code, printed verbatim or expanded as a dictionary. See "extras". 
                            Fetches the extras from a specific force component, indicated in parentheses [extras_component(idx)]. """,
                 "func": (lambda idx: self.system.forces.extras_component(int(idx))),
+            },
+            "extras_bias": {
+                "help": """The additional data returned by the bias forcefield, printed verbatim or expanded as a dictionary. See "extras". """,
+                "func": (lambda: self.system.ensemble.bias.extras),
             },
             "isotope_zetatd": {
                 "dimension": "undefined",

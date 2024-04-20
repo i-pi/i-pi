@@ -644,7 +644,6 @@ class FFDebye(FFEval):
         r["status"] = "Done"
         r["t_finished"] = time.time()
 
-
 class FFPlumed(FFEval):
     """Direct PLUMED interface
 
@@ -671,6 +670,7 @@ class FFPlumed(FFEval):
         init_file="",
         plumeddat="",
         plumedstep=0,
+        plumedextras=[],
     ):
         """Initialises FFPlumed.
 
@@ -689,6 +689,7 @@ class FFPlumed(FFEval):
         self.plumed = plumed.Plumed()
         self.plumeddat = plumeddat
         self.plumedstep = plumedstep
+        self.plumedextras = plumedextras
         self.init_file = init_file
 
         if self.init_file.mode == "xyz":
@@ -718,6 +719,21 @@ class FFPlumed(FFEval):
             self.plumedrestart = True
             self.plumed.cmd("setRestart", 1)
         self.plumed.cmd("init")
+                
+        ipi_name = lambda name : "ipi_"+name.replace(".","_")
+        self.plumed_data = {}
+        for x in plumedextras:
+            rank = np.zeros( 1, dtype=np.int_ )    
+            self.plumed.cmd(f"getDataRank {x}", rank )
+            if rank[0]>1:
+                raise ValueError("Cannot retrieve varibles with rank > 1")
+            shape = np.zeros( rank[0], dtype=np.int_ )
+            if shape[0]>1:
+                raise ValueError("Cannot retrieve varibles with size > 1")            
+            self.plumed.cmd(f"getDataShape {x}", shape )   
+            self.plumed_data[x] = np.zeros(shape, dtype=np.double)
+            self.plumed.cmd(f"setMemoryForData {x}", self.plumed_data[x] )
+            
         self.charges = dstrip(myatoms.q) * 0.0
         self.masses = dstrip(myatoms.m)
         self.lastq = np.zeros(3 * self.natoms)
@@ -759,7 +775,7 @@ class FFPlumed(FFEval):
         self.plumed.cmd("setVirial", vir)
         self.plumed.cmd("prepareCalc")
         self.plumed.cmd("performCalcNoUpdate")
-
+        
         bias = np.zeros(1, float)
         self.plumed.cmd("getBias", bias)
         v = bias[0]
@@ -771,8 +787,12 @@ class FFPlumed(FFEval):
             f[:] -= dstrip(self.system_force.f).flatten()
             vir[:] -= -dstrip(self.system_force.vir)
 
+        extras = {"raw": ""}
+        for x in self.plumed_data:
+            extras[str(x)] = self.plumed_data[x].copy()
+
         # nb: the virial is a symmetric tensor, so we don't need to transpose
-        r["result"] = [v, f, vir, {"raw": ""}]
+        r["result"] = [v, f, vir, extras]
         r["status"] = "Done"
 
     def mtd_update(self, pos, cell):

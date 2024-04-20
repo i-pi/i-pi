@@ -1,8 +1,9 @@
 <simulation mode="static" verbosity="medium">
    <output prefix='simulation'>
-    <properties stride='1' filename='out'>  [ step, potential{electronvolt}] </properties>
+       <properties stride='1' filename='out'>  [ step, potential{electronvolt}, ensemble_bias{electronvolt}] </properties>
     <trajectory stride="20" filename="pos_c" format="xyz"> x_centroid </trajectory>
     <trajectory stride="20" filename="frc_c" format="xyz"> f_centroid </trajectory>
+    <trajectory stride="10" filename="dhh" extra_type="dhh"> extras_bias </trajectory>
    </output>
    <total_steps> 100 </total_steps>
    <ffsocket name="pswater" mode="unix">
@@ -11,6 +12,7 @@
    <ffplumed name="plumed">
        <file mode="xyz">./init.xyz</file>
        <plumeddat> plumed.dat </plumeddat>
+       <plumedextras> [dhh, metad.bias] </plumedextras>
    </ffplumed>
    <system >
        <initialize nbeads='1'> 

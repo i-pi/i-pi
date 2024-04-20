@@ -400,7 +400,7 @@ class ForceComponent:
         )
         self._extras = depend_value(
             name="extras",
-            value=np.zeros(self.nbeads, float),
+            value={},
             func=self.extra_gather,
             dependencies=[self._forces[b]._extra for b in range(self.nbeads)],
         )
@@ -530,6 +530,7 @@ class ScaledForceComponent:
     def __init__(self, baseforce, scaling=1):
         self.bf = baseforce
         self.name = baseforce.name
+        self.nbeads = baseforce.nbeads
         self.ffield = baseforce.ffield
         self._scaling = depend_value(name="scaling", value=scaling)
         self._f = depend_array(
@@ -554,10 +555,10 @@ class ScaledForceComponent:
             value=np.zeros((self.bf.nbeads, 3, 3)),
             dependencies=[self.bf._virs, self._scaling],
         )
-        self._extras = depend_array(
+        self._extras = depend_value(
             name="extras",
             func=lambda: self.bf.extras,
-            value=np.zeros(self.bf.nbeads),
+            value={},
             dependencies=[self.bf._extras],
         )
 
@@ -1447,7 +1448,7 @@ class Forces:
 
         re = {}
         for k in range(self.nforces):
-            # combines the extras from the different force components
+            # combines the extras from the different force components            
             for e, v in self.mforces[k].extras.items():
                 if e in self.mforces[k].force_extras:
                     # extras that are tagged as force_extras are treated exactly as if they were an energy/force/stress
