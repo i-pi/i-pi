@@ -15,3 +15,5 @@ i-pi--driver -u -h zundel -m zundel
 ```
 
 However, they require having PLUMED libraries and Python bindings in the appropriate system paths.
+
+Note also in `pimd_metadynamics` how to retrieve CVs computed PLUMED-side back into i-PI.
