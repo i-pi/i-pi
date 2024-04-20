@@ -1314,12 +1314,12 @@ class FFCommittee(ForceField):
         }
 
         if all_have_frc:
-            r["result"][3]["committee_force"] = (
-                rescaled_frcs.reshape(len(rescaled_pots), -1),
+            r["result"][3]["committee_force"] = rescaled_frcs.reshape(
+                len(rescaled_pots), -1
             )
         if all_have_vir:
-            r["result"][3]["committee_virial"] = (
-                rescaled_virs.reshape(len(rescaled_pots), -1),
+            r["result"][3]["committee_virial"] = rescaled_virs.reshape(
+                len(rescaled_pots), -1
             )
 
         if self.baseline_name != "":
