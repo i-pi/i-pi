@@ -1,0 +1,7 @@
+# default units are LENGTH=nm ENERGY=kJ/mol TIME=ps
+dhh: DISTANCE ATOMS=2,3 
+RESTRAINT ARG=dhh AT=0.25 KAPPA=1e5 LABEL=rest
+
+PRINT ARG=dhh,rest.* STRIDE=4 FILE=COLVAR
+FLUSH STRIDE=1
+

@@ -44,12 +44,14 @@ python_driver_models = [
 ]
 
 
-def get_test_list(parent):
+def get_test_list(parent, skip_noauto=True):
     """This function recursively searches for test"""
     folders = [x[0] for x in os.walk(parent)]
     reg_tests = list()
 
     for ff in folders:
+        if skip_noauto and ff[-7:].lower() == ".noauto":
+            continue
         if os.path.isfile(Path(ff) / "input.xml"):
             reg_tests.append(ff)
 
