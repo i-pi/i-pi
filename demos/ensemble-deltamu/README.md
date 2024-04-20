@@ -1,4 +1,4 @@
-conSolid-liquid free energy with uncertainty quantification
+Solid-liquid free energy with uncertainty quantification
 ========================================================
 
 This example demonstrates a rather sophisticated setup to compute the $\Delta\mu_{SL}$ 
@@ -6,8 +6,12 @@ for the ice/water system using an ensemble of ML potentials, including an evalua
 the uncertainty using a direct propagation of the ensemble (cf. [Imbalzano2021, Kellner2024]).
 NB: while these simulations are realistic, the system size is too small to be converged.
 
-Prerequisites
--------------
+Simulations can be performed with either a deep ensemble of 4 separate Behler-Parrinello
+neural network, computed with the n2p2 driver in `lammps`, or with a shallow ensemble of 5
+weight-sharing multi-layer perceptrons based on SOAP features, computed with `rascaline`
+
+Installation of the rascaline model
+-----------------------------------
 
 Besides a recent version of i-PI, this demonstration requires some external dependencies.
 In particular you will need to install [Plumed](https://plumed.org), making sure to enable
@@ -41,18 +45,29 @@ and [torch](https://pytorch.org/) for the neural network training.
 
 Install from within the `./demos/ensemble-deltamu` directory.
 
+Installation of the n2p2 model
+------------------------------
 
-Running the simulation
+You will need a version of LAMMPS patched with the N2P2 driver, and to download the models.
+
+Running the simulations
 ----------------------
 
 The simulations can be run using the provided `run_rascaline.sh` script.
-Change the variables `PLUMED_PATH` and `IPI_PATH` to the paths were the source of
-Plumed and i-PI are located. Then simply run the provided script.
+
+For the rascaline model, change the variables `PLUMED_PATH` and `IPI_PATH` to the 
+paths were the source of Plumed and i-PI are located. Then simply run the provided script.
 
 ```
 ./run_rascaline.sh
 ```
 
+Similarly, to run the n2p2 model, set the environment variables in 
+`run_n2p2.sh` and execute it
+
+```
+./run_n2p2.sh
+```
 
 Interface pinning
 -----------------

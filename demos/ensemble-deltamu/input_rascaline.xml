@@ -1,5 +1,5 @@
 <simulation verbosity="medium" threading="True" safe_stride="10">
-   <output prefix="pinning">
+   <output prefix="pinning-rascaline">
        <properties stride='20' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, potential{electronvolt}, ensemble_bias{electronvolt}, pressure_cv{megapascal}, volume{angstrom3}, cell_h{angstrom} ] </properties>
     <trajectory filename='committee_pot' stride='20' extra_type='committee_pot'> extras </trajectory> 
     <trajectory filename="pos" stride="2000" cell_units="angstrom" format="ase"> positions{angstrom} </trajectory>
