@@ -361,7 +361,8 @@ class Properties:
                 "longhelp": """The contribution to the system potential from one of the force components.
                        Takes one mandatory argument index (zero-based) that indicates which component of the
                        potential must be returned. The optional argument 'bead' will print the potential associated
-                       with the specified bead. If the potential is weighed, the weight will be applied. """,
+                       with the specified bead (interpolated to the full ring polymer). 
+                       If the potential is weighed, the weight will be applied. """,
                 "func": (
                     lambda index, bead="-1": (
                         self.forces.pots_component(int(index)).sum() / self.beads.nbeads
@@ -376,14 +377,16 @@ class Properties:
                 "longhelp": """The contribution to the system potential from one of the
                        force components. Takes one mandatory argument index (zero-based) that indicates
                        which component of the potential must be returned. The optional argument 'bead'
-                       will print the potential associated with the specified bead. Potential weights
-                       will not be applied. """,
+                       will print the potential associated with the specified bead, at the level of 
+                       discretization of the given component. Potential weights will not be applied. """,
                 "func": (
                     lambda index, bead="-1": (
-                        self.forces.pots_component(int(index), False).sum()
+                        self.forces.pots_component(int(index), False, False).sum()
                         / self.beads.nbeads
                         if int(bead) < 0
-                        else self.forces.pots_component(int(index), False)[int(bead)]
+                        else self.forces.pots_component(int(index), False, False)[
+                            int(bead)
+                        ]
                     )
                 ),
             },
@@ -2838,7 +2841,7 @@ class Trajectories:
                 "help": """The contribution to the system forces from one of the force components.
                        Takes one mandatory argument index (zero-based) that indicates which component of the
                        potential must be returned. The optional argument 'bead' will print the potential associated
-                       with the specified bead, otherwise the centoid force is computed. 
+                       with the specified bead (interpolated to the full ring polymer), otherwise the centoid force is computed. 
                        If the potential is weighed, the weight will be applied. """,
                 "func": lambda index, bead="-1": (
                     self.system.forces.forces_component(int(index)).sum(axis=0)
@@ -2852,20 +2855,24 @@ class Trajectories:
                 "help": """The contribution to the system forces from one of the force components.
                        Takes one mandatory argument index (zero-based) that indicates which component of the
                        potential must be returned. The optional argument 'bead' will print the potential associated
-                       with the specified bead, otherwise the centoid force is computed. 
-                       If the potential is weighed, the weight will be applied. """,
+                       with the specified bead (with the level of discretization of the component), otherwise the 
+                       centoid force is computed. The weight of the potential is not applied. """,
                 "func": lambda index, bead="-1": (
-                    self.system.forces.forces_component(int(index), False).sum(axis=0)
+                    self.system.forces.forces_component(int(index), False, False).sum(
+                        axis=0
+                    )
                     / self.system.beads.nbeads
                     if int(bead) < 0
-                    else self.system.forces.forces_component(int(index), False)[
+                    else self.system.forces.forces_component(int(index), False, False)[
                         int(bead)
                     ]
                 ),
             },
-            "extras_component": {
-                "help": """The additional data returned by the client code, printed verbatim or expanded as a dictionary. See "extras". 
-                           Fetches the extras from a specific force component, indicated in parentheses [extras_component(idx)]. """,
+            "extras_component_raw": {
+                "help": """The additional data returned by the client code, printed verbatim or expanded 
+                           as a dictionary. See "extras". 
+                           Fetches the extras from a specific force component, indicated in parentheses 
+                           [extras_component(idx)]. Never applies weighting or contraction""",
                 "func": (lambda idx: self.system.forces.extras_component(int(idx))),
             },
             "extras_bias": {

@@ -1161,41 +1161,44 @@ class Forces:
             vir += v
         return vir
 
-    def pots_component(self, index, weighted=True):
+    def pots_component(self, index, weighted=True, interpolate=True):
         """Fetches the index^th component of the total potential."""
-        if weighted:
-            if self.mforces[index].weight != 0:
-                return self.mforces[index].weight * self.mrpc[index].b2tob1(
-                    self.mforces[index].pots
-                )
-            else:
-                return 0
-        else:
-            return self.mrpc[index].b2tob1(self.mforces[index].pots)
 
-    def forces_component(self, index, weighted=True):
-        """Fetches the index^th component of the total force."""
-        if weighted:
-            if self.mforces[index].weight != 0:
-                return self.mforces[index].weight * self.mrpc[index].b2tob1(
-                    dstrip(self.mforces[index].f)
-                )
+        if weighted and self.mforces[index].weight == 0:
+            if interpolate:
+                return np.zeros(self.mrpc[index].nbeads1)
             else:
-                return np.zeros((self.nbeads, self.natoms * 3), float)
+                return np.zeros(self.mrpc[index].nbeads2)
         else:
-            return self.mrpc[index].b2tob1(dstrip(self.mforces[index].f))
+            pots = dstrip(self.mforces[index].pots).copy()
+            if weighted:
+                pots *= self.mforces[index].weight
+            if interpolate:
+                pots = self.mrpc[index].b2tob1(pots)
+            return pots
+
+    def forces_component(self, index, weighted=True, interpolate=True):
+        """Fetches the index^th component of the total force."""
+
+        if weighted and self.mforces[index].weight == 0:
+            if interpolate:
+                return np.zeros((self.mrpc[index].nbeads1, 3 * self.natoms))
+            else:
+                return np.zeros((self.mrpc[index].nbeads2, 3 * self.natoms))
+        else:
+            forces = dstrip(self.mforces[index].f).copy()
+            if weighted:
+                forces *= self.mforces[index].weight
+            if interpolate:
+                forces = self.mrpc[index].b2tob1(forces)
+            return forces
 
     def extras_component(self, index):
-        """Fetches extras that are computed for one specific force component."""
+        """Fetches extras that are computed for one specific force component.
 
-        if self.nbeads != self.mforces[index].nbeads:
-            raise ValueError(
-                "Cannot fetch extras for a component when using ring polymer contraction"
-            )
-        if self.mforces[index].weight == 0:
-            raise ValueError(
-                "Cannot fetch extras for a component that has not been computed because of zero weight"
-            )
+        Does not attempt to apply weights or interpolate, always returns raw stuff.
+        """
+
         return self.mforces[index].extras
 
     def forcesvirs_4th_order(self, index):

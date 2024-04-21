@@ -247,6 +247,9 @@ class nm_rescale(object):
            nbeads2: The rescaled number of beads.
         """
 
+        self.nbeads1 = nbeads1
+        self.nbeads2 = nbeads2
+
         if open_paths is None:
             open_paths = []
         self._open = open_paths
