@@ -2848,6 +2848,12 @@ class Trajectories:
                     is printed verbatim. Will print out one file per bead, unless the bead attribute is set by the user.""",
                 "func": (lambda: self.system.forces.extras),
             },
+            "extras_centroid": {
+                "help": """The additional data returned by the client code. If the attribute "extra_type" is specified, and if the 
+                    data is JSON formatted, it prints only the specified field. Otherwise (or if extra_type="raw") the full string 
+                    is printed verbatim. Will print out one file per bead, unless the bead attribute is set by the user.""",
+                "func": (lambda: np.sum(self.system.forces.extras, 0) / float(self.system.beads.nbeads)),
+            },
             "extras_component": {
                 "help": """The additional data returned by the client code, printed verbatim or expanded as a dictionary. See "extras". 
                            Fetches the extras from a specific force component, indicated in parentheses [extras_component(idx)]. """,
