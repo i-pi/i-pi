@@ -2821,7 +2821,7 @@ class Trajectories:
             },
             "f_centroid": {
                 "dimension": "force",
-                "help": "The force acting on the centroid.",
+                "help": "The instantenous thermodynamic force on the centroid defined as an average over replicas.",
                 "func": (
                     lambda: np.sum(self.system.forces.f, 0)
                     / float(self.system.beads.nbeads)
@@ -2849,9 +2849,7 @@ class Trajectories:
                 "func": (lambda: self.system.forces.extras),
             },
             "extras_centroid": {
-                "help": """The additional data returned by the client code. If the attribute "extra_type" is specified, and if the 
-                    data is JSON formatted, it prints only the specified field. Otherwise (or if extra_type="raw") the full string 
-                    is printed verbatim. Will print out one file per bead, unless the bead attribute is set by the user.""",
+                "help": """The additional data returned by the client code averaged over all replicas. This quantity assumes the attribute "extra_type" is specified for the quantity of interest and that the data is JSON formatted.""",
                 "func": (
                     lambda: np.sum(self.system.forces.extras, 0)
                     / float(self.system.beads.nbeads)
