@@ -345,7 +345,7 @@ class TrajectoryOutput(BaseOutput):
             "velocities",
             "forces",
             "extras",
-            "extras_component",
+            "extras_component_raw",
             "extras_bias",
             "forces_sc",
             "momenta",
@@ -478,7 +478,7 @@ class TrajectoryOutput(BaseOutput):
         """
 
         key = getkey(what)
-        if key in ["extras", "extras_component", "extras_bias"]:
+        if key in ["extras", "extras_component_raw", "extras_bias"]:
             stream.write(
                 " #%s(%s)# Step:  %10d  Bead:  %5d  \n"
                 % (key.upper(), self.extra_type, self.system.simul.step + 1, b)

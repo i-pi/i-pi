@@ -1199,6 +1199,7 @@ class Forces:
         Does not attempt to apply weights or interpolate, always returns raw stuff.
         """
 
+        print("accessing extras ", self.mforces[index].extras)
         return self.mforces[index].extras
 
     def forcesvirs_4th_order(self, index):

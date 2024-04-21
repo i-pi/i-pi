@@ -2872,7 +2872,7 @@ class Trajectories:
                 "help": """The additional data returned by the client code, printed verbatim or expanded 
                            as a dictionary. See "extras". 
                            Fetches the extras from a specific force component, indicated in parentheses 
-                           [extras_component(idx)]. Never applies weighting or contraction""",
+                           [extras_component_raw(idx)]. Never applies weighting or contraction""",
                 "func": (lambda idx: self.system.forces.extras_component(int(idx))),
             },
             "extras_bias": {
