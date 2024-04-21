@@ -301,7 +301,7 @@ class ForceComponent:
         weight=1.0,
         name="",
         mts_weights=None,
-        force_extras=None,
+        interpolate_extras=None,
         epsilon=-0.001,
     ):
         """Initializes ForceComponent
@@ -316,7 +316,7 @@ class ForceComponent:
               will be weighted by this factor. The combination is a weighted sum.
            name: The name of the forcefield.
            mts_weights: Weight of forcefield at each mts level.
-           force_extras: A list of properties that should be treated as physical quantities,
+           interpolate_extras: A list of properties that should be treated as physical quantities,
               converted to numpy arrays and treated with ring polymer contraction. If
               different force components have this field, they will also be summed with
               the respective weight like a forces object.
@@ -330,10 +330,10 @@ class ForceComponent:
             self.mts_weights = np.asarray([])
         else:
             self.mts_weights = np.asarray(mts_weights)
-        if force_extras is None:
-            self.force_extras = []
+        if interpolate_extras is None:
+            self.interpolate_extras = []
         else:
-            self.force_extras = force_extras
+            self.interpolate_extras = interpolate_extras
         self.epsilon = epsilon
 
     def bind(self, beads, cell, fflist, output_maker):
@@ -464,21 +464,21 @@ class ForceComponent:
                     )
                 fc_extra[e].append(b.extra[e])
 
-        # force_extras should be numerical, thus can be converted to numpy arrays.
+        # interpolate_extras should be numerical, thus can be converted to numpy arrays.
         # we enforce the type and numpy will raise an error if not.
-        for e in self.force_extras:
+        for e in self.interpolate_extras:
             try:
                 fc_extra[e] = np.asarray(fc_extra[e], dtype=float)
             except KeyError:
                 raise KeyError(
-                    "force_extras required "
+                    "interpolate_extras required "
                     + e
                     + " to promote, but was not found among extras "
                     + str(list(fc_extra.keys()))
                 )
             except:
                 raise Exception(
-                    "force_extras has to be numerical to be treated as a physical quantity. It is not -- check the quantity that is being passed."
+                    "interpolate_extras has to be numerical to be treated as a physical quantity. It is not -- check the quantity that is being passed."
                 )
         return fc_extra
 
@@ -577,7 +577,7 @@ class ScaledForceComponent:
         self._weight = depend_value(name="weight", value=0)
         dpipe(self.bf._weight, self._weight)
         self.mts_weights = self.bf.mts_weights
-        self.force_extras = self.bf.force_extras
+        self.interpolate_extras = self.bf.interpolate_extras
 
     def get_pots(self):
         return (
@@ -813,7 +813,7 @@ class Forces:
                 nbeads=newb,
                 weight=fc.weight,
                 mts_weights=fc.mts_weights,
-                force_extras=fc.force_extras,
+                interpolate_extras=fc.interpolate_extras,
                 epsilon=fc.epsilon,
             )
             newbeads = Beads(beads.natoms, newb)
@@ -1450,8 +1450,8 @@ class Forces:
         for k in range(self.nforces):
             # combines the extras from the different force components
             for e, v in self.mforces[k].extras.items():
-                if e in self.mforces[k].force_extras:
-                    # extras that are tagged as force_extras are treated exactly as if they were an energy/force/stress
+                if e in self.mforces[k].interpolate_extras:
+                    # extras that are tagged as interpolate_extras are treated exactly as if they were an energy/force/stress
                     v = (
                         self.mforces[k].weight
                         * self.mforces[k].mts_weights.sum()

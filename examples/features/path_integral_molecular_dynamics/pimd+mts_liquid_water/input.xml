@@ -1,7 +1,8 @@
 <simulation mode='md' verbosity='high'>
   <output prefix='simulation'>
-    <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv{megapascal} ] </properties>
-    <trajectory filename='pos' stride='1'> positions </trajectory>
+    <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv{megapascal}, pot_component_raw(0), pot_component_raw(1) ] </properties>
+    <trajectory filename='pos' stride='10'> positions </trajectory>
+    <trajectory filename='f-0c' stride='10'> forces_component_raw(0) </trajectory>
     <checkpoint stride='200'/>
   </output>
   <total_steps>100</total_steps>

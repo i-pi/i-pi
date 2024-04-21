@@ -39,10 +39,10 @@
     </initialize>
     <forces>
       <force forcefield='driver' weight="1.0">
-          <force_extras> ['dipole'] </force_extras>
+          <interpolate_extras> ['dipole'] </interpolate_extras>
       </force>
       <force forcefield='driver2' weight="2.0" >
-           <force_extras> ['dipole'] </force_extras>  
+           <interpolate_extras> ['dipole'] </interpolate_extras>  
       </force>
     </forces>
     <ensemble>

@@ -2833,6 +2833,36 @@ class Trajectories:
                     is printed verbatim. Will print out one file per bead, unless the bead attribute is set by the user.""",
                 "func": (lambda: self.system.forces.extras),
             },
+            "forces_component": {
+                "dimension": "force",
+                "help": """The contribution to the system forces from one of the force components.
+                       Takes one mandatory argument index (zero-based) that indicates which component of the
+                       potential must be returned. The optional argument 'bead' will print the potential associated
+                       with the specified bead, otherwise the centoid force is computed. 
+                       If the potential is weighed, the weight will be applied. """,
+                "func": lambda index, bead="-1": (
+                    self.system.forces.forces_component(int(index)).sum(axis=0)
+                    / self.system.beads.nbeads
+                    if int(bead) < 0
+                    else self.system.forces.forces_component(int(index))[int(bead)]
+                ),
+            },
+            "forces_component_raw": {
+                "dimension": "force",
+                "help": """The contribution to the system forces from one of the force components.
+                       Takes one mandatory argument index (zero-based) that indicates which component of the
+                       potential must be returned. The optional argument 'bead' will print the potential associated
+                       with the specified bead, otherwise the centoid force is computed. 
+                       If the potential is weighed, the weight will be applied. """,
+                "func": lambda index, bead="-1": (
+                    self.system.forces.forces_component(int(index), False).sum(axis=0)
+                    / self.system.beads.nbeads
+                    if int(bead) < 0
+                    else self.system.forces.forces_component(int(index), False)[
+                        int(bead)
+                    ]
+                ),
+            },
             "extras_component": {
                 "help": """The additional data returned by the client code, printed verbatim or expanded as a dictionary. See "extras". 
                            Fetches the extras from a specific force component, indicated in parentheses [extras_component(idx)]. """,

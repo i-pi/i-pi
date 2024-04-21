@@ -36,7 +36,7 @@
          <temperature units="kelvin"> 300.0 </temperature>
          <bias>
            <force forcefield="plumed" nbeads="1">
-             <force_extras> [ doo, mtd.bias ] </force_extras>
+             <interpolate_extras> [ doo, mtd.bias ] </interpolate_extras>
            </force>
          </bias>
       </ensemble>

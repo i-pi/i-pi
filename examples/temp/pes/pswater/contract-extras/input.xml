@@ -31,7 +31,7 @@
         <!-- The line below is the one that tells i-PI that the 'dipole' extras quantity will be 
         treated as a physical quantity like forces. It can then be interpolated, and if there are
         several force components, it will be automatically summed with the respective weights -->
-        <force_extras> [dipole] </force_extras>
+        <interpolate_extras> [dipole] </interpolate_extras>
       </force>
     </forces>
     <ensemble>
