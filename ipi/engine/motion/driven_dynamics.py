@@ -136,8 +136,8 @@ class EDAIntegrator(DummyIntegrator):
         #   once before, and once after `NVEIntegrator.step` (as implemented in `EDANVEIntegrator.step`)
         # - If you change the name of this method to `pstep`, then this method will be called
         #   multiple times by `NVEIntegrator.step`. This would lead to a wrong dynamics!
-        # - For this reason, the momenta (the time-dependent force contribution)
-        #   should be done in a method with a different name (as done here).
+        # - For this reason, the time-dependent force contribution to the momenta
+        #   should be added in a method with a different name (as done here).
         # - This issue arises from the fact that a time-dependent force integrator is ill-defined
         #   in a MTS algorithm framework. For this reason, the time-dependent contribution can added in the
         #   outermost layer only, such that to avoid any inconsistency in the definition of the time used to evaluate the force.
@@ -154,8 +154,6 @@ class EDAIntegrator(DummyIntegrator):
             self.efield_time += self.dt
             # the next time this condition will be 'False'
             # so we will avoid to re-compute the EDAforces
-        else:
-            pass
         pass
 
     def _eda_forces(self):
