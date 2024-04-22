@@ -108,9 +108,6 @@ class Dynamics(Motion):
             self.integrator = SCIntegrator()
         elif self.enstype == "scnpt":
             self.integrator = SCNPTIntegrator()
-        # elif self.enstype == "eda-nve":
-        #     # NVE integrator with an external time-dependent driving (electric field)
-        #     self.integrator = EDANVEIntegrator()
         else:
             self.integrator = DummyIntegrator()
 
@@ -127,17 +124,6 @@ class Dynamics(Motion):
             self.fixatoms3 = np.array(
                 [[3 * i, 3 * i + 1, 3 * i + 2] for i in self.fixatoms]
             ).flatten()
-
-        # self.eda_on = False  # whether the dynamics is driven or not
-        # if self.enstype in EDA.integrators:
-        #     # if the dynamics is driven, allocate necessary objects
-        #     self.efield = efield
-        #     self.bec = bec
-        #     self.eda = EDA(self.efield, self.bec)
-        #     self.eda_on = True
-        # else:
-        #     # otherwise, keep the class clean and avoid allocating useless things
-        #     pass
 
     def get_fixdof(self):
         """Calculate the number of fixed degrees of freedom, required for
@@ -217,12 +203,6 @@ class Dynamics(Motion):
         self.ensemble.add_xlpot(self.barostat._cell_jacobian)
         self.ensemble.add_xlkin(self.barostat._kin)
 
-        # # self.eda has not been allocated if 'self.eda_on' == False
-        # # Attention: call 'self.eda.bind' before 'self.integrator.bind'
-        # if self.eda_on:
-        #     self.eda.bind(self.ensemble, self.enstype)
-
-        # now that the timesteps are decided, we proceed to bind the integrator.
         self.integrator.bind(self)
 
         # applies constraints immediately after initialization.
