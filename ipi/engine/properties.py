@@ -2872,8 +2872,10 @@ class Trajectories:
                 "help": """The additional data returned by the client code, printed verbatim or expanded 
                            as a dictionary. See "extras". 
                            Fetches the extras from a specific force component, indicated in parentheses 
-                           [extras_component_raw(idx)]. Never applies weighting or contraction""",
-                "func": (lambda idx: self.system.forces.extras_component(int(idx))),
+                           and a specific bead [extras_component_raw(idx; bead=0)]. 
+                           Never applies weighting or contraction, and does not automatically sum 
+                           over beads as we don't know if the extras are numeric""",
+                "func": (lambda idx: (self.system.forces.extras_component(int(idx)))),
             },
             "extras_bias": {
                 "help": """The additional data returned by the bias forcefield, printed verbatim or expanded as a dictionary. See "extras". """,
