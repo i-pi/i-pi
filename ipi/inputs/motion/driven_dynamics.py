@@ -1,4 +1,4 @@
-"""Creates objects that deal with the different ensembles."""
+"""Creates objects to deal with dynamics driven by external fields."""
 
 # This file is part of i-PI.
 # i-PI Copyright (C) 2014-2015 i-PI developers
