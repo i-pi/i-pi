@@ -289,7 +289,7 @@ class Properties:
                 "size": 3,
                 "func": (
                     lambda: (
-                        self.motion.eda.Electric_Field.Efield
+                        self.motion.Electric_Field.Efield
                         if isinstance(self.motion, DrivenDynamics)
                         else np.zeros(3)
                     )
@@ -300,7 +300,7 @@ class Properties:
                 "help": "The (gaussian) envelope function of the external applied electric field (values go from 0 to 1).",
                 "func": (
                     lambda: (
-                        self.motion.eda.Electric_Field.Eenvelope
+                        self.motion.Electric_Field.Eenvelope
                         if isinstance(self.motion, DrivenDynamics)
                         else 0.0
                     )
@@ -312,10 +312,10 @@ class Properties:
                 "size": 3,
                 "func": (
                     lambda bead="-1": (
-                        self.motion.eda.Electric_Dipole.dipole.mean(axis=0)
+                        self.motion.Electric_Dipole.dipole.mean(axis=0)
                         if int(bead) < 0
                         else (
-                            self.motion.eda.Electric_Dipole.dipole[int(bead)]
+                            self.motion.Electric_Dipole.dipole[int(bead)]
                             if isinstance(self.motion, DrivenDynamics)
                             else np.zeros(3)
                         )
@@ -3173,10 +3173,9 @@ class Trajectories:
         # allocate empty BECs
         shape = (self.system.beads.nbeads, self.system.beads.natoms * 3)
         bec = np.full(shape, np.nan)
-        # check whether `self.system.motion.eda`` has been allocated
         if isinstance(self.system.motion, DrivenDynamics):
             # get all the BECs
-            BEC = self.system.motion.eda.Born_Charges.bec
+            BEC = self.system.motion.Born_Charges.bec
             # convert the component into numerical index
             xyz2index = {"x": 0, "y": 1, "z": 2}
             index = xyz2index[xyz]

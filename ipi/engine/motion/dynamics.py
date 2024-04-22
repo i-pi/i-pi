@@ -201,8 +201,6 @@ class Dynamics(Motion):
         self.ensemble.add_xlpot(self.barostat._cell_jacobian)
         self.ensemble.add_xlkin(self.barostat._kin)
 
-        self.integrator.bind(self)
-
         # applies constraints immediately after initialization.
         self.integrator.pconstraints()
 

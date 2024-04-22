@@ -200,5 +200,5 @@ class InputDrivenDynamics(InputDynamics):
         if dyn == {}:
             return
         super().store(dyn)
-        self.efield.store(dyn.efield)
-        self.bec.store(dyn.bec)
+        self.efield.store(dyn.Electric_Field)
+        self.bec.store(dyn.Born_Charges)
