@@ -1,10 +1,4 @@
-"""Contains the classes that deal with the different dynamics required in
-different types of ensembles.
-
-Holds the algorithms required for normal mode propagators, and the objects to
-do the constant temperature and pressure algorithms. Also calculates the
-appropriate conserved energy quantity for the ensemble of choice.
-"""
+"""Creates objects to deal with dynamics driven by external fields."""
 
 # This file is part of i-PI.
 # i-PI Copyright (C) 2014-2015 i-PI developers
