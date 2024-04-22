@@ -11,7 +11,6 @@ from ipi.utils.inputvalue import (
 from ipi.inputs.motion.dynamics import InputDynamics
 import numpy as np
 
-from ipi.engine.motion.driven_dynamics import ElectricField, BEC
 from ipi.engine.barostats import *
 from ipi.utils.inputvalue import *
 from ipi.inputs.thermostats import *
