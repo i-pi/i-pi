@@ -9,7 +9,6 @@ import numpy as np
 from ipi.utils.depend import *
 from ipi.utils.units import Constants
 from ipi.engine.motion.dynamics import NVEIntegrator, DummyIntegrator, Dynamics
-from ipi.utils.depend import *
 from ipi.utils.units import UnitMap
 import re
 
