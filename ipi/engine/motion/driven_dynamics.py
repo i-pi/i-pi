@@ -7,7 +7,6 @@
 import numpy as np
 
 from ipi.utils.depend import *
-from ipi.engine.motion.driven_dynamics import EDA
 from ipi.utils.units import Constants
 from ipi.engine.motion.dynamics import NVEIntegrator, DummyIntegrator, Dynamics
 from ipi.utils.depend import *
@@ -111,11 +110,11 @@ class EDAIntegrator(DummyIntegrator):
         super().bind(motion)
 
         self._time = self.eda._time
-        self._mts_time = self.eda._mts_time
+        self._efield_time = self.eda._efield_time
 
         dep = [
             self._time,
-            self._mts_time,
+            self._efield_time,
             self.eda.Born_Charges._bec,
             self.eda.Electric_Field._Efield,
         ]
@@ -400,16 +399,22 @@ class ElectricField:
 
     def bind(self, eda, enstype):
         self.enstype = enstype
-        self._mts_time = eda._mts_time
+        self._efield_time = eda._efield_time
 
-        dep = [self._mts_time, self._peak, self._sigma]
+        dep = [self._efield_time, self._peak, self._sigma]
         self._Eenvelope = depend_value(
             name="Eenvelope", value=1.0, func=self._get_Eenvelope, dependencies=dep
         )
 
         if enstype in EDA.integrators:
             # dynamics is not driven --> add dependencies to the electric field
-            dep = [self._mts_time, self._amp, self._freq, self._phase, self._Eenvelope]
+            dep = [
+                self._efield_time,
+                self._amp,
+                self._freq,
+                self._phase,
+                self._Eenvelope,
+            ]
             self._Efield = depend_array(
                 name="Efield",
                 value=np.zeros(3, float),
@@ -480,12 +485,14 @@ class EDA:
         self.Electric_Dipole = ElectricDipole()
         self.Born_Charges = bec
         self._time = depend_value(name="time", value=0)
-        self._mts_time = depend_value(name="efield_time", value=0)
+        self._efield_time = depend_value(name="efield_time", value=0)
         pass
 
     def bind(self, ensemble, enstype):
         self.enstype = enstype
-        self._mts_time = depend_value(name="efield_time", value=dstrip(ensemble).time)
+        self._efield_time = depend_value(
+            name="efield_time", value=dstrip(ensemble).time
+        )
         self._time = ensemble._time
         self.Electric_Field.bind(self, enstype)
         self.Electric_Dipole.bind(self, ensemble)
