@@ -7,7 +7,7 @@
 import numpy as np
 
 from ipi.utils.depend import *
-from ipi.engine.motion.eda import EDA
+from ipi.engine.motion.driven_dynamics import EDA
 from ipi.utils.units import Constants
 from ipi.engine.motion.dynamics import NVEIntegrator, DummyIntegrator, Dynamics
 from ipi.utils.depend import *
@@ -15,6 +15,7 @@ from ipi.utils.units import UnitMap
 import re
 
 # __all__ = ["BEC", "ElectricField", "EDA"]
+
 
 class DrivenDynamics(Dynamics):
     """self (path integral) molecular dynamics class.
@@ -170,6 +171,7 @@ class EDANVEIntegrator(EDAIntegrator, NVEIntegrator):
         )  # the driver is called here: add nuclear and electronic forces (DFT)
         EDAIntegrator.pstep(self, level)  # add the driving forces, i.e. q_e Z @ E(t)
         pass
+
 
 class BEC:
     """Class to handle the Born Effective Charge tensors when performing driven dynamics (with 'eda-nve')"""
