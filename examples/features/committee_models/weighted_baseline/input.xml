@@ -43,8 +43,8 @@
     </initialize>
     <forces>
         <force forcefield='committee' nbeads='1'> 
-            <!-- adding these to force_extras will make the committee extras be treated properly with ring-polymer contraction, ect. -->
-            <force_extras> [committee_pot, committee_force, committee_virial, baseline_pot, baseline_force, baseline_virial, wb_mixing] </force_extras>
+            <!-- adding these to interpolate_extras will make the committee extras be treated properly with ring-polymer contraction, ect. -->
+            <interpolate_extras> [committee_pot, committee_force, committee_virial, baseline_pot, baseline_force, baseline_virial, wb_mixing] </interpolate_extras>
         </force>
     </forces>
     <motion mode='dynamics'>

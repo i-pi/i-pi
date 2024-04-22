@@ -7,7 +7,7 @@
     <trajectory filename='kin' format='xyz' stride='2'> kinetic_cv </trajectory>
     <trajectory filename='dip' stride='2' extra_type='dipole'> extras </trajectory>
     <trajectory filename='raw' stride='2' extra_type='raw'> extras </trajectory>    
-    <trajectory filename='dip0' stride='2' extra_type='dipole'> extras_component(0) </trajectory>
+    <trajectory filename='dip0' stride='2' extra_type='dipole'> extras_component_raw(0) </trajectory>
     <checkpoint stride='100' filename='chk' overwrite='true'/>
     <checkpoint stride='2000' filename='restart' overwrite='false'/>
   </output>

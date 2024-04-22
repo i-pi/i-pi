@@ -15,3 +15,7 @@ i-pi--driver -u -h zundel -m zundel
 ```
 
 However, they require having PLUMED libraries and Python bindings in the appropriate system paths.
+
+Note also that the example in `pimd_metadynamics` provides a demonstration of how to retrieve quantities
+computed PLUMED-side (such as CV values) back into i-PI as `extras` that can be associated with 
+individual structures and printed out alongside the other i-PI outputs.

@@ -1,4 +1,4 @@
-<simulation verbosity='medium'>
+<simulation verbosity='high'>
   <output prefix='simulation'>
     <properties stride='1' filename='out'>  [ time{picosecond}, conserved, temperature{kelvin}, kinetic_md, kinetic_cv, kinetic_cv(O), kinetic_cv(H), potential ] </properties>
     <trajectory filename='pos' format='xyz' stride='2'> positions{angstrom} </trajectory>
@@ -6,6 +6,9 @@
     <trajectory filename='for' format='xyz' stride='2'> forces </trajectory>
     <trajectory filename='kin' format='xyz' stride='2'> kinetic_cv </trajectory>
     <trajectory filename='dip' stride='2' extra_type='dipole'> extras </trajectory>
+    <trajectory filename='raw' stride='2' extra_type='raw'> extras </trajectory>    
+    <trajectory filename='dip0' stride='2' extra_type='dipole'> extras_component_raw(0) </trajectory>
+    <trajectory filename='dip1' stride='2' extra_type='dipole'> extras_component_raw(1) </trajectory>
     <checkpoint stride='100' filename='chk' overwrite='true'/>
     <checkpoint stride='2000' filename='restart' overwrite='false'/>
   </output>
@@ -20,18 +23,26 @@
     <latency>0.02</latency>
     <timeout>400</timeout>
   </ffsocket>
+  <ffsocket mode='unix' pbc='false' name='driver2'>
+    <!--<address>localhost</address>   -->
+    <address>driver2</address>
+    <port>31400</port>
+    <latency>0.02</latency>
+    <timeout>400</timeout>
+  </ffsocket>
   <system>
-    <initialize nbeads='4'>
+    <initialize nbeads='1'>
       <file mode='xyz' units='angstrom'> h2o_3.xyz </file>
       <cell mode='abc' units='angstrom'> [ 10.0, 10.0, 10.0 ] </cell>
+      <!--     <gle mode='chk'> restart.chk </gle> -->
       <velocities mode='thermal' units='kelvin'> 300 </velocities>
     </initialize>
     <forces>
-      <force forcefield='driver' nbeads="2">
-        <!-- The line below is the one that tells i-PI that the 'dipole' extras quantity will be 
-        treated as a physical quantity like forces. It can then be interpolated, and if there are
-        several force components, it will be automatically summed with the respective weights -->
-        <force_extras> ['dipole'] </force_extras>
+      <force forcefield='driver' weight="1.0">
+          <interpolate_extras> ['dipole'] </interpolate_extras>
+      </force>
+      <force forcefield='driver2' weight="2.0" >
+           <interpolate_extras> ['dipole'] </interpolate_extras>  
       </force>
     </forces>
     <ensemble>

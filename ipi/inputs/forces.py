@@ -79,7 +79,7 @@ class InputForceComponent(Input):
                 "dimension": "force",
             },
         ),
-        "force_extras": (
+        "interpolate_extras": (
             InputArray,
             {
                 "dtype": str,
@@ -107,7 +107,7 @@ class InputForceComponent(Input):
         self.nbeads.store(forceb.nbeads)
         self.weight.store(forceb.weight)
         self.mts_weights.store(forceb.mts_weights)
-        self.force_extras.store(forceb.force_extras)
+        self.interpolate_extras.store(forceb.interpolate_extras)
         self.fd_epsilon.store(forceb.epsilon)
         self.name.store(forceb.name)
         self.forcefield.store(forceb.ffield)
@@ -126,7 +126,7 @@ class InputForceComponent(Input):
             weight=self.weight.fetch(),
             name=self.name.fetch(),
             mts_weights=self.mts_weights.fetch(),
-            force_extras=self.force_extras.fetch(),
+            interpolate_extras=self.interpolate_extras.fetch(),
             epsilon=self.fd_epsilon.fetch(),
         )
 
