@@ -131,18 +131,13 @@ class EDAIntegrator(DummyIntegrator):
 
     def td_pstep(self, level=0):
         """Velocity Verlet momentum propagator with a time dependent force."""
-        # Note for future developers!
-        # - This method should be called only twice per MD step:
-        #   once before, and once after `NVEIntegrator.step` (as implemented in `EDANVEIntegrator.step`)
-        # - If you change the name of this method to `pstep`, then this method will be called
-        #   multiple times by `NVEIntegrator.step`. This would lead to a wrong dynamics!
-        # - For this reason, the time-dependent force contribution to the momenta
-        #   should be added in a method with a different name (as done here).
-        # - This issue arises from the fact that a time-dependent force integrator is ill-defined
-        #   in a MTS algorithm framework. For this reason, the time-dependent contribution can added in the
-        #   outermost layer only, such that to avoid any inconsistency in the definition of the time used to evaluate the force.
+        # This method adds the time-dependent force contribution to the momenta.
+        # and it is called only twice per MD step, as implemented in `EDANVEIntegrator.step`.
 
         if level != 0:
+            # A time-dependent force integrator is ill-defined in a MTS algorithm framework.
+            # For this reason, the time-dependent contribution can added in the outermost layer only,
+            # such that to avoid any inconsistency in the definition of the time used to evaluate the forces.
             raise ValueError(
                 "EDAIntegrator can be called only in the outermost layer of a Multiple Time Step algorithm."
             )
