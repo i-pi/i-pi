@@ -270,7 +270,7 @@ class ElectricField:
 
     def _get_Efield(self):
         """Get the value of the external electric field (cartesian axes)"""
-        time = dstrip(self.mts_time)
+        time = dstrip(self.efield_time)
         if hasattr(time, "__len__"):
             return np.outer(self._get_Ecos(time) * self.Eenvelope, self.amp)
         else:
@@ -280,7 +280,7 @@ class ElectricField:
         return self.peak > 0.0 and self.sigma != np.inf
 
     def _get_Eenvelope(self):
-        time = dstrip(self.mts_time)
+        time = dstrip(self.efield_time)
         """Get the gaussian envelope function of the external electric field"""
         if self._Eenvelope_is_on():
             x = time  # indipendent variable
@@ -299,7 +299,7 @@ class ElectricField:
 
 dproperties(
     ElectricField,
-    ["amp", "phase", "peak", "sigma", "freq", "Eenvelope", "Efield", "mts_time"],
+    ["amp", "phase", "peak", "sigma", "freq", "Eenvelope", "Efield", "efield_time"],
 )
 
 
@@ -314,12 +314,12 @@ class EDA:
         self.Electric_Dipole = ElectricDipole()
         self.Born_Charges = bec
         self._time = depend_value(name="time", value=0)
-        self._mts_time = depend_value(name="mts_time", value=0)
+        self._mts_time = depend_value(name="efield_time", value=0)
         pass
 
     def bind(self, ensemble, enstype):
         self.enstype = enstype
-        self._mts_time = depend_value(name="mts_time", value=dstrip(ensemble).time)
+        self._mts_time = depend_value(name="efield_time", value=dstrip(ensemble).time)
         self._time = ensemble._time
         self.Electric_Field.bind(self, enstype)
         self.Electric_Dipole.bind(self, ensemble)
@@ -334,4 +334,4 @@ class EDA:
         pass
 
 
-dproperties(EDA, ["mts_time", "time"])
+dproperties(EDA, ["efield_time", "time"])

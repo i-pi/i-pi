@@ -92,7 +92,7 @@ class DrivenDynamics(Dynamics):
 
         # Check that these variable are the same.
         # If they are not the same, then there is a bug in the code
-        dt = abs(self.ensemble.time - self.integrator.mts_time)
+        dt = abs(self.ensemble.time - self.integrator.efield_time)
         if dt > 1e-12:
             raise ValueError(
                 "The time at which the Electric Field is evaluated is not properly updated!"
@@ -131,10 +131,10 @@ class EDAIntegrator(DummyIntegrator):
     def pstep(self, level=0):
         """Velocity Verlet momentum propagator."""
         self.beads.p += self.EDAforces * self.pdt[level]
-        if dstrip(self.mts_time) == dstrip(self.time):
+        if dstrip(self.efield_time) == dstrip(self.time):
             # it's the first time that 'pstep' is called
-            # then we need to update 'mts_time'
-            self.mts_time += dstrip(self.dt)
+            # then we need to update 'efield_time'
+            self.efield_time += dstrip(self.dt)
             # the next time this condition will be 'False'
             # so we will avoid to re-compute the EDAforces
         pass
@@ -155,7 +155,7 @@ class EDAIntegrator(DummyIntegrator):
         super().step(step)
 
 
-dproperties(EDAIntegrator, ["EDAforces", "mts_time", "time"])
+dproperties(EDAIntegrator, ["EDAforces", "efield_time", "time"])
 
 
 class EDANVEIntegrator(EDAIntegrator, NVEIntegrator):
