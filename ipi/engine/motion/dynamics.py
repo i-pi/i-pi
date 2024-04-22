@@ -18,7 +18,6 @@ from ipi.engine.thermostats import Thermostat
 from ipi.engine.barostats import Barostat
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import warning, verbosity
-from ipi.engine.motion.eda import EDA
 
 
 class Dynamics(Motion):
@@ -286,8 +285,6 @@ class DummyIntegrator:
         self.fixatoms = motion.fixatoms
         self.fixatoms3 = motion.fixatoms3
         self.enstype = motion.enstype
-        if motion.enstype in EDA.integrators:
-            self.eda = motion.eda
 
         # no need to dpipe these are really just references
         self._splitting = motion._splitting
