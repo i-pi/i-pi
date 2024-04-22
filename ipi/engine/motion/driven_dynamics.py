@@ -14,7 +14,6 @@ from ipi.utils.units import UnitMap
 import re
 
 
-
 class DrivenDynamics(Dynamics):
     """self (path integral) molecular dynamics class.
 
@@ -73,7 +72,7 @@ class DrivenDynamics(Dynamics):
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
 
-        dpipe(dfrom=ens._time, dto=self._time) 
+        dpipe(dfrom=ens._time, dto=self._time)
 
         super().bind(ens, beads, nm, cell, bforce, prng, omaker)
 
@@ -112,8 +111,8 @@ class EDAIntegrator(DummyIntegrator):
         """bind variables"""
         super().bind(motion)
 
-        dpipe(dto=motion._efield_time, dfrom=self._efield_time)  
-        dpipe(dfrom=motion._time, dto=self._time) 
+        dpipe(dto=motion._efield_time, dfrom=self._efield_time)
+        dpipe(dfrom=motion._time, dto=self._time)
         self.Born_Charges = motion.Born_Charges
         self.Electric_Field = motion.Electric_Field
 
