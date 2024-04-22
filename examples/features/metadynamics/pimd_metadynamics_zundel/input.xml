@@ -9,11 +9,13 @@
    <ffplumed name="plumed">
          <file mode="xyz">./h5o2+.xyz</file>
          <plumeddat> plumed/plumed.dat </plumeddat>
+         <plumedextras> [doo, co1.lessthan, co2.lessthan, mtd.bias ] </plumedextras>
    </ffplumed>
    <total_steps>400</total_steps>
    <output prefix="data">
       <trajectory stride="40" filename="pos" cell_units="angstrom">positions{angstrom}</trajectory>
       <trajectory stride="20" filename="xc" format="xyz">x_centroid{angstrom}</trajectory>
+      <trajectory stride="20" filename="doo" bead="0" extra_type="doo"> extras_bias </trajectory>
       <properties stride="2"> [ step, time, conserved, temperature{kelvin}, kinetic_cv, 
             potential, kinetic_cv(H), kinetic_cv(O), ensemble_bias ] </properties>
    </output>
@@ -33,7 +35,9 @@
       <ensemble>
          <temperature units="kelvin"> 300.0 </temperature>
          <bias>
-            <force forcefield="plumed" nbeads="1"></force>
+           <force forcefield="plumed" nbeads="1">
+             <interpolate_extras> [ doo, mtd.bias ] </interpolate_extras>
+           </force>
          </bias>
       </ensemble>
       <motion mode="dynamics">
