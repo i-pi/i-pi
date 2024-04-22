@@ -129,15 +129,33 @@ class EDAIntegrator(DummyIntegrator):
         )
         pass
 
-    def pstep(self, level=0):
-        """Velocity Verlet momentum propagator."""
+    def td_pstep(self, level=0):
+        """Velocity Verlet momentum propagator with a time dependent force."""
+        # Note for future developers!
+        # - This method should be called only twice per MD step:
+        #   once before, and once after `NVEIntegrator.step` (as implemented in `EDANVEIntegrator.step`)
+        # - If you change the name of this method to `pstep`, then this method will be called
+        #   multiple times by `NVEIntegrator.step`. This would lead to a wrong dynamics!
+        # - For this reason, the momenta (the time-dependent force contribution)
+        #   should be done in a method with a different name (as done here).
+        # - This issue arises from the fact that a time-dependent force integrator is ill-defined
+        #   in a MTS algorithm framework. For this reason, the time-dependent contribution can added in the
+        #   outermost layer only, such that to avoid any inconsistency in the definition of the time used to evaluate the force.
+
+        if level != 0:
+            raise ValueError(
+                "EDAIntegrator can be called only in the outermost layer of a Multiple Time Step algorithm."
+            )
+
         self.beads.p += self.EDAforces * self.pdt[level]
         if self.efield_time <= self.time:
-            # it's the first time that 'pstep' is called
+            # it's the first time that 'td_pstep' is called
             # then we need to update 'efield_time'
             self.efield_time += self.dt
             # the next time this condition will be 'False'
             # so we will avoid to re-compute the EDAforces
+        else:
+            pass
         pass
 
     def _eda_forces(self):
@@ -146,14 +164,6 @@ class EDAIntegrator(DummyIntegrator):
         E = dstrip(self.Electric_Field.Efield)  # vector of shape (3)
         forces = Constants.e * Z @ E  # array of shape (nbeads,3xNatoms)
         return forces
-
-    def step(self, step=None):
-        if len(self.nmts) > 1:
-            raise ValueError(
-                "EDAIntegrator is not implemented with the Multiple Time Step algorithm (yet)."
-            )
-        # This should call 'NVEIntegrator.step' since 'self' should be an instance of 'EDANVEIntegrator' and not of 'EDAIntegrator'
-        super().step(step)
 
 
 dproperties(EDAIntegrator, ["EDAforces", "efield_time", "time"])
@@ -164,15 +174,10 @@ class EDANVEIntegrator(EDAIntegrator, NVEIntegrator):
     using the Electric Dipole Approximation (EDA) when an external electric field is applied.
     """
 
-    def pstep(self, level):
-        # NVEIntegrator does not use 'super()' within 'pstep'
-        # then we can not use 'super()' here.
-        # We need to call the 'pstep' methods explicitly.
-        NVEIntegrator.pstep(
-            self, level
-        )  # the driver is called here: add nuclear and electronic forces (DFT)
-        EDAIntegrator.pstep(self, level)  # add the driving forces, i.e. q_e Z @ E(t)
-        pass
+    def step(self, step):
+        EDAIntegrator.td_pstep(self, 0)
+        NVEIntegrator.step(self, step)
+        EDAIntegrator.td_pstep(self, 0)
 
 
 class BEC:
