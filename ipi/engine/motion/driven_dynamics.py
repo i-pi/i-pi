@@ -185,7 +185,7 @@ class BEC:
     # If an external time-dependent electric field E(t) is applied, this couples to the dipole of the system,
     # and the resulting additional term to the forces is given by q_e Z^* @ E(t) --> have a look at EDAIntegrator._eda_forces
     #
-    # The BEC tensors Z^* can be given to i-PI by an external driven through the etxra strings in the forces
+    # The BEC tensors Z^* can be given to i-PI by an external driver through the etxras strings in the forces
     # of they can be kept fixed during the dynamics: in this case you can provide them through a txt file.
 
     def __init__(self, cbec=None, bec=None):
