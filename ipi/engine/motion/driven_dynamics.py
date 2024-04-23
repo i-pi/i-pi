@@ -67,30 +67,13 @@ class DrivenDynamics(Dynamics):
         self.Born_Charges = bec
         self.Electric_Dipole = ElectricDipole()
         self._time = depend_value(name="time", value=0)
-        # self._efield_time = depend_value(name="efield_time", value=0)
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
-
         dpipe(dfrom=ens._time, dto=self._time)
-
         super().bind(ens, beads, nm, cell, bforce, prng, omaker)
-
         self.Electric_Dipole.bind(ens)
         self.Electric_Field.bind(self, self.enstype)
         self.Born_Charges.bind(ens, self.enstype)
-
-    # def step(self, step=None):
-    #     """Advances the dynamics by one time step"""
-
-    #     super().step(step)
-
-    #     # # Check that these variable are the same.
-    #     # # If they are not the same, then there is a bug in the code
-    #     # dt = abs(self.ensemble.time - self.integrator.efield_time)
-    #     # if dt > 1e-12:
-    #     #     raise ValueError(
-    #     #         "The time at which the Electric Field is evaluated is not properly updated!"
-    #     #     )
 
 
 dproperties(DrivenDynamics, ["dt", "nmts", "splitting", "ntemp", "time", "efield_time"])
@@ -104,30 +87,13 @@ class EDAIntegrator(DummyIntegrator):
     def __init__(self):
         super().__init__()
         self._time = depend_value(name="time", value=0)
-        # self._efield_time = depend_value(name="efield_time", value=0)
 
     def bind(self, motion: DrivenDynamics):
         """bind variables"""
         super().bind(motion)
-
-        # dpipe(dto=motion._efield_time, dfrom=self._efield_time)
         dpipe(dfrom=motion._time, dto=self._time)
         self.Born_Charges: BEC = motion.Born_Charges
         self.Electric_Field: ElectricField = motion.Electric_Field
-
-        # dep = [
-        #     self._time,
-        #     self._efield_time,
-        #     self.Born_Charges._bec,
-        #     self.Electric_Field._Efield,
-        # ]
-        # self._EDAforces = depend_array(
-        #     name="EDAforces",
-        #     func=self._eda_forces,
-        #     value=np.zeros((self.beads.nbeads, self.beads.natoms * 3)),
-        #     dependencies=dep,
-        # )
-        pass
 
     def td_pstep(self, time, level=0):
         """Velocity Verlet momentum propagator with a time dependent force."""
@@ -144,18 +110,12 @@ class EDAIntegrator(DummyIntegrator):
 
         edaforces = self.EDAforces(time)
         self.beads.p += edaforces * self.pdt[level]
-        # if self.efield_time <= self.time:
-        #     # it's the first time that 'td_pstep' is called
-        #     # then we need to update 'efield_time'
-        #     self.efield_time += self.dt
-        #     # the next time this condition will be 'False'
-        #     # so we will avoid to re-compute the EDAforces
+
         pass
 
     def EDAforces(self, time):
         """Compute the EDA contribution to the forces, i.e. `q_e Z^* @ E(t)`"""
         Z = dstrip(self.Born_Charges.bec)  # tensor of shape (nbeads,3xNatoms,3)
-        # E = dstrip(self.Electric_Field.Efield)  # vector of shape (3)
         E = self.Electric_Field.Efield(time)  # vector of shape (3)
         forces = Constants.e * Z @ E  # array of shape (nbeads,3xNatoms)
         return forces
@@ -392,52 +352,10 @@ class ElectricField:
             name="sigma", value=sigma if sigma is not None else np.inf
         )
         self.enabled = True
-        # self._Efield = depend_array(
-        #     name="Efield",
-        #     value=np.zeros(3, float),
-        #     func=lambda: np.zeros(3, float),
-        # )
-        # self.Efield = lambda t: np.zeros(3, float)
-        # self._Eenvelope = depend_value(
-        #     name="Eenvelope",
-        #     value=1.0,
-        #     func=lambda: np.zeros(3, float),
-        # )
-        # self.Eenvelope = lambda t: 0
 
     def bind(self, driven_dyn, enstype: str):
         self.enstype = enstype
-        # self._efield_time = driven_dyn._efield_time
-
-        # dep = [self._efield_time, self._peak, self._sigma]
-        # self._Eenvelope = depend_value(
-        #     name="Eenvelope", value=1.0, func=self._get_Eenvelope, dependencies=dep
-        # )
-
-        if enstype in driven_dyn.driven_integrators:
-            # dynamics is driven --> add dependencies to the electric field
-            self.enabled = True
-            # dep = [
-            #     self._efield_time,
-            #     self._amp,
-            #     self._freq,
-            #     self._phase,
-            #     self._Eenvelope,
-            # ]
-            # self._Efield = depend_array(
-            #     name="Efield",
-            #     value=np.zeros(3, float),
-            #     func=self._get_Efield,
-            #     dependencies=dep,
-            # )
-        else:
-            # dynamics is not driven --> no dependencies for the electric field
-            self.enabled = False
-            # self._Efield = depend_array(
-            #     name="Efield",
-            #     value=np.zeros(3, float),
-            #     func=lambda: np.zeros(3, float),
-            # )
+        self.enabled = enstype in driven_dyn.driven_integrators
         pass
 
     def store(self, ef):
