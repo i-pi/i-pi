@@ -67,7 +67,7 @@ class DrivenDynamics(Dynamics):
         self.Born_Charges = bec
         self.Electric_Dipole = ElectricDipole()
         self._time = depend_value(name="time", value=0)
-        self._efield_time = depend_value(name="efield_time", value=0)
+        # self._efield_time = depend_value(name="efield_time", value=0)
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
 
@@ -79,18 +79,18 @@ class DrivenDynamics(Dynamics):
         self.Electric_Field.bind(self, self.enstype)
         self.Born_Charges.bind(ens, self.enstype)
 
-    def step(self, step=None):
-        """Advances the dynamics by one time step"""
+    # def step(self, step=None):
+    #     """Advances the dynamics by one time step"""
 
-        super().step(step)
+    #     super().step(step)
 
-        # Check that these variable are the same.
-        # If they are not the same, then there is a bug in the code
-        dt = abs(self.ensemble.time - self.integrator.efield_time)
-        if dt > 1e-12:
-            raise ValueError(
-                "The time at which the Electric Field is evaluated is not properly updated!"
-            )
+    #     # # Check that these variable are the same.
+    #     # # If they are not the same, then there is a bug in the code
+    #     # dt = abs(self.ensemble.time - self.integrator.efield_time)
+    #     # if dt > 1e-12:
+    #     #     raise ValueError(
+    #     #         "The time at which the Electric Field is evaluated is not properly updated!"
+    #     #     )
 
 
 dproperties(DrivenDynamics, ["dt", "nmts", "splitting", "ntemp", "time", "efield_time"])
@@ -104,32 +104,32 @@ class EDAIntegrator(DummyIntegrator):
     def __init__(self):
         super().__init__()
         self._time = depend_value(name="time", value=0)
-        self._efield_time = depend_value(name="efield_time", value=0)
+        # self._efield_time = depend_value(name="efield_time", value=0)
 
     def bind(self, motion: DrivenDynamics):
         """bind variables"""
         super().bind(motion)
 
-        dpipe(dto=motion._efield_time, dfrom=self._efield_time)
+        # dpipe(dto=motion._efield_time, dfrom=self._efield_time)
         dpipe(dfrom=motion._time, dto=self._time)
-        self.Born_Charges = motion.Born_Charges
-        self.Electric_Field = motion.Electric_Field
+        self.Born_Charges: BEC = motion.Born_Charges
+        self.Electric_Field: ElectricField = motion.Electric_Field
 
-        dep = [
-            self._time,
-            self._efield_time,
-            self.Born_Charges._bec,
-            self.Electric_Field._Efield,
-        ]
-        self._EDAforces = depend_array(
-            name="EDAforces",
-            func=self._eda_forces,
-            value=np.zeros((self.beads.nbeads, self.beads.natoms * 3)),
-            dependencies=dep,
-        )
+        # dep = [
+        #     self._time,
+        #     self._efield_time,
+        #     self.Born_Charges._bec,
+        #     self.Electric_Field._Efield,
+        # ]
+        # self._EDAforces = depend_array(
+        #     name="EDAforces",
+        #     func=self._eda_forces,
+        #     value=np.zeros((self.beads.nbeads, self.beads.natoms * 3)),
+        #     dependencies=dep,
+        # )
         pass
 
-    def td_pstep(self, level=0):
+    def td_pstep(self, time, level=0):
         """Velocity Verlet momentum propagator with a time dependent force."""
         # This method adds the time-dependent force contribution to the momenta.
         # and it is called only twice per MD step, as implemented in `EDANVEIntegrator.step`.
@@ -142,24 +142,26 @@ class EDAIntegrator(DummyIntegrator):
                 "EDAIntegrator can be called only in the outermost layer of a Multiple Time Step algorithm."
             )
 
-        self.beads.p += self.EDAforces * self.pdt[level]
-        if self.efield_time <= self.time:
-            # it's the first time that 'td_pstep' is called
-            # then we need to update 'efield_time'
-            self.efield_time += self.dt
-            # the next time this condition will be 'False'
-            # so we will avoid to re-compute the EDAforces
+        edaforces = self.EDAforces(time)
+        self.beads.p += edaforces * self.pdt[level]
+        # if self.efield_time <= self.time:
+        #     # it's the first time that 'td_pstep' is called
+        #     # then we need to update 'efield_time'
+        #     self.efield_time += self.dt
+        #     # the next time this condition will be 'False'
+        #     # so we will avoid to re-compute the EDAforces
         pass
 
-    def _eda_forces(self):
+    def EDAforces(self, time):
         """Compute the EDA contribution to the forces, i.e. `q_e Z^* @ E(t)`"""
         Z = dstrip(self.Born_Charges.bec)  # tensor of shape (nbeads,3xNatoms,3)
-        E = dstrip(self.Electric_Field.Efield)  # vector of shape (3)
+        # E = dstrip(self.Electric_Field.Efield)  # vector of shape (3)
+        E = self.Electric_Field.Efield(time)  # vector of shape (3)
         forces = Constants.e * Z @ E  # array of shape (nbeads,3xNatoms)
         return forces
 
 
-dproperties(EDAIntegrator, ["EDAforces", "efield_time", "time"])
+dproperties(EDAIntegrator, ["time"])
 
 
 class EDANVEIntegrator(EDAIntegrator, NVEIntegrator):
@@ -168,9 +170,11 @@ class EDANVEIntegrator(EDAIntegrator, NVEIntegrator):
     """
 
     def step(self, step):
-        EDAIntegrator.td_pstep(self, 0)
+        time = self.time
+        EDAIntegrator.td_pstep(self, time, 0)
         NVEIntegrator.step(self, step)
-        EDAIntegrator.td_pstep(self, 0)
+        time = self.time + self.dt
+        EDAIntegrator.td_pstep(self, time, 0)
 
 
 class BEC:
@@ -387,48 +391,53 @@ class ElectricField:
         self._sigma = depend_value(
             name="sigma", value=sigma if sigma is not None else np.inf
         )
-        self._Efield = depend_array(
-            name="Efield",
-            value=np.zeros(3, float),
-            func=lambda: np.zeros(3, float),
-        )
-        self._Eenvelope = depend_value(
-            name="Eenvelope",
-            value=1.0,
-            func=lambda: np.zeros(3, float),
-        )
+        self.enabled = True
+        # self._Efield = depend_array(
+        #     name="Efield",
+        #     value=np.zeros(3, float),
+        #     func=lambda: np.zeros(3, float),
+        # )
+        # self.Efield = lambda t: np.zeros(3, float)
+        # self._Eenvelope = depend_value(
+        #     name="Eenvelope",
+        #     value=1.0,
+        #     func=lambda: np.zeros(3, float),
+        # )
+        # self.Eenvelope = lambda t: 0
 
     def bind(self, driven_dyn, enstype: str):
         self.enstype = enstype
-        self._efield_time = driven_dyn._efield_time
+        # self._efield_time = driven_dyn._efield_time
 
-        dep = [self._efield_time, self._peak, self._sigma]
-        self._Eenvelope = depend_value(
-            name="Eenvelope", value=1.0, func=self._get_Eenvelope, dependencies=dep
-        )
+        # dep = [self._efield_time, self._peak, self._sigma]
+        # self._Eenvelope = depend_value(
+        #     name="Eenvelope", value=1.0, func=self._get_Eenvelope, dependencies=dep
+        # )
 
         if enstype in driven_dyn.driven_integrators:
             # dynamics is driven --> add dependencies to the electric field
-            dep = [
-                self._efield_time,
-                self._amp,
-                self._freq,
-                self._phase,
-                self._Eenvelope,
-            ]
-            self._Efield = depend_array(
-                name="Efield",
-                value=np.zeros(3, float),
-                func=self._get_Efield,
-                dependencies=dep,
-            )
+            self.enabled = True
+            # dep = [
+            #     self._efield_time,
+            #     self._amp,
+            #     self._freq,
+            #     self._phase,
+            #     self._Eenvelope,
+            # ]
+            # self._Efield = depend_array(
+            #     name="Efield",
+            #     value=np.zeros(3, float),
+            #     func=self._get_Efield,
+            #     dependencies=dep,
+            # )
         else:
             # dynamics is not driven --> no dependencies for the electric field
-            self._Efield = depend_array(
-                name="Efield",
-                value=np.zeros(3, float),
-                func=lambda: np.zeros(3, float),
-            )
+            self.enabled = False
+            # self._Efield = depend_array(
+            #     name="Efield",
+            #     value=np.zeros(3, float),
+            #     func=lambda: np.zeros(3, float),
+            # )
         pass
 
     def store(self, ef):
@@ -440,19 +449,25 @@ class ElectricField:
         self.sigma.store(ef.sigma)
         pass
 
-    def _get_Efield(self):
+    def Efield(self, time):
         """Get the value of the external electric field (cartesian axes)"""
-        time = self.efield_time
-        if hasattr(time, "__len__"):
-            return np.outer(self._get_Ecos(time) * self.Eenvelope, self.amp)
+        if not self.enabled:  # return a zero field with the correct shape
+            if hasattr(time, "__len__"):
+                return np.zeros((len(time), 3), float)
+            else:
+                return np.zeros(3, float)
         else:
-            return self._get_Ecos(time) * self.Eenvelope * self.amp
+            Eenv = self.Eenvelope(time)  # evaluate the envelope function
+            Ecos = self._get_Ecos(time)  # evaluate the cos function
+            if hasattr(time, "__len__"):
+                return np.outer(Ecos * Eenv, self.amp)
+            else:
+                return Ecos * Eenv * self.amp
 
     def _Eenvelope_is_on(self):
         return self.peak > 0.0 and self.sigma != np.inf
 
-    def _get_Eenvelope(self):
-        time = self.efield_time
+    def Eenvelope(self, time):
         """Get the gaussian envelope function of the external electric field"""
         if self._Eenvelope_is_on():
             x = time  # indipendent variable
@@ -471,5 +486,5 @@ class ElectricField:
 
 dproperties(
     ElectricField,
-    ["amp", "phase", "peak", "sigma", "freq", "Eenvelope", "Efield", "efield_time"],
+    ["amp", "phase", "peak", "sigma", "freq"],
 )

@@ -289,7 +289,7 @@ class Properties:
                 "size": 3,
                 "func": (
                     lambda: (
-                        self.motion.Electric_Field.Efield
+                        self.motion.Electric_Field.Efield(self.ensemble.time)
                         if isinstance(self.motion, DrivenDynamics)
                         else np.zeros(3)
                     )
@@ -300,7 +300,7 @@ class Properties:
                 "help": "The (gaussian) envelope function of the external applied electric field (values go from 0 to 1).",
                 "func": (
                     lambda: (
-                        self.motion.Electric_Field.Eenvelope
+                        self.motion.Electric_Field.Eenvelope(self.ensemble.time)
                         if isinstance(self.motion, DrivenDynamics)
                         else 0.0
                     )
@@ -2825,7 +2825,9 @@ class Trajectories:
                 "help": "The external electric field contribution to the forces",
                 "func": (
                     lambda: (
-                        self.system.motion.integrator.EDAforces
+                        self.system.motion.integrator.EDAforces(
+                            self.system.motion.integrator.time
+                        )
                         if isinstance(self.system.motion, DrivenDynamics)
                         else np.zeros((self.system.beads.natoms * 3))
                     )
