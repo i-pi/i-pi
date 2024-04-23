@@ -62,6 +62,11 @@ To add a new regression test please provide:
 
      reference file: ref_simulation.out
      output to be genererated from i-pi: simulation.out
+   
+   - Folder names terminating with '.NOAUTO' (e.g. 'PLUMED.NOAUTO') are ignored 
+     when run without specifying the folder name explicitly. This is useful when the
+     test requires an external program (e.g. PLUMED) that may not be available on
+     the testing platform
 
 
 Important: 

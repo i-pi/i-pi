@@ -1,0 +1,8 @@
+        filename                        format
+----------------------------------------------------------
+ref_simulation.frc_c.xyz                  xyz
+ref_simulation.pos_c.xyz                  xyz
+ref_simulation.dhh_0                      numpy
+ref_simulation.out                       numpy
+ref_COLVAR                               numpy
+ref_HILLS                                numpy

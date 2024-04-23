@@ -346,7 +346,8 @@ class TrajectoryOutput(BaseOutput):
             "forces",
             "Eforces",
             "extras",
-            "extras_component",
+            # "extras_component_raw", write out a single file as we don't know how to do contraction here
+            "extras_bias",
             "forces_sc",
             "momenta",
             "becx",
@@ -356,7 +357,7 @@ class TrajectoryOutput(BaseOutput):
             # must write out trajectories for each bead, so must create b streams
 
             # prepare format string for file name
-            if getkey(self.what) == "extras" or getkey(self.what) == "extras_component":
+            if getkey(self.what)[:6] == "extras":
                 fmt_fn = self.filename + "_" + fmt_bead
             else:
                 fmt_fn = self.filename + "_" + fmt_bead + "." + self.format
@@ -371,7 +372,10 @@ class TrajectoryOutput(BaseOutput):
                     self.out.append(None)
         else:
             # open one file
-            filename = self.filename + "." + self.format
+            filename = self.filename
+            # prepare format string for file name
+            if getkey(self.what)[:6] != "extras":
+                filename += "." + self.format
             self.out = open_backup(filename, mode)
 
     def close_stream(self):
@@ -481,14 +485,27 @@ class TrajectoryOutput(BaseOutput):
         """
 
         key = getkey(what)
-        if key in ["extras", "extras_component"]:
-            stream.write(
-                " #%s(%s)# Step:  %10d  Bead:  %5d  \n"
-                % (key.upper(), self.extra_type, self.system.simul.step + 1, b)
-            )
+        if key in ["extras", "extras_component_raw", "extras_bias"]:
+            if key == "extras_component_raw":
+                stream.write(
+                    " #%s(%s)# Step:  %10d  Bead:  %5d  \n"
+                    % (key.upper(), self.extra_type, self.system.simul.step + 1, b)
+                )
+            else:
+                stream.write(
+                    " #%s(%s)# Step:  %10d \n"
+                    % (key.upper(), self.extra_type, self.system.simul.step + 1)
+                )
             if self.extra_type in data:
                 try:
-                    floatarray = np.asarray(data[self.extra_type][b], dtype=float)
+                    if key == "extras_component_raw":
+                        # don't partition into beads as there might be a different number when contracting
+                        floatarray = np.asarray(
+                            data[self.extra_type], dtype=float
+                        ).squeeze()
+                    else:
+                        # picks up the desired bead
+                        floatarray = np.asarray(data[self.extra_type][b], dtype=float)
                     if floatarray.ndim == 2:
                         stream.write(
                             "\n".join(
