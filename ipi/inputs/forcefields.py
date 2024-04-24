@@ -521,7 +521,7 @@ class InputFFPlumed(InputForceField):
                 "help": "The current step counter for PLUMED calls",
             },
         ),
-        "plumedextras": (
+        "plumed_extras": (
             InputArray,
             {
                 "dtype": str,
@@ -552,7 +552,7 @@ unless you include a <metad> tag, that triggers the log update. """
         # self.plumedstep.store(pstep)
         self.plumedstep.store(ff.plumedstep)
         self.file.store(ff.init_file)
-        self.plumedextras.store(np.array(ff.plumed_data.keys()))
+        self.plumed_extras.store(np.array(ff.plumed_data.keys()))
 
     def fetch(self):
         super(InputFFPlumed, self).fetch()
@@ -565,7 +565,7 @@ unless you include a <metad> tag, that triggers the log update. """
             threaded=self.threaded.fetch(),
             plumeddat=self.plumeddat.fetch(),
             plumedstep=self.plumedstep.fetch(),
-            plumedextras=self.plumedextras.fetch(),
+            plumed_extras=self.plumed_extras.fetch(),
             init_file=self.file.fetch(),
         )
 

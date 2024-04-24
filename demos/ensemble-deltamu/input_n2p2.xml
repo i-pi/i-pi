@@ -25,7 +25,7 @@
     </ffsocket>
   </ffcommittee>
   <ffplumed name="plumed">                                                    
-      <file mode="xyz">init.xyz</file>
+      <file mode="xyz">init_ase.xyz</file>
       <plumeddat>plumed.dat </plumeddat>                              
   </ffplumed> 
    <system>
