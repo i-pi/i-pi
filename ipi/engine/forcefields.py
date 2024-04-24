@@ -670,7 +670,7 @@ class FFPlumed(FFEval):
         init_file="",
         plumeddat="",
         plumedstep=0,
-        plumedextras=[],
+        plumed_extras=[],
     ):
         """Initialises FFPlumed.
 
@@ -689,7 +689,7 @@ class FFPlumed(FFEval):
         self.plumed = plumed.Plumed()
         self.plumeddat = plumeddat
         self.plumedstep = plumedstep
-        self.plumedextras = plumedextras
+        self.plumed_extras = plumed_extras
         self.init_file = init_file
 
         if self.init_file.mode == "xyz":
@@ -721,7 +721,7 @@ class FFPlumed(FFEval):
         self.plumed.cmd("init")
 
         self.plumed_data = {}
-        for x in plumedextras:
+        for x in plumed_extras:
             rank = np.zeros(1, dtype=np.int_)
             self.plumed.cmd(f"getDataRank {x}", rank)
             if rank[0] > 1:

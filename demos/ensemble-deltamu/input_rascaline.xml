@@ -1,9 +1,10 @@
 <simulation verbosity="medium" threading="True" safe_stride="10">
    <output prefix="pinning-rascaline">
        <properties stride='20' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, potential{electronvolt}, ensemble_bias{electronvolt}, pressure_cv{megapascal}, volume{angstrom3}, cell_h{angstrom} ] </properties>
-    <trajectory filename='committee_pot' stride='20' extra_type='committee_pot'> extras </trajectory> 
-    <trajectory filename="pos" stride="2000" cell_units="angstrom" format="ase"> positions{angstrom} </trajectory>
-    <trajectory filename='extra' stride='2000'> extras </trajectory>    
+       <trajectory filename='committee_pot' stride='20' extra_type='committee_pot'> extras </trajectory>
+       <trajectory filename='cv' stride='20' extra_type='m6.morethan-1'> extras </trajectory>
+       <trajectory filename="pos" stride="2000" cell_units="angstrom" format="ase"> positions{angstrom} </trajectory>
+       <trajectory filename='extra' stride='2000'> extras </trajectory>    
     <checkpoint stride='2500'></checkpoint>
    </output>
    <total_steps> 400000  </total_steps>
@@ -16,8 +17,9 @@
     <parse_json> True </parse_json>
   </ffcommittee>
   <ffplumed name="plumed">                                                    
-      <file mode="xyz">init.xyz</file>
-      <plumeddat>plumed.dat </plumeddat>                              
+      <file mode="xyz">init_ase.xyz</file>
+      <plumeddat>plumed.dat </plumeddat>
+      <plumed_extras> [ m6.morethan-1 ] </plumed_extras>
   </ffplumed> 
    <system>
       <initialize nbeads="1">
@@ -31,7 +33,7 @@
          <dynamics mode="nst">
             <timestep units="femtosecond"> 0.5 </timestep>
             <barostat mode="anisotropic">
-              <tau units="femtosecond"> 1000 </tau>
+              <tau units="femtosecond"> 500 </tau>
               <thermostat mode='gle'>
                 <A shape='(5,5)'>
                   [   1.119252684345e-2,    8.975945537096e-6,   -2.728650447177e-5,   -7.011051989908e-4,    8.414373543550e-3, 

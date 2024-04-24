@@ -59,6 +59,7 @@ For the rascaline model, change the variables `PLUMED_PATH` and `IPI_PATH` to th
 paths were the source of Plumed and i-PI are located. Then simply run the provided script.
 
 ```
+conda activate deltamu
 ./run_rascaline.sh
 ```
 
