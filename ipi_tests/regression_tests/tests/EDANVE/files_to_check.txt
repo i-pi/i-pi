@@ -1,0 +1,10 @@
+        filename                        format
+----------------------------------------------------------
+ref_simulation.becx_0.xyz         xyz
+ref_simulation.becy_0.xyz         xyz
+ref_simulation.becz_0.xyz         xyz
+ref_simulation.Eforces_0.xyz      xyz
+ref_simulation.forces_0.xyz       xyz
+ref_simulation.positions_0.xyz    xyz
+ref_simulation.velocities_0.xyz   xyz
+ref_simulation.properties.out     numpy
