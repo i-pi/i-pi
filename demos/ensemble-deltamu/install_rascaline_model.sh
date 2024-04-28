@@ -3,10 +3,10 @@
 #macOS related flag
 export MACOSX_DEPLOYMENT_TARGET=11
 
+conda install -c conda-forge rust=1.74 python=3.10
+
 #purge the pip cache
 pip cache purge
-
-conda install -c conda-forge rust=1.74 python=3.10
 
 #install plumed and pyplumed from i-pi-demo channel with crystallization enabled
 conda install --strict-channel-priority -c plumed/label/ipi-demo -c conda-forge plumed py-plumed
