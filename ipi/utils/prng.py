@@ -130,6 +130,18 @@ class Random(object):
 
         return self.rng[0].poisson(lam, size)
 
+    def uniform(self, low=0.0, high=1.0, size=None):
+        """Interface to the standard uniform() function.
+
+        Args:
+            Same as numpy.Generator.uniform
+
+        Returns:
+            Uniform random reals in the prescribed interval
+        """
+
+        return self.rng[0].uniform(low, high, size)
+
     def integers(self, low, high=None, size=None, dtype=np.int64, endpoint=False):
         """Interface to the standard integers() function.
 
