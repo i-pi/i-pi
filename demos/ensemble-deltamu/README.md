@@ -224,12 +224,14 @@ the committee potential member $V^{(k)}$, starting from a group of configuration
 collected from a simulation performed with the mean potential $\bar{V}$. 
 
 $$
+\
 \langle y \rangle_{V^{(k)}} \approx 
 \langle y \rangle_{\bar{V}} - \beta 
 \left[
-\langle< y (V^{(k)}-\bar{V})\rangle _{\bar{V}} -
-\langle y \rangle_{\bar{V}} \langle< V^{(k)}-\bar{V}\rangle _{\bar{V}}
+\langle y (V^{(k)}-\bar{V}) \rangle_{\bar{V}} -
+\langle y \rangle_{\bar{V}} \langle V^{(k)}-\bar{V} \rangle_{\bar{V}}
 \right]
+\
 $$
 
 It is important to keep in mind that the CEA is based on the assumption that $y$ and 
