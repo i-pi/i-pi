@@ -104,7 +104,7 @@ class Random(object):
 
         return self.rng[0].standard_normal()
 
-    def gamma(self, k, theta=1.0):
+    def gamma(self, k, theta=1.0, size=None):
         """Interface to the standard gamma() function.
 
         Args:
@@ -116,7 +116,55 @@ class Random(object):
             mean value theta.
         """
 
-        return self.rng[0].gamma(k, theta)
+        return self.rng[0].gamma(k, theta, size)
+
+    def poisson(self, lam=1.0, size=None):
+        """Interface to the standard poisson() function.
+
+        Args:
+            lam: Mean of the Poisson distribution
+
+        Returns:
+            A random number from a Poisson distribution
+        """
+
+        return self.rng[0].poisson(lam, size)
+
+    def uniform(self, low=0.0, high=1.0, size=None):
+        """Interface to the standard uniform() function.
+
+        Args:
+            Same as numpy.Generator.uniform
+
+        Returns:
+            Uniform random reals in the prescribed interval
+        """
+
+        return self.rng[0].uniform(low, high, size)
+
+    def integers(self, low, high=None, size=None, dtype=np.int64, endpoint=False):
+        """Interface to the standard integers() function.
+
+        Args:
+            Same as numpy.Generator.integers
+
+        Returns:
+            Random integers in the prescribed interval
+        """
+
+        return self.rng[0].integers(low, high, size, dtype, endpoint)
+
+    def shuffle(self, x, axis=0):
+        """Interface to the standard shuffle() function.
+
+        Args:
+            Same as numpy.Generator.shuffle
+
+        Returns:
+            None
+        """
+
+        self.rng[0].shuffle(x, axis)
 
     def gfill_serial(self, out):
         """Fills a pre-allocated array serially

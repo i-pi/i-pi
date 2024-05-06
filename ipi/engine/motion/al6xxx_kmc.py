@@ -240,7 +240,7 @@ class AlKMC(Motion):
             idx = np.asarray(
                 list(range(self.ncell**3)), int
             )  # initialize random distribution of atoms
-            self.prng.rng.shuffle(idx)
+            self.prng.shuffle(idx)
             self.idx = idx
 
         # initialize state based on the index
