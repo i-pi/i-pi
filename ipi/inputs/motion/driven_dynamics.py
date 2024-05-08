@@ -184,8 +184,22 @@ class InputDrivenDynamics(InputDynamics):
 
     fields.update(InputDynamics.fields)
 
-    attribs = {}
-    attribs.update(InputDynamics.attribs)
+    attribs = {
+        "mode": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "default": "eda-nve",
+                "help": """The ensemble that will be sampled during the simulation.
+                eda-nve: nve with an external electric field;
+                 """,
+                "options": [
+                    "eda-nve",
+                ],
+            },
+        ),
+        "splitting": InputDynamics.attribs["splitting"],
+    }
 
     dynamic = {}
 
