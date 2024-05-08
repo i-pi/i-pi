@@ -85,8 +85,8 @@ class Atoms:
        natoms: The number of atoms.
 
     Depend objects:
-       p: An array giving the components of the atom positions.
-       q: An array giving the components of the atom momenta.
+       p: An array giving the components of the atom momenta.
+       q: An array giving the components of the atom position.
        m: An array giving the atom masses.
        names: An array giving the atom names.
        m3: An array of 3*n elements where each element of m has been copied

@@ -27,6 +27,7 @@ class Constants(object):
     kb = 1.0
     hbar = 1.0
     amu = 1822.8885
+    e = 1.0  # elementary charge, electron charge = - |e|
 
 
 class Elements(dict):
@@ -219,6 +220,22 @@ UnitMap = {
         "inversecm": 4.5563353e-06,
         "hertz*rad": 2.4188843e-17,
         "hertz": 1.5198298e-16,
+        "hz": 1.5198298e-16,
+        "thz": 1.5198298e-4,
+    },
+    "electric-field": {  # Hartree/Bohr radius
+        # 1Hartree = 27.2113862459 eV
+        #    1Bohr = 0.5291772109  A
+        "": 1.00,
+        "automatic": 1.00,
+        "atomic_unit": 1.00,
+        "ev/a": 0.019446903811441516,  # 0.5291772109/27.2113862459
+    },
+    "electric-dipole": {  # electron charge * Bohr
+        "": 1.00,
+        "automatic": 1.00,
+        "atomic_unit": 1.00,
+        "eang": 1.8897261,  # electron charge * angstrom
     },
     "ms-momentum": {  # TODO fill up units here (mass-scaled momentum)
         "": 1.00,
