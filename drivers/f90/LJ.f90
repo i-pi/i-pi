@@ -209,4 +209,86 @@
 
          END SUBROUTINE
 
+         SUBROUTINE LJMix_getall(n_type2, rc, sigma, eps, natoms, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
+            ! Calculates the LJ potential energy and virial and the forces 
+            ! acting on all the atoms, using 0.4 sigma and 0.4 epsilon for the first n_type2 atoms
+            !
+            ! Args:
+            !    n_type2: First atom are considered as type 2
+            !    rc: The cut-off radius.
+            !    sigma: The LJ distance parameter.	NOTE: x0 of the spring is set to be equal to sigma
+            !    eps: The LJ energy parameter.		NOTE: stiffness of the spring is set to be equal: 36*2^(2/3) eps
+            !    natoms: The number of atoms in the system.
+            !    atoms: A vector holding all the atom positions.
+            !    cell_h: The simulation box cell vector matrix.
+            !    cell_ih: The inverse of the simulation box cell vector matrix.
+            !    index_list: A array giving the last index of n_list that 
+            !       gives the neighbours of a given atom.
+            !    n_list: An array giving the indices of the atoms that neighbour
+            !       the atom determined by index_list.
+            !    pot: The total potential energy of the system.
+            !    forces: An array giving the forces acting on all the atoms.
+            !    virial: The virial tensor, not divided by the volume.
+
+            DOUBLE PRECISION, INTENT(IN) :: rc
+            DOUBLE PRECISION, INTENT(IN) :: sigma
+            DOUBLE PRECISION, INTENT(IN) :: eps
+            INTEGER, INTENT(IN) :: natoms
+            DOUBLE PRECISION, DIMENSION(natoms,3), INTENT(IN) :: atoms
+            DOUBLE PRECISION, DIMENSION(3,3), INTENT(IN) :: cell_h
+            DOUBLE PRECISION, DIMENSION(3,3), INTENT(IN) :: cell_ih
+            INTEGER, DIMENSION(natoms), INTENT(IN) :: index_list
+            INTEGER, DIMENSION(natoms*(natoms-1)/2), INTENT(IN) :: n_list
+            DOUBLE PRECISION, INTENT(OUT) :: pot
+            DOUBLE PRECISION, DIMENSION(natoms,3), INTENT(OUT) :: forces
+            DOUBLE PRECISION, DIMENSION(3,3), INTENT(OUT) :: virial
+
+            INTEGER i, j, k, l, start, n_type2
+            DOUBLE PRECISION, DIMENSION(3) :: fij, rij
+            DOUBLE PRECISION sigmaij, epsij, r2, pot_ij, pot_lr, vir_lr, volume
+
+            start = 1
+            DO i = 1, natoms - 1
+               ! Only loops over the neigbour list, not all the atoms.
+               DO j = start, index_list(i)                                 
+                  CALL vector_separation(cell_h, cell_ih, atoms(i,:), atoms(n_list(j),:), rij, r2)
+                  IF (r2 < rc*rc) THEN ! Only calculates contributions between neighbouring particles.                     
+                     sigmaij = 1 ! geometric average of interaction parameters
+                     epsij = 1                     
+                     IF (i .le. n_type2) THEN
+                        sigmaij = 0.6
+                        epsij = 0.6
+                     ENDIF
+                     IF (i .le. n_type2) THEN
+                        sigmaij = sigmaij*0.6
+                        epsij = epsij*0.6
+                     ENDIF
+                     sigmaij = sigma*DSQRT(sigmaij)
+                     epsij = eps*DSQRT(epsij)
+
+                     CALL LJ_fij(sigmaij, epsij, rij, sqrt(r2), pot_ij, fij)
+
+                     forces(i,:) = forces(i,:) + fij
+                     forces(n_list(j),:) = forces(n_list(j),:) - fij
+                     pot = pot + pot_ij
+                     DO k = 1, 3
+                        DO l = k, 3
+                           ! Only the upper triangular elements calculated.
+                           virial(k,l) = virial(k,l) + fij(k)*rij(l)
+                        ENDDO
+                     ENDDO
+                  ENDIF
+               ENDDO
+               start = index_list(i) + 1
+            ENDDO
+
+            ! Assuming an upper-triangular vector matrix for the simulation box.
+            volume = cell_h(1,1)*cell_h(2,2)*cell_h(3,3)
+            CALL LJ_longrange(rc, sigma*(1-n_type2*0.4/natoms), eps*(1-n_type2*0.4/natoms), natoms, volume, pot_lr, vir_lr)
+            pot = pot + pot_lr
+            DO k = 1, 3
+               virial(k,k) = virial(k,k) + vir_lr
+            ENDDO
+
+         END SUBROUTINE
       END MODULE
