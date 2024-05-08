@@ -12,7 +12,7 @@ import re
 from ipi.utils.messages import verbosity, info
 
 
-__all__ = ["Constants", "Elements", "unit_to_internal", "unit_to_user", "UnitMap"]
+__all__ = ["Constants", "Elements", "unit_to_internal", "unit_to_user"]
 
 
 class Constants(object):
