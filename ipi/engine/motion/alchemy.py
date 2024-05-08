@@ -83,7 +83,7 @@ class AlchemyMC(Motion):
 
     def step(self, step=None):
         # picks number of attempted exchanges
-        ntries = self.prng.rng.poisson(self.nxc)
+        ntries = self.prng.poisson(self.nxc)
         if ntries == 0:
             return
 
@@ -120,10 +120,10 @@ class AlchemyMC(Motion):
         # if (1.0/self.nxc < self.prng.u) : return  # tries a round of exhanges with probability 1/nmc
 
         for x in range(ntries):
-            i = self.prng.rng.randint(lenlist)
-            j = self.prng.rng.randint(lenlist)
+            i = self.prng.integers(0, lenlist)
+            j = self.prng.integers(0, lenlist)
             while self.beads.names[axlist[i]] == self.beads.names[axlist[j]]:
-                j = self.prng.rng.randint(lenlist)  # makes sure we pick a real exchange
+                j = self.prng.integers(0, lenlist)  # makes sure we pick a real exchange
 
             # energy change due to the swap
             difspring = (atomspring[i] - atomspring[j]) * (

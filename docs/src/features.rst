@@ -19,9 +19,12 @@ Fermionic statistics can be obtained by a reweigthing procedure by post
 processing the simulation (see ref. 2 below).
 
 | **Main contributors:** Yotam Feldman, Barak Hirshberg
-| **Implementation:**
+| **Theory and Implementation:**
 | Y.M.Y. Feldman and B. Hirshberg *“Quadratic scaling bosonic path
-  integral molecular dynamics simulations”*, in preparation.
+  integral molecular dynamics simulations”*, J. Chem. Phys. 159, 154107 (2023) DOI: 
+  `10.1063/5.0173749 <https://doi.org/10.1063/5.0173749>`__
+  — BibTeX:
+  `fetch <https://pubs.aip.org/Citation/Download?resourceId=2917443&resourceType=3&citationFormat=2>`__
 | **Theory:**
 | B. Hirshberg, V. Rizzi and M. Parrinello, *“Path integral molecular
   dynamics for bosons”*, Proc. Natl. Acad. Sci. U.S.A. 116 (43)

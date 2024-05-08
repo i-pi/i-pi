@@ -1,0 +1,40 @@
+<simulation verbosity='low' threading='false' safe_stride='100'>
+    <fflj name='dummy' pbc='False'>
+      <parameters>{eps: 0.0, sigma: 1.0}</parameters>
+   </fflj>
+   <total_steps>4000</total_steps>
+   <output prefix='simulation'>
+      <trajectory stride='1000' filename='pos'> positions </trajectory>
+      <properties stride='1000'> [ step, time, conserved, temperature, kinetic_md, potential, pressure_md, volume ] </properties>
+   </output>
+   <prng n_threads='2'>
+      <seed>18885</seed>
+   </prng>
+   <system>
+      <forces> 
+          <force forcefield='dummy' weight='0.0'> </force>
+      </forces>
+      <initialize nbeads='32'>
+        <file mode='xyz'> init.xyz</file>
+        <cell> [10.0, 0, 0, 0, 10.0, 0, 0, 0, 10.0] </cell>
+        <masses mode='manual'> [1.0] </masses>
+        <velocities mode='thermal'> 1 </velocities>
+      </initialize>
+      <normal_modes fft_threads='2' fft_float32='True'/>
+      <ensemble>
+          <temperature> 1 </temperature>
+          <pressure> 1 </pressure>
+      </ensemble>
+      <motion mode='dynamics'>
+        <fixcom> False </fixcom>
+        <dynamics mode='npt'>
+            <timestep> 0.1 </timestep>
+            <thermostat mode='langevin'> <tau> 1 </tau> </thermostat>
+            <barostat mode='isotropic'>
+                <tau> 10 </tau>
+                <thermostat mode='langevin'> <tau> 10 </tau> </thermostat>
+            </barostat>
+        </dynamics>
+      </motion>
+  </system>
+</simulation>

@@ -1,7 +1,11 @@
 <simulation mode='md' verbosity='high'>
   <output prefix='simulation'>
-    <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv{megapascal} ] </properties>
-    <trajectory filename='pos' stride='1'> positions </trajectory>
+    <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv{megapascal}, pot_component_raw(0), pot_component_raw(1) ] </properties>
+    <properties stride='10' filename='pot_lr'>  [ pot_component(1;0), pot_component(1;1), pot_component(1;2), pot_component(1;3) ] </properties> 
+    <properties stride='10' filename='pot_lr-raw'>  [ pot_component_raw(1;0), pot_component_raw(1;1) ] </properties>
+    <trajectory filename='pos' stride='10'> positions </trajectory>
+    <trajectory filename='f_sr_c' stride='10'> forces_component_raw(0) </trajectory>
+    <trajectory filename='f_lr-raw' stride='10'> forces_component_raw(0;0) </trajectory>
     <checkpoint stride='200'/>
   </output>
   <total_steps>100</total_steps>
@@ -21,14 +25,16 @@
     </initialize>
     <forces>
        <!--
-         MTS setup - apply the fast (short-range) force in the inner loop and the slow (long-range) force in the outer loop. 
-         Note that if the outer loop contains a *correction* to the inner loop the weights should be 
-         [-1,1] (fast force) and [1,0] (slow force)
+           MTS setup - apply the fast (short-range) force in the inner loop and the slow (long-range) force in the 
+           outer loop. Also does ring-polymer contraction, by computing the long-range force on just two beads. 
+
+           Note that if the outer loop contains a *correction* to the inner loop the weights should be 
+           [-1,1] (fast force) and [1,0] (slow force)         
        -->
       <force forcefield='short_range'>
         <mts_weights>[0,1]</mts_weights>
       </force>
-      <force forcefield='long_range'>
+      <force forcefield='long_range' nbeads='2'>
         <mts_weights>[1,0]</mts_weights>
       </force>
     </forces>

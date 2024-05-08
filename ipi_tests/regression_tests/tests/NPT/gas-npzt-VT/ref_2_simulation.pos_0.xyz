@@ -2,302 +2,302 @@
 # CELL(abcABC):   10.00000    10.00000    10.00000    90.00000    90.00000    90.00000  Step:           0  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
        H  0.00000e+00  0.00000e+00  0.00000e+00
 1
-# CELL(abcABC):   10.00000    10.00000     9.19349    90.00000    90.00000    90.00000  Step:           1  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -6.81286e-03 -5.17330e-04 -6.95800e-03
+# CELL(abcABC):   10.00000    10.00000     9.19424    90.00000    90.00000    90.00000  Step:           1  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -4.78229e-03 -1.51992e-02 -4.78005e-03
 1
-# CELL(abcABC):   10.00000    10.00000     7.25087    90.00000    90.00000    90.00000  Step:           2  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -1.29945e-02 -1.75305e-03 -1.32097e-02
+# CELL(abcABC):   10.00000    10.00000     7.29013    90.00000    90.00000    90.00000  Step:           2  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -1.16610e-02 -3.06125e-02 -9.67996e-03
 1
-# CELL(abcABC):   10.00000    10.00000     5.08282    90.00000    90.00000    90.00000  Step:           3  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -1.91370e-02 -3.78136e-03 -2.00000e-02
+# CELL(abcABC):   10.00000    10.00000     5.14229    90.00000    90.00000    90.00000  Step:           3  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -1.83536e-02 -4.60295e-02 -1.46885e-02
 1
-# CELL(abcABC):   10.00000    10.00000     3.28256    90.00000    90.00000    90.00000  Step:           4  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -2.34081e-02 -5.15311e-03 -2.81672e-02
+# CELL(abcABC):   10.00000    10.00000     3.33930    90.00000    90.00000    90.00000  Step:           4  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -2.53512e-02 -6.12430e-02 -2.11807e-02
 1
-# CELL(abcABC):   10.00000    10.00000     2.02291    90.00000    90.00000    90.00000  Step:           5  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -2.82751e-02 -5.09532e-03 -4.12039e-02
+# CELL(abcABC):   10.00000    10.00000     2.06249    90.00000    90.00000    90.00000  Step:           5  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -3.31697e-02 -7.60492e-02 -3.00305e-02
 1
-# CELL(abcABC):   10.00000    10.00000     1.21479    90.00000    90.00000    90.00000  Step:           6  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.37718e-02 -7.07016e-03 -6.36851e-02
+# CELL(abcABC):   10.00000    10.00000     1.23860    90.00000    90.00000    90.00000  Step:           6  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -4.07940e-02 -9.18625e-02 -4.18097e-02
 1
-# CELL(abcABC):   10.00000    10.00000     0.72461    90.00000    90.00000    90.00000  Step:           7  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -4.03587e-02 -9.85277e-03 -1.03246e-01
+# CELL(abcABC):   10.00000    10.00000     0.73272    90.00000    90.00000    90.00000  Step:           7  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -4.85265e-02 -1.07094e-01 -6.44925e-02
 1
-# CELL(abcABC):   10.00000    10.00000     0.43661    90.00000    90.00000    90.00000  Step:           8  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -4.68324e-02 -1.23747e-02 -1.69554e-01
+# CELL(abcABC):   10.00000    10.00000     0.43348    90.00000    90.00000    90.00000  Step:           8  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -5.75553e-02 -1.21864e-01 -1.05819e-01
 1
-# CELL(abcABC):   10.00000    10.00000     0.27520    90.00000    90.00000    90.00000  Step:           9  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -5.47056e-02 -1.56336e-02 -2.80350e-01
+# CELL(abcABC):   10.00000    10.00000     0.26103    90.00000    90.00000    90.00000  Step:           9  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -6.80447e-02 -1.36843e-01 -1.78503e-01
 1
-# CELL(abcABC):   10.00000    10.00000     0.19412    90.00000    90.00000    90.00000  Step:          10  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -6.24482e-02 -1.98991e-02 -4.64420e-01
+# CELL(abcABC):   10.00000    10.00000     0.16627    90.00000    90.00000    90.00000  Step:          10  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -7.76105e-02 -1.52595e-01 -3.01722e-01
 1
-# CELL(abcABC):   10.00000    10.00000     0.17160    90.00000    90.00000    90.00000  Step:          11  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -6.93386e-02 -2.33533e-02 -7.79095e-01
+# CELL(abcABC):   10.00000    10.00000     0.12119    90.00000    90.00000    90.00000  Step:          11  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -8.61900e-02 -1.68016e-01 -5.06415e-01
 1
-# CELL(abcABC):   10.00000    10.00000     0.20147    90.00000    90.00000    90.00000  Step:          12  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -7.68040e-02 -2.62705e-02 -1.32761e+00
+# CELL(abcABC):   10.00000    10.00000     0.11293    90.00000    90.00000    90.00000  Step:          12  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -9.53698e-02 -1.83363e-01 -8.55242e-01
 1
-# CELL(abcABC):   10.00000    10.00000     0.28705    90.00000    90.00000    90.00000  Step:          13  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -8.58989e-02 -2.91618e-02 -2.24413e+00
+# CELL(abcABC):   10.00000    10.00000     0.13850    90.00000    90.00000    90.00000  Step:          13  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -1.05617e-01 -1.98829e-01 -1.45672e+00
 1
-# CELL(abcABC):   10.00000    10.00000     0.44624    90.00000    90.00000    90.00000  Step:          14  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -9.25519e-02 -3.26341e-02 -3.73455e+00
+# CELL(abcABC):   10.00000    10.00000     0.20201    90.00000    90.00000    90.00000  Step:          14  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -1.15992e-01 -2.14241e-01 -2.45873e+00
 1
-# CELL(abcABC):   10.00000    10.00000     0.71125    90.00000    90.00000    90.00000  Step:          15  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -9.95902e-02 -3.45535e-02 -6.10968e+00
+# CELL(abcABC):   10.00000    10.00000     0.31766    90.00000    90.00000    90.00000  Step:          15  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -1.26320e-01 -2.30541e-01 -4.09578e+00
 1
-# CELL(abcABC):   10.00000    10.00000     1.13499    90.00000    90.00000    90.00000  Step:          16  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -1.07435e-01 -3.61617e-02 -9.84535e+00
+# CELL(abcABC):   10.00000    10.00000     0.51143    90.00000    90.00000    90.00000  Step:          16  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -1.37291e-01 -2.48823e-01 -6.73927e+00
 1
-# CELL(abcABC):   10.00000    10.00000     1.77921    90.00000    90.00000    90.00000  Step:          17  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -1.16033e-01 -3.91990e-02 -1.54933e+01
+# CELL(abcABC):   10.00000    10.00000     0.82370    90.00000    90.00000    90.00000  Step:          17  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -1.47045e-01 -2.66637e-01 -1.09436e+01
 1
-# CELL(abcABC):   10.00000    10.00000     2.70289    90.00000    90.00000    90.00000  Step:          18  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -1.23922e-01 -4.38472e-02 -2.35754e+01
+# CELL(abcABC):   10.00000    10.00000     1.30536    90.00000    90.00000    90.00000  Step:          18  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -1.55234e-01 -2.84311e-01 -1.73974e+01
 1
-# CELL(abcABC):   10.00000    10.00000     3.90846    90.00000    90.00000    90.00000  Step:          19  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -1.32603e-01 -4.87960e-02 -3.41150e+01
+# CELL(abcABC):   10.00000    10.00000     2.02037    90.00000    90.00000    90.00000  Step:          19  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -1.62947e-01 -3.00929e-01 -2.69598e+01
 1
-# CELL(abcABC):   10.00000    10.00000     5.28319    90.00000    90.00000    90.00000  Step:          20  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -1.40888e-01 -5.15770e-02 -4.61309e+01
+# CELL(abcABC):   10.00000    10.00000     3.02078    90.00000    90.00000    90.00000  Step:          20  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -1.71460e-01 -3.17216e-01 -4.03317e+01
 1
-# CELL(abcABC):   10.00000    10.00000     6.53097    90.00000    90.00000    90.00000  Step:          21  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -1.48627e-01 -5.48598e-02 -5.70398e+01
+# CELL(abcABC):   10.00000    10.00000     4.28400    90.00000    90.00000    90.00000  Step:          21  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -1.79831e-01 -3.31309e-01 -5.72130e+01
 1
-# CELL(abcABC):   10.00000    10.00000     7.22085    90.00000    90.00000    90.00000  Step:          22  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -1.55692e-01 -5.70601e-02 -6.30760e+01
+# CELL(abcABC):   10.00000    10.00000     5.64056    90.00000    90.00000    90.00000  Step:          22  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -1.87764e-01 -3.45328e-01 -7.53430e+01
 1
-# CELL(abcABC):   10.00000    10.00000     7.08974    90.00000    90.00000    90.00000  Step:          23  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -1.61822e-01 -5.95199e-02 -6.19405e+01
+# CELL(abcABC):   10.00000    10.00000     6.74315    90.00000    90.00000    90.00000  Step:          23  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -1.98253e-01 -3.57295e-01 -9.00807e+01
 1
-# CELL(abcABC):   10.00000    10.00000     6.18685    90.00000    90.00000    90.00000  Step:          24  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -1.68395e-01 -6.30786e-02 -5.40599e+01
+# CELL(abcABC):   10.00000    10.00000     7.20616    90.00000    90.00000    90.00000  Step:          24  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -2.06097e-01 -3.67285e-01 -9.62737e+01
 1
-# CELL(abcABC):   10.00000    10.00000     4.87018    90.00000    90.00000    90.00000  Step:          25  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -1.75162e-01 -6.49637e-02 -4.25649e+01
+# CELL(abcABC):   10.00000    10.00000     6.83119    90.00000    90.00000    90.00000  Step:          25  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -2.14825e-01 -3.75785e-01 -9.12708e+01
 1
-# CELL(abcABC):   10.00000    10.00000     3.55021    90.00000    90.00000    90.00000  Step:          26  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -1.81793e-01 -6.64926e-02 -3.10407e+01
+# CELL(abcABC):   10.00000    10.00000     5.79391    90.00000    90.00000    90.00000  Step:          26  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -2.24718e-01 -3.84232e-01 -7.74187e+01
 1
-# CELL(abcABC):   10.00000    10.00000     2.44714    90.00000    90.00000    90.00000  Step:          27  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -1.89021e-01 -6.73641e-02 -2.14120e+01
+# CELL(abcABC):   10.00000    10.00000     4.48159    90.00000    90.00000    90.00000  Step:          27  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -2.33370e-01 -3.91300e-01 -5.98908e+01
 1
-# CELL(abcABC):   10.00000    10.00000     1.62547    90.00000    90.00000    90.00000  Step:          28  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -1.96875e-01 -6.69941e-02 -1.42445e+01
+# CELL(abcABC):   10.00000    10.00000     3.22486    90.00000    90.00000    90.00000  Step:          28  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -2.41892e-01 -3.99654e-01 -4.31073e+01
 1
-# CELL(abcABC):   10.00000    10.00000     1.05633    90.00000    90.00000    90.00000  Step:          29  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -2.05394e-01 -6.69176e-02 -9.29050e+00
+# CELL(abcABC):   10.00000    10.00000     2.21304    90.00000    90.00000    90.00000  Step:          29  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -2.50715e-01 -4.07781e-01 -2.95992e+01
 1
-# CELL(abcABC):   10.00000    10.00000     0.67977    90.00000    90.00000    90.00000  Step:          30  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -2.12497e-01 -6.90030e-02 -6.03048e+00
+# CELL(abcABC):   10.00000    10.00000     1.46832    90.00000    90.00000    90.00000  Step:          30  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -2.59731e-01 -4.16243e-01 -1.96646e+01
 1
-# CELL(abcABC):   10.00000    10.00000     0.43848    90.00000    90.00000    90.00000  Step:          31  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -2.21018e-01 -7.06460e-02 -3.96904e+00
+# CELL(abcABC):   10.00000    10.00000     0.95823    90.00000    90.00000    90.00000  Step:          31  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -2.68300e-01 -4.23527e-01 -1.28711e+01
 1
-# CELL(abcABC):   10.00000    10.00000     0.28902    90.00000    90.00000    90.00000  Step:          32  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -2.30757e-01 -7.21766e-02 -2.73717e+00
+# CELL(abcABC):   10.00000    10.00000     0.62068    90.00000    90.00000    90.00000  Step:          32  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -2.78259e-01 -4.28374e-01 -8.39487e+00
 1
-# CELL(abcABC):   10.00000    10.00000     0.20076    90.00000    90.00000    90.00000  Step:          33  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -2.41037e-01 -7.55443e-02 -2.07970e+00
+# CELL(abcABC):   10.00000    10.00000     0.40440    90.00000    90.00000    90.00000  Step:          33  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -2.86410e-01 -4.31883e-01 -5.55666e+00
 1
-# CELL(abcABC):   10.00000    10.00000     0.15490    90.00000    90.00000    90.00000  Step:          34  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -2.49178e-01 -7.93796e-02 -1.85550e+00
+# CELL(abcABC):   10.00000    10.00000     0.27030    90.00000    90.00000    90.00000  Step:          34  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -2.95940e-01 -4.36963e-01 -3.84621e+00
 1
-# CELL(abcABC):   10.00000    10.00000     0.14151    90.00000    90.00000    90.00000  Step:          35  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -2.57798e-01 -8.20142e-02 -2.01296e+00
+# CELL(abcABC):   10.00000    10.00000     0.19195    90.00000    90.00000    90.00000  Step:          35  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -3.05985e-01 -4.43361e-01 -2.92444e+00
 1
-# CELL(abcABC):   10.00000    10.00000     0.15744    90.00000    90.00000    90.00000  Step:          36  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -2.65665e-01 -8.45370e-02 -2.58369e+00
+# CELL(abcABC):   10.00000    10.00000     0.15351    90.00000    90.00000    90.00000  Step:          36  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -3.17587e-01 -4.47940e-01 -2.60584e+00
 1
-# CELL(abcABC):   10.00000    10.00000     0.20421    90.00000    90.00000    90.00000  Step:          37  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -2.74349e-01 -8.75467e-02 -3.66049e+00
+# CELL(abcABC):   10.00000    10.00000     0.14696    90.00000    90.00000    90.00000  Step:          37  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -3.29603e-01 -4.52254e-01 -2.82166e+00
 1
-# CELL(abcABC):   10.00000    10.00000     0.28863    90.00000    90.00000    90.00000  Step:          38  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -2.82633e-01 -8.89794e-02 -5.41179e+00
+# CELL(abcABC):   10.00000    10.00000     0.16988    90.00000    90.00000    90.00000  Step:          38  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -3.41586e-01 -4.54643e-01 -3.60182e+00
 1
-# CELL(abcABC):   10.00000    10.00000     0.42387    90.00000    90.00000    90.00000  Step:          39  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -2.91011e-01 -8.88608e-02 -8.11349e+00
+# CELL(abcABC):   10.00000    10.00000     0.22540    90.00000    90.00000    90.00000  Step:          39  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -3.53132e-01 -4.55939e-01 -5.07217e+00
 1
-# CELL(abcABC):   10.00000    10.00000     0.62899    90.00000    90.00000    90.00000  Step:          40  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.00408e-01 -8.83528e-02 -1.21521e+01
+# CELL(abcABC):   10.00000    10.00000     0.32116    90.00000    90.00000    90.00000  Step:          40  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -3.64482e-01 -4.55780e-01 -7.44846e+00
 1
-# CELL(abcABC):   10.00000    10.00000     0.93051    90.00000    90.00000    90.00000  Step:          41  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.08099e-01 -8.67324e-02 -1.80527e+01
+# CELL(abcABC):   10.00000    10.00000     0.46957    90.00000    90.00000    90.00000  Step:          41  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -3.75627e-01 -4.57372e-01 -1.10440e+01
 1
-# CELL(abcABC):   10.00000    10.00000     1.35579    90.00000    90.00000    90.00000  Step:          42  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.13319e-01 -8.52473e-02 -2.63520e+01
+# CELL(abcABC):   10.00000    10.00000     0.69070    90.00000    90.00000    90.00000  Step:          42  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -3.86206e-01 -4.59331e-01 -1.63496e+01
 1
-# CELL(abcABC):   10.00000    10.00000     1.92387    90.00000    90.00000    90.00000  Step:          43  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.18640e-01 -8.53939e-02 -3.74270e+01
+# CELL(abcABC):   10.00000    10.00000     1.00609    90.00000    90.00000    90.00000  Step:          43  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -3.98400e-01 -4.61651e-01 -2.38852e+01
 1
-# CELL(abcABC):   10.00000    10.00000     2.63830    90.00000    90.00000    90.00000  Step:          44  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.25371e-01 -8.50946e-02 -5.13490e+01
+# CELL(abcABC):   10.00000    10.00000     1.44126    90.00000    90.00000    90.00000  Step:          44  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -4.10675e-01 -4.63765e-01 -3.42637e+01
 1
-# CELL(abcABC):   10.00000    10.00000     3.45688    90.00000    90.00000    90.00000  Step:          45  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.30494e-01 -8.51971e-02 -6.72971e+01
+# CELL(abcABC):   10.00000    10.00000     2.01792    90.00000    90.00000    90.00000  Step:          45  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -4.23385e-01 -4.65513e-01 -4.80048e+01
 1
-# CELL(abcABC):   10.00000    10.00000     4.26622    90.00000    90.00000    90.00000  Step:          46  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.37072e-01 -8.52770e-02 -8.30638e+01
+# CELL(abcABC):   10.00000    10.00000     2.73026    90.00000    90.00000    90.00000  Step:          46  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -4.34118e-01 -4.65677e-01 -6.49733e+01
 1
-# CELL(abcABC):   10.00000    10.00000     4.89268    90.00000    90.00000    90.00000  Step:          47  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.40858e-01 -8.76936e-02 -9.52694e+01
+# CELL(abcABC):   10.00000    10.00000     3.52436    90.00000    90.00000    90.00000  Step:          47  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -4.46510e-01 -4.65747e-01 -8.38877e+01
 1
-# CELL(abcABC):   10.00000    10.00000     5.16538    90.00000    90.00000    90.00000  Step:          48  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.45090e-01 -9.13809e-02 -1.00588e+02
+# CELL(abcABC):   10.00000    10.00000     4.28274    90.00000    90.00000    90.00000  Step:          48  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -4.59627e-01 -4.68815e-01 -1.01953e+02
 1
-# CELL(abcABC):   10.00000    10.00000     5.00192    90.00000    90.00000    90.00000  Step:          49  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.49016e-01 -9.48667e-02 -9.74159e+01
+# CELL(abcABC):   10.00000    10.00000     4.83100    90.00000    90.00000    90.00000  Step:          49  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -4.71843e-01 -4.70097e-01 -1.15015e+02
 1
-# CELL(abcABC):   10.00000    10.00000     4.45353    90.00000    90.00000    90.00000  Step:          50  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.52964e-01 -9.77223e-02 -8.67469e+01
+# CELL(abcABC):   10.00000    10.00000     5.02914    90.00000    90.00000    90.00000  Step:          50  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -4.84437e-01 -4.71290e-01 -1.19741e+02
 1
-# CELL(abcABC):   10.00000    10.00000     3.68177    90.00000    90.00000    90.00000  Step:          51  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.56425e-01 -1.00757e-01 -7.17276e+01
+# CELL(abcABC):   10.00000    10.00000     4.81992    90.00000    90.00000    90.00000  Step:          51  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -4.96683e-01 -4.71978e-01 -1.14769e+02
 1
-# CELL(abcABC):   10.00000    10.00000     2.87080    90.00000    90.00000    90.00000  Step:          52  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.58811e-01 -1.01232e-01 -5.59446e+01
+# CELL(abcABC):   10.00000    10.00000     4.27219    90.00000    90.00000    90.00000  Step:          52  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -5.09267e-01 -4.70136e-01 -1.01736e+02
 1
-# CELL(abcABC):   10.00000    10.00000     2.13877    90.00000    90.00000    90.00000  Step:          53  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.62232e-01 -1.01589e-01 -4.16985e+01
+# CELL(abcABC):   10.00000    10.00000     3.54091    90.00000    90.00000    90.00000  Step:          53  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -5.21579e-01 -4.67953e-01 -8.43306e+01
 1
-# CELL(abcABC):   10.00000    10.00000     1.54023    90.00000    90.00000    90.00000  Step:          54  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.64986e-01 -1.03280e-01 -3.00570e+01
+# CELL(abcABC):   10.00000    10.00000     2.77303    90.00000    90.00000    90.00000  Step:          54  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -5.35261e-01 -4.66104e-01 -6.60526e+01
 1
-# CELL(abcABC):   10.00000    10.00000     1.08730    90.00000    90.00000    90.00000  Step:          55  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.69272e-01 -1.03763e-01 -2.12590e+01
+# CELL(abcABC):   10.00000    10.00000     2.07426    90.00000    90.00000    90.00000  Step:          55  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -5.49233e-01 -4.64391e-01 -4.94200e+01
 1
-# CELL(abcABC):   10.00000    10.00000     0.76004    90.00000    90.00000    90.00000  Step:          56  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.73440e-01 -1.03557e-01 -1.49177e+01
+# CELL(abcABC):   10.00000    10.00000     1.50386    90.00000    90.00000    90.00000  Step:          56  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -5.62302e-01 -4.60104e-01 -3.58461e+01
 1
-# CELL(abcABC):   10.00000    10.00000     0.53142    90.00000    90.00000    90.00000  Step:          57  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.78114e-01 -1.03232e-01 -1.05118e+01
+# CELL(abcABC):   10.00000    10.00000     1.06664    90.00000    90.00000    90.00000  Step:          57  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -5.74606e-01 -4.56419e-01 -2.54466e+01
 1
-# CELL(abcABC):   10.00000    10.00000     0.37731    90.00000    90.00000    90.00000  Step:          58  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.80814e-01 -1.05352e-01 -7.57745e+00
+# CELL(abcABC):   10.00000    10.00000     0.74669    90.00000    90.00000    90.00000  Step:          58  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -5.86500e-01 -4.53337e-01 -1.78467e+01
 1
-# CELL(abcABC):   10.00000    10.00000     0.27819    90.00000    90.00000    90.00000  Step:          59  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.84089e-01 -1.06348e-01 -5.74650e+00
+# CELL(abcABC):   10.00000    10.00000     0.51946    90.00000    90.00000    90.00000  Step:          59  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -5.99223e-01 -4.50622e-01 -1.24615e+01
 1
-# CELL(abcABC):   10.00000    10.00000     0.22051    90.00000    90.00000    90.00000  Step:          60  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.87978e-01 -1.06417e-01 -4.76744e+00
+# CELL(abcABC):   10.00000    10.00000     0.36208    90.00000    90.00000    90.00000  Step:          60  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -6.12349e-01 -4.50200e-01 -8.75103e+00
 1
-# CELL(abcABC):   10.00000    10.00000     0.19575    90.00000    90.00000    90.00000  Step:          61  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.91013e-01 -1.06882e-01 -4.49530e+00
+# CELL(abcABC):   10.00000    10.00000     0.25514    90.00000    90.00000    90.00000  Step:          61  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -6.25973e-01 -4.47921e-01 -6.25995e+00
 1
-# CELL(abcABC):   10.00000    10.00000     0.20085    90.00000    90.00000    90.00000  Step:          62  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.92537e-01 -1.06401e-01 -4.90487e+00
+# CELL(abcABC):   10.00000    10.00000     0.18471    90.00000    90.00000    90.00000  Step:          62  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -6.39506e-01 -4.47071e-01 -4.66296e+00
 1
-# CELL(abcABC):   10.00000    10.00000     0.23447    90.00000    90.00000    90.00000  Step:          63  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.92938e-01 -1.06673e-01 -6.00836e+00
+# CELL(abcABC):   10.00000    10.00000     0.14074    90.00000    90.00000    90.00000  Step:          63  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -6.55343e-01 -4.46073e-01 -3.73144e+00
 1
-# CELL(abcABC):   10.00000    10.00000     0.29989    90.00000    90.00000    90.00000  Step:          64  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.92721e-01 -1.07729e-01 -7.92657e+00
+# CELL(abcABC):   10.00000    10.00000     0.11692    90.00000    90.00000    90.00000  Step:          64  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -6.71575e-01 -4.46570e-01 -3.33123e+00
 1
-# CELL(abcABC):   10.00000    10.00000     0.40270    90.00000    90.00000    90.00000  Step:          65  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.93549e-01 -1.06988e-01 -1.08310e+01
+# CELL(abcABC):   10.00000    10.00000     0.11038    90.00000    90.00000    90.00000  Step:          65  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -6.87396e-01 -4.45042e-01 -3.41926e+00
 1
-# CELL(abcABC):   10.00000    10.00000     0.55168    90.00000    90.00000    90.00000  Step:          66  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.95311e-01 -1.06844e-01 -1.49764e+01
+# CELL(abcABC):   10.00000    10.00000     0.11942    90.00000    90.00000    90.00000  Step:          66  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -7.04602e-01 -4.41962e-01 -3.98701e+00
 1
-# CELL(abcABC):   10.00000    10.00000     0.75777    90.00000    90.00000    90.00000  Step:          67  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.96344e-01 -1.06361e-01 -2.06724e+01
+# CELL(abcABC):   10.00000    10.00000     0.14478    90.00000    90.00000    90.00000  Step:          67  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -7.21958e-01 -4.38999e-01 -5.09927e+00
 1
-# CELL(abcABC):   10.00000    10.00000     1.03351    90.00000    90.00000    90.00000  Step:          68  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.97574e-01 -1.05330e-01 -2.82680e+01
+# CELL(abcABC):   10.00000    10.00000     0.18859    90.00000    90.00000    90.00000  Step:          68  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -7.38793e-01 -4.35189e-01 -6.86015e+00
 1
-# CELL(abcABC):   10.00000    10.00000     1.38648    90.00000    90.00000    90.00000  Step:          69  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.99313e-01 -1.05420e-01 -3.79766e+01
+# CELL(abcABC):   10.00000    10.00000     0.25557    90.00000    90.00000    90.00000  Step:          69  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -7.55186e-01 -4.30841e-01 -9.46324e+00
 1
-# CELL(abcABC):   10.00000    10.00000     1.82002    90.00000    90.00000    90.00000  Step:          70  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.99858e-01 -1.06498e-01 -4.98922e+01
+# CELL(abcABC):   10.00000    10.00000     0.35296    90.00000    90.00000    90.00000  Step:          70  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -7.71876e-01 -4.24492e-01 -1.31925e+01
 1
-# CELL(abcABC):   10.00000    10.00000     2.31778    90.00000    90.00000    90.00000  Step:          71  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -4.00773e-01 -1.09866e-01 -6.35688e+01
+# CELL(abcABC):   10.00000    10.00000     0.48979    90.00000    90.00000    90.00000  Step:          71  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -7.87012e-01 -4.18321e-01 -1.83956e+01
 1
-# CELL(abcABC):   10.00000    10.00000     2.83669    90.00000    90.00000    90.00000  Step:          72  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -4.01956e-01 -1.11769e-01 -7.78252e+01
+# CELL(abcABC):   10.00000    10.00000     0.67842    90.00000    90.00000    90.00000  Step:          72  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -8.01010e-01 -4.12251e-01 -2.55443e+01
 1
-# CELL(abcABC):   10.00000    10.00000     3.30682    90.00000    90.00000    90.00000  Step:          73  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -4.03378e-01 -1.14105e-01 -9.07445e+01
+# CELL(abcABC):   10.00000    10.00000     0.92864    90.00000    90.00000    90.00000  Step:          73  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -8.14999e-01 -4.05206e-01 -3.50132e+01
 1
-# CELL(abcABC):   10.00000    10.00000     3.64466    90.00000    90.00000    90.00000  Step:          74  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -4.04618e-01 -1.15538e-01 -1.00032e+02
+# CELL(abcABC):   10.00000    10.00000     1.25245    90.00000    90.00000    90.00000  Step:          74  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -8.29382e-01 -3.97418e-01 -4.72594e+01
 1
-# CELL(abcABC):   10.00000    10.00000     3.76939    90.00000    90.00000    90.00000  Step:          75  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -4.05557e-01 -1.17167e-01 -1.03470e+02
+# CELL(abcABC):   10.00000    10.00000     1.65445    90.00000    90.00000    90.00000  Step:          75  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -8.40135e-01 -3.89888e-01 -6.24560e+01
 1
-# CELL(abcABC):   10.00000    10.00000     3.65552    90.00000    90.00000    90.00000  Step:          76  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -4.03983e-01 -1.18215e-01 -1.00358e+02
+# CELL(abcABC):   10.00000    10.00000     2.12246    90.00000    90.00000    90.00000  Step:          76  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -8.49502e-01 -3.83500e-01 -8.01441e+01
 1
-# CELL(abcABC):   10.00000    10.00000     3.33830    90.00000    90.00000    90.00000  Step:          77  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -4.01579e-01 -1.19289e-01 -9.16618e+01
+# CELL(abcABC):   10.00000    10.00000     2.62208    90.00000    90.00000    90.00000  Step:          77  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -8.59324e-01 -3.76699e-01 -9.90265e+01
 1
-# CELL(abcABC):   10.00000    10.00000     2.88283    90.00000    90.00000    90.00000  Step:          78  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.98512e-01 -1.20066e-01 -7.91687e+01
+# CELL(abcABC):   10.00000    10.00000     3.08745    90.00000    90.00000    90.00000  Step:          78  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -8.68476e-01 -3.70419e-01 -1.16616e+02
 1
-# CELL(abcABC):   10.00000    10.00000     2.38003    90.00000    90.00000    90.00000  Step:          79  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.95391e-01 -1.20690e-01 -6.53745e+01
+# CELL(abcABC):   10.00000    10.00000     3.44085    90.00000    90.00000    90.00000  Step:          79  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -8.77758e-01 -3.65909e-01 -1.29978e+02
 1
-# CELL(abcABC):   10.00000    10.00000     1.89492    90.00000    90.00000    90.00000  Step:          80  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.93671e-01 -1.21383e-01 -5.20675e+01
+# CELL(abcABC):   10.00000    10.00000     3.61358    90.00000    90.00000    90.00000  Step:          80  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -8.86929e-01 -3.61561e-01 -1.36517e+02
 1
-# CELL(abcABC):   10.00000    10.00000     1.46677    90.00000    90.00000    90.00000  Step:          81  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.91666e-01 -1.20123e-01 -4.03239e+01
+# CELL(abcABC):   10.00000    10.00000     3.56371    90.00000    90.00000    90.00000  Step:          81  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -8.97298e-01 -3.58532e-01 -1.34645e+02
 1
-# CELL(abcABC):   10.00000    10.00000     1.11128    90.00000    90.00000    90.00000  Step:          82  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.89153e-01 -1.17161e-01 -3.05759e+01
+# CELL(abcABC):   10.00000    10.00000     3.31071    90.00000    90.00000    90.00000  Step:          82  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -9.07252e-01 -3.57578e-01 -1.25099e+02
 1
-# CELL(abcABC):   10.00000    10.00000     0.83088    90.00000    90.00000    90.00000  Step:          83  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.87014e-01 -1.14757e-01 -2.28938e+01
+# CELL(abcABC):   10.00000    10.00000     2.91372    90.00000    90.00000    90.00000  Step:          83  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -9.16675e-01 -3.54775e-01 -1.10110e+02
 1
-# CELL(abcABC):   10.00000    10.00000     0.61570    90.00000    90.00000    90.00000  Step:          84  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.83382e-01 -1.12224e-01 -1.70072e+01
+# CELL(abcABC):   10.00000    10.00000     2.44794    90.00000    90.00000    90.00000  Step:          84  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -9.24719e-01 -3.51405e-01 -9.25230e+01
 1
-# CELL(abcABC):   10.00000    10.00000     0.45654    90.00000    90.00000    90.00000  Step:          85  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.78330e-01 -1.10744e-01 -1.26685e+01
+# CELL(abcABC):   10.00000    10.00000     1.97874    90.00000    90.00000    90.00000  Step:          85  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -9.33102e-01 -3.48682e-01 -7.48051e+01
 1
-# CELL(abcABC):   10.00000    10.00000     0.34030    90.00000    90.00000    90.00000  Step:          86  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.72457e-01 -1.10123e-01 -9.51998e+00
+# CELL(abcABC):   10.00000    10.00000     1.55393    90.00000    90.00000    90.00000  Step:          86  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -9.43087e-01 -3.47273e-01 -5.87643e+01
 1
-# CELL(abcABC):   10.00000    10.00000     0.25729    90.00000    90.00000    90.00000  Step:          87  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.68574e-01 -1.09717e-01 -7.29855e+00
+# CELL(abcABC):   10.00000    10.00000     1.19335    90.00000    90.00000    90.00000  Step:          87  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -9.54320e-01 -3.45490e-01 -4.51506e+01
 1
-# CELL(abcABC):   10.00000    10.00000     0.20042    90.00000    90.00000    90.00000  Step:          88  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.64345e-01 -1.08914e-01 -5.81779e+00
+# CELL(abcABC):   10.00000    10.00000     0.90298    90.00000    90.00000    90.00000  Step:          88  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -9.66656e-01 -3.42631e-01 -3.41938e+01
 1
-# CELL(abcABC):   10.00000    10.00000     0.16333    90.00000    90.00000    90.00000  Step:          89  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.60150e-01 -1.08621e-01 -4.91001e+00
+# CELL(abcABC):   10.00000    10.00000     0.67737    90.00000    90.00000    90.00000  Step:          89  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -9.78552e-01 -3.39032e-01 -2.56896e+01
 1
-# CELL(abcABC):   10.00000    10.00000     0.14249    90.00000    90.00000    90.00000  Step:          90  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.55184e-01 -1.08757e-01 -4.48750e+00
+# CELL(abcABC):   10.00000    10.00000     0.50678    90.00000    90.00000    90.00000  Step:          90  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -9.90574e-01 -3.36073e-01 -1.92728e+01
 1
-# CELL(abcABC):   10.00000    10.00000     0.13612    90.00000    90.00000    90.00000  Step:          91  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.50879e-01 -1.09201e-01 -4.51826e+00
+# CELL(abcABC):   10.00000    10.00000     0.38040    90.00000    90.00000    90.00000  Step:          91  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -1.00182e+00 -3.34118e-01 -1.45385e+01
 1
-# CELL(abcABC):   10.00000    10.00000     0.14309    90.00000    90.00000    90.00000  Step:          92  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.45923e-01 -1.09617e-01 -4.98944e+00
+# CELL(abcABC):   10.00000    10.00000     0.28835    90.00000    90.00000    90.00000  Step:          92  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -1.01273e+00 -3.29949e-01 -1.11167e+01
 1
-# CELL(abcABC):   10.00000    10.00000     0.16294    90.00000    90.00000    90.00000  Step:          93  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.40246e-01 -1.07333e-01 -5.90528e+00
+# CELL(abcABC):   10.00000    10.00000     0.22373    90.00000    90.00000    90.00000  Step:          93  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -1.02403e+00 -3.27064e-01 -8.75034e+00
 1
-# CELL(abcABC):   10.00000    10.00000     0.19682    90.00000    90.00000    90.00000  Step:          94  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.34852e-01 -1.06329e-01 -7.32788e+00
+# CELL(abcABC):   10.00000    10.00000     0.18092    90.00000    90.00000    90.00000  Step:          94  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -1.03577e+00 -3.24320e-01 -7.23579e+00
 1
-# CELL(abcABC):   10.00000    10.00000     0.24677    90.00000    90.00000    90.00000  Step:          95  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.28758e-01 -1.05941e-01 -9.34685e+00
+# CELL(abcABC):   10.00000    10.00000     0.15538    90.00000    90.00000    90.00000  Step:          95  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -1.04669e+00 -3.20902e-01 -6.40880e+00
 1
-# CELL(abcABC):   10.00000    10.00000     0.31612    90.00000    90.00000    90.00000  Step:          96  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.24050e-01 -1.07232e-01 -1.20995e+01
+# CELL(abcABC):   10.00000    10.00000     0.14499    90.00000    90.00000    90.00000  Step:          96  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -1.05928e+00 -3.17386e-01 -6.20267e+00
 1
-# CELL(abcABC):   10.00000    10.00000     0.40819    90.00000    90.00000    90.00000  Step:          97  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.20550e-01 -1.08270e-01 -1.57201e+01
+# CELL(abcABC):   10.00000    10.00000     0.14801    90.00000    90.00000    90.00000  Step:          97  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -1.07286e+00 -3.14217e-01 -6.56557e+00
 1
-# CELL(abcABC):   10.00000    10.00000     0.52710    90.00000    90.00000    90.00000  Step:          98  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.16927e-01 -1.09622e-01 -2.03745e+01
+# CELL(abcABC):   10.00000    10.00000     0.16423    90.00000    90.00000    90.00000  Step:          98  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -1.08614e+00 -3.10860e-01 -7.51282e+00
 1
-# CELL(abcABC):   10.00000    10.00000     0.67533    90.00000    90.00000    90.00000  Step:          99  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.13514e-01 -1.11846e-01 -2.61628e+01
+# CELL(abcABC):   10.00000    10.00000     0.19397    90.00000    90.00000    90.00000  Step:          99  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -1.09993e+00 -3.07985e-01 -9.07648e+00
 1
-# CELL(abcABC):   10.00000    10.00000     0.85672    90.00000    90.00000    90.00000  Step:         100  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
-       H -3.11985e-01 -1.11622e-01 -3.32357e+01
+# CELL(abcABC):   10.00000    10.00000     0.23893    90.00000    90.00000    90.00000  Step:         100  Bead:       0 positions{atomic_unit}  cell{atomic_unit}
+       H -1.11552e+00 -3.04660e-01 -1.13516e+01

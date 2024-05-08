@@ -66,14 +66,14 @@ if __name__ == "__main__":
 
     try:
         path = str(regtests_folder / args.folder)
-        reg_tests = get_test_list(path)
+        reg_tests = get_test_list(path, skip_noauto=False)
         print("We will run only:")
         for i in reg_tests:
             print(i)
         print("")
     except:
         print("We will run all available regression tests")
-        reg_tests = get_test_list(regtests_folder)
+        reg_tests = get_test_list(regtests_folder, skip_noauto=True)
 
     print("We have found {} reg_tests".format(len(reg_tests)))
     for test_info in reg_tests:

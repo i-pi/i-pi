@@ -521,6 +521,14 @@ class InputFFPlumed(InputForceField):
                 "help": "The current step counter for PLUMED calls",
             },
         ),
+        "plumedextras": (
+            InputArray,
+            {
+                "dtype": str,
+                "default": input_default(factory=np.zeros, args=(0, str)),
+                "help": "List of variables defined in the PLUMED input, that should be transferred to i-PI as `extras` fields.",
+            },
+        ),
     }
 
     attribs = {}
@@ -528,7 +536,12 @@ class InputFFPlumed(InputForceField):
     attribs.update(InputForceField.attribs)
     fields.update(InputForceField.fields)
 
-    default_help = """ Direct PLUMED interface """
+    default_help = """ 
+Direct PLUMED interface. Can be used to implement metadynamics in i-PI in combination with
+the <metad> SMotion class. NB: if you use PLUMED for constant biasing (e.g. for umbrella sampling)
+the bias will be computed but there will be no output as specified in the `plumed.dat` file 
+unless you include a <metad> tag, that triggers the log update. """
+
     default_label = "FFPLUMED"
 
     def store(self, ff):
@@ -539,6 +552,7 @@ class InputFFPlumed(InputForceField):
         # self.plumedstep.store(pstep)
         self.plumedstep.store(ff.plumedstep)
         self.file.store(ff.init_file)
+        self.plumedextras.store(np.array(ff.plumed_data.keys()))
 
     def fetch(self):
         super(InputFFPlumed, self).fetch()
@@ -551,6 +565,7 @@ class InputFFPlumed(InputForceField):
             threaded=self.threaded.fetch(),
             plumeddat=self.plumeddat.fetch(),
             plumedstep=self.plumedstep.fetch(),
+            plumedextras=self.plumedextras.fetch(),
             init_file=self.file.fetch(),
         )
 
