@@ -9,10 +9,11 @@ state vector.
 # See the "licenses" directory for full license information.
 
 
-import numpy as np
+import json
 
 from ipi.utils.prng import *
 from ipi.utils.inputvalue import *
+from ipi.utils.io import NumpyEncoder
 
 
 __all__ = ["InputRandom"]
@@ -28,16 +29,23 @@ class InputRandom(Input):
     Attributes:
        seed: An optional integer giving a seed to initialise the random number
           generator from. Defaults to 123456.
-       state: An optional array giving the state of the random number generator.
-          Defaults to an empty array.
-       has_gauss: An optional integer giving whether there is a stored
-          Gaussian number or not. Defaults to 0.
-       gauss: An optional float giving the stored Gaussian number. Defaults to
-          0.0.
-       set_pos: An optional integer giving the position in the state array
-          that is being read from. Defaults to 0.
+       state: An optional string giving the state of the random number generator.s
+       n_threads: An optional integer giving whether to use threaded evaluation. Defaults to 1.
     """
 
+    attribs = {
+        "n_threads": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": 1,
+                "help": """
+Use parallel PRNG generator. Will make trajectories less reproducible and is only faster
+if the arrays are very large.
+""",
+            },
+        ),
+    }
     fields = {
         "seed": (
             InputValue,
@@ -48,33 +56,11 @@ class InputRandom(Input):
             },
         ),
         "state": (
-            InputArray,
+            InputValue,
             {
-                "dtype": np.uint,
-                "default": input_default(
-                    factory=np.zeros, kwargs={"shape": (0,), "dtype": np.uint}
-                ),
+                "dtype": str,
+                "default": "",
                 "help": "Gives the state vector for the random number generator. Avoid directly modifying this unless you are very familiar with the inner workings of the algorithm used.",
-            },
-        ),
-        "has_gauss": (
-            InputValue,
-            {
-                "dtype": int,
-                "default": 0,
-                "help": "Determines whether there is a stored gaussian number or not. A value of 0 means there is none stored.",
-            },
-        ),
-        "gauss": (
-            InputValue,
-            {"dtype": float, "default": 0.00, "help": "The stored Gaussian number."},
-        ),
-        "set_pos": (
-            InputValue,
-            {
-                "dtype": int,
-                "default": 0,
-                "help": "Gives the position in the state array that the random number generator is reading from.",
             },
         ),
     }
@@ -92,11 +78,8 @@ class InputRandom(Input):
 
         super(InputRandom, self).store(prng)
         self.seed.store(prng.seed)
-        gstate = prng.state
-        self.state.store(gstate[1])
-        self.set_pos.store(gstate[2])
-        self.has_gauss.store(gstate[3])
-        self.gauss.store(gstate[4])
+        self.state.store(json.dumps(prng.state, cls=NumpyEncoder))
+        self.n_threads.store(prng.n_threads)
 
     def fetch(self):
         """Creates a random number object.
@@ -109,14 +92,8 @@ class InputRandom(Input):
 
         super(InputRandom, self).fetch()
         if not self.state._explicit:
-            return Random(seed=self.seed.fetch())
+            return Random(seed=self.seed.fetch(), n_threads=self.n_threads.fetch())
         else:
             return Random(
-                state=(
-                    "MT19937",
-                    self.state.fetch(),
-                    self.set_pos.fetch(),
-                    self.has_gauss.fetch(),
-                    self.gauss.fetch(),
-                )
+                state=json.loads(self.state.fetch()), n_threads=self.n_threads.fetch()
             )

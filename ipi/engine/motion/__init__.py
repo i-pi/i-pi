@@ -24,3 +24,4 @@ from .planetary import Planetary
 from .atomswap import AtomSwap
 from .ramp import TemperatureRamp, PressureRamp
 from .al6xxx_kmc import AlKMC
+from .driven_dynamics import DrivenDynamics

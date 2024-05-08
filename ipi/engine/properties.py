@@ -14,6 +14,7 @@ from ipi.utils.depend import dstrip
 from ipi.utils.units import Constants, unit_to_internal
 from ipi.utils.mathtools import logsumlog, h2abc_deg
 from ipi.utils.io.inputs import io_xml
+from ipi.engine.motion.driven_dynamics import DrivenDynamics
 
 __all__ = ["Properties", "Trajectories", "getkey", "getall", "help_latex", "help_rst"]
 
@@ -282,6 +283,45 @@ class Properties:
                 "size": 6,
                 "func": (lambda: np.asarray(h2abc_deg(self.cell.h))),
             },
+            "Efield": {
+                "dimension": "atomic_unit",
+                "help": "The external applied electric field (x,y,z components in cartesian axes).",
+                "size": 3,
+                "func": (
+                    lambda: (
+                        self.motion.Electric_Field.Efield(self.ensemble.time)
+                        if isinstance(self.motion, DrivenDynamics)
+                        else np.zeros(3)
+                    )
+                ),
+            },
+            "Eenvelope": {
+                "dimension": "atomic_unit",
+                "help": "The (gaussian) envelope function of the external applied electric field (values go from 0 to 1).",
+                "func": (
+                    lambda: (
+                        self.motion.Electric_Field.Eenvelope(self.ensemble.time)
+                        if isinstance(self.motion, DrivenDynamics)
+                        else 0.0
+                    )
+                ),
+            },
+            "dipole": {
+                "dimension": "electric-dipole",
+                "help": "The electric dipole of the system (x,y,z components in cartesian axes).",
+                "size": 3,
+                "func": (
+                    lambda bead="-1": (
+                        self.motion.Electric_Dipole.dipole.mean(axis=0)
+                        if int(bead) < 0
+                        else (
+                            self.motion.Electric_Dipole.dipole[int(bead)]
+                            if isinstance(self.motion, DrivenDynamics)
+                            else np.zeros(3)
+                        )
+                    )
+                ),
+            },
             "conserved": {
                 "dimension": "energy",
                 "help": "The value of the conserved energy quantity per bead.",
@@ -361,7 +401,8 @@ class Properties:
                 "longhelp": """The contribution to the system potential from one of the force components.
                        Takes one mandatory argument index (zero-based) that indicates which component of the
                        potential must be returned. The optional argument 'bead' will print the potential associated
-                       with the specified bead. If the potential is weighed, the weight will be applied. """,
+                       with the specified bead (interpolated to the full ring polymer). 
+                       If the potential is weighed, the weight will be applied. """,
                 "func": (
                     lambda index, bead="-1": (
                         self.forces.pots_component(int(index)).sum() / self.beads.nbeads
@@ -376,14 +417,16 @@ class Properties:
                 "longhelp": """The contribution to the system potential from one of the
                        force components. Takes one mandatory argument index (zero-based) that indicates
                        which component of the potential must be returned. The optional argument 'bead'
-                       will print the potential associated with the specified bead. Potential weights
-                       will not be applied. """,
+                       will print the potential associated with the specified bead, at the level of 
+                       discretization of the given component. Potential weights will not be applied. """,
                 "func": (
                     lambda index, bead="-1": (
-                        self.forces.pots_component(int(index), False).sum()
+                        self.forces.pots_component(int(index), False, False).sum()
                         / self.beads.nbeads
                         if int(bead) < 0
-                        else self.forces.pots_component(int(index), False)[int(bead)]
+                        else self.forces.pots_component(int(index), False, False)[
+                            int(bead)
+                        ]
                     )
                 ),
             },
@@ -1122,21 +1165,6 @@ class Properties:
         acv = np.dot(q.flatten(), f.flatten())
         acv *= -0.5 / self.beads.nbeads
         acv += ncount * 1.5 * Constants.kb * self.ensemble.temp
-        # ~ acv = 0.0
-        # ~ ncount = 0
-        # ~
-        # ~ for i in range(self.beads.natoms):
-        # ~ if (atom != "" and iatom != i and latom != self.beads.names[i]):
-        # ~ continue
-        # ~
-        # ~ kcv = 0.0
-        # ~ k = 3*i
-        # ~ for b in range(self.beads.nbeads):
-        # ~ kcv += q[b,k]* f[b,k] + q[b,k+1]* f[b,k+1] + q[b,k+2]* f[b,k+2]
-        # ~ kcv *= -0.5/self.beads.nbeads
-        # ~ kcv += 1.5*Constants.kb*self.ensemble.temp
-        # ~ acv += kcv
-        # ~ ncount += 1
 
         if ncount == 0:
             # TODO: don't warn if bosons are matched
@@ -2752,10 +2780,46 @@ class Trajectories:
                 "help": "The momentum trajectories. Will print out one file per bead, unless the bead attribute is set by the user.",
                 "func": (lambda: 1.0 * self.system.beads.p),
             },
+            "becx": {
+                # Have a look at the documentation in the 'BEC' class
+                "dimension": "number",
+                "help": "The x component of the Born Effective Charges in cartesian coordinates.",
+                "func": (lambda: self._get_bec("x")),
+            },
+            "becy": {
+                # Have a look at the documentation in the 'BEC' class
+                "dimension": "number",
+                "help": "The y component of the Born Effective Charges in cartesian coordinates.",
+                "func": (lambda: self._get_bec("y")),
+            },
+            "becz": {
+                # Have a look at the documentation in the 'BEC' class
+                "dimension": "number",
+                "help": "The z component of the Born Effective Charges in cartesian coordinates.",
+                "func": (lambda: self._get_bec("z")),
+            },
             "forces": {
                 "dimension": "force",
                 "help": "The force trajectories. Will print out one file per bead, unless the bead attribute is set by the user.",
                 "func": (lambda: 1.0 * self.system.forces.f),
+            },
+            "Eforces": {
+                # if the dynamics is driven then 'forces' contains, on top of the 'usual' internal forces between the nuclei,
+                # an extra term due to the coupling of the external (driving) electric field with the dipole of the system
+                # This extra term depends on the nuclear positions of the system through the BEC tensors (if they are not fixed)
+                # and the value of the time dependent electric field.
+                # Have a look to the 'EDAIntegrator' class.
+                "dimension": "force",
+                "help": "The external electric field contribution to the forces",
+                "func": (
+                    lambda: (
+                        self.system.motion.integrator.EDAforces(
+                            self.system.motion.integrator.time
+                        )
+                        if isinstance(self.system.motion, DrivenDynamics)
+                        else np.zeros((self.system.beads.natoms * 3))
+                    )
+                ),
             },
             "forces_sc": {
                 "dimension": "force",
@@ -2848,10 +2912,50 @@ class Trajectories:
                     is printed verbatim. Will print out one file per bead, unless the bead attribute is set by the user.""",
                 "func": (lambda: self.system.forces.extras),
             },
-            "extras_component": {
-                "help": """The additional data returned by the client code, printed verbatim or expanded as a dictionary. See "extras". 
-                           Fetches the extras from a specific force component, indicated in parentheses [extras_component(idx)]. """,
-                "func": (lambda idx: self.system.forces.extras_component(int(idx))),
+            "forces_component": {
+                "dimension": "force",
+                "help": """The contribution to the system forces from one of the force components.
+                       Takes one mandatory argument index (zero-based) that indicates which component of the
+                       potential must be returned. The optional argument 'bead' will print the potential associated
+                       with the specified bead (interpolated to the full ring polymer), otherwise the centoid force is computed. 
+                       If the potential is weighed, the weight will be applied. """,
+                "func": lambda index, bead="-1": (
+                    self.system.forces.forces_component(int(index)).sum(axis=0)
+                    / self.system.beads.nbeads
+                    if int(bead) < 0
+                    else self.system.forces.forces_component(int(index))[int(bead)]
+                ),
+            },
+            "forces_component_raw": {
+                "dimension": "force",
+                "help": """The contribution to the system forces from one of the force components.
+                       Takes one mandatory argument index (zero-based) that indicates which component of the
+                       potential must be returned. The optional argument 'bead' will print the potential associated
+                       with the specified bead (with the level of discretization of the component), otherwise the 
+                       centoid force is computed. The weight of the potential is not applied. """,
+                "func": lambda index, bead="-1": (
+                    self.system.forces.forces_component(int(index), False, False).sum(
+                        axis=0
+                    )
+                    / self.system.beads.nbeads
+                    if int(bead) < 0
+                    else self.system.forces.forces_component(int(index), False, False)[
+                        int(bead)
+                    ]
+                ),
+            },
+            "extras_component_raw": {
+                "help": """The additional data returned by the client code, printed verbatim or expanded 
+                           as a dictionary. See "extras". 
+                           Fetches the extras from a specific force component, indicated in parentheses 
+                           and a specific bead [extras_component_raw(idx; bead=0)]. 
+                           Never applies weighting or contraction, and does not automatically sum 
+                           over beads as we don't know if the extras are numeric""",
+                "func": (lambda idx: (self.system.forces.extras_component(int(idx)))),
+            },
+            "extras_bias": {
+                "help": """The additional data returned by the bias forcefield, printed verbatim or expanded as a dictionary. See "extras". """,
+                "func": (lambda: self.system.ensemble.bias.extras),
             },
             "isotope_zetatd": {
                 "dimension": "undefined",
@@ -3093,3 +3197,20 @@ class Trajectories:
         else:
             dimension = ""
         return value, dimension, unit
+
+    def _get_bec(self, xyz):
+        """Return a component (xyz = x, y, or z) of the Born Effective Charge Tensors."""
+        # allocate empty BECs
+        shape = (self.system.beads.nbeads, self.system.beads.natoms * 3)
+        bec = np.full(shape, np.nan)
+        if isinstance(self.system.motion, DrivenDynamics):
+            # get all the BECs
+            BEC = self.system.motion.Born_Charges.bec
+            # convert the component into numerical index
+            xyz2index = {"x": 0, "y": 1, "z": 2}
+            index = xyz2index[xyz]
+            # get the `xyz` component of the BECs for all the beads
+            bec = np.asarray([bec[:, index] for bec in BEC])
+            # `reshape` should not be necessary, but it guarantees the shape to be correct
+            bec = bec.reshape(shape)
+        return bec

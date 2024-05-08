@@ -55,7 +55,15 @@ class InputDynamics(InputDictionary):
                 sc: Suzuki-Chin high-order NVT; scnpt: Suzuki-Chin high-order NpT;
                 nvt-cc: constrained-centroid NVT;
                  """,
-                "options": ["nve", "nvt", "npt", "nst", "sc", "scnpt", "nvt-cc"],
+                "options": [
+                    "nve",
+                    "nvt",
+                    "npt",
+                    "nst",
+                    "sc",
+                    "scnpt",
+                    "nvt-cc",
+                ],
             },
         ),
         "splitting": (
@@ -136,4 +144,5 @@ class InputDynamics(InputDictionary):
         rv = super(InputDynamics, self).fetch()
         rv["mode"] = self.mode.fetch()
         rv["splitting"] = self.splitting.fetch()
+        print(self)
         return rv

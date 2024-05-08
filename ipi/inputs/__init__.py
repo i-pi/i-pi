@@ -9,6 +9,7 @@ __all__ = [
     "barostats",
     "cell",
     "ensembles",
+    "eda",
     "thermostats",
     "motion",
     "interface",

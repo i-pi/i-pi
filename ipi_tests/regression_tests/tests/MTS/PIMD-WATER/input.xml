@@ -1,0 +1,47 @@
+<simulation mode='md' verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv{megapascal}, pot_component(0), pot_component(1) ] </properties>
+    <trajectory filename='pos' stride='10'> positions </trajectory>
+  </output>
+  <total_steps>10</total_steps>
+  <prng>
+    <seed>31415</seed>
+  </prng>
+  <ffsocket name='short_range' mode='unix' pbc='false'>
+    <address>h2o-short</address>
+  </ffsocket>
+  <ffsocket name='full' mode='unix' pbc='false'>
+    <address>h2o-full</address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='2'>
+      <file mode='xyz'> water_216.xyz </file>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <forces>
+       <!--
+         MTS setup - apply the fast (short-range) force in the inner loop and the slow (long-range) force in the outer loop. 
+         Note that if the outer loop contains a *correction* to the inner loop the weights should be 
+         [-1,1] (fast force) and [1,0] (slow force)
+       -->
+      <force forcefield='short_range'>
+        <mts_weights>[0,1]</mts_weights>
+      </force>
+      <force forcefield='full'>
+        <mts_weights>[1,-1]</mts_weights>
+      </force>
+    </forces>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <timestep units='femtosecond'> 1.00 </timestep>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+        <nmts>[1,4]</nmts>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units='kelvin'> 300 </temperature>
+    </ensemble>
+  </system>
+</simulation>
