@@ -939,7 +939,9 @@ class InterfaceSocket(object):
             # makes sure the request is marked as running and the client included in the jobs list
             fc.locked = fc.lastreq is r["id"]
 
-            r["offset"] = (
+            r[
+                "offset"
+            ] = (
                 self.offset
             )  # transmits with the request an offset value for the energy (typically zero)
 

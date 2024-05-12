@@ -400,7 +400,7 @@ class PesMapper(object):
         e = self.pot.copy()
         g = -self.f.copy()
 
-        e = e * (self.coef[1:,0] + self.coef[:-1,0]) / 2
+        e = e * (self.coef[1:, 0] + self.coef[:-1, 0]) / 2
         g = g * (self.coef[1:] + self.coef[:-1]) / 2
         return e, g
 
@@ -670,7 +670,7 @@ class FrictionMapper(PesMapper):
         e += e_friction
         g += g_friction
 
-        e = e * (self.coef[1:,0] + self.coef[:-1,0]) / 2
+        e = e * (self.coef[1:, 0] + self.coef[:-1, 0]) / 2
         g = g * (self.coef[1:] + self.coef[:-1]) / 2
 
         return e, g
@@ -865,10 +865,10 @@ class Mapper(object):
     It also handles fixatoms"""
 
     def __init__(self):
-        """Initializes object for Mapper. 
+        """Initializes object for Mapper.
         This class is inteded to combine several mappers and provide
         the actual Mapper that will be used by the optimizers."""
-        
+
         self.sm = SpringMapper()
         self.gm = PesMapper()
 
@@ -1758,7 +1758,7 @@ class LanczosOptimizer(HessianOptimizer):
             h_up_band[-1, :] += -np.ones(h_up_band.shape[1]) * lamb
             d_x = alpha * invmul_banded(h_up_band, f)
         else:
-            h_test = (h_test - np.eye(h_test.shape[0]) * lamb)
+            h_test = h_test - np.eye(h_test.shape[0]) * lamb
             d_x = alpha * np.linalg.solve(h_test, f)
 
         d_x.shape = self.fix.fixbeads.q.shape
