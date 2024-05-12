@@ -1756,10 +1756,10 @@ class LanczosOptimizer(HessianOptimizer):
 
         if banded:
             h_up_band[-1, :] += -np.ones(h_up_band.shape[1]) * lamb
-            d_x = invmul_banded(h_up_band, f)
+            d_x = alpha * invmul_banded(h_up_band, f)
         else:
-            h_test = alpha * (h_test - np.eye(h_test.shape[0]) * lamb)
-            d_x = np.linalg.solve(h_test, f)
+            h_test = (h_test - np.eye(h_test.shape[0]) * lamb)
+            d_x = alpha * np.linalg.solve(h_test, f)
 
         d_x.shape = self.fix.fixbeads.q.shape
 
