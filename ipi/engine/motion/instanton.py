@@ -400,9 +400,8 @@ class PesMapper(object):
         e = self.pot.copy()
         g = -self.f.copy()
 
-        e = e * (self.coef[1:] + self.coef[:-1]) / 2
+        e = e * (self.coef[1:,0] + self.coef[:-1,0]) / 2
         g = g * (self.coef[1:] + self.coef[:-1]) / 2
-
         return e, g
 
 
@@ -671,7 +670,7 @@ class FrictionMapper(PesMapper):
         e += e_friction
         g += g_friction
 
-        e = e * (self.coef[1:] + self.coef[:-1]) / 2
+        e = e * (self.coef[1:,0] + self.coef[:-1,0]) / 2
         g = g * (self.coef[1:] + self.coef[:-1]) / 2
 
         return e, g
@@ -865,10 +864,13 @@ class Mapper(object):
     """Creation of the multi-dimensional function that is the proxy between all the energy and force components and the optimization algorithm.
     It also handles fixatoms"""
 
-    def __init__(self, esum=False):
+    def __init__(self):
+        """Initializes object for Mapper. 
+        This class is inteded to combine several mappers and provide
+        the actual Mapper that will be used by the optimizers."""
+        
         self.sm = SpringMapper()
         self.gm = PesMapper()
-        self.esum = esum
 
     def initialize(self, q, forces):
         self.gm.initialize(q, forces)
@@ -876,7 +878,7 @@ class Mapper(object):
         e1, g1 = self.gm.evaluate()
         e2, g2 = self.sm(q)
         g = self.fix.get_active_vector(g1 + g2, 1)
-        e = np.sum(e1 + e2)
+        e = np.sum(e1) + np.sum(e2)
 
         self.save(e, g)
 
@@ -922,7 +924,7 @@ class Mapper(object):
         if mode == "all":
             e1, g1 = self.sm(x, new_disc)
             e2, g2 = self.gm(x, new_disc)
-            e = e1 + e2
+            e = np.sum(e1) + np.sum(e2)
             g = np.add(g1, g2)
 
         elif mode == "physical":
@@ -937,9 +939,6 @@ class Mapper(object):
 
         if mode == "all":
             self.save(np.sum(e), g)
-
-        if self.esum:
-            e = np.sum(e)
 
         if ret:
             return e, g
@@ -1842,8 +1841,6 @@ class LBFGSOptimizer(DummyOptimizer):
                 raise ValueError("Initial direction size does not match system size")
 
         self.optarrays["d"] = geop.optarrays["d"]
-
-        self.mapper.esum = True
 
     def initialize(self, step):
         if step == 0:
