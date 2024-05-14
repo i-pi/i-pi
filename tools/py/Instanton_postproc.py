@@ -243,7 +243,7 @@ def save_frequencies(d, nzeros, filename="freq.dat"):
     """Small function to save the frequencies in a file
     d: array with the eigenvalues of the (extended) hessian"""
 
-    outfile = open("filename", "w")
+    outfile = open(filename, "w")
     aux = np.zeros(nzeros)
     freq = np.sign(d) * np.absolute(d) ** 0.5
     dd = np.concatenate((aux, freq))
