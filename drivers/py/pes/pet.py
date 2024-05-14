@@ -32,7 +32,7 @@ The PET driver requires (a) a path to the results/experiment_name folder emitted
 Other arguments to the pet.SingleStructCalculator class can be optionally
 supplied in key=value form after the required arguments.
 
-Example: python driver.py -m pet -u -o path/to/results/name,template.xyz,device=cuda
+Example: python driver.py -m pet -u -o "path/to/results/name,template.xyz,device=cuda"
 """
 
         super().__init__(args, verbose)
