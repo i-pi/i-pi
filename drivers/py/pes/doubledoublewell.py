@@ -14,7 +14,6 @@ from ipi.utils import units
 __DRIVER_NAME__ = "double_double_well"
 __DRIVER_CLASS__ = "DDW_with_explicit_bath_driver"
 
-# np.set_printoptions(precision=14, suppress=True,threshold='nan',linewidth=1000)
 
 invcm2au = units.unit_to_internal("frequency", "inversecm", 1.0)
 A2au = units.unit_to_internal("length", "angstrom", 1.0)
@@ -57,8 +56,6 @@ class DDW_with_explicit_bath_driver(Dummy_driver):
         super(DDW_with_explicit_bath_driver, self).__init__(
             args, error_msg=self.error_msg
         )
-        # self.args = args
-        # self.check_arguments()
         self.init = False
 
     def check_arguments(self):
@@ -111,8 +108,6 @@ class DDW_with_explicit_bath_driver(Dummy_driver):
         y = pos.reshape(-1, 1)[self.ndof // 2 + 1 :]
         assert self.ndof == q1.size + q2.size + x.size + y.size
 
-        # fq1 = np.zeros(q1.shape)
-        # fq2 = np.zeros(q2.shape)
         fx = np.zeros(x.shape)
         fy = np.zeros(x.shape)
 

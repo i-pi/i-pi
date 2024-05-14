@@ -16,7 +16,6 @@ from ipi.utils import units
 __DRIVER_NAME__ = "DW_bath"
 __DRIVER_CLASS__ = "DoubleWell_with_explicit_bath_driver"
 
-# np.set_printoptions(precision=14, suppress=True,threshold='nan',linewidth=1000)
 
 invcm2au = units.unit_to_internal("frequency", "inversecm", 1.0)
 A2au = units.unit_to_internal("length", "angstrom", 1.0)
@@ -47,8 +46,6 @@ class DoubleWell_with_explicit_bath_driver(Dummy_driver):
         super(DoubleWell_with_explicit_bath_driver, self).__init__(
             args, error_msg=self.error_msg
         )
-        # self.args = args
-        # self.check_arguments()
 
         self.init = False
 
@@ -57,8 +54,6 @@ class DoubleWell_with_explicit_bath_driver(Dummy_driver):
 
         try:
             param = list(map(float, self.args))
-            # arglist = self.args.split(",")
-            # param = list(map(float, arglist))
             assert len(param) == 9
             w_b = param[0] * invcm2au
             v0 = param[1] * invcm2au
@@ -67,7 +62,7 @@ class DoubleWell_with_explicit_bath_driver(Dummy_driver):
 
             self.bath_parameters = {}
             self.bath_parameters["m"] = param[2]
-            # self.bath_parameters["delta"] = param[3] * A2au
+            
             self.bath_parameters["eta0"] = param[4]
             self.bath_parameters["eps1"] = param[5]
             self.bath_parameters["eps2"] = param[6]
