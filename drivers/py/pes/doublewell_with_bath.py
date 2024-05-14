@@ -62,7 +62,7 @@ class DoubleWell_with_explicit_bath_driver(Dummy_driver):
 
             self.bath_parameters = {}
             self.bath_parameters["m"] = param[2]
-            
+
             self.bath_parameters["eta0"] = param[4]
             self.bath_parameters["eps1"] = param[5]
             self.bath_parameters["eps2"] = param[6]

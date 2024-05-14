@@ -15,7 +15,6 @@ __DRIVER_NAME__ = "DW"
 __DRIVER_CLASS__ = "DoubleWell_driver"
 
 
-
 invcm2au = units.unit_to_internal("frequency", "inversecm", 1.0)
 A2au = units.unit_to_internal("length", "angstrom", 1.0)
 

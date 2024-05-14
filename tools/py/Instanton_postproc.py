@@ -145,6 +145,7 @@ if args.temperature == 0.0:
 
 # ----- Define some functions-----------------
 
+
 def get_double(q0, nbeads0, natoms, h0):
     """Takes nbeads, positions and hessian (only the 'physcal part') of the half polymer and
     returns the equivalent for the full ringpolymer."""
@@ -245,9 +246,9 @@ def save_frequencies(d, nzeros, filename="freq.dat"):
 
     outfile = open(filename, "w")
     aux = np.zeros(nzeros)
-    freq = np.sign(d) * np.absolute(d) ** 0.5 /cm2au
+    freq = np.sign(d) * np.absolute(d) ** 0.5 / cm2au
     dd = np.concatenate((aux, freq))
-    np.savetxt(outfile, dd.reshape(dd.size,1), header="Frequencies (cm^-1)")
+    np.savetxt(outfile, dd.reshape(dd.size, 1), header="Frequencies (cm^-1)")
     outfile.close()
     print("We saved the frequencies in {}".format(filename))
 
@@ -534,7 +535,7 @@ elif case == "instanton":
         )
         teta = tetaphi / phi
         h = -teta / betaP
-        # cm2au= (2 * np.pi * 3e10 * 2.4188843e-17)  # Handy for debugging 
+        # cm2au= (2 * np.pi * 3e10 * 2.4188843e-17)  # Handy for debugging
 
         print("\n\nWe are done")
         print("Nbeads {}, betaP {} a.u.,hbar {} a.u".format(nbeads, betaP, hbar))
