@@ -16,8 +16,8 @@ Examples for rate calculation:
            python  Instanton_postproc.py   RESTART  -c    TS         -t   300
 
 Examples for splitting  calculation (2 steps):
-         i)   python  Instanton_postproc.py   RESTART  -c  reactant   -t   10  -n 32 --->this generate the 'freq.dat' file
-         ii)  python  Instanton_postproc.py   RESTART  -c  instanton  -t   10  -freq freq.dat
+         i)   python  Instanton_postproc.py   RESTART  -c  reactant   -t   10  -n 32 --->this generate the 'eigenvalues_reactant.dat' file
+         ii)  python  Instanton_postproc.py   RESTART  -c  instanton  -t   10  -freq eigenvalues_reactant.dat
 
 
 
@@ -245,9 +245,9 @@ def save_frequencies(d, nzeros, filename="freq.dat"):
 
     outfile = open(filename, "w")
     aux = np.zeros(nzeros)
-    freq = np.sign(d) * np.absolute(d) ** 0.5
+    freq = np.sign(d) * np.absolute(d) ** 0.5 /cm2au
     dd = np.concatenate((aux, freq))
-    np.savetxt(outfile, dd.reshape(1, dd.size), header="Frequencies (atomic units)")
+    np.savetxt(outfile, dd.reshape(dd.size,1), header="Frequencies (cm^-1)")
     outfile.close()
     print("We saved the frequencies in {}".format(filename))
 
@@ -394,10 +394,17 @@ if case == "reactant":
     # logQvib    = -np.sum( np.log( 2*np.sinh( (beta*hbar*np.sqrt(d)/2.0) )  ))   #Limit n->inf
     logQvib_rp = -get_rp_freq(d, nbeadsR, temp)
 
+    # This file is created to use afterwards in the splitting calculations
+    outfile = open("eigenvalues_reactant.dat", "w")
+    aux = np.zeros(nzeros)
+    dd = np.concatenate((aux, d))
+    np.savetxt(outfile, dd.reshape(1, dd.size))
+    outfile.close()
+
     print(("\nWe are done. Reactants. Nbeads {}".format(nbeadsR)))
     print(("{:14s} | {:8s} | {:8s}".format("Qtras(bohr^-3)", "Qrot", "logQvib_rp")))
     print(("{:14.3f} | {:8.3f} |{:8.3f}\n".format(Qtras, Qrot, logQvib_rp)))
-    print("A file with the frequencies in atomic units was generated\n")
+    print("A file with the eigenvalues in atomic units was generated\n")
 
 elif case == "TS":
     Qtras = ((np.sum(m)) / (2 * np.pi * beta * hbar**2)) ** 1.5
