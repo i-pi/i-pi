@@ -1,0 +1,42 @@
+<simulation verbosity='medium'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potential{electronvolt}, pressure_cv{megapascal} ] </properties>
+    <trajectory filename='pos' stride='20' cell_units='angstrom' format="xyz"> positions{angstrom} </trajectory>
+    <checkpoint stride='200'/>
+  </output>
+  <total_steps>1000</total_steps>
+  <prng>
+    <seed>31415</seed>
+  </prng>
+  <ffsocket name='ch5p' mode='unix' pbc='false'>
+      <address>ch5p</address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='4'>
+      <file mode='xyz'> init.xyz </file>
+      <velocities mode='thermal' units='kelvin'> 100 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='ch5p'> </force>
+    </forces>
+    <motion mode='multi'>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <timestep units='femtosecond'> 0.5 </timestep>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 10 </tau>
+        </thermostat>
+      </dynamics>
+    </motion>
+    <motion mode='alchemy'>
+      <alchemy>
+        <nxc> 1 </nxc>
+        <names> [ H, D ] </names>
+      </alchemy>
+    </motion>
+    </motion>
+    <ensemble>
+      <temperature units='kelvin'> 400 </temperature>
+    </ensemble>
+  </system>
+</simulation>

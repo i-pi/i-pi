@@ -14,6 +14,7 @@ from ipi.utils.depend import dstrip
 from ipi.utils.units import Constants, unit_to_internal
 from ipi.utils.mathtools import logsumlog, h2abc_deg
 from ipi.utils.io.inputs import io_xml
+from ipi.engine.motion.driven_dynamics import DrivenDynamics
 
 __all__ = ["Properties", "Trajectories", "getkey", "getall", "help_latex", "help_rst"]
 
@@ -281,6 +282,45 @@ class Properties:
                       are defined similarly. Since the output mixes different units, a, b and c can only be output in bohr.""",
                 "size": 6,
                 "func": (lambda: np.asarray(h2abc_deg(self.cell.h))),
+            },
+            "Efield": {
+                "dimension": "atomic_unit",
+                "help": "The external applied electric field (x,y,z components in cartesian axes).",
+                "size": 3,
+                "func": (
+                    lambda: (
+                        self.motion.Electric_Field.Efield(self.ensemble.time)
+                        if isinstance(self.motion, DrivenDynamics)
+                        else np.zeros(3)
+                    )
+                ),
+            },
+            "Eenvelope": {
+                "dimension": "atomic_unit",
+                "help": "The (gaussian) envelope function of the external applied electric field (values go from 0 to 1).",
+                "func": (
+                    lambda: (
+                        self.motion.Electric_Field.Eenvelope(self.ensemble.time)
+                        if isinstance(self.motion, DrivenDynamics)
+                        else 0.0
+                    )
+                ),
+            },
+            "dipole": {
+                "dimension": "electric-dipole",
+                "help": "The electric dipole of the system (x,y,z components in cartesian axes).",
+                "size": 3,
+                "func": (
+                    lambda bead="-1": (
+                        self.motion.Electric_Dipole.dipole.mean(axis=0)
+                        if int(bead) < 0
+                        else (
+                            self.motion.Electric_Dipole.dipole[int(bead)]
+                            if isinstance(self.motion, DrivenDynamics)
+                            else np.zeros(3)
+                        )
+                    )
+                ),
             },
             "conserved": {
                 "dimension": "energy",
@@ -2740,10 +2780,46 @@ class Trajectories:
                 "help": "The momentum trajectories. Will print out one file per bead, unless the bead attribute is set by the user.",
                 "func": (lambda: 1.0 * self.system.beads.p),
             },
+            "becx": {
+                # Have a look at the documentation in the 'BEC' class
+                "dimension": "number",
+                "help": "The x component of the Born Effective Charges in cartesian coordinates.",
+                "func": (lambda: self._get_bec("x")),
+            },
+            "becy": {
+                # Have a look at the documentation in the 'BEC' class
+                "dimension": "number",
+                "help": "The y component of the Born Effective Charges in cartesian coordinates.",
+                "func": (lambda: self._get_bec("y")),
+            },
+            "becz": {
+                # Have a look at the documentation in the 'BEC' class
+                "dimension": "number",
+                "help": "The z component of the Born Effective Charges in cartesian coordinates.",
+                "func": (lambda: self._get_bec("z")),
+            },
             "forces": {
                 "dimension": "force",
                 "help": "The force trajectories. Will print out one file per bead, unless the bead attribute is set by the user.",
                 "func": (lambda: 1.0 * self.system.forces.f),
+            },
+            "Eforces": {
+                # if the dynamics is driven then 'forces' contains, on top of the 'usual' internal forces between the nuclei,
+                # an extra term due to the coupling of the external (driving) electric field with the dipole of the system
+                # This extra term depends on the nuclear positions of the system through the BEC tensors (if they are not fixed)
+                # and the value of the time dependent electric field.
+                # Have a look to the 'EDAIntegrator' class.
+                "dimension": "force",
+                "help": "The external electric field contribution to the forces",
+                "func": (
+                    lambda: (
+                        self.system.motion.integrator.EDAforces(
+                            self.system.motion.integrator.time
+                        )
+                        if isinstance(self.system.motion, DrivenDynamics)
+                        else np.zeros((self.system.beads.natoms * 3))
+                    )
+                ),
             },
             "forces_sc": {
                 "dimension": "force",
@@ -3121,3 +3197,20 @@ class Trajectories:
         else:
             dimension = ""
         return value, dimension, unit
+
+    def _get_bec(self, xyz):
+        """Return a component (xyz = x, y, or z) of the Born Effective Charge Tensors."""
+        # allocate empty BECs
+        shape = (self.system.beads.nbeads, self.system.beads.natoms * 3)
+        bec = np.full(shape, np.nan)
+        if isinstance(self.system.motion, DrivenDynamics):
+            # get all the BECs
+            BEC = self.system.motion.Born_Charges.bec
+            # convert the component into numerical index
+            xyz2index = {"x": 0, "y": 1, "z": 2}
+            index = xyz2index[xyz]
+            # get the `xyz` component of the BECs for all the beads
+            bec = np.asarray([bec[:, index] for bec in BEC])
+            # `reshape` should not be necessary, but it guarantees the shape to be correct
+            bec = bec.reshape(shape)
+        return bec

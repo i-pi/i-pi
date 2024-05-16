@@ -15,7 +15,6 @@ import json
 __DRIVER_NAME__ = "DW_friction"
 __DRIVER_CLASS__ = "DoubleWell_with_friction_driver"
 
-# np.set_printoptions(precision=14, suppress=True,threshold='nan',linewidth=1000)
 
 invcm2au = units.unit_to_internal("frequency", "inversecm", 1.0)
 A2au = units.unit_to_internal("length", "angstrom", 1.0)
@@ -42,7 +41,8 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
         self.error_msg = """\nDW+fric driver expects 8 arguments.\n
         Example: python driver.py -m DoubleWell_with_fric -o omega_b (cm^-1) V0 (cm^-1) mass delta(\AA) eta0  eps1 eps2  deltaQ      \n
         python driver.py -m DoubleWell -o 500,2085,1837,0.00,1,0,0,1\n"""
-        self.args = args
+        self.args = args.split(",")
+        self.verbose = verbose
         self.check_arguments()
 
     def check_arguments(self):
@@ -50,8 +50,7 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
 
         self.k = 1837.36223469 * (3800.0 / 219323.0) ** 2
         try:
-            arglist = self.args.split(",")
-            param = list(map(float, arglist))
+            param = list(map(float, self.args))
             assert len(param) == 8
             w_b = param[0] * invcm2au
             v0 = param[1] * invcm2au

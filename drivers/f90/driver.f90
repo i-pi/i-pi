@@ -177,6 +177,8 @@
                   vstyle = 29
                ELSEIF (trim(cmdbuffer) == "water_dip_pol") THEN
                   vstyle = 31
+               ELSEIF (trim(cmdbuffer) == "ljmix") THEN
+                  vstyle = 32
                ELSEIF (trim(cmdbuffer) == "qtip4pf-c-1") THEN
                   vstyle = 60
                ELSEIF (trim(cmdbuffer) == "qtip4pf-c-2") THEN
@@ -195,7 +197,7 @@
                   vstyle = 99 ! returns non-zero but otherwise meaningless values
                ELSE
                   WRITE(*,*) " Unrecognized potential type ", trim(cmdbuffer)
-                  WRITE(*,*) " Use -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|harmonic_bath|meanfield_bath|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json|qtip4pf-c-1-delta|qtip4pf-c-2-delta|qtip4pf-c-json-delta] "
+                  WRITE(*,*) " Use -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|harmonic_bath|meanfield_bath|ljmix|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json|qtip4pf-c-1-delta|qtip4pf-c-2-delta|qtip4pf-c-json-delta] "
                   STOP "ENDED"
                ENDIF
             ELSEIF (ccmd == 4) THEN
@@ -298,7 +300,6 @@
             STOP "ENDED"
          ENDIF
          isinit = .true.
-
       ELSEIF (23 == vstyle) THEN !MB
          IF (par_count == 0) THEN ! defaults values
             vpars(1) = 0.004737803248674678
@@ -341,10 +342,10 @@
             STOP "ENDED"
          ENDIF
          isinit = .true.
-      ELSEIF (22 == vstyle) THEN !ljpolymer
+      ELSEIF (22 == vstyle .or. 32 == vstyle) THEN !ljpolymer or ljmix
          IF (4/= par_count) THEN
             WRITE(*,*) "Error: parameters not initialized correctly."
-            WRITE(*,*) "For ljpolymer potential use n_monomer,sigma,epsilon,cutoff"
+            WRITE(*,*) "For ljpolymer and ljmix potential use n_monomer,sigma,epsilon,cutoff"
             STOP "ENDED"
          ELSE
             n_monomer = nint(vpars(1))
@@ -905,6 +906,8 @@
                   CALL SG_getall(rc, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
                ELSEIF (vstyle == 22) THEN ! ljpolymer potential.
                   CALL ljpolymer_getall(n_monomer,rc,sigma,eps,stiffness,nat,atoms,cell_h,cell_ih,index_list,n_list,pot,forces,virial)
+               ELSEIF (vstyle == 32) THEN ! lj mixture.
+                  CALL ljmix_getall(n_monomer,rc,sigma,eps,nat,atoms,cell_h,cell_ih,index_list,n_list,pot,forces,virial)
                ENDIF
                IF (verbose > 0) WRITE(*,*) " Calculated energy is ", pot
             ENDIF
@@ -1052,7 +1055,8 @@
     CONTAINS
       SUBROUTINE helpmessage
          ! Help banner
-         WRITE(*,*) " SYNTAX: driver.x [-u] -a address [-p port] -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|harmonic_bath|meanfield_bath|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json|qtip4pf-c-1-delta|qtip4pf-c-2-delta|qtip4pf-c-json-delta]"
+
+         WRITE(*,*) " SYNTAX: driver.x [-u] -a address [-p port] -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|harmonic_bath|meanfield_bath|ljmix|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json|qtip4pf-c-1-delta|qtip4pf-c-2-delta|qtip4pf-c-json-delta]"
          WRITE(*,*) "         -o 'comma_separated_parameters' [-S sockets_prefix] [-v] "
          WRITE(*,*) ""
          WRITE(*,*) " For LJ potential use -o sigma,epsilon,cutoff "
@@ -1060,7 +1064,7 @@
          WRITE(*,*) " For 1D/3D harmonic oscillator use -o k "
          WRITE(*,*) " For 1D morse oscillators use -o r0,D,a"
          WRITE(*,*) " For qtip4pf-efield use -o Ex,Ey,Ez with Ei in V/nm"
-         WRITE(*,*) " For ljpolymer use -o n_monomer,sigma,epsilon,cutoff "
+         WRITE(*,*) " For ljpolymer or lkmix use -o n_monomer,sigma,epsilon,cutoff "
          WRITE(*,*) " For gas, dummy, use the optional -o sleep_seconds to add a delay"
          WRITE(*,*) " For the ideal, qtip4pf*, zundel, ch4hcbe, nasa, doublewell or doublewell_1D no options are needed! "
        END SUBROUTINE helpmessage

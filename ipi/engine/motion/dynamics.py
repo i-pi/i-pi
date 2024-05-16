@@ -55,6 +55,8 @@ class Dynamics(Motion):
         fixcom=False,
         fixatoms=None,
         nmts=None,
+        efield=None,
+        bec=None,
     ):
         """Initialises a "dynamics" motion object.
 
@@ -189,7 +191,6 @@ class Dynamics(Motion):
             nmts=len(self.nmts),
         )
 
-        # now that the timesteps are decided, we proceed to bind the integrator.
         self.integrator.bind(self)
 
         self.ensemble.add_econs(self.thermostat._ethermo)

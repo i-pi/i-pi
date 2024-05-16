@@ -3,6 +3,7 @@
 bin/i-pi-driver
 doc/manual.pdf
 doc/manual.xml
+doc/latex/input_ref_idx.tex
 *.pyc
 *.pyo
 *.x

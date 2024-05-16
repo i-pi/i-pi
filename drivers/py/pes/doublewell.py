@@ -15,8 +15,6 @@ __DRIVER_NAME__ = "DW"
 __DRIVER_CLASS__ = "DoubleWell_driver"
 
 
-# np.set_printoptions(precision=14, suppress=True,threshold='nan',linewidth=1000)
-
 invcm2au = units.unit_to_internal("frequency", "inversecm", 1.0)
 A2au = units.unit_to_internal("length", "angstrom", 1.0)
 
@@ -33,7 +31,7 @@ class DoubleWell_driver(Dummy_driver):
     def __init__(self, args=None, verbose=None):
         self.error_msg = """\nDW driver accepts 0 or 4 arguments.\nExample: python driver.py -m DoubleWell -o omega_b (cm^-1) V0 (cm^-1) mass(a.u) delta(angs) \n
         python driver.py -m DoubleWell -o 500,2085,1837,0.00 \n"""
-        super(DoubleWell_driver, self).__init__(args)
+        super(DoubleWell_driver, self).__init__(args, error_msg=self.error_msg)
 
     def check_arguments(self):
         """Function that checks the arguments required to run the driver"""
@@ -46,8 +44,7 @@ class DoubleWell_driver(Dummy_driver):
             self.delta = 00
         else:
             try:
-                arglist = self.args.split(",")
-                param = list(map(float, arglist))
+                param = list(map(float, self.args))
                 assert len(param) == 4
                 w_b = param[0] * invcm2au
                 v0 = param[1] * invcm2au

@@ -344,11 +344,15 @@ class TrajectoryOutput(BaseOutput):
             "positions",
             "velocities",
             "forces",
+            "Eforces",
             "extras",
             # "extras_component_raw", write out a single file as we don't know how to do contraction here
             "extras_bias",
             "forces_sc",
             "momenta",
+            "becx",
+            "becy",
+            "becz",
         ]:
             # must write out trajectories for each bead, so must create b streams
 
@@ -538,8 +542,12 @@ class TrajectoryOutput(BaseOutput):
             "positions",
             "velocities",
             "forces",
+            "Eforces",
             "forces_sc",
             "momenta",
+            "becx",
+            "becy",
+            "becz",
         ]:
             fatom = Atoms(self.system.beads.natoms)
             fatom.names[:] = self.system.beads.names
