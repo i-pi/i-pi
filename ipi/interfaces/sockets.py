@@ -609,6 +609,7 @@ class InterfaceSocket(object):
         match_mode="auto",
         exit_on_disconnect=False,
         max_workers=128,
+        sockets_prefix="/tmp/ipi_",
     ):
         """Initialises interface.
 
@@ -632,6 +633,8 @@ class InterfaceSocket(object):
         self.slots = slots
         self.mode = mode
         self.timeout = timeout
+        self.sockets_prefix = sockets_prefix
+        print(f"#### {self.sockets_prefix}")
         self.poll_iter = UPDATEFREQ  # triggers pool_update at first poll
         self.prlist = []  # list of pending requests
         self.match_mode = match_mode  # heuristics to match jobs and active clients
@@ -650,14 +653,14 @@ class InterfaceSocket(object):
         if self.mode == "unix":
             self.server = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
             try:
-                self.server.bind("/tmp/ipi_" + self.address)
+                self.server.bind(self.sockets_prefix + self.address)
                 info(
                     "Created unix socket with address " + self.address, verbosity.medium
                 )
             except socket.error:
                 raise RuntimeError(
                     "Error opening unix socket. Check if a file "
-                    + ("/tmp/ipi_" + self.address)
+                    + (self.sockets_prefix + self.address)
                     + " exists, and remove it if unused."
                 )
 
@@ -720,7 +723,7 @@ class InterfaceSocket(object):
                 verbosity.low,
             )
         if self.mode == "unix":
-            os.unlink("/tmp/ipi_" + self.address)
+            os.unlink(self.sockets_prefix + self.address)
 
     def poll(self):
         """Called in the main thread loop.

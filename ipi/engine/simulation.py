@@ -59,7 +59,11 @@ class Simulation:
 
     @staticmethod
     def load_from_xml(
-        fn_input, custom_verbosity=None, request_banner=False, read_only=False
+        fn_input,
+        custom_verbosity=None,
+        sockets_prefix=None,
+        request_banner=False,
+        read_only=False,
     ):
         """Load an XML input file and return a `Simulation` object.
 
@@ -69,6 +73,7 @@ class Simulation:
                 specified by the input file.
             request_banner (bool): Whether to print the i-PI banner,
                 if verbosity is higher than 'quiet'.
+            sockets_prefix (str): Use the specified prefix for all Unix domain sockets.
         """
 
         # parse the file
@@ -85,6 +90,11 @@ class Simulation:
             # Get from the input file
             custom_verbosity = input_simulation.verbosity.fetch()
         input_simulation.verbosity.value = custom_verbosity
+
+        if sockets_prefix is None:
+            # Get from the input file
+            sockets_prefix = input_simulation.sockets_prefix.fetch()
+        input_simulation.sockets_prefix.value = sockets_prefix
 
         # print banner if not suppressed and simulation verbose enough
         if request_banner and input_simulation.verbosity.value != "quiet":
@@ -122,6 +132,7 @@ class Simulation:
         ttime=0,
         threads=False,
         safe_stride=1,
+        sockets_prefix="ipi_",
     ):
         """Initialises Simulation class.
 
@@ -145,6 +156,7 @@ class Simulation:
         self.mode = mode
         self.threading = threads
         self.safe_stride = safe_stride
+        self.sockets_prefix = sockets_prefix
 
         self.syslist = syslist
         for s in syslist:

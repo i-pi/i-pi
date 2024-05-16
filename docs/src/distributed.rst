@@ -141,7 +141,12 @@ client becomes a significant overhead for the calculation. UNIX-domain
 sockets create a special file in the local file system, that serves as a
 rendezvous point between server and clients, and are uniquely identified
 by the name of the file itself, that can be specified in the “address”
-tag of in the xml input file and in the input of the client.
+tag of in the xml input file and in the input of the client. By default
+this file is created based on the address tag, with a `/tmp/ipi_` prefix.
+This can be overridden setting the “sockets_prefix” attribute for the
+:ref:`simulation` tag in the input file, or on the command-line using the
+`-S` option. Note that several clients do not support changing the default
+prefix.
 
 Unfortunately, UNIX sockets do not allow one to run i-PI and the clients
 on different computers, which limits greatly their utility when one

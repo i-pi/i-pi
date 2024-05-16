@@ -58,7 +58,7 @@ def main(fn_input, options):
             raise ImportError('Profiling requires the `yappi` package.')            
 
     # construct simulation based on input file
-    simulation = Simulation.load_from_xml(fn_input, request_banner=True, custom_verbosity=options.verbosity)
+    simulation = Simulation.load_from_xml(fn_input, request_banner=True, custom_verbosity=options.verbosity, sockets_prefix=options.sockets_prefix)
 
     # run the simulation
     simulation.run()
@@ -95,6 +95,9 @@ if __name__ == '__main__':
     parser.add_option('-V', '--verbosity', dest='verbosity', default=None,
                       choices=['quiet', 'low', 'medium', 'high', 'debug'],
                       help='Define the verbosity level.')
+
+    parser.add_option('-S', '--sockets_prefix', dest='sockets_prefix', default=None,
+                      help='Prefix for profiler files.')
 
     options, args = parser.parse_args()
 
