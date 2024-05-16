@@ -400,9 +400,8 @@ class PesMapper(object):
         e = self.pot.copy()
         g = -self.f.copy()
 
-        e = e * (self.coef[1:] + self.coef[:-1]) / 2
+        e = e * (self.coef[1:, 0] + self.coef[:-1, 0]) / 2
         g = g * (self.coef[1:] + self.coef[:-1]) / 2
-
         return e, g
 
 
@@ -671,7 +670,7 @@ class FrictionMapper(PesMapper):
         e += e_friction
         g += g_friction
 
-        e = e * (self.coef[1:] + self.coef[:-1]) / 2
+        e = e * (self.coef[1:, 0] + self.coef[:-1, 0]) / 2
         g = g * (self.coef[1:] + self.coef[:-1]) / 2
 
         return e, g
@@ -756,6 +755,11 @@ class SpringMapper(object):
             #    #g[i, :] +=  self.omega2 * (self.dbeads.q[i, :] - self.dbeads.q[i - 1, :])
             #    g[i, :] += self.dbeads.m3[i, :] * self.omega2 * (self.dbeads.q[i, :] - self.dbeads.q[i - 1, :])
             gq_k = np.dot(self.C, self.dbeads.q)
+            e = 0.5 * np.sum(
+                np.power(self.omegak, 2)[:, np.newaxis]
+                * (self.dbeads.m3 * np.power(gq_k, 2))
+            )
+
             g = self.dbeads.m3[0] * np.dot(
                 self.C.T, gq_k * (self.omegak**2)[:, np.newaxis]
             )
@@ -860,10 +864,13 @@ class Mapper(object):
     """Creation of the multi-dimensional function that is the proxy between all the energy and force components and the optimization algorithm.
     It also handles fixatoms"""
 
-    def __init__(self, esum=False):
+    def __init__(self):
+        """Initializes object for Mapper.
+        This class is inteded to combine several mappers and provide
+        the actual Mapper that will be used by the optimizers."""
+
         self.sm = SpringMapper()
         self.gm = PesMapper()
-        self.esum = esum
 
     def initialize(self, q, forces):
         self.gm.initialize(q, forces)
@@ -871,7 +878,7 @@ class Mapper(object):
         e1, g1 = self.gm.evaluate()
         e2, g2 = self.sm(q)
         g = self.fix.get_active_vector(g1 + g2, 1)
-        e = np.sum(e1 + e2)
+        e = np.sum(e1) + np.sum(e2)
 
         self.save(e, g)
 
@@ -917,7 +924,7 @@ class Mapper(object):
         if mode == "all":
             e1, g1 = self.sm(x, new_disc)
             e2, g2 = self.gm(x, new_disc)
-            e = e1 + e2
+            e = np.sum(e1) + np.sum(e2)
             g = np.add(g1, g2)
 
         elif mode == "physical":
@@ -932,9 +939,6 @@ class Mapper(object):
 
         if mode == "all":
             self.save(np.sum(e), g)
-
-        if self.esum:
-            e = np.sum(e)
 
         if ret:
             return e, g
@@ -1609,20 +1613,22 @@ class NROptimizer(HessianOptimizer):
         activearrays = self.pre_step(step)
 
         dyn_mat = get_dynmat(
-            activearrays["hessian"], self.sm.dbeads.m3, self.sm.dbeads.nbeads
+            activearrays["hessian"],
+            self.mapper.sm.dbeads.m3,
+            self.mapper.sm.dbeads.nbeads,
         )
         h_up_band = banded_hessian(
-            dyn_mat, self.sm, masses=False, shift=0.0000001
+            dyn_mat, self.mapper.sm, masses=False, shift=0.0000001
         )  # create upper band matrix
 
         fff = activearrays["old_f"] * (self.mapper.coef[1:] + self.mapper.coef[:-1]) / 2
-        f = (fff + self.sm.f).reshape(
-            self.sm.dbeads.natoms * 3 * self.sm.dbeads.nbeads, 1
+        f = (fff + self.mapper.sm.f).reshape(
+            self.mapper.sm.dbeads.natoms * 3 * self.mapper.sm.dbeads.nbeads, 1
         )
-        f = np.multiply(f, self.sm.dbeads.m3.reshape(f.shape) ** -0.5)
+        f = np.multiply(f, self.mapper.sm.dbeads.m3.reshape(f.shape) ** -0.5)
 
-        d_x = invmul_banded(h_up_band, f).reshape(self.sm.dbeads.q.shape)
-        d_x = np.multiply(d_x, self.sm.dbeads.m3**-0.5)
+        d_x = invmul_banded(h_up_band, f).reshape(self.mapper.sm.dbeads.q.shape)
+        d_x = np.multiply(d_x, self.mapper.sm.dbeads.m3**-0.5)
 
         # Rescale step if necessary
         if np.amax(np.absolute(d_x)) > activearrays["big_step"]:
@@ -1750,10 +1756,10 @@ class LanczosOptimizer(HessianOptimizer):
 
         if banded:
             h_up_band[-1, :] += -np.ones(h_up_band.shape[1]) * lamb
-            d_x = invmul_banded(h_up_band, f)
+            d_x = alpha * invmul_banded(h_up_band, f)
         else:
-            h_test = alpha * (h_test - np.eye(h_test.shape[0]) * lamb)
-            d_x = np.linalg.solve(h_test, f)
+            h_test = h_test - np.eye(h_test.shape[0]) * lamb
+            d_x = alpha * np.linalg.solve(h_test, f)
 
         d_x.shape = self.fix.fixbeads.q.shape
 
@@ -1835,8 +1841,6 @@ class LBFGSOptimizer(DummyOptimizer):
                 raise ValueError("Initial direction size does not match system size")
 
         self.optarrays["d"] = geop.optarrays["d"]
-
-        self.mapper.esum = True
 
     def initialize(self, step):
         if step == 0:

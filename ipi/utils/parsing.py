@@ -50,9 +50,14 @@ def read_output(filename):
         match = header_pattern.match(line)
         if match:
             # Extracting matched groups
-            col_type, start_col, end_col, property_name, units, description = (
-                match.groups()
-            )
+            (
+                col_type,
+                start_col,
+                end_col,
+                property_name,
+                units,
+                description,
+            ) = match.groups()
             col_info = f"{start_col}-{end_col}" if end_col else start_col
             properties[col_info] = {
                 "name": property_name,

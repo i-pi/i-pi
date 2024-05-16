@@ -1,8 +1,6 @@
 import numpy as np
 import sys
 
-# import os
-# import math
 import argparse
 from ipi.utils.messages import verbosity, info
 
@@ -18,8 +16,8 @@ Examples for rate calculation:
            python  Instanton_postproc.py   RESTART  -c    TS         -t   300
 
 Examples for splitting  calculation (2 steps):
-         i)   python  Instanton_postproc.py   RESTART  -c  reactant   -t   10  -n 32 --->this generate the 'freq.dat' file
-         ii)  python  Instanton_postproc.py   RESTART  -c  instanton  -t   10  -freq freq.dat
+         i)   python  Instanton_postproc.py   RESTART  -c  reactant   -t   10  -n 32 --->this generate the 'eigenvalues_reactant.dat' file
+         ii)  python  Instanton_postproc.py   RESTART  -c  instanton  -t   10  -freq eigenvalues_reactant.dat
 
 
 
@@ -49,8 +47,6 @@ from ipi.utils.units import unit_to_internal, Constants
 from ipi.utils.instools import red2comp
 from ipi.utils.hesstools import clean_hessian
 from ipi.engine.motion.instanton import SpringMapper
-
-# np.set_printoptions(precision=6, suppress=True, threshold=np.nan)
 
 # UNITS
 K2au = unit_to_internal("temperature", "kelvin", 1.0)
@@ -147,7 +143,7 @@ if args.temperature == 0.0:
     raise ValueError("The temperature must be specified.'")
 
 
-# -----Some functions-----------------
+# ----- Define some functions-----------------
 
 
 def get_double(q0, nbeads0, natoms, h0):
@@ -193,9 +189,6 @@ def Filter(pos, h, natoms, m, m3, filt):
     return pos, h, natoms, m, m3
 
 
-# def get_rp_freq(w0,nbeads,temp,asr=None,mode='rate',nzero=0):
-
-
 def get_rp_freq(w0, nbeads, temp, mode="rate"):
     """Compute the ring polymer frequencies for multidimensional harmonic potential
     defined by the frequencies w0."""
@@ -211,10 +204,6 @@ def get_rp_freq(w0, nbeads, temp, mode="rate"):
         sys.exit()
 
     if mode == "rate":
-        # for i in range(nzero):
-        #    for k in range(1, nbeads):
-        #        w += np.log(factor*np.sqrt(4./(betaP*hbar)**2 * np.sin(np.absolute(k)*np.pi/nbeads)**2))
-        #        # Yes, for each K w is nbeads
 
         for n in range(w0.size):
             for k in range(nbeads):
@@ -251,6 +240,19 @@ def get_rp_freq(w0, nbeads, temp, mode="rate"):
         sys.exit()
 
 
+def save_frequencies(d, nzeros, filename="freq.dat"):
+    """Small function to save the frequencies in a file
+    d: array with the eigenvalues of the (extended) hessian"""
+
+    outfile = open(filename, "w")
+    aux = np.zeros(nzeros)
+    freq = np.sign(d) * np.absolute(d) ** 0.5 / cm2au
+    dd = np.concatenate((aux, freq))
+    np.savetxt(outfile, dd.reshape(dd.size, 1), header="Frequencies (cm^-1)")
+    outfile.close()
+    print("We saved the frequencies in {}".format(filename))
+
+
 # -----END of some functions-----------------
 
 # -----READ---------------------------------
@@ -259,11 +261,6 @@ print("\nWe are ready to start. Reading {} ... (This can take a while)".format(i
 simulation = Simulation.load_from_xml(
     inputt, custom_verbosity="quiet", request_banner=False, read_only=True
 )
-# xmlrestart = xml_parse_file(open(inputt))
-# input_simulation = isimulation.InputSimulation()
-# input_simulation.parse(xmlrestart.fields[0][1])
-# simulation = input_simulation.fetch()
-# simulation.bind(read_only=True)
 
 
 beads = simulation.syslist[0].motion.beads.copy()
@@ -347,7 +344,7 @@ elif case == "instanton":
         pos = beads.q
         m3 = beads.m3
         omega2 = (temp * nbeads * kb / hbar) ** 2
-        # spring  = SpringMapper.spring_hessian(natoms,nbeads,beads.m3[0],omega2,mode='half')
+
         if not quiet:
             h0 = red2comp(hessian, nbeads, natoms)
             spring = SpringMapper.spring_hessian(
@@ -373,10 +370,10 @@ print(("atoms:  {}".format(natoms)))
 print(("ASR:    {}".format(asr)))
 print(("1/(betaP*hbar) = {:8.5f}".format((1 / (betaP * hbar)))))
 
-if not quiet:
+if not quiet or case == "reactant" or case == "TS":
     print("Diagonalization ... \n\n")
     d, w, detI = clean_hessian(h, pos, natoms, nbeads, m, m3, asr, mofi=True)
-    print("Final lowest 10 frequencies (cm^-1)")
+    print("Lowest 10 frequencies (cm^-1)")
     d10 = np.array2string(
         np.sign(d[0:10]) * np.absolute(d[0:10]) ** 0.5 / cm2au,
         precision=2,
@@ -384,6 +381,8 @@ if not quiet:
         formatter={"float_kind": lambda x: "%.2f" % x},
     )
     print(("{}".format(d10)))
+
+    save_frequencies(d, nzeros)
 
 if case == "reactant":
     Qtras = ((np.sum(m)) / (2 * np.pi * beta * hbar**2)) ** 1.5
@@ -393,19 +392,20 @@ if case == "reactant":
     else:
         Qrot = 1.0
 
-    outfile = open("freq.dat", "w")
+    # logQvib    = -np.sum( np.log( 2*np.sinh( (beta*hbar*np.sqrt(d)/2.0) )  ))   #Limit n->inf
+    logQvib_rp = -get_rp_freq(d, nbeadsR, temp)
+
+    # This file is created to use afterwards in the splitting calculations
+    outfile = open("eigenvalues_reactant.dat", "w")
     aux = np.zeros(nzeros)
     dd = np.concatenate((aux, d))
     np.savetxt(outfile, dd.reshape(1, dd.size))
     outfile.close()
 
-    # logQvib    = -np.sum( np.log( 2*np.sinh( (beta*hbar*np.sqrt(d)/2.0) )  ))   #Limit n->inf
-    logQvib_rp = -get_rp_freq(d, nbeadsR, temp)
-
     print(("\nWe are done. Reactants. Nbeads {}".format(nbeadsR)))
     print(("{:14s} | {:8s} | {:8s}".format("Qtras(bohr^-3)", "Qrot", "logQvib_rp")))
     print(("{:14.3f} | {:8.3f} |{:8.3f}\n".format(Qtras, Qrot, logQvib_rp)))
-    print("A file with the frequencies in atomic units was generated\n")
+    print("A file with the eigenvalues in atomic units was generated\n")
 
 elif case == "TS":
     Qtras = ((np.sum(m)) / (2 * np.pi * beta * hbar**2)) ** 1.5
@@ -511,7 +511,7 @@ elif case == "instanton":
             d_min[i] = float(aux[i])
         d_min = d_min.reshape((natoms * 3))
         out.close()
-        ww = get_rp_freq(d_min, nbeads, temp, mode="splitting")
+        ww = get_rp_freq(np.sign(d_min) * d_min**2, nbeads, temp, mode="splitting")
         react = np.sum(np.log(ww))
 
         action1 = (pots.sum() - nbeads * V0) * 1 / (temp * nbeads * kb)
@@ -535,7 +535,7 @@ elif case == "instanton":
         )
         teta = tetaphi / phi
         h = -teta / betaP
-        # cm2au= (2 * np.pi * 3e10 * 2.4188843e-17)
+        # cm2au= (2 * np.pi * 3e10 * 2.4188843e-17)  # Handy for debugging
 
         print("\n\nWe are done")
         print("Nbeads {}, betaP {} a.u.,hbar {} a.u".format(nbeads, betaP, hbar))

@@ -14,7 +14,6 @@ from ipi.utils import units
 __DRIVER_NAME__ = "double_double_well"
 __DRIVER_CLASS__ = "DDW_with_explicit_bath_driver"
 
-# np.set_printoptions(precision=14, suppress=True,threshold='nan',linewidth=1000)
 
 invcm2au = units.unit_to_internal("frequency", "inversecm", 1.0)
 A2au = units.unit_to_internal("length", "angstrom", 1.0)
@@ -54,16 +53,16 @@ class DDW_with_explicit_bath_driver(Dummy_driver):
         self.error_msg = """\nDW+explicit_bath driver expects 11 arguments.\n
         Example: python driver.py -m DoubleWell_with_explicit_bath -o wb1 (cm^-1) V1 (cm^-1) wb2 (cm^-1) V2 (cm^-1) coupling(au) mass delta(\AA) eta0  eps1 eps2  deltaQ omega_c(cm^-1)     \n
         python driver.py -m DoubleWell -o 500,2085,500,2085,0.1,1837,0.00,1,0,0,1,500\n"""
-        self.args = args
-        self.check_arguments()
+        super(DDW_with_explicit_bath_driver, self).__init__(
+            args, error_msg=self.error_msg
+        )
         self.init = False
 
     def check_arguments(self):
         """Function that checks the arguments required to run the driver"""
 
         try:
-            arglist = self.args.split(",")
-            param = list(map(float, arglist))
+            param = list(map(float, self.args))
             assert len(param) == 12
             wb1 = param[0] * invcm2au
             v1 = param[1] * invcm2au
@@ -109,8 +108,6 @@ class DDW_with_explicit_bath_driver(Dummy_driver):
         y = pos.reshape(-1, 1)[self.ndof // 2 + 1 :]
         assert self.ndof == q1.size + q2.size + x.size + y.size
 
-        # fq1 = np.zeros(q1.shape)
-        # fq2 = np.zeros(q2.shape)
         fx = np.zeros(x.shape)
         fy = np.zeros(x.shape)
 
