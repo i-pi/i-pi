@@ -511,7 +511,7 @@ elif case == "instanton":
             d_min[i] = float(aux[i])
         d_min = d_min.reshape((natoms * 3))
         out.close()
-        ww = get_rp_freq(d_min**2, nbeads, temp, mode="splitting")
+        ww = get_rp_freq(np.sign(d_min) * d_min**2, nbeads, temp, mode="splitting")
         react = np.sum(np.log(ww))
 
         action1 = (pots.sum() - nbeads * V0) * 1 / (temp * nbeads * kb)
