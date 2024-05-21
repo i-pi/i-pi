@@ -35,6 +35,7 @@ __all__ = [
 
 mode_map = {
     "bin": "binary",
+    "extxyz": "ase",
 }
 
 
@@ -67,7 +68,7 @@ def _get_io_function(mode, io):
     available ipi/utils/io/backends/io_*.py backends.
 
     Args:
-        mode: Which format has the file? e.g. "pdb", "xml" or "xyz"
+        mode: Which format has the file? e.g. "pdb", "xml", "bin", "extxyz", or "xyz"
         io: One of "print_path", "print", "read" or "iter"
     """
 
