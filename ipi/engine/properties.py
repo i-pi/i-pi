@@ -2935,9 +2935,8 @@ class Trajectories:
                        centoid force is computed. The weight of the potential is not applied. """,
                 "func": lambda index, bead="-1": (
                     self.system.forces.forces_component(
-                        int(index), weighted=False, interpolate=True
-                    ).sum(axis=0)
-                    / self.system.beads.nbeads
+                        int(index), weighted=False, interpolate=False
+                    ).mean(axis=0)
                     if int(bead) < 0
                     else self.system.forces.forces_component(int(index), False, False)[
                         int(bead)
