@@ -23,7 +23,7 @@ pip install "metatensor-torch ==0.5.*" "metatensor-operations ==0.2.*"
 ## Running the example
 
 ```bash
-i-pi input.xml; sleep 1 &
+i-pi input.xml & sleep 1 
 i-pi-py_driver -a metatensor -u -m metatensor -o nickel.xyz,nickel-lj.pt
 
 # with all the optional parameters:
