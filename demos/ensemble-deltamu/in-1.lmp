@@ -35,8 +35,8 @@ atom_style atomic                                                               
 read_data ${nameStartCfg}                                                               # read start configuration
 mass 1 ${mass1}                                                                         # set mass for element 1
 mass 2 ${mass2}                                                                         # set mass for element 2
-pair_style nnp dir ${runnerDir} showew no showewsum 1000 resetew yes maxew 1000000 cflength 1.8897261328 cfenergy 0.0367493254                        # set up pair style runner
-pair_coeff * * ${runnerCutoff}                                                          # set up pair style coefficients
+pair_style hdnnp ${runnerCutoff} dir ${runnerDir} showew no showewsum 1000 resetew yes maxew 1000000 cflength 1.8897261328 cfenergy 0.0367493254                        # set up pair style runner
+pair_coeff * * H O                                                                      # set up pair style coefficients
 timestep ${dt}                                                                          # set timestep
 velocity all create ${initTemp} ${velSeed}                                              # create initial velocities
 #fix AVE_TD all ave/time ${intTD} 1 ${intTD} c_thermo_temp c_thermo_press v_varVolume c_thermo_pe v_varKE f_INT file ${nameTD} mode scalar       # set up thermodynamic properties output
