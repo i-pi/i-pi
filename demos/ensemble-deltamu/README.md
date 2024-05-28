@@ -10,6 +10,14 @@ Simulations can be performed with either a deep ensemble of 4 separate Behler-Pa
 neural network, computed with the n2p2 driver in `lammps`, or with a shallow ensemble of 5
 weight-sharing multi-layer perceptrons based on SOAP features, computed with `rascaline`
 
+Installation of the dependencies
+-------------------------------
+For convenience we provide a script to install the necessary dependencies for both the "full" committee `n2p2`/`lammps`/`plumed` version of this tutorial, but also for the shallow ensemble `rascaline`/`plumed` version. 
+
+### Important information for Mx MacOS users:
+
+- conda prebuilt versions of plumed for Aarch64 do not include the `crystallization` module, you will have to compile PLUMED from source.
+
 Installation of the rascaline model
 -----------------------------------
 
@@ -34,9 +42,9 @@ In order to install the necessary packages for the MLIP we provide a setup scrip
 IMPORTANT: We recommend to install the packages in a fresh virtual environment.
 
 ```
-conda create --name deltamu
-conda activate deltamu
-./install_dependencies.sh
+conda create --name deltamu_rascaline
+conda activate deltamu_rascaline
+./install_rascaline.sh
 ```
 
 The install script will install [rascaline](https://github.com/Luthaf/rascaline) the atomic 
@@ -48,20 +56,30 @@ Install from within the `./demos/ensemble-deltamu` directory.
 Installation of the n2p2 model
 ------------------------------
 
-You will need a version of LAMMPS patched with the N2P2 driver, and to download the models.
+You will need a version of LAMMPS patched with the N2P2 driver, and to download the models.\
+Alternatively, we provide a script to install the necessary dependencies for the n2p2 model, including LAMMPS/n2p2 and PLUMED.\
+The dependency resolution might take a while.
+
+```
+conda create --name deltamu_n2p2
+conda activate deltamu_n2p2
+./install_n2p2.sh
+```
 
 Running the simulations
 ----------------------
 
-The simulations can be run using the provided `run_rascaline.sh` script.
+The simulations can be run using the provided `run_rascaline.sh` script, from within the 
+`./demos/ensemble-deltamu` directory.
+
+```
+conda activate deltamu_rascaline
+
+./run_rascaline.sh
+```
 
 For the rascaline model, change the variables `PLUMED_PATH` and `IPI_PATH` to the 
 paths were the source of Plumed and i-PI are located. Then simply run the provided script.
-
-```
-conda activate deltamu
-./run_rascaline.sh
-```
 
 Similarly, to run the n2p2 model, set the environment variables in 
 `run_n2p2.sh` and execute it
@@ -69,6 +87,15 @@ Similarly, to run the n2p2 model, set the environment variables in
 ```
 ./run_n2p2.sh
 ```
+
+Alternatively from within the `./demos/ensemble-deltamu` directory you can run the provided run script to run the demo after the conda-based installation.
+
+```
+conda activate deltamu_n2p2
+
+./run_n2p2_conda.sh
+```
+
 
 Interface pinning
 -----------------
