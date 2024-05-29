@@ -35,7 +35,6 @@ __all__ = [
 
 mode_map = {
     "bin": "binary",
-    "extxyz": "ase",
 }
 
 
