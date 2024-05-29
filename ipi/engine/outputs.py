@@ -359,6 +359,8 @@ class TrajectoryOutput(BaseOutput):
             # prepare format string for file name
             if getkey(self.what)[:6] == "extras":
                 fmt_fn = self.filename + "_" + fmt_bead
+            elif self.format == "ase":
+                fmt_fn = self.filename + "_" + fmt_bead + ".extxyz"
             else:
                 fmt_fn = self.filename + "_" + fmt_bead + "." + self.format
 
