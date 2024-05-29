@@ -1,6 +1,15 @@
 #!/bin/bash
 
-conda install -c conda-forge rust python=3.10
+conda install -c conda-forge cxx-compiler gcc rust python=3.10
+
+export PATH="$CONDA_PREFIX/bin:$PATH"
+export LD_LIBRARY_PATH="$CONDA_PREFIX/lib:$LD_LIBRARY_PATH"
+
+export CC="$CONDA_PREFIX/bin/gcc"
+export CXX="$CONDA_PREFIX/bin/g++"
+
+export CMAKE_C_COMPILER="$CONDA_PREFIX/bin/gcc"
+export CMAKE_CXX_COMPILER="$CONDA_PREFIX/bin/g++"
 
 #purge conda cache
 conda clean --all
