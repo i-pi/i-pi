@@ -301,6 +301,7 @@ if ase is not None:
 
     # Conversion factors from atomic units to ASE units
     conversion_factors = {
+        "undefined": {"ase": 1 },
         "energy": {"ase": 1 / (Hartree / eV)},
         "temperature": {"ase": kB},
         "time": {
