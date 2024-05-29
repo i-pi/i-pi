@@ -634,7 +634,6 @@ class InterfaceSocket(object):
         self.mode = mode
         self.timeout = timeout
         self.sockets_prefix = sockets_prefix
-        print(f"#### {self.sockets_prefix}")
         self.poll_iter = UPDATEFREQ  # triggers pool_update at first poll
         self.prlist = []  # list of pending requests
         self.match_mode = match_mode  # heuristics to match jobs and active clients
