@@ -1,0 +1,60 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties filename='out' stride='1'>  [ time{picosecond}, conserved, temperature{kelvin}, kinetic_md, potential ] </properties>
+
+    <!--prints the positions in xyz format with ASE comptible units-->
+    <trajectory filename='pos' format='xyz' stride='1' cell_units='angstrom'> positions{ase} </trajectory>
+    <!--prints the positions in extended xyz format-->
+    <trajectory filename='pos-extxyz' format='ase' stride='1'> positions </trajectory>
+    <!--prints the positions in xyz format with i-PI default units-->
+    <trajectory filename='pos-ipi' format='xyz' stride='1'> positions </trajectory>
+    
+    <!--prints the kinetic energy tensor in xyz format with ASE comptible units-->
+    <trajectory filename='kin-ase' format='xyz' stride='1' cell_units='angstrom'> kinetic_cv{ase} </trajectory>
+    <!--prints the kinetic energy tensor in extended xyz format-->
+    <trajectory filename='kin-extxyz' format='ase' stride='1'> kinetic_cv </trajectory>
+    <!--prints the kinetic energy tensor in xyz format in i-PI default units-->
+    <trajectory filename='kin-ipi' format='xyz' stride='1' cell_units='angstrom'> kinetic_cv{electronvolt} </trajectory>
+    
+    <!--prints the forces in xyz format with ASE comptible units-->
+    <trajectory filename='frc' format='xyz' stride='1' cell_units='angstrom'> forces{ase} </trajectory>
+    <!--prints the forces in extended xyz format-->
+    <trajectory filename='frc-extxyz' format='ase' stride='1'> forces </trajectory>
+    <!--prints the forces in xyz format with i-PI default units-->
+    <trajectory filename='frc-ipi' format='xyz' stride='1'> forces </trajectory>
+
+    <checkpoint filename='chk' stride='100' overwrite='true'/>
+    <checkpoint filename='restart' stride='100' overwrite='false'/>
+  </output>
+  <total_steps>10</total_steps>
+  <prng>
+    <seed>23658</seed>
+  </prng>
+  <ffsocket mode='unix' pbc='false' name='driver'>
+    <address>driver</address>
+    <port>31400</port>
+    <latency>0.02</latency>
+    <timeout>400</timeout>
+  </ffsocket>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='ase'> h2o.extxyz </file>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='driver'> </force>
+    </forces>
+    <ensemble>
+      <temperature units='kelvin'>300</temperature>
+    </ensemble>
+    <motion mode='dynamics'>
+      <fixcom>True</fixcom>
+      <dynamics mode='nvt'>
+        <timestep units='femtosecond'>0.5</timestep>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100</tau>
+        </thermostat>
+      </dynamics>
+    </motion>
+  </system>
+</simulation>
