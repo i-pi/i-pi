@@ -377,7 +377,10 @@ class TrajectoryOutput(BaseOutput):
             filename = self.filename
             # prepare format string for file name
             if getkey(self.what)[:6] != "extras":
-                filename += "." + self.format
+                if self.format == "ase":
+                    filename += ".extxyz" 
+                else:
+                    filename += "." + self.format
             self.out = open_backup(filename, mode)
 
     def close_stream(self):

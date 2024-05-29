@@ -54,8 +54,9 @@ def print_ase(
 
     from ase import Atoms
 
+    # Reads the quantity from the ipi_comment
     quantity = non_cell_keyword = next(((keyword, value) for keyword, value in re.findall(r"(\w+)\{(\w+)\}", title) if keyword != "cell"), (None, None))[0]
-    print (quantity)
+    
     ase_atoms = Atoms(
         atoms.names,
         cell=cell.h.T * cell_conv,
