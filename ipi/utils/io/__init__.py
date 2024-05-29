@@ -215,7 +215,7 @@ def print_file(
         units: Units for the output (e.g. "angstrom")
         cell_units: Units for the cell (dimension length, e.g. "angstrom")
     """
-    if mode in ["pdb", "ase"]:  # special case for PDB and ASE
+    if mode == "pdb":  # special case for PDB and ASE
         if dimension != "length":
             raise ValueError("PDB Standard is only designed for atomic positions")
         if units == "automatic":
@@ -224,6 +224,14 @@ def print_file(
             cell_units = "angstrom"
         if key == "":
             key = "positions"
+
+    elif mode == "ase":
+
+        if cell_units == "automatic": 
+            cell_units = "angstrom"
+        elif cell_units != "angstrom": 
+            raise ValueError("ASE Standard uses Ang eV based units system.")
+
     # in general, "automatic" units are actually "atomic_units"
     else:
         if units == "automatic":
