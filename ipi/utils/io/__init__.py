@@ -148,14 +148,14 @@ def print_file_path(
     # conversion used in i-PI can differ from ASE conversion factors up to numerics.
     elif mode == "ase":
         if units == "automatic":
-            units == "ase"
+            units = "ase"
         elif units != "ase":
             raise ValueError(
                 'Only "ase" or default units can be used with extended xyz format.'
             )
 
         if cell_units == "automatic":
-            units == "ase"
+            units = "ase"
         elif units != "ase":
             raise ValueError(
                 'Only "ase" or default units can be used with extended xyz format.'
@@ -248,14 +248,13 @@ def print_file(
     # conversion used in i-PI can differ from ASE conversion factors up to numerics.
     elif mode == "ase":
         if units == "automatic":
-            units == "ase"
+            units = "ase"
         elif units != "ase":
             raise ValueError(
                 'Only "ase" or default units can be used with extended xyz format.'
             )
-
         if cell_units == "automatic":
-            cell_units == "ase"
+            cell_units = "ase"
         elif cell_units != "ase":
             raise ValueError(
                 'Only "ase" or default units can be used with extended xyz format.'
@@ -272,6 +271,7 @@ def print_file(
     atoms_conv = unit_to_user(dimension, units, 1.0)
 
     title = title + ("%s{%s}  cell{%s}" % (key, units, cell_units))
+
     print_file_raw(
         mode=mode,
         atoms=atoms,
