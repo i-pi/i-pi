@@ -142,20 +142,24 @@ def print_file_path(
             units = "angstrom"
         if cell_units == "automatic":
             cell_units = "angstrom"
-    
-    # if output mode is 'ase', "automatic" units are actually "ase". In so far, only "ase" units can be used. 
-    # Raises an error even if units like "angstrom" are used. This is because atomic_units to angstrom 
-    # conversion used in i-PI can differ from ASE conversion factors up to numerics.  
+
+    # if output mode is 'ase', "automatic" units are actually "ase". In so far, only "ase" units can be used.
+    # Raises an error even if units like "angstrom" are used. This is because atomic_units to angstrom
+    # conversion used in i-PI can differ from ASE conversion factors up to numerics.
     elif mode == "ase":
         if units == "automatic":
             units == "ase"
         elif units != "ase":
-            raise ValueError("Only \"ase\" or default units can be used with extended xyz format.")
-  
+            raise ValueError(
+                'Only "ase" or default units can be used with extended xyz format.'
+            )
+
         if cell_units == "automatic":
             units == "ase"
         elif units != "ase":
-            raise ValueError("Only \"ase\" or default units can be used with extended xyz format.")
+            raise ValueError(
+                'Only "ase" or default units can be used with extended xyz format.'
+            )
 
     # in general, "automatic" units are actually "atomic_units"
     else:
@@ -239,19 +243,23 @@ def print_file(
         if key == "":
             key = "positions"
 
-    # if output mode is 'ase', "automatic" units are actually "ase". In so far, only "ase" units can be used. 
-    # Raises an error even if units like "angstrom" are used. This is because atomic_units to angstrom 
-    # conversion used in i-PI can differ from ASE conversion factors up to numerics.  
+    # if output mode is 'ase', "automatic" units are actually "ase". In so far, only "ase" units can be used.
+    # Raises an error even if units like "angstrom" are used. This is because atomic_units to angstrom
+    # conversion used in i-PI can differ from ASE conversion factors up to numerics.
     elif mode == "ase":
         if units == "automatic":
             units == "ase"
         elif units != "ase":
-            raise ValueError("Only \"ase\" or default units can be used with extended xyz format.")
+            raise ValueError(
+                'Only "ase" or default units can be used with extended xyz format.'
+            )
 
         if cell_units == "automatic":
             cell_units == "ase"
         elif cell_units != "ase":
-            raise ValueError("Only \"ase\" or default units can be used with extended xyz format.")
+            raise ValueError(
+                'Only "ase" or default units can be used with extended xyz format.'
+            )
 
     # in general, "automatic" units are actually "atomic_units"
     else:

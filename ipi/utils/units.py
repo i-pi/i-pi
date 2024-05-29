@@ -19,6 +19,7 @@ except ImportError:
 
 __all__ = ["Constants", "Elements", "unit_to_internal", "unit_to_user"]
 
+
 class Constants(object):
     """Class whose members are fundamental constants.
 
@@ -303,7 +304,8 @@ if ase is not None:
         "energy": {"ase": 1 / (Hartree / eV)},
         "temperature": {"ase": kB},
         "time": {
-            "ase": 1 / ((Bohr / Angstrom) * (1 / (Hartree / eV)) ** 0.5 * (_amu / 1) ** 0.5)
+            "ase": 1
+            / ((Bohr / Angstrom) * (1 / (Hartree / eV)) ** 0.5 * (_amu / 1) ** 0.5)
         },
         "frequency": {
             "ase": (Bohr / Angstrom) * (1 / (Hartree / eV)) ** 0.5 * (_amu / 1) ** 0.5
@@ -318,11 +320,14 @@ if ase is not None:
         "momentum": {"ase": 1 / ((Bohr / Angstrom) * (Hartree / eV) ** 0.5)},
         "mass": {"ase": 1},  # Atomic unit of mass to amu
         "pressure": {"ase": 1 / (Hartree / (Bohr**3 * Pascal))},
-        "density": {"ase": 1 / (_amu / (Angstrom**3))},  # Atomic unit of density to g/cm^3
+        "density": {
+            "ase": 1 / (_amu / (Angstrom**3))
+        },  # Atomic unit of density to g/cm^3
         "force": {"ase": 1 / (Hartree / Bohr)},  # Atomic unit of force to N
-        "hessian": {"ase": 1 / (Hartree / (Bohr**2))},  # Atomic unit of Hessian to eV/Å^2
+        "hessian": {
+            "ase": 1 / (Hartree / (Bohr**2))
+        },  # Atomic unit of Hessian to eV/Å^2
     }
-
 
     # Update UnitMap with ASE conversion factors
     for quantity, factors in conversion_factors.items():
@@ -407,7 +412,7 @@ def unit_to_internal(family, unit, number):
     if prefix not in UnitPrefix:
         raise TypeError(prefix + " is not a valid unit prefix.")
     if not base.lower() in UnitMap[family]:
-        print (base.lower(), UnitMap[family])
+        print(base.lower(), UnitMap[family])
         raise TypeError(base + " is an undefined unit for kind " + family + ".")
 
     return number * UnitMap[family][base.lower()] * UnitPrefix[prefix]
