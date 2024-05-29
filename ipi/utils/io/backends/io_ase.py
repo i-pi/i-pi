@@ -8,8 +8,10 @@ using the Atomic Simulation Environment
 
 # import os
 import sys
+import re
 import numpy as np
 from ipi.utils.units import Constants
+
 
 try:
     import ase
@@ -52,12 +54,14 @@ def print_ase(
 
     from ase import Atoms
 
+    quantity = non_cell_keyword = next(((keyword, value) for keyword, value in re.findall(r"(\w+)\{(\w+)\}", title) if keyword != "cell"), (None, None))[0]
+    print (quantity)
     ase_atoms = Atoms(
         atoms.names,
-        positions=atoms.q.reshape((-1, 3)) * atoms_conv,
         cell=cell.h.T * cell_conv,
         pbc=True,
     )
+    ase_atoms.arrays[quantity] = atoms.q.reshape((-1, 3)) * atoms_conv
     ase_atoms.info["ipi_comment"] = title
     ase_atoms.write(filedesc, format="extxyz")
 
