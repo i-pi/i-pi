@@ -25,7 +25,7 @@ pip install metatensor-operations
 pip install metatensor-torch
 
 pip install git+https://github.com/Luthaf/rascaline
-pip install git+https://github.com/luthaf/rascaline#subdirectory=python/rascaline-torch
+pip install --extra-index-url https://download.pytorch.org/whl/cpu git+https://github.com/luthaf/rascaline#subdirectory=python/rascaline-torch
 
 # modifies the i_pi drivers
 cp ./H2O/ipi_driver/lightning.py ../../drivers/py/pes/
