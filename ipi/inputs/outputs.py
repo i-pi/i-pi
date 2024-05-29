@@ -141,7 +141,7 @@ class InputTrajectory(InputValue):
             "dtype": str,
             "default": "xyz",
             "help": "The output file format.",
-            "options": ["xyz", "pdb", "ase"],
+            "options": ["xyz", "pdb", "ase", "bin"],
         },
     )
     attribs["cell_units"] = (
