@@ -243,9 +243,6 @@ def print_file(
     # Raises an error even if units like "angstrom" are used. This is because atomic_units to angstrom 
     # conversion used in i-PI can differ from ASE conversion factors up to numerics.  
     elif mode == "ase":
-
-        print ('DEBUG:', units, cell_units, units == "automatic", cell_units == "automatic")
-
         if units == "automatic":
             units == "ase"
         elif units != "ase":
