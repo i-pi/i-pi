@@ -3,14 +3,15 @@
 
 This example demonstrates the use of equilibrium-nonequilibrium ring-polymer molecular dynamic (RPMD) within the framework of i-PI to simulate 2D IR-Raman spectrum of liquid water. 
 For theory of equilibrium-nonequilibrium RPMD, see
-1. T. Begusic, X. Tao, G. A. Blake, T. F. Miller III, "Equilibrium–nonequilibrium ring-polymer molecular dynamics for nonlinear spectroscopy", J. Chem. Phys. 156, 131102 (2022).
-2. T. Begusic, G. A. Blake, "Two-dimensional infrared-Raman spectroscopy as a probe of water’s tetrahedrality", Nat. Commun. 14, 1950 (2023).
+1. [T. Begusic, X. Tao, G. A. Blake, T. F. Miller III, "Equilibrium–nonequilibrium ring-polymer molecular dynamics for nonlinear spectroscopy", J. Chem. Phys. 156, 131102 (2022).](https://doi.org/10.1063/5.0087156)
+2. [T. Begusic, G. A. Blake, "Two-dimensional infrared-Raman spectroscopy as a probe of water’s tetrahedrality", Nat. Commun. 14, 1950 (2023).](https://doi.org/10.1038/s41467-023-37667-7)
 
 The code provided here can be used to reproduce the results of ref 2.
 
 Briefly, the goal is to compute the response function R(t_1, t_2) according to eq 2 of ref 2, for which we need a backward equilibrium trajectory and two forward nonequilibrium (kicked) trajectories starting from an initial condition sampled according to the thermal distribution. In practice, the equilibrium part is computed by running a single long trajectory and nonequilibrium trajectories are started from points along the equilibrium trajectory. We then average over all "nonequilibrium events". The nonequilibrium part of the calculation is implemented in the enclosed script noneqm-traj.py and the computation of the response function is implemented in noneqm-response.py. This example runs on a periodic box of 64 water molecules at 300 K.
 This example does not produce useful data, but additional instructions are added at the end of this file for those who wish to run a converged simulation similar to that of ref 2.
 
+If you have questions about this demo, feel free to reach out by email at <tbegusic@caltech.edu>.
 
 Required software
 -----------------
