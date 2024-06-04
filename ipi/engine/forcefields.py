@@ -705,7 +705,6 @@ class FFPlumed(FFEval):
         self.plumed.cmd("setMDEngine", "i-pi")
         self.plumed.cmd("setPlumedDat", self.plumeddat)
         self.plumed.cmd("setNatoms", self.natoms)
-        self.plumed.cmd("setTimestep", 1.0)
         self.plumed.cmd(
             "setMDEnergyUnits", 2625.4996
         )  # Pass a pointer to the conversion factor between the energy unit used in your code and kJ mol-1
@@ -761,7 +760,7 @@ class FFPlumed(FFEval):
         self.plumed.cmd("setMasses", self.masses)
 
         # these instead are set properly. units conversion is done on the PLUMED side
-        self.plumed.cmd("setBox", r["cell"][0].T)
+        self.plumed.cmd("setBox", r["cell"][0].T.copy())
         pos = r["pos"].reshape(-1, 3)
 
         if self.system_force is not None:
@@ -807,7 +806,7 @@ class FFPlumed(FFEval):
         self.plumed.cmd("setMasses", self.masses)
         rpos = pos.reshape((-1, 3))
         self.plumed.cmd("setPositions", rpos)
-        self.plumed.cmd("setBox", cell.T)
+        self.plumed.cmd("setBox", cell.T.copy())
         if self.system_force is not None:
             f[:] = dstrip(self.system_force.f).reshape((-1, 3))
             vir[:] = -dstrip(self.system_force.vir)
