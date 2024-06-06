@@ -4,6 +4,7 @@
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
+import re
 
 import ipi.engine.system
 from ipi.utils.depend import *
@@ -88,8 +89,9 @@ class InputSysTemplate(Input):
                 sys = template
                 if len(labels) != len(ins):
                     raise ValueError("Labels and instance length mismatch")
-                for l in range(len(ins)):  # string replacement within the template
-                    sys = sys.replace(labels[l], ins[l])
+                for label, to_insert in sorted(zip(labels, ins), reverse=True):
+                    # sort from longest to smallest label, to avoid replacing 'string' in 'string1'
+                    sys = sys.replace(label, to_insert)
                 print("Generating system from template: \n", sys)
                 xsys = xml_parse_string(sys)  # parses the string to an XML object
                 isys = InputSystem()
