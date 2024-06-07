@@ -1,5 +1,4 @@
-driver_model harm3d 
+driver_model gas 
 address localhost
 port 31415
 socket_mode unix
-flags -o 0.12356216778762334
