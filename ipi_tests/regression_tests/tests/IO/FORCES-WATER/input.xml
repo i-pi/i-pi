@@ -1,5 +1,5 @@
 <simulation verbosity='low'>
-  <output prefix='ref_simulation'>
+  <output prefix='simulation'>
     <properties filename='out' stride='1'>  [ step, conserved, temperature{kelvin}, potential{electronvolt}, kinetic_cv ] </properties>
     <trajectory filename='frc' stride='1'> forces </trajectory>
     <trajectory filename='frc_spring' stride='1'> forces_spring </trajectory>
