@@ -64,9 +64,7 @@ TODO
 
         # Do the actual calculation
         pot, force = self.QMC_calc.forward(QMC_structure)
-        pot_ipi = np.asarray(
-            unit_to_internal("energy", "electronvolt", pot), np.float64
-        )
+        pot_ipi = pot
         force_ipi = np.asarray(unit_to_internal("force", "ev/ang", force), np.float64)
         # QMC does not yet compute stress
         vir_QMC = 0 * np.eye(3)
