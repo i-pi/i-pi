@@ -3,28 +3,28 @@
        H  0.00000e+00  0.00000e+00  0.00000e+00
 1
 # CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           1  Bead:       3 forces_spring{atomic_unit}  cell{atomic_unit}
-       H -3.49044e-04 -1.42844e-03  1.51887e-03
+       H  8.71212e-04  1.26558e-03 -1.00780e-03
 1
 # CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           2  Bead:       3 forces_spring{atomic_unit}  cell{atomic_unit}
-       H -1.18483e-03 -2.79258e-03  2.78499e-03
+       H  1.30961e-03  2.53861e-03  3.08447e-04
 1
 # CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           3  Bead:       3 forces_spring{atomic_unit}  cell{atomic_unit}
-       H -2.15825e-03 -2.86074e-03  2.97836e-03
+       H  1.60958e-03  6.90820e-03  4.43305e-03
 1
 # CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           4  Bead:       3 forces_spring{atomic_unit}  cell{atomic_unit}
-       H -4.99898e-03 -2.41919e-03  2.25192e-03
+       H  2.66257e-03  1.06707e-02  7.06634e-03
 1
 # CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           5  Bead:       3 forces_spring{atomic_unit}  cell{atomic_unit}
-       H -7.28533e-03 -1.95269e-03  1.17380e-03
+       H  2.65721e-03  1.26511e-02  8.99808e-03
 1
 # CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           6  Bead:       3 forces_spring{atomic_unit}  cell{atomic_unit}
-       H -7.21258e-03 -2.48394e-03 -7.34481e-04
+       H  3.59526e-03  1.52103e-02  8.73270e-03
 1
 # CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           7  Bead:       3 forces_spring{atomic_unit}  cell{atomic_unit}
-       H -7.13982e-03 -3.21593e-03 -2.09515e-03
+       H  5.67734e-03  1.68869e-02  8.15915e-03
 1
 # CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           8  Bead:       3 forces_spring{atomic_unit}  cell{atomic_unit}
-       H -7.00220e-03 -1.93286e-03 -3.30628e-03
+       H  6.83119e-03  1.95865e-02  7.77954e-03
 1
 # CELL(abcABC):  188.97261   188.97261   188.97261    90.00000    90.00000    90.00000  Step:           9  Bead:       3 forces_spring{atomic_unit}  cell{atomic_unit}
-       H -5.40127e-03  2.00967e-04 -4.75491e-03
+       H  7.05573e-03  2.23843e-02  6.88049e-03
