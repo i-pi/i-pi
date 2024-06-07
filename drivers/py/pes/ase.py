@@ -18,9 +18,9 @@ __DRIVER_CLASS__ = "ASEDriver"
 
 ERROR_MSG = """
 This ASE driver requires specification of and ASE calculator
-and an ASE-readable template file that describes the chemical makeup of the structure. 
+and an ASE-readable template file that describes the chemical makeup of the structure.
 
-Example: python driver.py -m ase -u -o template.xyz,model_parameters 
+Example: python driver.py -m ase -u -o template.xyz,model_parameters
 """
 
 
