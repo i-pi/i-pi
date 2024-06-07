@@ -8,4 +8,3 @@ ref_simulation.frc_spring_0.xyz           xyz
 ref_simulation.frc_spring_1.xyz           xyz
 ref_simulation.frc_spring_2.xyz           xyz
 ref_simulation.frc_spring_3.xyz           xyz
-ref_simulation.out                      numpy
