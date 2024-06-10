@@ -54,6 +54,15 @@ Example: python driver.py -m pet -u -o "path/to/results/name,template.xyz,device
             if len(args) > 2:
                 for arg in args[2:]:
                     key, value = arg.split("=")
+                    lookup = {
+                        "None": None,
+                        "False": False,
+                        "True": True,
+                    }
+
+                    if value in lookup:
+                        value = lookup[value]
+
                     kwargs[key] = value
 
         else:

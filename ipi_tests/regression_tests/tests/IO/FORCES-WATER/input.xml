@@ -1,0 +1,35 @@
+<simulation verbosity='low'>
+  <output prefix='simulation'>
+    <properties filename='out' stride='1'>  [ step, conserved, temperature{kelvin}, potential{electronvolt}, kinetic_cv ] </properties>
+    <trajectory filename='frc' stride='1'> forces </trajectory>
+    <trajectory filename='frc_spring' stride='1'> forces_spring </trajectory>
+  </output>
+  <total_steps>9</total_steps>
+  <prng>
+    <seed>31415</seed>
+  </prng>
+  <ffsocket name='lammps' mode='unix' pbc='false'>
+    <address>localhost</address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='4'>
+      <file mode='xyz'> init.xyz </file>
+      <cell mode='abc' units='angstrom'> [100, 100, 100] </cell>
+    </initialize>
+    <forces>
+      <force forcefield='lammps'> </force>
+    </forces>
+    <motion mode='dynamics'>
+      <fixcom> False </fixcom>
+      <dynamics mode='nvt'>
+        <timestep units='femtosecond'> 0.5 </timestep>
+        <thermostat mode='pile_g'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units='kelvin'> 300 </temperature>
+    </ensemble>
+  </system>
+</simulation>

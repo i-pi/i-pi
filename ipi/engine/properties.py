@@ -2803,6 +2803,11 @@ class Trajectories:
                 "help": "The force trajectories. Will print out one file per bead, unless the bead attribute is set by the user.",
                 "func": (lambda: 1.0 * self.system.forces.f),
             },
+            "forces_spring": {
+                "dimension": "force",
+                "help": "The spring force trajectories. Will print out one file per bead, unless the bead attribute is set by the user.",
+                "func": (lambda: 1.0 * self.system.nm.fspring),
+            },
             "Eforces": {
                 # if the dynamics is driven then 'forces' contains, on top of the 'usual' internal forces between the nuclei,
                 # an extra term due to the coupling of the external (driving) electric field with the dipole of the system

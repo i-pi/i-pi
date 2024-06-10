@@ -344,6 +344,7 @@ class TrajectoryOutput(BaseOutput):
             "positions",
             "velocities",
             "forces",
+            "forces_spring",
             "Eforces",
             "extras",
             # "extras_component_raw", write out a single file as we don't know how to do contraction here
@@ -547,6 +548,7 @@ class TrajectoryOutput(BaseOutput):
             "positions",
             "velocities",
             "forces",
+            "forces_spring",
             "Eforces",
             "forces_sc",
             "momenta",
