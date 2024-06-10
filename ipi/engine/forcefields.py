@@ -705,13 +705,15 @@ class FFPlumed(FFEval):
         self.plumed.cmd("setMDEngine", "i-pi")
         self.plumed.cmd("setPlumedDat", self.plumeddat)
         self.plumed.cmd("setNatoms", self.natoms)
+        timeunit = 2.4188843e-05
+        self.plumed.cmd("setTimestep", 1/timeunit)
         self.plumed.cmd(
             "setMDEnergyUnits", 2625.4996
         )  # Pass a pointer to the conversion factor between the energy unit used in your code and kJ mol-1
         self.plumed.cmd(
             "setMDLengthUnits", 0.052917721
         )  # Pass a pointer to the conversion factor between the length unit used in your code and nm
-        self.plumed.cmd("setMDTimeUnits", 2.4188843e-05)
+        self.plumed.cmd("setMDTimeUnits", timeunit)
         self.plumedrestart = False
         if self.plumedstep > 0:
             # we are restarting, signal that PLUMED should continue
