@@ -706,7 +706,7 @@ class FFPlumed(FFEval):
         self.plumed.cmd("setPlumedDat", self.plumeddat)
         self.plumed.cmd("setNatoms", self.natoms)
         timeunit = 2.4188843e-05
-        self.plumed.cmd("setTimestep", 1/timeunit)
+        self.plumed.cmd("setTimestep", 1 / timeunit)
         self.plumed.cmd(
             "setMDEnergyUnits", 2625.4996
         )  # Pass a pointer to the conversion factor between the energy unit used in your code and kJ mol-1
