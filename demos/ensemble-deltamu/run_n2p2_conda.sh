@@ -1,5 +1,9 @@
 #!/bin/bash
 
+source ./miniconda3/bin/activate n2p2_install
+
+export CONDA_BASE="$PWD/miniconda3/bin"
+
 ipi=i-pi
 driver=i-pi-py_driver
 
