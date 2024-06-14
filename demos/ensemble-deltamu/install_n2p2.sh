@@ -30,7 +30,7 @@ source ./miniconda3/bin/activate n2p2_install
 
 export CONDA_BASE="$PWD/miniconda3/bin"
 
-conda clean --all
+conda clean --all -y
 conda install python=3.10 -y
 conda install conda-forge::gsl -y
 conda install conda-forge::lammps -y
