@@ -30,7 +30,7 @@ source ./miniconda3/bin/activate rascaline_install
 
 export CONDA_BASE="$PWD/miniconda3/bin"
 
-conda install -c conda-forge cxx-compiler gcc rust python=3.10 -y
+conda install -c conda-forge cxx-compiler gcc rust=1.77 python=3.10 -y
 
 echo $CONDA_PREFIX
 
@@ -55,18 +55,19 @@ conda install --strict-channel-priority -c plumed/label/ipi-demo -c conda-forge 
 git clone -b i-pi-demo https://github.com/bananenpampe/H2O.git
 
 # pip installs
-pip install cmake numpy
+pip install cmake==3.29.5.1 numpy==1.26.4
 pip install --extra-index-url https://download.pytorch.org/whl/cpu torch==2.3.0
 
 pip install -r requirements.txt
 
-pip install metatensor
-pip install metatensor-core
-pip install metatensor-operations
-pip install metatensor-torch
+pip install metatensor==0.2.0
+pip install metatensor-core==0.1.8
+pip install metatensor-operations==0.2.1
+pip install metatensor-torch==0.5.1
 
-pip install git+https://github.com/Luthaf/rascaline
-pip install --extra-index-url https://download.pytorch.org/whl/cpu git+https://github.com/luthaf/rascaline#subdirectory=python/rascaline-torch
+export RASCALINE_COMMIT=44166158b174ca4162a93238b72dd527347f0800
+pip install "rascaline @ git+https://github.com/luthaf/rascaline@$RASCALINE_COMMIT"
+pip install --extra-index-url https://download.pytorch.org/whl/cpu "rascaline-torch @ git+https://github.com/luthaf/rascaline@$RASCALINE_COMMIT#subdirectory=python/rascaline-torch" 
 
 # modifies the i_pi drivers
 cp ./H2O/ipi_driver/lightning.py ../../drivers/py/pes/
