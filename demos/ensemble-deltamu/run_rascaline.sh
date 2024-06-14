@@ -13,8 +13,7 @@ rm /tmp/ipi*
 plumed_path=$(which plumed)
 echo "Plumed is located at: $plumed_path"
 
-#export MLIP_DIR=$PWD/H2O/driver/
-export MLIP_DIR=/Users/matthiaskellner/Documents/PhD/H2O/driver/
+export MLIP_DIR=$PWD/H2O/driver/
 
 sleep_time=2
 
