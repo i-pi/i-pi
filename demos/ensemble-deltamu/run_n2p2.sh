@@ -12,8 +12,6 @@ echo "Plumed is located at: $plumed_path"
 
 sleep_time=2
 
-source $IPI_PATH/env.sh 
-
 rm -f /tmp/ipi_nnp*
 
 if test -f "pinning.restart";
