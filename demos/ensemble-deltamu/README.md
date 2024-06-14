@@ -42,8 +42,6 @@ In order to install the necessary packages for the MLIP we provide a setup scrip
 IMPORTANT: We recommend to install the packages in a fresh virtual environment.
 
 ```
-conda create --name deltamu_rascaline
-conda activate deltamu_rascaline
 ./install_rascaline.sh
 ```
 
@@ -61,8 +59,6 @@ Alternatively, we provide a script to install the necessary dependencies for the
 The dependency resolution might take a while.
 
 ```
-conda create --name deltamu_n2p2
-conda activate deltamu_n2p2
 ./install_n2p2.sh
 ```
 
@@ -73,8 +69,6 @@ The simulations can be run using the provided `run_rascaline.sh` script, from wi
 `./demos/ensemble-deltamu` directory.
 
 ```
-conda activate deltamu_rascaline
-
 ./run_rascaline.sh
 ```
 
@@ -91,8 +85,6 @@ Similarly, to run the n2p2 model, set the environment variables in
 Alternatively from within the `./demos/ensemble-deltamu` directory you can run the provided run script to run the demo after the conda-based installation.
 
 ```
-conda activate deltamu_n2p2
-
 ./run_n2p2_conda.sh
 ```
 
