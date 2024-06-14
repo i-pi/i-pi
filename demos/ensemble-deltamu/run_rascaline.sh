@@ -17,8 +17,6 @@ export MLIP_DIR=$PWD/H2O/driver/
 
 sleep_time=2
 
-source $IPI_PATH/env.sh 
-
 if test -f "simulation.restart";
 then
         echo "continue last simulation"
