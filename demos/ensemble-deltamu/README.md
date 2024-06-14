@@ -72,17 +72,15 @@ The simulations can be run using the provided `run_rascaline.sh` script, from wi
 ./run_rascaline.sh
 ```
 
-For the rascaline model, change the variables `PLUMED_PATH` and `IPI_PATH` to the 
-paths were the source of Plumed and i-PI are located. Then simply run the provided script.
-
-Similarly, to run the n2p2 model, set the environment variables in 
-`run_n2p2.sh` and execute it
+In order to run the n2p2 model, set the environment variables in 
+`run_n2p2.sh` `PLUMED_PATH` and `IPI_PATH` to the 
+paths were the source of Plumed and i-PI are located and execute it.
 
 ```
 ./run_n2p2.sh
 ```
 
-Alternatively from within the `./demos/ensemble-deltamu` directory you can run the provided run script to run the demo after the conda-based installation.
+Alternatively from within the `./demos/ensemble-deltamu` directory you can run the provided run-script to run the n2p2 demo after the conda-based installation.
 
 ```
 ./run_n2p2_conda.sh
