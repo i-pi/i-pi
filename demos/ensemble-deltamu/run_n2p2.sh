@@ -28,3 +28,4 @@ lmp_serial < in-1.lmp > log.lmp1 &
 lmp_serial < in-2.lmp > log.lmp2 &
 lmp_serial < in-3.lmp > log.lmp3 &
 lmp_serial < in-4.lmp > log.lmp4 &
+wait # hold on until simulations are finished
