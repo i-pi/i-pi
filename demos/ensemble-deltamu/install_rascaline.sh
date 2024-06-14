@@ -30,7 +30,7 @@ source ./miniconda3/bin/activate rascaline_install
 
 export CONDA_BASE="$PWD/miniconda3/bin"
 
-conda install -c conda-forge cxx-compiler gcc rust python=3.10
+conda install -c conda-forge cxx-compiler gcc rust python=3.10 -y
 
 echo $CONDA_PREFIX
 
@@ -44,13 +44,13 @@ export CMAKE_C_COMPILER="$CONDA_PREFIX/bin/gcc"
 export CMAKE_CXX_COMPILER="$CONDA_PREFIX/bin/g++"
 
 #purge conda cache
-conda clean --all
+conda clean --all -y
 
 #purge the pip cache
-pip cache purge
+pip cache purge -y
 
 #install plumed and pyplumed from i-pi-demo channel with crystallization enabled
-conda install --strict-channel-priority -c plumed/label/ipi-demo -c conda-forge plumed py-plumed
+conda install --strict-channel-priority -c plumed/label/ipi-demo -c conda-forge plumed py-plumed -y
 
 git clone -b i-pi-demo https://github.com/bananenpampe/H2O.git
 
