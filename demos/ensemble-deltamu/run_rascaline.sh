@@ -31,4 +31,4 @@ echo "# i-PI is running"
 echo "# Waiting for ${sleep_time} (s) before executing driver"
 sleep ${sleep_time}
 
-${driver} -m lightning -a pinning -u -o ./rascaline_potential/example_10_converted.ckpt,template.xyz &
+${driver} -m lightning -a pinning -u -o ./rascaline_potential/example_5_converted.ckpt,template.xyz &
