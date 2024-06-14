@@ -78,7 +78,7 @@ From within the `./demos/ensemble-deltamu` directory you can run the provided ru
 ./run_n2p2.sh
 ```
 
-Alternativel, more geared towards running the n2p2 example on an HPC environment, set the environment variables in 
+Alternatively, more geared towards running the n2p2 example on an HPC environment, set the environment variables in 
 `run_n2p2_hpc.sh` `PLUMED_PATH` and `IPI_PATH` to the 
 paths were the source of Plumed and i-PI are located and execute it.
 
