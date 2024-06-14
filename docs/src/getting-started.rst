@@ -27,9 +27,10 @@ required for the sockets.c wrapper to the sockets standard library. Most
 electronic structure codes will also need to be linked with some
 mathematical libraries, such as BLAS, FFTW and LAPACK. Installation
 instructions for these codes should be provided as part of the code
-distribution and on the appropriate website, as given in
-:ref:`librarywebsites`. Patching for use with i-PI should not
+distribution and on the appropriate website. 
+Patching for use with i-PI should not
 introduce further dependencies.
+
 
 Using the setup.py module
 ^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -46,7 +47,7 @@ The first step is to build the distribution using:
 
 .. code-block::
 
-   > python setup.py build
+ > python setup.py build
 
 Note that this requires the distutils package that comes with the
 python-dev package.
@@ -72,28 +73,28 @@ into, using:
 
 .. code-block::
 
-    > mkdir ~/bin
-    > mkdir ~/lib/py_vers
-    > mkdir ~/lib/py_vers/site-packages
+  > mkdir ~/bin
+  > mkdir ~/lib/py_vers
+  > mkdir ~/lib/py_vers/site-packages
 
 Next, you must tell Python where to find this library, by appending to
 the Linux environment variable PYTHONPATH, using:
 
 .. code-block::
 
-    export PYTHONPATH=$PYTHONPATH:~/lib/py_vers/site-packages/
+  export PYTHONPATH=$PYTHONPATH:~/lib/py_vers/site-packages/
 
 Finally, the code can be installed using:
 
 .. code-block::
 
-   > python setup.py install –prefix= 
+ > python setup.py install –prefix= 
 
 Either way, it will now be possible to run the code automatically, using
 
 .. code-block::
 
-   > i-pi input-file.xml
+ > i-pi input-file.xml
 
 
 i-PI download
@@ -106,102 +107,6 @@ The i-PI executable, found in the ``bin`` folder, will run immediately,
 without needing to be installed or compiled, but we include a setup.py
 module in the main directory so it can be installed to the Python tree
 if so desired.
-
-Installing NumPy
-~~~~~~~~~~~~~~~~
-
-NumPy is the standard Python mathematics library, and is used for most
-of the array manipulation and linear algebra in i-PI. It should be
-installed alongside most standard Python environments on HPC facilities.
-Otherwise, it is generally relatively straightforward to install it.
-
-In any case you must first obtain the NumPy code, which can be
-downloaded as a tar file from http://www.numpy.org. If the version of
-NumPy being installed is given by “np_vers”, this can be extracted
-using:
-
-Before installing this code it first needs to be configured correctly.
-Note that this requires the distutils package that comes with the
-python-dev package. Assuming that the required software is installed,
-the NumPy package is built using:
-
-.. code-block::
-
-   > python setup.py build
-
-The next step is to install NumPy. By default the download is to the
-directory /usr/local. If you have root access, and so can write to /usr,
-then all that needs to be done to finish the install is:
-
-.. code-block::
-
-   > python setup.py install
-
-If you do not have root access, then the next step depends on which
-version of Python is beind used. With versions 2.6 or later there is a
-simple command to automatically download into the directory $HOME/local:
-
-.. code-block::
-
-   > python setup.py install –user
-
-With Python 2.4/2.5 the process is a little more involved. First you
-must explicitly install the package in the directory of choice, “np_dir”
-say, with the following command:
-
-.. code-block::
-
-   > python setup.py install --prefix=np_dir
-
-Next, you must tell Python where to find this library, by appending to
-the Linux environment variable PYTHONPATH. If you are using Python
-version “py_vers”, then the NumPy libraries will have been installed in
-the directory “np_dir/lib/py_vers/site-packages”, or a close analogue of
-this. In the above case the following command will allow the Python
-interpreter to find the NumPy libraries:
-
-.. code-block::
-
-   > export PYTHONPATH=$PYTHONPATH:np_dir/lib/py_vers/site-packages
-
-Now Python scripts can import the NumPy libraries using:
-
-.. code-block::
-
-   import numpy
-
-PyFFTW
-~~~~~~
-
-Some of the steps in the dynamics algorithm involve a change of
-variables from the bead coordinates to the normal modes of the ring
-polymers. Currently, this transformation is, at least by default,
-computed using a fast-Fourier transform (FFT) library within the NumPy
-distribution. This however is not the only distribution that could be
-used, and indeed faster stand-alone versions exist. The gold-standard
-FFT library is the FFTW library, which is a set of C libraries that have
-been heavily optimized for a wide range of applications. There have been
-a number of Python wrappers built around the FFTW library, one of which
-is currently interfaced with i-PI. This code can be found at
-https://github.com/hgomersall/pyFFTW, and has documentation at
-http://hgomersall.github.io/pyFFTW/.
-
-This code has the following dependencies:
-
--  Python version 2.7 or greater
-
--  Numpy version 1.6 or greater
-
--  FFTW version 3.2 or greater
-
-This can be installed in the same way as NumPy, except using the code
-distribution above, or using various installation packages as per the
-instructions on the above documentation. Note that no other options need
-to be specified in the input file; i-PI will check to see if this
-library is available, and if it is it will be used by default. Otherwise
-the slower NumPy version will be used.
-
-.. _clientinstall:
 
 Installing clients
 ------------------
@@ -236,9 +141,7 @@ i-PI functions based on a client-server protocol, where the evolution of
 the nuclear dynamics is performed by the i-PI server, whereas the energy
 and forces evaluation is delegated to one or more instances of an
 external program, that acts as a client. This design principle has
-several advantages, in particular the possibility of performing PIMD
-based on the forces produced by one’s favourite electronic
-structure/empirical force field code. However, it also makes running a
+several advantages, but it also makes running a
 simulation slightly more complicated, since the two components must be
 set up and started independently.
 
@@ -246,7 +149,7 @@ Running the i-PI server
 ~~~~~~~~~~~~~~~~~~~~~~~
 
 i-PI simulations are run using the i-pi Python script found in the
-“i-pi” directory. This script takes an xml-formatted file as input, and
+“bin” directory. This script takes an xml-formatted file as input, and
 automatically starts a simulation as specified by the data held in it.
 If the input file is called “input_file.xml”, then i-PI is run using:
 
@@ -272,29 +175,31 @@ their own documentation.
 
 .. _driver.x:
 
-Built-in, example client
+Built-in, fortran client
 ^^^^^^^^^^^^^^^^^^^^^^^^
 
-While i-PI is designed with *ab initio* electronic structure
-calculations in mind, it also includes a Fortran empirical potential
+i-PI includes a Fortran empirical potential
 client code to do simple calculations and to run the examples.
 
-The source code for this is included in the directory “drivers”, and can
+The source code for this is included in the directory “drivers/f90”, and can
 be compiled into an executable “i-pi-driver” using the UNIX utility
 make.
 
-This code currently has four empirical potentials hardcoded into it, a
-Lennard-Jones potential, the Silvera-Goldman potential
-:cite:`silv-gold78jcp`, a 1D harmonic oscillator potential,
-and the ideal gas (i.e. no potential interaction).
+This code currently has several empirical potentials hardcoded into it, including
+a Lennard-Jones potential, the Silvera-Goldman potential
+:cite:`silv-gold78jcp`,
+a primitive implementation of the  qtip4pf potentail for water ,
+:cite:`habe+09jcp`,
+several toy model potentials,
+the ideal gas (i.e. no potential interaction), and several more.
 
 How the code is run is based on what command line arguments are passed
 to it. The command line syntax is:
 
 .. code-block::
 
-   > i-pi-driver [-u] -h hostname -p port -m [gas|lj|sg|harm] -o
-   parameters [-v]
+   > i-pi-driver [-u] -a address [-p port] -m [model-name] -o [parameters] [-S sockets_prefix] [-v] 
+
 
 The flags do the following:
 
@@ -302,8 +207,8 @@ The flags do the following:
    Optional parameter. If specified, the client will connect to a unix
    domain socket. If not, it will connect to an internet socket.
 
--h:
-   Is followed in the command line argument list by the hostname of the
+-a:
+   Is followed in the command line argument list by the hostname (address) of the
    server.
 
 -p:
@@ -328,6 +233,10 @@ The flags do the following:
 -v:
    Optional parameter. If given, the client will print out more
    information each time step.
+
+-S:
+   Optional parameter. If given, overwrite the default socket prefix used in the creation of files for the socket communication.
+   (default "/tmp/ipi_")
 
 This code should be fairly simple to extend to other pair-wise
 interaction potentials, and examples of its use can be seen in the
@@ -539,7 +448,7 @@ approaches to run i-PI on a HPC system:
 Testing the install
 -------------------
 
-test the installation with ‘nose‘
+test the installation with ‘pytest‘
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 There are several test cases included, that can be run automatically
@@ -549,6 +458,10 @@ with ‘i-pi-tests‘ from the root directory.
 
    > i-pi-tests
 
+Note 1: pytest and pytest-mock python packages are required to run these tests, but they are required to run i-PI.
+Note 2: please compile the fortran driver, as explained in :ref:`driver.x`.
+Note 3: use the '-h' flag to see all the available tests
+
 test cases and examples
 ~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -556,5 +469,26 @@ The `examples/` folder contain a multitude of examples for i-PI, covering
 most of the existing functionalities, and including also simple tests that
 can be run with different client codes. 
 
-All the input files are contained in the directory “examples”, which is
-subdivided into subfolder that cover different classes of simulations, and/or different client codes. 
+
+The example folders is structured such that each sub-folder is focused on a different aspect of using i-PI:
+
+- **clients**: 
+    Contains examples that are code-specific, highlighting how the driver code should be set up
+                    (client-specific syntax and tags) to run it properly with i-PI
+
+- **features** :  
+     Examples of different functionalities implemented in i-PI.
+                    All examples can be run locally with the drivers provided with the code.
+
+- **hpc_scripts** :  
+      Examples of submission scripts on HPC platforms
+
+- **temp**     :
+     Temporary folder with historic examples that have not yet been adapted
+                    to the current folder structure
+
+- **init_files**: 
+      repository of input files shared by many examples
+
+We keep this folder updated as much as we can, and try to run automated tests on these inputs, but in some cases, e.g. when using external clients, we cannot run tests.
+Please report a bug if you find something that is not working.

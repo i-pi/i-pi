@@ -1,3 +1,4 @@
+.. _librarywebsites:
 On-line resources
 =================
 
@@ -22,7 +23,6 @@ worked examples of its capabilities see
 Finally, see http://hgomersall.github.io/pyFFTW/ for documentation on
 the Python FFTW library that is currently implemented with i-PI.
 
-.. _librarywebsites:
 
 Client code resources
 ~~~~~~~~~~~~~~~~~~~~~
