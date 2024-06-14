@@ -47,7 +47,7 @@ export CMAKE_CXX_COMPILER="$CONDA_PREFIX/bin/g++"
 conda clean --all -y
 
 #purge the pip cache
-pip cache purge -y
+pip cache purge
 
 #install plumed and pyplumed from i-pi-demo channel with crystallization enabled
 conda install --strict-channel-priority -c plumed/label/ipi-demo -c conda-forge plumed py-plumed -y
