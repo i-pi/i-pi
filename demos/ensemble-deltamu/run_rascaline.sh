@@ -1,5 +1,9 @@
 #!/bin/bash
 
+source ./miniconda3/bin/activate rascaline_install
+
+export CONDA_BASE="$PWD/miniconda3/bin"
+
 export OMP_NUM_THREADS=1
 
 ipi=i-pi
@@ -9,7 +13,8 @@ rm /tmp/ipi*
 plumed_path=$(which plumed)
 echo "Plumed is located at: $plumed_path"
 
-export MLIP_DIR=$PWD/H2O/driver/
+#export MLIP_DIR=$PWD/H2O/driver/
+export MLIP_DIR=/Users/matthiaskellner/Documents/PhD/H2O/driver/
 
 sleep_time=2
 
@@ -27,4 +32,4 @@ echo "# i-PI is running"
 echo "# Waiting for ${sleep_time} (s) before executing driver"
 sleep ${sleep_time}
 
-${driver} -m lightning -a pinning -u -o ./rascaline_potential/example_5_converted.ckpt,template.xyz &
+${driver} -m lightning -a pinning -u -o ./rascaline_potential/example_10_converted.ckpt,template.xyz &
