@@ -2,8 +2,7 @@
    <output prefix="pinning-rascaline">
        <properties stride='20' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, potential{electronvolt}, ensemble_bias{electronvolt}, pressure_cv{megapascal}, volume{angstrom3}, cell_h{angstrom} ] </properties>
        <trajectory filename='committee_pot' stride='20' extra_type='committee_pot'> extras </trajectory>
-       <trajectory filename='cv' stride='20' extra_type='m6.morethan-1'> extras </trajectory>
-       <trajectory filename="pos" stride="2000" cell_units="angstrom" format="ase"> positions{angstrom} </trajectory>
+       <trajectory filename="pos" stride="200" cell_units="angstrom" format="ase"> positions{angstrom} </trajectory>
        <trajectory filename='extra' stride='2000'> extras </trajectory>    
     <checkpoint stride='2500'></checkpoint>
    </output>
@@ -19,7 +18,6 @@
   <ffplumed name="plumed">                                                    
       <file mode="xyz">init_ase.xyz</file>
       <plumeddat>plumed.dat </plumeddat>
-      <plumed_extras> [ m6.morethan-1 ] </plumed_extras>
   </ffplumed> 
    <system>
       <initialize nbeads="1">
