@@ -2,7 +2,8 @@ name: pytest for examples
 
 on:
   pull_request:
-    branches: [ master ]
+    #    branches: [ master ]
+    branches: [ master,gh_page_update ]
 
 jobs:
   build:
