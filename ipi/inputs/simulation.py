@@ -333,7 +333,6 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
                 or k == "ffcommittee"
                 or k == "ffcavphsocket"
             ):
-                info(" # @simulation: Fetching" + k, verbosity.low)
                 new_ff = v.fetch()
                 if k == "ffsocket":
                     # overrides ffsocket prefix
