@@ -124,6 +124,8 @@ def read_trajectory(
     if format is None:
         # tries to infer the file format
         format = filename[filename.rfind(".") + 1 :]
+        if format == "extxyz":
+            format = "ase"
         if format not in ["xyz", "pdb", "binary", "json", "ase"]:
             raise ValueError(f"Unrecognized file format: {format}")
 
