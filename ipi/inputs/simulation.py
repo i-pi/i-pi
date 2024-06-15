@@ -12,7 +12,7 @@ from ipi.utils.units import *
 from ipi.utils.prng import *
 from ipi.utils.io import *
 from ipi.utils.io.inputs.io_xml import *
-from ipi.utils.messages import verbosity, info
+from ipi.utils.messages import verbosity
 from ipi.engine.smotion import Smotion
 from ipi.inputs.prng import InputRandom
 from ipi.inputs.system import InputSystem, InputSysTemplate
