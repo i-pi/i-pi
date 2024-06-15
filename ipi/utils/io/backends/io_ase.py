@@ -98,7 +98,11 @@ def read_ase(filedesc):
         _ase_open_files[filedesc] = iread(filedesc, ":")
 
     try:
-        atoms = next(_ase_open_files[filedesc])
+        try:
+            atoms = next(_ase_open_files[filedesc])
+        except ase.io.formats.UnknownFileTypeError:  # defaults to extxyz
+            _ase_open_files[filedesc] = iread(filedesc, ":", format="extxyz")
+            atoms = next(_ase_open_files[filedesc])
     except StopIteration:
         _ase_open_files.pop(filedesc)
         raise EOFError()
