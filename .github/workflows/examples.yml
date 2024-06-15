@@ -37,7 +37,7 @@ jobs:
          
         
          pip install .
-         pip install ase>=3.22.1
+         pip install ase==3.22.1
          echo "${GITHUB_WORKSPACE}/bin" >> $GITHUB_PATH
          #pip install sgdml 
 
