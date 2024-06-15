@@ -1,7 +1,7 @@
 Extended XYZ formatted outputs
 =================================================
 
-The example is for a water molecules. It can be run with the pswater driver mode. The positions, forces, and the kinetic energy tensor are printed in standard and extended XYZ formatted file. When non position quantities are printed out, the position arrays will correspond to zero. The extxyz files can be combined into a single one using:
+The example is for a water molecule. It can be run with the pswater driver mode. The positions, forces, and the kinetic energy tensor are printed in standard and extended XYZ formatted file. When non position quantities are printed out, the position arrays will correspond to zero. The extxyz files can be combined into a single one using:
 
 ```
 from ase.io import iread, write
