@@ -120,18 +120,6 @@ If you are interested in interfacing your code to i-PI please get in
 touch, we are always glad to help. We keep some information below in
 case you are interested in writing a patch to a code.
 
-Writing a patch
-~~~~~~~~~~~~~~~
-
-If you have edited a client code, and wish to make a patch available for
-the new version, then this can be done very simply. If your edited code
-is in a directory “new”, and a clean distribution is held in a directory
-“old”, then a patch “changes.patch” can be created using:
-
-.. code-block::
-
-   > diff -rupN old/ new/ > changes.patch
-
 .. _runningsimulations:
 
 Running i-PI
@@ -449,7 +437,7 @@ Testing the install
 -------------------
 
 test the installation with ‘pytest‘
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 There are several test cases included, that can be run automatically
 with ‘i-pi-tests‘ from the root directory.

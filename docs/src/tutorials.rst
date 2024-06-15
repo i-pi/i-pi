@@ -19,10 +19,7 @@ We will take (:math:`N`,\ :math:`P`,\ :math:`T`) = (108, 0, 25 K).
 Part 1 - *NVT* Equilibration run
 --------------------------------
 
-Client code
-~~~~~~~~~~~
-
-Let us now consider the problem of how to use i-PI to run a *NPT*
+In this tutorial we consider the problem of how to use i-PI to run a *NVT*
 simulation of para-hydrogen. The first thing that is required is a
 client code that is capable of calculating the potential interactions of
 para-hydrogen molecules. Fortunately, one of the client codes
@@ -31,26 +28,17 @@ hard-coded into it, and so all that is required is to create the
 “i-pi-driver” file compiling the code in the “drivers” directory, using
 the UNIX utility make.
 
+We will first go over the creation of the i-PI input file and afterwards
+the commands of how to run i-PI and the client code.
+If you want to skip the first section, against our recomendation if you are a newcomer 
+you can use the input file provided in the “tutorial-1” directory
+and skip directly to :ref:`run1`  
+
 This client code can be used for several different problems (see
 :ref:`driver.x`), some of which are explored in the “examples”
 directory, but for the current problem we will use the Silvera-Goldman
-potential with a cut-off radius of 15 :math:`a_0`. This is run using the
-following command:
+potential with a cut-off radius of 15 :math:`a_0`. 
 
-.. code-block::
-
-   > i-pi-driver -m sg -h localhost -o 15 -p 31415
-
-The option “-m” is followed by the empirical potential required, in this
-case we use “sg” for Silvera-Goldman, “-a localhost” sets up the client
-hostname (address) as “localhost”, “-o 15” sets the cut-off to 15 :math:`a_0`, and
-“-p 31415” sets the port number to 31415.
-
-Note that usually this step will require setting up appropriate client
-code input files, possibly for an *ab initio* electronic structure code,
-and so is generally a more involved process. Refer to
-:ref:`runningclients`, and the documentation of the appropriate
-client code, for more details on how to do this step.
 
 Creating the xml input file
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -227,8 +215,12 @@ the future, is to specify the units within the comment line of the xyz
 or the TITLE line of the pdb formats (as shown in the examples above).
 It is also important to put the units only in one place: if the units
 will be present in both, the configuration file with the tag “units” and
-in the input files (xyz or pdb) the conversion will be applied twice. It
-is also important to note that the units of the cell parameters and the
+in the input files (xyz or pdb) the conversion will be applied twice.
+
+A further comment on the cell units and  parameters
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+It is important to note that the units of the cell parameters and the
 units of the content of the files are specified separately
 (“positionunits” specify the units of the data and “cellunits” specify
 the units of the cell). This is necessary because the xyz format can be
@@ -440,13 +432,37 @@ To recap, at this point the input file looks as follows
 
 Please make sure you understand all the lines in the input file before continuing.
 
-ALBERTO HERE 
+Defining the forces
+^^^^^^^^^^^^^^^^^^^
+
+We continue within the the :ref:`system` block, and now consider the :ref:`forces` tag that defines each of 
+(the possibly many) components of the forces.
+Within this tag, the user can specify many different “force” tags and the
+final force will be the sum of the contribution from each “force” tag.
+In this simple example, however, we consider only one force component, and the corresponding section of the input 
+reads  
+
+.. code-block::
+
+   <system>
+     ...
+     <forces>
+        <force forcefield='driver'> </force>
+     </forces>
+   <system>
+
+The attribute "forcefield" of the tag *force* is simply a label that allows i-PI to match
+that particular force component with the corresponding server socket.
+Note that this apparent unnecessary-complicated syntax makes possible complex setups 
+required by more advanced simulations.
+
+
 Creating the server socket
 ^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Next let us consider the :ref:`ffsocket` and the :ref:`forces` sections, which deals with
-communication with the client codes. Since in this example we do not use
-ring-polymer contraction, we only need to specify a single :ref:`ffsocket` tag:
+Next let us consider the :ref:`ffsocket`  which deals with
+communication with the client codes. In this example, 
+we only need to specify a single :ref:`ffsocket` tag:
 
 .. code-block::
 
@@ -463,29 +479,43 @@ This gives the final :ref:`ffsocket` section:
 
 .. code-block::
 
-   <ffsocket mode="inet" name="driver-sg"> <address> localhost
-   </address> <port> 31415 </port> </ffsocket>
+   <ffsocket mode="inet" name="driver">
+       <address> localhost </address> 
+       <port> 31415 </port> 
+   </ffsocket>
 
-To enhance the generality of the input, the forces used to move the
-atoms are red from the “forces” tag, within the “system” environment:
 
-.. code-block::
-
-   <system> ... <forces> ... </forces> ... </system>
-
-Within this tag, the user can specify many different “force” tags. The
-final force will be the sum of the contribution from each “force” tag.
-Each force tag must be associate to an “ffsocket”. In particular the
-“forcefield” attribute of the “force” must match the “name” attribute of
-the “ffsocket”. In this tutorial only a single force is used that must
-match the ffsocket created above:
+and adding this to the previous section we have
 
 .. code-block::
 
-   <system> ... <forces> <force forcefield="driver-sg"/> </forces> ...
-   </system>
+  <simulation verbosity='high'>
+     <total_steps> 5000 </total_steps>
+     <ffsocket mode="inet" name="driver">
+       <address> localhost </address> 
+       <port> 31415 </port> 
+     </ffsocket>
+     <system>
+       <initialize nbeads='4'>
+         <file mode='pdb'> our_ref.pdb </file>
+         <velocities mode='thermal' units='kelvin'> 25 </velocities>
+       </initialize>
+       <motion mode='dynamics'>
+         <dynamics mode='nvt'>
+           <thermostat mode='pile_g'>
+             <tau units='femtosecond'> 25 </tau>
+           </thermostat>
+           <timestep units='femtosecond'> 1 </timestep>
+         </dynamics>
+       </motion>
+     </system>
+     <ensemble>
+         <temperature units='kelvin'> 25 </temperature>
+     </ensemble>
+  </simulation>
 
-For the sake of this tutorial, the “force” tag must be empty.
+Note that the :ref:`ffsocket` section lives outside the :ref:`system` block.
+
 
 Customizing the output
 ^^^^^^^^^^^^^^^^^^^^^^
@@ -496,7 +526,7 @@ properties of interest that i-PI can calculate and a large number of
 different output options, so to avoid confusion let us go through them
 one at a time.
 
-Firstly, the amount of data sent to standard output can be adjusted with
+First, we have the standard output. For this output, the amount of data can be adjusted with
 the “verbosity” attribute of :ref:`simulation`:
 
 .. code-block::
@@ -506,64 +536,11 @@ the “verbosity” attribute of :ref:`simulation`:
 By default the verbosity is set to “low”, which only outputs important
 warning messages and information, and some statistical information every
 1000 time steps. Here we will set it to “high”, which will tell i-PI to
-output the following data every time step:
+output the walltime required for the last step at  each step and information
+related to the socket communication.
 
-.. code-block::
 
-   # Average timings at MD step S. t/step: TOTAL [p: P q: Q t: T] # MD
-   diagnostics: V: POTENTIAL Kcv: KINETIC Ecns: CONSERVED @SOCKET:
-   Assigning [ X ] request id ID to client with last-id LID ( CID/ CTOT
-   : )
-
-where the output values have been replaced with the following:
-
-S:
-   This gives the current time step.
-
-TOTAL:
-   This gives the amount of time the current time step took.
-
-P:
-   This gives how long the momentum propagation step took.
-
-Q:
-   This gives how long the free-ring polymer propagation step took.
-
-T:
-   This gives how long the thermostat integration step took.
-
-POTENTIAL:
-   This gives the current potential energy of the system.
-
-KINETIC:
-   This gives the current kinetic energy of the system.
-
-CONSERVED:
-   This gives the current conserved quantity.
-
-X:
-   This says whether or not i-PI found a match for the calculation of
-   replica ID or not. If one of the connected client codes calculated
-   the forces for this replica on the last time step, then X will be
-   “match”, and i-PI will automatically assign this replica to the same
-   client as before. This should happen with all the replicas if CTOT is
-   the same as the number of beads.
-
-ID:
-   The index of the replica currently being assigned to a client code.
-
-LID:
-   The index of the replica which the client code last did a force
-   calculation of.
-
-CID:
-   The index of the client code in the list of all connected client
-   codes.
-
-CTOT:
-   The total number of connected client codes.
-
-What output gets written to file is specified by the :ref:`output` tag. There are
+Second, we have output written to file(s). The content of such output(s)  is specified by the :ref:`output` tag. There are
 three types of files; properties files, trajectory files and checkpoint
 files, which are specified with :ref:`properties`, :ref:`trajectory` and :ref:`checkpoint`
 tags respectively. For an in-depth
@@ -592,15 +569,30 @@ properties files:
    to visualize the progress of the simulation using plotting programs
    such as gnuplot, or to be used to get ensemble averages.
 
-Now that we know what each input file is used for, let us take an
-example of an output section and show how the xml input section works.
-The default output, i.e. what would be output if nothing was set by the
-user, would be generated with the following :ref:`output` section:
+Now that we know what each input file is used for, let analyze the  :ref:`output` section
+as provided in "tutorial-1/tutorial-1.xml" which reads
 
-This creates 6 files: “i-pi.md”, “i-pi.pos_0.xyz”, “i-pi.pos_1.xyz”,
-“i-pi.pos_2.xyz”, “i-pi.pos_3.xyz” and “i-pi.checkpoint”. “i-pi.md” is
-the properties file, “i-pi.pos_x.xyz” are the position trajectory files,
-and “i-pi.checkpoint” is the checkpoint file.
+.. code-block::
+
+  <output prefix='tut1'>
+    <checkpoint filename='checkpoint' stride='1000' overwrite='True'> </checkpoint>
+    <properties filename='md' stride='1'>
+        [step, time{picosecond}, conserved{kelvin}, temperature{kelvin}, potential{kelvin}, kinetic_cv{kelvin}]
+    </properties>
+    <trajectory filename='pos' stride='100' format='pdb' cell_units='angstrom'> positions{angstrom} </trajectory>
+    <trajectory filename='forces' stride='100'> forces  </trajectory>
+  </output>
+
+
+This setup will create create 11 files:
+
+*checkpoint file:* "tut1.checkpoint" 
+  
+*properties file:* "tut1.md"
+ 
+*position trajectory files (1 file per bead):* "tut1.pos_0.pdb", "tut1.pos_1.pdb", "tut1.pos_2.pdb", and "tut1.pos_3.pdb"
+
+*forces trajectory files (1 file per bead):* "tut1.forces_0.xyz", "tut1.forces_2.xyz", "tut1.forces_1.xyz", and "tut1.forces_3.xyz"
 
 The filenames are created using the syntax “prefix”.“filename”[_(file
 specifier)][.(file format)], where the file specifier is added to
@@ -608,7 +600,7 @@ separate similar files. For example, in the above case the different
 position trajectories for each bead are given a file specifier
 corresponding to the appropriate bead index.
 
-The “stride” attributes set how often data is output to each file; so in
+The “stride” attribute sets how often data is output to each file; so in
 the above case the properties are written out every 10 time steps, the
 trajectories every 100, and the checkpoints every 1000. The “format”
 attribute sets the format of the trajectory files, and the “overwrite”
@@ -617,24 +609,16 @@ or not.
 
 There are several options we can use to customize the output data.
 Firstly, the “prefix” attribute should be set to something which can be
-used to distinguish the files from different simulation runs. In this
-case we can simply set it to “tut1”:
+used to distinguish the files from different simulation runs. In the previous snippet 
+we set it to “tut1”:
 
-.. code-block::
-
-   <output prefix=’tut1’> ... </output>
-
-As for the input parameters, the units the output data is given in can
-be set by the user. Unlike the input parameters however, this is done by
+As for the input parameters, the default units are always  atomic units.
+However, this  can be modified by the user  by
 specifying an appropriate unit in curly braces after the name of the
-property or trajectory of interest, as shown below:
+property or trajectory of interest. In the previous snippet, we have for
+example set the temperature units to kelvin and position coordinates to angstroms
 
-Next, let us adjust some of the attributes. Let us suppose that we wish
-to output the properties every time step, to check for conserved
-quantity jumps, and to output the trajectory in pdb format. To do this
-we would set the “stride” and “format” tags, as shown below:
-
-Note that we have added a “cell_units” attribute to the :ref:`trajectory`
+When using 'pdb' format, it is important to add the “cell_units” attribute to the :ref:`trajectory`
 tag, so that the cell parameters are consistent with the position output.
 
 Finally, let us suppose that we wished to output another output property
@@ -655,28 +639,83 @@ property, which takes two arguments, “atom” and “bead”, giving the index
 of the atom and bead tagged respectively. The appropriate syntax is then
 given below:
 
-This will print out the force vector acting on bead 0 of atom 0. i-PI
-also accepts positional arguments (i.e. arguments not specified by a
-name, but just by their position in the list of arguments), and so this
-could also be written as:
+.. code-block::
 
-Finally, putting all this together, and adjusting some of the parameters
-of the new file, we get:
+  <output prefix='tut1'>
+    ...
+    <properties filename='force' stride='20'> [atom_f{piconewton}(atom=0;bead=0)] </properties>
+  </output>
+
+This will print out the force vector acting on bead 0 of atom 0.
+
+Input file tutorial-1
+^^^^^^^^^^^^^^^^^^^^^
+
+If you reached this point, you have been able to specify the input file from scratch, well done!
+Hopefully, this has helped you to understand the most important syntaxes of the i-PI input file.  However,
+we recomend that next time you use one of the many input files provided within the "examples"
+and "demos" folder.
+
+For the sake of completeness, we copy the input file we have just created: 
+
+.. code-block::
+   
+   <simulation verbosity='high'>
+     <output prefix='tut1'>
+       <checkpoint filename='checkpoint' stride='1000' overwrite='True'> </checkpoint>
+       <properties filename='md' stride='1'>
+           [step, time{picosecond}, conserved{kelvin}, temperature{kelvin}, potential{kelvin}, kinetic_cv{kelvin}]
+       </properties>
+       <trajectory filename='pos' stride='100' format='pdb' cell_units='angstrom'> positions{angstrom} </trajectory>
+       <trajectory filename='forces' stride='100'> forces  </trajectory>
+       <properties filename='force' stride='20'> [atom_f{piconewton}(atom=0;bead=0)] </properties>
+     </output>
+     <total_steps> 5000 </total_steps>
+     <ffsocket mode='inet' name='driver'>
+       <address>localhost</address>
+       <port> 31415 </port>
+     </ffsocket>
+     <system>
+       <initialize nbeads='4'>
+         <file mode='pdb'> our_ref.pdb </file>
+         <velocities mode='thermal' units='kelvin'> 25 </velocities>
+       </initialize>
+       <forces>
+         <force forcefield='driver'> </force>
+       </forces>
+       <ensemble>
+         <temperature units='kelvin'> 25 </temperature>
+       </ensemble>
+       <motion mode='dynamics'>
+         <dynamics mode='nvt'>
+           <thermostat mode='pile_g'>
+             <tau units='femtosecond'> 25 </tau>
+           </thermostat>
+           <timestep units='femtosecond'> 1 </timestep>
+         </dynamics>
+       </motion>
+     </system>
+   </simulation>
+                
 
 .. _run1:
 
 Running the simulation
 ~~~~~~~~~~~~~~~~~~~~~~
 
+ALBERTO 
+(If you haven't already, please check out the `install` section of this documentation to setup i-PI).
+
+
 Now that we have a valid input file, we can run the test simulation. The
 “i-pi” script in the root directory is used to create an i-PI simulation
 from a xml input file. As explained in :ref:`runningsimulations`
-this script is run (if we assume that we are in the “tutorial-1”
+this script is run (if we assume that we are in the “demos/para-h2-tutorial/tutorial-1”
 directory) using:
 
 .. code-block::
 
-   > python ../../../i-pi tutorial-1.xml
+   > python ../../../bin/i-pi tutorial-1.xml
 
 This will start the i-PI simulation, creating the server socket and
 initializing the simulation data. This should at this point print out a
@@ -691,6 +730,27 @@ At this point the driver code is run in a new terminal from the
 .. code-block::
 
    > i-pi-driver -m sg -h localhost -o 15 -p 31415
+
+
+
+This is run using the
+following command:
+
+.. code-block::
+
+   > i-pi-driver -m sg -h localhost -o 15 -p 31415
+
+The option “-m” is followed by the empirical potential required, in this
+case we use “sg” for Silvera-Goldman, “-a localhost” sets up the client
+hostname (address) as “localhost”, “-o 15” sets the cut-off to 15 :math:`a_0`, and
+“-p 31415” sets the port number to 31415.
+
+Note that usually this step will require setting up appropriate client
+code input files, possibly for an *ab initio* electronic structure code,
+and so is generally a more involved process. Refer to
+:ref:`runningclients`, and the documentation of the appropriate
+client code, for more details on how to do this step.
+
 
 The i-PI code should now output a message saying that a new client code
 has connected, and start running the simulation.
