@@ -35,11 +35,12 @@ DFTB+,
 elphmod,
 ffsGDML,
 FHI-aims, 
-Lammps, 
+LAMMPS, 
 librascal, 
 Quantum ESPRESSO, 
 Siesta,
-VASP, Yaff, VASP.
+Yaff.
+
 If you are interested in interfacing your code to i-PI please get in
 touch, we are always glad to help!
 
