@@ -703,9 +703,8 @@ For the sake of completeness, we copy the input file we have just created:
 Running the simulation
 ~~~~~~~~~~~~~~~~~~~~~~
 
-ALBERTO 
+ALBERTO (Check installation) 
 (If you haven't already, please check out the `install` section of this documentation to setup i-PI).
-
 
 Now that we have a valid input file, we can run the test simulation. The
 “i-pi” script in the root directory is used to create an i-PI simulation
@@ -725,32 +724,16 @@ signifies that the server socket has been opened and is waiting for
 connections from client codes.
 
 At this point the driver code is run in a new terminal from the
-“drivers” directory using the command specified above:
+“drivers” directory using the command:
 
 .. code-block::
 
-   > i-pi-driver -m sg -h localhost -o 15 -p 31415
-
-
-
-This is run using the
-following command:
-
-.. code-block::
-
-   > i-pi-driver -m sg -h localhost -o 15 -p 31415
+   > i-pi-driver -m sg -a localhost -o 15 -p 31415
 
 The option “-m” is followed by the empirical potential required, in this
 case we use “sg” for Silvera-Goldman, “-a localhost” sets up the client
 hostname (address) as “localhost”, “-o 15” sets the cut-off to 15 :math:`a_0`, and
 “-p 31415” sets the port number to 31415.
-
-Note that usually this step will require setting up appropriate client
-code input files, possibly for an *ab initio* electronic structure code,
-and so is generally a more involved process. Refer to
-:ref:`runningclients`, and the documentation of the appropriate
-client code, for more details on how to do this step.
-
 
 The i-PI code should now output a message saying that a new client code
 has connected, and start running the simulation.
