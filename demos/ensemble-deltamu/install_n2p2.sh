@@ -24,6 +24,7 @@ else
     echo "Miniconda is already installed. Skipping installation."
 fi
 
+./miniconda3/bin/conda env remove --name n2p2_install -y
 ./miniconda3/bin/conda create -n n2p2_install -y
 
 source ./miniconda3/bin/activate n2p2_install
