@@ -24,6 +24,7 @@ else
     echo "Miniconda is already installed. Skipping installation."
 fi
 
+./miniconda3/bin/conda env remove --name rascaline_install -y
 ./miniconda3/bin/conda create -n rascaline_install -y
 
 source ./miniconda3/bin/activate rascaline_install
@@ -52,6 +53,7 @@ pip cache purge
 #install plumed and pyplumed from i-pi-demo channel with crystallization enabled
 conda install --strict-channel-priority -c plumed/label/ipi-demo -c conda-forge plumed py-plumed -y
 
+rm -rf ./H2O/
 git clone -b i-pi-demo https://github.com/bananenpampe/H2O.git
 
 # pip installs
