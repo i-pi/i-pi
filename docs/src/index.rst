@@ -1,7 +1,7 @@
 Welcome to i-PI's documentation!
 ================================
 
-i-PI is a force-engine written in Python 3 with the goal of performing standard and advanced molecular simulations.
+i-PI is a force engine written in Python 3 with the goal of performing standard and advanced molecular simulations.
 The implementation is based on a client-server paradigm, where i-PI acts
 as the server and deals with the propagation of the nuclear dynamics,
 whereas the calculation of the potential energy, forces and the

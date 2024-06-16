@@ -1,9 +1,12 @@
 <simulation verbosity='high'>
   <output prefix='tut1'>
-    <properties filename='md' stride='1'> [step, time{picosecond}, conserved{kelvin}, temperature{kelvin}, potential{kelvin}, kinetic_cv{kelvin}] </properties>
-    <properties filename='force' stride='20'> [atom_f{piconewton}(atom=0;bead=0)] </properties>
+    <checkpoint filename='checkpoint' stride='1000' overwrite='True'> </checkpoint>
+    <properties filename='md' stride='1'> 
+        [step, time{picosecond}, conserved{kelvin}, temperature{kelvin}, potential{kelvin}, kinetic_cv{kelvin}]
+    </properties>
     <trajectory filename='pos' stride='100' format='pdb' cell_units='angstrom'> positions{angstrom} </trajectory>
-    <checkpoint filename='checkpoint' stride='1000' overwrite='True'/>
+    <trajectory filename='forces' stride='100'> forces  </trajectory>
+    <properties filename='force' stride='20'> [atom_f{piconewton}(atom=0;bead=0)] </properties>
   </output>
   <total_steps> 5000 </total_steps>
   <ffsocket mode='inet' name='driver'>
@@ -16,7 +19,7 @@
       <velocities mode='thermal' units='kelvin'> 25 </velocities>
     </initialize>
     <forces>
-      <force forcefield='driver'/>
+      <force forcefield='driver'> </force>
     </forces>
     <ensemble>
       <temperature units='kelvin'> 25 </temperature>

@@ -83,8 +83,8 @@ else if you want to keep the i-PI directory clean. For example
 ```bash
 cd demos/para-h2-tutorial/tutorial-1/
 i-pi tutorial-1.xml > log &
-i-pi-driver -h localhost -p 31415 -m sg -o 15 &
-i-pi-driver -h localhost -p 31415 -m sg -o 15 &
+i-pi-driver -a localhost -p 31415 -m sg -o 15 &
+i-pi-driver -a localhost -p 31415 -m sg -o 15 &
 tail -f log
 ```
 
