@@ -4,7 +4,7 @@ Program Overview
 i-PI is a force engine that operates with a client-server
 paradigm. i-PI acts as a server in command of the evolution of the nuclear positions, while one or more instances
 of the client code handle the evaluation of system-specific properties. Designed to be universal, i-PI’s architecture
-is agnostic to the indentity of the force providers, with a general and flexible backend that accommodates to a wide range of client codes.
+is agnostic to the identity of the force providers, with a general and flexible backend that accommodates to a wide range of client codes.
 
 The code is written in Python 3, a high-level, general-purpose interpreted programming language known for
 its emphasis on code readability. This choice facilitates rapid prototyping of new ideas and relatively easy code
@@ -46,14 +46,14 @@ Communication protocol
 
 Since i-PI is designed to be used with a wide range of codes and
 platforms, it has to rely on a simple and robust method for
-communicating between the server and client. Even though other choices
+communicating between the server and the client. Even though other choices
 are possible, and it should be relatively simple to implement other
 means of communication, the preferred approach relies on sockets as the
 underlying infrastructure. Both Internet and Unix domain sockets can be
-used: the latter allow for fast communication on a single node, whereas
-the former make it possible to realise a distributed computing paradigm,
+used: the latter allows for fast communication on a single node, whereas
+the former makes it possible to realise a distributed computing paradigm,
 with clients running on different nodes or even on different HPC
-facilities. In order to facilitate implementation of the socket
+facilities. In order to facilitate the implementation of the socket
 communication in client codes, a simple set of C wrappers to the
 standard libraries socket implementation is provided as part of the i-PI
 distribution, that can be used in any programming language that can be
@@ -94,12 +94,12 @@ brief discussion.
 
 
 This figure provides an overall scheme of the objects involved in the calculation 
-of the forces. The infrastracture comprises
+of the forces. The infrastructure comprises
 a force provider class that deals with the actual subdivision of work
 among the clients, and a sequence of objects that translate the request
 of the overall force of the system into atomic evaluations of one
 component of the force 
-When running path integral simulations, the later refers to the component of an individual bead: 
+When running path integral simulations, the latter refers to the component of an individual bead: 
 i-PI is built to hide the path integral infrastructure from the client, and so beads must be
 transferred individually.
 
@@ -131,7 +131,7 @@ and virial where required. Note that in order to support ring polymer
 contraction (RPC), the RPC procedure is executed even if no contraction
 was required (i.e. even if all clients contain the full amount of
 beads). ForceComponent is a very simple helper class that associates
-with each bead a ForceBead object, that is the entity in charge of
+with each bead a ForceBead object, which  is the entity in charge of
 filing force requests to the appropriate ForceField object and waiting
 for completion of the evaluation.
 
@@ -140,7 +140,7 @@ Automated evaluation (depend objects)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 i-PI uses a caching mechanism with automatic value updating to make the
-code used to propagate the dynamics as simple and clear as possible.
+code used to propagate the dynamics as simply and clearly  as possible.
 Every physical quantity that is referenced in the code is created using
 a “depend” object class, which is given the parameters on which it
 depends and a function used to calculate its value.
