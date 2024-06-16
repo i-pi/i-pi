@@ -12,7 +12,7 @@ from ipi.utils.units import *
 from ipi.utils.prng import *
 from ipi.utils.io import *
 from ipi.utils.io.inputs.io_xml import *
-from ipi.utils.messages import verbosity, info
+from ipi.utils.messages import verbosity
 from ipi.engine.smotion import Smotion
 from ipi.inputs.prng import InputRandom
 from ipi.inputs.system import InputSystem, InputSysTemplate
@@ -333,11 +333,9 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
                 or k == "ffcommittee"
                 or k == "ffcavphsocket"
             ):
-                info(" # @simulation: Fetching" + k, verbosity.low)
                 new_ff = v.fetch()
                 if k == "ffsocket":
                     # overrides ffsocket prefix
-                    print("OVERRIDIGN , ", new_ff.socket.sockets_prefix)
                     new_ff.socket.sockets_prefix = self.sockets_prefix.fetch()
                 fflist.append(new_ff)
 
