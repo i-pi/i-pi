@@ -12,5 +12,5 @@ To run tutorial 1:
 ```bash
 source <i-pi-root>/env.sh
 i-pi tutorial-1.xml
-i-pi-driver -m sg -h localhost -o 15 -p 31415
+i-pi-driver -m sg -a localhost -o 15 -p 31415
 ```
