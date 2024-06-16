@@ -1,0 +1,60 @@
+###############################################################################
+# MD simulation for revPBE0-D3 H2O with NN potential
+###############################################################################
+
+###############################################################################
+# VARIABLES
+###############################################################################
+clear
+variable dt              equal  0.0005                                                   # timestep (ps)
+variable intThermo       equal  1                                                       # screen output interval (timesteps)
+variable numSteps        equal  4000000                                                    # total number of simulation timesteps (timesteps)
+variable runnerCutoff    equal  6.3501269880                                            # largest symmetry function cutoff (Angstrom)
+variable mass2           equal  15.9994                                                 # mass for element 1 (O)  (g/mol)
+variable mass1           equal  1.0080                                                  # mass for element 2 (H) (g/mol)
+variable nameStartCfg    string "data.ice-eq"                				# name of the starting configuration file
+variable runnerDir       string "potentials/pot-03"	                        # directory containing RuNNer files
+# set initial velocity distribution
+variable initTemp        equal  265                                                   # initial temperature (K)
+variable velSeed         equal  4928459                                                 # seed for random number generator
+# NVT integrator (Nose-Hoover)
+variable startTemp       equal  265                                                   # starting temperature for thermostat (K)
+variable stopTemp        equal  265                                                   # final temperature for thermostat (K)
+variable tDamp           equal  1                                                    # thermostat damping factor (ps)
+# dump thermodynamic properties (temperature, pressure, potential energy, kinetic energy, integrator quantity)
+variable intTD           equal  10                                                      # thermodynamics dump file interval (timesteps)
+variable nameTD          string "traj/td"                                               # thermodynamics file name
+variable varVolume       equal  vol                                                     # variable required to print volume
+variable varKE           equal  ke                                                      # variable required to print kinetic energy
+###############################################################################
+# SETUP
+###############################################################################
+units metal                                                                             # define unit system (metal = Angstrom, eV, ps, g/mol)
+boundary p p p                                                                          # set periodic boundary conditions
+atom_style atomic                                                                       # set atomic style for particles
+read_data ${nameStartCfg}                                                               # read start configuration
+mass 1 ${mass1}                                                                         # set mass for element 1
+mass 2 ${mass2}                                                                         # set mass for element 2
+pair_style hdnnp ${runnerCutoff} dir ${runnerDir} showew no showewsum 1000 resetew yes maxew 1000000 cflength 1.8897261328 cfenergy 0.0367493254                        # set up pair style runner
+pair_coeff * * H O                                                                      # set up pair style coefficients
+timestep ${dt}                                                                          # set timestep
+velocity all create ${initTemp} ${velSeed}                                              # create initial velocities
+#fix AVE_TD all ave/time ${intTD} 1 ${intTD} c_thermo_temp c_thermo_press v_varVolume c_thermo_pe v_varKE f_INT file ${nameTD} mode scalar       # set up thermodynamic properties output
+thermo ${intThermo}                                                                     # set screen output
+###############################################################################
+# SIMULATION
+###############################################################################
+fix 1 all ipi nnp-3 32347 unix
+#fix 1 all nvt temp ${startTemp} ${stopTemp} ${tDamp}                                  # set up integrator
+run ${numSteps}                                                                         # RUN SIMULATION
+
+
+#
+#write_restart ${nameRestartEnd}                                                         # write final configuration (binary)
+###############################################################################
+# CLEAN UP
+###############################################################################
+undump XYZ
+#unfix AVE_TD
+#unfix INT
+###############################################################################

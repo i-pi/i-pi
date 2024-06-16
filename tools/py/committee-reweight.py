@@ -23,6 +23,7 @@ def direct_reweight(pot, obs, kbT):
     obs_avg_rew  : the observable reweighted for each potential
     weights      : the weights computed for each model and frame
     """
+
     beta = 1.0 / kbT
     num_pot_frames = pot.shape[0]
     num_obs_frames = obs.shape[0]
@@ -133,7 +134,7 @@ def uncertainty_CEA_multiple_models(pot, obs, kbT):
 
 
 def commitee_reweight(
-    path2ixml, pot_file, obs_file, stride=1, index=-1, direct=False, multi_models=False
+    pot_file, obs_file, kt, stride=1, index=-1, direct=False, multi_models=False
 ):
     """
     Parameters
@@ -145,6 +146,8 @@ def commitee_reweight(
                     A file containing the value of the observable for each frame.
                     It is assumed that lines correspond to frames, while columns to properties.
                     Multiple properties can be reweighted at the same time.
+    kt          :   float, mandatory
+                    The thermal energy, in the same units as pot_file
     stride      :   integer, [1]
                     The frequency of sampling of pot_file, if different from that of prop_file (e.g. --stride 10 if
                     the potential was printed 10 times more often than the observable. --stride -10 must be used if
@@ -175,15 +178,9 @@ def commitee_reweight(
     else:
         raise ValueError("Stride value cannot be zero")
 
-    # Load kbT from i-PI, we could make it into a small function
-    simul = Simulation.load_from_xml(
-        path2ixml, custom_verbosity="quiet", read_only=True
-    )
-    kbT = float(simul.syslist[0].ensemble.temp)
-
     if multi_models:
         mean_value, sigma2_a, sigma2_aV, sigma2_tilde = uncertainty_CEA_multiple_models(
-            potentials, obs, kbT
+            potentials, obs, kt
         )
         print("#     Mean            Error         sigma_a        sigma_aV")
         print(
@@ -194,9 +191,9 @@ def commitee_reweight(
     else:
         # CEA is the default choice. The weights or h_matrix are
         if direct:
-            rw_obs, _weights = direct_reweight(potentials, obs, kbT)
+            rw_obs, _weights = direct_reweight(potentials, obs, kt)
         else:
-            rw_obs, _h_matrix = CEA(potentials, obs, kbT)
+            rw_obs, _h_matrix = CEA(potentials, obs, kt)
         print(
             "#     Mean            Error        <committee_1>         ....         <committee_N>"
         )
@@ -216,19 +213,26 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
-        "input_xml",
-        type=str,
-        help="The path to the input file used to run the simulation (usually input.xml)",
-    )
-    parser.add_argument(
         "pot_file",
         type=str,
-        help="The file containing the potentials. Rows = frames, columns = potentials",
+        help="The file containing the potentials, in units of kT (default: Hartree). Rows = frames, columns = potentials",
     )
     parser.add_argument(
         "obs_file",
         type=str,
         help="The file containing the properties. Rows = frames, columns = property/ies",
+    )
+    parser.add_argument(
+        "--kt",
+        type=float,
+        default=0.0,
+        help="The thermal energy. Should be in the same units of the potentials, typically Hartree",
+    )
+    parser.add_argument(
+        "--input",
+        type=str,
+        default="",
+        help="The path to the input file used to run the simulation (usually input.xml). Used just to extract kT.",
     )
     parser.add_argument(
         "--stride",
@@ -254,11 +258,23 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
+
+    # Load kbT from i-PI, we could make it into a small function
+    if args.input != "":
+        simul = Simulation.load_from_xml(
+            args.input, custom_verbosity="quiet", read_only=True
+        )
+        kt = float(simul.syslist[0].ensemble.temp)
+    else:
+        kt = args.kt
+    if kt <= 0:
+        raise ValueError("Must specify either --kt or --input")
+
     sys.exit(
         commitee_reweight(
-            args.input_xml,
             args.pot_file,
             args.obs_file,
+            kt,
             args.stride,
             args.index,
             args.direct,

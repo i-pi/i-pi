@@ -534,6 +534,7 @@ class TrajectoryOutput(BaseOutput):
                 stream.write("\n")
             elif self.extra_type == "raw":
                 stream.write(str(data))
+                stream.write("\n")
             else:
                 raise KeyError(
                     "Extra type '"
