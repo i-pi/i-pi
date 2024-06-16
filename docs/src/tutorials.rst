@@ -37,7 +37,7 @@ and skip directly to :ref:`run1`
 This client code can be used for several different problems (see
 :ref:`driver.x`), some of which are explored in the “examples”
 directory, but for the current problem we will use the Silvera-Goldman
-potential with a cut-off radius of 15 :math:`a_0`. 
+potential with a cut-off radius of 15 Bohr.
 
 
 Creating the xml input file
@@ -703,18 +703,14 @@ For the sake of completeness, we copy the input file we have just created:
 Running the simulation
 ~~~~~~~~~~~~~~~~~~~~~~
 
-ALBERTO (Check installation) 
-(If you haven't already, please check out the `install` section of this documentation to setup i-PI).
+If you haven't already, please check out the :ref:`install` section of this documentation to setting up i-PI.
 
-Now that we have a valid input file, we can run the test simulation. The
-“i-pi” script in the root directory is used to create an i-PI simulation
-from a xml input file. As explained in :ref:`runningsimulations`
-this script is run (if we assume that we are in the “demos/para-h2-tutorial/tutorial-1”
-directory) using:
+In the following, we assume that you are in the “demos/para-h2-tutorial/tutorial-1” folder.
+Now that we have a valid input file, we can run the first part of the tutorial   using:
 
 .. code-block::
 
-   > python ../../../bin/i-pi tutorial-1.xml
+   > i-pi tutorial-1.xml
 
 This will start the i-PI simulation, creating the server socket and
 initializing the simulation data. This should at this point print out a
@@ -732,7 +728,7 @@ At this point the driver code is run in a new terminal from the
 
 The option “-m” is followed by the empirical potential required, in this
 case we use “sg” for Silvera-Goldman, “-a localhost” sets up the client
-hostname (address) as “localhost”, “-o 15” sets the cut-off to 15 :math:`a_0`, and
+hostname (address) as “localhost”, “-o 15” sets the cut-off to 15 Bohr, and
 “-p 31415” sets the port number to 31415.
 
 The i-PI code should now output a message saying that a new client code
@@ -743,7 +739,8 @@ Output data
 
 Once the simulation is finished (which should take about half an hour)
 it should have output “tut1.md”, “tut1.force”, “tut1.pos_0.xyz”,
-“tut1.pos_1.xyz”, “tut1.pos_2.xyz”, “tut1.pos_3.xyz”, “tut1.checkpoint”
+“tut1.pos_1.xyz”, “tut1.pos_2.xyz”, “tut1.pos_3.xyz”, “tut1.checkpoint”,
+“tut1.forces_1.xyz”, “tut1.forces_2.xyz”, “tut1.forces_3.xyz”, “tut1.forces_4.xyz”,
 and “RESTART”.
 
 Firstly, we consider the checkpoint files, “tut1.checkpoint” and
@@ -754,7 +751,7 @@ step using
 
 .. code-block::
 
-   > ../../../i-pi tut1.checkpoint
+   > i-pi tut1.checkpoint
 
 followed by running “i-pi-driver” as before.
 
@@ -783,20 +780,21 @@ exhibit any major drift, and second we should check to see if the
 properties of interest have converged. Using gnuplot, we can plot the
 relevant graphs using:
 
+
 .. code-block::
 
-   > gnuplot > p ’./tut1.md’ u 1:3 # Plots column 1, i.e. current
-   simulation step, > p ’./tut1.md’ u 1:4 # against columns 3, 4, 5 and
-   6, > p ’./tut1.md’ u 1:5 # i.e. conserved quantity, temperature, > p
-   ’./tut1.md’ u 1:6 # potential energy and kinetic energy
-
+   > gnuplot -persist  -e "plot 'tut1.md' u 1:3" # step vs conserved quantity 
+   > gnuplot -persist  -e "plot 'tut1.md' u 1:4" # step vs temperature
+   > gnuplot -persist  -e "plot 'tut1.md' u 1:5" # step vs potential energy
+   > gnuplot -persist  -e "plot 'tut1.md' u 1:6" # step vs kinetic  energy
+ 
 This will show that the conserved quantity has only a small drift
 upwards, the kinetic and potential energies have equilibrated, and the
 thermostat is keeping the temperature at the specified value. We have
 therefore specified a sufficiently short time step, chosen the
 thermostat parameters sensibly, and have equilibrated the properties of
 interest. Therefore this stage of the simulation is done, and we are
-ready to start the *NPT* run.
+ready to continue with the second part and start the *NPT* run.
 
 .. _part2:
 
@@ -836,7 +834,10 @@ the ensemble:
 
 .. code-block::
 
-   <ensemble> <pressure> 0 </pressure> ... </ensemble>
+   <ensemble>
+      <pressure> 0 </pressure>
+       ... 
+   </ensemble>
 
 Then, we must also specify the constant pressure algorithm, using the
 tag :ref:`barostat` within the dynamics environment. Do not forget to change the mode
@@ -854,10 +855,22 @@ freedom, and we will take its time scale to be 250 femtoseconds:
 
 .. code-block::
 
-   <system> <ensemble> <pressure> 0 </pressure> </ensemble> <motion
-   mode=’dynamics’> <dynamics mode=’npt’> <barostat mode=’isotropic’>
-   <thermostat mode=’langevin’> <tau units=’femtosecond’> 250 </tau>
-   </thermostat> ... </barostat> ... </dynamics> ... </motion> ...
+   <system>
+     ...
+     <ensemble> 
+        <pressure> 0 </pressure> 
+     </ensemble> 
+     <motion mode=’dynamics’>
+        <dynamics mode=’npt’> 
+            <barostat mode=’isotropic’>
+                 <thermostat mode=’langevin’> 
+                    <tau units=’femtosecond’> 250 </tau>
+                 </thermostat> 
+             </barostat> 
+             ... 
+        </dynamics> 
+        ... 
+      </motion> 
    </system>
 
 Finally, we will take the barostat time scale to be 250 femtoseconds
@@ -865,13 +878,28 @@ also, giving:
 
 .. code-block::
 
-   <system> <ensemble> <pressure> 0 </pressure> </ensemble> <motion
-   mode=’dynamics’> <dynamics mode=’npt’> <barostat mode=’isotropic’>
-   <thermostat mode=’langevin’> <tau units=’femtosecond’> 250 </tau>
-   </thermostat> <tau units=’femtosecond’> 250 </tau> </barostat> ...
-   </dynamics> ... </motion> ... </system>
+   <system>
+     ...
+     <ensemble> 
+        <pressure> 0 </pressure> 
+     </ensemble> 
+     <motion mode=’dynamics’>
+        <dynamics mode=’npt’> 
+            <barostat mode=’isotropic’>
+                 <thermostat mode=’langevin’> 
+                    <tau units=’femtosecond’> 250 </tau>
+                 </thermostat> 
+                 <tau units='femtosecond'> 250 </tau>
+             </barostat> 
+             ... 
+        </dynamics> 
+        ... 
+      </motion> 
+   </system>
 
 with the rest of the :ref:`ensemble` and :ref:`dynamics` tags being the same as before.
+Note that in a *NPT* simulation, we have two thermosthats, one applied to the nuclear degrees of freedom and one 
+applied to the volume degrees of freedom.
 
 Initialization from RESTART
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -884,6 +912,15 @@ Firstly, the original input file “tutorial-1.xml” needs to be modified
 so that it will do a *NPT* simulation instead of *NVT*. This involves
 modifying the “total_steps” :ref:`output` and :ref:`ensemble` tags as above.
 Next, we replace the tag :ref:`initialize` section with:
+
+.. code-block::
+
+  <system>
+    <initialize nbeads='4'>
+      <file mode='chk'> tutorial-1_RESTART </file>
+    </initialize>
+    ... 
+  </system>
 
 Note that the “mode” attribute has been set to “chk” to specify that the
 file is a checkpoint file. This will then use the RESTART file to
@@ -935,14 +972,14 @@ to “unix”:
 
 .. code-block::
 
-   <ffsocket mode=’unix’ name="driver-sg"> ... </ffsocket>
+   <ffsocket mode=’unix’ name="driver"> ... </ffsocket>
 
 We then specify that the client code should connect to a unix socket
 using the -u flag:
 
 .. code-block::
 
-   > i-pi-driver -u -m sg -h localhost -o 15 -p 31415
+   > i-pi-driver -u -m sg -a localhost -o 15 -p 31415
 
 Parallelizing the force calculation over the different replicas of the
 system is similarly easy, all that is required is to run the above
@@ -951,7 +988,7 @@ we would use:
 
 .. code-block::
 
-   > for a in 1 2 3 4; do > i-pi-driver -u -m sg -h localhost -o 15 -p
+   > for a in 1 2 3 4; do > i-pi-driver -u -m sg -a localhost -o 15 -p
    31415 & > done
 
 Using these techniques should help speed up the calculation

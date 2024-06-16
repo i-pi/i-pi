@@ -32,11 +32,65 @@ Patching for use with i-PI should not
 introduce further dependencies.
 
 
-Using the setup.py module
-^^^^^^^^^^^^^^^^^^^^^^^^^
+Quick Setup
+~~~~~~~~~~~ 
 
-While the ``i-pi`` file can be used to run any i-PI simulation, it is
-often more convenient to install the package to the system’s Python
+To use i-PI with an existing driver, install and update using `pip`:
+
+Last version:
+
+.. code-block::
+   
+   python -m pip install git+https://github.com/i-pi/i-pi.git
+
+Last Release:
+
+.. code-block::
+
+   pip install -U ipi
+
+
+Full installation
+~~~~~~~~~~~~~~~~~ 
+
+i-PI
+^^^^
+
+To develop i-PI or test it with the self-contained driver, follow these
+instructions. It is assumed that i-PI will
+be run from a Linux environment, with a recent version of Python, Numpy and
+gfortran, and that the terminal is initially in the i-pi package directory (the
+directory containing this file), which you can obtain by cloning the repository
+
+.. code-block::
+
+   git clone https://github.com/i-pi/i-pi.git
+
+
+Source the environment settings file `env.sh` as `source env.sh` or `.
+env.sh`.  It is useful to put this in your `.bashrc` or other settings file if
+you always want to have i-PI available.
+
+
+Fortran built-in driver
+^^^^^^^^^^^^^^^^^^^^^^^
+
+The built-in driver requires a FORTRAN compiler, and can be built as
+
+.. code-block::
+   
+   cd drivers/f90
+   make
+   cd ../..
+
+
+There is also a Python driver available in `drivers/py`, which however has limited
+functionalities.
+
+Alternative installation using the setup.py module
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+It is sometimes  more convenient to install the package to the system’s Python
 modules path, so that it is accessible by all users and can be run
 without specifying the path to the Python script.
 
@@ -96,17 +150,6 @@ Either way, it will now be possible to run the code automatically, using
 
  > i-pi input-file.xml
 
-
-i-PI download
-~~~~~~~~~~~~~
-
-You can find information how to download i-PI from
-http://ipi-code.org/download/.
-
-The i-PI executable, found in the ``bin`` folder, will run immediately,
-without needing to be installed or compiled, but we include a setup.py
-module in the main directory so it can be installed to the Python tree
-if so desired.
 
 Installing clients
 ------------------
