@@ -1,16 +1,2 @@
-i-PI is a free software: you can redistribute it and/or modify 
-it under, unless specified otherwise, the terms of the General Public License.
-
-i-PI is distributed in the hope that it will be useful,
-but, as expressed by GPL license,
-THERE IS NO WARRANTY FOR THE PROGRAM, TO THE EXTENT PERMITTED BY
-APPLICABLE LAW.  EXCEPT WHEN OTHERWISE STATED IN WRITING THE COPYRIGHT
-HOLDERS AND/OR OTHER PARTIES PROVIDE THE PROGRAM "AS IS" WITHOUT WARRANTY
-OF ANY KIND, EITHER EXPRESSED OR IMPLIED, INCLUDING, BUT NOT LIMITED TO,
-THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR
-PURPOSE.  THE ENTIRE RISK AS TO THE QUALITY AND PERFORMANCE OF THE PROGRAM
-IS WITH YOU.  SHOULD THE PROGRAM PROVE DEFECTIVE, YOU ASSUME THE COST OF
-ALL NECESSARY SERVICING, REPAIR OR CORRECTION.
-
-
-The code inside the driver folder is published under the  terms of the MIT License.
+i-PI is free software distributed under both the GPL and MIT licenses. 
+Users can choose the license that best fits their requirements. 
