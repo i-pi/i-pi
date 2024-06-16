@@ -8,8 +8,10 @@ using the Atomic Simulation Environment
 
 # import os
 import sys
+import re
 import numpy as np
 from ipi.utils.units import Constants
+
 
 try:
     import ase
@@ -52,12 +54,22 @@ def print_ase(
 
     from ase import Atoms
 
+    # Reads the quantity from the ipi_comment
+    quantity = next(
+        (
+            (keyword, value)
+            for keyword, value in re.findall(r"(\w+)\{(\w+)\}", title)
+            if keyword != "cell"
+        ),
+        (None, None),
+    )[0]
+
     ase_atoms = Atoms(
         atoms.names,
-        positions=atoms.q.reshape((-1, 3)) * atoms_conv,
         cell=cell.h.T * cell_conv,
         pbc=True,
     )
+    ase_atoms.arrays[quantity] = atoms.q.reshape((-1, 3)) * atoms_conv
     ase_atoms.info["ipi_comment"] = title
     ase_atoms.write(filedesc, format="extxyz")
 
@@ -86,7 +98,11 @@ def read_ase(filedesc):
         _ase_open_files[filedesc] = iread(filedesc, ":")
 
     try:
-        atoms = next(_ase_open_files[filedesc])
+        try:
+            atoms = next(_ase_open_files[filedesc])
+        except ase.io.formats.UnknownFileTypeError:  # defaults to extxyz
+            _ase_open_files[filedesc] = iread(filedesc, ":", format="extxyz")
+            atoms = next(_ase_open_files[filedesc])
     except StopIteration:
         _ase_open_files.pop(filedesc)
         raise EOFError()

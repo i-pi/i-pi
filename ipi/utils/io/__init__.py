@@ -67,7 +67,7 @@ def _get_io_function(mode, io):
     available ipi/utils/io/backends/io_*.py backends.
 
     Args:
-        mode: Which format has the file? e.g. "pdb", "xml" or "xyz"
+        mode: Which format has the file? e.g. "pdb", "xml", "bin", "extxyz", or "xyz"
         io: One of "print_path", "print", "read" or "iter"
     """
 
@@ -142,6 +142,25 @@ def print_file_path(
             units = "angstrom"
         if cell_units == "automatic":
             cell_units = "angstrom"
+
+    # if output mode is 'ase', "automatic" units are actually "ase". In so far, only "ase" units can be used.
+    # Raises an error even if units like "angstrom" are used. This is because atomic_units to angstrom
+    # conversion used in i-PI can differ from ASE conversion factors up to numerics.
+    elif mode == "ase":
+        if units == "automatic":
+            units = "ase"
+        elif units != "ase":
+            raise ValueError(
+                'Only "ase" or default units can be used with extended xyz format.'
+            )
+
+        if cell_units == "automatic":
+            units = "ase"
+        elif units != "ase":
+            raise ValueError(
+                'Only "ase" or default units can be used with extended xyz format.'
+            )
+
     # in general, "automatic" units are actually "atomic_units"
     else:
         if units == "automatic":
@@ -214,7 +233,7 @@ def print_file(
         units: Units for the output (e.g. "angstrom")
         cell_units: Units for the cell (dimension length, e.g. "angstrom")
     """
-    if mode in ["pdb", "ase"]:  # special case for PDB and ASE
+    if mode == "pdb":  # special case for PDB and ASE
         if dimension != "length":
             raise ValueError("PDB Standard is only designed for atomic positions")
         if units == "automatic":
@@ -223,6 +242,24 @@ def print_file(
             cell_units = "angstrom"
         if key == "":
             key = "positions"
+
+    # if output mode is 'ase', "automatic" units are actually "ase". In so far, only "ase" units can be used.
+    # Raises an error even if units like "angstrom" are used. This is because atomic_units to angstrom
+    # conversion used in i-PI can differ from ASE conversion factors up to numerics.
+    elif mode == "ase":
+        if units == "automatic":
+            units = "ase"
+        elif units != "ase":
+            raise ValueError(
+                'Only "ase" or default units can be used with extended xyz format.'
+            )
+        if cell_units == "automatic":
+            cell_units = "ase"
+        elif cell_units != "ase":
+            raise ValueError(
+                'Only "ase" or default units can be used with extended xyz format.'
+            )
+
     # in general, "automatic" units are actually "atomic_units"
     else:
         if units == "automatic":
@@ -234,6 +271,7 @@ def print_file(
     atoms_conv = unit_to_user(dimension, units, 1.0)
 
     title = title + ("%s{%s}  cell{%s}" % (key, units, cell_units))
+
     print_file_raw(
         mode=mode,
         atoms=atoms,
