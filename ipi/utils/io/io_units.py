@@ -31,10 +31,14 @@ def auto_units(
 ):
     """Processes comment line and requested units to determine how to interpret the I/O conversion."""
     # heuristics to detect units
-    if mode in ("pdb", "ase"):  # these are the default units
+    if mode == "pdb":  # these are the default units
         auto_cell = "angstrom"
         auto_units = "angstrom"
         auto_dimension = "length"
+    elif mode == "ase":
+        auto_cell = "ase"
+        auto_units = "ase"
+        auto_dimension = "undefined"
     else:
         auto_cell = "atomic_unit"
         auto_units = "atomic_unit"
