@@ -119,7 +119,7 @@ Python library directory:
 
 This will install the package in the /usr/lib/py_vers directory, where
 py_vers is the version of Python that is being used. This requires
-administrator priviledges.
+administrator privileges.
 
 Otherwise, one can install i-PI in a local Python path. If such path
 does not exist yet, one must create directories for the package to go
@@ -131,7 +131,7 @@ into, using:
   > mkdir ~/lib/py_vers
   > mkdir ~/lib/py_vers/site-packages
 
-Next, you must tell Python where to find this library, by appending to
+Next, you must tell Python where to find this library, by appending it to
 the Linux environment variable PYTHONPATH, using:
 
 .. code-block::
@@ -156,8 +156,8 @@ Installing clients
 
 As of today, the following codes provide out-of-the-box an i-PI
 interface: CP2K, DFTB+, Lammps, Quantum ESPRESSO, Siesta, FHI-aims,
-Yaff, deMonNano, TBE. Links to the webpages of these codes, including
-information on how to obtain them, can be found in http://ipi-code.org/.
+Yaff, deMonNano, TBE. Links to the web pages of these codes, including
+information on how to obtain them, can be found at http://ipi-code.org/.
 
 If you are interested in interfacing your code to i-PI please get in
 touch, we are always glad to help. We keep some information below in
@@ -179,7 +179,7 @@ set up and started independently.
 Running the i-PI server
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-i-PI simulations are run using the i-pi Python script found in the
+i-PI simulations are run using the i-PI Python script found in the
 “bin” directory. This script takes an xml-formatted file as input, and
 automatically starts a simulation as specified by the data held in it.
 If the input file is called “input_file.xml”, then i-PI is run using:
@@ -219,7 +219,7 @@ make.
 This code currently has several empirical potentials hardcoded into it, including
 a Lennard-Jones potential, the Silvera-Goldman potential
 :cite:`silv-gold78jcp`,
-a primitive implementation of the  qtip4pf potentail for water ,
+a primitive implementation of the  qtip4pf potential for water ,
 :cite:`habe+09jcp`,
 several toy model potentials,
 the ideal gas (i.e. no potential interaction), and several more.
@@ -235,7 +235,7 @@ to it. The command line syntax is:
 The flags do the following:
 
 -u:
-   Optional parameter. If specified, the client will connect to a unix
+   Optional parameter. If specified, the client will connect to a Unix
    domain socket. If not, it will connect to an internet socket.
 
 -a:
@@ -254,8 +254,7 @@ The flags do the following:
    options should be clear from their description.
 
 -o:
-   Is followed in the command line argument list by a string of comma
-   separated values needed to initialize the potential parameters. “gas”
+   Is followed in the command line argument list by a string of comma-separated values needed to initialize the potential parameters. “gas”
    requires no parameters, “harm” requires a spring constant, “sg”
    requires a cut-off radius and “lj” requires the length and energy
    scales and a cut-off radius to be specified. All of these must be
@@ -297,7 +296,7 @@ lines must be added to its input file:
        ...
     &END MOTION
 
-If instead a unix domain socket is required then the following
+If instead a Unix domain socket is required then the following
 modification is necessary:
 
 .. code-block::
@@ -331,7 +330,7 @@ the following lines must be added to its input file:
        ...
     /
 
-If instead a unix domain socket is required then the following
+If instead a Unix domain socket is required then the following
 modification is necessary:
 
 .. code-block::
@@ -390,7 +389,7 @@ modification is necessary:
     use_pimd_wrapper UNIX:host_address port
 
 One can also communicate different electronic-structure quantities to
-i-PI through the ``extra`` string from FHI-aims. In this case the
+i-PI through the ``extra`` string from FHI-aims. In this case, the
 following lines can be added to the ``control.in`` file:
 
 .. code-block::
@@ -496,12 +495,12 @@ Note 3: use the '-h' flag to see all the available tests
 test cases and examples
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-The `examples/` folder contain a multitude of examples for i-PI, covering
+The `examples/` folder contains a multitude of examples for i-PI, covering
 most of the existing functionalities, and including also simple tests that
 can be run with different client codes. 
 
 
-The example folders is structured such that each sub-folder is focused on a different aspect of using i-PI:
+The example folder is structured such that each sub-folder is focused on a different aspect of using i-PI:
 
 - **clients**: 
     Contains examples that are code-specific, highlighting how the driver code should be set up
@@ -515,7 +514,7 @@ The example folders is structured such that each sub-folder is focused on a diff
       Examples of submission scripts on HPC platforms
 
 - **temp**     :
-     Temporary folder with historic examples that have not yet been adapted
+     Temporary folder with historical examples that have not yet been adapted
                     to the current folder structure
 
 - **init_files**: 
