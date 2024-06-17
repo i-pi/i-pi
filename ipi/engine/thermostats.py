@@ -349,7 +349,7 @@ class ThermoPILE_L(Thermostat):
         )
 
         # must pipe all the dependencies in such a way that values for the nm thermostats
-        # are automatically updated based on the "master" thermostat
+        # are automatically updated based on the "main" thermostat
         def make_taugetter(k):
             return lambda: self.tauk[k - 1]
 
@@ -883,7 +883,7 @@ class ThermoNMGLE(Thermostat):
         ]
 
         # must pipe all the dependencies in such a way that values for the nm
-        # thermostats are automatically updated based on the "master" thermostat
+        # thermostats are automatically updated based on the "main" thermostat
         def make_Agetter(k):
             return lambda: self.A[k]
 
@@ -901,7 +901,7 @@ class ThermoNMGLE(Thermostat):
             dpipe(self._temp, t._temp)
             dpipe(self._dt, t._dt)
 
-            # here we pipe the A and C of individual NM to the "master" arrays
+            # here we pipe the A and C of individual NM to the "main" arrays
             t._A.add_dependency(self._A)
             t._A._func = make_Agetter(it)
             t._C.add_dependency(self._C)

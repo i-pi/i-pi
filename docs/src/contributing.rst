@@ -23,7 +23,7 @@ What we expect from a contribution
 
 To start contributing, note the following general guidelines:
 
-* Your contribution should be based on the master branch of the repository
+* Your contribution should be based on the main branch of the repository
 
 * We expect you to fork the repository and make all the changes in your fork
 

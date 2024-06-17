@@ -1060,9 +1060,9 @@ class Forces:
 
             # this is VERY subtle. beads in this force component are
             # obtained as a contraction, and so are computed automatically.
-            # when we set the master q, these get marked as tainted.
+            # when we set the main q, these get marked as tainted.
             # then we copy the force value, and set the force as untainted.
-            # next time we touch the master q, the tainting does not get
+            # next time we touch the main q, the tainting does not get
             # propagated, because the contracted q is already marked as tainted,
             # so the force does not get updated. we can fix this by copying
             # the value of the contracted bead, so that it's marked as NOT
