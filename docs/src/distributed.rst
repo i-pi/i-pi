@@ -120,7 +120,7 @@ Obviously, most electronic-structure client codes provide a further
 level of parallelisation, based on OpenMP and/or MPI. This is fully
 compatible with i-PI, as it does not matter how the client does the
 calculation since only the forces, potential and virial are sent to the
-server, and the communication is typically performed by the master
+server, and the communication is typically performed by the main 
 process of the client.
 
 Sockets
