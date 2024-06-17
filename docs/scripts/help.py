@@ -67,6 +67,7 @@ objects = {
     "bias": forces.InputForces(),
     "dynamics": motion.dynamics.InputDynamics(),
     "constrained_dynamics": motion.constrained_dynamics.InputConstrainedDynamics(),
+    "driven_dynamics": motion.driven_dynamics.InputDrivenDynamics(),
     "csolver": motion.constrained_dynamics.InputConstraintSolver(),
     "constraint": motion.constrained_dynamics.InputConstraint(),
     "t_ramp": motion.ramp.InputTemperatureRamp(),
