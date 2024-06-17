@@ -68,7 +68,7 @@ which may lead to a significant overhead in case of electronic structure calcula
 We recommend using the socket connection from the client code to ASE and then from ASE to i-PI, when possible. An example of a "double-socket" setup
 can be found in:
 
-``https://github.com/i-pi/i-pi/tree/master/examples/clients/ase_client``
+``https://github.com/i-pi/i-pi/tree/main/examples/clients/ase_client``
 
 How to run i-PI on a cluster?
 -----------------------------
