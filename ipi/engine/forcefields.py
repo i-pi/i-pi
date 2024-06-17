@@ -705,7 +705,11 @@ class FFPlumed(FFEval):
         self.plumed.cmd("setMDEngine", "i-pi")
         self.plumed.cmd("setPlumedDat", self.plumeddat)
         self.plumed.cmd("setNatoms", self.natoms)
-        timeunit = 2.4188843e-05
+        timeunit = 2.4188843e-05  # atomic time to ps
+        self.plumed.cmd("setMDTimeUnits", timeunit)
+        # given we don't necessarily call plumed once per step, so time does not make
+        # sense, we set the time step so that time in plumed is a counter of the number of times
+        # called
         self.plumed.cmd("setTimestep", 1 / timeunit)
         self.plumed.cmd(
             "setMDEnergyUnits", 2625.4996
@@ -713,7 +717,6 @@ class FFPlumed(FFEval):
         self.plumed.cmd(
             "setMDLengthUnits", 0.052917721
         )  # Pass a pointer to the conversion factor between the length unit used in your code and nm
-        self.plumed.cmd("setMDTimeUnits", timeunit)
         self.plumedrestart = False
         if self.plumedstep > 0:
             # we are restarting, signal that PLUMED should continue
