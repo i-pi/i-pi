@@ -68,7 +68,7 @@ class Dynamics(Motion):
 
         super(Dynamics, self).__init__(fixcom=fixcom, fixatoms=fixatoms)
 
-        # initialize time step. this is the master time step that covers a full time step
+        # initialize time step. this is the main time step that covers a full time step
         self._dt = depend_value(name="dt", value=timestep)
 
         if thermostat is None:
