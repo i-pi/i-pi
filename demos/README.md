@@ -42,3 +42,9 @@ Pinning is achieved using an order parameter computed by Plumed, and the model i
 Statistical reweighting is used to compute the error on the difference in chemical potential between
 water and ice at the set temperature. Repeating the simulation at multiple temperatures can be used to determine
 the melting point.
+
+Temperature-elevation (Te) path-integral coarse-grained simulations (PIGS)
+--------------------------------------------------------------------------
+
+This example shows how to train an effectively quantum potential energy surface and estimate quantum dynamical properties, such as IR and Raman spectra, at the cost of classical molecular dynamics. This demonstation walks through the full workflow, including performing path-integral molecular dynamics to generate training data for the effective potential, fitting the effective potential using the MACE machine learning potential, and performing quantum dynamics for modeling quantum IR and Raman spectra of liquid water.
+
