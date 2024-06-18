@@ -1,6 +1,8 @@
 Alchemical isotope exchanges
 ============================
 
+Author: `Michele Ceriotti <michele.ceriotti@gmail.com>`
+
 This example demonstrates the use of the alchemical exchange method implemented in i-PI
 (cf. the theory introduced in [Jian Liu, Richard S Andino, Christina M Miller, Xin Chen, David M Wilkins, Michele Ceriotti, David E Manolopoulos, “A surface-specific isotope effect in mixtures of light and heavy water”, J. Phys. Chem. C 117(6), 2944-2951 (2013)](http://dx.doi.org/10.1021/jp311986m) [bibtex](https://www.doi2bib.org/bib/10.1021/jp311986m), 
 and the implementation discussed in [Cheng, Bingqing, Jörg Behler, Michele Ceriotti, “Nuclear Quantum Effects in Water at the Triple Point: Using Theory as a Link Between Experiments.” J. Phys. Chem. Lett. 7(12), 2210-2215 (2016)](https://ipi-code.org/about/features/dx.doi.org/10.1021/acs.jpclett.6b00729) [bibtex](http://www.doi2bib.org/bib/10.1021%2Facs.jpclett.6b00729) ).

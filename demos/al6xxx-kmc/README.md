@@ -1,6 +1,8 @@
 Kinetic Monte Carlo for vacancy diffusion in an Al-Si-Mg alloy
 ==============================================================
 
+Author: `Michele Ceriotti <michele.ceriotti@gmail.com>`
+
 This example is somewhat atypical, in that it demonstrates a very ad hoc implementation of 
 KMC, designed specifically to run simulations of vacancy diffusion in an FCC alloy of aluminum
 with ~1% Si and Mg. 
