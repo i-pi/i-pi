@@ -1,6 +1,9 @@
 2D IR-Raman spectrum of liquid water
 ====================================
 
+Author:
+`Thomislav Begusic <tomislav.begusic@caltech.edu>`
+
 This example demonstrates the use of equilibrium-nonequilibrium ring-polymer molecular dynamic (RPMD) within the framework of i-PI to simulate 2D IR-Raman spectrum of liquid water. 
 For theory of equilibrium-nonequilibrium RPMD, see
 1. [T. Begusic, X. Tao, G. A. Blake, T. F. Miller III, "Equilibrium–nonequilibrium ring-polymer molecular dynamics for nonlinear spectroscopy", J. Chem. Phys. 156, 131102 (2022).](https://doi.org/10.1063/5.0087156)

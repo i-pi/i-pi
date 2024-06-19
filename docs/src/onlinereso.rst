@@ -1,4 +1,5 @@
 .. _librarywebsites:
+
 On-line resources
 =================
 
@@ -51,6 +52,7 @@ at `www.fftw.org <www.fftw.org>`__,
 `www.netlib.org/lapack <www.netlib.org/lapack>`__ respectively.
 
 These codes do not come as part of the i-PI package, and must be
-downloaded separately. See chapter :ref:`clientinstall` for more
-details of how to do this.
+downloaded separately. 
+
+.. See chapter :ref:`clientinstall` for more details of how to do this. 
 

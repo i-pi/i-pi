@@ -97,7 +97,7 @@ class InputPlanetary(InputDictionary):
             {
                 "dtype": int,
                 "default": -1,
-                "help": "Number of beads for centroid-constrained dynamics (default same as master trajectory)",
+                "help": "Number of beads for centroid-constrained dynamics (default same as main trajectory)",
             },
         ),
         "screen": (
