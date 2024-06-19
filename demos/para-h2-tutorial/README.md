@@ -1,6 +1,9 @@
 An introductory tutorial based on the p-H2 driver
 =================================================
 
+Authors: `Thomas More`, `Michele Ceriotti <michele.ceriotti@gmail.com>`
+
+
 This gives an example of simulations para-H2 with the isotropic Silvera-Goldman pair
 potential, as discussed in the tutorial section of the user manual. The examples include
 classical NVT and NPT simulations, as well as imaginary-time path integral MD. 
