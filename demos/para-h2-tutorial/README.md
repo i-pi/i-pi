@@ -1,7 +1,7 @@
 An introductory tutorial based on the p-H2 driver
 =================================================
 
-Authors: `Thomas More`, `Michele Ceriotti <michele.ceriotti@gmail.com>`
+Authors: `Joshua More`, `Michele Ceriotti <michele.ceriotti@gmail.com>`
 
 
 This gives an example of simulations para-H2 with the isotropic Silvera-Goldman pair
