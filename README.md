@@ -34,6 +34,9 @@ Last Release:
 pip install -U ipi
 ```
 
+Please note that the pip installation will not include the self-contained drivers. 
+For those, please follow the complete installation instructions provided below.
+
 Full installation
 -----------------
 
