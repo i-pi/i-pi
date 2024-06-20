@@ -14,7 +14,7 @@ for loader, module_name, is_pkg in pkgutil.iter_modules(__path__):
     # Import the module
     try:
         module = importlib.import_module("." + module_name, __package__)
-    except Exception as e:
+    except Exception:
         print(f"!! Could not import PES module {module_name} !!")
         traceback.print_exc()
 
