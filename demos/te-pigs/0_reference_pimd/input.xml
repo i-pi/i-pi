@@ -16,7 +16,7 @@
   <system>
     <initialize nbeads='8'>
       <file mode='pdb'> init.pdb </file>
-      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+      <velocities mode='thermal' units='kelvin'> 500 </velocities>
     </initialize>
     <forces>
       <force forcefield='maceoff23' weight='1'> </force>
@@ -32,7 +32,7 @@
       </dynamics>
     </motion>
     <ensemble>
-      <temperature units='kelvin'> 300 </temperature>
+      <temperature units='kelvin'> 500 </temperature>
     </ensemble>
   </system>
 </simulation>
