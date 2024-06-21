@@ -21,6 +21,17 @@ def prettify(elem):
 
 
 def set_all_ffsocket_pbc_if_default(input_path):
+    """
+    In version 2.0, the default value of the pbc flag in ffsocket was True.
+    In version 3.0, the default value of the pbc flag in ffsocket was False.
+    We recommend using the new default in mose cases, because it should not
+    change your simulations. A few clients only wored with False and had that
+    flag already explicit. However, if you, for some (unknown :-)) reason really
+    need to reproduce the behavior of version 2.0, this will write "pbc=True" in
+    the right place. Note that this script does not check whether your input was
+    for v 2.0 or 3.0 - as we have no way to check at the moment. It is your
+    responsibility to know.
+    """
     tree = ET.parse(input_path)
 
     # making the default value of pbc in v2.0 explicit in the input (changed in v3.0)
