@@ -141,9 +141,11 @@ class Replay(Motion):
                 elif self.intraj.mode == "ase":
                     for bindex, b in enumerate(self.beads):
                         if wildcard_used:
-                            myframe = read_file("ase", self.rfile[bindex])
+                            myframe = read_file(
+                                "ase", self.rfile[bindex], dimension="length"
+                            )
                         else:
-                            myframe = read_file("ase", self.rfile)
+                            myframe = read_file("ase", self.rfile, dimension="length")
                         myatoms = myframe["atoms"]
                         mycell = myframe["cell"]
                         b.q[:] = myatoms.q
