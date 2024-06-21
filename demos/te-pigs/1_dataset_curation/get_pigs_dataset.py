@@ -17,8 +17,7 @@ for a_pos, a_cforce, a_pforce in zip(
     atoms.arrays["centroid_force"] = a_cforce.arrays["f_centroid"]
     atoms.arrays["physical_force"] = a_pforce.arrays["forces_component_raw"]
     atoms.arrays["delta_force"] = (
-        a_cforce.arrays["forces_component_raw"]
-        - a_pforce.arrays["forces_component_raw"]
+        atoms.arrays["centroid_force"] - atoms.arrays["physical_force"]
     )
 
     atoms_list.append(atoms.copy())
