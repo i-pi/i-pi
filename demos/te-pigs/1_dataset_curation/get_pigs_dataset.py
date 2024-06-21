@@ -3,9 +3,7 @@ from ipi import read_trajectory
 
 position_filename = "../0_reference_pimd/simulation.xc.xyz"
 centroid_force_filename = "../0_reference_pimd/simulation.centroid_force.extxyz"
-physical_force_filename = (
-    "../0_reference_pimd/simulation.physical_force_on_centroid.extxyz"
-)
+physical_force_filename = "../0_reference_pimd/simulation.physical_force.extxyz"
 
 atoms_list = []
 for a_pos, a_cforce, a_pforce in zip(
@@ -16,7 +14,7 @@ for a_pos, a_cforce, a_pforce in zip(
 
     atoms = a_pos.copy()
 
-    atoms.arrays["centroid_force"] = a_cforce.arrays["forces_component_raw"]
+    atoms.arrays["centroid_force"] = a_cforce.arrays["f_centroid"]
     atoms.arrays["physical_force"] = a_pforce.arrays["forces_component_raw"]
     atoms.arrays["delta_force"] = (
         a_cforce.arrays["forces_component_raw"]
