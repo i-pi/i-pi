@@ -3,7 +3,7 @@
     <properties filename='out' stride='100'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential ] </properties>
     <trajectory filename='xc' stride='20' format='xyz' cell_units='angstrom'> x_centroid{angstrom} </trajectory>
     <trajectory filename='centroid_force' stride='20' format='ase'> forces_component_raw(0) </trajectory>
-    <trajectory filename='physical_force_on_centroid' stride='20' format='ase'> forces_component_raw(1) </trajectory>
+    <trajectory filename='physical_force' stride='20' format='ase'> forces_component_raw(1) </trajectory>
     <checkpoint stride='200'/>
   </output>
   <total_steps> 20000 </total_steps>
