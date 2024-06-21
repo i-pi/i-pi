@@ -1,7 +1,7 @@
 <simulation verbosity='medium'>
   <output prefix='simulation'>
     <properties filename='out' stride='40' flush='10'>  [ step, time{picosecond}, conserved, temperature{kelvin}, potential ] </properties>
-    <trajectory filename='xc' stride='4' flush='100'> x_centroid </trajectory>
+    <trajectory filename='pos' stride='4' flush='100' format='ase'> positions </trajectory>
     <checkpoint stride='200'/>
   </output>
   <total_steps> 200000 </total_steps>
