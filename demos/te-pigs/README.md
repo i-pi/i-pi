@@ -1,5 +1,7 @@
 # Te PIGS demonstration
 
+Author: Venkat Kapil [v.kapil@ucl.ac.uk](v.kapil@ucl.ac.uk)
+
 Here is a demonstration of the Te PIGS methods [1] on estimating first-principles quality IR and Raman spectra of liquid water at 300 K. It comprises two main steps:
 
 1. <b>Training</b>: We will train a quantum effective potential corresponding to the potential of mean force of the centroid of the path integral using the Te PIGS method. The training data will be generated from a path-integral molecular dynamics simulation at an elevated temperature of 500 K. The effective potential will be fit using the MACE [2] machine learning framework. 
