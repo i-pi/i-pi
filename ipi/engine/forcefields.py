@@ -73,7 +73,7 @@ class ForceField:
         offset=0.0,
         name="",
         pars=None,
-        dopbc=True,
+        dopbc=False,
         active=np.array([-1]),
         threaded=False,
     ):
