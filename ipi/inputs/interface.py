@@ -24,6 +24,7 @@ class InputInterfaceSocket(Input):
        mode: A string giving the type of socket used.
        pbc: A boolean giving whether the atom positions will be folded back
           into the unit cell before being sent through the socket or not.
+          Default is false.
 
     Fields:
        address: A string giving the host name.
@@ -99,7 +100,7 @@ class InputInterfaceSocket(Input):
             InputAttribute,
             {
                 "dtype": bool,
-                "default": True,
+                "default": False,
                 "help": "Applies periodic boundary conditions to the atoms coordinates before passing them on to the driver code.",
             },
         ),
