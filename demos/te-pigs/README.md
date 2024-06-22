@@ -3,9 +3,9 @@
 Here is a demonstration of the Te PIGS methods [1] on estimating first-principles quality IR and Raman spectra of liquid water at 300 K. It comprises two main steps:
 
 1. <b>Training</b>: We will train a quantum effective potential corresponding to the potential of mean force of the centroid of the path integral using the Te PIGS method. The training data will be generated from a path-integral molecular dynamics simulation at an elevated temperature of 500 K. The effective potential will be fit using the MACE [2] machine learning framework. 
-2. <b>Prediction</b>: This is as easy as performing molecular dynamics using the Te PIGS quantum effective potential at 300 K. IR and Raman spectra will be estimated as time correlation functions of the total polarization and polarizability, within linear response theory. 
+2. <b>Prediction</b>: This is as easy as performing molecular dynamics using the Te PIGS quantum effective potential at 300 K. IR and Raman spectra will be estimated as time correlation functions of the total polarization and polarizability within linear response theory. 
 
-We employ the MACE-OFF(S) potential [3], a recently developed hybrid-functional DFT-level machine learning potential for general organic molecules, as the potential energy surface. To account for the selection rules of the dipole moment and polarizability, we use a machine learning model of the polarization and polarizability of bulk water [4]. 
+We employ the MACE-OFF(S) potential [3], a recently developed hybrid-functional DFT-level machine learning potential for general organic molecules, as the potential energy surface. To account for the IR and Raman selection rules, we use a machine-learning model to predict the polarization and polarizability of bulk water [4]. 
 
 ## Training 
 
