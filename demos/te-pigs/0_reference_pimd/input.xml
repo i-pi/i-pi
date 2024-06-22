@@ -1,0 +1,38 @@
+<simulation verbosity='medium'>
+  <output prefix='simulation'>
+    <properties filename='out' stride='100'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential ] </properties>
+    <trajectory filename='xc' stride='20' format='xyz' cell_units='ase'> x_centroid{ase} </trajectory>
+    <trajectory filename='centroid_force' stride='20' format='ase'> f_centroid </trajectory>
+    <trajectory filename='physical_force' stride='20' format='ase'> forces_component_raw(1) </trajectory>
+    <checkpoint stride='200'/>
+  </output>
+  <total_steps> 20000 </total_steps>
+  <prng>
+    <seed>32415</seed>
+  </prng>
+  <ffsocket name='maceoff23' mode='unix' pbc='false'>
+    <address> driver </address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='8'>
+      <file mode='pdb'> init.pdb </file>
+      <velocities mode='thermal' units='kelvin'> 500 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='maceoff23' weight='1'> </force>
+      <force forcefield='maceoff23' weight='0' nbeads='1'> </force>
+    </forces>
+    <motion mode='dynamics'>
+      <fixcom> True </fixcom>
+      <dynamics mode='nvt' splitting='baoab'>
+        <timestep units='femtosecond'> 0.50 </timestep>
+        <thermostat mode='pile_l'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units='kelvin'> 500 </temperature>
+    </ensemble>
+  </system>
+</simulation>
