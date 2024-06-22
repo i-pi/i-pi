@@ -147,4 +147,4 @@ The first column of these files is the frequency in atomic units while the secon
 
 ## Contact
 
-Feel free to email v.kapil@ucl.ac.uk for any questions. 
+Feel free to email Venkat Kapil [v.kapil@ucl.ac.uk](v.kapil@ucl.ac.uk) for any questions. 
