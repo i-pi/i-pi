@@ -42,3 +42,8 @@ Pinning is achieved using an order parameter computed by Plumed, and the model i
 Statistical reweighting is used to compute the error on the difference in chemical potential between
 water and ice at the set temperature. Repeating the simulation at multiple temperatures can be used to determine
 the melting point.
+
+Temperature-elevation (Te) path-integral coarse-grained simulations (PIGS)
+--------------------------------------------------------------------------
+
+This example shows how to train a quantum effective potential energy surface using information from a reference path integral simulation. We will then estimate the quantum IR and Raman spectrum of liquid water at the cost of standard molecular dynamics. The quantum effective potential will represent the centroid potential of the mean force (PMF), and the approach used to fit the PMF using state-of-the-art machine learning potentials is known as path-integral coarse-grained simulations (PIGS). To attenuate the so-called curvature problem associated with centroid-based dynamics, we will fit a temperature-elevated (Te) PMF, i.e., the PMF will correspond to a high temperature at which the curvature problem associated with high-frequency curvilinear modes is reduced. The overall approach, known as Te PIGS, is an efficient and accurate framework for approximate quantum dynamics. 
