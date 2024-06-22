@@ -2,6 +2,7 @@
 
 import pkgutil
 import importlib
+import traceback
 
 __all__ = []
 
@@ -11,7 +12,11 @@ __drivers__ = {}
 # Iterate through all modules in the current package folder
 for loader, module_name, is_pkg in pkgutil.iter_modules(__path__):
     # Import the module
-    module = importlib.import_module("." + module_name, __package__)
+    try:
+        module = importlib.import_module("." + module_name, __package__)
+    except Exception:
+        print(f"!! Could not import PES module {module_name} !!")
+        traceback.print_exc()
 
     # Get the driver class and name from the module
     driver_class = getattr(module, "__DRIVER_CLASS__", None)
