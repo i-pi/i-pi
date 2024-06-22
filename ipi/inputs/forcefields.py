@@ -50,7 +50,7 @@ class InputForceField(Input):
        name: The name by which the forcefield will be identified in the System forces section.
        pbc: A boolean describing whether periodic boundary conditions will
           be applied to the atom positions before they are sent to the driver
-          code.
+          code. Default is False.
 
     Fields:
        latency: The number of seconds to sleep between looping over the requests.
@@ -70,7 +70,7 @@ class InputForceField(Input):
             InputAttribute,
             {
                 "dtype": bool,
-                "default": True,
+                "default": False,
                 "help": "Applies periodic boundary conditions to the atoms coordinates before passing them on to the driver code.",
             },
         ),
