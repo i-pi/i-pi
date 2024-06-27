@@ -25,6 +25,7 @@ import numpy as np
 from copy import copy
 import ipi.engine.initializer
 from ipi.utils.softexit import softexit
+from ipi.utils.messages import verbosity, warning
 
 from ipi.engine.motion import (
     Motion,
@@ -305,10 +306,11 @@ class InputMotionBase(Input):
             raise ValueError("Cannot store Mover calculator of type " + str(type(sc)))
 
         if (sc.fixcom is True) and (len(sc.fixatoms) > 0):
-            softexit.trigger(
-                status="bad",
-                message="Fixed atoms break translational invariance, and so should be used with <fixcom> False </fixcom>. You can disable this error if you know what you are doing.",
+            warning(
+                "The flag fixcom is true by default but you have chosen to fix some atoms explicitly. Because the two cannot be used together, we are overriding the fixcom setting and making it False.",
+                verbosity.low,
             )
+            sc.fixcom = False
 
         if tsc == 0:
             self.file.store(sc.intraj)
