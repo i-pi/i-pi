@@ -34,7 +34,7 @@ Last Release:
 pip install -U ipi
 ```
 
-Full installation
+Source installation
 -----------------
 
 To develop i-PI or test it with the self-contained driver, follow these
