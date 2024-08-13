@@ -1,7 +1,7 @@
 <simulation verbosity='low'>
    <output prefix='simulation'>
       <properties stride='40' filename='out'>  [ step, time{picosecond}, conserved, temperature{kelvin}, kinetic_cv, potential, pressure_cv, volume, ensemble_temperature ] </properties>
-      <trajectory filename='xc' stride='40'> x_centroid </trajectory>
+      <trajectory filename='xc' stride='40' format='ase'> x_centroid </trajectory>
       <trajectory filename='pos1' stride='40' bead='0'> positions </trajectory>
       <trajectory filename='pos2' stride='40' bead='4'> positions </trajectory>
       <checkpoint stride='4000'/>
