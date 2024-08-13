@@ -140,8 +140,8 @@ def main(inputfile, prefix="SRT_"):
                                     }
                                 )
                             else:
-                                extension = o.format 
-                                if extension == "ase": # special case
+                                extension = o.format
+                                if extension == "ase":  # special case
                                     extension = "extxyz"
                                 filename = filename + "_" + padb + "." + extension
                                 ofilename = ofilename + "_" + padb + "." + extension
@@ -167,9 +167,9 @@ def main(inputfile, prefix="SRT_"):
                         filename = s.prefix + "_" + o.filename
                     else:
                         filename = o.filename
-                    extension = o.format 
-                    if extension == "ase": # special case
-                        extension = "extxyz"                                
+                    extension = o.format
+                    if extension == "ase":  # special case
+                        extension = "extxyz"
                     filename = filename + "." + extension
                     ofilename = prefix + filename
                     ntraj.append(
