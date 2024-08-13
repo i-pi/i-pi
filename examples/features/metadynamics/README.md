@@ -11,11 +11,12 @@ to perform metadynamics calculations with i-PI
 These examples can be run using the Zundel PES implemented in the i-pi driver,
 
 ```bash
-i-pi--driver -u -h zundel -m zundel
+i-pi-driver -u -h zundel -m zundel
 ```
 
 However, they require having PLUMED libraries and Python bindings in the appropriate system paths.
 
 Note also that the example in `pimd_metadynamics` provides a demonstration of how to retrieve quantities
 computed PLUMED-side (such as CV values) back into i-PI as `extras` that can be associated with 
-individual structures and printed out alongside the other i-PI outputs.
+individual structures and printed out alongside the other i-PI outputs. This functionality requires
+a recent version of PLUMED, at least 2.9.1.

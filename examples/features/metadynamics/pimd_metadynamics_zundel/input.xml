@@ -9,7 +9,7 @@
    <ffplumed name="plumed">
          <file mode="xyz">./h5o2+.xyz</file>
          <plumeddat> plumed/plumed.dat </plumeddat>
-         <plumedextras> [doo, co1.lessthan, co2.lessthan, mtd.bias ] </plumedextras>
+         <plumed_extras> [doo, co1.lessthan, co2.lessthan, mtd.bias ] </plumed_extras>
    </ffplumed>
    <total_steps>400</total_steps>
    <output prefix="data">
