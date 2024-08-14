@@ -50,7 +50,7 @@ pip install -U ipi
 ```
 
 Source installation
------------------
+-------------------
 
 To develop i-PI or test it with the self-contained driver, follow these
 instructions. It is assumed that i-PI will
