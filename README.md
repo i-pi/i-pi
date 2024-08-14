@@ -17,6 +17,21 @@ and it implements most of the state-of-the-art methods to accelerate this kind o
 calculations. It has since grown to also provide all sorts of simulation 
 strategies, from replica exchange to geometry optimization. 
 
+If you use i-PI in your research, please cite the accompanying publication:
+for version 3, the relevant paper is 
+[Litman et al., *J. Chem. Phys.* 161, 062504 (2024)](https://doi.org/10.1063/5.0215869)
+
+```
+@article{litman2024ipi,
+  title={i-PI 3.0: a flexible and efficient framework for advanced atomistic simulations},     
+  author={Yair Litman and Venkat Kapil and Yotam M. Y. Feldman and Davide Tisi and Tomislav Begušić and Karen Fidanyan and Guillaume Fraux and Jacob Higer and Matthias Kellner and Tao E. Li and Eszter S. Pós and Elia Stocco and George Trenins and Barak Hirshberg and Mariana Rossi and Michele Ceriotti},
+  journal = {J. Chem. Phys.},
+  pages   = {062505},
+  volume  = {161},
+  year    = {2024}
+}
+```
+
 Quick Setup
 -----------
 
