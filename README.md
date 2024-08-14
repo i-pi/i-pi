@@ -23,12 +23,12 @@ for version 3, the relevant paper is
 
 ```
 @article{litman2024ipi,
-  title={i-PI 3.0: a flexible and efficient framework for advanced atomistic simulations},     
-  author={Yair Litman and Venkat Kapil and Yotam M. Y. Feldman and Davide Tisi and Tomislav Begušić and Karen Fidanyan and Guillaume Fraux and Jacob Higer and Matthias Kellner and Tao E. Li and Eszter S. Pós and Elia Stocco and George Trenins and Barak Hirshberg and Mariana Rossi and Michele Ceriotti},
-  journal = {J. Chem. Phys.},
-  pages   = {062505},
-  volume  = {161},
-  year    = {2024}
+title={i-PI 3.0: a flexible and efficient framework for advanced atomistic simulations},     
+author={Yair Litman and Venkat Kapil and Yotam M. Y. Feldman and Davide Tisi and Tomislav Begušić and Karen Fidanyan and Guillaume Fraux and Jacob Higer and Matthias Kellner and Tao E. Li and Eszter S. Pós and Elia Stocco and George Trenins and Barak Hirshberg and Mariana Rossi and Michele Ceriotti},
+journal = {J. Chem. Phys.},
+pages   = {062505},
+volume  = {161},
+year    = {2024}
 }
 ```
 
