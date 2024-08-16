@@ -1065,14 +1065,29 @@ class Properties:
         to the temperature. Rather than using a scaling factor based on the number of degrees
         of freedom, we add fake momenta to all the fixed components, so that a meaningful
         result will be obtained for each subset of coordinates regardless of the constraints
-        imposed on the system.
+        imposed on the system. Obviously printing the kinetic temperature only makes sense
+        if you're running a constant-temperature ensemble.
 
         Args:
            atom: If given, specifies the atom to give the temperature
               for. If not, then the simulation temperature.
         """
 
-        if len(self.motion.fixatoms) > 0:
+        if self.ensemble.temp > 0 and self.motion.fixcom:
+            # Adds a fake momentum to the centre of mass. This is the easiest way
+            # of getting meaningful temperatures for subsets of the system when there
+            # are fixed components
+            M = np.sum(self.beads.m)
+            pcm = np.tile(
+                np.sqrt(M * Constants.kb * self.ensemble.temp * self.beads.nbeads), 3
+            )
+            vcm = np.tile(pcm / M, self.beads.natoms)
+
+            # we have to change p in place because the kinetic energy
+            # can depend on nm masses
+            self.beads.p += self.beads.m3 * vcm
+
+        if self.ensemble.temp > 0 and len(self.motion.fixatoms) > 0:
             for i in self.motion.fixatoms:
                 pi = np.tile(
                     np.sqrt(
@@ -1083,26 +1098,7 @@ class Properties:
                     ),
                     3,
                 )
-                self.beads.p[:, 3 * i : 3 * i + 3] += pi
-
-        if self.motion.fixcom:
-            # Adds a fake momentum to the centre of mass. This is the easiest way
-            # of getting meaningful temperatures for subsets of the system when there
-            # are fixed components
-            M = np.sum(self.beads.m)
-            pcm = np.tile(
-                np.sqrt(M * Constants.kb * self.ensemble.temp * self.beads.nbeads), 3
-            )
-            vcm = np.tile(pcm / M, self.beads.natoms)
-
-            self.beads.p += self.beads.m3 * vcm
-
-            # Avoid double counting
-            if len(self.motion.fixatoms) > 0:
-                for i in self.motion.fixatoms:
-                    self.beads.p[:, 3 * i : 3 * i + 3] -= np.multiply(
-                        self.beads.m[i], pcm / M
-                    )
+                self.beads.p[:, 3 * i : 3 * i + 3] = pi
 
         kemd, ncount = self.get_kinmd(atom, bead, nm, return_count=True)
 
