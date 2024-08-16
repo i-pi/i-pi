@@ -1073,46 +1073,37 @@ class Properties:
               for. If not, then the simulation temperature.
         """
 
-        if self.ensemble.temp > 0:
+        if self.ensemble.temp > 0 and (
+            self.motion.fixcom or len(self.motion.fixatoms) > 0
+        ):
+
+            dp = np.zeros_like(self.beads.p)  # correction
+            tempfactor = np.sqrt(Constants.kb * self.ensemble.temp * self.beads.nbeads)
+
             if self.motion.fixcom:
                 # Adds a fake momentum to the centre of mass. This is the easiest way
                 # of getting meaningful temperatures for subsets of the system when there
                 # are fixed components
                 M = np.sum(self.beads.m)
-                pcm = np.tile(
-                    np.sqrt(M * Constants.kb * self.ensemble.temp * self.beads.nbeads),
-                    3,
-                )
-                vcm = np.tile(pcm / M, self.beads.natoms)
+                vcm = tempfactor / np.sqrt(M)
 
-                # we have to change p in place because the kinetic energy
-                # can depend on nm masses
-                self.beads.p += self.beads.m3 * vcm
+                dp += dstrip(self.beads.m3) * vcm
 
             if len(self.motion.fixatoms) > 0:
                 for i in self.motion.fixatoms:
-                    pi = np.tile(
-                        np.sqrt(
-                            self.beads.m[i]
-                            * Constants.kb
-                            * self.ensemble.temp
-                            * self.beads.nbeads
-                        ),
-                        3,
-                    )
-                    self.beads.p[:, 3 * i : 3 * i + 3] = pi
+                    pi = self.beads.sm[i] * tempfactor
+                    dp[:, 3 * i : 3 * i + 3] = pi
 
-        kemd, ncount = self.get_kinmd(atom, bead, nm, return_count=True)
+            # we have to change p in place because the kinetic energy
+            # can depend on nm masses
+            self.beads.p += dp
+            kemd, ncount = self.get_kinmd(atom, bead, nm, return_count=True)
 
-        if self.ensemble.temp > 0:
-            if self.motion.fixcom:
-                # Removes the fake momentum from the centre of mass.
-                self.beads.p -= self.beads.m3 * vcm
-
-            if len(self.motion.fixatoms) > 0:
-                # re-fixes the fix atoms
-                for i in self.motion.fixatoms:
-                    self.beads.p[:, 3 * i : 3 * i + 3] = 0.0
+            # .. and then undo
+            self.beads.p -= dp
+        else:
+            # just compute and carry on
+            kemd, ncount = self.get_kinmd(atom, bead, nm, return_count=True)
 
         return 2.0 * kemd / (Constants.kb * 3.0 * float(ncount) * self.beads.nbeads)
 
