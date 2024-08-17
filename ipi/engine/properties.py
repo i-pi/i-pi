@@ -1065,7 +1065,7 @@ class Properties:
         to the temperature. Rather than using a scaling factor based on the number of degrees
         of freedom, we add fake momenta to all the fixed components, so that a meaningful
         result will be obtained for each subset of coordinates regardless of the constraints
-        imposed on the system. Obviously printing the kinetic temperature only makes sense
+        imposed on the system. Computing the kinetic temperature only makes sense
         if you're running a constant-temperature ensemble.
 
         Args:
