@@ -1065,55 +1065,45 @@ class Properties:
         to the temperature. Rather than using a scaling factor based on the number of degrees
         of freedom, we add fake momenta to all the fixed components, so that a meaningful
         result will be obtained for each subset of coordinates regardless of the constraints
-        imposed on the system.
+        imposed on the system. Computing the kinetic temperature only makes sense
+        if you're running a constant-temperature ensemble.
 
         Args:
            atom: If given, specifies the atom to give the temperature
               for. If not, then the simulation temperature.
         """
 
-        if len(self.motion.fixatoms) > 0:
-            for i in self.motion.fixatoms:
-                pi = np.tile(
-                    np.sqrt(
-                        self.beads.m[i]
-                        * Constants.kb
-                        * self.ensemble.temp
-                        * self.beads.nbeads
-                    ),
-                    3,
-                )
-                self.beads.p[:, 3 * i : 3 * i + 3] += pi
+        if self.ensemble.temp > 0 and (
+            self.motion.fixcom or len(self.motion.fixatoms) > 0
+        ):
 
-        if self.motion.fixcom:
-            # Adds a fake momentum to the centre of mass. This is the easiest way
-            # of getting meaningful temperatures for subsets of the system when there
-            # are fixed components
-            M = np.sum(self.beads.m)
-            pcm = np.tile(
-                np.sqrt(M * Constants.kb * self.ensemble.temp * self.beads.nbeads), 3
-            )
-            vcm = np.tile(pcm / M, self.beads.natoms)
+            dp = np.zeros_like(self.beads.p)  # correction
+            tempfactor = np.sqrt(Constants.kb * self.ensemble.temp * self.beads.nbeads)
 
-            self.beads.p += self.beads.m3 * vcm
+            if self.motion.fixcom:
+                # Adds a fake momentum to the centre of mass. This is the easiest way
+                # of getting meaningful temperatures for subsets of the system when there
+                # are fixed components
+                M = np.sum(self.beads.m)
+                vcm = tempfactor / np.sqrt(M)
 
-            # Avoid double counting
+                dp += dstrip(self.beads.m3) * vcm
+
             if len(self.motion.fixatoms) > 0:
                 for i in self.motion.fixatoms:
-                    self.beads.p[:, 3 * i : 3 * i + 3] -= np.multiply(
-                        self.beads.m[i], pcm / M
-                    )
+                    pi = self.beads.sm3[0, 3 * i] * tempfactor
+                    dp[:, 3 * i : 3 * i + 3] = pi
 
-        kemd, ncount = self.get_kinmd(atom, bead, nm, return_count=True)
+            # we have to change p in place because the kinetic energy
+            # can depend on nm masses
+            self.beads.p += dp
+            kemd, ncount = self.get_kinmd(atom, bead, nm, return_count=True)
 
-        if self.motion.fixcom:
-            # Removes the fake momentum from the centre of mass.
-            self.beads.p -= self.beads.m3 * vcm
-
-        if len(self.motion.fixatoms) > 0:
-            # re-fixes the fix atoms
-            for i in self.motion.fixatoms:
-                self.beads.p[:, 3 * i : 3 * i + 3] = 0.0
+            # .. and then undo
+            self.beads.p -= dp
+        else:
+            # just compute and carry on
+            kemd, ncount = self.get_kinmd(atom, bead, nm, return_count=True)
 
         return 2.0 * kemd / (Constants.kb * 3.0 * float(ncount) * self.beads.nbeads)
 
