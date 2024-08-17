@@ -1091,7 +1091,7 @@ class Properties:
 
             if len(self.motion.fixatoms) > 0:
                 for i in self.motion.fixatoms:
-                    pi = self.beads.sm[i] * tempfactor
+                    pi = self.beads.sm3[0, 3 * i] * tempfactor
                     dp[:, 3 * i : 3 * i + 3] = pi
 
             # we have to change p in place because the kinetic energy
