@@ -23,22 +23,28 @@ def get_ipi_path():
     return path
 
 
-def install_driver():
+def install_driver(force_install=False):
     """
     This utility function fetches the FORTRAN driver folder from the ipi repo and installs it.
     Requires a system with git, gfortran and make.
     """
 
     ipi_driver_path = shutil.which("i-pi-driver")
-    if ipi_driver_path is None:
+    if ipi_driver_path is None or force_install:
         # this is where we'll copy the driver - the first writable folder
-        path_dirs = os.getenv("PATH").split(os.pathsep)
+        os_path = os.getenv("PATH")
+
+        if os_path is None or os_path == "":
+            path_dirs = []
+        else:
+            path_dirs = os_path.split(os.pathsep)
 
         for directory in path_dirs:
             # Check if the directory is writable
             if os.access(directory, os.W_OK):
                 ipi_driver_path = os.path.join(directory, "i-pi-driver")
                 break
+
         if ipi_driver_path is None:
             # install locally
             ipi_driver_path = os.path.join(os.getcwd(), "i-pi-driver")
