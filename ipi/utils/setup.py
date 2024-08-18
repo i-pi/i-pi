@@ -46,33 +46,41 @@ def install_driver():
         info(f"i-pi-driver is already present in {ipi_driver_path} ", verbosity.low)
         return
 
-    temp_dir = tempfile.mkdtemp()
+    ipi_path = get_ipi_path()
+    build_dir = os.path.join(ipi_path, "drivers/f90")
 
-    info(f"Temporary directory created: {temp_dir}", verbosity.medium)
+    if not os.path.exists(bulid_dir):
+        # fetches the drivers/f90 folder from the i-pi repo
+        temp_dir = tempfile.mkdtemp()
 
-    # fetches the drivers/f90 folder from the i-pi repo
-    try:
-        subprocess.run(["git", "init"], cwd=temp_dir)
-        subprocess.run(
-            ["git", "remote", "add", "origin", "https://github.com/i-pi/i-pi.git"],
-            cwd=temp_dir,
-        )
-        subprocess.run(["git", "config", "core.sparseCheckout", "true"], cwd=temp_dir)
-        with open(os.path.join(temp_dir, ".git", "info", "sparse-checkout"), "w") as f:
-            f.write("drivers/f90\n")
-        subprocess.run(["git", "pull", "--depth=1", "origin", "main"], cwd=temp_dir)
-    except:
-        warning(
-            "Failed to fetch the drivers folder from i-PI github repository",
-            verbosity.low,
-        )
-        raise
+        info(f"Temporary directory created: {temp_dir}", verbosity.medium)
+
+        try:
+            subprocess.run(["git", "init"], cwd=temp_dir)
+            subprocess.run(
+                ["git", "remote", "add", "origin", "https://github.com/i-pi/i-pi.git"],
+                cwd=temp_dir,
+            )
+            subprocess.run(
+                ["git", "config", "core.sparseCheckout", "true"], cwd=temp_dir
+            )
+            with open(
+                os.path.join(temp_dir, ".git", "info", "sparse-checkout"), "w"
+            ) as f:
+                f.write("drivers/f90\n")
+            subprocess.run(["git", "pull", "--depth=1", "origin", "main"], cwd=temp_dir)
+        except:
+            warning(
+                "Failed to fetch the drivers folder from i-PI github repository",
+                verbosity.low,
+            )
+            raise
+
+        build_dir = os.path.join(temp_dir, "drivers/f90")
 
     # compiles the driver
     try:
-        subprocess.run(
-            ["make", "-j", "1", "driver.x"], cwd=os.path.join(temp_dir, "drivers/f90/")
-        )
+        subprocess.run(["make", "-j", "1", "driver.x"], cwd=build_dir)
     except:
         warning(
             "Failed to compile the FORTRAN driver. Make sure you have `gfortran` and `make` available",
@@ -82,7 +90,7 @@ def install_driver():
 
     # moves the file to the bin/ folder
     try:
-        shutil.copy(os.path.join(temp_dir, "drivers/f90/driver.x"), ipi_driver_path)
+        shutil.copy(os.path.join(build_dir, "driver.x"), ipi_driver_path)
     except:
         warning("Failed to copy the driver to the bin folder", verbosity.low)
         raise
