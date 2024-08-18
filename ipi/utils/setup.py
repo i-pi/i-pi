@@ -49,7 +49,7 @@ def install_driver():
     ipi_path = get_ipi_path()
     build_dir = os.path.join(ipi_path, "drivers/f90")
 
-    if not os.path.exists(bulid_dir):
+    if not os.path.exists(build_dir):
         # fetches the drivers/f90 folder from the i-pi repo
         temp_dir = tempfile.mkdtemp()
 
