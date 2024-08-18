@@ -43,7 +43,7 @@ def install_driver():
             # install locally
             ipi_driver_path = os.path.join(os.getcwd(), "i-pi-driver")
     else:
-        info("Driver is already present", verbosity.low)
+        info(f"i-pi-driver is already present in {ipi_driver_path} ", verbosity.low)
         return
 
     temp_dir = tempfile.mkdtemp()
