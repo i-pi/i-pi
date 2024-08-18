@@ -15,6 +15,7 @@ __all__ = ["install_driver"]
 
 def get_ipi_path():
     """Guesses the path where i-PI is installed"""
+
     path = os.getenv("IPI_ROOT")
     if path is None or path == "":
         path = os.path.normpath(os.path.join(os.path.abspath(__file__), "../../"))
@@ -28,8 +29,20 @@ def install_driver():
     Requires a system with git, gfortran and make.
     """
 
-    ipi_driver_path = os.path.join(get_ipi_path(), "bin/i-pi-driver")
-    if os.path.exists(ipi_driver_path):
+    ipi_driver_path = shutil.which("i-pi-driver")
+    if ipi_driver_path is None:
+        # this is where we'll copy the driver - the first writable folder
+        path_dirs = os.getenv("PATH").split(os.pathsep)
+
+        for directory in path_dirs:
+            # Check if the directory is writable
+            if os.access(directory, os.W_OK):
+                ipi_driver_path = os.path.join(directory, "i-pi-driver")
+                break
+        if ipi_driver_path is None:
+            # install locally
+            ipi_driver_path = os.path.join(os.getcwd(), "i-pi-driver")
+    else:
         info("Driver is already present", verbosity.low)
         return
 
