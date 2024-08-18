@@ -8,11 +8,7 @@ Note that this will only run if you have Python version 3 or later.
 # See the "licenses" directory for full license information.
 
 
-import filecmp
 import os
-
-import numpy as np
-from numpy.testing import assert_equal
 from ipi import install_driver
 
 
