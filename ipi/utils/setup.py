@@ -8,7 +8,7 @@ import os
 import shutil
 import tempfile
 import subprocess
-from ipi.utils.messages import info, verbosity
+from ipi.utils.messages import info, warning, verbosity
 
 __all__ = ['install_driver']
 
@@ -24,7 +24,15 @@ def get_ipi_path():
     return path
 
 def install_driver():
-    print(get_ipi_path())
+    """
+    This utility function fetches the FORTRAN driver folder from the ipi repo and installs it.
+    Requires a system with git, gfortran and make. 
+    """
+
+    ipi_driver_path = os.path.join(get_ipi_path(), 'bin/i-pi-driver')
+    if os.path.exists(ipi_driver_path):
+        info("Driver is already present", verbosity.low)
+        return
 
     temp_dir = tempfile.mkdtemp()
 
@@ -39,25 +47,23 @@ def install_driver():
             f.write('drivers/f90\n')
         subprocess.run(['git', 'pull', '--depth=1', 'origin', 'main'], cwd=temp_dir)
     except:
-        info("Failed to fetch the drivers folder from i-PI github repository")
+        warning("Failed to fetch the drivers folder from i-PI github repository", verbosity.low)
         raise
 
     # compiles the driver
     try:
         subprocess.run(['make', '-j', '1', 'driver.x'], cwd=os.path.join(temp_dir, 'drivers/f90/'))
     except:
-        info("Failed to compile the FORTRAN driver. Make sure you have `gfortran` and `make` available")
+        warning("Failed to compile the FORTRAN driver. Make sure you have `gfortran` and `make` available", verbosity.low)
         raise
 
     # moves the file to the bin/ folder
     try:
-        ipi_bin = os.path.join(get_ipi_path(), 'bin')
-
         shutil.copy(os.path.join(temp_dir, 'drivers/f90/driver.x'),
-                    os.path.join(ipi_bin, 'i-pi-driver')
+                    ipi_driver_path
         )
     except:
-        info("Failed to copy the driver to the bin folder")
+        warning("Failed to copy the driver to the bin folder", verbosity.low)
         raise
 
 
