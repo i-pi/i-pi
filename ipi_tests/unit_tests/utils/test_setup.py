@@ -21,8 +21,11 @@ def test_driver_base():
 def test_driver_noroot():
     """Tests what happens if IPI_ROOT is not set"""
 
-    del os.environ["IPI_ROOT"]
-    install_driver()
+    if "IPI_ROOT" in os.environ:
+        ipi_root = os.environ["IPI_ROOT"]
+        del os.environ["IPI_ROOT"]
+        install_driver()
+        os.environ["IPI_ROOT"] = ipi_root
 
 
 def test_driver_forcebuild():
