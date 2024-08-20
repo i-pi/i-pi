@@ -515,6 +515,7 @@ class TrajectoryOutput(BaseOutput):
 
                 data_list = []
                 for extra in extra_list:
+                    extra = extra.strip()
                     if extra not in data:
                         raise KeyError(
                             "Extra type '"
