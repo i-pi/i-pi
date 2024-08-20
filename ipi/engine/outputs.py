@@ -502,16 +502,38 @@ class TrajectoryOutput(BaseOutput):
                     " #%s(%s)# Step:  %10d \n"
                     % (key.upper(), self.extra_type, self.system.simul.step + 1)
                 )
-            if self.extra_type in data:
-                try:
-                    if key == "extras_component_raw":
-                        # don't partition into beads as there might be a different number when contracting
-                        floatarray = np.asarray(
-                            data[self.extra_type], dtype=float
-                        ).squeeze()
-                    else:
-                        # picks up the desired bead
-                        floatarray = np.asarray(data[self.extra_type][b], dtype=float)
+            if self.extra_type == "raw":
+                stream.write(str(data))
+                stream.write("\n")
+            else:
+                if "," in self.extra_type:
+                    # expect that there is a bunch of terms that can be horizontally stacked
+                    extra_list = self.extra_type.split(",")
+                else:
+                    extra_list = [self.extra_type]
+
+                for extra in extra_list:
+                    if extra not in data:
+                        raise KeyError(
+                            "Extra type '"
+                            + extra
+                            + "' is not among the quantities returned by the forcefield."
+                        )
+
+                    try:
+                        if key == "extras_component_raw":
+                            # don't partition into beads as there might be a different number when contracting
+                            floatarray = np.asarray(data[extra], dtype=float).squeeze()
+                        else:
+                            # picks up the desired bead
+                            floatarray = np.asarray(data[extra][b], dtype=float)
+                        data_list.append(floatarray)
+                    except:
+                        # non-numerical field, just write as a string on a separate line
+                        stream.write("\n%s\n" % data[self.extra_type][b])
+
+                if len(data_list) > 0:
+                    floatarray = np.hstack(data_list)
                     if floatarray.ndim == 2:
                         stream.write(
                             "\n".join(
@@ -529,18 +551,7 @@ class TrajectoryOutput(BaseOutput):
                         raise ValueError(
                             "No specialized writer for arrays of dimension > 2"
                         )
-                except:
-                    stream.write("%s" % data[self.extra_type][b])
-                stream.write("\n")
-            elif self.extra_type == "raw":
-                stream.write(str(data))
-                stream.write("\n")
-            else:
-                raise KeyError(
-                    "Extra type '"
-                    + self.extra_type
-                    + "' is not among the quantities returned by any of the forcefields."
-                )
+                    stream.write("\n")
             if flush:
                 stream.flush()
                 os.fsync(stream)
