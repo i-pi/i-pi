@@ -512,6 +512,7 @@ class TrajectoryOutput(BaseOutput):
                 else:
                     extra_list = [self.extra_type]
 
+                data_list = []
                 for extra in extra_list:
                     if extra not in data:
                         raise KeyError(
@@ -530,7 +531,7 @@ class TrajectoryOutput(BaseOutput):
                         data_list.append(floatarray)
                     except:
                         # non-numerical field, just write as a string on a separate line
-                        stream.write("\n%s\n" % data[self.extra_type][b])
+                        stream.write("\n%s\n" % data[extra][b])
 
                 if len(data_list) > 0:
                     floatarray = np.hstack(data_list)
