@@ -22,6 +22,7 @@ from ipi.utils.io import open_backup
 from ipi.engine.properties import getkey
 from ipi.engine.atoms import *
 from ipi.engine.cell import *
+from ipi import ipi_global_settings
 
 __all__ = [
     "PropertyOutput",
@@ -539,15 +540,23 @@ class TrajectoryOutput(BaseOutput):
                         stream.write(
                             "\n".join(
                                 [
-                                    "      ".join(
-                                        ["{:15.8f}".format(item) for item in row]
+                                    " ".join(
+                                        [
+                                            ipi_global_settings["floatformat"] % item
+                                            for item in row
+                                        ]
                                     )
                                     for row in floatarray
                                 ]
                             )
                         )
                     elif floatarray.ndim == 1:
-                        stream.write("      ".join("%15.8f" % el for el in floatarray))
+                        stream.write(
+                            " ".join(
+                                ipi_global_settings["floatformat"] % el
+                                for el in floatarray
+                            )
+                        )
                     else:
                         raise ValueError(
                             "No specialized writer for arrays of dimension > 2"

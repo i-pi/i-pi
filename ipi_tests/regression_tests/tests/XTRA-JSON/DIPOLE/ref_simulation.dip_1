@@ -1,22 +1,22 @@
- #EXTRAS(dipole)# Step:           0  Bead:      1  
-    50.97124760          65.27350960          12.70650680
- #EXTRAS(dipole)# Step:           1  Bead:      1  
-    50.97883823          64.47837804          11.72047486
- #EXTRAS(dipole)# Step:           2  Bead:      1  
-    50.61588307          64.02940554          10.45065326
- #EXTRAS(dipole)# Step:           3  Bead:      1  
-    50.32161482          63.64622904           9.47517846
- #EXTRAS(dipole)# Step:           4  Bead:      1  
-    49.96927281          63.42031100           8.63894399
- #EXTRAS(dipole)# Step:           5  Bead:      1  
-    49.24540383          62.97692324           7.77199752
- #EXTRAS(dipole)# Step:           6  Bead:      1  
-    47.87862572          62.69778790           6.69591889
- #EXTRAS(dipole)# Step:           7  Bead:      1  
-    46.64513938          62.66981957           5.90667472
- #EXTRAS(dipole)# Step:           8  Bead:      1  
-    45.81252678          63.04548056           5.30740662
- #EXTRAS(dipole)# Step:           9  Bead:      1  
-    45.44928808          63.09328643           5.20800530
- #EXTRAS(dipole)# Step:          10  Bead:      1  
-    45.52442937          62.99110900           5.41162850
+ #EXTRAS(dipole)# Step:           0 
+  5.09712476e+01   6.52735096e+01   1.27065068e+01
+ #EXTRAS(dipole)# Step:           1 
+  5.09788382e+01   6.44783780e+01   1.17204749e+01
+ #EXTRAS(dipole)# Step:           2 
+  5.06158831e+01   6.40294055e+01   1.04506533e+01
+ #EXTRAS(dipole)# Step:           3 
+  5.03216148e+01   6.36462290e+01   9.47517846e+00
+ #EXTRAS(dipole)# Step:           4 
+  4.99692728e+01   6.34203110e+01   8.63894399e+00
+ #EXTRAS(dipole)# Step:           5 
+  4.92454038e+01   6.29769232e+01   7.77199752e+00
+ #EXTRAS(dipole)# Step:           6 
+  4.78786257e+01   6.26977879e+01   6.69591889e+00
+ #EXTRAS(dipole)# Step:           7 
+  4.66451394e+01   6.26698196e+01   5.90667472e+00
+ #EXTRAS(dipole)# Step:           8 
+  4.58125268e+01   6.30454806e+01   5.30740662e+00
+ #EXTRAS(dipole)# Step:           9 
+  4.54492881e+01   6.30932864e+01   5.20800530e+00
+ #EXTRAS(dipole)# Step:          10 
+  4.55244294e+01   6.29911090e+01   5.41162850e+00
