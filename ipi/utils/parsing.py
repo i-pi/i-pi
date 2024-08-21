@@ -61,8 +61,7 @@ def read_output(filename):
                 description,
             ) = match.groups()
             col_info = f"{start_col}-{end_col}" if end_col else start_col
-            if units_before is not None:
-                units = units_before
+            units = units_before
             if units_after is not None:
                 units = units_after
             if args is not None:
