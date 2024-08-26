@@ -13,7 +13,8 @@ __all__ = [
     "interfaces",
     "utils",
     "ipi_global_settings",
-    "install_driver" "read_output",
+    "install_driver",
+    "read_output",
     "read_trajectory",
 ]
 
