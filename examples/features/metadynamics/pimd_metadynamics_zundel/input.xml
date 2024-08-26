@@ -15,7 +15,7 @@
    <output prefix="data">
       <trajectory stride="40" filename="pos" cell_units="angstrom">positions{angstrom}</trajectory>
       <trajectory stride="20" filename="xc" format="xyz">x_centroid{angstrom}</trajectory>
-      <trajectory stride="20" filename="doo" bead="0" extra_type="doo"> extras_bias </trajectory>
+      <trajectory stride="20" filename="colvar" bead="0" extra_type="doo,co1.lessthan,co2.lessthan,mtd.bias"> extras_bias </trajectory>
       <properties stride="2"> [ step, time, conserved, temperature{kelvin}, kinetic_cv, 
             potential, kinetic_cv(H), kinetic_cv(O), ensemble_bias ] </properties>
    </output>
