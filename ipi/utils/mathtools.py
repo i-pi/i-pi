@@ -521,3 +521,79 @@ def LT_friction(freqs, spectral_density_over_w, forceit=False):
             )[0]
 
     return 2 * integral / np.pi
+
+
+def quat2rot(q):
+    """
+    Convert a normalized quaternion into a 3x3 rotation matrix.
+
+    Args:
+    q : list or array-like
+        A normalized quaternion [q1, q2, q3, q4] where q1 is the scalar part.
+
+    Returns:
+    numpy.ndarray
+        The corresponding 3x3 rotation matrix.
+    """
+
+    q1, q2, q3, q4 = q
+
+    # Compute the rotation matrix elements
+    R = np.array(
+        [
+            [1 - 2 * (q3**2 + q4**2), 2 * (q2 * q3 - q1 * q4), 2 * (q2 * q4 + q1 * q3)],
+            [2 * (q2 * q3 + q1 * q4), 1 - 2 * (q2**2 + q4**2), 2 * (q3 * q4 - q1 * q2)],
+            [2 * (q2 * q4 - q1 * q3), 2 * (q3 * q4 + q1 * q2), 1 - 2 * (q2**2 + q3**2)],
+        ]
+    )
+
+    return R
+
+
+def euler_zxz_to_matrix(theta, v, w):
+    """
+    Generate a rotation matrix from Euler angles [theta, v, w] in the ZXZ convention.
+
+    Args:
+    theta, v, w : float
+        Euler angles in radians.
+
+    Returns:
+    numpy.ndarray
+        The corresponding 3x3 rotation matrix.
+    """
+
+    # Rotation matrix around the Z-axis by theta
+    R_z_theta = np.array(
+        [
+            [np.cos(theta), -np.sin(theta), 0],
+            [np.sin(theta), np.cos(theta), 0],
+            [0, 0, 1],
+        ]
+    )
+
+    # Rotation matrix around the X-axis by v
+    R_x_v = np.array([[1, 0, 0], [0, np.cos(v), -np.sin(v)], [0, np.sin(v), np.cos(v)]])
+
+    # Rotation matrix around the Z-axis by w
+    R_z_w = np.array([[np.cos(w), -np.sin(w), 0], [np.sin(w), np.cos(w), 0], [0, 0, 1]])
+
+    # Total rotation matrix is the product of these matrices: R_z(w) * R_x(v) * R_z(theta)
+    rotation_matrix = R_z_w @ R_x_v @ R_z_theta
+
+    return rotation_matrix
+
+
+def random_rotation(prng, improper=True):
+    """Generates a (uniform) random rotation matrix"""
+
+    quaternion = prng.gvec(shape=(4,))
+    quaternion /= np.sqrt((quaternion**2).sum())
+
+    rot = quat2rot(quaternion)
+
+    # randomly generate an improper rotation
+    if improper and prng.u < 0.5:
+        rot *= -1.0
+
+    return rot
