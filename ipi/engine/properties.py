@@ -1916,7 +1916,7 @@ class Properties:
         """
         # Ugly but works
         if type(fd_delta) == str:
-            fd_delta = np.float(fd_delta)
+            fd_delta = float(fd_delta)
 
         dbeta = abs(float(fd_delta))
         beta = 1.0 / (Constants.kb * self.ensemble.temp)
