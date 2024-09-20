@@ -230,7 +230,7 @@ class Properties:
     """
 
     _DEFAULT_FINDIFF = 1e-4
-    _DEFAULT_FDERROR = 1e-6
+    _DEFAULT_FDERROR = 1e-4
     _DEFAULT_MINFID = 1e-7
 
     def __init__(self):
@@ -753,7 +753,7 @@ class Properties:
                 "func": self.get_yama_estimators,
                 "size": 2,
             },
-            "kcv_scaledcoords": {
+            "sc_kcv_scaledcoords": {
                 "dimension": "undefined",
                 "help": "The scaled coordinates estimators that can be used to compute energy and heat capacity",
                 "longhelp": """Returns the estimators that are required to evaluate the scaled-coordinates estimators
@@ -1855,7 +1855,8 @@ class Properties:
         return nx_tot / float(ncount)
 
     def get_kcv_estimators(self, fd_delta=-_DEFAULT_FINDIFF):
-        """Calculates the op beta derivative of the centroid virial kinetic energy estimator for the Suzuki-Chin propagator.
+        """Calculates the op beta derivative of the centroid virial kinetic 
+        energy estimator for the Suzuki-Chin propagator.
 
         Args:
            fd_delta: the relative finite difference in temperature to apply in
@@ -1918,37 +1919,38 @@ class Properties:
         if type(fd_delta) == str:
             fd_delta = float(fd_delta)
 
+        # dbeta is actually the relative finite-difference beta
         dbeta = abs(float(fd_delta))
         beta = 1.0 / (Constants.kb * self.ensemble.temp)
         self.dcell.h = self.cell.h
         qc = dstrip(self.beads.qc)
         q = dstrip(self.beads.q)
-        v0 = self.forces.pot / self.beads.nbeads
+        v0 = dstrip(self.forces.pot) / self.beads.nbeads
         while True:
             splus = np.sqrt(1.0 + dbeta)
             sminus = np.sqrt(1.0 - dbeta)
 
             for b in range(self.beads.nbeads):
                 self.dbeads[b].q = qc * (1.0 - splus) + splus * q[b, :]
-            vplus = self.dforces.pot / self.beads.nbeads
+            vplus = dstrip(self.dforces.pot) / self.beads.nbeads
 
             for b in range(self.beads.nbeads):
                 self.dbeads[b].q = qc * (1.0 - sminus) + sminus * q[b, :]
-            vminus = self.dforces.pot / self.beads.nbeads
+            vminus = dstrip(self.dforces.pot) / self.beads.nbeads
 
-            # print "DISPLACEMENT CHECK YAMA db: %e, d+: %e, d-: %e, dd: %e" %(dbeta, (vplus-v0)*dbeta, (v0-vminus)*dbeta, abs((vplus+vminus-2*v0)/(vplus-vminus)))
+            if verbosity.debug:
+                print( f"DISPLACEMENT CHECK YAMA db: {dbeta} d+: {(vplus-v0)/dbeta} d-: {(v0-vminus)/dbeta}")
 
             if (
                 fd_delta < 0
                 and abs((vplus + vminus - 2 * v0) / (vplus - vminus))
                 > self._DEFAULT_FDERROR
-                and dbeta > self._DEFAULT_MINFID
             ):
                 if dbeta > self._DEFAULT_MINFID:
                     dbeta *= 0.5
                     info(
-                        "Reducing displacement in scaled coordinates estimator",
-                        verbosity.low,
+                        f"Reducing displacement in scaled coordinates estimator to {dbeta}",
+                        verbosity.medium,
                     )
                     continue
                 else:
@@ -1956,6 +1958,7 @@ class Properties:
                         "Could not converge displacement for scaled coordinate estimators",
                         verbosity.low,
                     )
+                    # returns exactly zero so that the problem can be spotted
                     eps = 0.0
                     eps_prime = 0.0
                     break
@@ -1973,7 +1976,8 @@ class Properties:
         return np.asarray([eps, eps_prime])
 
     def get_scyama_estimators(self, fd_delta=-_DEFAULT_FINDIFF):
-        """Calculates the quantum scaled coordinate suzuki-chin kinetic energy estimator for the Suzuki-Chin propagator.
+        """Calculates the quantum scaled coordinate Suzuki-Chin 
+        kinetic energy estimator for the Suzuki-Chin propagator.
 
         Uses a finite difference method to calculate the estimators
         needed to calculate the energy and heat capacity of the system, as
