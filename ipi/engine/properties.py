@@ -1855,8 +1855,8 @@ class Properties:
 
         return nx_tot / float(ncount)
 
-    def get_kscop_estimators(self, fd_delta=-_DEFAULT_FINDIFF):
-        """Calculates the op beta derivative of the centroid virial kinetic 
+    def get_scop_estimators(self, fd_delta=-_DEFAULT_FINDIFF):
+        """Calculates the op beta derivative of the centroid virial kinetic
         energy estimator for the Suzuki-Chin fourth-order path integral
         sampling, cf. Appendix B of J. Chem. Theory Comput. 2019, 15, 3237-3249.
 
@@ -1917,7 +1917,7 @@ class Properties:
            computing finite-difference quantities. If it is negative, will be
            scaled down automatically to avoid discontinuities in the potential.
         """
-        
+
         if type(fd_delta) == str:
             fd_delta = float(fd_delta)
 
@@ -1941,7 +1941,9 @@ class Properties:
             vminus = dstrip(self.dforces.pot) / self.beads.nbeads
 
             if verbosity.debug:
-                print( f"DISPLACEMENT CHECK YAMA db: {dbeta} d+: {(vplus-v0)/dbeta} d-: {(v0-vminus)/dbeta}")
+                print(
+                    f"DISPLACEMENT CHECK YAMA db: {dbeta} d+: {(vplus-v0)/dbeta} d-: {(v0-vminus)/dbeta}"
+                )
 
             if (
                 fd_delta < 0
@@ -1978,7 +1980,7 @@ class Properties:
         return np.asarray([eps, eps_prime])
 
     def get_scyama_estimators(self, fd_delta=-_DEFAULT_FINDIFF):
-        """Calculates the quantum scaled coordinate Suzuki-Chin 
+        """Calculates the quantum scaled coordinate Suzuki-Chin
         kinetic energy estimator for the Suzuki-Chin factorization.
 
         Uses a finite difference method to calculate the estimators
@@ -1994,7 +1996,6 @@ class Properties:
            computing finite-difference quantities. If it is negative, will be
            scaled down automatically to avoid discontinuities in the potential.
         """
-
 
         if type(fd_delta) == str:
             fd_delta = float(fd_delta)
