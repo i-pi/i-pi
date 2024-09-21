@@ -230,8 +230,8 @@ class Properties:
     """
 
     _DEFAULT_FINDIFF = 1e-4
-    _DEFAULT_FDERROR = 1e-4
-    _DEFAULT_MINFID = 1e-7
+    _DEFAULT_FDERROR = 1e-5
+    _DEFAULT_MINFID = 1e-8
 
     def __init__(self):
         """Initialises Properties."""
@@ -753,12 +753,13 @@ class Properties:
                 "func": self.get_yama_estimators,
                 "size": 2,
             },
-            "sc_kcv_scaledcoords": {
+            "sc_op_scaledcoords": {
                 "dimension": "undefined",
-                "help": "The scaled coordinates estimators that can be used to compute energy and heat capacity",
+                "help": "The Suzuki-Chin OP scaled coordinates estimators that can be used to compute energy and heat capacity",
                 "longhelp": """Returns the estimators that are required to evaluate the scaled-coordinates estimators
-                       for total energy and heat capacity, as described in T. M. Yamamoto,
-                       J. Chem. Phys., 104101, 123 (2005). Returns eps_v and eps_v', as defined in that paper.
+                       for total energy and heat capacity for a Suzuki-Chin high-order factorization, as described in 
+                       Appendix B of J. Chem. Theory Comput. 2019, 15, 3237-3249 (2019). Returns eps_v and eps_v', 
+                       as defined in that paper.
                        As the two estimators have a different dimensions, this can only be output in atomic units.
                        Takes one argument, 'fd_delta', which gives the value of the finite difference parameter used -
                        which defaults to """
@@ -766,15 +767,15 @@ class Properties:
                 + """. If the value of 'fd_delta' is negative,
                        then its magnitude will be reduced automatically by the code if the finite difference error
                        becomes too large.""",
-                "func": self.get_kcv_estimators,
+                "func": self.get_scop_estimators,
                 "size": 2,
             },
             "sc_scaledcoords": {
                 "dimension": "undefined",
                 "help": "The Suzuki-Chin scaled coordinates estimators that can be used to compute energy and heat capacity",
                 "longhelp": """Returns the estimators that are required to evaluate the scaled-coordinates estimators
-                       for total energy and heat capacity, as described in T. M. Yamamoto,
-                       J. Chem. Phys., 104101, 123 (2005). Returns eps_v and eps_v', as defined in that paper.
+                       for total energy and heat capacity for a Suzuki-Chin fourth-order factorization, as described in
+                       T. M. Yamamoto, J. Chem. Phys., 104101, 123 (2005). Returns eps_v and eps_v', as defined in that paper.
                        As the two estimators have a different dimensions, this can only be output in atomic units.
                        Takes one argument, 'fd_delta', which gives the value of the finite difference parameter used -
                        which defaults to """
@@ -1854,9 +1855,10 @@ class Properties:
 
         return nx_tot / float(ncount)
 
-    def get_kcv_estimators(self, fd_delta=-_DEFAULT_FINDIFF):
+    def get_kscop_estimators(self, fd_delta=-_DEFAULT_FINDIFF):
         """Calculates the op beta derivative of the centroid virial kinetic 
-        energy estimator for the Suzuki-Chin propagator.
+        energy estimator for the Suzuki-Chin fourth-order path integral
+        sampling, cf. Appendix B of J. Chem. Theory Comput. 2019, 15, 3237-3249.
 
         Args:
            fd_delta: the relative finite difference in temperature to apply in
@@ -1915,12 +1917,12 @@ class Properties:
            computing finite-difference quantities. If it is negative, will be
            scaled down automatically to avoid discontinuities in the potential.
         """
-        # Ugly but works
+        
         if type(fd_delta) == str:
             fd_delta = float(fd_delta)
 
         # dbeta is actually the relative finite-difference beta
-        dbeta = abs(float(fd_delta))
+        dbeta = abs(fd_delta)
         beta = 1.0 / (Constants.kb * self.ensemble.temp)
         self.dcell.h = self.cell.h
         qc = dstrip(self.beads.qc)
@@ -1993,7 +1995,11 @@ class Properties:
            scaled down automatically to avoid discontinuities in the potential.
         """
 
-        dbeta = abs(float(fd_delta))
+
+        if type(fd_delta) == str:
+            fd_delta = float(fd_delta)
+
+        dbeta = abs(fd_delta)
         beta = 1.0 / (Constants.kb * self.ensemble.temp)
         self.dforces.omegan2 = self.forces.omegan2
         self.dforces.alpha = self.forces.alpha
