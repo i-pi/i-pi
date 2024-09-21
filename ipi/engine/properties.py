@@ -1979,7 +1979,7 @@ class Properties:
 
     def get_scyama_estimators(self, fd_delta=-_DEFAULT_FINDIFF):
         """Calculates the quantum scaled coordinate Suzuki-Chin 
-        kinetic energy estimator for the Suzuki-Chin propagator.
+        kinetic energy estimator for the Suzuki-Chin factorization.
 
         Uses a finite difference method to calculate the estimators
         needed to calculate the energy and heat capacity of the system, as
