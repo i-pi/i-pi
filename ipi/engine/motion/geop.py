@@ -137,7 +137,7 @@ class GeopMotion(Motion):
             self.hessian[:] = np.eye(len(self.hessian), len(self.hessian), 0, float)
             self.tr = self.initial_values["tr_trm"]
         # lbfgs
-        elif self.mode == "lbfgst":
+        elif self.mode == "lbfgs":
             self.corrections *= 0.0
             self.scale *= 0.0
             self.qlist *= 0.0
