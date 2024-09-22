@@ -50,8 +50,8 @@ class TBLiteDriver(object):
         in hartree/abohr.
         """
 
-        pos = unit_to_user("length", "bohr", pos)
-        cell = unit_to_user("length", "bohr", cell.T)
+        pos = unit_to_user("length", "atomic_unit", pos)
+        cell = unit_to_user("length", "atomic_unit", cell.T)
 
         calc = tb.Calculator(
             self.method,
@@ -60,7 +60,7 @@ class TBLiteDriver(object):
             self.charge,
             self.uhf,  # unpaired electrons
             np.asarray(cell) if self.periodic else None,
-            self.periodic,
+            np.repeat(self.periodic, 3) if self.periodic else None,
         )
         calc.set("verbosity", self.verbosity)
 
@@ -71,11 +71,13 @@ class TBLiteDriver(object):
         vir = results.get("virial")
 
         # converts to internal quantities
-        pot_ipi = np.asarray(unit_to_internal("energy", "hartree", pot), np.float64)
+        pot_ipi = np.asarray(unit_to_internal("energy", "atomic_unit", pot), np.float64)
         force_ipi = np.asarray(
-            unit_to_internal("force", "hartree/bohr", -grad), np.float64
+            unit_to_internal("force", "atomic_unit", -grad), np.float64
         )
-        vir_ipi = np.array(unit_to_internal("energy", "hartree", -vir.T), np.float64)
+        vir_ipi = np.array(
+            unit_to_internal("energy", "atomic_unit", -vir.T), np.float64
+        )
         extras = ""
 
         return pot_ipi, force_ipi, vir_ipi, extras
