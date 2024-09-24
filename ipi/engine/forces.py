@@ -1042,30 +1042,43 @@ class Forces:
         )
         return nforce
 
-    def transfer_forces(self, refforce):
-        """Low-level function copying over the value of a second force object,
-        triggering updates but un-tainting this force depends themselves.
-
-        We have noted that in some corner cases it is necessary to copy only
-        the values of updated forces rather than the full depend object, in order to
-        avoid triggering a repeated call to the client code that is potentially
-        very costly. This happens routinely in geometry relaxation routines, for example.
+    def dump_state(self):
+        """
+        Stores a (deep) copy of the internal state of a force object
         """
 
-        if len(self.mforces) != len(refforce.mforces):
+        force_data = []
+        for k in range(len(self.mforces)):
+            mself = self.mforces[k]
+            # access the actual data values
+
+            bead_forces = []
+            for b in range(mself.nbeads):
+                bead_forces.append(deepcopy(mself._forces[b]._ufvx._value))
+            force_data.append(
+                (
+                    # will also need bead positions, see _load_state
+                    deepcopy(mself.beads._q._value),
+                    bead_forces,
+                )
+            )
+        return force_data
+
+    def load_state(self, state):
+        """
+        Loads a previously-saved state of a force object. See
+        `transfere_forces` for an explanation of the usage and
+        logic.
+        """
+
+        if len(state) != len(self.mforces):
             raise ValueError(
-                "Cannot copy forces between objects with different numbers of components"
+                "Cannot load force state from an force with a different numbers of components"
             )
 
         for k in range(len(self.mforces)):
-            mreff = refforce.mforces[k]
             mself = self.mforces[k]
-            if mreff.nbeads != mself.nbeads:
-                raise ValueError(
-                    "Cannot copy forces between objects with different numbers of beads for the "
-                    + str(k)
-                    + "th component"
-                )
+            q, fb = state[k]
 
             # this is VERY subtle. beads in this force component are
             # obtained as a contraction, and so are computed automatically.
@@ -1077,12 +1090,39 @@ class Forces:
             # the value of the contracted bead, so that it's marked as NOT
             # tainted - it should not be as it's an internal of the force and
             # therefore get copied
-            mself.beads._q.set(mreff.beads.q, manual=False)
-            for b in range(mself.nbeads):
-                mself._forces[b]._ufvx.set(
-                    deepcopy(mreff._forces[b]._ufvx._value), manual=False
+            mself.beads._q.set(q, manual=False)
+            if len(fb) != mself.nbeads:
+                raise ValueError(
+                    "Cannot copy forces between objects with different numbers of beads for the "
+                    + str(k)
+                    + "th component"
                 )
+
+            for b in range(mself.nbeads):
+                mself._forces[b]._ufvx.set(fb[b], manual=False)
                 mself._forces[b]._ufvx.taint(taintme=False)
+
+    def transfer_forces(self, refforce):
+        """Low-level function copying over the value of a second force object,
+        triggering updates but un-tainting this force depends themselves.
+
+        We have noted that in some corner cases it is necessary to copy only
+        the values of updated forces rather than the full depend object, in order to
+        avoid triggering a repeated call to the client code that is potentially
+        very costly. This happens routinely in geometry relaxation routines,
+        for example.
+
+        The transfer can also be implemented in a delayed way, by using
+        separately set_state and dump_state. For instance, one can
+
+        old_state = force.dump_state()
+
+        do-something-that-changes-force
+
+        force.load_state(old_state)
+        """
+
+        self.load_state(refforce.dump_state)
 
     def transfer_forces_manual(
         self, new_q, new_v, new_forces, new_x=None, vir=np.zeros((3, 3))
