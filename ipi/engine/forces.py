@@ -1058,7 +1058,7 @@ class Forces:
             force_data.append(
                 (
                     # will also need bead positions, see _load_state
-                    deepcopy(mself.beads._q._value),
+                    deepcopy(dstrip(mself.beads.q)),
                     bead_forces,
                 )
             )
