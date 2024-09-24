@@ -268,9 +268,9 @@ class PesMapper(object):
         pass
 
     def bind(self, mapper):
-        self.dbeads = mapper.beads.copy()
-        self.dcell = mapper.cell.copy()
-        self.dforces = mapper.forces.copy(self.dbeads, self.dcell)
+        self.dbeads = mapper.beads.clone()
+        self.dcell = mapper.cell.clone()
+        self.dforces = mapper.forces.clone(self.dbeads, self.dcell)
 
         # self.nm = mapper.nm
         # self.rp_factor = mapper.rp_factor
@@ -355,8 +355,8 @@ class PesMapper(object):
         reduced_b.m[:] = self.dbeads.m
         reduced_b.names[:] = self.dbeads.names
 
-        reduced_cell = self.dcell.copy()
-        reduced_forces = self.dforces.copy(reduced_b, reduced_cell)
+        reduced_cell = self.dcell.clone()
+        reduced_forces = self.dforces.clone(reduced_b, reduced_cell)
 
         # Evaluate energy and forces (and maybe friction)
         rpots = reduced_forces.pots  # reduced energy
@@ -690,7 +690,7 @@ class SpringMapper(object):
         self.temp = mapper.temp
         self.fix = mapper.fix
         self.coef = mapper.coef
-        self.dbeads = mapper.beads.copy()
+        self.dbeads = mapper.beads.clone()
         # self.nm = mapper.nm
         # self.rp_factor = mapper.rp_factor
         if self.dbeads.nbeads > 1:

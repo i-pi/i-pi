@@ -1006,28 +1006,36 @@ class Forces:
             self._pots.add_dependency(fc._weight)
             self._virs.add_dependency(fc._weight)
 
-    def copy(self, beads=None, cell=None):
-        """Returns a copy of this force object that can be used to compute forces,
-        e.g. for use in internal loops of geometry optimizers, or for property
+    def clone(self, beads, cell):
+        """Duplicates the force object, so that it can be used to compute forces
+        using the same forcefields, but with a separate beads and cell object
+        (that can e.g. be created by cloning existing beads and cell objects).
+        This is useful whenever one wants to compute the same forces and energies
+        without touching the physical system, e.g. for use in internal loops of
+        geometry optimizers, when attempting Monte Carlo moves or for property
         calculation.
 
         Args:
-           beads: Optionally, bind this to a different beads object than the one
-              this Forces is currently bound
-           cell: Optionally, bind this to a different cell object
+           beads: Beads object that the clone should be bound to
+           cell: Cell object that the clone should be bound to
 
         Returns: The copy of the Forces object
         """
 
         if not self.bound:
             raise ValueError("Cannot copy a forces object that has not yet been bound.")
+        if not type(beads) is Beads:
+            raise ValueError(
+                "The 'beads' argument must be provided and be a Beads object."
+            )
+        if not type(cell) is Cell:
+            raise ValueError(
+                "The 'cell' argument must be provided and be a Cell object."
+            )
+
         nforce = Forces()
         nbeads = beads
-        if nbeads is None:
-            nbeads = self.beads
         ncell = cell
-        if cell is None:
-            ncell = self.cell
         nforce.bind(
             nbeads, ncell, self.fcomp, self.ff, self.open_paths, self.output_maker
         )
@@ -1252,9 +1260,9 @@ class Forces:
             if self.alpha == 0:
                 # we use an aux force evaluator with half the number of beads.
                 if self.dforces is None:
-                    self.dbeads = self.beads.copy(self.nbeads // 2)
-                    self.dcell = self.cell.copy()
-                    self.dforces = self.copy(self.dbeads, self.dcell)
+                    self.dbeads = self.beads.clone(self.nbeads // 2)
+                    self.dcell = self.cell.clone()
+                    self.dforces = self.clone(self.dbeads, self.dcell)
 
                 self.dcell.h = self.cell.h
 
@@ -1281,9 +1289,9 @@ class Forces:
             else:
                 # we use an aux force evaluator with the same number of beads.
                 if self.dforces is None:
-                    self.dbeads = self.beads.copy()
-                    self.dcell = self.cell.copy()
-                    self.dforces = self.copy(self.dbeads, self.dcell)
+                    self.dbeads = self.beads.clone()
+                    self.dcell = self.cell.clone()
+                    self.dforces = self.clone(self.dbeads, self.dcell)
 
                 self.dcell.h = self.cell.h
 
@@ -1310,9 +1318,9 @@ class Forces:
         if self.mforces[index].epsilon < 0.0:
             # we use an aux force evaluator with the same number of beads.
             if self.dforces is None:
-                self.dbeads = self.beads.copy()
-                self.dcell = self.cell.copy()
-                self.dforces = self.copy(self.dbeads, self.dcell)
+                self.dbeads = self.beads.clone()
+                self.dcell = self.cell.clone()
+                self.dforces = self.clone(self.dbeads, self.dcell)
 
             self.dcell.h = self.cell.h
 

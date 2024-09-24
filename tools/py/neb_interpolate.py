@@ -358,7 +358,7 @@ if __name__ == "__main__":
             print("Error: cannot find {}.".format(input_chk))
             sys.exit()
         cell = simulation.syslist[0].cell
-        beads = simulation.syslist[0].motion.beads.copy()
+        beads = simulation.syslist[0].motion.beads.clone()
         natoms = simulation.syslist[0].motion.beads.natoms
         masses = simulation.syslist[0].motion.beads.m  # KF: not sure about this line
         nbeads_old = beads.nbeads
