@@ -24,6 +24,7 @@ from ipi.utils.messages import verbosity, warning, info
 from ipi.utils.depend import *
 from ipi.utils.nmtransform import nm_rescale
 from ipi.engine.beads import Beads
+from ipi.engine.cell import Cell
 
 
 __all__ = ["Forces", "ForceComponent"]
