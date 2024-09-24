@@ -1122,7 +1122,7 @@ class Forces:
         force.load_state(old_state)
         """
 
-        self.load_state(refforce.dump_state)
+        self.load_state(refforce.dump_state())
 
     def transfer_forces_manual(
         self, new_q, new_v, new_forces, new_x=None, vir=np.zeros((3, 3))
