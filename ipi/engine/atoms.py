@@ -148,7 +148,7 @@ class Atoms:
             name="kstress", func=self.get_kstress, dependencies=[self._p, self._m]
         )
 
-    def copy(self):
+    def clone(self):
         """Creates a new Atoms object.
 
         Returns:
