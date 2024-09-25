@@ -290,7 +290,7 @@ class AlKMC(Motion):
         self.dens = [None] * self.neval
         self.dbias = [None] * self.neval
         for i in range(self.neval):
-            self.dbeads[i] = beads.copy()
+            self.dbeads[i] = beads.clone()
             self.dforces[i] = bforce.copy(self.dbeads[i], self.dcell)
             self.dnm[i] = nm.copy()
             self.dens[i] = ens.copy()

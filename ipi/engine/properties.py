@@ -957,9 +957,9 @@ class Properties:
         # dummy beads and forcefield objects so that we can use scaled and
         # displaced path estimators without changing the simulation bead
         # coordinates
-        self.dbeads = system.beads.copy()
-        self.dcell = system.cell.copy()
-        self.dforces = system.forces.copy(self.dbeads, self.dcell)
+        self.dbeads = system.beads.clone()
+        self.dcell = system.cell.clone()
+        self.dforces = system.forces.clone(self.dbeads, self.dcell)
         self.fqref = None
         self._threadlock = (
             system._propertylock
@@ -2989,15 +2989,15 @@ class Trajectories:
         # dummy beads and forcefield objects so that we can use scaled and
         # displaced path estimators without changing the simulation bead
         # coordinates
-        self.dbeads = system.beads.copy()
-        self.dcell = system.cell.copy()
-        self.dforces = self.system.forces.copy(self.dbeads, self.dcell)
+        self.dbeads = system.beads.clone()
+        self.dcell = system.cell.clone()
+        self.dforces = self.system.forces.clone(self.dbeads, self.dcell)
         self._threadlock = system._propertylock
 
         if system.beads.nbeads >= 2:
-            self.scdbeads = system.beads.copy(system.beads.nbeads // 2)
-            self.scdcell = system.cell.copy()
-            self.scdforces = self.system.forces.copy(self.scdbeads, self.scdcell)
+            self.scdbeads = system.beads.clone(system.beads.nbeads // 2)
+            self.scdcell = system.cell.clone()
+            self.scdforces = self.system.forces.clone(self.scdbeads, self.scdcell)
 
     def get_akcv(self):
         """Calculates the contribution to the kinetic energy due to each degree

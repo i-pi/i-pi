@@ -51,7 +51,7 @@ class Cell:
         )
         self._V = depend_value(name="V", func=self.get_volume, dependencies=[self._h])
 
-    def copy(self):
+    def clone(self):
         return Cell(dstrip(self.h).copy())
 
     def get_ih(self):

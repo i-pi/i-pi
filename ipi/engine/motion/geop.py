@@ -195,9 +195,9 @@ class LineMapper(object):
         self.fcount = 0
 
     def bind(self, dumop):
-        self.dbeads = dumop.beads.copy()
-        self.dcell = dumop.cell.copy()
-        self.dforces = dumop.forces.copy(self.dbeads, self.dcell)
+        self.dbeads = dumop.beads.clone()
+        self.dcell = dumop.cell.clone()
+        self.dforces = dumop.forces.clone(self.dbeads, self.dcell)
 
         self.fixatoms_mask = np.ones(
             3 * dumop.beads.natoms, dtype=bool
@@ -249,9 +249,9 @@ class GradientMapper(object):
         pass
 
     def bind(self, dumop):
-        self.dbeads = dumop.beads.copy()
-        self.dcell = dumop.cell.copy()
-        self.dforces = dumop.forces.copy(self.dbeads, self.dcell)
+        self.dbeads = dumop.beads.clone()
+        self.dcell = dumop.cell.clone()
+        self.dforces = dumop.forces.clone(self.dbeads, self.dcell)
 
         self.fixatoms_mask = np.ones(
             3 * dumop.beads.natoms, dtype=bool
