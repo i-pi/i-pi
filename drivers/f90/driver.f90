@@ -191,13 +191,15 @@
                   vstyle = 64
                ELSEIF (trim(cmdbuffer) == "qtip4pf-c-json-delta") THEN
                   vstyle = 65
+               ELSEIF (trim(cmdbuffer) == "qtip4pf-noo3") THEN
+                  vstyle = 70
                ELSEIF (trim(cmdbuffer) == "gas") THEN
                   vstyle = 0  ! ideal gas
                ELSEIF (trim(cmdbuffer) == "dummy") THEN
                   vstyle = 99 ! returns non-zero but otherwise meaningless values
                ELSE
                   WRITE(*,*) " Unrecognized potential type ", trim(cmdbuffer)
-                  WRITE(*,*) " Use -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|harmonic_bath|meanfield_bath|ljmix|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json|qtip4pf-c-1-delta|qtip4pf-c-2-delta|qtip4pf-c-json-delta] "
+                  WRITE(*,*) " Use -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4pf-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|harmonic_bath|meanfield_bath|ljmix|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json|qtip4pf-c-1-delta|qtip4pf-c-2-delta|qtip4pf-c-json-delta|qtip4pf-noo3] "
                   STOP "ENDED"
                ENDIF
             ELSEIF (ccmd == 4) THEN
@@ -790,6 +792,45 @@
                   CALL LJ_getall(rc, 2.1d0, -12d-6, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
                   CALL LJ_getall(rc, 2.5d0, 1d-6, nat, atoms, cell_h, cell_ih, index_list, n_list, pot, forces, virial)
                ENDIF
+            ELSEIF (70 == vstyle) THEN 
+               ! qtip4pf potential with rotational noise. adds a orientation-dependent term to 
+               ! test non-equivariant terms in the potential
+               vpars(1) = cell_h(1,1)
+               vpars(2) = cell_h(2,2)
+               vpars(3) = cell_h(3,3)
+               IF (cell_h(1,2).gt.1d-10 .or. cell_h(1,3).gt.1d-12  .or. cell_h(2,3).gt.1d-12) THEN
+                  WRITE(*,*) " qtip4pf PES only works with orthorhombic cells", cell_h(1,2), cell_h(1,3), cell_h(2,3)
+                  STOP "ENDED"
+               ENDIF
+               CALL qtip4pf(vpars(1:3),atoms,nat,forces,pot,virial)
+
+               DO i=1,nat,3
+                  dip = 0.5 * (atoms(i+1,:) + atoms(i+2,:)) - atoms(i,:)
+                  vpars(4) = sqrt(dip(1)**2+dip(2)**2+dip(3)**2)
+                  dip = dip/sqrt(dip(1)**2+dip(2)**2+dip(3)**2)
+                  vpars(1) = exp(dip(1)/vpars(4)*1.0)
+                  vpars(2) = exp(dip(2)/vpars(4)*0.5)
+                  vpars(3) = exp(dip(3)/vpars(4)*2.0)
+                  pot = pot + 1e-2*(vpars(1)+vpars(2)+vpars(3))
+                  vpars(1) = 1e-2*vpars(1)*1.0/vpars(4)**3
+                  vpars(2) = 1e-2*vpars(2)*0.5/vpars(4)**3
+                  vpars(3) = 1e-2*vpars(3)*2.0/vpars(4)**3
+                  ! gradients on O
+                  vpars(4) = -vpars(1)*(dip(2)**2+dip(3)**2) + vpars(2)*dip(1)*dip(2) + vpars(3)*dip(3)*dip(1) 
+                  vpars(5) = -vpars(2)*(dip(1)**2+dip(3)**2) + vpars(1)*dip(1)*dip(2) + vpars(3)*dip(2)*dip(3) 
+                  vpars(6) = -vpars(3)*(dip(1)**2+dip(2)**2) + vpars(1)*dip(1)*dip(3) + vpars(2)*dip(3)*dip(2) 
+                  forces(i,1) = forces(i,1) - vpars(4)
+                  forces(i,2) = forces(i,2) - vpars(5)
+                  forces(i,3) = forces(i,3) - vpars(6)
+                  ! gradients from H are just from Newton's law
+                  forces(i+1,1) = forces(i+1,1) + vpars(4)*0.5
+                  forces(i+1,2) = forces(i+1,2) + vpars(5)*0.5
+                  forces(i+1,3) = forces(i+1,3) + vpars(6)*0.5
+                  forces(i+2,1) = forces(i+2,1) + vpars(4)*0.5
+                  forces(i+2,2) = forces(i+2,2) + vpars(5)*0.5
+                  forces(i+2,3) = forces(i+2,3) + vpars(6)*0.5
+               ENDDO
+               
             ELSEIF (vstyle == 11) THEN ! efield potential.
                IF (mod(nat,3)/=0) THEN
                   WRITE(*,*) " Expecting water molecules O H H O H H O H H but got ", nat, "atoms"
@@ -1055,7 +1096,7 @@
       SUBROUTINE helpmessage
          ! Help banner
 
-         WRITE(*,*) " SYNTAX: driver.x [-u] -a address [-p port] -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|harmonic_bath|meanfield_bath|ljmix|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json|qtip4pf-c-1-delta|qtip4pf-c-2-delta|qtip4pf-c-json-delta]"
+         WRITE(*,*) " SYNTAX: driver.x [-u] -a address [-p port] -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|harmonic_bath|meanfield_bath|ljmix|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json|qtip4pf-c-1-delta|qtip4pf-c-2-delta|qtip4pf-c-json-delta|qtip4pf-noo3]"
          WRITE(*,*) "         -o 'comma_separated_parameters' [-S sockets_prefix] [-v] "
          WRITE(*,*) ""
          WRITE(*,*) " For LJ potential use -o sigma,epsilon,cutoff "
