@@ -584,6 +584,37 @@ def euler_zxz_to_matrix(theta, v, w):
     return rotation_matrix
 
 
+def roots_legendre(L):
+    """Replicates scipy.special.roots_legendre using only numpy"""
+
+    legendre_poly = np.polynomial.legendre.Legendre.basis(L)
+    roots = np.polynomial.legendre.legroots(legendre_poly.coef)
+    legendre_poly_deriv = legendre_poly.deriv()
+
+    # Calculate weights using the formula
+    weights = 2 / ((1 - roots**2) * (legendre_poly_deriv(roots) ** 2))
+
+    return roots, weights
+
+
+def get_rotation_quadrature(L):
+    matrices, weights = [], []
+    for theta_index in range(0, 2 * L - 1):
+        for w_index in range(0, 2 * L - 1):
+            theta = 2 * np.pi * theta_index / (2 * L - 1)
+            w = 2 * np.pi * w_index / (2 * L - 1)
+            roots_legendre_now, weights_now = roots_legendre(L)
+            all_v = np.arccos(roots_legendre_now)
+            for v, weight in zip(all_v, weights_now):
+                weights.append(weight)
+                angles = [theta, v, w]
+                rotation = R.from_euler("zxz", angles, degrees=False)
+                rotation_matrix = rotation.as_matrix()
+                matrices.append(rotation_matrix)
+
+    return matrices, weights
+
+
 def random_rotation(prng, improper=True):
     """Generates a (uniform) random rotation matrix"""
 
