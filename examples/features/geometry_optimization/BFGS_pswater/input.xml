@@ -1,4 +1,4 @@
-<simulation mode="static" verbosity="high">
+<simulation mode="static" verbosity="medium">
    <output prefix='simulation'>
     <properties stride='1' filename='out'>  [ step, potential{electronvolt}] </properties>
     <trajectory stride="1" filename="pos_c" format="xyz"> x_centroid </trajectory>
