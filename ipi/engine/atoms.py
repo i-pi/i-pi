@@ -156,9 +156,9 @@ class Atoms:
         """
 
         newat = Atoms(self.natoms)
-        newat.q[:] = self.q
-        newat.p[:] = self.p
-        newat.m[:] = self.m
+        newat.q[:] = dstrip(self.q)
+        newat.p[:] = dstrip(self.p)
+        newat.m[:] = dstrip(self.m)
         newat.names[:] = self.names
         return newat
 
