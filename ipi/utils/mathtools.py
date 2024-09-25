@@ -598,7 +598,7 @@ def roots_legendre(L):
 
 
 def get_rotation_quadrature(L):
-    matrices, weights = [], []
+    quads = []
     for theta_index in range(0, 2 * L - 1):
         for w_index in range(0, 2 * L - 1):
             theta = 2 * np.pi * theta_index / (2 * L - 1)
@@ -606,13 +606,11 @@ def get_rotation_quadrature(L):
             roots_legendre_now, weights_now = roots_legendre(L)
             all_v = np.arccos(roots_legendre_now)
             for v, weight in zip(all_v, weights_now):
-                weights.append(weight)
                 angles = [theta, v, w]
-                rotation = R.from_euler("zxz", angles, degrees=False)
-                rotation_matrix = rotation.as_matrix()
-                matrices.append(rotation_matrix)
+                rotation_matrix = euler_zxz_to_matrix(*angles)
+                quads.append((rotation_matrix, weight))
 
-    return matrices, weights
+    return quads
 
 
 def random_rotation(prng, improper=True):

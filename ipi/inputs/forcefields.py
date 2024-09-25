@@ -20,6 +20,7 @@ from ipi.engine.forcefields import (
     FFCommittee,
     FFdmd,
     FFCavPhSocket,
+    FFRotations,
 )
 from ipi.interfaces.sockets import InterfaceSocket
 from ipi.pes import __drivers__
@@ -39,6 +40,7 @@ __all__ = [
     "InputFFCommittee",
     "InputFFdmd",
     "InputFFCavPhSocket",
+    "InputFFRotations",
 ]
 
 
@@ -263,7 +265,7 @@ class InputFFSocket(InputForceField):
            ff: A ForceField object with a FFSocket forcemodel object.
         """
 
-        if (not type(ff) is FFSocket) and (not type(ff) is FFCavPhSocket):
+        if type(ff) not in [FFSocket, FFCavPhSocket, FFRotations]:
             raise TypeError(
                 "The type " + type(ff).__name__ + " is not a valid socket forcefield"
             )
@@ -918,6 +920,83 @@ class InputFFCommittee(InputForceField):
             active_thresh=self.active_thresh.fetch(),
             active_out=self.active_output.fetch(),
             parse_json=self.parse_json.fetch(),
+        )
+
+
+class InputFFRotations(InputFFSocket):
+    default_help = """Wraps around another forcefield to evaluate it
+                    over one or more rotated copies of the physical 
+                    system. This is useful when interacting with models
+                    that are not exactly invariant/covariant with respect 
+                    to rigid rotations.
+                      """
+    default_label = "FFROTATIONS"
+
+    fields = copy(InputFFSocket.fields)
+
+    fields["random"] = (
+        InputValue,
+        {
+            "dtype": bool,
+            "default": False,
+            "help": """Applies a random rotation at each evaluation. """,
+        },
+    )
+
+    fields["grid"] = (
+        InputValue,
+        {
+            "dtype": int,
+            "default": 1,
+            "help": """Sums over a grid of rotations of the given order.
+            Note that the number of rotations increases rapidly with the order, e.g.
+            '1' leads to a single rotation, '2' to 18, '3' to 75 rotations.
+            """,
+        },
+    )
+
+    fields["inversion"] = (
+        InputValue,
+        {
+            "dtype": bool,
+            "default": False,
+            "help": """Always applies the improper version of each rotation in the
+            grid (or the randomly-sampled rotation). Doubles the evaluations and makes
+            the model exactly equivariant to inversion.""",
+        },
+    )
+
+    def store(self, ff):
+        """Store all the sub-forcefields"""
+
+        super(InputFFRotations, self).store(ff)
+        self.inversion.store(ff.inversion)
+        self.grid.store(ff.grid)
+        self.random.store(ff.random)
+
+    def fetch(self):
+        """Fetches all of the FF objects"""
+
+        return FFRotations(
+            pars=self.parameters.fetch(),
+            name=self.name.fetch(),
+            latency=self.latency.fetch(),
+            offset=self.offset.fetch(),
+            dopbc=self.pbc.fetch(),
+            active=self.activelist.fetch(),
+            threaded=self.threaded.fetch(),
+            interface=InterfaceSocket(
+                address=self.address.fetch(),
+                port=self.port.fetch(),
+                slots=self.slots.fetch(),
+                mode=self.mode.fetch(),
+                timeout=self.timeout.fetch(),
+                match_mode=self.matching.fetch(),
+                exit_on_disconnect=self.exit_on_disconnect.fetch(),
+            ),
+            grid=self.grid.fetch(),
+            random=self.random.fetch(),
+            inversion=self.inversion.fetch(),
         )
 
 
