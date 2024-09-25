@@ -6,7 +6,7 @@
 	<trajectory filename="xc" stride="50" cell_units="angstrom"> x_centroid{angstrom} </trajectory>
      	<checkpoint stride="1000"/> 
    	</output> 
-   	<total_steps> 5000</total_steps> 
+   	<total_steps> 100</total_steps> 
   	<prng><seed>12345</seed></prng>
 	<ffsocket mode='unix' name='driver'>
     		<latency>  1.00000000e-04</latency>
