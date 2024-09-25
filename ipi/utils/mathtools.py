@@ -598,6 +598,9 @@ def roots_legendre(L):
 
 
 def get_rotation_quadrature(L):
+    if L==1:
+        # returns the identity (for some reason this algo below generates a different rotation)
+        return [(np.eye(3), 2.0)]
     quads = []
     for theta_index in range(0, 2 * L - 1):
         for w_index in range(0, 2 * L - 1):

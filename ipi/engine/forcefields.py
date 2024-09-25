@@ -16,6 +16,7 @@ import sys
 
 import numpy as np
 
+from ipi.utils.prng import Random
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import info, verbosity, warning
 from ipi.interfaces.sockets import InterfaceSocket
@@ -1473,6 +1474,8 @@ class FFRotations(FFSocket):
             interface,
         )
 
+        # TODO: initialize and save (probably better to use different PRNG than the one from the simulation)
+        self.prng = Random()
         self.random = random
         self.inversion = inversion
         self.grid = grid
@@ -1482,16 +1485,25 @@ class FFRotations(FFSocket):
     def queue(self, atoms, cell, reqid=-1):
         # launches requests for all of the rotations FF objects
         ffh = []
-        for r in self._rotations:
-            print("submitting rotation ", r)
-            rot_atoms = atoms.copy()
-            rot_cell = cell.copy()  # todo update to clone
+        rots = []
+        if self.random:
+            R_random = random_rotation(self.prng, improper=True)
+
+        for R, w in self._rotations:
+            print("submitting rotation ", R, R_random)
+
+            R = R@R_random
+            rot_atoms = atoms.clone()
+            rot_cell = cell.clone()
+            rot_atoms.q[:] = (dstrip(rot_atoms.q).reshape(-1,3)@R.T).flatten()
+            rot_cell.h[:] = dstrip(rot_cell.h)@R.T
+            rots.append((R, w))
             ffh.append(super(FFRotations, self).queue(rot_atoms, rot_cell, reqid))
 
         # creates the request with the help of the base class,
         # making sure it already contains a handle to the list of FF
         # requests
-        req = ForceField.queue(self, atoms, cell, reqid, template=dict(ff_handles=ffh))
+        req = ForceField.queue(self, atoms, cell, reqid, template=dict(ff_handles=ffh, rots=rots))
         req["status"] = "Running"
         req["t_dispatched"] = time.time()
         return req
@@ -1507,7 +1519,6 @@ class FFRotations(FFSocket):
 
     def gather(self, r):
         """Collects results from all sub-requests, and assemble the committee of models."""
-        print("GATHERING ")
         r["result"] = [
             0.0,
             np.zeros(len(r["pos"]), float),
@@ -1516,28 +1527,32 @@ class FFRotations(FFSocket):
         ]
 
         # list of pointers to the forcefield requests. shallow copy so we can remove stuff
-        com_handles = r["ff_handles"].copy()
+        rot_handles = r["ff_handles"].copy()
+        rots = r["rots"].copy()
 
         # Gathers the forcefield energetics and extras
         pots = []
         frcs = []
         virs = []
         xtrs = []
-
-        for ff_r in com_handles:
-            pots.append(ff_r["result"][0])
-            frcs.append(ff_r["result"][1])
-            virs.append(ff_r["result"][2])
+        quad_w = []
+        for ff_r, (R, w) in zip(rot_handles, rots):
+            pots.append(ff_r["result"][0])            
+            frcs.append((ff_r["result"][1].reshape(-1,3)@R).flatten())
+            print("force component", frcs[-1][:3])
+            virs.append((R.T@ff_r["result"][2]@R))
             xtrs.append(ff_r["result"][3])
+            quad_w.append(w)
 
+        quad_w = np.array(quad_w)
         pots = np.array(pots)
         frcs = np.array(frcs).reshape(len(frcs), -1)
         virs = np.array(virs).reshape(-1, 3, 3)
 
         # Computes the mean energetics
-        mean_pot = np.mean(pots, axis=0)
-        mean_frc = np.mean(frcs, axis=0)
-        mean_vir = np.mean(virs, axis=0)
+        mean_pot = np.mean(pots*quad_w, axis=0)/quad_w.mean()
+        mean_frc = np.mean(frcs*quad_w[:,np.newaxis], axis=0)/quad_w.mean()
+        mean_vir = np.mean(virs*quad_w[:,np.newaxis,np.newaxis], axis=0)/quad_w.mean()
         # Sets the output of the committee model.
         r["result"][0] = mean_pot
         r["result"][1] = mean_frc
@@ -1550,10 +1565,8 @@ class FFRotations(FFSocket):
             for x in xtrs:
                 r["result"][3][k].append(x[k])
 
-        print("RELEASING")
         for ff_r in r["ff_handles"]:
             self.release(ff_r)
-        print("RESEASIG SELF ")
         r["status"] = "Done"
         self.release(r)
 
@@ -1562,7 +1575,6 @@ class FFRotations(FFSocket):
 
         super().poll()
 
-        print(len(self.requests))
         for r in self.requests:
             if "ff_handles" in r and r["status"] != "Done" and self.check_finish(r):
                 r["t_finished"] = time.time()

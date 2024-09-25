@@ -851,7 +851,6 @@ class InterfaceSocket(object):
         if len(self.prlist) == 0 or len(freec) > len(self.prlist):
             self.prlist = [r for r in self.requests if r["status"] == "Queued"]
 
-        print(len(self.prlist), len(self.requests))
         if self.match_mode == "auto":
             match_seq = ["match", "none", "free", "any"]
         elif self.match_mode == "any":
