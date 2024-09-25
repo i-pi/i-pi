@@ -132,9 +132,9 @@ class SCPhononsMover(Motion):
 
         # Creates duplicate classes to simplify computation of forces.
         self.dof = 3 * self.beads.natoms
-        self.dbeads = self.beads.copy(nbeads=self.nparallel)
-        self.dcell = self.cell.copy()
-        self.dforces = self.forces.copy(self.dbeads, self.dcell)
+        self.dbeads = self.beads.clone(nbeads=self.nparallel)
+        self.dcell = self.cell.clone()
+        self.dforces = self.forces.clone(self.dbeads, self.dcell)
 
         # Sets temperature.
         self.temp = self.ensemble.temp

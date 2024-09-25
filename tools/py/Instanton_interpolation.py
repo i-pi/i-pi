@@ -128,7 +128,7 @@ if input_geo != "None" or chk != "None":
             print("We can't find {}".format(chk))
             sys.exit()
         cell = simulation.syslist[0].cell
-        beads = simulation.syslist[0].motion.beads.copy()
+        beads = simulation.syslist[0].motion.beads.clone()
         natoms = simulation.syslist[0].motion.beads.natoms
         nbeads = beads.nbeads
         q = beads.q
