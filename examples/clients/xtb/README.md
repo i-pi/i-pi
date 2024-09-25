@@ -8,7 +8,7 @@ A version of the tblite code that is compatible with this example can be
 obtained with 
 
 ```bash
-pip install tblite
+mamba install tblite-python -c conda-forge
 ```
 
 the example can be run as usual
