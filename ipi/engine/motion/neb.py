@@ -91,6 +91,9 @@ class NEBGradientMapper(object):
             self.allpots = dstrip(self.dforces.pots).copy()
             # We want to be greedy about force calls,
             # so we transfer from full beads to the reduced ones.
+            # MR note, 2024: The call below is overly convoluted and
+            # likely unnecessary. It should be possible to dump values
+            # now, or use usual transfer_forces. Needs deep revision.
             tmp_f = self.dforces.f.copy()[1:-1]
             tmp_v = self.allpots.copy()[1:-1]
             self.rforces.transfer_forces_manual(

@@ -1044,7 +1044,9 @@ class Forces:
 
     def dump_state(self):
         """
-        Stores a (deep) copy of the internal state of a force object
+        Stores a (deep) copy of the internal state of a force object.
+        See `transfer_forces` for an explanation of the usage and
+        logic.
         """
 
         force_data = []
@@ -1067,7 +1069,7 @@ class Forces:
     def load_state(self, state):
         """
         Loads a previously-saved state of a force object. See
-        `transfere_forces` for an explanation of the usage and
+        `transfer_forces` for an explanation of the usage and
         logic.
         """
 
@@ -1135,7 +1137,7 @@ class Forces:
           - new_f list of length equal to number of force type, containing the beads forces
           - new_x list of length equal to number of force type, containing the beads extras
         """
-        msg = "Unconsistent dimensions inside transfer_forces_manual"
+        msg = "Inconsistent dimensions inside transfer_forces_manual"
         assert len(self.mforces) == len(new_q), msg
         assert len(self.mforces) == len(new_v), msg
         assert len(self.mforces) == len(new_forces), msg
