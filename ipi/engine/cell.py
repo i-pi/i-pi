@@ -95,7 +95,7 @@ class Cell:
            system box.
         """
 
-        s = dstrip(pos).copy().reshape(-1,3)
+        s = dstrip(pos).copy().reshape(-1, 3)
 
         s = np.dot(dstrip(self.ih), s.T)
         s = s - np.round(s)
@@ -145,7 +145,7 @@ class GenericCell(Cell):
 
         Args:
            h: Optional array giving the initial lattice vector matrix. The
-              reference cell matrix is set equal to this. 
+              reference cell matrix is set equal to this.
         """
 
         if h is None:
