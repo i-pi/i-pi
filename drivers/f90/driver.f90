@@ -32,6 +32,7 @@
          USE SG
          USE PSWATER
          USE F90SOCKETS, ONLY : open_socket, writebuffer, readbuffer, f_sleep
+         USE DISTANCE, only: CELL_VOLUME
       IMPLICIT NONE
 
       ! SOCKET VARIABLES
@@ -387,7 +388,7 @@
             enddo
          ENDIF
          isinit = .true.
-      ELSEIF (vstyle == 1) THEN
+      ELSEIF (1 == vstyle) THEN
          IF (par_count /= 3) THEN
             WRITE(*,*) "Error: parameters not initialized correctly."
             WRITE(*,*) "For LJ potential use -o sigma,epsilon,cutoff "
@@ -521,8 +522,8 @@
             ! units and storage mode used in the driver.
             cell_h = transpose(cell_h)
             cell_ih = transpose(cell_ih)
-            ! We assume an upper triangular cell-vector matrix
-            volume = cell_h(1,1)*cell_h(2,2)*cell_h(3,3)
+            ! We compute for a generic cell, just in case (even though usually i-PI passes an upper triangular cell-vector matrix)
+            volume = CELL_VOLUME(cell_h) !cell_h(1,1)*cell_h(2,2)*cell_h(3,3)
 
             CALL readbuffer(socket, cbuf)       ! The number of atoms in the cell
             IF (verbose > 1) WRITE(*,*) "    !read!=> cbuf: ", cbuf
