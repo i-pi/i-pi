@@ -31,7 +31,7 @@ fortran_driver_models = [
     "doublewell_1D",
     "doublewell",
     "gas",
-    "noo3-h2o"
+    "noo3-h2o",
 ]
 
 # We should do this automatically but for now we do it explicitly here
