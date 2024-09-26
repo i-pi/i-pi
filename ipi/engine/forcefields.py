@@ -16,6 +16,7 @@ import sys
 
 import numpy as np
 
+from ipi.engine.cell import GenericCell
 from ipi.utils.prng import Random
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import info, verbosity, warning
@@ -1488,17 +1489,27 @@ class FFRotations(FFSocket):
         rots = []
         if self.random:
             R_random = random_rotation(self.prng, improper=True)
+        else:
+            R_random = np.eye(3)
 
         for R, w in self._rotations:
-            print("submitting rotation ", R, R_random)
-
             R = R@R_random
             rot_atoms = atoms.clone()
-            rot_cell = cell.clone()
-            rot_atoms.q[:] = (dstrip(rot_atoms.q).reshape(-1,3)@R.T).flatten()
-            rot_cell.h[:] = dstrip(rot_cell.h)@R.T
+            # NB we need generic cell orientation
+            rot_cell = GenericCell(R@dstrip(cell.h).copy())
+            rot_atoms.q[:] = (dstrip(rot_atoms.q).reshape(-1,3)@R.T).flatten()            
             rots.append((R, w))
+            
             ffh.append(super(FFRotations, self).queue(rot_atoms, rot_cell, reqid))
+
+            if self.inversion:
+                # also add a "flipped cell" to the evaluation list
+                R = R*-1
+                rot_cell = GenericCell(R@dstrip(cell.h).copy())
+                rot_atoms = atoms.clone()
+                rot_atoms.q[:] = (dstrip(rot_atoms.q).reshape(-1,3)@R.T).flatten()
+                ffh.append(super(FFRotations, self).queue(rot_atoms, rot_cell, reqid))
+     
 
         # creates the request with the help of the base class,
         # making sure it already contains a handle to the list of FF
@@ -1537,9 +1548,9 @@ class FFRotations(FFSocket):
         xtrs = []
         quad_w = []
         for ff_r, (R, w) in zip(rot_handles, rots):
-            pots.append(ff_r["result"][0])            
-            frcs.append((ff_r["result"][1].reshape(-1,3)@R).flatten())
-            print("force component", frcs[-1][:3])
+            pots.append(ff_r["result"][0])
+            # must rotate forces and virial back into the original reference frame
+            frcs.append((ff_r["result"][1].reshape(-1,3)@R).flatten())            
             virs.append((R.T@ff_r["result"][2]@R))
             xtrs.append(ff_r["result"][3])
             quad_w.append(w)
@@ -1549,15 +1560,16 @@ class FFRotations(FFSocket):
         frcs = np.array(frcs).reshape(len(frcs), -1)
         virs = np.array(virs).reshape(-1, 3, 3)
 
-        # Computes the mean energetics
+        # Computes the mean energetics (using the quadrature weights)
         mean_pot = np.mean(pots*quad_w, axis=0)/quad_w.mean()
         mean_frc = np.mean(frcs*quad_w[:,np.newaxis], axis=0)/quad_w.mean()
         mean_vir = np.mean(virs*quad_w[:,np.newaxis,np.newaxis], axis=0)/quad_w.mean()
+
         # Sets the output of the committee model.
         r["result"][0] = mean_pot
         r["result"][1] = mean_frc
         r["result"][2] = mean_vir
-        r["result"][3] = {}
+        r["result"][3] = {"o3grid_pots":pots} # this is the list of potentials on a grid, for monitoring
 
         # "dissolve" the extras dictionaries into a list
         for k in xtrs[0].keys():
@@ -1567,6 +1579,7 @@ class FFRotations(FFSocket):
 
         for ff_r in r["ff_handles"]:
             self.release(ff_r)
+
         r["status"] = "Done"
         self.release(r)
 
