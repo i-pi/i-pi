@@ -194,6 +194,8 @@ def modify_xml_4_dummy_test(
     for ff_root in ff_roots:
         for ff_socket in ff_root.findall("ffsocket"):
             ff_sockets.append(ff_socket)
+        for ff_socket in ff_root.findall("ffrotations"):
+            ff_sockets.append(ff_socket)
         for ff_socket in ff_root.findall("ffcavphsocket"):
             ff_sockets.append(ff_socket)
 
