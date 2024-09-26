@@ -94,13 +94,13 @@ falls back to a safe baseline potential when the ML models fail.
 | G. Imbalzano, Y. Zhuang, V. Kapil, K. Rossi, E. A. Engel, F.
   Grasselli, and M. Ceriotti, *“Uncertainty estimation for molecular
   dynamics and sampling”*, J. Chem. Phys. 154(7), 074102 (2021)
-| DOI: `10.1063/5.0036522 <dx.doi.org/10.1063/5.0036522>`__ — BibTeX:
+| DOI: `10.1063/5.0036522 <http://dx.doi.org/10.1063/5.0036522>`__ — BibTeX:
   `fetch <http://www.doi2bib.org/#/doi/10.1063/5.0036522>`__
 | F. Musil, M. J. Willatt, M. A. Langovoy, and M. Ceriotti, *“Fast and
   Accurate Uncertainty Estimation in Chemical Machine Learning”*,
   Journal of Chemical Theory and Computation 15(2), 906–915 (2019)
 | DOI:
-  `10.1021/acs.jctc.8b00959 <dx.doi.org/10.1021/acs.jctc.8b00959>`__ —
+  `10.1021/acs.jctc.8b00959 <http://dx.doi.org/10.1021/acs.jctc.8b00959>`__ —
   BibTeX:
   `fetch <http://www.doi2bib.org/#/doi/10.1021/acs.jctc.8b00959>`__
 
@@ -132,7 +132,7 @@ direction.
 | **Implementation and Theory:**
 | M. Hijazi, D. M. Wilkins, *“Fast-forward Langevin dynamics with
   momentum flips”*, J. Chem. Phys. 148, 184109 (2018)
-| DOI: `10.1063/1.5029833 <dx.doi.org/10.1063/1.5029833>`__ — BibTeX:
+| DOI: `10.1063/1.5029833 <http://dx.doi.org/10.1063/1.5029833>`__ — BibTeX:
   `fetch <https://www.doi2bib.org/bib/10.1063%2F1.5029833>`__
 
 
@@ -183,7 +183,7 @@ the harmonic Hessian.
   Fluctuations in Molecular Crystals: A First-Principles Study of the
   Stability of Paracetamol”*, Phs. Rev. Lett. 117, 115702 (2016)
 | DOI:
-  `10.1103/PhysRevLett.117.115702 <dx.doi.org/10.1103/PhysRevLett.117.115702>`__
+  `10.1103/PhysRevLett.117.115702 <http://dx.doi.org/10.1103/PhysRevLett.117.115702>`__
   — BibTeX:
   `fetch <http://www.doi2bib.org/#/doi/10.1103/PhysRevLett.117.115702>`__
 
@@ -204,7 +204,7 @@ other masses.
 | Michele Ceriotti, Thomas E. Markland, “Efficient methods and practical
   guidelines for simulating isotope effects.” The Journal of chemical
   physics 138(1), 014112 (2013).
-| DOI: `10.1063/1.4772676 <dx.doi.org/10.1063/1.4772676>`__ — BibTeX:
+| DOI: `10.1063/1.4772676 <http://dx.doi.org/10.1063/1.4772676>`__ — BibTeX:
   `fetch <http://www.doi2bib.org/#/doi/10.1063/1.4772676>`__
 
 Generalized Langevin Equation Thermostats
@@ -296,21 +296,21 @@ adjust the amount of compensation automatically.
   Accurate Car-Parrinello-like Approach to Born-Oppenheimer Molecular
   Dynamics”*, Phys. Rev. Lett. 98, 066401 (2007)
 | DOI:
-  `10.1103/PhysRevLett.98.066401 <dx.doi.org/10.1103/PhysRevLett.98.066401>`__
+  `10.1103/PhysRevLett.98.066401 <http://dx.doi.org/10.1103/PhysRevLett.98.066401>`__
   — BibTeX:
   `fetch <http://www.doi2bib.org/bib/10.1103%2FPhysRevLett.98.066401>`__
 | F. R. Krajewski, M. Parrinello, *“Linear scaling electronic structure
   calculations and accurate statistical mechanics sampling with noisy
   forces”*, Phys. Rev. B 73, 041105 (2006)
 | DOI:
-  `10.1103/PhysRevB.73.041105 <dx.doi.org/10.1103/PhysRevB.73.041105>`__
+  `10.1103/PhysRevB.73.041105 <http://dx.doi.org/10.1103/PhysRevB.73.041105>`__
   — BibTeX:
   `fetch <http://www.doi2bib.org/bib/10.1103%2FPhysRevB.73.041105>`__
 | Y. Luo, A. Zen, S. Sorella, *“Ab initio molecular dynamics with noisy
   forces: Validating the quantum Monte Carlo approach with benchmark
   calculations of molecular vibrational properties”*, J. Chem. Phys.
   141, 194112 (2014)
-| DOI: `10.1063/1.4901430 <dx.doi.org/10.1063/1.4901430>`__ — BibTeX:
+| DOI: `10.1063/1.4901430 <http://dx.doi.org/10.1063/1.4901430>`__ — BibTeX:
   `fetch <http://www.doi2bib.org/bib/10.1063%2F1.4901430>`__
 
 Multiple Time Step integrators
@@ -350,7 +350,7 @@ fluctuations of nuclei.
   Momentum Distribution in Water”*, J. Phys. Chem. B 122, 6048-6054
   (2018)
 | DOI:
-  `10.1021/acs.jpcb.8b03896 <dx.doi.org/10.1021/acs.jpcb.8b03896>`__ —
+  `10.1021/acs.jpcb.8b03896 <http://dx.doi.org/10.1021/acs.jpcb.8b03896>`__ —
   BibTeX:
   `fetch <http://www.doi2bib.org/#/doi/10.1021/acs.jpcb.8b03896>`__
 | **Theory:**
@@ -493,20 +493,20 @@ of configurations between parallel calculations.
   Ceriotti, C. Corminboeuf, *“Beyond static structures: Putting forth
   remd as a tool to solve problems in computational organic chemistry”*,
   J. Comput. Chem. 37(1), 83-92 (2016)
-| DOI: `10.1002/jcc.24025 <dx.doi.org/10.1002/jcc.24025>`__ — BibTeX:
+| DOI: `10.1002/jcc.24025 <http://dx.doi.org/10.1002/jcc.24025>`__ — BibTeX:
   `fetch <http://www.doi2bib.org/#/doi/10.1002/jcc.24025>`__
 | **Theory:**
 | Y. Sugita, Y. Okamoto, *“Replica-exchange molecular dynamics method
   for protein folding”*, Chem. Phys. Lett. 314(1-2), 141–151 (1999)
 | DOI:
-  `10.1016/s0009-2614(99)01123-9 <dx.doi.org/10.1016/s0009-2614(99)01123-9>`__
+  `10.1016/s0009-2614(99)01123-9 <http://dx.doi.org/10.1016/s0009-2614(99)01123-9>`__
   — BibTeX:
   `fetch <http://www.doi2bib.org/#/doi/10.1016/s0009-2614(99)01123-9>`__
 | T. Okabe, M. Kawata, Y. Okamoto, M. Mikami, *“Replica-exchange monte
   carlo method for the isobaric–isothermal ensemble”*, Chem. Phys. Lett.
   335(5-6), 435-439 (2001)
 | DOI: `10.1016/
-  s0009-2614(01)00055-0 <dx.doi.org/10.1016/s0009-2614(01)00055-0>`__ —
+  s0009-2614(01)00055-0 <http://dx.doi.org/10.1016/s0009-2614(01)00055-0>`__ —
   BibTeX:
   `fetch <http://www.doi2bib.org/#/doi/10.1016/s0009-2614(01)00055-0>`__
 
@@ -522,7 +522,7 @@ species into its isotopes.
   Effects in Water at the Triple Point: Using Theory as a Link Between
   Experiments.”* J. Phys. Chem. Lett. 7(12), 2210-2215 (2016)
 | DOI:
-  `10.1021/acs.jpclett.6b00729 <dx.doi.org/10.1021/acs.jpclett.6b00729>`__
+  `10.1021/acs.jpclett.6b00729 <http://dx.doi.org/10.1021/acs.jpclett.6b00729>`__
   — BibTeX:
   `fetch <http://www.doi2bib.org/bib/10.1021%2Facs.jpclett.6b00729>`__
 | **Theory:**
@@ -624,13 +624,13 @@ coordinate.
 | W. H. Miller, *Semiclassical limit of quantum mechanical transition
   state theory for nonseparable systems*, J. Chem. Phys. 62(5) 1899–1906
   (1975)
-| DOI: `10.1063/1.430676 <dx.doi.org/10.1063/1.430676>`__ — BibTeX:
-  `fetch <doi2bib.org/#/doi/10.1063/1.430676>`__
+| DOI: `10.1063/1.430676 <http://dx.doi.org/10.1063/1.430676>`__ — BibTeX:
+  `fetch <http://doi2bib.org/#/doi/10.1063/1.430676>`__
 | J. O. Richardson, *Ring-polymer instanton theory*, Int. Rev. Phys.
   Chem. 37, 171 (2018)
 | DOI:
-  `10.1080/0144235X.2018.1472353 <doi.org/10.1080/0144235X.2018.1472353>`__
-  — BibTeX: `fetch <doi2bib.org/#/doi/10.1080/0144235X.2018.1472353>`__
+  `10.1080/0144235X.2018.1472353 <http://doi.org/10.1080/0144235X.2018.1472353>`__
+  — BibTeX: `fetch <http://doi2bib.org/#/doi/10.1080/0144235X.2018.1472353>`__
 
 Thermodynamic Integrations
 --------------------------
