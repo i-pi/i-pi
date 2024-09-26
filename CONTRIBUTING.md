@@ -30,10 +30,10 @@ part of linting.
 In most systems, both packages can be easily installed using `pip`.
 BEFORE proceeding to a pull request, the minimal requirement is that you run
 
-::
-
-  $ make lint
-  $ make pretty
+```
+$ make lint
+$ make pretty
+```
 
 This will ensure the formatting and linting requirement are applied in the whole
 directory tree. Please resolve any warnings or errors that may appear. Your
@@ -42,6 +42,6 @@ commit will not pass the CI tests otherwise.
 For a more flexible setup, we also provide the script `i-pi-style`, for
 which instructions can be obtained by typing
 
-::
-
-  $ i-pi-style -h
+```
+$ i-pi-style -h
+```

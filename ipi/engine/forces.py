@@ -24,6 +24,7 @@ from ipi.utils.messages import verbosity, warning, info
 from ipi.utils.depend import *
 from ipi.utils.nmtransform import nm_rescale
 from ipi.engine.beads import Beads
+from ipi.engine.cell import Cell
 
 
 __all__ = ["Forces", "ForceComponent"]
@@ -1006,57 +1007,80 @@ class Forces:
             self._pots.add_dependency(fc._weight)
             self._virs.add_dependency(fc._weight)
 
-    def copy(self, beads=None, cell=None):
-        """Returns a copy of this force object that can be used to compute forces,
-        e.g. for use in internal loops of geometry optimizers, or for property
+    def clone(self, beads, cell):
+        """Duplicates the force object, so that it can be used to compute forces
+        using the same forcefields, but with a separate beads and cell object
+        (that can e.g. be created by cloning existing beads and cell objects).
+        This is useful whenever one wants to compute the same forces and energies
+        without touching the physical system, e.g. for use in internal loops of
+        geometry optimizers, when attempting Monte Carlo moves or for property
         calculation.
 
         Args:
-           beads: Optionally, bind this to a different beads object than the one
-              this Forces is currently bound
-           cell: Optionally, bind this to a different cell object
+           beads: Beads object that the clone should be bound to
+           cell: Cell object that the clone should be bound to
 
         Returns: The copy of the Forces object
         """
 
         if not self.bound:
             raise ValueError("Cannot copy a forces object that has not yet been bound.")
+        if not type(beads) is Beads:
+            raise ValueError(
+                "The 'beads' argument must be provided and be a Beads object."
+            )
+        if not type(cell) is Cell:
+            raise ValueError(
+                "The 'cell' argument must be provided and be a Cell object."
+            )
+
         nforce = Forces()
         nbeads = beads
-        if nbeads is None:
-            nbeads = self.beads
         ncell = cell
-        if cell is None:
-            ncell = self.cell
         nforce.bind(
             nbeads, ncell, self.fcomp, self.ff, self.open_paths, self.output_maker
         )
         return nforce
 
-    def transfer_forces(self, refforce):
-        """Low-level function copying over the value of a second force object,
-        triggering updates but un-tainting this force depends themselves.
-
-        We have noted that in some corner cases it is necessary to copy only
-        the values of updated forces rather than the full depend object, in order to
-        avoid triggering a repeated call to the client code that is potentially
-        very costly. This happens routinely in geometry relaxation routines, for example.
+    def dump_state(self):
+        """
+        Stores a (deep) copy of the internal state of a force object.
+        See `transfer_forces` for an explanation of the usage and
+        logic.
         """
 
-        if len(self.mforces) != len(refforce.mforces):
+        force_data = []
+        for k in range(len(self.mforces)):
+            mself = self.mforces[k]
+            # access the actual data values
+
+            bead_forces = []
+            for b in range(mself.nbeads):
+                bead_forces.append(deepcopy(mself._forces[b]._ufvx._value))
+            force_data.append(
+                (
+                    # will also need bead positions, see _load_state
+                    deepcopy(dstrip(mself.beads.q)),
+                    bead_forces,
+                )
+            )
+        return force_data
+
+    def load_state(self, state):
+        """
+        Loads a previously-saved state of a force object. See
+        `transfer_forces` for an explanation of the usage and
+        logic.
+        """
+
+        if len(state) != len(self.mforces):
             raise ValueError(
-                "Cannot copy forces between objects with different numbers of components"
+                "Cannot load force state from an force with a different numbers of components"
             )
 
         for k in range(len(self.mforces)):
-            mreff = refforce.mforces[k]
             mself = self.mforces[k]
-            if mreff.nbeads != mself.nbeads:
-                raise ValueError(
-                    "Cannot copy forces between objects with different numbers of beads for the "
-                    + str(k)
-                    + "th component"
-                )
+            q, fb = state[k]
 
             # this is VERY subtle. beads in this force component are
             # obtained as a contraction, and so are computed automatically.
@@ -1068,12 +1092,39 @@ class Forces:
             # the value of the contracted bead, so that it's marked as NOT
             # tainted - it should not be as it's an internal of the force and
             # therefore get copied
-            mself.beads._q.set(mreff.beads.q, manual=False)
-            for b in range(mself.nbeads):
-                mself._forces[b]._ufvx.set(
-                    deepcopy(mreff._forces[b]._ufvx._value), manual=False
+            mself.beads._q.set(q, manual=False)
+            if len(fb) != mself.nbeads:
+                raise ValueError(
+                    "Cannot copy forces between objects with different numbers of beads for the "
+                    + str(k)
+                    + "th component"
                 )
+
+            for b in range(mself.nbeads):
+                mself._forces[b]._ufvx.set(fb[b], manual=False)
                 mself._forces[b]._ufvx.taint(taintme=False)
+
+    def transfer_forces(self, refforce):
+        """Low-level function copying over the value of a second force object,
+        triggering updates but un-tainting this force depends themselves.
+
+        We have noted that in some corner cases it is necessary to copy only
+        the values of updated forces rather than the full depend object, in order to
+        avoid triggering a repeated call to the client code that is potentially
+        very costly. This happens routinely in geometry relaxation routines,
+        for example.
+
+        The transfer can also be implemented in a delayed way, by using
+        separately set_state and dump_state. For instance, one can
+
+        old_state = force.dump_state()
+
+        do-something-that-changes-force
+
+        force.load_state(old_state)
+        """
+
+        self.load_state(refforce.dump_state())
 
     def transfer_forces_manual(
         self, new_q, new_v, new_forces, new_x=None, vir=np.zeros((3, 3))
@@ -1086,7 +1137,7 @@ class Forces:
           - new_f list of length equal to number of force type, containing the beads forces
           - new_x list of length equal to number of force type, containing the beads extras
         """
-        msg = "Unconsistent dimensions inside transfer_forces_manual"
+        msg = "Inconsistent dimensions inside transfer_forces_manual"
         assert len(self.mforces) == len(new_q), msg
         assert len(self.mforces) == len(new_v), msg
         assert len(self.mforces) == len(new_forces), msg
@@ -1252,9 +1303,9 @@ class Forces:
             if self.alpha == 0:
                 # we use an aux force evaluator with half the number of beads.
                 if self.dforces is None:
-                    self.dbeads = self.beads.copy(self.nbeads // 2)
-                    self.dcell = self.cell.copy()
-                    self.dforces = self.copy(self.dbeads, self.dcell)
+                    self.dbeads = self.beads.clone(self.nbeads // 2)
+                    self.dcell = self.cell.clone()
+                    self.dforces = self.clone(self.dbeads, self.dcell)
 
                 self.dcell.h = self.cell.h
 
@@ -1281,9 +1332,9 @@ class Forces:
             else:
                 # we use an aux force evaluator with the same number of beads.
                 if self.dforces is None:
-                    self.dbeads = self.beads.copy()
-                    self.dcell = self.cell.copy()
-                    self.dforces = self.copy(self.dbeads, self.dcell)
+                    self.dbeads = self.beads.clone()
+                    self.dcell = self.cell.clone()
+                    self.dforces = self.clone(self.dbeads, self.dcell)
 
                 self.dcell.h = self.cell.h
 
@@ -1310,9 +1361,9 @@ class Forces:
         if self.mforces[index].epsilon < 0.0:
             # we use an aux force evaluator with the same number of beads.
             if self.dforces is None:
-                self.dbeads = self.beads.copy()
-                self.dcell = self.cell.copy()
-                self.dforces = self.copy(self.dbeads, self.dcell)
+                self.dbeads = self.beads.clone()
+                self.dcell = self.cell.clone()
+                self.dforces = self.clone(self.dbeads, self.dcell)
 
             self.dcell.h = self.cell.h
 

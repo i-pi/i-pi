@@ -21,7 +21,7 @@ py
 --
 
 A Python version of the driver. Some simple potentials, and interfaces
-with codes that have a Python API can be found in the `forcefields/` 
+with codes that have a Python API can be found in the `pes/` 
 folder. 
 
 
