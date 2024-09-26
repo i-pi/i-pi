@@ -14,7 +14,7 @@ from ipi.utils.depend import *
 from ipi.utils.mathtools import *
 
 
-__all__ = ["Cell"]
+__all__ = ["Cell", "GenericCell"]
 
 
 class Cell:
@@ -95,15 +95,14 @@ class Cell:
            system box.
         """
 
-        s = dstrip(pos).copy()
-        s.shape = (len(pos) // 3, 3)
+        s = dstrip(pos).copy().reshape(-1,3)
 
         s = np.dot(dstrip(self.ih), s.T)
         s = s - np.round(s)
 
         s = np.dot(dstrip(self.h), s).T
 
-        pos[:] = s.reshape((len(s) * 3))
+        pos[:] = s.reshape(-1)
 
     def minimum_distance(self, atom1, atom2):
         """Takes two atoms and tries to find the smallest vector between two
@@ -130,3 +129,49 @@ class Cell:
 
 
 dproperties(Cell, ["h", "ih", "V"])
+
+
+class GenericCell(Cell):
+    """A cell class that does not assume upper-triangular values.
+
+    Depend objects:
+       h: An array giving the lattice vector matrix.
+       ih: An array giving the inverse of the lattice vector matrix.
+       V: The volume of the cell.
+    """
+
+    def __init__(self, h=None):
+        """Initialises base cell class.
+
+        Args:
+           h: Optional array giving the initial lattice vector matrix. The
+              reference cell matrix is set equal to this. 
+        """
+
+        if h is None:
+            h = np.zeros((3, 3), float)
+
+        self._h = depend_array(name="h", value=h)
+        self._ih = depend_array(
+            name="ih",
+            value=np.zeros((3, 3), float),
+            func=self.get_ih,
+            dependencies=[self._h],
+        )
+        self._V = depend_value(name="V", func=self.get_volume, dependencies=[self._h])
+
+    def clone(self):
+        return GenericCell(dstrip(self.h).copy())
+
+    def get_ih(self):
+        """Inverts the lattice vector matrix."""
+
+        return np.linalg.inv(self.h)
+
+    def get_volume(self):
+        """Calculates the volume of the system box."""
+
+        return np.linalg.det(self.h)
+
+
+dproperties(GenericCell, ["h", "ih", "V"])
