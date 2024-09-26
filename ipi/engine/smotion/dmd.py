@@ -36,6 +36,8 @@ class DMD(Smotion):
         super(DMD, self).__init__()
         self.dmdff = dmdff
 
+        self.mode = "dmd"
+
     def step(self, step=None):
         """Updates driven md time step."""
 
