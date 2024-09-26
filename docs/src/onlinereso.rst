@@ -13,6 +13,10 @@ In http://gle4md.org/ one can also obtain colored-noise parameters to
 run Path Integral with Generalized Langevin Equation thermostat
 (PI+GLE/PIGLET) calculations.
 
+Several examples of usage of i-PI to perform advanced molecular simulations
+can be found among the recipes of the 
+`atomistic cookbook <https://lab-cosmo.github.io/atomistic-cookbook/>`_.
+
 Python resources
 ~~~~~~~~~~~~~~~~
 
