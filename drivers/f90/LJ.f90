@@ -189,7 +189,8 @@
                      forces(n_list(j),:) = forces(n_list(j),:) - fij
                      pot = pot + pot_ij
                      DO k = 1, 3
-                        DO l = 1, 3
+                        DO l = k, 3
+                           ! only upper triangular part is returned
                            virial(k,l) = virial(k,l) + fij(k)*rij(l)
                         ENDDO
                      ENDDO
@@ -271,7 +272,7 @@
                      forces(n_list(j),:) = forces(n_list(j),:) - fij
                      pot = pot + pot_ij
                      DO k = 1, 3
-                        DO l = 1, 3
+                        DO l = k, 3 ! only upper-tri part is returned
                            virial(k,l) = virial(k,l) + fij(k)*rij(l)
                         ENDDO
                      ENDDO
