@@ -312,7 +312,8 @@ modification is necessary:
     &END MOTION
 
 The rest of the input file should be the same as for a standard CP2K
-calculation, as explained at `www.cp2k.org/ <www.cp2k.org/>`__.
+calculation, as explained at it the documentation of 
+`CP2K <http://www.cp2k.org/>`__.
 
 Quantum-Espresso
 ^^^^^^^^^^^^^^^^

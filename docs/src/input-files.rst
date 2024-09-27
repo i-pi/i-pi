@@ -83,7 +83,7 @@ To help detect any user error the recognized tag names, data types and
 acceptable options are all specified in the code in a specialized input
 class for each class of object. A full list of all the available tags
 and a brief description of their function is given at 
-`input tags <input-tags.rst>`_.
+`input tags <input-tags.html>`_.
 
 .. _inputunits:
 
