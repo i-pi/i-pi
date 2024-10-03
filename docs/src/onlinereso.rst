@@ -15,7 +15,7 @@ run Path Integral with Generalized Langevin Equation thermostat
 
 Several examples of usage of i-PI to perform advanced molecular simulations
 can be found among the recipes of the 
-`atomistic cookbook <https://lab-cosmo.github.io/atomistic-cookbook/>`_.
+`atomistic cookbook <https://atomistic-cookbook.org/>`_.
 
 Python resources
 ~~~~~~~~~~~~~~~~
