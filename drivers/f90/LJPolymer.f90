@@ -105,6 +105,7 @@
             fij = f_tot*rij/r
    
          END SUBROUTINE
+
          SUBROUTINE LJ_functions(sigma, eps, r, pot, force)
             ! Calculates the magnitude of the LJ force and potential between
             ! a pair of atoms at a given distance from each other.
