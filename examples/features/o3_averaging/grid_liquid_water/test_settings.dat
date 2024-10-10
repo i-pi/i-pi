@@ -1,0 +1,4 @@
+#Settings file for automatic test
+driver_model qtip4pf
+driver_model2 noo3-h2o
+nsteps 10

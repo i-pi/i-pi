@@ -16,6 +16,8 @@ import sys
 
 import numpy as np
 
+from ipi.engine.cell import GenericCell
+from ipi.utils.prng import Random
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import info, verbosity, warning
 from ipi.interfaces.sockets import InterfaceSocket
@@ -23,6 +25,7 @@ from ipi.utils.depend import dstrip
 from ipi.utils.io import read_file
 from ipi.utils.units import unit_to_internal
 from ipi.utils.distance import vector_separation
+from ipi.utils.mathtools import get_rotation_quadrature, random_rotation
 
 try:
     import plumed
@@ -1369,6 +1372,162 @@ class FFCommittee(ForceField):
                     self.gather(r)
                     r["result"][0] -= self.offset
                     r["status"] = "Done"
+
+
+class FFRotations(FFSocket):
+    """Forcefield to manipulate models that are not exactly rotationally equivariant.
+    Can be used to evaluate a different random rotation at each evaluation, or to average
+    over a regular grid of Euler angles"""
+
+    def __init__(
+        self,
+        latency=1.0,
+        offset=0.0,
+        name="",
+        pars=None,
+        dopbc=True,
+        active=np.array([-1]),
+        threaded=True,
+        interface=None,
+        random=False,
+        inversion=False,
+        grid=1,
+    ):
+        super(FFRotations, self).__init__(
+            latency,
+            offset,
+            name,
+            pars,
+            dopbc,
+            active,
+            threaded,
+            interface,
+        )
+
+        # TODO: initialize and save (probably better to use different PRNG than the one from the simulation)
+        self.prng = Random()
+        self.random = random
+        self.inversion = inversion
+        self.grid = grid
+
+        self._rotations = get_rotation_quadrature(self.grid)
+
+    def queue(self, atoms, cell, reqid=-1):
+        # launches requests for all of the rotations FF objects
+        ffh = []
+        rots = []
+        if self.random:
+            R_random = random_rotation(self.prng, improper=True)
+        else:
+            R_random = np.eye(3)
+
+        for R, w in self._rotations:
+            R = R @ R_random
+            rot_atoms = atoms.clone()
+            # NB we need generic cell orientation
+            rot_cell = GenericCell(R @ dstrip(cell.h).copy())
+            rot_atoms.q[:] = (dstrip(rot_atoms.q).reshape(-1, 3) @ R.T).flatten()
+            rots.append((R, w))
+
+            ffh.append(super(FFRotations, self).queue(rot_atoms, rot_cell, reqid))
+
+            if self.inversion:
+                # also add a "flipped cell" to the evaluation list
+                R = R * -1
+                rot_cell = GenericCell(R @ dstrip(cell.h).copy())
+                rot_atoms = atoms.clone()
+                rot_atoms.q[:] = (dstrip(rot_atoms.q).reshape(-1, 3) @ R.T).flatten()
+                ffh.append(super(FFRotations, self).queue(rot_atoms, rot_cell, reqid))
+
+        # creates the request with the help of the base class,
+        # making sure it already contains a handle to the list of FF
+        # requests
+        req = ForceField.queue(
+            self, atoms, cell, reqid, template=dict(ff_handles=ffh, rots=rots)
+        )
+        req["status"] = "Running"
+        req["t_dispatched"] = time.time()
+        return req
+
+    def check_finish(self, r):
+        """Checks if all sub-requests associated with a given
+        request are finished"""
+
+        for ff_r in r["ff_handles"]:
+            if ff_r["status"] != "Done":
+                return False
+        return True
+
+    def gather(self, r):
+        """Collects results from all sub-requests, and assemble the committee of models."""
+        r["result"] = [
+            0.0,
+            np.zeros(len(r["pos"]), float),
+            np.zeros((3, 3), float),
+            "",
+        ]
+
+        # list of pointers to the forcefield requests. shallow copy so we can remove stuff
+        rot_handles = r["ff_handles"].copy()
+        rots = r["rots"].copy()
+
+        # Gathers the forcefield energetics and extras
+        pots = []
+        frcs = []
+        virs = []
+        xtrs = []
+        quad_w = []
+        for ff_r, (R, w) in zip(rot_handles, rots):
+            pots.append(ff_r["result"][0])
+            # must rotate forces and virial back into the original reference frame
+            frcs.append((ff_r["result"][1].reshape(-1, 3) @ R).flatten())
+            virs.append((R.T @ ff_r["result"][2] @ R))
+            xtrs.append(ff_r["result"][3])
+            quad_w.append(w)
+
+        quad_w = np.array(quad_w)
+        pots = np.array(pots)
+        frcs = np.array(frcs).reshape(len(frcs), -1)
+        virs = np.array(virs).reshape(-1, 3, 3)
+
+        # Computes the mean energetics (using the quadrature weights)
+        mean_pot = np.mean(pots * quad_w, axis=0) / quad_w.mean()
+        mean_frc = np.mean(frcs * quad_w[:, np.newaxis], axis=0) / quad_w.mean()
+        mean_vir = (
+            np.mean(virs * quad_w[:, np.newaxis, np.newaxis], axis=0) / quad_w.mean()
+        )
+
+        # Sets the output of the committee model.
+        r["result"][0] = mean_pot
+        r["result"][1] = mean_frc
+        r["result"][2] = mean_vir
+        r["result"][3] = {
+            "o3grid_pots": pots
+        }  # this is the list of potentials on a grid, for monitoring
+
+        # "dissolve" the extras dictionaries into a list
+        for k in xtrs[0].keys():
+            r["result"][3][k] = []
+            for x in xtrs:
+                r["result"][3][k].append(x[k])
+
+        for ff_r in r["ff_handles"]:
+            self.release(ff_r)
+
+        r["status"] = "Done"
+        self.release(r)
+
+    def poll(self):
+        """Polls the forcefield object to check if it has finished."""
+
+        super().poll()
+
+        for r in self.requests:
+            if "ff_handles" in r and r["status"] != "Done" and self.check_finish(r):
+                r["t_finished"] = time.time()
+                self.gather(r)
+                r["result"][0] -= self.offset
+                r["status"] = "Done"
 
 
 class PhotonDriver:

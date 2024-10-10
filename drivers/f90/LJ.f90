@@ -190,7 +190,7 @@
                      pot = pot + pot_ij
                      DO k = 1, 3
                         DO l = k, 3
-                           ! Only the upper triangular elements calculated.
+                           ! only upper triangular part is returned
                            virial(k,l) = virial(k,l) + fij(k)*rij(l)
                         ENDDO
                      ENDDO
@@ -199,8 +199,8 @@
                start = index_list(i) + 1
             ENDDO
 
-            ! Assuming an upper-triangular vector matrix for the simulation box.
-            volume = cell_h(1,1)*cell_h(2,2)*cell_h(3,3)
+            ! Works with a generic cell, even if usually it'll be upper-triuangular
+            volume = CELL_VOLUME(cell_h) !cell_h(1,1)*cell_h(2,2)*cell_h(3,3)
             CALL LJ_longrange(rc, sigma, eps, natoms, volume, pot_lr, vir_lr)
             pot = pot + pot_lr
             DO k = 1, 3
@@ -272,8 +272,7 @@
                      forces(n_list(j),:) = forces(n_list(j),:) - fij
                      pot = pot + pot_ij
                      DO k = 1, 3
-                        DO l = k, 3
-                           ! Only the upper triangular elements calculated.
+                        DO l = k, 3 ! only upper-tri part is returned
                            virial(k,l) = virial(k,l) + fij(k)*rij(l)
                         ENDDO
                      ENDDO
@@ -282,8 +281,8 @@
                start = index_list(i) + 1
             ENDDO
 
-            ! Assuming an upper-triangular vector matrix for the simulation box.
-            volume = cell_h(1,1)*cell_h(2,2)*cell_h(3,3)
+            ! Works with a generic cell, even if usually it'll be upper-triuangular
+            volume = CELL_VOLUME(cell_h) ! cell_h(1,1)*cell_h(2,2)*cell_h(3,3)
             CALL LJ_longrange(rc, sigma*(1-n_type2*0.4/natoms), eps*(1-n_type2*0.4/natoms), natoms, volume, pot_lr, vir_lr)
             pot = pot + pot_lr
             DO k = 1, 3
