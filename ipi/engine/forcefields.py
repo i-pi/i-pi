@@ -1484,9 +1484,10 @@ class FFRotations(FFSocket):
         self._rotations = get_rotation_quadrature(self.grid)
 
     def queue(self, atoms, cell, reqid=-1):
+
         # launches requests for all of the rotations FF objects
-        ffh = []
-        rots = []
+        ffh = []  # this is the list of "inner" FF requests
+        rots = []  # this is a list of tuples of (rotation matrix, weight)
         if self.random:
             R_random = random_rotation(self.prng, improper=True)
         else:
@@ -1494,20 +1495,25 @@ class FFRotations(FFSocket):
 
         for R, w in self._rotations:
             R = R @ R_random
-            rot_atoms = atoms.clone()
-            # NB we need generic cell orientation
-            rot_cell = GenericCell(R @ dstrip(cell.h).copy())
-            rot_atoms.q[:] = (dstrip(rot_atoms.q).reshape(-1, 3) @ R.T).flatten()
-            rots.append((R, w))
 
+            rot_atoms = atoms.clone()
+            rot_cell = GenericCell(
+                R @ dstrip(cell.h).copy()
+            )  # NB we need generic cell orientation
+            rot_atoms.q[:] = (dstrip(rot_atoms.q).reshape(-1, 3) @ R.T).flatten()
+
+            rots.append((R, w))
             ffh.append(super(FFRotations, self).queue(rot_atoms, rot_cell, reqid))
 
             if self.inversion:
-                # also add a "flipped cell" to the evaluation list
+                # also add a "flipped rotation" to the evaluation list
                 R = R * -1
+
                 rot_cell = GenericCell(R @ dstrip(cell.h).copy())
                 rot_atoms = atoms.clone()
                 rot_atoms.q[:] = (dstrip(rot_atoms.q).reshape(-1, 3) @ R.T).flatten()
+
+                rots.append((R, w))
                 ffh.append(super(FFRotations, self).queue(rot_atoms, rot_cell, reqid))
 
         # creates the request with the help of the base class,
@@ -1562,10 +1568,10 @@ class FFRotations(FFSocket):
         virs = np.array(virs).reshape(-1, 3, 3)
 
         # Computes the mean energetics (using the quadrature weights)
-        mean_pot = np.mean(pots * quad_w, axis=0) / quad_w.mean()
-        mean_frc = np.mean(frcs * quad_w[:, np.newaxis], axis=0) / quad_w.mean()
+        mean_pot = np.sum(pots * quad_w, axis=0) / quad_w.sum()
+        mean_frc = np.sum(frcs * quad_w[:, np.newaxis], axis=0) / quad_w.sum()
         mean_vir = (
-            np.mean(virs * quad_w[:, np.newaxis, np.newaxis], axis=0) / quad_w.mean()
+            np.sum(virs * quad_w[:, np.newaxis, np.newaxis], axis=0) / quad_w.sum()
         )
 
         # Sets the output of the committee model.
