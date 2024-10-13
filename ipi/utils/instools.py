@@ -210,7 +210,7 @@ def get_imvector(h, m3):
         verbosity.low,
     )
 
-    imv = w[:, 0] * (m3[:] ** 0.5)
+    imv = w[:, 0] / (m3[:] ** 0.5)
     imv = imv / np.linalg.norm(imv)
 
     return imv.reshape(1, imv.size)
