@@ -56,5 +56,5 @@ class Runner_examples(Runner):
             )
             return clients
         except Exception as ex:
-           print("Couldn't modify the xml file")
-           raise ex
+            print("Couldn't modify the xml file")
+            raise ex
