@@ -8,7 +8,7 @@ for the notation and basic equations
 import numpy as np
 from ipi.inputs.simulation import InputSimulation
 from ipi.utils.io.inputs import io_xml
-from ipi.utils.messages import info, verbosity
+from ipi.utils.messages import warning, info, verbosity
 
 
 def get_gle_matrices(ipi_input, time_scaling=1.0):

@@ -8,7 +8,7 @@ import sys
 import argparse
 import numpy as np
 from ipi.utils.tools import gle_frequency_kernel, isra_deconvolute, get_gle_matrices
-from ipi.utils.messages import info, warning, verbosity
+from ipi.utils.messages import info, verbosity
 
 
 def input_facf(path2inputfile, mrows, stride):
