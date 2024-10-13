@@ -1,0 +1,46 @@
+<simulation verbosity= "high">
+<output prefix="methane"> 
+<properties stride="5" filename="out">  [ step, time{picosecond},  conserved{electronvolt}, 
+	temperature{kelvin}, kinetic_md{electronvolt}, potential{electronvolt}, pressure_md{bar}, volume{angstrom3}, 
+	ensemble_temperature{kelvin}, cell_abcABC] </properties>
+	<trajectory filename="xc" stride="50" cell_units="angstrom"> x_centroid{angstrom} </trajectory>
+     	<checkpoint stride="1000"/> 
+   	</output> 
+   	<total_steps> 100</total_steps> 
+  	<prng><seed>12345</seed></prng>
+	<ffsocket mode='unix' name='driver'>
+    		<latency>  1.00000000e-04</latency>
+    		<slots>4</slots>
+    		<port>12345</port>
+    		<timeout>60.000000e+00</timeout>
+   		<address>xtb</address>
+  	</ffsocket> 
+	<system>
+        	<initialize nbeads="1">
+                	<file mode="xyz"> ch4.xyz </file>
+                 	<velocities mode="thermal" units="kelvin"> 250.0 </velocities>
+              	</initialize>
+	     	<forces>
+      			<force forcefield='driver'/>
+   		 </forces>
+		<motion mode="dynamics">
+                	<dynamics mode="nvt">
+                    		<timestep units="femtosecond"> 0.5 </timestep>
+                        	<thermostat mode='gle'>
+                        		<A shape='(5,5)'>
+                        					[	
+				4.498098855452e-3,    6.594810718477e-6,    2.788030342989e-4,   -8.808265165053e-4,    5.605371493938e-3,
+                                -6.726802271646e-6,    2.079069559861e-9,    1.746169548818e-5,   -4.800164465960e-6,    1.025830873432e-5,
+                                -3.586191452340e-4,   -1.746169548818e-5,    3.287481976399e-5,    1.245698716799e-4,   -2.417657162526e-4,
+                                -2.508912543565e-4,    4.800164465960e-6,   -1.245698716799e-4,    6.449207766266e-4,    2.783583234046e-4,
+                                5.273493443008e-3,   -1.025830873432e-5,    2.417657162526e-4,   -2.783583234046e-4,    7.488477456790e-3
+                        					]
+                       		</A>
+                        	</thermostat>
+                 	</dynamics>
+              	</motion>
+	   	<ensemble>
+                	<temperature units="kelvin"> 250.0 </temperature>
+           	</ensemble>
+         </system>
+</simulation>
