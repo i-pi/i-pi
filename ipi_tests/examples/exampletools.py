@@ -55,5 +55,6 @@ class Runner_examples(Runner):
                 test_settings,
             )
             return clients
-        except:
-            raise RuntimeError("Couldn't modify the xml file")
+        except Exception as ex:
+            print("Couldn't modify the xml file")
+            raise ex

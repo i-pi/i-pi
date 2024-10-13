@@ -31,6 +31,7 @@ fortran_driver_models = [
     "doublewell_1D",
     "doublewell",
     "gas",
+    "noo3-h2o",
 ]
 
 # We should do this automatically but for now we do it explicitly here
@@ -193,6 +194,8 @@ def modify_xml_4_dummy_test(
     ff_sockets = []
     for ff_root in ff_roots:
         for ff_socket in ff_root.findall("ffsocket"):
+            ff_sockets.append(ff_socket)
+        for ff_socket in ff_root.findall("ffrotations"):
             ff_sockets.append(ff_socket)
         for ff_socket in ff_root.findall("ffcavphsocket"):
             ff_sockets.append(ff_socket)
