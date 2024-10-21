@@ -810,6 +810,12 @@ class FFPlumed(FFEval):
         self.masses = dstrip(myatoms.m)
         self.lastq = np.zeros(3 * self.natoms)
         self.system_force = None  # reference to physical force calculator
+        softexit.register_function(self.softexit)
+
+    def softexit(self):
+        """Takes care of cleaning up upon softexit"""
+
+        self.plumed.finalize()
 
     def evaluate(self, r):
         """A wrapper function to call the PLUMED evaluation routines
