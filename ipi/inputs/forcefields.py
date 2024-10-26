@@ -473,7 +473,7 @@ class InputFFDebye(InputForceField):
                 "default": input_default(factory=np.zeros, args=(0,)),
                 "help": "Specifies the Hessian of the harmonic potential. "
                 "Default units are atomic. Units can be specified only by xml attribute. "
-                r"Implemented options are: 'atomic_unit', 'ev/ang\^2'",
+                r"Implemented options are: 'atomic_unit', 'ev/ang^2'",
                 "dimension": "hessian",
             },
         ),
@@ -943,17 +943,32 @@ class InputFFRotations(InputFFSocket):
         },
     )
 
-    fields["grid"] = (
+    fields["grid_order"] = (
         InputValue,
         {
             "dtype": int,
             "default": 1,
             "help": """Sums over a grid of rotations of the given order.
-            Note that the number of rotations increases rapidly with the order, e.g.
-            '1' leads to a single rotation, '2' to 18, '3' to 75 rotations.
+            Note that the number of rotations increases rapidly with the order:
+            e.g. for a legendre grid
+            '1' leads to a single rotation, '2' to 18, '3' to 75 rotations, while 
+            for a lebedev grid '3' contains 18 rotations, '5' 70 rotations and so on.
             """,
         },
     )
+
+    fields["grid_mode"] = (
+        InputValue,
+        {
+            "dtype": str,
+            "options": ["legendre", "lebedev"],
+            "default": "legendre",
+            "help": """Defines the type of integration grid. 
+            Lebedev grids are usually more efficient in integrating. 
+            """,
+        },
+    )
+
 
     fields["inversion"] = (
         InputValue,
@@ -967,11 +982,12 @@ class InputFFRotations(InputFFSocket):
     )
 
     def store(self, ff):
-        """Store all the sub-forcefields"""
+        """Store the base and rotation quadrature parameters"""
 
         super(InputFFRotations, self).store(ff)
         self.inversion.store(ff.inversion)
-        self.grid.store(ff.grid)
+        self.grid_order.store(ff.grid_order)
+        self.grid_mode.store(ff.grid_mode)
         self.random.store(ff.random)
 
     def fetch(self):
@@ -994,7 +1010,8 @@ class InputFFRotations(InputFFSocket):
                 match_mode=self.matching.fetch(),
                 exit_on_disconnect=self.exit_on_disconnect.fetch(),
             ),
-            grid=self.grid.fetch(),
+            grid_order=self.grid_order.fetch(),
+            grid_mode=self.grid_mode.fetch(),
             random=self.random.fetch(),
             inversion=self.inversion.fetch(),
         )

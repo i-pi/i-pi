@@ -6,6 +6,7 @@
 
 
 import math
+from importlib import resources
 
 import numpy as np
 
@@ -25,6 +26,8 @@ __all__ = [
     "logsumlog",
     "sinch",
     "gaussian_inv",
+    "get_rotation_quadrature_legendre",
+    "get_rotation_quadrature_lebedev",
 ]
 
 
@@ -308,7 +311,6 @@ def det_ut3x3(h):
 
 
 MINSERIES = 1e-8
-
 
 def exp_ut3x3(h):
     """Computes the matrix exponential for a 3x3 upper-triangular matrix.
@@ -597,7 +599,7 @@ def roots_legendre(L):
     return roots, weights
 
 
-def get_rotation_quadrature(L):
+def get_rotation_quadrature_legendre(L):
     if L == 1:
         # returns the identity (for some reason this algo below generates a different rotation)
         return [(np.eye(3), 2.0)]
@@ -611,10 +613,24 @@ def get_rotation_quadrature(L):
             for v, weight in zip(all_v, weights_now):
                 angles = [theta, v, w]
                 rotation_matrix = euler_zxz_to_matrix(*angles)
-                quads.append((rotation_matrix, weight))
+                quads.append((rotation_matrix, weight, angles))
 
     return quads
 
+def get_rotation_quadrature_lebedev(L):    
+    with resources.path("ipi.utils", "lebedev_grids.npy") as file_path:
+        lebedev = np.load(file_path, allow_pickle=True).item()
+    if not L in lebedev:
+        raise ValueError(f"There is no Lebedev grid of order {L} available")
+    leb_quad = lebedev[L]
+    quads = []
+    for theta_index in range(0, L):
+        theta = 2 * np.pi * theta_index / L
+        for w, v, weight in leb_quad:
+            angles = [theta, v, w] # [w, v, theta]
+            rotation_matrix = euler_zxz_to_matrix(*angles)
+            quads.append((rotation_matrix, weight, angles))
+    return quads   
 
 def random_rotation(prng, improper=True):
     """Generates a (uniform) random rotation matrix"""

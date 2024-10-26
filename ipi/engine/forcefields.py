@@ -26,7 +26,7 @@ from ipi.utils.io import read_file
 from ipi.utils.units import unit_to_internal
 from ipi.utils.distance import vector_separation
 from ipi.pes import __drivers__
-from ipi.utils.mathtools import get_rotation_quadrature, random_rotation
+from ipi.utils.mathtools import get_rotation_quadrature_legendre, get_rotation_quadrature_lebedev, random_rotation
 
 plumed = None
 
@@ -1462,7 +1462,8 @@ class FFRotations(FFSocket):
         interface=None,
         random=False,
         inversion=False,
-        grid=1,
+        grid_order=1,
+        grid_mode="lebedev"
     ):
         super(FFRotations, self).__init__(
             latency,
@@ -1479,9 +1480,19 @@ class FFRotations(FFSocket):
         self.prng = Random()
         self.random = random
         self.inversion = inversion
-        self.grid = grid
+        self.grid_order = grid_order
+        self.grid_mode = grid_mode
 
-        self._rotations = get_rotation_quadrature(self.grid)
+        if self.grid_mode == "lebedev":
+            self._rotations = get_rotation_quadrature_lebedev(self.grid_order)
+        elif self.grid_mode == "legendre":
+            self._rotations = get_rotation_quadrature_legendre(self.grid_order)
+        else:
+            raise ValueError(f"Invalid quadrature {self.grid_mode}")
+        info(f"""
+# Generating {self.grid_mode} rotation quadrature of order {self.grid_order}.
+# Grid contains {len(self._rotations)} proper rotations.
+""", verbosity.low)
 
     def queue(self, atoms, cell, reqid=-1):
 
@@ -1493,7 +1504,7 @@ class FFRotations(FFSocket):
         else:
             R_random = np.eye(3)
 
-        for R, w in self._rotations:
+        for R, w, _ in self._rotations:
             R = R @ R_random
 
             rot_atoms = atoms.clone()
