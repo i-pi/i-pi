@@ -1,6 +1,5 @@
 """ An interface for the [SO3LR](https://github.com/general-molecular-simulations/so3lr) calculator """
 
-import sys
 from .ase import ASEDriver
 
 try:
