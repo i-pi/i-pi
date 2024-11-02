@@ -13,10 +13,9 @@ from ipi.utils.units import unit_to_internal, unit_to_user
 
 try:
     import tblite.interface as tb
-except ImportError as e:
-    raise ModuleNotFoundError(
-        "Could not find tblite for xtb driver. Please install tblite-python with mamba"
-    ) from e
+except ImportError:
+    tb = None
+
 
 __DRIVER_NAME__ = "xtb"
 __DRIVER_CLASS__ = "TBLiteDriver"
@@ -31,6 +30,12 @@ class TBLiteDriver(object):
         verbose=False,
     ):
         """Initialized dummy drivers"""
+
+        if tb is None:
+            raise ModuleNotFoundError(
+                "Could not find tblite for xtb driver. Please install tblite-python with mamba"
+            )
+
         config = json.loads(args)
         try:
             self.method = config["method"]
