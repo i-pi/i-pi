@@ -28,7 +28,7 @@ A2au = units.unit_to_internal("length", "angstrom", 1.0)
 
 
 class DDW_with_explicit_bath_driver(Dummy_driver):
-    """Adds to a double-double well (DDW) potential coupled to two (explicit) harmonic baths.
+    r"""Adds to a double-double well (DDW) potential coupled to two (explicit) harmonic baths.
            pos[0:2] = DDW
            pos[2:n//2+1] = bath1
            pos[n//2+1:] = bath2
@@ -50,7 +50,7 @@ class DDW_with_explicit_bath_driver(Dummy_driver):
     """
 
     def __init__(self, args=None, verbose=None):
-        self.error_msg = """\nDW+explicit_bath driver expects 11 arguments.\n
+        self.error_msg = r"""\nDW+explicit_bath driver expects 11 arguments.\n
         Example: python driver.py -m DoubleWell_with_explicit_bath -o wb1 (cm^-1) V1 (cm^-1) wb2 (cm^-1) V2 (cm^-1) coupling(au) mass delta(\AA) eta0  eps1 eps2  deltaQ omega_c(cm^-1)     \n
         python driver.py -m DoubleWell -o 500,2085,500,2085,0.1,1837,0.00,1,0,0,1,500\n"""
         super(DDW_with_explicit_bath_driver, self).__init__(

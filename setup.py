@@ -7,12 +7,7 @@ scripts = [str(p) for p in Path("bin").iterdir() if p.name != "i-pi-driver"]
 
 setup(
     packages=[
-        *find_packages(exclude=["ipi_tests*"]),
-        "ipi._driver",
-        "ipi._driver.pes",
+        *find_packages(exclude=["ipi_tests*"])
     ],
-    package_dir={
-        "ipi._driver": "drivers/py",
-    },
     scripts=scripts,
 )
