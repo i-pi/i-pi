@@ -11,6 +11,7 @@ import numpy as np
 from ipi.engine.forcefields import (
     ForceField,
     FFSocket,
+    FFDirect,
     FFLennardJones,
     FFDebye,
     FFPlumed,
@@ -28,6 +29,7 @@ from ipi.utils.messages import verbosity, warning
 
 __all__ = [
     "InputFFSocket",
+    "InputFFDirect",
     "InputFFLennardJones",
     "InputFFDebye",
     "InputFFPlumed",
@@ -135,6 +137,8 @@ class InputForceField(Input):
         self.activelist.store(ff.active)
         self.threaded.store(ff.threaded)
 
+    _FFCLASS = ForceField
+
     def fetch(self):
         """Creates a ForceField object.
 
@@ -144,7 +148,7 @@ class InputForceField(Input):
 
         super(InputForceField, self).fetch()
 
-        return ForceField(
+        return self._FFCLASS(
             pars=self.parameters.fetch(),
             name=self.name.fetch(),
             latency=self.latency.fetch(),
@@ -336,6 +340,17 @@ class InputFFSocket(InputForceField):
             raise ValueError("Negative timeout parameter specified.")
 
 
+class InputFFDirect(InputForceField):
+    attribs = {}
+    attribs.update(InputForceField.attribs)
+
+    default_help = """ Direct potential that evaluates forces through a Python
+    call, using PES providers from a list of possible external codes. """
+    default_label = "FFDirect"
+
+    _FFCLASS = FFDirect
+
+
 class InputFFLennardJones(InputForceField):
     attribs = {}
     attribs.update(InputForceField.attribs)
@@ -344,29 +359,7 @@ class InputFFLennardJones(InputForceField):
                    Expects standard LJ parameters, e.g. { eps: 0.1, sigma: 1.0 }. """
     default_label = "FFLJ"
 
-    def store(self, ff):
-        super(InputFFLennardJones, self).store(ff)
-
-    def fetch(self):
-        super(InputFFLennardJones, self).fetch()
-
-        return FFLennardJones(
-            pars=self.parameters.fetch(),
-            name=self.name.fetch(),
-            latency=self.latency.fetch(),
-            offset=self.offset.fetch(),
-            dopbc=self.pbc.fetch(),
-            threaded=self.threaded.fetch(),
-        )
-
-        if self.slots.fetch() < 1 or self.slots.fetch() > 5:
-            raise ValueError(
-                "Slot number " + str(self.slots.fetch()) + " out of acceptable range."
-            )
-        if self.latency.fetch() < 0:
-            raise ValueError("Negative latency parameter specified.")
-        if self.timeout.fetch() < 0.0:
-            raise ValueError("Negative timeout parameter specified.")
+    _FFCLASS = FFLennardJones
 
 
 class InputFFdmd(InputForceField):
@@ -747,6 +740,7 @@ class InputFFCommittee(InputForceField):
 
     dynamic = {
         "ffsocket": (InputFFSocket, {"help": InputFFSocket.default_help}),
+        "ffdirect": (InputFFDirect, {"help": InputFFDirect.default_help}),
         "fflj": (InputFFLennardJones, {"help": InputFFLennardJones.default_help}),
         "ffdebye": (InputFFDebye, {"help": InputFFDebye.default_help}),
         "ffplumed": (InputFFPlumed, {"help": InputFFPlumed.default_help}),

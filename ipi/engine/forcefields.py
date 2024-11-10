@@ -391,6 +391,10 @@ class FFEval(ForceField):
         request["status"] = "Done"
 
 
+class FFDirect(FFEval):
+    pass
+
+
 class FFLennardJones(FFEval):
     """Basic fully pythonic force provider.
 
