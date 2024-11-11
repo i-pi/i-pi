@@ -420,8 +420,8 @@ class FFDirect(FFEval):
         super().__init__(latency, offset, name, pars, dopbc, active, threaded)
 
         self.pes = pes
-        # TODO sanitize the handling of pars
-        self.driver = __drivers__[self.pes]("", verbosity.high)
+        print("PARS ", pars)
+        self.driver = __drivers__[self.pes](verbose=verbosity.high, **pars)
 
     def evaluate(self, request):
         request["result"] = list(self.driver(request["cell"][0], request["pos"]))

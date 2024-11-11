@@ -4,6 +4,7 @@ import argparse
 import numpy as np
 
 from ipi.pes import *
+from ipi.utils.io.inputs import read_args_kwargs
 
 description = """
 Minimal example of a Python driver connecting to i-PI and exchanging energy, forces, etc.
@@ -222,7 +223,7 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
-    driver_args, driver_kwargs = parse_args_kwargs(args.param)
+    driver_args, driver_kwargs = read_args_kwargs(args.param)
 
     if args.mode in __drivers__:
         d_f = __drivers__[args.mode](

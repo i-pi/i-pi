@@ -8,3 +8,37 @@ simulation. For now only xml, but in future possibly also yml/json.
 
 
 __all__ = ["io_xml"]
+
+
+def read_value(s):
+    """Attempt to parse a string to int or float; fallback to string."""
+    s = s.strip()
+    for cast in (int, float):
+        try:
+            return cast(s)
+        except ValueError:
+            continue
+    return s
+
+
+def read_args_kwargs(input_str):
+    """
+    Parses a string into positional arguments and keyword arguments.
+
+    Args:
+        input_str (str): The input string containing comma-separated values and key-value pairs.
+
+    Returns:
+        tuple: A tuple containing a list of positional arguments and a dictionary of keyword arguments.
+    """
+    args = []
+    kwargs = {}
+    tokens = input_str.split(",")
+    for token in tokens:
+        token = token.strip()
+        if "=" in token:
+            key, value = token.split("=", 1)
+            kwargs[key.strip()] = _parse_value(value)
+        elif len(token) > 0:
+            args.append(_parse_value(token))
+    return args, kwargs
