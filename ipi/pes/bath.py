@@ -9,18 +9,18 @@ __DRIVER_CLASS__ = "Harmonic_Bath_explicit"
 class Harmonic_Bath_explicit(object):
     """Explicit description of an Harmonic bath"""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, nbath, m, eta0, eps1, eps2, deltaQ, w_c, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
         # (self, nbath, parameters):
         self.nbath = nbath
-        self.m = parameters["m"]
+        self.m = m
         # self.delta = parameters["delta"]
-        self.eta0 = parameters["eta0"]
-        self.eps1 = parameters["eps1"]
-        self.eps2 = parameters["eps2"]
-        self.deltaQ = parameters["deltaQ"]
-        self.w_c = parameters["w_c"]
+        self.eta0 = eta0
+        self.eps1 = eps1
+        self.eps2 = eps2
+        self.deltaQ = deltaQ
+        self.w_c = w_c
 
         self.set_ci_and_wi()
 
