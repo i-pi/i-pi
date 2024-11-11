@@ -1,7 +1,7 @@
 .. _librarywebsites:
 
-On-line resources
-=================
+Tutorials, recipes, and on-line resources
+=========================================
 
 Massive Open Online Course (MOOC)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -48,7 +48,7 @@ simulations can be found among the recipes of the
 These include an 
 `introduction to path integral simulations <https://atomistic-cookbook.org/latest/examples/path-integrals/path-integrals.html>`_, 
 a discussion of `how to compute quantum heat capacities <https://atomistic-cookbook.org/latest/examples/heat-capacity/heat-capacity.html>`_,
-and an example of `path integral metadynamics<https://atomistic-cookbook.org/latest/examples/pi-metad/pi-metad.html>`_.
+and an example of `path integral metadynamics <https://atomistic-cookbook.org/latest/examples/pi-metad/pi-metad.html>`_.
 
 Client code resources
 ~~~~~~~~~~~~~~~~~~~~~
