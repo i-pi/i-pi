@@ -17,17 +17,6 @@ Several examples of usage of i-PI to perform advanced molecular simulations
 can be found among the recipes of the 
 `atomistic cookbook <https://atomistic-cookbook.org/>`_.
 
-Python resources
-~~~~~~~~~~~~~~~~
-
-For help with Python programming, see
-`www.python.org <http://www.python.org>`__. For information about the NumPy
-mathematical library, see `www.numpy.org <http://www.numpy.org>`__, and for
-worked examples of its capabilities see
-`www.scipy.org/Tentative_NumPy_Tutorial <http://www.scipy.org/Tentative_NumPy_Tutorial>`__.
-Finally, see http://hgomersall.github.io/pyFFTW/ for documentation on
-the Python FFTW library that is currently implemented with i-PI.
-
 
 Client code resources
 ~~~~~~~~~~~~~~~~~~~~~
