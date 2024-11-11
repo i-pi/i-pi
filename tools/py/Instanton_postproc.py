@@ -258,7 +258,7 @@ def save_frequencies(d, nzeros, filename="freq.dat"):
 print("\nWe are ready to start. Reading {} ... (This can take a while)".format(inputt))
 
 simulation = Simulation.load_from_xml(
-    inputt, custom_verbosity="quiet", request_banner=False, read_only=True
+    open(inputt), custom_verbosity="quiet", request_banner=False, read_only=True
 )
 
 

@@ -16,7 +16,7 @@ import time
 from copy import deepcopy
 
 from ipi.utils.depend import depend_value, dpipe, dproperties
-from ipi.utils.io.inputs.io_xml import xml_parse_file
+from ipi.utils.io.inputs.io_xml import xml_parse_file, xml_parse_string
 from ipi.utils.messages import verbosity, info, warning, banner
 from ipi.utils.softexit import softexit
 import ipi.engine.outputs as eoutputs
@@ -60,7 +60,7 @@ class Simulation:
 
     @staticmethod
     def load_from_xml(
-        fn_input,
+        xml_input,
         custom_verbosity=None,
         sockets_prefix=None,
         request_banner=False,
@@ -69,7 +69,7 @@ class Simulation:
         """Load an XML input file and return a `Simulation` object.
 
         Arguments:
-            fn_input (str): Name of the input file.
+            xml_input (str | file): XML-formatted string, or open file handle
             custom_verbosity (str): If not `None`, overrides the verbosity
                 specified by the input file.
             request_banner (bool): Whether to print the i-PI banner,
@@ -78,7 +78,10 @@ class Simulation:
         """
 
         # parse the file
-        xmlrestart = xml_parse_file(open(fn_input))
+        if type(xml_input) is str:
+            xmlrestart = xml_parse_string(xml_input)
+        else:
+            xmlrestart = xml_parse_file(xml_input)
 
         # prepare the simulation input object
         input_simulation = isimulation.InputSimulation()
@@ -104,19 +107,19 @@ class Simulation:
         # create the simulation object
         simulation = input_simulation.fetch()
 
-        # pipe between the components of the simulation
-        simulation.bind(read_only)
-
         # echo the input file if verbose enough
         if verbosity.low:
             print(" @simulation: i-PI loaded input file: ", fn_input)
         if verbosity.medium:
             print(" --- begin input file content ---")
-            ifile = open(fn_input, "r")
+            ifile = open(xml_input, "r")
             for line in ifile.readlines():
                 print(line, end=" ")
             print(" ---  end input file content  ---")
             ifile.close()
+
+        # pipe between the components of the simulation
+        simulation.bind(read_only)
 
         return simulation
 
@@ -265,6 +268,14 @@ class Simulation:
         if self.smotion is not None:
             self.smotion.bind(self.syslist, self.prng, self.output_maker)
 
+        # registers the softexit routine
+        softexit.register_function(self.softexit)
+        softexit.start(self.ttime)
+
+        # starts tracemalloc to debug memory leaks
+        if verbosity.debug:
+            tracemalloc.start(10)
+
     def softexit(self):
         """Deals with a soft exit request.
 
@@ -289,14 +300,6 @@ class Simulation:
         when necessary. Also deals with starting and cleaning up the threads used
         in the communication between the driver and the PIMD code.
         """
-
-        # registers the softexit routine
-        softexit.register_function(self.softexit)
-        softexit.start(self.ttime)
-
-        # starts tracemalloc to debug memory leaks
-        if verbosity.debug:
-            tracemalloc.start(10)
 
         # prints inital configuration -- only if we are not restarting
         if self.step == 0:
@@ -337,27 +340,7 @@ class Simulation:
             if self.step % self.safe_stride == 0:
                 self.chk.store()
 
-            if len(self.syslist) > 0 and self.threading:
-                stepthreads = []
-                # steps through all the systems
-                for s in self.syslist:
-                    # creates separate threads for the different systems
-                    st = self.executor.submit(s.motion.step, step=self.step)
-                    stepthreads.append(st)
-
-                for st in stepthreads:
-                    st.result()
-            else:
-                for s in self.syslist:
-                    s.motion.step(step=self.step)
-
-            if softexit.triggered:
-                # Don't continue if we are about to exit.
-                break
-
-            # does the "super motion" step
-            if self.smotion is not None:
-                self.smotion.step(self.step)
+            self.run_step(self.step)
 
             if softexit.triggered:
                 # Don't write if we are about to exit.
@@ -415,6 +398,29 @@ class Simulation:
                 break
 
         self.rollback = False
+
+    def run_step(self, step):
+        if len(self.syslist) > 0 and self.threading:
+            stepthreads = []
+            # steps through all the systems
+            for s in self.syslist:
+                # creates separate threads for the different systems
+                st = self.executor.submit(s.motion.step, step=step)
+                stepthreads.append(st)
+
+            for st in stepthreads:
+                if softexit.triggered:
+                    return
+                st.result()
+        else:
+            for s in self.syslist:
+                s.motion.step(step=step)
+                if softexit.triggered:
+                    return
+
+        # does the "super motion" step
+        if self.smotion is not None:
+            self.smotion.step(step)
 
 
 dproperties(Simulation, ["step"])
