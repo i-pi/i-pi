@@ -359,7 +359,11 @@ class InputFFDirect(InputForceField):
     attribs.update(InputForceField.attribs)
 
     default_help = """ Direct potential that evaluates forces through a Python
-    call, using PES providers from a list of possible external codes. """
+    call, using PES providers from a list of possible external codes. The available
+    PES interfaces are listed into the `ipi/pes` folder, and are the same available
+    for the Python driver. The `<parameters>` field should contain a dictionary
+    of the specific option of the chosen PES.
+    """
     default_label = "FFDirect"
 
     def store(self, ff):
