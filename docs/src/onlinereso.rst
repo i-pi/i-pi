@@ -50,34 +50,3 @@ These include an
 a discussion of `how to compute quantum heat capacities <https://atomistic-cookbook.org/latest/examples/heat-capacity/heat-capacity.html>`_,
 and an example of `path integral metadynamics <https://atomistic-cookbook.org/latest/examples/pi-metad/pi-metad.html>`_.
 
-Client code resources
-~~~~~~~~~~~~~~~~~~~~~
-
-Several codes provide out-of-the-box an i-PI interface, including 
-ASE, 
-CASTEP, 
-CP2K,
-DFTB+,
-elphmod,
-ffsGDML,
-FHI-aims, 
-LAMMPS, 
-librascal, 
-Quantum ESPRESSO, 
-Siesta,
-Yaff.
-
-If you are interested in interfacing your code to i-PI please get in
-touch, we are always glad to help!
-
-There are several Fortran and C libraries that most client codes will
-probably need to run, such as FFTW, BLAS and LAPACK. These can be found
-at `www.fftw.org <http://www.fftw.org>`__,
-`www.netlib.org/blas <http://www.netlib.org/blas>`__ and
-`www.netlib.org/lapack <http://www.netlib.org/lapack>`__ respectively.
-
-These codes do not come as part of the i-PI package, and must be
-downloaded separately. 
-
-.. See chapter :ref:`clientinstall` for more details of how to do this. 
-
