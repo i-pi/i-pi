@@ -15,6 +15,7 @@ import os
 from warnings import warn
 from typing import List
 from ase import Atoms
+from ase.io import write
 
 try:
     import ase
@@ -234,95 +235,107 @@ def read_trajectory(
 
     return frames
 
-def merge_beads(prefix:str,folder:str,bead:int):
-    
-    #------------------#  
-    # if bead is not None:
-    #     pattern = f"{folder}/{prefix}.*_*.xyz"
-    # else:
+
+def merge_files(prefix: str, folder: str, bead: int) -> List[Atoms]:
+    """
+    Reads a set of i-PI output files and merges all the trajectory information
+    from files with the same bead number. The function will raise an error if
+    not all the beads have the same number of arrays or if no 'positions' array
+    is found.
+
+    Parameters
+    ----------
+    prefix : str
+        The prefix of the i-PI output files.
+    folder : str
+        The folder where the i-PI output files are stored.
+    bead : int
+        The bead number to be merged.
+
+    Returns
+    -------
+    traj : List[Atoms]
+        The merged trajectory information.
+    """
     pattern = f"{folder}/{prefix}.*_{bead}.xyz"
-    print(f"\n\t Looking for files mathing the following pattern: '{pattern}'")
+    # print(f"\n\t Looking for files mathing the following pattern: '{pattern}'")
     files = glob.glob(pattern)
     N = len(files)
-    print(f"\t {N} files found.")
+    # print(f"\t {N} files found.")
     if N == 0:
         raise ValueError("No files found.")
-    
-    #------------------#
-    pattern_extract = r'([^/]+)\.(.*?)_(.*?)\.(\w+)$'
-    beads = set()
+
+    # ------------------#
+    pattern_extract = r"([^/]+)\.(.*?)_(.*?)\.(\w+)$"
+    # beads = set()
     names = set()
-    for n,file in enumerate(files):
+    for n, file in enumerate(files):
         matched = re.search(pattern_extract, os.path.basename(file))
-        name = matched.group(2)    # Captures the first `*`
-        bead = matched.group(3)   # Captures the second `*`
+        name = matched.group(2)  # Captures the first `*`
+        # bead = matched.group(3)    # Captures the second `*`
         names.add(name)
-        beads.add(bead)  
-    Nn = len(names)        
-    Nb = len(beads)  
-    print(f"\t {Nb} beads found.")    
-    print(f"\t {Nn} arrays found.")    
-    assert N == Nb*Nn, f"Found {N} files but {Nb} beads and {Nn} arrays."
-    
+        # beads.add(bead)
+    Nn = len(names)
+    # Nb = len(beads)
+    # print(f"\t {Nb} beads found.")
+    # print(f"\t {Nn} arrays found.")
+    # assert N == Nb*Nn, f"Found {N} files but {Nb} beads and {Nn} arrays."
+
     if "positions" not in names:
         raise ValueError("No 'positions' array found.")
-        
-    #------------------#
-    print("\n\t Found the following files:")
-    # index = integer_to_slice_string(args.index)
-    instructions = {}
-    files = sorted(files, key=lambda x: 'positions' not in x)
+
+    # ------------------#
+    # print("\n\t Found the following files:")
+    files = sorted(files, key=lambda x: "positions" not in x)
     traj = None
-    for n,file in enumerate(files):
+    for n, file in enumerate(files):
         matched = re.search(pattern_extract, os.path.basename(file))
         if n == 0:
-            traj:List[Atoms] = read_trajectory(file)
+            traj: List[Atoms] = read_trajectory(file)
             if "positions" not in file:
-                raise ValueError(f"File {file} is not a position file but is the first file.")
+                raise ValueError(
+                    f"File {file} is not a position file but is the first file."
+                )
         else:
             if traj is None:
-                raise ValueError(f"File {file} is not a position file but is not the first file.")
-            array:List[Atoms] = read_trajectory(file)
+                raise ValueError(
+                    f"File {file} is not a position file but is not the first file."
+                )
+            array: List[Atoms] = read_trajectory(file)
             for i in range(len(traj)):
                 traj[i].arrays[name] = array[i].positions
-        
-        
-    #     if matched:
-    #         prefix_value = matched.group(1)   # Captures the prefix (variable part)
-    #         name = matched.group(2)    # Captures the first `*`
-    #         bead = matched.group(3)   # Captures the second `*`
-    #         extension = matched.group(4)      # Captures the file extension
-    #         assert prefix_value == prefix, f"File {file} does not match the expected pattern"
-    #         if extension != "xyz":
-    #             warn(f"File {file} was expected to have extension 'xyz' but has extension '{extension}'")
-    #         print(f"\t - bead={bead}, name={name}: {file}")
-    #         if name not in instructions:
-    #             instructions[name] = {}
-    #         instructions[name][bead] = Instruction(name=name, bead=bead, filename=file, format="i-pi", index=index, fixed_cell=args.fixed_cell,pbc=args.pbc)
-    #     else:
-    #         raise ValueError(f"File {file} does not match the expected pattern")
-        
-    # # #------------------#
-    # # print("\n\t Creating ASE trajectories (one for each bead):")
-    # # trajs:List[List[Atoms]] = [None]*Nb
-    # # for n,bead in enumerate(beads):
-    # #     print(f"\t - bead={bead} ... ",end="")
-    # #     instr:Instruction = instructions["positions"][bead]
-    # #     trajs[n] = instr.get()
-    # #     print("done")
-    
-    # print("\n\t Creating ASE trajectories (one for each bead):")
-    # for n,bead in enumerate(beads):
-    #     print(f"\t - bead={bead}:")
-    #     instr:Instruction = instructions["positions"][bead]
-    #     traj = instr.get()
-    #     for name in names:
-    #         print(f"\t\t - {name} ... ",end="")
-    #         if name == "positions":
-    #             continue
-    #         instr = instructions[name][bead]
-    #         arr = instr.get()
-    #         for i in range(len(traj)):
-    #             traj[i].arrays[name] = arr[i].positions
-    #         print("done")
-    #     pass
+
+    return traj
+
+
+def merge_beads(prefix: str, folder: str, nbeads: int, ofile: str):
+    """
+    Convert i-PI output files to ASE trajectory files.
+
+    Parameters
+    ----------
+    prefix : str
+        The prefix of the input files.
+    folder : str
+        The folder where the input files are located.
+    nbeads : int
+        The number of beads in the i-PI simulation.
+    ofile : str
+        The output ASE trajectory file.
+
+    Notes
+    -----
+    The input files are expected to be named as follows:
+    `<folder>/<prefix>.*_<bead>.xyz`, where `<prefix>` is the given prefix,
+    `<bead>` is the bead number (starting from 0), and `*` is a wildcard
+    matching any characters. The output ASE trajectory file will be named
+    `<ofile>.<bead>.extxyz`, where `<bead>` is the bead number.
+    """
+    for n in range(nbeads):
+        traj = merge_files(prefix, folder, n)
+        base_name, ext = os.path.splitext(ofile)
+        assert (
+            ext == ".extxyz"
+        ), f"Output file must have extension '.extxyz' but has extension '{ext}'"
+        tmp_file = f"{base_name}.{n}{ext}"
+        write(tmp_file, traj)
