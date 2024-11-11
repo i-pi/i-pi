@@ -39,17 +39,16 @@ class DoubleWell_with_explicit_bath_driver(Dummy_driver):
     !      If eps1=eps2=0 then sd(q) =1 and s(q) = q --->Spatially independent bath
     """
 
-    def __init__(self, args=None, verbose=None):
-        self.error_msg = r"""\nDW+explicit_bath driver expects 9 arguments.\n
+    _error_msg = r"""\nDW+explicit_bath driver expects 9 arguments.\n
         Example: python driver.py -m DoubleWell_with_explicit_bath -o omega_b (cm^-1) V0 (cm^-1) mass delta(\AA) eta0  eps1 eps2  deltaQ omega_c(cm^-1)     \n
         python driver.py -m DoubleWell -o 500,2085,1837,0.00,1,0,0,1,500\n"""
-        super(DoubleWell_with_explicit_bath_driver, self).__init__(
-            args, error_msg=self.error_msg
-        )
+
+    def __init__(self, *args, **kwargs):
 
         self.init = False
+        super().__init__(*args, **kwargs)
 
-    def check_arguments(self):
+    def check_parameters(self):
         """Function that checks the arguments required to run the driver"""
 
         try:
@@ -70,7 +69,7 @@ class DoubleWell_with_explicit_bath_driver(Dummy_driver):
             self.bath_parameters["w_c"] = param[8] * invcm2au
 
         except:
-            sys.exit(self.error_msg)
+            sys.exit(self._error_msg)
 
         self.A = -0.5 * self.m * (w_b) ** 2
         self.B = ((self.m**2) * (w_b) ** 4) / (16 * v0)

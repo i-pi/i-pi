@@ -29,7 +29,7 @@ A2au = units.unit_to_internal("length", "angstrom", 1.0)
 
 
 class DoubleWell_with_friction_driver(DoubleWell_driver):
-    """Adds to the double well potential the calculation of the friction tensor.
+    r"""Adds to the double well potential the calculation of the friction tensor.
 
     friction(q) = eta0 [\partial sd(q) \partial q ]^2
     with
@@ -37,15 +37,15 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
     sd(q) = [1+eps1 exp( (q-0)^2 / (2deltaQ^2) ) ] + eps2 tanh(q/deltaQ)
     """
 
-    def __init__(self, args=None, verbose=None):
-        self.error_msg = r"""\nDW+fric driver expects 8 arguments.\n
+    _error_msg = r"""\nDW+fric driver expects 8 arguments.\n
         Example: python driver.py -m DoubleWell_with_fric -o omega_b (cm^-1) V0 (cm^-1) mass delta(\AA) eta0  eps1 eps2  deltaQ      \n
         python driver.py -m DoubleWell -o 500,2085,1837,0.00,1,0,0,1\n"""
-        self.args = args.split(",")
-        self.verbose = verbose
-        self.check_arguments()
 
-    def check_arguments(self):
+    def __init__(self, *args, **kwargs):
+        self.args = args.split(",")
+        super().__init__(*args, **kwargs)
+
+    def check_parameters(self):
         """Function that checks the arguments required to run the driver"""
 
         self.k = 1837.36223469 * (3800.0 / 219323.0) ** 2
@@ -61,7 +61,7 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
             self.eps2 = param[6]
             self.deltaQ = param[7]
         except:
-            sys.exit(self.error_msg)
+            sys.exit(self._error_msg)
 
         self.A = -0.5 * m * (w_b) ** 2
         self.B = ((m**2) * (w_b) ** 4) / (16 * v0)

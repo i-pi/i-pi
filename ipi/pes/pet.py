@@ -15,7 +15,17 @@ __DRIVER_CLASS__ = "PET_driver"
 
 
 class PET_driver(Dummy_driver):
-    def __init__(self, args=None, verbose=False):
+    _error_msg = """
+The PET driver requires (a) a path to the results/experiment_name folder emitted by pet_train
+                        (b) a path to an ase.io.read-able file with a prototype structure
+
+Other arguments to the pet.SingleStructCalculator class can be optionally
+supplied in key=value form after the required arguments.
+
+Example: python driver.py -m pet -u -o "path/to/results/name,template.xyz,device=cuda"
+"""
+
+    def __init__(self, model_path, template, *args, **kwargs):
         global PETCalc, read
 
         try:
@@ -29,54 +39,21 @@ class PET_driver(Dummy_driver):
         except ImportError:
             raise ImportError("Could not find or import the PET module")
 
-        self.error_msg = """
-The PET driver requires (a) a path to the results/experiment_name folder emitted by pet_train
-                        (b) a path to an ase.io.read-able file with a prototype structure
+        self.model_path = model_path
+        self.template = template
+        super().__init__(*args, **kwargs)
 
-Other arguments to the pet.SingleStructCalculator class can be optionally
-supplied in key=value form after the required arguments.
-
-Example: python driver.py -m pet -u -o "path/to/results/name,template.xyz,device=cuda"
-"""
-
-        super().__init__(args, verbose)
-
-        if PETCalc is None:
-            raise ImportError("Couldn't load PET bindings")
-
-    def check_arguments(self):
+    def check_parameters(self):
         """Check the arguments required to run the driver
 
         This loads the potential and atoms template in PET
         """
-        args = self.args
-
-        if len(args) >= 2:
-            self.model_path = args[0]
-            self.template = args[1]
-            kwargs = {}
-            if len(args) > 2:
-                for arg in args[2:]:
-                    key, value = arg.split("=")
-                    lookup = {
-                        "None": None,
-                        "False": False,
-                        "True": True,
-                    }
-
-                    if value in lookup:
-                        value = lookup[value]
-
-                    kwargs[key] = value
-
-        else:
-            sys.exit(self.error_msg)
 
         self.template_ase = read(self.template)
         self.template_ase.arrays["forces"] = np.zeros_like(self.template_ase.positions)
         self.pet_calc = PETCalc(
             self.model_path,
-            **kwargs,
+            **self.kwargs,
         )
 
     def __call__(self, cell, pos):

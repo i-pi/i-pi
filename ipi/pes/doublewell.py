@@ -28,12 +28,13 @@ A2au = units.unit_to_internal("length", "angstrom", 1.0)
 
 
 class DoubleWell_driver(Dummy_driver):
-    def __init__(self, args=None, verbose=None):
-        self.error_msg = r"""\nDW driver accepts 0 or 4 arguments.\nExample: python driver.py -m DoubleWell -o omega_b (cm^-1) V0 (cm^-1) mass(a.u) delta(angs) \n
+    _error_msg = r"""\nDW driver accepts 0 or 4 arguments.\nExample: python driver.py -m DoubleWell -o omega_b (cm^-1) V0 (cm^-1) mass(a.u) delta(angs) \n
         python driver.py -m DoubleWell -o 500,2085,1837,0.00 \n"""
-        super(DoubleWell_driver, self).__init__(args, error_msg=self.error_msg)
 
-    def check_arguments(self):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+    def check_parameters(self):
         """Function that checks the arguments required to run the driver"""
         self.k = 1837.36223469 * (3800.0 / 219323.0) ** 2
         if self.args == "":
@@ -51,7 +52,7 @@ class DoubleWell_driver(Dummy_driver):
                 m = param[2]
                 self.delta = param[3] * A2au
             except:
-                sys.exit(self.error_msg)
+                sys.exit(self._error_msg)
 
         self.A = -0.5 * m * (w_b) ** 2
         self.B = ((m**2) * (w_b) ** 4) / (16 * v0)

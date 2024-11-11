@@ -20,11 +20,11 @@ __DRIVER_CLASS__ = "TBLiteDriver"
 class TBLiteDriver(object):
     """Base class providing the structure of a PES for the python driver."""
 
-    def __init__(
-        self,
-        args="",
-        verbose=False,
-    ):
+    def __init__(self, json_input, *args, **kwargs):
+
+        self.json_input = json_input
+        super().__init__(*args, **kwargs)
+
         """Initialized dummy drivers"""
 
         global tb
@@ -35,7 +35,7 @@ class TBLiteDriver(object):
                 "Could not find tblite for xtb driver. Please install tblite-python with mamba"
             )
 
-        config = json.loads(args)
+        config = json.loads(json_input)
         try:
             self.method = config["method"]
             self.numbers = np.asarray(config["numbers"])
@@ -44,7 +44,7 @@ class TBLiteDriver(object):
         self.charge = config.get("charge")
         self.uhf = config.get("uhf")
         self.periodic = config.get("periodic")
-        self.verbosity = 1 if verbose else 0
+        self.verbosity = 1 if self.verbose else 0
 
     def __call__(self, cell, pos):
         """

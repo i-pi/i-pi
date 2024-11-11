@@ -4,7 +4,7 @@ import pkgutil
 import importlib
 import traceback
 
-__all__ = []
+__all__ = ["parse_args_kwargs"]
 
 # Dictionary to store driver name to class mapping
 __drivers__ = {}
@@ -32,5 +32,40 @@ for loader, module_name, is_pkg in pkgutil.iter_modules(__path__):
             raise ImportError(
                 f"PES module `{module_name}` does not define __DRIVER_CLASS__ and __DRIVER_NAME__"
             )
+
+
+def _parse_value(s):
+    """Attempt to parse a string to int or float; fallback to string."""
+    s = s.strip()
+    for cast in (int, float):
+        try:
+            return cast(s)
+        except ValueError:
+            continue
+    return s
+
+
+def parse_args_kwargs(input_str):
+    """
+    Parses a string into positional arguments and keyword arguments.
+
+    Args:
+        input_str (str): The input string containing comma-separated values and key-value pairs.
+
+    Returns:
+        tuple: A tuple containing a list of positional arguments and a dictionary of keyword arguments.
+    """
+    args = []
+    kwargs = {}
+    tokens = input_str.split(",")
+    for token in tokens:
+        token = token.strip()
+        if "=" in token:
+            key, value = token.split("=", 1)
+            kwargs[key.strip()] = _parse_value(value)
+        elif len(token) > 0:
+            args.append(_parse_value(token))
+    return args, kwargs
+
 
 __all__.append("__drivers__")

@@ -16,7 +16,7 @@ Example: python3 driver.py -u -m elphmod -o driver.pickle
 class ModelIIIDriver(Dummy_driver):
     """Wrapper around elphmod MD driver."""
 
-    def check_arguments(self):
+    def check_parameters(self):
         """Check arguments and load driver instance."""
 
         import elphmod

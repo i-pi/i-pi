@@ -7,10 +7,8 @@ from .dummy import Dummy_driver
 from ipi.utils.units import unit_to_internal, unit_to_user
 from ipi.utils.messages import warning
 
-try:
-    from ase.io import read
-except ImportError:
-    warning("Could not find or import the ASE module")
+
+read = None
 
 __DRIVER_NAME__ = "ase"
 __DRIVER_CLASS__ = "ASEDriver"
@@ -24,24 +22,36 @@ Example: python driver.py -m ase -u -o template.xyz,model_parameters
 
 
 class ASEDriver(Dummy_driver):
-    """Abstract base class using an arbitrary ASE calculator as i-pi driver"""
+    """Abstract base class using an arbitrary ASE calculator as i-pi driver.
 
-    def __init__(self, args=None, verbose=False, error_msg=ERROR_MSG):
-        super().__init__(args, verbose, error_msg=error_msg)
+    Parameters:
+        :param verbose: bool, whether to print verbose output
+        :param template: string, where to get the structure from
+    """
 
-    def check_arguments(self):
+    _error_msg = """
+    ASEDriver has two arguments:
+    verbose (a bool flag) and template (a string holding the name of an ASE-readable
+    structure to initialize the calculator)
+    """
+
+    def __init__(self, template, *args, **kwargs):
+        global read
+        try:
+            from ase.io import read
+        except ImportError:
+            warning("Could not find or import the ASE module")
+
+        self.template = template
+        super().__init__(*args, **kwargs)
+
+    def check_parameters(self):
         """Check the arguments required to run the driver
 
         This loads the potential and atoms template in metatensor
         """
 
-        if len(self.args) >= 1:
-            self.template = self.args[0]
-        else:
-            sys.exit(self.error_msg)
-
         self.template_ase = read(self.template)
-
         self.ase_calculator = None
 
     def __call__(self, cell, pos):

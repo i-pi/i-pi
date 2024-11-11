@@ -131,19 +131,20 @@ class driverdipole_driver(Dummy_driver):
         "restart": False,  # whether remove the files (if already existing) where the dipole and BEC will be saved.
     }
 
-    def __init__(self, args=None):
-        self.error_msg = """The parameters of 'driverdipole_driver' are not correctly formatted. \
+    _error_msg = """The parameters of 'driverdipole_driver' are not correctly formatted. \
             They should be two or three strings, separated by a comma."""
+
+    def __init__(self, *args, **kwargs):
         self.opts = dict()
         self.count = 0
-        super().__init__(args)
+        super().__init__(*args, **kwargs)
 
-    def check_arguments(self):
+    def check_parameters(self):
         """Check the arguments required to run the driver."""
         try:
             arglist = self.args.split(",")
         except ValueError:
-            sys.exit(self.error_msg)
+            sys.exit(self._error_msg)
 
         if len(arglist) >= 2:
             info_file = arglist[0]  # json file to properly allocate a 'model' object
@@ -154,7 +155,7 @@ class driverdipole_driver(Dummy_driver):
                 print("\tNo options file provided: using the default values")
                 opts_file = None
         else:
-            sys.exit(self.error_msg)  # to be modified
+            sys.exit(self._error_msg)  # to be modified
 
         print("\n\tThe driver is 'driverdipole_driver'")
         print("\tLoading model ...")

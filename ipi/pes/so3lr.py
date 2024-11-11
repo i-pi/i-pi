@@ -7,7 +7,9 @@ So3lrCalculator = None
 __DRIVER_NAME__ = "so3lr"
 __DRIVER_CLASS__ = "SO3LR_driver"
 
-ERROR_MSG = """
+
+class SO3LR_driver(ASEDriver):
+    _error_msg = """
 SO3LR driver requires a template file that describes the chemical makeup of the structure.
 
 Optionally, lr_cutoff and dispersion_energy_lr_cutoff_damping can be specified.
@@ -15,9 +17,7 @@ Optionally, lr_cutoff and dispersion_energy_lr_cutoff_damping can be specified.
 Example: python driver.py -m so3lr -u -o template.xyz,lr_cutoff=12,dispersion_energy_lr_cutoff_damping=2
 """
 
-
-class SO3LR_driver(ASEDriver):
-    def __init__(self, args=None, verbose=False):
+    def __init__(self, *args, **kwargs):
 
         global So3lrCalculator
         try:
@@ -25,19 +25,9 @@ class SO3LR_driver(ASEDriver):
         except:
             raise ImportError("Couldn't load so3lr bindings")
 
-        super().__init__(args, verbose, ERROR_MSG)
+        super().__init__(*args, **kwargs)
 
-    def check_arguments(self):
-        super().check_arguments()
+    def check_parameters(self):
+        super().check_parameters()
 
-        args = self.args
-
-        kwargs = {}
-        if len(args) >= 2:
-            _ = args[0]  # template we don't need
-
-            for arg in args[1:]:
-                key, value = arg.split("=")
-                kwargs[key] = float(value)
-
-        self.ase_calculator = So3lrCalculator(**kwargs)
+        self.ase_calculator = So3lrCalculator(**self.kwargs)

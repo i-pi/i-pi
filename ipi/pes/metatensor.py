@@ -17,7 +17,9 @@ mtt = None
 __DRIVER_NAME__ = "metatensor"
 __DRIVER_CLASS__ = "MetatensorDriver"
 
-ERROR_MSG = """
+
+class MetatensorDriver(ASEDriver):
+    _error_msg = """
 The metatensor driver requires specification of a .pt TorchScript model and an
 ASE-readable template file that describes the chemical makeup of the structure.
 
@@ -25,9 +27,16 @@ Example: python driver.py -m metatensor -u -o template.xyz,model.pt,device=cpu,\
 extensions=path/to/extensions,check_consistency=False
 """
 
-
-class MetatensorDriver(ASEDriver):
-    def __init__(self, args=None, verbose=False, error_msg=ERROR_MSG):
+    def __init__(
+        self,
+        template,
+        model,
+        device="cpu",
+        extensions="",
+        check_consistency=False,
+        *args,
+        **kwargs,
+    ):
         global MetatensorCalculator, mtt
         if MetatensorCalculator is None:
             try:
@@ -38,9 +47,13 @@ class MetatensorDriver(ASEDriver):
             except ImportError as e:
                 warning(f"Could not find or import metatensor.torch: {e}")
 
-        super().__init__(args, verbose, error_msg)
+        self.model = model
+        self.device = device
+        self.extensions = extensions
+        self.check_consistency = check_consistency
+        super().__init__(template, *args, **kwargs)
 
-    def check_arguments(self):
+    def check_parameters(self):
         """Check the arguments required to run the driver
 
         This loads the potential and atoms template in metatensor
@@ -60,34 +73,13 @@ class MetatensorDriver(ASEDriver):
                 f"at '{mtt.__file__}'"
             )
 
-        super().check_arguments()
+        super().check_parameters()
 
-        if len(self.args) < 2:
-            sys.exit(self.error_msg)
-        self.model_path = self.args[1]
+        self.model_path = self.model
 
-        device = None
-        extensions_directory = None
-        check_consistency = False
-        for arg in self.args[2:]:
-            if arg.startswith("device="):
-                device = arg[7:]
-            elif arg.startswith("extensions="):
-                extensions_directory = arg[11:]
-            elif arg.startswith("check_consistency="):
-                arg = arg[18:]
-                if arg == "True":
-                    check_consistency = True
-                elif arg == "False":
-                    check_consistency = False
-                else:
-                    raise ValueError(
-                        "invalid value for check_consistency, expected True or False, "
-                        f"got {arg}"
-                    )
-
-            else:
-                sys.exit(self.error_msg)
+        device = self.device
+        extensions_directory = self.extensions
+        check_consistency = self.check_consistency
 
         self.ase_calculator = MetatensorCalculator(
             self.model_path,

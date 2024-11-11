@@ -222,10 +222,14 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    driver_args, driver_kwargs = parse_args_kwargs(args.param)
+
     if args.mode in __drivers__:
-        d_f = __drivers__[args.mode](args.param, args.verbose)
+        d_f = __drivers__[args.mode](
+            *driver_args, verbose=args.verbose, **driver_kwargs
+        )
     elif args.mode == "dummy":
-        d_f = Dummy_driver(args.param, args.verbose)
+        d_f = Dummy_driver(verbose=args.verbose)
     else:
         raise ValueError("Unsupported driver mode ", args.mode)
 

@@ -8,16 +8,16 @@ MACECalculator = None
 __DRIVER_NAME__ = "mace"
 __DRIVER_CLASS__ = "MACE_driver"
 
-ERROR_MSG = """
+
+class MACE_driver(ASEDriver):
+    _error_msg = """
 MACE driver requires specification of a .json model,
 and a template file that describes the chemical makeup of the structure.
 
 Example: python driver.py -m mace -u -o model.json,template.xyz
 """
 
-
-class MACE_driver(ASEDriver):
-    def __init__(self, args=None, verbose=False):
+    def __init__(self, template, model, device="cpu", *args, **kwargs):
 
         global MACECalculator
 
@@ -26,17 +26,16 @@ class MACE_driver(ASEDriver):
         except:
             raise ImportError("Couldn't load mace bindings")
 
-        super().__init__(args, verbose, ERROR_MSG)
+        self.model = model
+        self.device = device
+        super().__init__(template, *args, **kwargs)
 
-    def check_arguments(self):
+    def check_parameters(self):
         """Check the arguments requuired to run the driver
 
         This loads the potential and atoms template in MACE
         """
 
-        super().check_arguments()
+        super().check_parameters()
 
-        if len(self.args) < 2:
-            sys.exit(self.error_msg)
-
-        self.ase_calculator = MACECalculator(model_paths=self.args[1], device="cpu")
+        self.ase_calculator = MACECalculator(model_paths=self.model, device=self.device)

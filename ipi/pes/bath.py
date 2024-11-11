@@ -9,7 +9,10 @@ __DRIVER_CLASS__ = "driver_tools"
 class Harmonic_Bath_explicit(object):
     """Explicit description of an Harmonic bath"""
 
-    def __init__(self, nbath, parameters):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # (self, nbath, parameters):
         self.nbath = nbath
         self.m = parameters["m"]
         # self.delta = parameters["delta"]
