@@ -22,6 +22,7 @@ from ipi.engine.forcefields import (
     FFCavPhSocket,
 )
 from ipi.interfaces.sockets import InterfaceSocket
+from ipi.pes import __drivers__
 import ipi.engine.initializer
 from ipi.inputs.initializer import *
 from ipi.utils.inputvalue import *
@@ -341,6 +342,19 @@ class InputFFSocket(InputForceField):
 
 
 class InputFFDirect(InputForceField):
+    fields = {
+        "pes": (
+            InputValue,
+            {
+                "dtype": str,
+                "default": "dummy",
+                "options": list(__drivers__.keys()),
+                "help": "Type of PES that should be used to evaluate the forcefield",
+            },
+        ),
+    }
+    fields.update(InputForceField.fields)
+
     attribs = {}
     attribs.update(InputForceField.attribs)
 
@@ -348,7 +362,22 @@ class InputFFDirect(InputForceField):
     call, using PES providers from a list of possible external codes. """
     default_label = "FFDirect"
 
-    _FFCLASS = FFDirect
+    def store(self, ff):
+        super().store(ff)
+        self.pes.store(ff.pes)
+
+    def fetch(self):
+        super().fetch()
+
+        return FFDirect(
+            pars=self.parameters.fetch(),
+            name=self.name.fetch(),
+            latency=self.latency.fetch(),
+            offset=self.offset.fetch(),
+            dopbc=self.pbc.fetch(),
+            threaded=self.threaded.fetch(),
+            pes=self.pes.fetch(),
+        )
 
 
 class InputFFLennardJones(InputForceField):
@@ -438,7 +467,7 @@ class InputFFDebye(InputForceField):
                 "default": input_default(factory=np.zeros, args=(0,)),
                 "help": "Specifies the Hessian of the harmonic potential. "
                 "Default units are atomic. Units can be specified only by xml attribute. "
-                "Implemented options are: 'atomic_unit', 'ev/ang\^2'",
+                r"Implemented options are: 'atomic_unit', 'ev/ang^2'",
                 "dimension": "hessian",
             },
         ),

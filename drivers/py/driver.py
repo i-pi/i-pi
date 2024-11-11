@@ -9,6 +9,7 @@ description = """
 Minimal example of a Python driver connecting to i-PI and exchanging energy, forces, etc.
 """
 
+
 def recv_data(sock, data):
     """Fetches binary data from i-PI socket."""
     blen = data.itemsize * data.size

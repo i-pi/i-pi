@@ -1,5 +1,6 @@
 <simulation verbosity='medium' threading='false' safe_stride='100'>
-   <ffdirect name='driver'>
+    <ffdirect name='driver'>
+        <pes> dummy </pes>  
       <latency>  1.00000000e-04</latency>
    </ffdirect>
    <total_steps>10000</total_steps>

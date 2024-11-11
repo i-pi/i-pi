@@ -23,6 +23,7 @@ from ipi.utils.depend import dstrip
 from ipi.utils.io import read_file
 from ipi.utils.units import unit_to_internal
 from ipi.utils.distance import vector_separation
+from ipi.pes import __drivers__
 
 try:
     import plumed
@@ -392,7 +393,42 @@ class FFEval(ForceField):
 
 
 class FFDirect(FFEval):
-    pass
+    def __init__(
+        self,
+        latency=1.0,
+        offset=0.0,
+        name="",
+        pars=None,
+        dopbc=False,
+        active=np.array([-1]),
+        threaded=False,
+        pes="dummy",
+    ):
+        """Initialises FFDirect.
+
+        Args:
+            latency: The number of seconds the socket will wait before updating
+                the client list.
+            offset: A constant offset subtracted from the energy value given by the
+                client.
+            name: The name of the forcefield.
+            pars: A dictionary used to initialize the forcefield, if required.
+                Of the form {'name1': value1, 'name2': value2, ... }.
+            dopbc: Decides whether or not to apply the periodic boundary conditions
+                before sending the positions to the client code.
+            active: Indexes of active atoms in this forcefield
+
+        """
+
+        super().__init__(latency, offset, name, pars, dopbc, active, threaded)
+
+        self.pes = pes
+        # TODO sanitize the handling of pars
+        self.driver = __drivers__[self.pes]("", verbosity.high)
+
+    def evaluate(self, request):
+        request["result"] = list(self.driver(request["cell"][0], request["pos"]))
+        request["status"] = "Done"
 
 
 class FFLennardJones(FFEval):
