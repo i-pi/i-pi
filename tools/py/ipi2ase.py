@@ -12,14 +12,18 @@ from io import TextIOWrapper
 import numpy as np
 from ipi.utils.units import unit_to_internal, unit_to_user
 from ipi.utils.mathtools import abc2h
+from ipi.utils.parsing import merge_beads
 
 #---------------------------------------#
 # Description of the script's purpose
 description = "Convert a i-PI trajectory to a ASE file."
 
-deg2rad     = np.pi / 180.0
-abcABC      = re.compile(r"CELL[\(\[\{]abcABC[\)\]\}]: ([-+0-9\.Ee ]*)\s*")
-abcABCunits = re.compile(r'\{([^}]+)\}')
+deg2rad       = np.pi / 180.0
+abcABC        = re.compile(r"CELL[\(\[\{]abcABC[\)\]\}]: ([-+0-9\.Ee ]*)\s*")
+abcABCunits   = re.compile(r'\{([^}]+)\}')
+variableunits = re.compile(r'(\w+)\{(.*?)\}')
+
+# NAMES = ["positions","velocities","forces","momenta"]
 
 #---------------------------------------#
 def intype(argument):
@@ -185,7 +189,17 @@ class FakeList:
             raise IndexError("FakeList index out of range")
         
 #---------------------------------------#
-def string2cell(string:Match[str])->np.ndarray:
+def string2cell(string:str)->np.ndarray:
+    """
+    Convert a string in the format "a b c alpha beta gamma" into a lattice vector matrix.
+
+    Args:
+        string (Match[str]): A match object containing the string to convert.
+
+    Returns:
+        np.ndarray: A 3x3 upper triangular matrix representing the lattice vectors.
+    """
+    string:Match[str] = abcABC.search(string)
     a, b, c = [float(x) for x in string.group(1).split()[:3]]
     alpha, beta, gamma = [float(x) * deg2rad for x in string.group(1).split()[3:6]]
     return abc2h(a, b, c, alpha, beta, gamma)
@@ -204,20 +218,16 @@ class Instruction:
     def get(self)->List[Atoms]:
         
         f = "extxyz" if self.format in ["i-pi","ipi"] else self.format
-        
-        units = {
-            "positions" : "atomic_unit",
-            "cell" : "atomic_unit"
-        }
-        # factor = {
-        #     "positions" : np.nan,
-        #     "cell" : np.nan
-        # }
-    
+            
         with open(self.filename,"r") as ffile:
             traj = read(ffile,index=self.index,format=f)
             
             ffile.seek(0)
+            
+            if not self.pbc:
+                for atom in traj:
+                    atom.set_cell( None)
+                    atom.set_pbc(False)
             
             if self.format in ["i-pi","ipi"]:
                 
@@ -225,31 +235,35 @@ class Instruction:
                 comment = read_comments_xyz(ffile,slice(0,1,None))[0]
                 
                 # this could be improved
-                units["positions"] = str(comment).split("positions{")[1].split("}")[0]
-                units["cell"] = str(comment).split("cell{")[1].split("}")[0]
+                tmp = variableunits.search(comment)
+                units = {
+                    "positions" : str(comment).split("positions{")[1].split("}")[0],
+                    "cell" : str(comment).split("cell{")[1].split("}")[0]
+                }
                 
                 factor = {
                     "positions" : convert(1,"length",_from=units["positions"],_to="angstrom"),
                             "cell" : convert(1,"length",_from=units["cell"],     _to="angstrom"),
                 }
 
-                if self.fixed_cell:
-                    # little optimization if the cell is fixed
-                    string:Match[str] = abcABC.search(comment)
-                    value = string2cell(string)
-                    cells:List[np.ndarray] = FakeList(value,len(traj))
-                        
-                else:
-                    comments = read_comments_xyz(ffile,self.index)
-                    strings:List[Match[str]] = [ abcABC.search(comment) for comment in comments ]
-                    cells:List[np.ndarray] = [np.zeros(3,3)]*len(strings)
-                    if len(comments) != len(traj):
-                        raise ValueError("coding error: found comments different from atomic structures: {:d} comments != {:d} atoms (using index {})."\
-                                            .format(len(comments),len(traj),self.index))
+                if self.pbc:
                     
-                    # reading the cell parameters from the comments
-                    for n,string in enumerate(strings):
-                        cells[n] = string2cell(string)
+                    if self.fixed_cell:
+                        # little optimization if the cell is fixed
+                        # string:Match[str] = abcABC.search(comment)
+                        value = string2cell(comment)
+                        cells:List[np.ndarray] = FakeList(value,len(traj))
+                            
+                    else:
+                        comments = read_comments_xyz(ffile,self.index)
+                        if len(comments) != len(traj):
+                            raise ValueError("coding error: found comments different from atomic structures: {:d} comments != {:d} atoms (using index {})."\
+                                                .format(len(comments),len(traj),self.index))
+                        
+                        # reading the cell parameters from the comments
+                        cells:List[np.ndarray] = [np.zeros((3,3))]*len(comments)
+                        for n,comment in enumerate(comments):
+                            cells[n] = string2cell(comment)
 
                 for atom, cell in zip(traj,cells):
                     atom.set_cell(cell.T * factor["cell"] if self.pbc else None)
@@ -258,11 +272,11 @@ class Instruction:
         
         return traj
 
-    def __repr__(self):
-        return f"Instruction(name={self.name}, bead={self.bead}, filename={self.filename}, format={self.format})"
+    # def __repr__(self):
+    #     return f"Instruction(name={self.name}, bead={self.bead}, filename={self.filename}, format={self.format})"
     
-    def __str__(self):
-        return f"Instruction(name={self.name}, bead={self.bead}, filename={self.filename}, format={self.format})"
+    # def __str__(self):
+    #     return f"Instruction(name={self.name}, bead={self.bead}, filename={self.filename}, format={self.format})"
     
 # class Instructions(List[Instruction]):
 #     pass
@@ -302,63 +316,13 @@ def main():
     if args.prefix is not None:
         args.prefix = str(args.prefix)
         
-    #------------------#  
-    pattern = f"{args.folder}/{args.prefix}.*_*.xyz"
-    print(f"\n\t Looking for files mathing the following pattern: '{pattern}'")
-    files = glob.glob(pattern)
-    N = len(files)
-    print(f"\t {N} files found.")
-    if N == 0:
-        raise ValueError("No files found.")
-    
     #------------------#
-    pattern_extract = r'([^/]+)\.(.*?)_(.*?)\.(\w+)$'
-    beads = set()
-    names = set()
-    for n,file in enumerate(files):
-        matched = re.search(pattern_extract, os.path.basename(file))
-        name = matched.group(2)    # Captures the first `*`
-        bead = matched.group(3)   # Captures the second `*`
-        names.add(name)
-        beads.add(bead)  
-    Nn = len(names)        
-    Nb = len(beads)  
-    print(f"\t {Nb} beads found.")    
-    print(f"\t {Nn} arrays found.")    
-    assert N == Nb*Nn, f"Found {N} files but {Nb} beads and {Nn} arrays."
+    test = merge_beads(args.prefix,args.folder,0)
         
-    #------------------#
-    print("\n\t Found the following files:")
-    index = integer_to_slice_string(args.index)
-    instructions = {}
-    for n,file in enumerate(files):
-        matched = re.search(pattern_extract, os.path.basename(file))
-        if matched:
-            prefix_value = matched.group(1)   # Captures the prefix (variable part)
-            name = matched.group(2)    # Captures the first `*`
-            bead = matched.group(3)   # Captures the second `*`
-            extension = matched.group(4)      # Captures the file extension
-            assert prefix_value == args.prefix, f"File {file} does not match the expected pattern"
-            if extension != "xyz":
-                warn(f"File {file} was expected to have extension 'xyz' but has extension '{extension}'")
-            print(f"\t - bead={bead}, name={name}: {file}")
-            if name not in instructions:
-                instructions[name] = {}
-            instructions[name][bead] = Instruction(name=name, bead=bead, filename=file, format="i-pi", index=index, fixed_cell=args.fixed_cell,pbc=args.pbc)
-        else:
-            raise ValueError(f"File {file} does not match the expected pattern")
         
-    #------------------#
-    print("\n\t Creating ASE trajectories (one for each bead)")
-    trajs = [None]*Nb
-    for n,bead in enumerate(beads):
-        print(f"\t - bead={bead}")
-        instr:Instruction = instructions["positions"][bead]
-        trajs[n] = instr.get()
-        pass
-        # for name in names:
-        #     for inst in instructions[name].values():
-        #         if inst.bead == bead:
+         
+        
+        
         
     pass
 
