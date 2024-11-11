@@ -12,6 +12,9 @@
     <trajectory stride='1' filename='for' cell_units='angstrom'> forces </trajectory>
     <properties stride='1' filename='neb'> [step, bead_potentials] </properties>
   </output>
+  <prng>
+      <seed> 12345 </seed>
+   </prng>
   <system>
     <forces>
       <force forcefield='zundel'/>

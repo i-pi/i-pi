@@ -5,6 +5,9 @@
     <trajectory stride="20" filename="frc_c" format="xyz"> f_centroid </trajectory>
     <trajectory stride="10" filename="dhh" extra_type="dhh"> extras_bias </trajectory>
    </output>
+   <prng>
+      <seed> 12345 </seed>
+   </prng>
    <total_steps> 100 </total_steps>
    <ffsocket name="pswater" mode="unix">
        <address> localhost </address> 
