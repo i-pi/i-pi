@@ -5,8 +5,6 @@ be used to perform calculations based on different types of machine learning
 potentials
 """
 
-import sys
-
 from ipi.utils.messages import warning
 
 from .ase import ASEDriver
