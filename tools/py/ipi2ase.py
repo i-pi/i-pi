@@ -2,7 +2,7 @@
 import argparse
 from ipi.utils.parsing import merge_beads
 
-description = "Convert a i-PI trajectory to a ASE files."
+description = "Convert i-PI trajectories to ASE files."
 
 
 # ---------------------------------------#
@@ -15,8 +15,7 @@ def prepare_args():
         type=str,
         required=True,
         **argv,
-        help="prefix of the i-PI files (i-pi format will be assumed) (default: %(default)s)",
-        default=None,
+        help="prefix of the i-PI files",
     )
     parser.add_argument(
         "-f",
@@ -33,7 +32,7 @@ def prepare_args():
         type=int,
         required=True,
         **argv,
-        help="index to be read from input file (default: %(default)s)",
+        help="number of beads (default: %(default)s)",
         default=":",
     )
     parser.add_argument(
