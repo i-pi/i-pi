@@ -1,6 +1,5 @@
 """Interface with librascal to run machine learning potentials"""
 
-import sys
 from .dummy import Dummy_driver
 
 from ipi.utils.mathtools import det_ut3x3

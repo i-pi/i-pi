@@ -38,7 +38,7 @@ def read_args_kwargs(input_str):
         token = token.strip()
         if "=" in token:
             key, value = token.split("=", 1)
-            kwargs[key.strip()] = _parse_value(value)
+            kwargs[key.strip()] = read_value(value)
         elif len(token) > 0:
-            args.append(_parse_value(token))
+            args.append(read_value(token))
     return args, kwargs

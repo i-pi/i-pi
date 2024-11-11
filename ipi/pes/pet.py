@@ -1,6 +1,5 @@
 """Interface with [PET](https://github.com/serfg/pet) models to run machine learning potentials"""
 
-import sys
 import numpy as np
 from .dummy import Dummy_driver
 

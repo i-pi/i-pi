@@ -1,6 +1,5 @@
 """ Harmonic potential """
 
-import sys
 from .dummy import Dummy_driver
 import numpy as np
 

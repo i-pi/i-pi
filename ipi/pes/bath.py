@@ -2,8 +2,8 @@
 
 import numpy as np
 
-__DRIVER_NAME__ = None
-__DRIVER_CLASS__ = "driver_tools"
+__DRIVER_NAME__ = "bath"
+__DRIVER_CLASS__ = "Harmonic_Bath_explicit"
 
 
 class Harmonic_Bath_explicit(object):
