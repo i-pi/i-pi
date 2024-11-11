@@ -257,13 +257,13 @@ def merge_files(prefix: str, folder: str, bead: int) -> List[Atoms]:
     traj : List[Atoms]
         The merged trajectory information.
     """
-    
+
     # author: Elia Stocco
-    # comments: 
+    # comments:
     # The script cycle over the arrays and then over then over the atoms.
     # This is slower than the other way around but it is more readable
     # and it is less memory expensive, especially for large files.
-    
+
     if ase is None:
         raise ImportError(
             "read_trajectory requires the `ase` package to return the structure in ASE format"
@@ -288,7 +288,7 @@ def merge_files(prefix: str, folder: str, bead: int) -> List[Atoms]:
     # ------------------#
     files = sorted(files, key=lambda x: "positions" not in x)
     traj = None
-    for n, file in enumerate(files): # cycle over arrays
+    for n, file in enumerate(files):  # cycle over arrays
         matched = re.search(pattern_extract, os.path.basename(file))
         name = matched.group(2)
         if n == 0:
@@ -303,7 +303,7 @@ def merge_files(prefix: str, folder: str, bead: int) -> List[Atoms]:
                     f"File {file} is not a position file but is not the first file."
                 )
             array: List[Atoms] = read_trajectory(file)
-            for i in range(len(traj)): # cycle over atoms
+            for i in range(len(traj)):  # cycle over atoms
                 traj[i].arrays[name] = array[i].positions
 
     return traj
@@ -336,7 +336,7 @@ def merge_beads(prefix: str, folder: str, nbeads: int, ofile: str):
         raise ImportError(
             "read_trajectory requires the `ase` package to return the structure in ASE format"
         )
-    for n in range(nbeads): # cycle over arrays
+    for n in range(nbeads):  # cycle over arrays
         traj = merge_files(prefix, folder, n)
         base_name, ext = os.path.splitext(ofile)
         assert (
