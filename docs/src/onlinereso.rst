@@ -21,6 +21,29 @@ In http://gle4md.org/ one can also obtain colored-noise parameters to
 run Path Integral with Generalized Langevin Equation thermostat
 (PI+GLE/PIGLET) calculations.
 
+Examples and demos 
+~~~~~~~~~~~~~~~~~~~
+The `examples` and `demos` folders in the i-PI `source code <https://github.com/i-pi/i-pi>`_
+contain inputs for many different types of
+calculations based on i-PI. Examples are typically minimal use-cases of specific
+features, while demos are more structured, tutorial-like examples that show how
+to realize more complex setups, and also provide a brief discussion of the 
+underlying algorithms.
+
+To run these examples, you should typically start i-PI, redirecting the output to
+a log file, and then run a couple of instances of the driver code. The progress
+of the wrapper is followed by monitoring the log file with the `tail` Linux command.
+
+Optionally, you can make a copy of the directory with the example somewhere
+else if you want to keep the i-PI directory clean. For example::
+
+    bash
+    cd demos/para-h2-tutorial/tutorial-1/
+    i-pi tutorial-1.xml > log &
+    i-pi-driver -a localhost -p 31415 -m sg -o 15 &
+    i-pi-driver -a localhost -p 31415 -m sg -o 15 &
+    tail -f log
+
 Tutorials
 ~~~~~~~~~
 A simple tutorial on how to run i-PI can be found in the documentation:
