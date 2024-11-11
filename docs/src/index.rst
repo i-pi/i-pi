@@ -27,6 +27,7 @@ This documentation is structured as follows:
 
    introduction
    onlinereso
+   tutorials
    features
    getting-started
    units
@@ -35,7 +36,6 @@ This documentation is structured as follows:
    output-files
    output-tags
    distributed
-   tutorials
    faq
    troubleshooting
    contributing
