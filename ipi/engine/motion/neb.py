@@ -113,7 +113,7 @@ class NEBGradientMapper(object):
         # Array for spring constants
         kappa = np.zeros(nimg)
 
-        btau = np.zeros((nimg, nat), float)
+        btau = np.zeros((nimg, nactive_dof), float)
         for ii in range(1, nimg - 1):
             d1 = bq[ii] - bq[ii - 1]  # tau minus
             d2 = bq[ii + 1] - bq[ii]  # tau plus

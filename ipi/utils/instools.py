@@ -317,7 +317,7 @@ class Fix(object):
 
         self.fixatoms_dof = fixatoms_dof
         if np.mod(self.fixatoms_dof, 3) == 0:
-            self.fix_atoms = np.unique(self.fixatoms_dof // 3)
+            self.fixatoms = np.unique(self.fixatoms_dof // 3)
         else:
             softexit.trigger(
                 message="fixatoms_dof is not yet implemented. please use fixatoms",
@@ -334,7 +334,7 @@ class Fix(object):
         mask2 = np.tile(mask1, self.nbeads)
         self.mask2 = np.arange(3 * self.natoms * self.nbeads)[mask2]
 
-        self.fixbeads = Beads(beads.natoms - len(fixatoms), beads.nbeads)
+        self.fixbeads = Beads(beads.natoms - len(self.fixatoms), beads.nbeads)
         self.fixbeads.q[:] = self.get_active_vector(beads.clone().q, 1)
         self.fixbeads.m[:] = self.get_active_vector(beads.clone().m, 0)
         self.fixbeads.names[:] = self.get_active_vector(beads.clone().names, 0)
