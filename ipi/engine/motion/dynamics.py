@@ -53,7 +53,7 @@ class Dynamics(Motion):
         thermostat=None,
         barostat=None,
         fixcom=False,
-        fixatoms=None,
+        fixatoms_dof=None,
         nmts=None,
         efield=None,
         bec=None,
@@ -66,7 +66,7 @@ class Dynamics(Motion):
                 motion will be constrained or not. Defaults to False.
         """
 
-        super(Dynamics, self).__init__(fixcom=fixcom, fixatoms=fixatoms)
+        super(Dynamics, self).__init__(fixcom=fixcom, fixatoms_dof=fixatoms_dof)
 
         # initialize time step. this is the main time step that covers a full time step
         self._dt = depend_value(name="dt", value=timestep)
@@ -76,7 +76,7 @@ class Dynamics(Motion):
         else:
             if (
                 thermostat.__class__.__name__ is ("ThermoPILE_G" or "ThermoNMGLEG ")
-            ) and (len(fixatoms) > 0):
+            ) and (len(fixatoms_dof) > 0):
                 softexit.trigger(
                     status="bad",
                     message="!! Sorry, fixed atoms and global thermostat on the centroid not supported. Use a local thermostat. !!",
@@ -115,21 +115,17 @@ class Dynamics(Motion):
 
         # constraints
         self.fixcom = fixcom
-        if fixatoms is None:
-            self.fixatoms = np.zeros(0, int)
-            self.fixatoms3 = np.zeros(0, int)
+        if fixatoms_dof is None:
+            self.fixatoms_dof = np.zeros(0, int)
         else:
-            self.fixatoms = fixatoms
-            self.fixatoms3 = np.array(
-                [[3 * i, 3 * i + 1, 3 * i + 2] for i in self.fixatoms]
-            ).flatten()
+            self.fixatoms_dof = fixatoms_dof
 
     def get_fixdof(self):
         """Calculate the number of fixed degrees of freedom, required for
         temperature and pressure calculations.
         """
 
-        fixdof = len(self.fixatoms) * 3 * self.beads.nbeads
+        fixdof = len(self.fixatoms_dof) * self.beads.nbeads
         if self.fixcom:
             fixdof += 3
         return fixdof
@@ -279,8 +275,7 @@ class DummyIntegrator:
         self.thermostat = motion.thermostat
         self.barostat = motion.barostat
         self.fixcom = motion.fixcom
-        self.fixatoms = motion.fixatoms
-        self.fixatoms3 = motion.fixatoms3
+        self.fixatoms_dof = motion.fixatoms_dof
         self.enstype = motion.enstype
 
         # no need to dpipe these are really just references
@@ -368,13 +363,12 @@ class DummyIntegrator:
 
             self.ensemble.eens += np.sum(vcom**2) * 0.5 * Mnb  # COM kinetic energy
 
-        if len(self.fixatoms) > 0:
+        if len(self.fixatoms_dof) > 0:
             m3 = dstrip(beads.m3)
             p = dstrip(beads.p)
-            fixatoms3 = self.fixatoms3
 
-            self.ensemble.eens += 0.5 * np.sum(p[:, fixatoms3] ** 2 / m3[:, fixatoms3])
-            beads.p[:, fixatoms3] = 0.0
+            self.ensemble.eens += 0.5 * np.sum(p[:, self.fixatoms_dof] ** 2 / m3[:, self.fixatoms_dof])
+            beads.p[:, self.fixatoms_dof] = 0.0
 
 
 dproperties(

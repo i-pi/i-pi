@@ -28,10 +28,10 @@ class MultiMotion(Motion):
             self.dt
         )  # DON'T ASK WHY BUT IF YOU DON'T DO THAT WEAKREFS TO SELF.DT WILL BE INVALIDATED
 
-        self.fixatoms = set(self.mlist[0].fixatoms)
+        self.fixatoms_dof = set(self.mlist[0].fixatoms_dof)
         for m in self.mlist:
-            self.fixatoms = self.fixatoms.intersection(m.fixatoms)
-        self.fixatoms = list(self.fixatoms)
+            self.fixatoms_dof = self.fixatoms.intersection(m.fixatoms_dof)
+        self.fixatoms_dof = list(self.fixatoms_dof)
 
         self.fixcom = True  # fixcom is true only if all movers are fixed
         for m in self.mlist:
