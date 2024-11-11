@@ -422,5 +422,9 @@ class Simulation:
         if self.smotion is not None:
             self.smotion.step(step)
 
+    def stop(self):
+        for k, f in self.fflist.items():
+            f.stop()
+
 
 dproperties(Simulation, ["step"])
