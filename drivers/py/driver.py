@@ -201,8 +201,8 @@ if __name__ == "__main__":
         "--mode",
         type=str,
         default="dummy",
+        choices=list(__drivers__.keys()),
         help="""Type of potential to be used to compute the potential and its derivatives.
-                Currently implemented: [dummy, harmonic]
         """,
     )
     parser.add_argument(
