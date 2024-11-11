@@ -13,12 +13,11 @@ from ipi.utils.units import unit_to_user
 import glob
 import os
 from typing import List
-from ase import Atoms
-
 
 try:
     import ase
     from ase.io import write
+    from ase import Atoms
 except ImportError:
     ase = None
 
