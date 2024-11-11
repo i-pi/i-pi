@@ -315,17 +315,6 @@ class InputMotionBase(Input):
         else:
             raise ValueError("Cannot store Mover calculator of type " + str(type(sc)))
 
-        if len(sc.fixatoms) > 0:
-            if len(sc.fixatoms_dof > 0):
-                softexit.trigger(
-                    status="bad",
-                    message=(
-                        "Please specify either fixatoms or fixatoms_dof in your input file"
-                    ),
-                )
-            else:
-                sc.fixatoms_dof = sc.fixatoms[:, np.newaxis] * 3 + np.array([0, 1, 2])
-
         if (sc.fixcom is True) and (len(sc.fixatoms_dof_mask) > 0):
             warning(
                 "The flag fixcom is true by default but you have chosen to fix some atoms (or degree of freedom) explicitly. Because the two cannot be used together, we are overriding the fixcom setting and making it False.",
@@ -348,6 +337,19 @@ class InputMotionBase(Input):
         """
 
         super(InputMotionBase, self).fetch()
+
+        if len(self.fixatoms) > 0:
+            if len(self.fixatoms_dof > 0):
+                softexit.trigger(
+                    status="bad",
+                    message=(
+                        "Please specify either fixatoms or fixatoms_dof in your input file"
+                    ),
+                )
+            else:
+                self.fixatoms_dof = self.fixatoms[:, np.newaxis] * 3 + np.array(
+                    [0, 1, 2]
+                )
 
         if self.mode.fetch() == "replay":
             sc = Replay(
