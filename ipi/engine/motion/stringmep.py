@@ -93,7 +93,9 @@ class StringGradientMapper(object):
         be = dstrip(self.rforces.pots).copy()
 
         # Calculate the force component perpendicular to the spline.
-        tangent = spline_derv(self.dbeads.q[:, self.fixatoms_mask], self.dbeads.nbeads)[1:-1]
+        tangent = spline_derv(self.dbeads.q[:, self.fixatoms_mask], self.dbeads.nbeads)[
+            1:-1
+        ]
         rbf_perp = rbf - tangent * np.sum(rbf * tangent, axis=1)[:, np.newaxis]
 
         # Return potential energy of the whole string and minus f_perpendicular
@@ -187,7 +189,7 @@ class StringClimbGrMapper(object):
         """
         self.fixatoms_dof = ens.fixatoms_dof.copy()
         # A mask to exclude fixed atoms from 3N-arrays
-        self.fixatoms_mask= np.ones(3 * ens.beads.natoms, dtype=bool)
+        self.fixatoms_mask = np.ones(3 * ens.beads.natoms, dtype=bool)
         if len(ens.fixatoms_dof) > 0:
             self.ffixatoms_mask[ens.fixatoms_dof] = 0
 
@@ -195,8 +197,12 @@ class StringClimbGrMapper(object):
         self.rbeads = Beads(ens.beads.natoms, 1)
         self.rcell = ens.cell.clone()
         # Coords of the bead before and after the climbing one.
-        self.q_prev = np.zeros(3 * (ens.beads.natoms - len(ens.fixatoms))) #ALBERTO HERE
-        self.q_next = np.zeros(3 * (ens.beads.natoms - len(ens.fixatoms))) #ALBERTO HERE
+        self.q_prev = np.zeros(
+            3 * (ens.beads.natoms - len(ens.fixatoms))
+        )  # ALBERTO HERE
+        self.q_next = np.zeros(
+            3 * (ens.beads.natoms - len(ens.fixatoms))
+        )  # ALBERTO HERE
         # Make reduced forces dependent on reduced beads
         self.rforces = ens.forces.clone(self.rbeads, self.rcell)
 
@@ -352,7 +358,7 @@ class StringMover(Motion):
         # and reduce it if needed, because someone may want to provide
         # existing Hessian of the full system.
         if self.mode in ["damped_bfgs", "bfgstrm"]:
-            n_activedim = beads.q[0].size - len(self.fixatoms_dof)  
+            n_activedim = beads.q[0].size - len(self.fixatoms_dof)
             if self.stage == "string":
                 if self.hessian.size == (n_activedim * (beads.nbeads - 2)) ** 2:
                     # Desired dimension
@@ -418,7 +424,7 @@ class StringMover(Motion):
                 else:
                     raise ValueError("Hessian size does not match system size.")
 
-        if len(self.fixatoms_dof//3) == len(self.beads[0]):
+        if len(self.fixatoms_dof // 3) == len(self.beads[0]):
             softexit.trigger(
                 status="bad",
                 message="WARNING: all atoms are fixed, geometry won't change. Exiting simulation.",
@@ -496,7 +502,7 @@ class StringMover(Motion):
         natoms = self.beads.natoms
         fixatoms_mask = self.stringgm.fixatoms_mask
 
-        n_activedim = self.beads.q[0].size - len(self.fixatoms_dof) 
+        n_activedim = self.beads.q[0].size - len(self.fixatoms_dof)
 
         # Store 'old' resampled positions
         self.old_x[:] = self.beads.q[1:-1, fixatoms_mask]
@@ -619,7 +625,9 @@ class StringMover(Motion):
 
         # Here the forces are called on resampled positions.
         info(" @STRING: calling forces on resampled positions.", vrb.debug)
-        self.stringpot, self.stringgrad = self.stringgm(self.beads.q[1:-1, fixatoms_mask])
+        self.stringpot, self.stringgrad = self.stringgm(
+            self.beads.q[1:-1, fixatoms_mask]
+        )
         # This transfers forces from the mapper beads to the "main" beads,
         # so that recalculation won't be triggered after the step.
         # We need to keep forces up to date to be able to output
@@ -1142,7 +1150,9 @@ class StringMover(Motion):
                     vrb.debug,
                 )
                 # Store old bead positions at step 0
-                self.old_x = dstrip(self.beads.q[1:-1, self.stringgm.fixatoms_mask]).copy()
+                self.old_x = dstrip(
+                    self.beads.q[1:-1, self.stringgm.fixatoms_mask]
+                ).copy()
 
             self.path_step_textbook2002(step)
 

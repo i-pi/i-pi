@@ -4,6 +4,7 @@ from ipi.engine.beads import Beads
 from ipi.utils.messages import verbosity, info
 from ipi.utils import units
 import ipi.utils.mathtools as mt
+from ipi.utils.softexit import softexit
 
 
 def banded_hessian(h, sm, masses=True, shift=0.001):
@@ -307,14 +308,20 @@ def ms_pathway(pos, m3):
 class Fix(object):
     """Class that applies a fixatoms type constrain"""
 
-    def __init__(self, fixatoms, beads, nbeads=None):
+    def __init__(self, fixatoms_dof, beads, nbeads=None):
         self.natoms = beads.natoms
         if nbeads is None:
             self.nbeads = beads.nbeads
         else:
             self.nbeads = nbeads
 
-        self.fixatoms = fixatoms
+        self.fixatoms_dof = fixatoms_dof
+        if np.mod(self.fixatoms_dof, 3) == 0:
+            self.fix_atoms = np.unique(self.fixatoms_dof // 3)
+        else:
+            softexit.trigger(
+                message="fixatoms_dof is not yet implemented. please use fixatoms",
+            )
 
         self.mask0 = np.delete(np.arange(self.natoms), self.fixatoms)
         self.nactive = len(self.mask0)

@@ -152,7 +152,9 @@ def totalEnergy(prefix, temp, ss=0):
                         rc[:] - q[j, i * 3 : i * 3 + 3], f[j, i * 3 : i * 3 + 3]
                     )
 
-            ePA *= 0.5 * nbeads * (Constants.kb * temperature) ** 2 / Constants.hbar**2
+            ePA *= (
+                0.5 * nbeads * (Constants.kb * temperature) ** 2 / Constants.hbar**2
+            )
             ePA += 0.5 * nbeads * (3 * natoms) * Constants.kb * temperature + U
             f2ePA = f2 * ePA
             eVir /= 2.0 * nbeads
