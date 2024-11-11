@@ -53,7 +53,7 @@ if the arrays are very large.
                 "dtype": int,
                 #                "default": 123456,
                 "default": -1,
-                "help": "This is the seed number used to generate the initial state of the random number generator. Previously, the seed was fixed as 123456. Currently, the seed is random and given by the system time (down to ms). This is done in utils/prng.py.",
+                "help": "This specifies the seed number used to generate the initial state of the random number generator. Previously, the default seed was fixed as 123456. Currently, the default seed is random and given by the system time (down to ms). This is done in utils/prng.py.",
             },
         ),
         "state": (
