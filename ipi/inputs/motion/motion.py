@@ -82,10 +82,10 @@ class InputMotionBase(Input):
     Fields:
        fixcom: An optional boolean which decides whether the centre of mass
           motion will be constrained or not.
-       fixatoms: A list of the indices of atoms that should not be moved. 
+       fixatoms: A list of the indices of atoms that should not be moved.
        fixatoms_dof: A list of indices of degrees of freedom that should be kept fixed.
        Note that fixatoms is a 'short' way for to provide the fixatoms_dof, but only the latter is stored internally and written restart files.
-       
+
     """
 
     attribs = {
@@ -315,16 +315,16 @@ class InputMotionBase(Input):
         else:
             raise ValueError("Cannot store Mover calculator of type " + str(type(sc)))
 
-        if (len(sc.fixatoms) > 0:
-           if len(sc.fixatoms_dof> 0):
-              softexit.trigger(                                                                                                                                                                           
-                status="bad",                                                                                                                                                                           
-                message=(                                                                                                                                                                               
-                    "Please specify either fixatoms or fixatoms_dof in your input file"
-                ),                                                                                                                                                                                      
-             )
-           else:
-              sc.fixatoms_dof = sc.fixatoms[:, np.newaxis] * 3 + np.array([0, 1, 2])
+        if len(sc.fixatoms) > 0:
+            if len(sc.fixatoms_dof > 0):
+                softexit.trigger(
+                    status="bad",
+                    message=(
+                        "Please specify either fixatoms or fixatoms_dof in your input file"
+                    ),
+                )
+            else:
+                sc.fixatoms_dof = sc.fixatoms[:, np.newaxis] * 3 + np.array([0, 1, 2])
 
         if (sc.fixcom is True) and (len(sc.fixatoms_dof_mask) > 0):
             warning(
