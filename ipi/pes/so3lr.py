@@ -2,10 +2,7 @@
 
 from .ase import ASEDriver
 
-try:
-    from so3lr import So3lrCalculator
-except:
-    So3lrCalculator = None
+So3lrCalculator = None
 
 __DRIVER_NAME__ = "so3lr"
 __DRIVER_CLASS__ = "SO3LR_driver"
@@ -21,7 +18,11 @@ Example: python driver.py -m so3lr -u -o template.xyz,lr_cutoff=12,dispersion_en
 
 class SO3LR_driver(ASEDriver):
     def __init__(self, args=None, verbose=False):
-        if So3lrCalculator is None:
+
+        global So3lrCalculator
+        try:
+            from so3lr import So3lrCalculator
+        except:
             raise ImportError("Couldn't load so3lr bindings")
 
         super().__init__(args, verbose, ERROR_MSG)

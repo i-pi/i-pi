@@ -3,10 +3,7 @@
 import sys
 from .ase import ASEDriver
 
-try:
-    from mace.calculators import MACECalculator
-except:
-    MACECalculator = None
+MACECalculator = None
 
 __DRIVER_NAME__ = "mace"
 __DRIVER_CLASS__ = "MACE_driver"
@@ -21,7 +18,12 @@ Example: python driver.py -m mace -u -o model.json,template.xyz
 
 class MACE_driver(ASEDriver):
     def __init__(self, args=None, verbose=False):
-        if MACECalculator is None:
+
+        global MACECalculator
+
+        try:
+            from mace.calculators import MACECalculator
+        except:
             raise ImportError("Couldn't load mace bindings")
 
         super().__init__(args, verbose, ERROR_MSG)

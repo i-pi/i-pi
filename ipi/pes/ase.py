@@ -11,7 +11,6 @@ try:
     from ase.io import read
 except ImportError:
     warning("Could not find or import the ASE module")
-    MetatensorCalculator = None
 
 __DRIVER_NAME__ = "ase"
 __DRIVER_CLASS__ = "ASEDriver"

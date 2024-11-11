@@ -6,10 +6,7 @@ from .dummy import Dummy_driver
 from ipi.utils.mathtools import det_ut3x3
 from ipi.utils.units import unit_to_internal, unit_to_user
 
-try:
-    from rascal.models.genericmd import GenericMDCalculator as RascalCalc
-except:
-    RascalCalc = None
+RascalCalc = None
 
 __DRIVER_NAME__ = "rascal"
 __DRIVER_CLASS__ = "Rascal_driver"
@@ -24,8 +21,11 @@ Example: python driver.py -m rascal -u -o model.json,template.xyz
 class Rascal_driver(Dummy_driver):
     def __init__(self, args=None, verbose=False):
         super().__init__(args, verbose, error_msg=ERROR_MSG)
+        global RascalCalc
 
-        if RascalCalc is None:
+        try:
+            from rascal.models.genericmd import GenericMDCalculator as RascalCalc
+        except:
             raise ImportError("Couldn't load librascal bindings")
 
     def check_arguments(self):

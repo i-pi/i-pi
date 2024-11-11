@@ -7,17 +7,8 @@ from .dummy import Dummy_driver
 from ipi.utils.units import unit_to_internal, unit_to_user
 from ipi.utils.messages import warning
 
-try:
-    from pet import SingleStructCalculator as PETCalc
-
-    try:
-        from ase.io import read
-    except ImportError:
-        warning("The PET driver has an ASE dependency")
-        raise
-except ImportError:
-    warning("Could not find or import the PET module")
-    PETCalc = None
+PETCalc = None
+read = None
 
 __DRIVER_NAME__ = "pet"
 __DRIVER_CLASS__ = "PET_driver"
@@ -25,6 +16,19 @@ __DRIVER_CLASS__ = "PET_driver"
 
 class PET_driver(Dummy_driver):
     def __init__(self, args=None, verbose=False):
+        global PETCalc, read
+
+        try:
+            from pet import SingleStructCalculator as PETCalc
+
+            try:
+                from ase.io import read
+            except ImportError:
+                warning("The PET driver has an ASE dependency")
+                raise
+        except ImportError:
+            raise ImportError("Could not find or import the PET module")
+
         self.error_msg = """
 The PET driver requires (a) a path to the results/experiment_name folder emitted by pet_train
                         (b) a path to an ase.io.read-able file with a prototype structure

@@ -11,12 +11,8 @@ from ipi.utils.messages import warning
 
 from .ase import ASEDriver
 
-try:
-    import metatensor.torch
-    from metatensor.torch.atomistic.ase_calculator import MetatensorCalculator
-except ImportError as e:
-    warning(f"Could not find or import metatensor.torch: {e}")
-    MetatensorCalculator = None
+MetatensorCalculator = None
+mtt = None
 
 __DRIVER_NAME__ = "metatensor"
 __DRIVER_CLASS__ = "MetatensorDriver"
@@ -32,6 +28,16 @@ extensions=path/to/extensions,check_consistency=False
 
 class MetatensorDriver(ASEDriver):
     def __init__(self, args=None, verbose=False, error_msg=ERROR_MSG):
+        global MetatensorCalculator, mtt
+        if MetatensorCalculator is None:
+            try:
+                import metatensor.torch as mtt
+                from metatensor.torch.atomistic.ase_calculator import (
+                    MetatensorCalculator,
+                )
+            except ImportError as e:
+                warning(f"Could not find or import metatensor.torch: {e}")
+
         super().__init__(args, verbose, error_msg)
 
     def check_arguments(self):
@@ -43,15 +49,15 @@ class MetatensorDriver(ASEDriver):
         if MetatensorCalculator is None:
             raise ImportError("could not import metatensor.torch, is it installed?")
 
-        metatensor_major, metatensor_minor, *_ = metatensor.torch.__version__.split(".")
+        metatensor_major, metatensor_minor, *_ = mtt.__version__.split(".")
         metatensor_major = int(metatensor_major)
         metatensor_minor = int(metatensor_minor)
 
-        if metatensor_major != 0 or metatensor_minor != 5:
+        if metatensor_major != 0 or metatensor_minor < 5:
             raise ImportError(
-                "this code is only compatible with metatensor-torch v0.5.x, "
-                f"found version v{metatensor.torch.__version__} "
-                f"at '{metatensor.torch.__file__}'"
+                "this code is only compatible with metatensor-torch >= v0.5, "
+                f"found version v{mtt.__version__} "
+                f"at '{mtt.__file__}'"
             )
 
         super().check_arguments()

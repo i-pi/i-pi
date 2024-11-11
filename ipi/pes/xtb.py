@@ -11,11 +11,7 @@ import json
 
 from ipi.utils.units import unit_to_internal, unit_to_user
 
-try:
-    import tblite.interface as tb
-except ImportError:
-    tb = None
-
+tb = None
 
 __DRIVER_NAME__ = "xtb"
 __DRIVER_CLASS__ = "TBLiteDriver"
@@ -31,7 +27,10 @@ class TBLiteDriver(object):
     ):
         """Initialized dummy drivers"""
 
-        if tb is None:
+        global tb
+        try:
+            import tblite.interface as tb
+        except ImportError:
             raise ModuleNotFoundError(
                 "Could not find tblite for xtb driver. Please install tblite-python with mamba"
             )
