@@ -3,7 +3,7 @@
         <properties stride='1' filename='out'>  [ step, potential{electronvolt}] </properties>
    </output>
    <prng>
-      <seed> 12345 </seed>
+      <seed> 123456 </seed>
    </prng>
    <total_steps>100       </total_steps>
    <ffsocket name="doublewell_1D" mode="unix" >

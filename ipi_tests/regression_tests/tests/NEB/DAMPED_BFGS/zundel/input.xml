@@ -13,7 +13,7 @@
     <properties stride='1' filename='neb'> [step, bead_potentials] </properties>
   </output>
   <prng>
-      <seed> 12345 </seed>
+      <seed> 123456 </seed>
    </prng>
   <system>
     <forces>
