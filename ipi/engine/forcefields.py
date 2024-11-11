@@ -25,10 +25,7 @@ from ipi.utils.units import unit_to_internal
 from ipi.utils.distance import vector_separation
 from ipi.pes import __drivers__
 
-try:
-    import plumed
-except ImportError:
-    plumed = None
+plumed = None
 
 
 class ForceRequest(dict):
@@ -718,8 +715,11 @@ class FFPlumed(FFEval):
            pars: Optional dictionary, giving the parameters needed by the driver.
         """
 
+        global plumed
         # a socket to the communication library is created or linked
-        if plumed is None:
+        try:
+            import plumed
+        except ImportError:
             raise ImportError(
                 "Cannot find plumed libraries to link to a FFPlumed object/"
             )
