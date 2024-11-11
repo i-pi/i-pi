@@ -424,7 +424,11 @@ class FFDirect(FFEval):
         self.driver = __drivers__[self.pes](verbose=verbosity.high, **pars)
 
     def evaluate(self, request):
-        request["result"] = list(self.driver(request["cell"][0], request["pos"]))
+        results = list(self.driver(request["cell"][0], request["pos"].reshape(-1, 3)))
+        # ensure forces and virial have the correct shape
+        results[1] = results[1].reshape(-1)
+        results[2] = results[2].reshape(3, 3)
+        request["result"] = results
         request["status"] = "Done"
 
 
