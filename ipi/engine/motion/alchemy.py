@@ -30,7 +30,7 @@ class AlchemyMC(Motion):
     """
 
     def __init__(
-        self, fixcom=False, fixatoms=None, mode=None, names=[], nxc=1, ealc=None
+        self, fixcom=False, fixatoms_dof=None, mode=None, names=[], nxc=1, ealc=None
     ):
         """Initialises a "alchemical exchange" motion object.
 
@@ -40,7 +40,7 @@ class AlchemyMC(Motion):
 
         """
 
-        super(AlchemyMC, self).__init__(fixcom=fixcom, fixatoms=fixatoms)
+        super(AlchemyMC, self).__init__(fixcom=fixcom, fixatoms_dof=fixatoms_dof)
 
         self.names = names
         self.nxc = nxc
