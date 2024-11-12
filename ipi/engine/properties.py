@@ -230,8 +230,8 @@ class Properties:
     """
 
     _DEFAULT_FINDIFF = 1e-4
-    _DEFAULT_FDERROR = 1e-6
-    _DEFAULT_MINFID = 1e-7
+    _DEFAULT_FDERROR = 1e-5
+    _DEFAULT_MINFID = 1e-8
 
     def __init__(self):
         """Initialises Properties."""
@@ -753,12 +753,13 @@ class Properties:
                 "func": self.get_yama_estimators,
                 "size": 2,
             },
-            "kcv_scaledcoords": {
+            "sc_op_scaledcoords": {
                 "dimension": "undefined",
-                "help": "The scaled coordinates estimators that can be used to compute energy and heat capacity",
+                "help": "The Suzuki-Chin OP scaled coordinates estimators that can be used to compute energy and heat capacity",
                 "longhelp": """Returns the estimators that are required to evaluate the scaled-coordinates estimators
-                       for total energy and heat capacity, as described in T. M. Yamamoto,
-                       J. Chem. Phys., 104101, 123 (2005). Returns eps_v and eps_v', as defined in that paper.
+                       for total energy and heat capacity for a Suzuki-Chin high-order factorization, as described in 
+                       Appendix B of J. Chem. Theory Comput. 2019, 15, 3237-3249 (2019). Returns eps_v and eps_v', 
+                       as defined in that paper.
                        As the two estimators have a different dimensions, this can only be output in atomic units.
                        Takes one argument, 'fd_delta', which gives the value of the finite difference parameter used -
                        which defaults to """
@@ -766,15 +767,15 @@ class Properties:
                 + """. If the value of 'fd_delta' is negative,
                        then its magnitude will be reduced automatically by the code if the finite difference error
                        becomes too large.""",
-                "func": self.get_kcv_estimators,
+                "func": self.get_scop_estimators,
                 "size": 2,
             },
             "sc_scaledcoords": {
                 "dimension": "undefined",
                 "help": "The Suzuki-Chin scaled coordinates estimators that can be used to compute energy and heat capacity",
                 "longhelp": """Returns the estimators that are required to evaluate the scaled-coordinates estimators
-                       for total energy and heat capacity, as described in T. M. Yamamoto,
-                       J. Chem. Phys., 104101, 123 (2005). Returns eps_v and eps_v', as defined in that paper.
+                       for total energy and heat capacity for a Suzuki-Chin fourth-order factorization, as described in
+                       T. M. Yamamoto, J. Chem. Phys., 104101, 123 (2005). Returns eps_v and eps_v', as defined in that paper.
                        As the two estimators have a different dimensions, this can only be output in atomic units.
                        Takes one argument, 'fd_delta', which gives the value of the finite difference parameter used -
                        which defaults to """
@@ -956,9 +957,9 @@ class Properties:
         # dummy beads and forcefield objects so that we can use scaled and
         # displaced path estimators without changing the simulation bead
         # coordinates
-        self.dbeads = system.beads.copy()
-        self.dcell = system.cell.copy()
-        self.dforces = system.forces.copy(self.dbeads, self.dcell)
+        self.dbeads = system.beads.clone()
+        self.dcell = system.cell.clone()
+        self.dforces = system.forces.clone(self.dbeads, self.dcell)
         self.fqref = None
         self._threadlock = (
             system._propertylock
@@ -1065,55 +1066,45 @@ class Properties:
         to the temperature. Rather than using a scaling factor based on the number of degrees
         of freedom, we add fake momenta to all the fixed components, so that a meaningful
         result will be obtained for each subset of coordinates regardless of the constraints
-        imposed on the system.
+        imposed on the system. Computing the kinetic temperature only makes sense
+        if you're running a constant-temperature ensemble.
 
         Args:
            atom: If given, specifies the atom to give the temperature
               for. If not, then the simulation temperature.
         """
 
-        if len(self.motion.fixatoms) > 0:
-            for i in self.motion.fixatoms:
-                pi = np.tile(
-                    np.sqrt(
-                        self.beads.m[i]
-                        * Constants.kb
-                        * self.ensemble.temp
-                        * self.beads.nbeads
-                    ),
-                    3,
-                )
-                self.beads.p[:, 3 * i : 3 * i + 3] += pi
+        if self.ensemble.temp > 0 and (
+            self.motion.fixcom or len(self.motion.fixatoms) > 0
+        ):
 
-        if self.motion.fixcom:
-            # Adds a fake momentum to the centre of mass. This is the easiest way
-            # of getting meaningful temperatures for subsets of the system when there
-            # are fixed components
-            M = np.sum(self.beads.m)
-            pcm = np.tile(
-                np.sqrt(M * Constants.kb * self.ensemble.temp * self.beads.nbeads), 3
-            )
-            vcm = np.tile(pcm / M, self.beads.natoms)
+            dp = np.zeros_like(self.beads.p)  # correction
+            tempfactor = np.sqrt(Constants.kb * self.ensemble.temp * self.beads.nbeads)
 
-            self.beads.p += self.beads.m3 * vcm
+            if self.motion.fixcom:
+                # Adds a fake momentum to the centre of mass. This is the easiest way
+                # of getting meaningful temperatures for subsets of the system when there
+                # are fixed components
+                M = np.sum(self.beads.m)
+                vcm = tempfactor / np.sqrt(M)
 
-            # Avoid double counting
+                dp += dstrip(self.beads.m3) * vcm
+
             if len(self.motion.fixatoms) > 0:
                 for i in self.motion.fixatoms:
-                    self.beads.p[:, 3 * i : 3 * i + 3] -= np.multiply(
-                        self.beads.m[i], pcm / M
-                    )
+                    pi = self.beads.sm3[0, 3 * i] * tempfactor
+                    dp[:, 3 * i : 3 * i + 3] = pi
 
-        kemd, ncount = self.get_kinmd(atom, bead, nm, return_count=True)
+            # we have to change p in place because the kinetic energy
+            # can depend on nm masses
+            self.beads.p += dp
+            kemd, ncount = self.get_kinmd(atom, bead, nm, return_count=True)
 
-        if self.motion.fixcom:
-            # Removes the fake momentum from the centre of mass.
-            self.beads.p -= self.beads.m3 * vcm
-
-        if len(self.motion.fixatoms) > 0:
-            # re-fixes the fix atoms
-            for i in self.motion.fixatoms:
-                self.beads.p[:, 3 * i : 3 * i + 3] = 0.0
+            # .. and then undo
+            self.beads.p -= dp
+        else:
+            # just compute and carry on
+            kemd, ncount = self.get_kinmd(atom, bead, nm, return_count=True)
 
         return 2.0 * kemd / (Constants.kb * 3.0 * float(ncount) * self.beads.nbeads)
 
@@ -1864,8 +1855,10 @@ class Properties:
 
         return nx_tot / float(ncount)
 
-    def get_kcv_estimators(self, fd_delta=-_DEFAULT_FINDIFF):
-        """Calculates the op beta derivative of the centroid virial kinetic energy estimator for the Suzuki-Chin propagator.
+    def get_scop_estimators(self, fd_delta=-_DEFAULT_FINDIFF):
+        """Calculates the op beta derivative of the centroid virial kinetic
+        energy estimator for the Suzuki-Chin fourth-order path integral
+        sampling, cf. Appendix B of J. Chem. Theory Comput. 2019, 15, 3237-3249.
 
         Args:
            fd_delta: the relative finite difference in temperature to apply in
@@ -1924,41 +1917,44 @@ class Properties:
            computing finite-difference quantities. If it is negative, will be
            scaled down automatically to avoid discontinuities in the potential.
         """
-        # Ugly but works
-        if type(fd_delta) == str:
-            fd_delta = np.float(fd_delta)
 
-        dbeta = abs(float(fd_delta))
+        if type(fd_delta) == str:
+            fd_delta = float(fd_delta)
+
+        # dbeta is actually the relative finite-difference beta
+        dbeta = abs(fd_delta)
         beta = 1.0 / (Constants.kb * self.ensemble.temp)
         self.dcell.h = self.cell.h
         qc = dstrip(self.beads.qc)
         q = dstrip(self.beads.q)
-        v0 = self.forces.pot / self.beads.nbeads
+        v0 = dstrip(self.forces.pot) / self.beads.nbeads
         while True:
             splus = np.sqrt(1.0 + dbeta)
             sminus = np.sqrt(1.0 - dbeta)
 
             for b in range(self.beads.nbeads):
                 self.dbeads[b].q = qc * (1.0 - splus) + splus * q[b, :]
-            vplus = self.dforces.pot / self.beads.nbeads
+            vplus = dstrip(self.dforces.pot) / self.beads.nbeads
 
             for b in range(self.beads.nbeads):
                 self.dbeads[b].q = qc * (1.0 - sminus) + sminus * q[b, :]
-            vminus = self.dforces.pot / self.beads.nbeads
+            vminus = dstrip(self.dforces.pot) / self.beads.nbeads
 
-            # print "DISPLACEMENT CHECK YAMA db: %e, d+: %e, d-: %e, dd: %e" %(dbeta, (vplus-v0)*dbeta, (v0-vminus)*dbeta, abs((vplus+vminus-2*v0)/(vplus-vminus)))
+            if verbosity.debug:
+                print(
+                    f"DISPLACEMENT CHECK YAMA db: {dbeta} d+: {(vplus-v0)/dbeta} d-: {(v0-vminus)/dbeta}"
+                )
 
             if (
                 fd_delta < 0
                 and abs((vplus + vminus - 2 * v0) / (vplus - vminus))
                 > self._DEFAULT_FDERROR
-                and dbeta > self._DEFAULT_MINFID
             ):
                 if dbeta > self._DEFAULT_MINFID:
                     dbeta *= 0.5
                     info(
-                        "Reducing displacement in scaled coordinates estimator",
-                        verbosity.low,
+                        f"Reducing displacement in scaled coordinates estimator to {dbeta}",
+                        verbosity.medium,
                     )
                     continue
                 else:
@@ -1966,6 +1962,7 @@ class Properties:
                         "Could not converge displacement for scaled coordinate estimators",
                         verbosity.low,
                     )
+                    # returns exactly zero so that the problem can be spotted
                     eps = 0.0
                     eps_prime = 0.0
                     break
@@ -1983,7 +1980,8 @@ class Properties:
         return np.asarray([eps, eps_prime])
 
     def get_scyama_estimators(self, fd_delta=-_DEFAULT_FINDIFF):
-        """Calculates the quantum scaled coordinate suzuki-chin kinetic energy estimator for the Suzuki-Chin propagator.
+        """Calculates the quantum scaled coordinate Suzuki-Chin
+        kinetic energy estimator for the Suzuki-Chin factorization.
 
         Uses a finite difference method to calculate the estimators
         needed to calculate the energy and heat capacity of the system, as
@@ -1999,7 +1997,10 @@ class Properties:
            scaled down automatically to avoid discontinuities in the potential.
         """
 
-        dbeta = abs(float(fd_delta))
+        if type(fd_delta) == str:
+            fd_delta = float(fd_delta)
+
+        dbeta = abs(fd_delta)
         beta = 1.0 / (Constants.kb * self.ensemble.temp)
         self.dforces.omegan2 = self.forces.omegan2
         self.dforces.alpha = self.forces.alpha
@@ -2988,15 +2989,15 @@ class Trajectories:
         # dummy beads and forcefield objects so that we can use scaled and
         # displaced path estimators without changing the simulation bead
         # coordinates
-        self.dbeads = system.beads.copy()
-        self.dcell = system.cell.copy()
-        self.dforces = self.system.forces.copy(self.dbeads, self.dcell)
+        self.dbeads = system.beads.clone()
+        self.dcell = system.cell.clone()
+        self.dforces = self.system.forces.clone(self.dbeads, self.dcell)
         self._threadlock = system._propertylock
 
         if system.beads.nbeads >= 2:
-            self.scdbeads = system.beads.copy(system.beads.nbeads // 2)
-            self.scdcell = system.cell.copy()
-            self.scdforces = self.system.forces.copy(self.scdbeads, self.scdcell)
+            self.scdbeads = system.beads.clone(system.beads.nbeads // 2)
+            self.scdcell = system.cell.clone()
+            self.scdforces = self.system.forces.clone(self.scdbeads, self.scdcell)
 
     def get_akcv(self):
         """Calculates the contribution to the kinetic energy due to each degree

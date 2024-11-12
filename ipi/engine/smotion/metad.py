@@ -30,6 +30,8 @@ class MetaDyn(Smotion):
         self.metaff = metaff
         self.use_energy = use_energy
 
+        self.mode = "metad"
+
     def bind(self, syslist, prng, omaker):
         super(MetaDyn, self).bind(syslist, prng, omaker)
 

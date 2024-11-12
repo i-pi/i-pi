@@ -137,7 +137,7 @@ class GeopMotion(Motion):
             self.hessian[:] = np.eye(len(self.hessian), len(self.hessian), 0, float)
             self.tr = self.initial_values["tr_trm"]
         # lbfgs
-        elif self.mode == "lbfgst":
+        elif self.mode == "lbfgs":
             self.corrections *= 0.0
             self.scale *= 0.0
             self.qlist *= 0.0
@@ -195,9 +195,9 @@ class LineMapper(object):
         self.fcount = 0
 
     def bind(self, dumop):
-        self.dbeads = dumop.beads.copy()
-        self.dcell = dumop.cell.copy()
-        self.dforces = dumop.forces.copy(self.dbeads, self.dcell)
+        self.dbeads = dumop.beads.clone()
+        self.dcell = dumop.cell.clone()
+        self.dforces = dumop.forces.clone(self.dbeads, self.dcell)
 
         self.fixatoms_mask = np.ones(
             3 * dumop.beads.natoms, dtype=bool
@@ -249,9 +249,9 @@ class GradientMapper(object):
         pass
 
     def bind(self, dumop):
-        self.dbeads = dumop.beads.copy()
-        self.dcell = dumop.cell.copy()
-        self.dforces = dumop.forces.copy(self.dbeads, self.dcell)
+        self.dbeads = dumop.beads.clone()
+        self.dcell = dumop.cell.clone()
+        self.dforces = dumop.forces.clone(self.dbeads, self.dcell)
 
         self.fixatoms_mask = np.ones(
             3 * dumop.beads.natoms, dtype=bool

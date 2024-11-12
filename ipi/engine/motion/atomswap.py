@@ -64,9 +64,9 @@ class AtomSwap(Motion):
 
         super(AtomSwap, self).bind(ens, beads, cell, bforce, nm, prng, omaker)
         self.ensemble.add_econs(self._ealc)
-        self.dbeads = self.beads.copy()
-        self.dcell = self.cell.copy()
-        self.dforces = self.forces.copy(self.dbeads, self.dcell)
+        self.dbeads = self.beads.clone()
+        self.dcell = self.cell.clone()
+        self.dforces = self.forces.clone(self.dbeads, self.dcell)
 
     def AXlist(self, atomtype):
         """This compile a list of atoms ready for exchanges."""

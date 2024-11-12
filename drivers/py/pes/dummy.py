@@ -2,6 +2,8 @@
 __DRIVER_NAME__ = "dummy"
 __DRIVER_CLASS__ = "Dummy_driver"
 
+import json
+
 
 class Dummy_driver(object):
     """Base class providing the structure of a PES for the python driver."""
@@ -24,5 +26,7 @@ class Dummy_driver(object):
         pot = 0.0
         force = pos * 0.0  # makes a zero force with same shape as pos
         vir = cell * 0.0  # makes a zero virial with same shape as cell
-        extras = "nada"
+        extras = json.dumps(
+            {"dipole": [0.0, 0.0, 0.0]}
+        )  # have json formatting to potentially work with some test examples. meaningless value
         return pot, force, vir, extras

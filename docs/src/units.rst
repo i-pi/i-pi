@@ -17,11 +17,11 @@ details on how to do this, see :ref:`inputunits` and
    Unit        Name          S.I. Value
    =========== ============= ================
    Length      Bohr radius   5.2917721e-11 m
-   Time        N.A.          2.4188843e-17 s
+   Time        Atomic units  2.4188843e-17 s
    Mass        Electron mass 9.1093819e-31 kg
    Temperature Hartree       315774.66 K
    Energy      Hartree       4.3597438e-18 J
-   Pressure    N.A.          2.9421912e13 Pa
+   Pressure    Atomic units  2.9421912e13 Pa
    =========== ============= ================
 
 Regarding the specification of these units in the i-PI input files, the
