@@ -213,6 +213,7 @@ example above.
 .. _fig-network:
 
 .. figure:: ../figures/ipi-network.*
+   :class: white-background
    :width: 90.0%
 
    A schematic representation of the network layout one
