@@ -60,7 +60,9 @@ class ASEDriver(Dummy_driver):
         structure.calc = self.ase_calculator
 
         # Do the actual calculation
-        properties = structure.get_properties(["energy", "forces", "stress"])
+        self.ase_calculator.calculate(atoms=structure)
+        properties = self.ase_calculator.results
+
         pot = properties["energy"]
         force = properties["forces"]
         stress = properties["stress"]
