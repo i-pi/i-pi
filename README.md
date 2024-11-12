@@ -47,6 +47,10 @@ Last Release:
 pip install -U ipi
 ```
 
+## Documentation 
+
+You can find the online documentation at [https://docs.ipi-code.org/#](https://docs.ipi-code.org/#). Alternatively, you can build it locally by following instructions in the `docs/README.md` file.
+
 ## Source installation
 
 To develop i-PI or test it with the self-contained driver, follow these
@@ -104,7 +108,7 @@ The monitoring can be interrupted with CTRL+C when the run has finished (5000 st
 ## Tutorials and online resources
 
 The i-PI [documentation](https://docs.ipi-code.org/onlinereso.html) has a list of
-avaialble tutorials, recipes and other useful online resources.
+available tutorials, recipes and other useful online resources.
 
 ## Run the automatic test suite
 
