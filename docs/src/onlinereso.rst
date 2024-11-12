@@ -6,9 +6,9 @@ Tutorials, recipes, and on-line resources
 Massive Open Online Course (MOOC)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-The theory behind many types of simulation that i-PI can do and examples 
-of simulations with i-PI can also be found in an online course freely 
-available to everyone, and accessible from this 
+The theory behind classical and path-integral methods for structure 
+and dynamics along with practical exercises can be found in an online 
+course freely available to everyone, and accessible from this
 `link <https://courseware.epfl.ch/courses/course-v1:EPFL+X+2022/about>`_.
 
 i-PI resources
@@ -26,7 +26,8 @@ Examples and demos
 The `examples` and `demos` folders in the i-PI `source code <https://github.com/i-pi/i-pi>`_
 contain inputs for many different types of
 calculations based on i-PI. Examples are typically minimal use-cases of specific
-features, while demos are more structured, tutorial-like examples that show how
+features, examples of client codes, or setups for high performance computing, 
+while demos are more structured, tutorial-like examples that show how
 to realize more complex setups, and also provide a brief discussion of the 
 underlying algorithms.
 
