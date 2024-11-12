@@ -457,7 +457,7 @@ def merge_beads(prefix, folder, nbeads, ofile):
         write(tmp_file, traj)
 
 
-def merge_trajectories(files, names, strides):
+def merge_trajectories(files, names, strides, formats):
     """
     Merge multiple i-PI output files into a single ASE trajectory object.
 
@@ -533,7 +533,7 @@ def merge_trajectories(files, names, strides):
         if n == 0:
 
             # Read the trajectory to get the positions
-            traj = read_trajectory(file)
+            traj = read_trajectory(filename=file, format=formats[n])
 
             # ATTENTION:
             # This is highly inefficient because the codes reads the whole trajectory
@@ -677,10 +677,12 @@ def create_classical_trajectory(input_file, trajectories, properties):
     ### Trajectory building
     # build the output trajectory
 
+    formats = [a.format for a in ipi_trajs]
+
     # suppress the output fo messages to screen
     with SuppressOutput():
         # build the trajectory
-        traj = merge_trajectories(traj_files, trajectories, traj_strides)
+        traj = merge_trajectories(traj_files, trajectories, traj_strides, formats)
 
     # check that all the trajectories of interest have been correctly read
     keys = traj[0].arrays.keys()
