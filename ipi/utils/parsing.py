@@ -9,7 +9,7 @@ numpy arrays.
 import re
 import numpy as np
 from ipi.utils.units import unit_to_user
-
+import sys
 import os
 
 try:
@@ -19,6 +19,16 @@ except ImportError:
     ase = None
 
 __all__ = ["read_output", "read_trajectory"]
+
+
+# Disable
+def blockPrint():
+    sys.stdout = open(os.devnull, "w")
+
+
+# Restore
+def enablePrint():
+    sys.stdout = sys.__stdout__
 
 
 def read_output(filename):
@@ -124,6 +134,8 @@ def read_trajectory(
     to returning a list of raw strings.
     units can be inferred from the file content, or specified with `dimension`, `units` and `cell_units`
     """
+
+    blockPrint()
 
     if ase is None:
         raise ImportError(
@@ -236,6 +248,8 @@ def read_trajectory(
             break
         except:
             raise
+
+    enablePrint()
 
     return frames
 
@@ -360,3 +374,138 @@ def merge_beads(prefix: str, folder: str, nbeads: int, ofile: str):
         ), f"Output file must have extension '.extxyz' but has extension '{ext}'"
         tmp_file = f"{base_name}.{n}{ext}"
         write(tmp_file, traj)
+
+
+def merge_trajectories(files: list[str], names: list[str]):
+    """
+    Merge multiple i-PI output files into a single ASE trajectory file.
+
+    Parameters
+    ----------
+    files : list[str]
+        A list of file names to be merged.
+    names : list[str]
+        A list of array names to be used for the merge.
+
+    Returns
+    -------
+    traj : ASE Atoms object
+        The merged trajectory.
+
+    Notes
+    -----
+    The input files are expected to be named as follows:
+    `<prefix>.*_<bead>.xyz`, where `<prefix>` is the given prefix,
+    `<bead>` is the bead number (starting from 0), and `*` is a wildcard
+    matching any characters. The output ASE trajectory file will be named
+    `<prefix>.extxyz`, where `<prefix>` is the given prefix.
+    """
+    # author: Elia Stocco
+    # comments:
+    # The script cycle over the arrays and then over then over the atoms.
+    # This is slower than the other way around but it is more readable
+    # and it is less memory expensive, especially for large files.
+
+    if ase is None:
+        raise ImportError(
+            "merge_trajectories requires the `ase` package to return the structure in ASE format"
+        )
+    # ------------------#
+    pattern_extract = r"([^/]+)\.(.*?)_(.*?)\.(\w+)$"
+    # check_names = set()
+    for n, file in enumerate(files):
+        matched = re.search(pattern_extract, os.path.basename(file))
+        name = matched.group(2)
+        assert name == names[n], "some error"
+
+    if "positions" not in names:
+        raise ValueError("No 'positions' array found.")
+
+    # ------------------#
+    files = sorted(files, key=lambda x: "positions" not in x)
+    traj = None
+    for n, file in enumerate(files):  # cycle over arrays
+        matched = re.search(pattern_extract, os.path.basename(file))
+        name = matched.group(2)
+        if n == 0:
+            traj = read_trajectory(file)
+            if "positions" not in file:
+                raise ValueError(
+                    f"File {file} is not a position file but is the first file."
+                )
+        else:
+            if traj is None:
+                raise ValueError(
+                    f"File {file} is not a position file but is not the first file."
+                )
+            array = read_trajectory(file)
+            for i in range(len(traj)):  # cycle over atoms
+                traj[i].arrays[name] = array[i].positions
+
+    return traj
+
+
+def create_classical_trajectory(input_file: str, trajectories: list[str]):
+
+    if len(trajectories) > 0:
+        available = ["positions", "forces", "velocities"]
+        okay = [a in available for a in trajectories]
+        assert all(okay), "Some provided trajectories are not available."
+
+    if "positions" not in trajectories:
+        trajectories.append("positions")
+
+    from ipi.utils.io.inputs import io_xml
+    from ipi.inputs.simulation import InputSimulation
+    from ipi.engine.outputs import TrajectoryOutput, PropertyOutput
+
+    blockPrint()
+
+    xml = io_xml.xml_parse_file(input_file)
+    # Initializes the simulation class.
+    isimul = InputSimulation()
+    isimul.parse(xml.fields[0][1])
+    simul = isimul.fetch()
+
+    enablePrint()
+
+    # number of output trajectories/properties
+    N = len(simul.outtemplate)
+
+    ipi_props = [a for a in simul.outtemplate if isinstance(a, PropertyOutput)]
+    assert len(ipi_props) <= 1, "Only one (or zero) property output is supported"
+    ipi_props = ipi_props[0] if len(ipi_props) == 1 else None
+
+    # check that positions have been saved to file
+    ipi_trajs = [a for a in simul.outtemplate if isinstance(a, TrajectoryOutput)]
+    whats = [a.what for a in ipi_trajs]
+    assert "positions" in whats, "Positions have not beed saved to file."
+
+    # keep only the trajectories of interest
+    ipi_trajs = [a for a in ipi_trajs if a.what in trajectories]
+
+    # check the stride
+    strides = [a.stride for a in ipi_trajs]
+    max_stride = max(strides)
+    okay = [max_stride % a == 0 for a in strides]
+    assert all(okay), "Strides are not compatibles."
+
+    # check the stride
+    nbeads = simul.syslist[0].beads.nbeads
+    assert nbeads == 1, "A classical trajectory can only have `nbeads` == 1."
+
+    # built the list of ase.Atoms
+    prefix = simul.outtemplate.prefix
+    files = [f"{prefix}.{traj.filename}_0.xyz" for traj in ipi_trajs]
+    for file in files:
+        assert os.path.exists(file), f"File '{file}' does not exist."
+
+    # build the trajectory
+    traj = merge_trajectories(files, trajectories)
+
+    # check that all the trajectories of interest have been correctly read
+    keys = traj[0].arrays.keys()
+    for name in trajectories:
+        assert name in keys, f"'{name}' is not in the output trajectory."
+
+    return traj
