@@ -255,9 +255,7 @@ class GradientMapper(object):
             3 * dumop.beads.natoms, dtype=bool
         )  # Mask to exclude fixed atoms from 3N-arrays
         if len(dumop.fixatoms) > 0:
-            self.fixatoms_mask[3 * dumop.fixatoms] = 0
-            self.fixatoms_mask[3 * dumop.fixatoms + 1] = 0
-            self.fixatoms_mask[3 * dumop.fixatoms + 2] = 0
+            self.fixatoms_mask[dumop.fixatoms_dof] = 0
 
     def __call__(self, x):
         """computes energy and gradient for optimization step"""
@@ -296,7 +294,7 @@ class DummyOptimizer:
         self.cell = geop.cell
         self.forces = geop.forces
         self.fixcom = geop.fixcom
-        self.fixatoms = geop.fixatoms
+        self.fixatoms_dof = geop.fixatoms_dof
 
         self.mode = geop.mode
         self.tolerances = geop.tolerances
@@ -358,12 +356,10 @@ class DummyOptimizer:
         info(" @GEOP: Updating bead positions", verbosity.debug)
         self.qtime += time.time()
 
-        if len(self.fixatoms) > 0:
+        if len(self.fixatoms_dof) > 0:
             ftmp = self.forces.f.copy()
             for dqb in ftmp:
-                dqb[self.fixatoms * 3] = 0.0
-                dqb[self.fixatoms * 3 + 1] = 0.0
-                dqb[self.fixatoms * 3 + 2] = 0.0
+                dqb[self.fixatoms_dof] = 0.0
             fmax = np.amax(np.absolute(ftmp))
         else:
             fmax = np.amax(np.absolute(self.forces.f))
@@ -438,21 +434,17 @@ class BFGSOptimizer(DummyOptimizer):
                 np.dot(self.forces.f.flatten(), self.forces.f.flatten())
             )
 
-            if len(self.fixatoms) > 0:
+            if len(self.fixatoms_dof) > 0:
                 for dqb in self.d:
-                    dqb[self.fixatoms * 3] = 0.0
-                    dqb[self.fixatoms * 3 + 1] = 0.0
-                    dqb[self.fixatoms * 3 + 2] = 0.0
+                    dqb[self.fixatoms_dof] = 0.0
 
         self.old_x[:] = self.beads.q
         self.old_u[:] = self.forces.pot
         self.old_f[:] = self.forces.f
 
-        if len(self.fixatoms) > 0:
+        if len(self.fixatoms_dof) > 0:
             for dqb in self.old_f:
-                dqb[self.fixatoms * 3] = 0.0
-                dqb[self.fixatoms * 3 + 1] = 0.0
-                dqb[self.fixatoms * 3 + 2] = 0.0
+                dqb[self.fixatoms_dof] = 0.0
 
             fdf0 = (self.old_u, -self.old_f[:, self.gm.fixatoms_mask])
 
@@ -549,11 +541,9 @@ class BFGSTRMOptimizer(DummyOptimizer):
         self.old_u[:] = self.forces.pot
         self.old_f[:] = self.forces.f
 
-        if len(self.fixatoms) > 0:
+        if len(self.fixatoms_dof) > 0:
             for dqb in self.old_f:
-                dqb[self.fixatoms * 3] = 0.0
-                dqb[self.fixatoms * 3 + 1] = 0.0
-                dqb[self.fixatoms * 3 + 2] = 0.0
+                dqb[self.fixatoms_dof] = 0.0
 
             # Reduce dimensionality
             masked_old_x = self.old_x[:, self.gm.fixatoms_mask]
@@ -657,11 +647,9 @@ class LBFGSOptimizer(DummyOptimizer):
         self.old_u[:] = self.forces.pot
         self.old_f[:] = self.forces.f
 
-        if len(self.fixatoms) > 0:
+        if len(self.fixatoms_dof) > 0:
             for dqb in self.old_f:
-                dqb[self.fixatoms * 3] = 0.0
-                dqb[self.fixatoms * 3 + 1] = 0.0
-                dqb[self.fixatoms * 3 + 2] = 0.0
+                dqb[self.fixatoms_dof] = 0.0
 
             # Reduce the dimensionality
             masked_old_x = self.old_x[:, self.gm.fixatoms_mask]
@@ -766,11 +754,9 @@ class Damped_BFGSOptimizer(DummyOptimizer):
         self.old_u[:] = self.forces.pot
         self.old_f[:] = self.forces.f
 
-        if len(self.fixatoms) > 0:
+        if len(self.fixatoms_dof) > 0:
             for dqb in self.old_f:
-                dqb[self.fixatoms * 3] = 0.0
-                dqb[self.fixatoms * 3 + 1] = 0.0
-                dqb[self.fixatoms * 3 + 2] = 0.0
+                dqb[self.fixatoms_dof] = 0.0
 
             fdf0 = (self.old_u, -self.old_f[:, self.gm.fixatoms_mask])
 
@@ -847,11 +833,9 @@ class SDOptimizer(DummyOptimizer):
         self.old_f[:] = self.forces.f
 
         # Check for fixatoms
-        if len(self.fixatoms) > 0:
+        if len(self.fixatoms_dof) > 0:
             for dqb in self.old_f:
-                dqb[self.fixatoms * 3] = 0.0
-                dqb[self.fixatoms * 3 + 1] = 0.0
-                dqb[self.fixatoms * 3 + 2] = 0.0
+                dqb[self.fixatoms_dof] = 0.0
 
         dq1 = dstrip(self.old_f)
 
@@ -954,11 +938,9 @@ class CGOptimizer(DummyOptimizer):
         self.d[:] = dq1
         self.old_f[:] = gradf1
 
-        if len(self.fixatoms) > 0:
+        if len(self.fixatoms_dof) > 0:
             for dqb in dq1_unit:
-                dqb[self.fixatoms * 3] = 0.0
-                dqb[self.fixatoms * 3 + 1] = 0.0
-                dqb[self.fixatoms * 3 + 2] = 0.0
+                dqb[self.fixatoms_dof] = 0.0
 
         self.lm.set_dir(dstrip(self.beads.q), dq1_unit)
 
