@@ -49,7 +49,7 @@ pip install -U ipi
 
 ## Documentation 
 
-You can find the online documentation at [https://docs.ipi-code.org/#](https://docs.ipi-code.org/#). Alternatively, you can build it locally by following instructions in the `docs/README.md` file.
+You can find the online documentation at [https://docs.ipi-code.org](https://docs.ipi-code.org/). Alternatively, you can build it locally by following instructions in the `docs/README.md` file.
 
 ## Source installation
 
