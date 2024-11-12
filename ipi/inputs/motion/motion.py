@@ -350,6 +350,7 @@ class InputMotionBase(Input):
                 )
             else:
                 fixatoms_dof = fixatoms[:, np.newaxis] * 3 + np.array([0, 1, 2])
+        fixatoms_dof = np.sort(fixatoms_dof.flatten())
 
         if self.mode.fetch() == "replay":
             sc = Replay(
