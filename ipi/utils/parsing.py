@@ -12,12 +12,10 @@ from ipi.utils.units import unit_to_user
 
 import glob
 import os
-from typing import List
 
 try:
     import ase
     from ase.io import write
-    from ase import Atoms
 except ImportError:
     ase = None
 
@@ -235,7 +233,7 @@ def read_trajectory(
     return frames
 
 
-def merge_files(prefix: str, folder: str, bead: int) -> List[Atoms]:
+def merge_files(prefix: str, folder: str, bead: int):
     """
     Reads a set of i-PI output files and merges all the trajectory information
     from files with the same bead number. The function will raise an error if
@@ -267,8 +265,20 @@ def merge_files(prefix: str, folder: str, bead: int) -> List[Atoms]:
         raise ImportError(
             "read_trajectory requires the `ase` package to return the structure in ASE format"
         )
-    pattern = f"{folder}/{prefix}.*_{bead}.xyz"
-    files = glob.glob(pattern)
+    # pattern = f"{folder}/{prefix}.*_{bead}.xyz"
+    # files = glob.glob(pattern)
+
+    # Construct the regex pattern
+    regex_pattern = re.compile(
+        rf"^{re.escape(prefix)}\.\w+_{re.escape(str(bead))}\.xyz$"
+    )
+    # Filter files using regex
+    files = [
+        os.path.join(folder, filename)
+        for filename in os.listdir(folder)
+        if regex_pattern.match(filename)
+    ]
+
     N = len(files)
     if N == 0:
         raise ValueError("No files found.")
@@ -291,7 +301,7 @@ def merge_files(prefix: str, folder: str, bead: int) -> List[Atoms]:
         matched = re.search(pattern_extract, os.path.basename(file))
         name = matched.group(2)
         if n == 0:
-            traj: List[Atoms] = read_trajectory(file)
+            traj = read_trajectory(file)
             if "positions" not in file:
                 raise ValueError(
                     f"File {file} is not a position file but is the first file."
@@ -301,7 +311,7 @@ def merge_files(prefix: str, folder: str, bead: int) -> List[Atoms]:
                 raise ValueError(
                     f"File {file} is not a position file but is not the first file."
                 )
-            array: List[Atoms] = read_trajectory(file)
+            array = read_trajectory(file)
             for i in range(len(traj)):  # cycle over atoms
                 traj[i].arrays[name] = array[i].positions
 
