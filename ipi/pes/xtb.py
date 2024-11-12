@@ -20,7 +20,10 @@ class TBLiteDriver(Dummy_driver):
     """
 
     def __init__(self, json_input, *args, **kwargs):
-
+        warnings(
+            "THIS PES HAS NOT BEEN TESTED FOLLOWING CONVERSION TO THE NEW PES API.",
+            verbosity.low,
+        )
         config = json.load(open(json_input))
 
         global tb

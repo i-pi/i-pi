@@ -16,7 +16,10 @@ class ModelIIIDriver(Dummy_driver):
 
     def check_parameters(self):
         """Check arguments and load driver instance."""
-
+        warnings(
+            "THIS PES HAS NOT BEEN TESTED FOLLOWING CONVERSION TO THE NEW PES API.",
+            verbosity.low,
+        )
         import elphmod
 
         if len(self.args) != 1:

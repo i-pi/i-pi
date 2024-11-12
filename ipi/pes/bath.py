@@ -10,6 +10,10 @@ class Harmonic_Bath_explicit(object):
     """Explicit description of an Harmonic bath"""
 
     def __init__(self, nbath, m, eta0, eps1, eps2, deltaQ, w_c, *args, **kwargs):
+        warnings(
+            "THIS PES HAS NOT BEEN TESTED FOLLOWING CONVERSION TO THE NEW PES API.",
+            verbosity.low,
+        )
         super().__init__(*args, **kwargs)
 
         self.nbath = nbath

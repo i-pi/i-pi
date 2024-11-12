@@ -135,6 +135,10 @@ class driverdipole_driver(Dummy_driver):
     }
 
     def __init__(self, *args, **kwargs):
+        warnings(
+            "THIS PES HAS NOT BEEN TESTED FOLLOWING CONVERSION TO THE NEW PES API.",
+            verbosity.low,
+        )
         self.opts = dict()
         self.count = 0
         super().__init__(*args, **kwargs)
@@ -142,7 +146,7 @@ class driverdipole_driver(Dummy_driver):
     def check_parameters(self):
         """Check the arguments required to run the driver."""
         try:
-            arglist = self.args.split(",")
+            arglist = self.args
         except ValueError:
             sys.exit(self.__doc__)
 

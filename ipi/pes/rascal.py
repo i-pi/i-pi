@@ -29,7 +29,10 @@ class Rascal_driver(Dummy_driver):
 
     def __init__(self, model, template, *args, **kwargs):
         global RascalCalc
-
+        warnings(
+            "THIS PES HAS NOT BEEN TESTED FOLLOWING CONVERSION TO THE NEW PES API.",
+            verbosity.low,
+        )
         try:
             from rascal.models.genericmd import GenericMDCalculator as RascalCalc
         except:

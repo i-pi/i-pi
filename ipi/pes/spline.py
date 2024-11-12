@@ -21,7 +21,10 @@ class Spline_driver(Dummy_driver):
     """\nspline driver requires specification of filename that contains 5 columns (pos, f1,f2,f3,e) to perform 3x1D spline.\nExample: python driver.py -m spline -u -o <filename>\n"""
 
     def __init__(self, data_file, *args, **kwargs):
-
+        warnings(
+            "THIS PES HAS NOT BEEN TESTED FOLLOWING CONVERSION TO THE NEW PES API.",
+            verbosity.low,
+        )
         self.data_file = data_file
         super().__init__(*args, **kwargs)
         self.get_spline()

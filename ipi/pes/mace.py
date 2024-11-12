@@ -25,7 +25,10 @@ class MACE_driver(ASEDriver):
     """
 
     def __init__(self, template, model, device="cpu", *args, **kwargs):
-
+        warnings(
+            "THIS PES HAS NOT BEEN TESTED FOLLOWING CONVERSION TO THE NEW PES API.",
+            verbosity.low,
+        )
         global MACECalculator
 
         try:

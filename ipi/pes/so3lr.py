@@ -18,7 +18,10 @@ class SO3LR_driver(ASEDriver):
     """
 
     def __init__(self, *args, **kwargs):
-
+        warnings(
+            "THIS PES HAS NOT BEEN TESTED FOLLOWING CONVERSION TO THE NEW PES API.",
+            verbosity.low,
+        )
         global So3lrCalculator
         try:
             from so3lr import So3lrCalculator
