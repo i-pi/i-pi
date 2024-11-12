@@ -14,3 +14,7 @@ echo "# driver is running"
 wait
 
 echo "# Simulation complete"
+
+i-pi-remdsort input.xml
+
+echo "# Replica ensembles reconstructed"

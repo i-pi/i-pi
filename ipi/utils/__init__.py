@@ -15,6 +15,7 @@ __all__ = [
     "nmtransform",
     "messages",
     "softexit",
+    "setup",
     "io",
     "constrtools",
 ]
