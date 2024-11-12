@@ -39,7 +39,7 @@ class Replay(Motion):
         None really meaningful.
     """
 
-    def __init__(self, fixcom=False, fixatoms=None, intraj=None):
+    def __init__(self, fixcom=False, fixatoms_dof=None, intraj=None):
         """Initialises Replay.
 
         Args:
@@ -50,7 +50,7 @@ class Replay(Motion):
            intraj: The input trajectory file.
         """
 
-        super(Replay, self).__init__(fixcom=fixcom, fixatoms=fixatoms)
+        super(Replay, self).__init__(fixcom=fixcom, fixatoms_dof=fixatoms_dof)
         if intraj is None:
             raise ValueError(
                 "Must provide an initialized InitFile object to read trajectory from"

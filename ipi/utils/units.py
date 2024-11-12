@@ -298,7 +298,6 @@ UnitMap = {
 
 # Conditionally includes "ase" units for each quantity
 if ase is not None:
-
     # Conversion factors from atomic units to ASE units
     conversion_factors = {
         "undefined": {"ase": 1},
