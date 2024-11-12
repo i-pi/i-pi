@@ -1,78 +1,65 @@
 """Interface with [PET](https://github.com/serfg/pet) models to run machine learning potentials"""
 
-import sys
 import numpy as np
 from .dummy import Dummy_driver
 
 from ipi.utils.units import unit_to_internal, unit_to_user
 from ipi.utils.messages import warning
 
-try:
-    from pet import SingleStructCalculator as PETCalc
-
-    try:
-        from ase.io import read
-    except ImportError:
-        warning("The PET driver has an ASE dependency")
-        raise
-except ImportError:
-    warning("Could not find or import the PET module")
-    PETCalc = None
+PETCalc = None
+read = None
 
 __DRIVER_NAME__ = "pet"
 __DRIVER_CLASS__ = "PET_driver"
 
 
 class PET_driver(Dummy_driver):
-    def __init__(self, args=None, verbose=False):
-        self.error_msg = """
-The PET driver requires (a) a path to the results/experiment_name folder emitted by pet_train
-                        (b) a path to an ase.io.read-able file with a prototype structure
+    """
+    Driver for `PET` MLIPs
+    The driver requires specification of the folder containing the
+    outputs from a PET model training, a template file that describes the chemical makeup
+    of the structure, and optional parameters specific for the PET architecture.
+    Requires the pet library
 
-Other arguments to the pet.SingleStructCalculator class can be optionally
-supplied in key=value form after the required arguments.
+    Command-line:
+        i-pi-py_driver -m pet -o model_path=path_to_results/prefix,template=template.xyz,device=cuda [...]
 
-Example: python driver.py -m pet -u -o "path/to/results/name,template.xyz,device=cuda"
-"""
+    Parameters:
+        :param template: string, filename of an ASE-readable structure file
+            to initialize atomic number and types
+        :param model: string, filename of the torchscript model file
+        :param device: string, optional, ["cpu" | "cuda"]
+    """
 
-        super().__init__(args, verbose)
+    def __init__(self, model_path, template, *args, **kwargs):
+        global PETCalc, read
 
-        if PETCalc is None:
-            raise ImportError("Couldn't load PET bindings")
+        try:
+            from pet import SingleStructCalculator as PETCalc
 
-    def check_arguments(self):
+            try:
+                from ase.io import read
+            except ImportError:
+                warning("The PET driver has an ASE dependency")
+                raise
+        except ImportError:
+            raise ImportError("Could not find or import the PET module")
+
+        self.model_path = model_path
+        self.template = template
+        super().__init__(*args, **kwargs)
+
+    def check_parameters(self):
         """Check the arguments required to run the driver
 
         This loads the potential and atoms template in PET
         """
-        args = self.args
-
-        if len(args) >= 2:
-            self.model_path = args[0]
-            self.template = args[1]
-            kwargs = {}
-            if len(args) > 2:
-                for arg in args[2:]:
-                    key, value = arg.split("=")
-                    lookup = {
-                        "None": None,
-                        "False": False,
-                        "True": True,
-                    }
-
-                    if value in lookup:
-                        value = lookup[value]
-
-                    kwargs[key] = value
-
-        else:
-            sys.exit(self.error_msg)
 
         self.template_ase = read(self.template)
         self.template_ase.arrays["forces"] = np.zeros_like(self.template_ase.positions)
         self.pet_calc = PETCalc(
             self.model_path,
-            **kwargs,
+            **self.kwargs,
         )
 
     def __call__(self, cell, pos):

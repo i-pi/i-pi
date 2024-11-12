@@ -12,6 +12,7 @@ from xml.sax.handler import ContentHandler
 
 import numpy as np
 from ipi import ipi_global_settings
+from . import read_value
 
 __all__ = [
     "xml_node",
@@ -448,7 +449,7 @@ def read_dict(data, delims="{}", split=",", key_split=":", strip=" \n\t"):
         rtuple = list(map(mystrip, s.split(key_split)))
         if not len(rtuple) == 2:
             raise ValueError("Format for a key:value format is wrong for item " + s)
-        rdict[rtuple[0]] = rtuple[1]
+        rdict[rtuple[0]] = read_value(rtuple[1])
 
     return rdict
 
