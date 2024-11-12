@@ -1,11 +1,3 @@
-"""
-Interface with tblite to provide GFN1-xTB and GFN2-xTB calculators.
-
-Example:: 
-
-    python driver.py -m xtb -u -o '{"method": "GFN2-xTB", "numbers": [8,1,1], "periodic": false}'
-"""
-
 import numpy as np
 import json
 
@@ -18,7 +10,13 @@ __DRIVER_CLASS__ = "TBLiteDriver"
 
 
 class TBLiteDriver(object):
-    """Base class providing the structure of a PES for the python driver."""
+    """
+    Interface with tblite to provide GFN1-xTB and GFN2-xTB calculators.
+
+    Example::
+
+        python driver.py -m xtb -u -o '{"method": "GFN2-xTB", "numbers": [8,1,1], "periodic": false}'
+    """
 
     def __init__(self, json_input, *args, **kwargs):
 

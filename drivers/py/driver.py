@@ -226,9 +226,18 @@ if __name__ == "__main__":
     driver_args, driver_kwargs = read_args_kwargs(args.param)
 
     if args.mode in __drivers__:
-        d_f = __drivers__[args.mode](
-            *driver_args, verbose=args.verbose, **driver_kwargs
-        )
+        try:
+            d_f = __drivers__[args.mode](
+                *driver_args, verbose=args.verbose, **driver_kwargs
+            )
+        except ImportError:
+            # specific errors have already been triggered
+            raise
+        except Exception as err:
+            print(f"Error setting up PES mode {args.mode}")
+            print(__drivers__[args.mode].__doc__)
+            print("Error trace: ")
+            raise err
     elif args.mode == "dummy":
         d_f = Dummy_driver(verbose=args.verbose)
     else:

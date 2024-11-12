@@ -8,11 +8,11 @@ import json
 class Dummy_driver(object):
     """Base class providing the structure of a PES for the python driver.
 
+    Command line:
+        i-pi-py_driver -m dummy [...]
     Init arguments:
-        param verbose: bool to determine whether the PES should output verbose info.
+        :param verbose: bool to determine whether the PES should output verbose info.
     """
-
-    _error_msg = "Invalid arguments for the PES"
 
     def __init__(self, verbose=False, *args, **kwargs):
         """Initialized dummy drivers"""

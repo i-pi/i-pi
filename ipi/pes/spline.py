@@ -18,7 +18,7 @@ __DRIVER_CLASS__ = "Spline_driver"
 
 
 class Spline_driver(Dummy_driver):
-    _error_msg = """\nspline driver requires specification of filename that contains 5 columns (pos, f1,f2,f3,e) to perform 3x1D spline.\nExample: python driver.py -m spline -u -o <filename>\n"""
+    """\nspline driver requires specification of filename that contains 5 columns (pos, f1,f2,f3,e) to perform 3x1D spline.\nExample: python driver.py -m spline -u -o <filename>\n"""
 
     def __init__(self, data_file, *args, **kwargs):
 

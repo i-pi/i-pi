@@ -47,11 +47,12 @@ class DDW_with_explicit_bath_driver(Dummy_driver):
     !      and
     !
     !      DDW(q1,q2) = DW(q1) + DW(q2) + C(q1q2)^2
-    """
 
-    _error_msg = r"""\nDW+explicit_bath driver expects 11 arguments.\n
-        Example: python driver.py -m DoubleWell_with_explicit_bath -o wb1 (cm^-1) V1 (cm^-1) wb2 (cm^-1) V2 (cm^-1) coupling(au) mass delta(\AA) eta0  eps1 eps2  deltaQ omega_c(cm^-1)     \n
-        python driver.py -m DoubleWell -o 500,2085,500,2085,0.1,1837,0.00,1,0,0,1,500\n"""
+    DW+explicit_bath driver expects 11 arguments.\n
+    Example:
+        i-pi-py_driver.py -m DoubleWell_with_explicit_bath -o wb1 (cm^-1) V1 (cm^-1) wb2 (cm^-1) V2 (cm^-1) coupling(au) mass delta(\AA) eta0  eps1 eps2  deltaQ omega_c(cm^-1)     \n
+        i-pi-py_driver.py -m DoubleWell -o 500,2085,500,2085,0.1,1837,0.00,1,0,0,1,500
+    """
 
     def __init__(self, *args, **kwargs):
 
@@ -84,7 +85,7 @@ class DDW_with_explicit_bath_driver(Dummy_driver):
 
         except:
             print("Received arguments:")
-            sys.exit(self._error_msg)
+            sys.exit(self.__doc__)
 
         self.A1 = -0.5 * self.m * (wb1) ** 2
         self.B1 = ((self.m**2) * (wb1) ** 4) / (16 * v1)

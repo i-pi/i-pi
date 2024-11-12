@@ -6,15 +6,13 @@ from .dummy import Dummy_driver
 __DRIVER_NAME__ = "elphmod"
 __DRIVER_CLASS__ = "ModelIIIDriver"
 
-ERROR_MSG = """
-A pickled driver instance is required (see elphmod.md.Driver.save).
-
-Example: python3 driver.py -u -m elphmod -o driver.pickle
-"""
-
 
 class ModelIIIDriver(Dummy_driver):
-    """Wrapper around elphmod MD driver."""
+    """Wrapper around elphmod MD driver.
+    A pickled driver instance is required (see elphmod.md.Driver.save).
+
+    Example: python3 driver.py -u -m elphmod -o driver.pickle
+    """
 
     def check_parameters(self):
         """Check arguments and load driver instance."""
@@ -22,7 +20,7 @@ class ModelIIIDriver(Dummy_driver):
         import elphmod
 
         if len(self.args) != 1:
-            sys.exit(ERROR_MSG)
+            sys.exit(self.__doc__)
 
         self.driver = elphmod.md.Driver.load(self.args[0])
 

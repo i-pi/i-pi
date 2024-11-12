@@ -12,26 +12,15 @@ read = None
 __DRIVER_NAME__ = "ase"
 __DRIVER_CLASS__ = "ASEDriver"
 
-ERROR_MSG = """
-This ASE driver requires specification of and ASE calculator
-and an ASE-readable template file that describes the chemical makeup of the structure.
-
-Example: python driver.py -m ase -u -o template.xyz,model_parameters
-"""
-
 
 class ASEDriver(Dummy_driver):
-    """Abstract base class using an arbitrary ASE calculator as i-pi driver.
+    """
+    Base class using an arbitrary ASE calculator as i-pi driver.
+    Should not be called directly as it does not set a calculator.
 
     Parameters:
         :param verbose: bool, whether to print verbose output
-        :param template: string, where to get the structure from
-    """
-
-    _error_msg = """
-    ASEDriver has two arguments:
-    verbose (a bool flag) and template (a string holding the name of an ASE-readable
-    structure to initialize the calculator)
+        :param template: string, ASE-readable filename where to get the structure data from
     """
 
     def __init__(self, template, *args, **kwargs):

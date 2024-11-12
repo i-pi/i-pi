@@ -17,13 +17,21 @@ __DRIVER_CLASS__ = "MetatensorDriver"
 
 
 class MetatensorDriver(ASEDriver):
-    _error_msg = """
-The metatensor driver requires specification of a .pt TorchScript model and an
-ASE-readable template file that describes the chemical makeup of the structure.
+    """
+    Driver for `metatensor` MLIPs
+    The driver requires specification of a torchscript model,
+    and a template file that describes the chemical makeup
+    of the structure. Requires the metatensor-torch library
 
-Example: python driver.py -m metatensor -u -o template.xyz,model.pt,device=cpu,\
-extensions=path/to/extensions,check_consistency=False
-"""
+    Command-line:
+        i-pi-py_driver -m metatensor -o template=template.xyz,model=model.json [...]
+
+    Parameters:
+        :param template: string, filename of an ASE-readable structure file
+            to initialize atomic number and types
+        :param model: string, filename of the torchscript model file
+        :param device: string, optional, ["cpu" | "cuda"]
+    """
 
     def __init__(
         self,

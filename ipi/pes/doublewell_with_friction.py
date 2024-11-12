@@ -35,11 +35,11 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
     with
     q = position, and
     sd(q) = [1+eps1 exp( (q-0)^2 / (2deltaQ^2) ) ] + eps2 tanh(q/deltaQ)
-    """
 
-    _error_msg = r"""\nDW+fric driver expects 8 arguments.\n
-        Example: python driver.py -m DoubleWell_with_fric -o omega_b (cm^-1) V0 (cm^-1) mass delta(\AA) eta0  eps1 eps2  deltaQ      \n
-        python driver.py -m DoubleWell -o 500,2085,1837,0.00,1,0,0,1\n"""
+    DW+fric driver expects 8 arguments.
+        Example: python driver.py -m DoubleWell_with_fric -o omega_b (cm^-1) V0 (cm^-1) mass delta(\AA) eta0  eps1 eps2  deltaQ
+        python driver.py -m DoubleWell -o 500,2085,1837,0.00,1,0,0,1
+    """
 
     def __init__(self, *args, **kwargs):
         self.args = args.split(",")
@@ -61,7 +61,7 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
             self.eps2 = param[6]
             self.deltaQ = param[7]
         except:
-            sys.exit(self._error_msg)
+            sys.exit(self.__doc__)
 
         self.A = -0.5 * m * (w_b) ** 2
         self.B = ((m**2) * (w_b) ** 4) / (16 * v0)

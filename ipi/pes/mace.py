@@ -9,12 +9,20 @@ __DRIVER_CLASS__ = "MACE_driver"
 
 
 class MACE_driver(ASEDriver):
-    _error_msg = """
-MACE driver requires specification of a .json model,
-and a template file that describes the chemical makeup of the structure.
+    """
+    Driver for the MACE MLIPs.
+    The driver requires specification of a .json model,
+    and a template file that describes the chemical makeup
+    of the structure.
 
-Example: python driver.py -m mace -u -o model.json,template.xyz
-"""
+    Command-line:
+    i-pi-py_driver.py -m mace -u -o template=template.xyz,model=model.json
+
+    Parameters:
+    :param template: string, filename of an ASE-readable structure file
+        to initialize atomic number and types
+    :param model: string, filename of the json-formatted model file
+    """
 
     def __init__(self, template, model, device="cpu", *args, **kwargs):
 

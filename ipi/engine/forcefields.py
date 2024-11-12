@@ -420,7 +420,16 @@ class FFDirect(FFEval):
         super().__init__(latency, offset, name, pars, dopbc, active, threaded)
 
         self.pes = pes
-        self.driver = __drivers__[self.pes](verbose=verbosity.high, **pars)
+        try:
+            self.driver = __drivers__[self.pes](verbose=verbosity.high, **pars)
+        except ImportError:
+            # specific errors have already been triggered
+            raise
+        except Exception as err:
+            print(f"Error setting up PES mode {self.pes}")
+            print(__drivers__[self.pes].__doc__)
+            print("Error trace: ")
+            raise err
 
     def evaluate(self, request):
         results = list(self.driver(request["cell"][0], request["pos"].reshape(-1, 3)))

@@ -9,13 +9,13 @@ __DRIVER_CLASS__ = "SO3LR_driver"
 
 
 class SO3LR_driver(ASEDriver):
-    _error_msg = """
-SO3LR driver requires a template file that describes the chemical makeup of the structure.
+    """
+    SO3LR driver requires a template file that describes the chemical makeup of the structure.
 
-Optionally, lr_cutoff and dispersion_energy_lr_cutoff_damping can be specified.
+    Optionally, lr_cutoff and dispersion_energy_lr_cutoff_damping can be specified.
 
-Example: python driver.py -m so3lr -u -o template.xyz,lr_cutoff=12,dispersion_energy_lr_cutoff_damping=2
-"""
+    Example: python driver.py -m so3lr -u -o template.xyz,lr_cutoff=12,dispersion_energy_lr_cutoff_damping=2
+    """
 
     def __init__(self, *args, **kwargs):
 

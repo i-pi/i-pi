@@ -30,18 +30,18 @@ A2au = units.unit_to_internal("length", "angstrom", 1.0)
 
 
 class DoubleWell_with_explicit_bath_driver(Dummy_driver):
-    """Adds to the double well potential an explicit harmonic bath. First dof correpond to the DW, the rest to the bath discretization
+    r"""Adds to the double well potential an explicit harmonic bath. First dof correpond to the DW, the rest to the bath discretization
 
     !  V(q,x1,..,xn) = DW(q) +
     !      sum_2^(3*N) [ 0.5 m w_i^2(q - (c_i s(q))/(m w_i)^2)^2 ]
     !      s(q) = q *sd(q)
     !      sd(q) = [1+eps1*exp( q^2 / (2 deltaQ^2) ) ] + eps2 tanh(q/deltaQ)
     !      If eps1=eps2=0 then sd(q) =1 and s(q) = q --->Spatially independent bath
-    """
 
-    _error_msg = r"""\nDW+explicit_bath driver expects 9 arguments.\n
+    DW+explicit_bath driver expects 9 arguments.
         Example: python driver.py -m DoubleWell_with_explicit_bath -o omega_b (cm^-1) V0 (cm^-1) mass delta(\AA) eta0  eps1 eps2  deltaQ omega_c(cm^-1)     \n
-        python driver.py -m DoubleWell -o 500,2085,1837,0.00,1,0,0,1,500\n"""
+        python driver.py -m DoubleWell -o 500,2085,1837,0.00,1,0,0,1,500
+    """
 
     def __init__(self, *args, **kwargs):
 
@@ -69,7 +69,7 @@ class DoubleWell_with_explicit_bath_driver(Dummy_driver):
             self.bath_parameters["w_c"] = param[8] * invcm2au
 
         except:
-            sys.exit(self._error_msg)
+            sys.exit(self.__doc__)
 
         self.A = -0.5 * self.m * (w_b) ** 2
         self.B = ((self.m**2) * (w_b) ** 4) / (16 * v0)

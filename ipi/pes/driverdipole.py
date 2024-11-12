@@ -118,6 +118,9 @@ def get_model(instructions, parameters: str):
 
 
 class driverdipole_driver(Dummy_driver):
+    """The parameters of 'driverdipole_driver' are not correctly formatted. \
+            They should be two or three strings, separated by a comma."""
+
     opts_default = {
         "dipole": {
             "send": True,  # whether to send the dipole to i-PI
@@ -131,9 +134,6 @@ class driverdipole_driver(Dummy_driver):
         "restart": False,  # whether remove the files (if already existing) where the dipole and BEC will be saved.
     }
 
-    _error_msg = """The parameters of 'driverdipole_driver' are not correctly formatted. \
-            They should be two or three strings, separated by a comma."""
-
     def __init__(self, *args, **kwargs):
         self.opts = dict()
         self.count = 0
@@ -144,7 +144,7 @@ class driverdipole_driver(Dummy_driver):
         try:
             arglist = self.args.split(",")
         except ValueError:
-            sys.exit(self._error_msg)
+            sys.exit(self.__doc__)
 
         if len(arglist) >= 2:
             info_file = arglist[0]  # json file to properly allocate a 'model' object

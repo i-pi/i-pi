@@ -14,15 +14,22 @@ __DRIVER_CLASS__ = "PET_driver"
 
 
 class PET_driver(Dummy_driver):
-    _error_msg = """
-The PET driver requires (a) a path to the results/experiment_name folder emitted by pet_train
-                        (b) a path to an ase.io.read-able file with a prototype structure
+    """
+    Driver for `PET` MLIPs
+    The driver requires specification of the folder containing the
+    outputs from a PET model training, a template file that describes the chemical makeup
+    of the structure, and optional parameters specific for the PET architecture.
+    Requires the pet library
 
-Other arguments to the pet.SingleStructCalculator class can be optionally
-supplied in key=value form after the required arguments.
+    Command-line:
+        i-pi-py_driver -m pet -o model_path=path_to_results/prefix,template=template.xyz,device=cuda [...]
 
-Example: python driver.py -m pet -u -o "path/to/results/name,template.xyz,device=cuda"
-"""
+    Parameters:
+        :param template: string, filename of an ASE-readable structure file
+            to initialize atomic number and types
+        :param model: string, filename of the torchscript model file
+        :param device: string, optional, ["cpu" | "cuda"]
+    """
 
     def __init__(self, model_path, template, *args, **kwargs):
         global PETCalc, read

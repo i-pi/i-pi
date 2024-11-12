@@ -12,11 +12,20 @@ __DRIVER_CLASS__ = "Rascal_driver"
 
 
 class Rascal_driver(Dummy_driver):
-    _error_msg = """
-Rascal driver requires specification of a .json model file fitted with librascal, 
-and a template file that describes the chemical makeup of the structure. 
-Example: python driver.py -m rascal -u -o model.json,template.xyz
-"""
+    """
+    Driver for `librascal` MLIPs
+    The driver requires specification of the model JSON-formated definition,
+    and a template file that describes the chemical makeup
+    of the structure. Requires the librascal library
+
+    Command-line:
+        i-pi-py_driver -m rascal -o model=model.json,template=template.xyz [...]
+
+    Parameters:
+        :param template: string, filename of an ASE-readable structure file
+            to initialize atomic number and types
+        :param model: string, filename of the torchscript model file
+    """
 
     def __init__(self, model, template, *args, **kwargs):
         global RascalCalc
