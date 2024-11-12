@@ -8,8 +8,6 @@ temp/ph2/rpmd   # long and complicated
 
 # Needs infrastructure fixing
 
-clients/fhi_aims/zundel                        # dummy driver has an issue with extra_type. example works with actual backends.
-
 # Need of external dependency
 clients/yaff/mil53_ffyaff
 clients/yaff/mil53_ffsocket

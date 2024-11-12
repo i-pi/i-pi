@@ -3,6 +3,9 @@
         <properties stride='1' filename='out'>  [ step, potential{electronvolt}] </properties>
         <trajectory stride="1" filename="xc" format="xyz">x_centroid{angstrom}</trajectory>
    </output>
+   <prng>
+      <seed> 123456 </seed>
+   </prng>
    <total_steps>400       </total_steps>
    <ffsocket name="ch4cbe" mode="unix" >
        <address> localhost </address>
