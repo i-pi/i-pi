@@ -9,7 +9,14 @@ import traceback
 import sys
 import os
 
-__all__ = ["Verbosity", "verbosity", "banner", "info", "warning"]
+__all__ = [
+    "Verbosity",
+    "verbosity",
+    "banner",
+    "info",
+    "warning",
+    "get_identification_info",
+]
 
 
 VERB_QUIET = 0

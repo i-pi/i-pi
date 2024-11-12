@@ -22,6 +22,12 @@ from ipi.utils.io import open_backup
 from ipi.engine.properties import getkey
 from ipi.engine.atoms import *
 from ipi.engine.cell import *
+from ipi.utils.messages import get_identification_info
+
+try:
+    from datetime import datetime
+except:
+    datetime = None
 
 __all__ = [
     "PropertyOutput",
@@ -188,6 +194,17 @@ class PropertyOutput(BaseOutput):
 
     def print_header(self):
         # print nice header if information is available on the properties
+
+        info_string = get_identification_info()
+        self.out.write(info_string)
+
+        if datetime is not None:
+            # print nice header if information is available on the properties
+            ohead = "# Date and Time: {}".format(
+                datetime.now().strftime("%Y-%m-%d %H:%M")
+            )
+            self.out.write(ohead + "\n")
+
         icol = 1
         for what in self.outlist:
             ohead = "# "
