@@ -492,6 +492,9 @@ def create_classical_trajectory(input_file, trajectories, properties):
         isimul.parse(xml.fields[0][1])
         simul = isimul.fetch()
 
+    ### Prefix
+    prefix = simul.outtemplate.prefix
+
     ### Properties
     # It's gonna be quick to check if everything is alright.
     # Let's prepare the necessary variables and used them and the end of this function.
@@ -500,7 +503,16 @@ def create_classical_trajectory(input_file, trajectories, properties):
     assert len(ipi_props) <= 1, "Only one (or zero) property output is supported"
     ipi_props = ipi_props[0] if len(ipi_props) == 1 else None
 
-    # keep only the trajectories of interest
+    if ipi_props is not None:
+
+        # read the properties
+        pfile = f"{prefix}.{ipi_props.filename}"
+        if len(properties) > 0 and not os.path.exists(pfile):
+            raise ValueError(f"File {pfile} does not exists.")
+        props, _ = read_output(pfile)
+
+        # keep only the trajectories of interest
+        props = {key: props[key] for key in properties if key in props}
 
     ### Trajectories
     # Time and memory consuming.
@@ -526,7 +538,6 @@ def create_classical_trajectory(input_file, trajectories, properties):
     assert nbeads == 1, "A classical trajectory can only have `nbeads` == 1."
 
     # built the list of ase.Atoms
-    prefix = simul.outtemplate.prefix
     files = [f"{prefix}.{traj.filename}_0.xyz" for traj in ipi_trajs]
     for file in files:
         assert os.path.exists(file), f"File '{file}' does not exist."
