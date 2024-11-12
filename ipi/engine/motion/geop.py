@@ -254,7 +254,7 @@ class GradientMapper(object):
         self.fixatoms_mask = np.ones(
             3 * dumop.beads.natoms, dtype=bool
         )  # Mask to exclude fixed atoms from 3N-arrays
-        if len(dumop.fixatoms) > 0:
+        if len(dumop.fixatoms_dof) > 0:
             self.fixatoms_mask[dumop.fixatoms_dof] = 0
 
     def __call__(self, x):

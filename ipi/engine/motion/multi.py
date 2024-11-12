@@ -30,7 +30,7 @@ class MultiMotion(Motion):
 
         self.fixatoms_dof = set(self.mlist[0].fixatoms_dof)
         for m in self.mlist:
-            self.fixatoms_dof = self.fixatoms.intersection(m.fixatoms_dof)
+            self.fixatoms_dof = self.fixatoms_dof.intersection(m.fixatoms_dof)
         self.fixatoms_dof = list(self.fixatoms_dof)
 
         self.fixcom = True  # fixcom is true only if all movers are fixed
