@@ -1,7 +1,5 @@
 """ Harmonic potential """
 
-import sys
-
 try:
     from .doublewell import DoubleWell_driver
 except:
@@ -55,7 +53,7 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
         **kwargs
     ):
 
-        #     try:
+    try:
         w_b = w_b * invcm2au
         v0 = v0 * invcm2au
         self.delta = delta * A2au
@@ -67,10 +65,10 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
         self.A = -0.5 * m * (w_b) ** 2
         self.B = ((m**2) * (w_b) ** 4) / (16 * v0)
 
-    #        except:
-    #           sys.exit(self.__doc__)
+    except:
+        sys.exit(self.__doc__)
 
-    #      super().__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def check_dimensions(self, pos):
         """Functions that checks dimensions of the received position"""
