@@ -169,7 +169,11 @@ class InputTrajectory(InputValue):
         {
             "dtype": str,
             "default": "raw",
-            "help": "What extra to print from the different extra strings.",
+            "help": """
+What extra to print from the extra, if it's returned as a JSON dictionary. 
+Can also use 'raw' to print the full data of the unprocessed extra string, or 
+a comma-separated list of keys to print multiple keys, horizontally stacked. 
+""",
         },
     )
 

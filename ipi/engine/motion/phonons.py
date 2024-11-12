@@ -98,9 +98,9 @@ class DynMatrixMover(Motion):
         self.m = dstrip(self.beads.m)
         self.phcalc.bind(self)
 
-        self.dbeads = self.beads.copy()
-        self.dcell = self.cell.copy()
-        self.dforces = self.forces.copy(self.dbeads, self.dcell)
+        self.dbeads = self.beads.clone()
+        self.dcell = self.cell.clone()
+        self.dforces = self.forces.clone(self.dbeads, self.dcell)
 
     def step(self, step=None):
         """Executes one step of phonon computation."""

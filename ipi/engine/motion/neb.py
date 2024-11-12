@@ -51,9 +51,9 @@ class NEBGradientMapper(object):
         # In principle, there is no need in dforces within the Mapper,
         # BUT dbeads are needed to calculate tangents for the endpoints,
         # and dforces are needed outside the Mapper to construct the "main" forces.
-        self.dbeads = ens.beads.copy()
-        self.dcell = ens.cell.copy()
-        self.dforces = ens.forces.copy(self.dbeads, self.dcell)
+        self.dbeads = ens.beads.clone()
+        self.dcell = ens.cell.clone()
+        self.dforces = ens.forces.clone(self.dbeads, self.dcell)
         self.fixatoms = ens.fixatoms.copy()
 
         # Mask to exclude fixed atoms from 3N-arrays
@@ -66,7 +66,7 @@ class NEBGradientMapper(object):
         # Create reduced bead and force object
         self.rbeads = Beads(ens.beads.natoms, ens.beads.nbeads - 2)
         self.rbeads.q[:] = ens.beads.q[1:-1]
-        self.rforces = ens.forces.copy(self.rbeads, self.dcell)
+        self.rforces = ens.forces.clone(self.rbeads, self.dcell)
 
     def __call__(self, x):
         """Returns the potential for all beads and the gradient."""
@@ -91,6 +91,9 @@ class NEBGradientMapper(object):
             self.allpots = dstrip(self.dforces.pots).copy()
             # We want to be greedy about force calls,
             # so we transfer from full beads to the reduced ones.
+            # MR note, 2024: The call below is overly convoluted and
+            # likely unnecessary. It should be possible to dump values
+            # now, or use usual transfer_forces. Needs deep revision.
             tmp_f = self.dforces.f.copy()[1:-1]
             tmp_v = self.allpots.copy()[1:-1]
             self.rforces.transfer_forces_manual(
@@ -245,12 +248,12 @@ class NEBClimbGrMapper(object):
 
         # Reduced Beads object is needed to calculate only required beads.
         self.rbeads = Beads(ens.beads.natoms, 1)
-        self.rcell = ens.cell.copy()
+        self.rcell = ens.cell.clone()
         # Coords of the bead before and after the climbing one.
         self.q_prev = np.zeros(3 * (ens.beads.natoms - len(ens.fixatoms)))
         self.q_next = np.zeros(3 * (ens.beads.natoms - len(ens.fixatoms)))
         # Make reduced forces dependent on reduced beads
-        self.rforces = ens.forces.copy(self.rbeads, self.rcell)
+        self.rforces = ens.forces.clone(self.rbeads, self.rcell)
 
     def __call__(self, x):
         """Returns climbing force for a climbing image."""

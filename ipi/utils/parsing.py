@@ -40,7 +40,7 @@ def read_output(filename):
 
     # Regex pattern to match header lines and capture relevant parts
     header_pattern = re.compile(
-        r"#\s*(column|cols\.)\s+(\d+)(?:-(\d+))?\s*-->\s*([^\s\{]+)(?:\{([^\}]+)\})?\s*:\s*(.*)"
+        r"#\s*(column|cols\.)\s+(\d+)(?:-(\d+))?\s*-->\s*([^\s\{\(]+)(?:\{([^\}]+)\})?(?:\(([^\)]+)\))?(?:\{([^\}]+)\})?\s*:\s*(.*)"
     )
 
     # Reading the file
@@ -61,10 +61,18 @@ def read_output(filename):
                 start_col,
                 end_col,
                 property_name,
-                units,
+                units_before,
+                args,
+                units_after,
                 description,
             ) = match.groups()
             col_info = f"{start_col}-{end_col}" if end_col else start_col
+            units = units_before
+            if units_after is not None:
+                units = units_after
+            if args is not None:
+                property_name += f"({args})"
+
             properties[col_info] = {
                 "name": property_name,
                 "units": units,
@@ -137,7 +145,7 @@ def read_trajectory(
 
     file_handle = open(filename, "r")
     bohr2angstrom = unit_to_user("length", "angstrom", 1.0)
-    comment_regex = re.compile(r"(\w+)\{([^}]+)\}")
+    comment_regex = re.compile(r"([^)]+)\{([^}]+)\}")
     step_regex = re.compile(r"Step:\s+(\d+)")
 
     frames = []
@@ -145,7 +153,7 @@ def read_trajectory(
         try:
             if format == "extras":
                 file = open(filename, "r")
-                step_regex = re.compile(r"#EXTRAS\((\w+)\)# *Step:\s+(\d+)")
+                step_regex = re.compile(r"#EXTRAS[^(]*\(([^)]+)\)# *Step:\s+(\d+)")
                 step_list = []
                 data_list = []
                 data_frame = []
