@@ -599,7 +599,7 @@ def create_classical_trajectory(input_file, trajectories, properties):
             "Eforces",
         ]
         okay = [a in available for a in trajectories]
-        assert all(okay), f"Some provided trajectories are not available."
+        assert all(okay), "Some provided trajectories are not available."
 
     if "positions" not in trajectories:
         trajectories.append("positions")
