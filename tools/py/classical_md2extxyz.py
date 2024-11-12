@@ -1,4 +1,51 @@
 #!/usr/bin/env python
+"""
+This script converts a classical i-PI trajectory into an extxyz file format readable by ASE.
+The script must be run in the same folder where the i-PI simulation was done.
+
+Usage
+-----
+To use this script, run the following command in the terminal:
+
+1. Basic usage to convert an XML trajectory to an extxyz file with default options:
+    $ python classical_md2extxyz.py -i input.xml -o output.extxyz
+
+2. Including additional trajectory arrays (e.g., forces and velocities):
+    $ python classical_md2extxyz.py -i input.xml -o output.extxyz -t forces velocities
+
+3. Including additional properties (e.g., potential energy and temperature):
+    $ python classical_md2extxyz.py -i input.xml -o output.extxyz -p potential temperature
+
+By default `positions` and `forces` are always read, as well as `potential`.
+To change this behavor, just modify the default parameters in `prepare_args`.
+
+Arguments
+---------
+-i, --input : str
+    The XML input file containing the classical i-PI trajectory. This argument is required.
+
+-o, --output : str
+    The name of the output extxyz file. This argument is required.
+
+-t, --trajectories : list of str (optional)
+    A list of trajectory data to be added as arrays to the extxyz file. Default is `["forces"]` (and `positions` will be added automatically).
+
+-p, --properties : list of str (optional)
+    A list of properties to be added as `info` fields in the extxyz file. Default is `["potential"]`.
+
+Requirements
+------------
+- Python with `argparse` for argument parsing.
+- The `ase` package for working with ASE trajectory objects. Install it via:
+    $ pip install ase
+
+Exceptions
+----------
+- Raises `ImportError` if the `ase` package is not installed.
+- Raises `ValueError` if the input or output arguments are missing.
+
+"""
+
 import argparse
 from ipi.utils.parsing import create_classical_trajectory
 
