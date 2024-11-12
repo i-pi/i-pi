@@ -2,6 +2,7 @@ import numpy as np
 import json
 
 from ipi.utils.units import unit_to_internal, unit_to_user
+from ipi.utils.messages import verbosity, warning
 from .dummy import Dummy_driver
 
 tb = None
@@ -20,7 +21,7 @@ class TBLiteDriver(Dummy_driver):
     """
 
     def __init__(self, json_input, *args, **kwargs):
-        warnings(
+        warning(
             "THIS PES HAS NOT BEEN TESTED FOLLOWING CONVERSION TO THE NEW PES API.",
             verbosity.low,
         )
