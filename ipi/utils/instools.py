@@ -317,7 +317,7 @@ class Fix(object):
 
         self.fixatoms_dof = fixatoms_dof
         if len(self.fixatoms_dof) > 0:
-            if np.mod(self.fixatoms_dof, 3) == 0:
+            if np.mod(len(self.fixatoms_dof), 3) == 0:
                 self.fixatoms = np.unique(self.fixatoms_dof // 3)
             else:
                 softexit.trigger(
