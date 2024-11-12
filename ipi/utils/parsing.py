@@ -734,7 +734,7 @@ def create_centroid_trajectory(input_file, trajectories):
     # import these classes and modules here to avoid circular import errors.
     from ipi.utils.io.inputs import io_xml
     from ipi.inputs.simulation import InputSimulation
-    from ipi.engine.outputs import TrajectoryOutput, PropertyOutput
+    from ipi.engine.outputs import TrajectoryOutput
 
     # suppress the output fo messages to screen
     with SuppressOutput():
