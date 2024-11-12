@@ -8,6 +8,7 @@ except:
 import numpy as np
 from ipi.utils import units
 import json
+import sys
 
 
 __DRIVER_NAME__ = "DW_friction"
