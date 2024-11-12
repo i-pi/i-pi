@@ -32,13 +32,10 @@ class DoubleWell_driver(Dummy_driver):
     DW driver accepts 0 or 4 arguments.\nExample: python driver.py -m DoubleWell -o omega_b (cm^-1) V0 (cm^-1) mass(a.u) delta(angs) \n
         python driver.py -m DoubleWell -o 500,2085,1837,0.00 \n"""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, w_b=None, v0=None, m=None, delta=None, *args, **kwargs):
 
-    def check_parameters(self):
-        """Function that checks the arguments required to run the driver"""
-        self.k = 1837.36223469 * (3800.0 / 219323.0) ** 2
-        if self.args == "":
+        if w_b == None or v0 == None or m == None or delta == None:
+            print("using default values from Craig-JCP-2005")
             # We used Craig's values (J. Chem. Phys. 122, 084106, 2005)
             w_b = 500 * invcm2au  # Tc = 115K
             v0 = 2085 * invcm2au
@@ -46,17 +43,16 @@ class DoubleWell_driver(Dummy_driver):
             self.delta = 00
         else:
             try:
-                param = list(map(float, self.args))
-                assert len(param) == 4
-                w_b = param[0] * invcm2au
-                v0 = param[1] * invcm2au
-                m = param[2]
-                self.delta = param[3] * A2au
+                w_b = w_b * invcm2au
+                v0 = v0 * invcm2au
+                self.delta = delta * A2au
             except:
                 sys.exit(self.__doc__)
 
+        self.k = 1837.36223469 * (3800.0 / 219323.0) ** 2
         self.A = -0.5 * m * (w_b) ** 2
         self.B = ((m**2) * (w_b) ** 4) / (16 * v0)
+        super().__init__(*args, **kwargs)
 
     def __call__(self, cell, pos):
         """DoubleWell potential l"""
