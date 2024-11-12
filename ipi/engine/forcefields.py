@@ -916,6 +916,14 @@ class FFYaff(FFEval):
 
         """
 
+        warning(
+            """
+                <ffyaff> is deprecated and might be removed in a future release of i-PI.
+                If you are interested in using it, please help port it to the PES
+                infrastructure.
+                """
+        )
+
         from yaff import System, ForceField, log
         import codecs
         import locale
@@ -1007,6 +1015,14 @@ class FFsGDML(FFEval):
            sGDML_model: Filename contaning the sGDML model
 
         """
+
+        warning(
+            """
+                <ffsgdml> is deprecated and might be removed in a future release of i-PI.
+                If you are interested in using it, please help port it to the PES
+                infrastructure.
+                """
+        )
 
         # a socket to the communication library is created or linked
         super(FFsGDML, self).__init__(
