@@ -13,14 +13,18 @@ In http://gle4md.org/ one can also obtain colored-noise parameters to
 run Path Integral with Generalized Langevin Equation thermostat
 (PI+GLE/PIGLET) calculations.
 
+Several examples of usage of i-PI to perform advanced molecular simulations
+can be found among the recipes of the 
+`atomistic cookbook <https://atomistic-cookbook.org/>`_.
+
 Python resources
 ~~~~~~~~~~~~~~~~
 
 For help with Python programming, see
-`www.python.org <www.python.org>`__. For information about the NumPy
-mathematical library, see `www.numpy.org <www.numpy.org>`__, and for
+`www.python.org <http://www.python.org>`__. For information about the NumPy
+mathematical library, see `www.numpy.org <http://www.numpy.org>`__, and for
 worked examples of its capabilities see
-`www.scipy.org/Tentative_NumPy_Tutorial <www.scipy.org/Tentative_NumPy_Tutorial>`__.
+`www.scipy.org/Tentative_NumPy_Tutorial <http://www.scipy.org/Tentative_NumPy_Tutorial>`__.
 Finally, see http://hgomersall.github.io/pyFFTW/ for documentation on
 the Python FFTW library that is currently implemented with i-PI.
 
@@ -47,9 +51,9 @@ touch, we are always glad to help!
 
 There are several Fortran and C libraries that most client codes will
 probably need to run, such as FFTW, BLAS and LAPACK. These can be found
-at `www.fftw.org <www.fftw.org>`__,
-`www.netlib.org/blas <www.netlib.org/blas>`__ and
-`www.netlib.org/lapack <www.netlib.org/lapack>`__ respectively.
+at `www.fftw.org <http://www.fftw.org>`__,
+`www.netlib.org/blas <http://www.netlib.org/blas>`__ and
+`www.netlib.org/lapack <http://www.netlib.org/lapack>`__ respectively.
 
 These codes do not come as part of the i-PI package, and must be
 downloaded separately. 

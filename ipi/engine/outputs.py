@@ -22,6 +22,7 @@ from ipi.utils.io import open_backup
 from ipi.engine.properties import getkey
 from ipi.engine.atoms import *
 from ipi.engine.cell import *
+from ipi import ipi_global_settings
 
 __all__ = [
     "PropertyOutput",
@@ -502,45 +503,66 @@ class TrajectoryOutput(BaseOutput):
                     " #%s(%s)# Step:  %10d \n"
                     % (key.upper(), self.extra_type, self.system.simul.step + 1)
                 )
-            if self.extra_type in data:
-                try:
-                    if key == "extras_component_raw":
-                        # don't partition into beads as there might be a different number when contracting
-                        floatarray = np.asarray(
-                            data[self.extra_type], dtype=float
-                        ).squeeze()
-                    else:
-                        # picks up the desired bead
-                        floatarray = np.asarray(data[self.extra_type][b], dtype=float)
+            if self.extra_type == "raw":
+                stream.write(str(data))
+                stream.write("\n")
+            else:
+                if "," in self.extra_type:
+                    # expect that there is a bunch of terms that can be horizontally stacked
+                    extra_list = self.extra_type.split(",")
+                else:
+                    extra_list = [self.extra_type]
+
+                data_list = []
+                for extra in extra_list:
+                    extra = extra.strip()
+                    if extra not in data:
+                        raise KeyError(
+                            "Extra type '"
+                            + extra
+                            + "' is not among the quantities returned by the forcefield."
+                        )
+
+                    try:
+                        if key == "extras_component_raw":
+                            # don't partition into beads as there might be a different number when contracting
+                            floatarray = np.asarray(data[extra], dtype=float).squeeze()
+                        else:
+                            # picks up the desired bead
+                            floatarray = np.asarray(data[extra][b], dtype=float)
+                        data_list.append(floatarray)
+                    except:
+                        # non-numerical field, just write as a string on a separate line
+                        stream.write("\n%s\n" % data[extra][b])
+
+                if len(data_list) > 0:
+                    floatarray = np.hstack(data_list)
                     if floatarray.ndim == 2:
                         stream.write(
                             "\n".join(
                                 [
-                                    "      ".join(
-                                        ["{:15.8f}".format(item) for item in row]
+                                    " ".join(
+                                        [
+                                            ipi_global_settings["floatformat"] % item
+                                            for item in row
+                                        ]
                                     )
                                     for row in floatarray
                                 ]
                             )
                         )
                     elif floatarray.ndim == 1:
-                        stream.write("      ".join("%15.8f" % el for el in floatarray))
+                        stream.write(
+                            " ".join(
+                                ipi_global_settings["floatformat"] % el
+                                for el in floatarray
+                            )
+                        )
                     else:
                         raise ValueError(
                             "No specialized writer for arrays of dimension > 2"
                         )
-                except:
-                    stream.write("%s" % data[self.extra_type][b])
-                stream.write("\n")
-            elif self.extra_type == "raw":
-                stream.write(str(data))
-                stream.write("\n")
-            else:
-                raise KeyError(
-                    "Extra type '"
-                    + self.extra_type
-                    + "' is not among the quantities returned by any of the forcefields."
-                )
+                    stream.write("\n")
             if flush:
                 stream.flush()
                 os.fsync(stream)

@@ -166,7 +166,7 @@ class Beads:
             dependencies=[b._kstress for b in self._blist],
         )
 
-    def copy(self, nbeads=-1):
+    def clone(self, nbeads=-1):
         """Creates a new beads object with newP <= P beads from the original.
 
         Returns:
@@ -174,7 +174,7 @@ class Beads:
         """
 
         if nbeads > self.nbeads:
-            raise ValueError("Cannot copy to an object with larger number of beads")
+            raise ValueError("Cannot clone to an object with larger number of beads")
         elif nbeads == -1:
             nbeads = self.nbeads
 

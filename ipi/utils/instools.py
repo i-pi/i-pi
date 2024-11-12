@@ -209,7 +209,7 @@ def get_imvector(h, m3):
         verbosity.low,
     )
 
-    imv = w[:, 0] * (m3[:] ** 0.5)
+    imv = w[:, 0] / (m3[:] ** 0.5)
     imv = imv / np.linalg.norm(imv)
 
     return imv.reshape(1, imv.size)
@@ -328,9 +328,9 @@ class Fix(object):
         self.mask2 = np.arange(3 * self.natoms * self.nbeads)[mask2]
 
         self.fixbeads = Beads(beads.natoms - len(fixatoms), beads.nbeads)
-        self.fixbeads.q[:] = self.get_active_vector(beads.copy().q, 1)
-        self.fixbeads.m[:] = self.get_active_vector(beads.copy().m, 0)
-        self.fixbeads.names[:] = self.get_active_vector(beads.copy().names, 0)
+        self.fixbeads.q[:] = self.get_active_vector(beads.clone().q, 1)
+        self.fixbeads.m[:] = self.get_active_vector(beads.clone().m, 0)
+        self.fixbeads.names[:] = self.get_active_vector(beads.clone().names, 0)
 
         mask3a = np.ones(9 * self.natoms, dtype=bool)
         for i in range(9):

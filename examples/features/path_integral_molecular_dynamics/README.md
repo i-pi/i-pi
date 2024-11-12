@@ -7,5 +7,4 @@ Path integral molecular dynamics.
 `pimd+mts`:  path integral molecular dynamics with MTS algorithm to integrate short and long ranged forces with different timesteps. Includes option to print out the slow and/or fast force components.
 `rpc`:  path integral molecular dynamics with RPC algorithm to use different number of replicas for short and long ranged forces.
 scpimd:  path integral molecular dynamics with the Suzuki-Chin splitting.
-`water_remd`: path integral molecular dynamics with replica-exchange spanning different temperatures and pressures.
 `standard_constant_pressure`: path integral molecular dynamics using the PILE thermostat and MTS for propagating the ring polymer modes in the NPT ensemble.
