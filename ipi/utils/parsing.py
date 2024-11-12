@@ -587,6 +587,7 @@ def create_classical_trajectory(input_file, trajectories, properties):
     #   Have a look at the `ATTENTION` comments.
 
     if len(trajectories) > 0:
+        # add more keys if you need
         available = [
             "positions",
             "forces",
@@ -595,9 +596,10 @@ def create_classical_trajectory(input_file, trajectories, properties):
             "becx",
             "becy",
             "becz",
+            "Eforces",
         ]
         okay = [a in available for a in trajectories]
-        assert all(okay), "Some provided trajectories are not available."
+        assert all(okay), f"Some provided trajectories are not available."
 
     if "positions" not in trajectories:
         trajectories.append("positions")
@@ -707,5 +709,92 @@ def create_classical_trajectory(input_file, trajectories, properties):
     for n, snapshot in enumerate(traj):
         for p in props.keys():
             snapshot.info[p] = strided_properties[p][n]
+
+    return traj
+
+
+def create_centroid_trajectory(input_file, trajectories):
+
+    # author: Elia Stocco
+    # date: November 12th, 2024
+    # comments:
+    #   the code could be vastly improved by avoiding reading the whole trajectory from file
+    #   Have a look at the `ATTENTION` comments.
+
+    if len(trajectories) > 0:
+        # add more keys if you need
+        available = ["x_centroid", "v_centroid", "f_centroid", "p_centroid"]
+        okay = [a in available for a in trajectories]
+        assert all(okay), "Some provided trajectories are not available."
+
+    if "x_centroid" not in trajectories:
+        trajectories.append("x_centroid")
+    trajectories = sorted(trajectories, key=lambda x: "x_centroid" not in x)
+
+    # import these classes and modules here to avoid circular import errors.
+    from ipi.utils.io.inputs import io_xml
+    from ipi.inputs.simulation import InputSimulation
+    from ipi.engine.outputs import TrajectoryOutput, PropertyOutput
+
+    # suppress the output fo messages to screen
+    with SuppressOutput():
+        xml = io_xml.xml_parse_file(input_file)
+        # Initializes the simulation class.
+        isimul = InputSimulation()
+        isimul.parse(xml.fields[0][1])
+        simul = isimul.fetch()
+
+    ### Beads
+    # check the number of beads
+    nbeads = simul.syslist[0].beads.nbeads
+    assert nbeads == 1, "A classical trajectory can only have `nbeads` == 1."
+
+    ### Prefix
+    prefix = simul.outtemplate.prefix
+
+    ### Trajectories files
+    # Time and memory consuming.
+
+    # check that positions have been saved to file
+    ipi_trajs = [a for a in simul.outtemplate if isinstance(a, TrajectoryOutput)]
+    whats = [a.what for a in ipi_trajs]
+    assert "x_centroid" in whats, "`x_centroid` have not beed saved to file."
+
+    # keep only the trajectories of interest
+    ipi_trajs = [a for a in ipi_trajs if a.what in trajectories]
+
+    # move `x_centroid` to the first place
+    ipi_trajs = sorted(ipi_trajs, key=lambda x: "x_centroid" not in x.what)
+    # overwrite `trajectories` so that it will have the same ordering of `ipi_trajs`
+    trajectories = [a.what for a in ipi_trajs]
+
+    ### Stride
+    # check the stride (of both properties and trajectories)
+    strides = [a.stride for a in ipi_trajs]
+    max_stride = max(strides)
+    okay = [max_stride % a == 0 for a in strides]
+    assert all(okay), "Strides are not compatibles."
+    strides = [int(max_stride / s) for s in strides]
+    assert all(
+        [a * b.stride == max_stride for a, b in zip(strides, ipi_trajs)]
+    ), "Some errors occurred."
+
+    # check that all the trajectory files exist
+    traj_files = [f"{prefix}.{traj.filename}.xyz" for traj in ipi_trajs]
+    for file in traj_files:
+        assert os.path.exists(file), f"File '{file}' does not exist."
+
+    ### Trajectory building
+    # build the output trajectory
+
+    formats = [a.format for a in ipi_trajs]
+
+    # build the trajectory
+    traj = merge_trajectories(traj_files, trajectories, strides, formats)
+
+    # check that all the trajectories of interest have been correctly read
+    keys = traj[0].arrays.keys()
+    for name in trajectories:
+        assert name in keys, f"'{name}' is not in the output trajectory."
 
     return traj
