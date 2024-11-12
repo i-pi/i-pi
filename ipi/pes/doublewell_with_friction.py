@@ -53,20 +53,20 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
         **kwargs
     ):
 
-    try:
-        w_b = w_b * invcm2au
-        v0 = v0 * invcm2au
-        self.delta = delta * A2au
-        self.eta0 = eta0
-        self.eps1 = eps1
-        self.eps2 = eps2
-        self.deltaQ = deltaQ
-        self.k = 1837.36223469 * (3800.0 / 219323.0) ** 2
-        self.A = -0.5 * m * (w_b) ** 2
-        self.B = ((m**2) * (w_b) ** 4) / (16 * v0)
+        try:
+            w_b = w_b * invcm2au
+            v0 = v0 * invcm2au
+            self.delta = delta * A2au
+            self.eta0 = eta0
+            self.eps1 = eps1
+            self.eps2 = eps2
+            self.deltaQ = deltaQ
+            self.k = 1837.36223469 * (3800.0 / 219323.0) ** 2
+            self.A = -0.5 * m * (w_b) ** 2
+            self.B = ((m**2) * (w_b) ** 4) / (16 * v0)
 
-    except:
-        sys.exit(self.__doc__)
+        except:
+            sys.exit(self.__doc__)
 
         super().__init__(*args, **kwargs)
 
