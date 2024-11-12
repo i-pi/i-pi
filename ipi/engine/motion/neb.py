@@ -54,14 +54,11 @@ class NEBGradientMapper(object):
         self.dbeads = ens.beads.clone()
         self.dcell = ens.cell.clone()
         self.dforces = ens.forces.clone(self.dbeads, self.dcell)
-        self.fixatoms = ens.fixatoms.copy()
+        self.fixatoms_dof = ens.fixatoms_dof.copy()
 
         # Mask to exclude fixed atoms from 3N-arrays
         self.fixatoms_mask = np.ones(3 * ens.beads.natoms, dtype=bool)
-        if len(ens.fixatoms) > 0:
-            self.fixatoms_mask[3 * ens.fixatoms] = 0
-            self.fixatoms_mask[3 * ens.fixatoms + 1] = 0
-            self.fixatoms_mask[3 * ens.fixatoms + 2] = 0
+        self.fixatoms_mask[ens.fixatoms_dof] = 0
 
         # Create reduced bead and force object
         self.rbeads = Beads(ens.beads.natoms, ens.beads.nbeads - 2)
@@ -111,12 +108,12 @@ class NEBGradientMapper(object):
         nimg = self.dbeads.nbeads
 
         # Number of atoms
-        nat = self.dbeads.natoms - len(self.fixatoms)
+        nactive_dof = 3 * self.dbeads.natoms - len(self.fixatoms_dof)
 
         # Array for spring constants
         kappa = np.zeros(nimg)
 
-        btau = np.zeros((nimg, 3 * nat), float)
+        btau = np.zeros((nimg, nactive_dof), float)
         for ii in range(1, nimg - 1):
             d1 = bq[ii] - bq[ii - 1]  # tau minus
             d2 = bq[ii + 1] - bq[ii]  # tau plus
@@ -238,20 +235,18 @@ class NEBClimbGrMapper(object):
         """Creates reduced Beads object in order to calculate forces
         only for the climbing bead, and binds it to beads
         """
-        self.fixatoms = ens.fixatoms.copy()
+        self.fixatoms_dof = ens.fixatoms_dof.copy()
         # A mask to exclude fixed atoms from 3N-arrays
         self.fixatoms_mask = np.ones(3 * ens.beads.natoms, dtype=bool)
-        if len(ens.fixatoms) > 0:
-            self.fixatoms_mask[3 * ens.fixatoms] = 0
-            self.fixatoms_mask[3 * ens.fixatoms + 1] = 0
-            self.fixatoms_mask[3 * ens.fixatoms + 2] = 0
+        if len(ens.fixatoms_dof) > 0:
+            self.fixatoms_mask[self.fixatoms_dof] = 0
 
         # Reduced Beads object is needed to calculate only required beads.
         self.rbeads = Beads(ens.beads.natoms, 1)
         self.rcell = ens.cell.clone()
         # Coords of the bead before and after the climbing one.
-        self.q_prev = np.zeros(3 * (ens.beads.natoms - len(ens.fixatoms)))
-        self.q_next = np.zeros(3 * (ens.beads.natoms - len(ens.fixatoms)))
+        self.q_prev = np.zeros(3 * ens.beads.natoms - len(ens.fixatoms_dof))
+        self.q_next = np.zeros(3 * ens.beads.natoms - len(ens.fixatoms_dof))
         # Make reduced forces dependent on reduced beads
         self.rforces = ens.forces.clone(self.rbeads, self.rcell)
 
@@ -336,7 +331,7 @@ class NEBMover(Motion):
     def __init__(
         self,
         fixcom=False,
-        fixatoms=None,
+        fixatoms_dof=None,
         mode="damped_bfgs",
         biggest_step=0.5,
         old_coord=np.zeros(0, float),
@@ -371,7 +366,7 @@ class NEBMover(Motion):
               motion will be constrained or not. Defaults to False.
         """
 
-        super(NEBMover, self).__init__(fixcom=fixcom, fixatoms=fixatoms)
+        super(NEBMover, self).__init__(fixcom=fixcom, fixatoms_dof=fixatoms_dof)
 
         # Optimization options
         self.tolerances = tolerances
@@ -420,7 +415,7 @@ class NEBMover(Motion):
         # and reduce it if needed, because someone may want to provide
         # existing hessian of the full system.
         if self.mode == "damped_bfgs":
-            n_activedim = beads.q[0].size - len(self.fixatoms) * 3
+            n_activedim = beads.q[0].size - len(self.fixatoms_dof)
             if self.stage == "neb":
                 if self.hessian.size == (n_activedim * (beads.nbeads - 2)) ** 2:
                     # Desired dimension
@@ -486,7 +481,7 @@ class NEBMover(Motion):
                 else:
                     raise ValueError("Hessian size does not match system size.")
 
-        if len(self.fixatoms) == len(self.beads[0]):
+        if len(self.fixatoms_dof) == 3 * len(self.beads[0]):
             softexit.trigger(
                 status="bad",
                 message="WARNING: all atoms are fixed, geometry won't change. Exiting simulation.",
@@ -518,7 +513,7 @@ class NEBMover(Motion):
             % (str(self.climbgm.q_prev.shape), str(self.climbgm.q_next.shape)),
             verbosity.debug,
         )
-        n_activedim = self.beads.q[0].size - len(self.fixatoms) * 3
+        n_activedim = self.beads.q[0].size - len(self.fixatoms_dof)
         if self.hessian.shape != (n_activedim, n_activedim):
             self.hessian = np.eye(n_activedim)
 
@@ -591,7 +586,7 @@ class NEBMover(Motion):
 
         info(" @NEB STEP %d, stage: %s" % (step, self.stage), verbosity.debug)
 
-        n_activedim = self.beads.q[0].size - len(self.fixatoms) * 3
+        n_activedim = self.beads.q[0].size - len(self.fixatoms_dof)
 
         # Check if we restarted a converged calculation (by mistake)
         if self.stage == "converged":
