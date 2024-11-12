@@ -53,11 +53,6 @@ def get_identification_info_xml():
     return xml_comments
 
 
-# Example usage to get XML-formatted comments:
-xml_output = get_identification_info_xml()
-print(xml_output)  # You can write this output to an XML file if needed
-
-
 class OutputList(list):
     """A simple decorated list to save the output prefix and bring it
     back to the initialization phase of the simulation"""
@@ -215,14 +210,14 @@ class PropertyOutput(BaseOutput):
         # print nice header if information is available on the properties
 
         info_string = get_identification_info()
-        self.out.write(info_string)
+        self.out.write(info_string + "#\n")
 
         if datetime is not None:
             # print nice header if information is available on the properties
             ohead = "# Date and Time: {}".format(
                 datetime.now().strftime("%Y-%m-%d %H:%M")
             )
-            self.out.write(ohead + "\n")
+            self.out.write(ohead + "\n#\n")
 
         icol = 1
         for what in self.outlist:
@@ -737,7 +732,7 @@ class CheckpointOutput:
 
         with open_function(filename, "w") as check_file:
             info_string = get_identification_info_xml()
-            check_file.write(info_string)
+            check_file.write(info_string + "\n")
             check_file.write(self.status.write(name="simulation"))
 
         # Do not use backed up file open on subsequent writes.
