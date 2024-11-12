@@ -63,7 +63,7 @@ Source the environment settings file `env.sh` as `source env.sh` or `.
 env.sh`. It is useful to put this in your `.bashrc` or other settings file if
 you always want to have i-PI available.
 
-### Compile the driver code
+## Compile the driver code
 
 The built-in driver requires a FORTRAN compiler, and can be built as
 
@@ -76,7 +76,7 @@ cd ../..
 There is also a Python driver available in `drivers/py`, which however has limited
 functionalities.
 
-### Examples and demos
+## Examples and demos
 
 The `examples` and `demos` folders contain inputs for many different types of
 calculations based on i-PI. Examples are typically minimal use-cases of specific
@@ -89,7 +89,7 @@ a log file, and then run a couple of instances of the driver code. The progress
 of the wrapper is followed by monitoring the log file with the `tail` Linux command.
 
 Optionally, you can make a copy of the directory with the example somewhere
-else if you want to keep the i-PI directory clean. For example
+else if you want to keep the i-PI directory clean. For example, after sourcing the `env.sh` file, 
 
 ```bash
 cd demos/para-h2-tutorial/tutorial-1/
@@ -101,12 +101,12 @@ tail -f log
 
 The monitoring can be interrupted with CTRL+C when the run has finished (5000 steps).
 
-### Tutorials and online resources
+## Tutorials and online resources
 
 The i-PI [documentation](https://docs.ipi-code.org/onlinereso.html) has a list of
 avaialble tutorials, recipes and other useful online resources.
 
-### Run the automatic test suite
+## Run the automatic test suite
 
 The automatic test suite can be run by calling the i-pi-tests script.
 You need to have the `pytest` package installed
