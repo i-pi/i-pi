@@ -33,24 +33,6 @@ def prepare_args():
         help="trajectories to be added to the extxyz file (default: %(default)s)",
         default=["forces"],
     )
-    # parser.add_argument(
-    #     "-f",
-    #     "--folder",
-    #     type=str,
-    #     required=False,
-    #     **argv,
-    #     help="folder containing the i-PI files (default: %(default)s)",
-    #     default=".",
-    # )
-    # parser.add_argument(
-    #     "-n",
-    #     "--nbeads",
-    #     type=int,
-    #     required=True,
-    #     **argv,
-    #     help="number of beads (default: %(default)s)",
-    #     default=":",
-    # )
     parser.add_argument(
         "-o", "--output", type=str, required=True, **argv, help="output extxyz file"
     )

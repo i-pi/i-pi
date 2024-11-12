@@ -254,7 +254,7 @@ def read_trajectory(
     return frames
 
 
-def merge_files(prefix: str, folder: str, bead: int):
+def merge_files(prefix, folder, bead):
     """
     Reads a set of i-PI output files and merges all the trajectory information
     from files with the same bead number. The function will raise an error if
@@ -339,7 +339,7 @@ def merge_files(prefix: str, folder: str, bead: int):
     return traj
 
 
-def merge_beads(prefix: str, folder: str, nbeads: int, ofile: str):
+def merge_beads(prefix, folder, nbeads, ofile):
     """
     Convert i-PI output files to ASE trajectory files.
 
@@ -376,7 +376,7 @@ def merge_beads(prefix: str, folder: str, nbeads: int, ofile: str):
         write(tmp_file, traj)
 
 
-def merge_trajectories(files: list[str], names: list[str]):
+def merge_trajectories(files, names):
     """
     Merge multiple i-PI output files into a single ASE trajectory file.
 
@@ -445,7 +445,7 @@ def merge_trajectories(files: list[str], names: list[str]):
     return traj
 
 
-def create_classical_trajectory(input_file: str, trajectories: list[str]):
+def create_classical_trajectory(input_file, trajectories):
 
     if len(trajectories) > 0:
         available = ["positions", "forces", "velocities"]
