@@ -1,6 +1,7 @@
 """ An interface for the [SO3LR](https://github.com/general-molecular-simulations/so3lr) calculator """
 
 from .ase import ASEDriver
+from ipi.utils.messages import verbosity, warning
 
 So3lrCalculator = None
 
@@ -18,7 +19,7 @@ class SO3LR_driver(ASEDriver):
     """
 
     def __init__(self, *args, **kwargs):
-        warnings(
+        warning(
             "THIS PES HAS NOT BEEN TESTED FOLLOWING CONVERSION TO THE NEW PES API.",
             verbosity.low,
         )

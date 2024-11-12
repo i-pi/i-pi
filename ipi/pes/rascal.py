@@ -4,6 +4,7 @@ from .dummy import Dummy_driver
 
 from ipi.utils.mathtools import det_ut3x3
 from ipi.utils.units import unit_to_internal, unit_to_user
+from ipi.utils.messages import verbosity, warning
 
 RascalCalc = None
 
@@ -29,7 +30,7 @@ class Rascal_driver(Dummy_driver):
 
     def __init__(self, model, template, *args, **kwargs):
         global RascalCalc
-        warnings(
+        warning(
             "THIS PES HAS NOT BEEN TESTED FOLLOWING CONVERSION TO THE NEW PES API.",
             verbosity.low,
         )

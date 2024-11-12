@@ -4,6 +4,9 @@ import sys
 import json
 import numpy as np
 import warnings
+
+from ipi.utils.messages import verbosity, warning
+
 import importlib
 from .dummy import Dummy_driver
 
@@ -135,7 +138,7 @@ class driverdipole_driver(Dummy_driver):
     }
 
     def __init__(self, *args, **kwargs):
-        warnings(
+        warning(
             "THIS PES HAS NOT BEEN TESTED FOLLOWING CONVERSION TO THE NEW PES API.",
             verbosity.low,
         )

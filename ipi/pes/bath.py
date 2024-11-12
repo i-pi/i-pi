@@ -2,6 +2,8 @@
 
 import numpy as np
 
+from ipi.utils.messages import verbosity, warning
+
 __DRIVER_NAME__ = "bath"
 __DRIVER_CLASS__ = "Harmonic_Bath_explicit"
 
@@ -10,7 +12,7 @@ class Harmonic_Bath_explicit(object):
     """Explicit description of an Harmonic bath"""
 
     def __init__(self, nbath, m, eta0, eps1, eps2, deltaQ, w_c, *args, **kwargs):
-        warnings(
+        warning(
             "THIS PES HAS NOT BEEN TESTED FOLLOWING CONVERSION TO THE NEW PES API.",
             verbosity.low,
         )

@@ -2,6 +2,8 @@
 
 from .ase import ASEDriver
 
+from ipi.utils.messages import verbosity, warning
+
 MACECalculator = None
 
 __DRIVER_NAME__ = "mace"
@@ -25,7 +27,7 @@ class MACE_driver(ASEDriver):
     """
 
     def __init__(self, template, model, device="cpu", *args, **kwargs):
-        warnings(
+        warning(
             "THIS PES HAS NOT BEEN TESTED FOLLOWING CONVERSION TO THE NEW PES API.",
             verbosity.low,
         )

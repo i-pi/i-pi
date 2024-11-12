@@ -3,6 +3,8 @@
 import sys
 from .dummy import Dummy_driver
 
+from ipi.utils.messages import verbosity, warning
+
 __DRIVER_NAME__ = "elphmod"
 __DRIVER_CLASS__ = "ModelIIIDriver"
 
@@ -16,7 +18,7 @@ class ModelIIIDriver(Dummy_driver):
 
     def check_parameters(self):
         """Check arguments and load driver instance."""
-        warnings(
+        warning(
             "THIS PES HAS NOT BEEN TESTED FOLLOWING CONVERSION TO THE NEW PES API.",
             verbosity.low,
         )

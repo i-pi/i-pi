@@ -6,6 +6,8 @@ from .dummy import Dummy_driver
 from scipy import interpolate
 import json
 
+from ipi.utils.messages import verbosity, warning
+
 """Spline driver. This is not a serious interpolation, use it if you know what you are doing. """
 factor_coord = 5
 mass = 1836
@@ -21,7 +23,7 @@ class Spline_driver(Dummy_driver):
     """\nspline driver requires specification of filename that contains 5 columns (pos, f1,f2,f3,e) to perform 3x1D spline.\nExample: python driver.py -m spline -u -o <filename>\n"""
 
     def __init__(self, data_file, *args, **kwargs):
-        warnings(
+        warning(
             "THIS PES HAS NOT BEEN TESTED FOLLOWING CONVERSION TO THE NEW PES API.",
             verbosity.low,
         )
