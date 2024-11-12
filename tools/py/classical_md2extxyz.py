@@ -34,6 +34,16 @@ def prepare_args():
         default=["forces"],
     )
     parser.add_argument(
+        "-p",
+        "--properties",
+        type=str,
+        nargs="*",  # Allows zero or more arguments to be passed, creating a list
+        required=False,
+        **argv,
+        help="trajectories to be added to the extxyz file (default: %(default)s)",
+        default=["potential", "stress"],
+    )
+    parser.add_argument(
         "-o", "--output", type=str, required=True, **argv, help="output extxyz file"
     )
     return parser.parse_args()
@@ -55,7 +65,7 @@ def main():
     print()
 
     print("\t Constructing the classical trajectory")
-    atoms = create_classical_trajectory(args.input, args.trajectories)
+    atoms = create_classical_trajectory(args.input, args.trajectories, args.properties)
     print(
         "\t The trajectory will have the following arrays: ",
         list(atoms[0].arrays.keys()),

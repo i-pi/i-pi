@@ -21,14 +21,39 @@ except ImportError:
 __all__ = ["read_output", "read_trajectory"]
 
 
-# Disable
-def blockPrint():
-    sys.stdout = open(os.devnull, "w")
+class SuppressOutput:
+    """
+    A context manager to suppress print output by redirecting sys.stdout to os.devnull.
 
+    Attributes:
+        enable (bool): If True, suppresses output. Defaults to True.
+    """
 
-# Restore
-def enablePrint():
-    sys.stdout = sys.__stdout__
+    def __init__(self, enable=True):
+        """
+        Initializes SuppressOutput with the option to enable or disable suppression.
+
+        Args:
+            enable (bool): Whether to suppress output. Defaults to True.
+        """
+        self.enable = enable
+
+    def __enter__(self):
+        """
+        Redirects sys.stdout to os.devnull if suppression is enabled.
+        """
+        if self.enable:
+            self._original_stdout = sys.stdout
+            sys.stdout = open(os.devnull, "w")
+        return self
+
+    def __exit__(self, *argv, **kwargs):
+        """
+        Restores sys.stdout to its original state after exiting the context.
+        """
+        if self.enable:
+            sys.stdout.close()
+            sys.stdout = self._original_stdout
 
 
 def read_output(filename):
@@ -134,8 +159,6 @@ def read_trajectory(
     to returning a list of raw strings.
     units can be inferred from the file content, or specified with `dimension`, `units` and `cell_units`
     """
-
-    blockPrint()
 
     if ase is None:
         raise ImportError(
@@ -248,8 +271,6 @@ def read_trajectory(
             break
         except:
             raise
-
-    enablePrint()
 
     return frames
 
@@ -445,7 +466,11 @@ def merge_trajectories(files, names):
     return traj
 
 
-def create_classical_trajectory(input_file, trajectories):
+def create_classical_trajectory(input_file, trajectories, properties):
+
+    # author: Elia Stocco
+    # date: November 12th, 2024
+    # comments:
 
     if len(trajectories) > 0:
         available = ["positions", "forces", "velocities"]
@@ -459,20 +484,27 @@ def create_classical_trajectory(input_file, trajectories):
     from ipi.inputs.simulation import InputSimulation
     from ipi.engine.outputs import TrajectoryOutput, PropertyOutput
 
-    blockPrint()
+    # suppress the output fo messages to screen
+    with SuppressOutput():
+        xml = io_xml.xml_parse_file(input_file)
+        # Initializes the simulation class.
+        isimul = InputSimulation()
+        isimul.parse(xml.fields[0][1])
+        simul = isimul.fetch()
 
-    xml = io_xml.xml_parse_file(input_file)
-    # Initializes the simulation class.
-    isimul = InputSimulation()
-    isimul.parse(xml.fields[0][1])
-    simul = isimul.fetch()
+    ### Properties
+    # It's gonna be quick to check if everything is alright.
+    # Let's prepare the necessary variables and used them and the end of this function.
 
-    enablePrint()
-
-    # properties have not added yet to the trajectory
     ipi_props = [a for a in simul.outtemplate if isinstance(a, PropertyOutput)]
     assert len(ipi_props) <= 1, "Only one (or zero) property output is supported"
     ipi_props = ipi_props[0] if len(ipi_props) == 1 else None
+
+    # keep only the trajectories of interest
+
+    ### Trajectories
+    # Time and memory consuming.
+    # Let's built the output trajectory
 
     # check that positions have been saved to file
     ipi_trajs = [a for a in simul.outtemplate if isinstance(a, TrajectoryOutput)]
@@ -482,6 +514,7 @@ def create_classical_trajectory(input_file, trajectories):
     # keep only the trajectories of interest
     ipi_trajs = [a for a in ipi_trajs if a.what in trajectories]
 
+    ### Stride
     # check the stride
     strides = [a.stride for a in ipi_trajs]
     max_stride = max(strides)
@@ -498,8 +531,10 @@ def create_classical_trajectory(input_file, trajectories):
     for file in files:
         assert os.path.exists(file), f"File '{file}' does not exist."
 
-    # build the trajectory
-    traj = merge_trajectories(files, trajectories)
+    # suppress the output fo messages to screen
+    with SuppressOutput():
+        # build the trajectory
+        traj = merge_trajectories(files, trajectories)
 
     # check that all the trajectories of interest have been correctly read
     keys = traj[0].arrays.keys()
