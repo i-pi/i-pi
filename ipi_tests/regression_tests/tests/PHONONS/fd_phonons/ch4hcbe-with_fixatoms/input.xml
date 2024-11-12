@@ -24,7 +24,7 @@
             <prefix> phonons </prefix>
             <asr> none </asr>
          </vibrations>
-      <fixatoms_dof> [15,16,17]</fixatoms_dof>
+      <fixatoms> [5]</fixatoms>
       <fixcom> False </fixcom>
       </motion>
    </system>
