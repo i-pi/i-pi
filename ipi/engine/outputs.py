@@ -39,6 +39,25 @@ __all__ = [
 ]
 
 
+def get_identification_info_xml():
+    info = get_identification_info()
+
+    # Filter out only the branch and last commit lines
+    filtered_lines = [
+        line for line in info.splitlines() if "Branch" in line or "Last Commit" in line
+    ]
+
+    # Wrap each line in XML comment markers
+    xml_comments = "\n".join([f"<!-- {line.strip()} -->" for line in filtered_lines])
+
+    return xml_comments
+
+
+# Example usage to get XML-formatted comments:
+xml_output = get_identification_info_xml()
+print(xml_output)  # You can write this output to an XML file if needed
+
+
 class OutputList(list):
     """A simple decorated list to save the output prefix and bring it
     back to the initialization phase of the simulation"""
@@ -717,6 +736,8 @@ class CheckpointOutput:
             self.status.step.store(self.simul.step + 1)
 
         with open_function(filename, "w") as check_file:
+            info_string = get_identification_info_xml()
+            check_file.write(info_string)
             check_file.write(self.status.write(name="simulation"))
 
         # Do not use backed up file open on subsequent writes.
