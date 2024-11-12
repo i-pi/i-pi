@@ -10,7 +10,6 @@ import re
 import numpy as np
 from ipi.utils.units import unit_to_user
 
-import glob
 import os
 
 try:
