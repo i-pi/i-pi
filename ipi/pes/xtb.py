@@ -2,6 +2,7 @@ import numpy as np
 import json
 
 from ipi.utils.units import unit_to_internal, unit_to_user
+from .dummy import Dummy_driver
 
 tb = None
 
@@ -9,21 +10,18 @@ __DRIVER_NAME__ = "xtb"
 __DRIVER_CLASS__ = "TBLiteDriver"
 
 
-class TBLiteDriver(object):
+class TBLiteDriver(Dummy_driver):
     """
     Interface with tblite to provide GFN1-xTB and GFN2-xTB calculators.
 
     Example::
 
-        python driver.py -m xtb -u -o '{"method": "GFN2-xTB", "numbers": [8,1,1], "periodic": false}'
+        python driver.py -m xtb -u -o config.json
     """
 
     def __init__(self, json_input, *args, **kwargs):
 
-        self.json_input = json_input
-        super().__init__(*args, **kwargs)
-
-        """Initialized dummy drivers"""
+        config = json.load(open(json_input))
 
         global tb
         try:
@@ -33,7 +31,6 @@ class TBLiteDriver(object):
                 "Could not find tblite for xtb driver. Please install tblite-python with mamba"
             )
 
-        config = json.loads(json_input)
         try:
             self.method = config["method"]
             self.numbers = np.asarray(config["numbers"])
@@ -43,6 +40,8 @@ class TBLiteDriver(object):
         self.uhf = config.get("uhf")
         self.periodic = config.get("periodic")
         self.verbosity = 1 if self.verbose else 0
+
+        super().__init__(*args, **kwargs)
 
     def __call__(self, cell, pos):
         """
