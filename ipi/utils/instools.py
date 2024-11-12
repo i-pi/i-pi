@@ -316,12 +316,15 @@ class Fix(object):
             self.nbeads = nbeads
 
         self.fixatoms_dof = fixatoms_dof
-        if np.mod(self.fixatoms_dof, 3) == 0:
-            self.fixatoms = np.unique(self.fixatoms_dof // 3)
+        if len(self.fixatoms_dof) > 0:
+            if np.mod(self.fixatoms_dof, 3) == 0:
+                self.fixatoms = np.unique(self.fixatoms_dof // 3)
+            else:
+                softexit.trigger(
+                    message="fixatoms_dof is not yet implemented. please use fixatoms",
+                )
         else:
-            softexit.trigger(
-                message="fixatoms_dof is not yet implemented. please use fixatoms",
-            )
+            self.fixatoms = self.fixatoms_dof
 
         self.mask0 = np.delete(np.arange(self.natoms), self.fixatoms)
         self.nactive = len(self.mask0)
