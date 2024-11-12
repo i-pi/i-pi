@@ -41,30 +41,36 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
         python driver.py -m DoubleWell -o 500,2085,1837,0.00,1,0,0,1
     """
 
-    def __init__(self, *args, **kwargs):
-        self.args = args.split(",")
-        super().__init__(*args, **kwargs)
+    def __init__(
+        self,
+        w_b=None,
+        v0=None,
+        m=None,
+        eta0=None,
+        eps1=None,
+        eps2=None,
+        delta=None,
+        deltaQ=None,
+        *args,
+        **kwargs
+    ):
 
-    def check_parameters(self):
-        """Function that checks the arguments required to run the driver"""
-
+        #     try:
+        w_b = w_b * invcm2au
+        v0 = v0 * invcm2au
+        self.delta = delta * A2au
+        self.eta0 = eta0
+        self.eps1 = eps1
+        self.eps2 = eps2
+        self.deltaQ = deltaQ
         self.k = 1837.36223469 * (3800.0 / 219323.0) ** 2
-        try:
-            param = list(map(float, self.args))
-            assert len(param) == 8
-            w_b = param[0] * invcm2au
-            v0 = param[1] * invcm2au
-            m = param[2]
-            self.delta = param[3] * A2au
-            self.eta0 = param[4]
-            self.eps1 = param[5]
-            self.eps2 = param[6]
-            self.deltaQ = param[7]
-        except:
-            sys.exit(self.__doc__)
-
         self.A = -0.5 * m * (w_b) ** 2
         self.B = ((m**2) * (w_b) ** 4) / (16 * v0)
+
+    #        except:
+    #           sys.exit(self.__doc__)
+
+    #      super().__init__(*args, **kwargs)
 
     def check_dimensions(self, pos):
         """Functions that checks dimensions of the received position"""

@@ -43,36 +43,44 @@ class DoubleWell_with_explicit_bath_driver(Dummy_driver):
         python driver.py -m DoubleWell -o 500,2085,1837,0.00,1,0,0,1,500
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self,
+        w_b=None,
+        v0=None,
+        m=None,
+        delta=None,
+        eta0=None,
+        eps1=None,
+        eps2=None,
+        deltaQ=None,
+        w_c=None,
+        *args,
+        **kwargs
+    ):
 
         self.init = False
-        super().__init__(*args, **kwargs)
-
-    def check_parameters(self):
-        """Function that checks the arguments required to run the driver"""
 
         try:
-            param = list(map(float, self.args))
-            assert len(param) == 9
-            w_b = param[0] * invcm2au
-            v0 = param[1] * invcm2au
-            self.m = param[2]
-            self.delta = param[3] * A2au
+            w_b = w_b * invcm2au
+            v0 = v0 * invcm2au
+            self.m = m
+            self.delta = delta * A2au
 
             self.bath_parameters = {}
-            self.bath_parameters["m"] = param[2]
+            self.bath_parameters["m"] = self.m
 
-            self.bath_parameters["eta0"] = param[4]
-            self.bath_parameters["eps1"] = param[5]
-            self.bath_parameters["eps2"] = param[6]
-            self.bath_parameters["deltaQ"] = param[7]
-            self.bath_parameters["w_c"] = param[8] * invcm2au
+            self.bath_parameters["eta0"] = eta0
+            self.bath_parameters["eps1"] = eps1
+            self.bath_parameters["eps2"] = eps2
+            self.bath_parameters["deltaQ"] = deltaQ
+            self.bath_parameters["w_c"] = w_c * invcm2au
 
         except:
             sys.exit(self.__doc__)
 
         self.A = -0.5 * self.m * (w_b) ** 2
         self.B = ((self.m**2) * (w_b) ** 4) / (16 * v0)
+        super().__init__(*args, **kwargs)
 
     def __call__(self, cell, pos):
         """DoubleWell potential"""
@@ -84,7 +92,7 @@ class DoubleWell_with_explicit_bath_driver(Dummy_driver):
 
         if not self.init:
             self.nbath = np.size(x)
-            self.bath = Harmonic_Bath_explicit(self.nbath, self.bath_parameters)
+            self.bath = Harmonic_Bath_explicit(self.nbath, **self.bath_parameters)
 
         # Harmonic bath
         pot, fq, fx = self.bath(q, x)

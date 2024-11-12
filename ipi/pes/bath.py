@@ -12,10 +12,8 @@ class Harmonic_Bath_explicit(object):
     def __init__(self, nbath, m, eta0, eps1, eps2, deltaQ, w_c, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # (self, nbath, parameters):
         self.nbath = nbath
         self.m = m
-        # self.delta = parameters["delta"]
         self.eta0 = eta0
         self.eps1 = eps1
         self.eps2 = eps2
