@@ -88,7 +88,7 @@ objects = {
     "forcefield": forcefields.InputForceField(),
     "ffsocket": forcefields.InputFFSocket(),
     "ffdirect": forcefields.InputFFDirect(),
-    "fflj": forcefields.InputFFLennardJones(),    
+    "fflj": forcefields.InputFFLennardJones(),
     "ffdebye": forcefields.InputFFDebye(),
     "ffplumed": forcefields.InputFFPlumed(),
     "ffyaff": forcefields.InputFFYaff(),
