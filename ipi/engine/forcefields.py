@@ -459,12 +459,14 @@ class FFLennardJones(FFEval):
 
     def __init__(
         self,
-        latency=1.0e-3,
+        latency=1.0,
         offset=0.0,
         name="",
         pars=None,
-        dopbc=False,
-        threaded=False,
+        dopbc=True,
+        active=np.array([-1]),
+        threaded=True,
+        interface=None,
     ):
         """Initialises FFLennardJones.
 
@@ -480,7 +482,7 @@ class FFLennardJones(FFEval):
 
         # a socket to the communication library is created or linked
         super(FFLennardJones, self).__init__(
-            latency, offset, name, pars, dopbc=dopbc, threaded=threaded
+            latency, offset, name, pars, dopbc=dopbc, threaded=threaded, active=active
         )
         self.epsfour = float(self.pars["eps"]) * 4
         self.sixepsfour = 6 * self.epsfour
