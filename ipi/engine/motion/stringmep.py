@@ -424,7 +424,7 @@ class StringMover(Motion):
                 else:
                     raise ValueError("Hessian size does not match system size.")
 
-        if len(self.fixatoms_dof // 3) == len(self.beads[0]):
+        if len(self.fixatoms_dof) == 3 * len(self.beads[0]):
             softexit.trigger(
                 status="bad",
                 message="WARNING: all atoms are fixed, geometry won't change. Exiting simulation.",

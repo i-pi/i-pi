@@ -158,7 +158,8 @@ class GeopMotion(Motion):
         # Binds optimizer
         self.optimizer.bind(self)
 
-        if len(self.fixatoms_dof) == len(self.beads[0]):
+        print("HERE", len(self.fixatoms_dof), len(self.beads[0]))
+        if len(self.fixatoms_dof) == 3 * len(self.beads[0]):
             softexit.trigger(
                 status="bad",
                 message="WARNING: all atoms are fixed, geometry won't change. Exiting simulation",
