@@ -84,7 +84,7 @@ class InputMotionBase(Input):
           motion will be constrained or not.
        fixatoms: A list of the indices of atoms that should not be moved.
        fixatoms_dof: A list of indices of degrees of freedom that should be kept fixed.
-       Note that fixatoms is a 'short' way for to provide the fixatoms_dof, but only the latter is stored internally and written restart files.
+       Note that fixatoms is a 'short' way for to provide the fixatoms_dof, but only the latter is stored internally and written restart files. Example: [0,2,4] means (x-coordinate atom 1, z-coordinate atom 1, y-coordinate atom 2)
 
     """
 
