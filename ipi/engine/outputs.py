@@ -23,6 +23,7 @@ from ipi.engine.properties import getkey
 from ipi.engine.atoms import *
 from ipi.engine.cell import *
 from ipi.utils.messages import get_identification_info
+from ipi import ipi_global_settings
 
 try:
     from datetime import datetime
