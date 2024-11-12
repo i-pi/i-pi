@@ -56,6 +56,61 @@ class SuppressOutput:
             sys.stdout = self._original_stdout
 
 
+class AppendableList:
+    """
+    A class that can append numpy arrays to a pre-allocated array.
+    If the array is full, it doubles its size.
+    """
+
+    def __init__(self, size: int = 100000) -> None:
+        """
+        Initialize a new AppendableArray.
+
+        Args:
+            size (int): The initial size of the array. Defaults to 100000.
+        """
+        self._arr = [None] * size
+        self._size = 0
+        self._max_size = size
+        self._n_update = 0
+
+    def append(self, x) -> None:
+        """
+        Append a variable to the list.
+
+        Args:
+            x (object): The variable to append.
+
+        """
+        # If the array is full, double its size
+        if self._size + 1 > self._max_size:
+            self._expand()
+        # Append the float to the array
+        self._arr[self._size] = x
+        # Increment the size counter
+        self._size += 1
+
+    def _expand(self) -> None:
+        """
+        Double the size of the array.
+        """
+        new_size = self._max_size * 2
+        new_arr = [None] * new_size
+        new_arr[: self._size] = self.finalize()
+        self._arr = new_arr
+        self._max_size = new_size
+        self._n_update += 1
+
+    def finalize(self):
+        """
+        Return the final array.
+
+        Returns:
+            T: The final array.
+        """
+        return self._arr[: self._size]
+
+
 def read_output(filename):
     """Reads an i-PI output file and returns a dictionary with the properties in a tidy order,
     and information on units and descriptions of the content.
@@ -180,7 +235,12 @@ def read_trajectory(
     comment_regex = re.compile(r"([^)]+)\{([^}]+)\}")
     step_regex = re.compile(r"Step:\s+(\d+)")
 
-    frames = []
+    # Do not use `list.append`
+    # frames = []
+
+    # Let's optimize this thing
+    frames = AppendableList()
+
     while True:
         try:
             if format == "extras":
@@ -272,7 +332,7 @@ def read_trajectory(
         except:
             raise
 
-    return frames
+    return frames.finalize()
 
 
 def merge_files(prefix, folder, bead):
@@ -397,40 +457,65 @@ def merge_beads(prefix, folder, nbeads, ofile):
         write(tmp_file, traj)
 
 
-def merge_trajectories(files, names):
+def merge_trajectories(files, names, strides):
     """
-    Merge multiple i-PI output files into a single ASE trajectory file.
+    Merge multiple i-PI output files into a single ASE trajectory object.
 
     Parameters
     ----------
     files : list[str]
-        A list of file names to be merged.
+        A list of file paths to be merged. The first file must contain the positions.
     names : list[str]
-        A list of array names to be used for the merge.
+        A list of array names corresponding to the data arrays in the input files.
+        The first name must be `'positions'`.
+
+    strides : list[int]
+        A list of integers specifying the stride (sampling rate) to apply to each
+        trajectory file. If `stride[i] = 1`, all frames from file `i` are included.
+        A larger stride will select every `stride[i]`-th frame.
 
     Returns
     -------
     traj : ASE Atoms object
-        The merged trajectory.
+        The merged trajectory, represented as an ASE Atoms object containing the
+        atomic positions and any other arrays (e.g., forces) from the input files.
 
     Notes
     -----
-    The input files are expected to be named as follows:
-    `<prefix>.*_<bead>.xyz`, where `<prefix>` is the given prefix,
-    `<bead>` is the bead number (starting from 0), and `*` is a wildcard
-    matching any characters. The output ASE trajectory file will be named
-    `<prefix>.extxyz`, where `<prefix>` is the given prefix.
+    - The input files are expected to have the format `<prefix>.*_0.xyz`, where:
+        - `<prefix>` is the given prefix for the files,
+        - `*` is a wildcard matching any characters,
+        - `<bead>` is the bead number (starting from 0).
+    - The output ASE trajectory will be stored in the file `<prefix>.extxyz`, where
+      `<prefix>` is the given prefix.
+
+    - The function assumes that the first file corresponds to atomic positions and
+      subsequent files correspond to other data arrays, such as forces or velocities.
+      All files are expected to follow this convention.
+
+    - The function is not highly optimized, as it reads the entire trajectory for each
+      file and then slices it based on the provided stride. In the future, it would be
+      more efficient to directly pass the stride to the trajectory reader.
+
     """
     # author: Elia Stocco
     # comments:
-    # The script cycle over the arrays and then over then over the atoms.
-    # This is slower than the other way around but it is more readable
-    # and it is less memory expensive, especially for large files.
+    #   The script loops over the arrays and then over then over the atoms.
+    #   This is slower than the other way around but it is more readable
+    #   and it is less memory expensive, especially for large files.
 
+    # ------------------#
     if ase is None:
         raise ImportError(
             "merge_trajectories requires the `ase` package to return the structure in ASE format"
         )
+
+    # ------------------#
+    if "positions" not in names:
+        raise ValueError("No 'positions' array found.")
+    if names[0] != "positions":
+        raise ValueError("The first elements must be `positions`.")
+
     # ------------------#
     pattern_extract = r"([^/]+)\.(.*?)_(.*?)\.(\w+)$"
     # check_names = set()
@@ -439,9 +524,6 @@ def merge_trajectories(files, names):
         name = matched.group(2)
         assert name == names[n], "some error"
 
-    if "positions" not in names:
-        raise ValueError("No 'positions' array found.")
-
     # ------------------#
     files = sorted(files, key=lambda x: "positions" not in x)
     traj = None
@@ -449,7 +531,20 @@ def merge_trajectories(files, names):
         matched = re.search(pattern_extract, os.path.basename(file))
         name = matched.group(2)
         if n == 0:
+
+            # Read the trajectory to get the positions
             traj = read_trajectory(file)
+
+            # ATTENTION:
+            # This is highly inefficient because the codes reads the whole trajectory
+            # and then takes only the snapshots of interest.
+            # In the future one should provide `stride` directly to `read_trajectory`.
+
+            # slice the trajectory using the stride
+            stride = strides[n]
+            if stride != 1:
+                traj = traj[::stride]
+
             if "positions" not in file:
                 raise ValueError(
                     f"File {file} is not a position file but is the first file."
@@ -459,7 +554,21 @@ def merge_trajectories(files, names):
                 raise ValueError(
                     f"File {file} is not a position file but is not the first file."
                 )
+
+            # Read the trajectory to get other arrays
             array = read_trajectory(file)
+
+            # ATTENTION:
+            # This is highly inefficient because the codes reads the whole trajectory
+            # and then takes only the snapshots of interest.
+            # In the future one should provide `stride` directly to `read_trajectory`.
+
+            # slice the trajectory using the stride
+            stride = strides[n]
+            if stride != 1:
+                array = array[::stride]
+
+            # add the read trajectory to the output as `ase.Atoms.arrays`
             for i in range(len(traj)):  # cycle over atoms
                 traj[i].arrays[name] = array[i].positions
 
@@ -471,15 +580,27 @@ def create_classical_trajectory(input_file, trajectories, properties):
     # author: Elia Stocco
     # date: November 12th, 2024
     # comments:
+    #   the code could be vastly improved by avoiding reading the whole trajectory from file
+    #   Have a look at the `ATTENTION` comments.
 
     if len(trajectories) > 0:
-        available = ["positions", "forces", "velocities"]
+        available = [
+            "positions",
+            "forces",
+            "velocities",
+            "momenta",
+            "becx",
+            "becy",
+            "becz",
+        ]
         okay = [a in available for a in trajectories]
         assert all(okay), "Some provided trajectories are not available."
 
     if "positions" not in trajectories:
         trajectories.append("positions")
+    trajectories = sorted(trajectories, key=lambda x: "positions" not in x)
 
+    # import these classes and modules here to avoid circular import errors.
     from ipi.utils.io.inputs import io_xml
     from ipi.inputs.simulation import InputSimulation
     from ipi.engine.outputs import TrajectoryOutput, PropertyOutput
@@ -491,6 +612,11 @@ def create_classical_trajectory(input_file, trajectories, properties):
         isimul = InputSimulation()
         isimul.parse(xml.fields[0][1])
         simul = isimul.fetch()
+
+    ### Beads
+    # check the number of beads
+    nbeads = simul.syslist[0].beads.nbeads
+    assert nbeads == 1, "A classical trajectory can only have `nbeads` == 1."
 
     ### Prefix
     prefix = simul.outtemplate.prefix
@@ -506,17 +632,16 @@ def create_classical_trajectory(input_file, trajectories, properties):
     if ipi_props is not None:
 
         # read the properties
-        pfile = f"{prefix}.{ipi_props.filename}"
-        if len(properties) > 0 and not os.path.exists(pfile):
-            raise ValueError(f"File {pfile} does not exists.")
-        props, _ = read_output(pfile)
+        prop_file = f"{prefix}.{ipi_props.filename}"
+        if len(properties) > 0 and not os.path.exists(prop_file):
+            raise ValueError(f"File {prop_file} does not exists.")
+        props, _ = read_output(prop_file)
 
-        # keep only the trajectories of interest
+        # keep only the properties of interest
         props = {key: props[key] for key in properties if key in props}
 
-    ### Trajectories
+    ### Trajectories files
     # Time and memory consuming.
-    # Let's built the output trajectory
 
     # check that positions have been saved to file
     ipi_trajs = [a for a in simul.outtemplate if isinstance(a, TrajectoryOutput)]
@@ -526,30 +651,58 @@ def create_classical_trajectory(input_file, trajectories, properties):
     # keep only the trajectories of interest
     ipi_trajs = [a for a in ipi_trajs if a.what in trajectories]
 
+    # move `positions` to the first place
+    ipi_trajs = sorted(ipi_trajs, key=lambda x: "positions" not in x.what)
+    # overwrite `trajectories` so that it will have the same ordering of `ipi_trajs`
+    trajectories = [a.what for a in ipi_trajs]
+
     ### Stride
-    # check the stride
-    strides = [a.stride for a in ipi_trajs]
+    # check the stride (of both properties and trajectories)
+    ipi_trajs_props = ipi_trajs if ipi_props is None else ipi_trajs + [ipi_props]
+    strides = [a.stride for a in ipi_trajs_props]
     max_stride = max(strides)
     okay = [max_stride % a == 0 for a in strides]
     assert all(okay), "Strides are not compatibles."
+    strides = [int(max_stride / s) for s in strides]
+    assert all(
+        [a * b.stride == max_stride for a, b in zip(strides, ipi_trajs)]
+    ), "Some errors occurred."
+    traj_strides = strides[:-1]
 
-    # check the stride
-    nbeads = simul.syslist[0].beads.nbeads
-    assert nbeads == 1, "A classical trajectory can only have `nbeads` == 1."
-
-    # built the list of ase.Atoms
-    files = [f"{prefix}.{traj.filename}_0.xyz" for traj in ipi_trajs]
-    for file in files:
+    # check that all the trajectory files exist
+    traj_files = [f"{prefix}.{traj.filename}_0.xyz" for traj in ipi_trajs]
+    for file in traj_files:
         assert os.path.exists(file), f"File '{file}' does not exist."
+
+    ### Trajectory building
+    # build the output trajectory
 
     # suppress the output fo messages to screen
     with SuppressOutput():
         # build the trajectory
-        traj = merge_trajectories(files, trajectories)
+        traj = merge_trajectories(traj_files, trajectories, traj_strides)
 
     # check that all the trajectories of interest have been correctly read
     keys = traj[0].arrays.keys()
     for name in trajectories:
         assert name in keys, f"'{name}' is not in the output trajectory."
+
+    ### Properties adding
+
+    # ATTENTION:
+    # This is highly inefficient because the codes reads all the properties
+    # and then takes only the snapshots of interest.
+    # In the future one should provide `stride` directly to `read_output`.
+
+    strided_properties = {}
+    stride = strides[-1]
+    for p in props.keys():
+        strided_properties[p] = props[p][::stride]
+
+    # Let's loop over the atoms and then over the properties
+    # Maybe the other way around might be faster.
+    for n, snapshot in enumerate(traj):
+        for p in props.keys():
+            snapshot.info[p] = strided_properties[p][n]
 
     return traj

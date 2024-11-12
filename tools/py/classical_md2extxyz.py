@@ -8,7 +8,7 @@ try:
 except ImportError:
     ase = None
 
-description = "Convert a classical i-PI trajectory to an extxyz file readable from ASE."
+description = "Convert a classical i-PI trajectory to an extxyz file readable by ASE."
 
 
 # ---------------------------------------#
@@ -30,7 +30,7 @@ def prepare_args():
         nargs="*",  # Allows zero or more arguments to be passed, creating a list
         required=False,
         **argv,
-        help="trajectories to be added to the extxyz file (default: %(default)s)",
+        help="trajectories to be added as `arrays` to the extxyz file (default: %(default)s)",
         default=["forces"],
     )
     parser.add_argument(
@@ -40,8 +40,8 @@ def prepare_args():
         nargs="*",  # Allows zero or more arguments to be passed, creating a list
         required=False,
         **argv,
-        help="trajectories to be added to the extxyz file (default: %(default)s)",
-        default=["potential", "stress"],
+        help="properties to be added as `info` to the extxyz file (default: %(default)s)",
+        default=["potential"],
     )
     parser.add_argument(
         "-o", "--output", type=str, required=True, **argv, help="output extxyz file"
@@ -64,17 +64,24 @@ def main():
         print("\t {:>20s}:".format(k), getattr(args, k))
     print()
 
-    print("\t Constructing the classical trajectory")
+    print("\t Constructing the classical trajectory ... ")
     atoms = create_classical_trajectory(args.input, args.trajectories, args.properties)
     print(
-        "\t The trajectory will have the following arrays: ",
+        f"\t The trajectory has {len(atoms)} snapshots.   | The least common multiple of all the strides has been used."
+    )
+    print(
+        "\t The trajectory has the following arrays: ",
         list(atoms[0].arrays.keys()),
+    )
+    print(
+        "\t The trajectory has the following info: ",
+        list(atoms[0].info.keys()),
     )
 
     print(f"\t The trajectory will be saved to '{args.output}'.")
-    write(args.output, atoms)
+    write(args.output, atoms, format="extxyz")
 
-    print("\t Job dobe :)")
+    print("\t Job dobe :)\n")
 
     return
 
