@@ -54,34 +54,43 @@ class DDW_with_explicit_bath_driver(Dummy_driver):
         i-pi-py_driver.py -m DoubleWell -o 500,2085,500,2085,0.1,1837,0.00,1,0,0,1,500
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(
+        self,
+        wb1=None,
+        v1=None,
+        wb2=None,
+        v2=None,
+        C=None,
+        m=None,
+        delta=None,
+        eta0=None,
+        eps1=None,
+        eps2=None,
+        deltaQ=None,
+        w_c=None,
+        *args,
+        **kwargs
+    ):
 
-        self.param = list(map(str, args))
         self.init = False
-        super().__init__(*args, **kwargs)
-
-    def check_parameters(self):
-        """Function that checks the arguments required to run the driver"""
-
         try:
-            param = list(map(float, self.args))
-            assert len(param) == 12
-            wb1 = param[0] * invcm2au
-            v1 = param[1] * invcm2au
-            wb2 = param[2] * invcm2au
-            v2 = param[3] * invcm2au
-            self.C = param[4]
-            self.m = param[5]
-            self.delta = param[6] * A2au
+            wb1 = wb1 * invcm2au
+            v1 = v1 * invcm2au
+            wb2 = wb2 * invcm2au
+            v2 = v2 * invcm2au
+            self.C = C
+            self.m = m
+            self.delta = delta * A2au
 
             self.bath_parameters = {}
             self.bath_parameters["m"] = self.m
+            self.bath_parameters["eta0"] = eta0
+            self.bath_parameters["eps1"] = eps1
+            self.bath_parameters["eps2"] = eps2
+            self.bath_parameters["deltaQ"] = deltaQ
+            self.bath_parameters["w_c"] = w_c * invcm2au
             self.bath_parameters["delta"] = self.delta
-            self.bath_parameters["eta0"] = param[7]
-            self.bath_parameters["eps1"] = param[8]
-            self.bath_parameters["eps2"] = param[9]
-            self.bath_parameters["deltaQ"] = param[10]
-            self.bath_parameters["w_c"] = param[11] * invcm2au
+        # def __init__(self, nbath, m, eta0, eps1, eps2, deltaQ, w_c, *args, **kwargs):
 
         except:
             print("Received arguments:")
@@ -92,6 +101,7 @@ class DDW_with_explicit_bath_driver(Dummy_driver):
 
         self.A2 = -0.5 * self.m * (wb2) ** 2
         self.B2 = ((self.m**2) * (wb2) ** 4) / (16 * v2)
+        super().__init__(*args, **kwargs)
 
     def __call__(self, cell, pos):
         """DoubleWell potential"""
