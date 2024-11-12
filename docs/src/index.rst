@@ -26,16 +26,16 @@ This documentation is structured as follows:
    :maxdepth: 2
 
    introduction
-   onlinereso
-   tutorials
-   features
    getting-started
+   features
    units
    input-files
    input-tags
    output-files
    output-tags
    distributed
+   tutorials
+   onlinereso
    faq
    troubleshooting
    contributing

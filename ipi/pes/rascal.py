@@ -1,45 +1,53 @@
 """Interface with librascal to run machine learning potentials"""
 
-import sys
 from .dummy import Dummy_driver
 
 from ipi.utils.mathtools import det_ut3x3
 from ipi.utils.units import unit_to_internal, unit_to_user
+from ipi.utils.messages import verbosity, warning
 
-try:
-    from rascal.models.genericmd import GenericMDCalculator as RascalCalc
-except:
-    RascalCalc = None
+RascalCalc = None
 
 __DRIVER_NAME__ = "rascal"
 __DRIVER_CLASS__ = "Rascal_driver"
 
-ERROR_MSG = """
-Rascal driver requires specification of a .json model file fitted with librascal, 
-and a template file that describes the chemical makeup of the structure. 
-Example: python driver.py -m rascal -u -o model.json,template.xyz
-"""
-
 
 class Rascal_driver(Dummy_driver):
-    def __init__(self, args=None, verbose=False):
-        super().__init__(args, verbose, error_msg=ERROR_MSG)
+    """
+    Driver for `librascal` MLIPs
+    The driver requires specification of the model JSON-formated definition,
+    and a template file that describes the chemical makeup
+    of the structure. Requires the librascal library
 
-        if RascalCalc is None:
+    Command-line:
+        i-pi-py_driver -m rascal -o model=model.json,template=template.xyz [...]
+
+    Parameters:
+        :param template: string, filename of an ASE-readable structure file
+            to initialize atomic number and types
+        :param model: string, filename of the torchscript model file
+    """
+
+    def __init__(self, model, template, *args, **kwargs):
+        global RascalCalc
+        warning(
+            "THIS PES HAS NOT BEEN TESTED FOLLOWING CONVERSION TO THE NEW PES API.",
+            verbosity.low,
+        )
+        try:
+            from rascal.models.genericmd import GenericMDCalculator as RascalCalc
+        except:
             raise ImportError("Couldn't load librascal bindings")
+        self.model = model
+        self.template = template
 
-    def check_arguments(self):
+        super().__init__(*args, **kwargs)
+
+    def check_parameters(self):
         """Check the arguments required to run the driver
 
         This loads the potential and atoms template in librascal
         """
-        arglist = self.args
-
-        if len(arglist) == 2:
-            self.model = arglist[0]
-            self.template = arglist[1]
-        else:
-            sys.exit(self.error_msg)
 
         self.rascal_calc = RascalCalc(self.model, True, self.template)
 
