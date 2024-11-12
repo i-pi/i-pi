@@ -64,7 +64,7 @@ def main():
         print("\t {:>20s}:".format(k), getattr(args, k))
     print()
 
-    print("\t Constructing the classical trajectory ... ")
+    print("\t Constructing the classical trajectory.")
     atoms = create_classical_trajectory(args.input, args.trajectories, args.properties)
     print(
         f"\t The trajectory has {len(atoms)} snapshots.   | The least common multiple of all the strides has been used."
@@ -81,7 +81,7 @@ def main():
     print(f"\t The trajectory will be saved to '{args.output}'.")
     write(args.output, atoms, format="extxyz")
 
-    print("\t Job dobe :)\n")
+    print("\t Job done :)\n")
 
     return
 

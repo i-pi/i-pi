@@ -530,10 +530,12 @@ def merge_trajectories(files, names, strides, formats):
     for n, file in enumerate(files):  # cycle over arrays
         matched = re.search(pattern_extract, os.path.basename(file))
         name = matched.group(2)
+        print(f"\t - reading file '{file}'")
         if n == 0:
 
             # Read the trajectory to get the positions
-            traj = read_trajectory(filename=file, format=formats[n])
+            with SuppressOutput():
+                traj = read_trajectory(filename=file, format=formats[n])
 
             # ATTENTION:
             # This is highly inefficient because the codes reads the whole trajectory
@@ -556,7 +558,8 @@ def merge_trajectories(files, names, strides, formats):
                 )
 
             # Read the trajectory to get other arrays
-            array = read_trajectory(file)
+            with SuppressOutput():
+                array = read_trajectory(file)
 
             # ATTENTION:
             # This is highly inefficient because the codes reads the whole trajectory
@@ -679,10 +682,8 @@ def create_classical_trajectory(input_file, trajectories, properties):
 
     formats = [a.format for a in ipi_trajs]
 
-    # suppress the output fo messages to screen
-    with SuppressOutput():
-        # build the trajectory
-        traj = merge_trajectories(traj_files, trajectories, traj_strides, formats)
+    # build the trajectory
+    traj = merge_trajectories(traj_files, trajectories, traj_strides, formats)
 
     # check that all the trajectories of interest have been correctly read
     keys = traj[0].arrays.keys()
