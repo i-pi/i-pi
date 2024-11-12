@@ -469,9 +469,7 @@ def create_classical_trajectory(input_file: str, trajectories: list[str]):
 
     enablePrint()
 
-    # number of output trajectories/properties
-    N = len(simul.outtemplate)
-
+    # properties have not added yet to the trajectory
     ipi_props = [a for a in simul.outtemplate if isinstance(a, PropertyOutput)]
     assert len(ipi_props) <= 1, "Only one (or zero) property output is supported"
     ipi_props = ipi_props[0] if len(ipi_props) == 1 else None
