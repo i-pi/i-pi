@@ -78,6 +78,12 @@ follows:
    propagated for one more time step, and new force requests will be
    dispatched.
 
+
+.. figure:: ../figures/ipi-comm.*
+   :width: 90.0%
+
+   A schematic simplified representation of the communication protocol 
+
 Parallelization
 ---------------
 
