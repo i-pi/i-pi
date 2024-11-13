@@ -204,7 +204,6 @@ def get_rp_freq(w0, nbeads, temp, mode="rate"):
         sys.exit()
 
     if mode == "rate":
-
         for n in range(w0.size):
             for k in range(nbeads):
                 if w0[n] == 0 and k == 0:
