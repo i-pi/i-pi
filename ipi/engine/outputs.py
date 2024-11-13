@@ -25,10 +25,6 @@ from ipi.engine.cell import *
 from ipi.utils.messages import get_identification_info
 from ipi import ipi_global_settings
 
-try:
-    from datetime import datetime
-except:
-    datetime = None
 
 __all__ = [
     "PropertyOutput",
@@ -232,13 +228,6 @@ class PropertyOutput(BaseOutput):
 
         info_string = get_identification_info()
         self.out.write(info_string + "#\n")
-
-        if datetime is not None:
-            # print nice header if information is available on the properties
-            ohead = "# Date and Time: {}".format(
-                datetime.now().strftime("%Y-%m-%d %H:%M")
-            )
-            self.out.write(ohead + "\n#\n")
 
         icol = 1
         for what in self.outlist:
