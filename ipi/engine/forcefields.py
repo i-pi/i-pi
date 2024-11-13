@@ -23,11 +23,9 @@ from ipi.utils.depend import dstrip
 from ipi.utils.io import read_file
 from ipi.utils.units import unit_to_internal
 from ipi.utils.distance import vector_separation
+from ipi.pes import __drivers__
 
-try:
-    import plumed
-except ImportError:
-    plumed = None
+plumed = None
 
 
 class ForceRequest(dict):
@@ -391,6 +389,58 @@ class FFEval(ForceField):
         request["status"] = "Done"
 
 
+class FFDirect(FFEval):
+    def __init__(
+        self,
+        latency=1.0,
+        offset=0.0,
+        name="",
+        pars=None,
+        dopbc=False,
+        active=np.array([-1]),
+        threaded=False,
+        pes="dummy",
+    ):
+        """Initialises FFDirect.
+
+        Args:
+            latency: The number of seconds the socket will wait before updating
+                the client list.
+            offset: A constant offset subtracted from the energy value given by the
+                client.
+            name: The name of the forcefield.
+            pars: A dictionary used to initialize the forcefield, if required.
+                Of the form {'name1': value1, 'name2': value2, ... }.
+            dopbc: Decides whether or not to apply the periodic boundary conditions
+                before sending the positions to the client code.
+            active: Indexes of active atoms in this forcefield
+
+        """
+
+        super().__init__(latency, offset, name, pars, dopbc, active, threaded)
+
+        self.pes = pes
+        try:
+            self.driver = __drivers__[self.pes](verbose=verbosity.high, **pars)
+        except ImportError:
+            # specific errors have already been triggered
+            raise
+        except Exception as err:
+            print(f"Error setting up PES mode {self.pes}")
+            print(__drivers__[self.pes].__doc__)
+            print("Error trace: ")
+            raise err
+
+    def evaluate(self, request):
+        results = list(self.driver(request["cell"][0], request["pos"].reshape(-1, 3)))
+
+        # ensure forces and virial have the correct shape to fit the results
+        results[1] = results[1].reshape(-1)
+        results[2] = results[2].reshape(3, 3)
+        request["result"] = results
+        request["status"] = "Done"
+
+
 class FFLennardJones(FFEval):
     """Basic fully pythonic force provider.
 
@@ -409,12 +459,14 @@ class FFLennardJones(FFEval):
 
     def __init__(
         self,
-        latency=1.0e-3,
+        latency=1.0,
         offset=0.0,
         name="",
         pars=None,
-        dopbc=False,
-        threaded=False,
+        dopbc=True,
+        active=np.array([-1]),
+        threaded=True,
+        interface=None,
     ):
         """Initialises FFLennardJones.
 
@@ -430,7 +482,7 @@ class FFLennardJones(FFEval):
 
         # a socket to the communication library is created or linked
         super(FFLennardJones, self).__init__(
-            latency, offset, name, pars, dopbc=dopbc, threaded=threaded
+            latency, offset, name, pars, dopbc=dopbc, threaded=threaded, active=active
         )
         self.epsfour = float(self.pars["eps"]) * 4
         self.sixepsfour = 6 * self.epsfour
@@ -678,8 +730,11 @@ class FFPlumed(FFEval):
            pars: Optional dictionary, giving the parameters needed by the driver.
         """
 
+        global plumed
         # a socket to the communication library is created or linked
-        if plumed is None:
+        try:
+            import plumed
+        except ImportError:
             raise ImportError(
                 "Cannot find plumed libraries to link to a FFPlumed object/"
             )
@@ -863,6 +918,14 @@ class FFYaff(FFEval):
 
         """
 
+        warning(
+            """
+                <ffyaff> is deprecated and might be removed in a future release of i-PI.
+                If you are interested in using it, please help port it to the PES
+                infrastructure.
+                """
+        )
+
         from yaff import System, ForceField, log
         import codecs
         import locale
@@ -954,6 +1017,14 @@ class FFsGDML(FFEval):
            sGDML_model: Filename contaning the sGDML model
 
         """
+
+        warning(
+            """
+                <ffsgdml> is deprecated and might be removed in a future release of i-PI.
+                If you are interested in using it, please help port it to the PES
+                infrastructure.
+                """
+        )
 
         # a socket to the communication library is created or linked
         super(FFsGDML, self).__init__(

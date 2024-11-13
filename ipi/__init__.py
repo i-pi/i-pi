@@ -12,6 +12,7 @@ __all__ = [
     "inputs",
     "interfaces",
     "utils",
+    "pes",
     "ipi_global_settings",
     "install_driver",
     "read_output",
