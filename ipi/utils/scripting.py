@@ -33,9 +33,10 @@ def simulation_xml(
     forcefield,
     motion,
     temperature=None,
-    outputs=None,
+    output=None,
     verbosity="quiet",
     safe_stride=20,
+    prefix=None,
 ):
     """
     A helper function to generate an XML string for an i-PI simulation input.
@@ -71,10 +72,20 @@ def simulation_xml(
     xml_ff = xml_parse_string(forcefield).fields[0][1]
     ff_name = xml_ff.attribs["name"]
 
+    # parses the outputs and overrides prefix
+    if output is None:
+        output = DEFAULT_OUTPUTS
+    if prefix is not None:
+        xml_output = xml_parse_string(output)
+        if xml_output.fields[0][0] != "output":
+            raise ValueError("the output parameter should be a valid 'output' block")
+        xml_output.fields[0][1].attribs["prefix"] = prefix
+        output = xml_write(xml_output)
+
     return f"""
 <simulation verbosity='{verbosity}' safe_stride='{safe_stride}'>
 {forcefield}
-{DEFAULT_OUTPUTS if outputs is None else outputs}
+{output}
 <system>
 {input_beads.write("beads")}
 {input_cell.write("cell")}
@@ -176,7 +187,7 @@ class InteractiveSimulation:
     def __init__(self, xml_input):
         self.simulation = Simulation.load_from_xml(xml_input)
 
-    def run(self, steps=1):
+    def run(self, steps=1, write_outputs=True):
         """Stepper through the simulation.
         Run the simulation interactively for the specified number of steps.
 
@@ -185,7 +196,7 @@ class InteractiveSimulation:
 
         print(self.simulation.step)
         self.simulation.tsteps = self.simulation.step + steps
-        self.simulation.run()
+        self.simulation.run(write_outputs=write_outputs)
         # saves the RESTART file
         self.simulation.chk.write(store=True)
         self.simulation.step += 1

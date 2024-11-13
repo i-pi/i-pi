@@ -16,6 +16,7 @@ input_xml = simulation_xml(
     ),
     motion=motion_nvt_xml(timestep=0.5 * ase.units.fs),
     temperature=400,
+    prefix="script",
 )
 
 print("Running with XML input:\n\n", input_xml)
@@ -37,7 +38,7 @@ print(
     sim.properties("potential"),
     sim.properties("temperature"),
 )
-sim.run(10)
+sim.run(10, write_outputs=False)  # we can suppress the outputs
 print(
     sim.properties("time") / ase.units.fs,
     sim.properties("potential"),
