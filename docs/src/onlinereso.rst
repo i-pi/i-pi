@@ -58,6 +58,9 @@ Flagship school, are available here:
 Tutorials from the 2023 CECAM Flagship school are available here:
 `i-PI 2023 tutorials <https://github.com/i-pi/piqm2023-tutorial>`_.
 
+Tutorial from one of our developers on using machine learning interatomic potentials with i-PI are available here:
+`MLIPs-with-i-PI <https://github.com/venkatkapil24/MLIPs-with-iPI>`_.
+
 Note that these examples use some features 
 (such as qTIP4P/F water and the Zundel cation potentials in the driver code, 
 and optionally also CP2K). Instructions on how to install and run these codes 
