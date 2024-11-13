@@ -16,7 +16,7 @@ import time
 from copy import deepcopy
 
 from ipi.utils.depend import depend_value, dpipe, dproperties
-from ipi.utils.io.inputs.io_xml import xml_parse_file, xml_parse_string
+from ipi.utils.io.inputs.io_xml import xml_parse_file, xml_parse_string, xml_write
 from ipi.utils.messages import verbosity, info, warning, banner
 from ipi.utils.softexit import softexit
 import ipi.engine.outputs as eoutputs
@@ -108,15 +108,10 @@ class Simulation:
         simulation = input_simulation.fetch()
 
         # echo the input file if verbose enough
-        if verbosity.low:
-            print(" @simulation: i-PI loaded input file: ", xml_input)
         if verbosity.medium:
             print(" --- begin input file content ---")
-            ifile = open(xml_input, "r")
-            for line in ifile.readlines():
-                print(line, end=" ")
+            print(xml_write(xmlrestart))
             print(" ---  end input file content  ---")
-            ifile.close()
 
         # pipe between the components of the simulation
         simulation.bind(read_only)
