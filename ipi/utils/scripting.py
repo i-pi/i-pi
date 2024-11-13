@@ -6,17 +6,16 @@ from ipi.inputs.cell import InputCell
 from ipi.engine.beads import Beads
 from ipi.engine.cell import Cell
 from ipi.engine.simulation import Simulation
-from ipi.utils.io.inputs.io_xml import (
-    xml_node,
-    xml_parse_string,
-    xml_parse_file,
-    xml_write,
-    xml_edit,
-)
+from ipi.utils.io.inputs.io_xml import xml_parse_string, xml_write
 
 from ipi.utils.io.backends.io_ase import ase, _asecheck
 
-__all__ = ["simulation_xml", "motion_nvt_xml", "forcefield_xml" "InteractiveSimulation"]
+__all__ = [
+    "simulation_xml",
+    "motion_nvt_xml",
+    "forcefield_xml",
+    "InteractiveSimulation",
+]
 
 
 DEFAULT_OUTPUTS = """
@@ -201,7 +200,7 @@ class InteractiveSimulation:
         self.simulation.chk.write(store=True)
         self.simulation.step += 1
 
-    def run_step(self, steps):
+    def run_step(self, step):
         self.simulation.run_step(step)
 
     def properties(self, property):

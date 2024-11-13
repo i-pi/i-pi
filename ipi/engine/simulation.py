@@ -109,7 +109,7 @@ class Simulation:
 
         # echo the input file if verbose enough
         if verbosity.low:
-            print(" @simulation: i-PI loaded input file: ", fn_input)
+            print(" @simulation: i-PI loaded input file: ", xml_input)
         if verbosity.medium:
             print(" --- begin input file content ---")
             ifile = open(xml_input, "r")

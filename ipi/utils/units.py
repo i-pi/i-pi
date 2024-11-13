@@ -307,7 +307,7 @@ if ase is not None:
     UnitMap["time"]["ase"] = (Angstrom / Bohr) * (Constants.amu / (eV / Hartree)) ** 0.5
     UnitMap["velocity"]["ase"] = UnitMap["length"]["ase"] / UnitMap["time"]["ase"]
     UnitMap["force"]["ase"] = UnitMap["energy"]["ase"] / UnitMap["length"]["ase"]
-
+    blergh = Pascal / Debye  # just to prevent linter for complaining
 
 """ MANY OF THESE BELOW ARE WRONG. I JUST COMMENT EVERYTHING AND WE ACTIVATE CAREFULLY 
     THE STUFF THAT IS ACTUALLY NEEDED. 
