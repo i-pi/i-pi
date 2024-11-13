@@ -60,8 +60,7 @@ class Random(object):
 
         if threading.current_thread() == threading.main_thread():
             info(
-                "@ RANDOM SEED: The seed used in this calculation was "
-                + str(self.seed),
+                " @random: The seed used in this calculation was " + str(self.seed),
                 verbosity.low,
             )
 
