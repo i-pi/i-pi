@@ -180,7 +180,9 @@ class PropertyOutput(BaseOutput):
        system: The system object to get the data to be output from.
     """
 
-    def __init__(self, filename="out", stride=1, flush=1, outlist=None):
+    def __init__(
+        self, filename="out", stride=1, flush=1, verbosity="low", outlist=None
+    ):
         """Initializes a property output stream opening the corresponding
         file name.
 
@@ -201,6 +203,9 @@ class PropertyOutput(BaseOutput):
         self.outlist = np.asarray(outlist, np.dtype("|U1024"))
         self.flush = flush
         self.nout = 0
+        if verbosity not in ["low", "high"]:
+            raise ValueError(f"`{verbosity}` can only be `low` or `high`.")
+        self.verbosity = verbosity
 
     def bind(self, system, mode="w"):
         """Binds output proxy to System object.
@@ -226,8 +231,10 @@ class PropertyOutput(BaseOutput):
     def print_header(self):
         # print nice header if information is available on the properties
 
-        info_string = get_identification_info()
-        self.out.write(info_string + "#\n")
+        if self.verbosity == "high":
+            info_string = get_identification_info()
+            info_string = info_string.replace("#", "###")
+            self.out.write(info_string + "#\n")
 
         icol = 1
         for what in self.outlist:
