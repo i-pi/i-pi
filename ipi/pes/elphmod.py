@@ -1,6 +1,7 @@
 """Interface with [elphmod](https://github.com/janberges/elphmod) MD driver."""
 
 import sys
+import os
 from .dummy import Dummy_driver
 
 from ipi.utils.messages import verbosity, warning
@@ -13,21 +14,26 @@ class ModelIIIDriver(Dummy_driver):
     """Wrapper around elphmod MD driver.
     A pickled driver instance is required (see elphmod.md.Driver.save).
 
-    Example: python3 driver.py -u -m elphmod -o driver.pickle
+    Example: python3 driver.py -u -m elphmod -o driver=driver.pickle
     """
 
-    def check_parameters(self):
-        """Check arguments and load driver instance."""
-        warning(
-            "THIS PES HAS NOT BEEN TESTED FOLLOWING CONVERSION TO THE NEW PES API.",
-            verbosity.low,
-        )
+    def __init__(self, *args, **kwargs):
         import elphmod
+        from icecream import ic
 
-        if len(self.args) != 1:
-            sys.exit(self.__doc__)
-
-        self.driver = elphmod.md.Driver.load(self.args[0])
+        ic(args)
+        ic(kwargs)
+        filename = kwargs["driver"]
+        if not os.path.exists(filename):
+            raise ValueError(f"File '{filename}' does not exist.")
+        self.driver = elphmod.md.Driver.load(filename)
+        if self.driver is None:
+            raise ValueError(
+                f"Some error occured within `ModelIIIDriver.__init__` when trying to load the driver from file '{filename}'."
+            )
+        del kwargs["driver"]
+        super().__init__(*args, **kwargs)
+        pass
 
     def __call__(self, cell, pos):
         """Calculate energy and forces for given structure."""
