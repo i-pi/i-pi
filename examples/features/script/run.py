@@ -1,69 +1,37 @@
 #!/usr/bin/python
+from ipi.utils.scripting import setup_forcefield, setup_nvt, InteractiveSimulation
+import ase.io
 
-from ipi.engine.simulation import Simulation
-from ipi.utils.messages import verbosity
-import subprocess
-
-import numpy as np
-from ipi.utils.units import Elements
-from ipi.inputs.beads import InputBeads
-from ipi.inputs.cell import InputCell
-from ipi.engine.beads import Beads
-from ipi.engine.cell import Cell
-from ipi.utils.io.inputs.io_xml import (
-    xml_node,
-    xml_parse_string,
-    xml_parse_file,
-    xml_write,
-    xml_edit,
+# There are utilities to quickly set up XML inputs for commonly-used simulations
+data = ase.io.read("water-64.xyz")
+input_xml = setup_nvt(
+    structures=data,
+    forcefield=setup_forcefield(
+        name="harmonic", mode="direct", pes="harmonic", parameters="{k1:1e-3}"
+    ),
+    temperature=400,
+    timestep=0.5,
 )
 
-import ase, ase.io
+# The main object for scripting is `InteractiveSimulation`, that is initialized from
+# and XML input and acts as a wrapper around an i-PI simulation object
+sim = InteractiveSimulation(input_xml)
 
+# `properties` accesses the (well) properties of the simulation object
+print(sim.properties("potential"), sim.properties("kinetic_md"))
+# `run` advances the interactive simulation by one (or the prescribed number) of steps
+sim.run(10)
+print(sim.properties("potential"), sim.properties("kinetic_md"))
+sim.run(10)
+print(sim.properties("potential"), sim.properties("kinetic_md"))
 
-def setup_system(xml_template, atoms):
-    pass
+# `get_structures` dumps the state of the system as ASE Atoms objects, possibly listing
+# all systems and beads
+ase.io.write("final_positions.xyz", sim.get_structures())
 
-
-data = ase.io.read("./water-64.xyz", 0)
-beads = Beads(nbeads=1, natoms=len(data))
-beads.q = data.positions.flatten() / 0.529177
-beads.names = np.array(data.symbols)
-beads.m = np.array([Elements.mass(n) for n in beads.names])
-
-input_beads = InputBeads()
-input_beads.store(beads)
-xml_beads = xml_parse_string(input_beads.write("beads")).fields[0][1]
-
-print("CELL ", data.cell)
-cell = Cell(h=np.array(data.cell) / 0.529177)
-input_cell = InputCell()
-input_cell.store(cell)
-xml_cell = xml_parse_string(input_cell.write("cell")).fields[0][1]
-
-xml_template = xml_parse_file("input.xml")
-
-print(xml_template)
-
-xml_edit(xml_template, ["system", "initialize"], xml_beads, mode="remove")
-xml_edit(xml_template, ["system"], xml_beads, mode="add")
-xml_edit(xml_template, ["system"], xml_cell, mode="add")
-xml_edited = xml_write(xml_template)
-print(xml_edited)
-sim = Simulation.load_from_xml(xml_edited)
-verbosity.level = "quiet"
-
-print(sim.syslist[0].beads.q[0, :3])
-print(sim.syslist[0].beads.p[0, :3])
-driver = subprocess.Popen(["i-pi-driver", "-u", "-a", "h2o-md.1", "-m", "qtip4pf"])
-
-print("# istep V K")
-for istep in range(10):
-    sim.run_step(istep)
-    print(
-        istep,
-        sim.syslist[0].properties["potential"][0],
-        sim.syslist[0].properties["kinetic_md"][0],
-    )
-sim.stop()
-driver.wait()
+# we can also set the simulation state
+structure = sim.get_structures()
+structure.positions[:] = data.positions
+structure.arrays["ipi_velocities"][:] = 0
+sim.set_structures(structure)
+print(sim.properties("potential"), sim.properties("kinetic_md"))
