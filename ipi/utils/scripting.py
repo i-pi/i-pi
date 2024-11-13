@@ -183,8 +183,12 @@ class InteractiveSimulation:
         :param steps: int, number of steps the simulation should be advanced by
         """
 
+        print(self.simulation.step)
         self.simulation.tsteps = self.simulation.step + steps
         self.simulation.run()
+        # saves the RESTART file
+        self.simulation.chk.write(store=True)
+        self.simulation.step += 1
 
     def run_step(self, steps):
         self.simulation.run_step(step)

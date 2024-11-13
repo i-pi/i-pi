@@ -26,6 +26,8 @@ sim.run(10)
 print(sim.properties("time")/ase.units.fs, sim.properties("potential"), sim.properties("temperature"))
 sim.run(10)
 print(sim.properties("time")/ase.units.fs, sim.properties("potential"), sim.properties("temperature"))
+sim.run(10)
+print(sim.properties("time")/ase.units.fs, sim.properties("potential"), sim.properties("temperature"))
 
 # `get_structures` dumps the state of the system as ASE Atoms objects, possibly listing
 # all systems and beads
