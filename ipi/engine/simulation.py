@@ -108,8 +108,8 @@ class Simulation:
 
         # echo the input file if verbose enough
         if verbosity.low:
-            print(" # i-PI loaded input file: ", fn_input)
-        elif verbosity.medium:
+            print(" @simulation: i-PI loaded input file: ", fn_input)
+        if verbosity.medium:
             print(" --- begin input file content ---")
             ifile = open(fn_input, "r")
             for line in ifile.readlines():
@@ -151,7 +151,7 @@ class Simulation:
                 cumulative total.
         """
 
-        info(" # Initializing simulation object ", verbosity.low)
+        info(" @simulation: Initializing simulation object ", verbosity.low)
         self.prng = prng
         self.mode = mode
         self.threading = threads
@@ -268,7 +268,9 @@ class Simulation:
         if self.step < self.tsteps:
             self.step += 1
         if not self.rollback:
-            info("SOFTEXIT: Saving the latest status at the end of the step")
+            info(
+                " @simulation.softexit: Saving the latest status at the end of the step"
+            )
             self.chk.store()
 
         self.chk.write(store=False)
@@ -377,7 +379,7 @@ class Simulation:
                 or (verbosity.low and self.step % 1000 == 0)
             ):
                 info(
-                    " # Average timings at MD step % 7d. t/step: %10.5e"
+                    " @simulation.run: Average timings at MD step % 7d. t/step: %10.5e"
                     % (self.step, ttot / cstep)
                 )
                 cstep = 0
@@ -396,11 +398,13 @@ class Simulation:
                         info(line)
 
             if os.path.exists("EXIT"):
-                info(" # EXIT file detected! Bye bye!", verbosity.low)
+                info(" @simulation.run: EXIT file detected! Bye bye!", verbosity.low)
                 break
 
             if (self.ttime > 0) and (time.time() - simtime > self.ttime):
-                info(" # Wall clock time expired! Bye bye!", verbosity.low)
+                info(
+                    " @simulation.run: Wall clock time expired! Bye bye!", verbosity.low
+                )
                 break
 
         self.rollback = False
