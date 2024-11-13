@@ -1,29 +1,31 @@
 #!/usr/bin/python
-from ipi.utils.scripting import setup_forcefield, setup_nvt, InteractiveSimulation
-import ase.io
+from ipi.utils.scripting import simulation_xml, forcefield_xml, motion_nvt_xml, InteractiveSimulation
+import ase, ase.io
 
 # There are utilities to quickly set up XML inputs for commonly-used simulations
 data = ase.io.read("water-64.xyz")
-input_xml = setup_nvt(
+input_xml = simulation_xml(
     structures=data,
-    forcefield=setup_forcefield(
+    forcefield=forcefield_xml(
         name="harmonic", mode="direct", pes="harmonic", parameters="{k1:1e-3}"
     ),
-    temperature=400,
-    timestep=0.5,
+    motion=motion_nvt_xml(timestep=0.5 * ase.units.fs),
+    temperature=400,    
 )
+
+print("Running with XML input:\n\n", input_xml)
 
 # The main object for scripting is `InteractiveSimulation`, that is initialized from
 # and XML input and acts as a wrapper around an i-PI simulation object
 sim = InteractiveSimulation(input_xml)
 
 # `properties` accesses the (well) properties of the simulation object
-print(sim.properties("potential"), sim.properties("kinetic_md"))
+print(sim.properties("time")/ase.units.fs, sim.properties("potential"), sim.properties("temperature"))
 # `run` advances the interactive simulation by one (or the prescribed number) of steps
 sim.run(10)
-print(sim.properties("potential"), sim.properties("kinetic_md"))
+print(sim.properties("time")/ase.units.fs, sim.properties("potential"), sim.properties("temperature"))
 sim.run(10)
-print(sim.properties("potential"), sim.properties("kinetic_md"))
+print(sim.properties("time")/ase.units.fs, sim.properties("potential"), sim.properties("temperature"))
 
 # `get_structures` dumps the state of the system as ASE Atoms objects, possibly listing
 # all systems and beads

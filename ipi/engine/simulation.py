@@ -293,7 +293,7 @@ class Simulation:
 
         self.chk.write(store=False)
 
-    def run(self):
+    def run(self, write_outputs=True):
         """Runs the simulation.
 
         Does all the simulation steps, and outputs data to the appropriate files
@@ -302,7 +302,7 @@ class Simulation:
         """
 
         # prints inital configuration -- only if we are not restarting
-        if self.step == 0:
+        if self.step == 0 and write_outputs:
             self.step = -1
             # must use multi-threading to avoid blocking in multi-system runs with WTE
             if self.threading:
@@ -346,18 +346,19 @@ class Simulation:
                 # Don't write if we are about to exit.
                 break
 
-            if self.threading:
-                stepthreads = []
-                for o in self.outputs:
-                    if o.active():  # don't start a thread if it's not needed
-                        st = self.executor.submit(o.write)
-                        stepthreads.append(st)
+            if write_outputs:
+                if self.threading:
+                    stepthreads = []
+                    for o in self.outputs:
+                        if o.active():  # don't start a thread if it's not needed
+                            st = self.executor.submit(o.write)
+                            stepthreads.append(st)
 
-                for st in stepthreads:
-                    st.result()
-            else:
-                for o in self.outputs:
-                    o.write()
+                    for st in stepthreads:
+                        st.result()
+                else:
+                    for o in self.outputs:
+                        o.write()
 
             steptime += time.time()
             ttot += steptime

@@ -13,7 +13,7 @@ from ipi.utils.messages import verbosity, info
 
 try:
     import ase
-    from ase.units import Bohr, Hartree, eV, Angstrom, Pascal, kB, Debye, _amu
+    from ase.units import Bohr, Hartree, eV, Angstrom, Pascal, kB, Debye
 except ImportError:
     ase = None
 
@@ -299,20 +299,33 @@ UnitMap = {
 # Conditionally includes "ase" units for each quantity
 if ase is not None:
     # Conversion factors from atomic units to ASE units
+
+    UnitMap["undefined"]["ase"] = 1.0
+    UnitMap["energy"]["ase"] = eV / Hartree
+    UnitMap["length"]["ase"] = Angstrom / Bohr
+    UnitMap["temperature"]["ase"] = kB * eV / Hartree
+    UnitMap["time"]["ase"] = (Angstrom / Bohr) * (Constants.amu / (eV / Hartree)) ** 0.5
+    UnitMap["velocity"]["ase"] = UnitMap["length"]["ase"] / UnitMap["time"]["ase"]
+    UnitMap["force"]["ase"] = UnitMap["energy"]["ase"] / UnitMap["length"]["ase"]
+
+
+""" MANY OF THESE BELOW ARE WRONG. I JUST COMMENT EVERYTHING AND WE ACTIVATE CAREFULLY 
+    THE STUFF THAT IS ACTUALLY NEEDED. 
     conversion_factors = {
         "undefined": {"ase": 1},
-        "energy": {"ase": 1 / (Hartree / eV)},
-        "temperature": {"ase": kB},
+        "energy": {"ase": eV / Hartree},
+        "temperature": {"ase": kB * eV / Hartree},
+        "length": {"ase": 1 / (Bohr / Angstrom)},
         "time": {
             "ase": 1
-            / ((Bohr / Angstrom) * (1 / (Hartree / eV)) ** 0.5 * (_amu / 1) ** 0.5)
+            / ((Bohr / Angstrom) * (Constants.amu / (Hartree / eV)) ** 0.5)
         },
         "frequency": {
             "ase": (Bohr / Angstrom) * (1 / (Hartree / eV)) ** 0.5 * (_amu / 1) ** 0.5
         },
         "electric-field": {"ase": 1 / (Hartree / (Bohr * eV / Angstrom))},
         "electric-dipole": {"ase": 1 / (Bohr / Debye)},
-        "length": {"ase": 1 / (Bohr / Angstrom)},
+        
         "volume": {"ase": 1 / ((Bohr**3) / (Angstrom**3))},
         "velocity": {
             "ase": 1 / ((Hartree / eV) ** 0.5 * (Bohr / Angstrom) / (_amu / 1) ** 0.5)
@@ -333,7 +346,7 @@ if ase is not None:
     for quantity, factors in conversion_factors.items():
         if quantity in UnitMap:
             UnitMap[quantity].update(factors)
-
+"""
 
 # a list of magnitude prefixes
 UnitPrefix = {
