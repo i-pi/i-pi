@@ -11,6 +11,7 @@ import numpy as np
 from ipi.engine.forcefields import (
     ForceField,
     FFSocket,
+    FFDirect,
     FFLennardJones,
     FFDebye,
     FFPlumed,
@@ -21,6 +22,7 @@ from ipi.engine.forcefields import (
     FFCavPhSocket,
 )
 from ipi.interfaces.sockets import InterfaceSocket
+from ipi.pes import __drivers__
 import ipi.engine.initializer
 from ipi.inputs.initializer import *
 from ipi.utils.inputvalue import *
@@ -28,6 +30,7 @@ from ipi.utils.messages import verbosity, warning
 
 __all__ = [
     "InputFFSocket",
+    "InputFFDirect",
     "InputFFLennardJones",
     "InputFFDebye",
     "InputFFPlumed",
@@ -135,6 +138,8 @@ class InputForceField(Input):
         self.activelist.store(ff.active)
         self.threaded.store(ff.threaded)
 
+    _FFCLASS = ForceField
+
     def fetch(self):
         """Creates a ForceField object.
 
@@ -144,7 +149,7 @@ class InputForceField(Input):
 
         super(InputForceField, self).fetch()
 
-        return ForceField(
+        return self._FFCLASS(
             pars=self.parameters.fetch(),
             name=self.name.fetch(),
             latency=self.latency.fetch(),
@@ -336,6 +341,49 @@ class InputFFSocket(InputForceField):
             raise ValueError("Negative timeout parameter specified.")
 
 
+class InputFFDirect(InputForceField):
+    fields = {
+        "pes": (
+            InputValue,
+            {
+                "dtype": str,
+                "default": "dummy",
+                "options": list(__drivers__.keys()),
+                "help": "Type of PES that should be used to evaluate the forcefield",
+            },
+        ),
+    }
+    fields.update(InputForceField.fields)
+
+    attribs = {}
+    attribs.update(InputForceField.attribs)
+
+    default_help = """ Direct potential that evaluates forces through a Python
+    call, using PES providers from a list of possible external codes. The available
+    PES interfaces are listed into the `ipi/pes` folder, and are the same available
+    for the Python driver. The `<parameters>` field should contain a dictionary
+    of the specific option of the chosen PES.
+    """
+    default_label = "FFDirect"
+
+    def store(self, ff):
+        super().store(ff)
+        self.pes.store(ff.pes)
+
+    def fetch(self):
+        super().fetch()
+
+        return FFDirect(
+            pars=self.parameters.fetch(),
+            name=self.name.fetch(),
+            latency=self.latency.fetch(),
+            offset=self.offset.fetch(),
+            dopbc=self.pbc.fetch(),
+            threaded=self.threaded.fetch(),
+            pes=self.pes.fetch(),
+        )
+
+
 class InputFFLennardJones(InputForceField):
     attribs = {}
     attribs.update(InputForceField.attribs)
@@ -344,29 +392,7 @@ class InputFFLennardJones(InputForceField):
                    Expects standard LJ parameters, e.g. { eps: 0.1, sigma: 1.0 }. """
     default_label = "FFLJ"
 
-    def store(self, ff):
-        super(InputFFLennardJones, self).store(ff)
-
-    def fetch(self):
-        super(InputFFLennardJones, self).fetch()
-
-        return FFLennardJones(
-            pars=self.parameters.fetch(),
-            name=self.name.fetch(),
-            latency=self.latency.fetch(),
-            offset=self.offset.fetch(),
-            dopbc=self.pbc.fetch(),
-            threaded=self.threaded.fetch(),
-        )
-
-        if self.slots.fetch() < 1 or self.slots.fetch() > 5:
-            raise ValueError(
-                "Slot number " + str(self.slots.fetch()) + " out of acceptable range."
-            )
-        if self.latency.fetch() < 0:
-            raise ValueError("Negative latency parameter specified.")
-        if self.timeout.fetch() < 0.0:
-            raise ValueError("Negative timeout parameter specified.")
+    _FFCLASS = FFLennardJones
 
 
 class InputFFdmd(InputForceField):
@@ -747,6 +773,7 @@ class InputFFCommittee(InputForceField):
 
     dynamic = {
         "ffsocket": (InputFFSocket, {"help": InputFFSocket.default_help}),
+        "ffdirect": (InputFFDirect, {"help": InputFFDirect.default_help}),
         "fflj": (InputFFLennardJones, {"help": InputFFLennardJones.default_help}),
         "ffdebye": (InputFFDebye, {"help": InputFFDebye.default_help}),
         "ffplumed": (InputFFPlumed, {"help": InputFFPlumed.default_help}),

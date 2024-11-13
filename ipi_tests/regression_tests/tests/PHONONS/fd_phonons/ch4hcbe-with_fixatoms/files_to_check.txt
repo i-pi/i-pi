@@ -1,0 +1,8 @@
+        filename                        format
+----------------------------------------------------------
+ref_vib.xc.xyz                  xyz
+ref_vib.out                     numpy
+ref_vib.phonons.dynmat          numpy  all,1e-8,1e-8
+ref_vib.phonons.eigval          numpy  all,1e-8,1e-8
+ref_vib.phonons_full.hess       numpy  all,1e-8,1e-8
+ref_vib.phonons.hess            numpy  all,1e-8,1e-8

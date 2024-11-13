@@ -1,5 +1,5 @@
 #!/bin/bash
-# usage: run_profile.sh [-p] natoms [ndriver]
+# usage: run_profiling.sh [-p] natoms [ndriver]
 # run a mock simulation using an natoms box, -p activates yappi profiling
 
 # Default value for natoms

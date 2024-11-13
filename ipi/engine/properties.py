@@ -1075,9 +1075,8 @@ class Properties:
         """
 
         if self.ensemble.temp > 0 and (
-            self.motion.fixcom or len(self.motion.fixatoms) > 0
+            self.motion.fixcom or len(self.motion.fixatoms_dof) > 0
         ):
-
             dp = np.zeros_like(self.beads.p)  # correction
             tempfactor = np.sqrt(Constants.kb * self.ensemble.temp * self.beads.nbeads)
 
@@ -1090,10 +1089,10 @@ class Properties:
 
                 dp += dstrip(self.beads.m3) * vcm
 
-            if len(self.motion.fixatoms) > 0:
-                for i in self.motion.fixatoms:
-                    pi = self.beads.sm3[0, 3 * i] * tempfactor
-                    dp[:, 3 * i : 3 * i + 3] = pi
+            if len(self.motion.fixatoms_dof) > 0:
+                for i in self.motion.fixatoms_dof:
+                    pi = self.beads.sm3[0, i] * tempfactor
+                    dp[:, i] = pi
 
             # we have to change p in place because the kinetic energy
             # can depend on nm masses

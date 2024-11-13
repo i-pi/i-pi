@@ -87,6 +87,7 @@ objects = {
     "h0": cell.InputCell(),
     "forcefield": forcefields.InputForceField(),
     "ffsocket": forcefields.InputFFSocket(),
+    "ffdirect": forcefields.InputFFDirect(),
     "fflj": forcefields.InputFFLennardJones(),
     "ffdebye": forcefields.InputFFDebye(),
     "ffplumed": forcefields.InputFFPlumed(),
