@@ -82,7 +82,12 @@ follows:
 .. figure:: ../figures/ipi-comm.*
    :width: 90.0%
 
-   A schematic simplified representation of the communication protocol 
+   A schematic simplified representation of the communication protocol.
+   We note that most of the clients do not make use of the 'NEEDINIT' option, 
+   The communication is *asynchronous* but we have omited the 'waiting' blocks
+   for simplicity.
+
+   
 
 Parallelization
 ---------------
