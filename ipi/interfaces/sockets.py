@@ -486,11 +486,11 @@ class Driver(DriverSocket):
         if mxtra:
             try:
                 mxtradict = json.loads(mxtra)
-                info("Extra string JSON has been loaded.", verbosity.debug)
+                info("@driver.getforce: Extra string JSON has been loaded.", verbosity.debug)
             except:
                 # if we can't parse it as a dict, issue a warning and carry on
                 info(
-                    "Extra string could not be loaded as a dictionary. Extra=" + mxtra,
+                    "@driver.getforce: Extra string could not be loaded as a dictionary. Extra=" + mxtra,
                     verbosity.debug,
                 )
                 mxtradict = {}
@@ -654,7 +654,7 @@ class InterfaceSocket(object):
             try:
                 self.server.bind(self.sockets_prefix + self.address)
                 info(
-                    "Created unix socket with address " + self.address, verbosity.medium
+                    " @interfacesocket.open: Created unix socket with address " + self.address, verbosity.medium
                 )
             except socket.error:
                 raise RuntimeError(
@@ -676,7 +676,7 @@ class InterfaceSocket(object):
 
             self.server.bind((self.address, self.port))
             info(
-                "Created inet socket with address "
+                " @interfacesocket.open: Created inet socket with address "
                 + self.address
                 + " and port number "
                 + str(self.port),
@@ -700,7 +700,7 @@ class InterfaceSocket(object):
     def close(self):
         """Closes down the socket."""
 
-        info(" @SOCKET: Shutting down the driver interface.", verbosity.low)
+        info(" @interfacesocket.close: Shutting down the driver interface.", verbosity.low)
 
         for c in self.clients:
             try:
@@ -718,7 +718,7 @@ class InterfaceSocket(object):
             self.server.close()
         except:
             info(
-                " @SOCKET: Problem shutting down the server socket. Will just continue and hope for the best.",
+                " @interfacesocket.close: Problem shutting down the server socket. Will just continue and hope for the best.",
                 verbosity.low,
             )
         if self.mode == "unix":
@@ -795,7 +795,7 @@ class InterfaceSocket(object):
                 client.settimeout(TIMEOUT)
                 driver = Driver(client)
                 info(
-                    " @SOCKET:   Client asked for connection from "
+                    " @interfacesocket.pool_update:   Client asked for connection from "
                     + str(address)
                     + ". Now hand-shaking.",
                     verbosity.low,
@@ -805,7 +805,7 @@ class InterfaceSocket(object):
                     driver.exit_on_disconnect = self.exit_on_disconnect
                     self.clients.append(driver)
                     info(
-                        " @SOCKET:   Handshaking was successful. Added to the client list.",
+                        " @interfacesocket.pool_update:   Handshaking was successful. Added to the client list.",
                         verbosity.low,
                     )
                     self.poll_iter = UPDATEFREQ  # if a new client was found, will try again harder next time
@@ -948,7 +948,7 @@ class InterfaceSocket(object):
             r["status"] = "Running"
             self.prlist.remove(r)
             info(
-                " @SOCKET: %s Assigning [%5s] request id %4s to client with last-id %4s (% 3d/% 3d : %s)"
+                " @interfacesocket.dispatch_free_client: %s Assigning [%5s] request id %4s to client with last-id %4s (% 3d/% 3d : %s)"
                 % (
                     time.strftime("%y/%m/%d-%H:%M:%S"),
                     match_ids,
