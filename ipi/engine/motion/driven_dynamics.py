@@ -8,7 +8,12 @@ import numpy as np
 
 from ipi.utils.depend import *
 from ipi.utils.units import Constants
-from ipi.engine.motion.dynamics import NVEIntegrator, DummyIntegrator, Dynamics
+from ipi.engine.motion.dynamics import (
+    NVEIntegrator,
+    DummyIntegrator,
+    Dynamics,
+    NVTIntegrator,
+)
 from ipi.utils.units import UnitMap
 import re
 
@@ -38,7 +43,7 @@ class DrivenDynamics(Dynamics):
             effective classical temperature.
     """
 
-    driven_integrators = ["eda-nve"]
+    driven_integrators = ["eda-nve", "eda-nvt"]
 
     def __init__(
         self,
@@ -60,6 +65,9 @@ class DrivenDynamics(Dynamics):
         if self.enstype == "eda-nve":
             # NVE integrator with an external time-dependent electric field
             self.integrator = EDANVEIntegrator()
+        elif self.enstype == "eda-nvt":
+            # NVE integrator with an external time-dependent electric field
+            self.integrator = EDANVTIntegrator()
         else:
             self.integrator = DummyIntegrator()
 
@@ -98,7 +106,7 @@ class EDAIntegrator(DummyIntegrator):
     def td_pstep(self, time, level=0):
         """Velocity Verlet momentum propagator with a time dependent force."""
         # This method adds the time-dependent force contribution to the momenta.
-        # and it is called only twice per MD step, as implemented in `EDANVEIntegrator.step`.
+        # and it is called only twice per MD step, as implemented in `EDANVEIntegrator.step` or `EDANVTIntegrator.step`.
 
         if level != 0:
             # A time-dependent force integrator is ill-defined in a MTS algorithm framework.
@@ -110,6 +118,7 @@ class EDAIntegrator(DummyIntegrator):
 
         edaforces = self.EDAforces(time)
         self.beads.p += edaforces * self.pdt[level]
+        self.pconstraints()
 
         pass
 
@@ -137,8 +146,21 @@ class EDANVEIntegrator(EDAIntegrator, NVEIntegrator):
         EDAIntegrator.td_pstep(self, time, 0)
 
 
+class EDANVTIntegrator(EDAIntegrator, NVTIntegrator):
+    """Integrator object for simulations with constant Number of particles, Volume, and Temperature (NVT)
+    using the Electric Dipole Approximation (EDA) when an external electric field is applied.
+    """
+
+    def step(self, step):
+        time = self.time
+        EDAIntegrator.td_pstep(self, time, 0)
+        NVTIntegrator.step(self, step)
+        time = self.time + self.dt
+        EDAIntegrator.td_pstep(self, time, 0)
+
+
 class BEC:
-    """Class to handle the Born Effective Charge tensors when performing driven dynamics (with 'eda-nve')"""
+    """Class to handle the Born Effective Charge tensors when performing driven dynamics (with 'eda-nve' and 'eda-nvt')"""
 
     # The BEC tensors Z^* are defined as the derivative of the electric dipole of the system w.r.t. nuclear positions
     # in units of the elementary charge, i.e. Z^*_{ij} = 1/q_e \frac{\partial d_i }{\partial R_j}
@@ -147,16 +169,19 @@ class BEC:
     # A tensor of this shape is stored for each bead --> self._bec.shape = (self.nbeads, 3 * self.natoms, 3)
     #
     # If an external time-dependent electric field E(t) is applied, this couples to the dipole of the system,
-    # and the resulting additional term to the forces is given by q_e Z^* @ E(t) --> have a look at EDAIntegrator._eda_forces
+    # and the resulting additional term to the forces is given by q_e Z^* @ E(t) --> have a look at EDAIntegrator.EDAforces
     #
-    # The BEC tensors Z^* can be given to i-PI by an external driver through the etxras strings in the forces
-    # of they can be kept fixed during the dynamics: in this case you can provide them through a txt file.
+    # The BEC tensors Z^* can be given to i-PI by an external driver through the extras strings in the forces
+    # or they can be kept fixed during the dynamics: in this case you can provide them through a txt file.
 
-    def __init__(self, cbec=None, bec=None):
+    ASR_THRESHOLD = 1e-8
+
+    def __init__(self, cbec=None, bec=None, mode="none"):
         self.cbec = cbec
         if bec is None:
             bec = np.full((0, 3), np.nan)
         self._bec = depend_array(name="bec", value=bec)
+        self.mode = mode
         pass
 
     def bind(self, ensemble, enstype):
@@ -185,6 +210,7 @@ class BEC:
     def store(self, bec):
         super(BEC, self).store(bec)
         self.cbec.store(bec.cbec)
+        self.mode.store(bec.mode)
 
     def _get_driver_BEC(self, bead=None):
         """Return the BEC tensors (in cartesian coordinates), when computed by the driver"""
@@ -198,11 +224,11 @@ class BEC:
                 raise ValueError(
                     "Error in '_get_driver_BEC': 'bead' is greater than the number of beads"
                 )
-        else:
-            if self.nbeads != 1:
-                raise ValueError(
-                    "Error in '_get_driver_BEC': EDA integration has not implemented yet for 'nbeads' > 1"
-                )
+        # else:
+        #     if self.nbeads != 1:
+        #         raise ValueError(
+        #             "Error in '_get_driver_BEC': EDA integration has not implemented yet for 'nbeads' > 1"
+        #         )
 
         if self.cbec:
             if "BEC" not in self.forces.extras:
@@ -215,24 +241,36 @@ class BEC:
                 msg + ": you should not get into this functon if 'cbec' is False."
             )
 
-        BEC = np.full((self.nbeads, 3 * self.natoms, 3), np.nan)
+        Z = np.full((self.nbeads, 3 * self.natoms, 3), np.nan)
         for n in range(self.nbeads):
             bec = np.asarray(self.forces.extras["BEC"][n])
 
             if bec.shape[0] != 3 * self.natoms:
                 raise ValueError(
                     msg
-                    + ": number of BEC tensors is not equal to the number fo atoms x 3."
+                    + ": number of BEC tensors is not equal to the number of atoms x 3."
                 )
             if bec.shape[1] != 3:
                 raise ValueError(
                     msg
                     + ": BEC tensors with wrong shape. They should have 3 components."
                 )
+            sum_rule: np.ndarray = (
+                np.asarray(bec.reshape((self.natoms, 3, 3)).sum(axis=0)) / self.natoms
+            )
+            if not np.allclose(sum_rule, 0, atol=BEC.ASR_THRESHOLD):
+                raise ValueError(
+                    msg + ": "
+                    "BEC tensors do not satisfy acoustic sum rule/charge conservation.\n\
+                    The sum over all the atoms should be zero, but it has exceeded the threshold of {:.e} per atom.\n\
+                    The mean over all the atoms is {}.\n\
+                    Check your driver or modify `BEC.ASR_THRESHOLD` in `ipi/engine/motion/driven_dynamics.py`.".format(
+                        BEC.ASR_THRESHOLD, sum_rule.flatten().tolist()
+                    )
+                )
+            Z[n, :, :] = np.copy(bec)
 
-            BEC[n, :, :] = np.copy(bec)
-
-        return BEC
+        return Z
 
     def _get_fixed_BEC(self):
         """Return the BEC tensors (in cartesian coordinates).
@@ -258,7 +296,7 @@ dproperties(BEC, ["bec"])
 
 
 class ElectricDipole:
-    """Class to handle the electric dipole of the system when performing driven dynamics (with 'eda-nve')"""
+    """Class to handle the electric dipole of the system when performing driven dynamics (with 'eda-nve' and 'eda-nvt')"""
 
     def __init__(self):
         pass
@@ -337,7 +375,7 @@ dproperties(ElectricDipole, ["dipole", "nbeads", "forces"])
 
 
 class ElectricField:
-    """Class to handle the time dependent electric field when performing driven dynamics (with 'eda-nve')"""
+    """Class to handle the time dependent electric field when performing driven dynamics (with 'eda-nve' and 'eda-nvt')"""
 
     def __init__(self, amp=None, freq=None, phase=None, peak=None, sigma=None):
         self._amp = depend_array(
