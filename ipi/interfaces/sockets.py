@@ -486,11 +486,15 @@ class Driver(DriverSocket):
         if mxtra:
             try:
                 mxtradict = json.loads(mxtra)
-                info("@driver.getforce: Extra string JSON has been loaded.", verbosity.debug)
+                info(
+                    "@driver.getforce: Extra string JSON has been loaded.",
+                    verbosity.debug,
+                )
             except:
                 # if we can't parse it as a dict, issue a warning and carry on
                 info(
-                    "@driver.getforce: Extra string could not be loaded as a dictionary. Extra=" + mxtra,
+                    "@driver.getforce: Extra string could not be loaded as a dictionary. Extra="
+                    + mxtra,
                     verbosity.debug,
                 )
                 mxtradict = {}
@@ -654,7 +658,9 @@ class InterfaceSocket(object):
             try:
                 self.server.bind(self.sockets_prefix + self.address)
                 info(
-                    " @interfacesocket.open: Created unix socket with address " + self.address, verbosity.medium
+                    " @interfacesocket.open: Created unix socket with address "
+                    + self.address,
+                    verbosity.medium,
                 )
             except socket.error:
                 raise RuntimeError(
@@ -700,7 +706,10 @@ class InterfaceSocket(object):
     def close(self):
         """Closes down the socket."""
 
-        info(" @interfacesocket.close: Shutting down the driver interface.", verbosity.low)
+        info(
+            " @interfacesocket.close: Shutting down the driver interface.",
+            verbosity.low,
+        )
 
         for c in self.clients:
             try:

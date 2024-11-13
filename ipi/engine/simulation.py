@@ -268,7 +268,9 @@ class Simulation:
         if self.step < self.tsteps:
             self.step += 1
         if not self.rollback:
-            info(" @simulation.softexit: Saving the latest status at the end of the step")
+            info(
+                " @simulation.softexit: Saving the latest status at the end of the step"
+            )
             self.chk.store()
 
         self.chk.write(store=False)
@@ -400,7 +402,9 @@ class Simulation:
                 break
 
             if (self.ttime > 0) and (time.time() - simtime > self.ttime):
-                info(" @simulation.run: Wall clock time expired! Bye bye!", verbosity.low)
+                info(
+                    " @simulation.run: Wall clock time expired! Bye bye!", verbosity.low
+                )
                 break
 
         self.rollback = False

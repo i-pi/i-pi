@@ -77,7 +77,11 @@ class Softexit(object):
            message: The message to output to standard output.
         """
 
-        print(" @softexit.trigger:  SOFTEXIT CALLED FROM THREAD", threading.currentThread(), message)
+        print(
+            " @softexit.trigger:  SOFTEXIT CALLED FROM THREAD",
+            threading.currentThread(),
+            message,
+        )
         if not self.triggered:  # avoid double calls from different threads
             self.exiting = True
             self.triggered = True
