@@ -41,12 +41,32 @@ __all__ = [
 
 
 def get_identification_info_xml():
+    """
+    Retrieves identification information and formats it as XML-style comments.
+
+    This function fetches information using the `get_identification_info()` function,
+    processes the output by removing any leading '#' characters, and wraps each line
+    in XML comment tags (`<!-- -->`). The resulting string can be used for adding
+    comments in XML files to document identification information.
+
+    Returns:
+        str: A string where each line of the identification info is enclosed in
+        XML comment markers.
+    """
+
     info = get_identification_info()
 
-    # Filter out only the branch and last commit lines
-    filtered_lines = [
-        line for line in info.splitlines() if "Branch" in line or "Last Commit" in line
-    ]
+    # Uncomment and modify these lines to filter the messages and print only some information messages
+    # # Filter out only the branch and last commit lines
+    # filtered_lines = [
+    #     line for line in info.splitlines() if "Branch" in line or "Last Commit" in line
+    # ]
+
+    # all information to RESTART/checkpoint files
+    filtered_lines = info.splitlines()
+
+    # let's remove the #
+    filtered_lines = [line.replace("#", "") for line in filtered_lines]
 
     # Wrap each line in XML comment markers
     xml_comments = "\n".join([f"<!-- {line.strip()} -->" for line in filtered_lines])
