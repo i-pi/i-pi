@@ -1,10 +1,7 @@
 """Interface with [elphmod](https://github.com/janberges/elphmod) MD driver."""
 
-import sys
 import os
 from .dummy import Dummy_driver
-
-from ipi.utils.messages import verbosity, warning
 
 __DRIVER_NAME__ = "elphmod"
 __DRIVER_CLASS__ = "ModelIIIDriver"
@@ -19,10 +16,7 @@ class ModelIIIDriver(Dummy_driver):
 
     def __init__(self, *args, **kwargs):
         import elphmod
-        from icecream import ic
 
-        ic(args)
-        ic(kwargs)
         filename = kwargs["driver"]
         if not os.path.exists(filename):
             raise ValueError(f"File '{filename}' does not exist.")
