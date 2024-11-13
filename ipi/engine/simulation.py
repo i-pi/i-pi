@@ -21,6 +21,7 @@ from ipi.utils.messages import verbosity, info, warning, banner
 from ipi.utils.softexit import softexit
 import ipi.engine.outputs as eoutputs
 import ipi.inputs.simulation as isimulation
+import threading
 
 from concurrent.futures import ThreadPoolExecutor
 
@@ -161,6 +162,12 @@ class Simulation:
         self.syslist = syslist
         for s in syslist:
             s.prng = self.prng  # bind the system's prng to self prng
+            if threading.current_thread() == threading.main_thread():
+                info(
+                    "@ RANDOM SEED: The seed used in this calculation was "
+                    + str(self.prng.seed),
+                    verbosity.low,
+                )
             s.init.init_stage1(s)
 
         # TODO - does this have any meaning now that we introduce the smotion class?

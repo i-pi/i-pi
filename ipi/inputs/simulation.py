@@ -57,7 +57,7 @@ class InputSimulation(Input):
             InputRandom,
             {
                 "help": InputRandom.default_help,
-                "default": input_default(factory=Random),
+                "default": input_default(factory=(lambda: Random())),
             },
         ),
         "output": (
