@@ -233,8 +233,9 @@ class PropertyOutput(BaseOutput):
 
         if self.verbosity == "high":
             info_string = get_identification_info()
+            info_string += "#\n"
             info_string = info_string.replace("#", "###")
-            self.out.write(info_string + "#\n")
+            self.out.write(info_string)
 
         icol = 1
         for what in self.outlist:
