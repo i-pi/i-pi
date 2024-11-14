@@ -337,45 +337,41 @@ def read_trajectory(
 
 def merge_trajectories(files, names, strides, formats):
     """
-    Merge multiple i-PI output files into a single ASE trajectory object.
+    Merges multiple trajectory files into a single ASE trajectory object.
+
+    This function reads multiple trajectory files, processes each according to the provided `names`, `strides`, and `formats`, and merges them into a unified trajectory. The first file must contain positions.
 
     Parameters
     ----------
-    files : list[str]
-        A list of file paths to be merged. The first file must contain the positions.
-    names : list[str]
-        A list of array names corresponding to the data arrays in the input files.
-        The first name must be `'positions'`.
-
-    strides : list[int]
-        A list of integers specifying the stride (sampling rate) to apply to each
-        trajectory file. If `stride[i] = 1`, all frames from file `i` are included.
-        A larger stride will select every `stride[i]`-th frame.
+    files : list of str
+        Paths to the trajectory files.
+    names : list of str
+        Identifiers for the data arrays; 'positions' must be the first.
+    strides : list of int
+        Stride values to read frames selectively.
+    formats : list of str
+        Formats of the trajectory files (ASE compatible).
 
     Returns
     -------
-    traj : ASE Atoms object
-        The merged trajectory, represented as an ASE Atoms object containing the
-        atomic positions and any other arrays (e.g., forces) from the input files.
+    list of ase.Atoms
+        Trajectory with attached data arrays as per `names`.
+
+    Raises
+    ------
+    ImportError
+        If ASE is not installed.
+    ValueError
+        If 'positions' is not first in `names`.
+    AssertionError
+        If filename checks fail.
 
     Notes
     -----
-    - The input files are expected to have the format `<prefix>.*_0.xyz`, where:
-        - `<prefix>` is the given prefix for the files,
-        - `*` is a wildcard matching any characters,
-        - `<bead>` is the bead number (starting from 0).
-    - The output ASE trajectory will be stored in the file `<prefix>.extxyz`, where
-      `<prefix>` is the given prefix.
-
-    - The function assumes that the first file corresponds to atomic positions and
-      subsequent files correspond to other data arrays, such as forces or velocities.
-      All files are expected to follow this convention.
-
-    - The function is not highly optimized, as it reads the entire trajectory for each
-      file and then slices it based on the provided stride. In the future, it would be
-      more efficient to directly pass the stride to the trajectory reader.
-
+    - Iteratively reads and aligns data to construct a trajectory.
+    - May be memory-intensive when handling large files.
     """
+
     # author: Elia Stocco
     # comments:
     #   The script loops over the arrays and then over then over the atoms.
@@ -457,6 +453,30 @@ def merge_trajectories(files, names, strides, formats):
 
 
 def create_classical_trajectory(input_file, trajectories, properties):
+    """
+    Creates a classical trajectory from i-PI output files.
+
+    This function processes XML input and trajectory files to construct a classical ASE trajectory. It ensures compatibility of selected trajectories and properties.
+
+    Parameters
+    ----------
+    input_file : str
+        XML file path from the i-PI simulation.
+    trajectories : list of str
+        Trajectories to include (e.g., 'positions', 'forces').
+    properties : list of str
+        Properties to append to the trajectory.
+
+    Returns
+    -------
+    ASE Atoms object
+        Combined trajectory with added properties.
+
+    Notes
+    -----
+    - Limited to single-bead simulations (`nbeads == 1`).
+    - Reads full files for processing; not optimized for large data.
+    """
 
     # author: Elia Stocco
     # date: November 12th, 2024
@@ -592,6 +612,33 @@ def create_classical_trajectory(input_file, trajectories, properties):
 
 
 def create_centroid_trajectory(input_file, trajectories):
+    """
+    Creates a centroid trajectory from an i-PI XML file and related outputs.
+
+    Processes specified trajectory types and compiles them into a unified ASE trajectory, prioritizing `x_centroid`.
+
+    Parameters
+    ----------
+    input_file : str
+        Path to the XML input file.
+    trajectories : list of str
+        Types of trajectories to include.
+
+    Returns
+    -------
+    list of ase.Atoms
+        Merged trajectory with specified properties.
+
+    Raises
+    ------
+    AssertionError
+        For missing or unsupported trajectories.
+
+    Notes
+    -----
+    - Relies on `merge_trajectories()` for data alignment.
+    - May read full files, impacting performance on large data sets.
+    """
 
     # author: Elia Stocco
     # date: November 12th, 2024
@@ -621,11 +668,6 @@ def create_centroid_trajectory(input_file, trajectories):
         isimul = InputSimulation()
         isimul.parse(xml.fields[0][1])
         simul = isimul.fetch()
-
-    ### Beads
-    # check the number of beads
-    nbeads = simul.syslist[0].beads.nbeads
-    assert nbeads == 1, "A classical trajectory can only have `nbeads` == 1."
 
     ### Prefix
     prefix = simul.outtemplate.prefix
@@ -679,6 +721,30 @@ def create_centroid_trajectory(input_file, trajectories):
 
 
 def create_bead_trajectories(input_file, trajectories, properties):
+    """
+    Generates bead trajectories from i-PI output files.
+
+    Processes XML data to build individual trajectories for each bead in a multi-bead system, ensuring all relevant arrays and properties are attached.
+
+    Parameters
+    ----------
+    input_file : str
+        XML file from the i-PI simulation.
+    trajectories : list of str
+        Trajectory types to include.
+    properties : list of str
+        Properties to append to each bead trajectory.
+
+    Returns
+    -------
+    list of ase.Atoms
+        A list of ASE Atoms objects for each bead.
+
+    Notes
+    -----
+    - Supports multiple beads (`nbeads > 1`).
+    - Memory-intensive due to full file reads.
+    """
 
     # author: Elia Stocco
     # date: November 14th, 2024
