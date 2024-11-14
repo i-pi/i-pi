@@ -6,7 +6,8 @@ from ipi.inputs.cell import InputCell
 from ipi.engine.beads import Beads
 from ipi.engine.cell import Cell
 from ipi.engine.simulation import Simulation
-from ipi.utils.io.inputs.io_xml import xml_parse_string, xml_write
+from ipi.utils.io.inputs.io_xml import xml_parse_string, xml_write, write_dict
+from ipi.pes import __drivers__
 
 from ipi.utils.io.backends.io_ase import ase, _asecheck
 
@@ -113,17 +114,28 @@ def forcefield_xml(
     """
 
     if mode == "direct":
+        if pes is None:
+            raise ValueError(f"Must specify 'pes' for {mode} forcefields")
+        elif pes not in __drivers__.keys():
+            raise ValueError(f"Invalid value {pes} for 'pes'")
+        if parameters is None:
+            parameters = ""
+        elif type(parameters) is dict:
+            parameters = f"<parameters>{write_dict(parameters)}</parameters>"
+        else:
+            parameters = f"<parameters>{parameters}</parameters>"
+
         xml_ff = f"""
 <ffdirect name='{name}'>
 <pes>{"dummy" if pes is None else pes}</pes>
-{"" if parameters is None else f"<parameters>{parameters}</parameters>"}
+{parameters}
 </ffdirect>
 """
     elif mode == "unix" or mode == "inet":
         if address is None:
-            raise ValueError("Must specify address for {mode} forcefield")
+            raise ValueError("Must specify address for {mode} forcefields")
         if mode == "inet" and port is None:
-            raise ValueError("Must specify port for {mode} forcefield")
+            raise ValueError("Must specify port for {mode} forcefields")
         xml_ff = f"""
 <ffsocket name='{name}'>
 <address>{address}</address>

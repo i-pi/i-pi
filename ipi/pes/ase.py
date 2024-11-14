@@ -21,9 +21,20 @@ class ASEDriver(Dummy_driver):
     Parameters:
         :param verbose: bool, whether to print verbose output
         :param template: string, ASE-readable filename where to get the structure data from
+        :param has_energy: bool, whether the model can compute energy
+        :param has_forces: bool, whether the model can compute forces
+        :param has_stress: bool, whether the model can compute stress
     """
 
-    def __init__(self, template, *args, **kwargs):
+    def __init__(
+        self,
+        template,
+        has_energy=True,
+        has_forces=True,
+        has_stress=True,
+        *args,
+        **kwargs
+    ):
         global read
         try:
             from ase.io import read
@@ -31,6 +42,13 @@ class ASEDriver(Dummy_driver):
             warning("Could not find or import the ASE module")
 
         self.template = template
+        self.capabilities = []
+        if has_energy:
+            self.capabilities.append("energy")
+        if has_forces:
+            self.capabilities.append("forces")
+        if has_stress:
+            self.capabilities.append("stress")
         super().__init__(*args, **kwargs)
 
     def check_parameters(self):
@@ -60,12 +78,15 @@ class ASEDriver(Dummy_driver):
         structure.calc = self.ase_calculator
 
         # Do the actual calculation
-        self.ase_calculator.calculate(atoms=structure)
-        properties = self.ase_calculator.results
+        properties = structure.get_properties(self.capabilities)
 
-        pot = properties["energy"]
-        force = properties["forces"]
-        stress = properties["stress"]
+        pot = properties["energy"] if "energy" in self.capabilities else 0.0
+        force = (
+            properties["forces"]
+            if "forces" in self.capabilities
+            else np.zeros_like(pos)
+        )
+        stress = properties["stress"] if "stress" in self.capabilities else np.zeros(9)
         if len(stress) == 6:
             # converts from voight notation
             stress = np.array(stress[[0, 5, 4, 5, 1, 3, 4, 3, 2]])

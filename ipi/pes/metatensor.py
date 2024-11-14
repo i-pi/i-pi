@@ -57,6 +57,7 @@ class MetatensorDriver(ASEDriver):
         self.device = device
         self.extensions = extensions
         self.check_consistency = check_consistency
+        print("ARGS ", kwargs)
         super().__init__(template, *args, **kwargs)
 
     def check_parameters(self):
