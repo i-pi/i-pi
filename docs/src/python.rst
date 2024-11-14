@@ -47,6 +47,8 @@ An example of usage of this interface goes as follows:
 
 .. code-block:: python 
 
+    from ipi.utils.scripting import InteractiveSimulation, simulation_xml, motion_nvt_xml, forcefield_xml
+
     data = ase.io.read("init.xyz")
     input_xml = simulation_xml(
         structures=data,
