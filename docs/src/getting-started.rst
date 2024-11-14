@@ -435,6 +435,7 @@ nodes, and to queue and manage computational jobs.
 .. _fig-running:
 
 .. figure:: ../figures/ipi-running.*
+   :class: white-background   
    :width: 90.0%
 
    Different approaches to run i-PI and a number of

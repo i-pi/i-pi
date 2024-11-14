@@ -144,5 +144,4 @@ class InputDynamics(InputDictionary):
         rv = super(InputDynamics, self).fetch()
         rv["mode"] = self.mode.fetch()
         rv["splitting"] = self.splitting.fetch()
-        print(self)
         return rv
