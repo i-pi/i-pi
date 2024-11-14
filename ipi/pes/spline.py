@@ -3,10 +3,13 @@
 import numpy as np
 import sys
 from .dummy import Dummy_driver
-from scipy import interpolate
 import json
-
 from ipi.utils.messages import verbosity, warning
+
+try:
+    from scipy import interpolate
+except ImportError:
+    raise ImportError("Could not import scipy. Please install to use this.")
 
 """Spline driver. This is not a serious interpolation, use it if you know what you are doing. """
 factor_coord = 5

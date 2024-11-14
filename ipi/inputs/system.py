@@ -90,7 +90,7 @@ class InputSysTemplate(Input):
                 for label, to_insert in sorted(zip(labels, ins), reverse=True):
                     # sort from longest to smallest label, to avoid replacing 'string' in 'string1'
                     sys = sys.replace(label, to_insert)
-                print("Generating system from template: \n", sys)
+                print(" @inputsystemplate.fetch: Generating system from template:", sys)
                 xsys = xml_parse_string(sys)  # parses the string to an XML object
                 isys = InputSystem()
                 isys.parse(
