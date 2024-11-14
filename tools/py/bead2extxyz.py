@@ -1,52 +1,44 @@
-#!/usr/bin/env python
 """
-This script converts a classical i-PI trajectory into an extxyz file format readable by ASE.
-The script must be run in the same folder where the i-PI simulation was done.
+Convert i-PI bead trajectories to ASE-readable extxyz files.
+
+This script reads bead trajectories from an i-PI XML file and creates separate extxyz files for each bead. 
+The output files can be used with ASE for further analysis.
 
 Usage
 -----
-To use this script, run the following command in the terminal:
+Basic conversion:
+    $ python bead2extxyz.py -i input.xml -o output_prefix
 
-1. Basic usage to convert an XML trajectory to an extxyz file with default options:
-    $ python classical_md2extxyz.py -i input.xml -o output.extxyz
+Include additional arrays (e.g., velocities):
+    $ python bead2extxyz.py -i input.xml -o output_prefix -t velocities
 
-2. Including additional trajectory arrays (e.g., forces and velocities):
-    $ python classical_md2extxyz.py -i input.xml -o output.extxyz -t forces velocities
-
-3. Including additional properties (e.g., potential energy and temperature):
-    $ python classical_md2extxyz.py -i input.xml -o output.extxyz -p potential temperature
-
-By default `positions` and `forces` are always read, as well as `potential`.
-To change this behavor, just modify the default parameters in `prepare_args`.
+Add specific properties (e.g., bead-level potential):
+    $ python bead2extxyz.py -i input.xml -o output_prefix -p bead_potentials
 
 Arguments
 ---------
 -i, --input : str
-    The XML input file containing the classical i-PI trajectory. This argument is required.
-
+    Path to the XML input file (required).
 -o, --output : str
-    The name of the output extxyz file. This argument is required.
-
+    Prefix for output extxyz files (required).
 -t, --trajectories : list of str (optional)
-    A list of trajectory data to be added as arrays to the extxyz file. Default is `["forces"]` (and `positions` will be added automatically).
-
+    Arrays to include in extxyz files. Default: `["forces"]`.
 -p, --properties : list of str (optional)
-    A list of properties to be added as `info` fields in the extxyz file. Default is `["potential"]`.
+    Properties to include as `info` fields. Default: `["bead_potentials"]`.
 
 Requirements
 ------------
-- Python with `argparse` for argument parsing.
-- The `ase` package for working with ASE trajectory objects. Install it via:
-    $ pip install ase
+- Python with `argparse`.
+- `ase` package (install via `$ pip install ase`).
 
-Exceptions
-----------
-- Raises `ImportError` if the `ase` package is not installed.
-- Raises `ValueError` if the input or output arguments are missing.
+Examples
+--------
+Basic usage:
+    $ python bead2extxyz.py -i trajectory.xml -o output_prefix
 
+Include velocities:
+    $ python bead2extxyz.py -i trajectory.xml -o output_prefix -t velocities
 """
-
-# author: Elia Stocco
 
 import argparse
 from ipi.utils.parsing import create_bead_trajectories
