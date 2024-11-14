@@ -224,11 +224,6 @@ class BEC:
                 raise ValueError(
                     "Error in '_get_driver_BEC': 'bead' is greater than the number of beads"
                 )
-        # else:
-        #     if self.nbeads != 1:
-        #         raise ValueError(
-        #             "Error in '_get_driver_BEC': EDA integration has not implemented yet for 'nbeads' > 1"
-        #         )
 
         if self.cbec:
             if "BEC" not in self.forces.extras:
