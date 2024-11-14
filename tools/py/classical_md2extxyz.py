@@ -46,8 +46,6 @@ Exceptions
 
 """
 
-# author: Elia Stocco
-
 import argparse
 from ipi.utils.parsing import create_classical_trajectory
 

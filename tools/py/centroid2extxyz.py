@@ -37,8 +37,6 @@ Exceptions
 
 """
 
-# author: Elia Stocco
-
 import argparse
 from ipi.utils.parsing import create_centroid_trajectory
 
