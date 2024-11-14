@@ -798,3 +798,168 @@ def create_centroid_trajectory(input_file, trajectories):
         assert name in keys, f"'{name}' is not in the output trajectory."
 
     return traj
+
+
+def create_bead_trajectories(input_file, trajectories, properties):
+
+    # author: Elia Stocco
+    # date: November 14th, 2024
+    # comments:
+    #   the code could be vastly improved by avoiding reading the whole trajectory from file
+    #   Have a look at the `ATTENTION` comments.
+
+    if len(trajectories) > 0:
+        # add more keys if you need
+        available = [
+            "positions",
+            "forces",
+            "velocities",
+            "momenta",
+            "becx",
+            "becy",
+            "becz",
+            "Eforces",
+        ]
+        okay = [a in available for a in trajectories]
+        assert all(okay), "Some provided trajectories are not available."
+
+    if "positions" not in trajectories:
+        trajectories.append("positions")
+    trajectories = sorted(trajectories, key=lambda x: "positions" not in x)
+
+    # import these classes and modules here to avoid circular import errors.
+    from ipi.utils.io.inputs import io_xml
+    from ipi.inputs.simulation import InputSimulation
+    from ipi.engine.outputs import TrajectoryOutput, PropertyOutput
+
+    # suppress the output fo messages to screen
+    with SuppressOutput():
+        xml = io_xml.xml_parse_file(input_file)
+        # Initializes the simulation class.
+        isimul = InputSimulation()
+        isimul.parse(xml.fields[0][1])
+        simul = isimul.fetch()
+
+    ### Beads
+    # check the number of beads
+    nbeads = simul.syslist[0].beads.nbeads
+
+    ### Prefix
+    prefix = simul.outtemplate.prefix
+
+    ### Properties
+    # It's gonna be quick to check if everything is alright.
+    # Let's prepare the necessary variables and used them and the end of this function.
+
+    ipi_props = [a for a in simul.outtemplate if isinstance(a, PropertyOutput)]
+    assert len(ipi_props) <= 1, "Only one (or zero) property output is supported"
+    ipi_props = ipi_props[0] if len(ipi_props) == 1 else None
+
+    if ipi_props is not None:
+
+        # read the properties
+        prop_file = f"{prefix}.{ipi_props.filename}"
+        if len(properties) > 0 and not os.path.exists(prop_file):
+            raise ValueError(f"File {prop_file} does not exists.")
+        props, _ = read_output(prop_file)
+
+        # keep only the properties of interest
+        props = {key: props[key] for key in properties if key in props}
+
+    ### Trajectories files
+    # Time and memory consuming.
+
+    # check that positions have been saved to file
+    ipi_trajs = [a for a in simul.outtemplate if isinstance(a, TrajectoryOutput)]
+    whats = [a.what for a in ipi_trajs]
+    assert "positions" in whats, "Positions have not beed saved to file."
+
+    # keep only the trajectories of interest
+    ipi_trajs = [a for a in ipi_trajs if a.what in trajectories]
+
+    # move `positions` to the first place
+    ipi_trajs = sorted(ipi_trajs, key=lambda x: "positions" not in x.what)
+    # overwrite `trajectories` so that it will have the same ordering of `ipi_trajs`
+    trajectories = [a.what for a in ipi_trajs]
+
+    ### Stride
+    # check the stride (of both properties and trajectories)
+    ipi_trajs_props = ipi_trajs if ipi_props is None else ipi_trajs + [ipi_props]
+    strides = [a.stride for a in ipi_trajs_props]
+    max_stride = max(strides)
+    okay = [max_stride % a == 0 for a in strides]
+    assert all(okay), "Strides are not compatibles."
+    strides = [int(max_stride / s) for s in strides]
+    assert all(
+        [a * b.stride == max_stride for a, b in zip(strides, ipi_trajs)]
+    ), "Some errors occurred."
+    traj_strides = strides[:-1]
+
+    ### Properties adding
+
+    # ATTENTION:
+    # This is highly inefficient because the codes reads all the properties
+    # and then takes only the snapshots of interest.
+    # In the future one should provide `stride` directly to `read_output`.
+
+    strided_properties = {}
+    stride = strides[-1]
+    for p in props.keys():
+        strided_properties[p] = props[p][::stride]
+
+    ### Trajectory building
+    # build the output trajectory
+
+    formats = [a.format for a in ipi_trajs]
+    btraj = [None] * nbeads
+    for b in range(nbeads):  # cycle over beads
+
+        # trajectory files for each bead
+        traj_files = [f"{prefix}.{traj.filename}_{b}.xyz" for traj in ipi_trajs]
+
+        # check that all the trajectory files exist
+        for file in traj_files:
+            assert os.path.exists(file), f"File '{file}' does not exist."
+
+        # build the trajectory
+        traj = merge_trajectories(traj_files, trajectories, traj_strides, formats)
+
+        # check that all the trajectories of interest have been correctly read
+        keys = traj[0].arrays.keys()
+        for name in trajectories:
+            assert name in keys, f"'{name}' is not in the output trajectory."
+
+        # Let's loop over the atoms and then over the properties
+        # Maybe the other way around might be faster.
+        Nsnapshots = len(traj)
+        for n, snapshot in enumerate(traj):
+            for p in props.keys():
+                bead_prop = strided_properties[
+                    p
+                ]  # bead_prop.shape = (n. snapshots, nbeads)
+                assert bead_prop.shape == (
+                    Nsnapshots,
+                    nbeads,
+                ), f"The property {p} for bead {b} has shape {bead_prop.shape}, but {(Nsnapshots,nbeads)} was expected."
+                snapshot.info[p] = bead_prop[n, b]
+
+        btraj[b] = traj
+
+    ### Last check
+    # check that all the trajectories have the same arrays, info, and length
+    lengths = [len(b) for b in btraj]
+    assert all(
+        [l == lengths[0] for l in lengths]
+    ), f"Trajectories for different beads do not have the same length: {lengths}"
+
+    arrays = [list(b[0].arrays.keys()) for b in btraj]
+    assert all(
+        [a == arrays[0] for a in arrays]
+    ), f"Trajectories for different beads do not have the same arrays: {arrays}"
+
+    infos = [list(b[0].info.keys()) for b in btraj]
+    assert all(
+        [i == infos[0] for i in infos]
+    ), f"Trajectories for different beads do not have the same infos: {infos}"
+
+    return btraj
