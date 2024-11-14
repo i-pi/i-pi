@@ -14,7 +14,6 @@ import os
 
 try:
     import ase
-    from ase.io import write
 except ImportError:
     ase = None
 
