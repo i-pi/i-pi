@@ -325,7 +325,6 @@ class Properties:
                 "dimension": "energy",
                 "help": "The value of the total energy per bead.",
                 "func": self.get_energy,
-                "func": (lambda: self.ensemble.econs / float(self.beads.nbeads)),
             },
             "ensemble_lp": {
                 "dimension": "undefined",
