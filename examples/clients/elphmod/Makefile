@@ -22,7 +22,7 @@ driver $(DRIVER): driver.py $(MODEL)
 run $(RUN): input.xml $(DRIVER)
 	$(IPI) $< &
 	sleep 5
-	i-pi-driver-py -u -m elphmod -o $(word 2,$^)
+	i-pi-driver-py -u -m elphmod -o driver=driver.pickle
 	wait
 
 run2: input.xml run.py $(DRIVER)
