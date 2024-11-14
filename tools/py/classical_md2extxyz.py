@@ -46,6 +46,8 @@ Exceptions
 
 """
 
+# author: Elia Stocco
+
 import argparse
 from ipi.utils.parsing import create_classical_trajectory
 
@@ -101,7 +103,7 @@ def main():
 
     if ase is None:
         raise ImportError(
-            "classical_md2extxyz.py requires the `ase` package to return the structure in ASE format"
+            "'classical_md2extxyz.py' requires the `ase` package to return the structure in ASE format"
         )
 
     args = prepare_args()

@@ -1,4 +1,44 @@
 #!/usr/bin/env python
+"""
+This script converts the i-PI centroid trajectory into an extxyz file format readable by ASE.
+It can be used to include various trajectory arrays and saves the results in a format that is compatible with ASE for further processing or analysis.
+
+Usage
+-----
+To use this script, run the following command in the terminal:
+
+1. Basic usage to convert an XML trajectory to an extxyz file with default options:
+    $ python centroid2extxyz.py -i input.xml -o output.extxyz
+
+2. Including additional trajectory arrays (e.g., forces and velocities):
+    $ python centroid2extxyz.py -i input.xml -o output.extxyz -t forces velocities
+
+Arguments
+---------
+-i, --input : str
+    The XML input file containing the centroid trajectory. This argument is required.
+
+-o, --output : str
+    The name of the output extxyz file. This argument is required.
+
+-t, --trajectories : list of str (optional)
+    A list of trajectory data to be added as arrays to the extxyz file. Default is `["forces"]` (and `positions` will be added automatically).
+
+Requirements
+------------
+- Python with `argparse` for argument parsing.
+- The `ase` package for handling ASE trajectory objects. Install it via:
+    $ pip install ase
+
+Exceptions
+----------
+- Raises `ImportError` if the `ase` package is not installed.
+- Prints relevant error messages for missing input or output arguments.
+
+"""
+
+# author: Elia Stocco
+
 import argparse
 from ipi.utils.parsing import create_centroid_trajectory
 
@@ -46,7 +86,7 @@ def main():
 
     if ase is None:
         raise ImportError(
-            "centroid2extxyz.py requires the `ase` package to return the structure in ASE format"
+            "'centroid2extxyz.py' requires the `ase` package to return the structure in ASE format"
         )
 
     args = prepare_args()
