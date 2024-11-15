@@ -89,14 +89,15 @@ def simulation_xml(
 <system>
 {input_beads.write("beads")}
 {input_cell.write("cell")}
-{"" if temperature is None else 
-f"""<initialize nbeads='{nbeads}'>
-<velocities mode='thermal' units='ase'> {temperature} </velocities>
-</initialize>
-<ensemble>
-<temperature units='ase'> {temperature} </temperature>
-</ensemble>"""
-}
+{(
+    f"<initialize nbeads='{nbeads}'>"
+    f"<velocities mode='thermal' units='ase'> {temperature} </velocities>"
+    "</initialize>"
+    f"<ensemble>"
+    f"<temperature units='ase'> {temperature} </temperature>"
+    "</ensemble>"
+    if temperature is not None else ""
+)}
 <forces>
 <force forcefield='{ff_name}'> </force>
 </forces>
@@ -104,7 +105,6 @@ f"""<initialize nbeads='{nbeads}'>
 </system>
 </simulation>
 """
-
 
 def forcefield_xml(
     name, mode="direct", parameters=None, pes=None, address=None, port=None
