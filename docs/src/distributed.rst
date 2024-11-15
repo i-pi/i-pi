@@ -84,7 +84,7 @@ follows:
 
    A schematic simplified representation of the communication protocol.
    We note that most of the clients do not make use of the 'NEEDINIT' option, 
-   The communication is *asynchronous* but we have omited the 'waiting' blocks
+   The communication is *asynchronous* but we have omitted the 'waiting' blocks
    for simplicity.
 
    
