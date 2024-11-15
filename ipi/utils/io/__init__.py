@@ -456,7 +456,9 @@ def open_backup(filename, mode="r", buffering=-1):
         if fn_backup != filename:
             os.rename(filename, fn_backup)
             info(
-                "Backup performed: {0:s} -> {1:s}".format(filename, fn_backup),
+                " @open_backup: Backup performed: {0:s} -> {1:s}".format(
+                    filename, fn_backup
+                ),
                 verbosity.low,
             )
 

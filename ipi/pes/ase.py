@@ -1,48 +1,45 @@
 """Interface with ASE calculators"""
 
-import sys
 import numpy as np
 from .dummy import Dummy_driver
 
 from ipi.utils.units import unit_to_internal, unit_to_user
 from ipi.utils.messages import warning
 
-try:
-    from ase.io import read
-except ImportError:
-    warning("Could not find or import the ASE module")
-    MetatensorCalculator = None
+
+read = None
 
 __DRIVER_NAME__ = "ase"
 __DRIVER_CLASS__ = "ASEDriver"
 
-ERROR_MSG = """
-This ASE driver requires specification of and ASE calculator
-and an ASE-readable template file that describes the chemical makeup of the structure.
-
-Example: python driver.py -m ase -u -o template.xyz,model_parameters
-"""
-
 
 class ASEDriver(Dummy_driver):
-    """Abstract base class using an arbitrary ASE calculator as i-pi driver"""
+    """
+    Base class using an arbitrary ASE calculator as i-pi driver.
+    Should not be called directly as it does not set a calculator.
 
-    def __init__(self, args=None, verbose=False, error_msg=ERROR_MSG):
-        super().__init__(args, verbose, error_msg=error_msg)
+    Parameters:
+        :param verbose: bool, whether to print verbose output
+        :param template: string, ASE-readable filename where to get the structure data from
+    """
 
-    def check_arguments(self):
+    def __init__(self, template, *args, **kwargs):
+        global read
+        try:
+            from ase.io import read
+        except ImportError:
+            warning("Could not find or import the ASE module")
+
+        self.template = template
+        super().__init__(*args, **kwargs)
+
+    def check_parameters(self):
         """Check the arguments required to run the driver
 
         This loads the potential and atoms template in metatensor
         """
 
-        if len(self.args) >= 1:
-            self.template = self.args[0]
-        else:
-            sys.exit(self.error_msg)
-
         self.template_ase = read(self.template)
-
         self.ase_calculator = None
 
     def __call__(self, cell, pos):
@@ -63,7 +60,9 @@ class ASEDriver(Dummy_driver):
         structure.calc = self.ase_calculator
 
         # Do the actual calculation
-        properties = structure.get_properties(["energy", "forces", "stress"])
+        self.ase_calculator.calculate(atoms=structure)
+        properties = self.ase_calculator.results
+
         pot = properties["energy"]
         force = properties["forces"]
         stress = properties["stress"]

@@ -83,9 +83,29 @@ The built-in driver requires a FORTRAN compiler, and can be built as
    make
    cd ../..
 
+Python driver and PES
+^^^^^^^^^^^^^^^^^^^^^
 
-There is also a Python driver available in `drivers/py`, which however has limited
-functionalities.
+In addition to the FORTRAN drive, the i-PI distribution contains also a Python 
+driver, available in `drivers/py` and through the command-line command 
+`i-pi-py_driver`, which evaluates potential energy surfaces evaluated by simple 
+driver classes, that can be found in `ipi/pes`. 
+
+These classes are particularly suitable to perform inference with machine-learning
+potentials implemented in Python, and it is reasonably simple to add your own,
+if you need to (see also the :ref:`contributing` section).
+
+These PES files can also be used directly, without the need to go through a 
+client-server interface, using a :ref:`ffdirect` forcefield, including in the
+XML input a block similar to 
+
+.. code-block::
+   
+   <ffdirect name="ff_name">
+      <pes> harmonic </pes>
+      <parameters> { k1: 1.0} </parameters>
+   </ffdirect>
+
 
 Alternative installation using the setup.py module
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -266,7 +286,7 @@ The flags do the following:
 
 -S:
    Optional parameter. If given, overwrite the default socket prefix used in the creation of files for the socket communication.
-   (default "/tmp/ipi_")
+   (default "/tmp/ipi\_")
 
 This code should be fairly simple to extend to other pair-wise
 interaction potentials, and examples of its use can be seen in the
@@ -415,6 +435,7 @@ nodes, and to queue and manage computational jobs.
 .. _fig-running:
 
 .. figure:: ../figures/ipi-running.*
+   :class: white-background   
    :width: 90.0%
 
    Different approaches to run i-PI and a number of

@@ -13,7 +13,7 @@ model = metatensor_lj_test.lennard_jones_model(
     with_extension=False,
 )
 
-model.export("nickel-lj.pt")
+model.save("nickel-lj.pt")
 
 
 model = metatensor_lj_test.lennard_jones_model(
@@ -25,4 +25,4 @@ model = metatensor_lj_test.lennard_jones_model(
     energy_unit="kcal/mol",
     with_extension=True,
 )
-model.export("nickel-lj-extensions.pt", collect_extensions="collected-extensions/")
+model.save("nickel-lj-extensions.pt", collect_extensions="collected-extensions/")

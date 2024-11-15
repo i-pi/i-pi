@@ -10,14 +10,14 @@ machine learning potentials.
 
 ## Installation
 
-The code is compatible with metatensor-torch v0.5, which you can install with
+The code is compatible with metatensor-torch v0.6, which you can install with
 
 ```bash
 # install all metatensor packages simultaneously
 pip install "metatensor[torch]"
 
 # install packages individually, with explicit control over the installed versions
-pip install "metatensor-torch ==0.5.*" "metatensor-operations ==0.2.*"
+pip install "metatensor-torch ==0.6.*" "metatensor-operations ==0.2.*"
 ```
 
 ## Running the example
@@ -42,3 +42,13 @@ The options (after `-o`) are as follow:
 - `check_consistency` controls whether we should run some extra internal
   consistency checks about data given to the model and data returned by the
   model.
+
+## Running with FFDirect 
+
+It is also possible to run the metatensor PES directly, without the need for an external
+driver. To do so, you need to use a `<ffdirect>` clause in the input, and specify
+the appropriate options as a dictionary. Then, you can simply run
+
+```bash
+i-pi input-direct.xml
+``` 

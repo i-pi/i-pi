@@ -15,8 +15,6 @@ it had not been stopped.
 import numpy as np
 import concurrent.futures
 import time
-from ipi.utils.messages import verbosity, info
-import threading
 
 __all__ = ["Random"]
 
@@ -57,13 +55,6 @@ class Random(object):
             seed = int(time.time() * 1000)
 
         self.seed = seed
-
-        if threading.current_thread() == threading.main_thread():
-            info(
-                "@ RANDOM SEED: The seed used in this calculation was "
-                + str(self.seed),
-                verbosity.low,
-            )
 
         self.rng = [
             np.random.Generator(np.random.MT19937(s))

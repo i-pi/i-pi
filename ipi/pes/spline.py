@@ -3,8 +3,13 @@
 import numpy as np
 import sys
 from .dummy import Dummy_driver
-from scipy import interpolate
 import json
+from ipi.utils.messages import verbosity, warning
+
+try:
+    from scipy import interpolate
+except ImportError:
+    raise ImportError("Could not import scipy. Please install to use this.")
 
 """Spline driver. This is not a serious interpolation, use it if you know what you are doing. """
 factor_coord = 5
@@ -18,21 +23,27 @@ __DRIVER_CLASS__ = "Spline_driver"
 
 
 class Spline_driver(Dummy_driver):
-    def __init__(self, args=None, verbose=None):
-        self.error_msg = """\nspline driver requires specification of filename that contains 5 columns (pos, f1,f2,f3,e) to perform 3x1D spline.\nExample: python driver.py -m spline -u -o <filename>\n"""
-        super(Spline_driver, self).__init__(args)
+    """\nspline driver requires specification of filename that contains 5 columns (pos, f1,f2,f3,e) to perform 3x1D spline.\nExample: python driver.py -m spline -u -o <filename>\n"""
+
+    def __init__(self, data_file, *args, **kwargs):
+        warning(
+            "THIS PES HAS NOT BEEN TESTED FOLLOWING CONVERSION TO THE NEW PES API.",
+            verbosity.low,
+        )
+        self.data_file = data_file
+        super().__init__(*args, **kwargs)
         self.get_spline()
         if friction and not SI:
             self.get_spline_fric()
         self.k = 1836 * (3800.0 / 219323.0) ** 2
 
-    def check_arguments(self):
+    def check_parameters(self):
         """Function that checks the arguments required to run the driver"""
 
         try:
-            data = np.loadtxt(self.args[0]).reshape(-1, 5)
+            data = np.loadtxt(self.data_file).reshape(-1, 5)
         except ValueError:
-            sys.exit(self.error_msg)
+            sys.exit(self._error_msg)
         self.data = data
 
     def get_spline(self):
