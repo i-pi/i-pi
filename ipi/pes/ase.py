@@ -41,6 +41,9 @@ class ASEDriver(Dummy_driver):
         except ImportError:
             warning("Could not find or import the ASE module")
 
+        global all_changes
+        from ase.calculators.calculator import all_changes
+
         self.template = template
         self.capabilities = []
         if has_energy:

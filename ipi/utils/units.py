@@ -307,46 +307,28 @@ if ase is not None:
     UnitMap["time"]["ase"] = (Angstrom / Bohr) * (Constants.amu / (eV / Hartree)) ** 0.5
     UnitMap["velocity"]["ase"] = UnitMap["length"]["ase"] / UnitMap["time"]["ase"]
     UnitMap["force"]["ase"] = UnitMap["energy"]["ase"] / UnitMap["length"]["ase"]
+    UnitMap["volume"]["ase"] = UnitMap["length"]["ase"] ** 3
+    UnitMap["frequency"]["ase"] = 1 / UnitMap["time"]["ase"]
+    UnitMap["mass"]["ase"] = (
+        UnitMap["energy"]["ase"] / UnitMap["velocity"]["ase"] ** 2
+    )  # to check
+    UnitMap["pressure"]["ase"] = (
+        UnitMap["energy"]["ase"] / UnitMap["volume"]["ase"]
+    )  # to check
+    UnitMap["momentum"]["ase"] = (
+        UnitMap["mass"]["ase"] * UnitMap["velocity"]["ase"]
+    )  # to check
+    UnitMap["density"]["ase"] = (
+        UnitMap["mass"]["ase"] / UnitMap["volume"]["ase"]
+    )  # to check
+    UnitMap["hessian"]["ase"] = (
+        UnitMap["energy"]["ase"] / UnitMap["length"]["ase"] ** 2
+    )  # to check
+    # since ASe handles charges in atomic_units, dipole and electric field should have the same units as lenth and force, respectively
+    UnitMap["electric-dipole"]["ase"] = UnitMap["length"]["ase"]
+    UnitMap["electric-field"]["ase"] = UnitMap["force"]["ase"]
+
     blergh = Pascal / Debye  # just to prevent linter for complaining
-
-""" MANY OF THESE BELOW ARE WRONG. I JUST COMMENT EVERYTHING AND WE ACTIVATE CAREFULLY 
-    THE STUFF THAT IS ACTUALLY NEEDED. 
-    conversion_factors = {
-        "undefined": {"ase": 1},
-        "energy": {"ase": eV / Hartree},
-        "temperature": {"ase": kB * eV / Hartree},
-        "length": {"ase": 1 / (Bohr / Angstrom)},
-        "time": {
-            "ase": 1
-            / ((Bohr / Angstrom) * (Constants.amu / (Hartree / eV)) ** 0.5)
-        },
-        "frequency": {
-            "ase": (Bohr / Angstrom) * (1 / (Hartree / eV)) ** 0.5 * (_amu / 1) ** 0.5
-        },
-        "electric-field": {"ase": 1 / (Hartree / (Bohr * eV / Angstrom))},
-        "electric-dipole": {"ase": 1 / (Bohr / Debye)},
-        
-        "volume": {"ase": 1 / ((Bohr**3) / (Angstrom**3))},
-        "velocity": {
-            "ase": 1 / ((Hartree / eV) ** 0.5 * (Bohr / Angstrom) / (_amu / 1) ** 0.5)
-        },
-        "momentum": {"ase": 1 / ((Bohr / Angstrom) * (Hartree / eV) ** 0.5)},
-        "mass": {"ase": 1},  # Atomic unit of mass to amu
-        "pressure": {"ase": 1 / (Hartree / (Bohr**3 * Pascal))},
-        "density": {
-            "ase": 1 / (_amu / (Angstrom**3))
-        },  # Atomic unit of density to g/cm^3
-        "force": {"ase": 1 / (Hartree / Bohr)},  # Atomic unit of force to N
-        "hessian": {
-            "ase": 1 / (Hartree / (Bohr**2))
-        },  # Atomic unit of Hessian to eV/Å^2
-    }
-
-    # Update UnitMap with ASE conversion factors
-    for quantity, factors in conversion_factors.items():
-        if quantity in UnitMap:
-            UnitMap[quantity].update(factors)
-"""
 
 # a list of magnitude prefixes
 UnitPrefix = {
