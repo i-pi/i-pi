@@ -35,18 +35,26 @@ class TBLiteDriver(Dummy_driver):
                 "Could not find tblite for xtb driver. Please install tblite-python with mamba"
             )
 
-        input_data = read_file_name(
-            template,
-        )
+        input_data = read_file_name(template)
         atoms = input_data["atoms"]
         symbols = atoms.names[:]
-        self.numbers = np.asarray(symbols_to_numbers(symbols))
-        self.method = method
-
-        self.charge = charge
-        self.uhf = uhf
+        numbers = np.asarray(symbols_to_numbers(symbols))
         self.periodic = periodic
         self.verbosity = 1 if self.verbose else 0
+
+        pos = unit_to_user("length", "atomic_unit", atoms.q[:])
+        cell = unit_to_user("length", "atomic_unit", input_data["cell"].h.T)
+
+        self.calc = tb.Calculator(
+            method,
+            numbers,
+            np.asarray(pos),
+            charge,
+            uhf,  # unpaired electrons
+            np.asarray(cell) if self.periodic else None,
+            np.repeat(self.periodic, 3) if self.periodic else None,
+        )
+        self.calc.set("verbosity", self.verbosity)
 
     def __call__(self, cell, pos):
         """
@@ -59,19 +67,10 @@ class TBLiteDriver(Dummy_driver):
         pos = unit_to_user("length", "atomic_unit", pos)
         cell = unit_to_user("length", "atomic_unit", cell.T)
 
-        calc = tb.Calculator(
-            self.method,
-            self.numbers,
-            np.asarray(pos),
-            self.charge,
-            self.uhf,  # unpaired electrons
-            np.asarray(cell) if self.periodic else None,
-            np.repeat(self.periodic, 3) if self.periodic else None,
-        )
-        calc.set("verbosity", self.verbosity)
+        self.calc.update(np.asarray(pos), np.asarray(cell) if self.periodic else None)
 
         # Do the actual calculation
-        results = calc.singlepoint()
+        results = self.calc.singlepoint()
         pot = results.get("energy")
         grad = results.get("gradient")
         vir = results.get("virial")
