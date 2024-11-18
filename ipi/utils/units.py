@@ -13,7 +13,7 @@ from ipi.utils.messages import verbosity, info
 
 try:
     import ase
-    from ase.units import Bohr, Hartree, eV, Angstrom, Pascal, kB, Debye
+    from ase.units import Bohr, Hartree, eV, Angstrom, kB
 except ImportError:
     ase = None
 
@@ -327,8 +327,6 @@ if ase is not None:
     # since ASe handles charges in atomic_units, dipole and electric field should have the same units as lenth and force, respectively
     UnitMap["electric-dipole"]["ase"] = UnitMap["length"]["ase"]
     UnitMap["electric-field"]["ase"] = UnitMap["force"]["ase"]
-
-    blergh = Pascal / Debye  # just to prevent linter for complaining
 
 # a list of magnitude prefixes
 UnitPrefix = {
