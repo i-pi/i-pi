@@ -105,28 +105,34 @@ class Verbosity(object):
 verbosity = Verbosity()
 
 
-def read_git_file(filepath):
-    """Reads and returns the content of a Git-related file."""
-    try:
-        with open(filepath, "r") as file:
-            return file.read().strip()
-    except FileNotFoundError:
-        return None
-
-
 def get_git_info():
     """
-    Retrieves basic Git repository information by reading .git directory files.
+    Retrieves information about the current Git repository, including the branch name,
+    last commit hash, and remote URL.
 
-    Returns
-    -------
-    dict or None
-        A dictionary containing Git information or None if unable to read Git data.
+    Returns:
+        dict: A dictionary containing:
+            - 'branch_name' (str): The current branch name or 'DETACHED' if in a detached HEAD state.
+              Defaults to 'unknown' if parsing fails.
+            - 'last_commit' (str): The hash of the last commit on the current branch. Defaults to
+              'unknown' if the commit cannot be determined.
+            - 'remote_url' (str): The URL of the remote repository. Defaults to 'unknown' if not found.
+
+        None: If the Git directory is not found or if required information cannot be retrieved.
     """
+
     base_path = os.path.abspath(os.path.join(__file__, "..", "..", "..")) + "/"
     git_dir = os.path.join(base_path, ".git")
     if not os.path.isdir(git_dir):
         return None
+
+    def read_git_file(filepath):
+        """Reads and returns the content of a Git-related file."""
+        try:
+            with open(filepath, "r") as file:
+                return file.read().strip()
+        except FileNotFoundError:
+            return None
 
     # Read HEAD to get the current branch or commit hash
     head_content = read_git_file(os.path.join(git_dir, "HEAD"))
@@ -172,25 +178,15 @@ def get_git_info():
 
 def get_system_info():
     """
-    Collects and returns basic system information.
+    Collects and returns basic system information including the current working directory,
+    the machine's hostname, and the current date and time.
 
-    This function gathers details such as the current working directory and the machine
-    name (hostname). Additional information such as the fully qualified domain name (FQDN),
-    operating system details, CPU information, and user information can be uncommented and
-    added as needed.
-
-    Returns
-    -------
-    dict
-        A dictionary containing:
-        - "current_folder": str, the current working directory.
-        - "machine_name": str, the machine's hostname.
-        # - "fqdn": str, the fully qualified domain name (currently a fallback to machine name).
-        # - "os_name": str, the name of the operating system.
-        # - "os_version": str, the version of the operating system.
-        # - "processor": str, the processor model.
-        # - "num_nodes": int, the number of CPU cores.
-        # - "user_name": str, the user name running the script.
+    Returns:
+        dict: A dictionary containing:
+            - 'current_folder' (str): The current working directory path.
+            - 'working_directory' (str): The hostname of the machine, read from '/etc/hostname'.
+              If the file is not found, returns 'Unknown'.
+            - 'datetime' (str): The current date and time formatted as 'YYYY-MM-DD HH:MM:SS'.
     """
 
     # Get the current working directory
@@ -199,9 +195,9 @@ def get_system_info():
     # Get the machine name (hostname)
     try:
         with open("/etc/hostname", "r") as file:
-            machine_name = file.read().strip()
+            working_directory = file.read().strip()
     except FileNotFoundError:
-        machine_name = "Unknown"  # Fallback in case the file is not found
+        working_directory = "Unknown"  # Fallback in case the file is not found
 
     # Get the current time as a struct_time object
     current_time = time.localtime()
@@ -211,7 +207,7 @@ def get_system_info():
     # Return the collected information as a dictionary
     return {
         "current_folder": current_folder,
-        "machine_name": machine_name,
+        "working_directory": working_directory,
         "datetime": datetime,
     }
 
@@ -259,7 +255,7 @@ def get_identification_info():
     if system_info:
         info_string += "# Simulation information:\n"
         info_string += f"#           Machine Name: {system_info['machine_name']}\n"
-        info_string += f"#         Current Folder: {system_info['current_folder']}\n"
+        info_string += f"#      Working Directory: {system_info['working_directory']}\n"
         info_string += f"# Starting Date and Time: {system_info['datetime']}\n"
     else:
         # Inform the user if system information could not be retrieved
