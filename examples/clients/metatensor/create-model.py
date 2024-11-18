@@ -1,4 +1,4 @@
-# Use https://github.com/Luthaf/metatensor-lj-test/ to define a basic LJ model,
+# Use https://github.com/metatensor/lj-test/ to define a basic LJ model,
 # with and without a custom TorchScript extension
 import metatensor_lj_test
 

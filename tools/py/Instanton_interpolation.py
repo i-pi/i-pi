@@ -122,7 +122,7 @@ if input_geo != "None" or chk != "None":
 
         if os.path.exists(chk):
             simulation = Simulation.load_from_xml(
-                chk, custom_verbosity="low", request_banner=False, read_only=True
+                open(chk), custom_verbosity="low", request_banner=False, read_only=True
             )
         else:
             print("We can't find {}".format(chk))

@@ -998,14 +998,14 @@ class Properties:
         pkey = self.property_dict[key]
 
         # pkey["func"](*arglist,**kwarglist) gives the value of the property
-        # in atomic units. unit_to_user() returns the value in the user
+        # in atomic units. use unit_to_user() to convert the value in the user
         # specified units.
         with self._threadlock:
             value = pkey["func"](*arglist, **kwarglist)
         if "dimension" in pkey:
             dimension = pkey["dimension"]
         else:
-            dimension = ""
+            dimension = "undefined"
         return value, dimension, unit
 
     def tensor2vec(self, tensor):
