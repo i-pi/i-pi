@@ -11,6 +11,7 @@ Otherwise, replace all the with statements with f = filestream.
 
 import filecmp
 import os
+import re
 
 import numpy as np
 from numpy.testing import assert_equal
@@ -18,10 +19,132 @@ from numpy.testing import assert_equal
 from ..common.folder import local
 from ipi.utils.units import unit_to_internal
 from ipi.utils.io import iter_file, read_file, print_file
+from ipi.utils.parsing import read_trajectory
 
 
 pos_xyz = np.array([i for i in range(3 * 3)])
 pos_pdb = unit_to_internal("length", "angstrom", pos_xyz)
+
+# Regular expression to match the cell parameters
+abcABC = re.compile(r"CELL[\(\[\{]abcABC[\)\]\}]: ([-+0-9\.Ee ]*)\s*")
+
+
+def read_cell_parameters_from_extxyz(filename):
+    """
+    Reads the cell parameters from an external XYZ file using a regular expression.
+    """
+    # Open the file and read the relevant line
+    with open(filename, "r") as file:
+        file.readline()  # Skip the first line (number of atoms)
+        cell_line = file.readline()  # Read the second line (cell parameters)
+
+    # Use the regular expression to search for the cell parameters
+    _match = abcABC.search(cell_line)
+    if _match:
+        # Extract the cell parameters and convert them to a numpy array of floats
+        cell_params = np.array(_match.group(1).split(), dtype=float)
+        return cell_params
+    else:
+        raise ValueError("Cell parameters not found in the given file format.")
+
+
+def read_positions_from_extxyz(filename):
+    """
+    Reads atomic positions from an external XYZ file, skipping the header.
+    """
+    return np.genfromtxt(
+        filename, skip_header=2, dtype=None, encoding=None, usecols=(1, 2, 3)
+    )
+
+
+def test_read_pos_au():
+    """
+    Tests reading atomic positions in atomic units (bohr) and converts them to angstroms.
+    """
+    # positions saved in `atomic_unit`=`bohr`
+    file = local("test.positions_au.xyz")
+
+    # positions converted within `read_trajectory` into `angstrom`
+    atoms = read_trajectory(file)
+    assert len(atoms) == 1, "Wrong number of snapshots"
+    atoms = atoms[0]
+
+    # conversion factor from `bohr` to `angstrom`
+    ang2bohr = unit_to_internal("length", "angstrom", 1)
+
+    # extract the positions (in bohr) with brute force
+    positions = np.genfromtxt(
+        file, skip_header=2, dtype=None, encoding=None, usecols=(1, 2, 3)
+    )
+
+    # check that `read_trajectory` actually converts to  `angstrom`
+    assert np.allclose(atoms.positions * ang2bohr, positions), "Wrong conversion"
+
+
+def test_read_cell_au():
+    """
+    Tests reading cell parameters in atomic units (bohr) and converts them to angstroms.
+    """
+    # positions saved in `atomic_unit`=`bohr`
+    file = local("test.positions_au.xyz")
+
+    # positions converted within `read_trajectory` into `angstrom`
+    atoms = read_trajectory(file)
+    assert len(atoms) == 1, "Wrong number of snapshots"
+    atoms = atoms[0]
+
+    # conversion factor from `bohr` to `angstrom`
+    ang2bohr = unit_to_internal("length", "angstrom", 1)
+    atoms_cell = atoms.get_cell().cellpar()
+    atoms_cell[:3] *= ang2bohr
+
+    # extract the positions (in bohr) with brute force
+    cell = read_cell_parameters_from_extxyz(file)
+    print(cell)
+
+    # check that `read_trajectory` actually converts to  `angstrom`
+    assert np.allclose(atoms_cell, cell), "Wrong conversion"
+
+
+def test_read_pos_ang():
+    """
+    Tests reading atomic positions in angstroms without conversion.
+    """
+    # positions saved in `angstrom`
+    file = local("test.positions_ang.xyz")
+
+    # positions are not converted
+    atoms = read_trajectory(file)
+    assert len(atoms) == 1, "Wrong number of snapshots"
+    atoms = atoms[0]
+
+    # extract the positions (in angstrom) with brute force
+    positions = np.genfromtxt(
+        file, skip_header=2, dtype=None, encoding=None, usecols=(1, 2, 3)
+    )
+
+    # check that `read_trajectory` actually does not convert the positions
+    assert np.allclose(atoms.positions, positions), "Wrong conversion"
+
+
+def test_read_cell_ang():
+    """
+    Tests reading cell parameters in angstroms without conversion.
+    """
+    # positions saved in `atomic_unit`=`bohr`
+    file = local("test.positions_ang.xyz")
+
+    # positions converted within `read_trajectory` into `angstrom`
+    atoms = read_trajectory(file)
+    assert len(atoms) == 1, "Wrong number of snapshots"
+    atoms = atoms[0]
+    atoms_cell = atoms.get_cell().cellpar()
+
+    # extract the positions (in bohr) with brute force
+    cell = read_cell_parameters_from_extxyz(file)
+
+    # check that `read_trajectory` actually converts to  `angstrom`
+    assert np.allclose(atoms_cell, cell), "Wrong conversion"
 
 
 def test_read_xyz():
