@@ -142,6 +142,7 @@ def get_git_info():
     branch_name = "unknown"
     last_commit = "unknown"
     remote_url = "unknown"
+    version = "unknown"
 
     # Parse the current branch name
     try:
@@ -169,7 +170,15 @@ def get_git_info():
     except:
         pass
 
+    try:
+        from ipi import __version__
+
+        version = __version__
+    except:
+        pass
+
     return {
+        "version": version,
         "branch_name": branch_name,
         "last_commit": last_commit,
         "remote_url": remote_url,
@@ -241,6 +250,7 @@ def get_identification_info():
     # Format and add Git information if it is successfully retrieved
     if git_info:
         info_string += "# Git information:\n"
+        info_string += f"#    i-PI version: {git_info['version']}\n"
         info_string += f"#      Remote URL: {git_info['remote_url']:<24}\n"
         info_string += f"#          Branch: {git_info['branch_name']:<24}\n"
         info_string += f"#     Last Commit: {git_info['last_commit']:<24}\n"
