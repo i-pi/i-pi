@@ -231,7 +231,7 @@ def read_trajectory(
 
     file_handle = open(filename, "r")
     bohr2angstrom = unit_to_user("length", "angstrom", 1.0)
-    comment_regex = re.compile(r"([^)]+)\{([^}]+)\}")
+    # comment_regex = re.compile(r"([^)]+)\{([^}]+)\}")
     step_regex = re.compile(r"Step:\s+(\d+)")
 
     # Do not use `list.append`
@@ -302,27 +302,29 @@ def read_trajectory(
                     pbc=True,
                 )
 
-                # parse comment to get the property
-                matches = comment_regex.findall(ret["comment"])
+                ### This piece of code just complicates everything
 
-                # get what we have found
-                if len(matches) >= 2:
-                    what = matches[-2][0]
-                else:  # defaults to reading positions
-                    what = "positions"
+                # # parse comment to get the property
+                # matches = comment_regex.findall(ret["comment"])
 
-                # ... and the step
-                matches = step_regex.findall(ret["comment"])
-                if len(matches) >= 1:
-                    frame.info["step"] = int(matches[-1][0])
+                # # get what we have found
+                # if len(matches) >= 2:
+                #     what = matches[-2][0]
+                # else:  # defaults to reading positions
+                #     what = "positions"
 
-                # if we have forces, set positions to zero (that data is missing!) and set forces instead
-                if what == "forces":
-                    # set forces and convert to eV/angstrom
-                    frame.positions *= 0
-                    frame.arrays["forces"] = ret["atoms"].q.reshape(
-                        (-1, 3)
-                    ) * unit_to_user("force", "ev/ang", 1.0)
+                # # ... and the step
+                # matches = step_regex.findall(ret["comment"])
+                # if len(matches) >= 1:
+                #     frame.info["step"] = int(matches[-1][0])
+
+                # # if we have forces, set positions to zero (that data is missing!) and set forces instead
+                # if what == "forces":
+                #     # set forces and convert to eV/angstrom
+                #     frame.positions *= 0
+                #     frame.arrays["forces"] = ret["atoms"].q.reshape(
+                #         (-1, 3)
+                #     ) * unit_to_user("force", "ev/ang", 1.0)
 
                 frames.append(frame)
 
@@ -444,9 +446,31 @@ def merge_trajectories(files, names, strides, formats):
             if stride != 1:
                 array = array[::stride]
 
-            # add the read trajectory to the output as `ase.Atoms.arrays`
-            for i in range(len(traj)):  # cycle over atoms
-                traj[i].arrays[name] = array[i].positions
+            if not isinstance(array, list) or not isinstance(array[0], ase.Atoms):
+                raise ValueError("`array` should be a `list` of `ase.Atoms`.")
+
+            ### `read_trajectory` treats `forces` differently.
+            # if `read_trajectory` recognize that it's reading a file containing the forces
+            # it sets to zero the positions and save the information to `ase.Atoms.arrays["forces"]`.
+
+            # check that the positions are not zero
+            tmp = np.asarray([a.positions for a in array])
+
+            if np.allclose(tmp, 0):
+
+                if name != "forces":
+                    raise ValueError(
+                        f"This piece of code should be run only when `name`='forces', but `name`='{name}'"
+                    )
+
+                # add the read trajectory to the output as `ase.Atoms.arrays`
+                for i in range(len(traj)):  # cycle over atoms
+                    traj[i].arrays[name] = array[i].arrays[name]
+
+            else:
+                # add the read trajectory to the output as `ase.Atoms.arrays`
+                for i in range(len(traj)):  # cycle over atoms
+                    traj[i].arrays[name] = array[i].positions
 
     return traj
 

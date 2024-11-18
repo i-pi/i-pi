@@ -46,6 +46,7 @@ Exceptions
 
 """
 
+import json
 import argparse
 from ipi.utils.parsing import create_classical_trajectory
 
@@ -56,6 +57,14 @@ except ImportError:
     ase = None
 
 description = "Convert a classical i-PI trajectory to an extxyz file readable by ASE."
+
+default_units = {
+    # "positions": ["length", "angstrom"],
+    # "cell": ["length", "angstrom"],
+    "potential": ["energy", "electronvolt"],
+    "bead_potentials": ["energy", "electronvolt"],
+    "forces": ["forces", "ev/ang"],
+}
 
 
 # ---------------------------------------#
@@ -91,6 +100,15 @@ def prepare_args():
         default=["potential"],
     )
     parser.add_argument(
+        "-u",
+        "--units",
+        type=str,
+        required=False,
+        **argv,
+        help="JSON formatted units for both trajectories and properties, for example { <name> : [ <family>, <unit> ], ... } (default: %(default)s)",
+        default="{ }",  # str(default_units),
+    )
+    parser.add_argument(
         "-o", "--output", type=str, required=True, **argv, help="output extxyz file"
     )
     return parser.parse_args()
@@ -110,6 +128,17 @@ def main():
     for k in args.__dict__.keys():
         print("\t {:>20s}:".format(k), getattr(args, k))
     print()
+
+    try:
+        args.units = json.loads(args.units)
+    except:
+        raise ValueError(f"-u/--units must be JSON formatted, but it is `{args.units}`")
+
+    for u in args.units.keys():
+        assert (
+            u not in default_units
+        ), f"You can not modify defaults units, i.e. {list(default_units.keys())}"
+    args.units = {**args.units, **default_units}
 
     print("\t Constructing the classical trajectory.")
     atoms = create_classical_trajectory(args.input, args.trajectories, args.properties)
