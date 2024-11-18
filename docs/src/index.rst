@@ -33,6 +33,7 @@ This documentation is structured as follows:
    input-tags
    output-files
    output-tags
+   python
    distributed
    tutorials
    onlinereso

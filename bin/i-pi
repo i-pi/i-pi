@@ -58,7 +58,7 @@ def main(fn_input, options):
             raise ImportError('Profiling requires the `yappi` package.')            
 
     # construct simulation based on input file
-    simulation = Simulation.load_from_xml(fn_input, request_banner=True, custom_verbosity=options.verbosity, sockets_prefix=options.sockets_prefix)
+    simulation = Simulation.load_from_xml(open(fn_input), request_banner=True, custom_verbosity=options.verbosity, sockets_prefix=options.sockets_prefix)
 
     # run the simulation
     simulation.run()

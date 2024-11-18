@@ -44,3 +44,10 @@ except ImportError:
     __version__ = get_git_version()
 
 # Now you can use __version__ in your project
+
+from ipi.engine.simulation import Simulation
+
+class IPI:
+    def __init__(self, xml_data):
+        self._simulation = Simulation.load_from_xml(xml_data)
+

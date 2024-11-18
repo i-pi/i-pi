@@ -14,18 +14,16 @@ class ModelIIIDriver(Dummy_driver):
     Example: python3 driver.py -u -m elphmod -o driver=driver.pickle
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, driver, *args, **kwargs):
         import elphmod
 
-        filename = kwargs["driver"]
-        if not os.path.exists(filename):
-            raise ValueError(f"File '{filename}' does not exist.")
-        self.driver = elphmod.md.Driver.load(filename)
+        if not os.path.exists(driver):
+            raise ValueError(f"File '{driver}' does not exist.")
+        self.driver = elphmod.md.Driver.load(driver)
         if self.driver is None:
             raise ValueError(
-                f"Some error occured within `ModelIIIDriver.__init__` when trying to load the driver from file '{filename}'."
+                f"Some error occured within `ModelIIIDriver.__init__` when trying to load the driver from file '{driver}'."
             )
-        del kwargs["driver"]
         super().__init__(*args, **kwargs)
         pass
 
