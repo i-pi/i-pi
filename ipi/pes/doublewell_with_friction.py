@@ -1,7 +1,5 @@
 """ Harmonic potential """
 
-import sys
-
 try:
     from .doublewell import DoubleWell_driver
 except:
@@ -10,6 +8,7 @@ except:
 import numpy as np
 from ipi.utils import units
 import json
+import sys
 
 
 __DRIVER_NAME__ = "DW_friction"
@@ -29,42 +28,48 @@ A2au = units.unit_to_internal("length", "angstrom", 1.0)
 
 
 class DoubleWell_with_friction_driver(DoubleWell_driver):
-    """Adds to the double well potential the calculation of the friction tensor.
+    r"""Adds to the double well potential the calculation of the friction tensor.
 
     friction(q) = eta0 [\partial sd(q) \partial q ]^2
     with
     q = position, and
     sd(q) = [1+eps1 exp( (q-0)^2 / (2deltaQ^2) ) ] + eps2 tanh(q/deltaQ)
+
+    DW+fric driver expects 8 arguments.
+        Example: python driver.py -m DoubleWell_with_fric -o omega_b (cm^-1) V0 (cm^-1) mass delta(\AA) eta0  eps1 eps2  deltaQ
+        python driver.py -m DoubleWell -o 500,2085,1837,0.00,1,0,0,1
     """
 
-    def __init__(self, args=None, verbose=None):
-        self.error_msg = """\nDW+fric driver expects 8 arguments.\n
-        Example: python driver.py -m DoubleWell_with_fric -o omega_b (cm^-1) V0 (cm^-1) mass delta(\AA) eta0  eps1 eps2  deltaQ      \n
-        python driver.py -m DoubleWell -o 500,2085,1837,0.00,1,0,0,1\n"""
-        self.args = args.split(",")
-        self.verbose = verbose
-        self.check_arguments()
+    def __init__(
+        self,
+        w_b=None,
+        v0=None,
+        m=None,
+        eta0=None,
+        eps1=None,
+        eps2=None,
+        delta=None,
+        deltaQ=None,
+        *args,
+        **kwargs
+    ):
 
-    def check_arguments(self):
-        """Function that checks the arguments required to run the driver"""
-
-        self.k = 1837.36223469 * (3800.0 / 219323.0) ** 2
         try:
-            param = list(map(float, self.args))
-            assert len(param) == 8
-            w_b = param[0] * invcm2au
-            v0 = param[1] * invcm2au
-            m = param[2]
-            self.delta = param[3] * A2au
-            self.eta0 = param[4]
-            self.eps1 = param[5]
-            self.eps2 = param[6]
-            self.deltaQ = param[7]
-        except:
-            sys.exit(self.error_msg)
+            w_b = w_b * invcm2au
+            v0 = v0 * invcm2au
+            self.delta = delta * A2au
+            self.eta0 = eta0
+            self.eps1 = eps1
+            self.eps2 = eps2
+            self.deltaQ = deltaQ
+            self.k = 1837.36223469 * (3800.0 / 219323.0) ** 2
+            self.A = -0.5 * m * (w_b) ** 2
+            self.B = ((m**2) * (w_b) ** 4) / (16 * v0)
 
-        self.A = -0.5 * m * (w_b) ** 2
-        self.B = ((m**2) * (w_b) ** 4) / (16 * v0)
+        except:
+            sys.exit(self.__doc__)
+
+        super().__init__(*args, **kwargs)
 
     def check_dimensions(self, pos):
         """Functions that checks dimensions of the received position"""

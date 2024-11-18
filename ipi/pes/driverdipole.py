@@ -4,6 +4,9 @@ import sys
 import json
 import numpy as np
 import warnings
+
+from ipi.utils.messages import verbosity, warning
+
 import importlib
 from .dummy import Dummy_driver
 
@@ -118,6 +121,9 @@ def get_model(instructions, parameters: str):
 
 
 class driverdipole_driver(Dummy_driver):
+    """The parameters of 'driverdipole_driver' are not correctly formatted. \
+            They should be two or three strings, separated by a comma."""
+
     opts_default = {
         "dipole": {
             "send": True,  # whether to send the dipole to i-PI
@@ -131,19 +137,21 @@ class driverdipole_driver(Dummy_driver):
         "restart": False,  # whether remove the files (if already existing) where the dipole and BEC will be saved.
     }
 
-    def __init__(self, args=None):
-        self.error_msg = """The parameters of 'driverdipole_driver' are not correctly formatted. \
-            They should be two or three strings, separated by a comma."""
+    def __init__(self, *args, **kwargs):
+        warning(
+            "THIS PES HAS NOT BEEN TESTED FOLLOWING CONVERSION TO THE NEW PES API.",
+            verbosity.low,
+        )
         self.opts = dict()
         self.count = 0
-        super().__init__(args)
+        super().__init__(*args, **kwargs)
 
-    def check_arguments(self):
+    def check_parameters(self):
         """Check the arguments required to run the driver."""
         try:
-            arglist = self.args.split(",")
+            arglist = self.args
         except ValueError:
-            sys.exit(self.error_msg)
+            sys.exit(self.__doc__)
 
         if len(arglist) >= 2:
             info_file = arglist[0]  # json file to properly allocate a 'model' object
@@ -154,7 +162,7 @@ class driverdipole_driver(Dummy_driver):
                 print("\tNo options file provided: using the default values")
                 opts_file = None
         else:
-            sys.exit(self.error_msg)  # to be modified
+            sys.exit(self._error_msg)  # to be modified
 
         print("\n\tThe driver is 'driverdipole_driver'")
         print("\tLoading model ...")

@@ -1,42 +1,40 @@
-"""
-Interface with tblite to provide GFN1-xTB and GFN2-xTB calculators.
-
-Example:: 
-
-    python driver.py -m xtb -u -o '{"method": "GFN2-xTB", "numbers": [8,1,1], "periodic": false}'
-"""
-
 import numpy as np
 import json
 
 from ipi.utils.units import unit_to_internal, unit_to_user
+from ipi.utils.messages import verbosity, warning
+from .dummy import Dummy_driver
 
-try:
-    import tblite.interface as tb
-except ImportError:
-    tb = None
-
+tb = None
 
 __DRIVER_NAME__ = "xtb"
 __DRIVER_CLASS__ = "TBLiteDriver"
 
 
-class TBLiteDriver(object):
-    """Base class providing the structure of a PES for the python driver."""
+class TBLiteDriver(Dummy_driver):
+    """
+    Interface with tblite to provide GFN1-xTB and GFN2-xTB calculators.
 
-    def __init__(
-        self,
-        args="",
-        verbose=False,
-    ):
-        """Initialized dummy drivers"""
+    Example::
 
-        if tb is None:
+        python driver.py -m xtb -u -o config.json
+    """
+
+    def __init__(self, json_input, *args, **kwargs):
+        warning(
+            "THIS PES HAS NOT BEEN TESTED FOLLOWING CONVERSION TO THE NEW PES API.",
+            verbosity.low,
+        )
+        config = json.load(open(json_input))
+
+        global tb
+        try:
+            import tblite.interface as tb
+        except ImportError:
             raise ModuleNotFoundError(
                 "Could not find tblite for xtb driver. Please install tblite-python with mamba"
             )
 
-        config = json.loads(args)
         try:
             self.method = config["method"]
             self.numbers = np.asarray(config["numbers"])
@@ -45,7 +43,9 @@ class TBLiteDriver(object):
         self.charge = config.get("charge")
         self.uhf = config.get("uhf")
         self.periodic = config.get("periodic")
-        self.verbosity = 1 if verbose else 0
+        self.verbosity = 1 if self.verbose else 0
+
+        super().__init__(*args, **kwargs)
 
     def __call__(self, cell, pos):
         """
