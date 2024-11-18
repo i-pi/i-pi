@@ -18,6 +18,10 @@ def read_value(s):
             return cast(s)
         except ValueError:
             continue
+    if s.lower() == "false":
+        return False
+    if s.lower() == "true":
+        return True
     return s
 
 

@@ -52,3 +52,12 @@ the appropriate options as a dictionary. Then, you can simply run
 ```bash
 i-pi input-direct.xml
 ``` 
+
+## Running with a scripting interface
+
+To see how to run the metatensor calculator through the interactive Python interface,
+check the `run.py` script
+
+```bash
+python run.py
+```
