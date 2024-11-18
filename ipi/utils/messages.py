@@ -8,6 +8,7 @@
 import traceback
 import sys
 import os
+import time
 
 __all__ = [
     "Verbosity",
@@ -202,10 +203,16 @@ def get_system_info():
     except FileNotFoundError:
         machine_name = "Unknown"  # Fallback in case the file is not found
 
+    # Get the current time as a struct_time object
+    current_time = time.localtime()
+    # Format the time in a human-readable way
+    datetime = time.strftime("%Y-%m-%d %H:%M:%S", current_time)
+
     # Return the collected information as a dictionary
     return {
         "current_folder": current_folder,
         "machine_name": machine_name,
+        "datetime": datetime,
     }
 
 
@@ -250,12 +257,13 @@ def get_identification_info():
 
     # Format and add system information if it is successfully retrieved
     if system_info:
-        info_string += "# System information:\n"
-        info_string += f"#     Current Folder: {system_info['current_folder']}\n"
-        info_string += f"#       Machine Name: {system_info['machine_name']}\n"
+        info_string += "# Simulation information:\n"
+        info_string += f"#           Machine Name: {system_info['machine_name']}\n"
+        info_string += f"#         Current Folder: {system_info['current_folder']}\n"
+        info_string += f"# Starting Date and Time: {system_info['datetime']}\n"
     else:
         # Inform the user if system information could not be retrieved
-        info_string += "# Unable to retrieve system information.\n"
+        info_string += "# Unable to retrieve simulation information.\n"
 
     # Return the final formatted string
     return info_string
