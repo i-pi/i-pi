@@ -270,11 +270,10 @@ class InteractiveSimulation:
                 structures = [structures]
             for b, struc in enumerate(structures):
                 system.beads.q[b] = struc.positions.flatten() * unit_to_internal(
-                    "length", "angstrom", 1.0
+                    "length", "ase", 1.0
                 )
+                system.cell.h = struc.cell * unit_to_internal("length", "ase", 1.0)
                 if "ipi_velocities" in struc.arrays:
-                    system.beads.p[b] = (
-                        struc.arrays["ipi_velocities"].flatten()
-                        / unit_to_user("length", "angstrom", 1.0)
-                        * unit_to_user("time", "femtosecond", 1.0)
-                    )
+                    system.beads.p[b] = struc.arrays[
+                        "ipi_velocities"
+                    ].flatten() * unit_to_internal("velocity", "ase", 1.0)

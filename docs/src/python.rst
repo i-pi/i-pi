@@ -26,7 +26,9 @@ i-PI trajectories can be output in
 `extended xyz format <https://wiki.fysik.dtu.dk/ase/ase/io/formatoptions.html#extxyz>`_, 
 and can be read by `ASE <https://wiki.fysik.dtu.dk/ase/index.html>`_, while the property
 outputs can be simply read with ``np.loadtxt``. However, more reliable parsing can be
-achieved using the ``ipi.read_output`` and ``ipi.read_trajectory`` functions. 
+achieved using the ``ipi.read_output`` and ``ipi.read_trajectory`` functions, that 
+can also read the native i-PI trajectory formats, and that parse the header of the 
+output file to provide metadata on the type and units of the properties it contains. 
 
 Scripting i-PI
 ~~~~~~~~~~~~~~
@@ -35,12 +37,17 @@ If one wants to run an i-PI simulation within a Python script, it is also possib
 to use a (somewhat primitive) scripting API, defined in the ``ipi.utils.scripting``
 module. The core component is the ``InteractiveSimulation`` class, that can be
 initialized from an *XML* input, advanced for a given number of steps using the
-``run`` method. The calculation requires also the use of a driver, that can 
+``run`` method. The calculation requires also the use of a driver, that can
 communicate through sockets (in which case it must be launched after 
-initialization, and before running) or using an :ref:`ffdirect` block. 
+initialization, and before running) or directly using a Python API
+using an :ref:`ffdirect` block. 
 
 Properties can be accessed using the ``properties`` method, and a snapshot
-of the configuration by calling ``get_structures``. 
+of the configuration by calling ``get_structures``.
+It is also possible to call ``set_structures`` to change positions, cell 
+and (if available) velocities to those that can be found in an Atoms structure
+(or a list of structures in case there are multiple systems and/or multiple
+beads).
 Several utility functions, also available within the module, facilitate
 building on the fly an *XML* string to initialize the simulation.
 An example of usage of this interface goes as follows:
@@ -62,7 +69,3 @@ An example of usage of this interface goes as follows:
     sim.run(100)
     potential = sim.properties("potential")
     ase.io.write("final_structure.xyz", sim.get_structures())
-
-
-
-
