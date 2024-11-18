@@ -7,8 +7,16 @@
 
 import traceback
 import sys
+import os
 
-__all__ = ["Verbosity", "verbosity", "banner", "info", "warning"]
+__all__ = [
+    "Verbosity",
+    "verbosity",
+    "banner",
+    "info",
+    "warning",
+    "get_identification_info",
+]
 
 
 VERB_QUIET = 0
@@ -96,6 +104,235 @@ class Verbosity(object):
 verbosity = Verbosity()
 
 
+def read_git_file(filepath):
+    """Reads and returns the content of a Git-related file."""
+    try:
+        with open(filepath, "r") as file:
+            return file.read().strip()
+    except FileNotFoundError:
+        return None
+
+
+def get_git_info():
+    """
+    Retrieves basic Git repository information by reading .git directory files.
+
+    Returns
+    -------
+    dict or None
+        A dictionary containing Git information or None if unable to read Git data.
+    """
+    base_path = os.path.abspath(os.path.join(__file__, "..", "..", "..")) + "/"
+    git_dir = os.path.join(base_path, ".git")
+    if not os.path.isdir(git_dir):
+        return None
+
+    # Read HEAD to get the current branch or commit hash
+    head_content = read_git_file(os.path.join(git_dir, "HEAD"))
+    if not head_content:
+        return None
+
+    branch_name = "unknown"
+    last_commit = "unknown"
+    remote_url = "unknown"
+    commit_author = "unknown"
+    commit_message = "unknown"
+
+    # Parse the current branch name
+    try:
+        if head_content.startswith("ref:"):
+            ref_path = os.path.join(git_dir, head_content.split(" ")[1])
+            branch_name = os.path.basename(ref_path)
+            last_commit = read_git_file(ref_path)
+        else:
+            # Detached HEAD state
+            branch_name = "DETACHED"
+            last_commit = head_content
+    except:
+        pass
+
+    try:
+        # Read the last commit details from logs if available
+        logs_path = os.path.join(git_dir, "logs", "HEAD")
+        # commit_author = commit_date = commit_message = None
+        if os.path.exists(logs_path):
+            with open(logs_path, "r") as logs_file:
+                last_log = logs_file.readlines()[-1].split()
+                commit_author = last_log[2]  # Simplified; may need adjustments
+                commit_message = " ".join(last_log[7:])  # Adjust index as necessary
+    except:
+        pass
+
+    try:
+        # Get remote URL from the config file
+        config_path = os.path.join(git_dir, "config")
+        # remote_url = None
+        if os.path.exists(config_path):
+            with open(config_path, "r") as config_file:
+                for line in config_file:
+                    if line.strip().startswith("url ="):
+                        remote_url = line.split("=")[1].strip()
+                        break
+    except:
+        pass
+
+    return {
+        "branch_name": branch_name,
+        "last_commit": last_commit,
+        "remote_url": remote_url,
+        "commit_author": commit_author,
+        "commit_message": commit_message,
+    }
+
+
+def get_system_info():
+    """
+    Collects and returns basic system information.
+
+    This function gathers details such as the current working directory and the machine
+    name (hostname). Additional information such as the fully qualified domain name (FQDN),
+    operating system details, CPU information, and user information can be uncommented and
+    added as needed.
+
+    Returns
+    -------
+    dict
+        A dictionary containing:
+        - "current_folder": str, the current working directory.
+        - "machine_name": str, the machine's hostname.
+        # - "fqdn": str, the fully qualified domain name (currently a fallback to machine name).
+        # - "os_name": str, the name of the operating system.
+        # - "os_version": str, the version of the operating system.
+        # - "processor": str, the processor model.
+        # - "num_nodes": int, the number of CPU cores.
+        # - "user_name": str, the user name running the script.
+    """
+
+    # Get the current working directory
+    current_folder = os.getcwd()
+
+    # Get the machine name (hostname)
+    try:
+        with open("/etc/hostname", "r") as file:
+            machine_name = file.read().strip()
+    except FileNotFoundError:
+        machine_name = "Unknown"  # Fallback in case the file is not found
+
+    # # Get the FQDN using a basic fallback
+    # fqdn = machine_name  # This can be extended to a more complex method if needed
+
+    # The following code snippets are for gathering additional system information.
+    # Uncomment these lines if more detailed system data is required.
+
+    # # Get the operating system name and version from `/etc/os-release`
+    # os_name = "Unknown"
+    # os_version = "Unknown"
+    # try:
+    #     with open("/etc/os-release", "r") as file:
+    #         for line in file:
+    #             if line.startswith("NAME="):
+    #                 os_name = line.split("=")[1].strip().strip('"')
+    #             elif line.startswith("VERSION="):
+    #                 os_version = line.split("=")[1].strip().strip('"')
+    # except FileNotFoundError:
+    #     pass  # If the file is not found, the OS details will remain 'Unknown'
+
+    # # Get the processor name from `/proc/cpuinfo`
+    # processor = "Unknown"
+    # try:
+    #     with open("/proc/cpuinfo", "r") as file:
+    #         for line in file:
+    #             if line.startswith("model name"):
+    #                 processor = line.split(":")[1].strip()
+    #                 break  # Stop after finding the first processor entry
+    # except FileNotFoundError:
+    #     pass  # If the file is not found, the processor name will remain 'Unknown'
+
+    # # Get the number of CPUs from `/proc/cpuinfo`
+    # num_nodes = 0
+    # try:
+    #     with open("/proc/cpuinfo", "r") as file:
+    #         num_nodes = sum(1 for line in file if line.startswith("processor"))
+    # except FileNotFoundError:
+    #     pass  # If the file is not found, the CPU count will remain 0
+
+    # # Get the user name from environment variables
+    # user_name = os.getenv("USER") or os.getenv("USERNAME") or "Unknown"  # Fallback if environment variables are not set
+
+    # Return the collected information as a dictionary
+    return {
+        "current_folder": current_folder,
+        "machine_name": machine_name,
+        # "fqdn": fqdn,
+        # "os_name": os_name,
+        # "os_version": os_version,
+        # "processor": processor,
+        # "num_nodes": num_nodes,
+        # "user_name": user_name,
+    }
+
+
+def get_identification_info():
+    """
+    Collects and formats both Git and system information into a human-readable string.
+
+    This function retrieves information from the Git repository and the system where
+    it is executed. It formats the gathered data into a structured, readable string
+    with appropriate headings and labels, which can be used for logging or documentation.
+
+    Returns
+    -------
+    str
+        A formatted string that includes Git information (e.g., remote URL, branch name,
+        last commit details) and system information (e.g., current folder, machine name).
+        If any information cannot be retrieved, the output will include an appropriate
+        message indicating that.
+    """
+
+    # Retrieve Git information using a helper function
+    git_info = get_git_info()
+
+    # Retrieve system information using another helper function
+    system_info = get_system_info()
+
+    # Initialize the string that will hold all formatted information
+    info_string = ""
+
+    # Format and add Git information if it is successfully retrieved
+    if git_info:
+        info_string += "# Git information:\n"
+        info_string += f"#      Remote URL: {git_info['remote_url']:<24}\n"
+        info_string += f"#          Branch: {git_info['branch_name']:<24}\n"
+        info_string += f"#     Last Commit: {git_info['last_commit']:<24}\n"
+        info_string += f"#   Commit Author: {git_info['commit_author'] or 'N/A':<24}\n"
+        info_string += f"#  Commit Message: {git_info['commit_message'] or 'N/A':<24}\n"
+    else:
+        # Inform the user if Git information could not be retrieved
+        info_string += "# Unable to retrieve Git information.\n"
+
+    # Add a separator line for clarity between Git and system information
+    info_string += "#\n"
+
+    # Format and add system information if it is successfully retrieved
+    if system_info:
+        info_string += "# System information:\n"
+        info_string += f"#     Current Folder: {system_info['current_folder']}\n"
+        info_string += f"#       Machine Name: {system_info['machine_name']}\n"
+        # Additional system info lines can be uncommented as needed
+        # info_string += f"#               FQDN: {system_info['fqdn']}\n"
+        # info_string += f"#   Operating System: {system_info['os_name']}\n"
+        # info_string += f"#         OS Version: {system_info['os_version']}\n"
+        # info_string += f"#          Processor: {system_info['processor']}\n"
+        # info_string += f"#     Number of CPUs: {system_info['num_nodes']}\n"
+        # info_string += f"#          User Name: {system_info['user_name']}\n"
+    else:
+        # Inform the user if system information could not be retrieved
+        info_string += "# Unable to retrieve system information.\n"
+
+    # Return the final formatted string
+    return info_string
+
+
 def banner():
     """Prints out a banner."""
 
@@ -118,6 +355,9 @@ def banner():
 
     """
     )
+
+    info_string = get_identification_info()
+    print(info_string)
 
 
 def info(text="", show=True):
