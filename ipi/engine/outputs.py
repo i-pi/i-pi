@@ -62,10 +62,14 @@ def get_identification_info_xml():
     filtered_lines = info.splitlines()
 
     # let's remove the #
-    filtered_lines = [line.replace("#", "") for line in filtered_lines]
+    filtered_lines = [
+        line.replace("#", "").replace("\t", "    ") for line in filtered_lines
+    ]
 
     # Wrap each line in XML comment markers
-    xml_comments = "\n".join([f"<!-- {line.strip()} -->" for line in filtered_lines])
+    xml_comments = (
+        "<!--\n" + "\n".join([f"{line.strip()}" for line in filtered_lines]) + "\n-->"
+    )
 
     return xml_comments
 
