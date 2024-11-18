@@ -135,8 +135,8 @@ def get_git_info():
     branch_name = "unknown"
     last_commit = "unknown"
     remote_url = "unknown"
-    commit_author = "unknown"
-    commit_message = "unknown"
+    # commit_author = "unknown"
+    # commit_message = "unknown"
 
     # Parse the current branch name
     try:
@@ -158,8 +158,8 @@ def get_git_info():
         if os.path.exists(logs_path):
             with open(logs_path, "r") as logs_file:
                 last_log = logs_file.readlines()[-1].split()
-                commit_author = last_log[2]  # Simplified; may need adjustments
-                commit_message = " ".join(last_log[7:])  # Adjust index as necessary
+                # commit_author = last_log[2]  # Simplified; may need adjustments
+                # commit_message = " ".join(last_log[7:])  # Adjust index as necessary
     except:
         pass
 
@@ -180,8 +180,8 @@ def get_git_info():
         "branch_name": branch_name,
         "last_commit": last_commit,
         "remote_url": remote_url,
-        "commit_author": commit_author,
-        "commit_message": commit_message,
+        # "commit_author": commit_author,
+        # "commit_message": commit_message,
     }
 
 
@@ -304,8 +304,8 @@ def get_identification_info():
         info_string += f"#      Remote URL: {git_info['remote_url']:<24}\n"
         info_string += f"#          Branch: {git_info['branch_name']:<24}\n"
         info_string += f"#     Last Commit: {git_info['last_commit']:<24}\n"
-        info_string += f"#   Commit Author: {git_info['commit_author'] or 'N/A':<24}\n"
-        info_string += f"#  Commit Message: {git_info['commit_message'] or 'N/A':<24}\n"
+        # info_string += f"#   Commit Author: {git_info['commit_author'] or 'N/A':<24}\n"
+        # info_string += f"#  Commit Message: {git_info['commit_message'] or 'N/A':<24}\n"
     else:
         # Inform the user if Git information could not be retrieved
         info_string += "# Unable to retrieve Git information.\n"
