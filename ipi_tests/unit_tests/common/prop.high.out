@@ -1,13 +1,13 @@
 ### Git information:
-###      Remote URL: git@github.com:Author/i-pi.git
-###          Branch: gitinfo                 
-###     Last Commit: de26c551187880e68h3c8f499b08874946c810dc
-###   Commit Author: Author              
-###  Commit Message: testing with verbosity='high'
+###    i-PI version: 0.1.dev1960+gcfe9540.d20241118
+###      Remote URL: git@github.com:EliaStocco/i-pi.git
+###          Branch: git-info-2              
+###     Last Commit: b0b339c69f2bcf342df2cc521dda435f8321438d
 ###
-### System information:
-###     Current Folder: /home/author/google-personal/codes/i-pi-main/examples/features/driven_dynamics/efield-water-beads
-###       Machine Name: cfelm-pcx00000
+### Simulation information:
+###           Machine Name: cfelm-pcx33764
+###      Working Directory: /home/stoccoel/google-personal/codes/i-pi-main/examples/features/driven_dynamics/efield-water-beads
+### Starting Date and Time: 2024-11-18 11:59:12
 ###
 # column   1     --> step : The current simulation time step.
 # column   2     --> time : The elapsed simulation time.
