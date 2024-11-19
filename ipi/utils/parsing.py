@@ -8,7 +8,7 @@ numpy arrays.
 
 import re
 import numpy as np
-from ipi.utils.units import unit_to_user
+from ipi.utils.units import unit_to_user, unit_to_internal
 import sys
 import os
 
@@ -18,6 +18,32 @@ except ImportError:
     ase = None
 
 __all__ = ["read_output", "read_trajectory"]
+
+
+def convert(
+    what: float,
+    family: str = None,
+    _from: str = "atomic_unit",
+    _to: str = "atomic_unit",
+):
+    """Convert a quantity from one unit of a specific family to another.
+    Example:
+    arr = convert([1,3,4],'length','angstrom','atomic_unit')
+    arr = convert([1,3,4],'energy','atomic_unit','millielectronvolt')"""
+    # from ipi.utils.units import unit_to_internal, unit_to_user
+    try:
+        factor = unit_to_internal(family, _from, 1)
+    except:
+        raise ValueError(
+            f"Error when trying to convert '{_from}' into 'atomic_unit' assuming that it is a '{family}' unit."
+        )
+    try:
+        factor *= unit_to_user(family, _to, 1)
+    except:
+        raise ValueError(
+            f"Error when trying to convert 'atomic_unit' into '{_to}' assuming that it is a '{family}' unit."
+        )
+    return what * factor
 
 
 class SuppressOutput:
@@ -198,13 +224,7 @@ def read_output(filename):
     return values_dict, info_dict
 
 
-def read_trajectory(
-    filename,
-    format=None,
-    dimension="automatic",
-    units="automatic",
-    cell_units="automatic",
-):
+def read_trajectory(filename, format=None):
     """Reads a file in i-PI format and returns it in ASE format.
 
     `format` can be `xyz` (i-PI formatted), `pdb`, `binary`, `json`, `ase`, and if not specified it'll
@@ -219,7 +239,9 @@ def read_trajectory(
             "read_trajectory requires the `ase` package to return the structure in ASE format"
         )
 
-    from ipi.utils.io import read_file
+    from ipi.utils.io import _get_io_function
+    from ipi.engine.atoms import Atoms
+    from ipi.engine.cell import Cell
 
     if format is None:
         # tries to infer the file format
@@ -230,8 +252,7 @@ def read_trajectory(
             raise ValueError(f"Unrecognized file format: {format}")
 
     file_handle = open(filename, "r")
-    bohr2angstrom = unit_to_user("length", "angstrom", 1.0)
-    # comment_regex = re.compile(r"([^)]+)\{([^}]+)\}")
+    comment_regex = re.compile(r"(\w+)\{([^}]+)\}")  # re.compile(r"([^)]+)\{([^}]+)\}")
     step_regex = re.compile(r"Step:\s+(\d+)")
 
     # Do not use `list.append`
@@ -239,6 +260,7 @@ def read_trajectory(
 
     # Let's optimize this thing
     frames = AppendableList()
+    unique_what = None
 
     while True:
         try:
@@ -287,44 +309,79 @@ def read_trajectory(
                     property_name: data_list,
                 }
             else:
-                ret = read_file(
-                    format,
-                    file_handle,
-                    dimension=dimension,
-                    units=units,
-                    cell_units=cell_units,
-                )
 
-                frame = ase.Atoms(
-                    ret["atoms"].names,
-                    positions=ret["atoms"].q.reshape((-1, 3)) * bohr2angstrom,
-                    cell=ret["cell"].h.T * bohr2angstrom,
-                    pbc=True,
-                )
+                # The unit conversion will be performed here because
+                # the function `read_file` from `ipi.utils.io` works
+                # properly only for 'positions'.
 
-                ### This piece of code just complicates everything
+                # It is not clear how this function will behave when the file is not in 'xyz' format
 
-                # # parse comment to get the property
-                # matches = comment_regex.findall(ret["comment"])
+                reader = _get_io_function(format, "read")
+                comment, cell, data, names, masses = reader(filedesc=file_handle)
+                natoms = len(names)
 
-                # # get what we have found
-                # if len(matches) >= 2:
-                #     what = matches[-2][0]
-                # else:  # defaults to reading positions
-                #     what = "positions"
+                cell = Cell(cell)
+                atoms = Atoms(natoms)
+                atoms.q[:] = data
+                atoms.names[:] = names
+                atoms.m[:] = masses
 
-                # # ... and the step
-                # matches = step_regex.findall(ret["comment"])
-                # if len(matches) >= 1:
-                #     frame.info["step"] = int(matches[-1][0])
+                ret = {"atoms": atoms, "cell": cell, "comment": comment}
 
-                # # if we have forces, set positions to zero (that data is missing!) and set forces instead
-                # if what == "forces":
-                #     # set forces and convert to eV/angstrom
-                #     frame.positions *= 0
-                #     frame.arrays["forces"] = ret["atoms"].q.reshape(
-                #         (-1, 3)
-                #     ) * unit_to_user("force", "ev/ang", 1.0)
+                # parse comment to get the property
+                matches = comment_regex.findall(ret["comment"])
+                # example: [('positions', 'angstrom'), ('cell', 'angstrom')]
+
+                if len(matches) != 2:
+                    what = "positions"
+
+                what = matches[0][0]
+
+                if unique_what is None:
+                    unique_what = what
+                else:
+                    if unique_what != what:
+                        raise ValueError("The file containes mixed information.")
+
+                ### ASE units
+                # Set the ASE units correctly:
+                #   - 'positions', 'x_centroid' : angstrom
+                #   - 'forces' : ev/ang
+                #   - 'cell' : angstrom
+                #   - other: atomic_unit
+
+                cell_factor = convert(1, "length", _from=matches[1][1], _to="angstrom")
+
+                if what in ["positions", "x_centroid"]:
+                    frame = ase.Atoms(
+                        ret["atoms"].names,
+                        positions=ret["atoms"].q.reshape((-1, 3))
+                        * convert(1, "length", _from=matches[0][1], _to="angstrom"),
+                        cell=ret["cell"].h.T * cell_factor,
+                        pbc=True,
+                    )
+
+                elif what == "forces":
+                    frame = ase.Atoms(
+                        ret["atoms"].names,
+                        positions=ret["atoms"].q.reshape((-1, 3))
+                        * convert(1, "force", _from=matches[0][1], _to="ev/ang"),
+                        cell=ret["cell"].h.T * cell_factor,
+                        pbc=True,
+                    )
+
+                else:
+                    frame = ase.Atoms(
+                        ret["atoms"].names,
+                        positions=ret["atoms"].q.reshape((-1, 3)),
+                        cell=ret["cell"].h.T * cell_factor,
+                        pbc=True,
+                    )
+
+                # ... and the step
+                matches = step_regex.findall(ret["comment"])
+                if len(matches) >= 1:
+                    frame.info["step"] = int(matches[-1][0])
 
                 frames.append(frame)
 
@@ -333,7 +390,7 @@ def read_trajectory(
         except:
             raise
 
-    return frames.finalize()
+    return frames.finalize(), what
 
 
 def merge_trajectories(files, names, strides, formats):
@@ -410,7 +467,7 @@ def merge_trajectories(files, names, strides, formats):
 
             # Read the trajectory to get the positions
             with SuppressOutput():
-                traj = read_trajectory(filename=file, format=formats[n])
+                traj, _ = read_trajectory(filename=file, format=formats[n])
 
             # ATTENTION:
             # This is highly inefficient because the codes reads the whole trajectory
@@ -434,7 +491,7 @@ def merge_trajectories(files, names, strides, formats):
 
             # Read the trajectory to get other arrays
             with SuppressOutput():
-                array = read_trajectory(file)
+                array, _ = read_trajectory(file)
 
             # ATTENTION:
             # This is highly inefficient because the codes reads the whole trajectory

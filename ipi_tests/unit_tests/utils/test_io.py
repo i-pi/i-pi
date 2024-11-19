@@ -65,7 +65,8 @@ def test_read_pos_au():
     file = local("test.positions_au.xyz")
 
     # positions converted within `read_trajectory` into `angstrom`
-    atoms = read_trajectory(file)
+    atoms, name = read_trajectory(file)
+    assert name == "positions", f"Something is wrong: name = {name}"
     assert len(atoms) == 1, "Wrong number of snapshots"
     atoms = atoms[0]
 
@@ -73,9 +74,10 @@ def test_read_pos_au():
     ang2bohr = unit_to_internal("length", "angstrom", 1)
 
     # extract the positions (in bohr) with brute force
-    positions = np.genfromtxt(
-        file, skip_header=2, dtype=None, encoding=None, usecols=(1, 2, 3)
-    )
+    positions = read_positions_from_extxyz(file)
+
+    print("\n", atoms.positions)
+    print("\n", positions)
 
     # check that `read_trajectory` actually converts to  `angstrom`
     assert np.allclose(atoms.positions * ang2bohr, positions), "Wrong conversion"
@@ -89,7 +91,8 @@ def test_read_cell_au():
     file = local("test.positions_au.xyz")
 
     # positions converted within `read_trajectory` into `angstrom`
-    atoms = read_trajectory(file)
+    atoms, name = read_trajectory(file)
+    assert name == "positions", f"Something is wrong: name = {name}"
     assert len(atoms) == 1, "Wrong number of snapshots"
     atoms = atoms[0]
 
@@ -114,14 +117,16 @@ def test_read_pos_ang():
     file = local("test.positions_ang.xyz")
 
     # positions are not converted
-    atoms = read_trajectory(file)
+    atoms, name = read_trajectory(file)
+    assert name == "positions", f"Something is wrong: name = {name}"
     assert len(atoms) == 1, "Wrong number of snapshots"
     atoms = atoms[0]
 
     # extract the positions (in angstrom) with brute force
-    positions = np.genfromtxt(
-        file, skip_header=2, dtype=None, encoding=None, usecols=(1, 2, 3)
-    )
+    positions = read_positions_from_extxyz(file)
+
+    print("\n", atoms.positions)
+    print("\n", positions)
 
     # check that `read_trajectory` actually does not convert the positions
     assert np.allclose(atoms.positions, positions), "Wrong conversion"
@@ -135,7 +140,8 @@ def test_read_cell_ang():
     file = local("test.positions_ang.xyz")
 
     # positions converted within `read_trajectory` into `angstrom`
-    atoms = read_trajectory(file)
+    atoms, name = read_trajectory(file)
+    assert name == "positions", f"Something is wrong: name = {name}"
     assert len(atoms) == 1, "Wrong number of snapshots"
     atoms = atoms[0]
     atoms_cell = atoms.get_cell().cellpar()
@@ -145,6 +151,76 @@ def test_read_cell_ang():
 
     # check that `read_trajectory` actually converts to  `angstrom`
     assert np.allclose(atoms_cell, cell), "Wrong conversion"
+
+
+def test_read_vel_au():
+    """
+    Tests reading atomic velocities in atomic units without conversion.
+    """
+    # positions saved in `angstrom`
+    file = local("test.velocities_au.xyz")
+
+    # positions are not converted
+    atoms, name = read_trajectory(file)
+    assert name == "velocities", f"Something is wrong: name = {name}"
+    assert len(atoms) == 1, "Wrong number of snapshots"
+    atoms = atoms[0]
+
+    # extract the positions (in angstrom) with brute force
+    positions = read_positions_from_extxyz(file)
+
+    print("\n", atoms.positions)
+    print("\n", positions)
+
+    # check that `read_trajectory` actually does not convert the positions
+    assert np.allclose(atoms.positions, positions), "Wrong conversion"
+
+
+def test_read_forces_au():
+    """
+    Tests reading atomic velocities in atomic units without conversion.
+    """
+    # positions saved in `angstrom`
+    file = local("test.forces_au.xyz")
+
+    # positions are not converted
+    atoms, name = read_trajectory(file)
+    assert name == "forces", f"Something is wrong: name = {name}"
+    assert len(atoms) == 1, "Wrong number of snapshots"
+    atoms = atoms[0]
+
+    # extract the positions (in angstrom) with brute force
+    positions = read_positions_from_extxyz(file)
+
+    print("\n", atoms.positions)
+    print("\n", positions)
+
+    # check that `read_trajectory` actually does not convert the positions
+    evang2au = unit_to_internal("force", "ev/ang", 1)
+    assert np.allclose(atoms.positions * evang2au, positions), "Wrong conversion"
+
+
+def test_read_forces_ase():
+    """
+    Tests reading atomic velocities in atomic units without conversion.
+    """
+    # positions saved in `angstrom`
+    file = local("test.forces_ase.xyz")
+
+    # positions are not converted
+    atoms, name = read_trajectory(file)
+    assert name == "forces", f"Something is wrong: name = {name}"
+    assert len(atoms) == 1, "Wrong number of snapshots"
+    atoms = atoms[0]
+
+    # extract the positions (in angstrom) with brute force
+    positions = read_positions_from_extxyz(file)
+
+    print("\n", atoms.positions)
+    print("\n", positions)
+
+    # check that `read_trajectory` actually does not convert the positions
+    assert np.allclose(atoms.positions, positions), "Wrong conversion"
 
 
 def test_read_xyz():
