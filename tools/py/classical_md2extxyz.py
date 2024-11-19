@@ -5,8 +5,6 @@ The script must be run in the same folder where the i-PI simulation was done.
 
 Usage
 -----
-To use this script, run the following command in the terminal:
-
 1. Basic usage to convert an XML trajectory to an extxyz file with default options:
     $ python classical_md2extxyz.py -i input.xml -o output.extxyz
 
@@ -16,8 +14,11 @@ To use this script, run the following command in the terminal:
 3. Including additional properties (e.g., potential energy and temperature):
     $ python classical_md2extxyz.py -i input.xml -o output.extxyz -p potential temperature
 
-By default `positions` and `forces` are always read, as well as `potential`.
-To change this behavor, just modify the default parameters in `prepare_args`.
+4. Specifying custom units for properties and trajectories:
+    $ python classical_md2extxyz.py -i input.xml -o output.extxyz -u '{"forces": ["force", "eV/Angstrom"]}'
+
+By default, `positions` and `forces` are always read, as well as `potential`.
+To change this behavior, modify the default parameters in `prepare_args`.
 
 Arguments
 ---------
@@ -33,18 +34,38 @@ Arguments
 -p, --properties : list of str (optional)
     A list of properties to be added as `info` fields in the extxyz file. Default is `["potential"]`.
 
+-u, --units : str (optional)
+    JSON formatted string specifying units for properties and trajectories. For example, '{"forces": ["force", "eV/Angstrom"]}'.
+    This allows customization of units applied in the conversion. Default units are:
+        - potential: ["energy", "electronvolt"]
+
 Requirements
 ------------
 - Python with `argparse` for argument parsing.
 - The `ase` package for working with ASE trajectory objects. Install it via:
     $ pip install ase
+- `json` module for parsing units.
 
 Exceptions
 ----------
 - Raises `ImportError` if the `ase` package is not installed.
-- Raises `ValueError` if the input or output arguments are missing.
+- Raises `ValueError` if the input or output arguments are missing or if the `--units` argument is not properly formatted.
 
+Examples
+--------
+1. Basic usage:
+    $ python classical_md2extxyz.py -i trajectory.xml -o output.extxyz
+
+2. Including forces and velocities as trajectory data:
+    $ python classical_md2extxyz.py -i trajectory.xml -o output.extxyz -t forces velocities
+
+3. Adding potential and temperature as properties:
+    $ python classical_md2extxyz.py -i trajectory.xml -o output.extxyz -p potential temperature
+
+4. Using custom units:
+    $ python classical_md2extxyz.py -i trajectory.xml -o output.extxyz -u '{"velocities": ["velocity", "angstrom/femtosecond"]}'
 """
+
 
 import json
 import argparse

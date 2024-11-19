@@ -1,7 +1,8 @@
+#!/usr/bin/env python
 """
 Convert i-PI bead trajectories to ASE-readable extxyz files.
 
-This script reads bead trajectories from an i-PI XML file and creates separate extxyz files for each bead. 
+This script reads bead trajectories from an i-PI XML file and creates separate extxyz files for each bead.
 The output files can be used with ASE for further analysis.
 
 Usage
@@ -15,6 +16,9 @@ Include additional arrays (e.g., velocities):
 Add specific properties (e.g., bead-level potential):
     $ python bead2extxyz.py -i input.xml -o output_prefix -p bead_potentials
 
+Specify custom units for properties and trajectories:
+    $ python bead2extxyz.py -i input.xml -o output_prefix -u '{"forces": ["force", "eV/Angstrom"]}'
+
 Arguments
 ---------
 -i, --input : str
@@ -25,11 +29,16 @@ Arguments
     Arrays to include in extxyz files. Default: `["forces"]`.
 -p, --properties : list of str (optional)
     Properties to include as `info` fields. Default: `["bead_potentials"]`.
+-u, --units : str (optional)
+    JSON formatted string specifying units for properties and trajectories. For example, '{"forces": ["force", "eV/Angstrom"]}'.
+    This option allows the user to customize the units applied in the conversion. Default units are:
+        - bead_potentials: ["energy", "electronvolt"]
 
 Requirements
 ------------
 - Python with `argparse`.
 - `ase` package (install via `$ pip install ase`).
+- `json` module for parsing units.
 
 Examples
 --------
@@ -38,7 +47,11 @@ Basic usage:
 
 Include velocities:
     $ python bead2extxyz.py -i trajectory.xml -o output_prefix -t velocities
+
+Add custom units:
+    $ python bead2extxyz.py -i trajectory.xml -o output_prefix -u '{"velocities": ["velocity", "angstrom/femtosecond"]}'
 """
+
 
 import json
 import argparse
