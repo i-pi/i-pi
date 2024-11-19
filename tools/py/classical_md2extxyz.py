@@ -59,11 +59,7 @@ except ImportError:
 description = "Convert a classical i-PI trajectory to an extxyz file readable by ASE."
 
 default_units = {
-    # "positions": ["length", "angstrom"],
-    # "cell": ["length", "angstrom"],
     "potential": ["energy", "electronvolt"],
-    "bead_potentials": ["energy", "electronvolt"],
-    "forces": ["forces", "ev/ang"],
 }
 
 
@@ -129,6 +125,7 @@ def main():
         print("\t {:>20s}:".format(k), getattr(args, k))
     print()
 
+    #
     try:
         args.units = json.loads(args.units)
     except:
@@ -139,9 +136,13 @@ def main():
             u not in default_units
         ), f"You can not modify defaults units, i.e. {list(default_units.keys())}"
     args.units = {**args.units, **default_units}
+    print("\t Conversion units: ", args.units)
 
+    #
     print("\t Constructing the classical trajectory.")
-    atoms = create_classical_trajectory(args.input, args.trajectories, args.properties)
+    atoms = create_classical_trajectory(
+        args.input, args.trajectories, args.properties, args.units
+    )
     print(
         f"\t The trajectory has {len(atoms)} snapshots.   | The least common multiple of all the strides has been used."
     )
@@ -154,6 +155,7 @@ def main():
         list(atoms[0].info.keys()),
     )
 
+    #
     print(f"\t The trajectory will be saved to '{args.output}'.")
     write(args.output, atoms, format="extxyz")
 

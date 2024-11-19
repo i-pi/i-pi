@@ -40,6 +40,7 @@ Include velocities:
     $ python bead2extxyz.py -i trajectory.xml -o output_prefix -t velocities
 """
 
+import json
 import argparse
 from ipi.utils.parsing import create_bead_trajectories
 
@@ -50,6 +51,11 @@ except ImportError:
     ase = None
 
 description = "Convert a classical i-PI trajectory to an extxyz file readable by ASE."
+
+
+default_units = {
+    "bead_potentials": ["energy", "electronvolt"],
+}
 
 
 # ---------------------------------------#
@@ -85,6 +91,15 @@ def prepare_args():
         default=["bead_potentials"],
     )
     parser.add_argument(
+        "-u",
+        "--units",
+        type=str,
+        required=False,
+        **argv,
+        help="JSON formatted units for both trajectories and properties, for example { <name> : [ <family>, <unit> ], ... } (default: %(default)s)",
+        default="{ }",  # str(default_units),
+    )
+    parser.add_argument(
         "-o",
         "--output",
         type=str,
@@ -110,9 +125,23 @@ def main():
         print("\t {:>20s}:".format(k), getattr(args, k))
     print()
 
+    #
+    try:
+        args.units = json.loads(args.units)
+    except:
+        raise ValueError(f"-u/--units must be JSON formatted, but it is `{args.units}`")
+
+    for u in args.units.keys():
+        assert (
+            u not in default_units
+        ), f"You can not modify defaults units, i.e. {list(default_units.keys())}"
+    args.units = {**args.units, **default_units}
+    print("\t Conversion units: ", args.units)
+
+    #
     print("\t Constructing the classical trajectory.")
     list_atoms = create_bead_trajectories(
-        args.input, args.trajectories, args.properties
+        args.input, args.trajectories, args.properties, args.units
     )
     print(
         f"\n\t The trajectories have {len(list_atoms[0])} snapshots.   | The least common multiple of all the strides has been used."
@@ -126,6 +155,7 @@ def main():
         list(list_atoms[0][0].info.keys()),
     )
 
+    #
     print(f"\n\t The trajectories will be saved to file with prefix '{args.output}':")
     for n, atoms in enumerate(list_atoms):
         file = f"{args.output}.bead={n}.extxyz"

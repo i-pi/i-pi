@@ -532,7 +532,7 @@ def merge_trajectories(files, names, strides, formats):
     return traj
 
 
-def create_classical_trajectory(input_file, trajectories, properties):
+def create_classical_trajectory(input_file, trajectories, properties, units):
     """
     Creates a classical trajectory from i-PI output files.
 
@@ -618,10 +618,21 @@ def create_classical_trajectory(input_file, trajectories, properties):
         prop_file = f"{prefix}.{ipi_props.filename}"
         if len(properties) > 0 and not os.path.exists(prop_file):
             raise ValueError(f"File {prop_file} does not exists.")
-        props, _ = read_output(prop_file)
+        props, comments = read_output(prop_file)
 
         # keep only the properties of interest
         props = {key: props[key] for key in properties if key in props}
+
+        # convert properties units
+        for key in props.keys():
+            if key in units:
+                p = props[key]
+                family = units[key][0]
+                _from = (
+                    comments[key][0] if comments[key][0] is not None else "atomic_unit"
+                )
+                _to = units[key][1]
+                props[key] = convert(p, family, _from, _to)
 
     ### Trajectories files
     # Time and memory consuming.
@@ -800,7 +811,7 @@ def create_centroid_trajectory(input_file, trajectories):
     return traj
 
 
-def create_bead_trajectories(input_file, trajectories, properties):
+def create_bead_trajectories(input_file, trajectories, properties, units):
     """
     Generates bead trajectories from i-PI output files.
 
@@ -885,10 +896,21 @@ def create_bead_trajectories(input_file, trajectories, properties):
         prop_file = f"{prefix}.{ipi_props.filename}"
         if len(properties) > 0 and not os.path.exists(prop_file):
             raise ValueError(f"File {prop_file} does not exists.")
-        props, _ = read_output(prop_file)
+        props, comments = read_output(prop_file)
 
         # keep only the properties of interest
         props = {key: props[key] for key in properties if key in props}
+
+        # convert properties units
+        for key in props.keys():
+            if key in units:
+                p = props[key]
+                family = units[key][0]
+                _from = (
+                    comments[key][0] if comments[key][0] is not None else "atomic_unit"
+                )
+                _to = units[key][1]
+                props[key] = convert(p, family, _from, _to)
 
     ### Trajectories files
     # Time and memory consuming.
