@@ -1,5 +1,3 @@
-from typing import List
-
 import numpy as np
 
 from ipi.utils.units import unit_to_internal, unit_to_user
