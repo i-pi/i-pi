@@ -1,8 +1,7 @@
 import numpy as np
-import json
 
 from ipi.utils.units import unit_to_internal, unit_to_user
-from ipi.utils.messages import verbosity, warning
+from ipi.utils.io import read_file_name
 from .dummy import Dummy_driver
 
 tb = None
@@ -17,15 +16,14 @@ class TBLiteDriver(Dummy_driver):
 
     Example::
 
-        python driver.py -m xtb -u -o config.json
+        i-pi-py_driver -m xtb -u -o template=input.xyz,method=GFN2-xTB
     """
 
-    def __init__(self, json_input, *args, **kwargs):
-        warning(
-            "THIS PES HAS NOT BEEN TESTED FOLLOWING CONVERSION TO THE NEW PES API.",
-            verbosity.low,
-        )
-        config = json.load(open(json_input))
+    def __init__(
+        self, template, method, charge=None, uhf=None, periodic=None, *args, **kwargs
+    ):
+
+        super().__init__(*args, **kwargs)
 
         global tb
         try:
@@ -35,17 +33,26 @@ class TBLiteDriver(Dummy_driver):
                 "Could not find tblite for xtb driver. Please install tblite-python with mamba"
             )
 
-        try:
-            self.method = config["method"]
-            self.numbers = np.asarray(config["numbers"])
-        except KeyError as e:
-            raise ValueError(f"Required key {str(e)} not found.")
-        self.charge = config.get("charge")
-        self.uhf = config.get("uhf")
-        self.periodic = config.get("periodic")
+        input_data = read_file_name(template)
+        atoms = input_data["atoms"]
+        symbols = atoms.names[:]
+        numbers = np.asarray(tb.symbols_to_numbers(symbols))
+        self.periodic = periodic
         self.verbosity = 1 if self.verbose else 0
 
-        super().__init__(*args, **kwargs)
+        pos = unit_to_user("length", "atomic_unit", atoms.q[:])
+        cell = unit_to_user("length", "atomic_unit", input_data["cell"].h.T)
+
+        self.calc = tb.Calculator(
+            method,
+            numbers,
+            np.asarray(pos),
+            charge,
+            uhf,  # unpaired electrons
+            np.asarray(cell) if self.periodic else None,
+            np.repeat(self.periodic, 3) if self.periodic else None,
+        )
+        self.calc.set("verbosity", self.verbosity)
 
     def __call__(self, cell, pos):
         """
@@ -58,19 +65,10 @@ class TBLiteDriver(Dummy_driver):
         pos = unit_to_user("length", "atomic_unit", pos)
         cell = unit_to_user("length", "atomic_unit", cell.T)
 
-        calc = tb.Calculator(
-            self.method,
-            self.numbers,
-            np.asarray(pos),
-            self.charge,
-            self.uhf,  # unpaired electrons
-            np.asarray(cell) if self.periodic else None,
-            np.repeat(self.periodic, 3) if self.periodic else None,
-        )
-        calc.set("verbosity", self.verbosity)
+        self.calc.update(np.asarray(pos), np.asarray(cell) if self.periodic else None)
 
         # Do the actual calculation
-        results = calc.singlepoint()
+        results = self.calc.singlepoint()
         pot = results.get("energy")
         grad = results.get("gradient")
         vir = results.get("virial")
