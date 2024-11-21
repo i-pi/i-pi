@@ -1529,9 +1529,6 @@ class Properties:
            bead: If given, compute the classical KE of a single bead.
            nm: If given, compute the classical KE of a single normal mode.
         """
-        from icecream import ic
-
-        ic(bead)
 
         if bead != "" and nm != "":
             raise ValueError(
