@@ -207,7 +207,6 @@ def read_trajectory(
 
                 # parse comment to get the property
                 matches = comment_regex.findall(ret["comment"])
-                print("MATCHES ", matches)
                 # get what we have found
                 if len(matches) == 2:
                     what = matches[0][0]
