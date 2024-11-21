@@ -306,6 +306,12 @@ class Properties:
                 "size": 3,
                 "func": self.get_dipole,
             },
+            "bead_dipoles": {
+                "dimension": "electric-dipole",
+                "help": "The electric dipole of each bead (x,y,z components in cartesian axes).",
+                "size": "3 x nbeads",
+                "func": self.get_bead_dipoles,
+            },
             "conserved": {
                 "dimension": "energy",
                 "help": "The value of the conserved energy quantity per bead.",
@@ -959,6 +965,7 @@ class Properties:
         )  # lock to avoid concurrent access and messing up with dbeads
 
         self.property_dict["bead_potentials"]["size"] = self.beads.nbeads
+        self.property_dict["bead_dipoles"]["size"] = 3 * self.beads.nbeads
         # self.properties_init()  # Initialize the properties here so that all
         # +all variables are accessible (for example to set
         # +the size of the hamiltonian_weights).
@@ -1451,12 +1458,38 @@ class Properties:
 
     def get_dipole(self, atom="", bead="", nm="", return_count=False):
         """Returns the electric-dipole moment of the system."""
-        if bead == "" or int(bead) < 0:
-            return self.motion.Electric_Dipole.dipole.mean(axis=0)
-        elif isinstance(self.motion, DrivenDynamics):
-            return self.motion.Electric_Dipole.dipole[int(bead)]
+        assert nm == "", "'nm' not implemented in 'get_dipole'."
+        assert return_count == False, "'return_count' not implemented in 'get_dipole'."
+        assert (
+            atom == ""
+        ), "The dipole is defined only for charge neutral systems, not for atoms."
+        if isinstance(self.motion, DrivenDynamics):
+            if bead == "" or int(bead) < 0:
+                return self.motion.Electric_Dipole.dipole.mean(axis=0)
+            else:
+                return self.motion.Electric_Dipole.dipole[int(bead)]
         else:
-            return np.zeros(3)
+            return np.full(3, np.nan)
+
+    def get_bead_dipoles(self, atom="", bead="", nm="", return_count=False):
+        """Returns the electric-dipole moment of a single bead."""
+        assert nm == "", "'nm' not implemented in 'get_dipole'."
+        assert return_count == False, "'return_count' not implemented in 'get_dipole'."
+        assert (
+            atom == ""
+        ), "The dipole is defined only for charge neutral systems, not for atoms in molecules."
+        assert (
+            bead == ""
+        ), "'Properties.get_bead_dipoles' is supposed to be used to print the dipole of all the beads.\
+            If you want to print the dipole of individual beads use 'dipole(bead=<N>)'."
+        if isinstance(self.motion, DrivenDynamics):
+            out = np.asarray(self.motion.Electric_Dipole.dipole).flatten()
+        else:
+            out = np.full(3 * self.beads.nbeads, np.nan)
+        assert out.shape == (
+            3 * self.beads.nbeads,
+        ), f"Wrong shape for bead dipoles, expected '{(3*self.beads.nbeads,)}', but found '{out.shape}'."
+        return out
 
     def get_conserved(self, atom="", bead="", nm="", return_count=False):
         """Returns the conserved quantity of the system."""
@@ -1496,6 +1529,9 @@ class Properties:
            bead: If given, compute the classical KE of a single bead.
            nm: If given, compute the classical KE of a single normal mode.
         """
+        from icecream import ic
+
+        ic(bead)
 
         if bead != "" and nm != "":
             raise ValueError(
