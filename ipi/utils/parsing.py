@@ -9,6 +9,7 @@ numpy arrays.
 import re
 import numpy as np
 from ipi.utils.units import unit_to_user
+from ipi.utils.messages import warning, verbosity
 
 try:
     import ase
@@ -220,12 +221,35 @@ def read_trajectory(
 
                 # if we have forces, set positions to zero (that data is missing!)
                 # and set forces instead
-                if what == "forces":
-                    # set forces and convert to eV/angstrom
-                    frame.positions *= 0
-                    frame.arrays["forces"] = ret["atoms"].q.reshape(
-                        (-1, 3)
-                    ) * unit_to_user("force", "ase", 1.0)
+                if what in [
+                    "positions",
+                    "x_centroid",
+                    "x_centroid_even",
+                    "x_centroid_odd",
+                ]:
+                    pass  # nothing to do here, positions is the right place to store
+                else:
+                    frame.positions *= 0.0  # trajectory does NOT contain position data!
+                    frame.arrays[what] = ret["atoms"].q.reshape((-1, 3))
+                    if what in [
+                        "forces",
+                        "forces_spring",
+                        "forces_component",
+                        "forces_sc",
+                        "Eforces",
+                        "f_centroid",
+                        "forces_component_raw",
+                    ]:
+                        frame.arrays[what] *= unit_to_user("force", "ase", 1.0)
+                    elif what in ["velocities", "v_centroid"]:
+                        frame.arrays[what] *= unit_to_user("velocity", "ase", 1.0)
+                    elif what in ["momenta", "p_centroid"]:
+                        frame.arrays[what] *= unit_to_user("momentum", "ase", 1.0)
+                    else:
+                        warning(
+                            f"No units conversion implemented for trajectory type {what}",
+                            verbosity.low,
+                        )
 
                 frames.append(frame)
 
