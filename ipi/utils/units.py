@@ -365,7 +365,7 @@ UnitPrefixRE = re.compile(UnitPrefixRE)
 #
 
 
-def unit_to_internal(family, unit, number):
+def unit_to_internal(family, unit, number=1.0):
     """Converts a number of given dimensions and units into internal units.
 
     Args:
@@ -411,7 +411,7 @@ def unit_to_internal(family, unit, number):
     return number * UnitMap[family][base.lower()] * UnitPrefix[prefix]
 
 
-def unit_to_user(family, unit, number):
+def unit_to_user(family, unit, number=1.0):
     """Converts a number of given dimensions from internal to user units.
 
     Args:
@@ -423,4 +423,4 @@ def unit_to_user(family, unit, number):
         The number in the user specified units
     """
 
-    return number / unit_to_internal(family, unit, 1.0)
+    return number / unit_to_internal(family, unit)

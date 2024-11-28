@@ -139,7 +139,6 @@ def read_trajectory(
             raise ValueError(f"Unrecognized file format: {format}")
 
     file_handle = open(filename, "r")
-    bohr2angstrom = unit_to_user("length", "angstrom", 1.0)
     comment_regex = re.compile(r"(\w+)\{([^}]+)\}")
     step_regex = re.compile(r"Step:\s+(\d+)")
 
@@ -201,8 +200,9 @@ def read_trajectory(
 
                 frame = ase.Atoms(
                     ret["atoms"].names,
-                    positions=ret["atoms"].q.reshape((-1, 3)) * bohr2angstrom,
-                    cell=ret["cell"].h.T * bohr2angstrom,
+                    # will apply conversion later!
+                    positions=ret["atoms"].q.reshape((-1, 3)),
+                    cell=ret["cell"].h.T * unit_to_user("length", "ase"),
                     pbc=True,
                 )
 
@@ -219,37 +219,25 @@ def read_trajectory(
                 if len(matches) >= 1:
                     frame.info["step"] = int(matches[-1][0])
 
-                # if we have forces, set positions to zero (that data is missing!)
-                # and set forces instead
-                if what in [
-                    "positions",
-                    "x_centroid",
-                    "x_centroid_even",
-                    "x_centroid_odd",
-                ]:
-                    pass  # nothing to do here, positions is the right place to store
+                # fetch the list of known traj types, cf. `engine/properties.py``
+                from ipi.engine.properties import Trajectories  # avoids circular import
+
+                traj_types = Trajectories().traj_dict
+                if not what in traj_types:
+                    warning(
+                        f"{what} is not a known trajectory type. Will apply no units conversion",
+                        verbosity.low,
+                    )
+                elif traj_types[what]["dimension"] == "length":
+                    # positions is the right place to store, and we just need to convert
+                    frame.positions *= unit_to_user("length", "ase")
                 else:
-                    frame.positions *= 0.0  # trajectory does NOT contain position data!
-                    frame.arrays[what] = ret["atoms"].q.reshape((-1, 3))
-                    if what in [
-                        "forces",
-                        "forces_spring",
-                        "forces_component",
-                        "forces_sc",
-                        "Eforces",
-                        "f_centroid",
-                        "forces_component_raw",
-                    ]:
-                        frame.arrays[what] *= unit_to_user("force", "ase", 1.0)
-                    elif what in ["velocities", "v_centroid"]:
-                        frame.arrays[what] *= unit_to_user("velocity", "ase", 1.0)
-                    elif what in ["momenta", "p_centroid"]:
-                        frame.arrays[what] *= unit_to_user("momentum", "ase", 1.0)
-                    else:
-                        warning(
-                            f"No units conversion implemented for trajectory type {what}",
-                            verbosity.low,
-                        )
+                    # if we have another type of value, set positions to zero
+                    # (that data is missing!) and set an array instead
+                    frame.positions *= 0.0
+                    frame.arrays[what] = ret["atoms"].q.reshape((-1, 3)) * unit_to_user(
+                        traj_types[what]["dimension"], "ase"
+                    )
 
                 frames.append(frame)
 
