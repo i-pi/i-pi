@@ -12,8 +12,10 @@
   <ffsocket name='driver-qtip4pf' mode='unix' pbc='false'>
       <address>h2o-base</address>
   </ffsocket>
-  <ffrotations name='driver-noo3' mode='unix' pbc='false'>
-      <address>h2o-noo3</address>
+  <ffrotations name='driver-noo3' pbc='false'>
+      <ffsocket name='base-noo3' mode='unix' pbc='false'>
+          <address>h2o-noo3</address>
+      </ffsocket>
       <grid_order> 2 </grid_order> 
       <grid_mode> legendre </grid_mode>
       <inversion> True </inversion>
