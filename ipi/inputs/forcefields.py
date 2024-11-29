@@ -265,7 +265,7 @@ class InputFFSocket(InputForceField):
            ff: A ForceField object with a FFSocket forcemodel object.
         """
 
-        if type(ff) not in [FFSocket, FFCavPhSocket, FFRotations]:
+        if type(ff) not in [FFSocket, FFCavPhSocket]:
             raise TypeError(
                 "The type " + type(ff).__name__ + " is not a valid socket forcefield"
             )
@@ -923,7 +923,7 @@ class InputFFCommittee(InputForceField):
         )
 
 
-class InputFFRotations(InputFFSocket):
+class InputFFRotations(InputForceField):
     default_help = """Wraps around another forcefield to evaluate it
                     over one or more rotated copies of the physical 
                     system. This is useful when interacting with models
@@ -932,7 +932,7 @@ class InputFFRotations(InputFFSocket):
                       """
     default_label = "FFROTATIONS"
 
-    fields = copy(InputFFSocket.fields)
+    fields = copy(InputForceField.fields)
 
     fields["random"] = (
         InputValue,
@@ -980,6 +980,22 @@ class InputFFRotations(InputFFSocket):
         },
     )
 
+    fields["ffsocket"] = (
+        InputFFSocket,
+        {
+            "help": InputFFSocket.default_help,
+            "default": input_default(factory=FFSocket, kwargs={"name": "__DUMMY__"}),
+        },
+    )
+
+    fields["ffdirect"] = (
+        InputFFDirect,
+        {
+            "help": InputFFDirect.default_help,
+            "default": input_default(factory=FFDirect, kwargs={"name": "__DUMMY__"}),
+        },
+    )
+
     def store(self, ff):
         """Store the base and rotation quadrature parameters"""
 
@@ -988,6 +1004,8 @@ class InputFFRotations(InputFFSocket):
         self.grid_order.store(ff.grid_order)
         self.grid_mode.store(ff.grid_mode)
         self.random.store(ff.random)
+        self.ffsocket.store(ff.ffsocket)
+        self.ffdirect.store(ff.ffdirect)
 
     def fetch(self):
         """Fetches all of the FF objects"""
@@ -1000,15 +1018,8 @@ class InputFFRotations(InputFFSocket):
             dopbc=self.pbc.fetch(),
             active=self.activelist.fetch(),
             threaded=self.threaded.fetch(),
-            interface=InterfaceSocket(
-                address=self.address.fetch(),
-                port=self.port.fetch(),
-                slots=self.slots.fetch(),
-                mode=self.mode.fetch(),
-                timeout=self.timeout.fetch(),
-                match_mode=self.matching.fetch(),
-                exit_on_disconnect=self.exit_on_disconnect.fetch(),
-            ),
+            ffsocket=self.ffsocket.fetch(),
+            ffdirect=self.ffdirect.fetch(),
             grid_order=self.grid_order.fetch(),
             grid_mode=self.grid_mode.fetch(),
             random=self.random.fetch(),

@@ -13,6 +13,7 @@ import time
 import threading
 import json
 import sys
+from contextlib import nullcontext
 
 import numpy as np
 
@@ -74,7 +75,7 @@ class ForceField:
 
     def __init__(
         self,
-        latency=1.0,
+        latency=1e-4,
         offset=0.0,
         name="",
         pars=None,
@@ -230,22 +231,26 @@ class ForceField:
         finished.
         """
 
-        info(" @ForceField: Starting the polling thread main loop.", verbosity.low)
+        info(
+            f" @ForceField ({self.name}): Starting the polling thread main loop.",
+            verbosity.low,
+        )
         while self._doloop[0]:
             time.sleep(self.latency)
             if len(self.requests) > 0:
                 self.poll()
 
-    def release(self, request):
+    def release(self, request, lock=True):
         """Removes a request from the evaluation queue.
 
         Args:
             request: The id of the job to release.
+            lock: whether we should apply a threadlock here
         """
 
         """Frees up a request."""
 
-        with self._threadlock:
+        with self._threadlock if lock else nullcontext():
             if request in self.requests:
                 try:
                     self.requests.remove(request)
@@ -426,6 +431,8 @@ class FFDirect(FFEval):
 
         super().__init__(latency, offset, name, pars, dopbc, active, threaded)
 
+        if pars is None:
+            pars = {}  # defaults no pars
         self.pes = pes
         try:
             self.driver = __drivers__[self.pes](verbose=verbosity.high, **pars)
@@ -1166,7 +1173,7 @@ class FFCommittee(ForceField):
             pars=pars,
             dopbc=dopbc,
             active=active,
-            threaded=True,
+            threaded=True,  # hardcoded, otherwise won't work!
         )
         if len(fflist) == 0:
             raise ValueError(
@@ -1449,7 +1456,7 @@ class FFCommittee(ForceField):
                     r["status"] = "Done"
 
 
-class FFRotations(FFSocket):
+class FFRotations(ForceField):
     """Forcefield to manipulate models that are not exactly rotationally equivariant.
     Can be used to evaluate a different random rotation at each evaluation, or to average
     over a regular grid of Euler angles"""
@@ -1463,25 +1470,37 @@ class FFRotations(FFSocket):
         dopbc=True,
         active=np.array([-1]),
         threaded=True,
-        interface=None,
+        ffsocket=None,
+        ffdirect=None,
         random=False,
         inversion=False,
         grid_order=1,
         grid_mode="lebedev",
     ):
-        super(FFRotations, self).__init__(
-            latency,
-            offset,
-            name,
-            pars,
-            dopbc,
-            active,
-            threaded,
-            interface,
+        super(
+            FFRotations, self
+        ).__init__(  # force threaded execution to handle sub-ffield
+            latency, offset, name, pars, dopbc, active, threaded=True
         )
 
         # TODO: initialize and save (probably better to use different PRNG than the one from the simulation)
         self.prng = Random()
+        self.ffsocket = ffsocket
+        self.ffdirect = ffdirect
+        if ffsocket is None or self.ffsocket.name == "__DUMMY__":
+            if ffdirect is None or self.ffdirect.name == "__DUMMY__":
+                raise ValueError(
+                    "Must specify a non-default value for either `ffsocket` or `ffdirect` into `ffrotations`"
+                )
+            else:
+                self.ff = self.ffdirect
+        elif ffdirect is None or self.ffdirect.name == "__DUMMY__":
+            self.ff = self.ffsocket
+        else:
+            raise ValueError(
+                "Cannot specify both `ffsocket` and `ffdirect` into `ffrotations`"
+            )
+
         self.random = random
         self.inversion = inversion
         self.grid_order = grid_order
@@ -1500,6 +1519,14 @@ class FFRotations(FFSocket):
 """,
             verbosity.low,
         )
+
+    def bind(self, output_maker=None):
+        super().bind(output_maker)
+        self.ff.bind(output_maker)
+
+    def start(self):
+        super().start()
+        self.ff.start()
 
     def queue(self, atoms, cell, reqid=-1):
 
@@ -1521,7 +1548,7 @@ class FFRotations(FFSocket):
             rot_atoms.q[:] = (dstrip(rot_atoms.q).reshape(-1, 3) @ R.T).flatten()
 
             rots.append((R, w))
-            ffh.append(super(FFRotations, self).queue(rot_atoms, rot_cell, reqid))
+            ffh.append(self.ff.queue(rot_atoms, rot_cell, reqid))
 
             if self.inversion:
                 # also add a "flipped rotation" to the evaluation list
@@ -1532,7 +1559,7 @@ class FFRotations(FFSocket):
                 rot_atoms.q[:] = (dstrip(rot_atoms.q).reshape(-1, 3) @ R.T).flatten()
 
                 rots.append((R, w))
-                ffh.append(super(FFRotations, self).queue(rot_atoms, rot_cell, reqid))
+                ffh.append(self.ff.queue(rot_atoms, rot_cell, reqid))
 
         # creates the request with the help of the base class,
         # making sure it already contains a handle to the list of FF
@@ -1555,6 +1582,7 @@ class FFRotations(FFSocket):
 
     def gather(self, r):
         """Collects results from all sub-requests, and assemble the committee of models."""
+
         r["result"] = [
             0.0,
             np.zeros(len(r["pos"]), float),
@@ -1607,22 +1635,19 @@ class FFRotations(FFSocket):
                 r["result"][3][k].append(x[k])
 
         for ff_r in r["ff_handles"]:
-            self.release(ff_r)
-
-        r["status"] = "Done"
-        self.release(r)
+            self.ff.release(ff_r)
 
     def poll(self):
         """Polls the forcefield object to check if it has finished."""
 
-        super().poll()
-
-        for r in self.requests:
-            if "ff_handles" in r and r["status"] != "Done" and self.check_finish(r):
-                r["t_finished"] = time.time()
-                self.gather(r)
-                r["result"][0] -= self.offset
-                r["status"] = "Done"
+        with self._threadlock:
+            for r in self.requests:
+                if "ff_handles" in r and r["status"] != "Done" and self.check_finish(r):
+                    r["t_finished"] = time.time()
+                    self.gather(r)
+                    r["result"][0] -= self.offset
+                    r["status"] = "Done"
+                    self.release(r, lock=False)
 
 
 class PhotonDriver:
