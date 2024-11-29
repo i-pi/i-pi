@@ -231,10 +231,7 @@ class ForceField:
         finished.
         """
 
-        info(
-            f" @ForceField ({self.name}): Starting the polling thread main loop.",
-            verbosity.low,
-        )
+        info(f" @ForceField ({self.name}): Starting the polling thread main loop.", verbosity.low)
         while self._doloop[0]:
             time.sleep(self.latency)
             if len(self.requests) > 0:
@@ -245,7 +242,7 @@ class ForceField:
 
         Args:
             request: The id of the job to release.
-            lock: whether we should apply a threadlock here
+            lock: whether we should apply a threadlock here 
         """
 
         """Frees up a request."""
@@ -432,7 +429,7 @@ class FFDirect(FFEval):
         super().__init__(latency, offset, name, pars, dopbc, active, threaded)
 
         if pars is None:
-            pars = {}  # defaults no pars
+            pars = {} # defaults no pars
         self.pes = pes
         try:
             self.driver = __drivers__[self.pes](verbose=verbosity.high, **pars)
@@ -1173,7 +1170,7 @@ class FFCommittee(ForceField):
             pars=pars,
             dopbc=dopbc,
             active=active,
-            threaded=True,  # hardcoded, otherwise won't work!
+            threaded=True, # hardcoded, otherwise won't work!
         )
         if len(fflist) == 0:
             raise ValueError(
@@ -1470,17 +1467,15 @@ class FFRotations(ForceField):
         dopbc=True,
         active=np.array([-1]),
         threaded=True,
-        ffsocket=None,
-        ffdirect=None,
+        ffsocket = None,
+        ffdirect = None,
         random=False,
         inversion=False,
         grid_order=1,
         grid_mode="lebedev",
     ):
-        super(
-            FFRotations, self
-        ).__init__(  # force threaded execution to handle sub-ffield
-            latency, offset, name, pars, dopbc, active, threaded=True
+        super(FFRotations, self).__init__( # force threaded execution to handle sub-ffield
+            latency, offset, name, pars, dopbc, active, threaded=True  
         )
 
         # TODO: initialize and save (probably better to use different PRNG than the one from the simulation)
@@ -1489,17 +1484,13 @@ class FFRotations(ForceField):
         self.ffdirect = ffdirect
         if ffsocket is None or self.ffsocket.name == "__DUMMY__":
             if ffdirect is None or self.ffdirect.name == "__DUMMY__":
-                raise ValueError(
-                    "Must specify a non-default value for either `ffsocket` or `ffdirect` into `ffrotations`"
-                )
+                raise ValueError("Must specify a non-default value for either `ffsocket` or `ffdirect` into `ffrotations`")
             else:
-                self.ff = self.ffdirect
+                self.ff=self.ffdirect
         elif ffdirect is None or self.ffdirect.name == "__DUMMY__":
             self.ff = self.ffsocket
         else:
-            raise ValueError(
-                "Cannot specify both `ffsocket` and `ffdirect` into `ffrotations`"
-            )
+            raise ValueError("Cannot specify both `ffsocket` and `ffdirect` into `ffrotations`")
 
         self.random = random
         self.inversion = inversion
@@ -1629,19 +1620,24 @@ class FFRotations(ForceField):
         }  # this is the list of potentials on a grid, for monitoring
 
         # "dissolve" the extras dictionaries into a list
-        for k in xtrs[0].keys():
-            r["result"][3][k] = []
+        if isinstance(xtrs[0], dict):
+            for k in xtrs[0].keys():
+                r["result"][3][k] = []
+                for x in xtrs:
+                    r["result"][3][k].append(x[k])
+        else:
+            r["result"][3]["raw"] = []
             for x in xtrs:
-                r["result"][3][k].append(x[k])
+                r["result"][3]["raw"].append(x)
 
         for ff_r in r["ff_handles"]:
             self.ff.release(ff_r)
-
+        
     def poll(self):
         """Polls the forcefield object to check if it has finished."""
 
         with self._threadlock:
-            for r in self.requests:
+            for r in self.requests:             
                 if "ff_handles" in r and r["status"] != "Done" and self.check_finish(r):
                     r["t_finished"] = time.time()
                     self.gather(r)
