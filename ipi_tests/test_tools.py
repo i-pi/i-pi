@@ -186,16 +186,15 @@ def modify_xml_4_dummy_test(
     root = tree.getroot()
     clients = list()
 
+    ff_roots = [root]
     if len(root.findall("ffcommittee")) > 0:
-        ff_roots = root.findall("ffcommittee")
-    else:
-        ff_roots = [root]
+        ff_roots += root.findall("ffcommittee")
+    if len(root.findall("ffrotations")) > 0:
+        ff_roots += root.findall("ffrotations")
 
     ff_sockets = []
     for ff_root in ff_roots:
         for ff_socket in ff_root.findall("ffsocket"):
-            ff_sockets.append(ff_socket)
-        for ff_socket in ff_root.findall("ffrotations"):
             ff_sockets.append(ff_socket)
         for ff_socket in ff_root.findall("ffcavphsocket"):
             ff_sockets.append(ff_socket)
@@ -325,7 +324,7 @@ class Runner(object):
                         print("List all files  /tmp/ipi_*")
                         for filename in glob.glob("/tmp/ipi_*"):
                             print(filename)
-                        ipi_error = ipi.communicate(timeout=120)[1].decode("ascii")
+                        ipi_error = ipi.communicate(timeout=10)[1].decode("ascii")
                         print(ipi_error)
                         return "Could not find the i-PI UNIX socket"
 
@@ -378,13 +377,13 @@ class Runner(object):
                 drivers.append(driver)
 
             # check i-pi errors
-            ipi_out, ipi_error = ipi.communicate(timeout=60)
+            ipi_out, ipi_error = ipi.communicate(timeout=10)
             assert ipi.returncode == 0, "i-PI error occurred: {}".format(ipi_error)
 
             # check driver errors
             for driver in drivers:
                 # if i-PI has ended, we can wait for the driver to quit
-                driver_out, driver_err = driver.communicate(timeout=60)
+                driver_out, driver_err = driver.communicate(timeout=10)
                 assert (
                     driver.returncode == 0
                 ), "Driver error occurred: {}\n Driver Output: {}".format(
