@@ -312,6 +312,7 @@ def det_ut3x3(h):
 
 MINSERIES = 1e-8
 
+
 def exp_ut3x3(h):
     """Computes the matrix exponential for a 3x3 upper-triangular matrix.
 
@@ -617,7 +618,8 @@ def get_rotation_quadrature_legendre(L):
 
     return quads
 
-def get_rotation_quadrature_lebedev(L):    
+
+def get_rotation_quadrature_lebedev(L):
     with resources.path("ipi.utils", "lebedev_grids.npy") as file_path:
         lebedev = np.load(file_path, allow_pickle=True).item()
     if not L in lebedev:
@@ -627,10 +629,11 @@ def get_rotation_quadrature_lebedev(L):
     for theta_index in range(0, L):
         theta = 2 * np.pi * theta_index / L
         for w, v, weight in leb_quad:
-            angles = [theta, v, w] # [w, v, theta]
+            angles = [theta, v, w]  # [w, v, theta]
             rotation_matrix = euler_zxz_to_matrix(*angles)
             quads.append((rotation_matrix, weight, angles))
-    return quads   
+    return quads
+
 
 def random_rotation(prng, improper=True):
     """Generates a (uniform) random rotation matrix"""

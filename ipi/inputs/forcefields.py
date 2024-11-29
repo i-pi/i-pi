@@ -969,7 +969,6 @@ class InputFFRotations(InputFFSocket):
         },
     )
 
-
     fields["inversion"] = (
         InputValue,
         {
