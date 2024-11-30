@@ -148,7 +148,7 @@ class Atoms:
             name="kstress", func=self.get_kstress, dependencies=[self._p, self._m]
         )
 
-    def copy(self):
+    def clone(self):
         """Creates a new Atoms object.
 
         Returns:
@@ -156,9 +156,9 @@ class Atoms:
         """
 
         newat = Atoms(self.natoms)
-        newat.q[:] = self.q
-        newat.p[:] = self.p
-        newat.m[:] = self.m
+        newat.q[:] = dstrip(self.q)
+        newat.p[:] = dstrip(self.p)
+        newat.m[:] = dstrip(self.m)
         newat.names[:] = self.names
         return newat
 

@@ -1,0 +1,43 @@
+<simulation verbosity='high'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_md{electronvolt}, potential{electronvolt}, pressure_md{megapascal}, stress_md{megapascal} ] </properties>
+    <trajectory filename='noo3_pots' stride='2' cell_units='angstrom' extra_type="o3grid_pots"> extras_component_raw(1) </trajectory>  
+    <trajectory filename='pos' stride='20' cell_units='angstrom'> positions{angstrom} </trajectory>
+    <checkpoint stride='200'/>
+  </output>
+  <total_steps>1000</total_steps>
+  <prng>
+    <seed>31415</seed>
+  </prng>
+  <ffsocket name='driver-qtip4pf' mode='unix' pbc='false'>
+      <address>h2o-base</address>
+  </ffsocket>
+  <ffrotations name='driver-noo3' pbc='false'>
+      <ffsocket name='base-noo3' mode='unix' pbc='false'>
+          <address>h2o-noo3</address>
+      </ffsocket>
+      <grid_order> 3 </grid_order> <grid_mode> lebedev </grid_mode>
+      <inversion> True </inversion>
+  </ffrotations>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='xyz'> water_216.xyz </file>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+    <forces>
+      <force forcefield='driver-qtip4pf'/>
+      <force forcefield='driver-noo3' weight="1.0"/>
+    </forces>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <timestep units='femtosecond'> 0.5 </timestep>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 100 </tau>
+        </thermostat>
+      </dynamics>
+    </motion>
+    <ensemble>
+      <temperature units='kelvin'> 300 </temperature>
+    </ensemble>
+  </system>
+</simulation>

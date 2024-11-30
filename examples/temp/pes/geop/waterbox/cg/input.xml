@@ -12,7 +12,7 @@
   </ffsocket>
   <system>
     <initialize nbeads='1'>
-      <file mode='xyz'> water_216.xyz </file>
+      <file mode='xyz'> water_64.xyz </file>
     </initialize>
     <forces>
       <force forcefield='qtip4pf'> </force>

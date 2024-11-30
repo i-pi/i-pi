@@ -187,6 +187,10 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
             iforcefields.InputFFCommittee,
             {"help": iforcefields.InputFFCommittee.default_help},
         ),
+        "ffrotations": (
+            iforcefields.InputFFRotations,
+            {"help": iforcefields.InputFFRotations.default_help},
+        ),
         "ffsgdml": (
             iforcefields.InputFFsGDML,
             {"help": iforcefields.InputFFsGDML.default_help},
@@ -246,7 +250,7 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
             _obj,
         ) in enumerate(_fflist + simul.syslist):
             if self.extra[_ii] == 0:
-                if isinstance(_obj, eforcefields.FFSocket):
+                if type(_obj) is eforcefields.FFSocket:
                     _iobj = iforcefields.InputFFSocket()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("ffsocket", _iobj)
@@ -282,6 +286,10 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
                     _iobj = iforcefields.InputFFCommittee()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("ffcommittee", _iobj)
+                elif isinstance(_obj, eforcefields.FFRotations):
+                    _iobj = iforcefields.InputFFRotations()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffrotations", _iobj)
                 elif isinstance(_obj, eforcefields.FFCavPhSocket):
                     _iobj = iforcefields.InputFFCavPhSocket()
                     _iobj.store(_obj)
@@ -340,6 +348,7 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
                 "ffsgdml",
                 "ffyaff",
                 "ffcommittee",
+                "ffrotations",
                 "ffcavphsocket",
             ]:
                 new_ff = v.fetch()

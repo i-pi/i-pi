@@ -9,6 +9,7 @@ import glob
 
 clean_all = False
 debug = False
+TIMEOUT = 20
 
 fortran_driver_models = [
     "dummy",
@@ -31,6 +32,7 @@ fortran_driver_models = [
     "doublewell_1D",
     "doublewell",
     "gas",
+    "noo3-h2o",
 ]
 
 # We should do this automatically but for now we do it explicitly here
@@ -185,10 +187,11 @@ def modify_xml_4_dummy_test(
     root = tree.getroot()
     clients = list()
 
+    ff_roots = [root]
     if len(root.findall("ffcommittee")) > 0:
-        ff_roots = root.findall("ffcommittee")
-    else:
-        ff_roots = [root]
+        ff_roots += root.findall("ffcommittee")
+    if len(root.findall("ffrotations")) > 0:
+        ff_roots += root.findall("ffrotations")
 
     ff_sockets = []
     for ff_root in ff_roots:
@@ -322,7 +325,7 @@ class Runner(object):
                         print("List all files  /tmp/ipi_*")
                         for filename in glob.glob("/tmp/ipi_*"):
                             print(filename)
-                        ipi_error = ipi.communicate(timeout=120)[1].decode("ascii")
+                        ipi_error = ipi.communicate(timeout=TIMEOUT)[1].decode("ascii")
                         print(ipi_error)
                         return "Could not find the i-PI UNIX socket"
 
@@ -375,13 +378,13 @@ class Runner(object):
                 drivers.append(driver)
 
             # check i-pi errors
-            ipi_out, ipi_error = ipi.communicate(timeout=60)
+            ipi_out, ipi_error = ipi.communicate(timeout=TIMEOUT)
             assert ipi.returncode == 0, "i-PI error occurred: {}".format(ipi_error)
 
             # check driver errors
             for driver in drivers:
                 # if i-PI has ended, we can wait for the driver to quit
-                driver_out, driver_err = driver.communicate(timeout=60)
+                driver_out, driver_err = driver.communicate(timeout=TIMEOUT)
                 assert (
                     driver.returncode == 0
                 ), "Driver error occurred: {}\n Driver Output: {}".format(
