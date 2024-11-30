@@ -16,7 +16,8 @@
       <ffsocket name='base-noo3' mode='unix' pbc='false'>
           <address>h2o-noo3</address>
       </ffsocket>
-      <random> True </random>      
+      <random> True </random>
+      <prng> 54321 </prng>
   </ffrotations>
   <system>
     <initialize nbeads='1'>

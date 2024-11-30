@@ -28,6 +28,8 @@ import ipi.engine.initializer
 from ipi.inputs.initializer import *
 from ipi.utils.inputvalue import *
 from ipi.utils.messages import verbosity, warning
+from ipi.utils.prng import Random
+from ipi.inputs.prng import InputRandom
 
 __all__ = [
     "InputFFSocket",
@@ -980,6 +982,14 @@ class InputFFRotations(InputForceField):
         },
     )
 
+    fields["prng"] = (
+        InputRandom,
+        {
+            "help": InputRandom.default_help,
+            "default": input_default(factory=Random),
+        },
+    )
+
     fields["ffsocket"] = (
         InputFFSocket,
         {
@@ -1004,6 +1014,7 @@ class InputFFRotations(InputForceField):
         self.grid_order.store(ff.grid_order)
         self.grid_mode.store(ff.grid_mode)
         self.random.store(ff.random)
+        self.prng.store(ff.prng)
         self.ffsocket.store(ff.ffsocket)
         self.ffdirect.store(ff.ffdirect)
 
@@ -1018,6 +1029,7 @@ class InputFFRotations(InputForceField):
             dopbc=self.pbc.fetch(),
             active=self.activelist.fetch(),
             threaded=self.threaded.fetch(),
+            prng=self.prng.fetch(),
             ffsocket=self.ffsocket.fetch(),
             ffdirect=self.ffdirect.fetch(),
             grid_order=self.grid_order.fetch(),
