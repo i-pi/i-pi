@@ -926,12 +926,19 @@ class InputFFCommittee(InputForceField):
 
 
 class InputFFRotations(InputForceField):
-    default_help = """Wraps around another forcefield to evaluate it
-                    over one or more rotated copies of the physical 
-                    system. This is useful when interacting with models
-                    that are not exactly invariant/covariant with respect 
-                    to rigid rotations.
-                      """
+    default_help = """
+Wraps around another forcefield to evaluate it over one or more 
+rotated copies of the physical system. This is useful when 
+interacting with models that are not exactly invariant/covariant 
+with respect to rigid rotations.
+Besides the parameters defining how averaging is to be performed
+(using an integration grid, and/or randomizing the orientation at
+each step) the <ffrotations> should contain either a <ffsocket>
+or a <ffdirect> block that computes the "base" model. Note that
+this forcefield should be given a separate `name`, but that you
+cannot access this "inner" forcefield from other parts of the 
+input file.
+"""
     default_label = "FFROTATIONS"
 
     fields = copy(InputForceField.fields)
