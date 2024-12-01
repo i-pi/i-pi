@@ -1,3 +1,5 @@
+.. _contributing:
+
 Contributing
 ============
 
@@ -89,7 +91,11 @@ If your new development in i-PI is directly related to a specific client code or
 We very much welcome new interfaces and we will be happy to answer your questions. 
 
 If you want to enable the communication of a new client code with i-PI, it is not difficult: Please check an example of how it was  done in ``fortran`` and ``python`` in the `drivers` folder in the repository.
-
+It is especially simple to add a new potential energy that is evaluated in Python: it is sufficient to add a file in the `ipi/pes` folder, specifying 
+`__DRIVER_NAME__` (a string that will be used to refer to the PES from the i-PI input or the command line) and `__DRIVER_CLASS__`, the name of the 
+actual class, that should provide, directly or through inheritance, a `__call__(self, cell, pos)` function and return a tuple with
+`(potential, forces, virial, extras)`. See any of the existing PES files to use as templates - it is particularly simple to create a class that 
+piggybacs on an existing ASE-style calculator.
 
 
 Getting recognition for your contribution

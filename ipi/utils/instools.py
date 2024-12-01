@@ -4,6 +4,7 @@ from ipi.engine.beads import Beads
 from ipi.utils.messages import verbosity, info
 from ipi.utils import units
 import ipi.utils.mathtools as mt
+from ipi.utils.softexit import softexit
 
 
 def banded_hessian(h, sm, masses=True, shift=0.001):
@@ -307,14 +308,23 @@ def ms_pathway(pos, m3):
 class Fix(object):
     """Class that applies a fixatoms type constrain"""
 
-    def __init__(self, fixatoms, beads, nbeads=None):
+    def __init__(self, fixatoms_dof, beads, nbeads=None):
         self.natoms = beads.natoms
         if nbeads is None:
             self.nbeads = beads.nbeads
         else:
             self.nbeads = nbeads
 
-        self.fixatoms = fixatoms
+        self.fixatoms_dof = fixatoms_dof
+        if len(self.fixatoms_dof) > 0:
+            if np.mod(len(self.fixatoms_dof), 3) == 0:
+                self.fixatoms = np.unique(self.fixatoms_dof // 3)
+            else:
+                softexit.trigger(
+                    message="fixatoms_dof is not yet implemented. please use fixatoms",
+                )
+        else:
+            self.fixatoms = self.fixatoms_dof
 
         self.mask0 = np.delete(np.arange(self.natoms), self.fixatoms)
         self.nactive = len(self.mask0)
@@ -327,7 +337,7 @@ class Fix(object):
         mask2 = np.tile(mask1, self.nbeads)
         self.mask2 = np.arange(3 * self.natoms * self.nbeads)[mask2]
 
-        self.fixbeads = Beads(beads.natoms - len(fixatoms), beads.nbeads)
+        self.fixbeads = Beads(beads.natoms - len(self.fixatoms), beads.nbeads)
         self.fixbeads.q[:] = self.get_active_vector(beads.clone().q, 1)
         self.fixbeads.m[:] = self.get_active_vector(beads.clone().m, 0)
         self.fixbeads.names[:] = self.get_active_vector(beads.clone().names, 0)

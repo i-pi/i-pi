@@ -54,11 +54,12 @@ bibtex_bibfiles = ["references.bib"]
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
 #
-html_theme = "agogo"
+html_title = "i-PI documentation pages"
+html_theme = "furo"
 html_theme_options = {
-    "rightsidebar": "false",
+    "top_of_page_buttons": [],
 }
-
+html_favicon = "../_static/favicon-ipi.png"
 html_logo = "../figures/ipi-logo.svg"
 
 html_css_files = [

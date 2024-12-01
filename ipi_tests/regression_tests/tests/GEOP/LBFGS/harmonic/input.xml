@@ -4,6 +4,9 @@
     <trajectory stride="1" filename="pos_c" format="xyz"> x_centroid </trajectory>
     <trajectory stride="1" filename="frc_c" format="xyz"> f_centroid </trajectory>
    </output>
+   <prng>
+      <seed> 123456 </seed>
+   </prng>
    <total_steps> 10 </total_steps>
    <ffsocket name="harm3d" mode="unix">
        <address> localhost </address> 

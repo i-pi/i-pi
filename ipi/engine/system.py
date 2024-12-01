@@ -61,7 +61,7 @@ class System:
               systems.
         """
 
-        info(" # Initializing system object ", verbosity.low)
+        info(" @system: Initializing system object ", verbosity.low)
         self.prefix = prefix
         self.init = init
         self.ensemble = ensemble
@@ -82,7 +82,7 @@ class System:
         self.simul = simul  # keeps a handle to the parent simulation object
 
         # binds important computation engines
-        info(" # Binding the forces ", verbosity.low)
+        info(" @system.bind: Binding the forces ", verbosity.low)
         self.forces.bind(
             self.beads,
             self.cell,

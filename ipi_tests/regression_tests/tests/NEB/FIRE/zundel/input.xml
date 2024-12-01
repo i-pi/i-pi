@@ -7,6 +7,9 @@
     <timeout> 600 </timeout>
     <address> localhost </address>
   </ffsocket>
+ <prng>
+      <seed> 123456 </seed>
+   </prng>
   <output prefix='simulation'>
     <trajectory stride='1' filename='pos' cell_units='angstrom'> positions{angstrom} </trajectory>
     <trajectory stride='1' filename='for' cell_units='angstrom'> forces </trajectory>

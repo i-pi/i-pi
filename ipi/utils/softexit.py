@@ -77,17 +77,21 @@ class Softexit(object):
            message: The message to output to standard output.
         """
 
-        print("SOFTEXIT CALLED FROM THREAD", threading.currentThread(), message)
+        print(
+            " @softexit.trigger:  SOFTEXIT CALLED FROM THREAD",
+            threading.currentThread(),
+            message,
+        )
         if not self.triggered:  # avoid double calls from different threads
             self.exiting = True
             self.triggered = True
 
             if status == "restartable":
-                message += "\nRestartable as is: YES."
+                message += " Restartable as is: YES."
             elif status == "success":
-                message += "\nI-PI reports success. Restartable as is: NO."
+                message += " I-PI reports success. Restartable as is: NO."
             elif status == "bad":
-                message += "\nI-PI reports a problem. Restartable as is: NO."
+                message += " I-PI reports a problem. Restartable as is: NO."
             else:
                 raise ValueError("Unknown option for softexit status.")
 

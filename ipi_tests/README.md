@@ -14,7 +14,10 @@
 
  * To run the unitary, example and regression tests, please use i-pi/bin/i-pi-tests. For details of usage call it with "-h" option.
 
- * In some situations it is desirable to perform regresion/examples tests only for a selected set.
+ * The tests can be customized to an extent by including a `test_settings.dat` file that specifies how to run the test,
+   mostly by describing the driver that should be used. See some of the existing files as examples. 
+
+ * In some situations it is desirable to perform regression/examples tests only for a selected set.
    For these cases, we also provide more flexible scripts for performing the regresion tests and testing the provided examples.
    See i-pi/ipi_tests/regression_tests/test_run.py and i-pi/ipi_tests/examples/test_examples.py, respectively. 
    For details of usage call them with "-h" option.

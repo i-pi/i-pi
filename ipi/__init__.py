@@ -12,6 +12,7 @@ __all__ = [
     "inputs",
     "interfaces",
     "utils",
+    "pes",
     "ipi_global_settings",
     "install_driver",
     "read_output",
@@ -19,3 +20,10 @@ __all__ = [
 ]
 
 ipi_global_settings = {"floatformat": "%16.8e"}
+
+from ipi.engine.simulation import Simulation
+
+
+class IPI:
+    def __init__(self, xml_data):
+        self._simulation = Simulation.load_from_xml(xml_data)

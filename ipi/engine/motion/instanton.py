@@ -83,7 +83,7 @@ class InstantonMotion(Motion):
     def __init__(
         self,
         fixcom=False,
-        fixatoms=None,
+        fixatoms_dof=None,
         mode="None",
         tolerances={"energy": 1e-5, "force": 1e-4, "position": 1e-3},
         biggest_step=0.3,
@@ -118,7 +118,7 @@ class InstantonMotion(Motion):
     ):
         """Initialises InstantonMotion."""
 
-        super(InstantonMotion, self).__init__(fixcom=fixcom, fixatoms=fixatoms)
+        super(InstantonMotion, self).__init__(fixcom=fixcom, fixatoms_dof=fixatoms_dof)
 
         self.options = {}  # Optimization options
 
@@ -862,7 +862,7 @@ class SpringMapper(object):
 
 class Mapper(object):
     """Creation of the multi-dimensional function that is the proxy between all the energy and force components and the optimization algorithm.
-    It also handles fixatoms"""
+    It also handles fixatoms_dof"""
 
     def __init__(self):
         """Initializes object for Mapper.
@@ -894,7 +894,7 @@ class Mapper(object):
         self.nm = dumop.nm
         self.rp_factor = dumop.rp_factor
 
-        self.fixatoms = dumop.fixatoms
+        self.fixatoms_dof = dumop.fixatoms_dof
         self.fix = dumop.fix
         self.fixbeads = self.fix.fixbeads
 
@@ -969,9 +969,9 @@ class DummyOptimizer:
         self.cell = geop.cell
         self.forces = geop.forces
         self.fixcom = geop.fixcom
-        self.fixatoms = geop.fixatoms
+        self.fixatoms_dof = geop.fixatoms_dof
 
-        self.fix = Fix(self.fixatoms, self.beads, self.beads.nbeads)
+        self.fix = Fix(self.fixatoms_dof, self.beads, self.beads.nbeads)
         self.nm = geop.nm
         self.rp_factor = geop.rp_factor
 
@@ -1055,7 +1055,7 @@ class DummyOptimizer:
             verbosity.low,
         )
 
-        fix_onebead = Fix(self.fixatoms, self.beads, 1)
+        fix_onebead = Fix(self.fixatoms_dof, self.beads, 1)
         active_hessian = fix_onebead.get_active_vector(
             self.optarrays["initial_hessian"], 2
         )
@@ -1140,7 +1140,7 @@ class DummyOptimizer:
                     x0=self.beads.q.copy(),
                     natoms=self.beads.natoms,
                     nbeads=self.beads.nbeads,
-                    fixatoms=self.fixatoms,
+                    fixatoms_dof=self.fixatoms_dof,
                     friction=self.options["frictionSD"],
                 )
 
@@ -1272,7 +1272,7 @@ class HessianOptimizer(DummyOptimizer):
         self.options["hessian_update"] = geop.options["hessian_update"]
         self.options["hessian_asr"] = geop.options["hessian_asr"]
 
-        if len(self.fixatoms) > 0:
+        if len(self.fixatoms_dof) > 0:
             info(" 'fixatoms' is enabled. Setting asr to None", verbosity.low)
             self.options["hessian_asr"] = "none"
         #        self.output_maker = geop.output_maker
@@ -1380,7 +1380,7 @@ class HessianOptimizer(DummyOptimizer):
                 x0=self.beads.q.copy(),
                 natoms=self.beads.natoms,
                 nbeads=self.beads.nbeads,
-                fixatoms=self.fixatoms,
+                fixatoms_dof=self.fixatoms_dof,
                 friction=self.options["frictionSD"],
             )
             if self.options["friction"] and self.options["frictionSD"]:
@@ -1422,7 +1422,7 @@ class HessianOptimizer(DummyOptimizer):
                 x0=new_x,
                 natoms=self.beads.natoms,
                 nbeads=self.beads.nbeads,
-                fixatoms=self.fixatoms,
+                fixatoms_dof=self.fixatoms_dof,
                 friction=self.options["frictionSD"],
             )
 

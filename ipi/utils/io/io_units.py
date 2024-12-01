@@ -113,7 +113,7 @@ def process_units(
     )
 
     info(
-        " # Interpreting input with dimension %s, units %s and cell units %s"
+        " @process_units: Interpreting input with dimension %s, units %s and cell units %s"
         % (dimension, units, cell_units),
         verbosity.high,
     )

@@ -68,7 +68,7 @@ class AlKMC(Motion):
         thermostat=None,
         barostat=None,
         fixcom=False,
-        fixatoms=None,
+        fixatoms_dof=None,
         nmts=None,
         max_cache_len=1000,
     ):
@@ -165,7 +165,7 @@ class AlKMC(Motion):
 
         # the KMC step is variable and so it cannot be stored as proper timing
         self._dt = depend_value(name="dt", value=0.0)
-        self.fixatoms = np.asarray([])
+        self.fixatoms_dof = np.asarray([])
         self.fixcom = True
         self.optimizer = [None] * self.neval
         # geop should not trigger exit if there is early convergence, but just carry on.
@@ -174,7 +174,7 @@ class AlKMC(Motion):
         for i in range(self.neval):
             # geometry optimizer should not have *any* hystory dependence
             self.optimizer[i] = GeopMotion(
-                fixcom=fixcom, fixatoms=fixatoms, **optimizer
+                fixcom=fixcom, fixatoms_dof=fixatoms_dof, **optimizer
             )  # mode="cg", ls_options={"tolerance": 1, "iter": 20,  "step": 1e-3, "adaptive": 0.0}, tolerances={"energy": 1e-7, "force": 1e-2, "position": 1e-4}, ) #!TODO: set the geop parameters properly
 
         # dictionary of previous energy evaluations - kind of tricky to use this with the omaker thingie

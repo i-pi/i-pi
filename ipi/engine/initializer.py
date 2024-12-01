@@ -123,7 +123,7 @@ def init_file(
     ratoms = []
 
     info(
-        " # Initializing from file %s. Dimension: %s, units: %s, cell_units: %s"
+        " @init_file: Initializing from file %s. Dimension: %s, units: %s, cell_units: %s"
         % (filename, dimension, units, cell_units),
         verbosity.low,
     )
@@ -283,7 +283,7 @@ def set_vector(iif, dq, rq):
         res = nm_rescale(nbeads, dbeads)  # path rescaler
         if nbeads != dbeads:
             info(
-                " # Initialize is rescaling from %5d beads to %5d beads"
+                " @set_vector: Initialize is rescaling from %5d beads to %5d beads"
                 % (nbeads, dbeads),
                 verbosity.low,
             )
@@ -368,7 +368,7 @@ class Initializer:
 
         for k, v in self.queue:
             info(
-                " # Initializer (stage 1) parsing " + str(k) + " object.",
+                " @initializer: Initializer (stage 1) parsing " + str(k) + " object.",
                 verbosity.high,
             )
 
@@ -491,7 +491,7 @@ class Initializer:
                     rtemp = simul.ensemble.temp
                 else:
                     info(
-                        " # Resampling velocities at temperature %s %s"
+                        " @initializer: Resampling velocities at temperature %s %s"
                         % (v.value, v.units),
                         verbosity.low,
                     )
@@ -615,7 +615,7 @@ class Initializer:
 
         for k, v in self.queue:
             info(
-                " # Initializer (stage 2) parsing " + str(k) + " object.",
+                " @initializer: Initializer (stage 2) parsing " + str(k) + " object.",
                 verbosity.high,
             )
 

@@ -23,29 +23,29 @@ class Motion:
             each bead.
         fixcom: A boolean which decides whether the centre of mass
             motion will be constrained or not.
-        fixatoms: A list of atoms that should be held fixed to their
+        fixatoms_dof: A list of degrees of freedom  that should be held fixed to their
             initial positions.
 
     Depend objects:
         none
     """
 
-    def __init__(self, fixcom=False, fixatoms=None):
+    def __init__(self, fixcom=False, fixatoms_dof=None):
         """Initialises Motion object.
 
         Args:
            fixcom: An optional boolean which decides whether the centre of mass
               motion will be constrained or not. Defaults to False.
-           fixatoms: A list of atoms that should be held fixed to their
-             initial positions.
+           fixatoms_dof: A list of degrees of freedom  that should be held fixed to their
+              initial positions.
         """
 
         self._dt = depend_value(name="dt", value=0.0)
         self.fixcom = fixcom
-        if fixatoms is None:
-            self.fixatoms = np.zeros(0, int)
+        if fixatoms_dof is None:
+            self.fixatoms_dof = np.zeros(0, int)
         else:
-            self.fixatoms = fixatoms
+            self.fixatoms_dof = fixatoms_dof
 
         self.beads = self.cell = self.forces = self.prng = self.nm = self.enstype = None
 

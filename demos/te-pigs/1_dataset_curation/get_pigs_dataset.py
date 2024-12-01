@@ -11,7 +11,6 @@ for a_pos, a_cforce, a_pforce in zip(
     iread(centroid_force_filename),
     iread(physical_force_filename),
 ):
-
     atoms = a_pos.copy()
 
     atoms.arrays["centroid_force"] = a_cforce.arrays["f_centroid"]

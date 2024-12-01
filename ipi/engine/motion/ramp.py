@@ -24,7 +24,7 @@ class TemperatureRamp(Motion):
     def __init__(
         self,
         fixcom=False,
-        fixatoms=None,
+        fixatoms_dof=None,
         t_start=1.0,
         t_end=1.0,
         total_steps=0,
@@ -75,7 +75,7 @@ class PressureRamp(Motion):
     def __init__(
         self,
         fixcom=False,
-        fixatoms=None,
+        fixatoms_dof=None,
         p_start=1.0,
         p_end=1.0,
         total_steps=0,

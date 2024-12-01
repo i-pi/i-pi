@@ -262,7 +262,7 @@ if __name__ == "__main__":
     # Load kbT from i-PI, we could make it into a small function
     if args.input != "":
         simul = Simulation.load_from_xml(
-            args.input, custom_verbosity="quiet", read_only=True
+            open(args.input), custom_verbosity="quiet", read_only=True
         )
         kt = float(simul.syslist[0].ensemble.temp)
     else:

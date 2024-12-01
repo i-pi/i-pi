@@ -27,6 +27,7 @@ A schematic representation of the code structure and the server-client communica
 
 .. figure:: ../figures/ipi-structure-v3.*
    :width: 90.0%
+   :class: white-background
 
    Figure 1. Schematic representation of the i-PI code structure and the server-client communication.
   
@@ -81,6 +82,7 @@ machinery in i-PI might appear complicated at first, and deserves a
 brief discussion.
 
 .. figure:: ../figures/ipi-forces.*
+   :class: white-background   
    :width: 90.0%
 
    Schematic representation of the different objects that
@@ -146,6 +148,7 @@ a “depend” object class, which is given the parameters on which it
 depends and a function used to calculate its value.
 
 .. figure:: ../figures/ipi-depend.*
+   :class: white-background   
    :width: 90.0%
 
    Schematic overview of the functioning of the

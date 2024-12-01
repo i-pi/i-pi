@@ -34,7 +34,7 @@ class DynMatrixMover(Motion):
     def __init__(
         self,
         fixcom=False,
-        fixatoms=None,
+        fixatoms_dof=None,
         mode="fd",
         energy_shift=0.0,
         pos_shift=0.001,
@@ -52,7 +52,7 @@ class DynMatrixMover(Motion):
         refdynmatrix : A 3Nx3N array that stores the refined dynamic matrix.
         """
 
-        super(DynMatrixMover, self).__init__(fixcom=fixcom, fixatoms=fixatoms)
+        super(DynMatrixMover, self).__init__(fixcom=fixcom, fixatoms_dof=fixatoms_dof)
 
         # Finite difference option.
         self.mode = mode
@@ -77,13 +77,12 @@ class DynMatrixMover(Motion):
         if self.prefix == "":
             self.prefix = "phonons"
 
-        if len(fixatoms) > 0:
-            fixdof = np.concatenate((3 * fixatoms, 3 * fixatoms + 1, 3 * fixatoms + 2))
-            self.fixdof = np.sort(fixdof)
+        if len(fixatoms_dof) > 0:
+            self.fixatoms_dof = fixatoms_dof
             if self.mode == "enmfd" or self.mode == "nmfd":
                 raise ValueError("Fixatoms is not implemented for the selected mode.")
         else:
-            self.fixdof = np.array([])
+            self.fixatoms_dof = np.array([])
 
     def bind(self, ens, beads, nm, cell, bforce, prng, omaker):
         super(DynMatrixMover, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
@@ -109,13 +108,15 @@ class DynMatrixMover(Motion):
         else:
             self.phcalc.transform()
             self.refdynmatrix = self.apply_asr(self.refdynmatrix.copy())
-            self.printall(self.prefix, self.refdynmatrix.copy(), fixdof=self.fixdof)
+            self.printall(
+                self.prefix, self.refdynmatrix.copy(), fixatoms_dof=self.fixatoms_dof
+            )
             softexit.trigger(
                 status="success",
                 message="Dynamic matrix is calculated. Exiting simulation",
             )
 
-    def printall(self, prefix, dmatx, deltaw=0.0, fixdof=np.array([])):
+    def printall(self, prefix, dmatx, deltaw=0.0, fixatoms_dof=np.array([])):
         """Prints out diagnostics for a given dynamical matrix."""
 
         dmatx = dmatx + np.eye(len(dmatx)) * deltaw
@@ -124,17 +125,19 @@ class DynMatrixMover(Motion):
         else:
             wstr = ""
 
-        # get active arrays:
-        activedof = 3 * self.beads.natoms - fixdof.size
-        if fixdof.size > 0:
-            mask = np.delete(np.arange(3 * self.beads.natoms), fixdof)
+        # Get active arrays:
+        activedof = 3 * self.beads.natoms - fixatoms_dof.size
+        if fixatoms_dof.size > 0:
+            active_atoms_mask = np.delete(
+                np.arange(3 * self.beads.natoms), fixatoms_dof
+            )
         else:
-            mask = np.arange(3 * self.beads.natoms)
+            active_atoms_mask = np.arange(3 * self.beads.natoms)
 
         dmatx_full = dmatx.copy()
         ism_full = self.ism.copy()
-        dmatx = dmatx[mask][:, mask]
-        ism = self.ism[mask]
+        dmatx = dmatx[active_atoms_mask][:, active_atoms_mask]
+        ism = self.ism[active_atoms_mask]
 
         # prints out the dynamical matrix
         outfile = self.output_maker.get_output(self.prefix + ".dynmat", "w")
@@ -344,7 +347,7 @@ class FDPhononCalculator(DummyPhononCalculator):
     def step(self, step=None):
         """Computes one row of the dynamic matrix."""
 
-        if step not in self.dm.fixdof:
+        if step not in self.dm.fixatoms_dof:
             # initializes the finite deviation
             dev = np.zeros(3 * self.dm.beads.natoms, float)
             dev[step] = self.dm.deltax

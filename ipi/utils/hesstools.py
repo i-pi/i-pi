@@ -176,7 +176,7 @@ def clean_hessian(h, q, natoms, nbeads, m, m3, asr, mofi=False):
 
 
 def get_hessian(
-    gm, x0, natoms, nbeads=1, fixatoms=[], d=0.001, new_disc=False, friction=False
+    gm, x0, natoms, nbeads=1, fixatoms_dof=[], d=0.001, new_disc=False, friction=False
 ):
     """Compute the physical hessian given a function to evaluate energy and forces (gm).
     The intermediate steps are written as a temporary files so the full hessian calculations is only ONE step.
@@ -185,19 +185,16 @@ def get_hessian(
            x0       = position vector
            natoms   = number of atoms
            nbeads   = number of beads
-           fixatoms = indexes of fixed atoms
+           fixatoms_dof = indexes of fixed degrees of freedom
            d        = displacement
 
-    OUT    h       = physical hessian ( (natoms-len(fixatoms) )*3 , nbeads*( natoms-len(fixatoms) )*3)
+    OUT    h        = physical hessian  (3*natoms-len(fixatoms_dof)  , nbeads*( 3*natoms-len(fixatoms_dof) ))
     """
 
     info(" @get_hessian: Computing hessian", verbosity.low)
-    fixdofs = list()
-    for i in fixatoms:
-        fixdofs.extend([3 * i, 3 * i + 1, 3 * i + 2])
     ii = natoms * 3
-    activedof = np.delete(np.arange(ii), fixdofs)
-    ncalc = ii - len(fixdofs)
+    activedof = np.delete(np.arange(ii), fixatoms_dof)
+    ncalc = ii - len(fixatoms_dof)
     if x0.size != natoms * 3 * nbeads:
         raise ValueError(
             "The position vector is not consistent with the number of atoms/beads."
@@ -250,7 +247,7 @@ def get_hessian(
 
     # Start calculation:
     for j in range(i0 + 1, ii):
-        if j in fixdofs:
+        if j in fixatoms_dof:
             continue
         else:
             ndone = len(activedof[activedof < j])

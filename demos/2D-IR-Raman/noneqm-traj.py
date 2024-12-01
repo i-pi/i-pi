@@ -175,7 +175,7 @@ def main(fn_input, options):
     tree.write(fn_input_noneqm)
 
     simulation = Simulation.load_from_xml(
-        fn_input_noneqm, request_banner=False, custom_verbosity=options.verbosity
+        open(fn_input_noneqm), request_banner=False, custom_verbosity=options.verbosity
     )
     spec.run(simulation, options.tfirst, options.tlast)
     softexit.trigger(status="success", message=" @ SIMULATION: Exiting cleanly.")

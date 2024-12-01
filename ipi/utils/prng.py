@@ -14,6 +14,7 @@ it had not been stopped.
 
 import numpy as np
 import concurrent.futures
+import time
 
 __all__ = ["Random"]
 
@@ -39,7 +40,7 @@ class Random(object):
             Gaussian random number returned.
     """
 
-    def __init__(self, seed=12345, state=None, n_threads=1):
+    def __init__(self, seed=-1, state=None, n_threads=1):
         """Initialises Random.
 
         Args:
@@ -49,7 +50,12 @@ class Random(object):
                     arrays to be filled are large!)
         """
 
+        # Here we make the seed random if it has not been specified in the input file
+        if seed == -1:
+            seed = int(time.time() * 1000)
+
         self.seed = seed
+
         self.rng = [
             np.random.Generator(np.random.MT19937(s))
             for s in np.random.SeedSequence(seed).spawn(n_threads)
