@@ -18,6 +18,7 @@ from numpy.testing import assert_equal
 from ..common.folder import local
 from ipi.utils.units import unit_to_internal
 from ipi.utils.io import iter_file, read_file, print_file
+from ipi.utils.parsing import read_output
 
 
 pos_xyz = np.array([i for i in range(3 * 3)])
@@ -164,3 +165,57 @@ def test_print_xyz2():
 
     assert filecmp.cmp(local("test.pos_0.xyz"), local("test.pos_1.xyz"))
     os.unlink(local("test.pos_1.xyz"))
+
+
+def test_read_output_low_verbosity():
+    """Test the read_output function with low verbosity output."""
+    # run locally with: python -m pytest test_io.py::test_read_output_low_verbosity -v -s
+    file = local("prop.low.out")
+    a, b = read_output(file)
+
+    assert a is not None, "Expected non-None result for 'a'"
+    assert b is not None, "Expected non-None result for 'b'"
+    assert a.keys() == b.keys(), "Keys should be the same"
+    keys = list(a.keys())
+    assert keys == [
+        "step",
+        "time",
+        "conserved",
+        "kinetic_md",
+        "potential",
+        "Efield",
+        "Eenvelope",
+        "dipole",
+    ], "wrong keys"
+    for k, v in a.items():
+        assert len(v) == 501, f"`{k}` has the wrong size: {len(v)}"
+
+
+def test_read_output_high_verbosity():
+    """Test the read_output function with high verbosity output."""
+    # run locally with: python -m pytest test_io.py::test_read_output_high_verbosity -v -s
+    file = local("prop.high.out")
+    a, b = read_output(file)
+
+    assert a is not None, "Expected non-None result for 'a'"
+    assert b is not None, "Expected non-None result for 'b'"
+    assert a.keys() == b.keys(), "Keys should be the same"
+    keys = list(a.keys())
+    assert keys == [
+        "step",
+        "time",
+        "conserved",
+        "kinetic_md",
+        "potential",
+        "Efield",
+        "Eenvelope",
+        "dipole(0)",
+        "dipole(1)",
+    ], "wrong keys"
+    for k, v in a.items():
+        assert len(v) == 101, f"`{k}` has the wrong size: {len(v)}"
+
+
+if __name__ == "__main__":
+    test_read_output_low_verbosity()
+    test_read_output_low_verbosity()

@@ -57,6 +57,15 @@ class InputProperties(InputArray):
             "help": "How often should streams be flushed. 1 means each time, zero means never.",
         },
     )
+    attribs["verbosity"] = (
+        InputAttribute,
+        {
+            "dtype": str,
+            "default": "low",
+            "options": ["low", "high"],
+            "help": "The level of output on stdout. 'low' will print only properties and column names, 'high' will print information for reproducibility.",
+        },
+    )
 
     def __init__(self, help=None, default=None, dtype=None, dimension=None):
         """Initializes InputProperties.
@@ -75,6 +84,7 @@ class InputProperties(InputArray):
             filename=self.filename.fetch(),
             stride=self.stride.fetch(),
             flush=self.flush.fetch(),
+            verbosity=self.verbosity.fetch(),
             outlist=super(InputProperties, self).fetch(),
         )
 
@@ -84,6 +94,7 @@ class InputProperties(InputArray):
         super(InputProperties, self).store(prop.outlist)
         self.stride.store(prop.stride)
         self.flush.store(prop.flush)
+        self.verbosity.store(prop.verbosity)
         self.filename.store(prop.filename)
 
     def check(self):

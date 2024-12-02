@@ -17,3 +17,4 @@ regtest-ref
 /build
 /dist
 *.egg-info/
+ipi/_version.py
