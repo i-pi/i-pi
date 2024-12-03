@@ -734,8 +734,9 @@ class FFPlumed(FFEval):
         dopbc=False,
         threaded=False,
         init_file="",
-        plumeddat="",
-        plumedstep=0,
+        compute_work=True,
+        plumed_dat="",
+        plumed_step=0,
         plumed_extras=[],
     ):
         """Initialises FFPlumed.
@@ -756,9 +757,10 @@ class FFPlumed(FFEval):
             latency, offset, name, pars, dopbc=False, threaded=threaded
         )
         self.plumed = plumed.Plumed()
-        self.plumeddat = plumeddat
-        self.plumedstep = plumedstep
+        self.plumed_dat = plumed_dat
+        self.plumed_step = plumed_step
         self.plumed_extras = plumed_extras
+        self.compute_work = compute_work
         self.init_file = init_file
 
         if self.init_file.mode == "xyz":
@@ -772,7 +774,7 @@ class FFPlumed(FFEval):
         self.natoms = myatoms.natoms
         self.plumed.cmd("setRealPrecision", 8)  # i-PI uses double precision
         self.plumed.cmd("setMDEngine", "i-pi")
-        self.plumed.cmd("setPlumedDat", self.plumeddat)
+        self.plumed.cmd("setPlumedDat", self.plumed_dat)
         self.plumed.cmd("setNatoms", self.natoms)
         timeunit = 2.4188843e-05  # atomic time to ps
         self.plumed.cmd("setMDTimeUnits", timeunit)
@@ -787,7 +789,7 @@ class FFPlumed(FFEval):
             "setMDLengthUnits", 0.052917721
         )  # Pass a pointer to the conversion factor between the length unit used in your code and nm
         self.plumedrestart = False
-        if self.plumedstep > 0:
+        if self.plumed_step > 0:
             # we are restarting, signal that PLUMED should continue
             self.plumedrestart = True
             self.plumed.cmd("setRestart", 1)
@@ -835,7 +837,7 @@ class FFPlumed(FFEval):
         # linking with the current value in simulations is non-trivial, as masses
         # are not expected to be the force evaluator's business, and charges are not
         # i-PI's business.
-        self.plumed.cmd("setStep", self.plumedstep)
+        self.plumed.cmd("setStep", self.plumed_step)
         self.plumed.cmd("setCharges", self.charges)
         self.plumed.cmd("setMasses", self.masses)
 
@@ -877,27 +879,31 @@ class FFPlumed(FFEval):
         """Makes updates to the potential that only need to be triggered
         upon completion of a time step."""
 
-        self.plumedstep += 1
-        f = np.zeros((self.natoms, 3))
-        vir = np.zeros((3, 3))
+        # NB - this assumes this is called at the end of a step,
+        # when the bias has already been computed to integrate MD
+        # unexpected behavior will happen if it's called when the
+        # bias force is not "freshly computed"
 
-        self.plumed.cmd("setStep", self.plumedstep)
-        self.plumed.cmd("setCharges", self.charges)
-        self.plumed.cmd("setMasses", self.masses)
-        rpos = pos.reshape((-1, 3))
-        self.plumed.cmd("setPositions", rpos)
-        self.plumed.cmd("setBox", cell.T.copy())
-        if self.system_force is not None:
-            f[:] = dstrip(self.system_force.f).reshape((-1, 3))
-            vir[:] = -dstrip(self.system_force.vir)
-            self.plumed.cmd("setEnergy", dstrip(self.system_force.pot))
-        self.plumed.cmd("setForces", f)
-        self.plumed.cmd("setVirial", vir)
-        self.plumed.cmd("prepareCalc")
-        self.plumed.cmd("performCalcNoUpdate")
+        self.plumed_step += 1
+
+        bias_before = np.zeros(1, float)
+        bias_after = np.zeros(1, float)
+
+        if self.compute_work:
+            self.plumed.cmd("getBias", bias_before)
+
+        # sets the step and does the actual update
+        self.plumed.cmd("setStep", self.plumed_step)
         self.plumed.cmd("update")
 
-        return True
+        # recompute the bias so we can compute the work
+        if self.compute_work:
+            self.plumed.cmd("performCalcNoForces")
+            self.plumed.cmd("getBias", bias_after)
+
+        work = (bias_before - bias_after).item()
+
+        return work
 
 
 class FFYaff(FFEval):

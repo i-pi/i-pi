@@ -539,16 +539,27 @@ class InputFFPlumed(InputForceField):
                 "help": "This describes the location to read the reference structure file from.",
             },
         ),
-        "plumeddat": (
+        "plumed_dat": (
             InputValue,
             {"dtype": str, "default": "plumed.dat", "help": "The PLUMED input file"},
         ),
-        "plumedstep": (
+        "plumed_step": (
             InputValue,
             {
                 "dtype": int,
                 "default": 0,
                 "help": "The current step counter for PLUMED calls",
+            },
+        ),
+        "compute_work": (
+            InputValue,
+            {
+                "dtype": bool,
+                "default": True,
+                "help": """Compute the work done by the metadynamics bias 
+                (to correct the conserved quantity). Note that this might 
+                require multiple evaluations of the conserved quantities,
+                and can add some overhead.""",
             },
         ),
         "plumed_extras": (
@@ -576,11 +587,9 @@ unless you include a <metad> tag, that triggers the log update. """
 
     def store(self, ff):
         super(InputFFPlumed, self).store(ff)
-        self.plumeddat.store(ff.plumeddat)
-        # pstep = ff.plumedstep
-        # if pstep > 0: pstep -= 1 # roll back plumed step before writing a restart
-        # self.plumedstep.store(pstep)
-        self.plumedstep.store(ff.plumedstep)
+        self.plumed_dat.store(ff.plumed_dat)
+        self.plumed_step.store(ff.plumed_step)
+        self.compute_work.store(ff.compute_work)
         self.file.store(ff.init_file)
         self.plumed_extras.store(np.array(list(ff.plumed_data.keys())))
 
@@ -593,8 +602,9 @@ unless you include a <metad> tag, that triggers the log update. """
             offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
             threaded=self.threaded.fetch(),
-            plumeddat=self.plumeddat.fetch(),
-            plumedstep=self.plumedstep.fetch(),
+            compute_work=self.compute_work.fetch(),
+            plumed_dat=self.plumed_dat.fetch(),
+            plumed_step=self.plumed_step.fetch(),
             plumed_extras=self.plumed_extras.fetch(),
             init_file=self.file.fetch(),
         )

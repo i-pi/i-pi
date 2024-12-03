@@ -26,7 +26,7 @@
   </ffcommittee>
   <ffplumed name="plumed">                                                    
       <file mode="xyz">init_ase.xyz</file>
-      <plumeddat>plumed.dat </plumeddat>                              
+      <plumed_dat>plumed.dat </plumed_dat>                              
   </ffplumed> 
    <system>
       <initialize nbeads="1">
