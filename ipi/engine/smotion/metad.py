@@ -84,10 +84,16 @@ class MetaDyn(Smotion):
                 if s.ensemble.bweights[ik] == 0:
                     continue  # do not put metad bias on biases with zero weights (useful to do remd+metad!)
 
+                # MTD is hardcoded to be applied on the centroid variable.
+                # this is the "right" thing if you need to compute kinetics based
+                # on the resulting FES
                 mtd_work = f.mtd_update(pos=s.beads.qc, cell=s.cell.h)
+
                 # updates the conserved quantity with the change in bias so that
                 # we remove the shift due to added hills
-                s.ensemble.eens += mtd_work
+                s.ensemble.eens += (
+                    mtd_work * s.beads.nbeads
+                )  # apply ring polymer contraction!
 
                 if mtd_work != 0:
                     # hacky but cannot think of a better way: we must manually taint *just* that component.

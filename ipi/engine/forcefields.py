@@ -892,6 +892,16 @@ class FFPlumed(FFEval):
         if self.compute_work:
             self.plumed.cmd("getBias", bias_before)
 
+        # Checks that the update is called on the right position.
+        # this should be the case for most workflows - if this error
+        # is triggered and your input makes sense, the right thing to
+        # do is to perform a full plumed-side update (which will have a cost,
+        # so see if you can avoid it)
+        if np.linalg.norm(self.lastq - pos) > 1e-10:
+            raise ValueError(
+                "Metadynamics update is performed using an incorrect position"
+            )
+
         # sets the step and does the actual update
         self.plumed.cmd("setStep", self.plumed_step)
         self.plumed.cmd("update")
