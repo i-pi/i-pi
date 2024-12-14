@@ -130,7 +130,7 @@ The relevant section in the `input.xml` file is
 ```
   <ffplumed name="plumed">
       <file mode="xyz">init.xyz</file>
-      <plumeddat>plumed.dat </plumeddat>
+      <plumed_dat>plumed.dat </plumed_dat>
   </ffplumed>
 ```
 
