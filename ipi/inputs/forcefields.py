@@ -567,7 +567,13 @@ class InputFFPlumed(InputForceField):
             {
                 "dtype": str,
                 "default": input_default(factory=np.zeros, args=(0, str)),
-                "help": "List of variables defined in the PLUMED input, that should be transferred to i-PI as `extras` fields.",
+                "help": """List of variables defined in the PLUMED input, 
+                that should be transferred to i-PI as `extras` fields. 
+                Note that a version of PLUMED greater or equal than 2.10 is necessary 
+                to retrieve variables into i-PI, 
+                and that, if you are using ring-polymer contraction, the associated force block 
+                should use `interpolate_extras` to make sure all beads have values. 
+                """,
             },
         ),
     }
