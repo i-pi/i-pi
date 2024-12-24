@@ -13,9 +13,12 @@ import time
 import threading
 import json
 import sys
+from contextlib import nullcontext
 
 import numpy as np
 
+from ipi.engine.cell import GenericCell
+from ipi.utils.prng import Random
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import info, verbosity, warning
 from ipi.interfaces.sockets import InterfaceSocket
@@ -24,6 +27,11 @@ from ipi.utils.io import read_file
 from ipi.utils.units import unit_to_internal
 from ipi.utils.distance import vector_separation
 from ipi.pes import __drivers__
+from ipi.utils.mathtools import (
+    get_rotation_quadrature_legendre,
+    get_rotation_quadrature_lebedev,
+    random_rotation,
+)
 
 plumed = None
 
@@ -67,7 +75,7 @@ class ForceField:
 
     def __init__(
         self,
-        latency=1.0,
+        latency=1e-4,
         offset=0.0,
         name="",
         pars=None,
@@ -223,22 +231,26 @@ class ForceField:
         finished.
         """
 
-        info(" @ForceField: Starting the polling thread main loop.", verbosity.low)
+        info(
+            f" @ForceField ({self.name}): Starting the polling thread main loop.",
+            verbosity.low,
+        )
         while self._doloop[0]:
             time.sleep(self.latency)
             if len(self.requests) > 0:
                 self.poll()
 
-    def release(self, request):
+    def release(self, request, lock=True):
         """Removes a request from the evaluation queue.
 
         Args:
             request: The id of the job to release.
+            lock: whether we should apply a threadlock here
         """
 
         """Frees up a request."""
 
-        with self._threadlock:
+        with self._threadlock if lock else nullcontext():
             if request in self.requests:
                 try:
                     self.requests.remove(request)
@@ -419,6 +431,8 @@ class FFDirect(FFEval):
 
         super().__init__(latency, offset, name, pars, dopbc, active, threaded)
 
+        if pars is None:
+            pars = {}  # defaults no pars
         self.pes = pes
         try:
             self.driver = __drivers__[self.pes](verbose=verbosity.high, **pars)
@@ -1159,7 +1173,7 @@ class FFCommittee(ForceField):
             pars=pars,
             dopbc=dopbc,
             active=active,
-            threaded=True,
+            threaded=True,  # hardcoded, otherwise won't work!
         )
         if len(fflist) == 0:
             raise ValueError(
@@ -1440,6 +1454,209 @@ class FFCommittee(ForceField):
                     self.gather(r)
                     r["result"][0] -= self.offset
                     r["status"] = "Done"
+
+
+class FFRotations(ForceField):
+    """Forcefield to manipulate models that are not exactly rotationally equivariant.
+    Can be used to evaluate a different random rotation at each evaluation, or to average
+    over a regular grid of Euler angles"""
+
+    def __init__(
+        self,
+        latency=1.0,
+        offset=0.0,
+        name="",
+        pars=None,
+        dopbc=True,
+        active=np.array([-1]),
+        threaded=True,
+        prng=None,
+        ffsocket=None,
+        ffdirect=None,
+        random=False,
+        inversion=False,
+        grid_order=1,
+        grid_mode="lebedev",
+    ):
+        super(
+            FFRotations, self
+        ).__init__(  # force threaded execution to handle sub-ffield
+            latency, offset, name, pars, dopbc, active, threaded=True
+        )
+
+        if prng is None:
+            warning("No PRNG provided, will initialize one", verbosity.low)
+            self.prng = Random()
+        else:
+            self.prng = prng
+        self.ffsocket = ffsocket
+        self.ffdirect = ffdirect
+        if ffsocket is None or self.ffsocket.name == "__DUMMY__":
+            if ffdirect is None or self.ffdirect.name == "__DUMMY__":
+                raise ValueError(
+                    "Must specify a non-default value for either `ffsocket` or `ffdirect` into `ffrotations`"
+                )
+            else:
+                self.ff = self.ffdirect
+        elif ffdirect is None or self.ffdirect.name == "__DUMMY__":
+            self.ff = self.ffsocket
+        else:
+            raise ValueError(
+                "Cannot specify both `ffsocket` and `ffdirect` into `ffrotations`"
+            )
+
+        self.random = random
+        self.inversion = inversion
+        self.grid_order = grid_order
+        self.grid_mode = grid_mode
+
+        if self.grid_mode == "lebedev":
+            self._rotations = get_rotation_quadrature_lebedev(self.grid_order)
+        elif self.grid_mode == "legendre":
+            self._rotations = get_rotation_quadrature_legendre(self.grid_order)
+        else:
+            raise ValueError(f"Invalid quadrature {self.grid_mode}")
+        info(
+            f"""
+# Generating {self.grid_mode} rotation quadrature of order {self.grid_order}.
+# Grid contains {len(self._rotations)} proper rotations.
+{("# Inversion is also active, doubling the number of evaluations." if self.inversion else "")}""",
+            verbosity.low,
+        )
+
+    def bind(self, output_maker=None):
+        super().bind(output_maker)
+        self.ff.bind(output_maker)
+
+    def start(self):
+        super().start()
+        self.ff.start()
+
+    def queue(self, atoms, cell, reqid=-1):
+
+        # launches requests for all of the rotations FF objects
+        ffh = []  # this is the list of "inner" FF requests
+        rots = []  # this is a list of tuples of (rotation matrix, weight)
+        if self.random:
+            R_random = random_rotation(self.prng, improper=True)
+        else:
+            R_random = np.eye(3)
+
+        for R, w, _ in self._rotations:
+            R = R @ R_random
+
+            rot_atoms = atoms.clone()
+            rot_cell = GenericCell(
+                R @ dstrip(cell.h).copy()
+            )  # NB we need generic cell orientation
+            rot_atoms.q[:] = (dstrip(rot_atoms.q).reshape(-1, 3) @ R.T).flatten()
+
+            rots.append((R, w))
+            ffh.append(self.ff.queue(rot_atoms, rot_cell, reqid))
+
+            if self.inversion:
+                # also add a "flipped rotation" to the evaluation list
+                R = R * -1
+
+                rot_cell = GenericCell(R @ dstrip(cell.h).copy())
+                rot_atoms = atoms.clone()
+                rot_atoms.q[:] = (dstrip(rot_atoms.q).reshape(-1, 3) @ R.T).flatten()
+
+                rots.append((R, w))
+                ffh.append(self.ff.queue(rot_atoms, rot_cell, reqid))
+
+        # creates the request with the help of the base class,
+        # making sure it already contains a handle to the list of FF
+        # requests
+        req = ForceField.queue(
+            self, atoms, cell, reqid, template=dict(ff_handles=ffh, rots=rots)
+        )
+        req["status"] = "Running"
+        req["t_dispatched"] = time.time()
+        return req
+
+    def check_finish(self, r):
+        """Checks if all sub-requests associated with a given
+        request are finished"""
+
+        for ff_r in r["ff_handles"]:
+            if ff_r["status"] != "Done":
+                return False
+        return True
+
+    def gather(self, r):
+        """Collects results from all sub-requests, and assemble the committee of models."""
+
+        r["result"] = [
+            0.0,
+            np.zeros(len(r["pos"]), float),
+            np.zeros((3, 3), float),
+            "",
+        ]
+
+        # list of pointers to the forcefield requests. shallow copy so we can remove stuff
+        rot_handles = r["ff_handles"].copy()
+        rots = r["rots"].copy()
+
+        # Gathers the forcefield energetics and extras
+        pots = []
+        frcs = []
+        virs = []
+        xtrs = []
+        quad_w = []
+        for ff_r, (R, w) in zip(rot_handles, rots):
+            pots.append(ff_r["result"][0])
+            # must rotate forces and virial back into the original reference frame
+            frcs.append((ff_r["result"][1].reshape(-1, 3) @ R).flatten())
+            virs.append((R.T @ ff_r["result"][2] @ R))
+            xtrs.append(ff_r["result"][3])
+            quad_w.append(w)
+
+        quad_w = np.array(quad_w)
+        pots = np.array(pots)
+        frcs = np.array(frcs).reshape(len(frcs), -1)
+        virs = np.array(virs).reshape(-1, 3, 3)
+
+        # Computes the mean energetics (using the quadrature weights)
+        mean_pot = np.sum(pots * quad_w, axis=0) / quad_w.sum()
+        mean_frc = np.sum(frcs * quad_w[:, np.newaxis], axis=0) / quad_w.sum()
+        mean_vir = (
+            np.sum(virs * quad_w[:, np.newaxis, np.newaxis], axis=0) / quad_w.sum()
+        )
+
+        # Sets the output of the committee model.
+        r["result"][0] = mean_pot
+        r["result"][1] = mean_frc
+        r["result"][2] = mean_vir
+        r["result"][3] = {
+            "o3grid_pots": pots
+        }  # this is the list of potentials on a grid, for monitoring
+
+        # "dissolve" the extras dictionaries into a list
+        if isinstance(xtrs[0], dict):
+            for k in xtrs[0].keys():
+                r["result"][3][k] = []
+                for x in xtrs:
+                    r["result"][3][k].append(x[k])
+        else:
+            r["result"][3]["raw"] = []
+            for x in xtrs:
+                r["result"][3]["raw"].append(x)
+
+        for ff_r in r["ff_handles"]:
+            self.ff.release(ff_r)
+
+    def poll(self):
+        """Polls the forcefield object to check if it has finished."""
+
+        with self._threadlock:
+            for r in self.requests:
+                if "ff_handles" in r and r["status"] != "Done" and self.check_finish(r):
+                    r["t_finished"] = time.time()
+                    self.gather(r)
+                    r["result"][0] -= self.offset
+                    r["status"] = "Done"
+                    self.release(r, lock=False)
 
 
 class PhotonDriver:

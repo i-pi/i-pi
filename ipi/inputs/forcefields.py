@@ -20,6 +20,7 @@ from ipi.engine.forcefields import (
     FFCommittee,
     FFdmd,
     FFCavPhSocket,
+    FFRotations,
 )
 from ipi.interfaces.sockets import InterfaceSocket
 from ipi.pes import __drivers__
@@ -27,6 +28,8 @@ import ipi.engine.initializer
 from ipi.inputs.initializer import *
 from ipi.utils.inputvalue import *
 from ipi.utils.messages import verbosity, warning
+from ipi.utils.prng import Random
+from ipi.inputs.prng import InputRandom
 
 __all__ = [
     "InputFFSocket",
@@ -39,6 +42,7 @@ __all__ = [
     "InputFFCommittee",
     "InputFFdmd",
     "InputFFCavPhSocket",
+    "InputFFRotations",
 ]
 
 
@@ -263,7 +267,7 @@ class InputFFSocket(InputForceField):
            ff: A ForceField object with a FFSocket forcemodel object.
         """
 
-        if (not type(ff) is FFSocket) and (not type(ff) is FFCavPhSocket):
+        if type(ff) not in [FFSocket, FFCavPhSocket]:
             raise TypeError(
                 "The type " + type(ff).__name__ + " is not a valid socket forcefield"
             )
@@ -471,7 +475,7 @@ class InputFFDebye(InputForceField):
                 "default": input_default(factory=np.zeros, args=(0,)),
                 "help": "Specifies the Hessian of the harmonic potential. "
                 "Default units are atomic. Units can be specified only by xml attribute. "
-                r"Implemented options are: 'atomic_unit', 'ev/ang\^2'",
+                r"Implemented options are: 'atomic_unit', 'ev/ang^2'",
                 "dimension": "hessian",
             },
         ),
@@ -918,6 +922,127 @@ class InputFFCommittee(InputForceField):
             active_thresh=self.active_thresh.fetch(),
             active_out=self.active_output.fetch(),
             parse_json=self.parse_json.fetch(),
+        )
+
+
+class InputFFRotations(InputForceField):
+    default_help = """
+Wraps around another forcefield to evaluate it over one or more 
+rotated copies of the physical system. This is useful when 
+interacting with models that are not exactly invariant/covariant 
+with respect to rigid rotations.
+Besides the parameters defining how averaging is to be performed
+(using an integration grid, and/or randomizing the orientation at
+each step) the <ffrotations> should contain either a <ffsocket>
+or a <ffdirect> block that computes the "base" model. Note that
+this forcefield should be given a separate `name`, but that you
+cannot access this "inner" forcefield from other parts of the 
+input file.
+"""
+    default_label = "FFROTATIONS"
+
+    fields = copy(InputForceField.fields)
+
+    fields["random"] = (
+        InputValue,
+        {
+            "dtype": bool,
+            "default": False,
+            "help": """Applies a random rotation at each evaluation. """,
+        },
+    )
+
+    fields["grid_order"] = (
+        InputValue,
+        {
+            "dtype": int,
+            "default": 1,
+            "help": """Sums over a grid of rotations of the given order.
+            Note that the number of rotations increases rapidly with the order:
+            e.g. for a legendre grid
+            '1' leads to a single rotation, '2' to 18, '3' to 75 rotations, while 
+            for a lebedev grid '3' contains 18 rotations, '5' 70 rotations and so on.
+            """,
+        },
+    )
+
+    fields["grid_mode"] = (
+        InputValue,
+        {
+            "dtype": str,
+            "options": ["legendre", "lebedev"],
+            "default": "legendre",
+            "help": """Defines the type of integration grid. 
+            Lebedev grids are usually more efficient in integrating. 
+            """,
+        },
+    )
+
+    fields["inversion"] = (
+        InputValue,
+        {
+            "dtype": bool,
+            "default": False,
+            "help": """Always applies the improper version of each rotation in the
+            grid (or the randomly-sampled rotation). Doubles the evaluations and makes
+            the model exactly equivariant to inversion.""",
+        },
+    )
+
+    fields["prng"] = (
+        InputRandom,
+        {
+            "help": InputRandom.default_help,
+            "default": input_default(factory=Random),
+        },
+    )
+
+    fields["ffsocket"] = (
+        InputFFSocket,
+        {
+            "help": InputFFSocket.default_help,
+            "default": input_default(factory=FFSocket, kwargs={"name": "__DUMMY__"}),
+        },
+    )
+
+    fields["ffdirect"] = (
+        InputFFDirect,
+        {
+            "help": InputFFDirect.default_help,
+            "default": input_default(factory=FFDirect, kwargs={"name": "__DUMMY__"}),
+        },
+    )
+
+    def store(self, ff):
+        """Store the base and rotation quadrature parameters"""
+
+        super(InputFFRotations, self).store(ff)
+        self.inversion.store(ff.inversion)
+        self.grid_order.store(ff.grid_order)
+        self.grid_mode.store(ff.grid_mode)
+        self.random.store(ff.random)
+        self.prng.store(ff.prng)
+        self.ffsocket.store(ff.ffsocket)
+        self.ffdirect.store(ff.ffdirect)
+
+    def fetch(self):
+        """Fetches all of the FF objects"""
+
+        return FFRotations(
+            pars=self.parameters.fetch(),
+            name=self.name.fetch(),
+            latency=self.latency.fetch(),
+            offset=self.offset.fetch(),
+            dopbc=self.pbc.fetch(),
+            active=self.activelist.fetch(),
+            threaded=self.threaded.fetch(),
+            prng=self.prng.fetch(),
+            ffsocket=self.ffsocket.fetch(),
+            ffdirect=self.ffdirect.fetch(),
+            grid_order=self.grid_order.fetch(),
+            grid_mode=self.grid_mode.fetch(),
+            random=self.random.fetch(),
+            inversion=self.inversion.fetch(),
         )
 
 
