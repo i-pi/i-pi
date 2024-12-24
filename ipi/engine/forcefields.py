@@ -1520,7 +1520,7 @@ class FFRotations(ForceField):
             f"""
 # Generating {self.grid_mode} rotation quadrature of order {self.grid_order}.
 # Grid contains {len(self._rotations)} proper rotations.
-""",
+{("# Inversion is also active, doubling the number of evaluations." if self.inversion else "")}""",
             verbosity.low,
         )
 
