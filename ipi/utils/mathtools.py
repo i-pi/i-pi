@@ -629,7 +629,7 @@ def get_rotation_quadrature_lebedev(L):
     for theta_index in range(0, L):
         theta = 2 * np.pi * theta_index / L
         for w, v, weight in leb_quad:
-            angles = [theta, v, w]  # [w, v, theta]
+            angles = [w, v, theta]
             rotation_matrix = euler_zxz_to_matrix(*angles)
             quads.append((rotation_matrix, weight, angles))
     return quads
