@@ -81,7 +81,7 @@ def install_driver(force_install=False):
             ) as f:
                 f.write("drivers/f90\n")
             subprocess.run(
-                ["git", "pull", "--depth=1", "origin", "feat/equivator"], cwd=temp_dir
+                ["git", "pull", "--depth=1", "origin", "main"], cwd=temp_dir
             )
         except:
             warning(
