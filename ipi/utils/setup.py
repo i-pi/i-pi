@@ -80,9 +80,7 @@ def install_driver(force_install=False):
                 os.path.join(temp_dir, ".git", "info", "sparse-checkout"), "w"
             ) as f:
                 f.write("drivers/f90\n")
-            subprocess.run(
-                ["git", "pull", "--depth=1", "origin", "feat/equivator"], cwd=temp_dir
-            )
+            subprocess.run(["git", "pull", "--depth=1", "origin", "main"], cwd=temp_dir)
         except:
             warning(
                 "Failed to fetch the drivers folder from i-PI github repository",
