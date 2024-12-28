@@ -8,6 +8,8 @@ concurrency:
 
 jobs:
   python-tests:
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.os }} / Python ${{ matrix.python-version }} / Torch ${{ matrix.torch-version }}
     strategy:
       matrix:
         include:
@@ -20,9 +22,6 @@ jobs:
           - os: windows-2019
             python-version: "3.12"
 
-    runs-on: "${{ matrix.os }}"
-    
-    name: Regression and unitary tests 
     steps:
       - uses: actions/checkout@v4
         with:
