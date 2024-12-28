@@ -5,6 +5,5 @@ pytest
 pytest-mock
 pytest-cov
 mock
-coverage
 distutils
 flake8>=3.8.4
