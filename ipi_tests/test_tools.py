@@ -7,10 +7,12 @@ import tempfile
 import time
 import glob
 
-def copy_tree(src, dst): # emulates distutils copy_tree
+
+def copy_tree(src, dst):  # emulates distutils copy_tree
     if os.path.exists(dst):
         shutil.rmtree(dst)
     shutil.copytree(src, dst)
+
 
 clean_all = False
 debug = False
