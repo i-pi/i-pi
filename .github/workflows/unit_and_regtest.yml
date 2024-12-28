@@ -1,7 +1,11 @@
 name: Regression and unitary tests
 
-on: [push, pull_request]
-
+on: 
+  push:
+    branches: [main]
+  pull_request:
+    # Check all PR
+  
 concurrency:
   group: python-tests-${{ github.ref }}
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
