@@ -6,7 +6,7 @@
       <trajectory filename='pos2' stride='40' bead='4'> positions </trajectory>
       <checkpoint stride='4000'/>
    </output>
-   <total_steps> 20 </total_steps>
+   <total_steps> 400 </total_steps>
    <prng><seed>31415</seed></prng>
    <ffsocket name='qtip4pf' mode='unix' matching='any' pbc='false'>
        <address> f1 </address>

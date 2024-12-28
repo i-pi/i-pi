@@ -2,6 +2,10 @@ name: Regression and unitary tests
 
 on: [push, pull_request]
 
+concurrency:
+  group: python-tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+
 jobs:
   build:
 
