@@ -1,11 +1,16 @@
 import subprocess as sp
 import os
 from pathlib import Path
-from distutils.dir_util import copy_tree
+import shutil
 import xml.etree.ElementTree as ET
 import tempfile
 import time
 import glob
+
+def copy_tree(src, dst): # emulates distutils copy_tree
+    if os.path.exists(dst):
+        shutil.rmtree(dst)
+    shutil.copytree(src, dst)
 
 clean_all = False
 debug = False
