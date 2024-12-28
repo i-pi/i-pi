@@ -313,12 +313,12 @@ class Runner(object):
             if len(clients) > 0:
                 f_connected = False
                 for client in clients:
-                    for i in range(50):
+                    for i in range(100):
                         if os.path.exists("/tmp/ipi_" + client[2]):
                             f_connected = True
                             break
                         else:
-                            time.sleep(0.5)
+                            time.sleep(0.2)
                     if not f_connected:
                         print("Could not find the i-PI UNIX socket.")
                         print("Current client {}".format(client))
