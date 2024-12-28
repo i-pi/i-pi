@@ -7,8 +7,7 @@ concurrency:
   cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
 
 jobs:
-  build:
-
+  python-tests:
     strategy:
       matrix:
         include:
@@ -63,4 +62,3 @@ jobs:
       run: |
          pwd
          i-pi-tests -t regtests
-
