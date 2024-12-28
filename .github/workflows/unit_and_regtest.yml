@@ -9,7 +9,7 @@ concurrency:
 jobs:
   python-tests:
     runs-on: ${{ matrix.os }}
-    name: ${{ matrix.os }} / Python ${{ matrix.python-version }} / Torch ${{ matrix.torch-version }}
+    name: ${{ matrix.os }} / Python ${{ matrix.python-version }}
     strategy:
       matrix:
         include:
