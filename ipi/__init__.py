@@ -1,6 +1,14 @@
 """
-The i-PI package.
+The i-PI module.
 """
+
+# Python 3.8+:
+from importlib.metadata import version, PackageNotFoundError
+
+try:
+    __version__ = version("ipi")
+except PackageNotFoundError:
+    __version__ = "unknown"
 
 # expose some utility functions in a more direct way
 from ipi.utils.parsing import read_output, read_trajectory
