@@ -1464,6 +1464,7 @@ class Properties:
 
         It returns the average of the electric dipole moments of all the beads as an array of shape of (3,).
         """
+        bead = int(bead) if bead not in [None, ""] else -1
         assert (
             atom == ""
         ), "The dipole is defined only for charge neutral systems, not for atoms in molecules."
@@ -1476,10 +1477,10 @@ class Properties:
             return_count == False
         ), "'return_count' not implemented in 'get_averaged_dipole'."
         if isinstance(self.motion, DrivenDynamics):
-            if bead == "" or int(bead) < 0:
+            if bead == -1:
                 return self.motion.Electric_Dipole.dipole.mean(axis=0)
             else:
-                return self.motion.Electric_Dipole.dipole[int(bead)]
+                return self.motion.Electric_Dipole.dipole[bead]
         else:
             return np.full(3, np.nan)
 
@@ -1493,6 +1494,7 @@ class Properties:
 
         If you specify `bead_dipoles(bead=<N>)` it will return the dipole of the Nth bead as an array of shape (3,).
         """
+        bead = int(bead) if bead not in [None, ""] else -1
         assert (
             atom == ""
         ), "The dipole is defined only for charge neutral systems, not for atoms in molecules."
@@ -1501,17 +1503,17 @@ class Properties:
             return_count == False
         ), "'return_count' not implemented in 'get_bead_dipoles'."
         if isinstance(self.motion, DrivenDynamics):
-            if bead == "" or int(bead) < 0:
+            if bead == -1:
                 out = np.asarray(self.motion.Electric_Dipole.dipole).reshape(
                     (3, self.beads.nbeads)
                 )
             else:
-                out = np.asarray(self.motion.Electric_Dipole.dipole[int(bead)])
+                out = np.asarray(self.motion.Electric_Dipole.dipole[bead])
                 assert out.shape == (
                     3,
                 ), f"Wrong shape for bead dipole, expected '(3,)', but found '{out.shape}'."
         else:
-            if bead == "" or int(bead) < 0:
+            if bead == -1:
                 out = np.full((3 * self.beads.nbeads), np.nan)
             else:
                 out = np.full(3, np.nan)
