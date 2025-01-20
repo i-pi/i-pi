@@ -1,0 +1,77 @@
+<simulation>
+    <ffsocket mode='unix' name='driver'>
+         <latency>  1.00000000e-02</latency>
+         <slots>4</slots>
+         <port>20614</port>
+         <timeout>  6.00000000e+02</timeout>
+         <address>zundel</address>
+   </ffsocket>
+   <ffplumed name="plumed">
+         <file mode="xyz">./h5o2+.xyz</file>
+         <plumed_dat> plumed/plumed.dat </plumed_dat>
+         <plumed_extras> [doo, dc, opes.bias ] </plumed_extras>
+   </ffplumed>
+   <total_steps>400</total_steps>
+   <output prefix="data">
+      <trajectory stride="40" filename="pos" cell_units="angstrom">positions{angstrom}</trajectory>
+      <trajectory stride="20" filename="xc" format="xyz">x_centroid{angstrom}</trajectory>
+      <trajectory stride="20" filename="colvar" bead="0" extra_type="doo,dc,opes.bias"> extras_bias </trajectory>
+      <properties stride="2"> [ step, time, conserved, temperature{kelvin}, kinetic_cv, 
+            potential, kinetic_cv(H), kinetic_cv(O), ensemble_bias ] </properties>
+   </output>
+   <prng>
+      <seed>18885</seed>
+   </prng>
+   <system>
+      <forces> 
+          <force forcefield="driver"></force>
+      </forces>
+      <initialize nbeads="8">
+        <file mode="xyz">./h5o2+.xyz</file>
+        <cell>
+         [   25.29166, 0, 0, 0, 25.29166, 0, 0, 0, 25.29166 ]
+        </cell>
+      </initialize>
+      <ensemble>
+         <temperature units="kelvin"> 300.0 </temperature>
+         <bias>
+           <force forcefield="plumed" nbeads="1">
+             <interpolate_extras> [ doo, dc, opes.bias ] </interpolate_extras>
+           </force>
+         </bias>
+      </ensemble>
+      <motion mode="dynamics">
+        <dynamics mode="nvt">
+         <timestep units="femtosecond"> 0.5 </timestep>
+<!--
+# Generated at http://cosmo-epfl.github.io/gle4md
+# Please cite:
+# M. Ceriotti, G. Bussi and M. Parrinello, J. Chem. Theory Comput. 6, 1170 (2010) 
+# M. Ceriotti, G. Bussi and M. Parrinello, Phys. Rev. Lett. 102, 020601 (2009)
+# Smart-sampling GLE. Enforces efficient sampling, focussing the effort on the slowest mode 
+# accessible by the simulation. Generated from the parameter file
+# library/smart/smart-0.5_6-2.a, 
+# and shifted so that they are effective to sample optimally 
+# a time scale of t_opt=1 picoseconds,
+# and do as well as possible upt to a cutoff frequency of 
+# νmax=100 THz [3336 cm^-1]
+-->
+  <thermostat mode='gle'>
+    <A shape='(7,7)'>
+      [   8.191023526179e-4,    8.328506066524e-3,    1.657771834013e-3,    9.736989925341e-4,    2.841803794895e-4,   -3.176846864198e-5,   -2.967010478210e-4, 
+  -8.389856546341e-4,    2.405526974742e-2,   -1.507872374848e-2,    2.589784240185e-3,    1.516783633362e-3,   -5.958833418565e-4,    4.198422349789e-4, 
+   7.798710586406e-4,    1.507872374848e-2,    8.569039501219e-3,    6.001000899602e-3,    1.062029383877e-3,    1.093939147968e-3,   -2.661575532976e-3, 
+  -9.676783161546e-4,   -2.589784240185e-3,   -6.001000899602e-3,    2.680459336535e-5,   -5.214694469742e-5,    4.231304910751e-4,   -2.104894919743e-5, 
+  -2.841997149166e-4,   -1.516783633362e-3,   -1.062029383877e-3,    5.214694469742e-5,    1.433903506353e-9,   -4.241574212449e-5,    7.910178912362e-5, 
+   3.333208286893e-5,    5.958833418565e-4,   -1.093939147968e-3,   -4.231304910751e-4,    4.241574212449e-5,    2.385554468441e-8,   -3.139255482869e-5, 
+   2.967533789056e-4,   -4.198422349789e-4,    2.661575532976e-3,    2.104894919743e-5,   -7.910178912362e-5,    3.139255482869e-5,   2.432567259684e-11
+     ]
+    </A>
+  </thermostat>
+        </dynamics>
+      </motion>
+  </system>
+  <smotion mode="metad">
+     <metad> <metaff> [ plumed ] </metaff> </metad>
+  </smotion>
+</simulation>

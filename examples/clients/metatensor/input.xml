@@ -27,7 +27,7 @@
 
     <motion mode="dynamics">
     	<dynamics mode="nvt">
-        	<timestep units="femtosecond"> 0.5 </timestep>
+        	<timestep units="femtosecond"> 2 </timestep>
             <thermostat mode='gle'>
             	<A shape='(5,5)'>[
                 	 4.49e-3,   6.59e-6,   2.79e-4,  -8.81e-4,   5.61e-3,
