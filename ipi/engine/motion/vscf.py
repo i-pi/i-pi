@@ -22,6 +22,8 @@ __all__ = ["NormalModeMover"]
 import numpy as np
 import os
 
+from math import factorial
+
 from ipi.engine.motion import Motion
 from ipi.utils.depend import *
 
@@ -294,9 +296,7 @@ class IMF(DummyCalculator):
         except:
             herfun = hermite(n)
 
-        norm = (alpha / np.pi) ** 0.25 * np.sqrt(
-            1.0 / (2.0 ** (n) * np.math.factorial(n))
-        )
+        norm = (alpha / np.pi) ** 0.25 * np.sqrt(1.0 / (2.0 ** (n) * factorial(n)))
         psival = norm * np.exp(-alpha * q**2 / 2.0) * herfun(np.sqrt(alpha) * q)
 
         return psival
