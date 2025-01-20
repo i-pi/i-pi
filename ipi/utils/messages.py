@@ -142,7 +142,6 @@ def get_git_info():
     branch_name = "unknown"
     last_commit = "unknown"
     remote_url = "unknown"
-    version = "unknown"
 
     # Parse the current branch name
     try:
