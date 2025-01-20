@@ -1,3 +1,6 @@
+
+.. _units-conventions:
+
 Internal units and conventions
 ==============================
 
@@ -67,5 +70,25 @@ the input file: when given in an array format, the correct format is e.g.
 The socket flag ``pbc=True`` or ``pbc=False``
 ---------------------------------------------
 
-Inside the ``ffsocket`` block, 
+Inside the ``ffsocket`` and almost all other socket-type blocks,
+there is a flag called ``pbc``, which has generated a lot of debate
+regarding its meaning and regarding its behaviour (see :ref:`input-tags`).
+
+The purpose of this flag is to tell i-PI whether to wrap the positions before sending
+them to the client or not. It bears no consequence to the type of simulation
+you are performing (i.e., this is not about whether the simulation is periodic or not).
+
+Before the release of i-PI v.3.0, the default of this flag was set to True. This choice
+was made especifically because of the LAMMPS client (see below), but for all other clients
+we had experience with, they either did not care whether this flag was true or false 
+and worked fine regardless or they would break down completely or in corner cases ``pbc=True``.
+
+With the release of i-PI v3.0 we set the default of this flag to be *False*. This has improved
+the user experience in most cases. However, we do recommend using the latest version of LAMMPS
+with this new default, as we also had to update the LAMMPS client interface, which incidentally
+became a lot faster (because we avoid triggering the neighbor-list calculation at each step).
+
+If you se issues with your LAMMPS calculation (instability, missing atoms), 
+especially for older versions of LAMMPS, setting ``pbc=True`` in your socket should fix it.
+
 

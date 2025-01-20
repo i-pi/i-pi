@@ -15,7 +15,7 @@ please consider reporting an issue on Github: https://github.com/i-pi/i-pi/issue
 Which units does i-PI use?
 ---------------------------
 Atomic units are used everywhere inside the code.
-The exact values are listed in the manual section "Internal units".
+The exact values and more details are given in section :ref:`units-conventions`.
 For I/O operations, various units are accepted.
 The XML tags responsible for physical settings accept the attribute ``units=<unit>``.
 If nothing is specified, i-PI will assume atomic units.
