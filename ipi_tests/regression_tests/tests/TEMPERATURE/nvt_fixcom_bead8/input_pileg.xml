@@ -1,6 +1,6 @@
 <simulation verbosity='high'>
   <output prefix='simulation_pileg'>
-    <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_cv{electronvolt}, potential{electronvolt}, pressure_cv{megapascal} ] </properties>
+    <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, temperature{kelvin}(atom=O), temperature{kelvin}(atom=H), temperature{kelvin}(atom=0), temperature{kelvin}(bead=1),temperature{kelvin}(nm=0),temperature{kelvin}(nm=4),temperature{kelvin}(nm=7)] </properties>
     <!--trajectory filename='pos' stride='20'> positions{angstrom} </trajectory-->
     <trajectory filename='xc' stride='20'> x_centroid{angstrom} </trajectory>
     <!--trajectory filename='fc' stride='1'> f_centroid{ev/ang} </trajectory-->
