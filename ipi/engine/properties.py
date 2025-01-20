@@ -300,15 +300,15 @@ class Properties:
                     )
                 ),
             },
-            "dipole": {
+            "avg_dipole": {
                 "dimension": "electric-dipole",
-                "help": "The electric dipole of the system (x,y,z components in cartesian axes).",
+                "help": "The beads-averaged electric dipole moment (x,y,z components in cartesian axes).",
                 "size": 3,
-                "func": self.get_dipole,
+                "func": self.get_averaged_dipole,
             },
             "bead_dipoles": {
                 "dimension": "electric-dipole",
-                "help": "The electric dipole of each bead (x,y,z components in cartesian axes).",
+                "help": "The electric dipole moment of each bead (x,y,z components in cartesian axes).",
                 "size": "3 x nbeads",
                 "func": self.get_bead_dipoles,
             },
@@ -1456,13 +1456,25 @@ class Properties:
         else:
             return np.zeros(3)
 
-    def get_dipole(self, atom="", bead="", nm="", return_count=False):
-        """Returns the electric-dipole moment of the system."""
-        assert nm == "", "'nm' not implemented in 'get_dipole'."
-        assert return_count == False, "'return_count' not implemented in 'get_dipole'."
+    def get_averaged_dipole(self, atom="", bead="", nm="", return_count=False):
+        """
+        Returns the beads-averaged electric-dipole moment.
+
+        The input parameters `atoms`, `nm`, `bead`, and `return_count` are not supported.
+
+        It returns the average of the electric dipole moments of all the beads as an array of shape of (3,).
+        """
         assert (
             atom == ""
-        ), "The dipole is defined only for charge neutral systems, not for atoms."
+        ), "The dipole is defined only for charge neutral systems, not for atoms in molecules."
+        assert (
+            bead != "" or int(bead) >= 0
+        ), "'get_averaged_dipole' is supposed to be used to print the beads-averaged electric-dipole moment.\
+            If you want to print the dipole of individual beads use 'bead_dipoles(bead=<N>)'."
+        assert nm == "", "'nm' not implemented in 'get_dipole'."
+        assert (
+            return_count == False
+        ), "'return_count' not implemented in 'get_averaged_dipole'."
         if isinstance(self.motion, DrivenDynamics):
             if bead == "" or int(bead) < 0:
                 return self.motion.Electric_Dipole.dipole.mean(axis=0)
@@ -1472,23 +1484,37 @@ class Properties:
             return np.full(3, np.nan)
 
     def get_bead_dipoles(self, atom="", bead="", nm="", return_count=False):
-        """Returns the electric-dipole moment of a single bead."""
-        assert nm == "", "'nm' not implemented in 'get_dipole'."
-        assert return_count == False, "'return_count' not implemented in 'get_dipole'."
+        """
+        Returns the electric-dipole moment of a single bead.
+
+        The input parameters `atoms`, `nm`, and `return_count` are not supported.
+
+        By default it returns the dipole of all the beads as a flattened array of shape of (3*Nbeads,).
+
+        If you specify `bead_dipoles(bead=<N>)` it will return the dipole of the Nth bead as an array of shape (3,).
+        """
         assert (
             atom == ""
         ), "The dipole is defined only for charge neutral systems, not for atoms in molecules."
+        assert nm == "", "'nm' not implemented in 'get_bead_dipoles'."
         assert (
-            bead == ""
-        ), "'Properties.get_bead_dipoles' is supposed to be used to print the dipole of all the beads.\
-            If you want to print the dipole of individual beads use 'dipole(bead=<N>)'."
+            return_count == False
+        ), "'return_count' not implemented in 'get_bead_dipoles'."
         if isinstance(self.motion, DrivenDynamics):
-            out = np.asarray(self.motion.Electric_Dipole.dipole).flatten()
+            if bead == "" or int(bead) < 0:
+                out = np.asarray(self.motion.Electric_Dipole.dipole).reshape(
+                    (3, self.beads.nbeads)
+                )
+            else:
+                out = np.asarray(self.motion.Electric_Dipole.dipole[int(bead)])
+                assert out.shape == (
+                    3,
+                ), f"Wrong shape for bead dipole, expected '(3,)', but found '{out.shape}'."
         else:
-            out = np.full(3 * self.beads.nbeads, np.nan)
-        assert out.shape == (
-            3 * self.beads.nbeads,
-        ), f"Wrong shape for bead dipoles, expected '{(3*self.beads.nbeads,)}', but found '{out.shape}'."
+            if bead == "" or int(bead) < 0:
+                out = np.full((3 * self.beads.nbeads), np.nan)
+            else:
+                out = np.full(3, np.nan)
         return out
 
     def get_conserved(self, atom="", bead="", nm="", return_count=False):
