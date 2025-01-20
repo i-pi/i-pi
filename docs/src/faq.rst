@@ -36,7 +36,10 @@ How to build i-PI?
 i-PI is a Python code, and as such, strictly speaking, does not need to be compiled and installed.
 ``<i-pi-root>/bin/i-pi`` file is an executable.
 ``source <i-pi-root>/env.sh`` ensures that necessary paths are added to PATH, PYTHONPATH etc.
-However, it is often more convenient to install the package to the system’s Python modules path,
+Note that this option will *soon be deprecated* and the usage of i-PI as a package (see below) is 
+recommended.
+
+It is more convenient to install the package to the system’s Python modules path,
 so that it is accessible by all users and can be run without specifying the path to the Python script.
 For this purpose we have included a module in the root directory of the i-PI distribution, ``setup.py``,
 which handles creating a package with the executable and all the modules which are necessary for it to run.
@@ -69,6 +72,18 @@ We recommend using the socket connection from the client code to ASE and then fr
 can be found in:
 
 ``https://github.com/i-pi/i-pi/tree/main/examples/clients/ase_client``
+
+How to run i-PI with VASP?
+--------------------------
+VASP is not shipped with support to i-PI. The way to get simulations running is to patch the VASP source code.
+This patch aims to add socket support and we provide patches in ``<i-pi-root>/examples/clients/vasp``. Check
+the README file in that folder for detailed instructions on how to patch VASP.
+ 
+Note that the patches are version numbered, and we cannot guarantee that a given patch will work on a different
+VASP version than the one it was created for. We welcome contributions on the updates to these patches
+to keep up-to-date to the current VASP releases. The most recent VASP version we support by explicit path (as of Jan. 2025) 
+is 6.3.0. The general script ``patch_vasp.py`` by T. Tian in ``<i-pi-root>/examples/clients/vasp`` can work for more recent, e.g. 6.4.X, versions, 
+but we recommend testing. 
 
 How to run i-PI on a cluster?
 -----------------------------

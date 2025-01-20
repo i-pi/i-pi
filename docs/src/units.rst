@@ -63,3 +63,9 @@ This is also reflected in how the cell parameters should be provided in
 the input file: when given in an array format, the correct format is e.g.
 ``<h units='angstrom'> [10, 1, 2, 0, 9, -1, 0, 0, 11] </h>``. 
 
+
+The socket flag ``pbc=True`` or ``pbc=False``
+---------------------------------------------
+
+Inside the ``ffsocket`` block, 
+
