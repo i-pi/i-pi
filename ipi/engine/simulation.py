@@ -15,7 +15,6 @@ import os
 import time
 from copy import deepcopy
 
-import ipi
 from ipi.utils.depend import depend_value, dpipe, dproperties
 from ipi.utils.io.inputs.io_xml import xml_parse_file, xml_parse_string, xml_write
 from ipi.utils.messages import verbosity, info, warning, banner

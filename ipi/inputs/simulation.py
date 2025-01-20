@@ -4,8 +4,6 @@
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
-
-import ipi
 from ipi import ipi_global_settings
 from ipi.utils.depend import *
 from ipi.utils.inputvalue import *
