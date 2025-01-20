@@ -241,6 +241,7 @@ UnitMap = {
         "automatic": 1.00,
         "atomic_unit": 1.00,
         "eang": 1.8897261,  # electron charge * angstrom
+        "debye" : 0.3934303, # https://en.wikipedia.org/wiki/Debye#cite_note-10
     },
     "ms-momentum": {  # TODO fill up units here (mass-scaled momentum)
         "": 1.00,
