@@ -5,6 +5,7 @@
 # See the "licenses" directory for full license information.
 
 
+import ipi
 from ipi import ipi_global_settings
 from ipi.utils.depend import *
 from ipi.utils.inputvalue import *
@@ -22,6 +23,8 @@ import ipi.engine.forcefields as eforcefields
 import ipi.inputs.outputs as ioutputs
 from ipi.inputs.smotion import InputSmotion
 
+_latest_supported_input_version = "3.1"
+
 
 __all__ = ["InputSimulation"]
 
@@ -34,6 +37,7 @@ class InputSimulation(Input):
     object.
 
     Attributes:
+       version: A string identifying the input version.
        verbosity: A string saying how much should be output to standard output.
        mode: A string which determines what type of simulation will be run.
 
@@ -97,6 +101,14 @@ class InputSimulation(Input):
     }
 
     attribs = {
+        "version": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "default": "unspecified",
+                "help": "The i-Pi input version of the file.",
+            },
+        ),
         "verbosity": (
             InputAttribute,
             {
@@ -222,6 +234,8 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
         self.smotion.store(simul.smotion)
         self.threading.store(simul.threading)
         self.floatformat.store(ipi_global_settings["floatformat"])
+
+        self.version.store(_latest_supported_input_version)
 
         # this we pick from the messages class. kind of a "global" but it seems to
         # be the best way to pass around the (global) information on the level of output.
