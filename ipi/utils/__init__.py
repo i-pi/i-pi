@@ -16,6 +16,7 @@ __all__ = [
     "messages",
     "softexit",
     "setup",
+    "tools",
     "io",
     "constrtools",
 ]

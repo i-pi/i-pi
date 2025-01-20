@@ -9,6 +9,7 @@ numpy arrays.
 import re
 import numpy as np
 from ipi.utils.units import unit_to_user
+from ipi.utils.messages import warning, verbosity
 
 try:
     import ase
@@ -138,8 +139,7 @@ def read_trajectory(
             raise ValueError(f"Unrecognized file format: {format}")
 
     file_handle = open(filename, "r")
-    bohr2angstrom = unit_to_user("length", "angstrom", 1.0)
-    comment_regex = re.compile(r"([^)]+)\{([^}]+)\}")
+    comment_regex = re.compile(r"(\w+)\{([^}]+)\}")
     step_regex = re.compile(r"Step:\s+(\d+)")
 
     frames = []
@@ -200,17 +200,17 @@ def read_trajectory(
 
                 frame = ase.Atoms(
                     ret["atoms"].names,
-                    positions=ret["atoms"].q.reshape((-1, 3)) * bohr2angstrom,
-                    cell=ret["cell"].h.T * bohr2angstrom,
+                    # will apply conversion later!
+                    positions=ret["atoms"].q.reshape((-1, 3)),
+                    cell=ret["cell"].h.T * unit_to_user("length", "ase"),
                     pbc=True,
                 )
 
                 # parse comment to get the property
                 matches = comment_regex.findall(ret["comment"])
-
                 # get what we have found
-                if len(matches) >= 2:
-                    what = matches[-2][0]
+                if len(matches) == 2:
+                    what = matches[0][0]
                 else:  # defaults to reading positions
                     what = "positions"
 
@@ -219,13 +219,25 @@ def read_trajectory(
                 if len(matches) >= 1:
                     frame.info["step"] = int(matches[-1][0])
 
-                # if we have forces, set positions to zero (that data is missing!) and set forces instead
-                if what == "forces":
-                    # set forces and convert to eV/angstrom
-                    frame.positions *= 0
-                    frame.arrays["forces"] = ret["atoms"].q.reshape(
-                        (-1, 3)
-                    ) * unit_to_user("force", "ev/ang", 1.0)
+                # fetch the list of known traj types, cf. `engine/properties.py``
+                from ipi.engine.properties import Trajectories  # avoids circular import
+
+                traj_types = Trajectories().traj_dict
+                if not what in traj_types:
+                    warning(
+                        f"{what} is not a known trajectory type. Will apply no units conversion",
+                        verbosity.low,
+                    )
+                elif traj_types[what]["dimension"] == "length":
+                    # positions is the right place to store, and we just need to convert
+                    frame.positions *= unit_to_user("length", "ase")
+                else:
+                    # if we have another type of value, set positions to zero
+                    # (that data is missing!) and set an array instead
+                    frame.positions *= 0.0
+                    frame.arrays[what] = ret["atoms"].q.reshape((-1, 3)) * unit_to_user(
+                        traj_types[what]["dimension"], "ase"
+                    )
 
                 frames.append(frame)
 

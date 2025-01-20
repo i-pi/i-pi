@@ -71,6 +71,7 @@ class MetaDyn(Smotion):
                 k = bc.ffield
                 if k not in self.metaff:
                     continue  # only does metad for the indicated forcefield
+
                 f = s.ensemble.bias.ff[k]
                 if not hasattr(
                     f, "mtd_update"
@@ -83,16 +84,25 @@ class MetaDyn(Smotion):
                 if s.ensemble.bweights[ik] == 0:
                     continue  # do not put metad bias on biases with zero weights (useful to do remd+metad!)
 
-                meta_pot_before = s.ensemble.bias.pot
+                # MTD is hardcoded to be applied on the centroid variable.
+                # this is the "right" thing if you need to compute kinetics based
+                # on the resulting FES
+                mtd_work = f.mtd_update(pos=s.beads.qc, cell=s.cell.h)
 
-                fmtd = f.mtd_update(pos=s.beads.qc, cell=s.cell.h)
-                if fmtd:  # if metadyn has updated, then we must recompute forces.
-                    # hacky but cannot think of a better way: we must manually taint *just* that component
+                # updates the conserved quantity with the change in bias so that
+                # we remove the shift due to added hills
+                s.ensemble.eens += (
+                    mtd_work * s.beads.nbeads
+                )  # apply ring polymer contraction!
+
+                if mtd_work != 0:
+                    # hacky but cannot think of a better way: we must manually taint *just* that component.
+                    # we also use the fact that the bias force from a hill is zero when it's added so we
+                    # don't need changes to the forces, only to the bias
                     for fc in s.ensemble.bias.mforces:
                         if fc.ffield == k:
                             for fb in fc._forces:
-                                fb._ufvx.taint()
-                    meta_pot_after = s.ensemble.bias.pot
-                    # updates the conserved quantity with the change in bias so that
-                    # we remove the shift due to added hills
-                    s.ensemble.eens += meta_pot_before - meta_pot_after
+                                # this open-heart surgery on a depend object is fugly
+                                # but can't se a better way
+                                fb._ufvx._value[0] -= mtd_work
+                                fb._ufvx.taint(taintme=False)
