@@ -34,15 +34,15 @@ jobs:
 
       - run: which python
 
-    - name: Install Gfortran and Compile Driver
-      shell: bash
-      run: |
-         sudo apt-get update
-         sudo apt-get install gfortran
-         cd drivers/f90
-         make
+      - name: Install Gfortran and Compile Driver
+        shell: bash
+        run: |
+          sudo apt-get update
+          apt-get install gfortran
+          cd drivers/f90
+          make
 
-    - name: pytests for examples
-      shell: bash
-      run: |
-         i-pi-tests -t examples
+      - name: pytests for examples
+        shell: bash
+        run: |
+          i-pi-tests -t examples
