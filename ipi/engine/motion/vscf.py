@@ -296,9 +296,7 @@ class IMF(DummyCalculator):
         except:
             herfun = hermite(n)
 
-        norm = (alpha / np.pi) ** 0.25 * np.sqrt(
-            1.0 / (2.0 ** (n) * factorial(n))
-        )
+        norm = (alpha / np.pi) ** 0.25 * np.sqrt(1.0 / (2.0 ** (n) * factorial(n)))
         psival = norm * np.exp(-alpha * q**2 / 2.0) * herfun(np.sqrt(alpha) * q)
 
         return psival
