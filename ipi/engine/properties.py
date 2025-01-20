@@ -1119,6 +1119,15 @@ class Properties:
                     3 * np.sum(self.beads.m[atom_ids]) / np.sum(self.beads.m)
                 )  # This computes the portion of the COM kinetic energy (3*0.5kBT) on the selected atoms
 
+            if nm != "":
+                # Get normal mode temperature
+                if int(nm) == 0:
+                    # Centroid mode, since fixcom and constrained centroid only removes velocities from the centroid, we need to add the KE for all the beads
+                    eff_number_fixed_dof *= self.beads.nbeads
+                elif int(nm) > 0:
+                    # non-centroid mode, no need to add KE for fixcom and constrained centroid
+                    eff_number_fixed_dof = 0
+
             if len(self.motion.fixatoms_dof) > 0:
                 # Note that fixatom should NOT be compatitable with fixcom!
                 flags = np.zeros(self.beads.natoms * 3)
