@@ -170,15 +170,10 @@ def get_git_info():
     except:
         pass
 
-    try:
-        from ipi import __version__
-
-        version = __version__
-    except:
-        pass
+    from ipi import __version__
 
     return {
-        "version": version,
+        "version": __version__,
         "branch_name": branch_name,
         "last_commit": last_commit,
         "remote_url": remote_url,
