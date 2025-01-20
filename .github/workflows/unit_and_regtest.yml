@@ -7,13 +7,13 @@ on:
     # Check all PR
   
 concurrency:
-  group: python-tests-${{ github.ref }}
-  cancel-in-progress: ${{ github.ref != 'refs/heads/master' }}
+  group: reg-unit-tests-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 jobs:
-  python-tests:
+  reg-unit-tests:
     runs-on: ${{ matrix.os }}
-    name: ${{ matrix.os }} / Python ${{ matrix.python-version }}
+    name: Regtests on ${{ matrix.os }} / Python ${{ matrix.python-version }}
     strategy:
       matrix:
         include:
