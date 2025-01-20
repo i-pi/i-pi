@@ -12,12 +12,14 @@ from xml.sax.handler import ContentHandler
 
 import numpy as np
 from ipi import ipi_global_settings
+from . import read_value
 
 __all__ = [
     "xml_node",
     "xml_handler",
     "xml_parse_string",
     "xml_parse_file",
+    "xml_edit",
     "xml_write",
     "read_type",
     "read_float",
@@ -55,9 +57,10 @@ class xml_node(object):
 
         Args:
             attribs: An optional dictionary giving attribute data. Defaults to {}.
-            fields: An optional dictionary holding all the data between the start
+            fields: An optional list holding all the data between the start
                 and end tags, including information about other nodes.
-                Defaults to {}.
+                This is stored as a list of tuples [(key, value)] to allow for
+                duplicated entries.
             name: An optional string giving the tag name. Defaults to ''.
         """
 
@@ -241,6 +244,38 @@ def xml_write(xml, name="", indent="", text=""):
         else:
             rstr += "\n" + indent + "</" + name + ">"
     return rstr
+
+
+def xml_edit(root, path, node, full_path=False, mode="add"):
+    """Edits an xml_node, "add"-ing, "remove"-ing
+    or "replace"-ing the node at the desired location(s)"""
+
+    n_edited = 0
+
+    for idx in range(len(root.fields) - 1, -1, -1):
+        # iterate backwards to avoid index errors as we are editing the list in place
+        name, field = root.fields[idx]
+        if name == "_text":  # reached a dead end
+            continue
+        print(name, field)
+        if name == path[0]:
+            if len(path) == 1:
+                if mode == "add":
+                    field.fields.append((node.name, node))
+                elif mode == "remove":
+                    root.fields.pop(idx)
+                elif mode == "replace":
+                    root.fields[idx] = (node.name, node)
+                else:
+                    raise ValueError(f"Invalid editing mode {mode}")
+                n_edited += 1
+            else:
+                n_edited += xml_edit(field, path[1:], node, full_path, mode)
+        elif not full_path:
+            # see if the path is to be found somewhere >>within<<
+            n_edited += xml_edit(field, path, node, full_path, mode)
+
+    return n_edited
 
 
 def read_type(type, data):
@@ -448,7 +483,7 @@ def read_dict(data, delims="{}", split=",", key_split=":", strip=" \n\t"):
         rtuple = list(map(mystrip, s.split(key_split)))
         if not len(rtuple) == 2:
             raise ValueError("Format for a key:value format is wrong for item " + s)
-        rdict[rtuple[0]] = rtuple[1]
+        rdict[rtuple[0]] = read_value(rtuple[1])
 
     return rdict
 

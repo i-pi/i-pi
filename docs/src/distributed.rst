@@ -78,6 +78,17 @@ follows:
    propagated for one more time step, and new force requests will be
    dispatched.
 
+
+.. figure:: ../figures/ipi-comm.*
+   :width: 90.0%
+
+   A schematic simplified representation of the communication protocol.
+   We note that most of the clients do not make use of the 'NEEDINIT' option, 
+   The communication is *asynchronous* but we have omitted the 'waiting' blocks
+   for simplicity.
+
+   
+
 Parallelization
 ---------------
 
@@ -213,6 +224,7 @@ example above.
 .. _fig-network:
 
 .. figure:: ../figures/ipi-network.*
+   :class: white-background
    :width: 90.0%
 
    A schematic representation of the network layout one

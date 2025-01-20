@@ -11,6 +11,7 @@ import numpy as np
 from ipi.engine.forcefields import (
     ForceField,
     FFSocket,
+    FFDirect,
     FFLennardJones,
     FFDebye,
     FFPlumed,
@@ -19,15 +20,20 @@ from ipi.engine.forcefields import (
     FFCommittee,
     FFdmd,
     FFCavPhSocket,
+    FFRotations,
 )
 from ipi.interfaces.sockets import InterfaceSocket
+from ipi.pes import __drivers__
 import ipi.engine.initializer
 from ipi.inputs.initializer import *
 from ipi.utils.inputvalue import *
 from ipi.utils.messages import verbosity, warning
+from ipi.utils.prng import Random
+from ipi.inputs.prng import InputRandom
 
 __all__ = [
     "InputFFSocket",
+    "InputFFDirect",
     "InputFFLennardJones",
     "InputFFDebye",
     "InputFFPlumed",
@@ -36,6 +42,7 @@ __all__ = [
     "InputFFCommittee",
     "InputFFdmd",
     "InputFFCavPhSocket",
+    "InputFFRotations",
 ]
 
 
@@ -135,6 +142,8 @@ class InputForceField(Input):
         self.activelist.store(ff.active)
         self.threaded.store(ff.threaded)
 
+    _FFCLASS = ForceField
+
     def fetch(self):
         """Creates a ForceField object.
 
@@ -144,7 +153,7 @@ class InputForceField(Input):
 
         super(InputForceField, self).fetch()
 
-        return ForceField(
+        return self._FFCLASS(
             pars=self.parameters.fetch(),
             name=self.name.fetch(),
             latency=self.latency.fetch(),
@@ -258,7 +267,7 @@ class InputFFSocket(InputForceField):
            ff: A ForceField object with a FFSocket forcemodel object.
         """
 
-        if (not type(ff) is FFSocket) and (not type(ff) is FFCavPhSocket):
+        if type(ff) not in [FFSocket, FFCavPhSocket]:
             raise TypeError(
                 "The type " + type(ff).__name__ + " is not a valid socket forcefield"
             )
@@ -336,6 +345,49 @@ class InputFFSocket(InputForceField):
             raise ValueError("Negative timeout parameter specified.")
 
 
+class InputFFDirect(InputForceField):
+    fields = {
+        "pes": (
+            InputValue,
+            {
+                "dtype": str,
+                "default": "dummy",
+                "options": list(__drivers__.keys()),
+                "help": "Type of PES that should be used to evaluate the forcefield",
+            },
+        ),
+    }
+    fields.update(InputForceField.fields)
+
+    attribs = {}
+    attribs.update(InputForceField.attribs)
+
+    default_help = """ Direct potential that evaluates forces through a Python
+    call, using PES providers from a list of possible external codes. The available
+    PES interfaces are listed into the `ipi/pes` folder, and are the same available
+    for the Python driver. The `<parameters>` field should contain a dictionary
+    of the specific option of the chosen PES.
+    """
+    default_label = "FFDirect"
+
+    def store(self, ff):
+        super().store(ff)
+        self.pes.store(ff.pes)
+
+    def fetch(self):
+        super().fetch()
+
+        return FFDirect(
+            pars=self.parameters.fetch(),
+            name=self.name.fetch(),
+            latency=self.latency.fetch(),
+            offset=self.offset.fetch(),
+            dopbc=self.pbc.fetch(),
+            threaded=self.threaded.fetch(),
+            pes=self.pes.fetch(),
+        )
+
+
 class InputFFLennardJones(InputForceField):
     attribs = {}
     attribs.update(InputForceField.attribs)
@@ -344,29 +396,7 @@ class InputFFLennardJones(InputForceField):
                    Expects standard LJ parameters, e.g. { eps: 0.1, sigma: 1.0 }. """
     default_label = "FFLJ"
 
-    def store(self, ff):
-        super(InputFFLennardJones, self).store(ff)
-
-    def fetch(self):
-        super(InputFFLennardJones, self).fetch()
-
-        return FFLennardJones(
-            pars=self.parameters.fetch(),
-            name=self.name.fetch(),
-            latency=self.latency.fetch(),
-            offset=self.offset.fetch(),
-            dopbc=self.pbc.fetch(),
-            threaded=self.threaded.fetch(),
-        )
-
-        if self.slots.fetch() < 1 or self.slots.fetch() > 5:
-            raise ValueError(
-                "Slot number " + str(self.slots.fetch()) + " out of acceptable range."
-            )
-        if self.latency.fetch() < 0:
-            raise ValueError("Negative latency parameter specified.")
-        if self.timeout.fetch() < 0.0:
-            raise ValueError("Negative timeout parameter specified.")
+    _FFCLASS = FFLennardJones
 
 
 class InputFFdmd(InputForceField):
@@ -445,7 +475,7 @@ class InputFFDebye(InputForceField):
                 "default": input_default(factory=np.zeros, args=(0,)),
                 "help": "Specifies the Hessian of the harmonic potential. "
                 "Default units are atomic. Units can be specified only by xml attribute. "
-                "Implemented options are: 'atomic_unit', 'ev/ang\^2'",
+                r"Implemented options are: 'atomic_unit', 'ev/ang^2'",
                 "dimension": "hessian",
             },
         ),
@@ -509,11 +539,11 @@ class InputFFPlumed(InputForceField):
                 "help": "This describes the location to read the reference structure file from.",
             },
         ),
-        "plumeddat": (
+        "plumed_dat": (
             InputValue,
             {"dtype": str, "default": "plumed.dat", "help": "The PLUMED input file"},
         ),
-        "plumedstep": (
+        "plumed_step": (
             InputValue,
             {
                 "dtype": int,
@@ -521,12 +551,29 @@ class InputFFPlumed(InputForceField):
                 "help": "The current step counter for PLUMED calls",
             },
         ),
+        "compute_work": (
+            InputValue,
+            {
+                "dtype": bool,
+                "default": True,
+                "help": """Compute the work done by the metadynamics bias 
+                (to correct the conserved quantity). Note that this might 
+                require multiple evaluations of the conserved quantities,
+                and can add some overhead.""",
+            },
+        ),
         "plumed_extras": (
             InputArray,
             {
                 "dtype": str,
                 "default": input_default(factory=np.zeros, args=(0, str)),
-                "help": "List of variables defined in the PLUMED input, that should be transferred to i-PI as `extras` fields.",
+                "help": """List of variables defined in the PLUMED input, 
+                that should be transferred to i-PI as `extras` fields. 
+                Note that a version of PLUMED greater or equal than 2.10 is necessary 
+                to retrieve variables into i-PI, 
+                and that, if you are using ring-polymer contraction, the associated force block 
+                should use `interpolate_extras` to make sure all beads have values. 
+                """,
             },
         ),
     }
@@ -546,11 +593,9 @@ unless you include a <metad> tag, that triggers the log update. """
 
     def store(self, ff):
         super(InputFFPlumed, self).store(ff)
-        self.plumeddat.store(ff.plumeddat)
-        # pstep = ff.plumedstep
-        # if pstep > 0: pstep -= 1 # roll back plumed step before writing a restart
-        # self.plumedstep.store(pstep)
-        self.plumedstep.store(ff.plumedstep)
+        self.plumed_dat.store(ff.plumed_dat)
+        self.plumed_step.store(ff.plumed_step)
+        self.compute_work.store(ff.compute_work)
         self.file.store(ff.init_file)
         self.plumed_extras.store(np.array(list(ff.plumed_data.keys())))
 
@@ -563,8 +608,9 @@ unless you include a <metad> tag, that triggers the log update. """
             offset=self.offset.fetch(),
             dopbc=self.pbc.fetch(),
             threaded=self.threaded.fetch(),
-            plumeddat=self.plumeddat.fetch(),
-            plumedstep=self.plumedstep.fetch(),
+            compute_work=self.compute_work.fetch(),
+            plumed_dat=self.plumed_dat.fetch(),
+            plumed_step=self.plumed_step.fetch(),
             plumed_extras=self.plumed_extras.fetch(),
             init_file=self.file.fetch(),
         )
@@ -747,6 +793,7 @@ class InputFFCommittee(InputForceField):
 
     dynamic = {
         "ffsocket": (InputFFSocket, {"help": InputFFSocket.default_help}),
+        "ffdirect": (InputFFDirect, {"help": InputFFDirect.default_help}),
         "fflj": (InputFFLennardJones, {"help": InputFFLennardJones.default_help}),
         "ffdebye": (InputFFDebye, {"help": InputFFDebye.default_help}),
         "ffplumed": (InputFFPlumed, {"help": InputFFPlumed.default_help}),
@@ -891,6 +938,127 @@ class InputFFCommittee(InputForceField):
             active_thresh=self.active_thresh.fetch(),
             active_out=self.active_output.fetch(),
             parse_json=self.parse_json.fetch(),
+        )
+
+
+class InputFFRotations(InputForceField):
+    default_help = """
+Wraps around another forcefield to evaluate it over one or more 
+rotated copies of the physical system. This is useful when 
+interacting with models that are not exactly invariant/covariant 
+with respect to rigid rotations.
+Besides the parameters defining how averaging is to be performed
+(using an integration grid, and/or randomizing the orientation at
+each step) the <ffrotations> should contain either a <ffsocket>
+or a <ffdirect> block that computes the "base" model. Note that
+this forcefield should be given a separate `name`, but that you
+cannot access this "inner" forcefield from other parts of the 
+input file.
+"""
+    default_label = "FFROTATIONS"
+
+    fields = copy(InputForceField.fields)
+
+    fields["random"] = (
+        InputValue,
+        {
+            "dtype": bool,
+            "default": False,
+            "help": """Applies a random rotation at each evaluation. """,
+        },
+    )
+
+    fields["grid_order"] = (
+        InputValue,
+        {
+            "dtype": int,
+            "default": 1,
+            "help": """Sums over a grid of rotations of the given order.
+            Note that the number of rotations increases rapidly with the order:
+            e.g. for a legendre grid
+            '1' leads to a single rotation, '2' to 18, '3' to 75 rotations, while 
+            for a lebedev grid '3' contains 18 rotations, '5' 70 rotations and so on.
+            """,
+        },
+    )
+
+    fields["grid_mode"] = (
+        InputValue,
+        {
+            "dtype": str,
+            "options": ["legendre", "lebedev"],
+            "default": "legendre",
+            "help": """Defines the type of integration grid. 
+            Lebedev grids are usually more efficient in integrating. 
+            """,
+        },
+    )
+
+    fields["inversion"] = (
+        InputValue,
+        {
+            "dtype": bool,
+            "default": False,
+            "help": """Always applies the improper version of each rotation in the
+            grid (or the randomly-sampled rotation). Doubles the evaluations and makes
+            the model exactly equivariant to inversion.""",
+        },
+    )
+
+    fields["prng"] = (
+        InputRandom,
+        {
+            "help": InputRandom.default_help,
+            "default": input_default(factory=Random),
+        },
+    )
+
+    fields["ffsocket"] = (
+        InputFFSocket,
+        {
+            "help": InputFFSocket.default_help,
+            "default": input_default(factory=FFSocket, kwargs={"name": "__DUMMY__"}),
+        },
+    )
+
+    fields["ffdirect"] = (
+        InputFFDirect,
+        {
+            "help": InputFFDirect.default_help,
+            "default": input_default(factory=FFDirect, kwargs={"name": "__DUMMY__"}),
+        },
+    )
+
+    def store(self, ff):
+        """Store the base and rotation quadrature parameters"""
+
+        super(InputFFRotations, self).store(ff)
+        self.inversion.store(ff.inversion)
+        self.grid_order.store(ff.grid_order)
+        self.grid_mode.store(ff.grid_mode)
+        self.random.store(ff.random)
+        self.prng.store(ff.prng)
+        self.ffsocket.store(ff.ffsocket)
+        self.ffdirect.store(ff.ffdirect)
+
+    def fetch(self):
+        """Fetches all of the FF objects"""
+
+        return FFRotations(
+            pars=self.parameters.fetch(),
+            name=self.name.fetch(),
+            latency=self.latency.fetch(),
+            offset=self.offset.fetch(),
+            dopbc=self.pbc.fetch(),
+            active=self.activelist.fetch(),
+            threaded=self.threaded.fetch(),
+            prng=self.prng.fetch(),
+            ffsocket=self.ffsocket.fetch(),
+            ffdirect=self.ffdirect.fetch(),
+            grid_order=self.grid_order.fetch(),
+            grid_mode=self.grid_mode.fetch(),
+            random=self.random.fetch(),
+            inversion=self.inversion.fetch(),
         )
 
 

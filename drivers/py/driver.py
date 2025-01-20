@@ -3,12 +3,8 @@ import socket
 import argparse
 import numpy as np
 
-
-try:
-    from pes import *
-except ImportError:
-    # when in an installed i-PI package
-    from ipi._driver.pes import *
+from ipi.pes import *
+from ipi.utils.io.inputs import read_args_kwargs
 
 description = """
 Minimal example of a Python driver connecting to i-PI and exchanging energy, forces, etc.
@@ -119,8 +115,8 @@ def run_driver(
             nat = recv_data(sock, np.int32())
             if len(pos) == 0:
                 # shapes up the position array
-                pos.resize((nat, 3))
-                force.resize((nat, 3))
+                pos.resize((nat, 3), refcheck=False)
+                force.resize((nat, 3), refcheck=False)
             else:
                 if len(pos) != nat:
                     raise RuntimeError("Atom number changed during i-PI run")
@@ -205,8 +201,8 @@ if __name__ == "__main__":
         "--mode",
         type=str,
         default="dummy",
+        choices=list(__drivers__.keys()),
         help="""Type of potential to be used to compute the potential and its derivatives.
-                Currently implemented: [dummy, harmonic]
         """,
     )
     parser.add_argument(
@@ -227,10 +223,23 @@ if __name__ == "__main__":
 
     args = parser.parse_args()
 
+    driver_args, driver_kwargs = read_args_kwargs(args.param)
+
     if args.mode in __drivers__:
-        d_f = __drivers__[args.mode](args.param, args.verbose)
+        try:
+            d_f = __drivers__[args.mode](
+                *driver_args, verbose=args.verbose, **driver_kwargs
+            )
+        except ImportError:
+            # specific errors have already been triggered
+            raise
+        except Exception as err:
+            print(f"Error setting up PES mode {args.mode}")
+            print(__drivers__[args.mode].__doc__)
+            print("Error trace: ")
+            raise err
     elif args.mode == "dummy":
-        d_f = Dummy_driver(args.param, args.verbose)
+        d_f = Dummy_driver(verbose=args.verbose)
     else:
         raise ValueError("Unsupported driver mode ", args.mode)
 

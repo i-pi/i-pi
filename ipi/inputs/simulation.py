@@ -159,6 +159,10 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
             iforcefields.InputFFSocket,
             {"help": iforcefields.InputFFSocket.default_help},
         ),
+        "ffdirect": (
+            iforcefields.InputFFDirect,
+            {"help": iforcefields.InputFFDirect.default_help},
+        ),
         "fflj": (
             iforcefields.InputFFLennardJones,
             {"help": iforcefields.InputFFLennardJones.default_help},
@@ -182,6 +186,10 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
         "ffcommittee": (
             iforcefields.InputFFCommittee,
             {"help": iforcefields.InputFFCommittee.default_help},
+        ),
+        "ffrotations": (
+            iforcefields.InputFFRotations,
+            {"help": iforcefields.InputFFRotations.default_help},
         ),
         "ffsgdml": (
             iforcefields.InputFFsGDML,
@@ -242,10 +250,14 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
             _obj,
         ) in enumerate(_fflist + simul.syslist):
             if self.extra[_ii] == 0:
-                if isinstance(_obj, eforcefields.FFSocket):
+                if type(_obj) is eforcefields.FFSocket:
                     _iobj = iforcefields.InputFFSocket()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("ffsocket", _iobj)
+                elif isinstance(_obj, eforcefields.FFDirect):
+                    _iobj = iforcefields.InputFFDirect()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffdirect", _iobj)
                 elif isinstance(_obj, eforcefields.FFLennardJones):
                     _iobj = iforcefields.InputFFLennardJones()
                     _iobj.store(_obj)
@@ -274,6 +286,10 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
                     _iobj = iforcefields.InputFFCommittee()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("ffcommittee", _iobj)
+                elif isinstance(_obj, eforcefields.FFRotations):
+                    _iobj = iforcefields.InputFFRotations()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffrotations", _iobj)
                 elif isinstance(_obj, eforcefields.FFCavPhSocket):
                     _iobj = iforcefields.InputFFCavPhSocket()
                     _iobj.store(_obj)
@@ -322,17 +338,19 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
                 # of system objects with the desired properties set
                 # automatically to many values.
                 syslist += v.fetch()
-            elif (
-                k == "ffsocket"
-                or k == "fflj"
-                or k == "ffdebye"
-                or k == "ffdmd"
-                or k == "ffplumed"
-                or k == "ffsgdml"
-                or k == "ffyaff"
-                or k == "ffcommittee"
-                or k == "ffcavphsocket"
-            ):
+            elif k in [
+                "ffsocket",
+                "ffdirect",
+                "fflj",
+                "ffdebye",
+                "ffdmd",
+                "ffplumed",
+                "ffsgdml",
+                "ffyaff",
+                "ffcommittee",
+                "ffrotations",
+                "ffcavphsocket",
+            ]:
                 new_ff = v.fetch()
                 if k == "ffsocket":
                     # overrides ffsocket prefix

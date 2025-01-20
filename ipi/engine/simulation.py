@@ -16,11 +16,12 @@ import time
 from copy import deepcopy
 
 from ipi.utils.depend import depend_value, dpipe, dproperties
-from ipi.utils.io.inputs.io_xml import xml_parse_file
+from ipi.utils.io.inputs.io_xml import xml_parse_file, xml_parse_string, xml_write
 from ipi.utils.messages import verbosity, info, warning, banner
 from ipi.utils.softexit import softexit
 import ipi.engine.outputs as eoutputs
 import ipi.inputs.simulation as isimulation
+import threading
 
 from concurrent.futures import ThreadPoolExecutor
 
@@ -59,7 +60,7 @@ class Simulation:
 
     @staticmethod
     def load_from_xml(
-        fn_input,
+        xml_input,
         custom_verbosity=None,
         sockets_prefix=None,
         request_banner=False,
@@ -68,7 +69,7 @@ class Simulation:
         """Load an XML input file and return a `Simulation` object.
 
         Arguments:
-            fn_input (str): Name of the input file.
+            xml_input (str | file): XML-formatted string, or open file handle
             custom_verbosity (str): If not `None`, overrides the verbosity
                 specified by the input file.
             request_banner (bool): Whether to print the i-PI banner,
@@ -77,7 +78,10 @@ class Simulation:
         """
 
         # parse the file
-        xmlrestart = xml_parse_file(open(fn_input))
+        if type(xml_input) is str:
+            xmlrestart = xml_parse_string(xml_input)
+        else:
+            xmlrestart = xml_parse_file(xml_input)
 
         # prepare the simulation input object
         input_simulation = isimulation.InputSimulation()
@@ -103,19 +107,14 @@ class Simulation:
         # create the simulation object
         simulation = input_simulation.fetch()
 
+        # echo the input file if verbose enough
+        if verbosity.medium:
+            print(" --- begin input file content ---")
+            print(xml_write(xmlrestart))
+            print(" ---  end input file content  ---")
+
         # pipe between the components of the simulation
         simulation.bind(read_only)
-
-        # echo the input file if verbose enough
-        if verbosity.low:
-            print(" # i-PI loaded input file: ", fn_input)
-        elif verbosity.medium:
-            print(" --- begin input file content ---")
-            ifile = open(fn_input, "r")
-            for line in ifile.readlines():
-                print(line, end=" ")
-            print(" ---  end input file content  ---")
-            ifile.close()
 
         return simulation
 
@@ -151,7 +150,7 @@ class Simulation:
                 cumulative total.
         """
 
-        info(" # Initializing simulation object ", verbosity.low)
+        info(" @simulation: Initializing simulation object ", verbosity.low)
         self.prng = prng
         self.mode = mode
         self.threading = threads
@@ -161,6 +160,12 @@ class Simulation:
         self.syslist = syslist
         for s in syslist:
             s.prng = self.prng  # bind the system's prng to self prng
+            if threading.current_thread() == threading.main_thread():
+                info(
+                    "@ RANDOM SEED: The seed used in this calculation was "
+                    + str(self.prng.seed),
+                    verbosity.low,
+                )
             s.init.init_stage1(s)
 
         # TODO - does this have any meaning now that we introduce the smotion class?
@@ -258,6 +263,14 @@ class Simulation:
         if self.smotion is not None:
             self.smotion.bind(self.syslist, self.prng, self.output_maker)
 
+        # registers the softexit routine
+        softexit.register_function(self.softexit)
+        softexit.start(self.ttime)
+
+        # starts tracemalloc to debug memory leaks
+        if verbosity.debug:
+            tracemalloc.start(10)
+
     def softexit(self):
         """Deals with a soft exit request.
 
@@ -268,12 +281,14 @@ class Simulation:
         if self.step < self.tsteps:
             self.step += 1
         if not self.rollback:
-            info("SOFTEXIT: Saving the latest status at the end of the step")
+            info(
+                " @simulation.softexit: Saving the latest status at the end of the step"
+            )
             self.chk.store()
 
         self.chk.write(store=False)
 
-    def run(self):
+    def run(self, write_outputs=True):
         """Runs the simulation.
 
         Does all the simulation steps, and outputs data to the appropriate files
@@ -281,16 +296,8 @@ class Simulation:
         in the communication between the driver and the PIMD code.
         """
 
-        # registers the softexit routine
-        softexit.register_function(self.softexit)
-        softexit.start(self.ttime)
-
-        # starts tracemalloc to debug memory leaks
-        if verbosity.debug:
-            tracemalloc.start(10)
-
         # prints inital configuration -- only if we are not restarting
-        if self.step == 0:
+        if self.step == 0 and write_outputs:
             self.step = -1
             # must use multi-threading to avoid blocking in multi-system runs with WTE
             if self.threading:
@@ -328,44 +335,25 @@ class Simulation:
             if self.step % self.safe_stride == 0:
                 self.chk.store()
 
-            if len(self.syslist) > 0 and self.threading:
-                stepthreads = []
-                # steps through all the systems
-                for s in self.syslist:
-                    # creates separate threads for the different systems
-                    st = self.executor.submit(s.motion.step, step=self.step)
-                    stepthreads.append(st)
-
-                for st in stepthreads:
-                    st.result()
-            else:
-                for s in self.syslist:
-                    s.motion.step(step=self.step)
-
-            if softexit.triggered:
-                # Don't continue if we are about to exit.
-                break
-
-            # does the "super motion" step
-            if self.smotion is not None:
-                self.smotion.step(self.step)
+            self.run_step(self.step)
 
             if softexit.triggered:
                 # Don't write if we are about to exit.
                 break
 
-            if self.threading:
-                stepthreads = []
-                for o in self.outputs:
-                    if o.active():  # don't start a thread if it's not needed
-                        st = self.executor.submit(o.write)
-                        stepthreads.append(st)
+            if write_outputs:
+                if self.threading:
+                    stepthreads = []
+                    for o in self.outputs:
+                        if o.active():  # don't start a thread if it's not needed
+                            st = self.executor.submit(o.write)
+                            stepthreads.append(st)
 
-                for st in stepthreads:
-                    st.result()
-            else:
-                for o in self.outputs:
-                    o.write()
+                    for st in stepthreads:
+                        st.result()
+                else:
+                    for o in self.outputs:
+                        o.write()
 
             steptime += time.time()
             ttot += steptime
@@ -377,7 +365,7 @@ class Simulation:
                 or (verbosity.low and self.step % 1000 == 0)
             ):
                 info(
-                    " # Average timings at MD step % 7d. t/step: %10.5e"
+                    " @simulation.run: Average timings at MD step % 7d. t/step: %10.5e"
                     % (self.step, ttot / cstep)
                 )
                 cstep = 0
@@ -396,14 +384,43 @@ class Simulation:
                         info(line)
 
             if os.path.exists("EXIT"):
-                info(" # EXIT file detected! Bye bye!", verbosity.low)
+                info(" @simulation.run: EXIT file detected! Bye bye!", verbosity.low)
                 break
 
             if (self.ttime > 0) and (time.time() - simtime > self.ttime):
-                info(" # Wall clock time expired! Bye bye!", verbosity.low)
+                info(
+                    " @simulation.run: Wall clock time expired! Bye bye!", verbosity.low
+                )
                 break
 
         self.rollback = False
+
+    def run_step(self, step):
+        if len(self.syslist) > 0 and self.threading:
+            stepthreads = []
+            # steps through all the systems
+            for s in self.syslist:
+                # creates separate threads for the different systems
+                st = self.executor.submit(s.motion.step, step=step)
+                stepthreads.append(st)
+
+            for st in stepthreads:
+                if softexit.triggered:
+                    return
+                st.result()
+        else:
+            for s in self.syslist:
+                s.motion.step(step=step)
+                if softexit.triggered:
+                    return
+
+        # does the "super motion" step
+        if self.smotion is not None:
+            self.smotion.step(step)
+
+    def stop(self):
+        for k, f in self.fflist.items():
+            f.stop()
 
 
 dproperties(Simulation, ["step"])

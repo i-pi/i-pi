@@ -352,7 +352,10 @@ if __name__ == "__main__":
         input_chk = args.chk
         if os.path.exists(input_chk):
             simulation = Simulation.load_from_xml(
-                input_chk, custom_verbosity="low", request_banner=False, read_only=True
+                open(input_chk),
+                custom_verbosity="low",
+                request_banner=False,
+                read_only=True,
             )
         else:
             print("Error: cannot find {}.".format(input_chk))
