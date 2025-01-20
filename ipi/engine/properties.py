@@ -1075,8 +1075,7 @@ class Properties:
                 latom = ""
                 if iatom >= self.beads.natoms:
                     raise IndexError(
-                        "Atom index %d is larger than the number of atoms"
-                        % iatom
+                        "Atom index %d is larger than the number of atoms" % iatom
                     )
             except ValueError:
                 # here 'atom' is a label rather than an index which is stored in latom
@@ -1109,24 +1108,36 @@ class Properties:
 
         # accounting for constrained dof
         if self.ensemble.temp > 0:
-            eff_number_fixed_dof = 0 # the effective number of fixed degrees of freedom for the selected atom(s)
+            eff_number_fixed_dof = 0  # the effective number of fixed degrees of freedom for the selected atom(s)
             if self.motion.enstype == "nvt-cc":
-                eff_number_fixed_dof = len(atom_ids) * 3 # fixing the centroid for 1 atoms effectively fixes 3 dof, therefore the eff_number_fixed_dof is 3 time the number of atoms
+                eff_number_fixed_dof = (
+                    len(atom_ids) * 3
+                )  # fixing the centroid for 1 atoms effectively fixes 3 dof, therefore the eff_number_fixed_dof is 3 time the number of atoms
 
             elif self.motion.fixcom:
-                eff_number_fixed_dof = 3 * np.sum(self.beads.m[atom_ids]) / np.sum(self.beads.m) # This computes the portion of the COM kinetic energy (3*0.5kBT) on the selected atoms
+                eff_number_fixed_dof = (
+                    3 * np.sum(self.beads.m[atom_ids]) / np.sum(self.beads.m)
+                )  # This computes the portion of the COM kinetic energy (3*0.5kBT) on the selected atoms
 
             if len(self.motion.fixatoms_dof) > 0:
                 # Note that fixatom should NOT be compatitable with fixcom!
                 flags = np.zeros(self.beads.natoms * 3)
-                flags[self.motion.fixatoms_dof] += 1 # mark all fixed atom dof as 1
-                dof_ids = np.concatenate((atom_ids * 3, atom_ids * 3 + 1, atom_ids * 3 + 2))
-                eff_nbeads = self.beads.nbeads - 1 if self.motion.enstype == "nvt-cc" else self.beads.nbeads
+                flags[self.motion.fixatoms_dof] += 1  # mark all fixed atom dof as 1
+                dof_ids = np.concatenate(
+                    (atom_ids * 3, atom_ids * 3 + 1, atom_ids * 3 + 2)
+                )
+                eff_nbeads = (
+                    self.beads.nbeads - 1
+                    if self.motion.enstype == "nvt-cc"
+                    else self.beads.nbeads
+                )
                 eff_number_fixed_dof += np.sum(flags[dof_ids]) * eff_nbeads
 
             kemd += 0.5 * Constants.kb * self.ensemble.temp * eff_number_fixed_dof
 
-        return 2.0 * kemd / (Constants.kb * 3.0 * float(len(atom_ids)) * self.beads.nbeads)
+        return (
+            2.0 * kemd / (Constants.kb * 3.0 * float(len(atom_ids)) * self.beads.nbeads)
+        )
 
     def get_kincv(self, atom=""):
         """Calculates the quantum centroid virial kinetic energy estimator.
