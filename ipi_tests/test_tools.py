@@ -1,11 +1,18 @@
 import subprocess as sp
 import os
 from pathlib import Path
-from distutils.dir_util import copy_tree
+import shutil
 import xml.etree.ElementTree as ET
 import tempfile
 import time
 import glob
+
+
+def copy_tree(src, dst):  # emulates distutils copy_tree
+    if os.path.exists(dst):
+        shutil.rmtree(dst)
+    shutil.copytree(src, dst)
+
 
 clean_all = False
 debug = False
@@ -313,12 +320,12 @@ class Runner(object):
             if len(clients) > 0:
                 f_connected = False
                 for client in clients:
-                    for i in range(50):
+                    for i in range(100):
                         if os.path.exists("/tmp/ipi_" + client[2]):
                             f_connected = True
                             break
                         else:
-                            time.sleep(0.5)
+                            time.sleep(0.2)
                     if not f_connected:
                         print("Could not find the i-PI UNIX socket.")
                         print("Current client {}".format(client))
