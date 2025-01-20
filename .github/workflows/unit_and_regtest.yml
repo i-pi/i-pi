@@ -1,4 +1,4 @@
-name: Regression and unitary tests
+name: Pytest for examples
 
 on: 
   push:
@@ -34,30 +34,15 @@ jobs:
 
       - run: which python
 
-      - name: Install dependencies and Project
-        run: |
-           python -m pip install --upgrade pip
-           pip install -r requirements.txt 
-           pip install .
-           pip install ase==3.22.1
-           echo "${GITHUB_WORKSPACE}/bin" >> $GITHUB_PATH
+    - name: Install Gfortran and Compile Driver
+      shell: bash
+      run: |
+         sudo apt-get update
+         sudo apt-get install gfortran
+         cd drivers/f90
+         make
 
-      - name: Install Gfortran and Compile Driver
-        shell: bash
-        run: |
-           sudo apt-get update
-           sudo apt-get install gfortran
-           cd drivers/f90
-           make
-
-      - name: unit-tests
-        shell: bash
-        run: |
-           pwd
-           i-pi-tests -t unit
-
-      - name: regtests
-        shell: bash
-        run: |
-           pwd
-           i-pi-tests -t regtests
+    - name: pytests for examples
+      shell: bash
+      run: |
+         i-pi-tests -t examples
