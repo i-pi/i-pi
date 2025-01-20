@@ -266,7 +266,7 @@ def get_identification_info():
         info_string += "# Simulation information:\n"
         info_string += f"#           Machine Name: {system_info['machine_name']}\n"
         info_string += f"#      Working Directory: {system_info['working_directory']}\n"
-        info_string += f"# Starting Date and Time: {system_info['datetime']}\n"
+        info_string += f"#          Date and Time: {system_info['datetime']}\n"
     else:
         # Inform the user if system information could not be retrieved
         info_string += "# Unable to retrieve simulation information.\n"
