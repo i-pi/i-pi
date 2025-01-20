@@ -1,4 +1,4 @@
-name: pytest for examples
+name: Pytest for examples
 
 on:
   pull_request:
@@ -9,7 +9,7 @@ jobs:
 
     strategy:
       matrix:
-        python-version: [3.8.5]
+        python-version: [3.8]
         os: ["ubuntu-22.04"]
 
     runs-on: "${{ matrix.os }}"

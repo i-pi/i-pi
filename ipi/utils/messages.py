@@ -7,6 +7,7 @@
 
 import traceback
 import sys
+from ipi import __version__
 
 __all__ = ["Verbosity", "verbosity", "banner", "info", "warning"]
 
@@ -100,13 +101,13 @@ def banner():
     """Prints out a banner."""
 
     print(
-        r"""
+        rf"""
  ____       ____       ____       ____
 /    \     /    \     /    \     /    \
 |  #################################  |
 \__#_/     \____/     \____/     \_#__/
    #    _        _______  _____    #
-   #   (_)      |_   __ \|_   _|   #      -*-       v 3.1      -*-
+   #   (_)      |_   __ \|_   _|   #      -*-   v {__version__}  -*-
    #   __  ______ | |__) | | |     #
    Y  [  ||______||  ___/  | |     #      A Universal Force Engine
   0 0  | |       _| |_    _| |_    #
