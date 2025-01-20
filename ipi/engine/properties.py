@@ -284,19 +284,13 @@ class Properties:
                 "func": (lambda: np.asarray(h2abc_deg(self.cell.h))),
             },
             "Efield": {
-                "dimension": "atomic_unit",
+                "dimension": "electric-field",
                 "help": "The external applied electric field (x,y,z components in cartesian axes).",
                 "size": 3,
-                "func": (
-                    lambda: (
-                        self.motion.Electric_Field.Efield(self.ensemble.time)
-                        if isinstance(self.motion, DrivenDynamics)
-                        else np.zeros(3)
-                    )
-                ),
+                "func": self.get_Efield,
             },
             "Eenvelope": {
-                "dimension": "atomic_unit",
+                "dimension": "undefined",
                 "help": "The (gaussian) envelope function of the external applied electric field (values go from 0 to 1).",
                 "func": (
                     lambda: (
@@ -306,26 +300,37 @@ class Properties:
                     )
                 ),
             },
-            "dipole": {
+            "avg_dipole": {
                 "dimension": "electric-dipole",
-                "help": "The electric dipole of the system (x,y,z components in cartesian axes).",
+                "help": "The beads-averaged electric dipole moment (x,y,z components in cartesian axes).",
                 "size": 3,
-                "func": (
-                    lambda bead="-1": (
-                        self.motion.Electric_Dipole.dipole.mean(axis=0)
-                        if int(bead) < 0
-                        else (
-                            self.motion.Electric_Dipole.dipole[int(bead)]
-                            if isinstance(self.motion, DrivenDynamics)
-                            else np.zeros(3)
-                        )
-                    )
-                ),
+                "func": self.get_averaged_dipole,
+            },
+            "bead_dipoles": {
+                "dimension": "electric-dipole",
+                "help": "The electric dipole moment of each bead (x,y,z components in cartesian axes).",
+                "size": "3 x nbeads",
+                "func": self.get_bead_dipoles,
             },
             "conserved": {
                 "dimension": "energy",
                 "help": "The value of the conserved energy quantity per bead.",
-                "func": (lambda: self.ensemble.econs / float(self.beads.nbeads)),
+                "func": self.get_conserved,
+            },
+            "Econserved": {
+                "dimension": "energy",
+                "help": "The value of the conserved energy quantity per bead when an external electric field is applied.",
+                "func": self.get_Econserved,
+            },
+            "eda": {
+                "dimension": "energy",
+                "help": "The value of the energy contribution due to the external electric field.",
+                "func": self.get_eda,
+            },
+            "energy": {
+                "dimension": "energy",
+                "help": "The value of the total energy per bead.",
+                "func": self.get_energy,
             },
             "ensemble_lp": {
                 "dimension": "undefined",
@@ -369,13 +374,7 @@ class Properties:
                 "help": "The physical system potential energy.",
                 "longhelp": """The physical system potential energy. With the optional argument 'bead'
                          will print the potential associated with the specified bead.""",
-                "func": (
-                    lambda bead="-1": (
-                        self.forces.pot / self.beads.nbeads
-                        if int(bead) < 0
-                        else self.forces.pots[int(bead)]
-                    )
-                ),
+                "func": self.get_pot,
             },
             "bead_potentials": {
                 "dimension": "energy",
@@ -966,6 +965,7 @@ class Properties:
         )  # lock to avoid concurrent access and messing up with dbeads
 
         self.property_dict["bead_potentials"]["size"] = self.beads.nbeads
+        self.property_dict["bead_dipoles"]["size"] = 3 * self.beads.nbeads
         # self.properties_init()  # Initialize the properties here so that all
         # +all variables are accessible (for example to set
         # +the size of the hamiltonian_weights).
@@ -1448,6 +1448,138 @@ class Properties:
         v = v / self.beads.nbeads
 
         return PkT32 - spring + v
+
+    def get_Efield(self, atom="", bead="", nm="", return_count=False):
+        """Returns the external electric field applied to the system."""
+        if isinstance(self.motion, DrivenDynamics):
+            return self.motion.Electric_Field.Efield(self.ensemble.time)
+        else:
+            return np.zeros(3)
+
+    def get_averaged_dipole(self, atom="", bead="", nm="", return_count=False):
+        """
+        Returns the beads-averaged electric-dipole moment.
+
+        The input parameters `atom`, `nm`, `bead`, and `return_count` are not supported in this function.
+
+        It returns the average of the electric dipole moments of all the beads as an array of shape (3,).
+        """
+        # Convert 'bead' to an integer, or set it to -1 if it's an empty string or None
+        bead = int(bead) if bead not in [None, ""] else -1
+
+        # Ensure 'atom' is not set, since dipole is only defined for charge-neutral systems
+        assert (
+            atom == ""
+        ), "The dipole is defined only for charge neutral systems, not for atoms in molecules."
+
+        # Ensure bead is not an empty string or invalid value
+        assert (
+            bead != "" or int(bead) >= 0
+        ), "'get_averaged_dipole' is supposed to be used to print the beads-averaged electric-dipole moment.\
+            If you want to print the dipole of individual beads use 'bead_dipoles(bead=<N>)'."
+
+        # Ensure 'nm' is not passed as it's not implemented in this function
+        assert nm == "", "'nm' not implemented in 'get_dipole'."
+
+        # Ensure 'return_count' is False, as it's not supported in this function
+        assert (
+            return_count == False
+        ), "'return_count' not implemented in 'get_averaged_dipole'."
+
+        # If the motion is an instance of DrivenDynamics
+        if isinstance(self.motion, DrivenDynamics):
+            # If 'bead' is -1, return the mean dipole moment of all beads (averaged across all beads)
+            if bead == -1:
+                return self.motion.Electric_Dipole.dipole.mean(axis=0)
+            # Otherwise, return the dipole of the specified bead
+            else:
+                return self.motion.Electric_Dipole.dipole[bead]
+        else:
+            # If the motion is not of type DrivenDynamics, return NaN for the dipole moment
+            return np.full(3, np.nan)
+
+    def get_bead_dipoles(self, atom="", bead="", nm="", return_count=False):
+        """
+        Returns the electric-dipole moment of a single bead.
+
+        The input parameters `atom`, `nm`, and `return_count` are not supported in this function.
+
+        By default, it returns the dipole of all the beads as a flattened array of shape (3*Nbeads,).
+
+        If you specify `bead_dipoles(bead=<N>)` it will return the dipole of the Nth bead as an array of shape (3,).
+        """
+        # Convert 'bead' to an integer, or set it to -1 if it's an empty string or None
+        bead = int(bead) if bead not in [None, ""] else -1
+
+        # Ensure 'atom' is not set, since dipole is only defined for charge-neutral systems
+        assert (
+            atom == ""
+        ), "The dipole is defined only for charge neutral systems, not for atoms in molecules."
+
+        # Ensure 'nm' is not passed as it's not implemented in this function
+        assert nm == "", "'nm' not implemented in 'get_bead_dipoles'."
+
+        # Ensure 'return_count' is False, as it's not supported in this function
+        assert (
+            return_count == False
+        ), "'return_count' not implemented in 'get_bead_dipoles'."
+
+        # If the motion is an instance of DrivenDynamics
+        if isinstance(self.motion, DrivenDynamics):
+            # If 'bead' is -1, return the mean dipole moment across all beads
+            if bead == -1:
+                out = (
+                    np.asarray(self.motion.Electric_Dipole.dipole)
+                    .reshape((3, self.beads.nbeads))  # Reshape to (3, Nbeads)
+                    .mean(axis=1)  # Take the mean dipole across all beads
+                )
+            # Otherwise, return the dipole of the specific bead
+            else:
+                out = np.asarray(self.motion.Electric_Dipole.dipole[bead])
+                # Ensure the output has the expected shape (3,)
+                assert out.shape == (
+                    3,
+                ), f"Wrong shape for bead dipole, expected '(3,)', but found '{out.shape}'."
+        else:
+            # If the motion is not of type DrivenDynamics, return NaN for each bead or specific bead
+            if bead == -1:
+                out = np.full(
+                    (3 * self.beads.nbeads), np.nan
+                )  # For all beads, return NaN values
+            else:
+                out = np.full(3, np.nan)  # For a specific bead, return NaN values
+
+        # Return the calculated dipole or NaN values
+        return out
+
+    def get_conserved(self, atom="", bead="", nm="", return_count=False):
+        """Returns the conserved quantity of the system."""
+        return self.ensemble.econs / float(self.beads.nbeads)
+
+    def get_eda(self, atom="", bead="", nm="", return_count=False):
+        dipole = self.get_dipole(atom, bead, nm, return_count)
+        Efield = self.get_Efield(atom, bead, nm, return_count)
+        eda = float(dipole @ Efield)
+        return eda
+
+    def get_Econserved(self, atom="", bead="", nm="", return_count=False):
+        """Returns the conserved quantity of the system when an external electric field is applied."""
+        cons = self.get_conserved(atom, bead, nm, return_count)
+        eda = self.get_eda(atom, bead, nm, return_count)
+        return cons - eda
+
+    def get_energy(self, atom="", bead="", nm="", return_count=False):
+        """Calculates the physical system total energy as the sum of the potential and kinetic energies."""
+        kin = self.get_kinmd(atom, bead, nm, return_count)
+        pot = self.get_pot(atom, bead, nm, return_count)
+        return kin + pot
+
+    def get_pot(self, atom="", bead="-1", nm="", return_count=False):
+        """Calculates the physical system potential energy."""
+        if bead == "" or int(bead) < 0:
+            return self.forces.pot / self.beads.nbeads
+        else:
+            return self.forces.pots[int(bead)]
 
     def get_kinmd(self, atom="", bead="", nm="", return_count=False):
         """Calculates the classical kinetic energy of the simulation (p^2/2m)
