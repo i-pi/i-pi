@@ -38,7 +38,7 @@ jobs:
         shell: bash
         run: |
           sudo apt-get update
-          apt-get install gfortran
+          sudo apt-get install gfortran
           cd drivers/f90
           make
 
