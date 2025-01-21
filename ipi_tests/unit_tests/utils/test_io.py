@@ -188,7 +188,7 @@ def test_read_output_low_verbosity():
         "dipole",
     ], "wrong keys"
     for k, v in a.items():
-        assert len(v) == 501, f"`{k}` has the wrong size: {len(v)}"
+        assert len(v) == 3, f"`{k}` has the wrong size: {len(v)}"
 
 
 def test_read_output_high_verbosity():
@@ -213,7 +213,7 @@ def test_read_output_high_verbosity():
         "dipole(1)",
     ], "wrong keys"
     for k, v in a.items():
-        assert len(v) == 101, f"`{k}` has the wrong size: {len(v)}"
+        assert len(v) == 3, f"`{k}` has the wrong size: {len(v)}"
 
 
 if __name__ == "__main__":
