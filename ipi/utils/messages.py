@@ -9,6 +9,7 @@ import traceback
 import sys
 import os
 import time
+from ipi import __version__
 
 __all__ = [
     "Verbosity",
@@ -169,8 +170,6 @@ def get_git_info():
     except:
         pass
 
-    from ipi import __version__
-
     return {
         "version": __version__,
         "branch_name": branch_name,
@@ -273,13 +272,13 @@ def banner():
     """Prints out a banner."""
 
     print(
-        r"""
+        rf"""
  ____       ____       ____       ____
 /    \     /    \     /    \     /    \
 |  #################################  |
 \__#_/     \____/     \____/     \_#__/
    #    _        _______  _____    #
-   #   (_)      |_   __ \|_   _|   #      -*-       v 3.0      -*-
+   #   (_)      |_   __ \|_   _|   #      -*-   v {__version__}  -*-
    #   __  ______ | |__) | | |     #
    Y  [  ||______||  ___/  | |     #      A Universal Force Engine
   0 0  | |       _| |_    _| |_    #
