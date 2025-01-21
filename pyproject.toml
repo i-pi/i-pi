@@ -1,6 +1,9 @@
 [build-system]
-requires = ["setuptools", "wheel"]
+requires = ["setuptools", "wheel", "setuptools-scm"]
 build-backend = "setuptools.build_meta"
 
 [tool.black]
 exclude = 'test_properties.py'
+
+[tool.setuptools_scm]
+write_to = "ipi/_version.py"
