@@ -304,12 +304,15 @@ class Properties:
                 "dimension": "electric-dipole",
                 "help": "The beads-averaged electric dipole moment (x,y,z components in cartesian axes).",
                 "size": 3,
-                "func": self.get_averaged_dipole,
+                "func": self.get_average_dipole,
             },
             "bead_dipoles": {
                 "dimension": "electric-dipole",
-                "help": "The electric dipole moment of each bead (x,y,z components in cartesian axes).",
-                "size": "3 x nbeads",
+                "help": "The electric dipole moment of each/one bead (x,y,z components in cartesian axes).",
+                "longhelp": "The electric dipole moment of each bead, or of a single bead if the index is specified (x,y,z components in cartesian axes).\
+                    It returns the dipole of each bead by default.\
+                    If you provide `bead_dipoles(<N>)` or `bead_dipoles(bead=<N>)` it will return the dipole of the Nth bead.",
+                "size": "3 / 3 x nbeads",
                 "func": self.get_bead_dipoles,
             },
             "conserved": {
@@ -965,7 +968,7 @@ class Properties:
         )  # lock to avoid concurrent access and messing up with dbeads
 
         self.property_dict["bead_potentials"]["size"] = self.beads.nbeads
-        self.property_dict["bead_dipoles"]["size"] = 3 * self.beads.nbeads
+        self.property_dict["bead_dipoles"]["size"] = [ 3 * self.beads.nbeads, 3]
         # self.properties_init()  # Initialize the properties here so that all
         # +all variables are accessible (for example to set
         # +the size of the hamiltonian_weights).
@@ -1456,7 +1459,7 @@ class Properties:
         else:
             return np.zeros(3)
 
-    def get_averaged_dipole(self, atom="", bead="", nm="", return_count=False):
+    def get_average_dipole(self, bead=""):
         """
         Returns the beads-averaged electric-dipole moment.
 
@@ -1467,38 +1470,26 @@ class Properties:
         # Convert 'bead' to an integer, or set it to -1 if it's an empty string or None
         bead = int(bead) if bead not in [None, ""] else -1
 
-        # Ensure 'atom' is not set, since dipole is only defined for charge-neutral systems
-        assert (
-            atom == ""
-        ), "The dipole is defined only for charge neutral systems, not for atoms in molecules."
-
         # Ensure bead is not an empty string or invalid value
         assert (
             bead != "" or int(bead) >= 0
-        ), "'get_averaged_dipole' is supposed to be used to print the beads-averaged electric-dipole moment.\
+        ), "'get_average_dipole' is supposed to be used to print the beads-averaged electric-dipole moment.\
             If you want to print the dipole of individual beads use 'bead_dipoles(bead=<N>)'."
-
-        # Ensure 'nm' is not passed as it's not implemented in this function
-        assert nm == "", "'nm' not implemented in 'get_dipole'."
-
-        # Ensure 'return_count' is False, as it's not supported in this function
-        assert (
-            return_count == False
-        ), "'return_count' not implemented in 'get_averaged_dipole'."
 
         # If the motion is an instance of DrivenDynamics
         if isinstance(self.motion, DrivenDynamics):
             # If 'bead' is -1, return the mean dipole moment of all beads (averaged across all beads)
             if bead == -1:
-                return self.motion.Electric_Dipole.dipole.mean(axis=0)
+                out = self.motion.Electric_Dipole.dipole.mean(axis=0)
             # Otherwise, return the dipole of the specified bead
             else:
-                return self.motion.Electric_Dipole.dipole[bead]
+                out = self.motion.Electric_Dipole.dipole[bead]
         else:
             # If the motion is not of type DrivenDynamics, return NaN for the dipole moment
-            return np.full(3, np.nan)
+            out = np.full(3, np.nan)
+        return out
 
-    def get_bead_dipoles(self, atom="", bead="", nm="", return_count=False):
+    def get_bead_dipoles(self, bead=""):
         """
         Returns the electric-dipole moment of a single bead.
 
@@ -1510,29 +1501,12 @@ class Properties:
         """
         # Convert 'bead' to an integer, or set it to -1 if it's an empty string or None
         bead = int(bead) if bead not in [None, ""] else -1
-
-        # Ensure 'atom' is not set, since dipole is only defined for charge-neutral systems
-        assert (
-            atom == ""
-        ), "The dipole is defined only for charge neutral systems, not for atoms in molecules."
-
-        # Ensure 'nm' is not passed as it's not implemented in this function
-        assert nm == "", "'nm' not implemented in 'get_bead_dipoles'."
-
-        # Ensure 'return_count' is False, as it's not supported in this function
-        assert (
-            return_count == False
-        ), "'return_count' not implemented in 'get_bead_dipoles'."
-
+       
         # If the motion is an instance of DrivenDynamics
         if isinstance(self.motion, DrivenDynamics):
             # If 'bead' is -1, return the mean dipole moment across all beads
             if bead == -1:
-                out = (
-                    np.asarray(self.motion.Electric_Dipole.dipole)
-                    .reshape((3, self.beads.nbeads))  # Reshape to (3, Nbeads)
-                    .mean(axis=1)  # Take the mean dipole across all beads
-                )
+                out = np.asarray(self.motion.Electric_Dipole.dipole).flatten() # Reshape to (3, Nbeads)
             # Otherwise, return the dipole of the specific bead
             else:
                 out = np.asarray(self.motion.Electric_Dipole.dipole[bead])

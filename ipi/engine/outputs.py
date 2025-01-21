@@ -19,7 +19,7 @@ from ipi.utils.depend import *
 import ipi.utils.io as io
 from ipi.utils.io.inputs.io_xml import *
 from ipi.utils.io import open_backup
-from ipi.engine.properties import getkey
+from ipi.engine.properties import getkey, getall
 from ipi.engine.atoms import *
 from ipi.engine.cell import *
 from ipi import ipi_global_settings
@@ -177,13 +177,19 @@ class PropertyOutput(BaseOutput):
         # missing or mispelled
 
         for what in self.outlist:
-            key = getkey(what)
+            # key = getkey(what)
+            (key, unit, arglist, kwarglist) = getall(what)
             if key not in list(system.properties.property_dict.keys()):
                 print(
                     "Computable properties list: ",
                     list(system.properties.property_dict.keys()),
                 )
                 raise KeyError(key + " is not a recognized property")
+            
+            if arglist is not None or kwarglist is not None:
+                if "size" in system.properties.property_dict[key]:
+                    size = system.properties.property_dict[key]["size"][-1]
+                    system.properties.property_dict[key]["size"] = size
 
         super(PropertyOutput, self).bind(mode, system)
 
