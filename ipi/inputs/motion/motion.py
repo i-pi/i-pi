@@ -243,6 +243,8 @@ class InputMotionBase(Input):
         """
 
         super(InputMotionBase, self).store(sc)
+
+
         tsc = -1
         if type(sc) is Motion:
             self.mode.store("dummy")
@@ -315,12 +317,6 @@ class InputMotionBase(Input):
         else:
             raise ValueError("Cannot store Mover calculator of type " + str(type(sc)))
 
-        if (sc.fixcom is True) and (len(sc.fixatoms_dof) > 0):
-            warning(
-                "The flag fixcom is true by default but you have chosen to fix some atoms (or degree of freedom) explicitly. Because the two cannot be used together, we are overriding the fixcom setting and making it False.",
-                verbosity.low,
-            )
-            sc.fixcom = False
 
         if tsc == 0:
             self.file.store(sc.intraj)
@@ -338,8 +334,19 @@ class InputMotionBase(Input):
 
         super(InputMotionBase, self).fetch()
 
+        fixcom = self.fixcom.fetch() 
         fixatoms = self.fixatoms.fetch()
         fixatoms_dof = self.fixatoms_dof.fetch()
+        
+        if (fixcom is True) and ((len(fixatoms) > 0) or (len(fixatoms_dof) > 0)):
+            warning(
+                "The flag fixcom is true by default but you have chosen to fix some atoms (or degree of freedom) explicitly. Because the two cannot be used together, we are overriding the fixcom setting and making it False.",
+                verbosity.low,
+            )
+            fixcom = False
+
+        
+
         if len(fixatoms) > 0:
             if len(fixatoms_dof > 0):
                 softexit.trigger(
@@ -354,13 +361,15 @@ class InputMotionBase(Input):
 
         if self.mode.fetch() == "replay":
             sc = Replay(
-                fixcom=self.fixcom.fetch(),
+                #fixcom=self.fixcom.fetch(),
+                fixcom=fixcom,
                 fixatoms_dof=fixatoms_dof,
                 intraj=self.file.fetch(),
             )
         elif self.mode.fetch() == "minimize":
             sc = GeopMotion(
-                fixcom=self.fixcom.fetch(),
+                #fixcom=self.fixcom.fetch(),
+                fixcom=fixcom,
                 fixatoms_dof=fixatoms_dof,
                 **self.optimizer.fetch()
             )
@@ -370,7 +379,8 @@ class InputMotionBase(Input):
             #                "temporarily disabled until further bug-fixes."
             #            )
             sc = NEBMover(
-                fixcom=self.fixcom.fetch(),
+                #fixcom=self.fixcom.fetch(),
+                fixcom=fixcom,
                 fixatoms_dof=fixatoms_dof,
                 **self.neb_optimizer.fetch()
             )
@@ -384,67 +394,78 @@ class InputMotionBase(Input):
                 ),
             )
             sc = StringMover(
-                fixcom=self.fixcom.fetch(),
+                #fixcom=self.fixcom.fetch(),
+                fixcom=fixcom,
                 fixatoms_dof=fixatoms_dof,
                 **self.string_optimizer.fetch()
             )
         elif self.mode.fetch() == "driven_dynamics":
             sc = DrivenDynamics(
-                fixcom=self.fixcom.fetch(),
+                #fixcom=self.fixcom.fetch(),
+                fixcom=fixcom,
                 fixatoms_dof=fixatoms_dof,
                 **self.driven_dynamics.fetch()
             )
         elif self.mode.fetch() == "dynamics":
             sc = Dynamics(
-                fixcom=self.fixcom.fetch(),
+                #fixcom=self.fixcom.fetch(),
+                fixcom=fixcom,
                 fixatoms_dof=fixatoms_dof,
                 **self.dynamics.fetch()
             )
         elif self.mode.fetch() == "constrained_dynamics":
             sc = ConstrainedDynamics(
-                fixcom=self.fixcom.fetch(),
+                #fixcom=self.fixcom.fetch(),
+                fixcom=fixcom,
                 fixatoms_dof=fixatoms_dof,
                 **self.constrained_dynamics.fetch()
             )
         elif self.mode.fetch() == "vibrations":
             sc = DynMatrixMover(
-                fixcom=self.fixcom.fetch(),
+                #fixcom=self.fixcom.fetch(),
+                fixcom=fixcom,
                 fixatoms_dof=fixatoms_dof,
                 **self.vibrations.fetch()
             )
         elif self.mode.fetch() == "normalmodes":
             sc = NormalModeMover(
-                fixcom=self.fixcom.fetch(),
+                #fixcom=self.fixcom.fetch(),
+                fixcom=fixcom,
                 fixatoms_dof=fixatoms_dof,
                 **self.normalmodes.fetch()
             )
         elif self.mode.fetch() == "scp":
             sc = SCPhononsMover(
-                fixcom=self.fixcom.fetch(),
+                #fixcom=self.fixcom.fetch(),
+                fixcom=fixcom,
                 fixatoms_dof=fixatoms_dof,
                 **self.scp.fetch()
             )
         elif self.mode.fetch() == "alchemy":
             sc = AlchemyMC(
-                fixcom=self.fixcom.fetch(),
+                #fixcom=self.fixcom.fetch(),
+                fixcom=fixcom,
                 fixatoms_dof=fixatoms_dof,
                 **self.alchemy.fetch()
             )
         elif self.mode.fetch() == "atomswap":
             sc = AtomSwap(
-                fixcom=self.fixcom.fetch(),
+                #fixcom=self.fixcom.fetch(),
+                fixcom=fixcom,
                 fixatoms_dof=fixatoms_dof,
                 **self.atomswap.fetch()
             )
         elif self.mode.fetch() == "instanton":
             sc = InstantonMotion(
-                fixcom=self.fixcom.fetch(),
+                #fixcom=self.fixcom.fetch(),
+                fixcom=fixcom,
                 fixatoms_dof=fixatoms_dof,
                 **self.instanton.fetch()
             )
         elif self.mode.fetch() == "planetary":
             sc = Planetary(
-                fixcom=self.fixcom.fetch(),
+                #fixcom=self.fixcom.fetch(),
+                fixcom=fixcom,
                 fixatoms_dof=fixatoms_dof,
                 **self.planetary.fetch()
             )
@@ -454,7 +475,8 @@ class InputMotionBase(Input):
             sc = PressureRamp(**self.p_ramp.fetch())
         elif self.mode.fetch() == "al-kmc":
             sc = AlKMC(
-                fixcom=self.fixcom.fetch(),
+                #fixcom=self.fixcom.fetch(),
+                fixcom=fixcom,
                 fixatoms_dof=fixatoms_dof,
                 **self.al6xxx_kmc.fetch()
             )
