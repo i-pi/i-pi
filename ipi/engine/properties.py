@@ -1543,7 +1543,6 @@ class Properties:
             except ValueError:
                 raise ValueError("Normal mode index is not a valid integer")
 
-
         pnm = dstrip(self.nm.pnm)
         dm3 = dstrip(self.nm.dynm3)
         p = dstrip(self.beads.p)

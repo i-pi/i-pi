@@ -152,7 +152,6 @@ class Dynamics(Motion):
 
         super(Dynamics, self).bind(ens, beads, nm, cell, bforce, prng, omaker)
 
-
         # Checks if the number of mts levels is equal to the dimensionality of the mts weights.
         if len(self.nmts) != self.forces.nmtslevels:
             raise ValueError(
@@ -200,7 +199,6 @@ class Dynamics(Motion):
 
         # applies constraints immediately after initialization.
         self.integrator.pconstraints()
-        
 
         # TODO THOROUGH CLEAN-UP AND CHECK
         if (
