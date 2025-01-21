@@ -1,3 +1,6 @@
+
+.. _input-tags:
+
 Input file tags 
 ====================
 
