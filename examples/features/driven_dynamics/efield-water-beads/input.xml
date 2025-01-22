@@ -16,7 +16,7 @@
     <trajectory filename='becx'>becx</trajectory> 
     <trajectory filename='becy'>becy</trajectory> 
     <trajectory filename='becz'>becz</trajectory> 
-    <properties filename='properties.out' > [ bead_dipoles(0), bead_dipoles(bead=1), bead_dipoles ] </properties>
+    <properties filename='properties.out' > [ dipole(0), dipole(bead=1), bead_dipoles ] </properties>
   </output>
 
   <prng>
