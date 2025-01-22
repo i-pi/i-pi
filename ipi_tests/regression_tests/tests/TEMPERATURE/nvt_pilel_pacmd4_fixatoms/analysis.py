@@ -7,7 +7,7 @@ for suffix in suffixes:
     data = read_output("simulation.temp" + suffix)
     for key in data[0].keys():
         print(
-            "%.30s :  %10.5f +/- %10.5f"
+            "%.50s :  %10.5f +/- %10.5f"
             % (
                 key,
                 numpy.mean(data[0][key]),
