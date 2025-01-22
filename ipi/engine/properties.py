@@ -1449,7 +1449,7 @@ class Properties:
 
         return PkT32 - spring + v
 
-    def get_Efield(self, atom="", bead="", nm="", return_count=False):
+    def get_Efield(self):
         """Returns the external electric field applied to the system."""
         if isinstance(self.motion, DrivenDynamics):
             return self.motion.Electric_Field.Efield(self.ensemble.time)
@@ -1463,7 +1463,7 @@ class Properties:
         The input parameters `atom`, `nm`, `bead`, and `return_count` are not supported in this function.
 
         By default it returns the beads-averaged electric dipole moments as an array of shape (3,).
-        
+
         If `bead` is specified (e.g. dipole(bead=<N>) or dipole(<N>)), it returns the dipole of the Nth bead as an array of shape (3,).
         """
         # Convert 'bead' to an integer, or set it to -1 if it's an empty string or None
@@ -1480,9 +1480,11 @@ class Properties:
         else:
             # If the motion is not of type DrivenDynamics, return NaN for the dipole moment
             out = np.full(3, np.nan)
-            
-        assert out.shape == (3,), f"Wrong shape for dipole, expected '(3,)', but found '{out.shape}'."
-        
+
+        assert out.shape == (
+            3,
+        ), f"Wrong shape for dipole, expected '(3,)', but found '{out.shape}'."
+
         return out
 
     def get_bead_dipoles(self):
@@ -1491,9 +1493,7 @@ class Properties:
         """
         # If the motion is an instance of DrivenDynamics
         if isinstance(self.motion, DrivenDynamics):
-            out = np.asarray(
-                self.motion.Electric_Dipole.dipole
-            ).flatten()
+            out = np.asarray(self.motion.Electric_Dipole.dipole).flatten()
         else:
             out = np.full(
                 (3 * self.beads.nbeads), np.nan
@@ -1505,20 +1505,25 @@ class Properties:
 
         return out
 
-    def get_conserved(self, atom="", bead="", nm="", return_count=False):
+    def get_conserved(self):
         """Returns the conserved quantity of the system."""
         return self.ensemble.econs / float(self.beads.nbeads)
 
-    def get_eda(self, atom="", bead="", nm="", return_count=False):
-        dipole = self.get_dipole(atom, bead, nm, return_count)
-        Efield = self.get_Efield(atom, bead, nm, return_count)
+    def get_eda(self):
+        """
+        Returns the interaction energy between the dipole and the external electric field within the Electric Dipole Approximation.
+        """
+        dipole = self.get_dipole()
+        Efield = self.get_Efield()
         eda = float(dipole @ Efield)
         return eda
 
-    def get_Econserved(self, atom="", bead="", nm="", return_count=False):
-        """Returns the conserved quantity of the system when an external electric field is applied."""
-        cons = self.get_conserved(atom, bead, nm, return_count)
-        eda = self.get_eda(atom, bead, nm, return_count)
+    def get_Econserved(self):
+        """
+        Returns the conserved quantity of the system when an external electric field is applied.
+        """
+        cons = self.get_conserved()
+        eda = self.get_eda()
         return cons - eda
 
     def get_energy(self, atom="", bead="", nm="", return_count=False):
