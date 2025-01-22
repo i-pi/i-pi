@@ -33,6 +33,8 @@ __all__ = [
     "BaseOutput",
 ]
 
+"TEST"
+
 
 class OutputList(list):
     """A simple decorated list to save the output prefix and bring it
