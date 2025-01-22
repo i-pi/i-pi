@@ -19,12 +19,10 @@ from ipi.utils.depend import *
 import ipi.utils.io as io
 from ipi.utils.io.inputs.io_xml import *
 from ipi.utils.io import open_backup
-from ipi.engine.properties import getkey, getall
+from ipi.engine.properties import getkey
 from ipi.engine.atoms import *
 from ipi.engine.cell import *
-from ipi.utils.messages import get_identification_info
 from ipi import ipi_global_settings
-
 
 __all__ = [
     "PropertyOutput",
@@ -34,42 +32,6 @@ __all__ = [
     "OutputMaker",
     "BaseOutput",
 ]
-
-
-def get_identification_info_xml():
-    """
-    Retrieves identification information and formats it as XML-style comments.
-
-    This function fetches information using the `get_identification_info()` function,
-    processes the output by removing any leading '#' characters, and wraps each line
-    in XML comment tags (`<!-- -->`). The resulting string can be used for adding
-    comments in XML files to document identification information.
-
-    Returns:
-        str: A string where each line of the identification info is enclosed in
-        XML comment markers.
-    """
-
-    info = get_identification_info()
-
-    # Uncomment and modify these lines to filter the messages and print only some information messages
-    # # Filter out only the branch and last commit lines
-    # filtered_lines = [
-    #     line for line in info.splitlines() if "Branch" in line or "Last Commit" in line
-    # ]
-
-    # all information to RESTART/checkpoint files
-    filtered_lines = info.splitlines()
-
-    # let's remove the #
-    filtered_lines = [line.replace("#", "") for line in filtered_lines]
-
-    # Wrap each line in XML comment markers
-    xml_comments = (
-        "<!--\n" + "\n".join([f"{line}" for line in filtered_lines]) + "\n-->"
-    )
-
-    return xml_comments
 
 
 class OutputList(list):
@@ -182,9 +144,7 @@ class PropertyOutput(BaseOutput):
        system: The system object to get the data to be output from.
     """
 
-    def __init__(
-        self, filename="out", stride=1, flush=1, verbosity="low", outlist=None
-    ):
+    def __init__(self, filename="out", stride=1, flush=1, outlist=None):
         """Initializes a property output stream opening the corresponding
         file name.
 
@@ -205,9 +165,6 @@ class PropertyOutput(BaseOutput):
         self.outlist = np.asarray(outlist, np.dtype("|U1024"))
         self.flush = flush
         self.nout = 0
-        if verbosity not in ["low", "high"]:
-            raise ValueError(f"`{verbosity}` can only be `low` or `high`.")
-        self.verbosity = verbosity
 
     def bind(self, system, mode="w"):
         """Binds output proxy to System object.
@@ -220,8 +177,7 @@ class PropertyOutput(BaseOutput):
         # missing or mispelled
 
         for what in self.outlist:
-            # key = getkey(what)
-            (key, unit, arglist, kwarglist) = getall(what)
+            key = getkey(what)
             if key not in list(system.properties.property_dict.keys()):
                 print(
                     "Computable properties list: ",
@@ -229,22 +185,10 @@ class PropertyOutput(BaseOutput):
                 )
                 raise KeyError(key + " is not a recognized property")
 
-            if arglist is not None or kwarglist is not None:
-                if "size" in system.properties.property_dict[key]:
-                    size = system.properties.property_dict[key]["size"][-1]
-                    system.properties.property_dict[key]["size"] = size
-
         super(PropertyOutput, self).bind(mode, system)
 
     def print_header(self):
         # print nice header if information is available on the properties
-
-        if self.verbosity == "high":
-            info_string = get_identification_info()
-            info_string += "#\n"
-            info_string = info_string.replace("#", "###")
-            self.out.write(info_string)
-
         icol = 1
         for what in self.outlist:
             ohead = "# "
@@ -778,8 +722,6 @@ class CheckpointOutput:
             self.status.step.store(self.simul.step + 1)
 
         with open_function(filename, "w") as check_file:
-            info_string = get_identification_info_xml()
-            check_file.write(info_string + "\n")
             check_file.write(self.status.write(name="simulation"))
 
         # Do not use backed up file open on subsequent writes.
