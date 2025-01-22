@@ -228,7 +228,7 @@ class PropertyOutput(BaseOutput):
                     list(system.properties.property_dict.keys()),
                 )
                 raise KeyError(key + " is not a recognized property")
-            
+
             if arglist is not None or kwarglist is not None:
                 if "size" in system.properties.property_dict[key]:
                     size = system.properties.property_dict[key]["size"][-1]
