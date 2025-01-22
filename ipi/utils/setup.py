@@ -64,7 +64,13 @@ def install_driver(force_install=False):
         try:
             subprocess.run(["git", "init"], cwd=temp_dir)
             subprocess.run(
-                ["git", "remote", "add", "origin", "https://github.com/i-pi/i-pi.git"],
+                [
+                    "git",
+                    "remote",
+                    "add",
+                    "origin",
+                    "https://github.com/lab-cosmo/i-pi.git",
+                ],
                 cwd=temp_dir,
             )
             subprocess.run(

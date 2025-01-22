@@ -8,7 +8,7 @@
    </ffsocket>
    <ffplumed name="plumed">
          <file mode="xyz">./h5o2+.xyz</file>
-         <plumeddat> plumed/plumed.dat </plumeddat>
+         <plumed_dat> plumed/plumed.dat </plumed_dat>
    </ffplumed>
    <total_steps>400</total_steps>
    <output prefix="data">

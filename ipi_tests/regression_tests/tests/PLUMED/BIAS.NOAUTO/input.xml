@@ -15,7 +15,7 @@
    </ffsocket>
    <ffplumed name="plumed">
        <file mode="xyz">./init.xyz</file>
-       <plumeddat> plumed.dat </plumeddat>
+       <plumed_dat> plumed.dat </plumed_dat>
        <plumedextras> [dhh, rest.bias] </plumedextras>
    </ffplumed>
    <system >

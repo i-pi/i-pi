@@ -12,7 +12,7 @@
   <prng>
     <seed>31415</seed>
   </prng>
-  <ffcommittee name="committee">
+  <ffcommittee name="committee" threaded="False">
     <alpha> 1.0 </alpha>
     <active_output> active </active_output>
     <active_thresh units="electronvolt"> 0.05 </active_thresh>

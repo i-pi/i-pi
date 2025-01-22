@@ -393,8 +393,8 @@ class ExchangePotential:
                 - dstrip(self.prefix_V)[self.nbosons]
             )
             - math.log(
-                np.math.factorial(self.nbosons)
-            )  # (1.0 / np.math.factorial(self.nbosons))
+                math.factorial(self.nbosons)
+            )  # (1.0 / math.factorial(self.nbosons))
         )
 
     def get_longest_probability(self):
