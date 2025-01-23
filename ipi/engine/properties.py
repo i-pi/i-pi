@@ -1103,7 +1103,7 @@ class Properties:
               for. If not, then the simulation temperature.
         """
 
-        kemd = self.get_kinmd(atom, bead, nm)
+        kemd = self.get_kinmd(atom, bead, nm) # this returns the bead-average classical KE
         atom_ids = self.get_atom_ids(atom)
 
         # accounting for constrained dof
@@ -1122,7 +1122,7 @@ class Properties:
             if nm != "":
                 # Get normal mode temperature
                 if int(nm) == 0:
-                    # Centroid mode, since fixcom and constrained centroid only removes velocities from the centroid, we need to add the KE for all the beads
+                    # Centroid mode, since fixcom and constrained centroid only removes velocities from the centroid, we need to counterbalance the bead averaging done later by multiplying N here
                     eff_number_fixed_dof *= self.beads.nbeads
                 elif int(nm) > 0:
                     # non-centroid mode, no need to add KE for fixcom and constrained centroid
@@ -1136,13 +1136,13 @@ class Properties:
                     (atom_ids * 3, atom_ids * 3 + 1, atom_ids * 3 + 2)
                 )
                 eff_nbeads = (
-                    self.beads.nbeads - 1
+                    self.beads.nbeads - 1 # prevent double counting
                     if self.motion.enstype == "nvt-cc"
                     else self.beads.nbeads
                 )
                 eff_number_fixed_dof += np.sum(flags[dof_ids]) * eff_nbeads
 
-            kemd += 0.5 * Constants.kb * self.ensemble.temp * eff_number_fixed_dof
+            kemd += 0.5 * Constants.kb * self.ensemble.temp * eff_number_fixed_dof # short for 0.5*N*kB*T * eff_number_fixed_dof / N, " / N " is bead-averaging to match the definition of kemd.
 
         return (
             2.0 * kemd / (Constants.kb * 3.0 * float(len(atom_ids)) * self.beads.nbeads)
@@ -1491,7 +1491,7 @@ class Properties:
         return PkT32 - spring + v
 
     def get_kinmd(self, atom="", bead="", nm="", return_count=False):
-        """Calculates the classical kinetic energy of the simulation (p^2/2m)
+        """Calculates the (bead-average) classical kinetic energy of the simulation (p^2/2m)
 
         Args:
            atom: If given, specifies the atom to give the kinetic energy
