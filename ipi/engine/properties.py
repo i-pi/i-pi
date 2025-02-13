@@ -306,6 +306,12 @@ class Properties:
                 "size": 3,
                 "func": self.get_dipole,
             },
+            "dipole_dtime": {
+                "dimension": "velocity",
+                "help": "The time derivative of the beads-averaged electric dipole moment or the electric dipole moment of a single bead (x,y,z components in cartesian axes).",
+                "size": 3,
+                "func": self.get_dipole_dtime,
+            },
             "bead_dipoles": {
                 "dimension": "electric-dipole",
                 "help": "The electric dipole moment of all the beads (x,y,z components in cartesian axes).",
@@ -1458,7 +1464,7 @@ class Properties:
 
     def get_dipole(self, bead=""):
         """
-        Returns the beads-averaged electric-dipole moment or the dipole of a single bead if specified.
+        Returns the beads-averaged electric-dipole moment, or the dipole of a single bead (if specified).
 
         The input parameters `atom`, `nm`, `bead`, and `return_count` are not supported in this function.
 
@@ -1485,6 +1491,25 @@ class Properties:
             3,
         ), f"Wrong shape for dipole, expected '(3,)', but found '{out.shape}'."
 
+        return out
+
+    def get_dipole_dtime(self, bead=""):
+        """
+        Returns the beads-averaged time derivative of the electric-dipole moment, or the dipole of a single bead (if specified).
+
+        The input parameters `atom`, `nm`, `bead`, and `return_count` are not supported in this function.
+
+        By default it returns the beads-averaged electric dipole moments as an array of shape (3,).
+
+        If `bead` is specified (e.g. dipole_dtime(bead=<N>) or dipole_dtime(<N>)), it returns the dipole time derivative of the Nth bead as an array of shape (3,).
+        """
+        # Convert 'bead' to an integer, or set it to -1 if it's an empty string or None
+        bead = int(bead) if bead not in [None, ""] else -1
+
+        if isinstance(self.motion, DrivenDynamics):
+            out = self.motion.integrator.dipole_dtime(bead)
+        else:
+            out = np.full(3, np.nan)
         return out
 
     def get_bead_dipoles(self):
