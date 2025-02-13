@@ -255,14 +255,12 @@ class BEC:
             )
             if not np.allclose(sum_rule, 0, atol=BEC.ASR_THRESHOLD):
                 raise ValueError(
-                    msg + ": "
-                    "BEC tensors do not satisfy acoustic sum rule/charge conservation.\n\
-                    The sum over all the atoms should be zero, but it has exceeded the threshold of {:.e} per atom.\n\
-                    The mean over all the atoms is {}.\n\
-                    Check your driver or modify `BEC.ASR_THRESHOLD` in `ipi/engine/motion/driven_dynamics.py`.".format(
-                        BEC.ASR_THRESHOLD, sum_rule.flatten().tolist()
-                    )
+                    f"{msg}: BEC tensors do not satisfy acoustic sum rule/charge conservation.\n"
+                    f"The sum over all the atoms should be zero, but it has exceeded the threshold of {BEC.ASR_THRESHOLD:.2e} per atom.\n"
+                    f"The mean over all the atoms is {sum_rule.flatten().tolist()}.\n"
+                    "Check your driver or modify `BEC.ASR_THRESHOLD` in `ipi/engine/motion/driven_dynamics.py`."
                 )
+
             Z[n, :, :] = np.copy(bec)
 
         return Z
