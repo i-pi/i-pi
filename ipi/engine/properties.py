@@ -318,6 +318,12 @@ class Properties:
                 "size": "3 x nbeads",
                 "func": self.get_bead_dipoles,
             },
+            "bead_dipoles_dtime": {
+                "dimension": "velocity",
+                "help": "The time derivative of the electric dipole moment of all the beads (x,y,z components in cartesian axes).",
+                "size": "3 x nbeads",
+                "func": self.get_bead_dipoles_dtime,
+            },
             "conserved": {
                 "dimension": "energy",
                 "help": "The value of the conserved energy quantity per bead.",
@@ -972,6 +978,7 @@ class Properties:
 
         self.property_dict["bead_potentials"]["size"] = self.beads.nbeads
         self.property_dict["bead_dipoles"]["size"] = 3 * self.beads.nbeads
+        self.property_dict["bead_dipoles_dtime"]["size"] = 3 * self.beads.nbeads
         # self.properties_init()  # Initialize the properties here so that all
         # +all variables are accessible (for example to set
         # +the size of the hamiltonian_weights).
@@ -1493,25 +1500,6 @@ class Properties:
 
         return out
 
-    def get_dipole_dtime(self, bead=""):
-        """
-        Returns the beads-averaged time derivative of the electric-dipole moment, or the dipole of a single bead (if specified).
-
-        The input parameters `atom`, `nm`, `bead`, and `return_count` are not supported in this function.
-
-        By default it returns the beads-averaged electric dipole moments as an array of shape (3,).
-
-        If `bead` is specified (e.g. dipole_dtime(bead=<N>) or dipole_dtime(<N>)), it returns the dipole time derivative of the Nth bead as an array of shape (3,).
-        """
-        # Convert 'bead' to an integer, or set it to -1 if it's an empty string or None
-        bead = int(bead) if bead not in [None, ""] else -1
-
-        if isinstance(self.motion, DrivenDynamics):
-            out = self.motion.integrator.dipole_dtime(bead)
-        else:
-            out = np.full(3, np.nan)
-        return out
-
     def get_bead_dipoles(self):
         """
         Returns the electric-dipole moment of all the beads as a flattened array of shape (3*Nbeads,)
@@ -1527,6 +1515,46 @@ class Properties:
         assert out.shape == (
             3 * self.beads.nbeads,
         ), f"Wrong shape for bead dipole, expected '(3xNbeads)', but found '{out.shape}'."
+
+        return out
+
+    def get_dipole_dtime(self, bead=""):
+        """
+        Returns the beads-averaged time derivative of the electric-dipole moment, or the dipole of a single bead (if specified).
+
+        The input parameters `atom`, `nm`, `bead`, and `return_count` are not supported in this function.
+
+        By default it returns the beads-averaged electric dipole moments as an array of shape (3,).
+
+        If `bead` is specified (e.g. dipole_dtime(bead=<N>) or dipole_dtime(<N>)), it returns the dipole time derivative of the Nth bead as an array of shape (3,).
+        """
+        # Convert 'bead' to an integer, or set it to -1 if it's an empty string or None
+        bead = int(bead) if bead not in [None, ""] else -1
+
+        if isinstance(self.motion, DrivenDynamics):
+            out = self.motion.integrator.dipole_dtime(bead)
+            if bead == -1:
+                out = np.mean(out, axis=0)
+        else:
+            out = np.full(3, np.nan)
+        assert out.shape == (3,), f"Got out.shape = {out.shape}, expected (3,)"
+        return out
+
+    def get_bead_dipoles_dtime(self):
+        """
+        Returns the time derivative of the electric-dipole moment of all the beads as a flattened array of shape (3*Nbeads,)
+        """
+        # If the motion is an instance of DrivenDynamics
+        if isinstance(self.motion, DrivenDynamics):
+            out = self.motion.integrator.dipole_dtime(bead=-1).flatten()
+        else:
+            out = np.full(
+                (3 * self.beads.nbeads), np.nan
+            )  # For all beads, return NaN values
+
+        assert out.shape == (
+            3 * self.beads.nbeads,
+        ), f"Wrong shape for bead dipole_dtime, expected '(3xNbeads)', but found '{out.shape}'."
 
         return out
 

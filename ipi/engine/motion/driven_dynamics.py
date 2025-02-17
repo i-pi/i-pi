@@ -136,16 +136,14 @@ class EDAIntegrator(DummyIntegrator):
         )  # Born Effective Charges: shape == (nbeads,3xNatoms,3)
         v = self.beads.p / self.beads.m3  # velocities: shape == (nbeads,3xNatoms)
         if bead >= 0:
-            mu_dt = np.asarray(
-                Constants.e * Z[bead] @ v[bead]
-            ).flatten()  # time derivative of the dipole: shape == (3)
+            mu_dt = Constants.e * np.einsum("jk,j->k", Z[bead], v[bead])
+            # time derivative of the dipole: shape == (3)
             assert mu_dt.shape == (
                 3,
             ), f"Got mu_dt.shape = {mu_dt.shape}, expected (3,)"
         else:
-            mu_dt = np.asarray(
-                Constants.e * Z @ v
-            )  # time derivative of the dipole: shape == (nbeads,3)
+            mu_dt = Constants.e * np.einsum("ijk,ij->ik", Z, v)
+            # time derivative of the dipole: shape == (nbeads,3)
             assert mu_dt.shape == (
                 self.beads.nbeads,
                 3,
