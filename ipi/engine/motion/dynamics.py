@@ -283,6 +283,10 @@ class DummyIntegrator:
         self._dt = motion._dt
         self._nmts = motion._nmts
 
+        # calculate active atoms
+        full_indices = np.arange(len(self.beads.p[0]))
+        self.activeatoms_dof = np.setdiff1d(full_indices, self.fixatoms_dof)
+
         # total number of iteration in the inner-most MTS loop
         self._inmts = depend_value(name="inmts", func=lambda: np.prod(self.nmts))
         self._nmtslevels = depend_value(name="nmtslevels", func=lambda: len(self.nmts))
@@ -361,17 +365,16 @@ class DummyIntegrator:
             vcom = np.sum(p.reshape(-1, 3), axis=0) / Mnb
             beads.p -= (m3 * vcom).reshape(nb, -1)
 
-            self.ensemble.eens += np.sum(vcom**2) * 0.5 * Mnb  # COM kinetic energy
+            self.ensemble.eens += np.sum(vcom**2) * 0.5 * Mnb  # COM kinetic energy.
 
         if len(self.fixatoms_dof) > 0:
             m3 = dstrip(beads.m3)
             p = dstrip(beads.p)
-
+            print('momsquare ', p[:, self.fixatoms_dof] ** 2)
             self.ensemble.eens += 0.5 * np.sum(
                 p[:, self.fixatoms_dof] ** 2 / m3[:, self.fixatoms_dof]
             )
             beads.p[:, self.fixatoms_dof] = 0.0
-
 
 dproperties(
     DummyIntegrator,
@@ -400,9 +403,9 @@ class NVEIntegrator(DummyIntegrator):
         """Velocity Verlet momentum propagator."""
 
         # halfdt/alpha
-        self.beads.p[:] += dstrip(self.forces.mts_forces[level].f) * self.pdt[level]
+        self.beads.p[:, self.activeatoms_dof] += dstrip(self.forces.mts_forces[level].f)[:, self.activeatoms_dof] * self.pdt[level]
         if level == 0 and self.ensemble.has_bias:  # adds bias in the outer loop
-            self.beads.p[:] += dstrip(self.bias.f) * self.pdt[level]
+            self.beads.p[:, self.activeatoms_dof] += dstrip(self.bias.f)[:, self.activeatoms_dof] * self.pdt[level]
 
     def qcstep(self):
         """Velocity Verlet centroid position propagator."""
