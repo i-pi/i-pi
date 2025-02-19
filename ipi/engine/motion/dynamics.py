@@ -370,11 +370,12 @@ class DummyIntegrator:
         if len(self.fixatoms_dof) > 0:
             m3 = dstrip(beads.m3)
             p = dstrip(beads.p)
-            print('momsquare ', p[:, self.fixatoms_dof] ** 2)
+            print("momsquare ", p[:, self.fixatoms_dof] ** 2)
             self.ensemble.eens += 0.5 * np.sum(
                 p[:, self.fixatoms_dof] ** 2 / m3[:, self.fixatoms_dof]
             )
             beads.p[:, self.fixatoms_dof] = 0.0
+
 
 dproperties(
     DummyIntegrator,
@@ -403,9 +404,14 @@ class NVEIntegrator(DummyIntegrator):
         """Velocity Verlet momentum propagator."""
 
         # halfdt/alpha
-        self.beads.p[:, self.activeatoms_dof] += dstrip(self.forces.mts_forces[level].f)[:, self.activeatoms_dof] * self.pdt[level]
+        self.beads.p[:, self.activeatoms_dof] += (
+            dstrip(self.forces.mts_forces[level].f)[:, self.activeatoms_dof]
+            * self.pdt[level]
+        )
         if level == 0 and self.ensemble.has_bias:  # adds bias in the outer loop
-            self.beads.p[:, self.activeatoms_dof] += dstrip(self.bias.f)[:, self.activeatoms_dof] * self.pdt[level]
+            self.beads.p[:, self.activeatoms_dof] += (
+                dstrip(self.bias.f)[:, self.activeatoms_dof] * self.pdt[level]
+            )
 
     def qcstep(self):
         """Velocity Verlet centroid position propagator."""

@@ -264,7 +264,14 @@ class Ensemble:
         for e in self._elist:
             eham += e.get()
 
-        print('kin, pot, eens, eget, total',self.nm.kin, self.forces.pot, self.eens, eham-self.nm.kin-self.forces.pot, self.nm.kin+ self.forces.pot)
+        print(
+            "kin, pot, eens, eget, total",
+            self.nm.kin,
+            self.forces.pot,
+            self.eens,
+            eham - self.nm.kin - self.forces.pot,
+            self.nm.kin + self.forces.pot,
+        )
         return eham + self.eens
 
     def get_lpens(self):
