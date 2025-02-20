@@ -370,7 +370,6 @@ class DummyIntegrator:
         if len(self.fixatoms_dof) > 0:
             m3 = dstrip(beads.m3)
             p = dstrip(beads.p)
-            print("momsquare ", p[:, self.fixatoms_dof] ** 2)
             self.ensemble.eens += 0.5 * np.sum(
                 p[:, self.fixatoms_dof] ** 2 / m3[:, self.fixatoms_dof]
             )
