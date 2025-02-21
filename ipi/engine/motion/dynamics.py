@@ -221,6 +221,11 @@ class Dynamics(Motion):
             elif self.enstype == "nst":
                 if np.allclose(self.ensemble.stressext.diagonal(), -12345):
                     raise ValueError("Unspecified stress for a constant-s integrator")
+        if self.enstype == "nve" and self.beads.nbeads > 1:
+            if self.ensemble.temp < 0:
+                raise ValueError(
+                    "You need to provide a positive value for temperature inside ensemble to run a PIMD simulation, even when choosing NVE propagation."
+                )
 
     def get_ntemp(self):
         """Returns the PI simulation temperature (P times the physical T)."""
@@ -282,6 +287,16 @@ class DummyIntegrator:
         self._splitting = motion._splitting
         self._dt = motion._dt
         self._nmts = motion._nmts
+
+        # check whether fixed indexes make sense
+        if np.any(self.fixatoms_dof >= (3 * self.beads.natoms)):
+            raise ValueError(
+                "Constrained indexes are out of bounds wrt. number of atoms."
+            )
+
+        # calculate active dofs
+        full_indices = np.arange(3 * self.beads.natoms)
+        self.activeatoms_dof = np.setdiff1d(full_indices, self.fixatoms_dof)
 
         # total number of iteration in the inner-most MTS loop
         self._inmts = depend_value(name="inmts", func=lambda: np.prod(self.nmts))
@@ -361,12 +376,11 @@ class DummyIntegrator:
             vcom = np.sum(p.reshape(-1, 3), axis=0) / Mnb
             beads.p -= (m3 * vcom).reshape(nb, -1)
 
-            self.ensemble.eens += np.sum(vcom**2) * 0.5 * Mnb  # COM kinetic energy
+            self.ensemble.eens += np.sum(vcom**2) * 0.5 * Mnb  # COM kinetic energy.
 
         if len(self.fixatoms_dof) > 0:
             m3 = dstrip(beads.m3)
             p = dstrip(beads.p)
-
             self.ensemble.eens += 0.5 * np.sum(
                 p[:, self.fixatoms_dof] ** 2 / m3[:, self.fixatoms_dof]
             )
@@ -400,9 +414,14 @@ class NVEIntegrator(DummyIntegrator):
         """Velocity Verlet momentum propagator."""
 
         # halfdt/alpha
-        self.beads.p[:] += dstrip(self.forces.mts_forces[level].f) * self.pdt[level]
+        self.beads.p[:, self.activeatoms_dof] += (
+            dstrip(self.forces.mts_forces[level].f)[:, self.activeatoms_dof]
+            * self.pdt[level]
+        )
         if level == 0 and self.ensemble.has_bias:  # adds bias in the outer loop
-            self.beads.p[:] += dstrip(self.bias.f) * self.pdt[level]
+            self.beads.p[:, self.activeatoms_dof] += (
+                dstrip(self.bias.f)[:, self.activeatoms_dof] * self.pdt[level]
+            )
 
     def qcstep(self):
         """Velocity Verlet centroid position propagator."""
