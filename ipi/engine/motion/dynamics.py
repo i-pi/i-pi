@@ -221,6 +221,11 @@ class Dynamics(Motion):
             elif self.enstype == "nst":
                 if np.allclose(self.ensemble.stressext.diagonal(), -12345):
                     raise ValueError("Unspecified stress for a constant-s integrator")
+        if self.enstype == "nve" and self.beads.nbeads > 1:
+            if self.ensemble.temp < 0:
+                raise ValueError(
+                    "You need to provide a positive value for temperature inside ensemble to run a PIMD simulation, even when choosing NVE propagation."
+                )
 
     def get_ntemp(self):
         """Returns the PI simulation temperature (P times the physical T)."""
