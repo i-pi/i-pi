@@ -288,8 +288,12 @@ class DummyIntegrator:
         self._dt = motion._dt
         self._nmts = motion._nmts
 
-        # calculate active atoms
-        full_indices = np.arange(len(self.beads.p[0]))
+        # check whether fixed indexes make sense
+        if np.any(self.fixatoms_dof >= (3*self.beads.natoms)):   
+            raise ValueError("Constrained indexes are out of bounds wrt. number of atoms.")
+
+        # calculate active dofs
+        full_indices = np.arange(3*self.beads.natoms)
         self.activeatoms_dof = np.setdiff1d(full_indices, self.fixatoms_dof)
 
         # total number of iteration in the inner-most MTS loop
