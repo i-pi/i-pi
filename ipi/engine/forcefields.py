@@ -383,13 +383,13 @@ class FFEval(ForceField):
 
         # We have to be thread-safe, as in multi-system mode this might get
         # called by many threads at once.
-        with self._threadlock:
-            for r in self.requests:
-                if r["status"] == "Queued":
-                    r["status"] = "Running"
-                    r["t_dispatched"] = time.time()
-                    self.evaluate(r)
-                    r["result"][0] -= self.offset  # subtract constant offset
+        # with self._threadlock:
+        for r in self.requests:
+            if r["status"] == "Queued":
+                r["status"] = "Running"
+                r["t_dispatched"] = time.time()
+                self.evaluate(r)
+                r["result"][0] -= self.offset  # subtract constant offset
 
     def evaluate(self, request):
         request["result"] = [
