@@ -1103,7 +1103,9 @@ class Properties:
               for. If not, then the simulation temperature.
         """
 
-        kemd = self.get_kinmd(atom, bead, nm) # this returns the bead-average classical KE
+        kemd = self.get_kinmd(
+            atom, bead, nm
+        )  # this returns the bead-average classical KE
         atom_ids = self.get_atom_ids(atom)
 
         # accounting for constrained dof
@@ -1136,13 +1138,15 @@ class Properties:
                     (atom_ids * 3, atom_ids * 3 + 1, atom_ids * 3 + 2)
                 )
                 eff_nbeads = (
-                    self.beads.nbeads - 1 # prevent double counting
+                    self.beads.nbeads - 1  # prevent double counting
                     if self.motion.enstype == "nvt-cc"
                     else self.beads.nbeads
                 )
                 eff_number_fixed_dof += np.sum(flags[dof_ids]) * eff_nbeads
 
-            kemd += 0.5 * Constants.kb * self.ensemble.temp * eff_number_fixed_dof # short for 0.5*N*kB*T * eff_number_fixed_dof / N, " / N " is bead-averaging to match the definition of kemd.
+            kemd += (
+                0.5 * Constants.kb * self.ensemble.temp * eff_number_fixed_dof
+            )  # short for 0.5*N*kB*T * eff_number_fixed_dof / N, " / N " is bead-averaging to match the definition of kemd.
 
         return (
             2.0 * kemd / (Constants.kb * 3.0 * float(len(atom_ids)) * self.beads.nbeads)
@@ -1556,6 +1560,14 @@ class Properties:
                 if atom != "" and iatom != i and latom != self.beads.names[i]:
                     continue
                 k = 3 * i
+
+                # Checks if all the beads have the same mass. If not, raises an error.
+                mass_vals = [dm3[b, k] for b in range(self.beads.nbeads)]
+                if len(set(mass_vals)) > 1:
+                    raise ValueError(
+                        "Bead kinetic energy is not a diagnostic for temperature when using a non-diagonal or inconsistent mass matrix. Do not print out bead kinetic energies."
+                    )
+
                 kmd += (
                     p[ibead, k] ** 2 + p[ibead, k + 1] ** 2 + p[ibead, k + 2] ** 2
                 ) / (2.0 * m3[ibead, k])
