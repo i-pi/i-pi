@@ -4,6 +4,7 @@ from .dummy import Dummy_driver
 import torch
 import numpy as np
 from ipi.utils.messages import warning
+from ipi.utils.units import unit_to_user, unit_to_internal
 
 __DRIVER_NAME__ = "pswater"
 __DRIVER_CLASS__ = "pswater_driver"
@@ -25,8 +26,8 @@ class pswater_driver(Dummy_driver):
             numpy.ndarray: Virial tensor (not used in this example).
             dict: Additional properties including dipole moment and Born effective charges.
         """
-        r1 = torch.tensor(pos, dtype=torch.float64)
-        pot, force = self.calculate_energy_forces(r1)
+        r1 = torch.tensor(pos, dtype=torch.float64)  # bohr
+        pot, force = self.calculate_energy_forces(r1)  #
         dipole, bec = self.calculate_dipole_born_charges(r1)
         Z = bec.detach().numpy()
         Z = np.reshape(Z, (3, 9)).T
@@ -56,8 +57,8 @@ class pswater_driver(Dummy_driver):
         deoh = f5z * deohA
         phh1 = f5z * phh1A * torch.exp(phh2)
 
-        exp1 = torch.exp(-alphaoh * (dROH1 - reoh))
-        exp2 = torch.exp(-alphaoh * (dROH2 - reoh))
+        exp1 = torch.exp(-alphaoh * (dROH1 - roh))
+        exp2 = torch.exp(-alphaoh * (dROH2 - roh))
         Va = deoh * (exp1 * (exp1 - 2.0) + exp2 * (exp2 - 2.0))
         Vb = phh1 * torch.exp(-phh2 * dRHH)
 
@@ -65,22 +66,33 @@ class pswater_driver(Dummy_driver):
         x2 = (dROH2 - reoh) / reoh
         x3 = costh - costhe
 
-        fmat_list = [torch.zeros(3) for _ in range(16)]
-        fmat_list[1] = torch.ones(3)
+        # Initialize a list to store tensor values for each step
+        fmat_list = [torch.zeros(3, dtype=torch.float64)]  # fmat(0,1:3) = 0.d0
+        fmat_list.append(torch.ones(3, dtype=torch.float64))  # fmat(1,1:3) = 1.d0
+
+        # Compute fmat recursively without in-place operations
         for j in range(2, 16):
-            fmat_list[j][0] = fmat_list[j - 1][0] * x1
-            fmat_list[j][1] = fmat_list[j - 1][1] * x2
-            fmat_list[j][2] = fmat_list[j - 1][2] * x3
+            fmat_list.append(
+                torch.stack(
+                    [
+                        fmat_list[j - 1][0] * x1,
+                        fmat_list[j - 1][1] * x2,
+                        fmat_list[j - 1][2] * x3,
+                    ]
+                )
+            )
+
+        # Convert list to a single tensor
         fmat = torch.stack(fmat_list)
 
         efac = torch.exp(-b1 * ((dROH1 - reoh) ** 2 + (dROH2 - reoh) ** 2))
 
         sum0 = 0.0
-        for j in range(2, 245):
-            inI, inJ, inK = idx[j] - 1
-            sum0 = (
-                sum0
-                + c5z[j]
+
+        for j in range(1, 244):  # Fortran (2:245) → Python (1, 244)
+            inI, inJ, inK = idx[j]  # - 1  # Adjust for 0-based indexing
+            sum0 += (
+                c5z[j]
                 * (fmat[inI, 0] * fmat[inJ, 1] + fmat[inJ, 0] * fmat[inI, 1])
                 * fmat[inK, 2]
             )
@@ -90,7 +102,7 @@ class pswater_driver(Dummy_driver):
         e1 += 0.44739574026257
         e1 *= 0.00285914375100642899  # cm-1 to Kcal/mol
 
-        return e1
+        return unit_to_internal("energy", "kilocal/mol", e1)
 
     def calculate_charges(self, r1: torch.Tensor) -> torch.Tensor:
         """Calculates the partial charges for a water monomer.
@@ -131,7 +143,7 @@ class pswater_driver(Dummy_driver):
         P1 = 0.0
         P2 = 0.0
         for j in range(2, 84):
-            inI, inJ, inK = idxD[j] - 1
+            inI, inJ, inK = idxD[j]  # - 1
             P1 = P1 + coefD[j] * fmat[inI, 0] * fmat[inJ, 1] * fmat[inK, 2]
             P2 = P2 + coefD[j] * fmat[inJ, 0] * fmat[inI, 1] * fmat[inK, 2]
 
@@ -158,11 +170,13 @@ class pswater_driver(Dummy_driver):
             torch.Tensor: Forces on the atoms.
         """
         # with torch.autograd.set_detect_anomaly(False):
+        bohr2ang = unit_to_user("length", "angstrom", 1)
+        r1 *= bohr2ang
         r1.requires_grad_(True)
         pes = self.calculate_pes(r1)
         pes.backward()
         forces = -r1.grad
-        return pes, forces
+        return pes, forces * bohr2ang
 
     def calculate_dipole_born_charges(self, r1: torch.Tensor) -> torch.Tensor:
         """Calculates the dipole moment and Born effective charges for a water monomer.
@@ -2009,21 +2023,21 @@ cmass = torch.tensor(
 )
 
 # Two body parameters
-reoh = torch.tensor(0.958649)
-thetae = torch.tensor(104.3475)
-b1 = torch.tensor(2.0)
-roh = torch.tensor(0.9519607159623009)
-alphaoh = torch.tensor(2.587949757553683)
-deohA = torch.tensor(42290.92019288289)
-phh1A = torch.tensor(16.94879431193463)
-phh2 = torch.tensor(12.66426998162947)
+reoh = torch.tensor(0.958649, dtype=torch.float64)
+thetae = torch.tensor(104.3475, dtype=torch.float64)
+b1 = torch.tensor(2.0, dtype=torch.float64)
+roh = torch.tensor(0.9519607159623009, dtype=torch.float64)
+alphaoh = torch.tensor(2.587949757553683, dtype=torch.float64)
+deohA = torch.tensor(42290.92019288289, dtype=torch.float64)
+phh1A = torch.tensor(16.94879431193463, dtype=torch.float64)
+phh2 = torch.tensor(12.66426998162947, dtype=torch.float64)
 
 # Scaling factors for contributions to empirical potential
-f5z = torch.tensor(0.999677885)
-fbasis = torch.tensor(0.15860145369897)
-fcore = torch.tensor(-1.6351695982132)
-frest = torch.tensor(1.0)
-costhe = torch.tensor(-0.24780227221366464506e0)
+f5z = torch.tensor(0.999677885, dtype=torch.float64)
+fbasis = torch.tensor(0.15860145369897, dtype=torch.float64)
+fcore = torch.tensor(-1.6351695982132, dtype=torch.float64)
+frest = torch.tensor(1.0, dtype=torch.float64)
+costhe = torch.tensor(-0.24780227221366464506e0, dtype=torch.float64)
 
 idxD = torch.zeros((84, 3), dtype=torch.int64)
 idxD[:, 0] = torch.tensor(
@@ -2376,7 +2390,8 @@ coefD = torch.tensor(
         -1.8340983193745e-01,
         2.3426707273520e-01,
         1.5141050914514e-01,
-    ]
+    ],
+    dtype=torch.float64,
 )
 
 # Additional parameters
