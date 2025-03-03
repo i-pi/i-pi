@@ -5,7 +5,7 @@ import json
 import numpy as np
 from .mace import MACE_driver
 from ipi.utils.messages import warning
-from ipi.utils.units import unit_to_internal, unit_to_user
+from ipi.utils.units import unit_to_internal
 
 MACECalculator = None
 
