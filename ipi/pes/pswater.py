@@ -115,7 +115,7 @@ class pswater_driver(Dummy_driver):
         """
         ROH1 = r1[1] - r1[0]
         ROH2 = r1[2] - r1[0]
-        RHH = r1[1] - r1[2]
+        # RHH = r1[1] - r1[2]
         dROH1 = torch.norm(ROH1)
         dROH2 = torch.norm(ROH2)
         # dRHH = torch.norm(RHH)
