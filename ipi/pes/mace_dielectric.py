@@ -21,6 +21,9 @@ METHODS_AVAILABLE = [
 # ToDo:
 # - check the units of the electric displacement
 # - write fixed_D
+# - add flag to chose whether to :
+#   -- compute the energy and forces, dipole and BEC, and then compute the sum of the forces
+#   -- compute the energy, add E x mu, and compute the total forces directly (easier and faster)
 
 
 class MACE_dielectric_driver(MACE_driver):
@@ -104,7 +107,7 @@ class MACE_dielectric_driver(MACE_driver):
                 )
                 tmp_data["V-unit"] = "atomic_unit"
 
-            D = unit_to_internal("bo", tmp_data["D-unit"], tmp_data["D"])
+            D = unit_to_internal("electric-field", tmp_data["D-unit"], tmp_data["D"])
             V = unit_to_internal("volume", tmp_data["V-unit"], tmp_data["V"])
             self.instructions = {
                 "D": D,
@@ -142,6 +145,7 @@ class MACE_dielectric_driver(MACE_driver):
         return pot_ipi, force_ipi, vir_ipi, extras_ipi
 
 
+# ------------------------------ #
 def fixed_E(extras: dict, Efield: np.ndarray):
     pot = -np.asarray(extras["dipole"]) @ Efield
     force = extras["BEC"] @ Efield
@@ -149,5 +153,8 @@ def fixed_E(extras: dict, Efield: np.ndarray):
     return pot, force, vir, extras
 
 
-def fixed_D(extras: dict, displacement: np.ndarray, volume: np.ndarray):
-    return None
+# ------------------------------ #
+def fixed_D(extras: dict, displacement: np.ndarray, volume: float):
+    polarization = extras["dipole"] / volume
+    Efield = displacement - 4 * np.pi * polarization
+    return fixed_E(extras, Efield)
