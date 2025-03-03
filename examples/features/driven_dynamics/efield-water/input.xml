@@ -1,6 +1,6 @@
 <simulation verbosity='high'>
 
-  <total_steps>500</total_steps>
+  <total_steps>10</total_steps>
 
   <ffsocket mode='unix' name='driver' pbc='False'> 
     <address>driver</address>
