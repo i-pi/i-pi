@@ -10,6 +10,7 @@ import json
 from .dummy import Dummy_driver
 
 from ipi.utils.messages import warning
+import ase.io
 
 torch = None
 mtt = None
@@ -57,12 +58,13 @@ class MetatensorDriver(Dummy_driver):
         *args,
         **kwargs,
     ):
-        global torch, mtt, mta
+        global torch, mtt, mta, mta_ase_calculator
         if torch is None and mtt is None and mta is None:
             try:
                 import torch
                 import metatensor.torch as mtt
                 import metatensor.torch.atomistic as mta
+                from metatensor.torch.atomistic import ase_calculator as mta_ase_calculator
             except ImportError as e:
                 warning(f"Could not find or import metatensor.torch: {e}")
 
@@ -72,8 +74,11 @@ class MetatensorDriver(Dummy_driver):
         self.check_consistency = check_consistency
         self.energy_ensemble = energy_ensemble
         self.force_virial_ensemble = force_virial_ensemble
-        print("ARGS ", kwargs)
-        super().__init__(template, *args, **kwargs)
+        self._name_template = template
+        self.template = ase.io.read(template)
+        print("ARGS ", args)
+        print("KWARGS ", kwargs)
+        super().__init__( *args, **kwargs)
 
     def check_parameters(self):
         """Check the arguments required to run the driver
@@ -106,6 +111,7 @@ class MetatensorDriver(Dummy_driver):
             model_path, extensions_directory=self.extensions
         )
         self.model = self.model.to(self.device)
+        self._dtype = getattr(torch,self.model.capabilities().dtype)
 
         # Register the requested outputs
         outputs = {"energy": mta.ModelOutput(quantity="energy", unit="Hartree")}
@@ -124,16 +130,16 @@ class MetatensorDriver(Dummy_driver):
     def __call__(self, cell, pos):
         """Get energies, forces and virials from the atomistic model."""
 
-        ase_atoms = self.template_ase.copy()
+        ase_atoms = self.template.copy()
         ase_atoms.positions = pos
         ase_atoms.cell = cell
 
-        types, positions, cell, pbc = mta.ase_calculator._ase_to_torch_data(
+        types, positions, cell, pbc = mta_ase_calculator._ase_to_torch_data(
             atoms=ase_atoms, dtype=torch.float64, device=self.device
         )
         positions.requires_grad_(True)
         strain = torch.eye(
-            3, requires_grad=True, device=self._device, dtype=self._dtype
+            3, requires_grad=True, device=self.device, dtype=self._dtype
         )
         positions = positions @ strain
         cell = cell @ strain
@@ -141,7 +147,7 @@ class MetatensorDriver(Dummy_driver):
 
         for options in self.model.requested_neighbor_lists():
             neighbors = mta.ase_calculator._compute_ase_neighbors(
-                ase_atoms, options, dtype=self._dtype, device=self._device
+                ase_atoms, options, dtype=self._dtype, device=self.device
             )
             mta.register_autograd_neighbors(
                 system,
@@ -150,7 +156,7 @@ class MetatensorDriver(Dummy_driver):
             )
             system.add_neighbor_list(options, neighbors)
 
-        outputs = self._model(
+        outputs = self.model(
             [system],
             self.evaluation_options,
             check_consistency=self.check_consistency,
@@ -180,7 +186,7 @@ class MetatensorDriver(Dummy_driver):
                 # torch.autograd.functional.jacobian, which is vectorized
                 def _compute_ensemble(positions, strain):
                     return (
-                        self._model(
+                        self.model(
                             [mta.System(types, positions @ strain, cell @ strain, pbc)],
                             self.evaluation_options,
                             check_consistency=self.check_consistency,
