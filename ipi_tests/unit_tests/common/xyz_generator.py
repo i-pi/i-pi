@@ -1,6 +1,5 @@
 #!/usr/bin/env python3
-""" Generate fake parameters useful to test the softare.
-"""
+"""Generate fake parameters useful to test the softare."""
 
 import tempfile as tmp
 import numpy as np

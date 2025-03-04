@@ -1,8 +1,8 @@
-""" Utility functions to parse i-PI output files.
+"""Utility functions to parse i-PI output files.
 
 These are meant to be used in Python post-processing pipelines, so
-trajectory files are read as ASE objects (assuming units to be 
-Angstrom and eV), and output files are read in a dictionary of 
+trajectory files are read as ASE objects (assuming units to be
+Angstrom and eV), and output files are read in a dictionary of
 numpy arrays.
 """
 

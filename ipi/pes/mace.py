@@ -1,4 +1,4 @@
-""" An interface for the [MACE](https://github.com/ACEsuit/mace) calculator """
+"""An interface for the [MACE](https://github.com/ACEsuit/mace) calculator"""
 
 from .ase import ASEDriver
 
