@@ -64,7 +64,9 @@ class MetatensorDriver(Dummy_driver):
                 import torch
                 import metatensor.torch as mtt
                 import metatensor.torch.atomistic as mta
-                from metatensor.torch.atomistic import ase_calculator as mta_ase_calculator
+                from metatensor.torch.atomistic import (
+                    ase_calculator as mta_ase_calculator,
+                )
             except ImportError as e:
                 warning(f"Could not find or import metatensor.torch: {e}")
 
@@ -78,7 +80,7 @@ class MetatensorDriver(Dummy_driver):
         self.template = ase.io.read(template)
         print("ARGS ", args)
         print("KWARGS ", kwargs)
-        super().__init__( *args, **kwargs)
+        super().__init__(*args, **kwargs)
 
     def check_parameters(self):
         """Check the arguments required to run the driver
@@ -111,7 +113,7 @@ class MetatensorDriver(Dummy_driver):
             model_path, extensions_directory=self.extensions
         )
         self.model = self.model.to(self.device)
-        self._dtype = getattr(torch,self.model.capabilities().dtype)
+        self._dtype = getattr(torch, self.model.capabilities().dtype)
 
         # Register the requested outputs
         outputs = {"energy": mta.ModelOutput(quantity="energy", unit="Hartree")}
@@ -138,9 +140,7 @@ class MetatensorDriver(Dummy_driver):
             atoms=ase_atoms, dtype=torch.float64, device=self.device
         )
         positions.requires_grad_(True)
-        strain = torch.eye(
-            3, requires_grad=True, device=self.device, dtype=self._dtype
-        )
+        strain = torch.eye(3, requires_grad=True, device=self.device, dtype=self._dtype)
         positions = positions @ strain
         cell = cell @ strain
         system = mta.System(types, positions, cell, pbc)
