@@ -944,8 +944,6 @@ class Properties:
         )  # lock to avoid concurrent access and messing up with dbeads
 
         self.property_dict["bead_potentials"]["size"] = self.beads.nbeads
-        self.property_dict["bead_dipoles"]["size"] = 3 * self.beads.nbeads
-        self.property_dict["bead_dipoles_dtime"]["size"] = 3 * self.beads.nbeads
         # self.properties_init()  # Initialize the properties here so that all
         # +all variables are accessible (for example to set
         # +the size of the hamiltonian_weights).
