@@ -339,11 +339,6 @@ class Properties:
                 "help": "The value of the energy contribution due to the external electric field.",
                 "func": self.get_eda,
             },
-            "energy": {
-                "dimension": "energy",
-                "help": "The value of the total energy per bead.",
-                "func": self.get_energy,
-            },
             "ensemble_lp": {
                 "dimension": "undefined",
                 "help": "The log of the ensemble probability",
@@ -1578,12 +1573,6 @@ class Properties:
         cons = self.get_conserved()
         eda = self.get_eda()
         return cons - eda
-
-    def get_energy(self, atom="", bead="", nm="", return_count=False):
-        """Calculates the physical system total energy as the sum of the potential and kinetic energies."""
-        kin = self.get_kinmd(atom, bead, nm, return_count)
-        pot = self.get_pot(atom, bead, nm, return_count)
-        return kin + pot
 
     def get_pot(self, atom="", bead="-1", nm="", return_count=False):
         """Calculates the physical system potential energy."""
