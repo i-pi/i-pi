@@ -7,7 +7,7 @@
  ] </properties>
     <properties stride='1' filename='temp_indices' flush='1000'> [ temperature{kelvin}(atom=0), temperature{kelvin}(atom=1), temperature{kelvin}(atom=2),   temperature{kelvin}(atom=0; bead=0), temperature{kelvin}(atom=0; bead=1), temperature{kelvin}(atom=0; bead=2), temperature{kelvin}(atom=0; bead=3),   temperature{kelvin}(atom=0; nm=0), temperature{kelvin}(atom=0; nm=1), temperature{kelvin}(atom=0; nm=2), temperature{kelvin}(atom=0; nm=3),   temperature{kelvin}(atom=1; bead=0), temperature{kelvin}(atom=1; bead=1), temperature{kelvin}(atom=1; bead=2), temperature{kelvin}(atom=1; bead=3),   temperature{kelvin}(atom=1; nm=0), temperature{kelvin}(atom=1; nm=1), temperature{kelvin}(atom=1; nm=2), temperature{kelvin}(atom=1; nm=3),   temperature{kelvin}(atom=2; bead=0), temperature{kelvin}(atom=2; bead=1), temperature{kelvin}(atom=2; bead=2), temperature{kelvin}(atom=2; bead=3),   temperature{kelvin}(atom=2; nm=0), temperature{kelvin}(atom=2; nm=1), temperature{kelvin}(atom=2; nm=2), temperature{kelvin}(atom=2; nm=3) ] </properties>
   </output>
-  <total_steps>100000</total_steps>
+  <total_steps>10</total_steps>
   <prng>
     <seed>32415</seed>
   </prng>

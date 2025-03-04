@@ -23,13 +23,13 @@
 	<force forcefield='driver' weight='0'> </force>
     </forces>
     <motion mode='dynamics'>
-      <dynamics mode='nvt'>
+      <dynamics mode='nvt-cc'>
         <timestep units='femtosecond'> 0.25 </timestep>
         <thermostat mode='pile_l'>
           <tau units='femtosecond'> 10 </tau>
         </thermostat>
       </dynamics>
-      <fixcom> True </fixcom>
+      <fixcom> False </fixcom>
     </motion>
     <ensemble>
       <temperature units='kelvin'> 500 </temperature>

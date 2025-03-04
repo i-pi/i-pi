@@ -4,7 +4,7 @@
     <properties stride='1' filename='temp_species' flush='1000'>  [ temperature{kelvin}(atom=O), temperature{kelvin}(atom=H) ] </properties>
     <properties stride='1' filename='temp_indices' flush='1000'>  [ temperature{kelvin}(atom=0), temperature{kelvin}(atom=1), temperature{kelvin}(atom=2) ] </properties>
   </output>
-  <total_steps>100000</total_steps>
+  <total_steps>10</total_steps>
   <prng>
     <seed>32415</seed>
   </prng>
