@@ -7,7 +7,7 @@ potentials
 
 import json
 
-from ipi.utils.units import unit_to_user
+from ipi.utils.units import unit_to_internal, unit_to_user
 from .dummy import Dummy_driver
 
 from ipi.utils.messages import warning
@@ -117,11 +117,9 @@ class MetatensorDriver(Dummy_driver):
         self._dtype = getattr(torch, self.model.capabilities().dtype)
 
         # Register the requested outputs
-        outputs = {"energy": mta.ModelOutput(quantity="energy", unit="Hartree")}
+        outputs = {"energy": mta.ModelOutput(quantity="energy", unit="eV")}
         if self.energy_ensemble:
-            outputs["energy_ensemble"] = mta.ModelOutput(
-                quantity="energy", unit="Hartree"
-            )
+            outputs["energy_ensemble"] = mta.ModelOutput(quantity="energy", unit="eV")
         self.evaluation_options = mta.ModelEvaluationOptions(
             length_unit="Angstrom",
             outputs=outputs,
@@ -170,9 +168,15 @@ class MetatensorDriver(Dummy_driver):
             grad_outputs=-torch.ones_like(energy_tensor),
         )
 
-        energy = energy_tensor.detach().cpu().numpy()
-        forces = forces_tensor.detach().cpu().numpy()
-        virial = virial_tensor.detach().cpu().numpy()
+        energy = unit_to_internal(
+            "energy", "electronvolt", energy_tensor.detach().cpu().numpy()
+        )
+        forces = unit_to_internal(
+            "force", "ev/ang", forces_tensor.detach().cpu().numpy()
+        )
+        virial = unit_to_internal(
+            "pressure", "ev/ang3", virial_tensor.detach().cpu().numpy()
+        )
         # print('energy',energy)
 
         extras_dict = {}
@@ -181,7 +185,9 @@ class MetatensorDriver(Dummy_driver):
             energy_ensemble_tensor = (
                 outputs["energy_ensemble"].block().values.squeeze(0)
             )
-            energy_ensemble = energy_ensemble_tensor.detach().cpu().numpy()
+            energy_ensemble = unit_to_internal(
+                "energy", "electronvolt", energy_ensemble_tensor.detach().cpu().numpy()
+            )
             extras_dict["committee_pot"] = list(energy_ensemble)
 
             if self.force_virial_ensemble:
@@ -205,8 +211,12 @@ class MetatensorDriver(Dummy_driver):
                 )
                 force_ensemble_tensor = -minus_force_ensemble_tensor
                 virial_ensemble_tensor = -minus_virial_ensemble_tensor
-                force_ensemble = force_ensemble_tensor.detach().cpu().numpy()
-                virial_ensemble = virial_ensemble_tensor.detach().cpu().numpy()
+                force_ensemble = unit_to_internal(
+                    "force", "ev/ang", force_ensemble_tensor.detach().cpu().numpy()
+                )
+                virial_ensemble = unit_to_internal(
+                    "pressure", "ev/ang3", virial_ensemble_tensor.detach().cpu().numpy()
+                )
                 extras_dict["committee_force"] = list(force_ensemble.flatten())
                 extras_dict["committee_virial"] = list(virial_ensemble.flatten())
 
