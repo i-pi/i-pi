@@ -1,4 +1,4 @@
-""" Harmonic Bath """
+"""Harmonic Bath"""
 
 import numpy as np
 

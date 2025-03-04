@@ -1,0 +1,11 @@
+# column   1     --> step : The current simulation time step.
+# column   2     --> time : The elapsed simulation time.
+# column   3     --> conserved : The value of the conserved energy quantity per bead.
+# column   4     --> kinetic_md : The kinetic energy of the (extended) classical system.
+# column   5     --> potential : The physical system potential energy.
+# cols.    6-8   --> Efield : The external applied electric field (x,y,z components in cartesian axes).
+# column   9     --> Eenvelope : The (gaussian) envelope function of the external applied electric field (values go from 0 to 1).
+# cols.   10-12  --> dipole : The electric dipole of the system (x,y,z components in cartesian axes).
+    0.00000000e+00     0.00000000e+00     1.27656759e-07     0.00000000e+00     1.27656759e-07     0.00000000e+00   1.67731314e-05   0.00000000e+00   3.35462628e-04    -3.50000000e-06   3.88144990e-01   1.33000000e-06 
+    1.00000000e+00     4.13413730e+01     1.27664191e-07     1.48756352e-11     1.27649315e-07     0.00000000e+00   1.36268801e-05   0.00000000e+00   3.63329653e-04    -3.50000000e-06   3.88145290e-01   1.13000000e-06 
+    2.00000000e+00     8.26827460e+01     1.27673997e-07     3.24642266e-11     1.27641533e-07     0.00000000e+00   2.46501897e-06   0.00000000e+00   3.93354231e-04    -3.50000000e-06   3.88146040e-01   6.40000000e-07 

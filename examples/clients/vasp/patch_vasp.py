@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 """
-Patch script for VASP source code to add socket support. 
+Patch script for VASP source code to add socket support.
 Original code at https://github.com/ulissigroup/vasp-interactive/blob/main/vasp-build/patch_ipi.py
 The patch script works by inserting socket code blocks into VASP's fortran source codes,
 and should be suitable for VASP versions later than 5.4.

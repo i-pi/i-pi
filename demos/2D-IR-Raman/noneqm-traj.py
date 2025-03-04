@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
-"""Runs nonequilibrium trajectories based on equilibrium-nonequilibrium method for nonlinear spectroscopy.
-"""
+"""Runs nonequilibrium trajectories based on equilibrium-nonequilibrium method for nonlinear spectroscopy."""
 
 # This file is part of i-PI.
 # i-PI Copyright (C) 2014-2015 i-PI developers
