@@ -1,4 +1,4 @@
-black>=25.1
+black>=24.8.0
 numpy
 pathlib
 pytest
