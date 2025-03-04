@@ -6,7 +6,7 @@
 		volume{angstrom3}, ensemble_temperature{kelvin}, cell_abcABC]
     </properties>
     <trajectory filename="xc" stride="5" cell_units="angstrom"> x_centroid{angstrom} </trajectory>
-    <trajectory filename="forces" stride="1" format="ase"> forces </trajectory>
+    <trajectory filename="forces" stride="5" format="ase"> forces </trajectory>
     <checkpoint stride="1000"/>
 </output>
 <total_steps> 1000</total_steps>
