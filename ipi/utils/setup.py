@@ -1,6 +1,6 @@
-""" Utility functions to install command-line tools.
+"""Utility functions to install command-line tools.
 
-These utilities facilitate the installation of the Fortran driver 
+These utilities facilitate the installation of the Fortran driver
 when it is not already present.
 """
 

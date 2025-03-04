@@ -1,5 +1,4 @@
-"""Functions used to transform units in input files into default atomic system of units.
-"""
+"""Functions used to transform units in input files into default atomic system of units."""
 
 # This file is part of i-PI.
 # i-PI Copyright (C) 2014-2015 i-PI developers

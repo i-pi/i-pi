@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" paraweights.py
+"""paraweights.py
 
 Relies on the infrastructure of i-pi, so the ipi package should
 be installed in the Python module directory, or the i-pi
