@@ -329,11 +329,6 @@ class Properties:
                 "help": "The value of the conserved energy quantity per bead.",
                 "func": self.get_conserved,
             },
-            "Econserved": {
-                "dimension": "energy",
-                "help": "The value of the conserved energy quantity per bead when an external electric field is applied.",
-                "func": self.get_Econserved,
-            },
             "interaction_energy": {
                 "dimension": "energy",
                 "help": "The value of the interaction energy due to the external electric field.",
@@ -1565,14 +1560,6 @@ class Properties:
         Efield = self.get_Efield()
         eda = float(dipole @ Efield)
         return eda
-
-    def get_Econserved(self):
-        """
-        Returns the conserved quantity of the system when an external electric field is applied.
-        """
-        cons = self.get_conserved()
-        eda = self.get_eda()
-        return cons - eda
 
     def get_pot(self, atom="", bead="-1", nm="", return_count=False):
         """Calculates the physical system potential energy."""
