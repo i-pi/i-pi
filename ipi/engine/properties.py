@@ -15,6 +15,7 @@ from ipi.utils.units import Constants, unit_to_internal
 from ipi.utils.mathtools import logsumlog, h2abc_deg
 from ipi.utils.io.inputs import io_xml
 from ipi.engine.motion.driven_dynamics import DrivenDynamics
+from ipi.utils.softexit import softexit
 
 __all__ = ["Properties", "Trajectories", "getkey", "getall", "help_latex", "help_rst"]
 
@@ -1482,7 +1483,9 @@ class Properties:
                 out = self.motion.Electric_Dipole.dipole[bead]
         else:
             # If the motion is not of type DrivenDynamics, return NaN for the dipole moment
-            out = np.full(3, np.nan)
+            softexit.trigger(
+                message=" @ PROPERTIES : if you want to print the dipole through the `properties` class you need to use the `eda-nve` or `eda-nvt` ensembles."
+            )
 
         assert out.shape == (
             3,
@@ -1498,9 +1501,9 @@ class Properties:
         if isinstance(self.motion, DrivenDynamics):
             out = np.asarray(self.motion.Electric_Dipole.dipole).flatten()
         else:
-            out = np.full(
-                (3 * self.beads.nbeads), np.nan
-            )  # For all beads, return NaN values
+            softexit.trigger(
+                message=" @ PROPERTIES : if you want to print the dipole through the `properties` class you need to use the `eda-nve` or `eda-nvt` ensembles."
+            )
 
         assert out.shape == (
             3 * self.beads.nbeads,
@@ -1526,7 +1529,9 @@ class Properties:
             if bead == -1:
                 out = np.mean(out, axis=0)
         else:
-            out = np.full(3, np.nan)
+            softexit.trigger(
+                message=" @ PROPERTIES : if you want to print the dipole through the `properties` class you need to use the `eda-nve` or `eda-nvt` ensembles."
+            )
         assert out.shape == (3,), f"Got out.shape = {out.shape}, expected (3,)"
         return out
 
@@ -1538,9 +1543,9 @@ class Properties:
         if isinstance(self.motion, DrivenDynamics):
             out = self.motion.integrator.dipole_dtime(bead=-1).flatten()
         else:
-            out = np.full(
-                (3 * self.beads.nbeads), np.nan
-            )  # For all beads, return NaN values
+            softexit.trigger(
+                message=" @ PROPERTIES : if you want to print the dipole through the `properties` class you need to use the `eda-nve` or `eda-nvt` ensembles."
+            )
 
         assert out.shape == (
             3 * self.beads.nbeads,
