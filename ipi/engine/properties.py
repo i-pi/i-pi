@@ -334,10 +334,10 @@ class Properties:
                 "help": "The value of the conserved energy quantity per bead when an external electric field is applied.",
                 "func": self.get_Econserved,
             },
-            "eda": {
+            "interaction_energy": {
                 "dimension": "energy",
-                "help": "The value of the energy contribution due to the external electric field.",
-                "func": self.get_eda,
+                "help": "The value of the interaction energy due to the external electric field.",
+                "func": self.get_interaction_energy,
             },
             "ensemble_lp": {
                 "dimension": "undefined",
@@ -1557,7 +1557,7 @@ class Properties:
         """Returns the conserved quantity of the system."""
         return self.ensemble.econs / float(self.beads.nbeads)
 
-    def get_eda(self):
+    def get_interaction_energy(self):
         """
         Returns the interaction energy between the dipole and the external electric field within the Electric Dipole Approximation.
         """
