@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" posforce2kinetic.py
+"""posforce2kinetic.py
 
 Reads positions and forces from an i-PI run and computes the centroid-virial
 kinetic energy estimator for each particle and time frame, printing it out in

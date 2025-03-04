@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" mergebeadspdb.py
+"""mergebeadspdb.py
 
 Reads positions of individual beads from an i-PI run and
 assemles them in a pdb describing the ring polymer connectivity.

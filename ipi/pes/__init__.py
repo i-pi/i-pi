@@ -1,4 +1,4 @@
-""" Small functions/classes providing access to driver PES to be called from driver.py """
+"""Small functions/classes providing access to driver PES to be called from driver.py"""
 
 import pkgutil
 import importlib
