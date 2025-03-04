@@ -1,4 +1,4 @@
-""" Harmonic potential """
+"""Harmonic potential"""
 
 import sys
 

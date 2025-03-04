@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-""" Run or create reference for regtest i-pi.
+"""Run or create reference for regtest i-pi.
 
 Todo:
     * Add support for .gzip files.

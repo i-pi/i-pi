@@ -1,4 +1,4 @@
-""" Harmonic potential """
+"""Harmonic potential"""
 
 try:
     from .doublewell import DoubleWell_driver

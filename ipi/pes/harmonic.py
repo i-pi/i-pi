@@ -1,4 +1,4 @@
-""" Harmonic potential """
+"""Harmonic potential"""
 
 from .dummy import Dummy_driver
 import numpy as np
