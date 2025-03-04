@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" xyz2pdb.py
+"""xyz2pdb.py
 
 Reads positions of a system in xyz format and returns a
 pdb file. Also reads the comment line and returns the

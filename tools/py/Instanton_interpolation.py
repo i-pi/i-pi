@@ -1,4 +1,4 @@
-""" Instanton_interpolation.py
+"""Instanton_interpolation.py
 Reads a hessian file  and/or a positions file (xyz format) and creates an interpolation
 that can be used in a further instanton optimization with more beads
 

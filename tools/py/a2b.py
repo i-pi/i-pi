@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" a2b.py
+"""a2b.py
 
 Reads positions of a system in format 'a' and returns a
 file written in format 'b'.

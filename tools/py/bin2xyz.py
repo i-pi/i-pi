@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" bin2xyz.py
+"""bin2xyz.py
 
 Reads positions of a system in binary format and returns a
 xyz file.
