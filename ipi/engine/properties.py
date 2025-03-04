@@ -1111,7 +1111,7 @@ class Properties:
         # accounting for constrained dof
         if self.ensemble.temp > 0:
             eff_number_fixed_dof = 0  # the effective number of fixed degrees of freedom for the selected atom(s)
-            if self.motion.enstype == "nvt-cc":
+            if isinstance(self.motion.enstype, str) and self.motion.enstype == "nvt-cc":
                 eff_number_fixed_dof = (
                     len(atom_ids) * 3
                 )  # fixing the centroid for 1 atoms effectively fixes 3 dof, therefore the eff_number_fixed_dof is 3 time the number of atoms
