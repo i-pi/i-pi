@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 
-""" getproperty.py
+"""getproperty.py
 
 Parses a property output file and - if present - outputs the column(s)
 corresponding to the desired property. Relies on the infrastructure of i-pi,

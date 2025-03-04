@@ -1,4 +1,4 @@
-""" spline potential """
+"""spline potential"""
 
 import numpy as np
 import sys
