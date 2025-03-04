@@ -306,6 +306,12 @@ class Properties:
                 "help": "The value of the conserved energy quantity per bead.",
                 "func": self.get_conserved,
             },
+            "dipole": {
+                "dimension": "electric-dipole",
+                "help": "The beads-averaged electric dipole moment or the electric dipole moment of a single bead (x,y,z components in cartesian axes).",
+                "size": 3,
+                "func": self.get_dipole,
+            },
             "interaction_energy": {
                 "dimension": "energy",
                 "help": "The value of the interaction energy due to the external electric field.",
@@ -1439,6 +1445,39 @@ class Properties:
     def get_conserved(self):
         """Returns the conserved quantity of the system."""
         return self.ensemble.econs / float(self.beads.nbeads)
+
+    def get_dipole(self, bead=""):
+        """
+        Returns the beads-averaged electric-dipole moment, or the dipole of a single bead (if specified).
+
+        The input parameters `atom`, `nm`, `bead`, and `return_count` are not supported in this function.
+
+        By default it returns the beads-averaged electric dipole moments as an array of shape (3,).
+
+        If `bead` is specified (e.g. dipole(bead=<N>) or dipole(<N>)), it returns the dipole of the Nth bead as an array of shape (3,).
+        """
+        # Convert 'bead' to an integer, or set it to -1 if it's an empty string or None
+        bead = int(bead) if bead not in [None, ""] else -1
+
+        # If the motion is an instance of DrivenDynamics
+        if isinstance(self.motion, DrivenDynamics):
+            # If 'bead' is -1, return the mean dipole moment of all beads (averaged across all beads)
+            if bead == -1:
+                out = self.motion.Electric_Dipole.dipole.mean(axis=0)
+            # Otherwise, return the dipole of the specified bead
+            else:
+                out = self.motion.Electric_Dipole.dipole[bead]
+        else:
+            # If the motion is not of type DrivenDynamics, return NaN for the dipole moment
+            softexit.trigger(
+                message=" @ PROPERTIES : the electric field is defined only when using the `eda-nve` or `eda-nvt` ensemble."
+            )
+
+        assert out.shape == (
+            3,
+        ), f"Wrong shape for dipole, expected '(3,)', but found '{out.shape}'."
+
+        return out
 
     def get_interaction_energy(self):
         """
