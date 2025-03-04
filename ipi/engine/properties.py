@@ -301,12 +301,6 @@ class Properties:
                     )
                 ),
             },
-            "bead_dipoles": {
-                "dimension": "electric-dipole",
-                "help": "The electric dipole moment of all the beads (x,y,z components in cartesian axes).",
-                "size": "3 x nbeads",
-                "func": self.get_bead_dipoles,
-            },
             "conserved": {
                 "dimension": "energy",
                 "help": "The value of the conserved energy quantity per bead.",
@@ -1443,24 +1437,6 @@ class Properties:
             softexit.trigger(
                 message=" @ PROPERTIES : the electric field is defined only when using the `eda-nve` or `eda-nvt` ensemble."
             )
-
-    def get_bead_dipoles(self):
-        """
-        Returns the electric-dipole moment of all the beads as a flattened array of shape (3*Nbeads,)
-        """
-        # If the motion is an instance of DrivenDynamics
-        if isinstance(self.motion, DrivenDynamics):
-            out = np.asarray(self.motion.Electric_Dipole.dipole).flatten()
-        else:
-            softexit.trigger(
-                message=" @ PROPERTIES : if you want to print the dipole through the `properties` class you need to use the `eda-nve` or `eda-nvt` ensembles."
-            )
-
-        assert out.shape == (
-            3 * self.beads.nbeads,
-        ), f"Wrong shape for bead dipole, expected '(3xNbeads)', but found '{out.shape}'."
-
-        return out
 
     def get_conserved(self):
         """Returns the conserved quantity of the system."""
