@@ -7,6 +7,7 @@ potentials
 
 import json
 
+from ipi.utils.units import unit_to_user
 from .dummy import Dummy_driver
 
 from ipi.utils.messages import warning
@@ -122,7 +123,7 @@ class MetatensorDriver(Dummy_driver):
                 quantity="energy", unit="Hartree"
             )
         self.evaluation_options = mta.ModelEvaluationOptions(
-            length_unit="Bohr",
+            length_unit="Angstrom",
             outputs=outputs,
         )
 
@@ -133,12 +134,13 @@ class MetatensorDriver(Dummy_driver):
         """Get energies, forces and virials from the atomistic model."""
 
         ase_atoms = self.template.copy()
-        ase_atoms.positions = pos
-        ase_atoms.cell = cell
+        ase_atoms.positions = unit_to_user("length", "angstrom", pos)
+        ase_atoms.cell = unit_to_user("length", "angstrom", cell.T)
 
         types, positions, cell, pbc = mta_ase_calculator._ase_to_torch_data(
             atoms=ase_atoms, dtype=torch.float64, device=self.device
         )
+        # print("types, positions, cell, pbc", types, positions, cell, pbc)
         positions.requires_grad_(True)
         strain = torch.eye(3, requires_grad=True, device=self.device, dtype=self._dtype)
         positions = positions @ strain
@@ -171,6 +173,7 @@ class MetatensorDriver(Dummy_driver):
         energy = energy_tensor.detach().cpu().numpy()
         forces = forces_tensor.detach().cpu().numpy()
         virial = virial_tensor.detach().cpu().numpy()
+        # print('energy',energy)
 
         extras_dict = {}
 
