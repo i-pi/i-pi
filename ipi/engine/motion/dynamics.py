@@ -296,7 +296,10 @@ class DummyIntegrator:
 
         # calculate active dofs
         full_indices = np.arange(3 * self.beads.natoms)
-        self.activeatoms_dof = np.setdiff1d(full_indices, self.fixatoms_dof)
+        # in the next line, we check whether the fixed indexes are in the full indexes and invert the boolean result with the tilde
+        mask = ~np.isin(full_indices, self.fixatoms_dof)
+        # these are the active indexes determined without sorting, which is faster
+        self.activeatoms_dof = full_indices[mask]
 
         # total number of iteration in the inner-most MTS loop
         self._inmts = depend_value(name="inmts", func=lambda: np.prod(self.nmts))
