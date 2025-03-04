@@ -1458,7 +1458,9 @@ class Properties:
         if isinstance(self.motion, DrivenDynamics):
             return self.motion.Electric_Field.Efield(self.ensemble.time)
         else:
-            return np.zeros(3)
+            softexit.trigger(
+                message=" @ PROPERTIES : the electric field is defined only when using the `eda-nve` or `eda-nvt` ensemble."
+            )
 
     def get_dipole(self, bead=""):
         """
