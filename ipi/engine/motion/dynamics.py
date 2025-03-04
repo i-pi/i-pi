@@ -297,9 +297,7 @@ class DummyIntegrator:
         # calculate active dofs
         full_indices = np.arange(3 * self.beads.natoms)
         # in the next line, we check whether the fixed indexes are in the full indexes and invert the boolean result with the tilde
-        mask = ~np.isin(full_indices, self.fixatoms_dof)
-        # these are the active indexes determined without sorting, which is faster
-        self.activeatoms_dof = full_indices[mask]
+        self.activeatoms_mask = ~np.isin(full_indices, self.fixatoms_dof)
 
         # total number of iteration in the inner-most MTS loop
         self._inmts = depend_value(name="inmts", func=lambda: np.prod(self.nmts))
@@ -417,13 +415,13 @@ class NVEIntegrator(DummyIntegrator):
         """Velocity Verlet momentum propagator."""
 
         # halfdt/alpha
-        self.beads.p[:, self.activeatoms_dof] += (
-            dstrip(self.forces.mts_forces[level].f)[:, self.activeatoms_dof]
+        self.beads.p[:, self.activeatoms_mask] += (
+            dstrip(self.forces.mts_forces[level].f)[:, self.activeatoms_mask]
             * self.pdt[level]
         )
         if level == 0 and self.ensemble.has_bias:  # adds bias in the outer loop
-            self.beads.p[:, self.activeatoms_dof] += (
-                dstrip(self.bias.f)[:, self.activeatoms_dof] * self.pdt[level]
+            self.beads.p[:, self.activeatoms_mask] += (
+                dstrip(self.bias.f)[:, self.activeatoms_mask] * self.pdt[level]
             )
 
     def qcstep(self):
