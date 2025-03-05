@@ -295,9 +295,12 @@ class DummyIntegrator:
             )
 
         # calculate active dofs
-        full_indices = np.arange(3 * self.beads.natoms)
-        # in the next line, we check whether the fixed indexes are in the full indexes and invert the boolean result with the tilde
-        self.activeatoms_mask = ~np.isin(full_indices, self.fixatoms_dof)
+        if len(self.fixatoms_dof) > 0:
+            full_indices = np.arange(3 * self.beads.natoms)
+            # in the next line, we check whether the fixed indexes are in the full indexes and invert the boolean result with the tilde
+            self.activeatoms_mask = ~np.isin(full_indices, self.fixatoms_dof)
+        else:
+            self.activeatoms_mask = False
 
         # total number of iteration in the inner-most MTS loop
         self._inmts = depend_value(name="inmts", func=lambda: np.prod(self.nmts))
@@ -415,14 +418,19 @@ class NVEIntegrator(DummyIntegrator):
         """Velocity Verlet momentum propagator."""
 
         # halfdt/alpha
-        self.beads.p[:, self.activeatoms_mask] += (
-            dstrip(self.forces.mts_forces[level].f)[:, self.activeatoms_mask]
-            * self.pdt[level]
-        )
-        if level == 0 and self.ensemble.has_bias:  # adds bias in the outer loop
+        if len(self.fixatoms_dof) > 0:
             self.beads.p[:, self.activeatoms_mask] += (
-                dstrip(self.bias.f)[:, self.activeatoms_mask] * self.pdt[level]
+                dstrip(self.forces.mts_forces[level].f)[:, self.activeatoms_mask]
+                * self.pdt[level]
             )
+            if level == 0 and self.ensemble.has_bias:  # adds bias in the outer loop
+                self.beads.p[:, self.activeatoms_mask] += (
+                    dstrip(self.bias.f)[:, self.activeatoms_mask] * self.pdt[level]
+                )
+        else:
+            self.beads.p[:] += dstrip(self.forces.mts_forces[level].f) * self.pdt[level]
+            if level == 0 and self.ensemble.has_bias:  # adds bias in the outer loop
+                self.beads.p[:] += dstrip(self.bias.f) * self.pdt[level]
 
     def qcstep(self):
         """Velocity Verlet centroid position propagator."""
