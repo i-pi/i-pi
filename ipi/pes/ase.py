@@ -84,7 +84,6 @@ class ASEDriver(Dummy_driver):
         # Do the actual calculation
         self.ase_calculator.calculate(structure)
         properties = self.ase_calculator.results
-        # properties = structure.get_properties(self.capabilities)
 
         if "energy" in self.capabilities:
             pot = properties["energy"]
