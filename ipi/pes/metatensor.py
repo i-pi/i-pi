@@ -10,7 +10,7 @@ import json
 from ipi.utils.units import unit_to_internal, unit_to_user
 from .dummy import Dummy_driver
 
-from ipi.utils.messages import warning, info, verbosity
+from ipi.utils.messages import warning, info
 import ase.io
 
 torch = None
