@@ -251,7 +251,7 @@ class MetatensorDriver(Dummy_driver):
                     virial_ensemble_tensor.detach()
                     .to(device="cpu", dtype=torch.float64)
                     .numpy(),
-                ):warning
+                )
                 extras_dict["committee_force"] = list(force_ensemble.flatten())
                 extras_dict["committee_virial"] = list(virial_ensemble.flatten())
 
