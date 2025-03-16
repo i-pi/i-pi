@@ -452,7 +452,7 @@ class FFDirect(FFEval):
         results[1] = results[1].reshape(-1)
         results[2] = results[2].reshape(3, 3)
 
-        # copied and pasted from 'Driver.getforce' in 'ipi/interfaces/sockets.py'
+        # converts the extra fields, if there are any
         mxtra = results[3]
         mxtradict = {}
         if mxtra:
