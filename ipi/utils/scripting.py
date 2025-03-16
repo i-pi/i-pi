@@ -39,7 +39,27 @@ def simulation_xml(
     prefix=None,
 ):
     """
-    A helper function to generate an XML string for an i-PI simulation input.
+    A helper function to generate an XML string for a basic i-PI 
+    simulation input.
+    
+    param structures: ase.Atoms|list(ase.Atoms) an Atoms object containing
+        the initial structure for the system (or list of Atoms objects to
+        initialize a path integral simulation with many beads). The
+        structures should be in standardized form (cf. standard_cell from ASE).
+    param forcefield: str An XML-formatted string describing the forcefield
+        to be used in the simulation
+    param motion: str An XML-formatted string describing the motion class
+        to be used in the simulation
+    temperature: Optional(float) A float specifying the temperature. If not
+        specified, the temperature won't be set, and you should use a NVE
+        motion class
+    output: Optional(str) An  XML-formatted string describing the output
+        A default list of outputs will be generated if not provided
+    verbosity: Optional(str), default "quiet". The level of logging done
+        to stdout
+    safe_stride: Optional(int), default 20. How often the internal checkpoint
+        data should be stored
+    prefix: Optional(str) The prefix to be used for simulation outputs.
     """
 
     if type(structures) is list:
@@ -241,7 +261,7 @@ class InteractiveSimulation:
                     positions=dstrip(system.beads.q[b]).reshape(-1, 3)
                     * unit_to_user("length", "ase", 1.0),
                     symbols=dstrip(system.beads.names),
-                    cell=dstrip(system.cell.h) * unit_to_user("length", "ase", 1.0),
+                    cell=dstrip(system.cell.h).T * unit_to_user("length", "ase", 1.0),
                 )
                 struc.arrays["ipi_velocities"] = dstrip(system.beads.p[b]).reshape(
                     -1, 3
@@ -272,7 +292,7 @@ class InteractiveSimulation:
                 system.beads.q[b] = struc.positions.flatten() * unit_to_internal(
                     "length", "ase", 1.0
                 )
-                system.cell.h = struc.cell * unit_to_internal("length", "ase", 1.0)
+                system.cell.h = struc.cell.T * unit_to_internal("length", "ase", 1.0)
                 if "ipi_velocities" in struc.arrays:
                     system.beads.p[b] = struc.arrays[
                         "ipi_velocities"
