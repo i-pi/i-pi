@@ -140,8 +140,9 @@ class MetatensorDriver(Dummy_driver):
         types, positions, cell, pbc = mta_ase_calculator._ase_to_torch_data(
             atoms=ase_atoms, dtype=self._dtype, device=self.device
         )
-        # print("types, positions, cell, pbc", types, positions, cell, pbc)
+        
         positions.requires_grad_(True)
+        # this is to compute the virial (which is the derivative with respect to the strain)
         strain = torch.eye(3, requires_grad=True, device=self.device, dtype=self._dtype)
         positions = positions @ strain
         cell = cell @ strain
@@ -153,7 +154,7 @@ class MetatensorDriver(Dummy_driver):
             )
             mta.register_autograd_neighbors(
                 system,
-                neighbors,
+                mtt.detach_block(neighbors),
                 check_consistency=self.check_consistency,
             )
             system.add_neighbor_list(options, neighbors)
@@ -205,9 +206,19 @@ class MetatensorDriver(Dummy_driver):
                 # this function definition is necessary to use
                 # torch.autograd.functional.jacobian, which is vectorized
                 def _compute_ensemble(positions, strain):
-                    return (
+                    new_system=mta.System(types, positions @ strain, cell @ strain, pbc)
+                    for options in self.model.requested_neighbor_lists():
+                        neighbors = system.get_neighbor_list(options)
+                        mta.register_autograd_neighbors(
+                            new_system,
+                            neighbors,
+                            check_consistency=self.check_consistency,
+                        )
+                        new_system.add_neighbor_list(options, neighbors)
+
+                    return (                        
                         self.model(
-                            [mta.System(types, positions @ strain, cell @ strain, pbc)],
+                            [new_system],
                             self.evaluation_options,
                             check_consistency=self.check_consistency,
                         )["energy_ensemble"]
