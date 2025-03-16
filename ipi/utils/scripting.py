@@ -64,7 +64,7 @@ def simulation_xml(
     input_beads = InputBeads()
     input_beads.store(beads)
 
-    cell = Cell(h=np.array(structure.cell) * unit_to_internal("length", "ase", 1.0))
+    cell = Cell(h=np.array(structure.cell).T * unit_to_internal("length", "ase", 1.0))
     input_cell = InputCell()
     input_cell.store(cell)
 
