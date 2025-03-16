@@ -59,10 +59,9 @@ class MetatensorDriver(Dummy_driver):
         *args,
         **kwargs,
     ):
-        super().__init__(*args, **kwargs)
 
         global torch, mtt, mta, mta_ase_calculator
-        if torch is None and mtt is None and mta is None:
+        if torch is None or mtt is None or mta is None:
             try:
                 import torch
                 import metatensor.torch as mtt
@@ -82,6 +81,7 @@ class MetatensorDriver(Dummy_driver):
         self.force_virial_ensemble = force_virial_ensemble
         self._name_template = template
         self.template = ase.io.read(template)
+        super().__init__(*args, **kwargs)
 
         info(f"Model arguments:\n{args}\n{kwargs}", self.verbose)
 
@@ -138,7 +138,7 @@ class MetatensorDriver(Dummy_driver):
         ase_atoms.cell = unit_to_user("length", "angstrom", cell.T)
 
         types, positions, cell, pbc = mta_ase_calculator._ase_to_torch_data(
-            atoms=ase_atoms, dtype=torch.float64, device=self.device
+            atoms=ase_atoms, dtype=self._dtype, device=self.device
         )
         # print("types, positions, cell, pbc", types, positions, cell, pbc)
         positions.requires_grad_(True)
@@ -171,13 +171,19 @@ class MetatensorDriver(Dummy_driver):
         )
 
         energy = unit_to_internal(
-            "energy", "electronvolt", energy_tensor.detach().cpu().numpy()
+            "energy",
+            "electronvolt",
+            energy_tensor.detach().to(device="cpu", dtype=torch.float64).numpy(),
         )
         forces = unit_to_internal(
-            "force", "ev/ang", forces_tensor.detach().cpu().numpy()
+            "force",
+            "ev/ang",
+            forces_tensor.detach().to(device="cpu", dtype=torch.float64).numpy(),
         )
         virial = unit_to_internal(
-            "pressure", "ev/ang3", virial_tensor.detach().cpu().numpy()
+            "pressure",
+            "ev/ang3",
+            virial_tensor.detach().to(device="cpu", dtype=torch.float64).numpy(),
         )
 
         extras_dict = {}
@@ -187,7 +193,11 @@ class MetatensorDriver(Dummy_driver):
                 outputs["energy_ensemble"].block().values.squeeze(0)
             )
             energy_ensemble = unit_to_internal(
-                "energy", "electronvolt", energy_ensemble_tensor.detach().cpu().numpy()
+                "energy",
+                "electronvolt",
+                energy_ensemble_tensor.detach()
+                .to(device="cpu", dtype=torch.float64)
+                .numpy(),
             )
             extras_dict["committee_pot"] = list(energy_ensemble)
 
@@ -213,10 +223,18 @@ class MetatensorDriver(Dummy_driver):
                 force_ensemble_tensor = -minus_force_ensemble_tensor
                 virial_ensemble_tensor = -minus_virial_ensemble_tensor
                 force_ensemble = unit_to_internal(
-                    "force", "ev/ang", force_ensemble_tensor.detach().cpu().numpy()
+                    "force",
+                    "ev/ang",
+                    force_ensemble_tensor.detach()
+                    .to(device="cpu", dtype=torch.float64)
+                    .numpy(),
                 )
                 virial_ensemble = unit_to_internal(
-                    "pressure", "ev/ang3", virial_ensemble_tensor.detach().cpu().numpy()
+                    "pressure",
+                    "ev/ang3",
+                    virial_ensemble_tensor.detach()
+                    .to(device="cpu", dtype=torch.float64)
+                    .numpy(),
                 )
                 extras_dict["committee_force"] = list(force_ensemble.flatten())
                 extras_dict["committee_virial"] = list(virial_ensemble.flatten())
