@@ -208,10 +208,12 @@ class MetatensorDriver(Dummy_driver):
                 def _compute_ensemble(positions, strain):
                     new_system=mta.System(types, positions @ strain, cell @ strain, pbc)
                     for options in self.model.requested_neighbor_lists():
-                        neighbors = system.get_neighbor_list(options)
+                        neighbors = mta.ase_calculator._compute_ase_neighbors(
+                            ase_atoms, options, dtype=self._dtype, device=self.device
+                        )
                         mta.register_autograd_neighbors(
                             new_system,
-                            mtt.detach_block(neighbors),
+                            neighbors,
                             check_consistency=self.check_consistency,
                         )
                         new_system.add_neighbor_list(options, neighbors)
