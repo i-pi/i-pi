@@ -70,7 +70,8 @@ Atomistic recipes
 ~~~~~~~~~~~~~~~~~
 
 Several examples of usage of i-PI to perform advanced molecular 
-simulations can be found among the recipes of the 
+simulations can be found in the 
+`i-PI chapter <https://atomistic-cookbook.org/software/i-pi.html>`_ of the 
 `atomistic cookbook <https://atomistic-cookbook.org/>`_.
 These include an 
 `introduction to path integral simulations <https://atomistic-cookbook.org/latest/examples/path-integrals/path-integrals.html>`_, 

@@ -11,6 +11,7 @@
   </prng>
   <ffdirect name='driver'>
       <pes> dummy </pes>
+      <parameters> { verbose: True } </parameters>
   </ffdirect>
   <system>
     <initialize nbeads='4'>

@@ -10,7 +10,7 @@ import json
 from ipi.utils.units import unit_to_internal, unit_to_user
 from .dummy import Dummy_driver
 
-from ipi.utils.messages import warning
+from ipi.utils.messages import warning, info, verbosity
 import ase.io
 
 torch = None
@@ -59,6 +59,8 @@ class MetatensorDriver(Dummy_driver):
         *args,
         **kwargs,
     ):
+        super().__init__(*args, **kwargs)
+
         global torch, mtt, mta, mta_ase_calculator
         if torch is None and mtt is None and mta is None:
             try:
@@ -70,6 +72,7 @@ class MetatensorDriver(Dummy_driver):
                 )
             except ImportError as e:
                 warning(f"Could not find or import metatensor.torch: {e}")
+                raise
 
         self.model = model
         self.device = device
@@ -79,9 +82,8 @@ class MetatensorDriver(Dummy_driver):
         self.force_virial_ensemble = force_virial_ensemble
         self._name_template = template
         self.template = ase.io.read(template)
-        print("ARGS ", args)
-        print("KWARGS ", kwargs)
-        super().__init__(*args, **kwargs)
+
+        info(f"Model arguments:\n{args}\n{kwargs}", self.verbose)
 
     def check_parameters(self):
         """Check the arguments required to run the driver
@@ -126,7 +128,7 @@ class MetatensorDriver(Dummy_driver):
         )
 
         # Show the model metadata to the users
-        print(self.model.metadata())
+        info(f"Metatomic model data:\n{self.model.metadata()}", self.verbose)
 
     def __call__(self, cell, pos):
         """Get energies, forces and virials from the atomistic model."""
@@ -177,7 +179,6 @@ class MetatensorDriver(Dummy_driver):
         virial = unit_to_internal(
             "pressure", "ev/ang3", virial_tensor.detach().cpu().numpy()
         )
-        # print('energy',energy)
 
         extras_dict = {}
 
