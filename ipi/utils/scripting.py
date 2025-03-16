@@ -39,9 +39,9 @@ def simulation_xml(
     prefix=None,
 ):
     """
-    A helper function to generate an XML string for a basic i-PI 
+    A helper function to generate an XML string for a basic i-PI
     simulation input.
-    
+
     param structures: ase.Atoms|list(ase.Atoms) an Atoms object containing
         the initial structure for the system (or list of Atoms objects to
         initialize a path integral simulation with many beads). The
