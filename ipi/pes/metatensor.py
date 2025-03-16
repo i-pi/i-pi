@@ -154,7 +154,7 @@ class MetatensorDriver(Dummy_driver):
             )
             mta.register_autograd_neighbors(
                 system,
-                mtt.detach_block(neighbors),
+                neighbors,
                 check_consistency=self.check_consistency,
             )
             system.add_neighbor_list(options, neighbors)
@@ -211,7 +211,7 @@ class MetatensorDriver(Dummy_driver):
                         neighbors = system.get_neighbor_list(options)
                         mta.register_autograd_neighbors(
                             new_system,
-                            neighbors,
+                            mtt.detach_block(neighbors),
                             check_consistency=self.check_consistency,
                         )
                         new_system.add_neighbor_list(options, neighbors)
