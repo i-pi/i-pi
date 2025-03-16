@@ -140,7 +140,7 @@ class MetatensorDriver(Dummy_driver):
         types, positions, cell, pbc = mta_ase_calculator._ase_to_torch_data(
             atoms=ase_atoms, dtype=self._dtype, device=self.device
         )
-        
+
         positions.requires_grad_(True)
         # this is to compute the virial (which is the derivative with respect to the strain)
         strain = torch.eye(3, requires_grad=True, device=self.device, dtype=self._dtype)
@@ -208,7 +208,9 @@ class MetatensorDriver(Dummy_driver):
                 # this function definition is necessary to use
                 # torch.autograd.functional.jacobian, which is vectorized
                 def _compute_ensemble(positions, strain):
-                    new_system=mta.System(types, positions @ strain, cell @ strain, pbc)
+                    new_system = mta.System(
+                        types, positions @ strain, cell @ strain, pbc
+                    )
                     for options in self.model.requested_neighbor_lists():
                         # we meed to recompute the neighbor list to be able to register gradients
                         neighbors = mta.ase_calculator._compute_ase_neighbors(
@@ -221,7 +223,7 @@ class MetatensorDriver(Dummy_driver):
                         )
                         new_system.add_neighbor_list(options, neighbors)
 
-                    return (                        
+                    return (
                         self.model(
                             [new_system],
                             self.evaluation_options,
