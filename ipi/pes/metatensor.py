@@ -202,12 +202,15 @@ class MetatensorDriver(Dummy_driver):
             )
             extras_dict["committee_pot"] = list(energy_ensemble)
 
+            # the ensemble of forces and virials require a more expensive calculation
+            # so they are controlled by a separate option
             if self.force_virial_ensemble:
                 # this function definition is necessary to use
                 # torch.autograd.functional.jacobian, which is vectorized
                 def _compute_ensemble(positions, strain):
                     new_system=mta.System(types, positions @ strain, cell @ strain, pbc)
                     for options in self.model.requested_neighbor_lists():
+                        # we meed to recompute the neighbor list to be able to register gradients
                         neighbors = mta.ase_calculator._compute_ase_neighbors(
                             ase_atoms, options, dtype=self._dtype, device=self.device
                         )
@@ -248,7 +251,7 @@ class MetatensorDriver(Dummy_driver):
                     virial_ensemble_tensor.detach()
                     .to(device="cpu", dtype=torch.float64)
                     .numpy(),
-                )
+                ):warning
                 extras_dict["committee_force"] = list(force_ensemble.flatten())
                 extras_dict["committee_virial"] = list(virial_ensemble.flatten())
 
