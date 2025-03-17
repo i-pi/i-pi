@@ -174,17 +174,25 @@ class MetatensorDriver(Dummy_driver):
         energy = unit_to_internal(
             "energy",
             "electronvolt",
-            energy_tensor.detach().to(device="cpu", dtype=torch.float64).numpy(),
+            energy_tensor.detach().to(device="cpu", dtype=torch.float64).numpy().item(),
         )
         forces = unit_to_internal(
             "force",
             "ev/ang",
-            forces_tensor.detach().to(device="cpu", dtype=torch.float64).numpy(),
+            forces_tensor.detach()
+            .reshape(3, -1)
+            .to(device="cpu", dtype=torch.float64)
+            .numpy()
+            .squeeze(),
         )
         virial = unit_to_internal(
             "pressure",
             "ev/ang3",
-            virial_tensor.detach().to(device="cpu", dtype=torch.float64).numpy(),
+            virial_tensor.detach()
+            .reshape(3, 3)
+            .to(device="cpu", dtype=torch.float64)
+            .numpy()
+            .squeeze(),
         )
 
         extras_dict = {}
