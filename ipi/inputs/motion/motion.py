@@ -357,28 +357,17 @@ class InputMotionBase(Input):
 
         if self.mode.fetch() == "replay":
             sc = Replay(
-                # fixcom=self.fixcom.fetch(),
                 fixcom=fixcom,
                 fixatoms_dof=fixatoms_dof,
                 intraj=self.file.fetch(),
             )
         elif self.mode.fetch() == "minimize":
             sc = GeopMotion(
-                # fixcom=self.fixcom.fetch(),
-                fixcom=fixcom,
-                fixatoms_dof=fixatoms_dof,
-                **self.optimizer.fetch()
+                fixcom=fixcom, fixatoms_dof=fixatoms_dof, **self.optimizer.fetch()
             )
         elif self.mode.fetch() == "neb":
-            #            raise ValueError(
-            #                "The nudged elastic band calculation has been "
-            #                "temporarily disabled until further bug-fixes."
-            #            )
             sc = NEBMover(
-                # fixcom=self.fixcom.fetch(),
-                fixcom=fixcom,
-                fixatoms_dof=fixatoms_dof,
-                **self.neb_optimizer.fetch()
+                fixcom=fixcom, fixatoms_dof=fixatoms_dof, **self.neb_optimizer.fetch()
             )
         elif self.mode.fetch() == "string":
             softexit.trigger(
@@ -390,80 +379,51 @@ class InputMotionBase(Input):
                 ),
             )
             sc = StringMover(
-                # fixcom=self.fixcom.fetch(),
                 fixcom=fixcom,
                 fixatoms_dof=fixatoms_dof,
                 **self.string_optimizer.fetch()
             )
         elif self.mode.fetch() == "driven_dynamics":
             sc = DrivenDynamics(
-                # fixcom=self.fixcom.fetch(),
-                fixcom=fixcom,
-                fixatoms_dof=fixatoms_dof,
-                **self.driven_dynamics.fetch()
+                fixcom=fixcom, fixatoms_dof=fixatoms_dof, **self.driven_dynamics.fetch()
             )
         elif self.mode.fetch() == "dynamics":
             sc = Dynamics(
-                # fixcom=self.fixcom.fetch(),
-                fixcom=fixcom,
-                fixatoms_dof=fixatoms_dof,
-                **self.dynamics.fetch()
+                fixcom=fixcom, fixatoms_dof=fixatoms_dof, **self.dynamics.fetch()
             )
         elif self.mode.fetch() == "constrained_dynamics":
             sc = ConstrainedDynamics(
-                # fixcom=self.fixcom.fetch(),
                 fixcom=fixcom,
                 fixatoms_dof=fixatoms_dof,
                 **self.constrained_dynamics.fetch()
             )
         elif self.mode.fetch() == "vibrations":
             sc = DynMatrixMover(
-                # fixcom=self.fixcom.fetch(),
-                fixcom=fixcom,
-                fixatoms_dof=fixatoms_dof,
-                **self.vibrations.fetch()
+                fixcom=fixcom, fixatoms_dof=fixatoms_dof, **self.vibrations.fetch()
             )
         elif self.mode.fetch() == "normalmodes":
             sc = NormalModeMover(
-                # fixcom=self.fixcom.fetch(),
-                fixcom=fixcom,
-                fixatoms_dof=fixatoms_dof,
-                **self.normalmodes.fetch()
+                fixcom=fixcom, fixatoms_dof=fixatoms_dof, **self.normalmodes.fetch()
             )
         elif self.mode.fetch() == "scp":
             sc = SCPhononsMover(
-                # fixcom=self.fixcom.fetch(),
-                fixcom=fixcom,
-                fixatoms_dof=fixatoms_dof,
-                **self.scp.fetch()
+                fixcom=fixcom, fixatoms_dof=fixatoms_dof, **self.scp.fetch()
             )
         elif self.mode.fetch() == "alchemy":
             sc = AlchemyMC(
-                # fixcom=self.fixcom.fetch(),
-                fixcom=fixcom,
-                fixatoms_dof=fixatoms_dof,
-                **self.alchemy.fetch()
+                fixcom=fixcom, fixatoms_dof=fixatoms_dof, **self.alchemy.fetch()
             )
         elif self.mode.fetch() == "atomswap":
             sc = AtomSwap(
-                # fixcom=self.fixcom.fetch(),
-                fixcom=fixcom,
-                fixatoms_dof=fixatoms_dof,
-                **self.atomswap.fetch()
+                fixcom=fixcom, fixatoms_dof=fixatoms_dof, **self.atomswap.fetch()
             )
         elif self.mode.fetch() == "instanton":
             sc = InstantonMotion(
-                # fixcom=self.fixcom.fetch(),
-                fixcom=fixcom,
-                fixatoms_dof=fixatoms_dof,
-                **self.instanton.fetch()
+                fixcom=fixcom, fixatoms_dof=fixatoms_dof, **self.instanton.fetch()
             )
         elif self.mode.fetch() == "planetary":
             sc = Planetary(
-                # fixcom=self.fixcom.fetch(),
-                fixcom=fixcom,
-                fixatoms_dof=fixatoms_dof,
-                **self.planetary.fetch()
+                fixcom=fixcom, fixatoms_dof=fixatoms_dof, **self.planetary.fetch()
             )
         elif self.mode.fetch() == "t_ramp":
             sc = TemperatureRamp(**self.t_ramp.fetch())
@@ -471,14 +431,10 @@ class InputMotionBase(Input):
             sc = PressureRamp(**self.p_ramp.fetch())
         elif self.mode.fetch() == "al-kmc":
             sc = AlKMC(
-                # fixcom=self.fixcom.fetch(),
-                fixcom=fixcom,
-                fixatoms_dof=fixatoms_dof,
-                **self.al6xxx_kmc.fetch()
+                fixcom=fixcom, fixatoms_dof=fixatoms_dof, **self.al6xxx_kmc.fetch()
             )
         else:
             sc = Motion()
-            # raise ValueError("'" + self.mode.fetch() + "' is not a supported motion calculation mode.")
 
         return sc
 

@@ -1095,8 +1095,10 @@ class Properties:
         In case where a specie or a set of indices is selected, and there are constraints,
         the result might be incorrect, as the kinetic energy is not necessarily proportional
         to the temperature.
-        Computing the kinetic temperature only makes sense
-        if you're running a constant-temperature ensemble.
+        Computing the kinetic temperature only makes sense if you're running a constant-temperature
+        ensemble, otherwise you are only getting an alternative scaling of the kinetic energy
+        whose average should not be interpreted as a temperature (unless you're in the thermodynamic
+        limit of a very ergodic simulation).
 
         Args:
            atom: If given, specifies the atom to give the temperature
