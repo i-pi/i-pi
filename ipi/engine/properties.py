@@ -1042,54 +1042,101 @@ class Properties:
         else:
             return prop_vec[bead, 3 * atom : 3 * (atom + 1)]
 
+    def get_atom_ids(self, atom=""):
+        """Give the indices of the requested atom(s)
+
+        Args:
+           atom: The indices or names of the atoms
+        """
+
+        if atom == "":
+            return np.arange(self.beads.natoms, dtype=int)
+
+        else:
+            try:
+                # iatom gives the index of the atom to be studied
+                iatom = int(atom)
+                latom = ""
+                if iatom >= self.beads.natoms:
+                    raise IndexError(
+                        "Atom index %d is larger than the number of atoms" % iatom
+                    )
+            except ValueError:
+                # here 'atom' is a label rather than an index which is stored in latom
+                iatom = -1
+                latom = atom
+            atom_ids = []
+
+            for i in range(self.beads.natoms):
+                if i == iatom or self.beads.names[i] == latom:
+                    atom_ids.append(i)
+
+            return np.array(atom_ids, dtype=int)
+
     def get_temp(self, atom="", bead="", nm=""):
         """Calculates the MD kinetic temperature.
 
         In case where a specie or a set of indices is selected, and there are constraints,
         the result might be incorrect, as the kinetic energy is not necessarily proportional
-        to the temperature. Rather than using a scaling factor based on the number of degrees
-        of freedom, we add fake momenta to all the fixed components, so that a meaningful
-        result will be obtained for each subset of coordinates regardless of the constraints
-        imposed on the system. Computing the kinetic temperature only makes sense
-        if you're running a constant-temperature ensemble.
+        to the temperature.
+        Computing the kinetic temperature only makes sense if you're running a constant-temperature
+        ensemble, otherwise you are only getting an alternative scaling of the kinetic energy
+        whose average should not be interpreted as a temperature (unless you're in the thermodynamic
+        limit of a very ergodic simulation).
 
         Args:
            atom: If given, specifies the atom to give the temperature
               for. If not, then the simulation temperature.
         """
 
-        if self.ensemble.temp > 0 and (
-            self.motion.fixcom or len(self.motion.fixatoms_dof) > 0
-        ):
-            dp = np.zeros_like(self.beads.p)  # correction
-            tempfactor = np.sqrt(Constants.kb * self.ensemble.temp * self.beads.nbeads)
+        kemd = self.get_kinmd(
+            atom, bead, nm
+        )  # this returns the bead-average classical KE
+        atom_ids = self.get_atom_ids(atom)
 
-            if self.motion.fixcom:
-                # Adds a fake momentum to the centre of mass. This is the easiest way
-                # of getting meaningful temperatures for subsets of the system when there
-                # are fixed components
-                M = np.sum(self.beads.m)
-                vcm = tempfactor / np.sqrt(M)
+        # accounting for constrained dof
+        if self.ensemble.temp > 0:
+            eff_number_fixed_dof = 0  # the effective number of fixed degrees of freedom for the selected atom(s)
+            if hasattr(self.motion, "enstype") and self.motion.enstype == "nvt-cc":
+                eff_number_fixed_dof = (
+                    len(atom_ids) * 3
+                )  # fixing the centroid for 1 atoms effectively fixes 3 dof, therefore the eff_number_fixed_dof is 3 time the number of atoms
 
-                dp += dstrip(self.beads.m3) * vcm
+            elif self.motion.fixcom:
+                eff_number_fixed_dof = (
+                    3 * np.sum(self.beads.m[atom_ids]) / np.sum(self.beads.m)
+                )  # This computes the portion of the COM kinetic energy (3*0.5kBT) on the selected atoms
+
+            if nm != "":
+                # Get normal mode temperature
+                if int(nm) == 0:
+                    # Centroid mode, since fixcom and constrained centroid only removes velocities from the centroid, we need to counterbalance the bead averaging done later by multiplying N here
+                    eff_number_fixed_dof *= self.beads.nbeads
+                elif int(nm) > 0:
+                    # non-centroid mode, no need to add KE for fixcom and constrained centroid
+                    eff_number_fixed_dof = 0
 
             if len(self.motion.fixatoms_dof) > 0:
-                for i in self.motion.fixatoms_dof:
-                    pi = self.beads.sm3[0, i] * tempfactor
-                    dp[:, i] = pi
+                # Note that fixatom should NOT be compatitable with fixcom!
+                flags = np.zeros(self.beads.natoms * 3)
+                flags[self.motion.fixatoms_dof] += 1  # mark all fixed atom dof as 1
+                dof_ids = np.concatenate(
+                    (atom_ids * 3, atom_ids * 3 + 1, atom_ids * 3 + 2)
+                )
+                eff_nbeads = (
+                    self.beads.nbeads - 1  # prevent double counting
+                    if self.motion.enstype == "nvt-cc"
+                    else self.beads.nbeads
+                )
+                eff_number_fixed_dof += np.sum(flags[dof_ids]) * eff_nbeads
 
-            # we have to change p in place because the kinetic energy
-            # can depend on nm masses
-            self.beads.p += dp
-            kemd, ncount = self.get_kinmd(atom, bead, nm, return_count=True)
+            kemd += (
+                0.5 * Constants.kb * self.ensemble.temp * eff_number_fixed_dof
+            )  # short for 0.5*N*kB*T * eff_number_fixed_dof / N, " / N " is bead-averaging to match the definition of kemd.
 
-            # .. and then undo
-            self.beads.p -= dp
-        else:
-            # just compute and carry on
-            kemd, ncount = self.get_kinmd(atom, bead, nm, return_count=True)
-
-        return 2.0 * kemd / (Constants.kb * 3.0 * float(ncount) * self.beads.nbeads)
+        return (
+            2.0 * kemd / (Constants.kb * 3.0 * float(len(atom_ids)) * self.beads.nbeads)
+        )
 
     def get_kincv(self, atom=""):
         """Calculates the quantum centroid virial kinetic energy estimator.
@@ -1496,7 +1543,7 @@ class Properties:
             return self.forces.pots[int(bead)]
 
     def get_kinmd(self, atom="", bead="", nm="", return_count=False):
-        """Calculates the classical kinetic energy of the simulation (p^2/2m)
+        """Calculates the (bead-average) classical kinetic energy of the simulation (p^2/2m)
 
         Args:
            atom: If given, specifies the atom to give the kinetic energy
@@ -1561,6 +1608,14 @@ class Properties:
                 if atom != "" and iatom != i and latom != self.beads.names[i]:
                     continue
                 k = 3 * i
+
+                # Checks if all the beads have the same mass. If not, raises an error.
+                mass_vals = [dm3[b, k] for b in range(self.beads.nbeads)]
+                if len(set(mass_vals)) > 1:
+                    raise ValueError(
+                        "Bead kinetic energy is not a diagnostic for temperature when using a non-diagonal or inconsistent mass matrix. Do not print out bead kinetic energies."
+                    )
+
                 kmd += (
                     p[ibead, k] ** 2 + p[ibead, k + 1] ** 2 + p[ibead, k + 2] ** 2
                 ) / (2.0 * m3[ibead, k])

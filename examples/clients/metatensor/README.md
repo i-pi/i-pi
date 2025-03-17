@@ -42,6 +42,10 @@ The options (after `-o`) are as follow:
 - `check_consistency` controls whether we should run some extra internal
   consistency checks about data given to the model and data returned by the
   model.
+- `energy_ensemble` is a bool specifying whether to compute (if available in
+  the model) an ensemble of energy predictions
+- `force_virial_ensemble` is a bool specifying whether to also compute 
+  an ensemble of force predictions
 
 ## Running with FFDirect 
 
@@ -61,3 +65,8 @@ check the `run.py` script
 ```bash
 python run.py
 ```
+
+## Running with an ensemble output
+
+Metatensor calculators can return ensembles for UQ. An example of how to do this
+is given in `input-ensemble.xml`
