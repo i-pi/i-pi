@@ -1,0 +1,26 @@
+# column   1     --> temperature{kelvin}(atom=0) : The current temperature, as obtained from the MD kinetic energy.
+# column   2     --> temperature{kelvin}(atom=1) : The current temperature, as obtained from the MD kinetic energy.
+# column   3     --> temperature{kelvin}(atom=2) : The current temperature, as obtained from the MD kinetic energy.
+# column   4     --> temperature{kelvin}(atom=0; nm=0) : The current temperature, as obtained from the MD kinetic energy.
+# column   5     --> temperature{kelvin}(atom=0; nm=1) : The current temperature, as obtained from the MD kinetic energy.
+# column   6     --> temperature{kelvin}(atom=0; nm=2) : The current temperature, as obtained from the MD kinetic energy.
+# column   7     --> temperature{kelvin}(atom=0; nm=3) : The current temperature, as obtained from the MD kinetic energy.
+# column   8     --> temperature{kelvin}(atom=1; nm=0) : The current temperature, as obtained from the MD kinetic energy.
+# column   9     --> temperature{kelvin}(atom=1; nm=1) : The current temperature, as obtained from the MD kinetic energy.
+# column  10     --> temperature{kelvin}(atom=1; nm=2) : The current temperature, as obtained from the MD kinetic energy.
+# column  11     --> temperature{kelvin}(atom=1; nm=3) : The current temperature, as obtained from the MD kinetic energy.
+# column  12     --> temperature{kelvin}(atom=2; nm=0) : The current temperature, as obtained from the MD kinetic energy.
+# column  13     --> temperature{kelvin}(atom=2; nm=1) : The current temperature, as obtained from the MD kinetic energy.
+# column  14     --> temperature{kelvin}(atom=2; nm=2) : The current temperature, as obtained from the MD kinetic energy.
+# column  15     --> temperature{kelvin}(atom=2; nm=3) : The current temperature, as obtained from the MD kinetic energy.
+    5.26881949e+02     3.23442001e+02     5.00000000e+02     1.09817633e+03     5.63818684e+02     2.51612271e+02     1.93920509e+02     6.42215328e+02     7.28633880e+01     5.37445923e+02     4.12433670e+01     5.00000000e+02     5.00000000e+02     5.00000000e+02     5.00000000e+02   
+    4.24894838e+02     2.98043589e+02     5.00000000e+02     1.16493447e+03     2.57478289e+02     1.17766604e+02     1.59399990e+02     6.63373309e+02     3.96999998e+01     3.75322893e+02     1.13778156e+02     5.00000000e+02     5.00000000e+02     5.00000000e+02     5.00000000e+02   
+    5.77124920e+02     2.98423040e+02     5.00000000e+02     1.18901571e+03     4.99772886e+02     1.59566693e+02     4.60144385e+02     6.67553016e+02     2.03672603e+02     2.75983198e+02     4.64833442e+01     5.00000000e+02     5.00000000e+02     5.00000000e+02     5.00000000e+02   
+    5.42990063e+02     3.03456922e+02     5.00000000e+02     1.19228184e+03     2.95623756e+02     1.68541548e+02     5.15513108e+02     6.93291452e+02     3.12660664e+01     2.82166141e+02     2.07104027e+02     5.00000000e+02     5.00000000e+02     5.00000000e+02     5.00000000e+02   
+    5.00551376e+02     4.97428511e+02     5.00000000e+02     1.18739151e+03     1.38719083e+02     1.47883317e+02     5.28211591e+02     6.57688161e+02     3.08517134e+02     6.77925711e+02     3.45583038e+02     5.00000000e+02     5.00000000e+02     5.00000000e+02     5.00000000e+02   
+    5.87741800e+02     6.17797190e+02     5.00000000e+02     1.21117044e+03     1.81162814e+02     3.13121559e+02     6.45512385e+02     7.24957328e+02     4.75418626e+02     9.53690076e+02     3.17122731e+02     5.00000000e+02     5.00000000e+02     5.00000000e+02     5.00000000e+02   
+    7.36104211e+02     5.15657895e+02     5.00000000e+02     1.14192039e+03     2.33313800e+02     3.34003442e+02     1.23517922e+03     7.02452193e+02     1.53916460e+02     1.05531306e+03     1.50949867e+02     5.00000000e+02     5.00000000e+02     5.00000000e+02     5.00000000e+02   
+    9.20368473e+02     4.99659919e+02     5.00000000e+02     1.13546183e+03     4.35780967e+02     4.02352132e+02     1.70787896e+03     7.19720491e+02     2.96409899e+02     8.11941556e+02     1.70567728e+02     5.00000000e+02     5.00000000e+02     5.00000000e+02     5.00000000e+02   
+    1.00130566e+03     4.90809773e+02     5.00000000e+02     1.13436266e+03     5.77464274e+02     3.99799527e+02     1.89359619e+03     6.37865491e+02     2.65863716e+02     7.44277123e+02     3.15232763e+02     5.00000000e+02     5.00000000e+02     5.00000000e+02     5.00000000e+02   
+    8.13499372e+02     5.55123569e+02     5.00000000e+02     1.13540314e+03     4.03829414e+02     4.30207600e+02     1.28455734e+03     6.10804776e+02     2.61135274e+02     7.67704284e+02     5.80849942e+02     5.00000000e+02     5.00000000e+02     5.00000000e+02     5.00000000e+02   
+    6.56684035e+02     5.21939299e+02     5.00000000e+02     1.03906197e+03     4.94376131e+02     1.24211278e+02     9.69086756e+02     5.34005834e+02     1.78842422e+02     9.40098935e+02     4.34810008e+02     5.00000000e+02     5.00000000e+02     5.00000000e+02     5.00000000e+02   

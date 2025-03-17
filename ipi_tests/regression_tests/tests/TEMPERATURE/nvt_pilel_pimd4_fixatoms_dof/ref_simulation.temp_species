@@ -1,0 +1,21 @@
+# column   1     --> temperature{kelvin}(atom=O) : The current temperature, as obtained from the MD kinetic energy.
+# column   2     --> temperature{kelvin}(atom=H) : The current temperature, as obtained from the MD kinetic energy.
+# column   3     --> temperature{kelvin}(atom=O; bead=0) : The current temperature, as obtained from the MD kinetic energy.
+# column   4     --> temperature{kelvin}(atom=O; bead=1) : The current temperature, as obtained from the MD kinetic energy.
+# column   5     --> temperature{kelvin}(atom=O; bead=2) : The current temperature, as obtained from the MD kinetic energy.
+# column   6     --> temperature{kelvin}(atom=O; bead=3) : The current temperature, as obtained from the MD kinetic energy.
+# column   7     --> temperature{kelvin}(atom=O; nm=0) : The current temperature, as obtained from the MD kinetic energy.
+# column   8     --> temperature{kelvin}(atom=O; nm=1) : The current temperature, as obtained from the MD kinetic energy.
+# column   9     --> temperature{kelvin}(atom=O; nm=2) : The current temperature, as obtained from the MD kinetic energy.
+# column  10     --> temperature{kelvin}(atom=O; nm=3) : The current temperature, as obtained from the MD kinetic energy.
+    5.83991988e+02     4.95621004e+02     2.72385595e+02     4.33601859e+02     7.57092181e+02     8.72888318e+02     1.10677653e+03     6.85115201e+02     3.09078025e+02     2.34998200e+02   
+    5.22743184e+02     4.43848184e+02     2.68220246e+02     3.17287897e+02     6.88638906e+02     8.16825687e+02     1.27101801e+03     3.07296803e+02     1.71382590e+02     3.41275337e+02   
+    7.34835600e+02     4.93581480e+02     7.00752049e+02     5.21394398e+02     5.35195335e+02     1.18200062e+03     1.42207987e+03     5.49758625e+02     2.79703699e+02     6.87800203e+02   
+    6.86728512e+02     4.78163614e+02     6.59724365e+02     8.35430492e+02     4.37887238e+02     8.13871955e+02     1.37911180e+03     4.01063297e+02     2.91906325e+02     6.74832626e+02   
+    6.05503238e+02     5.84718810e+02     6.37511855e+02     9.12578759e+02     2.57170043e+02     6.14752297e+02     1.26470771e+03     3.30044088e+02     2.10259473e+02     6.17001683e+02   
+    6.99224019e+02     7.02203124e+02     4.01540634e+02     1.26337057e+03     3.06891789e+02     8.25093077e+02     1.36124272e+03     3.36746539e+02     4.48695806e+02     6.50211014e+02   
+    6.95450993e+02     7.10659370e+02     3.81365681e+02     9.82010741e+02     4.18941845e+02     9.99485703e+02     1.17767827e+03     3.33401619e+02     2.42067677e+02     1.02865640e+03   
+    7.78391593e+02     6.04114601e+02     4.58600115e+02     9.47507379e+02     6.22927187e+02     1.08453169e+03     1.09531538e+03     4.97663950e+02     2.46008053e+02     1.27457900e+03   
+    9.10246267e+02     6.94162265e+02     3.49525625e+02     1.24272641e+03     6.25287348e+02     1.42344568e+03     1.05515960e+03     5.33962649e+02     2.76209889e+02     1.77565293e+03   
+    7.24990495e+02     6.00052074e+02     3.46920910e+02     9.87680431e+02     7.93146702e+02     7.72213939e+02     1.17237090e+03     3.42811209e+02     2.32323873e+02     1.15245600e+03   
+    5.20338413e+02     5.39112098e+02     2.85512673e+02     7.27381079e+02     4.92292689e+02     5.76167212e+02     8.97498902e+02     2.13518981e+02     1.69696239e+02     8.00639530e+02   

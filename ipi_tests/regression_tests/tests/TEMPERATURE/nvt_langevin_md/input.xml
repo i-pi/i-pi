@@ -1,0 +1,35 @@
+<simulation verbosity='low'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out' flush='1000'>  [ step, time{picosecond}, conserved, temperature{kelvin}, potential ] </properties>
+    <properties stride='1' filename='temp_species' flush='1000'>  [ temperature{kelvin}(atom=O), temperature{kelvin}(atom=H) ] </properties>
+    <properties stride='1' filename='temp_indices' flush='1000'>  [ temperature{kelvin}(atom=0), temperature{kelvin}(atom=1), temperature{kelvin}(atom=2) ] </properties>
+  </output>
+  <total_steps>10</total_steps>
+  <prng>
+    <seed>32415</seed>
+  </prng>
+  <ffsocket name='driver' mode='unix' pbc='false'>
+    <address> driver </address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='1'>
+      <file mode='ase'> h2o.xyz </file>
+      <velocities mode='thermal' units='kelvin'> 500 </velocities>
+    </initialize>
+    <forces>
+	<force forcefield='driver' weight='0'> </force>
+    </forces>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <timestep units='femtosecond'> 0.5 </timestep>
+        <thermostat mode='langevin'>
+          <tau units='femtosecond'> 10 </tau>
+        </thermostat>
+      </dynamics>
+      <fixcom> False </fixcom>
+    </motion>
+    <ensemble>
+      <temperature units='kelvin'> 500 </temperature>
+    </ensemble>
+  </system>
+</simulation>

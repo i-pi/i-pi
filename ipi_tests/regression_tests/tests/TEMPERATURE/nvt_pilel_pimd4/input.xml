@@ -1,0 +1,38 @@
+<simulation verbosity='low'>
+  <output prefix='simulation'>
+    <properties stride='1' filename='out' flush='1000'>  [ step, time{picosecond}, conserved, temperature{kelvin}, potential ] </properties>
+    <properties stride='1' filename='temp_species' flush='1000'>  [ temperature{kelvin}(atom=O), temperature{kelvin}(atom=H), 
+  temperature{kelvin}(atom=O; bead=0), temperature{kelvin}(atom=O; bead=1), temperature{kelvin}(atom=O; bead=2), temperature{kelvin}(atom=O; bead=3), 
+  temperature{kelvin}(atom=O; nm=0), temperature{kelvin}(atom=O; nm=1), temperature{kelvin}(atom=O; nm=2), temperature{kelvin}(atom=O; nm=3) ]
+ ] </properties>
+    <properties stride='1' filename='temp_indices' flush='1000'> [ temperature{kelvin}(atom=0), temperature{kelvin}(atom=1), temperature{kelvin}(atom=2),   temperature{kelvin}(atom=0; bead=0), temperature{kelvin}(atom=0; bead=1), temperature{kelvin}(atom=0; bead=2), temperature{kelvin}(atom=0; bead=3),   temperature{kelvin}(atom=0; nm=0), temperature{kelvin}(atom=0; nm=1), temperature{kelvin}(atom=0; nm=2), temperature{kelvin}(atom=0; nm=3),   temperature{kelvin}(atom=1; bead=0), temperature{kelvin}(atom=1; bead=1), temperature{kelvin}(atom=1; bead=2), temperature{kelvin}(atom=1; bead=3),   temperature{kelvin}(atom=1; nm=0), temperature{kelvin}(atom=1; nm=1), temperature{kelvin}(atom=1; nm=2), temperature{kelvin}(atom=1; nm=3),   temperature{kelvin}(atom=2; bead=0), temperature{kelvin}(atom=2; bead=1), temperature{kelvin}(atom=2; bead=2), temperature{kelvin}(atom=2; bead=3),   temperature{kelvin}(atom=2; nm=0), temperature{kelvin}(atom=2; nm=1), temperature{kelvin}(atom=2; nm=2), temperature{kelvin}(atom=2; nm=3) ] </properties>
+  </output>
+  <total_steps>10</total_steps>
+  <prng>
+    <seed>32415</seed>
+  </prng>
+  <ffsocket name='driver' mode='unix' pbc='false'>
+    <address> driver </address>
+  </ffsocket>
+  <system>
+    <initialize nbeads='4'>
+      <file mode='ase'> h2o.xyz </file>
+      <velocities mode='thermal' units='kelvin'> 500 </velocities>
+    </initialize>
+    <forces>
+	<force forcefield='driver' weight='0'> </force>
+    </forces>
+    <motion mode='dynamics'>
+      <dynamics mode='nvt'>
+        <timestep units='femtosecond'> 0.25 </timestep>
+        <thermostat mode='pile_l'>
+          <tau units='femtosecond'> 10 </tau>
+        </thermostat>
+      </dynamics>
+      <fixcom> False </fixcom>
+    </motion>
+    <ensemble>
+      <temperature units='kelvin'> 500 </temperature>
+    </ensemble>
+  </system>
+</simulation>
