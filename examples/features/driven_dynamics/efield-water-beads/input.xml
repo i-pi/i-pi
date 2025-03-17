@@ -16,7 +16,8 @@
     <trajectory filename='becx'>becx</trajectory> 
     <trajectory filename='becy'>becy</trajectory> 
     <trajectory filename='becz'>becz</trajectory> 
-    <properties filename='properties.out' verbosity='high' > [ step, time, conserved, kinetic_md, potential, Efield, Eenvelope, dipole(0), dipole(1) ] </properties>
+    <trajectory filename='dip' extra_type='dipole'> extras </trajectory>
+    <properties filename='properties.out' verbosity='high' > [ step, time, conserved, kinetic_md, potential, Efield, Eenvelope ] </properties>
   </output>
 
   <prng>
