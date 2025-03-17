@@ -89,6 +89,8 @@ class Simulation:
         # check the input and partition it appropriately
         input_simulation.parse(xmlrestart.fields[0][1])
 
+        Simulation.check_version(input_simulation)
+
         # override verbosity if requested
         if custom_verbosity is None:
             # Get from the input file
@@ -117,6 +119,17 @@ class Simulation:
         simulation.bind(read_only)
 
         return simulation
+
+    @staticmethod
+    def check_version(input_simulation):
+        input_version = input_simulation.version.fetch()
+        if input_version == "unspecified":
+            warning("Input with unspecified version number")
+        else:
+            # hardcoded and not ipi.__version__ to be intentional about changes to the input version
+            # (which may not happen in every release. also allows to support more than one version if necessary)
+            if input_version != isimulation._latest_supported_input_version:
+                raise Exception("Unsupported input version %s" % input_version)
 
     def __init__(
         self,
