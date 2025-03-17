@@ -6,17 +6,18 @@
 		volume{angstrom3}, ensemble_temperature{kelvin}, cell_abcABC]
     </properties>
     <trajectory filename="xc" stride="5" cell_units="angstrom"> x_centroid{angstrom} </trajectory>
-    <trajectory filename="forces" stride="5" format="ase"> forces </trajectory>
+    <trajectory filename="fc" stride="5" cell_units="angstrom"> f_centroid </trajectory>
+    <trajectory filename='committee_pot' stride='5' extra_type='committee_pot'>extras</trajectory>
+    <trajectory filename='committee_force' stride='5' extra_type='committee_force'>extras</trajectory>
     <checkpoint stride="1000"/>
 </output>
 <total_steps> 1000</total_steps>
 <prng><seed>12345</seed></prng>
 
-<ffsocket mode='unix' name='driver' pbc="false">
-    <port>12345</port>
-    <address>metatensor</address>
-</ffsocket>
-
+<ffdirect name='driver'>
+    <pes> metatensor </pes>
+    <parameters> {template:nickel.xyz,model:nickel-lj.pt,device:cpu,energy_ensemble:True, force_virial_ensemble:True } </parameters>
+</ffdirect>
 <system>
     <initialize nbeads="1">
         <file mode="ase" units="angstrom"> nickel.xyz </file>
@@ -28,7 +29,7 @@
 
     <motion mode="dynamics">
     	<dynamics mode="nvt">
-        	<timestep units="femtosecond"> 2 </timestep>
+        	<timestep units="femtosecond"> 0.5 </timestep>
             <thermostat mode='gle'>
             	<A shape='(5,5)'>[
                 	 4.49e-3,   6.59e-6,   2.79e-4,  -8.81e-4,   5.61e-3,
