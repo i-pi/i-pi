@@ -1,0 +1,14 @@
+# column   1     --> temperature{kelvin}(atom=0) : The current temperature, as obtained from the MD kinetic energy.
+# column   2     --> temperature{kelvin}(atom=1) : The current temperature, as obtained from the MD kinetic energy.
+# column   3     --> temperature{kelvin}(atom=2) : The current temperature, as obtained from the MD kinetic energy.
+    4.51706489e+02     9.29788982e+02     1.25199986e+03   
+    4.47979577e+02     1.03464672e+03     7.98474514e+02   
+    4.48816268e+02     1.08201904e+03     7.78511587e+02   
+    4.48872203e+02     1.31132409e+03     8.61344830e+02   
+    4.52243934e+02     1.31882952e+03     7.53574274e+02   
+    4.55288873e+02     9.77303502e+02     5.71307162e+02   
+    4.53971454e+02     9.75392941e+02     4.40439490e+02   
+    4.48690308e+02     9.56756798e+02     5.20199470e+02   
+    4.46676929e+02     7.75028553e+02     6.53509010e+02   
+    4.47882809e+02     8.89792426e+02     8.52206801e+02   
+    4.56096972e+02     1.04139259e+03     7.52295075e+02   

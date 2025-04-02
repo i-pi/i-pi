@@ -1,0 +1,49 @@
+<simulation verbosity="medium">
+<output prefix="lj-nickel">
+    <properties stride="5" filename="out">
+		[step, time{picosecond}, conserved{electronvolt}, temperature{kelvin},
+		kinetic_md{electronvolt}, potential{electronvolt}, pressure_md{bar},
+		volume{angstrom3}, ensemble_temperature{kelvin}, cell_abcABC]
+    </properties>
+    <trajectory filename="xc" stride="5" cell_units="angstrom"> x_centroid{angstrom} </trajectory>
+    <trajectory filename="fc" stride="5" cell_units="angstrom"> f_centroid </trajectory>
+    <trajectory filename='committee_pot' stride='5' extra_type='committee_pot'>extras</trajectory>
+    <trajectory filename='committee_force' stride='5' extra_type='committee_force'>extras</trajectory>
+    <checkpoint stride="1000"/>
+</output>
+<total_steps> 1000</total_steps>
+<prng><seed>12345</seed></prng>
+
+<ffdirect name='driver'>
+    <pes> metatensor </pes>
+    <parameters> {template:nickel.xyz,model:nickel-lj.pt,device:cpu,energy_ensemble:True, force_virial_ensemble:True } </parameters>
+</ffdirect>
+<system>
+    <initialize nbeads="1">
+        <file mode="ase" units="angstrom"> nickel.xyz </file>
+        <velocities mode="thermal" units="kelvin"> 250.0 </velocities>
+    </initialize>
+    <forces>
+    	<force forcefield='driver'/>
+    </forces>
+
+    <motion mode="dynamics">
+    	<dynamics mode="nvt">
+        	<timestep units="femtosecond"> 0.5 </timestep>
+            <thermostat mode='gle'>
+            	<A shape='(5,5)'>[
+                	 4.49e-3,   6.59e-6,   2.79e-4,  -8.81e-4,   5.61e-3,
+                    -6.73e-6,   2.08e-9,   1.75e-5,  -4.80e-6,   1.03e-5,
+                    -3.59e-4,  -1.75e-5,   3.29e-5,   1.24e-4,  -2.42e-4,
+                    -2.51e-4,   4.80e-6,  -1.24e-4,   6.45e-4,   2.78e-4,
+                     5.27e-3,  -1.03e-5,   2.42e-4,  -2.78e-4,   7.49e-3
+                ]</A>
+            </thermostat>
+        </dynamics>
+    </motion>
+
+	<ensemble>
+        <temperature units="kelvin"> 250.0 </temperature>
+    </ensemble>
+</system>
+</simulation>

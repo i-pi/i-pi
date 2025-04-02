@@ -15,6 +15,7 @@ from ipi.utils.units import Constants, unit_to_internal
 from ipi.utils.mathtools import logsumlog, h2abc_deg
 from ipi.utils.io.inputs import io_xml
 from ipi.engine.motion.driven_dynamics import DrivenDynamics
+from ipi.utils.softexit import softexit
 
 __all__ = ["Properties", "Trajectories", "getkey", "getall", "help_latex", "help_rst"]
 
@@ -284,19 +285,13 @@ class Properties:
                 "func": (lambda: np.asarray(h2abc_deg(self.cell.h))),
             },
             "Efield": {
-                "dimension": "atomic_unit",
+                "dimension": "electric-field",
                 "help": "The external applied electric field (x,y,z components in cartesian axes).",
                 "size": 3,
-                "func": (
-                    lambda: (
-                        self.motion.Electric_Field.Efield(self.ensemble.time)
-                        if isinstance(self.motion, DrivenDynamics)
-                        else np.zeros(3)
-                    )
-                ),
+                "func": self.get_Efield,
             },
             "Eenvelope": {
-                "dimension": "atomic_unit",
+                "dimension": "undefined",
                 "help": "The (gaussian) envelope function of the external applied electric field (values go from 0 to 1).",
                 "func": (
                     lambda: (
@@ -306,26 +301,21 @@ class Properties:
                     )
                 ),
             },
-            "dipole": {
-                "dimension": "electric-dipole",
-                "help": "The electric dipole of the system (x,y,z components in cartesian axes).",
-                "size": 3,
-                "func": (
-                    lambda bead="-1": (
-                        self.motion.Electric_Dipole.dipole.mean(axis=0)
-                        if int(bead) < 0
-                        else (
-                            self.motion.Electric_Dipole.dipole[int(bead)]
-                            if isinstance(self.motion, DrivenDynamics)
-                            else np.zeros(3)
-                        )
-                    )
-                ),
-            },
             "conserved": {
                 "dimension": "energy",
                 "help": "The value of the conserved energy quantity per bead.",
-                "func": (lambda: self.ensemble.econs / float(self.beads.nbeads)),
+                "func": self.get_conserved,
+            },
+            "dipole": {
+                "dimension": "electric-dipole",
+                "help": "The beads-averaged electric dipole moment or the electric dipole moment of a single bead (x,y,z components in cartesian axes).",
+                "size": 3,
+                "func": self.get_dipole,
+            },
+            "interaction_energy": {
+                "dimension": "energy",
+                "help": "The value of the interaction energy due to the external electric field.",
+                "func": self.get_interaction_energy,
             },
             "ensemble_lp": {
                 "dimension": "undefined",
@@ -369,13 +359,7 @@ class Properties:
                 "help": "The physical system potential energy.",
                 "longhelp": """The physical system potential energy. With the optional argument 'bead'
                          will print the potential associated with the specified bead.""",
-                "func": (
-                    lambda bead="-1": (
-                        self.forces.pot / self.beads.nbeads
-                        if int(bead) < 0
-                        else self.forces.pots[int(bead)]
-                    )
-                ),
+                "func": self.get_pot,
             },
             "bead_potentials": {
                 "dimension": "energy",
@@ -1058,54 +1042,101 @@ class Properties:
         else:
             return prop_vec[bead, 3 * atom : 3 * (atom + 1)]
 
+    def get_atom_ids(self, atom=""):
+        """Give the indices of the requested atom(s)
+
+        Args:
+           atom: The indices or names of the atoms
+        """
+
+        if atom == "":
+            return np.arange(self.beads.natoms, dtype=int)
+
+        else:
+            try:
+                # iatom gives the index of the atom to be studied
+                iatom = int(atom)
+                latom = ""
+                if iatom >= self.beads.natoms:
+                    raise IndexError(
+                        "Atom index %d is larger than the number of atoms" % iatom
+                    )
+            except ValueError:
+                # here 'atom' is a label rather than an index which is stored in latom
+                iatom = -1
+                latom = atom
+            atom_ids = []
+
+            for i in range(self.beads.natoms):
+                if i == iatom or self.beads.names[i] == latom:
+                    atom_ids.append(i)
+
+            return np.array(atom_ids, dtype=int)
+
     def get_temp(self, atom="", bead="", nm=""):
         """Calculates the MD kinetic temperature.
 
         In case where a specie or a set of indices is selected, and there are constraints,
         the result might be incorrect, as the kinetic energy is not necessarily proportional
-        to the temperature. Rather than using a scaling factor based on the number of degrees
-        of freedom, we add fake momenta to all the fixed components, so that a meaningful
-        result will be obtained for each subset of coordinates regardless of the constraints
-        imposed on the system. Computing the kinetic temperature only makes sense
-        if you're running a constant-temperature ensemble.
+        to the temperature.
+        Computing the kinetic temperature only makes sense if you're running a constant-temperature
+        ensemble, otherwise you are only getting an alternative scaling of the kinetic energy
+        whose average should not be interpreted as a temperature (unless you're in the thermodynamic
+        limit of a very ergodic simulation).
 
         Args:
            atom: If given, specifies the atom to give the temperature
               for. If not, then the simulation temperature.
         """
 
-        if self.ensemble.temp > 0 and (
-            self.motion.fixcom or len(self.motion.fixatoms_dof) > 0
-        ):
-            dp = np.zeros_like(self.beads.p)  # correction
-            tempfactor = np.sqrt(Constants.kb * self.ensemble.temp * self.beads.nbeads)
+        kemd = self.get_kinmd(
+            atom, bead, nm
+        )  # this returns the bead-average classical KE
+        atom_ids = self.get_atom_ids(atom)
 
-            if self.motion.fixcom:
-                # Adds a fake momentum to the centre of mass. This is the easiest way
-                # of getting meaningful temperatures for subsets of the system when there
-                # are fixed components
-                M = np.sum(self.beads.m)
-                vcm = tempfactor / np.sqrt(M)
+        # accounting for constrained dof
+        if self.ensemble.temp > 0:
+            eff_number_fixed_dof = 0  # the effective number of fixed degrees of freedom for the selected atom(s)
+            if hasattr(self.motion, "enstype") and self.motion.enstype == "nvt-cc":
+                eff_number_fixed_dof = (
+                    len(atom_ids) * 3
+                )  # fixing the centroid for 1 atoms effectively fixes 3 dof, therefore the eff_number_fixed_dof is 3 time the number of atoms
 
-                dp += dstrip(self.beads.m3) * vcm
+            elif self.motion.fixcom:
+                eff_number_fixed_dof = (
+                    3 * np.sum(self.beads.m[atom_ids]) / np.sum(self.beads.m)
+                )  # This computes the portion of the COM kinetic energy (3*0.5kBT) on the selected atoms
+
+            if nm != "":
+                # Get normal mode temperature
+                if int(nm) == 0:
+                    # Centroid mode, since fixcom and constrained centroid only removes velocities from the centroid, we need to counterbalance the bead averaging done later by multiplying N here
+                    eff_number_fixed_dof *= self.beads.nbeads
+                elif int(nm) > 0:
+                    # non-centroid mode, no need to add KE for fixcom and constrained centroid
+                    eff_number_fixed_dof = 0
 
             if len(self.motion.fixatoms_dof) > 0:
-                for i in self.motion.fixatoms_dof:
-                    pi = self.beads.sm3[0, i] * tempfactor
-                    dp[:, i] = pi
+                # Note that fixatom should NOT be compatitable with fixcom!
+                flags = np.zeros(self.beads.natoms * 3)
+                flags[self.motion.fixatoms_dof] += 1  # mark all fixed atom dof as 1
+                dof_ids = np.concatenate(
+                    (atom_ids * 3, atom_ids * 3 + 1, atom_ids * 3 + 2)
+                )
+                eff_nbeads = (
+                    self.beads.nbeads - 1  # prevent double counting
+                    if self.motion.enstype == "nvt-cc"
+                    else self.beads.nbeads
+                )
+                eff_number_fixed_dof += np.sum(flags[dof_ids]) * eff_nbeads
 
-            # we have to change p in place because the kinetic energy
-            # can depend on nm masses
-            self.beads.p += dp
-            kemd, ncount = self.get_kinmd(atom, bead, nm, return_count=True)
+            kemd += (
+                0.5 * Constants.kb * self.ensemble.temp * eff_number_fixed_dof
+            )  # short for 0.5*N*kB*T * eff_number_fixed_dof / N, " / N " is bead-averaging to match the definition of kemd.
 
-            # .. and then undo
-            self.beads.p -= dp
-        else:
-            # just compute and carry on
-            kemd, ncount = self.get_kinmd(atom, bead, nm, return_count=True)
-
-        return 2.0 * kemd / (Constants.kb * 3.0 * float(ncount) * self.beads.nbeads)
+        return (
+            2.0 * kemd / (Constants.kb * 3.0 * float(len(atom_ids)) * self.beads.nbeads)
+        )
 
     def get_kincv(self, atom=""):
         """Calculates the quantum centroid virial kinetic energy estimator.
@@ -1449,8 +1480,70 @@ class Properties:
 
         return PkT32 - spring + v
 
+    def get_Efield(self):
+        """Returns the external electric field applied to the system."""
+        if isinstance(self.motion, DrivenDynamics):
+            return self.motion.Electric_Field.Efield(self.ensemble.time)
+        else:
+            softexit.trigger(
+                message=" @ PROPERTIES : the electric field is defined only when using the `eda-nve` or `eda-nvt` ensemble."
+            )
+
+    def get_conserved(self):
+        """Returns the conserved quantity of the system."""
+        return self.ensemble.econs / float(self.beads.nbeads)
+
+    def get_dipole(self, bead=""):
+        """
+        Returns the beads-averaged electric-dipole moment, or the dipole of a single bead (if specified).
+
+        The input parameters `atom`, `nm`, `bead`, and `return_count` are not supported in this function.
+
+        By default it returns the beads-averaged electric dipole moments as an array of shape (3,).
+
+        If `bead` is specified (e.g. dipole(bead=<N>) or dipole(<N>)), it returns the dipole of the Nth bead as an array of shape (3,).
+        """
+        # Convert 'bead' to an integer, or set it to -1 if it's an empty string or None
+        bead = int(bead) if bead not in [None, ""] else -1
+
+        # If the motion is an instance of DrivenDynamics
+        if isinstance(self.motion, DrivenDynamics):
+            # If 'bead' is -1, return the mean dipole moment of all beads (averaged across all beads)
+            if bead == -1:
+                out = self.motion.Electric_Dipole.dipole.mean(axis=0)
+            # Otherwise, return the dipole of the specified bead
+            else:
+                out = self.motion.Electric_Dipole.dipole[bead]
+        else:
+            # If the motion is not of type DrivenDynamics, return NaN for the dipole moment
+            softexit.trigger(
+                message=" @ PROPERTIES : the electric field is defined only when using the `eda-nve` or `eda-nvt` ensemble."
+            )
+
+        assert out.shape == (
+            3,
+        ), f"Wrong shape for dipole, expected '(3,)', but found '{out.shape}'."
+
+        return out
+
+    def get_interaction_energy(self):
+        """
+        Returns the interaction energy between the dipole and the external electric field within the Electric Dipole Approximation.
+        """
+        dipole = self.get_dipole()
+        Efield = self.get_Efield()
+        eda = float(dipole @ Efield)
+        return eda
+
+    def get_pot(self, atom="", bead="-1", nm="", return_count=False):
+        """Calculates the physical system potential energy."""
+        if bead == "" or int(bead) < 0:
+            return self.forces.pot / self.beads.nbeads
+        else:
+            return self.forces.pots[int(bead)]
+
     def get_kinmd(self, atom="", bead="", nm="", return_count=False):
-        """Calculates the classical kinetic energy of the simulation (p^2/2m)
+        """Calculates the (bead-average) classical kinetic energy of the simulation (p^2/2m)
 
         Args:
            atom: If given, specifies the atom to give the kinetic energy
@@ -1515,6 +1608,14 @@ class Properties:
                 if atom != "" and iatom != i and latom != self.beads.names[i]:
                     continue
                 k = 3 * i
+
+                # Checks if all the beads have the same mass. If not, raises an error.
+                mass_vals = [dm3[b, k] for b in range(self.beads.nbeads)]
+                if len(set(mass_vals)) > 1:
+                    raise ValueError(
+                        "Bead kinetic energy is not a diagnostic for temperature when using a non-diagonal or inconsistent mass matrix. Do not print out bead kinetic energies."
+                    )
+
                 kmd += (
                     p[ibead, k] ** 2 + p[ibead, k + 1] ** 2 + p[ibead, k + 2] ** 2
                 ) / (2.0 * m3[ibead, k])

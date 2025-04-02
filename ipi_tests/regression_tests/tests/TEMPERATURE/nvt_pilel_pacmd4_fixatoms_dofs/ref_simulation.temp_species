@@ -1,0 +1,17 @@
+# column   1     --> temperature{kelvin}(atom=O) : The current temperature, as obtained from the MD kinetic energy.
+# column   2     --> temperature{kelvin}(atom=H) : The current temperature, as obtained from the MD kinetic energy.
+# column   3     --> temperature{kelvin}(atom=O; nm=0) : The current temperature, as obtained from the MD kinetic energy.
+# column   4     --> temperature{kelvin}(atom=O; nm=1) : The current temperature, as obtained from the MD kinetic energy.
+# column   5     --> temperature{kelvin}(atom=O; nm=2) : The current temperature, as obtained from the MD kinetic energy.
+# column   6     --> temperature{kelvin}(atom=O; nm=3) : The current temperature, as obtained from the MD kinetic energy.
+    5.83991988e+02     4.95621004e+02     1.10677653e+03     6.85115201e+02     3.09078025e+02     2.34998200e+02   
+    5.13553057e+02     4.76570305e+02     1.16663509e+03     3.65791689e+02     1.95798526e+02     3.25986921e+02   
+    6.60404419e+02     5.00977844e+02     1.22495998e+03     5.57082378e+02     2.60611142e+02     5.98964178e+02   
+    6.22881746e+02     4.85268725e+02     1.22442221e+03     3.70748866e+02     2.66710917e+02     6.29644994e+02   
+    5.86998439e+02     5.34596343e+02     1.20220163e+03     2.99909405e+02     2.43839051e+02     6.02043665e+02   
+    6.71364684e+02     6.13884968e+02     1.23877903e+03     3.46697974e+02     4.42561153e+02     6.57420581e+02   
+    7.18540452e+02     6.46832579e+02     1.18802282e+03     3.93494764e+02     2.80156259e+02     1.01248797e+03   
+    8.31365023e+02     6.05304732e+02     1.17348643e+03     5.48617057e+02     2.86862179e+02     1.31649442e+03   
+    9.93881059e+02     7.02478619e+02     1.17107955e+03     6.10487161e+02     3.55720767e+02     1.83823676e+03   
+    8.24649234e+02     6.62214910e+02     1.20958082e+03     4.45758653e+02     2.63843941e+02     1.37941352e+03   
+    6.81966126e+02     6.00911939e+02     1.13372964e+03     2.92711099e+02     2.07393704e+02     1.09403007e+03   
