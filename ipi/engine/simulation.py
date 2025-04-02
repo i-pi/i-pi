@@ -15,6 +15,7 @@ import os
 import time
 from copy import deepcopy
 
+import ipi
 from ipi.utils.depend import depend_value, dpipe, dproperties
 from ipi.utils.io.inputs.io_xml import xml_parse_file, xml_parse_string, xml_write
 from ipi.utils.messages import verbosity, info, warning, banner
@@ -126,9 +127,7 @@ class Simulation:
         if input_version == "unspecified":
             warning("Input with unspecified version number")
         else:
-            # hardcoded and not ipi.__version__ to be intentional about changes to the input version
-            # (which may not happen in every release. also allows to support more than one version if necessary)
-            if input_version != isimulation._latest_supported_input_version:
+            if input_version != ipi.__version__:
                 raise Exception("Unsupported input version %s" % input_version)
 
     def __init__(
