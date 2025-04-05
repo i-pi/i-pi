@@ -77,7 +77,7 @@ def vv_obabo(self, step=None):
 
 
 sim.set_motion_step(vv_obabo)
-sim.run(10, write_outputs=False)
+sim.run(10, write_outputs=True)
 print(
     sim.properties("time") / ase.units.fs,
     sim.properties("potential"),
