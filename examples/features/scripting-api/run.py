@@ -5,6 +5,7 @@ from ipi.utils.scripting import (
     motion_nvt_xml,
     InteractiveSimulation,
 )
+from ipi.utils.depend import dstrip
 import ase, ase.io
 
 # There are utilities to quickly set up XML inputs for commonly-used simulations
@@ -61,3 +62,24 @@ structure.positions[:] = data.positions
 structure.arrays["ipi_velocities"][:] = 0
 sim.set_structures(structure)
 print(sim.properties("potential"), sim.properties("kinetic_md"))
+
+
+# one can do more aggressive "interventions" by monkey-patching the
+# InputSimulation object (although this requires an understanding
+# of the i-PI internals)
+def vv_obabo(self, step=None):
+    self.thermostat.step()
+    self.beads.p[:] += dstrip(self.forces.f) * self.dt * 0.5
+    self.beads.q[:] += dstrip(self.beads.p) / dstrip(self.beads.m3) * self.dt
+    self.beads.p[:] += dstrip(self.forces.f) * self.dt * 0.5
+    self.thermostat.step()
+    self.ensemble.time += self.dt
+
+
+sim.set_motion_step(vv_obabo)
+sim.run(10, write_outputs=False)
+print(
+    sim.properties("time") / ase.units.fs,
+    sim.properties("potential"),
+    sim.properties("kinetic_md"),
+)
