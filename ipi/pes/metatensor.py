@@ -141,7 +141,7 @@ class MetatensorDriver(Dummy_driver):
                 )
             else:
                 outputs["non_conservative_forces"] = mta.ModelOutput(
-                    quantity="forces", unit="eV/Angstrom", per_atom=True
+                    quantity="force", unit="eV/Angstrom", per_atom=True
                 )
             if "non_conservative_stress" not in self.model.capabilities().outputs:
                 warnings.warn(
@@ -152,7 +152,7 @@ class MetatensorDriver(Dummy_driver):
                 )
             else:
                 outputs["non_conservative_stress"] = mta.ModelOutput(
-                    quantity="stress", unit="eV/Angstrom^3"
+                    quantity="pressure", unit="eV/Angstrom^3"
                 )
         if self.energy_ensemble:
             outputs["energy_ensemble"] = mta.ModelOutput(quantity="energy", unit="eV")
