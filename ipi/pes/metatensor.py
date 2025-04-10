@@ -207,9 +207,7 @@ class MetatensorDriver(Dummy_driver):
         if self.non_conservative:
             forces_tensor = outputs["non_conservative_forces"].block().values
             if "non_conservative_stress" in outputs:
-                virial_tensor = -outputs[
-                    "non_conservative_stress"
-                ].block().values * torch.abs(torch.det(cell))
+                virial_tensor = outputs["non_conservative_stress"].block().values
             else:
                 virial_tensor = torch.full(
                     (3, 3), torch.nan, device=self.device, dtype=self._dtype
@@ -220,6 +218,7 @@ class MetatensorDriver(Dummy_driver):
                 (positions, strain),
                 grad_outputs=-torch.ones_like(energy_tensor),
             )
+            virial_tensor = -virial_tensor / torch.abs(torch.det(cell))
 
         energy = unit_to_internal(
             "energy",
@@ -295,7 +294,9 @@ class MetatensorDriver(Dummy_driver):
                     )
                 )
                 force_ensemble_tensor = -minus_force_ensemble_tensor
-                virial_ensemble_tensor = -minus_virial_ensemble_tensor
+                virial_ensemble_tensor = -minus_virial_ensemble_tensor / torch.abs(
+                    torch.det(cell)
+                )
                 force_ensemble = unit_to_internal(
                     "force",
                     "ev/ang",
