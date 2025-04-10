@@ -8,7 +8,6 @@ potentials
 import json
 import warnings
 
-import numpy as np
 from ipi.utils.units import unit_to_internal, unit_to_user
 from .dummy import Dummy_driver
 
@@ -213,7 +212,7 @@ class MetatensorDriver(Dummy_driver):
                 ].block().values * torch.abs(torch.det(cell))
             else:
                 virial_tensor = torch.full(
-                    (3, 3), np.nan, device=self.device, dtype=self._dtype
+                    (3, 3), torch.nan, device=self.device, dtype=self._dtype
                 )
         else:
             forces_tensor, virial_tensor = torch.autograd.grad(
