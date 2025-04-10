@@ -6,7 +6,9 @@ potentials
 """
 
 import json
+import warnings
 
+import numpy as np
 from ipi.utils.units import unit_to_internal, unit_to_user
 from .dummy import Dummy_driver
 
@@ -45,6 +47,8 @@ class MetatensorDriver(Dummy_driver):
         :param force_virial_ensemble: bool, optional, whether to compute an ensemble
             of forces and virials for uncertainty quantification (warning: this can be
             computationally expensive)
+        :param non_conservative: bool, optional, whether to use non-conservative forces
+            and stresses
     """
 
     def __init__(
@@ -56,6 +60,7 @@ class MetatensorDriver(Dummy_driver):
         check_consistency=False,
         energy_ensemble=False,
         force_virial_ensemble=False,
+        non_conservative=False,
         *args,
         **kwargs,
     ):
@@ -79,6 +84,7 @@ class MetatensorDriver(Dummy_driver):
         self.check_consistency = check_consistency
         self.energy_ensemble = energy_ensemble
         self.force_virial_ensemble = force_virial_ensemble
+        self.non_conservative = non_conservative
         self._name_template = template
         self.template = ase.io.read(template)
         super().__init__(*args, **kwargs)
@@ -108,6 +114,14 @@ class MetatensorDriver(Dummy_driver):
                 "energy_ensemble is also True"
             )
 
+        # these two are not compatible, since force and stress ensembles are calculated
+        # by autograd on the memebers of the energy ensemble
+        if self.force_virial_ensemble and self.non_conservative:
+            raise ValueError(
+                "`force_virial_ensemble` and `non_conservative` cannot be set to True "
+                "at the same time"
+            )
+
         super().check_parameters()
 
         # Load the model
@@ -120,6 +134,27 @@ class MetatensorDriver(Dummy_driver):
 
         # Register the requested outputs
         outputs = {"energy": mta.ModelOutput(quantity="energy", unit="eV")}
+        if self.non_conservative:
+            if "non_conservative_forces" not in self.model.capabilities().outputs:
+                raise ValueError(
+                    "Non-conservative evaluation was requested, but "
+                    "this model does not support non-conservative forces. "
+                )
+            else:
+                outputs["non_conservative_forces"] = mta.ModelOutput(
+                    quantity="forces", unit="eV/Angstrom", per_atom=True
+                )
+            if "non_conservative_stress" not in self.model.capabilities().outputs:
+                warnings.warn(
+                    "Non-conservative evaluation was requested, but "
+                    "this model does not support non-conservative stresses. "
+                    "Setting them to `nan`; make sure your simulation does not require "
+                    "them."
+                )
+            else:
+                outputs["non_conservative_stress"] = mta.ModelOutput(
+                    quantity="stress", unit="eV/Angstrom^3"
+                )
         if self.energy_ensemble:
             outputs["energy_ensemble"] = mta.ModelOutput(quantity="energy", unit="eV")
         self.evaluation_options = mta.ModelEvaluationOptions(
@@ -141,11 +176,15 @@ class MetatensorDriver(Dummy_driver):
             atoms=ase_atoms, dtype=self._dtype, device=self.device
         )
 
-        positions.requires_grad_(True)
-        # this is to compute the virial (which is the derivative with respect to the strain)
-        strain = torch.eye(3, requires_grad=True, device=self.device, dtype=self._dtype)
-        positions = positions @ strain
-        cell = cell @ strain
+        if not self.non_conservative:
+            positions.requires_grad_(True)
+            # this is to compute the virial (which is the derivative with respect to the strain)
+            strain = torch.eye(
+                3, requires_grad=True, device=self.device, dtype=self._dtype
+            )
+            positions = positions @ strain
+            cell = cell @ strain
+
         system = mta.System(types, positions, cell, pbc)
 
         for options in self.model.requested_neighbor_lists():
@@ -165,11 +204,23 @@ class MetatensorDriver(Dummy_driver):
             check_consistency=self.check_consistency,
         )
         energy_tensor = outputs["energy"].block().values
-        forces_tensor, virial_tensor = torch.autograd.grad(
-            energy_tensor,
-            (positions, strain),
-            grad_outputs=-torch.ones_like(energy_tensor),
-        )
+
+        if self.non_conservative:
+            forces_tensor = outputs["non_conservative_forces"].block().values
+            if "non_conservative_stress" in outputs:
+                virial_tensor = -outputs[
+                    "non_conservative_stress"
+                ].block().values * torch.abs(torch.det(cell))
+            else:
+                virial_tensor = torch.full(
+                    (3, 3), np.nan, device=self.device, dtype=self._dtype
+                )
+        else:
+            forces_tensor, virial_tensor = torch.autograd.grad(
+                energy_tensor,
+                (positions, strain),
+                grad_outputs=-torch.ones_like(energy_tensor),
+            )
 
         energy = unit_to_internal(
             "energy",
