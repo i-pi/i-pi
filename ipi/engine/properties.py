@@ -601,7 +601,7 @@ class Properties:
                       independent components in the form [xx, yy, zz, xy, xz, yz].""",
                 "func": (
                     lambda: self.tensor2vec(
-                        (self.forces.vir + self.nm.kstress) / self.cell.V
+                        (self.forces.vir + self.get_kstress_md()) / self.cell.V
                     )
                 ),
             },
@@ -610,7 +610,7 @@ class Properties:
                 "help": "The pressure of the (extended) classical system.",
                 "func": (
                     lambda: np.trace(
-                        (self.forces.vir + self.nm.kstress) / (3.0 * self.cell.V)
+                        (self.forces.vir + self.get_kstress_md()) / (3.0 * self.cell.V)
                     )
                 ),
             },
@@ -620,7 +620,7 @@ class Properties:
                 "help": "The kinetic stress tensor of the (extended) classical system.",
                 "longhelp": """The kinetic stress tensor of the (extended) classical system. Returns the 6
                       independent components in the form [xx, yy, zz, xy, xz, yz].""",
-                "func": (lambda: self.tensor2vec(self.nm.kstress / self.cell.V)),
+                "func": (lambda: self.tensor2vec(self.get_kstress_md() / self.cell.V)),
             },
             "virial_fq": {
                 "dimension": "energy",
@@ -1133,6 +1133,7 @@ class Properties:
             kemd += (
                 0.5 * Constants.kb * self.ensemble.temp * eff_number_fixed_dof
             )  # short for 0.5*N*kB*T * eff_number_fixed_dof / N, " / N " is bead-averaging to match the definition of kemd.
+        print(self.ensemble.temp, len(atom_ids))
 
         return (
             2.0 * kemd / (Constants.kb * 3.0 * float(len(atom_ids)) * self.beads.nbeads)
@@ -1657,6 +1658,15 @@ class Properties:
             return kmd / nbeads, ncount
         else:
             return kmd / nbeads
+
+    def get_kstress_md(self):
+        """Calculates the (bead-average) classical kinetic stress of the simulation (pp^T/m)"""
+
+        # sp = (dstrip(self.beads.p) / dstrip(self.beads.sm3)).reshape(-1, 3)
+        # return sp.T @ sp
+
+        # uses normal modes to keep into account also possible mass-scaling
+        return self.nm.kstress
 
     def get_ktens(self, atom=""):
         """Calculates the quantum centroid virial kinetic energy
