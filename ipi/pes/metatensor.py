@@ -294,7 +294,7 @@ class MetatensorDriver(Dummy_driver):
                     )
                 )
                 force_ensemble_tensor = -minus_force_ensemble_tensor
-                virial_ensemble_tensor = -minus_virial_ensemble_tensor / torch.abs(
+                virial_ensemble_tensor = minus_virial_ensemble_tensor / torch.abs(
                     torch.det(cell)
                 )
                 force_ensemble = unit_to_internal(
