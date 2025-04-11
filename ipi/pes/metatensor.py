@@ -177,7 +177,8 @@ class MetatensorDriver(Dummy_driver):
 
         if not self.non_conservative:
             positions.requires_grad_(True)
-            # this is to compute the virial (which is the derivative with respect to the strain)
+            # this is to compute the virial (which is related to the derivative with
+            # respect to the strain)
             strain = torch.eye(
                 3, requires_grad=True, device=self.device, dtype=self._dtype
             )
@@ -207,9 +208,15 @@ class MetatensorDriver(Dummy_driver):
         if self.non_conservative:
             forces_tensor = outputs["non_conservative_forces"].block().values
             if "non_conservative_stress" in outputs:
-                virial_tensor = outputs["non_conservative_stress"].block().values
+                # Note that i-pi calls "virial" what ASE and metatensor call "stress".
+                # Here, we use variable naming that is consistent with ASE/metatensor,
+                # which define "stress" in the same way as the i-pi "virial" and
+                # "virial" as (- stress * volume)
+                # The variable "ipi_virial" is the only exception: it is the virial as
+                # defined in i-pi
+                stress_tensor = outputs["non_conservative_stress"].block().values
             else:
-                virial_tensor = torch.full(
+                stress_tensor = torch.full(
                     (3, 3), torch.nan, device=self.device, dtype=self._dtype
                 )
         else:
@@ -218,7 +225,7 @@ class MetatensorDriver(Dummy_driver):
                 (positions, strain),
                 grad_outputs=-torch.ones_like(energy_tensor),
             )
-            virial_tensor = -virial_tensor / torch.abs(torch.det(cell))
+            stress_tensor = -virial_tensor / torch.abs(torch.det(cell))
 
         energy = unit_to_internal(
             "energy",
@@ -233,10 +240,10 @@ class MetatensorDriver(Dummy_driver):
             .to(device="cpu", dtype=torch.float64)
             .numpy(),
         )
-        virial = unit_to_internal(
+        ipi_virial = unit_to_internal(
             "pressure",
             "ev/ang3",
-            virial_tensor.detach()
+            stress_tensor.detach()
             .reshape(3, 3)
             .to(device="cpu", dtype=torch.float64)
             .numpy(),
@@ -294,7 +301,7 @@ class MetatensorDriver(Dummy_driver):
                     )
                 )
                 force_ensemble_tensor = -minus_force_ensemble_tensor
-                virial_ensemble_tensor = minus_virial_ensemble_tensor / torch.abs(
+                stress_ensemble_tensor = minus_virial_ensemble_tensor / torch.abs(
                     torch.det(cell)
                 )
                 force_ensemble = unit_to_internal(
@@ -304,15 +311,15 @@ class MetatensorDriver(Dummy_driver):
                     .to(device="cpu", dtype=torch.float64)
                     .numpy(),
                 )
-                virial_ensemble = unit_to_internal(
+                stress_ensemble = unit_to_internal(
                     "pressure",
                     "ev/ang3",
-                    virial_ensemble_tensor.detach()
+                    stress_ensemble_tensor.detach()
                     .to(device="cpu", dtype=torch.float64)
                     .numpy(),
                 )
                 extras_dict["committee_force"] = list(force_ensemble.flatten())
-                extras_dict["committee_virial"] = list(virial_ensemble.flatten())
+                extras_dict["committee_virial"] = list(stress_ensemble.flatten())
 
         extras = json.dumps(extras_dict)
-        return energy, forces, virial, extras
+        return energy, forces, ipi_virial, extras
