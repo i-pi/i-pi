@@ -1133,7 +1133,6 @@ class Properties:
             kemd += (
                 0.5 * Constants.kb * self.ensemble.temp * eff_number_fixed_dof
             )  # short for 0.5*N*kB*T * eff_number_fixed_dof / N, " / N " is bead-averaging to match the definition of kemd.
-        print(self.ensemble.temp, len(atom_ids))
 
         return (
             2.0 * kemd / (Constants.kb * 3.0 * float(len(atom_ids)) * self.beads.nbeads)
