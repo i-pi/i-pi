@@ -952,25 +952,12 @@ class NormalModes:
            The sum of the MD kinetic stress tensor contributions from each NM.
         """
 
-        kmd = np.zeros((3, 3), float)
-        sm = dstrip(self.beads.sm3[0])
-        pnm = dstrip(self.pnm)
-        nmf = dstrip(self.nm_factor)
-
-        for b in range(self.nbeads):
-            sp = pnm[b] / sm  # mass-scaled momentum of b-th NM
-
-            for i in range(3):
-                for j in range(3):
-                    # computes the outer product of the p of various normal modes
-                    # singling out Cartesian components to build the tensor
-                    # also takes care of the possibility of having non-RPMD masses
-                    kmd[i, j] += (
-                        np.dot(sp[i : 3 * self.natoms : 3], sp[j : 3 * self.natoms : 3])
-                        / nmf[b]
-                    )
-
-        return kmd
+        # computes mass and nm_scaling-scaled momenta
+        spnm = (dstrip(self.pnm) / np.sqrt(dstrip(self.nm_factor)[:, None])) / dstrip(
+            self.beads.sm3
+        )
+        spnm = spnm.reshape(-1, 3)  # reshape for quick outer product
+        return spnm.T @ spnm
 
 
 dproperties(

@@ -433,9 +433,11 @@ class FFDirect(FFEval):
 
         if pars is None:
             pars = {}  # defaults no pars
+        if not "verbosity" in pars:
+            pars["verbosity"] = verbosity.high
         self.pes = pes
         try:
-            self.driver = __drivers__[self.pes](verbose=verbosity.high, **pars)
+            self.driver = __drivers__[self.pes](**pars)
         except ImportError:
             # specific errors have already been triggered
             raise
@@ -451,6 +453,34 @@ class FFDirect(FFEval):
         # ensure forces and virial have the correct shape to fit the results
         results[1] = results[1].reshape(-1)
         results[2] = results[2].reshape(3, 3)
+
+        # converts the extra fields, if there are any
+        mxtra = results[3]
+        mxtradict = {}
+        if mxtra:
+            try:
+                mxtradict = json.loads(mxtra)
+                info(
+                    "@driver.getforce: Extra string JSON has been loaded.",
+                    verbosity.debug,
+                )
+            except:
+                # if we can't parse it as a dict, issue a warning and carry on
+                info(
+                    "@driver.getforce: Extra string could not be loaded as a dictionary. Extra="
+                    + mxtra,
+                    verbosity.debug,
+                )
+                mxtradict = {}
+                pass
+            if "raw" in mxtradict:
+                raise ValueError(
+                    "'raw' cannot be used as a field in a JSON-formatted extra string"
+                )
+
+            mxtradict["raw"] = mxtra
+        results[3] = mxtradict
+
         request["result"] = results
         request["status"] = "Done"
 
