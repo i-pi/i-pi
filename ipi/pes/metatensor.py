@@ -65,7 +65,7 @@ class MetatensorDriver(Dummy_driver):
         energy_ensemble=False,
         force_virial_ensemble=False,
         non_conservative=False,
-        warn_if_uncertain=False,
+        warn_if_uncertain=True,
         *args,
         **kwargs,
     ):
@@ -233,7 +233,7 @@ class MetatensorDriver(Dummy_driver):
             check_consistency=self.check_consistency,
         )
 
-        if self.warn_if_uncertain and "energy_uncertainty" in outputs:
+        if "energy_uncertainty" in outputs:
             energy_uncertainty = (
                 outputs["energy_uncertainty"].block().values.detach().cpu().numpy()
             )
