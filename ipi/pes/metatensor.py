@@ -7,6 +7,7 @@ potentials
 
 import json
 import warnings
+import numpy as np
 
 from ipi.utils.units import unit_to_internal, unit_to_user
 from .dummy import Dummy_driver
@@ -49,6 +50,9 @@ class MetatensorDriver(Dummy_driver):
             computationally expensive)
         :param non_conservative: bool, optional, whether to use non-conservative forces
             and stresses
+        :param warn_if_uncertain: bool, optional, whether to warn if either the model
+            has no uncertainty quantification capabilities or if a given
+            configuration is exceedingly uncertain
     """
 
     def __init__(
@@ -61,6 +65,7 @@ class MetatensorDriver(Dummy_driver):
         energy_ensemble=False,
         force_virial_ensemble=False,
         non_conservative=False,
+        warn_if_uncertain=False,
         *args,
         **kwargs,
     ):
@@ -92,7 +97,9 @@ class MetatensorDriver(Dummy_driver):
         self.energy_ensemble = energy_ensemble
         self.force_virial_ensemble = force_virial_ensemble
         self.non_conservative = non_conservative
-        self.template = template
+        self.warn_if_uncertain = warn_if_uncertain
+        self._name_template = template
+        self.template = ase.io.read(template)
         super().__init__(*args, **kwargs)
 
         info(f"Model arguments:\n{args}\n{kwargs}", self.verbose)
@@ -167,6 +174,22 @@ class MetatensorDriver(Dummy_driver):
                 outputs["non_conservative_stress"] = mta.ModelOutput(
                     quantity="pressure", unit="eV/Angstrom^3"
                 )
+        if self.warn_if_uncertain:
+            supports_per_atom_uq = False
+            if "energy_uncertainty" in self.model.capabilities().outputs:
+                if self.model.capabilities().outputs["energy_uncertainty"].per_atom:
+                    supports_per_atom_uq = True
+            if supports_per_atom_uq:
+                outputs["energy_uncertainty"] = mta.ModelOutput(
+                    quantity="energy",
+                    unit="eV",
+                    per_atom=True,
+                )
+            else:
+                warnings.warn(
+                    "This model does not support uncertainty quantification. "
+                    "Proceed at your own risk."
+                )
         if self.energy_ensemble:
             outputs["energy_ensemble"] = mta.ModelOutput(quantity="energy", unit="eV")
         self.evaluation_options = mta.ModelEvaluationOptions(
@@ -209,6 +232,18 @@ class MetatensorDriver(Dummy_driver):
             self.evaluation_options,
             check_consistency=self.check_consistency,
         )
+
+        if self.warn_if_uncertain and "energy_uncertainty" in outputs:
+            energy_uncertainty = (
+                outputs["energy_uncertainty"].block().values.detach().cpu().numpy()
+            )
+            max_uncertainty = np.max(np.abs(energy_uncertainty))
+            if max_uncertainty > 0.1:
+                warnings.warn(
+                    "This model is uncertain for this configuration. "
+                    f"Maximum energy uncertainty per atom: {energy_uncertainty} eV"
+                )
+
         energy_tensor = outputs["energy"].block().values
 
         if self.non_conservative:
