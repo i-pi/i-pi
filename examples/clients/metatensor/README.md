@@ -4,26 +4,26 @@ Runs an example of a metatensor model, implementing a basic Lennard-Jones model
 with the parameters for Nickel.
 
 This driver can be used with any model following the [metatensor atomistic
-models](https://lab-cosmo.github.io/metatensor/latest/atomistic/index.html)
+models](https://docs.metatensor.org/latest/atomistic/index.html)
 interface. This can be used for classical force-fields, but it more intended for
 machine learning potentials.
 
 ## Installation
 
-The code is compatible with metatensor-torch v0.6, which you can install with
+The code requires additional dependencies, which you can install with
 
 ```bash
-# install all metatensor packages simultaneously
-pip install "metatensor[torch]"
+# install all packages simultaneously
+pip install "metatensor[torch] vesin[torch] ase"
 
 # install packages individually, with explicit control over the installed versions
-pip install "metatensor-torch ==0.6.*" "metatensor-operations ==0.2.*"
+pip install "metatensor-torch ==0.7.*" "metatensor-operations ==0.3.*"
 ```
 
 ## Running the example
 
 ```bash
-i-pi input.xml & sleep 1 
+i-pi input.xml & sleep 1
 i-pi-py_driver -a metatensor -u -m metatensor -o nickel.xyz,nickel-lj.pt
 
 # with all the optional parameters:
@@ -44,10 +44,10 @@ The options (after `-o`) are as follow:
   model.
 - `energy_ensemble` is a bool specifying whether to compute (if available in
   the model) an ensemble of energy predictions
-- `force_virial_ensemble` is a bool specifying whether to also compute 
+- `force_virial_ensemble` is a bool specifying whether to also compute
   an ensemble of force predictions
 
-## Running with FFDirect 
+## Running with FFDirect
 
 It is also possible to run the metatensor PES directly, without the need for an external
 driver. To do so, you need to use a `<ffdirect>` clause in the input, and specify
@@ -55,7 +55,7 @@ the appropriate options as a dictionary. Then, you can simply run
 
 ```bash
 i-pi input-direct.xml
-``` 
+```
 
 ## Running with a scripting interface
 
@@ -69,4 +69,8 @@ python run.py
 ## Running with an ensemble output
 
 Metatensor calculators can return ensembles for UQ. An example of how to do this
-is given in `input-ensemble.xml`
+is given in `input-ensemble.xml`, which you can run with
+
+```bash
+i-pi input-ensemble.xml
+```
