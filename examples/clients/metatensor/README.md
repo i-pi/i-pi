@@ -14,7 +14,7 @@ The code requires additional dependencies, which you can install with
 
 ```bash
 # install all packages simultaneously
-pip install "metatensor[torch] vesin[torch] ase"
+pip install "metatensor[torch]" "vesin[torch]" ase
 
 # install packages individually, with explicit control over the installed versions
 pip install "metatensor-torch ==0.7.*" "metatensor-operations ==0.3.*"
