@@ -15,8 +15,9 @@ from ipi.utils.messages import warning, info
 import ase.io
 
 torch = None
-mtt = None
+mts = None
 mta = None
+vesin_torch_metatensor = None
 
 __DRIVER_NAME__ = "metatensor"
 __DRIVER_CLASS__ = "MetatensorDriver"
@@ -63,19 +64,26 @@ class MetatensorDriver(Dummy_driver):
         *args,
         **kwargs,
     ):
-
-        global torch, mtt, mta, mta_ase_calculator
-        if torch is None or mtt is None or mta is None:
+        global torch, mts, mta, vesin_torch_metatensor
+        if (
+            torch is None
+            or mts is None
+            or mta is None
+            or vesin_torch_metatensor is None
+        ):
             try:
                 import torch
-                import metatensor.torch as mtt
+                import metatensor.torch as mts
                 import metatensor.torch.atomistic as mta
-                from metatensor.torch.atomistic import (
-                    ase_calculator as mta_ase_calculator,
-                )
+                import vesin.torch.metatensor as vesin_torch_metatensor
             except ImportError as e:
-                warning(f"Could not find or import metatensor.torch: {e}")
-                raise
+                message = (
+                    "could not find the metatensor driver dependencies, "
+                    "make sure they are installed with "
+                    "`python -m pip install metatensor[torch] vesin[torch]`"
+                )
+                warning(f"{message}: {e}")
+                raise ImportError(message) from e
 
         self.model = model
         self.device = device
@@ -84,8 +92,7 @@ class MetatensorDriver(Dummy_driver):
         self.energy_ensemble = energy_ensemble
         self.force_virial_ensemble = force_virial_ensemble
         self.non_conservative = non_conservative
-        self._name_template = template
-        self.template = ase.io.read(template)
+        self.template = template
         super().__init__(*args, **kwargs)
 
         info(f"Model arguments:\n{args}\n{kwargs}", self.verbose)
@@ -96,15 +103,15 @@ class MetatensorDriver(Dummy_driver):
         This loads the potential and atoms template in metatensor
         """
 
-        metatensor_major, metatensor_minor, *_ = mtt.__version__.split(".")
+        metatensor_major, metatensor_minor, *_ = mts.__version__.split(".")
         metatensor_major = int(metatensor_major)
         metatensor_minor = int(metatensor_minor)
 
         if metatensor_major != 0 or metatensor_minor < 6:
             raise ImportError(
                 "this code is only compatible with metatensor-torch >= v0.6, "
-                f"found version v{mtt.__version__} "
-                f"at '{mtt.__file__}'"
+                f"found version v{mts.__version__} "
+                f"at '{mts.__file__}'"
             )
 
         if self.force_virial_ensemble and not self.energy_ensemble:
@@ -130,6 +137,12 @@ class MetatensorDriver(Dummy_driver):
         )
         self.model = self.model.to(self.device)
         self._dtype = getattr(torch, self.model.capabilities().dtype)
+
+        # read the template and extract the corresponding atomic types
+        atoms = ase.io.read(self.template)
+        self._types = torch.from_numpy(atoms.numbers).to(
+            device=self.device, dtype=torch.int32
+        )
 
         # Register the requested outputs
         outputs = {"energy": mta.ModelOutput(quantity="energy", unit="eV")}
@@ -166,14 +179,14 @@ class MetatensorDriver(Dummy_driver):
 
     def __call__(self, cell, pos):
         """Get energies, forces and virials from the atomistic model."""
+        positions = unit_to_user("length", "angstrom", pos)
+        cell = unit_to_user("length", "angstrom", cell.T)
 
-        ase_atoms = self.template.copy()
-        ase_atoms.positions = unit_to_user("length", "angstrom", pos)
-        ase_atoms.cell = unit_to_user("length", "angstrom", cell.T)
-
-        types, positions, cell, pbc = mta_ase_calculator._ase_to_torch_data(
-            atoms=ase_atoms, dtype=self._dtype, device=self.device
+        positions = torch.from_numpy(positions).to(
+            dtype=self._dtype, device=self.device
         )
+        cell = torch.from_numpy(cell).to(dtype=self._dtype, device=self.device)
+        pbc = torch.norm(cell, dim=1) != 0.0
 
         if not self.non_conservative:
             positions.requires_grad_(True)
@@ -185,18 +198,11 @@ class MetatensorDriver(Dummy_driver):
             positions = positions @ strain
             cell = cell @ strain
 
-        system = mta.System(types, positions, cell, pbc)
-
-        for options in self.model.requested_neighbor_lists():
-            neighbors = mta.ase_calculator._compute_ase_neighbors(
-                ase_atoms, options, dtype=self._dtype, device=self.device
-            )
-            mta.register_autograd_neighbors(
-                system,
-                neighbors,
-                check_consistency=self.check_consistency,
-            )
-            system.add_neighbor_list(options, neighbors)
+        system = mta.System(self._types, positions, cell, pbc)
+        # compute the requires neighbor lists with vesin
+        vesin_torch_metatensor.compute_requested_neighbors(
+            system, system_length_unit="A", model=self.model
+        )
 
         outputs = self.model(
             [system],
@@ -271,13 +277,11 @@ class MetatensorDriver(Dummy_driver):
                 # torch.autograd.functional.jacobian, which is vectorized
                 def _compute_ensemble(positions, strain):
                     new_system = mta.System(
-                        types, positions @ strain, cell @ strain, pbc
+                        self._types, positions @ strain, cell @ strain, pbc
                     )
                     for options in self.model.requested_neighbor_lists():
-                        # we meed to recompute the neighbor list to be able to register gradients
-                        neighbors = mta.ase_calculator._compute_ase_neighbors(
-                            ase_atoms, options, dtype=self._dtype, device=self.device
-                        )
+                        # get the pre-computed NL, and re-attach it in the compute graph
+                        neighbors = mts.detach_block(system.get_neighbor_list(options))
                         mta.register_autograd_neighbors(
                             new_system,
                             neighbors,
