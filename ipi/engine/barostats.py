@@ -93,7 +93,7 @@ class Barostat:
     """
 
     def __init__(
-        self, dt=None, temp=None, tau=None, ebaro=None, thermostat=None, nmts=None, vol_constraint=None
+        self, dt=None, temp=None, tau=None, ebaro=None, thermostat=None, vol_constraint=None, nmts=None
     ):
         """Initialises base barostat class.
 
