@@ -100,8 +100,8 @@ class InputBaro(Input):
             {
                 "default": False,
                 "dtype": bool,
-                "help": "If True, a different ensemble is sampled where the cell volume remains fixed while allowing for full cell fluctuations."
-            }
+                "help": "If True, a different ensemble is sampled where the cell volume remains fixed while allowing for full cell fluctuations.",
+            },
         ),
     }
 
