@@ -182,19 +182,15 @@ class MetatensorDriver(Dummy_driver):
         positions = unit_to_user("length", "angstrom", pos)
         cell = unit_to_user("length", "angstrom", cell.T)
 
-        positions = torch.from_numpy(positions).to(
-            dtype=self._dtype, device=self.device
-        )
-        cell = torch.from_numpy(cell).to(dtype=self._dtype, device=self.device)
+        positions = torch.from_numpy(positions).to(dtype=self._dtype)
+        cell = torch.from_numpy(cell).to(dtype=self._dtype)
         pbc = torch.norm(cell, dim=1) != 0.0
 
         if not self.non_conservative:
             positions.requires_grad_(True)
             # this is to compute the virial (which is related to the derivative with
             # respect to the strain)
-            strain = torch.eye(
-                3, requires_grad=True, device=self.device, dtype=self._dtype
-            )
+            strain = torch.eye(3, requires_grad=True, dtype=self._dtype)
             positions = positions @ strain
             cell = cell @ strain
 
@@ -203,6 +199,7 @@ class MetatensorDriver(Dummy_driver):
         vesin_torch_metatensor.compute_requested_neighbors(
             system, system_length_unit="A", model=self.model
         )
+        system = system.to(self.device)
 
         outputs = self.model(
             [system],
