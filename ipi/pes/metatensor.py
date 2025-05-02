@@ -140,9 +140,7 @@ class MetatensorDriver(Dummy_driver):
 
         # read the template and extract the corresponding atomic types
         atoms = ase.io.read(self.template)
-        self._types = torch.from_numpy(atoms.numbers).to(
-            device=self.device, dtype=torch.int32
-        )
+        self._types = torch.from_numpy(atoms.numbers).to(dtype=torch.int32)
 
         # Register the requested outputs
         outputs = {"energy": mta.ModelOutput(quantity="energy", unit="eV")}
