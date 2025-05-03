@@ -7,6 +7,7 @@ potentials
 
 import json
 import warnings
+import numpy as np
 
 from ipi.utils.units import unit_to_internal, unit_to_user
 from .dummy import Dummy_driver
@@ -19,11 +20,11 @@ mts = None
 mta = None
 vesin_torch_metatensor = None
 
-__DRIVER_NAME__ = "metatensor"
-__DRIVER_CLASS__ = "MetatensorDriver"
+__DRIVER_NAME__ = "metatensor_energy_only"
+__DRIVER_CLASS__ = "MetatensorEnergyOnlyDriver"
 
 
-class MetatensorDriver(Dummy_driver):
+class MetatensorEnergyOnlyDriver(Dummy_driver):
     """
     Driver for `metatensor` MLIPs
     The driver requires specification of a torchscript model,
@@ -176,21 +177,13 @@ class MetatensorDriver(Dummy_driver):
         info(f"Metatomic model data:\n{self.model.metadata()}", self.verbose)
 
     def __call__(self, cell, pos):
-        """Get energies, forces and virials from the atomistic model."""
+        """Get energies from the atomistic model."""
         positions = unit_to_user("length", "angstrom", pos)
         cell = unit_to_user("length", "angstrom", cell.T)
 
         positions = torch.from_numpy(positions).to(dtype=self._dtype)
         cell = torch.from_numpy(cell).to(dtype=self._dtype)
         pbc = torch.norm(cell, dim=1) != 0.0
-
-        if not self.non_conservative:
-            positions.requires_grad_(True)
-            # this is to compute the virial (which is related to the derivative with
-            # respect to the strain)
-            strain = torch.eye(3, requires_grad=True, dtype=self._dtype)
-            positions = positions @ strain
-            cell = cell @ strain
 
         system = mta.System(self._types, positions, cell, pbc)
         # compute the requires neighbor lists with vesin
@@ -206,119 +199,14 @@ class MetatensorDriver(Dummy_driver):
         )
         energy_tensor = outputs["energy"].block().values
 
-        if self.non_conservative:
-            forces_tensor = outputs["non_conservative_forces"].block().values
-            if "non_conservative_stress" in outputs:
-                # Note that i-pi calls "virial" what ASE and metatensor call "stress".
-                # Here, we use variable naming that is consistent with ASE/metatensor,
-                # which define "stress" in the same way as the i-pi "virial" and
-                # "virial" as (- stress * volume)
-                # The variable "ipi_virial" is the only exception: it is the virial as
-                # defined in i-pi
-                stress_tensor = outputs["non_conservative_stress"].block().values
-            else:
-                stress_tensor = torch.full(
-                    (3, 3), torch.nan, device=self.device, dtype=self._dtype
-                )
-        else:
-            forces_tensor, virial_tensor = torch.autograd.grad(
-                energy_tensor,
-                (positions, strain),
-                grad_outputs=-torch.ones_like(energy_tensor),
-            )
-            stress_tensor = -virial_tensor / torch.abs(torch.det(cell))
-
         energy = unit_to_internal(
             "energy",
             "electronvolt",
             energy_tensor.detach().to(device="cpu", dtype=torch.float64).numpy().item(),
         )
-        forces = unit_to_internal(
-            "force",
-            "ev/ang",
-            forces_tensor.detach()
-            .reshape(3, -1)
-            .to(device="cpu", dtype=torch.float64)
-            .numpy(),
-        )
-        ipi_virial = unit_to_internal(
-            "pressure",
-            "ev/ang3",
-            stress_tensor.detach()
-            .reshape(3, 3)
-            .to(device="cpu", dtype=torch.float64)
-            .numpy(),
-        )
 
-        extras_dict = {}
+        forces = np.zeros((len(pos), 3), dtype=np.float64)
+        virial = np.zeros((3, 3), dtype=np.float64)
 
-        if self.energy_ensemble:
-            energy_ensemble_tensor = (
-                outputs["energy_ensemble"].block().values.squeeze(0)
-            )
-            energy_ensemble = unit_to_internal(
-                "energy",
-                "electronvolt",
-                energy_ensemble_tensor.detach()
-                .to(device="cpu", dtype=torch.float64)
-                .numpy(),
-            )
-            extras_dict["committee_pot"] = list(energy_ensemble)
-
-            # the ensemble of forces and virials require a more expensive calculation
-            # so they are controlled by a separate option
-            if self.force_virial_ensemble:
-                # this function definition is necessary to use
-                # torch.autograd.functional.jacobian, which is vectorized
-                def _compute_ensemble(positions, strain):
-                    new_system = mta.System(
-                        self._types, positions @ strain, cell @ strain, pbc
-                    )
-                    for options in self.model.requested_neighbor_lists():
-                        # get the pre-computed NL, and re-attach it in the compute graph
-                        neighbors = mts.detach_block(system.get_neighbor_list(options))
-                        mta.register_autograd_neighbors(
-                            new_system,
-                            neighbors,
-                            check_consistency=self.check_consistency,
-                        )
-                        new_system.add_neighbor_list(options, neighbors)
-
-                    return (
-                        self.model(
-                            [new_system],
-                            self.evaluation_options,
-                            check_consistency=self.check_consistency,
-                        )["energy_ensemble"]
-                        .block()
-                        .values.squeeze(0)
-                    )
-
-                minus_force_ensemble_tensor, minus_virial_ensemble_tensor = (
-                    torch.autograd.functional.jacobian(
-                        _compute_ensemble, (positions, strain), vectorize=True
-                    )
-                )
-                force_ensemble_tensor = -minus_force_ensemble_tensor
-                stress_ensemble_tensor = minus_virial_ensemble_tensor / torch.abs(
-                    torch.det(cell)
-                )
-                force_ensemble = unit_to_internal(
-                    "force",
-                    "ev/ang",
-                    force_ensemble_tensor.detach()
-                    .to(device="cpu", dtype=torch.float64)
-                    .numpy(),
-                )
-                stress_ensemble = unit_to_internal(
-                    "pressure",
-                    "ev/ang3",
-                    stress_ensemble_tensor.detach()
-                    .to(device="cpu", dtype=torch.float64)
-                    .numpy(),
-                )
-                extras_dict["committee_force"] = list(force_ensemble.flatten())
-                extras_dict["committee_virial"] = list(stress_ensemble.flatten())
-
-        extras = json.dumps(extras_dict)
-        return energy, forces, ipi_virial, extras
+        extras = json.dumps({})
+        return energy, forces, virial, extras
