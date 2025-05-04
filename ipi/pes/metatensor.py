@@ -198,6 +198,7 @@ class MetatensorDriver(Dummy_driver):
             system, system_length_unit="A", model=self.model
         )
         system = system.to(self.device)
+        cell_volume = torch.abs(torch.det(cell))
 
         outputs = self.model(
             [system],
@@ -226,7 +227,11 @@ class MetatensorDriver(Dummy_driver):
                 (positions, strain),
                 grad_outputs=-torch.ones_like(energy_tensor),
             )
-            stress_tensor = -virial_tensor / torch.abs(torch.det(cell))
+            print(f"check stress, {virial_tensor}")
+            stress_tensor = virial_tensor / cell_volume
+    
+        virial_tensor = 0.5*(stress_tensor+stress_tensor.T)*cell_volume # symmetrize, for non-constrained models
+        print("chk cell ", cell)
 
         energy = unit_to_internal(
             "energy",
@@ -242,13 +247,14 @@ class MetatensorDriver(Dummy_driver):
             .numpy(),
         )
         ipi_virial = unit_to_internal(
-            "pressure",
-            "ev/ang3",
-            stress_tensor.detach()
+            "energy",
+            "electronvolt",
+            virial_tensor.detach()
             .reshape(3, 3)
             .to(device="cpu", dtype=torch.float64)
             .numpy(),
         )
+        print(f"check 2 {ipi_virial}")
 
         extras_dict = {}
 
