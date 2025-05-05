@@ -309,7 +309,7 @@ class MetatensorDriver(Dummy_driver):
                 )
                 virial_ensemble = unit_to_internal(
                     "energy",
-                    "ev/ang3",
+                    "electronvolt",
                     virial_ensemble_tensor.detach()
                     .to(device="cpu", dtype=torch.float64)
                     .numpy(),
