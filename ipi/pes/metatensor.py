@@ -248,6 +248,8 @@ class MetatensorDriver(Dummy_driver):
             .to(device="cpu", dtype=torch.float64)
             .numpy(),
         )
+        # symmetrize the virial for rotationally unconstrained models
+        virial = (virial + virial.T) / 2.0
 
         extras_dict = {}
 
@@ -314,6 +316,10 @@ class MetatensorDriver(Dummy_driver):
                     .to(device="cpu", dtype=torch.float64)
                     .numpy(),
                 )
+                # symmetrize the virial for rotationally unconstrained models
+                virial_ensemble = (
+                    virial_ensemble + virial_ensemble.swapaxes(1, 2)
+                ) / 2.0
                 extras_dict["committee_force"] = list(force_ensemble.flatten())
                 extras_dict["committee_virial"] = list(virial_ensemble.flatten())
 
