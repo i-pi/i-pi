@@ -45,6 +45,8 @@ class PET_driver(Dummy_driver):
         except ImportError:
             raise ImportError("Could not find or import the PET module")
 
+        warning("PET driver is deprecated and will be removed in the next release.")
+
         self.model_path = model_path
         self.template = template
         super().__init__(*args, **kwargs)
