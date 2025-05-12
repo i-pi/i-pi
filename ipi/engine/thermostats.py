@@ -1143,15 +1143,6 @@ class ThermoFFL(ThermoLangevin):
        flip: Type of flip to use ('soft', 'hard', 'rescale').
     """
 
-    def get_T(self):
-        """Calculates the coefficient of the overall drift of the velocities."""
-
-        return np.exp(-self.dt / self.tau)
-
-    def get_S(self):
-        """Calculates the coefficient of the white noise."""
-
-        return np.sqrt(Constants.kb * self.temp * (1 - self.T**2))
 
     def __init__(self, temp=1.0, dt=1.0, tau=1.0, ethermo=0.0, flip="rescale"):
         """Initialises ThermoFFL.
@@ -1167,16 +1158,8 @@ class ThermoFFL(ThermoLangevin):
               Allowed values are 'soft', 'hard', 'rescale', 'none'.
         """
 
-        super(ThermoFFL, self).__init__(temp, dt, ethermo)
+        super(ThermoFFL, self).__init__(temp=temp, dt=dt, tau=tau, ethermo=ethermo)
 
-        self._dt = depend_value(value=dt, name="dt")
-        self._tau = depend_value(value=tau, name="tau")
-        self._T = depend_value(
-            name="T", func=self.get_T, dependencies=[self._tau, self._dt]
-        )
-        self._S = depend_value(
-            name="S", func=self.get_S, dependencies=[self._temp, self._T]
-        )
         self._flip = depend_value(value=flip, name="flip")
 
         allowed_flips = ["soft", "hard", "rescale", "none"]
@@ -1211,8 +1194,8 @@ class ThermoFFL(ThermoLangevin):
         # Check whether to flip momenta back
         if self.flip == "soft":
             # Soft flip
-            p_old = np.reshape(p_old, (len(p) / 3, 3))
-            p_new = np.reshape(p, (len(p) / 3, 3))
+            p_old = np.reshape(p_old, (-1, 3))
+            p_new = np.reshape(p, (-1, 3))
             dotpr = hfunc(
                 np.sum(np.multiply(p_old, p_new), axis=1)
                 / np.sum(np.multiply(p_old, p_old), axis=1)
@@ -1223,8 +1206,8 @@ class ThermoFFL(ThermoLangevin):
             p = np.multiply(p, np.sign(np.multiply(p, p_old)))
         elif self.flip == "rescale":
             # Rescale flip
-            p_old = np.reshape(p_old, (len(p) / 3, 3))
-            p_new = np.reshape(p, (len(p) / 3, 3))
+            p_old = np.reshape(p_old, (-1, 3))
+            p_new = np.reshape(p, (-1, 3))
             scalfac = np.linalg.norm(p_new, axis=1) / np.linalg.norm(p_old, axis=1)
             p = np.reshape(np.multiply(scalfac, p_old.T).T, len(p))
         # Otherwise we have chosen 'none', and we just don't do anything here
@@ -1237,8 +1220,7 @@ class ThermoFFL(ThermoLangevin):
         self.p = p
         self.ethermo = et
 
-
-dproperties(ThermoFFL, "flip")
+dproperties(ThermoFFL, ["flip"])
 
 
 class MultiThermo(Thermostat):
