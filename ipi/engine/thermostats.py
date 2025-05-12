@@ -1143,7 +1143,6 @@ class ThermoFFL(ThermoLangevin):
        flip: Type of flip to use ('soft', 'hard', 'rescale').
     """
 
-
     def __init__(self, temp=1.0, dt=1.0, tau=1.0, ethermo=0.0, flip="rescale"):
         """Initialises ThermoFFL.
 
@@ -1219,6 +1218,7 @@ class ThermoFFL(ThermoLangevin):
 
         self.p = p
         self.ethermo = et
+
 
 dproperties(ThermoFFL, ["flip"])
 
