@@ -990,7 +990,7 @@ class ThermoNMGLEG(ThermoNMGLE):
         self._thermos.append(t)
 
 
-dproperties(ThermoNMGLE, ["tau"])
+dproperties(ThermoNMGLEG, ["tau"])
 
 
 class ThermoCL(Thermostat):
