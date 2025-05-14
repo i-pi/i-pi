@@ -11,4 +11,4 @@ as the built-in driver only supports cubic cells for the TIP4P/f potential
 
 `NPzT_ensemble_MTTK`: classical NVT simulations with the MTTK barostat with only the z-component cell allowed to fluctuate
 
-`NVsigmaT_ensemble`: classical (N, V, $\sigma_a = 0$, T)-simulation with the MTTK barostat, where the cell is allowed to fluctuate under the constraint of constant volume
+`NVsigmaT_ensemble_MTTK`: classical (N, V, $\sigma_a = 0$, T)-simulation with the MTTK barostat, where the cell is allowed to fluctuate under the constraint of constant volume

@@ -100,7 +100,7 @@ class InputBaro(Input):
             {
                 "default": False,
                 "dtype": bool,
-                "help": "If True, a different ensemble is sampled where the cell volume remains fixed while allowing for full cell fluctuations.",
+                "help": "If True, the (N, V, sigma_a = 0, T)-ensemble is sampled, which allows for full cell fluctuations while keeping the cell volume fixed. This ensemble was introduced in [doi:10.1021/acs.jctc.5b00748]. Note that it is only implemented for the MTTK ('flexible') barostat, enabling it for any other barostat will not work and result in an error.",
             },
         ),
     }
