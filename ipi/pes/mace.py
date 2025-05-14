@@ -37,10 +37,11 @@ class MACE_driver(ASEDriver):
             from mace.calculators import MACECalculator
         except:
             raise ImportError("Couldn't load mace bindings")
-        
+
         try:
             from ase.outputs import _defineprop
-            _defineprop("node_energy",dtype=float,shape=('natoms',))
+
+            _defineprop("node_energy", dtype=float, shape=("natoms",))
         except ImportError:
             raise ValueError("Could not find or import the ASE module")
 
