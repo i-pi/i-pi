@@ -1,4 +1,4 @@
-# i-PI: a Universal Force Engine
+# i-PI: a Universal Force Engine (test)
 
 A Python interface for ab initio path integral molecular dynamics simulations (and more).
 i-PI is a Python server (that does not need to be compiled and only requires a relatively
