@@ -13,7 +13,7 @@ __DRIVER_CLASS__ = "MACE_driver"
 class MACE_driver(ASEDriver):
     """
     Driver for the MACE MLIPs.
-    The driver requires specification of a .json model,
+    The driver requires specification of a torch model,
     and a template file that describes the chemical makeup
     of the structure.
 
