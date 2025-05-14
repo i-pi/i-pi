@@ -1,6 +1,5 @@
 """Interface with ASE calculators"""
 
-import json
 import numpy as np
 from .dummy import Dummy_driver
 
@@ -82,27 +81,15 @@ class ASEDriver(Dummy_driver):
         structure.calc = self.ase_calculator
 
         # Do the actual calculation
-        self.ase_calculator.calculate(structure)
-        properties = self.ase_calculator.results
+        properties = structure.get_properties(self.capabilities)
 
-        if "energy" in self.capabilities:
-            pot = properties["energy"]
-            del properties["energy"]
-        else:
-            pot = 0.0
-
-        if "forces" in self.capabilities:
-            force = properties["forces"]
-            del properties["forces"]
-        else:
-            force = np.zeros_like(pos)
-
-        if "stress" in self.capabilities:
-            stress = properties["stress"]
-            del properties["stress"]
-        else:
-            stress = np.zeros(9)
-
+        pot = properties["energy"] if "energy" in self.capabilities else 0.0
+        force = (
+            properties["forces"]
+            if "forces" in self.capabilities
+            else np.zeros_like(pos)
+        )
+        stress = properties["stress"] if "stress" in self.capabilities else np.zeros(9)
         if len(stress) == 6:
             # converts from voight notation
             stress = np.array(stress[[0, 5, 4, 5, 1, 3, 4, 3, 2]])
@@ -116,27 +103,6 @@ class ASEDriver(Dummy_driver):
         vir_ipi = np.array(
             unit_to_internal("energy", "electronvolt", vir_calc.T), dtype=np.float64
         )
-        extras = json.dumps(properties, cls=NumpyEncoder)
+        extras = ""
 
         return pot_ipi, force_ipi, vir_ipi, extras
-
-
-# ---------------------------------------#
-class NumpyEncoder(json.JSONEncoder):
-    """
-    Custom JSON encoder to handle NumPy arrays.
-
-    This encoder converts NumPy arrays into Python lists, ensuring compatibility
-    with the JSON serialization format.
-
-    Example:
-        >>> import numpy as np
-        >>> data = {"array": np.array([1, 2, 3])}
-        >>> json.dumps(data, cls=NumpyEncoder)
-        '{"array": [1, 2, 3]}'
-    """
-
-    def default(self, obj):
-        if isinstance(obj, np.ndarray):
-            return obj.tolist()  # Convert NumPy array to list
-        return super().default(obj)
