@@ -152,7 +152,9 @@ class InputBaro(Input):
         super(InputBaro, self).fetch()
         if self.vol_constraint.fetch() and self.mode.fetch() != "flexible":
             raise ValueError(
-                "Constraining the volume is not supported for the " + self.mode.fetch() + " barostat, use flexible instead."
+                "Constraining the volume is not supported for the "
+                + self.mode.fetch()
+                + " barostat, use flexible instead."
             )
         if self.mode.fetch() == "isotropic":
             baro = BaroBZP(thermostat=self.thermostat.fetch(), tau=self.tau.fetch())
