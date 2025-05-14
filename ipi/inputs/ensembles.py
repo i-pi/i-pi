@@ -29,7 +29,7 @@ class InputEnsemble(Input):
 
     Fields:
        temperature: An optional float giving the temperature in atomic units.
-          Defaults to 1.0.
+          Defaults to -1.0.
        pressure: An optional float giving the external pressure in atomic units.
           Defaults to 1.0.
        eens: An optional float giving the ensemble contribution to the conserved

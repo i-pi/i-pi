@@ -136,7 +136,7 @@ class InputSystem(Input):
             InputEnsemble,
             {
                 "help": InputEnsemble.default_help,
-                "default": input_default(factory=Ensemble, kwargs={"temp": 1.0}),
+                "default": input_default(factory=Ensemble, kwargs={"temp": -1.0}),
             },
         ),
         "motion": (
