@@ -36,8 +36,13 @@ class Rascal_driver(Dummy_driver):
         )
         try:
             from rascal.models.genericmd import GenericMDCalculator as RascalCalc
-        except:
+        except ImportError:
             raise ImportError("Couldn't load librascal bindings")
+
+        warning(
+            "librascal driver is deprecated and will be removed in the next release."
+        )
+
         self.model = model
         self.template = template
 

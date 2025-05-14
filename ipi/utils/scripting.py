@@ -226,7 +226,6 @@ class InteractiveSimulation:
         :param steps: int, number of steps the simulation should be advanced by
         """
 
-        print(self.simulation.step)
         self.simulation.tsteps = self.simulation.step + steps
         self.simulation.run(write_outputs=write_outputs)
         # saves the RESTART file
@@ -297,3 +296,22 @@ class InteractiveSimulation:
                     system.beads.p[b] = struc.arrays[
                         "ipi_velocities"
                     ].flatten() * unit_to_internal("velocity", "ase", 1.0)
+
+    def set_motion_step(self, custom_step):
+        """
+        Overrides the step function of the main motion class with a custom one.
+        `custom_step` should be defined as
+
+        ```
+        def custom_step(self, step=None):
+            do_something
+        ```
+
+        and `self` will be a reference to the motion class itself; depending on the
+        original motion class, this might contain thermostats, barostats, etc.
+        """
+
+        for s in self.simulation.syslist:
+            s.motion.__dict__["step"] = custom_step.__get__(
+                s.motion, s.motion.__class__
+            )

@@ -13,6 +13,7 @@ from ipi.utils.messages import warning, verbosity
 
 try:
     import ase
+    import ase.io
 except ImportError:
     ase = None
 
@@ -138,6 +139,10 @@ def read_trajectory(
         if format not in ["xyz", "pdb", "binary", "json", "ase"]:
             raise ValueError(f"Unrecognized file format: {format}")
 
+    if format == "ase":
+        # should already be in ASE format, just read and return
+        return ase.io.read(filename, ":", format="extxyz")
+
     file_handle = open(filename, "r")
     comment_regex = re.compile(r"(\w+)\{([^}]+)\}")
     step_regex = re.compile(r"Step:\s+(\d+)")
@@ -240,7 +245,6 @@ def read_trajectory(
                     )
 
                 frames.append(frame)
-
         except EOFError:
             break
         except:
