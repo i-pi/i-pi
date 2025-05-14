@@ -1,0 +1,73 @@
+# Metatomic example
+
+Runs an example of a metatomic model, implementing a basic Lennard-Jones model
+with the parameters for Nickel.
+
+This driver can be used with any model following the
+[metatomic](https://docs.metatensor.org/metatomic) interface. This can be used
+for classical force-fields, but it more intended for machine learning
+potentials.
+
+## Installation
+
+The code requires additional dependencies, which you can install with
+
+```bash
+pip install metatomic-torch vesin ase
+```
+
+## Running the example
+
+```bash
+i-pi input.xml & sleep 1
+i-pi-py_driver -a metatomic -u -m metatomic -o nickel.xyz,nickel-lj.pt
+
+# with all the optional parameters:
+i-pi-py_driver -a metatomic -u -m metatomic -o nickel.xyz,nickel-lj.pt,device=cpu,extensions=some-extensions-dir/,check_consistency=True
+```
+
+The options (after `-o`) are as follow:
+
+- the path to a template file, we will use it to get the types for all atoms in
+  the system
+- the path to the model file
+- `device` controls which torch device to use to run the model
+- `extensions` is the path to a directory containing TorchScript extensions. If
+  the model requires such extensions, we will try to load them from this
+  directory first
+- `check_consistency` controls whether we should run some extra internal
+  consistency checks about data given to the model and data returned by the
+  model.
+- `energy_ensemble` is a bool specifying whether to compute (if available in
+  the model) an ensemble of energy predictions
+- `force_virial_ensemble` is a bool specifying whether to also compute
+  an ensemble of force predictions
+
+## Running with FFDirect
+
+It is also possible to use the metatomic PES directly, without the need for an
+external driver. To do so, you need to use a `<ffdirect>` clause in the input,
+and specify the appropriate options as a dictionary. Then, you can simply run
+
+```bash
+i-pi input-direct.xml
+```
+
+## Running with a scripting interface
+
+To see how to use the metatomic driver through the interactive Python interface,
+check the `run.py` script
+
+```bash
+python run.py
+```
+
+## Running with an ensemble output
+
+Metatomic models can compute ensemble of predictions for uncertainty
+quantification. An example of how to do this is given in `input-ensemble.xml`,
+which you can run with
+
+```bash
+i-pi input-ensemble.xml
+```
