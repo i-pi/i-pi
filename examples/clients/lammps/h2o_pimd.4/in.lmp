@@ -9,7 +9,7 @@ angle_style     harmonic
 #kspace_style	pppm 0.0001
 kspace_style	pppm/tip4p 0.0001
 
-read_data	data.lmp
+read_data	water_216_data.lmp
 pair_coeff  * * 0 0
 pair_coeff  1  1  0.000295147 5.96946
 
