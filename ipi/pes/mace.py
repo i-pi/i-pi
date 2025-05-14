@@ -18,12 +18,12 @@ class MACE_driver(ASEDriver):
     of the structure.
 
     Command-line:
-    i-pi-py_driver.py -m mace -u -o template=template.xyz,model=model.json
+    i-pi-py_driver -m mace -u -a address -o template=structure.xyz,model=mace_mp.model
 
     Parameters:
     :param template: string, filename of an ASE-readable structure file
         to initialize atomic number and types
-    :param model: string, filename of the json-formatted model file
+    :param model: string, filename of the MACE model
     """
 
     def __init__(self, template, model, device="cpu", *args, **kwargs):
