@@ -192,7 +192,7 @@ class ForceBead:
 
         # print diagnostics about the elapsed time
         info(
-            "# forcefield %s evaluated in %f (queue) and %f (dispatched) sec."
+            " @forces: FF %s evaluated in %f (queue) and %f (dispatched) sec."
             % (
                 self.ff.name,
                 request["t_finished"] - request["t_queued"],
