@@ -483,6 +483,7 @@ class FFDirect(FFEval):
 
         request["result"] = results
         request["status"] = "Done"
+        request["t_finished"] = time.time()
 
 
 class FFLennardJones(FFEval):
