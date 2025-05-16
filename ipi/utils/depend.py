@@ -31,7 +31,7 @@ from copy import deepcopy
 
 import numpy as np
 
-from ipi.utils.messages import verbosity, warning
+from ipi.utils.messages import verbosity, warning, info
 
 
 __all__ = [
@@ -273,6 +273,7 @@ class depend_base(object):
         if self._synchro is not None:
             if not self._name == self._synchro.manual:
                 self.set(self._func[self._synchro.manual](), manual=False)
+                info(f" @depend: Set value for {self._name} (syncro)", verbosity.debug)
             else:
                 warning(
                     self._name + " probably shouldn't be tainted (synchro)",
@@ -280,6 +281,7 @@ class depend_base(object):
                 )
         elif self._func is not None:
             self.set(self._func(), manual=False)
+            info(f" @depend: Set value for {self._name} (auto)", verbosity.debug)
         else:
             warning(
                 self._name + " probably shouldn't be tainted (value)", verbosity.low
@@ -298,6 +300,7 @@ class depend_base(object):
 
         if self._synchro is not None:
             self._synchro.manual = self._name
+            info(f" @depend: Set value for {self._name} (manual)", verbosity.debug)
         elif self._func is not None:
             raise NameError(
                 "Cannot set manually the value of the automatically-computed property <"
