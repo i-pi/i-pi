@@ -156,6 +156,12 @@ class InputBaro(Input):
                 + self.mode.fetch()
                 + " barostat, use flexible instead."
             )
+        if self.vol_constraint.fetch() and any(
+            _ in self.hfix.fetch() for _ in ("xx", "yy", "zz")
+        ):
+            raise ValueError(
+                "Diagonal cell entries cannot be fixed while constraining the volume."
+            )
         if self.mode.fetch() == "isotropic":
             baro = BaroBZP(thermostat=self.thermostat.fetch(), tau=self.tau.fetch())
             if self.p._explicit:
