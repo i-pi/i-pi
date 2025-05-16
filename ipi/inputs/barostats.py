@@ -95,6 +95,14 @@ class InputBaro(Input):
                 "help": "A list of the cell entries that should be held fixed (xx, yy, zz, xy, xz, yz). 'offdiagonal' is an alias for xy, xz, yz.",
             },
         ),
+        "vol_constraint": (
+            InputValue,
+            {
+                "default": False,
+                "dtype": bool,
+                "help": "If True, the (N, V, sigma_a = 0, T)-ensemble is sampled, which allows for full cell fluctuations while keeping the cell volume fixed. This ensemble was introduced in [doi:10.1021/acs.jctc.5b00748]. Note that it is only implemented for the MTTK ('flexible') barostat, enabling it for any other barostat will not work and result in an error.",
+            },
+        ),
     }
 
     default_help = "Simulates an external pressure bath."
@@ -120,6 +128,7 @@ class InputBaro(Input):
             self.mode.store("flexible")
             self.p.store(baro.p)
             self.hfix.store(baro.hfix)
+            self.vol_constraint.store(baro.vol_constraint)
         elif type(baro) is BaroRGB:
             self.mode.store("anisotropic")
             self.p.store(baro.p)
@@ -141,6 +150,18 @@ class InputBaro(Input):
         """
 
         super(InputBaro, self).fetch()
+        if self.vol_constraint.fetch() and self.mode.fetch() != "flexible":
+            raise ValueError(
+                "Constraining the volume is not supported for the "
+                + self.mode.fetch()
+                + " barostat, use flexible instead."
+            )
+        if self.vol_constraint.fetch() and any(
+            _ in self.hfix.fetch() for _ in ("xx", "yy", "zz")
+        ):
+            raise ValueError(
+                "Diagonal cell entries cannot be fixed while constraining the volume."
+            )
         if self.mode.fetch() == "isotropic":
             baro = BaroBZP(thermostat=self.thermostat.fetch(), tau=self.tau.fetch())
             if self.p._explicit:
@@ -154,6 +175,7 @@ class InputBaro(Input):
                 thermostat=self.thermostat.fetch(),
                 tau=self.tau.fetch(),
                 hfix=self.hfix.fetch(),
+                vol_constraint=self.vol_constraint.fetch(),
             )
             if self.p._explicit:
                 baro.p = self.p.fetch()
