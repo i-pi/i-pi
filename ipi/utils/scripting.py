@@ -262,9 +262,9 @@ class InteractiveSimulation:
                     symbols=dstrip(system.beads.names),
                     cell=dstrip(system.cell.h).T * unit_to_user("length", "ase", 1.0),
                 )
-                struc.arrays["ipi_velocities"] = dstrip(system.beads.p[b]).reshape(
+                struc.arrays["ipi_momentum"] = dstrip(system.beads.p[b]).reshape(
                     -1, 3
-                ) * unit_to_user("velocity", "ase", 1.0)
+                ) * unit_to_user("momentum", "ase", 1.0)
                 struc.arrays["ipi_forces"] = dstrip(system.forces.f[b]).reshape(
                     -1, 3
                 ) * unit_to_user("force", "ase", 1.0)
@@ -292,10 +292,14 @@ class InteractiveSimulation:
                     "length", "ase", 1.0
                 )
                 system.cell.h = struc.cell.T * unit_to_internal("length", "ase", 1.0)
-                if "ipi_velocities" in struc.arrays:
+                if "ipi_momentum" in struc.arrays:
                     system.beads.p[b] = struc.arrays[
-                        "ipi_velocities"
-                    ].flatten() * unit_to_internal("velocity", "ase", 1.0)
+                        "ipi_momentum"
+                    ].flatten() * unit_to_internal("momentum", "ase", 1.0)
+                elif "ipi_velocity" in struc.arrays:
+                    system.beads.p[b] = struc.arrays[
+                        "ipi_velocity"
+                    ].flatten() * unit_to_internal("velocity", "ase", 1.0) *dstrip(system.beads.m3)[0]
 
     def set_motion_step(self, custom_step):
         """
