@@ -1,11 +1,12 @@
 import numpy as np
 from ipi.utils.depend import dstrip
-from ipi.utils.units import Elements, unit_to_internal, unit_to_user
+from ipi.utils.units import Elements, unit_to_internal, unit_to_user, Constants
 from ipi.inputs.beads import InputBeads
 from ipi.inputs.cell import InputCell
 from ipi.engine.beads import Beads
 from ipi.engine.cell import Cell
 from ipi.engine.simulation import Simulation
+from ipi.engine.motion import Motion, Dynamics
 from ipi.utils.io.inputs.io_xml import xml_parse_string, xml_write, write_dict
 from ipi.pes import __drivers__
 
@@ -370,3 +371,28 @@ class InteractiveSimulation:
 
         for s, f in zip(self.simulation.syslist, custom_step):
             s.motion.__dict__["step"] = f.__get__(s.motion, s.motion.__class__)
+
+    def reset_momenta(self, temperature_K=None):
+        """Resets system momenta"""
+
+        for s in self.simulation.syslist:
+            if temperature_K is not None:
+                temperature = unit_to_internal("energy", "kelvin", temperature_K)
+            else:
+                temperature = s.ensemble.temp
+
+            # also correct for the change in kinetic energy
+            s.ensemble.eens += s.nm.kin
+
+            # initialize in the nm basis to handle PIMD mass scaling
+            s.nm.pnm[:] = (
+                self.simulation.prng.gvec((s.beads.nbeads, 3 * s.beads.natoms))
+                * np.sqrt(dstrip(s.nm.dynm3))
+                * np.sqrt(s.beads.nbeads * temperature * Constants.kb)
+            )
+
+            s.ensemble.eens -= s.nm.kin
+
+            # apply momentum constraints
+            if isinstance(s.motion, Dynamics):
+                s.motion.integrator.pconstraints()
