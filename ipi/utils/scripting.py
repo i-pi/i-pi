@@ -238,7 +238,7 @@ def _define_calculator():
                     self.results["forces"] = self._forces
 
 
-class InteractiveSimulation:
+class InteractiveSimulation(Simulation):
     """A wrapper to `Simulation` that allows accessing
     properties and configurations in a "safe" way from Python.
     The object is initialized from an XML input, and supports
@@ -250,7 +250,8 @@ class InteractiveSimulation:
     """
 
     def __init__(self, xml_input):
-        self.simulation = Simulation.load_from_xml(xml_input)
+        sim = Simulation.load_from_xml(xml_input)
+        self.__dict__.update(sim.__dict__)
 
     def run(self, steps=1, write_outputs=True):
         """Stepper through the simulation.
@@ -259,14 +260,11 @@ class InteractiveSimulation:
         :param steps: int, number of steps the simulation should be advanced by
         """
 
-        self.simulation.tsteps = self.simulation.step + steps
-        self.simulation.run(write_outputs=write_outputs)
+        self.tsteps = self.step + steps
+        super().run(write_outputs=write_outputs)
         # saves the RESTART file
-        self.simulation.chk.write(store=True)
-        self.simulation.step += 1
-
-    def run_step(self, step):
-        self.simulation.run_step(step)
+        self.chk.write(store=True)
+        self.step += 1
 
     def properties(self, property):
         """Fetches properties from the simulation state.
@@ -274,7 +272,7 @@ class InteractiveSimulation:
         :param property: the name of a property to be fetched from the simulation
         """
         props = []
-        for system in self.simulation.syslist:
+        for system in self.syslist:
             value, dimension, unit = system.properties[property]
             props.append(value * unit_to_user(dimension, "ase", 1.0))
         if len(props) == 1:
@@ -287,7 +285,7 @@ class InteractiveSimulation:
         _define_calculator()
 
         sys_structures = []
-        for system in self.simulation.syslist:
+        for system in self.syslist:
             structures = []
             for b in range(system.beads.nbeads):
                 struc = ase.Atoms(
@@ -317,9 +315,9 @@ class InteractiveSimulation:
     def set_structures(self, sys_structures):
         _asecheck()
 
-        if len(self.simulation.syslist) == 1:
+        if len(self.syslist) == 1:
             sys_structures = [sys_structures]
-        for system, structures in zip(self.simulation.syslist, sys_structures):
+        for system, structures in zip(self.syslist, sys_structures):
             if system.beads.nbeads == 1:
                 structures = [structures]
             for b, struc in enumerate(structures):
@@ -341,7 +339,7 @@ class InteractiveSimulation:
         """
 
         step_list = []
-        for s in self.simulation.syslist:
+        for s in self.syslist:
             step_list.append(s.motion.step)
 
         if len(step_list) == 1:
@@ -367,15 +365,15 @@ class InteractiveSimulation:
         """
 
         if not hasattr(custom_step, "__len__"):
-            custom_step = [custom_step for s in self.simulation.syslist]
+            custom_step = [custom_step for s in self.syslist]
 
-        for s, f in zip(self.simulation.syslist, custom_step):
+        for s, f in zip(self.syslist, custom_step):
             s.motion.__dict__["step"] = f.__get__(s.motion, s.motion.__class__)
 
-    def reset_momenta(self, temperature_K=None):
+    def thermalize_momenta(self, temperature_K=None):
         """Resets system momenta"""
 
-        for s in self.simulation.syslist:
+        for s in self.syslist:
             if temperature_K is not None:
                 temperature = unit_to_internal("energy", "kelvin", temperature_K)
             else:
@@ -386,7 +384,7 @@ class InteractiveSimulation:
 
             # initialize in the nm basis to handle PIMD mass scaling
             s.nm.pnm[:] = (
-                self.simulation.prng.gvec((s.beads.nbeads, 3 * s.beads.natoms))
+                self.prng.gvec((s.beads.nbeads, 3 * s.beads.natoms))
                 * np.sqrt(dstrip(s.nm.dynm3))
                 * np.sqrt(s.beads.nbeads * temperature * Constants.kb)
             )

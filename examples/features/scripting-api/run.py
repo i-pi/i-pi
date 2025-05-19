@@ -27,29 +27,33 @@ print("Running with XML input:\n\n", input_xml)
 sim = InteractiveSimulation(input_xml)
 
 # `properties` accesses the (well) properties of the simulation object
+print("# Initial properties")
 print(
-    sim.properties("time") / ase.units.fs,
-    sim.properties("potential"),
-    sim.properties("temperature"),
+    f'Time:        {sim.properties("time") / ase.units.fs}  '
+    f'Potential:   {sim.properties("potential")}  '
+    f'Temperature: {sim.properties("temperature")}'
 )
 # `run` advances the interactive simulation by one (or the prescribed number) of steps
 sim.run(10)
+print("# After 10 steps")
 print(
-    sim.properties("time") / ase.units.fs,
-    sim.properties("potential"),
-    sim.properties("temperature"),
+    f'Time:        {sim.properties("time") / ase.units.fs}  '
+    f'Potential:   {sim.properties("potential")}  '
+    f'Temperature: {sim.properties("temperature")}'
 )
 sim.run(10, write_outputs=False)  # we can suppress the outputs
+print("# Without outputs")
 print(
-    sim.properties("time") / ase.units.fs,
-    sim.properties("potential"),
-    sim.properties("temperature"),
+    f'Time:        {sim.properties("time") / ase.units.fs}  '
+    f'Potential:   {sim.properties("potential")}  '
+    f'Temperature: {sim.properties("temperature")}'
 )
 sim.run(10)
+print("# With outputs")
 print(
-    sim.properties("time") / ase.units.fs,
-    sim.properties("potential"),
-    sim.properties("temperature"),
+    f'Time:        {sim.properties("time") / ase.units.fs}  '
+    f'Potential:   {sim.properties("potential")}  '
+    f'Temperature: {sim.properties("temperature")}'
 )
 
 # `get_structures` dumps the state of the system as ASE Atoms objects, possibly listing
@@ -61,7 +65,12 @@ structure = sim.get_structures()
 structure.positions[:] = data.positions
 structure.arrays["momenta"][:] = 0
 sim.set_structures(structure)
-print(sim.properties("potential"), sim.properties("kinetic_md"))
+print("# Resetting position & momenta")
+print(
+    f'Time:        {sim.properties("time") / ase.units.fs}  '
+    f'Potential:   {sim.properties("potential")}  '
+    f'Temperature: {sim.properties("temperature")}'
+)
 
 
 # one can do more aggressive "interventions" by monkey-patching the
@@ -78,8 +87,9 @@ def vv_obabo(self, step=None):
 
 sim.set_motion_step(vv_obabo)
 sim.run(10, write_outputs=True)
+print("# Custom step")
 print(
-    sim.properties("time") / ase.units.fs,
-    sim.properties("potential"),
-    sim.properties("kinetic_md"),
+    f'Time:        {sim.properties("time") / ase.units.fs}  '
+    f'Potential:   {sim.properties("potential")}  '
+    f'Temperature: {sim.properties("temperature")}'
 )
