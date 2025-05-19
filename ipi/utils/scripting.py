@@ -205,6 +205,38 @@ def motion_nvt_xml(timestep, thermostat=None, path_integrals=False):
 """
 
 
+DummyCalculator = None
+
+
+def _define_calculator():
+    global DummyCalculator
+    _asecheck()
+    from ase.calculators.calculator import Calculator, all_changes
+
+    if DummyCalculator is None:
+
+        class DummyCalculator(Calculator):
+            implemented_properties = ["energy", "forces"]
+
+            def __init__(self, energy=None, forces=None, **kwargs):
+                super().__init__(**kwargs)
+                self._energy = energy
+                self._forces = forces
+
+            def calculate(
+                self,
+                atoms=None,
+                properties=["energy", "forces"],
+                system_changes=all_changes,
+            ):
+                super().calculate(atoms, properties, system_changes)
+                self.results = {}
+                if "energy" in properties:
+                    self.results["energy"] = self._energy
+                if "forces" in properties:
+                    self.results["forces"] = self._forces
+
+
 class InteractiveSimulation:
     """A wrapper to `Simulation` that allows accessing
     properties and configurations in a "safe" way from Python.
@@ -251,6 +283,7 @@ class InteractiveSimulation:
 
     def get_structures(self):
         _asecheck()
+        _define_calculator()
 
         sys_structures = []
         for system in self.simulation.syslist:
@@ -262,15 +295,16 @@ class InteractiveSimulation:
                     symbols=dstrip(system.beads.names),
                     cell=dstrip(system.cell.h).T * unit_to_user("length", "ase", 1.0),
                 )
-                struc.arrays["ipi_momentum"] = dstrip(system.beads.p[b]).reshape(
-                    -1, 3
-                ) * unit_to_user("momentum", "ase", 1.0)
-                struc.arrays["ipi_forces"] = dstrip(system.forces.f[b]).reshape(
-                    -1, 3
-                ) * unit_to_user("force", "ase", 1.0)
-                struc.info["ipi_potential"] = dstrip(
-                    system.forces.pots[b]
-                ) * unit_to_user("energy", "ase", 1.0)
+                struc.set_momenta(
+                    dstrip(system.beads.p[b]).reshape(-1, 3)
+                    * unit_to_user("momentum", "ase", 1.0)
+                )
+                struc.calc = DummyCalculator(
+                    energy=dstrip(system.forces.pots[b])
+                    * unit_to_user("energy", "ase", 1.0),
+                    forces=dstrip(system.forces.f[b]).reshape(-1, 3)
+                    * unit_to_user("force", "ase", 1.0),
+                )
                 structures.append(struc)
             if len(structures) == 1:  # flatten the structure if there's just one beads
                 structures = structures[0]
@@ -292,14 +326,27 @@ class InteractiveSimulation:
                     "length", "ase", 1.0
                 )
                 system.cell.h = struc.cell.T * unit_to_internal("length", "ase", 1.0)
-                if "ipi_momentum" in struc.arrays:
+                if "momenta" in struc.arrays:
                     system.beads.p[b] = struc.arrays[
-                        "ipi_momentum"
+                        "momenta"
                     ].flatten() * unit_to_internal("momentum", "ase", 1.0)
-                elif "ipi_velocity" in struc.arrays:
-                    system.beads.p[b] = struc.arrays[
-                        "ipi_velocity"
-                    ].flatten() * unit_to_internal("velocity", "ase", 1.0) *dstrip(system.beads.m3)[0]
+
+    def get_motion_step(self):
+        """
+        Fetches the step function(s) associated with the system motion classes.
+
+        Returns a single function, or a list depending if there's just one system
+        or many.
+        """
+
+        step_list = []
+        for s in self.simulation.syslist:
+            step_list.append(s.motion.step)
+
+        if len(step_list) == 1:
+            return step_list[0]
+        else:
+            return step_list
 
     def set_motion_step(self, custom_step):
         """
@@ -313,9 +360,13 @@ class InteractiveSimulation:
 
         and `self` will be a reference to the motion class itself; depending on the
         original motion class, this might contain thermostats, barostats, etc.
+
+        Call with a single function, or with a list if you have many systems and
+        want to set a different function for each system (for whatever reason)
         """
 
-        for s in self.simulation.syslist:
-            s.motion.__dict__["step"] = custom_step.__get__(
-                s.motion, s.motion.__class__
-            )
+        if not hasattr(custom_step, "__len__"):
+            custom_step = [custom_step for s in self.simulation.syslist]
+
+        for s, f in zip(self.simulation.syslist, custom_step):
+            s.motion.__dict__["step"] = f.__get__(s.motion, s.motion.__class__)
