@@ -59,7 +59,7 @@ ase.io.write("final_positions.xyz", sim.get_structures())
 # we can also set the simulation state
 structure = sim.get_structures()
 structure.positions[:] = data.positions
-structure.arrays["ipi_velocities"][:] = 0
+structure.arrays["momenta"][:] = 0
 sim.set_structures(structure)
 print(sim.properties("potential"), sim.properties("kinetic_md"))
 
