@@ -6,7 +6,7 @@ from ipi.inputs.cell import InputCell
 from ipi.engine.beads import Beads
 from ipi.engine.cell import Cell
 from ipi.engine.simulation import Simulation
-from ipi.engine.motion import Motion, Dynamics
+from ipi.engine.motion import Dynamics
 from ipi.utils.io.inputs.io_xml import xml_parse_string, xml_write, write_dict
 from ipi.pes import __drivers__
 
