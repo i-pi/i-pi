@@ -206,17 +206,15 @@ def motion_nvt_xml(timestep, thermostat=None, path_integrals=False):
 """
 
 
-DummyCalculator = None
-
-
+DummyASECalculator = None
 def _define_calculator():
-    global DummyCalculator
+    global DummyASECalculator
     _asecheck()
     from ase.calculators.calculator import Calculator, all_changes
 
-    if DummyCalculator is None:
+    if DummyASECalculator is None:
 
-        class DummyCalculator(Calculator):
+        class DummyASECalculator(Calculator):
             implemented_properties = ["energy", "forces"]
 
             def __init__(self, energy=None, forces=None, **kwargs):
@@ -298,7 +296,7 @@ class InteractiveSimulation(Simulation):
                     dstrip(system.beads.p[b]).reshape(-1, 3)
                     * unit_to_user("momentum", "ase", 1.0)
                 )
-                struc.calc = DummyCalculator(
+                struc.calc = DummyASECalculator(
                     energy=dstrip(system.forces.pots[b])
                     * unit_to_user("energy", "ase", 1.0),
                     forces=dstrip(system.forces.f[b]).reshape(-1, 3)
