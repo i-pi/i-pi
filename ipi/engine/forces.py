@@ -1244,6 +1244,22 @@ class Forces:
                 forces = self.mrpc[index].b2tob1(forces)
             return forces
 
+    def virs_component(self, index, weighted=True, interpolate=True):
+        """Fetches the index^th component of the virial."""
+
+        if weighted and self.mforces[index].weight == 0:
+            if interpolate:
+                return np.zeros((self.mrpc[index].nbeads1, 3, 3))
+            else:
+                return np.zeros((self.mrpc[index].nbeads2, 3, 3))
+        else:
+            virs = dstrip(self.mforces[index].virs).copy()
+            if weighted:
+                virs *= self.mforces[index].weight
+            if interpolate:
+                virs = self.mrpc[index].b2tob1(virs)
+            return virs
+
     def extras_component(self, index):
         """Fetches extras that are computed for one specific force component.
 

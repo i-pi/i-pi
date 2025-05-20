@@ -414,6 +414,46 @@ class Properties:
                     )
                 ),
             },
+            "vir_component": {
+                "dimension": "pressure",
+                "size": 6,
+                "help": "The contribution to the system virial from one of the force components. ",
+                "longhelp": """The contribution to the system potential from one of the force components.
+                       Takes one mandatory argument index (zero-based) that indicates which component of the
+                       potential must be returned. The optional argument 'bead' will print the potential associated
+                       with the specified bead (interpolated to the full ring polymer). 
+                       If the potential is weighed, the weight will be applied. """,
+                "func": (
+                    lambda index, bead="-1": self.tensor2vec(
+                        self.forces.virs_component(int(index)).mean(axis=0)
+                        if int(bead) < 0
+                        else self.forces.virs_component(int(index))[int(bead)]
+                    )
+                    / self.cell.V
+                ),
+            },
+            "vir_component_raw": {
+                "dimension": "pressure",
+                "size": 6,
+                "help": "The contribution to the system virial from one of the force components. ",
+                "longhelp": """The contribution to the system virial from one of the
+                       force components. Takes one mandatory argument index (zero-based) that indicates
+                       which component of the potential must be returned. The optional argument 'bead'
+                       will print the potential associated with the specified bead, at the level of 
+                       discretization of the given component. Potential weights will not be applied. """,
+                "func": (
+                    lambda index, bead="-1": self.tensor2vec(
+                        self.forces.virs_component(int(index), False, False).mean(
+                            axis=0
+                        )
+                        if int(bead) < 0
+                        else self.forces.virs_component(int(index), False, False)[
+                            int(bead)
+                        ]
+                    )
+                    / self.cell.V
+                ),
+            },
             "forcemod": {
                 "dimension": "force",
                 "help": "The modulus of the force.",
