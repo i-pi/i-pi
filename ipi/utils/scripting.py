@@ -250,6 +250,11 @@ class InteractiveSimulation(Simulation):
     """
 
     def __init__(self, xml_input):
+        # not-so-great way to initialize from the class method-generated
+        # Simulation object. one should probably reconsider how Simulation
+        # is initialized as this hack might lead to issues further down
+        # the line, but for the moment all looks good.
+
         sim = Simulation.load_from_xml(xml_input)
         self.__dict__.update(sim.__dict__)
 
