@@ -7,7 +7,7 @@
   <total_steps> 200</total_steps>
   <prng><seed>31415</seed></prng>
   <ffsocket name="lammps" mode="unix">
-      <address>lammps_ice</address> <latency> 1e-3 </latency>
+    <address>lammps_ice</address>
   </ffsocket>
   <system>
     <initialize nbeads="1">
@@ -17,17 +17,15 @@
     <forces><force forcefield="lammps"> </force></forces>
     <ensemble>
       <temperature units="kelvin"> 200 </temperature>
-      <stress units="megapascal"> [ 1, 0, 0, 0, 1, 0, 0, 0, 1 ] </stress>
+      <pressure units="megapascal"> 1 </stress>
     </ensemble>
     <motion mode="dynamics">
         <dynamics mode="nst">
-          <barostat mode="anisotropic">
+          <barostat mode="isotropic">
           <tau units="femtosecond"> 200 </tau>
           <thermostat mode="langevin">
             <tau units="femtosecond"> 100</tau>
           </thermostat>
-          <h0> [ 25.6156, 0, 0, 0, 29.5783, 0, 0, 0, 27.8867 ]</h0>
-          <hfix> [ offdiagonal ] </hfix>          
           </barostat>
           <thermostat mode="langevin">
                <tau units="femtosecond"> 100 </tau>
