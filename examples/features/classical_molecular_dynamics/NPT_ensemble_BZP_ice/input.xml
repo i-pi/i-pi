@@ -17,10 +17,10 @@
     <forces><force forcefield="lammps"> </force></forces>
     <ensemble>
       <temperature units="kelvin"> 200 </temperature>
-      <pressure units="megapascal"> 1 </stress>
+      <pressure units="megapascal"> 1 </pressure>
     </ensemble>
     <motion mode="dynamics">
-        <dynamics mode="nst">
+        <dynamics mode="npt">
           <barostat mode="isotropic">
           <tau units="femtosecond"> 200 </tau>
           <thermostat mode="langevin">
