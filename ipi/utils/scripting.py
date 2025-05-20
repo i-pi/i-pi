@@ -207,6 +207,8 @@ def motion_nvt_xml(timestep, thermostat=None, path_integrals=False):
 
 
 DummyASECalculator = None
+
+
 def _define_calculator():
     global DummyASECalculator
     _asecheck()
