@@ -1,0 +1,64 @@
+<simulation mode='static' verbosity='high'>
+
+    <output prefix='ipi'>
+        <properties stride='1' filename='out'> [ step, time{picosecond}, conserved, kinetic_md{electronvolt}, potential{electronvolt}, temperature{kelvin} ] </properties>
+        <trajectory filename='pos' stride='1' format='ase' > positions </trajectory>
+        <trajectory filename='force' stride='1' format='xyz' cell_units='angstrom'> forces{eV/ang} </trajectory>
+    </output>
+
+    <total_steps> 10000 </total_steps>
+    <prng> <seed> 32342 </seed> </prng>
+
+    <ffcommittee name="committee">
+        <active_output> active </active_output>
+
+        <ffdirect name='mace-0'>
+            <pes> mace </pes>
+            <parameters> {template:start.extxyz,model:mace.n=0.model } </parameters>
+        </ffdirect>
+
+        <ffdirect name='mace-1'>
+            <pes> mace </pes>
+            <parameters> {template:start.extxyz,model:mace.n=1.model } </parameters>
+        </ffdirect>
+
+        <ffdirect name='mace-2'>
+            <pes> mace </pes>
+            <parameters> {template:start.extxyz,model:mace.n=2.model } </parameters>
+        </ffdirect>
+
+        <ffdirect name='mace-3'>
+            <pes> mace </pes>
+            <parameters> {template:start.extxyz,model:mace.n=3.model } </parameters>
+        </ffdirect>
+
+    </ffcommittee>
+
+    <system>
+
+        <initialize nbeads='1'>
+            <file mode='ase'> start.extxyz </file>
+            <cell> [   1000, 0, 0, 0, 1000, 0, 0, 0, 1000 ] </cell>
+            <velocities mode='thermal' units='kelvin'> 300 </velocities>
+        </initialize>
+
+        <forces>
+            <force forcefield='committee'> </force>
+        </forces>
+
+        <motion mode='dynamics'>
+            <dynamics mode='nvt'>
+                <timestep units='femtosecond'> 0.25 </timestep>
+                <thermostat mode='svr'>
+                    <tau units='femtosecond'> 100 </tau>
+                </thermostat>
+            </dynamics>
+        </motion>
+        
+        <ensemble>
+            <temperature units='kelvin'> 300 </temperature>
+        </ensemble>
+
+    </system>
+
+</simulation>
