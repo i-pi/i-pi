@@ -1,0 +1,16 @@
+collected-extensions/
+nickel-lj-extensions.pt
+
+lj-nickel.out
+lj-nickel.restart
+lj-nickel.xc.xyz
+lj-nickel.fc.xyz
+lj-nickel.forces_0.extxyz
+lj-nickel.committee_pot_0
+lj-nickel.committee_force_0
+
+script.restart
+script.pos_0.xyz
+final_positions.xyz
+
+RESTART
