@@ -891,10 +891,10 @@ class InputFFCommittee(InputForceField):
                     _iobj = InputFFLennardJones()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("fflj", _iobj)
-                elif isinstance(_obj, FFQUIP):
-                    _iobj = InputFFQUIP()
-                    _iobj.store(_obj)
-                    self.extra[_ii] = ("ffquip", _iobj)
+                # elif isinstance(_obj, FFQUIP):
+                #     _iobj = InputFFQUIP()
+                #     _iobj.store(_obj)
+                #     self.extra[_ii] = ("ffquip", _iobj)
                 elif isinstance(_obj, FFDebye):
                     _iobj = InputFFDebye()
                     _iobj.store(_obj)
