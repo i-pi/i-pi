@@ -10,7 +10,7 @@ LAMMPS Description
          0 13.555191763 xlo xhi
          0 15.652162297 ylo yhi
          0  14.75700612 zlo zhi
-        1e-3 1e-3 1e-3 xy xz yz
+         1e-3 1e-3 1e-3 xy xz yz
 
 Masses
  

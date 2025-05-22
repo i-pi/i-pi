@@ -26,10 +26,9 @@
           <thermostat mode="langevin">
             <tau units="femtosecond"> 100</tau>
           </thermostat>
-          <vol_constraint> True </vol_constraint>
           </barostat>
           <thermostat mode="langevin">
-          <tau units="femtosecond"> 100 </tau>
+               <tau units="femtosecond"> 100 </tau>
           </thermostat>
           <timestep units="femtosecond"> 0.25 </timestep>
         </dynamics>
