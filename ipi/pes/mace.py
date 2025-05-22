@@ -39,9 +39,12 @@ class MACE_driver(ASEDriver):
             raise ImportError("Couldn't load mace bindings")
 
         try:
-            from ase.outputs import _defineprop
+            from ase.outputs import _defineprop, all_outputs
 
-            _defineprop("node_energy", dtype=float, shape=("natoms",))
+            # avoid duplicate
+            # it complains with a committee of ffdirect MACE models
+            if "node_energy" not in all_outputs:
+                _defineprop("node_energy", dtype=float, shape=("natoms",))
         except ImportError:
             raise ValueError("Could not find or import the ASE module")
 
