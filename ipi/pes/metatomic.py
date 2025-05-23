@@ -10,12 +10,12 @@ from ipi.utils.units import unit_to_internal, unit_to_user
 from .dummy import Dummy_driver
 
 from ipi.utils.messages import warning, info
-import ase.io
 
 torch = None
 mts = None
 mta = None
 vesin_metatomic = None
+ase_io = None
 
 __DRIVER_NAME__ = "metatomic"
 __DRIVER_CLASS__ = "MetatomicDriver"
@@ -63,13 +63,14 @@ class MetatomicDriver(Dummy_driver):
         *args,
         **kwargs,
     ):
-        global torch, mta, mts, vesin_metatomic
+        global torch, mta, mts, vesin_metatomic, ase_io
         if torch is None or mta is None or mts is None or vesin_metatomic is None:
             try:
                 import torch
                 import metatensor.torch as mts
                 import metatomic.torch as mta
                 import vesin.metatomic as vesin_metatomic
+                import ase.io as ase_io
             except ImportError as e:
                 message = (
                     "could not find the metatomic driver dependencies, "
@@ -132,7 +133,7 @@ class MetatomicDriver(Dummy_driver):
         self._dtype = getattr(torch, self.model.capabilities().dtype)
 
         # read the template and extract the corresponding atomic types
-        atoms = ase.io.read(self.template)
+        atoms = ase_io.read(self.template)
         self._types = torch.from_numpy(atoms.numbers).to(dtype=torch.int32)
 
         # Register the requested outputs
