@@ -1,10 +1,6 @@
 name: Pytest for examples
 
-on: 
-  push:
-    branches: [main]
-  pull_request:
-    # Check all PR
+on: [push, pull_request]
   
 concurrency:
   group: example-tests-${{ github.ref }}
