@@ -2,6 +2,7 @@
 import socket
 import argparse
 import numpy as np
+import json
 
 from ipi.pes import *
 from ipi.utils.io.inputs import read_args_kwargs
@@ -163,6 +164,25 @@ def run_driver(
         elif header == Message("EXIT"):
             print("Received exit message from i-PI. Bye bye!")
             return
+        
+        elif header == Message("EXTRA"):
+            
+            # The following code has been roughly copied and pasted from 'ipi/interfaces/sockets.py'
+            
+            # read how many charater are gonne be sent
+            nchar = recv_data(sock, np.int32())
+            # allocate an array of characters of the right size
+            extra = np.zeros(nchar, np.character)
+            # read the extra string
+            extra = recv_data(sock, extra)
+            # convert to ... something
+            extra = bytearray(extra).decode("utf-8")
+            # convert to JSON
+            extra = json.loads(extra)
+            try:
+                driver.store_extra(extra)
+            except Exception as err:
+                raise err
 
 
 if __name__ == "__main__":
