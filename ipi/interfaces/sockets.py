@@ -566,6 +566,9 @@ class Driver(DriverSocket):
             return
 
         r["start"] = time.time()
+        # ELIA STOCCO
+        if "extra" in r:
+            self.sendextra(r["extra"])
         self.sendpos(r["pos"][r["active"]], r["cell"])
 
         self.get_status()
