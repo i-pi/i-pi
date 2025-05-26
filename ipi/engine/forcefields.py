@@ -2198,3 +2198,29 @@ class FFCavPhSocket(FFSocket):
         )
 
         return newreq
+
+
+class FFDielectric(ForceField):
+
+    def __init__(self, name: str, mode: str, field: np.ndarray, forcefield: ForceField):
+        super().__init__()
+        self.name = name
+        self.mode = mode
+        self.field = field
+        self.forcefield = forcefield
+
+    def start(self):
+        return self.forcefield.start()
+
+    def queue(self, *argc, **kwargs):
+        newreq = self.forcefield.queue(*argc, **kwargs)
+        return newreq
+
+    # def check_finish(self, *argc,**kwargs):
+    #     return self.forcefield.check_finish(*argc,**kwargs)
+
+    # def gather(self,*argc,**kwargs):
+    #     return self.forcefield.gather(*argc,**kwargs)
+
+    # def poll(self,*argc,**kwargs):
+    #     return self.forcefield.poll(*argc,**kwargs)

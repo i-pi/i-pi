@@ -21,6 +21,7 @@ from ipi.engine.forcefields import (
     FFdmd,
     FFCavPhSocket,
     FFRotations,
+    FFDielectric,
 )
 from ipi.interfaces.sockets import InterfaceSocket
 from ipi.pes import __drivers__
@@ -1180,3 +1181,121 @@ class InputFFCavPhSocket(InputFFSocket):
             omega_c=self.omega_c.fetch(),
             ph_rep=self.ph_rep.fetch(),
         )
+
+
+class InputFFDielectric(InputForceField):
+
+    dynamic = {
+        "ffsocket": (InputFFSocket, {"help": InputFFSocket.default_help}),
+        "ffdirect": (InputFFDirect, {"help": InputFFDirect.default_help}),
+        "fflj": (InputFFLennardJones, {"help": InputFFLennardJones.default_help}),
+        "ffdmd": (InputFFdmd, {"help": InputFFdmd.default_help}),
+        "ffdebye": (InputFFDebye, {"help": InputFFDebye.default_help}),
+        "ffplumed": (InputFFPlumed, {"help": InputFFPlumed.default_help}),
+        "ffyaff": (InputFFYaff, {"help": InputFFYaff.default_help}),
+        "ffsgdml": (InputFFsGDML, {"help": InputFFsGDML.default_help}),
+        "ffcommittee": (InputFFCommittee, {"help": InputFFCommittee.default_help}),
+    }
+
+    fields = copy(InputForceField.fields)
+    attribs = copy(InputForceField.attribs)
+
+    fields["field"] = (
+        InputArray,
+        {
+            "dtype": float,
+            "default": np.zeros(3),
+            "help": "The applied external electric field/dielectric displacement (in cartesian coordinates)",
+            "dimension": "electric-field",
+        },
+    )
+
+    attribs["mode"] = (
+        InputAttribute,
+        {
+            "dtype": str,
+            "options": ["none", "E", "D"],
+            "default": "none",
+            "help": "Specifies type of applied dielectric field: none, external electric field (E) or electric displacement (D).",
+        },
+    )
+
+    default_help = "still empty"
+    default_label = "FFDIELECTRIC"
+
+    def __init__(self, *argc, **kwargs):
+        super().__init__(*argc, **kwargs)
+        # self.forcefield = None
+        pass
+
+    def store(self, ff):
+        """Store all the sub-forcefields"""
+        super().store(ff)
+
+        # _fflist = [ff.forcefield]
+        # if len(self.extra) != len(_fflist):
+        #     self.extra = [0] * len(_fflist)
+
+        self.extra = [None]
+        _ii = 0
+        _obj = ff.forcefield
+        if isinstance(_obj, FFSocket):
+            _iobj = InputFFSocket()
+            _iobj.store(_obj)
+            self.extra[_ii] = ("ffsocket", _iobj)
+        elif isinstance(_obj, FFDirect):
+            _iobj = InputFFDirect()
+            _iobj.store(_obj)
+            self.extra[_ii] = ("ffdirect", _iobj)
+        elif isinstance(_obj, FFLennardJones):
+            _iobj = InputFFLennardJones()
+            _iobj.store(_obj)
+            self.extra[_ii] = ("fflj", _iobj)
+        elif isinstance(_obj, FFdmd):
+            _iobj = InputFFdmd()
+            _iobj.store(_obj)
+            self.extra[_ii] = ("ffdmd", _iobj)
+        elif isinstance(_obj, FFDebye):
+            _iobj = InputFFDebye()
+            _iobj.store(_obj)
+            self.extra[_ii] = ("ffdebye", _iobj)
+        elif isinstance(_obj, FFPlumed):
+            _iobj = InputFFPlumed()
+            _iobj.store(_obj)
+            self.extra[_ii] = ("ffplumed", _iobj)
+        elif isinstance(_obj, FFYaff):
+            _iobj = InputFFYaff()
+            _iobj.store(_obj)
+            self.extra[_ii] = ("ffyaff", _iobj)
+        elif isinstance(_obj, FFsGDML):
+            _iobj = InputFFsGDML()
+            _iobj.store(_obj)
+            self.extra[_ii] = ("ffsgdml", _iobj)
+        elif isinstance(_obj, FFCommittee):
+            _iobj = InputFFCommittee()
+            _iobj.store(_obj)
+            self.extra[_ii] = ("ffcommittee", _iobj)
+
+        self.name.store(ff.name)
+        self.mode.store(ff.mode)
+        self.field.store(ff.field)
+        # self.forcefield.store(ff.forcefield)
+
+    def fetch(self):
+        """Fetches all of the FF objects"""
+        super().fetch()
+
+        if len(self.extra) != 1:
+            raise ValueError("You must provide only one ForceField.")
+        ff = self.extra[0]
+        ff = ff[1].fetch()
+
+        return FFDielectric(
+            name=self.name.fetch(),
+            mode=self.mode.fetch(),
+            field=self.field.fetch(),
+            forcefield=ff,
+        )
+
+    # def parse(self,*argc,**kwargs):
+    #     super().parse(*argc,**kwargs)

@@ -98,6 +98,7 @@ objects = {
     "ffdmd": forcefields.InputFFdmd(),
     "ffcommittee": forcefields.InputFFCommittee(),
     "ffcavphsocket": forcefields.InputFFCavPhSocket(),
+    "ffdielectric": forcefields.InputFFDielectric(),
     "forces": forces.InputForces(),
     "force": forces.InputForceComponent(),
     "al6xxx_kmc": motion.al6xxx_kmc.InputAlKMC(),
