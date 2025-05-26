@@ -419,6 +419,36 @@ class Driver(DriverSocket):
         else:
             raise InvalidStatus("Status in sendpos was " + self.status)
 
+    def sendextra(self, extra: str):
+        """Sends the extra string to the client.
+
+        Args:
+           extra: a JSON-formatted string.
+
+        Raises:
+           InvalidStatus: Raised if the status is not Ready.
+        """
+        global TIMEOUT  # we need to update TIMEOUT in case of sendall failure
+
+        if self.status & Status.Ready:
+            try:
+                # reduces latency by combining all messages in one
+                self.sendall(MESSAGE["extra"] + extra.encode())  # header  # extras
+                self.status = Status.Up | Status.Busy
+            except socket.timeout:
+                warning(
+                    f"Timeout in sendall after {TIMEOUT}s: resetting status and increasing timeout",
+                    verbosity.quiet,
+                )
+                self.status = Status.Timeout
+                TIMEOUT *= 2
+                return
+            except Exception as exc:
+                warning(f"Other exception during extra receive: {exc}", verbosity.quiet)
+                raise exc
+        else:
+            raise InvalidStatus("Status in sendextra was " + self.status)
+
     def getforce(self):
         """Gets the potential energy, force and virial from the driver.
 
