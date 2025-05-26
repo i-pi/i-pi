@@ -37,8 +37,11 @@ __DRIVER_CLASS__ = "Spherical_LJ_driver"
 #       between using torch and numpy, so the default is to use numpy.
 # - both the version, with torch or numpy, are equivalent in terms of results:
 #       this has been tested, and you can run the test youself setting DEBUG=True and USE_TORCH=True.
-#       Look (in this file) for "THE TEST IS HAPPING HERE" to find the test.
+#       Look (in this file) for "THE TEST IS HAPPENING HERE" to find the test.
 # - the docstring of the class explains how to use the driven and which parameters to provide.
+# - a similar confined potential has been used in https://doi.org/10.1103/PhysRevResearch.1.033145
+# - pay attention that the center of mass of your systems should roughly be at the center of the sphere (see "center" parameter),
+#       however, if any atoms are outside the sphere, the code will raise a warning (see 'warning_message' variable).
 
 # ---------------------- #
 USE_TORCH = False
