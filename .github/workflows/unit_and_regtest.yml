@@ -1,10 +1,6 @@
 name: Regression and unitary tests
 
-on: 
-  push:
-    branches: [main]
-  pull_request:
-    # Check all PR
+on: [push, pull_request]
   
 concurrency:
   group: reg-unit-tests-${{ github.ref }}
