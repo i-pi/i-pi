@@ -17,6 +17,7 @@ except ImportError:
 
 import numpy as np
 from ipi.utils.units import unit_to_internal, unit_to_user
+from ipi.utils.messages import warning
 
 __DRIVER_NAME__ = "Spherical_LJ"
 __DRIVER_CLASS__ = "Spherical_LJ_driver"
@@ -193,11 +194,21 @@ def LJ_potential(pos, center, radius, sigma, epsilon, first_power, second_power,
     if use_torch:
         delta = pos - center
         r = radius - torch.norm(delta, dim=1)
+        if torch.any(r <= 0):
+            warning(
+                "Some atoms are outside the spherical potential. "
+                "This can lead to numerical instability."
+            )
         potential = epsilon * (2.0 / 15.0 * (sigma / r) ** first_power - (sigma / r) ** second_power)
         return torch.sum(potential)
     else:
         delta = pos - center
         r = radius - np.linalg.norm(delta, axis=1)
+        if np.any(r <= 0):
+            warning(
+                "Some atoms are outside the spherical potential. "
+                "This can lead to numerical instability."
+            )
         potential = epsilon * (2.0 / 15.0 * (sigma / r) ** first_power - (sigma / r) ** second_power)
         return np.sum(potential)
 
