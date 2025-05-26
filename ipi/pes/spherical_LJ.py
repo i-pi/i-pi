@@ -1,10 +1,19 @@
-"""Spherical Lennard-Jones potential"""
+"""Spherical Lennard-Jones potential driver.
+
+This module implements a spherical Lennard-Jones (LJ) potential centered around a given point
+and applies it to a specified set of atomic species. It supports both NumPy and PyTorch backends,
+although NumPy is used by default due to similar performance.
+
+The driver is designed to be used with i-PI and ASE frameworks, functioning both as an ASE
+calculator and an i-PI driver.
+"""
 
 import json
 import numpy as np
 from ipi.utils.units import unit_to_internal, unit_to_user
 from ipi.utils.messages import warning
 
+# Attempt relative import first (for i-PI structure), fall back to absolute
 try:
     from .ase import ASEDriver
 except:
@@ -13,6 +22,7 @@ except:
 from ase.calculators.calculator import Calculator
 from ase import Atoms
 
+# Compatibility for different ASE versions
 try:
     from ase.calculators.calculator import all_changes
 except ImportError:
@@ -45,8 +55,8 @@ if USE_TORCH:
 class Spherical_LJ_driver(ASEDriver, Calculator):
     """
     Spherical Lennard-Jones potential driver.
-
-    You need to provide a JSON file or a dict structured as follows:
+    Driver implementing a Spherical Lennard-Jones (LJ) potential.
+    Parameters must be passed via a dictionary or a JSON file with the following keys:
     {
         "center": [0,0,0],              // center of the sphere
         "radius": 10,                   // radius of the spherical potential
@@ -133,6 +143,10 @@ class Spherical_LJ_driver(ASEDriver, Calculator):
         self.ase_calculator = self
 
     def calculate(self, atoms: Atoms, properties=None, system_changes=all_changes):
+        """
+        Core method that calculates energy and forces for given atoms using
+        the spherical Lennard-Jones potential.
+        """
         super().calculate(atoms, properties, system_changes)
 
         # Attention, do not use any inplace operations with torch, as it can lead to issues with gradients
@@ -193,9 +207,11 @@ class Spherical_LJ_driver(ASEDriver, Calculator):
 
 # ---------------------- #
 def calculate_torch(pos_to_use_np, instructions, use_torch):
-    """Compute the potential and forces using torch.
-    The potential is computed using the LJ_potential function,
-    and the forces are computed by taking the autograd of the potential.
+    """
+    Computes potential and forces using PyTorch's autograd for differentiation.
+
+    Returns:
+        potential (float), forces (ndarray)
     """
 
     # center = np.asarray(instructions["center"])
@@ -236,9 +252,11 @@ def calculate_torch(pos_to_use_np, instructions, use_torch):
 
 # ---------------------- #
 def calculate_numpy(pos_to_use_np, instructions, use_torch):
-    """Compute the potential and forces using numpy.
-    The potential is computed using the LJ_potential function,
-    and the forces are computed analitycally as the gradient of the potential.
+    """
+    Computes potential and analytical forces using NumPy.
+
+    Returns:
+        potential (float), forces (ndarray)
     """
     center = np.asarray(instructions["center"])
     radius = float(instructions["radius"])
@@ -291,6 +309,9 @@ def to_numpy(x):
 
 # ---------------------- #
 def potential_expression(sr, epsilon, first_power, second_power):
+    """
+    LJ-like potential formula.
+    """
     return epsilon * (2.0 / 15.0 * sr**first_power - sr**second_power)
 
 
@@ -298,7 +319,10 @@ def potential_expression(sr, epsilon, first_power, second_power):
 def LJ_potential(
     pos, center, radius, sigma, epsilon, first_power, second_power, use_torch
 ):
-
+    """
+    Calculates the LJ potential based on distance from the spherical boundary.
+    Returns total potential energy, residual distance vector (r), and displacement.
+    """
     delta = pos - center
     if use_torch:
         r = radius - torch.norm(delta, dim=1)
@@ -325,10 +349,12 @@ def convert(
     _from: str = "atomic_unit",
     _to: str = "atomic_unit",
 ) -> float:
-    """Convert a quantity from one unit of a specific family to another.
+    """
+    Converts a physical quantity between units of the same type (length, energy, etc.)
     Example:
     value = convert(7.6,'length','angstrom','atomic_unit')
-    arr = convert([1,3,4],'energy','atomic_unit','millielectronvolt')"""
+    arr = convert([1,3,4],'energy','atomic_unit','millielectronvolt')
+    """
     # from ipi.utils.units import unit_to_internal, unit_to_user
     if family is not None:
         factor = unit_to_internal(family, _from, 1)
@@ -340,7 +366,9 @@ def convert(
 
 # ---------------------- #
 def process_input(value):
-    """Process the input value to ensure it is in the correct format."""
+    """
+    Standardizes user input into numerical format (float or np.array).
+    """
     if isinstance(value, float):
         return value
     elif isinstance(value, int):
