@@ -103,6 +103,8 @@ class ASEDriver(Dummy_driver):
         vir_ipi = np.array(
             unit_to_internal("energy", "electronvolt", vir_calc.T), dtype=np.float64
         )
+        # ELIA STOCCO
+        # ToDo: this has to be fixed
         extras = ""
 
         return pot_ipi, force_ipi, vir_ipi, extras
