@@ -33,25 +33,10 @@ __DRIVER_CLASS__ = "Spherical_LJ_driver"
 
 # ---------------------- #
 # Attention/comments:
-# - preliminary tests on a laptop have not shown any significant performance difference
-#       between using torch and numpy, so the default is to use numpy.
-# - both the version, with torch or numpy, are equivalent in terms of results:
-#       this has been tested, and you can run the test youself setting DEBUG=True and USE_TORCH=True.
-#       Look (in this file) for "THE TEST IS HAPPENING HERE" to find the test.
 # - the docstring of the class explains how to use the driven and which parameters to provide.
 # - a similar confined potential has been used in https://doi.org/10.1103/PhysRevResearch.1.033145
 # - pay attention that the center of mass of your systems should roughly be at the center of the sphere (see "center" parameter),
 #       however, if any atoms are outside the sphere, the code will raise a warning (see 'warning_message' variable).
-
-# ---------------------- #
-USE_TORCH = False
-DEBUG = False
-warning_message = "Some atoms are outside the spherical potential. This can lead to numerical instability."
-
-if USE_TORCH:
-    import torch
-
-    torch.set_default_dtype(torch.float64)  # better accuracy than float32
 
 
 # ---------------------- #
@@ -152,11 +137,6 @@ class Spherical_LJ_driver(ASEDriver, Calculator):
         """
         super().calculate(atoms, properties, system_changes)
 
-        # Attention, do not use any inplace operations with torch, as it can lead to issues with gradients
-
-        # You can enable this context manager to detect anomalies in the autograd graph (torch only)
-        # with torch.autograd.set_detect_anomaly(False):
-
         # atomic positions [ang]
         pos = atoms.get_positions()
 
@@ -166,29 +146,11 @@ class Spherical_LJ_driver(ASEDriver, Calculator):
             for n, atom in enumerate(atoms)
             if atom.symbol in self.instructions["symbols"]
         ]
-        pos_to_use_np = pos[indices]
 
         # ---------------------- #
-        if USE_TORCH or DEBUG:
-            potential, forces = calculate_torch(pos_to_use_np, self.instructions, True)
-
-            # ---------------------- #
-            # compute the potential and forces with numpy for debugging
-            if DEBUG:  # THE TEST IS HAPPING HERE
-                potential_np, forces_np = calculate_numpy(
-                    pos_to_use_np, self.instructions, False
-                )
-                # Check that the potential and forces calculated with torch and numpy are the same
-                assert np.allclose(
-                    potential, potential_np
-                ), "Potential mismatch between torch and numpy calculations."
-                assert np.allclose(
-                    forces, forces_np
-                ), "Forces mismatch between torch and numpy calculations."
-
-        # ---------------------- #
-        else:
-            potential, forces = calculate_numpy(pos_to_use_np, self.instructions, False)
+        potential, forces = compute_energy_and_forces(
+            pos[indices], self.instructions, False
+        )
 
         # ---------------------- #
         all_forces = np.zeros((atoms.get_global_number_of_atoms(), 3))
@@ -209,52 +171,7 @@ class Spherical_LJ_driver(ASEDriver, Calculator):
 
 
 # ---------------------- #
-def calculate_torch(pos_to_use_np, instructions, use_torch):
-    """
-    Computes potential and forces using PyTorch's autograd for differentiation.
-
-    Returns:
-        potential (float), forces (ndarray)
-    """
-
-    # center = np.asarray(instructions["center"])
-    # radius = float(instructions["radius"])
-    # sigma = float(instructions["sigma"])
-    # epsilon = float(instructions["epsilon"])
-    # first_power = int(instructions["first_power"])
-    # second_power = int(instructions["second_power"])
-
-    pos_leaf = torch.tensor(pos_to_use_np, requires_grad=True)
-    pos_leaf.retain_grad()
-    center_torch = torch.tensor(instructions["center"])
-
-    potential, _, _ = LJ_potential(
-        pos_leaf,
-        center_torch,
-        instructions["radius"],
-        instructions["sigma"],
-        instructions["epsilon"],
-        instructions["first_power"],
-        instructions["second_power"],
-        use_torch,
-    )
-
-    # Compute the forces by taking the autograd of the potential
-    potential.backward()
-    if pos_leaf.grad is None:
-        raise RuntimeError(
-            "No gradient found. Ensure pos_leaf is a leaf tensor with requires_grad=True."
-        )
-    forces = -pos_leaf.grad
-
-    potential = float(potential.detach().cpu().numpy())
-    forces = forces.detach().cpu().numpy()
-
-    return potential, forces
-
-
-# ---------------------- #
-def calculate_numpy(pos_to_use_np, instructions, use_torch):
+def compute_energy_and_forces(pos, instructions):
     """
     Computes potential and analytical forces using NumPy.
 
@@ -268,81 +185,33 @@ def calculate_numpy(pos_to_use_np, instructions, use_torch):
     first_power = int(instructions["first_power"])
     second_power = int(instructions["second_power"])
 
-    pos_to_use = pos_to_use_np
-    potential, r, delta = LJ_potential(
-        pos_to_use,
-        center,
-        radius,
-        sigma,
-        epsilon,
-        first_power,
-        second_power,
-        use_torch,
-    )
-
-    r_vec = np.linalg.norm(delta, axis=1)  # ||delta||
+    delta = pos - center
+    r = radius - np.linalg.norm(delta, axis=1)
 
     # Check if any atom is outside the spherical potential
     if np.any(r <= 0):
-        warning(warning_message)
+        warning(
+            "Some atoms are outside the spherical potential. This can lead to numerical instability."
+        )
+
+    # Calculate the potential
+    sr = sigma / r
+    potential = epsilon * (2.0 / 15.0 * sr**first_power - sr**second_power)
+    potential = np.sum(potential)
+
+    # Calculate the forces
+    r_vec = np.linalg.norm(delta, axis=1)  # ||delta||
 
     # Correct derivative of the potential including the 2/15 factor
-    dU_dr = epsilon * (
+    dU_dr = -epsilon * (
         -first_power * (2.0 / 15.0) * (sigma**first_power) / (r ** (first_power + 1))
         + second_power * (sigma**second_power) / (r ** (second_power + 1))
     )
 
     unit_vectors = delta / r_vec[:, np.newaxis]  # normalize delta
-    forces = dU_dr[:, np.newaxis] * unit_vectors
+    forces = -dU_dr[:, np.newaxis] * unit_vectors
 
     return potential, forces
-
-
-# ---------------------- #
-def to_numpy(x):
-    """Convert input to numpy array if it is a torch tensor."""
-    try:
-        if isinstance(x, torch.Tensor):
-            return x.detach().cpu().numpy()
-        else:
-            return x
-    except:
-        return x
-
-
-# ---------------------- #
-def potential_expression(sr, epsilon, first_power, second_power):
-    """
-    LJ-like potential formula.
-    """
-    return epsilon * (2.0 / 15.0 * sr**first_power - sr**second_power)
-
-
-# ---------------------- #
-def LJ_potential(
-    pos, center, radius, sigma, epsilon, first_power, second_power, use_torch
-):
-    """
-    Calculates the LJ potential based on distance from the spherical boundary.
-    Returns total potential energy, residual distance vector (r), and displacement.
-    """
-    delta = pos - center
-    if use_torch:
-        r = radius - torch.norm(delta, dim=1)
-    else:
-        r = radius - np.linalg.norm(delta, axis=1)
-
-    # Check if any atom is outside the spherical potential
-    if np.any(to_numpy(r) <= 0):
-        warning(warning_message)
-
-    sr = sigma / r
-    potential = potential_expression(sr, epsilon, first_power, second_power)
-
-    if use_torch:
-        return torch.sum(potential), r, delta
-    else:
-        return np.sum(potential), r, delta
 
 
 # ---------------------- #
