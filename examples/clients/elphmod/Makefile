@@ -28,7 +28,7 @@ run $(RUN): input.xml $(DRIVER)
 run2: input.xml run.py $(DRIVER)
 	$(IPI) $< &
 	sleep 5
-	python3 $(word 2,$^)
+	python3 run.py
 	wait
 
 plot $(PLOT): plot.py $(RUN)
