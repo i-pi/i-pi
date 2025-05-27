@@ -46,6 +46,5 @@ all details of the flexible setup in `driver.py`. Second, setting up the driver
 can be quite time consuming, so it is more efficient to do this only once when
 launching it multiple times later.
 
-It is alternatively possible to run the driver through the module `ipi._driver`,
-which is however only available if i-PI has been installed using `setuptools`,
-e.g., through `pip`. This can be tested with `make run2` or `python3 run.py`.
+It is alternatively possible to run the driver through the function `run_driver`
+defined in `i-pi/drivers/py/driver.py`. This can be tested with `make run2`.
