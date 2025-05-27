@@ -48,4 +48,4 @@ launching it multiple times later.
 
 It is alternatively possible to run the driver through the function `run_driver`
 defined in `i-pi/drivers/py/driver.py`. This allows for viewing the trajectory
-in real time during the simulation. It can be tested with `make run2`.
+in real time during the simulation. It can be tested with `make show`.
