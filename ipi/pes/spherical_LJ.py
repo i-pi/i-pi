@@ -15,18 +15,10 @@ from ipi.utils.messages import warning
 
 # Attempt relative import first (for i-PI structure), fall back to absolute
 try:
-    from .ase import ASEDriver
+    from .dummy import Dummy_driver
 except:
-    from ase import ASEDriver
+    from dummy import Dummy_driver
 
-from ase.calculators.calculator import Calculator
-from ase import Atoms
-
-# Compatibility for different ASE versions
-try:
-    from ase.calculators.calculator import all_changes
-except ImportError:
-    from ase.calculators import all_changes
 
 __DRIVER_NAME__ = "Spherical_LJ"
 __DRIVER_CLASS__ = "Spherical_LJ_driver"
@@ -40,7 +32,7 @@ __DRIVER_CLASS__ = "Spherical_LJ_driver"
 
 
 # ---------------------- #
-class Spherical_LJ_driver(ASEDriver, Calculator):
+class Spherical_LJ_driver(Dummy_driver):
     """
     Spherical Lennard-Jones potential driver.
     Driver implementing a Spherical Lennard-Jones (LJ) potential.
@@ -62,10 +54,6 @@ class Spherical_LJ_driver(ASEDriver, Calculator):
     }
     Attention: no default parameters are provided, so you must specify all of them.
     You can just copy and paste the above example and modify the values as needed.
-
-    This class is both a i-PI driver and an ASE calculator:
-        - 'Spherical_LJ_driver.calculate' will compute the potential energy and forces (in eV and eV/ang respectively).
-        - 'ASEDriver.__call__' will take care of converting the results into atomic units.
     """
 
     dimensions = {
@@ -75,27 +63,27 @@ class Spherical_LJ_driver(ASEDriver, Calculator):
         "epsilon": "energy",
     }
 
-    units = {"length": "angstrom", "energy": "electronvolt"}
+    units = {"length": "atomic_unit", "energy": "atomic_unit"}
 
     def __init__(
         self,
-        template,
-        instructions,
+        template: str,
+        instructions: dict,
+        symbols: list = None,
         has_energy=True,
         has_forces=True,
         has_stress=False,
         *args,
         **kwargs,
     ):
+        assert has_energy, "Spherical_LJ_driver requires energy calculation."
+        assert has_forces, "Spherical_LJ_driver requires forces calculation."
 
         assert (
             not has_stress
         ), "Spherical_LJ_driver does not support stress calculation."
 
-        Calculator.__init__(self, *args, **kwargs)
-        ASEDriver.__init__(
-            self, template, has_energy, has_forces, has_stress, *args, **kwargs
-        )
+        super().__init__(self, *args, **kwargs)
 
         # Read instructions from file or use provided dictionary
         if isinstance(instructions, str):
@@ -125,44 +113,50 @@ class Spherical_LJ_driver(ASEDriver, Calculator):
 
         self.instructions = instructions
 
-    def check_parameters(self):
-        """Check the arguments required to run the driver"""
-        super().check_parameters()
-        self.ase_calculator = self
+        # Initialize symbols
+        self.atoms = None
+        if symbols is None:
+            # Let's try to use ASE ...
+            try:
+                from ase.io import read
 
-    def calculate(self, atoms: Atoms, properties=None, system_changes=all_changes):
+                atoms = read(template)
+                self.symbols = atoms.get_chemical_symbols()
+                assert atoms.positions.shape == (
+                    len(self.symbols),
+                    3,
+                ), "Positions shape mismatch."
+            except ImportError:
+                warning("Could not find or import the ASE module")
+        else:
+            # ... but the user can also provide symbols directly
+            self.symbols = symbols
+
+    def __call__(self, cell: np.ndarray, pos: np.ndarray):
         """
         Core method that calculates energy and forces for given atoms using
         the spherical Lennard-Jones potential.
         """
-        super().calculate(atoms, properties, system_changes)
 
-        # atomic positions [ang]
-        pos = atoms.get_positions()
+        potential, forces, vir, extras = super().__call__(cell, pos)
+
+        # check that the number of atoms has not changed
+        assert pos.shape == (len(self.symbols), 3), "Positions shape mismatch."
 
         # atoms to be considered
         indices = [
             n
-            for n, atom in enumerate(atoms)
-            if atom.symbol in self.instructions["symbols"]
+            for n, symbol in enumerate(self.symbols)
+            if symbol in self.instructions["symbols"]
         ]
 
-        # ---------------------- #
-        potential, forces = compute_energy_and_forces(
-            pos[indices], self.instructions, False
+        potential, some_forces = compute_energy_and_forces(
+            pos[indices], self.instructions
         )
 
-        # ---------------------- #
-        all_forces = np.zeros((atoms.get_global_number_of_atoms(), 3))
-        all_forces[indices] = forces
+        forces[indices, :] = some_forces
 
-        self.results = {
-            "free_energy": potential,
-            "energy": potential,
-            "forces": all_forces,
-            "stress": np.zeros(6),  # No stress calculation
-        }
-        return
+        return potential, forces, vir, extras
 
 
 # ---------------------- #
