@@ -1,4 +1,5 @@
 import warnings
+import tempfile
 import os
 
 import numpy as np
@@ -9,29 +10,26 @@ import json
 from typing import get_type_hints
 import typeguard
 from ase import Atoms
-from ase.data import atomic_masses, chemical_symbols
+from ase.data import chemical_symbols, atomic_masses
 from ase.io import read
+from ase.units import fs, kJ, mol, nm
+
 from .dummy import Dummy_driver
-from ase.io.extxyz import key_val_dict_to_str, key_val_str_to_dict_regex
-
 from ipi.utils.units import unit_to_internal, unit_to_user
-
-read = None
 
 __DRIVER_NAME__ = "psiflow"
 __DRIVER_CLASS__ = "Psiflow_driver"
 
 class Psiflow_driver(Dummy_driver):
 
-    def __init__(self, template, hamiltonian, device="cpu", *args, **kwargs):
+    def __init__(self, template, hamiltonian, *args, **kwargs):
         self.template = template
         self.hamiltonian = hamiltonian
-        self.device = device
         super().__init__(*args, **kwargs)
 
     def check_parameters(self):
         self.template_geometry = Geometry.from_atoms(read(self.template))
-        self.function = function_from_json(self.hamiltonian, device=self.device)
+        self.function = function_from_json(self.hamiltonian)
 
     def __call__(self, cell, pos):
 
@@ -68,7 +66,7 @@ class Function:
 
     def __call__(
         self,
-        geometry: Atoms,
+        geometry
     ) -> dict[str, float | np.ndarray]:
         raise NotImplementedError
 
@@ -77,7 +75,130 @@ class Function:
 class EnergyFunction(Function):
     outputs: ClassVar[tuple[str, ...]] = ("energy", "forces", "stress")
 
+@dataclass
+class EinsteinCrystalFunction(EnergyFunction):
+    force_constant: float
+    centers: np.ndarray
+    volume: float = 0.0
+
+    def __call__(
+        self,
+        geometry,
+    ) -> dict[str, float | np.ndarray]:
+        delta = geometry.per_atom.positions - self.centers
+        energy = self.force_constant * np.sum(delta**2) / 2
+        grad_pos = (-1.0) * self.force_constant * delta
+        if geometry.periodic and self.volume > 0.0:
+            delta = np.linalg.det(geometry.cell) - self.volume
+            _stress = self.force_constant * np.eye(3) * delta
+        else:
+            _stress = np.zeros((3, 3))
+        grad_cell = _stress
+        return {"energy": energy, "forces": grad_pos, "stress": grad_cell}
+
+
 @typeguard.typechecked
+@dataclass
+class PlumedFunction(EnergyFunction):
+    plumed_input: str
+    external: Optional[Union[str, Path]] = None
+
+    def __post_init__(self):
+        self.plumed_instances = {}
+
+    def __call__(
+        self,
+        geometry,
+    ) -> dict[str, float | np.ndarray]:
+        plumed_input = self.plumed_input
+        if self.external is not None:
+            assert self.external in plumed_input
+
+        key = self._geometry_to_key(geometry)
+        if key not in self.plumed_instances:
+            from plumed import Plumed
+
+            tmp = tempfile.NamedTemporaryFile(
+                prefix="plumed_", mode="w+", delete=False
+            )
+            # plumed creates a back up if this file would already exist
+            os.remove(tmp.name)
+            plumed_ = Plumed()
+            ps = 1000 * fs
+            plumed_.cmd("setRealPrecision", 8)
+            plumed_.cmd("setMDEnergyUnits", mol / kJ)
+            plumed_.cmd("setMDLengthUnits", 1 / nm)
+            plumed_.cmd("setMDTimeUnits", 1 / ps)
+            plumed_.cmd("setMDChargeUnits", 1.0)
+            plumed_.cmd("setMDMassUnits", 1.0)
+            plumed_.cmd("setLogFile", tmp.name)
+            plumed_.cmd("setRestart", True)
+            plumed_.cmd("setNatoms", len(geometry))
+            plumed_.cmd("init")
+            for line in plumed_input.split("\n"):
+                plumed_.cmd("readInputLine", line)
+            os.remove(tmp.name)  # remove whatever plumed has created
+            self.plumed_instances[key] = plumed_
+
+        # input system
+        plumed_ = self.plumed_instances[key]
+        plumed_.cmd("setStep", 0)
+        masses = np.array([atomic_masses[n] for n in geometry.per_atom.numbers])
+        plumed_.cmd("setMasses", masses)
+        copied_positions = geometry.per_atom.positions.astype(np.float64, copy=True)
+        plumed_.cmd("setPositions", copied_positions)
+        if geometry.periodic:
+            cell = geometry.cell.astype(np.float64, copy=True)
+            plumed_.cmd("setBox", cell)
+
+        # perform calculation
+        energy = np.zeros((1,))
+        forces = np.zeros((len(geometry), 3))
+        virial = np.zeros((3, 3))
+        plumed_.cmd("setForces", forces)
+        plumed_.cmd("setVirial", virial)
+        plumed_.cmd("prepareCalc")
+        plumed_.cmd("performCalcNoUpdate")
+        plumed_.cmd("getBias", energy)
+        if geometry.periodic:
+            stress = virial / np.linalg.det(geometry.cell)
+        else:
+            stress = np.zeros((3, 3))
+        return {"energy": float(energy.item()), "forces": forces, "stress": stress}
+
+    @staticmethod
+    def _geometry_to_key(geometry) -> tuple:
+        return tuple([geometry.periodic]) + tuple(geometry.per_atom.numbers)
+
+
+@typeguard.typechecked
+@dataclass
+class ZeroFunction(EnergyFunction):
+    def __call__(
+        self,
+        geometry
+    ) -> dict[str, float | np.ndarray]:
+        return {"energy": 0., "forces": np.zeros(shape=(len(geometry), 3)), "stress": np.zeros(shape=(3, 3))}
+
+
+@typeguard.typechecked
+@dataclass
+class HarmonicFunction(EnergyFunction):
+    positions: np.ndarray
+    hessian: np.ndarray
+    energy: Optional[float] = None
+
+    def __call__(
+        self,
+        geometry
+    ) -> dict[str, float | np.ndarray]:
+        delta = geometry.per_atom.positions.reshape(-1) - self.positions.reshape(-1)
+        grad = np.dot(self.hessian, delta)
+        energy = 0.5 * np.dot(delta, grad)
+        if self.energy is not None:
+            energy += self.energy
+        return {"energy": energy, "forces": (-1.0) * grad.reshape(-1, 3), "stress": np.zeros(shape=(3, 3))}
+
 @dataclass
 class MACEFunction(EnergyFunction):
     model_path: str
@@ -122,8 +243,9 @@ class MACEFunction(EnergyFunction):
 
     def get_atomic_energy(self, geometry):
         total = 0
-        symbols, counts = np.unique(geometry.get_chemical_symbols(), return_counts=True)
-        for idx, symbol in enumerate(symbols):
+        numbers, counts = np.unique(geometry.per_atom.numbers, return_counts=True)
+        for idx, number in enumerate(numbers):
+            symbol = chemical_symbols[number]
             try:
                 total += counts[idx] * self.atomic_energies[symbol]
             except KeyError:
@@ -132,7 +254,7 @@ class MACEFunction(EnergyFunction):
 
     def __call__(
         self,
-        geometry: Atoms,
+        geometry
     ) -> dict[str, float | np.ndarray]:
         from mace import data
         from mace.tools.torch_geometric.batch import Batch
@@ -146,8 +268,14 @@ class MACEFunction(EnergyFunction):
         if self.atomic_energies:
             energy += self.get_atomic_energy(geometry)
 
-        cell = np.copy(geometry.get_cell())
-        config = data.config_from_atoms(geometry)
+        cell = np.copy(geometry.cell) if geometry.periodic else None
+        atoms = Atoms(
+            positions=geometry.per_atom.positions,
+            numbers=geometry.per_atom.numbers,
+            cell=cell,
+            pbc=geometry.periodic,
+        )
+        config = data.config_from_atoms(atoms)
         data = data.AtomicData.from_config(config, z_table=self.z_table, cutoff=self.r_max)
         batch = Batch.from_data_list([data]).to(device=self.device)
         out = self.model(batch.to_dict(), compute_stress=cell is not None)
@@ -159,7 +287,10 @@ class MACEFunction(EnergyFunction):
 
 def function_from_json(path: Union[str, Path], **kwargs) -> Function:
     functions = [
+        EinsteinCrystalFunction,
+        HarmonicFunction,
         MACEFunction,
+        PlumedFunction,
         None,
     ]
     with open(path, "r") as f:
@@ -274,49 +405,6 @@ class Geometry:
             self.stdout = stdout
             self.identifier = identifier
 
-    def reset(self):
-        """
-        Reset all computed properties of the geometry to their default values.
-        """
-        self.energy = None
-        self.stress = None
-        self.delta = None
-        self.phase = None
-        self.logprob = None
-        self.per_atom.forces[:] = np.nan
-
-    def clean(self):
-        """
-        Clean the geometry by resetting properties and removing additional information.
-        """
-        self.reset()
-        self.order = {}
-        self.stdout = None
-        self.identifier = None
-
-    def __eq__(self, other) -> bool:
-        """
-        Check if two Geometry instances are equal.
-
-        Args:
-            other: The other object to compare with.
-
-        Returns:
-            bool: True if the geometries are equal, False otherwise.
-        """
-        if not isinstance(other, Geometry):
-            return False
-        # have to check separately for np.allclose due to different dtypes
-        equal = True
-        equal = equal and (len(self) == len(other))
-        equal = equal and (self.periodic == other.periodic)
-        if not equal:
-            return False
-        equal = equal and np.allclose(self.per_atom.numbers, other.per_atom.numbers)
-        equal = equal and np.allclose(self.per_atom.positions, other.per_atom.positions)
-        equal = equal and np.allclose(self.cell, other.cell)
-        return bool(equal)
-
     def __len__(self):
         """
         Get the number of atoms in the geometry.
@@ -360,20 +448,7 @@ class Geometry:
             bool: True if the geometry is periodic, False otherwise.
         """
         return np.any(self.cell)
-
-    @property
-    def per_atom_energy(self):
-        """
-        Calculate the energy per atom.
-
-        Returns:
-            Optional[float]: Energy per atom if total energy is available, None otherwise.
-        """
-        if self.energy is None:
-            return None
-        else:
-            return self.energy / len(self)
-
+    
     @property
     def volume(self):
         """
@@ -386,16 +461,6 @@ class Geometry:
             return np.nan
         else:
             return np.linalg.det(self.cell)
-        
-    @property
-    def atomic_masses(self):
-        """
-        Get the atomic masses of the atoms in the geometry.
-
-        Returns:
-            np.ndarray: Array of atomic masses.
-        """
-        return np.array([atomic_masses[n] for n in self.per_atom.numbers])
 
     @classmethod
     def from_atoms(cls, atoms: Atoms):
