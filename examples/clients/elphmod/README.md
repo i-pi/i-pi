@@ -30,8 +30,8 @@ monolayer tantalum disulfide. Running `make` performs the following steps:
 3. Now we are ready to run i-PI and the driver, which will communicate via a
    Unix domain socket, and perform the optimization with `make run`. This will
    start i-PI in the background, wait until it is ready, and start the driver
-   with `i-pi-driver-py -u -m elphmod -o driver.pickle`. i-PI will output the
-   potential energies (`run.out`), positions (`run.pos_0.xyz`), and forces
+   with `i-pi-driver-py -u -m elphmod -o driver=driver.pickle`. i-PI will output
+   the potential energies (`run.out`), positions (`run.pos_0.xyz`), and forces
    (`run.for_0.xyz`) for all steps.
 
 4. Finally, we can view the trajectory with `make plot` or `python3 plot.py`.
