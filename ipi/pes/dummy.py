@@ -37,10 +37,8 @@ class Dummy_driver(object):
             {"dipole": [0.0, 0.0, 0.0]}
         )  # have json formatting to potentially work with some test examples. meaningless value
         return pot, force, vir, extras
-    
-    def store_extra(self,extra:str):
+
+    def store_extra(self, extra: str):
         """Convert the JSON formatted string 'extra' into a dict and store it into self.extra."""
         # ToDo: improve error handling
         self.extra = json.load(extra)
-            
-    
