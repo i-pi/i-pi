@@ -56,6 +56,7 @@ MESSAGE = {
         "getforce",
         "forceready",
         "needextra",
+        "extradata",
     ]
 }
 
@@ -439,7 +440,7 @@ class Driver(DriverSocket):
         if self.status & Status.Ready:
             try:
                 # reduces latency by combining all messages in one
-                self.sendall(MESSAGE["extra"] + extra.encode())  # header  # extras
+                self.sendall(MESSAGE["extradata"] + extra.encode())  # header  # extras
                 self.status = Status.Up | Status.Busy
             except socket.timeout:
                 warning(
