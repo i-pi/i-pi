@@ -55,6 +55,7 @@ MESSAGE = {
         "posdata",
         "getforce",
         "forceready",
+        "needextra",
     ]
 }
 
@@ -105,6 +106,7 @@ class Status(object):
     HasData = 8
     Busy = 16
     Timeout = 32
+    NeedExtra = 64
 
 
 class DriverSocket(socket.socket):
@@ -296,6 +298,8 @@ class Driver(DriverSocket):
             return Status.Up | Status.NeedsInit
         elif reply == MESSAGE["havedata"]:
             return Status.Up | Status.HasData
+        elif reply == MESSAGE["needextra"]:
+            return Status.Up | Status.NeedExtra
         else:
             warning(" @SOCKET:    Unrecognized reply: " + str(reply), verbosity.low)
             return Status.Up
@@ -336,6 +340,8 @@ class Driver(DriverSocket):
             return Status.Up | Status.NeedsInit
         elif reply == MESSAGE["havedata"]:
             return Status.Up | Status.HasData
+        elif reply == MESSAGE["needextra"]:
+            return Status.Up | Status.NeedExtra
         else:
             warning(" @SOCKET:    Unrecognized reply: " + str(reply), verbosity.low)
             return Status.Up
@@ -558,18 +564,39 @@ class Driver(DriverSocket):
             self.initialize(r["id"], r["pars"])
             self.status = self.get_status()
 
-        if not (self.status & Status.Ready):
+        if not (self.status & (Status.Ready | Status.NeedExtra)):
             warning(
                 " @SOCKET:   Inconsistent client state in dispatch thread! (II)",
                 verbosity.low,
             )
             return
 
+        # From now on self.status can be only one among Status.Ready and Status.NeedExtra:
+        # not both, nor neither of both, but only and only one of these.
+
         r["start"] = time.time()
-        # ELIA STOCCO
-        if "extra" in r:
+
+        if self.status & (Status.Ready & Status.NeedExtra):
+            warning(
+                " @SOCKET:   Keep calm: set Ready and NeedExtra once at a time.",
+                verbosity.high,
+            )
+            raise InvalidStatus
+
+        if self.status & Status.NeedExtra:
+            if "extra" not in r:
+                warning(
+                    " @SOCKET:   'extra' is empty.",
+                    verbosity.high,
+                )
+                r["extra"] = ""
+
             self.sendextra(r["extra"])
-        self.sendpos(r["pos"][r["active"]], r["cell"])
+
+        elif self.status & Status.Ready:
+            self.sendpos(r["pos"][r["active"]], r["cell"])
+        else:
+            raise InvalidStatus
 
         self.get_status()
         if not (self.status & Status.HasData):
