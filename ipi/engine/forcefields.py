@@ -2202,10 +2202,18 @@ class FFCavPhSocket(FFSocket):
 
 class FFDielectric(ForceField):
 
-    def __init__(self, name: str, mode: str, field: np.ndarray, forcefield: ForceField):
+    def __init__(
+        self,
+        name: str,
+        mode: str,
+        where: str,
+        field: np.ndarray,
+        forcefield: ForceField,
+    ):
         super().__init__()
         self.name = name
         self.mode = mode
+        self.where = where
         self.field = field
         self.forcefield = forcefield
 
@@ -2214,6 +2222,8 @@ class FFDielectric(ForceField):
 
     def queue(self, *argc, **kwargs):
         newreq = self.forcefield.queue(*argc, **kwargs)
+        if self.where == "driver":
+            newreq["extra"] = json.dumps({"Efield": [0.0, 0.0, 0.0]})  # just an example
         return newreq
 
     # def check_finish(self, *argc,**kwargs):

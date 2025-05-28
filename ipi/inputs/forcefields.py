@@ -1200,7 +1200,9 @@ class InputFFDielectric(InputForceField):
     fields = copy(InputForceField.fields)
     attribs = copy(InputForceField.attribs)
 
-    fields["field"] = (
+    fields[
+        "field"
+    ] = (  # ToDo: this has to be modified to become a time-dependent object
         InputArray,
         {
             "dtype": float,
@@ -1217,6 +1219,18 @@ class InputFFDielectric(InputForceField):
             "options": ["none", "E", "D"],
             "default": "none",
             "help": "Specifies type of applied dielectric field: none, external electric field (E) or electric displacement (D).",
+        },
+    )
+
+    attribs["where"] = (
+        InputAttribute,
+        {
+            "dtype": str,
+            "options": ["client", "driver"],
+            "default": "client",
+            "help": "Where the contribution to the forces that depends on the electric field is computed.\
+                If 'client', i-PI expects to receive all necessary information to evaluate the extra contribution (which depends on 'mode') and it will sum it to the forces returned by the driver.\
+                If 'driver', i-PI will send extra information to the driver (which will take care of evaluating the extra contribution to the forces) and it will simply read the provided forces.",
         },
     )
 
@@ -1278,6 +1292,7 @@ class InputFFDielectric(InputForceField):
 
         self.name.store(ff.name)
         self.mode.store(ff.mode)
+        self.where.store(ff.where)
         self.field.store(ff.field)
         # self.forcefield.store(ff.forcefield)
 
@@ -1293,6 +1308,7 @@ class InputFFDielectric(InputForceField):
         return FFDielectric(
             name=self.name.fetch(),
             mode=self.mode.fetch(),
+            where=self.where.fetch(),
             field=self.field.fetch(),
             forcefield=ff,
         )
