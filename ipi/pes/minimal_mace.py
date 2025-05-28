@@ -1,21 +1,49 @@
 """To be written"""
 
 import numpy as np
-import torch
-
-from ase import Atoms
-from ase.calculators.calculator import all_changes, Calculator, all_properties
-from mace.calculators import MACECalculator
-
 from ipi.utils.messages import verbosity, warning
-from .ase import ASEDriver
+
+try:
+    from .dummy import Dummy_driver
+except:
+    from dummy import Dummy_driver
+
+try:
+    from ase import Atoms
+except ImportError as e:
+    message = (
+        "could not find 'ase.Atoms': make sure that 'ase' is installed."
+    )
+    warning(f"{message}: {e}")
+    raise ImportError(message) from e
+
+try:
+    from ase.calculators.calculator import all_changes, all_properties
+except ImportError as e:
+    message = (
+        "could not find 'all_changes' and 'all_properties' in 'ase': make sure that ase is installed."
+    )
+    warning(f"{message}: {e}")
+    raise ImportError(message) from e
+
+try:
+    from mace.calculators import MACECalculator
+except ImportError as e:
+    message = (
+        "could not find 'MACECalculator': make sure that 'MACE' is installed."
+    )
+    warning(f"{message}: {e}")
+    raise ImportError(message) from e
 
 __DRIVER_NAME__ = "minimal_mace"
 __DRIVER_CLASS__ = "Minimal_MACE_driver"
 
 # This driver inherits from MACECalculator so that it can overwrite the `calculate` method
 
-class Minimal_MACE_driver(ASEDriver,MACECalculator):
+class ExposedMACECalculator(MACECalculator):
+    pass
+
+class Minimal_MACE_driver(Dummy_driver):
     """
     To be written
     """
@@ -53,46 +81,7 @@ class Minimal_MACE_driver(ASEDriver,MACECalculator):
         super().check_parameters()
         self.ase_calculator = self
         
-    # overwrite 'MACECalculator.calculate'
-    def calculate(self, atoms:Atoms, properties=all_properties, system_changes=all_changes):
-        # skip 'MACECalculator.calculate'
-        Calculator().calculate(atoms, properties, system_changes)
-        
-        batch_base = self._atoms_to_batch(atoms)
-
-        if self.model_type in ["MACE", "EnergyDipoleMACE"]:
-            batch = self._clone_batch(batch_base)
-            node_heads = batch["head"][batch["batch"]]
-            num_atoms_arange = torch.arange(batch["positions"].shape[0])
-            node_e0 = self.models[0].atomic_energies_fn(batch["node_attrs"])[
-                num_atoms_arange, node_heads
-            ]
-            compute_stress = not self.use_compile
-        else:
-            compute_stress = False
-
-        ret_tensors = self._create_result_tensors(
-            self.model_type, self.num_models, len(atoms)
-        )
-        for i, model in enumerate(self.models):
-            batch = self._clone_batch(batch_base)
-            out = model(
-                batch.to_dict(),
-                compute_stress=compute_stress,
-                training=self.use_compile,
-                compute_edge_forces=self.compute_atomic_stresses,
-                compute_atomic_stresses=self.compute_atomic_stresses,
-            )
-        
-        
-        Natoms = atoms.get_global_number_of_atoms()
-        self.results = {
-            "energy": 0.,
-            "free_energy": 0.,
-            "forces": np.zeros((Natoms, 3)),
-            "stress": np.zeros(6),
-        }
-        
+   
 
 # pylint: disable=dangerous-default-value
 def calculate(self, atoms=None, properties=None, system_changes=all_changes):
