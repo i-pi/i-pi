@@ -448,7 +448,13 @@ class FFDirect(FFEval):
             raise err
 
     def evaluate(self, request):
-        results = list(self.driver(request["cell"][0], request["pos"].reshape(-1, 3)))
+        try:
+            results = list(
+                self.driver(request["cell"][0], request["pos"].reshape(-1, 3))
+            )
+        except Exception as err:
+            print(f"Error in 'FFDirect.evaluate' while evaluating energy and forces.")
+            raise err
 
         # ensure forces and virial have the correct shape to fit the results
         results[1] = results[1].reshape(-1)
@@ -2207,30 +2213,108 @@ class FFDielectric(ForceField):
         name: str,
         mode: str,
         where: str,
+        dipole: dict,
+        bec: dict,
         field: np.ndarray,
         forcefield: ForceField,
     ):
         super().__init__()
-        self.name = name
+        self.name = name  # this might be useless
         self.mode = mode
         self.where = where
+        self.dipole = ArrayFromDict(**dipole)
+        self.bec = ArrayFromDict(**bec)
         self.field = field
         self.forcefield = forcefield
 
     def start(self):
         return self.forcefield.start()
 
-    def queue(self, *argc, **kwargs):
-        newreq = self.forcefield.queue(*argc, **kwargs)
+    def queue(self, *argc, **kwargs) -> dict:
+        template = None
         if self.where == "driver":
-            newreq["extra"] = json.dumps({"Efield": [0.0, 0.0, 0.0]})  # just an example
-        return newreq
+            template = {
+                "extra": json.dumps({"Efield": [0.0, 0.0, 0.0]})  # just an example
+            }
+        request = self.forcefield.queue(*argc, **kwargs, template=template)
 
-    # def check_finish(self, *argc,**kwargs):
-    #     return self.forcefield.check_finish(*argc,**kwargs)
+        if self.where == "client":
+            return self.apply_ensemble(request)
 
-    # def gather(self,*argc,**kwargs):
-    #     return self.forcefield.gather(*argc,**kwargs)
+    def apply_ensemble(self, request: dict) -> dict:
 
-    # def poll(self,*argc,**kwargs):
-    #     return self.forcefield.poll(*argc,**kwargs)
+        # do nothing
+        if self.mode == "none":
+            return request
+
+        # check that we have all necessary information
+        u, f, v, x = request["result"]
+
+        mu = self.dipole.get(x)
+        # check that the Born Charges are provided
+        Z = self.bec.get(x)
+
+        # apply fixed-E ensemble
+        if self.mode == "E":
+            u, f, v, x = self.fixed_E(request["result"])
+        # apply fixed-D ensemble
+        elif self.mode == "D":
+            u, f, v, x = self.fixed_D(request["result"])
+        # there is an error in the implementation
+        else:
+            raise ValueError("coding error")
+        request["result"] = (u, f, v, x)
+        return request
+
+    def fixed_E(self, results: dict):
+        u, f, v, x = results
+        dipole = self.dipole.get(x)
+        Z = self.bec.get(x)
+        u -= dipole @ self.field
+        f += Z @ self.field
+        return u, f, v, x
+
+    def fixed_D(self, request):
+        raise ValueError("Not implemented yet")
+        return request
+
+
+class ArrayFromDict:
+
+    def __init__(self, family: str, units, key: str):
+        self.family = family
+        self.units = units
+        self.key = key
+        # self.shape = shape
+
+    def __repr__(self):
+        return (
+            f"{self.__class__.__name__}("
+            f"family={self.family!r}, "
+            f"units={self.units!r}, "
+            f"key={self.key!r}, "
+            # f"shape={self.shape!r})"
+        )
+
+    def get(self, dictionary: dict) -> np.ndarray:
+        if not isinstance(dictionary, dict):
+            softexit.trigger(
+                status="bad",
+                message=f"The input variable was supposed to be a python dictionary but it is {type(dictionary)}.",
+            )
+        if self.key not in dictionary:
+            softexit.trigger(
+                status="bad",
+                message=f"The key '{self.key}' is not in the provided dictionary.",
+            )
+        value = dictionary[self.key]
+        value = np.asarray(value)
+        # if self.shape is not None:
+        #     value = np.reshape(value,self.shape)
+        return unit_to_internal(self.family, self.units, value)
+
+    def __getitem__(self, name):
+        return self.__getattribute__(name)
+
+    def keys(self):
+        return self.__dict__.keys()
