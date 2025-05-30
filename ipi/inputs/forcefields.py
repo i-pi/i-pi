@@ -1212,6 +1212,23 @@ class InputFFDielectric(InputForceField):
         },
     )
 
+    fields["dipole"] = (
+        InputValueFromDict.specialize(
+            family="electric-dipole", default="eang", key="dipole"
+        ),
+        {
+            "default": {},
+            "help": "How to extract the dipole (keyword and units) from the extra information.",
+        },
+    )
+    fields["bec"] = (
+        InputValueFromDict.specialize(family="charge", default="e", key="BEC"),
+        {
+            "default": {},
+            "help": "How to extract the Born Charges (keyword and units) from the extra information.",
+        },
+    )
+
     attribs["mode"] = (
         InputAttribute,
         {
@@ -1294,7 +1311,8 @@ class InputFFDielectric(InputForceField):
         self.mode.store(ff.mode)
         self.where.store(ff.where)
         self.field.store(ff.field)
-        # self.forcefield.store(ff.forcefield)
+        self.dipole.store(ff.dipole)
+        self.bec.store(ff.bec)
 
     def fetch(self):
         """Fetches all of the FF objects"""
@@ -1309,6 +1327,8 @@ class InputFFDielectric(InputForceField):
             name=self.name.fetch(),
             mode=self.mode.fetch(),
             where=self.where.fetch(),
+            dipole=self.dipole.fetch(),
+            bec=self.bec.fetch(),
             field=self.field.fetch(),
             forcefield=ff,
         )
