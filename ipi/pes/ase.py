@@ -1,5 +1,6 @@
 """Interface with ASE calculators"""
 
+import json
 import numpy as np
 from .dummy import Dummy_driver
 
@@ -103,6 +104,19 @@ class ASEDriver(Dummy_driver):
         vir_ipi = np.array(
             unit_to_internal("energy", "electronvolt", vir_calc.T), dtype=np.float64
         )
-        extras = ""
+
+        # extra information
+        extras = {}
+        for key in properties:
+            if key not in ["energy", "forces", "stress"]:
+                value = properties[key]
+                if isinstance(value, np.ndarray):
+                    extras[key] = value.tolist()
+                else:
+                    extras[key] = float(value)
+        if extras == {}:
+            extras = ""
+        else:
+            extras = json.dumps(extras)
 
         return pot_ipi, force_ipi, vir_ipi, extras
