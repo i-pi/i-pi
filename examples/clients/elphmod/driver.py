@@ -20,7 +20,7 @@ driver = elphmod.md.Driver(
 
 driver.kT = 0.005
 driver.f = elphmod.occupations.fermi_dirac
-driver.random_displacements()
+driver.random_displacements(amplitude=0.05)
 
 driver.save("driver.pickle")
 driver.to_xyz("driver.xyz")
