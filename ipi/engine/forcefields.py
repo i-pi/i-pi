@@ -449,6 +449,8 @@ class FFDirect(FFEval):
 
     def evaluate(self, request):
         try:
+            if "extra" in request:
+                self.driver.store_extra(request["extra"])
             results = list(
                 self.driver(request["cell"][0], request["pos"].reshape(-1, 3))
             )

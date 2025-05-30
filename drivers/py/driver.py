@@ -146,8 +146,6 @@ def run_driver(
             extra = recv_data(sock, extra)
             # convert to ... something
             extra = bytearray(extra).decode("utf-8")
-            # convert to JSON
-            extra = json.loads(extra)
             # store extra data
             driver.store_extra(extra)
 
