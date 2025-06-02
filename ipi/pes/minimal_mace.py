@@ -11,37 +11,33 @@ except:
 try:
     from ase import Atoms
 except ImportError as e:
-    message = (
-        "could not find 'ase.Atoms': make sure that 'ase' is installed."
-    )
+    message = "could not find 'ase.Atoms': make sure that 'ase' is installed."
     warning(f"{message}: {e}")
     raise ImportError(message) from e
 
 try:
     from ase.calculators.calculator import all_changes, all_properties
 except ImportError as e:
-    message = (
-        "could not find 'all_changes' and 'all_properties' in 'ase': make sure that ase is installed."
-    )
+    message = "could not find 'all_changes' and 'all_properties' in 'ase': make sure that ase is installed."
     warning(f"{message}: {e}")
     raise ImportError(message) from e
 
 try:
     from mace.calculators import MACECalculator
 except ImportError as e:
-    message = (
-        "could not find 'MACECalculator': make sure that 'MACE' is installed."
-    )
+    message = "could not find 'MACECalculator': make sure that 'MACE' is installed."
     warning(f"{message}: {e}")
     raise ImportError(message) from e
 
-__DRIVER_NAME__ = "minimal_mace"
-__DRIVER_CLASS__ = "Minimal_MACE_driver"
+# __DRIVER_NAME__ = "minimal_mace"
+# __DRIVER_CLASS__ = "Minimal_MACE_driver"
 
 # This driver inherits from MACECalculator so that it can overwrite the `calculate` method
 
+
 class ExposedMACECalculator(MACECalculator):
     pass
+
 
 class Minimal_MACE_driver(Dummy_driver):
     """
@@ -67,21 +63,20 @@ class Minimal_MACE_driver(Dummy_driver):
         # set the device and dtype for torch
         # torch.set_default_device(device)
         # torch.set_default_dtype(getattr(torch, dtype))
-        
+
         # it loads only once mode
         # self.model:torch.nn.Module = torch.load(model, map_location=device)
         # self.model.to(device)
         # self.model.eval()
-        
+
         # initialize
-        ASEDriver().__init__(self,template, *args, **kwargs)
-        MACECalculator.__init__(self,*args, **kwargs)
+        ASEDriver().__init__(self, template, *args, **kwargs)
+        MACECalculator.__init__(self, *args, **kwargs)
 
     def check_parameters(self):
         super().check_parameters()
         self.ase_calculator = self
-        
-   
+
 
 # pylint: disable=dangerous-default-value
 def calculate(self, atoms=None, properties=None, system_changes=all_changes):
@@ -176,12 +171,8 @@ def calculate(self, atoms=None, properties=None, system_changes=all_changes):
                 * self.energy_units_to_eV
             )
     if self.model_type in ["DipoleMACE", "EnergyDipoleMACE"]:
-        self.results["dipole"] = (
-            torch.mean(ret_tensors["dipole"], dim=0).cpu().numpy()
-        )
+        self.results["dipole"] = torch.mean(ret_tensors["dipole"], dim=0).cpu().numpy()
         if self.num_models > 1:
             self.results["dipole_var"] = (
-                torch.var(ret_tensors["dipole"], dim=0, unbiased=False)
-                .cpu()
-                .numpy()
+                torch.var(ret_tensors["dipole"], dim=0, unbiased=False).cpu().numpy()
             )
