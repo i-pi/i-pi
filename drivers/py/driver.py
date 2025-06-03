@@ -100,6 +100,7 @@ def run_driver(
                 sock.sendall(Message("NEEDEXTRA"))
             elif f_data:
                 sock.sendall(Message("HAVEDATA"))
+                f_extra = False
             else:
                 sock.sendall(Message("READY"))
         elif header == Message("INIT"):
@@ -129,7 +130,7 @@ def run_driver(
             ##### THIS IS THE TIME TO DO SOMETHING WITH THE POSITIONS!
             pot, force, vir, extras = driver(cell, pos)
             f_data = True
-            f_extra = False  # no, the driver does not have extra data anymore
+            # f_extra = False  # no, the driver does not have extra data anymore
 
         elif header == Message("EXTRADATA"):
 
@@ -141,7 +142,7 @@ def run_driver(
             # read how many charater are gonne be sent
             nchar = recv_data(sock, np.int32())
             # allocate an array of characters of the right size
-            extra = np.zeros(nchar, np.character)
+            extra = np.zeros(nchar, dtype="S1")
             # read the extra string
             extra = recv_data(sock, extra)
             # convert to ... something
@@ -150,6 +151,7 @@ def run_driver(
             driver.store_extra(extra)
 
             f_extra = True  # yes, the driver has extra data
+            # sock.sendall(Message("READY"))
 
         elif header == Message("GETFORCE"):
             sock.sendall(Message("FORCEREADY"))
