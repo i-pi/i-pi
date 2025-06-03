@@ -455,7 +455,7 @@ class FFDirect(FFEval):
                 self.driver(request["cell"][0], request["pos"].reshape(-1, 3))
             )
         except Exception as err:
-            print(f"Error in 'FFDirect.evaluate' while evaluating energy and forces.")
+            print("Error in 'FFDirect.evaluate' while evaluating energy and forces.")
             raise err
 
         # ensure forces and virial have the correct shape to fit the results
