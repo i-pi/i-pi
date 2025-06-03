@@ -2242,6 +2242,8 @@ class FFDielectric(ForceField):
 
         if self.where == "client":
             return self.apply_ensemble(request)
+        else:
+            return request
 
     def apply_ensemble(self, request: dict) -> dict:
 
