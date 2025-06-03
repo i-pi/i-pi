@@ -2,7 +2,6 @@
 import socket
 import argparse
 import numpy as np
-import json
 
 from ipi.pes import *
 from ipi.utils.io.inputs import read_args_kwargs
