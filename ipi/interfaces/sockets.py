@@ -437,10 +437,12 @@ class Driver(DriverSocket):
         """
         global TIMEOUT  # we need to update TIMEOUT in case of sendall failure
 
-        if self.status & Status.Ready:
+        if self.status & Status.NeedExtra:
             try:
                 # reduces latency by combining all messages in one
-                self.sendall(MESSAGE["extradata"] + extra.encode())  # header  # extras
+                self.sendall(
+                    MESSAGE["extradata"] + np.int32(len(extra)) + extra.encode("utf-8")
+                )  # header  # extras
                 self.status = Status.Up | Status.Busy
             except socket.timeout:
                 warning(
@@ -593,8 +595,9 @@ class Driver(DriverSocket):
                 r["extra"] = ""
 
             self.sendextra(r["extra"])
+            self.get_status()
 
-        elif self.status & Status.Ready:
+        if self.status & Status.Ready:
             self.sendpos(r["pos"][r["active"]], r["cell"])
         else:
             raise InvalidStatus
@@ -980,7 +983,10 @@ class InterfaceSocket(object):
             return False
         if fc.status & Status.HasData:
             return False
-        if not (fc.status & (Status.Ready | Status.NeedsInit | Status.Busy)):
+        if not (
+            fc.status
+            & (Status.Ready | Status.NeedsInit | Status.Busy | Status.NeedExtra)
+        ):
             warning(
                 " @SOCKET: Client "
                 + str(fc.peername)
