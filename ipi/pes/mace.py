@@ -4,8 +4,6 @@ import json
 
 from .ase import ASEDriver
 
-from ipi.utils.messages import verbosity, warning
-
 MACECalculator = None
 
 __DRIVER_NAME__ = "mace"
