@@ -95,7 +95,7 @@ def run_driver(
             # responds to a status request
             if not f_init:
                 sock.sendall(Message("NEEDINIT"))
-            elif not f_extra:  # this goes before f_data
+            elif not f_extra and driver.requires_extra:  # this goes before f_data
                 sock.sendall(Message("NEEDEXTRA"))
             elif f_data:
                 sock.sendall(Message("HAVEDATA"))
@@ -132,7 +132,6 @@ def run_driver(
             # f_extra = False  # no, the driver does not have extra data anymore
 
         elif header == Message("EXTRADATA"):
-
             if not driver.requires_extra:
                 raise ValueError("The driver does not support EXTRADATA.")
 
