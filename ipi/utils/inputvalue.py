@@ -1350,7 +1350,10 @@ class InputValueFromDict(InputDictionary):
         ),
     }
 
-    # This is a really bad hack, but it should be robust
+    # Some comments:
+    # - this is a really bad hack, but it should be robust
+    # - The new attribute will not be saved to file because it will always have the default value (this is the default in i-PI)
+    # - the user can not specify 'family': the code will raise an exception.
     @classmethod
     def specialize(cls, family: str, default: str, key: str):
         assert family in UnitMap, "coding error"
@@ -1359,9 +1362,9 @@ class InputValueFromDict(InputDictionary):
         assert default in options, "coding error"
 
         # Create a deep copy of the original fields
-        new_fields = deepcopy(cls.attribs)
+        new_attribs = deepcopy(cls.attribs)
 
-        new_fields["family"] = (
+        new_attribs["family"] = (
             InputAttribute,
             {
                 "dtype": str,
@@ -1371,20 +1374,24 @@ class InputValueFromDict(InputDictionary):
             },
         )
 
-        # new_fields["family"][1]["default"] = family
-        # new_fields["family"][1]["options"] = list(UnitMap.keys())
+        new_attribs["units"][1]["options"] = options
+        new_attribs["units"][1]["default"] = default
 
-        new_fields["units"][1]["options"] = options
-        new_fields["units"][1]["default"] = default
-
-        new_fields["key"][1]["default"] = key
+        new_attribs["key"][1]["default"] = key
 
         # Dynamically create a new subclass with updated fields
         return type(
-            f"{cls.__name__}", (cls,), {"fields": new_fields}  # name of new class
+            f"{cls.__name__}", (cls,), {"attribs": new_attribs}  # name of new class
         )
 
     def store(self, value: dict):
         for k in value.keys():
             self.__dict__[k].store(value[k])
         pass
+
+    def fetch(self):
+        self.check()
+        rdic = {}
+        for f, v in self.attribs.items():
+            rdic[f] = self.__dict__[f].fetch()
+        return rdic
