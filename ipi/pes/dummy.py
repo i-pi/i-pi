@@ -41,4 +41,4 @@ class Dummy_driver(object):
     def store_extra(self, extra: str):
         """Convert the JSON formatted string 'extra' into a dict and store it into self.extra."""
         # ToDo: improve error handling
-        self.extra = json.load(extra)
+        self.extra = json.loads(extra)
