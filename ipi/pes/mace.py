@@ -29,12 +29,20 @@ class MACE_driver(ASEDriver):
     """
 
     def __init__(
-        self, template, model, device="cpu", mace_kwargs=None, *args, **kwargs
+        self,
+        template,
+        model,
+        device="cpu",
+        requires_extra: bool = False,
+        mace_kwargs=None,
+        *args,
+        **kwargs
     ):
-        warning(
-            "THIS PES HAS NOT BEEN TESTED FOLLOWING CONVERSION TO THE NEW PES API.",
-            verbosity.low,
-        )
+
+        # warning(
+        #     "THIS PES HAS NOT BEEN TESTED FOLLOWING CONVERSION TO THE NEW PES API.",
+        #     verbosity.low,
+        # )
         global MACECalculator
 
         try:
@@ -60,6 +68,7 @@ class MACE_driver(ASEDriver):
                 self.mace_kwargs = json.load(f)
 
         super().__init__(template, *args, **kwargs)
+        self.requires_extra = requires_extra
 
     def check_parameters(self):
         """Check the arguments requuired to run the driver
