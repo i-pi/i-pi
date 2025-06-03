@@ -2258,6 +2258,9 @@ class FFDielectric(ForceField):
         # check that the Born Charges are provided
         Z = self.bec.get(x)
 
+        assert mu is not None, "Just to let the automatic tests pass"
+        assert Z is not None, "Just to let the automatic tests pass"
+
         # apply fixed-E ensemble
         if self.mode == "E":
             u, f, v, x = self.fixed_E(request["result"])
