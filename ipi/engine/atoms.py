@@ -104,7 +104,7 @@ class Atoms:
        pz: An array giving the z components of the momenta.
     """
 
-    def __init__(self, natoms, _prebind=None):
+    def __init__(self, natoms, _prebind=None, ensemble=None):
         """Initialises Atoms.
 
         Each replica and the centroid coordinate are all held as Atoms objects,
@@ -147,6 +147,10 @@ class Atoms:
         self._kstress = depend_value(
             name="kstress", func=self.get_kstress, dependencies=[self._p, self._m]
         )
+        self.ensemble = ensemble
+
+    def bind(self, ensemble):
+        self.ensemble = ensemble
 
     def clone(self):
         """Creates a new Atoms object.
@@ -160,6 +164,7 @@ class Atoms:
         newat.p[:] = dstrip(self.p)
         newat.m[:] = dstrip(self.m)
         newat.names[:] = self.names
+        newat.ensemble = self.ensemble
         return newat
 
     def __len__(self):

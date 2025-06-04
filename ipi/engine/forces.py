@@ -823,9 +823,11 @@ class Forces:
             # the beads positions for this force components are obtained
             # automatically, when needed, as a contraction of the full beads
             newbeads._q._func = make_rpc(newrpc, beads)
+            newbeads.ensemble = beads.ensemble
             for b in newbeads:
                 # must update also indirect access to the beads coordinates
                 b._q._func = newbeads._q._func
+                b.ensemble = newbeads.ensemble
 
             # makes newbeads.q depend from beads.q
             beads._q.add_dependant(newbeads._q)

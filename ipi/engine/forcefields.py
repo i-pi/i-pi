@@ -1594,7 +1594,6 @@ class FFRotations(ForceField):
         self.ff.start()
 
     def queue(self, atoms, cell, reqid=-1):
-
         # launches requests for all of the rotations FF objects
         ffh = []  # this is the list of "inner" FF requests
         rots = []  # this is a list of tuples of (rotation matrix, weight)
@@ -2209,7 +2208,6 @@ class FFCavPhSocket(FFSocket):
 
 
 class FFDielectric(ForceField):
-
     def __init__(
         self,
         name: str,
@@ -2229,16 +2227,24 @@ class FFDielectric(ForceField):
         self.field = field
         self.forcefield = forcefield
 
+    def bind(self, output_maker=None):
+        """Binds the FF, at present just to allow for
+        managed output"""
+
+        self.output_maker = output_maker
+        self.forcefield.bind(output_maker)
+
     def start(self):
         return self.forcefield.start()
 
-    def queue(self, *argc, **kwargs) -> dict:
+    def queue(self, atoms, cell, **kwargs) -> dict:
+        # atoms.ensemble.time
         template = None
         if self.where == "driver":
             template = {
                 "extra": json.dumps({"Efield": [0.0, 0.0, 0.0]})  # just an example
             }
-        request = self.forcefield.queue(*argc, **kwargs, template=template)
+        request = self.forcefield.queue(atoms, cell, **kwargs, template=template)
 
         if self.where == "client":
             return self.apply_ensemble(request)
@@ -2246,7 +2252,6 @@ class FFDielectric(ForceField):
             return request
 
     def apply_ensemble(self, request: dict) -> dict:
-
         # do nothing
         if self.mode == "none":
             return request
@@ -2261,16 +2266,12 @@ class FFDielectric(ForceField):
         assert mu is not None, "Just to let the automatic tests pass"
         assert Z is not None, "Just to let the automatic tests pass"
 
-        # apply fixed-E ensemble
-        if self.mode == "E":
-            u, f, v, x = self.fixed_E(request["result"])
-        # apply fixed-D ensemble
-        elif self.mode == "D":
-            u, f, v, x = self.fixed_D(request["result"])
-        # there is an error in the implementation
-        else:
+        if self.mode == "E":  # apply fixed-E ensemble
+            request["result"] = self.fixed_E(request["result"])
+        elif self.mode == "D":  # apply fixed-D ensemble
+            request["result"] = self.fixed_D(request["result"])
+        else:  # there is an error in the implementation
             raise ValueError("coding error")
-        request["result"] = (u, f, v, x)
         return request
 
     def fixed_E(self, results: dict):
@@ -2287,7 +2288,6 @@ class FFDielectric(ForceField):
 
 
 class ArrayFromDict:
-
     def __init__(self, family: str, units, key: str):
         self.family = family
         self.units = units
