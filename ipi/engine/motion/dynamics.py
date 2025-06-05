@@ -357,6 +357,10 @@ class DummyIntegrator:
         """Dummy simulation time step which does nothing."""
         pass
 
+    def update_actual_time(self, qdt: float):
+        """Update the actual time of the simulation using the positions qdt"""
+        self.actual_time += qdt
+
     def pconstraints(self):
         """This removes the centre of mass contribution to the kinetic energy.
 
