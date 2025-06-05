@@ -83,7 +83,7 @@ class System:
 
         # binds important computation engines
         info(" @system.bind: Binding the forces ", verbosity.low)
-        self.beads.bind(self.ensemble)
+        self.beads.bind(self.motion)
         self.forces.bind(
             self.beads,
             self.cell,
