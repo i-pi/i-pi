@@ -451,7 +451,9 @@ class NVEIntegrator(DummyIntegrator):
     def qcstep(self):
         """Velocity Verlet centroid position propagator."""
         # dt/inmts
-        self.nm.qnm[0, :] += dstrip(self.nm.pnm)[0, :] * dstrip(self.qdt_on_m)
+        dt = dstrip(self.qdt_on_m)
+        self.nm.qnm[0, :] += dstrip(self.nm.pnm)[0, :] * dt
+        self.update_actual_time(dt)
 
     # now the idea is that for BAOAB the MTS should work as follows:
     # take the BAB MTS, and insert the O in the very middle. This might imply breaking a A step in two, e.g. one could have
@@ -654,6 +656,7 @@ class NPTIntegrator(NVTIntegrator):
         """Velocity Verlet centroid position propagator."""
 
         self.barostat.qcstep()
+        self.update_actual_time(self.qdt)
 
     def tstep(self):
         """Velocity Verlet thermostat step"""
@@ -798,6 +801,7 @@ class SCNPTIntegrator(SCIntegrator):
         """Velocity Verlet centroid position propagator."""
 
         self.barostat.qcstep()
+        self.update_actual_time(self.qdt)
 
     def tstep(self):
         """Velocity Verlet thermostat step"""
