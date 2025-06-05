@@ -245,12 +245,12 @@ class Dynamics(Motion):
             softexit.trigger(
                 status="bad", message=" @ SIMULATION: Error in the actual time update."
             )
-        self.actual_time = (
+        self.integrator.actual_time = (
             self.ensemble.time
         )  # overwrite to avoid accumulating numerical noise
 
 
-dproperties(Dynamics, ["dt", "nmts", "splitting", "ntemp"])
+dproperties(Dynamics, ["dt", "nmts", "splitting", "ntemp", "actual_time"])
 
 
 class DummyIntegrator:
