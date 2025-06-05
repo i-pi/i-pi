@@ -217,7 +217,7 @@ class Simulation:
         # start forcefields here so we avoid having a shitload of files printed
         # out only to find the socket is busy or whatever prevented starting the threads
         for k, f in self.fflist.items():
-            f.bind(self.output_maker, self)
+            f.bind(self.output_maker)
             f.start()
 
         # Checks for repeated filenames.
