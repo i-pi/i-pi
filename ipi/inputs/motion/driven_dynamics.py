@@ -4,7 +4,7 @@
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
-from ipi.engine.motion.driven_dynamics import ElectricField, BEC
+from ipi.engine.motion.driven_dynamics import ElectricField, BEC, ConstantField
 from ipi.utils.inputvalue import (
     input_default,
 )
@@ -18,7 +18,94 @@ from ipi.inputs.cell import *
 from copy import copy
 
 
-__all__ = ["InputDrivenDynamics", "InputElectricField", "InputBEC"]
+__all__ = ["InputDrivenDynamics", "InputElectricField", "InputBEC", "InputFunction"]
+
+CommonFields = {
+    "amplitude": (
+        InputArray,
+        {
+            "dtype": float,
+            "default": np.zeros(3),
+            "help": "The amplitude of the external field (in cartesian coordinates)",
+            "dimension": "electric-field",
+        },
+    ),
+    "freq": (
+        InputValue,
+        {
+            "dtype": float,
+            "default": 0.0,
+            "help": "The pulsation of the external field",
+            "dimension": "frequency",
+        },
+    ),
+    "phase": (
+        InputValue,
+        {
+            "dtype": float,
+            "default": 0.0,
+            "help": "The phase of the external field (in rad)",
+            "dimension": "number",
+        },
+    ),
+    "peak": (
+        InputValue,
+        {
+            "dtype": float,
+            "default": 0.0,
+            "help": "The time when the external field gets its maximum value",
+            "dimension": "time",
+        },
+    ),
+    "fwhm": (
+        InputValue,
+        {
+            "dtype": float,
+            "default": np.inf,
+            "help": "The FWHM of the gaussian envelope function of the external field",
+            "dimension": "time",
+        },
+    ),
+}
+
+
+class InputConstantField(Input):
+
+    fields = {"amplitude": CommonFields["amplitude"]}
+
+
+class InputPlaneWave(Input):
+    fields = {
+        "amplitude": CommonFields["amplitude"],
+        "freq": CommonFields["freq"],
+        "phase": CommonFields["phase"],
+    }
+
+
+class InputPlaneWaveGauss(InputPlaneWave):
+    fields = InputPlaneWave.fields
+    fields.update({"peak": CommonFields["peak"], "fwhm": CommonFields["fwhm"]})
+
+
+class InputVectorField(Input):
+
+    attribs = {
+        "mode": (
+            InputAttribute,
+            {
+                "dtype": str,
+                "default": "none",
+                "options": ["constant", "pw", "pw+gauss"],
+                "help": "The type of electric field.",
+            },
+        )
+    }
+
+    fields = {
+        "constant": (InputConstantField, {}),
+        "pw": (InputPlaneWave, {}),
+        "pw+gauss": (InputPlaneWaveGauss, {}),
+    }
 
 
 class InputElectricField(Input):
