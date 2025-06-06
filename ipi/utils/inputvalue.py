@@ -1320,7 +1320,7 @@ class InputArray(InputValue):
             self.shape.store((len(self.value),))
 
 
-class InputValueFromDict(InputDictionary):
+class InputValueFromDict(Input):
 
     # The user can not provide the 'family', but only 'units' and 'key'.
     # The 'family' is provided by the developer.
