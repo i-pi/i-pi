@@ -2238,7 +2238,7 @@ class FFDielectric(ForceField):
         return self.forcefield.start()
 
     def queue(self, atoms, cell, **kwargs) -> dict:
-        # atoms.ensemble.time
+        # atoms.motion.actual_time
         template = None
         if self.where == "driver":
             template = {
