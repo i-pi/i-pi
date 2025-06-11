@@ -4,7 +4,7 @@ import json
 
 from .ase import ASEDriver
 
-from ipi.utils.messages import warning, verbosity
+from ipi.utils.messages import verbosity, warning
 
 
 MACECalculator = None
