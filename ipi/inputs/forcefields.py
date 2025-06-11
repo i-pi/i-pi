@@ -911,14 +911,14 @@ class InputFFCommittee(InputForceField):
                     _iobj = InputFFsGDML()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("ffsgdml", _iobj)
-                elif isinstance(_obj, FFDirect):
-                    _iobj = InputFFDirect()
-                    _iobj.store(_obj)
-                    self.extra[_ii] = ("ffdirect", _iobj)
-                else:
-                    raise ValueError(
-                        f"This is a coding error: _obj is of type {type(_obj)} and this type is not included in the above if-else statement."
-                    )
+                # elif isinstance(_obj, FFDirect):
+                #     _iobj = InputFFDirect()
+                #     _iobj.store(_obj)
+                #     self.extra[_ii] = ("ffdirect", _iobj)
+                # else:
+                #     raise ValueError(
+                #         f"This is a coding error: _obj is of type {type(_obj)} and this type is not included in the above if-else statement."
+                #     )
             else:
                 self.extra[_ii][1].store(_obj)
 
