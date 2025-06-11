@@ -477,7 +477,7 @@ class Driver(DriverSocket):
         mlen = np.int32()
         mlen = self.recvall(mlen)
         if mlen > 0:
-            mxtra = np.zeros(mlen, np.dtype('S1'))
+            mxtra = np.zeros(mlen, np.dtype("S1"))
             mxtra = self.recvall(mxtra)
             mxtra = bytearray(mxtra).decode("utf-8")
         else:
