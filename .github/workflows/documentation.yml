@@ -1,6 +1,11 @@
 name: Documentation
 
-on: [push, pull_request]
+on:
+  push:
+    branches: [main]
+    tags: ["*"]
+  pull_request:
+    # Check all PR
 
 jobs:
   build-and-publish:
