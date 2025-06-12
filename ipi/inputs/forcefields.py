@@ -911,10 +911,10 @@ class InputFFCommittee(InputForceField):
                     _iobj = InputFFsGDML()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("ffsgdml", _iobj)
-                elif isinstance(_obj, FFDirect):
-                    _iobj = InputFFDirect()
-                    _iobj.store(_obj)
-                    self.extra[_ii] = ("ffdirect", _iobj)
+                # elif isinstance(_obj, FFDirect):
+                #     _iobj = InputFFDirect()
+                #     _iobj.store(_obj)
+                #     self.extra[_ii] = ("ffdirect", _iobj)
             else:
                 self.extra[_ii][1].store(_obj)
 
