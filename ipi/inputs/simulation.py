@@ -12,7 +12,7 @@ from ipi.utils.units import *
 from ipi.utils.prng import *
 from ipi.utils.io import *
 from ipi.utils.io.inputs.io_xml import *
-from ipi.utils.messages import verbosity, warning
+from ipi.utils.messages import verbosity
 from ipi.engine.smotion import Smotion
 from ipi.inputs.prng import InputRandom
 from ipi.inputs.system import InputSystem, InputSysTemplate
@@ -298,11 +298,6 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
                     _iobj = InputSystem()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("system", _iobj)
-                else:
-                    warning(
-                        f"This is a coding error: _obj is of type {type(_obj)} and this type is not included in the above if-else statement.",
-                        verbosity.high,
-                    )
 
             else:
                 self.extra[_ii][1].store(_obj)
