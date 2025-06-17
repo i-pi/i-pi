@@ -1093,13 +1093,14 @@
       SUBROUTINE helpmessage
          ! Help banner
 
-         WRITE(*,*) " SYNTAX: driver.x [-u] -a address [-p port] -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|harmonic_bath|meanfield_bath|ljmix|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json|qtip4pf-c-1-delta|qtip4pf-c-2-delta|qtip4pf-c-json-delta|noo3-h2o]"
+         WRITE(*,*) " SYNTAX: driver.x [-u] -a address [-p port] -m [dummy|gas|lj|sg|harm|harm3d|morse|morsedia|MorseHarmonic|zundel|qtip4pf|pswater|lepsm1|lepsm2|qtip4p-efield|eckart|ch4hcbe|ljpolymer|MB|doublewell|doublewell_1D|water_dip_pol|harmonic_bath|meanfield_bath|ljmix|qtip4pf-sr|qtip4pf-c-1|qtip4pf-c-2|qtip4pf-c-json|qtip4pf-c-1-delta|qtip4pf-c-2-delta|qtip4pf-c-json-delta|noo3-h2o]"
          WRITE(*,*) "         -o 'comma_separated_parameters' [-S sockets_prefix] [-v] "
          WRITE(*,*) ""
          WRITE(*,*) " For LJ potential use -o sigma,epsilon,cutoff "
          WRITE(*,*) " For SG potential use -o cutoff "
          WRITE(*,*) " For 1D/3D harmonic oscillator use -o k "
          WRITE(*,*) " For 1D morse oscillators use -o r0,D,a"
+         WRITE(*,*) " For the MorseHarmonic model use -o D,a,r0,k"
          WRITE(*,*) " For qtip4pf-efield use -o Ex,Ey,Ez with Ei in V/nm"
          WRITE(*,*) " For ljpolymer or lkmix use -o n_monomer,sigma,epsilon,cutoff "
          WRITE(*,*) " For gas, dummy, use the optional -o sleep_seconds to add a delay"
