@@ -17,12 +17,12 @@ __DRIVER_CLASS__ = "MorseHarmonic_driver"
 
 class MorseHarmonic_driver(Dummy_driver):
     """
-    Morse potential along z with harmonic potentials in x and y.
+    Quartic expansion of Morse potential around equilibrium + harmonic driver.
 
-    The Morse + Harmonic driver accepts either 0 or 4 arguments.
+    Accepts 0 or 4 arguments.
 
     Example usage:
-        i-pi-py_driver -m MorseHarmonic a=a_value, k=k_value, z0=z0_value, De=De_value
+        i-pi-py_driver -m MorseHarmonic -o a=a_value,k=k_value,z0=z0_value,De=De_value
 
     Parameter descriptions (with expected units):
 
