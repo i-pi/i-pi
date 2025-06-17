@@ -5,7 +5,6 @@ except:
 
 import numpy as np
 from ipi.utils import units
-from typing import Union
 
 # Unit conversions
 A2au = units.unit_to_internal("length", "angstrom", 1.0)
@@ -58,41 +57,41 @@ class MorseHarmonic_driver(Dummy_driver):
         self.k = k
         super().__init__(*args, **kwargs)
 
-    def potential(self, pos: np.ndarray) -> Union[float, np.ndarray]:
+    def potential(self, pos: np.ndarray):
         pot = np.zeros(pos.shape[:-1])
         pos3 = pos.reshape(-1, 3)
         pot3 = np.reshape(pot, -1)
-        xy = pos3[:,:2]
+        xy = pos3[:, :2]
         z = (pos3[:, 2] - self.z0) * self.a
-        pot3[:] = self.De * (z**2 - z**3 + (7.0/12.0)*z**4)
-        pot3 += self.k/2 * np.sum(xy**2, axis=-1)
+        pot3[:] = self.De * (z**2 - z**3 + (7.0 / 12.0) * z**4)
+        pot3 += self.k / 2 * np.sum(xy**2, axis=-1)
         return pot
 
-    def force(self, pos: np.ndarray) -> np.ndarray:
+    def force(self, pos: np.ndarray):
         force = np.zeros_like(pos)
         pos3 = pos.reshape(-1, 3)
         force3 = np.reshape(force, pos3.shape)
-        xy = pos3[:,:2]
+        xy = pos3[:, :2]
         z = (pos3[:, 2] - self.z0) * self.a
-        force3[:,:2] = -self.k*xy
-        force3[:,2] = -self.De * self.a * (2*z - 3*z**2 + (7.0/3.0)*z**3)
+        force3[:, :2] = -self.k * xy
+        force3[:, 2] = -self.De * self.a * (2 * z - 3 * z**2 + (7.0 / 3.0) * z**3)
         return force
 
-    def both(self, pos: np.ndarray) -> tuple[Union[float, np.ndarray], np.ndarray]:
+    def both(self, pos: np.ndarray):
         force = np.zeros_like(pos)
         pot = np.zeros(pos.shape[:-1])
         pos3 = pos.reshape(-1, 3)
         pot3 = np.reshape(pot, -1)
         force3 = np.reshape(force, pos3.shape)
-        xy = pos3[:,:2]
+        xy = pos3[:, :2]
         z = (pos3[:, 2] - self.z0) * self.a
-        U_morse = self.De * (z**2 - z**3 + (7.0/12.0)*z**4)
-        pot = self.k/2 * np.sum(xy**2, axis=-1) + U_morse
-        force3[:,:2] = -self.k*xy
-        force3[:,2] = -self.De * self.a * (2*z - 3*z**2 + (7.0/3.0)*z**3)
+        pot3[:] = self.De * (z**2 - z**3 + (7.0 / 12.0) * z**4)
+        pot3 += self.k / 2 * np.sum(xy**2, axis=-1)
+        force3[:, :2] = -self.k * xy
+        force3[:, 2] = -self.De * self.a * (2 * z - 3 * z**2 + (7.0 / 3.0) * z**3)
         return pot, force
 
-    def __call__(self, cell: np.ndarray, pos: np.ndarray) -> tuple[float, np.ndarray, np.ndarray, str]:
+    def __call__(self, cell: np.ndarray, pos: np.ndarray):
         """Compute total potential and forces: Morse in z, harmonic in x & y"""
         pot, force = self.both(pos)
         # Zero virial and dummy extras
