@@ -17,9 +17,19 @@ __DRIVER_CLASS__ = "MorseHarmonic_driver"
 
 class MorseHarmonic_driver(Dummy_driver):
     """
-    Morse + harmonic driver accepts 0 or 4 arguments.
-    Example: i-pi-py_driver -m MorseHarmonic \
-             -o De(eV) a(1/Angstrom) z0(Angstrom) k(a.u)
+    Morse potential along z with harmonic potentials in x and y.
+
+    The Morse + Harmonic driver accepts either 0 or 4 arguments.
+
+    Example usage:
+        i-pi-py_driver -m MorseHarmonic a=a_value, k=k_value, z0=z0_value, De=De_value
+
+    Parameter descriptions (with expected units):
+
+    - De (Ha)         : Well depth in Hartree. Default: 0.00735 Ha
+    - a  (a.u.^-1)    : Range parameter in inverse Bohr. Default: 1.61 a.u.^-1
+    - z0 (a.u.)       : Equilibrium position in Bohr (~1.1 Å). Default: 2.1 a.u.
+    - k  (a.u.)       : Harmonic force constant. Default: 0.343 a.u.
     """
 
     def __init__(self, De=None, a=None, z0=None, k=None, *args, **kwargs):
