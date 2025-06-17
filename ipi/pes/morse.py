@@ -1,5 +1,3 @@
-import sys
-
 try:
     from .dummy import Dummy_driver
 except:
