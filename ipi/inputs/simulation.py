@@ -298,7 +298,6 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
                     _iobj = InputSystem()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("system", _iobj)
-
             else:
                 self.extra[_ii][1].store(_obj)
 
