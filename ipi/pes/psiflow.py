@@ -7,6 +7,8 @@ from ipi.utils.messages import warning
 
 Geometry = None
 function_from_json = None
+check_input = None
+check_output = None
 
 __DRIVER_NAME__ = "psiflow"
 __DRIVER_CLASS__ = "Psiflow_driver"
@@ -27,11 +29,12 @@ class Psiflow_driver(Dummy_driver):
     """
 
     def __init__(self, template, hamiltonian, *args, **kwargs):
-        global Geometry, function_from_json
-        if Geometry is None or function_from_json is None:
+        global Geometry, function_from_json, check_input, check_output
+        if Geometry is None or function_from_json is None or check_input is None or check_output is None:
             try:
                 from psiflow.geometry import Geometry
                 from psiflow.functions import function_from_json
+                from psiflow.sampling.utils import check_input, check_output
             except ImportError as e:
                 message = (
                     "Could not find the Psiflow driver dependencies, "
@@ -46,6 +49,7 @@ class Psiflow_driver(Dummy_driver):
         super().__init__(*args, **kwargs)
 
     def check_parameters(self):
+        check_input(self.args) # psiflow hook
         self.template_geometry = Geometry.from_atoms(read(self.template))
         self.function = function_from_json(self.hamiltonian)
 
@@ -62,6 +66,8 @@ class Psiflow_driver(Dummy_driver):
         energy = outputs["energy"]
         forces = outputs["forces"]
         stress = outputs["stress"]
+        
+        check_output(outputs) # psiflow hook
 
         # converts to internal quantities
         pot_ipi = np.asarray(
