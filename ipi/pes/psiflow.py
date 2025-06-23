@@ -18,7 +18,7 @@ class Psiflow_driver(Dummy_driver):
     """
     Driver for Psiflow functions.
     The driver requires a template file (in ASE readable format) and a JSON file
-    containing the function definition. Requires the Psiflow package to be installed.
+    containing the function definition. Requires Psiflow to be installed.
 
     Command-line:
         i-pi-drvier -m psiflow -o template=template.xyz,hamiltonian=hamiltonian.json
@@ -30,7 +30,12 @@ class Psiflow_driver(Dummy_driver):
 
     def __init__(self, template, hamiltonian, *args, **kwargs):
         global Geometry, function_from_json, check_input, check_output
-        if Geometry is None or function_from_json is None or check_input is None or check_output is None:
+        if (
+            Geometry is None
+            or function_from_json is None
+            or check_input is None
+            or check_output is None
+        ):
             try:
                 from psiflow.geometry import Geometry
                 from psiflow.functions import function_from_json
@@ -49,9 +54,10 @@ class Psiflow_driver(Dummy_driver):
         super().__init__(*args, **kwargs)
 
     def check_parameters(self):
-        check_input(self.args) # psiflow hook
         self.template_geometry = Geometry.from_atoms(read(self.template))
         self.function = function_from_json(self.hamiltonian)
+
+        check_input(self)  # psiflow hook
 
     def __call__(self, cell, pos):
 
@@ -66,8 +72,8 @@ class Psiflow_driver(Dummy_driver):
         energy = outputs["energy"]
         forces = outputs["forces"]
         stress = outputs["stress"]
-        
-        check_output(outputs) # psiflow hook
+
+        check_output(outputs)  # psiflow hook
 
         # converts to internal quantities
         pot_ipi = np.asarray(
