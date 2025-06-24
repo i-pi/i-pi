@@ -21,7 +21,7 @@ class Psiflow_driver(Dummy_driver):
     containing the function definition. Requires Psiflow to be installed.
 
     Command-line:
-        i-pi-drvier -m psiflow -o template=template.xyz,hamiltonian=hamiltonian.json
+        i-pi-driver -m psiflow -o template=template.xyz,hamiltonian=hamiltonian.json
 
     Parameters:
         :param template: str, filename of an ASE-readable structure file
