@@ -1,13 +1,15 @@
+"""Interface with Psiflow to run machine learning potentials"""
+
 import numpy as np
-from ase.io import read
 
 from .dummy import Dummy_driver
 from ipi.utils.units import unit_to_internal, unit_to_user
 from ipi.utils.messages import warning
 
+read = None
 Geometry = None
 function_from_json = None
-check_input = None
+initialise_driver = None
 check_output = None
 
 __DRIVER_NAME__ = "psiflow"
@@ -29,17 +31,19 @@ class Psiflow_driver(Dummy_driver):
     """
 
     def __init__(self, template, hamiltonian, *args, **kwargs):
-        global Geometry, function_from_json, check_input, check_output
+        global read, Geometry, function_from_json, initialise_driver, check_output
         if (
-            Geometry is None
+            read is None
+            or Geometry is None
             or function_from_json is None
-            or check_input is None
+            or initialise_driver is None
             or check_output is None
         ):
             try:
+                from ase.io import read
                 from psiflow.geometry import Geometry
                 from psiflow.functions import function_from_json
-                from psiflow.sampling.utils import check_input, check_output
+                from psiflow.sampling.utils import initialise_driver, check_output
             except ImportError as e:
                 message = (
                     "Could not find the Psiflow driver dependencies, "
@@ -57,7 +61,7 @@ class Psiflow_driver(Dummy_driver):
         self.template_geometry = Geometry.from_atoms(read(self.template))
         self.function = function_from_json(self.hamiltonian)
 
-        check_input(self)  # psiflow hook
+        initialise_driver(self)
 
     def __call__(self, cell, pos):
 
@@ -73,7 +77,7 @@ class Psiflow_driver(Dummy_driver):
         forces = outputs["forces"]
         stress = outputs["stress"]
 
-        check_output(outputs)  # psiflow hook
+        check_output(outputs)
 
         # converts to internal quantities
         pot_ipi = np.asarray(
