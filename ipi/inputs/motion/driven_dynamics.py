@@ -4,7 +4,7 @@
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
-from ipi.engine.motion.driven_dynamics import ElectricField, BEC, ConstantField
+from ipi.engine.motion.driven_dynamics import ElectricField, BEC
 from ipi.utils.inputvalue import (
     input_default,
 )
