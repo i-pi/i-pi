@@ -4,7 +4,7 @@
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
-from ipi.engine.motion.driven_dynamics import ElectricField, BEC
+from ipi.engine.motion.driven_dynamics import ElectricField, BEC, ConstantVectorField
 from ipi.utils.inputvalue import (
     input_default,
 )
@@ -94,7 +94,7 @@ class InputVectorField(Input):
             InputAttribute,
             {
                 "dtype": str,
-                "default": "none",
+                "default": "constant",
                 "options": ["constant", "pw", "pw+gauss"],
                 "help": "The type of electric field.",
             },
@@ -102,10 +102,31 @@ class InputVectorField(Input):
     }
 
     fields = {
-        "constant": (InputConstantField, {}),
-        "pw": (InputPlaneWave, {}),
-        "pw+gauss": (InputPlaneWaveGauss, {}),
+        "constant": (
+            InputConstantField,
+            {"default": {}, "help": "Option for constant field"},
+        ),
+        "pw": (InputPlaneWave, {"default": {}, "help": "Option for plane-wave field"}),
+        "pw+gauss": (
+            InputPlaneWaveGauss,
+            {
+                "default": {},
+                "help": "Option for plane-wave field with gaussian envelope",
+            },
+        ),
     }
+
+    def fetch(self):
+        super().fetch()
+        mode = self.mode.fetch()
+        if mode == "constant":
+            return ConstantVectorField(self.constant.fetch())
+        # elif mode == "pw":
+        #     return ConstantField(self.constant.fetch())
+        # elif mode == "pw+gauss":
+        #     return ConstantField(self.constant.fetch())
+        else:
+            raise ValueError(f"Unknown mode {mode} in InputVectorField.fetch()")
 
 
 class InputElectricField(Input):

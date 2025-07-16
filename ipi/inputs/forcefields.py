@@ -31,6 +31,8 @@ from ipi.utils.inputvalue import *
 from ipi.utils.messages import verbosity, warning
 from ipi.utils.prng import Random
 from ipi.inputs.prng import InputRandom
+from ipi.inputs.motion.driven_dynamics import InputVectorField
+from ipi.engine.motion.driven_dynamics import ConstantVectorField
 
 __all__ = [
     "InputFFSocket",
@@ -1200,17 +1202,23 @@ class InputFFDielectric(InputForceField):
     fields = copy(InputForceField.fields)
     attribs = copy(InputForceField.attribs)
 
-    fields[
-        "field"
-    ] = (  # ToDo: this has to be modified to become a time-dependent object
-        InputArray,
+    fields["field"] = (
+        InputVectorField,
         {
-            "dtype": float,
-            "default": np.zeros(3),
-            "help": "The applied external electric field/dielectric displacement (in cartesian coordinates)",
-            "dimension": "electric-field",
+            "default": input_default(factory=ConstantVectorField),
+            "help": "The applied external field, i.e. electric field or dielectric displacement (in cartesian coordinates).",
         },
     )
+
+    # (  # ToDo: this has to be modified to become a time-dependent object
+    #     InputArray,
+    #     {
+    #         "dtype": float,
+    #         "default": np.zeros(3),
+    #         "help": "The applied external electric field/dielectric displacement (in cartesian coordinates)",
+    #         "dimension": "electric-field",
+    #     },
+    # )
 
     fields["dipole"] = (
         InputValueFromDict.specialize(

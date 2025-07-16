@@ -458,3 +458,24 @@ dproperties(
     ElectricField,
     ["amp", "phase", "peak", "sigma", "freq"],
 )
+
+
+class VectorField:
+    """Base class for vector fields in driven dynamics."""
+
+    def get(self, time: float):
+        """Get the value of the vector field at a given time."""
+        raise NotImplementedError("This method should be implemented in subclasses.")
+
+
+class ConstantVectorField(VectorField):
+    """Class for a constant vector field in driven dynamics."""
+
+    def __init__(self, amplitude=None):
+        self._amplitude = depend_array(
+            name="amplitude", value=amplitude if amplitude is not None else np.zeros(3)
+        )
+
+    def get(self, time: float):
+        """Get the value of the constant vector field at a given time."""
+        return self.amplitude
