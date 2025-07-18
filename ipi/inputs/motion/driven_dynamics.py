@@ -69,9 +69,12 @@ CommonFields = {
 }
 
 
-class InputConstantField(Input):
+class InputConstantVectorField(Input):
 
     fields = {"amplitude": CommonFields["amplitude"]}
+
+    def fetch(self):
+        return ConstantVectorField(self.amplitude.fetch())
 
 
 class InputPlaneWave(Input):
@@ -103,7 +106,7 @@ class InputVectorField(Input):
 
     fields = {
         "constant": (
-            InputConstantField,
+            InputConstantVectorField,
             {"default": {}, "help": "Option for constant field"},
         ),
         "pw": (InputPlaneWave, {"default": {}, "help": "Option for plane-wave field"}),
@@ -120,7 +123,7 @@ class InputVectorField(Input):
         super().fetch()
         mode = self.mode.fetch()
         if mode == "constant":
-            return ConstantVectorField(self.constant.fetch())
+            return self.constant.fetch()
         # elif mode == "pw":
         #     return ConstantField(self.constant.fetch())
         # elif mode == "pw+gauss":

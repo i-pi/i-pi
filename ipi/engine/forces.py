@@ -203,6 +203,7 @@ class ForceBead:
 
         # data has been collected, so the request can be released and a slot
         # freed up for new calculations
+        request = self.ff.post_process(request)  # request gets modified inplace
         result = request["result"]
 
         # reduce the reservation count (and wait for all calls to return)

@@ -302,6 +302,16 @@ class ForceField:
 
         pass
 
+    def post_process(self, request: dict):
+        """Post-processes the request after it has been evaluated.
+
+        This is called after the request has been evaluated and the result
+        has been stored in the request dictionary. It can be used to perform
+        any additional processing on the results, such as logging or
+        updating internal state.
+        """
+        return request
+
 
 class FFSocket(ForceField):
     """Interface between the PIMD code and a socket for a single replica.
@@ -2241,15 +2251,36 @@ class FFDielectric(ForceField):
         # atoms.motion.actual_time
         template = None
         if self.where == "driver":
-            template = {
-                "extra": json.dumps({"Efield": [0.0, 0.0, 0.0]})  # just an example
-            }
-        request = self.forcefield.queue(atoms, cell, **kwargs, template=template)
+            field = self.field.get(atoms.motion.actual_time)
+            field = dstrip(field).tolist()
+            template = {"extra": json.dumps({"Efield": field})}
+        return self.forcefield.queue(atoms, cell, **kwargs, template=template)
+
+    def post_process(self, r: dict):
+        """Post-processes the results of the forcefield request."""
+        # This is a no-op for now, but can be overridden in subclasses
+
+        # general safe checks
+        if r["status"] != "Done":
+            softexit.trigger(
+                status="bad",
+                message=f"Forcefield request {r['id']} is not done, cannot post-process (this is coding error).",
+            )
+        if r not in self.forcefield.requests:
+            softexit.trigger(
+                status="bad",
+                message=f"Forcefield request {r['id']} is not in the forcefield's request list (this is coding error).",
+            )
+        if "result" not in r:
+            softexit.trigger(
+                status="bad",
+                message=f"Forcefield request {r['id']} does not have a result (this is coding error).",
+            )
 
         if self.where == "client":
-            return self.apply_ensemble(request)
+            return self.apply_ensemble(r)
         else:
-            return request
+            return r
 
     def apply_ensemble(self, request: dict) -> dict:
         # do nothing

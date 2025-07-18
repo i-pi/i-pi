@@ -3,6 +3,7 @@ __DRIVER_NAME__ = "dummy"
 __DRIVER_CLASS__ = "Dummy_driver"
 
 import json
+import warnings
 
 
 class Dummy_driver(object):
@@ -41,4 +42,11 @@ class Dummy_driver(object):
     def store_extra(self, extra: str):
         """Convert the JSON formatted string 'extra' into a dict and store it into self.extra."""
         # ToDo: improve error handling
-        self.extra = json.loads(extra)
+        try:
+            self.extra = json.loads(extra)
+        except Exception as e:
+            warnings.warn(
+                f"Error while parsing extra data.\n{e}",
+                UserWarning,
+            )
+            self.extra = {}
