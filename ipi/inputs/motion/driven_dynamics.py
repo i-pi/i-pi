@@ -97,9 +97,18 @@ class InputPlaneWaveVectorField(Input):
         )
 
 
-class InputPlaneWaveGauss(InputPlaneWaveVectorField):
+class InputPlaneWaveGaussVectorField(InputPlaneWaveVectorField):
     fields = InputPlaneWaveVectorField.fields
     fields.update({"peak": CommonFields["peak"], "fwhm": CommonFields["fwhm"]})
+
+    def fetch(self):
+        return PlaneWaveVectorField(
+            amplitude=self.amplitude.fetch(),
+            freq=self.freq.fetch(),
+            phase=self.phase.fetch(),
+            peak=self.peak.fetch(),
+            fwhm=self.phfwhmase.fetch(),
+        )
 
 
 class InputVectorField(Input):
@@ -126,7 +135,7 @@ class InputVectorField(Input):
             {"default": {}, "help": "Option for plane-wave field"},
         ),
         "pwgauss": (
-            InputPlaneWaveGauss,
+            InputPlaneWaveGaussVectorField,
             {
                 "default": {},
                 "help": "Option for plane-wave field with gaussian envelope",
@@ -145,6 +154,9 @@ class InputVectorField(Input):
             return self.pwgauss.fetch()
         else:
             raise ValueError(f"Unknown mode {mode} in InputVectorField.fetch()")
+
+
+# Here come the old classes
 
 
 class InputElectricField(Input):

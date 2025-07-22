@@ -481,7 +481,6 @@ class ConstantVectorField(VectorField):
         )
 
     def get(self, time: float):
-        """Get the value of the constant vector field at a given time."""
         return self.amplitude
 
 
@@ -504,11 +503,47 @@ class PlaneWaveVectorField(VectorField):
         )
 
     def get(self, time: float):
-        """Get the value of the constant vector field at a given time."""
         return self.amplitude * np.cos(self.freq * time + self.phase)
 
 
 dproperties(
     PlaneWaveVectorField,
     ["amplitude", "freq", "phase"],
+)
+
+
+class PlaneWaveGaussVectorField(PlaneWaveVectorField):
+    """Class for a plane wave vector field in driven dynamics."""
+
+    def __init__(self, amplitude=None, freq=None, phase=None, peak=None, fwhm=None):
+        super().__init__(amplitude, freq, phase)
+        self._peak = depend_array(name="peak", value=peak if peak is not None else 0.0)
+
+        self._fwhm = depend_array(name="fwhm", value=fwhm if fwhm is not None else 0.0)
+
+    @staticmethod
+    def fwhm2sigma(fwhm: float) -> float:
+        """
+        Convert Full Width at Half Maximum (FWHM) to standard deviation (σ) for a Gaussian.
+
+        σ = FWHM / (2 * sqrt(2 * ln(2)))
+
+        Parameters:
+            fwhm (float): Full Width at Half Maximum
+
+        Returns:
+            float: Standard deviation σ
+        """
+        return fwhm / (2 * np.sqrt(2 * np.log(2)))
+
+    def get(self, time: float):
+        pw = super().get(time)
+        sigma = self.fwhm2sigma(self.fwhm)
+        gauss = np.exp(-0.5 * ((time - self.peak) / sigma) ** 2)
+        return pw * gauss
+
+
+dproperties(
+    PlaneWaveGaussVectorField,
+    ["amplitude", "freq", "phase", "peak", "fwhm"],
 )
