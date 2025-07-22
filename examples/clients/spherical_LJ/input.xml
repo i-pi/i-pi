@@ -1,0 +1,47 @@
+<simulation verbosity='high'>
+
+  <output prefix='simulation'>
+    <properties stride='1' filename='out'>  [ step, time{picosecond}, conserved{electronvolt}, kinetic_md{electronvolt}, potential{electronvolt}, temperature{kelvin} ] </properties>
+    <trajectory filename='pos' stride='1' format='ase'> positions </trajectory>
+  </output>
+
+  <total_steps>10</total_steps>
+
+  <prng>
+    <seed>31415</seed>
+  </prng>
+
+  <ffsocket name='qtip4pf' mode='unix' pbc='false'>
+      <address>qtip4pf</address>
+  </ffsocket>
+
+  <ffdirect name='lj' >
+    <pes> Spherical_LJ </pes>
+    <parameters> {template:start.extxyz,instructions:instructions.json} </parameters>
+  </ffdirect>
+
+  <system>
+
+    <initialize nbeads='1'>
+      <file mode='ase'> start.extxyz </file>
+      <velocities mode='thermal' units='kelvin'> 300 </velocities>
+    </initialize>
+
+    <forces>
+      <force forcefield='qtip4pf'> </force>
+      <force forcefield='lj'> </force>
+    </forces>
+
+    <motion mode='dynamics'>
+      <dynamics mode='nve'>
+        <timestep units='femtosecond'> 0.25 </timestep>
+      </dynamics>
+    </motion>
+
+    <ensemble>
+      <temperature units='kelvin'> 300 </temperature>
+    </ensemble>
+
+  </system>
+
+</simulation>
