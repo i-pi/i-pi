@@ -489,3 +489,26 @@ dproperties(
     ConstantVectorField,
     ["amplitude"],
 )
+
+
+class PlaneWaveVectorField(VectorField):
+    """Class for a plane wave vector field in driven dynamics."""
+
+    def __init__(self, amplitude=None, freq=None, phase=None):
+        self._amplitude = depend_array(
+            name="amplitude", value=amplitude if amplitude is not None else np.zeros(3)
+        )
+        self._freq = depend_value(name="freq", value=freq if freq is not None else 0.0)
+        self._phase = depend_array(
+            name="phase", value=phase if phase is not None else 0.0
+        )
+
+    def get(self, time: float):
+        """Get the value of the constant vector field at a given time."""
+        return self.amplitude * np.cos(self.freq * time + self.phase)
+
+
+dproperties(
+    PlaneWaveVectorField,
+    ["amplitude", "freq", "phase"],
+)
