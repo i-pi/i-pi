@@ -17,6 +17,7 @@ from contextlib import nullcontext
 
 import numpy as np
 
+from ipi.engine.motion.driven_dynamics import VectorField
 from ipi.engine.cell import GenericCell
 from ipi.utils.prng import Random
 from ipi.utils.softexit import softexit
@@ -2225,7 +2226,7 @@ class FFDielectric(ForceField):
         where: str,
         dipole: dict,
         bec: dict,
-        field: np.ndarray,
+        field: VectorField,
         forcefield: ForceField,
     ):
         super().__init__()

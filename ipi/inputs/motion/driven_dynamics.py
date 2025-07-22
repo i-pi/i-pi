@@ -147,11 +147,15 @@ class InputVectorField(Input):
         super().fetch()
         mode = self.mode.fetch()
         if mode == "constant":
-            return self.constant.fetch() # this will return a 'ConstantVectorField' object
+            return (
+                self.constant.fetch()
+            )  # this will return a 'ConstantVectorField' object
         elif mode == "pw":
-            return self.pw.fetch() # this will return a 'PlaneWaveVectorField' object
+            return self.pw.fetch()  # this will return a 'PlaneWaveVectorField' object
         elif mode == "pwgauss":
-            return self.pwgauss.fetch() # this will return a 'PlaneWaveGaussVectorField' object
+            return (
+                self.pwgauss.fetch()
+            )  # this will return a 'PlaneWaveGaussVectorField' object
         else:
             raise ValueError(f"Unknown mode {mode} in InputVectorField.fetch()")
 
