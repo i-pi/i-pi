@@ -92,7 +92,7 @@ if MACECalculator is not None:
         def apply_ensemble(self, data: dict) -> dict:
             if self.instructions == {}:
                 return data
-            extras = self.get_extras()
+            # extras = self.get_extras()
             if "ensemble" not in self.instructions:
                 raise ValueError(
                     "You need to specify an ensemble (among 'none', 'E', and 'D') in the instructions file."
