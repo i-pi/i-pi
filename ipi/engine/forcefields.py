@@ -2313,9 +2313,8 @@ class FFDielectric(ForceField):
         f += Z @ self.field
         return u, f, v, x
 
-    def fixed_D(self, request):
+    def fixed_D(self, request: dict):
         raise ValueError("Not implemented yet")
-        return request
 
 
 class ArrayFromDict:
