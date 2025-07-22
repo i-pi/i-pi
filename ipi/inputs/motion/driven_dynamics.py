@@ -125,7 +125,7 @@ class InputVectorField(Input):
             InputPlaneWaveVectorField,
             {"default": {}, "help": "Option for plane-wave field"},
         ),
-        "pw+gauss": (
+        "pwgauss": (
             InputPlaneWaveGauss,
             {
                 "default": {},
@@ -141,8 +141,8 @@ class InputVectorField(Input):
             return self.constant.fetch()
         elif mode == "pw":
             return self.pw.fetch()
-        # elif mode == "pw+gauss":
-        #     return ConstantField(self.constant.fetch())
+        elif mode == "pwgauss":
+            return self.pwgauss.fetch()
         else:
             raise ValueError(f"Unknown mode {mode} in InputVectorField.fetch()")
 
