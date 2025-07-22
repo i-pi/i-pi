@@ -1327,6 +1327,6 @@ class InputFFDielectric(InputForceField):
             where=self.where.fetch(),
             dipole=self.dipole.fetch(),
             bec=self.bec.fetch(),
-            field=self.field.fetch(), # this is a 'VectorField' object
+            field=self.field.fetch(),  # this is a 'VectorField' object
             forcefield=ff,
         )
