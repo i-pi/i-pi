@@ -144,6 +144,14 @@ if MACECalculator is not None:
                     **self.forward_kwargs
                 )
 
+                # compute Born Effective Charges using autodiff
+                if (
+                    "compute_BEC" in self.instructions
+                    and self.instructions["compute_BEC"] == True
+                ):
+                    out["BEC"] = self.compute_BEC(out)
+
+                # apply the external electric/dielectric field
                 out = self.apply_ensemble(out)
 
                 if self.model_type in ["MACE", "EnergyDipoleMACE"]:
@@ -248,3 +256,8 @@ if MACECalculator is not None:
                         .cpu()
                         .numpy()
                     )
+
+        @staticmethod
+        def compute_BEC(data: dict):
+            # still to be implemented
+            return 0.0
