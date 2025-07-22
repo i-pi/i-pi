@@ -77,7 +77,7 @@ class InputConstantVectorField(Input):
         return ConstantVectorField(self.amplitude.fetch())
 
 
-class InputPlaneWave(Input):
+class InputPlaneWaveVectorField(Input):
     fields = {
         "amplitude": CommonFields["amplitude"],
         "freq": CommonFields["freq"],
@@ -85,8 +85,8 @@ class InputPlaneWave(Input):
     }
 
 
-class InputPlaneWaveGauss(InputPlaneWave):
-    fields = InputPlaneWave.fields
+class InputPlaneWaveGauss(InputPlaneWaveVectorField):
+    fields = InputPlaneWaveVectorField.fields
     fields.update({"peak": CommonFields["peak"], "fwhm": CommonFields["fwhm"]})
 
 
@@ -109,7 +109,7 @@ class InputVectorField(Input):
             InputConstantVectorField,
             {"default": {}, "help": "Option for constant field"},
         ),
-        "pw": (InputPlaneWave, {"default": {}, "help": "Option for plane-wave field"}),
+        "pw": (InputPlaneWaveVectorField, {"default": {}, "help": "Option for plane-wave field"}),
         "pw+gauss": (
             InputPlaneWaveGauss,
             {
@@ -125,7 +125,7 @@ class InputVectorField(Input):
         if mode == "constant":
             return self.constant.fetch()
         # elif mode == "pw":
-        #     return ConstantField(self.constant.fetch())
+        #     return self.pw.fetch()
         # elif mode == "pw+gauss":
         #     return ConstantField(self.constant.fetch())
         else:
