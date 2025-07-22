@@ -1210,16 +1210,6 @@ class InputFFDielectric(InputForceField):
         },
     )
 
-    # (  # ToDo: this has to be modified to become a time-dependent object
-    #     InputArray,
-    #     {
-    #         "dtype": float,
-    #         "default": np.zeros(3),
-    #         "help": "The applied external electric field/dielectric displacement (in cartesian coordinates)",
-    #         "dimension": "electric-field",
-    #     },
-    # )
-
     fields["dipole"] = (
         InputValueFromDict.specialize(
             family="electric-dipole", default="eang", key="dipole"
