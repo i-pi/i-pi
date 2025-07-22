@@ -1327,9 +1327,6 @@ class InputFFDielectric(InputForceField):
             where=self.where.fetch(),
             dipole=self.dipole.fetch(),
             bec=self.bec.fetch(),
-            field=self.field.fetch(),
+            field=self.field.fetch(), # this is a 'VectorField' object
             forcefield=ff,
         )
-
-    # def parse(self,*argc,**kwargs):
-    #     super().parse(*argc,**kwargs)
