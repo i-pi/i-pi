@@ -4,7 +4,12 @@
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
-from ipi.engine.motion.driven_dynamics import ElectricField, BEC, ConstantVectorField
+from ipi.engine.motion.driven_dynamics import (
+    ElectricField,
+    BEC,
+    ConstantVectorField,
+    PlaneWaveVectorField,
+)
 from ipi.utils.inputvalue import (
     input_default,
 )
@@ -84,6 +89,13 @@ class InputPlaneWaveVectorField(Input):
         "phase": CommonFields["phase"],
     }
 
+    def fetch(self):
+        return PlaneWaveVectorField(
+            amplitude=self.amplitude.fetch(),
+            freq=self.freq.fetch(),
+            phase=self.phase.fetch(),
+        )
+
 
 class InputPlaneWaveGauss(InputPlaneWaveVectorField):
     fields = InputPlaneWaveVectorField.fields
@@ -109,7 +121,10 @@ class InputVectorField(Input):
             InputConstantVectorField,
             {"default": {}, "help": "Option for constant field"},
         ),
-        "pw": (InputPlaneWaveVectorField, {"default": {}, "help": "Option for plane-wave field"}),
+        "pw": (
+            InputPlaneWaveVectorField,
+            {"default": {}, "help": "Option for plane-wave field"},
+        ),
         "pw+gauss": (
             InputPlaneWaveGauss,
             {
@@ -124,8 +139,8 @@ class InputVectorField(Input):
         mode = self.mode.fetch()
         if mode == "constant":
             return self.constant.fetch()
-        # elif mode == "pw":
-        #     return self.pw.fetch()
+        elif mode == "pw":
+            return self.pw.fetch()
         # elif mode == "pw+gauss":
         #     return ConstantField(self.constant.fetch())
         else:
