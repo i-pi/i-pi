@@ -1241,11 +1241,11 @@ class InputFFDielectric(InputForceField):
         InputAttribute,
         {
             "dtype": str,
-            "options": ["client", "driver"],
+            "options": ["client", "server"],
             "default": "client",
             "help": "Where the contribution to the forces that depends on the electric field is computed.\
-                If 'client', i-PI expects to receive all necessary information to evaluate the extra contribution (which depends on 'mode') and it will sum it to the forces returned by the driver.\
-                If 'driver', i-PI will send extra information to the driver (which will take care of evaluating the extra contribution to the forces) and it will simply read the provided forces.",
+                If 'server', i-PI expects to receive all necessary information to evaluate the extra contribution (which depends on 'mode') and it will sum it to the forces returned by the client code/driver.\
+                If 'client', i-PI will send extra information to the driver (which will take care of evaluating the extra contribution to the forces) and it will simply read the provided forces.",
         },
     )
 

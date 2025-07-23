@@ -2278,10 +2278,12 @@ class FFDielectric(ForceField):
                 message=f"Forcefield request {r['id']} does not have a result (this is coding error).",
             )
 
-        if self.where == "client":
+        if self.where == "server":
             return self.apply_ensemble(r)
-        else:
+        elif self.where == "client":
             return r
+        else:
+            raise ValueError("coding error")
 
     def apply_ensemble(self, request: dict) -> dict:
         # do nothing
