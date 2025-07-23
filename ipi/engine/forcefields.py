@@ -115,18 +115,12 @@ class ForceField:
         self._thread = None
         self._doloop = [False]
         self._threadlock = threading.Lock()
-        self.template_list = list()
 
     def bind(self, output_maker=None):
         """Binds the FF, at present just to allow for
         managed output"""
 
         self.output_maker = output_maker
-
-    def add_template(self, template: dict):
-        """Store all the templates used in a MD step so that the user can inspect them by printing them to file"""
-        string = str(template)
-        self.template_list.append(string)
 
     def queue(self, atoms, cell, reqid=-1, template=None):
         """Adds a request.
@@ -189,8 +183,6 @@ class ForceField:
 
         if template is None:
             template = {}
-
-        self.add_template(template)
 
         template.update(
             {
@@ -2242,10 +2234,15 @@ class FFDielectric(ForceField):
         self.name = name  # this might be useless
         self.mode = mode
         self.where = where
-        self.dipole = ArrayFromDict(**dipole)
-        self.bec = ArrayFromDict(**bec)
-        self.field = field
+        self.dipole = ArrayFromDict(
+            **dipole
+        )  # how to read the dipole from the client code
+        self.bec = ArrayFromDict(
+            **bec
+        )  # how to read the Born Charges from the client code
+        self.field = field  # what type of external field should be applied
         self.forcefield = forcefield
+        self.template_list = list()
 
     def bind(self, output_maker=None):
         """Binds the FF, at present just to allow for
@@ -2257,6 +2254,11 @@ class FFDielectric(ForceField):
     def start(self):
         return self.forcefield.start()
 
+    def add_template(self, template: dict):
+        """Store all the templates used in a MD step so that the user can inspect them by printing them to file"""
+        string = str(template)
+        self.template_list.append(string)
+
     def queue(self, atoms, cell, template=None, **kwargs) -> dict:
         if template is None:
             template = {}
@@ -2266,9 +2268,10 @@ class FFDielectric(ForceField):
             field = dstrip(field).tolist()
             template = {
                 **template,  # add information provided to this method
-                "time": time,  # not necessaty but useful for debugging
+                "time": time,  # not strictly necessary but useful for debugging
                 "extra": json.dumps({"Efield": field}),  # extra information
             }
+        self.add_template(template)
         return self.forcefield.queue(atoms, cell, template=template, **kwargs)
 
     def post_process(self, r: dict):
