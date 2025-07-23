@@ -3081,6 +3081,10 @@ class Trajectories:
                     else self.system.forces.forces_component(int(index))[int(bead)]
                 ),
             },
+            "sent_extra": {
+                "help": """The request templates sent to the client codes""",
+                "func": self.get_sent_extra,
+            },
             "forces_component_raw": {
                 "dimension": "force",
                 "help": """The contribution to the system forces from one of the force components.
@@ -3368,3 +3372,12 @@ class Trajectories:
             # `reshape` should not be necessary, but it guarantees the shape to be correct
             bec = bec.reshape(shape)
         return bec
+
+    def get_sent_extra(self, key: str):
+        if key not in self.system.simul.fflist:
+            softexit.trigger(
+                status="bad",
+                message=f"Forcefield {key} does not exist.",
+            )
+        ff = self.system.simul.fflist[key]
+        return ff.get_extra()

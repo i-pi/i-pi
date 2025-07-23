@@ -314,6 +314,9 @@ class ForceField:
         """
         return request
 
+    def get_extra(self):
+        return {}
+
 
 class FFSocket(ForceField):
     """Interface between the PIMD code and a socket for a single replica.
@@ -2242,7 +2245,7 @@ class FFDielectric(ForceField):
         )  # how to read the Born Charges from the client code
         self.field = field  # what type of external field should be applied
         self.forcefield = forcefield
-        self.template_list = list()
+        self.template = {}
 
     def bind(self, output_maker=None):
         """Binds the FF, at present just to allow for
@@ -2254,24 +2257,33 @@ class FFDielectric(ForceField):
     def start(self):
         return self.forcefield.start()
 
-    def add_template(self, template: dict):
+    def store_extra(self, template: dict):
+        self.template = template
+
+    def get_extra(self):
         """Store all the templates used in a MD step so that the user can inspect them by printing them to file"""
-        string = str(template)
-        self.template_list.append(string)
+        return self.template.copy()
 
     def queue(self, atoms, cell, template=None, **kwargs) -> dict:
         if template is None:
             template = {}
-        if self.where == "driver":
-            time = float(atoms.motion.actual_time)
-            field = self.field.get(time)
-            field = dstrip(field).tolist()
-            template = {
-                **template,  # add information provided to this method
-                "time": time,  # not strictly necessary but useful for debugging
-                "extra": json.dumps({"Efield": field}),  # extra information
-            }
-        self.add_template(template)
+
+        # time-dependent information
+        time = float(atoms.motion.actual_time)
+        field = self.field.get(time)
+        field = dstrip(field).tolist()
+        extra_template = {
+            "time": time,  # not strictly necessary but useful for debugging
+            "extra": json.dumps({"Efield": field}),  # extra information
+        }
+        self.store_extra(extra_template)
+
+        assert self.where in ["client", "server"], "coding error"
+
+        # send the extra information only if requested
+        if self.where == "client":
+            template = {**template, **extra_template}
+
         return self.forcefield.queue(atoms, cell, template=template, **kwargs)
 
     def post_process(self, r: dict):

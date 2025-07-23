@@ -542,7 +542,7 @@ class TrajectoryOutput(BaseOutput):
         """
 
         key = getkey(what)
-        if key in ["extras", "extras_component_raw", "extras_bias"]:
+        if key in ["extras", "extras_component_raw", "extras_bias", "sent_extra"]:
             if key == "extras_component_raw":
                 stream.write(
                     " #%s(%s)# Step:  %10d  Bead:  %5d  \n"
