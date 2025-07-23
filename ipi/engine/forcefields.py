@@ -115,12 +115,18 @@ class ForceField:
         self._thread = None
         self._doloop = [False]
         self._threadlock = threading.Lock()
+        self.template_list = list()
 
     def bind(self, output_maker=None):
         """Binds the FF, at present just to allow for
         managed output"""
 
         self.output_maker = output_maker
+
+    def add_template(self, template: dict):
+        """Store all the templates used in a MD step so that the user can inspect them by printing them to file"""
+        string = str(template)
+        self.template_list.append(string)
 
     def queue(self, atoms, cell, reqid=-1, template=None):
         """Adds a request.
@@ -183,6 +189,9 @@ class ForceField:
 
         if template is None:
             template = {}
+
+        self.add_template(template)
+
         template.update(
             {
                 "id": reqid,
