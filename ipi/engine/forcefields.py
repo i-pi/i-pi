@@ -2248,14 +2248,19 @@ class FFDielectric(ForceField):
     def start(self):
         return self.forcefield.start()
 
-    def queue(self, atoms, cell, **kwargs) -> dict:
-        # atoms.motion.actual_time
-        template = None
+    def queue(self, atoms, cell, template=None, **kwargs) -> dict:
+        if template is None:
+            template = {}
         if self.where == "driver":
-            field = self.field.get(atoms.motion.actual_time)
+            time = float(atoms.motion.actual_time)
+            field = self.field.get(time)
             field = dstrip(field).tolist()
-            template = {"extra": json.dumps({"Efield": field})}
-        return self.forcefield.queue(atoms, cell, **kwargs, template=template)
+            template = {
+                **template,  # add information provided to this method
+                "time": time,  # not necessaty but useful for debugging
+                "extra": json.dumps({"Efield": field}),  # extra information
+            }
+        return self.forcefield.queue(atoms, cell, template=template, **kwargs)
 
     def post_process(self, r: dict):
         """Post-processes the results of the forcefield request."""
