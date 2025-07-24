@@ -32,7 +32,6 @@ from ipi.utils.messages import verbosity, warning
 from ipi.utils.prng import Random
 from ipi.inputs.prng import InputRandom
 from ipi.inputs.motion.driven_dynamics import InputVectorField
-from ipi.engine.motion.driven_dynamics import ConstantVectorField
 
 __all__ = [
     "InputFFSocket",
