@@ -9,6 +9,7 @@ from ipi.engine.motion.driven_dynamics import (
     BEC,
     ConstantVectorField,
     PlaneWaveVectorField,
+    PlaneWaveGaussVectorField,
 )
 from ipi.utils.inputvalue import (
     input_default,
@@ -74,41 +75,41 @@ CommonFields = {
 }
 
 
-class InputConstantVectorField(Input):
-
-    fields = {"amplitude": CommonFields["amplitude"]}
+class _InputCommonVectorField(Input):
+    _VF = None
 
     def fetch(self):
-        return ConstantVectorField(self.amplitude.fetch())
+        kwargs = {}
+        for k in self.fields.keys():
+            kwargs[k] = getattr(self, k).fetch()
+        return self._VF(**kwargs)
+
+    def store(self, field):
+        super().store(field)
+        for k in self.fields.keys():
+            value = getattr(field, k)
+            self.__dict__[k].store(value)
 
 
-class InputPlaneWaveVectorField(Input):
+class InputConstantVectorField(_InputCommonVectorField):
+
+    fields = {"amplitude": CommonFields["amplitude"]}
+    _VF = ConstantVectorField
+
+
+class InputPlaneWaveVectorField(_InputCommonVectorField):
     fields = {
         "amplitude": CommonFields["amplitude"],
         "freq": CommonFields["freq"],
         "phase": CommonFields["phase"],
     }
 
-    def fetch(self):
-        return PlaneWaveVectorField(
-            amplitude=self.amplitude.fetch(),
-            freq=self.freq.fetch(),
-            phase=self.phase.fetch(),
-        )
+    _VF = PlaneWaveVectorField
 
 
-class InputPlaneWaveGaussVectorField(InputPlaneWaveVectorField):
-    fields = InputPlaneWaveVectorField.fields
-    fields.update({"peak": CommonFields["peak"], "fwhm": CommonFields["fwhm"]})
-
-    def fetch(self):
-        return PlaneWaveVectorField(
-            amplitude=self.amplitude.fetch(),
-            freq=self.freq.fetch(),
-            phase=self.phase.fetch(),
-            peak=self.peak.fetch(),
-            fwhm=self.phfwhmase.fetch(),
-        )
+class InputPlaneWaveGaussVectorField(_InputCommonVectorField):
+    fields = CommonFields.copy()
+    _VF = PlaneWaveGaussVectorField
 
 
 class InputVectorField(Input):
@@ -128,16 +129,22 @@ class InputVectorField(Input):
     fields = {
         "constant": (
             InputConstantVectorField,
-            {"default": {}, "help": "Option for constant field"},
+            {
+                "default": input_default(factory=ConstantVectorField),
+                "help": "Option for constant field",
+            },
         ),
         "pw": (
             InputPlaneWaveVectorField,
-            {"default": {}, "help": "Option for plane-wave field"},
+            {
+                "default": input_default(factory=PlaneWaveVectorField),
+                "help": "Option for plane-wave field",
+            },
         ),
         "pwgauss": (
             InputPlaneWaveGaussVectorField,
             {
-                "default": {},
+                "default": input_default(factory=PlaneWaveGaussVectorField),
                 "help": "Option for plane-wave field with gaussian envelope",
             },
         ),
@@ -158,6 +165,20 @@ class InputVectorField(Input):
             )  # this will return a 'PlaneWaveGaussVectorField' object
         else:
             raise ValueError(f"Unknown mode {mode} in InputVectorField.fetch()")
+
+    def store(self, field):
+        super().store()
+        if isinstance(field, ConstantVectorField):
+            self.mode.store("constant")
+            self.constant.store(field)
+        elif isinstance(field, PlaneWaveVectorField):
+            self.mode.store("pw")
+            self.pw.store(field)
+        elif isinstance(field, PlaneWaveGaussVectorField):
+            self.mode.store("pwgauss")
+            self.pwgauss.store(field)
+        else:
+            raise ValueError(f"Unknown type {type(field)} in InputVectorField.store()")
 
 
 # Here come the old classes

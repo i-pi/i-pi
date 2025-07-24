@@ -2386,4 +2386,4 @@ class ArrayFromDict:
         return self.__getattribute__(name)
 
     def keys(self):
-        return self.__dict__.keys()
+        return ["family", "units", "key"]

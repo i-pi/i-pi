@@ -1205,7 +1205,6 @@ class InputFFDielectric(InputForceField):
     fields["field"] = (
         InputVectorField,
         {
-            "default": input_default(factory=ConstantVectorField),
             "help": "The applied external field, i.e. electric field or dielectric displacement (in cartesian coordinates).",
         },
     )
@@ -1215,14 +1214,12 @@ class InputFFDielectric(InputForceField):
             family="electric-dipole", default="eang", key="dipole"
         ),
         {
-            "default": {},
             "help": "How to extract the dipole (keyword and units) from the extra information.",
         },
     )
     fields["bec"] = (
         InputValueFromDict.specialize(family="charge", default="e", key="BEC"),
         {
-            "default": {},
             "help": "How to extract the Born Charges (keyword and units) from the extra information.",
         },
     )
@@ -1252,18 +1249,9 @@ class InputFFDielectric(InputForceField):
     default_help = "still empty"
     default_label = "FFDIELECTRIC"
 
-    def __init__(self, *argc, **kwargs):
-        super().__init__(*argc, **kwargs)
-        # self.forcefield = None
-        pass
-
-    def store(self, ff):
+    def store(self, ff: FFDielectric):
         """Store all the sub-forcefields"""
         super().store(ff)
-
-        # _fflist = [ff.forcefield]
-        # if len(self.extra) != len(_fflist):
-        #     self.extra = [0] * len(_fflist)
 
         self.extra = [None]
         _ii = 0
@@ -1305,7 +1293,7 @@ class InputFFDielectric(InputForceField):
             _iobj.store(_obj)
             self.extra[_ii] = ("ffcommittee", _iobj)
 
-        self.name.store(ff.name)
+        # self.name.store(ff.name)
         self.mode.store(ff.mode)
         self.where.store(ff.where)
         self.field.store(ff.field)
