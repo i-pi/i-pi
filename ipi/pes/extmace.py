@@ -15,24 +15,6 @@ class Extended_MACE_driver(MACE_driver):
     """
     MACE driver with the torch tensors exposed.
     """
-
-    # def __init__(
-    #     self, instructions: str = None, *args, **kwargs
-    # ):
-    #     # self.forward_kwargs = {}
-    #     # if forward_kwargs is not None:
-    #     #     with open(forward_kwargs, "r") as f:
-    #     #         self.forward_kwargs = json.load(f)
-
-    #     # self.instructions = {}
-    #     # if instructions is not None:
-    #     #     with open(instructions, "r") as f:
-    #     #         self.instructions = json.load(f)
-    #     # if "forward_kwargs" not in self.instructions:
-    #     #     self.instructions["forward_kwargs"] = {}
-
-    #     super().__init__(*args, **kwargs)
-
     def check_parameters(self):
         """Check the arguments requuired to run the driver
 
@@ -44,8 +26,6 @@ class Extended_MACE_driver(MACE_driver):
         self.ase_calculator = Extended_MACECalculator(
             model_paths=self.model,
             device=self.device,
-            # instructions=self.instructions,
-            # forward_kwargs=self.forward_kwargs,
             get_extras=lambda: self.extra,
             **self.mace_kwargs,
         )
@@ -59,8 +39,6 @@ try:
     from mace.tools.torch_geometric.batch import Batch
     from mace.calculators import MACECalculator
     from mace.modules.utils import get_outputs
-
-    # from mace.tools.torch_geometric.dataloader import DataLoader
     from ase.calculators.calculator import Calculator, all_changes
 except:
     OK = False
@@ -111,6 +89,11 @@ if OK:
 
             if self.instructions["ensemble"] == "E-debug":
                 compute_bec = True
+                
+            if compute_bec:
+                from ase.outputs import _defineprop, all_outputs
+                if "BEC" not in all_outputs:
+                    _defineprop("BEC", dtype=float, shape=(3,"natoms",3))
 
             # Attention:
             # if we want to compute the Born Charges we need to call 'torch.autograd.grad' on the dipoles w.r.t. the positions.
@@ -161,24 +144,21 @@ if OK:
             ret_tensors = self._create_result_tensors(
                 self.model_type, self.num_models, len(atoms)
             )
+            if compute_bec:
+                f = ret_tensors['forces']
+                ret_tensors["BEC"] = torch.zeros((len(self.models), 3,*f.shape[1:]), device=self.device)
+                #torch.zeros((3,*f.shape),dtype=f.dtype,device=f.device)
             for i, model in enumerate(self.models):
                 batch = self._clone_batch(batch_base)
                 out = model(
                     batch.to_dict(),
-                    # compute_stress=compute_stress,
-                    training=training,  # yes, this is correct
-                    # compute_edge_forces=self.compute_atomic_stresses,
-                    # compute_atomic_stresses=self.compute_atomic_stresses,
+                    training=training,
                     **forward_kwargs,
                     compute_displacement=True,
                 )
 
-                # compute Born Effective Charges using autodiff
-                if compute_bec:
-                    out["BEC"] = self.compute_BEC(out, batch)
-
                 # apply the external electric/dielectric field
-                out = self.apply_ensemble(out, batch, training, compute_stress)
+                out = self.apply_ensemble(out, batch, training, compute_bec)
 
                 if self.model_type in ["MACE", "EnergyDipoleMACE"]:
                     ret_tensors["energies"][i] = out["energy"].detach()
@@ -199,6 +179,8 @@ if OK:
                         ret_tensors.setdefault("atomic_virials", []).append(
                             out["atomic_virials"].detach()
                         )
+                if "BEC" in out:
+                    ret_tensors["BEC"][i] = out["BEC"].detach()
 
             del out
 
@@ -282,6 +264,10 @@ if OK:
                         .cpu()
                         .numpy()
                     )
+            if "BEC" in ret_tensors:
+                self.results["BEC"] = torch.mean(ret_tensors["BEC"], dim=0).cpu().numpy() 
+                    
+            return
 
         @staticmethod
         def compute_BEC(data: dict, batch: Batch) -> torch.Tensor:
@@ -323,16 +309,17 @@ if OK:
             return bec
 
         def apply_ensemble(
-            self, data: dict, batch: Batch, training: bool, compute_stress: bool
+            self, data: dict, batch: Batch, training: bool, compute_bec: bool
         ) -> dict:
             # if self.instructions == {}:
             #     return data
 
             ensemble = str(self.instructions["ensemble"]).upper()
             if ensemble == "NONE":  # no ensemble (just for debugging purposes)
+                # compute Born Effective Charges using autodiff
                 pass
             else:
-
+            
                 extras = self.get_extras()
                 if extras is None or extras == {}:
                     raise ValueError("The extra information dictionary is empty.")
@@ -342,6 +329,10 @@ if OK:
 
                 if ensemble == "E-debug":  # fixed external electric field
                     # This is very similar to what is done in the function 'fixed_E' in 'ipi/engine/forcefields.py'.
+                    if not compute_bec:
+                        raise ValueError("coding error")
+                    data["BEC"] = self.compute_BEC(data, batch)
+                    
                     Z = data["BEC"]
                     data["energy"] -= mu @ Efield
                     data["forces"] += torch.einsum("ijk,i->jk", Z, Efield)
@@ -373,6 +364,10 @@ if OK:
 
                 else:
                     raise ValueError("coding error")
+                
+            if compute_bec and "BEC" not in data:
+                data["BEC"] = self.compute_BEC(data, batch)
+                
             return data
 
 
