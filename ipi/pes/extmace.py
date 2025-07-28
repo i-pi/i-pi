@@ -49,8 +49,9 @@ class Extended_MACE_driver(MACE_driver):
             # instructions=self.instructions,
             # forward_kwargs=self.forward_kwargs,
             get_extras=lambda: self.extra,
-            **self.mace_kwargs
+            **self.mace_kwargs,
         )
+
 
 OK = True
 try:
@@ -58,31 +59,28 @@ try:
     from typing import List, Optional
     from mace.tools.torch_geometric.batch import Batch
     from mace.calculators import MACECalculator
+
     # from mace.tools.torch_geometric.dataloader import DataLoader
     from ase.calculators.calculator import Calculator, all_changes
 except:
     OK = False
-    
+
 if OK:
 
     class Extended_MACECalculator(MACECalculator):
-        
+
         def __init__(
-            self,
-            instructions: dict = {},
-            get_extras: callable = None,
-            *argc,
-            **kwargs
+            self, instructions: dict = {}, get_extras: callable = None, *argc, **kwargs
         ):
             if get_extras is not None:
                 self.get_extras = get_extras
-            
-            self.instructions = instructions            
+
+            self.instructions = instructions
             if "forward_kwargs" not in self.instructions:
                 self.instructions["forward_kwargs"] = {}
-                
+
             super().__init__(*argc, **kwargs)
-            
+
         def get_extras(self) -> dict:
             return {}
 
@@ -113,13 +111,16 @@ if OK:
             # call to base-class to set atoms attribute
             Calculator.calculate(self, atoms)
 
-            batch_base:Batch = self._atoms_to_batch(atoms)
+            batch_base: Batch = self._atoms_to_batch(atoms)
             assert isinstance(batch_base, Batch), "hello"
-            
-            #-------------------#
+
+            # -------------------#
             # Some boolean flags
-            compute_bec = "compute_BEC" in self.instructions and self.instructions["compute_BEC"] == True
-            
+            compute_bec = (
+                "compute_BEC" in self.instructions
+                and self.instructions["compute_BEC"] == True
+            )
+
             # Attention:
             # if we want to compute the Born Charges we need to call 'torch.autograd.grad' on the dipoles w.r.t. the positions.
             # However, since the forces are always computed, MACE always calls 'torch.autograd.grad' on the energy w.r.t. the positions.
@@ -148,15 +149,15 @@ if OK:
                 out = model(
                     batch.to_dict(),
                     compute_stress=compute_stress,
-                    training=training, # yes, this is correct
+                    training=training,  # yes, this is correct
                     compute_edge_forces=self.compute_atomic_stresses,
                     compute_atomic_stresses=self.compute_atomic_stresses,
-                    **self.instructions["forward_kwargs"]
+                    **self.instructions["forward_kwargs"],
                 )
 
                 # compute Born Effective Charges using autodiff
                 if compute_bec:
-                    out["BEC"] = self.compute_BEC(out,batch)
+                    out["BEC"] = self.compute_BEC(out, batch)
 
                 # apply the external electric/dielectric field
                 out = self.apply_ensemble(out)
@@ -265,7 +266,7 @@ if OK:
                     )
 
         @staticmethod
-        def compute_BEC(data: dict,batch:Batch):
+        def compute_BEC(data: dict, batch: Batch):
             # still to be implemented
             if "dipole" not in data:
                 raise ValueError(
@@ -279,15 +280,23 @@ if OK:
                 )
             mu = data["dipole"]
             pos = batch.positions
-            if not isinstance(mu,torch.Tensor):
-                raise ValueError(f"The dipole is not a torch.Tensor rather a {type(mu)}")
-            if not isinstance(pos,torch.Tensor):
-                raise ValueError(f"The positions are not a torch.Tensor rather a {type(pos)}")
-            bec = compute_dielectric_gradients(mu,pos)
-            if not isinstance(bec,torch.Tensor):
-                raise ValueError(f"The computed Born Charges are not a torch.Tensor rather a {type(bec)}")
-            if tuple(bec.shape) != (3,*pos.shape):
-                raise ValueError(f"The computed Born Charges have the wrong shape. The shape {(*pos.shape,3)} was expected but got {tuple(bec.shape)}.")
+            if not isinstance(mu, torch.Tensor):
+                raise ValueError(
+                    f"The dipole is not a torch.Tensor rather a {type(mu)}"
+                )
+            if not isinstance(pos, torch.Tensor):
+                raise ValueError(
+                    f"The positions are not a torch.Tensor rather a {type(pos)}"
+                )
+            bec = compute_dielectric_gradients(mu, pos)
+            if not isinstance(bec, torch.Tensor):
+                raise ValueError(
+                    f"The computed Born Charges are not a torch.Tensor rather a {type(bec)}"
+                )
+            if tuple(bec.shape) != (3, *pos.shape):
+                raise ValueError(
+                    f"The computed Born Charges have the wrong shape. The shape {(*pos.shape,3)} was expected but got {tuple(bec.shape)}."
+                )
             data["BEC"] = bec
             # Attention:
             # The tensor 'bec' has 3 dimensions.
@@ -296,9 +305,12 @@ if OK:
             # where mu_x is the x-component of the dipole and R^3_z is the z-component of the 4th (zero-indexed) atom i n the structure/batch.
             return data
 
-#---------------------------------------#
+
+# ---------------------------------------#
 # Function taken from https://github.com/davkovacs/mace/tree/mu_alpha
-def compute_dielectric_gradients(dielectric: torch.Tensor, positions: torch.Tensor) -> torch.Tensor:
+def compute_dielectric_gradients(
+    dielectric: torch.Tensor, positions: torch.Tensor
+) -> torch.Tensor:
     """Compute the spatial derivatives of dielectric tensor.
 
     Args:
@@ -309,7 +321,7 @@ def compute_dielectric_gradients(dielectric: torch.Tensor, positions: torch.Tens
         torch.Tensor: Spatial derivatives of dielectric tensor.
     """
     # dielectric = dielectric[:,0:2]
-    d_dielectric_dr = [None]*dielectric.shape[-1]
+    d_dielectric_dr = [None] * dielectric.shape[-1]
     for i in range(dielectric.shape[-1]):
         grad_outputs: List[Optional[torch.Tensor]] = [
             torch.ones((dielectric.shape[0], 1)).to(dielectric.device)
@@ -326,4 +338,4 @@ def compute_dielectric_gradients(dielectric: torch.Tensor, positions: torch.Tens
     # output = torch.stack(d_dielectric_dr, dim=0)
     # if gradient is None:
     #     return torch.zeros((positions.shape[0], dielectric.shape[-1], 3))
-    return torch.stack(d_dielectric_dr, dim=0) # [Pxyz,atoms,Rxyz]
+    return torch.stack(d_dielectric_dr, dim=0)  # [Pxyz,atoms,Rxyz]
