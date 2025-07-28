@@ -2341,8 +2341,10 @@ class FFDielectric(ForceField):
         u, f, v, x = results
         dipole = self.dipole.get(x)
         Z = self.bec.get(x)
-        u -= dipole @ self.field
-        f += Z @ self.field
+        time = self.template['time']
+        Efield = self.field.get(time)
+        u -= dipole @ Efield
+        f += Efield @ Z.reshape((3,-1))
         return u, f, v, x
 
     def fixed_D(self, request: dict):
