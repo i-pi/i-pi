@@ -60,6 +60,7 @@ try:
     from typing import List, Optional
     from mace.tools.torch_geometric.batch import Batch
     from mace.calculators import MACECalculator
+    from mace.modules.utils import get_outputs
 
     # from mace.tools.torch_geometric.dataloader import DataLoader
     from ase.calculators.calculator import Calculator, all_changes
@@ -79,40 +80,18 @@ if OK:
             self.instructions = instructions
             if "forward_kwargs" not in self.instructions:
                 self.instructions["forward_kwargs"] = {}
+            if "ensemble" not in self.instructions:
+                self.instructions["ensemble"] = "none"
+
+            if "ensemble" not in self.instructions:
+                raise ValueError(
+                    "You need to specify an ensemble (among 'none', 'E', 'E-debug', and 'D') in the instructions file."
+                )
 
             super().__init__(*argc, **kwargs)
 
         def get_extras(self) -> dict:
             return {}
-
-        def apply_ensemble(self, data: dict) -> dict:
-            if self.instructions == {}:
-                return data
-            if "ensemble" not in self.instructions:
-                raise ValueError(
-                    "You need to specify an ensemble (among 'none', 'E', and 'D') in the instructions file."
-                )
-            ensemble = str(self.instructions["ensemble"]).upper()
-            if ensemble == "NONE":  # no ensemble (just for debugging purposes)
-                pass
-            else:
-                extras = self.get_extras()
-                if extras is None or extras == {}:
-                    raise ValueError("The extra information dictionary is empty.")
-                if ensemble == "E":  # fixed external electric field
-                    # This is very similar to what is done in the function 'fixed_E' in 'ipi/engine/forcefields.py'.
-                    mu, Z = data["dipole"][0], data["BEC"]
-                    Efield = np.asarray(extras["Efield"])
-                    Efield = torch.from_numpy(Efield).to(
-                        device=self.device, dtype=mu.dtype
-                    )
-                    data["energy"] -= mu @ Efield
-                    data["forces"] += torch.einsum("ijk,i->jk", Z, Efield)
-                elif ensemble == "D":  # fixed dielectric displacement
-                    ValueError("Not implemented yet")
-                else:
-                    raise ValueError("coding error")
-            return data
 
         def calculate(self, atoms=None, properties=None, system_changes=all_changes):
             """
@@ -128,12 +107,12 @@ if OK:
             batch_base: Batch = self._atoms_to_batch(atoms)
             assert isinstance(batch_base, Batch), "hello"
 
-            # -------------------#
-            # Some boolean flags
-            compute_bec = (
-                "compute_BEC" in self.instructions
-                and self.instructions["compute_BEC"] == True
-            )
+            compute_bec = False
+            if "compute_BEC" in self.instructions:
+                compute_bec = self.instructions["compute_BEC"]
+
+            if self.instructions["ensemble"] == "E-debug":
+                compute_bec = True
 
             # Attention:
             # if we want to compute the Born Charges we need to call 'torch.autograd.grad' on the dipoles w.r.t. the positions.
@@ -155,6 +134,32 @@ if OK:
             else:
                 compute_stress = False
 
+            # -------------------#
+            # Some extra parameters to the model
+            if "compute_edge_forces" not in self.instructions["forward_kwargs"]:
+                self.instructions["forward_kwargs"][
+                    "compute_edge_forces"
+                ] = self.compute_atomic_stresses
+            # if "compute_atomic_stresses" not in self.instructions["forward_kwargs"]:
+            #     self.instructions["forward_kwargs"]["compute_atomic_stresses"] = (
+            #         self.compute_atomic_stresses
+            #     )
+            if "compute_stress" not in self.instructions["forward_kwargs"]:
+                self.instructions["forward_kwargs"]["compute_stress"] = compute_stress
+            # if "compute_hessian" not in self.instructions["forward_kwargs"]:
+            #     self.instructions["forward_kwargs"]["compute_hessian"] = False
+
+            forward_kwargs = self.instructions["forward_kwargs"].copy()
+
+            if self.instructions["ensemble"] == "E":
+                # disable all autograd flags to turn them on again in 'self.apply_ensemble'
+                forward_kwargs["compute_force"] = False
+                forward_kwargs["compute_stress"] = False
+                forward_kwargs["compute_virials"] = False
+                # forward_kwargs["compute_hessian"] = False
+                forward_kwargs["compute_edge_forces"] = False
+                # forward_kwargs["compute_atomic_stresses"] = False
+
             ret_tensors = self._create_result_tensors(
                 self.model_type, self.num_models, len(atoms)
             )
@@ -162,11 +167,12 @@ if OK:
                 batch = self._clone_batch(batch_base)
                 out = model(
                     batch.to_dict(),
-                    compute_stress=compute_stress,
+                    # compute_stress=compute_stress,
                     training=training,  # yes, this is correct
-                    compute_edge_forces=self.compute_atomic_stresses,
-                    compute_atomic_stresses=self.compute_atomic_stresses,
-                    **self.instructions["forward_kwargs"],
+                    # compute_edge_forces=self.compute_atomic_stresses,
+                    # compute_atomic_stresses=self.compute_atomic_stresses,
+                    **forward_kwargs,
+                    compute_displacement=True,
                 )
 
                 # compute Born Effective Charges using autodiff
@@ -174,7 +180,7 @@ if OK:
                     out["BEC"] = self.compute_BEC(out, batch)
 
                 # apply the external electric/dielectric field
-                out = self.apply_ensemble(out)
+                out = self.apply_ensemble(out, batch, training, compute_stress)
 
                 if self.model_type in ["MACE", "EnergyDipoleMACE"]:
                     ret_tensors["energies"][i] = out["energy"].detach()
@@ -280,7 +286,7 @@ if OK:
                     )
 
         @staticmethod
-        def compute_BEC(data: dict, batch: Batch):
+        def compute_BEC(data: dict, batch: Batch) -> torch.Tensor:
             # still to be implemented
             if "dipole" not in data:
                 raise ValueError(
@@ -317,6 +323,59 @@ if OK:
             # This means that bec[0,3,2] will contain d mu_x / d R^3_z,
             # where mu_x is the x-component of the dipole and R^3_z is the z-component of the 4th (zero-indexed) atom i n the structure/batch.
             return bec
+
+        def apply_ensemble(
+            self, data: dict, batch: Batch, training: bool, compute_stress: bool
+        ) -> dict:
+            # if self.instructions == {}:
+            #     return data
+
+            ensemble = str(self.instructions["ensemble"]).upper()
+            if ensemble == "NONE":  # no ensemble (just for debugging purposes)
+                pass
+            else:
+
+                extras = self.get_extras()
+                if extras is None or extras == {}:
+                    raise ValueError("The extra information dictionary is empty.")
+                Efield = np.asarray(extras["Efield"])
+                mu = data["dipole"][0]
+                Efield = torch.from_numpy(Efield).to(device=self.device, dtype=mu.dtype)
+
+                if ensemble == "E-debug":  # fixed external electric field
+                    # This is very similar to what is done in the function 'fixed_E' in 'ipi/engine/forcefields.py'.
+                    Z = data["BEC"]
+                    data["energy"] -= mu @ Efield
+                    data["forces"] += torch.einsum("ijk,i->jk", Z, Efield)
+
+                elif ensemble == "E":
+                    data["energy"] -= mu @ Efield
+                    forces, virials, stress, hessian, edge_forces = get_outputs(
+                        energy=data["energy"],
+                        positions=batch.positions,
+                        cell=batch.cell,
+                        displacement=data["displacement"],
+                        **self.instructions["forward_kwargs"],
+                        training=training,
+                    )
+
+                    if forces is not None:
+                        data["forces"] = forces
+                    if virials is not None:
+                        data["virials"] = virials
+                    if stress is not None:
+                        data["stress"] = stress
+                    if hessian is not None:
+                        data["hessian"] = hessian
+                    if edge_forces is not None:
+                        data["edge_forces"] = edge_forces
+
+                elif ensemble == "D":  # fixed dielectric displacement
+                    ValueError("Not implemented yet")
+
+                else:
+                    raise ValueError("coding error")
+            return data
 
 
 # ---------------------------------------#
