@@ -56,6 +56,7 @@ class Extended_MACE_driver(MACE_driver):
 OK = True
 try:
     import torch
+    import numpy as np
     from typing import List, Optional
     from mace.tools.torch_geometric.batch import Batch
     from mace.calculators import MACECalculator
@@ -94,10 +95,23 @@ if OK:
             ensemble = str(self.instructions["ensemble"]).upper()
             if ensemble == "NONE":  # no ensemble (just for debugging purposes)
                 pass
-            elif ensemble == "E":  # fixed external electric field
-                pass
-            elif ensemble == "D":  # fixed dielectric displacement
-                pass
+            else:
+                extras = self.get_extras()
+                if extras is None or extras == {}:
+                    raise ValueError("The extra information dictionary is empty.")
+                if ensemble == "E":  # fixed external electric field
+                    # This is very similar to what is done in the function 'fixed_E' in 'ipi/engine/forcefields.py'.
+                    mu, Z = data["dipole"][0], data["BEC"]
+                    Efield = np.asarray(extras["Efield"])
+                    Efield = torch.from_numpy(Efield).to(
+                        device=self.device, dtype=mu.dtype
+                    )
+                    data["energy"] -= mu @ Efield
+                    data["forces"] += torch.einsum("ijk,i->jk", Z, Efield)
+                elif ensemble == "D":  # fixed dielectric displacement
+                    ValueError("Not implemented yet")
+                else:
+                    raise ValueError("coding error")
             return data
 
         def calculate(self, atoms=None, properties=None, system_changes=all_changes):
@@ -124,10 +138,10 @@ if OK:
             # Attention:
             # if we want to compute the Born Charges we need to call 'torch.autograd.grad' on the dipoles w.r.t. the positions.
             # However, since the forces are always computed, MACE always calls 'torch.autograd.grad' on the energy w.r.t. the positions.
-            # This happens in 'compute_forces' in '/mace/modules/utils.py'.
+            # This happens in 'compute_forces' in 'mace/modules/utils.py'.
             # If 'training' == False, in that function the computational graph will be destroy and the Born Charges can not be computed afterwards.
             # For this reason, we set 'training' == True so that the computational graph is preserved and we can call 'torch.autograd.grad' in 'compute_dielectric_gradients'.
-            # If you don't believe me, please have a look at the keyword 'retain_graph' in '/mace/modules/utils.py' in the function 'compute_forces'.
+            # If you don't believe me, please have a look at the keyword 'retain_graph' in 'mace/modules/utils.py' in the function 'compute_forces'.
             training = self.use_compile or compute_bec
 
             if self.model_type in ["MACE", "EnergyDipoleMACE"]:
@@ -297,13 +311,12 @@ if OK:
                 raise ValueError(
                     f"The computed Born Charges have the wrong shape. The shape {(*pos.shape,3)} was expected but got {tuple(bec.shape)}."
                 )
-            data["BEC"] = bec
             # Attention:
             # The tensor 'bec' has 3 dimensions.
             # Its shape is (3,*pos.shape).
             # This means that bec[0,3,2] will contain d mu_x / d R^3_z,
             # where mu_x is the x-component of the dipole and R^3_z is the z-component of the 4th (zero-indexed) atom i n the structure/batch.
-            return data
+            return bec
 
 
 # ---------------------------------------#
