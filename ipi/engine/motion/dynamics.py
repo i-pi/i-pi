@@ -610,7 +610,7 @@ class NVEIntegrator(DummyIntegrator):
 
 class NVEIntegratorWithFriction(NVEIntegrator):
     """Integrator for constant energy simulations with friction.
-    
+
     Attributes:
         friction_mapper: A FrictionMapper instance to apply frictional forces.
         frictionSD: Whether to use state-dependent friction.
@@ -618,30 +618,36 @@ class NVEIntegratorWithFriction(NVEIntegrator):
     """
 
     def __init__(
-            self,
-            friction=False,
-            frictionSD=True,
-            eta=np.eye(0, 0, 0, float),
-            fric_spec_dens=np.zeros(0, float),
-            fric_spec_dens_ener=0.0,
-            *args,
-            **kwargs,
-            ):
+        self,
+        friction=False,
+        frictionSD=True,
+        eta=np.eye(0, 0, 0, float),
+        fric_spec_dens=np.zeros(0, float),
+        fric_spec_dens_ener=0.0,
+        *args,
+        **kwargs,
+    ):
         from ipi.engine.motion.instanton import FrictionMapper
-        self.friction_mapper = FrictionMapper(frictionSD=frictionSD,eta0=eta)
+
+        self.friction_mapper = FrictionMapper(frictionSD=frictionSD, eta0=eta)
         self.fric_spec_dens = fric_spec_dens
-        self.fric_spec_dens_ener =fric_spec_dens_ener
+        self.fric_spec_dens_ener = fric_spec_dens_ener
         super().__init__(*args, **kwargs)
-    def bind(self,motion):
+
+    def bind(self, motion):
         super().bind(motion)
         self.friction_mapper.bind(motion)
-        self.friction_mapper.set_fric_spec_dens(fric_spec_dens_data=self.fric_spec_dens,fric_spec_dens_ener=self.fric_spec_dens_ener)
+        self.friction_mapper.set_fric_spec_dens(
+            fric_spec_dens_data=self.fric_spec_dens,
+            fric_spec_dens_ener=self.fric_spec_dens_ener,
+        )
+
     def step(self, step=None):
         # check if friction exists in the forces
         eta = np.array(self.forces.extras["friction"])
         print(eta)
         # assert False,eta
-        
+
         super().step(step)
 
 
