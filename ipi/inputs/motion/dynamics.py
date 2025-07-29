@@ -56,6 +56,7 @@ class InputDynamics(InputDictionary):
                  """,
                 "options": [
                     "nve",
+                    "nve-f",
                     "nvt",
                     "npt",
                     "nst",
@@ -108,6 +109,47 @@ class InputDynamics(InputDictionary):
                 "help": "Number of iterations for each MTS level (including the outer loop, that should in most cases have just one iteration).",
             },
         ),
+        "friction": (
+            InputValue,
+            {
+                "dtype": bool,
+                "default": False,
+                "help": "Activates Friction. Add additional terms to the RP related to a position-independent frictional force. See Eq. 20 in J. Chem. Phys. 156, 194106 (2022)",
+            },
+        ),
+        "frictionSD": (
+            InputValue,
+            {
+                "dtype": bool,
+                "default": True,
+                "help": "Activates SD Friction. Add additional terms to the RP related to a position-dependent frictional force. See Eq. 32 in J. Chem. Phys. 156, 194106 (2022)",
+            },
+        ),
+        "fric_spec_dens": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.ones, args=(0,)),
+                "help": "Laplace Transform (LT) of friction. A two column data is expected. First column: w (cm^-1). Second column: LT(eta)(w). See Eq. 11 in J. Chem. Phys. 156, 194106 (2022). Note that within the separable coupling approximation the frequency dependence of the friction tensor is position independent.",
+            },
+        ),
+        "fric_spec_dens_ener": (
+            InputValue,
+            {
+                "dtype": float,
+                "default": 0.0,
+                "help": "Energy at which the LT of the friction tensor is evaluated in the client code",
+                "dimension": "energy",
+            },
+        ),
+        "eta": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": input_default(factory=np.eye, args=(0,)),
+                "help": "Friction Tensor. Only to be used when frictionSD is disabled.",
+            },
+        ),
     }
 
     dynamic = {}
@@ -131,6 +173,12 @@ class InputDynamics(InputDictionary):
         self.barostat.store(dyn.barostat)
         self.nmts.store(dyn.nmts)
         self.splitting.store(dyn.splitting)
+        options = dyn.options
+        self.friction.store(options["friction"])
+        self.frictionSD.store(options["frictionSD"])
+        if options["friction"]:
+            self.fric_spec_dens.store(options["fric_spec_dens"])
+            self.fric_spec_dens_ener.store(options["fric_spec_dens_ener"])
 
     def fetch(self):
         """Creates an ensemble object.
