@@ -15,6 +15,7 @@ class Extended_MACE_driver(MACE_driver):
     """
     MACE driver with the torch tensors exposed.
     """
+
     def check_parameters(self):
         """Check the arguments requuired to run the driver
 
@@ -89,11 +90,12 @@ if OK:
 
             if self.instructions["ensemble"] == "E-debug":
                 compute_bec = True
-                
+
             if compute_bec:
                 from ase.outputs import _defineprop, all_outputs
+
                 if "BEC" not in all_outputs:
-                    _defineprop("BEC", dtype=float, shape=(3,"natoms",3))
+                    _defineprop("BEC", dtype=float, shape=(3, "natoms", 3))
 
             # Attention:
             # if we want to compute the Born Charges we need to call 'torch.autograd.grad' on the dipoles w.r.t. the positions.
@@ -145,9 +147,11 @@ if OK:
                 self.model_type, self.num_models, len(atoms)
             )
             if compute_bec:
-                f = ret_tensors['forces']
-                ret_tensors["BEC"] = torch.zeros((len(self.models), 3,*f.shape[1:]), device=self.device)
-                #torch.zeros((3,*f.shape),dtype=f.dtype,device=f.device)
+                f = ret_tensors["forces"]
+                ret_tensors["BEC"] = torch.zeros(
+                    (len(self.models), 3, *f.shape[1:]), device=self.device
+                )
+                # torch.zeros((3,*f.shape),dtype=f.dtype,device=f.device)
             for i, model in enumerate(self.models):
                 batch = self._clone_batch(batch_base)
                 out = model(
@@ -265,8 +269,10 @@ if OK:
                         .numpy()
                     )
             if "BEC" in ret_tensors:
-                self.results["BEC"] = torch.mean(ret_tensors["BEC"], dim=0).cpu().numpy() 
-                    
+                self.results["BEC"] = (
+                    torch.mean(ret_tensors["BEC"], dim=0).cpu().numpy()
+                )
+
             return
 
         @staticmethod
@@ -319,7 +325,7 @@ if OK:
                 # compute Born Effective Charges using autodiff
                 pass
             else:
-            
+
                 extras = self.get_extras()
                 if extras is None or extras == {}:
                     raise ValueError("The extra information dictionary is empty.")
@@ -332,7 +338,7 @@ if OK:
                     if not compute_bec:
                         raise ValueError("coding error")
                     data["BEC"] = self.compute_BEC(data, batch)
-                    
+
                     Z = data["BEC"]
                     data["energy"] -= mu @ Efield
                     data["forces"] += torch.einsum("ijk,i->jk", Z, Efield)
@@ -364,10 +370,10 @@ if OK:
 
                 else:
                     raise ValueError("coding error")
-                
+
             if compute_bec and "BEC" not in data:
                 data["BEC"] = self.compute_BEC(data, batch)
-                
+
             return data
 
 
