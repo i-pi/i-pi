@@ -47,7 +47,6 @@ except:
 if OK:
 
     class Extended_MACECalculator(MACECalculator):
-
         def __init__(
             self, instructions: dict = {}, get_extras: callable = None, *argc, **kwargs
         ):
@@ -95,7 +94,7 @@ if OK:
                 from ase.outputs import _defineprop, all_outputs
 
                 if "BEC" not in all_outputs:
-                    _defineprop("BEC", dtype=float, shape=(3, "natoms", 3))
+                    _defineprop("BEC", dtype=float, shape=("natoms", 3, 3))
 
             # Attention:
             # if we want to compute the Born Charges we need to call 'torch.autograd.grad' on the dipoles w.r.t. the positions.
@@ -149,7 +148,7 @@ if OK:
             if compute_bec:
                 f = ret_tensors["forces"]
                 ret_tensors["BEC"] = torch.zeros(
-                    (len(self.models), 3, *f.shape[1:]), device=self.device
+                    (len(self.models), *f.shape[1:], 3), device=self.device
                 )
                 # torch.zeros((3,*f.shape),dtype=f.dtype,device=f.device)
             for i, model in enumerate(self.models):
@@ -312,6 +311,11 @@ if OK:
             # Its shape is (3,*pos.shape).
             # This means that bec[0,3,2] will contain d mu_x / d R^3_z,
             # where mu_x is the x-component of the dipole and R^3_z is the z-component of the 4th (zero-indexed) atom i n the structure/batch.
+
+            # we need to reshape 'bec' so that the first two axis will become d.o.f. once flattened
+            # and the last axis will the the component of the dipole
+            bec = bec.moveaxis(0, 2).moveaxis(1, 2)
+            # bec.sum(dim=0) should be a (3,3) matrix filled with zeros.
             return bec
 
         def apply_ensemble(
@@ -325,7 +329,6 @@ if OK:
                 # compute Born Effective Charges using autodiff
                 pass
             else:
-
                 extras = self.get_extras()
                 if extras is None or extras == {}:
                     raise ValueError("The extra information dictionary is empty.")
