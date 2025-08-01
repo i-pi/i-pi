@@ -1,6 +1,7 @@
 """An (extended) interface for the [MACE](https://github.com/ACEsuit/mace) calculator"""
 
 from .mace import MACE_driver
+from . import gpu_oversubscription
 
 # MACECalculator = None
 # all_changes = None
@@ -34,6 +35,7 @@ class Extended_MACE_driver(MACE_driver):
 
 OK = True
 try:
+    gpu_oversubscription()
     import time
     from datetime import datetime
     import torch
@@ -427,22 +429,21 @@ if OK:
         """
         # dielectric = dielectric[:,0:2]
         d_dielectric_dr = [None] * dielectric.shape[-1]
+        grad_outputs: List[torch.Tensor] = [
+            torch.ones((dielectric.shape[0], 1)).to(dielectric.device)
+        ]
         for i in range(dielectric.shape[-1]):
-            grad_outputs: List[Optional[torch.Tensor]] = [
-                torch.ones((dielectric.shape[0], 1)).to(dielectric.device)
-            ]
             gradient = torch.autograd.grad(
                 outputs=[dielectric[:, i].unsqueeze(-1)],
                 inputs=[positions],
                 grad_outputs=grad_outputs,
-                retain_graph=True,
-                create_graph=True,
-                allow_unused=True,
+                retain_graph=(i < dielectric.shape[-1] - 1),  # small optimization
+                create_graph=False,  # small optimization
+                allow_unused=False,  # small optimization
             )[0]
-            d_dielectric_dr[i] = gradient
-        # output = torch.stack(d_dielectric_dr, dim=0)
-        # if gradient is None:
-        #     return torch.zeros((positions.shape[0], dielectric.shape[-1], 3))
+            d_dielectric_dr[i] = gradient.detach()
+            del gradient  # cleanup
+        del grad_outputs  # cleanup
         return torch.stack(d_dielectric_dr, dim=0)  # [Pxyz,atoms,Rxyz]
 
     class Timer:
