@@ -196,7 +196,7 @@ class BEC:
     # The BEC tensors Z^* can be given to i-PI by an external driver through the extras strings in the forces
     # or they can be kept fixed during the dynamics: in this case you can provide them through a txt file.
 
-    ASR_THRESHOLD = 1e-8
+    ASR_THRESHOLD = 1e-6
 
     def __init__(self, cbec=None, bec=None, mode="none"):
         self.cbec = cbec
