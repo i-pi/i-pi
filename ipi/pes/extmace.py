@@ -81,7 +81,6 @@ if OK:
             Calculator.calculate(self, atoms)
 
             batch_base: Batch = self._atoms_to_batch(atoms)
-            assert isinstance(batch_base, Batch), "hello"
 
             compute_bec = False
             if "compute_BEC" in self.instructions:
