@@ -2,8 +2,6 @@
 import socket
 import argparse
 import numpy as np
-import importlib
-import traceback
 from ipi.pes import __drivers__, Dummy_driver, load_driver
 from ipi.utils.io.inputs import read_args_kwargs
 
