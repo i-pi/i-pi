@@ -40,7 +40,7 @@ try:
     from datetime import datetime
     import torch
     import numpy as np
-    from typing import List, Optional, Dict
+    from typing import List, Dict
     from mace.tools.torch_geometric.batch import Batch
     from mace.calculators import MACECalculator
     from mace.modules.utils import get_outputs
