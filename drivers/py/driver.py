@@ -4,7 +4,7 @@ import argparse
 import numpy as np
 import importlib
 import traceback
-from ipi.pes import __drivers__, Dummy_driver
+from ipi.pes import __drivers__, Dummy_driver, load_driver
 from ipi.utils.io.inputs import read_args_kwargs
 
 description = """
@@ -227,40 +227,7 @@ if __name__ == "__main__":
     driver_args, driver_kwargs = read_args_kwargs(args.param)
 
     # import only what we need
-    try:
-        module_name = f"ipi.pes.{args.mode}"
-        module = importlib.import_module(module_name, __package__)
-
-        driver_class = getattr(module, "__DRIVER_CLASS__", None)
-        if driver_class is None:
-            raise AttributeError(
-                f"Module '{module_name}' does not define '__DRIVER_CLASS__'."
-            )
-
-        d_f = getattr(module, driver_class)
-
-    except ModuleNotFoundError as e:
-        print(f"\n[ERROR] PES module '{module_name}' could not be found.")
-        traceback.print_exc()
-        raise ImportError(
-            f"Could not import PES module '{module_name}'. Please check the mode argument: '{args.mode}'."
-        ) from e
-
-    except AttributeError as e:
-        print(f"\n[ERROR] Driver class not found in module '{module_name}'.")
-        traceback.print_exc()
-        raise ImportError(
-            f"'{module_name}' does not define the expected class: {e}"
-        ) from e
-
-    except Exception as e:
-        print(
-            f"\n[ERROR] Unexpected error while importing or accessing driver class from '{module_name}'."
-        )
-        traceback.print_exc()
-        raise ImportError(
-            f"An unexpected error occurred while loading PES module '{module_name}': {e}"
-        ) from e
+    d_f = load_driver(args.mode)
 
     run_driver(
         unix=args.unix,

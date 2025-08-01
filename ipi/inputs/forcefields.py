@@ -352,7 +352,7 @@ class InputFFDirect(InputForceField):
             {
                 "dtype": str,
                 "default": "dummy",
-                "options": list(__drivers__.keys()),
+                "options": __drivers__,
                 "help": "Type of PES that should be used to evaluate the forcefield",
             },
         ),
