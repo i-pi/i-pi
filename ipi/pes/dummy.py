@@ -22,6 +22,7 @@ class Dummy_driver(object):
         self.kwargs = kwargs
         self.requires_extra = False
         self.extradata = ""
+        self.extra = None
 
         self.check_parameters()
 
