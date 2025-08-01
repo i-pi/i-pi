@@ -39,7 +39,6 @@ def load_driver(mode: str):
 
     Parameters:
         mode (str): The name of the PES mode/module to load.
-        package (str): The package to use for relative imports (optional).
 
     Returns:
         driver_class: The loaded driver class object.
