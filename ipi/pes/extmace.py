@@ -58,11 +58,8 @@ if OK:
                 self.instructions["forward_kwargs"] = {}
             if "ensemble" not in self.instructions:
                 self.instructions["ensemble"] = "none"
-
-            if "ensemble" not in self.instructions:
-                raise ValueError(
-                    "You need to specify an ensemble (among 'none', 'E', 'E-debug', and 'D') in the instructions file."
-                )
+            if "log" not in self.instructions:
+                self.instructions["log"] = False
 
             super().__init__(*argc, **kwargs)
 
