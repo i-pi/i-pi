@@ -225,7 +225,9 @@ if __name__ == "__main__":
     driver_args, driver_kwargs = read_args_kwargs(args.param)
 
     # import only what we need
-    d_f = load_driver(args.mode)
+    cls = load_driver(args.mode)
+
+    d_f = cls(*driver_args, **driver_kwargs)
 
     run_driver(
         unix=args.unix,
