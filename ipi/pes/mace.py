@@ -43,7 +43,6 @@ class MACE_driver(ASEDriver):
         global MACECalculator
 
         try:
-            gpu_oversubscription()
             from mace.calculators import MACECalculator
         except:
             raise ImportError("Couldn't load mace bindings")
@@ -83,23 +82,16 @@ class MACE_driver(ASEDriver):
 
 def gpu_oversubscription():
     """
-    Distributes GPUs among SLURM tasks by oversubscribing them when
-    there are more tasks than available GPUs on a node.
+    Assigns GPUs to SLURM tasks by oversubscribing when tasks exceed GPUs.
 
-    Determines the GPU assignment based on SLURM_LOCALID and the total
-    number of GPUs and tasks, sets CUDA_VISIBLE_DEVICES accordingly,
-    and logs output to a file named 'task.localid={ID}.log'.
+    Uses SLURM_LOCALID and SLURM_NTASKS_PER_NODE to map tasks onto GPUs,
+    sets CUDA_VISIBLE_DEVICES accordingly, and prints assignment info.
     """
 
-    import os, sys
+    import os
 
     # Get the task's local ID on this node (used for GPU assignment and logging)
     local_id = os.environ.get("SLURM_LOCALID", "unknown")
-
-    # Redirect stdout and stderr to a task-specific log file
-    log_file = f"task.localid={local_id}.log"
-    sys.stdout = open(log_file, "w")
-    sys.stderr = sys.stdout  # Also capture warnings and errors
 
     print("\n[GPU Oversubscription Info]")
 

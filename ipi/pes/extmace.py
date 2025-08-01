@@ -1,7 +1,8 @@
 """An (extended) interface for the [MACE](https://github.com/ACEsuit/mace) calculator"""
 
 from .mace import MACE_driver
-from .mace import gpu_oversubscription
+
+# from .mace import gpu_oversubscription
 
 # MACECalculator = None
 # all_changes = None
@@ -35,7 +36,7 @@ class Extended_MACE_driver(MACE_driver):
 
 OK = True
 try:
-    gpu_oversubscription()
+    # gpu_oversubscription()
     import time
     from datetime import datetime
     import torch
