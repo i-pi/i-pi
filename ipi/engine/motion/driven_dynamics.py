@@ -6,6 +6,7 @@
 
 import numpy as np
 
+from ipi.utils.softexit import softexit
 from ipi.utils.depend import *
 from ipi.utils.units import Constants
 from ipi.engine.motion.dynamics import (
@@ -240,46 +241,52 @@ class BEC:
 
         if bead is not None:
             if bead < 0:
-                raise ValueError("Error in '_get_driver_BEC': 'bead' is negative")
+                raise ValueError(f"{msg} (coding error): 'bead' is negative")
             if bead >= self.nbeads:
                 raise ValueError(
-                    "Error in '_get_driver_BEC': 'bead' is greater than the number of beads"
+                    f"{msg} (coding error): 'bead' is greater than the number of beads"
                 )
 
         if self.cbec:
             if "BEC" not in self.forces.extras:
-                raise ValueError(
-                    msg
-                    + ": BEC tensors are not returned to i-PI (or at least not accessible in '_get_driver_BEC')."
+                softexit.trigger(
+                    status="bad",
+                    message=f"{msg} (runtime error): BEC tensors are not returned to i-PI (or at least not accessible in '_get_driver_BEC').",
                 )
         else:
-            raise ValueError(
-                msg + ": you should not get into this functon if 'cbec' is False."
+            softexit.trigger(
+                status="bad",
+                message=f"{msg} (coding error): you should not get into this functon if 'cbec' is False.",
             )
 
         Z = np.full((self.nbeads, 3 * self.natoms, 3), np.nan)
         for n in range(self.nbeads):
             bec = np.asarray(self.forces.extras["BEC"][n])
 
+            if bec.ndim == 3:
+                # (atom_I,R_xyx,mu_xyz) -> (dof_i,mu_xyz)
+                bec = bec.reshape((bec.shape[0] * bec.shape[1], bec.shape[2]))
+
             if bec.shape[0] != 3 * self.natoms:
-                raise ValueError(
-                    msg
-                    + ": number of BEC tensors is not equal to the number of atoms x 3."
+                softexit.trigger(
+                    status="bad",
+                    message=f"{msg} (runtime error): number of BEC tensors is not equal to the number of atoms x 3. The BEC tensors have shape {bec.shape}.",
                 )
             if bec.shape[1] != 3:
-                raise ValueError(
-                    msg
-                    + ": BEC tensors with wrong shape. They should have 3 components."
+                softexit.trigger(
+                    status="bad",
+                    message=f"{msg} (runtime error): BEC tensors with wrong shape. They should have 3 components. The BEC tensors have shape {bec.shape}.",
                 )
             sum_rule: np.ndarray = (
                 np.asarray(bec.reshape((self.natoms, 3, 3)).sum(axis=0)) / self.natoms
             )
             if not np.allclose(sum_rule, 0, atol=BEC.ASR_THRESHOLD):
-                raise ValueError(
-                    f"{msg}: BEC tensors do not satisfy acoustic sum rule/charge conservation.\n"
+                softexit.trigger(
+                    status="bad",
+                    message=f"{msg} (runtime error): BEC tensors do not satisfy acoustic sum rule/charge conservation.\n"
                     f"The sum over all the atoms should be zero, but it has exceeded the threshold of {BEC.ASR_THRESHOLD:.2e} per atom.\n"
                     f"The mean over all the atoms is {sum_rule.flatten().tolist()}.\n"
-                    "Check your driver or modify `BEC.ASR_THRESHOLD` in `ipi/engine/motion/driven_dynamics.py`."
+                    "Check your driver or modify `BEC.ASR_THRESHOLD` in `ipi/engine/motion/driven_dynamics.py`.",
                 )
 
             Z[n, :, :] = np.copy(bec)
@@ -295,15 +302,15 @@ class BEC:
         try:
             return self.bec.reshape((self.nbeads, 3 * self.natoms, 3))
         except:
-            line = (
-                "Error in '_get_fixed_BEC': i-PI is going to stop.\n"
+            softexit.trigger(
+                status="bad",
+                message="Error in '_get_fixed_BEC' (runtime error): i-PI is going to stop.\n"
                 + "The BEC tensor is: "
                 + str(self.bec)
                 + "\nPay attention that in 'input.xml' you should have the following line:\n"
                 + "\t'<bec mode=\"file\"> filepath </bec>'\n"
-                + "The default mode could be 'none'. Please change it."
+                + "The default mode could be 'none'. Please change it.",
             )
-            raise ValueError(line)
 
 
 dproperties(BEC, ["bec"])
