@@ -1,6 +1,5 @@
 """Small functions/classes providing access to driver PES to be called from driver.py"""
 
-
 import importlib
 import traceback
 from .dummy import Dummy_driver
