@@ -2,8 +2,9 @@
 import socket
 import argparse
 import numpy as np
-
-from ipi.pes import *
+import importlib
+import traceback
+from ipi.pes import __drivers__, Dummy_driver
 from ipi.utils.io.inputs import read_args_kwargs
 
 description = """
@@ -201,7 +202,7 @@ if __name__ == "__main__":
         "--mode",
         type=str,
         default="dummy",
-        choices=list(__drivers__.keys()),
+        choices=__drivers__,
         help="""Type of potential to be used to compute the potential and its derivatives.
         """,
     )
@@ -224,24 +225,42 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     driver_args, driver_kwargs = read_args_kwargs(args.param)
+    
+    # import only what we need
+    try:
+        module_name = f"ipi.pes.{args.mode}"
+        module = importlib.import_module(module_name, __package__)
 
-    if args.mode in __drivers__:
-        try:
-            d_f = __drivers__[args.mode](
-                *driver_args, verbose=args.verbose, **driver_kwargs
+        driver_class = getattr(module, "__DRIVER_CLASS__", None)
+        if driver_class is None:
+            raise AttributeError(
+                f"Module '{module_name}' does not define '__DRIVER_CLASS__'."
             )
-        except ImportError:
-            # specific errors have already been triggered
-            raise
-        except Exception as err:
-            print(f"Error setting up PES mode {args.mode}")
-            print(__drivers__[args.mode].__doc__)
-            print("Error trace: ")
-            raise err
-    elif args.mode == "dummy":
-        d_f = Dummy_driver(verbose=args.verbose)
-    else:
-        raise ValueError("Unsupported driver mode ", args.mode)
+
+        d_f = getattr(module, driver_class)
+
+    except ModuleNotFoundError as e:
+        print(f"\n[ERROR] PES module '{module_name}' could not be found.")
+        traceback.print_exc()
+        raise ImportError(
+            f"Could not import PES module '{module_name}'. Please check the mode argument: '{args.mode}'."
+        ) from e
+
+    except AttributeError as e:
+        print(f"\n[ERROR] Driver class not found in module '{module_name}'.")
+        traceback.print_exc()
+        raise ImportError(
+            f"'{module_name}' does not define the expected class: {e}"
+        ) from e
+
+    except Exception as e:
+        print(
+            f"\n[ERROR] Unexpected error while importing or accessing driver class from '{module_name}'."
+        )
+        traceback.print_exc()
+        raise ImportError(
+            f"An unexpected error occurred while loading PES module '{module_name}': {e}"
+        ) from e
 
     run_driver(
         unix=args.unix,
