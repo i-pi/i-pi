@@ -263,6 +263,10 @@ class BEC:
         for n in range(self.nbeads):
             bec = np.asarray(self.forces.extras["BEC"][n])
 
+            if bec.ndim == 3:
+                # (atom_I,R_xyx,mu_xyz) -> (dof_i,mu_xyz)
+                bec = bec.reshape((bec.shape[0] * bec.shape[1], bec.shape[2]))
+
             if bec.shape[0] != 3 * self.natoms:
                 softexit.trigger(
                     status="bad",
