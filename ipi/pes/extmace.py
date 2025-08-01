@@ -2,8 +2,6 @@
 
 from .mace import MACE_driver
 
-# from .mace import gpu_oversubscription
-
 # MACECalculator = None
 # all_changes = None
 # Calculator = None
@@ -36,7 +34,6 @@ class Extended_MACE_driver(MACE_driver):
 
 OK = True
 try:
-    # gpu_oversubscription()
     import time
     from datetime import datetime
     import torch
@@ -84,6 +81,8 @@ if OK:
             :param system_changes: [str], system changes since last calculation, used by ASE internally
             :return:
             """
+
+            import torch
 
             # time single operations
             with Timer("calculate()", LOG_ENABLED):

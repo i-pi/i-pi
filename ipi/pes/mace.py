@@ -32,6 +32,7 @@ class MACE_driver(ASEDriver):
         model,
         device="cpu",
         requires_extra: bool = False,
+        gos: bool = False,  # GPU OverSubscription
         mace_kwargs=None,
         *args,
         **kwargs,
@@ -66,6 +67,9 @@ class MACE_driver(ASEDriver):
 
         super().__init__(template, *args, **kwargs)
         self.requires_extra = requires_extra
+
+        if gos:
+            gpu_oversubscription()
 
     def check_parameters(self):
         """Check the arguments requuired to run the driver
