@@ -1,36 +1,84 @@
 """Small functions/classes providing access to driver PES to be called from driver.py"""
 
-import pkgutil
 import importlib
 import traceback
+from .dummy import Dummy_driver
 
-__all__ = []
+__drivers__ = [
+    "ase",
+    "bath",
+    "double_double_well",
+    "DW",
+    "DW_bath",
+    "DW_friction",
+    "driverdipole",
+    "dummy",
+    "elphmod",
+    "harmonic",
+    "mace",
+    "metatensor",
+    "metatomic",
+    "MorseHarmonic",
+    "pet",
+    "psiflow",
+    "rascal",
+    "so3lr",
+    "Spherical_LJ",
+    "spline",
+    "xtb",
+]
 
-# Dictionary to store driver name to class mapping
-__drivers__ = {}
+# sort alphabetically
+__drivers__ = sorted(__drivers__)
 
-# Iterate through all modules in the current package folder
-for loader, module_name, is_pkg in pkgutil.iter_modules(__path__):
-    # Import the module
+
+def load_driver(mode: str):
+    """
+    Loads a PES driver module and retrieves its driver class.
+
+    Parameters:
+        mode (str): The name of the PES mode/module to load.
+
+    Returns:
+        driver_class: The loaded driver class object.
+
+    Raises:
+        ImportError: If the module or driver class cannot be loaded.
+    """
+    module_name = f"ipi.pes.{mode}"
+
     try:
-        module = importlib.import_module("." + module_name, __package__)
-    except Exception:
-        print(f"!! Could not import PES module {module_name} !!")
-        traceback.print_exc()
+        module = importlib.import_module(module_name, __package__)
 
-    # Get the driver class and name from the module
-    driver_class = getattr(module, "__DRIVER_CLASS__", None)
-    driver_name = getattr(module, "__DRIVER_NAME__", None)
-
-    # If both class and name are defined, update __all__ and __drivers__
-    if driver_class and driver_name:
-        __all__.append(driver_class)
-        __drivers__[driver_name] = getattr(module, driver_class)
-        globals()[driver_class] = getattr(module, driver_class)  # add class to globals
-    else:
-        if driver_class != "driver_tools":
-            raise ImportError(
-                f"PES module `{module_name}` does not define __DRIVER_CLASS__ and __DRIVER_NAME__"
+        driver_class_name = getattr(module, "__DRIVER_CLASS__", None)
+        if driver_class_name is None:
+            raise AttributeError(
+                f"Module '{module_name}' does not define '__DRIVER_CLASS__'."
             )
 
-__all__.append("__drivers__")
+        driver_class = getattr(module, driver_class_name)
+        return driver_class
+
+    except ModuleNotFoundError as e:
+        print(f"\n[ERROR] PES module '{module_name}' could not be found.")
+        traceback.print_exc()
+        raise ImportError(
+            f"Could not import PES module '{module_name}'. "
+            f"Please check the mode argument: '{mode}'."
+        ) from e
+
+    except AttributeError as e:
+        print(f"\n[ERROR] Driver class not found in module '{module_name}'.")
+        traceback.print_exc()
+        raise ImportError(
+            f"'{module_name}' does not define the expected class: {e}"
+        ) from e
+
+    except Exception as e:
+        print(
+            f"\n[ERROR] Unexpected error while importing or accessing driver class from '{module_name}'."
+        )
+        traceback.print_exc()
+        raise ImportError(
+            f"An unexpected error occurred while loading PES module '{module_name}': {e}"
+        ) from e
