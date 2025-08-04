@@ -44,6 +44,6 @@ def gpu_oversubscription():
 
 gpu_oversubscription()
 
-from .extmace import Extended_MACE_driver
+from .extmace import Extended_MACE_driver  # noqa: F401
 
 __DRIVER_CLASS__ = "Extended_MACE_driver"
