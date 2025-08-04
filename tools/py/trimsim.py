@@ -117,10 +117,11 @@ def main(inputfile, outdir="trim"):
                             else:
                                 if o.format == "ase":
                                     filename = filename + "_" + padb + ".extxyz"
+                                    ofilename = ofilename + "_" + padb + ".extxyz"
                                 else:
                                     filename = filename + "_" + padb + "." + o.format
+                                    ofilename = ofilename + "_" + padb + "." + o.format
 
-                                ofilename = ofilename + "_" + padb + "." + o.format
                                 ntraj.append(
                                     {
                                         "filename": filename,
