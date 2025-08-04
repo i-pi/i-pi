@@ -1,3 +1,5 @@
+"""An (extended) interface for the [MACE](https://github.com/ACEsuit/mace) calculator with GPU oversubscription for NVIDIA"""
+
 import os
 
 
