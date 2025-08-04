@@ -14,6 +14,8 @@ __drivers__ = [
     "driverdipole",
     "dummy",
     "elphmod",
+    "extmace",
+    "extmace_gpu",
     "harmonic",
     "mace",
     "metatensor",
