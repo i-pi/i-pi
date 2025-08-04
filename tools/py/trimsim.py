@@ -115,7 +115,7 @@ def main(inputfile, outdir="trim"):
                                     }
                                 )
                             else:
-                                if o.format == "ase": 
+                                if o.format == "ase":
                                     filename = filename + "_" + padb + ".extxyz"
                                 else:
                                     filename = filename + "_" + padb + "." + o.format
