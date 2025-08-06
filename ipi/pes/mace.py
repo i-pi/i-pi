@@ -7,7 +7,6 @@ from .tools import gpu_oversubscription
 
 gpu_oversubscription()  # run this before importing torch
 
-from ipi.utils.messages import verbosity, warning
 from mace.calculators import MACECalculator
 from ase.outputs import _defineprop, all_outputs
 
@@ -35,27 +34,16 @@ class MACE_driver(ASEDriver):
     :param model: string, filename of the MACE model
     """
 
-    def __init__(self, template, model, device="cpu", *args, **kwargs):
-        warning(
-            "THIS PES HAS NOT BEEN TESTED FOLLOWING CONVERSION TO THE NEW PES API.",
-            verbosity.low,
-        )
-        global MACECalculator
-
-        try:
-            from mace.calculators import MACECalculator
-        except:
-            raise ImportError("Couldn't load mace bindings")
-
-        try:
-            from ase.outputs import _defineprop, all_outputs
-
-            # avoid duplicate
-            # it complains with a committee of ffdirect MACE models
-            if "node_energy" not in all_outputs:
-                _defineprop("node_energy", dtype=float, shape=("natoms",))
-        except ImportError:
-            raise ValueError("Could not find or import the ASE module")
+    def __init__(
+        self,
+        template,
+        model,
+        device="cpu",
+        requires_extra: bool = False,
+        mace_kwargs=None,
+        *args,
+        **kwargs
+    ):
 
         self.model = model
         self.device = device
