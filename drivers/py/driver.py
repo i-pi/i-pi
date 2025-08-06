@@ -2,6 +2,7 @@
 import socket
 import argparse
 import numpy as np
+from ipi.pes.tools import Timer
 from ipi.pes import __drivers__, Dummy_driver, load_driver
 from ipi.utils.io.inputs import read_args_kwargs
 
@@ -126,7 +127,9 @@ def run_driver(
             pos = recv_data(sock, pos)
 
             ##### THIS IS THE TIME TO DO SOMETHING WITH THE POSITIONS!
-            pot, force, vir, extras = driver(cell, pos)
+            with Timer("__call__"):
+                pot, force, vir, extras = driver(cell, pos)
+            Timer.report()
             f_data = True
             # f_extra = False  # no, the driver does not have extra data anymore
 
