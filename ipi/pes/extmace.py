@@ -218,25 +218,29 @@ class Extended_MACECalculator(MACECalculator):
                     with Timer(f"model {i} -> 'apply_ensemble'", LOG_ENABLED):
                         out = self.apply_ensemble(out, batch, training, compute_bec)
 
-                    if self.model_type in ["MACE", "EnergyDipoleMACE"]:
+                    if "energy" in out:
                         ret_tensors["energies"][i] = out["energy"].detach()
                         ret_tensors["node_energy"][i] = (
                             out["node_energy"] - node_e0
                         ).detach()
+
+                    if "forces" in out:
                         ret_tensors["forces"][i] = out["forces"].detach()
-                        if out["stress"] is not None:
-                            ret_tensors["stress"][i] = out["stress"].detach()
-                    if self.model_type in ["DipoleMACE", "EnergyDipoleMACE"]:
+
+                    if "stress" in out:
+                        ret_tensors["stress"][i] = out["stress"].detach()
+
+                    if "dipole" in out:
                         ret_tensors["dipole"][i] = out["dipole"].detach()
-                    if self.model_type in ["MACE"]:
-                        if out["atomic_stresses"] is not None:
-                            ret_tensors.setdefault("atomic_stresses", []).append(
-                                out["atomic_stresses"].detach()
-                            )
-                        if out["atomic_virials"] is not None:
-                            ret_tensors.setdefault("atomic_virials", []).append(
-                                out["atomic_virials"].detach()
-                            )
+
+                    if "atomic_stresses" in out:
+                        ret_tensors.setdefault("atomic_stresses", []).append(
+                            out["atomic_stresses"].detach()
+                        )
+                    if "atomic_virials" in out:
+                        ret_tensors.setdefault("atomic_virials", []).append(
+                            out["atomic_virials"].detach()
+                        )
                     if "BEC" in out:
                         ret_tensors["BEC"][i] = out["BEC"].detach()
 
@@ -355,6 +359,7 @@ class Extended_MACECalculator(MACECalculator):
                     f"The positions are not a torch.Tensor rather a {type(pos)}"
                 )
             bec = compute_dielectric_gradients(mu, pos)
+
             if not isinstance(bec, torch.Tensor):
                 raise ValueError(
                     f"The computed Born Charges are not a torch.Tensor rather a {type(bec)}"
