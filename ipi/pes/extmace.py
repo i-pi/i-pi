@@ -441,3 +441,24 @@ def compute_dielectric_gradients(
         del gradient  # cleanup
     del grad_outputs  # cleanup
     return torch.stack(d_dielectric_dr, dim=0)  # [Pxyz,atoms,Rxyz]
+
+
+# --------------------------------------- #
+# Function taken from https://github.com/ACEsuit/mace/blob/main/mace/modules/utils.py
+# def compute_dielectric_gradients(
+#     dielectric: torch.Tensor,
+#     positions: torch.Tensor,
+# ) -> torch.Tensor:
+#     dielectric_flatten = dielectric.view(-1)
+
+#     def get_vjp(v):
+#         return torch.autograd.grad(
+#             dielectric_flatten,
+#             positions,
+#             v,
+#             retain_graph=True,
+#             create_graph=False,
+#             allow_unused=False,
+#         )
+#     I_N = torch.eye(dielectric.shape[-1]).to(dielectric.device)
+#     return torch.vmap(get_vjp, in_dims=0, out_dims=0)(I_N)[0]
