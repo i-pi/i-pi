@@ -1,4 +1,6 @@
 import os
+import time
+from datetime import datetime
 
 
 # --------------------------------------- #
@@ -44,3 +46,37 @@ def gpu_oversubscription():
         # Restrict visibility to the assigned GPU
         os.environ["CUDA_VISIBLE_DEVICES"] = str(gpu_id)
         print(f"  - CUDA_VISIBLE_DEVICES set to: {os.environ['CUDA_VISIBLE_DEVICES']}")
+
+
+# --------------------------------------- #
+class Timer:
+    _stack = []
+    _records = []
+
+    def __init__(self, name, log=True):
+        self.name = name
+        self.log = log
+        self.level = len(Timer._stack)
+
+    def __enter__(self):
+        self.start = time.time()
+        Timer._stack.append(self)
+        return self
+
+    def __exit__(self, exc_type, exc_val, exc_tb):
+        self.end = time.time()
+        self.elapsed = self.end - self.start
+        Timer._stack.pop()
+        if self.log:
+            Timer._records.append((self.start, self.level, self.name, self.elapsed))
+
+    @staticmethod
+    def report():
+        for t, level, name, elapsed in sorted(Timer._records):
+            timestamp = datetime.fromtimestamp(t).strftime("%Y-%m-%d %H:%M:%S")
+            indent = "    " * level
+            print(f"{timestamp}{indent} {name}: {elapsed:.4f} s")
+
+    @staticmethod
+    def reset():
+        Timer._records.clear()
