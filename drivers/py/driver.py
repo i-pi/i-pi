@@ -61,6 +61,7 @@ def run_driver(
     driver=Dummy_driver(),
     f_verbose=False,
     sockets_prefix="/tmp/ipi_",
+    logger: bool = None,
 ):
     """Minimal socket client for i-PI."""
 
@@ -87,6 +88,9 @@ def run_driver(
     pot = 0.0
     force = np.zeros(0, float)
     vir = np.zeros((3, 3), float)
+
+    LOGGER = Timer(logger is not None, logger)
+
     while True:  # ah the infinite loop!
         header = sock.recv(HDRLEN)
         if f_verbose:
@@ -127,9 +131,9 @@ def run_driver(
             pos = recv_data(sock, pos)
 
             ##### THIS IS THE TIME TO DO SOMETHING WITH THE POSITIONS!
-            with Timer("__call__"):
+            with LOGGER.section("__call__"):
                 pot, force, vir, extras = driver(cell, pos)
-            Timer.report()
+            LOGGER.report()
             f_data = True
             # f_extra = False  # no, the driver does not have extra data anymore
 
@@ -249,6 +253,14 @@ if __name__ == "__main__":
         default=False,
         help="Verbose output.",
     )
+    parser.add_argument(
+        "-l",
+        "--logger",
+        type=str,
+        default=None,
+        help="""Logger file (default: None) 
+        """,
+    )
 
     args = parser.parse_args()
 
@@ -266,4 +278,5 @@ if __name__ == "__main__":
         driver=d_f,
         f_verbose=args.verbose,
         sockets_prefix=args.sockets_prefix,
+        logger=args.logger,
     )

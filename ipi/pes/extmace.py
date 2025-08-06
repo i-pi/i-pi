@@ -44,6 +44,8 @@ from ase.calculators.calculator import Calculator, all_changes
 
 from .tools import Timer
 
+LOGGER: Timer = None
+
 
 class Extended_MACECalculator(MACECalculator):
     def __init__(
@@ -57,11 +59,10 @@ class Extended_MACECalculator(MACECalculator):
             self.instructions["forward_kwargs"] = {}
         if "ensemble" not in self.instructions:
             self.instructions["ensemble"] = "none"
-        if "log" not in self.instructions:
-            self.instructions["log"] = False
 
-        global LOG_ENABLED
-        LOG_ENABLED = self.instructions["log"]
+        global LOGGER
+        log = self.instructions.get("log", None)
+        LOGGER = Timer(log is not None, log)
 
         super().__init__(*argc, **kwargs)
 
@@ -78,12 +79,12 @@ class Extended_MACECalculator(MACECalculator):
         """
 
         # time single operations
-        with Timer("calculate()", LOG_ENABLED):
+        with LOGGER.section("calculate()"):
             # call to base-class to set atoms attribute
-            with Timer("Base calculate", LOG_ENABLED):
+            with LOGGER.section("Base calculate"):
                 Calculator.calculate(self, atoms)
 
-            with Timer("Prepare batch", LOG_ENABLED):
+            with LOGGER.section("Prepare batch"):
                 batch_base: Batch = self._atoms_to_batch(atoms)
 
             compute_bec = False
@@ -160,12 +161,12 @@ class Extended_MACECalculator(MACECalculator):
                 )
                 # torch.zeros((3,*f.shape),dtype=f.dtype,device=f.device)
 
-            with Timer("Forward pass loop", LOG_ENABLED):
+            with LOGGER.section("Forward pass loop"):
                 for i, model in enumerate(self.models):
-                    with Timer(f"model {i} -> '_clone_batch' ", LOG_ENABLED):
+                    with LOGGER.section(f"model {i} -> '_clone_batch' "):
                         batch = self._clone_batch(batch_base)
 
-                    with Timer(f"model {i} -> 'forward'", LOG_ENABLED):
+                    with LOGGER.section(f"model {i} -> 'forward'"):
                         out = model(
                             batch.to_dict(),
                             training=training,
@@ -174,7 +175,7 @@ class Extended_MACECalculator(MACECalculator):
                         )
 
                     # apply the external electric/dielectric field
-                    with Timer(f"model {i} -> 'apply_ensemble'", LOG_ENABLED):
+                    with LOGGER.section(f"model {i} -> 'apply_ensemble'"):
                         out = self.apply_ensemble(out, batch, training, compute_bec)
 
                     if "energy" in out:
@@ -290,13 +291,11 @@ class Extended_MACECalculator(MACECalculator):
                     torch.mean(ret_tensors["BEC"], dim=0).cpu().numpy()
                 )
 
-        if LOG_ENABLED:
-            Timer.report()
-        return
+        LOGGER.report()
 
     @staticmethod
     def compute_BEC(data: Dict[str, torch.Tensor], batch: Batch) -> torch.Tensor:
-        with Timer("'compute_BEC'", LOG_ENABLED):
+        with LOGGER.section("'compute_BEC'"):
             if "dipole" not in data:
                 raise ValueError(
                     f"The keyword 'dipole' is not in the output data of the MACE model.\nThe data provided by the model is: {list(data.keys())}"
@@ -377,7 +376,7 @@ class Extended_MACECalculator(MACECalculator):
                 if data["forces"] is not None:
                     raise ValueError("'forces' in 'data' should be None.")
 
-                with Timer("'get_outputs'", LOG_ENABLED):
+                with LOGGER.section("'get_outputs'"):
                     forces, virials, stress, hessian, edge_forces = get_outputs(
                         energy=data["energy"],
                         positions=batch.positions,
