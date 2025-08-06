@@ -1,6 +1,10 @@
 """An interface for the [MACE](https://github.com/ACEsuit/mace) calculator"""
 
 from .ase import ASEDriver
+from .tools import gpu_oversubscription
+
+gpu_oversubscription()  # run this before importing torch
+
 from ipi.utils.messages import verbosity, warning
 from mace.calculators import MACECalculator
 from ase.outputs import _defineprop, all_outputs
