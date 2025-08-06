@@ -77,8 +77,6 @@ class Extended_MACECalculator(MACECalculator):
         :return:
         """
 
-        import torch
-
         # time single operations
         with Timer("calculate()", LOG_ENABLED):
             # call to base-class to set atoms attribute
