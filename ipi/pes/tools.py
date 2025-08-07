@@ -90,7 +90,7 @@ class Timer:
             indent = "    " * level
             slurmid = int(os.environ.get("SLURM_LOCALID", "0"))
             lines.append(
-                f"{timestamp} {indent}{name} [id:{slurmid:3d}]: {elapsed:.4f} s"
+                f"{timestamp} [id:{slurmid:3d}] {indent}{name}: {elapsed:.4f} s"
             )
 
         if self.file:
