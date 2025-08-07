@@ -88,8 +88,10 @@ class Timer:
         for t, level, name, elapsed in sorted(self._records):
             timestamp = datetime.fromtimestamp(t).strftime("%Y-%m-%d %H:%M:%S")
             indent = "    " * level
-            slurmid = os.environ.get("SLURM_LOCALID", "/")
-            lines.append(f"{timestamp} {indent}{name} [id:{slurmid}]: {elapsed:.4f} s")
+            slurmid = int(os.environ.get("SLURM_LOCALID", "0"))
+            lines.append(
+                f"{timestamp} {indent}{name} [id:{slurmid:3d}]: {elapsed:.4f} s"
+            )
 
         if self.file:
             with open(self.file, "a", encoding="utf-8") as f:
