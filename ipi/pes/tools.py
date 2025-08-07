@@ -97,9 +97,10 @@ class Timer:
             with open(self.file, "a", encoding="utf-8") as f:
                 for line in lines:
                     f.write(line + "\n")
+                    f.flush()  # optional: flush to disk immediately
         else:
             for line in lines:
-                print(line)
+                print(line, flush=True)
 
         self.reset()
 
