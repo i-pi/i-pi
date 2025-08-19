@@ -1131,12 +1131,6 @@ class BaroRGB(Barostat):
         q += np.dot((p / self.beads.m3[0]).reshape((self.beads.natoms, 3)), sinh.T)
         p = np.dot(p.reshape((self.beads.natoms, 3)), expp.T)
 
-        # now apply the mask (and accumulate the associated change in conserved quantity)
-        # we use the thermostat conserved quantity accumulator, so we don't need to create a new one
-        self.thermostat.ethermo += self.kin
-        self.p *= self.hmask
-        self.thermostat.ethermo -= self.kin
-
         self.nm.qnm[0] = q.reshape((self.beads.natoms * 3))
         self.nm.pnm[0] = p.reshape((self.beads.natoms * 3))
 
@@ -1424,12 +1418,6 @@ class BaroMTK(Barostat):
         q = np.dot(q, expq.T)
         q += np.dot((p / self.beads.m3[0]).reshape((self.beads.natoms, 3)), sinh.T)
         p = np.dot(p.reshape((self.beads.natoms, 3)), expp.T)
-
-        # now apply the mask (and accumulate the associated change in conserved quantity)
-        # we use the thermostat conserved quantity accumulator, so we don't need to create a new one
-        self.thermostat.ethermo += self.kin
-        self.p *= self.hmask
-        self.thermostat.ethermo -= self.kin
 
         self.nm.qnm[0] = q.reshape((self.beads.natoms * 3))
         self.nm.pnm[0] = p.reshape((self.beads.natoms * 3))
