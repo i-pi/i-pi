@@ -27,7 +27,7 @@ class Dummy_driver(object):
         pass
 
     def compute_structure(self, cell, pos):
-        """ Evaluate a single structure"""
+        """Evaluate a single structure"""
         # just evaluates zeros
         pot = 0.0
         force = pos * 0.0  # makes a zero force with same shape as pos
@@ -36,13 +36,15 @@ class Dummy_driver(object):
             {"dipole": [0.0, 0.0, 0.0]}
         )  # have json formatting to potentially work with some test examples. meaningless value
         return pot, force, vir, extras
-    
+
     def __call__(self, cell, pos):
         """Does nothing, but returns properties that can be used by the driver loop."""
 
         if isinstance(cell, list):
-            if not isinstance(pos, list) or len(cell)!=len(pos):
-                raise ValueError("Both position and cell should be given as lists to run in batched mode")
+            if not isinstance(pos, list) or len(cell) != len(pos):
+                raise ValueError(
+                    "Both position and cell should be given as lists to run in batched mode"
+                )
             return [self.compute_structure(cell, pos) for cell, pos in zip(cell, pos)]
         else:
             return self.compute_structure(cell, pos)

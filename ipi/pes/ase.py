@@ -71,8 +71,8 @@ class ASEDriver(Dummy_driver):
         """
 
         if isinstance(cell, list) or isinstance(pos, list):
-            raise ValueError("ASE PES does not support batched execution")        
-                
+            raise ValueError("ASE PES does not support batched execution")
+
         # ASE calculators assume angstrom and eV units
         pos = unit_to_user("length", "angstrom", pos)
         # ASE expects cell-vectors-as-rows
