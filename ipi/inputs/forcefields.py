@@ -23,7 +23,6 @@ from ipi.engine.forcefields import (
     FFRotations,
 )
 from ipi.interfaces.sockets import InterfaceSocket
-from ipi.pes import __drivers__
 import ipi.engine.initializer
 from ipi.inputs.initializer import *
 from ipi.utils.inputvalue import *
@@ -352,7 +351,6 @@ class InputFFDirect(InputForceField):
             {
                 "dtype": str,
                 "default": "dummy",
-                "options": list(__drivers__.keys()),
                 "help": "Type of PES that should be used to evaluate the forcefield",
             },
         ),
