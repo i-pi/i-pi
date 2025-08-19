@@ -249,7 +249,7 @@ class MetatomicDriver(Dummy_driver):
             "force",
             "ev/ang",
             forces_tensor.detach()
-            .reshape(num_systems, 3, -1)
+            .reshape(num_systems, -1, 3)
             .to(device="cpu", dtype=torch.float64)
             .numpy(),
         )
@@ -262,7 +262,7 @@ class MetatomicDriver(Dummy_driver):
             .numpy(),
         )
         # symmetrize the virial for rotationally unconstrained models
-        virials = (virials + virials.swapaxes(1, 2)) / 2.0
+        virials = (virials + virials.swapaxes(1, 2)) * 0.5
 
         # extras_dict = {}
 
@@ -341,10 +341,9 @@ class MetatomicDriver(Dummy_driver):
 
         # extras = json.dumps(extras_dict)
 
-        energies = np.split(energies, energies.shape[0], axis=0)
-        forces = np.split(forces, np.cumsum([len(system) for system in systems])[:-1], axis=0)
-        virials = np.split(virials, virials.shape[0], axis=0)
-
+        energies = energies.flatten()
+        forces = forces.reshape((len(systems), -1, 3))
+        virials = virials.reshape((len(systems), 3, 3))
         return [(e, f, v, None) for (e, f, v) in zip(energies, forces, virials)]
 
     def compute_structure(self, cell, pos):
