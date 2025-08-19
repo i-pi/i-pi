@@ -279,7 +279,7 @@ class MetatomicDriver(Dummy_driver):
         virials = (virials + virials.swapaxes(1, 2)) * 0.5
 
         extras_dicts = [{}] * num_systems
-        
+
         if self.energy_ensemble:
             print(list(outputs.keys()))
             energy_ensemble_tensor = (
@@ -399,16 +399,19 @@ class MetatomicDriver(Dummy_driver):
             if torch.cuda.is_available():
                 torch.cuda.synchronize()
             model_time = -time()
-            
+
             # computes the model (in batched mode)
             outputs = self.model(
                 sys_batch,
                 self.evaluation_options,
                 check_consistency=self.check_consistency,
             )
-            print("requested outputs", self.evaluation_options.outputs.keys(),
-                  "actual outputs", outputs.keys()
-                  )
+            print(
+                "requested outputs",
+                self.evaluation_options.outputs.keys(),
+                "actual outputs",
+                outputs.keys(),
+            )
 
             if torch.cuda.is_available():
                 torch.cuda.synchronize()
