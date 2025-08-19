@@ -138,7 +138,7 @@ def forcefield_xml(
     if mode == "direct":
         if pes is None:
             raise ValueError(f"Must specify 'pes' for {mode} forcefields")
-        elif pes not in __drivers__:
+        elif pes not in __drivers__.keys():
             raise ValueError(f"Invalid value {pes} for 'pes'")
         if parameters is None:
             parameters = ""
