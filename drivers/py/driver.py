@@ -235,7 +235,7 @@ if __name__ == "__main__":
             raise ValueError(f"Invalid mode '{args.mode}'. Available modes: {choices}")
 
         # import client from ipi/pes/<module_name>.py
-        module_name = __drivers__[args.mode]
+        module_name = f"ipi.pes.{__drivers__[args.mode]}"
 
     # import the driver class
     cls = load_driver(module_name)
