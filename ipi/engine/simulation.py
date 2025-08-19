@@ -15,6 +15,7 @@ import os
 import time
 from copy import deepcopy
 
+import ipi
 from ipi.utils.depend import depend_value, dpipe, dproperties
 from ipi.utils.io.inputs.io_xml import xml_parse_file, xml_parse_string, xml_write
 from ipi.utils.messages import verbosity, info, warning, banner
@@ -89,6 +90,8 @@ class Simulation:
         # check the input and partition it appropriately
         input_simulation.parse(xmlrestart.fields[0][1])
 
+        Simulation.check_version(input_simulation)
+
         # override verbosity if requested
         if custom_verbosity is None:
             # Get from the input file
@@ -117,6 +120,26 @@ class Simulation:
         simulation.bind(read_only)
 
         return simulation
+
+    @staticmethod
+    def check_version(input_simulation):
+        input_version = input_simulation.version.fetch()
+        if input_version == "unspecified":
+            warning("Input with unspecified version number")
+        else:
+            if input_version != ipi.__version__:
+                raise Exception(
+                    "The version listed in your input %s is not expected by this version of i-PI - "
+                    "perhaps you have upgraded your i-PI code but not the input file, "
+                    "or you are using an old version of the code? "
+                    "We are stopping the code here to avoid subtle errors. "
+                    "Please check the release notes to see if your input is affected by any functionality "
+                    "changes between i-PI versions."
+                    "If there is no problem, please go to your input file and change"
+                    " the <version> field to this version of i-PI, %s. "
+                    "This will allow the simulation to run."
+                    % (input_version, ipi.__version__)
+                )
 
     def __init__(
         self,
