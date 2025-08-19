@@ -19,6 +19,7 @@ from ipi.utils.jit import compiled
 from ipi.engine.thermostats import Thermostat
 from ipi.engine.barostats import Barostat, BaroRGB
 from ipi.utils.messages import warning, verbosity
+from ipi.engine.friction import Friction
 
 
 class Dynamics(Motion):
@@ -56,9 +57,9 @@ class Dynamics(Motion):
         fixcom=False,
         fixatoms_dof=None,
         nmts=None,
-        friction=False,
         frictionSD=True,
-        eta=np.eye(0, 0, 0, float),
+        eta0=0.0,
+        omega_cutoff=0.0,
         fric_spec_dens=np.zeros(0, float),
         fric_spec_dens_ener=0.0,
         efield=None,
@@ -107,9 +108,9 @@ class Dynamics(Motion):
             self.integrator = NVEIntegrator()
         elif self.enstype == "nve-f":
             self.integrator = NVEIntegratorWithFriction(
-                friction=friction,
                 frictionSD=frictionSD,
-                eta=eta,
+                eta0=eta0,
+                omega_cutoff=omega_cutoff,
                 fric_spec_dens=fric_spec_dens,
                 fric_spec_dens_ener=fric_spec_dens_ener,
             )
@@ -612,41 +613,36 @@ class NVEIntegratorWithFriction(NVEIntegrator):
     """Integrator for constant energy simulations with friction.
 
     Attributes:
-        friction_mapper: A FrictionMapper instance to apply frictional forces.
-        frictionSD: Whether to use state-dependent friction.
-        eta0: Default friction tensor (used if state-independent).
+       
     """
 
     def __init__(
         self,
-        friction=False,
         frictionSD=True,
-        eta=np.eye(0, 0, 0, float),
+        eta0=0.0,
         fric_spec_dens=np.zeros(0, float),
         fric_spec_dens_ener=0.0,
+        omega_cutoff=0.0,
         *args,
         **kwargs,
     ):
-        from ipi.engine.motion.instanton import FrictionMapper
+        
 
-        self.friction_mapper = FrictionMapper(frictionSD=frictionSD, eta0=eta)
-        self.fric_spec_dens = fric_spec_dens
-        self.fric_spec_dens_ener = fric_spec_dens_ener
+        self.friction_mapper = Friction(
+            frictionSD=frictionSD,
+            fric_spec_dens=fric_spec_dens,
+            fric_spec_dens_ener=fric_spec_dens_ener,
+            eta0=eta0,
+            omega_cutoff=omega_cutoff,
+        )
         super().__init__(*args, **kwargs)
 
     def bind(self, motion):
         super().bind(motion)
         self.friction_mapper.bind(motion)
-        self.friction_mapper.set_fric_spec_dens(
-            fric_spec_dens_data=self.fric_spec_dens,
-            fric_spec_dens_ener=self.fric_spec_dens_ener,
-        )
 
     def step(self, step=None):
-        # check if friction exists in the forces
-        eta = np.array(self.forces.extras["friction"])
-        print(eta)
-        # assert False,eta
+        # TODO: Update the forces with friction
 
         super().step(step)
 

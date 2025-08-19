@@ -109,14 +109,6 @@ class InputDynamics(InputDictionary):
                 "help": "Number of iterations for each MTS level (including the outer loop, that should in most cases have just one iteration).",
             },
         ),
-        "friction": (
-            InputValue,
-            {
-                "dtype": bool,
-                "default": False,
-                "help": "Activates Friction. Add additional terms to the RP related to a position-independent frictional force. See Eq. 20 in J. Chem. Phys. 156, 194106 (2022)",
-            },
-        ),
         "frictionSD": (
             InputValue,
             {
@@ -142,12 +134,20 @@ class InputDynamics(InputDictionary):
                 "dimension": "energy",
             },
         ),
-        "eta": (
+        "eta0": (
             InputArray,
             {
                 "dtype": float,
-                "default": input_default(factory=np.eye, args=(0,)),
+                "default": 0.0,
                 "help": "Friction Tensor. Only to be used when frictionSD is disabled.",
+            },
+        ),
+        "omega_cutoff": (
+            InputArray,
+            {
+                "dtype": float,
+                "default": 0.0,
+                "help": "frequency cutoff",
             },
         ),
     }
@@ -174,9 +174,10 @@ class InputDynamics(InputDictionary):
         self.nmts.store(dyn.nmts)
         self.splitting.store(dyn.splitting)
         options = dyn.options
-        self.friction.store(options["friction"])
+        self.eta0.store(options["eta0"])
+        self.omega_cutoff.store(options["omega_cutoff"])
         self.frictionSD.store(options["frictionSD"])
-        if options["friction"]:
+        if options["frictionSD"]:
             self.fric_spec_dens.store(options["fric_spec_dens"])
             self.fric_spec_dens_ener.store(options["fric_spec_dens_ener"])
 
