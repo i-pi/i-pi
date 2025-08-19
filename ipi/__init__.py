@@ -2,7 +2,7 @@
 The i-PI module.
 """
 
-__version__ = "3.1"
+__version__ = "3.1.5.1"
 
 # expose some utility functions in a more direct way
 from ipi.utils.parsing import read_output, read_trajectory

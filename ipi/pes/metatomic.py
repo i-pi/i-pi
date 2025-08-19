@@ -1,8 +1,6 @@
 """
-Interface with metatensor
-(https://lab-cosmo.github.io/metatensor/latest/atomistic/index.html), that can
-be used to perform calculations based on different types of machine learning
-potentials
+Interface with metatomic ML models (https://docs.metatensor.org/metatomic/), that can be
+used to perform calculations with arbitrary machine learning potentials.
 """
 
 import json
@@ -16,26 +14,27 @@ from ipi.utils.messages import warning, info
 torch = None
 mts = None
 mta = None
-vesin_torch_metatensor = None
+vesin_metatomic = None
 ase_io = None
 
-__DRIVER_NAME__ = "metatensor"
-__DRIVER_CLASS__ = "MetatensorDriver"
+__DRIVER_NAME__ = "metatomic"
+__DRIVER_CLASS__ = "MetatomicDriver"
 
 
-class MetatensorDriver(Dummy_driver):
+class MetatomicDriver(Dummy_driver):
     """
-    Driver for `metatensor` MLIPs
-    The driver requires specification of a torchscript model,
-    and a template file that describes the chemical makeup
-    of the structure. Requires the metatensor-torch library
+    Driver for ``metatomic`` MLIPs.
+
+    The driver requires the path to a torchscript model, and a template file that
+    describes the chemical makeup of the structure. Requires the metatomic-torch
+    library.
 
     Command-line:
-        i-pi-py_driver -m metatensor -o template=template.xyz,model=model.json [...]
+        i-pi-py_driver -m metatomic -o template=template.xyz,model=model.json [...]
 
     Parameters:
-        :param template: string, filename of an ASE-readable structure file
-            to initialize atomic number and types
+        :param template: string, filename of an ASE-readable structure file to
+            initialize atomic number and types
         :param model: string, filename of the torchscript model file
         :param device: string, optional, ["cpu" | "cuda"]
         :param extensions: string, optional, path to the compiled extensions for the
@@ -44,8 +43,8 @@ class MetatensorDriver(Dummy_driver):
             checks when evaluating the model
         :param energy_ensemble: bool, optional, whether to compute an ensemble of
             energies for uncertainty quantification
-        :param force_virial_ensemble: bool, optional, whether to compute an ensemble
-            of forces and virials for uncertainty quantification (warning: this can be
+        :param force_virial_ensemble: bool, optional, whether to compute an ensemble of
+            forces and virials for uncertainty quantification (warning: this can be
             computationally expensive)
         :param non_conservative: bool, optional, whether to use non-conservative forces
             and stresses
@@ -64,24 +63,19 @@ class MetatensorDriver(Dummy_driver):
         *args,
         **kwargs,
     ):
-        global torch, mts, mta, vesin_torch_metatensor, ase_io
-        if (
-            torch is None
-            or mts is None
-            or mta is None
-            or vesin_torch_metatensor is None
-        ):
+        global torch, mta, mts, vesin_metatomic, ase_io
+        if torch is None or mta is None or mts is None or vesin_metatomic is None:
             try:
                 import torch
-                import ase.io as ase_io
                 import metatensor.torch as mts
-                import metatensor.torch.atomistic as mta
-                import vesin.torch.metatensor as vesin_torch_metatensor
+                import metatomic.torch as mta
+                import vesin.metatomic as vesin_metatomic
+                import ase.io as ase_io
             except ImportError as e:
                 message = (
-                    "could not find the metatensor driver dependencies, "
+                    "could not find the metatomic driver dependencies, "
                     "make sure they are installed with "
-                    "`python -m pip install metatensor[torch] vesin[torch]`"
+                    "`python -m pip install --upgrade metatomic-torch vesin`"
                 )
                 warning(f"{message}: {e}")
                 raise ImportError(message) from e
@@ -101,18 +95,17 @@ class MetatensorDriver(Dummy_driver):
     def check_parameters(self):
         """Check the arguments required to run the driver
 
-        This loads the potential and atoms template in metatensor
+        This loads the potential and atoms template
         """
 
-        metatensor_major, metatensor_minor, *_ = mts.__version__.split(".")
-        metatensor_major = int(metatensor_major)
-        metatensor_minor = int(metatensor_minor)
+        metatomic_major, metatomic_minor, *_ = mta.__version__.split(".")
+        metatomic_major = int(metatomic_major)
+        metatomic_minor = int(metatomic_minor)
 
-        if metatensor_major != 0 or metatensor_minor < 6:
+        if metatomic_major != 0 or metatomic_minor != 1:
             raise ImportError(
-                "this code is only compatible with metatensor-torch >= v0.6, "
-                f"found version v{mts.__version__} "
-                f"at '{mts.__file__}'"
+                "this code is only compatible with metatomic-torch == v0.1, "
+                f"found version v{mta.__version__} at '{mta.__file__}'"
             )
 
         if self.force_virial_ensemble and not self.energy_ensemble:
@@ -144,7 +137,13 @@ class MetatensorDriver(Dummy_driver):
         self._types = torch.from_numpy(atoms.numbers).to(dtype=torch.int32)
 
         # Register the requested outputs
-        outputs = {"energy": mta.ModelOutput(quantity="energy", unit="eV")}
+        outputs = {
+            "energy": mta.ModelOutput(
+                quantity="energy",
+                unit="eV",
+                per_atom=False,
+            )
+        }
         if self.non_conservative:
             if "non_conservative_forces" not in self.model.capabilities().outputs:
                 raise ValueError(
@@ -153,28 +152,38 @@ class MetatensorDriver(Dummy_driver):
                 )
             else:
                 outputs["non_conservative_forces"] = mta.ModelOutput(
-                    quantity="force", unit="eV/Angstrom", per_atom=True
+                    quantity="force",
+                    unit="eV/Angstrom",
+                    per_atom=True,
                 )
             if "non_conservative_stress" not in self.model.capabilities().outputs:
                 warnings.warn(
                     "Non-conservative evaluation was requested, but "
                     "this model does not support non-conservative stresses. "
-                    "Setting them to `nan`; make sure your simulation does not require "
+                    "Setting them to `NaN`; make sure your simulation does not require "
                     "them."
                 )
             else:
                 outputs["non_conservative_stress"] = mta.ModelOutput(
-                    quantity="pressure", unit="eV/Angstrom^3"
+                    quantity="pressure",
+                    unit="eV/Angstrom^3",
+                    per_atom=False,
                 )
+
         if self.energy_ensemble:
-            outputs["energy_ensemble"] = mta.ModelOutput(quantity="energy", unit="eV")
+            outputs["energy_ensemble"] = mta.ModelOutput(
+                quantity="energy",
+                unit="eV",
+                per_atom=False,
+            )
+
         self.evaluation_options = mta.ModelEvaluationOptions(
             length_unit="Angstrom",
             outputs=outputs,
         )
 
         # Show the model metadata to the users
-        info(f"Metatomic model data:\n{self.model.metadata()}", self.verbose)
+        info(f"Metatomic model information:\n{self.model.metadata()}", self.verbose)
 
     def __call__(self, cell, pos):
         """Get energies, forces and virials from the atomistic model."""
@@ -195,8 +204,8 @@ class MetatensorDriver(Dummy_driver):
 
         system = mta.System(self._types, positions, cell, pbc)
         # compute the requires neighbor lists with vesin
-        vesin_torch_metatensor.compute_requested_neighbors(
-            system, system_length_unit="A", model=self.model
+        vesin_metatomic.compute_requested_neighbors(
+            system, system_length_unit="Angstrom", model=self.model
         )
         system = system.to(self.device)
 

@@ -13,17 +13,17 @@ __DRIVER_CLASS__ = "MACE_driver"
 class MACE_driver(ASEDriver):
     """
     Driver for the MACE MLIPs.
-    The driver requires specification of a .json model,
+    The driver requires specification of a torch model,
     and a template file that describes the chemical makeup
     of the structure.
 
     Command-line:
-    i-pi-py_driver.py -m mace -u -o template=template.xyz,model=model.json
+    i-pi-py_driver -m mace -u -a address -o template=structure.xyz,model=mace_mp.model
 
     Parameters:
     :param template: string, filename of an ASE-readable structure file
         to initialize atomic number and types
-    :param model: string, filename of the json-formatted model file
+    :param model: string, filename of the MACE model
     """
 
     def __init__(self, template, model, device="cpu", *args, **kwargs):
@@ -37,6 +37,16 @@ class MACE_driver(ASEDriver):
             from mace.calculators import MACECalculator
         except:
             raise ImportError("Couldn't load mace bindings")
+
+        try:
+            from ase.outputs import _defineprop, all_outputs
+
+            # avoid duplicate
+            # it complains with a committee of ffdirect MACE models
+            if "node_energy" not in all_outputs:
+                _defineprop("node_energy", dtype=float, shape=("natoms",))
+        except ImportError:
+            raise ValueError("Could not find or import the ASE module")
 
         self.model = model
         self.device = device
