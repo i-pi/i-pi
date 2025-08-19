@@ -5,7 +5,6 @@ used to perform calculations with arbitrary machine learning potentials.
 
 import json
 import warnings
-import numpy as np
 
 from ipi.utils.units import unit_to_internal, unit_to_user
 from .dummy import Dummy_driver

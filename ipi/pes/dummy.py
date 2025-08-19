@@ -3,7 +3,7 @@ __DRIVER_NAME__ = "dummy"
 __DRIVER_CLASS__ = "Dummy_driver"
 
 import json
-from ipi.utils.messages import warning, info, verbosity
+from ipi.utils.messages import warning, verbosity
 
 
 class Dummy_driver(object):
