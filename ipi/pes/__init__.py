@@ -4,35 +4,36 @@ import importlib
 import traceback
 from .dummy import Dummy_driver
 
-__drivers__ = [
-    "ase",
-    "bath",
-    "double_double_well",
-    "DW",
-    "DW_bath",
-    "DW_friction",
-    "driverdipole",
-    "dummy",
-    "elphmod",
-    "harmonic",
-    "mace",
-    "metatensor",
-    "metatomic",
-    "MorseHarmonic",
-    "pet",
-    "psiflow",
-    "rascal",
-    "so3lr",
-    "Spherical_LJ",
-    "spline",
-    "xtb",
-]
+__drivers__ = {
+    "ase": "ase",
+    "bath": "bath",
+    "double_double_well": "double_double_well",
+    "DW": "DW",
+    "DW_bath": "DW_bath",
+    "DW_friction": "DW_friction",
+    "driverdipole": "driverdipole",
+    "dummy": "dummy",
+    "elphmod": "elphmod",
+    "harmonic": "harmonic",
+    "mace": "mace",
+    "metatensor": "metatensor",
+    "metatomic": "metatomic",
+    "MorseHarmonic": "MorseHarmonic",
+    "pet": "pet",
+    "psiflow": "psiflow",
+    "rascal": "rascal",
+    "so3lr": "so3lr",
+    "Spherical_LJ": "Spherical_LJ",
+    "spline": "spline",
+    "xtb": "xtb",
+}
+
 
 # sort alphabetically
-__drivers__ = sorted(__drivers__)
+__drivers__ = dict(sorted(__drivers__.items()))
 
 
-def load_driver(mode: str):
+def load_driver(mode: str, module_name: str) -> Dummy_driver:
     """
     Loads a PES driver module and retrieves its driver class.
 
