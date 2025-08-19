@@ -401,7 +401,7 @@ class FFEval(ForceField):
         request["status"] = "Done"
 
 
-class FFDirect(FFEval):
+class FFDirect(ForceField):
     def __init__(
         self,
         latency=1.0,
@@ -451,6 +451,24 @@ class FFDirect(FFEval):
             print(__drivers__[self.pes].__doc__)
             print("Error trace: ")
             raise err
+
+    def poll(self):
+        """Polls the forcefield checking if there are requests that should
+        be answered, and if necessary evaluates the associated forces and energy."""
+
+        # We have to be thread-safe, as in multi-system mode this might get
+        # called by many threads at once.
+        with self._threadlock:
+            # just assume this evaluate() is blocking
+            for r in self.requests:
+                if r["status"] == "Queued":
+                    r["status"] = "Running"
+                    r["t_dispatched"] = time.time()
+                    self.evaluate(r)
+                    if self.batch_size == 1:
+                        r["result"][0] -= self.offset  # subtract constant offset
+                if r["status"] == "Done":
+                    r["result"][0] -= self.offset  # subtract constant offset
 
     def _process_results(self, results, request):
         # ensure forces and virial have the correct shape to fit the results
@@ -503,7 +521,7 @@ class FFDirect(FFEval):
                 ]
                 results_batch = self.driver(cell_batch, pos_batch)
                 for results, request in zip(results_batch, self.request_batch):
-                    self._process_results(results, request)
+                    self._process_results(list(results), request)
 
                 self.request_batch = []
 
