@@ -5,6 +5,7 @@ used to perform calculations with arbitrary machine learning potentials.
 
 import json
 import warnings
+import numpy as np
 
 from ipi.utils.units import unit_to_internal, unit_to_user
 from .dummy import Dummy_driver
@@ -213,127 +214,138 @@ class MetatomicDriver(Dummy_driver):
 
         return system, strain
 
-    def _process_outputs(self, outputs, system, strain):
+    def _process_outputs(self, outputs, systems, strains):
+        num_systems = len(systems)
+
         energy_tensor = outputs["energy"].block().values
 
         if self.non_conservative:
             forces_tensor = outputs["non_conservative_forces"].block().values
             if "non_conservative_stress" in outputs:
-                stress_tensor = outputs["non_conservative_stress"].block().values
+                stresses_tensor = outputs["non_conservative_stress"].block().values
             else:
-                stress_tensor = torch.full(
-                    (3, 3), torch.nan, device=self.device, dtype=self._dtype
+                stresses_tensor = torch.full(
+                    (num_systems, 3, 3), torch.nan, device=self.device, dtype=self._dtype
                 )
-            virial_tensor = -stress_tensor * torch.abs(torch.det(system.cell))
+            virials_tensor = torch.stack([-stress_tensor * torch.abs(torch.det(system.cell)) for stress_tensor, system in zip(stresses_tensor, systems)])
         else:
-            forces_tensor, virial_tensor = torch.autograd.grad(
+            gradients = torch.autograd.grad(
                 energy_tensor,
-                (system.positions, strain),
+                [system.positions for system in systems] + strains,
                 grad_outputs=-torch.ones_like(energy_tensor),
-                retain_graph=True,
             )
+            # first half of the gradient tensors are forces
+            # second half are virials
+            forces_tensors, virial_tensors = gradients[:len(systems)], gradients[len(systems):]
+            forces_tensor = torch.stack(forces_tensors)
+            virials_tensor = torch.stack(virial_tensors)
 
-        energy = unit_to_internal(
+        energies = unit_to_internal(
             "energy",
             "electronvolt",
-            energy_tensor.detach().to(device="cpu", dtype=torch.float64).numpy().item(),
+            energy_tensor.detach().to(device="cpu", dtype=torch.float64).numpy().reshape(num_systems, 1),
         )
         forces = unit_to_internal(
             "force",
             "ev/ang",
             forces_tensor.detach()
-            .reshape(3, -1)
+            .reshape(num_systems, 3, -1)
             .to(device="cpu", dtype=torch.float64)
             .numpy(),
         )
-        virial = unit_to_internal(
+        virials = unit_to_internal(
             "energy",
             "electronvolt",
-            virial_tensor.detach()
-            .reshape(3, 3)
+            virials_tensor.detach()
+            .reshape(num_systems, 3, 3)
             .to(device="cpu", dtype=torch.float64)
             .numpy(),
         )
         # symmetrize the virial for rotationally unconstrained models
-        virial = (virial + virial.T) / 2.0
+        virials = (virials + virials.swapaxes(1, 2)) / 2.0
 
-        extras_dict = {}
+        # extras_dict = {}
 
-        if self.energy_ensemble:
-            energy_ensemble_tensor = (
-                outputs["energy_ensemble"].block().values.squeeze(0)
-            )
-            energy_ensemble = unit_to_internal(
-                "energy",
-                "electronvolt",
-                energy_ensemble_tensor.detach()
-                .to(device="cpu", dtype=torch.float64)
-                .numpy(),
-            )
-            extras_dict["committee_pot"] = list(energy_ensemble)
+        # if self.energy_ensemble:
+        #     energy_ensemble_tensor = (
+        #         outputs["energy_ensemble"].block().values.squeeze(0)
+        #     )
+        #     energy_ensemble = unit_to_internal(
+        #         "energy",
+        #         "electronvolt",
+        #         energy_ensemble_tensor.detach()
+        #         .to(device="cpu", dtype=torch.float64)
+        #         .numpy(),
+        #     )
+        #     extras_dict["committee_pot"] = list(energy_ensemble)
 
-            # the ensemble of forces and virials require a more expensive calculation
-            # so they are controlled by a separate option
-            if self.force_virial_ensemble:
-                # this function definition is necessary to use
-                # torch.autograd.functional.jacobian, which is vectorized
-                def _compute_ensemble(positions, strain):
-                    new_system = mta.System(
-                        self._types,
-                        positions @ strain,
-                        system.cell @ strain,
-                        system.pbc,
-                    )
-                    for options in self.model.requested_neighbor_lists():
-                        # get the pre-computed NL, and re-attach it in the compute graph
-                        neighbors = mts.detach_block(system.get_neighbor_list(options))
-                        mta.register_autograd_neighbors(
-                            new_system,
-                            neighbors,
-                            check_consistency=self.check_consistency,
-                        )
-                        new_system.add_neighbor_list(options, neighbors)
+        #     # the ensemble of forces and virials require a more expensive calculation
+        #     # so they are controlled by a separate option
+        #     if self.force_virial_ensemble:
+        #         # this function definition is necessary to use
+        #         # torch.autograd.functional.jacobian, which is vectorized
+        #         def _compute_ensemble(positions, strain):
+        #             new_system = mta.System(
+        #                 self._types,
+        #                 positions @ strain,
+        #                 system.cell @ strain,
+        #                 system.pbc,
+        #             )
+        #             for options in self.model.requested_neighbor_lists():
+        #                 # get the pre-computed NL, and re-attach it in the compute graph
+        #                 neighbors = mts.detach_block(system.get_neighbor_list(options))
+        #                 mta.register_autograd_neighbors(
+        #                     new_system,
+        #                     neighbors,
+        #                     check_consistency=self.check_consistency,
+        #                 )
+        #                 new_system.add_neighbor_list(options, neighbors)
 
-                    return (
-                        self.model(
-                            [new_system],
-                            self.evaluation_options,
-                            check_consistency=self.check_consistency,
-                        )["energy_ensemble"]
-                        .block()
-                        .values.squeeze(0)
-                    )
+        #             return (
+        #                 self.model(
+        #                     [new_system],
+        #                     self.evaluation_options,
+        #                     check_consistency=self.check_consistency,
+        #                 )["energy_ensemble"]
+        #                 .block()
+        #                 .values.squeeze(0)
+        #             )
 
-                minus_force_ensemble_tensor, minus_virial_ensemble_tensor = (
-                    torch.autograd.functional.jacobian(
-                        _compute_ensemble, (system.positions, strain), vectorize=True
-                    )
-                )
-                force_ensemble_tensor = -minus_force_ensemble_tensor
-                virial_ensemble_tensor = -minus_virial_ensemble_tensor
-                force_ensemble = unit_to_internal(
-                    "force",
-                    "ev/ang",
-                    force_ensemble_tensor.detach()
-                    .to(device="cpu", dtype=torch.float64)
-                    .numpy(),
-                )
-                virial_ensemble = unit_to_internal(
-                    "energy",
-                    "electronvolt",
-                    virial_ensemble_tensor.detach()
-                    .to(device="cpu", dtype=torch.float64)
-                    .numpy(),
-                )
-                # symmetrize the virial for rotationally unconstrained models
-                virial_ensemble = (
-                    virial_ensemble + virial_ensemble.swapaxes(1, 2)
-                ) / 2.0
-                extras_dict["committee_force"] = list(force_ensemble.flatten())
-                extras_dict["committee_virial"] = list(virial_ensemble.flatten())
+        #         minus_force_ensemble_tensor, minus_virial_ensemble_tensor = (
+        #             torch.autograd.functional.jacobian(
+        #                 _compute_ensemble, (system.positions, strain), vectorize=True
+        #             )
+        #         )
+        #         force_ensemble_tensor = -minus_force_ensemble_tensor
+        #         virial_ensemble_tensor = -minus_virial_ensemble_tensor
+        #         force_ensemble = unit_to_internal(
+        #             "force",
+        #             "ev/ang",
+        #             force_ensemble_tensor.detach()
+        #             .to(device="cpu", dtype=torch.float64)
+        #             .numpy(),
+        #         )
+        #         virial_ensemble = unit_to_internal(
+        #             "energy",
+        #             "electronvolt",
+        #             virial_ensemble_tensor.detach()
+        #             .to(device="cpu", dtype=torch.float64)
+        #             .numpy(),
+        #         )
+        #         # symmetrize the virial for rotationally unconstrained models
+        #         virial_ensemble = (
+        #             virial_ensemble + virial_ensemble.swapaxes(1, 2)
+        #         ) / 2.0
+        #         extras_dict["committee_force"] = list(force_ensemble.flatten())
+        #         extras_dict["committee_virial"] = list(virial_ensemble.flatten())
 
-        extras = json.dumps(extras_dict)
-        return energy, forces, virial, extras
+        # extras = json.dumps(extras_dict)
+
+        energies = np.split(energies, energies.shape[0], axis=0)
+        forces = np.split(forces, np.cumsum([len(system) for system in systems])[:-1], axis=0)
+        virials = np.split(virials, virials.shape[0], axis=0)
+
+        return [(e, f, v, None) for (e, f, v) in zip(energies, forces, virials)]
 
     def compute_structure(self, cell, pos):
         """Get energies, forces and virials from the atomistic model."""
@@ -345,7 +357,7 @@ class MetatomicDriver(Dummy_driver):
             check_consistency=self.check_consistency,
         )
 
-        return self._process_outputs(outputs, system, strain)
+        return self._process_outputs(outputs, [system], [strain])[0]
 
     def __call__(self, cell, pos):
         """Calls the model evaluation, taking care of both serial and batched execution"""
@@ -368,7 +380,7 @@ class MetatomicDriver(Dummy_driver):
             pre_time += time()
 
             model_time = -time()
-            outputs_raw = self.model(
+            outputs = self.model(
                 sys_batch,
                 self.evaluation_options,
                 check_consistency=self.check_consistency,
@@ -377,28 +389,11 @@ class MetatomicDriver(Dummy_driver):
             model_time += time()
 
             pp_time = -time()
-            outputs_batch = [{} for _ in range(len(sys_batch))]
-            for key, value in outputs_raw.items():
-                split_mts = mts.split(
-                    value,
-                    axis="samples",
-                    selections=[
-                        mts.Labels(
-                            names=["system"],
-                            values=torch.tensor([[i]], device=sys_batch[0].device),
-                        )
-                        for i in range(len(sys_batch))
-                    ],
-                )
-                for i in range(len(sys_batch)):
-                    outputs_batch[i][key] = split_mts[i]
+            processed_outputs = self._process_outputs(outputs, sys_batch, strain_batch)
             pp_time += time()
             print("Test timings! ", pre_time, model_time, pp_time)
 
-            return [
-                self._process_outputs(outputs, sys, strain)
-                for outputs, sys, strain in zip(outputs_batch, sys_batch, strain_batch)
-            ]
+            return processed_outputs
 
         else:
             return self.compute_structure(cell, pos)
