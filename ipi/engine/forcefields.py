@@ -443,7 +443,6 @@ class FFDirect(FFEval):
             raise
         except Exception as err:
             print(f"Error setting up PES mode {self.pes}")
-            print(load_driver(self.pes).__doc__)
             print("Error trace: ")
             raise err
 
