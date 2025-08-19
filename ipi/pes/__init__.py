@@ -1,5 +1,6 @@
 """Small functions/classes providing access to driver PES to be called from driver.py"""
 
+import os
 import importlib
 from .dummy import Dummy_driver
 
@@ -32,22 +33,39 @@ __drivers__ = {
 __drivers__ = dict(sorted(__drivers__.items()))
 
 
-def load_driver(module_name: str) -> Dummy_driver:
+def load_driver(mode: str) -> Dummy_driver:
     """
-    Dynamically load a driver class from a module.
+    Load a driver class for the given mode.
 
-    Imports the given module, looks up its `__DRIVER_CLASS__` attribute to
-    determine the class name, and returns the corresponding class object.
+    Looks for a local <mode>.py file or a module in `ipi.pes`.
+    The module must define `__DRIVER_CLASS__`.
 
-    Args:
-        module_name: Name of the module to import.
+    Parameters
+    ----------
+    mode : str
+        Driver name or local Python file (without `.py`).
 
-    Returns:
-        The driver class defined in the module.
+    Returns
+    -------
+    Dummy_driver
+        The driver class.
 
-    Raises:
-        AttributeError: If the module does not define `__DRIVER_CLASS__`.
+    Raises
+    ------
+    ValueError, AttributeError
     """
+
+    # import client from <args.mode>.py (in the current working directory)
+    if os.path.isfile(f"{mode}.py"):
+        module_name = mode
+    else:
+
+        if mode not in __drivers__:
+            choices = ", ".join(__drivers__.keys())
+            raise ValueError(f"Invalid mode '{mode}'. Available modes: {choices}")
+
+        # import client from ipi/pes/<module_name>.py
+        module_name = f"ipi.pes.{__drivers__[mode]}"
 
     module = importlib.import_module(module_name, __package__)
 

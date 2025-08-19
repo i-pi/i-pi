@@ -225,20 +225,8 @@ if __name__ == "__main__":
 
     driver_args, driver_kwargs = read_args_kwargs(args.param)
 
-    # import client from <args.mode>.py (in the current working directory)
-    if os.path.isfile(f"{args.mode}.py"):
-        module_name = args.mode
-    else:
-
-        if args.mode not in __drivers__:
-            choices = ", ".join(__drivers__.keys())
-            raise ValueError(f"Invalid mode '{args.mode}'. Available modes: {choices}")
-
-        # import client from ipi/pes/<module_name>.py
-        module_name = f"ipi.pes.{__drivers__[args.mode]}"
-
     # import the driver class
-    cls = load_driver(module_name)
+    cls = load_driver(args.mode)
 
     d_f = cls(*driver_args, **driver_kwargs)
 
