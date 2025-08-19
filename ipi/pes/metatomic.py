@@ -348,9 +348,10 @@ class MetatomicDriver(Dummy_driver):
         return self._process_outputs(outputs, system, strain)
 
     def __call__(self, cell, pos):
-        """Does nothing, but returns properties that can be used by the driver loop."""
+        """Calls the model evaluation, taking care of both serial and batched execution"""
 
         if isinstance(cell, list):
+            # we are getting a list of structure, so we run in batched mode
             if not isinstance(pos, list) or len(cell) != len(pos):
                 raise ValueError(
                     "Both position and cell should be given as lists to run in batched mode"
@@ -392,7 +393,7 @@ class MetatomicDriver(Dummy_driver):
                 for i in range(len(sys_batch)):
                     outputs_batch[i][key] = split_mts[i]
             pp_time += time()
-            print("Metatensor is slow! ", pre_time, model_time, pp_time)
+            print("Test timings! ", pre_time, model_time, pp_time)
 
             return [
                 self._process_outputs(outputs, sys, strain)
