@@ -3,6 +3,7 @@ __DRIVER_NAME__ = "dummy"
 __DRIVER_CLASS__ = "Dummy_driver"
 
 import json
+from ipi.utils.messages import warning, info, verbosity
 
 
 class Dummy_driver(object):
@@ -45,6 +46,7 @@ class Dummy_driver(object):
                 raise ValueError(
                     "Both position and cell should be given as lists to run in batched mode"
                 )
+            warning("Batched execution will execute in serial.", verbosity.high)
             return [self.compute_structure(cell, pos) for cell, pos in zip(cell, pos)]
         else:
             return self.compute_structure(cell, pos)

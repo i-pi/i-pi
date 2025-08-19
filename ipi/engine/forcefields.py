@@ -467,7 +467,7 @@ class FFDirect(ForceField):
                     self.evaluate(r)
                     if self.batch_size == 1:
                         r["result"][0] -= self.offset  # subtract constant offset
-                if r["status"] == "Done":
+                if self.batch_size > 1 and r["status"] == "Done":
                     r["result"][0] -= self.offset  # subtract constant offset
 
     def _process_results(self, results, request):

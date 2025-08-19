@@ -20,6 +20,8 @@ ase_io = None
 __DRIVER_NAME__ = "metatomic"
 __DRIVER_CLASS__ = "MetatomicDriver"
 
+from time import time
+
 
 class MetatomicDriver(Dummy_driver):
     """
@@ -185,14 +187,14 @@ class MetatomicDriver(Dummy_driver):
         # Show the model metadata to the users
         info(f"Metatomic model information:\n{self.model.metadata()}", self.verbose)
 
-    def __call__(self, cell, pos):
-        """Get energies, forces and virials from the atomistic model."""
+    def _prepare_system(self, cell, pos):
         positions = unit_to_user("length", "angstrom", pos)
         cell = unit_to_user("length", "angstrom", cell.T)
 
         positions = torch.from_numpy(positions).to(dtype=self._dtype)
         cell = torch.from_numpy(cell).to(dtype=self._dtype)
         pbc = torch.norm(cell, dim=1) != 0.0
+        strain = None
 
         if not self.non_conservative:
             positions.requires_grad_(True)
@@ -209,11 +211,9 @@ class MetatomicDriver(Dummy_driver):
         )
         system = system.to(self.device)
 
-        outputs = self.model(
-            [system],
-            self.evaluation_options,
-            check_consistency=self.check_consistency,
-        )
+        return system, strain
+
+    def _process_outputs(self, outputs, system, strain):
         energy_tensor = outputs["energy"].block().values
 
         if self.non_conservative:
@@ -224,12 +224,13 @@ class MetatomicDriver(Dummy_driver):
                 stress_tensor = torch.full(
                     (3, 3), torch.nan, device=self.device, dtype=self._dtype
                 )
-            virial_tensor = -stress_tensor * torch.abs(torch.det(cell))
+            virial_tensor = -stress_tensor * torch.abs(torch.det(system.cell))
         else:
             forces_tensor, virial_tensor = torch.autograd.grad(
                 energy_tensor,
-                (positions, strain),
+                (system.positions, strain),
                 grad_outputs=-torch.ones_like(energy_tensor),
+                retain_graph=True,
             )
 
         energy = unit_to_internal(
@@ -278,7 +279,10 @@ class MetatomicDriver(Dummy_driver):
                 # torch.autograd.functional.jacobian, which is vectorized
                 def _compute_ensemble(positions, strain):
                     new_system = mta.System(
-                        self._types, positions @ strain, cell @ strain, pbc
+                        self._types,
+                        positions @ strain,
+                        system.cell @ strain,
+                        system.pbc,
                     )
                     for options in self.model.requested_neighbor_lists():
                         # get the pre-computed NL, and re-attach it in the compute graph
@@ -302,7 +306,7 @@ class MetatomicDriver(Dummy_driver):
 
                 minus_force_ensemble_tensor, minus_virial_ensemble_tensor = (
                     torch.autograd.functional.jacobian(
-                        _compute_ensemble, (positions, strain), vectorize=True
+                        _compute_ensemble, (system.positions, strain), vectorize=True
                     )
                 )
                 force_ensemble_tensor = -minus_force_ensemble_tensor
@@ -330,3 +334,70 @@ class MetatomicDriver(Dummy_driver):
 
         extras = json.dumps(extras_dict)
         return energy, forces, virial, extras
+
+    def compute_structure(self, cell, pos):
+        """Get energies, forces and virials from the atomistic model."""
+
+        system, strain = self._prepare_system(cell, pos)
+        outputs = self.model(
+            [system],
+            self.evaluation_options,
+            check_consistency=self.check_consistency,
+        )
+
+        return self._process_outputs(outputs, system, strain)
+
+    def __call__(self, cell, pos):
+        """Does nothing, but returns properties that can be used by the driver loop."""
+
+        if isinstance(cell, list):
+            if not isinstance(pos, list) or len(cell) != len(pos):
+                raise ValueError(
+                    "Both position and cell should be given as lists to run in batched mode"
+                )
+
+            sys_batch = []
+            strain_batch = []
+
+            pre_time = -time()
+            for c, p in zip(cell, pos):
+                sy, st = self._prepare_system(c, p)
+                sys_batch.append(sy)
+                strain_batch.append(st)
+            pre_time += time()
+
+            model_time = -time()
+            outputs_raw = self.model(
+                sys_batch,
+                self.evaluation_options,
+                check_consistency=self.check_consistency,
+            )
+            torch.cuda.synchronize()
+            model_time += time()
+
+            pp_time = -time()
+            outputs_batch = [{} for _ in range(len(sys_batch))]
+            for key, value in outputs_raw.items():
+                split_mts = mts.split(
+                    value,
+                    axis="samples",
+                    selections=[
+                        mts.Labels(
+                            names=["system"],
+                            values=torch.tensor([[i]], device=sys_batch[0].device),
+                        )
+                        for i in range(len(sys_batch))
+                    ],
+                )
+                for i in range(len(sys_batch)):
+                    outputs_batch[i][key] = split_mts[i]
+            pp_time += time()
+            print("Metatensor is slow! ", pre_time, model_time, pp_time)
+
+            return [
+                self._process_outputs(outputs, sys, strain)
+                for outputs, sys, strain in zip(outputs_batch, sys_batch, strain_batch)
+            ]
+
+        else:
+            return self.compute_structure(cell, pos)
