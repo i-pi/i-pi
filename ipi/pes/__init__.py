@@ -1,7 +1,9 @@
 """Small functions/classes providing access to driver PES to be called from driver.py"""
 
-import os
+import os, sys
 import importlib
+from importlib import util
+from pathlib import Path
 from .dummy import Dummy_driver
 
 __drivers__ = {
@@ -55,19 +57,20 @@ def load_driver(mode: str) -> Dummy_driver:
     ValueError, AttributeError
     """
 
-    # import client from <args.mode>.py (in the current working directory)
     if os.path.isfile(f"{mode}.py"):
-        module_name = mode
+        # import client from <args.mode>.py (in the current working directory)
+        file_path = Path(f"{mode}.py")
+        spec = util.spec_from_file_location(file_path.stem, file_path)
+        module = util.module_from_spec(spec)
+        sys.modules[file_path.stem] = module
+        spec.loader.exec_module(module)
     else:
-
+        # import client from ipi/pes/<module_name>.py
         if mode not in __drivers__:
             choices = ", ".join(__drivers__.keys())
             raise ValueError(f"Invalid mode '{mode}'. Available modes: {choices}")
-
-        # import client from ipi/pes/<module_name>.py
         module_name = f"ipi.pes.{__drivers__[mode]}"
-
-    module = importlib.import_module(module_name, __package__)
+        module = importlib.import_module(module_name, __package__)
 
     driver_class_name = getattr(module, "__DRIVER_CLASS__", None)
     if driver_class_name is None:
