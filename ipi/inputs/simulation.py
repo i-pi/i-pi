@@ -21,7 +21,7 @@ import ipi.engine.forcefields as eforcefields
 import ipi.inputs.outputs as ioutputs
 from ipi.inputs.smotion import InputSmotion
 
-_latest_supported_input_version = "3.1"
+_latest_supported_input_version = ipi.__version__
 
 
 __all__ = ["InputSimulation"]
