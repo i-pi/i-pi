@@ -613,7 +613,7 @@ class NVEIntegratorWithFriction(NVEIntegrator):
     """Integrator for constant energy simulations with friction.
 
     Attributes:
-       
+
     """
 
     def __init__(
@@ -626,7 +626,6 @@ class NVEIntegratorWithFriction(NVEIntegrator):
         *args,
         **kwargs,
     ):
-        
 
         self.friction_mapper = Friction(
             frictionSD=frictionSD,
