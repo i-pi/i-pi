@@ -4,7 +4,7 @@
 # i-PI Copyright (C) 2014-2015 i-PI developers
 # See the "licenses" directory for full license information.
 
-from ipi import ipi_global_settings
+from ipi import ipi_global_settings, __version__
 from ipi.utils.depend import *
 from ipi.utils.inputvalue import *
 from ipi.utils.units import *
@@ -21,7 +21,7 @@ import ipi.engine.forcefields as eforcefields
 import ipi.inputs.outputs as ioutputs
 from ipi.inputs.smotion import InputSmotion
 
-_latest_supported_input_version = ipi.__version__
+_latest_supported_input_version = __version__
 
 
 __all__ = ["InputSimulation"]
