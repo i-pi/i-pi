@@ -13,12 +13,12 @@ from ipi.utils.units import unit_to_internal, unit_to_user
 from .dummy import Dummy_driver
 
 from ipi.utils.messages import warning, info
-import ase.io
 
 torch = None
 mts = None
 mta = None
 vesin_torch_metatensor = None
+ase_io = None
 
 __DRIVER_NAME__ = "metatensor"
 __DRIVER_CLASS__ = "MetatensorDriver"
@@ -69,7 +69,7 @@ class MetatensorDriver(Dummy_driver):
         *args,
         **kwargs,
     ):
-        global torch, mts, mta, vesin_torch_metatensor
+        global torch, mts, mta, vesin_torch_metatensor, ase_io
         if (
             torch is None
             or mts is None
@@ -78,6 +78,7 @@ class MetatensorDriver(Dummy_driver):
         ):
             try:
                 import torch
+                import ase.io as ase_io
                 import metatensor.torch as mts
                 import metatensor.torch.atomistic as mta
                 import vesin.torch.metatensor as vesin_torch_metatensor
@@ -146,7 +147,7 @@ class MetatensorDriver(Dummy_driver):
         self._dtype = getattr(torch, self.model.capabilities().dtype)
 
         # read the template and extract the corresponding atomic types
-        atoms = ase.io.read(self.template)
+        atoms = ase_io.read(self.template)
         self._types = torch.from_numpy(atoms.numbers).to(dtype=torch.int32)
 
         # Register the requested outputs

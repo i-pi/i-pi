@@ -76,6 +76,7 @@ class Barostat:
        nm: An object to do the normal mode transformation.
        thermostat: A thermostat coupled to the barostat degrees of freedom.
        mdof: The number of atomic degrees of freedom
+       vol_constraint: A boolean flag indicating whether the volume is constrained
 
     Depend objects:
        dt: The time step used in the algorithms. Depends on the simulation dt.
@@ -92,7 +93,14 @@ class Barostat:
     """
 
     def __init__(
-        self, dt=None, temp=None, tau=None, ebaro=None, thermostat=None, nmts=None
+        self,
+        dt=None,
+        temp=None,
+        tau=None,
+        ebaro=None,
+        thermostat=None,
+        vol_constraint=None,
+        nmts=None,
     ):
         """Initialises base barostat class.
 
@@ -138,6 +146,11 @@ class Barostat:
         if thermostat is None:
             thermostat = Thermostat()
         self.thermostat = thermostat
+
+        if vol_constraint is not None:
+            self.vol_constraint = vol_constraint
+        else:
+            self.vol_constraint = False
 
         # temperature to the thermostat
         dpipe(self._temp, self.thermostat._temp)
@@ -1163,11 +1176,12 @@ class BaroMTK(Barostat):
         tau=None,
         ebaro=None,
         thermostat=None,
+        vol_constraint=None,
         pext=None,
         p=None,
         hfix=None,
     ):
-        """Initializes RGB barostat.
+        """Initializes MTK barostat.
 
         Args:
         dt: Optional float giving the time step for the algorithms. Defaults
@@ -1179,10 +1193,11 @@ class BaroMTK(Barostat):
         ebaro: Optional float giving the conserved quantity already stored
         in the barostat initially. Used on restart.
         thermostat: The thermostat connected to the barostat degree of freedom.
+        vol_constraint: Optional boolean specifying whether or not the volume is constrained.
         p: Optional initial volume conjugate momentum. Defaults to 0.
         """
 
-        super(BaroMTK, self).__init__(dt, temp, tau, ebaro, thermostat)
+        super(BaroMTK, self).__init__(dt, temp, tau, ebaro, thermostat, vol_constraint)
 
         # non-zero elements of the cell momentum are only
         # pxx pyy pzz pxy pxz pyz, but we want to access it either as a
@@ -1377,6 +1392,10 @@ class BaroMTK(Barostat):
         # we use the thermostat conserved quantity accumulator, so we don't need to create a new one
         self.thermostat.ethermo += self.kin
         self.p *= self.hmask
+        if self.vol_constraint is True:
+            # a traceless momentum tensor will not change the volume, see
+            # Rogge, S. M. J. et al. Theory Comput. 11, 5583–5597 (2015) DOI: 10.1021/acs.jctc.5b00748
+            self.p -= np.eye(3) * np.trace(self.p) / 3.0
         self.thermostat.ethermo -= self.kin
 
     def qcstep(self):

@@ -14,7 +14,7 @@
     charge_mix_param   0.5   
   sc_accuracy_forces 5E-4
 #
-  use_pimd_wrapper localhost 40050
+  use_pimd_wrapper UNIX:localhost 40050
   communicate_pimd_wrapper dipole
   output_level MD_light
 
