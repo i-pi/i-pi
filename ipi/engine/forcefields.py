@@ -412,6 +412,7 @@ class FFDirect(FFEval):
         active=np.array([-1]),
         threaded=False,
         pes="dummy",
+        batch_size=1,
     ):
         """Initialises FFDirect.
 
@@ -426,7 +427,8 @@ class FFDirect(FFEval):
             dopbc: Decides whether or not to apply the periodic boundary conditions
                 before sending the positions to the client code.
             active: Indexes of active atoms in this forcefield
-
+            pes: The name of the potential-energy surface to be used
+            batch_size: 
         """
 
         super().__init__(latency, offset, name, pars, dopbc, active, threaded)
@@ -436,6 +438,9 @@ class FFDirect(FFEval):
         if not "verbosity" in pars:
             pars["verbosity"] = verbosity.high
         self.pes = pes
+        self.batch_size = batch_size
+        self.request_batch = []
+
         try:
             self.driver = __drivers__[self.pes](**pars)
         except ImportError:
@@ -447,9 +452,7 @@ class FFDirect(FFEval):
             print("Error trace: ")
             raise err
 
-    def evaluate(self, request):
-        results = list(self.driver(request["cell"][0], request["pos"].reshape(-1, 3)))
-
+    def _process_results(self, results, request):
         # ensure forces and virial have the correct shape to fit the results
         results[1] = results[1].reshape(-1)
         results[2] = results[2].reshape(3, 3)
@@ -484,6 +487,23 @@ class FFDirect(FFEval):
         request["result"] = results
         request["status"] = "Done"
         request["t_finished"] = time.time()
+
+    def evaluate(self, request):
+        if self.batch_size == 1:
+            results = list(self.driver(request["cell"][0], request["pos"].reshape(-1, 3)))
+            self._process_results(results, request)
+        else:
+            self.request_batch.append(request)
+            if len(self.request_batch) == self.batch_size:
+                cell_batch = [ request["cell"][0] for request in self.request_batch]
+                pos_batch = [ request["pos"].reshape(-1, 3) for request in self.request_batch]
+                results_batch = self.driver(cell_batch, pos_batch)
+                for results, request in zip(results_batch, self.request_batch):
+                    self._process_results(results, request)
+
+                self.request_batch = []
+
+            
 
 
 class FFLennardJones(FFEval):
