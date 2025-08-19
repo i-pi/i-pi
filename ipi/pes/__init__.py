@@ -1,16 +1,15 @@
 """Small functions/classes providing access to driver PES to be called from driver.py"""
 
 import importlib
-import traceback
 from .dummy import Dummy_driver
 
 __drivers__ = {
     "ase": "ase",
     "bath": "bath",
     "double_double_well": "double_double_well",
-    "DW": "DW",
-    "DW_bath": "DW_bath",
-    "DW_friction": "DW_friction",
+    "DW": "doublewell",
+    "DW_bath": "doublewell_with_bath",
+    "DW_friction": "doublewell_with_friction",
     "driverdipole": "driverdipole",
     "dummy": "dummy",
     "elphmod": "elphmod",
@@ -33,53 +32,30 @@ __drivers__ = {
 __drivers__ = dict(sorted(__drivers__.items()))
 
 
-def load_driver(mode: str, module_name: str) -> Dummy_driver:
+def load_driver(module_name: str) -> Dummy_driver:
     """
-    Loads a PES driver module and retrieves its driver class.
+    Dynamically load a driver class from a module.
 
-    Parameters:
-        mode (str): The name of the PES mode/module to load.
+    Imports the given module, looks up its `__DRIVER_CLASS__` attribute to
+    determine the class name, and returns the corresponding class object.
+
+    Args:
+        module_name: Name of the module to import.
 
     Returns:
-        driver_class: The loaded driver class object.
+        The driver class defined in the module.
 
     Raises:
-        ImportError: If the module or driver class cannot be loaded.
+        AttributeError: If the module does not define `__DRIVER_CLASS__`.
     """
-    module_name = f"ipi.pes.{mode}"
 
-    try:
-        module = importlib.import_module(module_name, __package__)
+    module = importlib.import_module(module_name, __package__)
 
-        driver_class_name = getattr(module, "__DRIVER_CLASS__", None)
-        if driver_class_name is None:
-            raise AttributeError(
-                f"Module '{module_name}' does not define '__DRIVER_CLASS__'."
-            )
-
-        driver_class = getattr(module, driver_class_name)
-        return driver_class
-
-    except ModuleNotFoundError as e:
-        print(f"\n[ERROR] PES module '{module_name}' could not be found.")
-        traceback.print_exc()
-        raise ImportError(
-            f"Could not import PES module '{module_name}'. "
-            f"Please check the mode argument: '{mode}'."
-        ) from e
-
-    except AttributeError as e:
-        print(f"\n[ERROR] Driver class not found in module '{module_name}'.")
-        traceback.print_exc()
-        raise ImportError(
-            f"'{module_name}' does not define the expected class: {e}"
-        ) from e
-
-    except Exception as e:
-        print(
-            f"\n[ERROR] Unexpected error while importing or accessing driver class from '{module_name}'."
+    driver_class_name = getattr(module, "__DRIVER_CLASS__", None)
+    if driver_class_name is None:
+        raise AttributeError(
+            f"Module '{module_name}' does not define '__DRIVER_CLASS__'."
         )
-        traceback.print_exc()
-        raise ImportError(
-            f"An unexpected error occurred while loading PES module '{module_name}': {e}"
-        ) from e
+
+    driver_class = getattr(module, driver_class_name)
+    return driver_class
