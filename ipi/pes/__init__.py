@@ -6,7 +6,7 @@ from .dummy import Dummy_driver
 __drivers__ = {
     "ase": "ase",
     "bath": "bath",
-    "double_double_well": "double_double_well",
+    "double_double_well": "doubledouble_well",
     "DW": "doublewell",
     "DW_bath": "doublewell_with_bath",
     "DW_friction": "doublewell_with_friction",
@@ -17,12 +17,12 @@ __drivers__ = {
     "mace": "mace",
     "metatensor": "metatensor",
     "metatomic": "metatomic",
-    "MorseHarmonic": "MorseHarmonic",
+    "MorseHarmonic": "morse",
     "pet": "pet",
     "psiflow": "psiflow",
     "rascal": "rascal",
     "so3lr": "so3lr",
-    "Spherical_LJ": "Spherical_LJ",
+    "Spherical_LJ": "spherical_LJ",
     "spline": "spline",
     "xtb": "xtb",
 }
