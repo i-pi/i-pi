@@ -128,15 +128,18 @@ class Simulation:
             warning("Input with unspecified version number")
         else:
             if input_version != ipi.__version__:
-                raise Exception("The version listed in your input %s is not expected by this version of i-PI - "
-                                "perhaps you have upgraded your i-PI code but not the input file, "
-                                "or you are using an old version of the code? "
-                                "We are stopping the code here to avoid subtle errors. "
-                                "Please check the release notes to see if your input is affected by any functionality "
-                                "changes between i-PI versions."
-                                "If there is no problem, please go to your input file and change"
-                                " the <version> field to this version of i-PI, %s. "
-                                "This will allow the simulation to run." % (input_version, ipi.__version__))
+                raise Exception(
+                    "The version listed in your input %s is not expected by this version of i-PI - "
+                    "perhaps you have upgraded your i-PI code but not the input file, "
+                    "or you are using an old version of the code? "
+                    "We are stopping the code here to avoid subtle errors. "
+                    "Please check the release notes to see if your input is affected by any functionality "
+                    "changes between i-PI versions."
+                    "If there is no problem, please go to your input file and change"
+                    " the <version> field to this version of i-PI, %s. "
+                    "This will allow the simulation to run."
+                    % (input_version, ipi.__version__)
+                )
 
     def __init__(
         self,
