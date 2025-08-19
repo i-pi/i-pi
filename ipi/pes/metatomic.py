@@ -225,9 +225,17 @@ class MetatomicDriver(Dummy_driver):
                 stresses_tensor = outputs["non_conservative_stress"].block().values
             else:
                 stresses_tensor = torch.full(
-                    (num_systems, 3, 3), torch.nan, device=self.device, dtype=self._dtype
+                    (num_systems, 3, 3),
+                    torch.nan,
+                    device=self.device,
+                    dtype=self._dtype,
                 )
-            virials_tensor = torch.stack([-stress_tensor * torch.abs(torch.det(system.cell)) for stress_tensor, system in zip(stresses_tensor, systems)])
+            virials_tensor = torch.stack(
+                [
+                    -stress_tensor * torch.abs(torch.det(system.cell))
+                    for stress_tensor, system in zip(stresses_tensor, systems)
+                ]
+            )
         else:
             gradients = torch.autograd.grad(
                 energy_tensor,
@@ -236,14 +244,20 @@ class MetatomicDriver(Dummy_driver):
             )
             # first half of the gradient tensors are forces
             # second half are virials
-            forces_tensors, virial_tensors = gradients[:len(systems)], gradients[len(systems):]
+            forces_tensors, virial_tensors = (
+                gradients[: len(systems)],
+                gradients[len(systems) :],
+            )
             forces_tensor = torch.stack(forces_tensors)
             virials_tensor = torch.stack(virial_tensors)
 
         energies = unit_to_internal(
             "energy",
             "electronvolt",
-            energy_tensor.detach().to(device="cpu", dtype=torch.float64).numpy().reshape(num_systems, 1),
+            energy_tensor.detach()
+            .to(device="cpu", dtype=torch.float64)
+            .numpy()
+            .reshape(num_systems, 1),
         )
         forces = unit_to_internal(
             "force",
@@ -378,6 +392,7 @@ class MetatomicDriver(Dummy_driver):
                 strain_batch.append(st)
             pre_time += time()
 
+            torch.cuda.synchronize()
             model_time = -time()
             outputs = self.model(
                 sys_batch,
