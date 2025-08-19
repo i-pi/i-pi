@@ -428,7 +428,7 @@ class FFDirect(FFEval):
                 before sending the positions to the client code.
             active: Indexes of active atoms in this forcefield
             pes: The name of the potential-energy surface to be used
-            batch_size: 
+            batch_size:
         """
 
         super().__init__(latency, offset, name, pars, dopbc, active, threaded)
@@ -490,20 +490,22 @@ class FFDirect(FFEval):
 
     def evaluate(self, request):
         if self.batch_size == 1:
-            results = list(self.driver(request["cell"][0], request["pos"].reshape(-1, 3)))
+            results = list(
+                self.driver(request["cell"][0], request["pos"].reshape(-1, 3))
+            )
             self._process_results(results, request)
         else:
             self.request_batch.append(request)
             if len(self.request_batch) == self.batch_size:
-                cell_batch = [ request["cell"][0] for request in self.request_batch]
-                pos_batch = [ request["pos"].reshape(-1, 3) for request in self.request_batch]
+                cell_batch = [request["cell"][0] for request in self.request_batch]
+                pos_batch = [
+                    request["pos"].reshape(-1, 3) for request in self.request_batch
+                ]
                 results_batch = self.driver(cell_batch, pos_batch)
                 for results, request in zip(results_batch, self.request_batch):
                     self._process_results(results, request)
 
                 self.request_batch = []
-
-            
 
 
 class FFLennardJones(FFEval):

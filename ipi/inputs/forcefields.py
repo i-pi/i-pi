@@ -361,7 +361,6 @@ class InputFFDirect(InputForceField):
             {
                 "dtype": int,
                 "default": 1,
-                "options": list(__drivers__.keys()),
                 "help": "The number of structures that should be batched in a single evaluation",
             },
         ),
