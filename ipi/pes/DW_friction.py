@@ -1,9 +1,9 @@
 """Harmonic potential"""
 
 try:
-    from .DW import DoubleWell_driver
+    from .doublewell import DoubleWell_driver
 except:
-    from DW import DoubleWell_driver
+    from ipi.pes.doublewell import DoubleWell_driver
 
 import numpy as np
 from ipi.utils import units
