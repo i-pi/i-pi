@@ -279,8 +279,9 @@ class MetatomicDriver(Dummy_driver):
         virials = (virials + virials.swapaxes(1, 2)) * 0.5
 
         extras_dicts = [{}] * num_systems
-
+        
         if self.energy_ensemble:
+            print(list(outputs.keys()))
             energy_ensemble_tensor = (
                 outputs["energy_ensemble"].block().values.squeeze(0)
             )
@@ -292,8 +293,8 @@ class MetatomicDriver(Dummy_driver):
                 .numpy(),
             )
 
-            for i in range(systems):
-                extras_dicts[i]["committee_pot"] = energy_ensemble[i]
+            for i in range(len(systems)):
+                extras_dicts[i]["committee_pot"] = list(energy_ensemble[i])
 
             # # the ensemble of forces and virials require a more expensive calculation
             # # so they are controlled by a separate option
@@ -395,15 +396,22 @@ class MetatomicDriver(Dummy_driver):
                 strain_batch.append(st)
             pre_time += time()
 
-            torch.cuda.synchronize()
+            if torch.cuda.is_available():
+                torch.cuda.synchronize()
             model_time = -time()
+            
             # computes the model (in batched mode)
             outputs = self.model(
                 sys_batch,
                 self.evaluation_options,
                 check_consistency=self.check_consistency,
             )
-            torch.cuda.synchronize()
+            print("requested outputs", self.evaluation_options.outputs.keys(),
+                  "actual outputs", outputs.keys()
+                  )
+
+            if torch.cuda.is_available():
+                torch.cuda.synchronize()
             model_time += time()
 
             pp_time = -time()
