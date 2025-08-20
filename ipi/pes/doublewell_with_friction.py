@@ -105,9 +105,9 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
     def compute_structure(self, cell, pos):
         """DoubleWell potential l"""
 
-        pot, force, vir, extras = super(DoubleWell_with_friction_driver, self).compute_structure(
-            cell, pos
-        )
+        pot, force, vir, extras = super(
+            DoubleWell_with_friction_driver, self
+        ).compute_structure(cell, pos)
 
         friction_tensor = self.get_friction_tensor(pos)
         extras = json.dumps({"friction": friction_tensor.tolist()})
