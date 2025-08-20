@@ -57,9 +57,6 @@ class Dynamics(Motion):
         fixcom=False,
         fixatoms_dof=None,
         nmts=None,
-        frictionSD=True,
-        eta0=0.0,
-        omega_cutoff=0.0,
         fric_spec_dens=np.zeros(0, float),
         fric_spec_dens_ener=0.0,
         efield=None,
@@ -618,30 +615,27 @@ class NVEIntegratorWithFriction(NVEIntegrator):
 
     def __init__(
         self,
-        frictionSD=True,
-        eta0=0.0,
         fric_spec_dens=np.zeros(0, float),
         fric_spec_dens_ener=0.0,
-        omega_cutoff=0.0,
         *args,
         **kwargs,
     ):
 
-        self.friction_mapper = Friction(
-            frictionSD=frictionSD,
+        self.friction = Friction(
             fric_spec_dens=fric_spec_dens,
             fric_spec_dens_ener=fric_spec_dens_ener,
-            eta0=eta0,
-            omega_cutoff=omega_cutoff,
         )
         super().__init__(*args, **kwargs)
 
     def bind(self, motion):
         super().bind(motion)
-        self.friction_mapper.bind(motion)
+        self.friction.bind(motion)
 
     def step(self, step=None):
-        # TODO: Update the forces with friction
+        time = self.time
+        forces = self.friction.forces(time)
+        self.beads.p += forces * self.pdt[0]
+        self.pconstraints()
 
         super().step(step)
 
