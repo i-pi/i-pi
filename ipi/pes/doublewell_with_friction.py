@@ -105,7 +105,7 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
     def compute_structure(self, cell, pos):
         """DoubleWell potential l"""
 
-        pot, force, vir, extras = super(DoubleWell_with_friction_driver, self).__call__(
+        pot, force, vir, extras = super(DoubleWell_with_friction_driver, self).compute_structure(
             cell, pos
         )
 

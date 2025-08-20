@@ -138,7 +138,7 @@ class Spherical_LJ_driver(Dummy_driver):
         the spherical Lennard-Jones potential.
         """
 
-        potential, forces, vir, extras = super().__call__(cell, pos)
+        potential, forces, vir, extras = super().compute_structure(cell, pos)
 
         # check that the number of atoms has not changed
         assert pos.shape == (len(self.symbols), 3), "Positions shape mismatch."

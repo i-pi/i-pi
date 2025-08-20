@@ -227,7 +227,7 @@ class driverdipole_driver(Dummy_driver):
         cell[np.isinf(cell)] = 0.0
 
         # Get vanishing pot, forces and vir
-        pot, force, vir, extras = super().__call__(cell, pos)
+        pot, force, vir, extras = super().compute_structure(cell, pos)
         extras = {}
 
         # computing BEC tensors and dipole
