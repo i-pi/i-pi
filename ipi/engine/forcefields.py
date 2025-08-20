@@ -412,7 +412,7 @@ class FFDirect(FFEval):
         active=np.array([-1]),
         threaded=False,
         pes="dummy",
-        file_path=None,
+        file_path="",
     ):
         """Initialises FFDirect.
 
@@ -437,8 +437,13 @@ class FFDirect(FFEval):
         if not "verbosity" in pars:
             pars["verbosity"] = verbosity.high
         self.pes = pes
+        self.file_path = file_path
         try:
-            self.driver = load_driver(self.pes,file_path)(**pars)
+            if self.pes == "custom" and self.file_path == "":
+                raise ValueError(
+                    "You must provide a file_path for the custom PES driver."
+                )
+            self.driver = load_driver(self.pes, self.file_path)(**pars)
         except ImportError:
             # specific errors have already been triggered
             raise

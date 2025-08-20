@@ -358,7 +358,7 @@ class InputFFDirect(InputForceField):
             InputValue,
             {
                 "dtype": str,
-                "default": None,
+                "default": "",
                 "help": "File path for 'custom' client (it should end with .py)",
             },
         ),
@@ -379,6 +379,7 @@ class InputFFDirect(InputForceField):
     def store(self, ff):
         super().store(ff)
         self.pes.store(ff.pes)
+        self.file_path.store(ff.file_path)
 
     def fetch(self):
         super().fetch()
@@ -391,6 +392,7 @@ class InputFFDirect(InputForceField):
             dopbc=self.pbc.fetch(),
             threaded=self.threaded.fetch(),
             pes=self.pes.fetch(),
+            file_path=self.file_path.fetch(),
         )
 
 
