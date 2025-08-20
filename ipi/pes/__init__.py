@@ -1,6 +1,6 @@
 """Small functions/classes providing access to driver PES to be called from driver.py"""
 
-import os, sys
+import sys
 import importlib
 from importlib import util
 from pathlib import Path
@@ -9,6 +9,7 @@ from .dummy import Dummy_driver
 __drivers__ = {
     "ase": "ase",
     "bath": "bath",
+    "custom": None,
     "double_double_well": "doubledouble_well",
     "DW": "doublewell",
     "DW_bath": "doublewell_with_bath",
@@ -35,17 +36,20 @@ __drivers__ = {
 __drivers__ = dict(sorted(__drivers__.items()))
 
 
-def load_driver(mode: str) -> Dummy_driver:
+def load_driver(mode: str, file_path: str) -> Dummy_driver:
     """
-    Load a driver class for the given mode.
+    Load a driver class by mode.
 
-    Looks for a local <mode>.py file or a module in `ipi.pes`.
+    If `mode="custom"`, imports the driver from `file_path`.
+    Otherwise, loads a registered driver from `ipi.pes`.
     The module must define `__DRIVER_CLASS__`.
 
     Parameters
     ----------
     mode : str
-        Driver name or local Python file (without `.py`).
+        "custom" or a registered driver name.
+    file_path : str
+        Path to a `.py` file (used only if mode="custom").
 
     Returns
     -------
@@ -54,12 +58,17 @@ def load_driver(mode: str) -> Dummy_driver:
 
     Raises
     ------
-    ValueError, AttributeError
+    ValueError
+        If mode is invalid.
+    AssertionError
+        If the driver is unimplemented.
+    AttributeError
+        If `__DRIVER_CLASS__` is missing.
     """
 
-    if os.path.isfile(f"{mode}.py"):
-        # import client from <args.mode>.py (in the current working directory)
-        file_path = Path(f"{mode}.py")
+    if mode == "custom":
+        # import client from <file_path>
+        file_path = Path(file_path)
         spec = util.spec_from_file_location(file_path.stem, file_path)
         module = util.module_from_spec(spec)
         sys.modules[file_path.stem] = module
@@ -69,7 +78,9 @@ def load_driver(mode: str) -> Dummy_driver:
         if mode not in __drivers__:
             choices = ", ".join(__drivers__.keys())
             raise ValueError(f"Invalid mode '{mode}'. Available modes: {choices}")
-        module_name = f"ipi.pes.{__drivers__[mode]}"
+        file_path = __drivers__[mode]
+        assert file_path is not None, f"Driver '{mode}' is not implemented."
+        module_name = f"ipi.pes.{file_path}"
         module = importlib.import_module(module_name, __package__)
 
     driver_class_name = getattr(module, "__DRIVER_CLASS__", None)

@@ -354,6 +354,14 @@ class InputFFDirect(InputForceField):
                 "help": "Type of PES that should be used to evaluate the forcefield",
             },
         ),
+        "file_path": (
+            InputValue,
+            {
+                "dtype": str,
+                "default": None,
+                "help": "File path for 'custom' client (it should end with .py)",
+            },
+        ),
     }
     fields.update(InputForceField.fields)
 

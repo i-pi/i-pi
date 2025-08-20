@@ -10,7 +10,7 @@
   </prng>
   <ffdirect name='driver'>
       <pes> custom </pes>
-      <parameters> { k1:1.0 } </parameters>
+      <parameters> { k1:1.0, file_path:custom.py } </parameters>
   </ffdirect>
   <system>
     <initialize nbeads='4'>

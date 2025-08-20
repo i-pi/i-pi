@@ -26,7 +26,7 @@ from ipi.utils.depend import dstrip
 from ipi.utils.io import read_file
 from ipi.utils.units import unit_to_internal
 from ipi.utils.distance import vector_separation
-from ipi.pes import load_driver
+from ipi.pes import load_driver, __drivers__
 from ipi.utils.mathtools import (
     get_rotation_quadrature_legendre,
     get_rotation_quadrature_lebedev,
@@ -412,6 +412,7 @@ class FFDirect(FFEval):
         active=np.array([-1]),
         threaded=False,
         pes="dummy",
+        file_path=None,
     ):
         """Initialises FFDirect.
 
@@ -437,7 +438,7 @@ class FFDirect(FFEval):
             pars["verbosity"] = verbosity.high
         self.pes = pes
         try:
-            self.driver = load_driver(self.pes)(**pars)
+            self.driver = load_driver(self.pes,file_path)(**pars)
         except ImportError:
             # specific errors have already been triggered
             raise

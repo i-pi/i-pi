@@ -13,7 +13,7 @@ IPI:=i-pi
 
 harmonic:
 	$(IPI) input.xml & sleep 5; \
-        $(driver) -u -a localhost -m custom -o 1 & \
+        $(driver) -u -a localhost -m custom -f custom.py -o 1 & \
 	wait
 
 clean:

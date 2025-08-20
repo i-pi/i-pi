@@ -2,7 +2,7 @@
 import socket
 import argparse
 import numpy as np
-from ipi.pes import Dummy_driver, load_driver
+from ipi.pes import Dummy_driver, load_driver, __drivers__
 from ipi.utils.io.inputs import read_args_kwargs
 
 description = """
@@ -200,7 +200,16 @@ if __name__ == "__main__":
         "--mode",
         type=str,
         default="dummy",
+        choices=list(__drivers__.keys()),
         help="""Type of potential to be used to compute the potential and its derivatives.
+        """,
+    )
+    parser.add_argument(
+        "-f",
+        "--file_path",
+        type=str,
+        default=None,
+        help="""File path for 'custom' client (it should end with .py).
         """,
     )
     parser.add_argument(
@@ -224,7 +233,7 @@ if __name__ == "__main__":
     driver_args, driver_kwargs = read_args_kwargs(args.param)
 
     # import the driver class
-    cls = load_driver(args.mode)
+    cls = load_driver(args.mode, args.file_path)
 
     d_f = cls(*driver_args, **driver_kwargs)
 
