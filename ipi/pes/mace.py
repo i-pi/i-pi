@@ -33,10 +33,6 @@ class MACE_driver(ASEDriver):
         self, template, model, device="cpu", mace_kwargs=None, *args, **kwargs
     ):
 
-        warning(
-            "THIS PES HAS NOT BEEN TESTED FOLLOWING CONVERSION TO THE NEW PES API.",
-            verbosity.low,
-        )
         global MACECalculator
 
         try:
