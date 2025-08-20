@@ -373,7 +373,7 @@ class MetatomicDriver(Dummy_driver):
 
         return self._process_outputs(outputs, [system], [strain])[0]
 
-    def __call__(self, cell, pos):
+    def compute(self, cell, pos):
         """Calls the model evaluation, taking care of both serial and batched execution"""
 
         if isinstance(cell, list):

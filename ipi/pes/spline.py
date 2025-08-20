@@ -118,7 +118,7 @@ class Spline_driver(Dummy_driver):
         """Functions that checks dimensions of the received position"""
         assert pos.shape == (1, 3)
 
-    def __call__(self, cell, pos):
+    def compute_structure(self, cell, pos):
         """Evaluate energy, forces and friction"""
         self.check_dimensions(pos)
         vir = cell * 0.0  # makes a zero virial with same shape as cell

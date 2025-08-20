@@ -38,7 +38,7 @@ class Dummy_driver(object):
         )  # have json formatting to potentially work with some test examples. meaningless value
         return pot, force, vir, extras
 
-    def __call__(self, cell, pos):
+    def compute(self, cell, pos):
         """Does nothing, but returns properties that can be used by the driver loop."""
 
         if isinstance(cell, list):
@@ -50,3 +50,8 @@ class Dummy_driver(object):
             return [self.compute_structure(cell, pos) for cell, pos in zip(cell, pos)]
         else:
             return self.compute_structure(cell, pos)
+
+    def __call__(self, cell, pos):
+        """Function interface"""
+
+        return self.compute(cell, pos)

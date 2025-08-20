@@ -63,15 +63,12 @@ class ASEDriver(Dummy_driver):
         self.template_ase = read(self.template)
         self.ase_calculator = None
 
-    def __call__(self, cell, pos):
+    def compute_structure(self, cell, pos):
         """Get energies, forces, and stresses from the ASE calculator
         This routine assumes that the client will take positions
         in angstrom, and return energies in electronvolt, and forces
         in ev/ang.
         """
-
-        if isinstance(cell, list) or isinstance(pos, list):
-            raise ValueError("ASE PES does not support batched execution")
 
         # ASE calculators assume angstrom and eV units
         pos = unit_to_user("length", "angstrom", pos)
