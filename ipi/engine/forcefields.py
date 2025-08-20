@@ -26,7 +26,7 @@ from ipi.utils.depend import dstrip
 from ipi.utils.io import read_file
 from ipi.utils.units import unit_to_internal
 from ipi.utils.distance import vector_separation
-from ipi.pes import __drivers__
+from ipi.pes import load_driver
 from ipi.utils.mathtools import (
     get_rotation_quadrature_legendre,
     get_rotation_quadrature_lebedev,
@@ -412,6 +412,7 @@ class FFDirect(FFEval):
         active=np.array([-1]),
         threaded=False,
         pes="dummy",
+        file_path="",
     ):
         """Initialises FFDirect.
 
@@ -436,14 +437,18 @@ class FFDirect(FFEval):
         if not "verbosity" in pars:
             pars["verbosity"] = verbosity.high
         self.pes = pes
+        self.file_path = file_path
         try:
-            self.driver = __drivers__[self.pes](**pars)
+            if self.pes == "custom" and self.file_path == "":
+                raise ValueError(
+                    "You must provide a file_path for the custom PES driver."
+                )
+            self.driver = load_driver(self.pes, self.file_path)(**pars)
         except ImportError:
             # specific errors have already been triggered
             raise
         except Exception as err:
             print(f"Error setting up PES mode {self.pes}")
-            print(__drivers__[self.pes].__doc__)
             print("Error trace: ")
             raise err
 
@@ -1586,7 +1591,6 @@ class FFRotations(ForceField):
         self.ff.start()
 
     def queue(self, atoms, cell, reqid=-1):
-
         # launches requests for all of the rotations FF objects
         ffh = []  # this is the list of "inner" FF requests
         rots = []  # this is a list of tuples of (rotation matrix, weight)

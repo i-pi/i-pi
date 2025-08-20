@@ -2,8 +2,7 @@
 import socket
 import argparse
 import numpy as np
-
-from ipi.pes import *
+from ipi.pes import Dummy_driver, load_driver, __drivers__
 from ipi.utils.io.inputs import read_args_kwargs
 
 description = """
@@ -206,6 +205,14 @@ if __name__ == "__main__":
         """,
     )
     parser.add_argument(
+        "-f",
+        "--file_path",
+        type=str,
+        default=None,
+        help="""File path for 'custom' client (it should end with .py).
+        """,
+    )
+    parser.add_argument(
         "-o",
         "--param",
         type=str,
@@ -225,23 +232,10 @@ if __name__ == "__main__":
 
     driver_args, driver_kwargs = read_args_kwargs(args.param)
 
-    if args.mode in __drivers__:
-        try:
-            d_f = __drivers__[args.mode](
-                *driver_args, verbose=args.verbose, **driver_kwargs
-            )
-        except ImportError:
-            # specific errors have already been triggered
-            raise
-        except Exception as err:
-            print(f"Error setting up PES mode {args.mode}")
-            print(__drivers__[args.mode].__doc__)
-            print("Error trace: ")
-            raise err
-    elif args.mode == "dummy":
-        d_f = Dummy_driver(verbose=args.verbose)
-    else:
-        raise ValueError("Unsupported driver mode ", args.mode)
+    # import the driver class
+    cls = load_driver(args.mode, args.file_path)
+
+    d_f = cls(*driver_args, **driver_kwargs)
 
     run_driver(
         unix=args.unix,
