@@ -311,7 +311,9 @@ class MetatomicDriver(Dummy_driver):
                             system.cell @ strain.to(self.device),
                             system.pbc,
                         )
-                        for system, positions, strain in zip(systems, positions_list, strain_list)
+                        for system, positions, strain in zip(
+                            systems, positions_list, strain_list
+                        )
                     ]
                     for options in self.model.requested_neighbor_lists():
                         # get the pre-computed NL, and re-attach it in the compute graph
