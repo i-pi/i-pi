@@ -173,6 +173,11 @@ class MetatomicDriver(Dummy_driver):
                 )
 
         if self.energy_ensemble:
+            outputs["energy_uncertainty"] = mta.ModelOutput(
+                quantity="energy",
+                unit="eV",
+                per_atom=False,
+            )
             outputs["energy_ensemble"] = mta.ModelOutput(
                 quantity="energy",
                 unit="eV",
@@ -288,7 +293,7 @@ class MetatomicDriver(Dummy_driver):
                 .to(device="cpu", dtype=torch.float64)
                 .numpy(),
             )
-            for extras_dict, energy_ensemble in zip(extras_dicts, energy_ensembles)
+            for extras_dict, energy_ensemble in zip(extras_dicts, energy_ensembles):
                 extras_dict["committee_pot"] = list(energy_ensemble)
 
             # the ensemble of forces and virials require a more expensive calculation
@@ -296,20 +301,24 @@ class MetatomicDriver(Dummy_driver):
             if self.force_virial_ensemble:
                 # this function definition is necessary to use
                 # torch.autograd.functional.jacobian, which is vectorized
-                def _compute_ensemble(positions_list, strain_list):
+                def _compute_ensemble(*positions_and_strain_tuple):
+                    positions_list = positions_and_strain_tuple[: len(systems)]
+                    strain_list = positions_and_strain_tuple[len(systems) :]
                     new_systems = [
                         mta.System(
-                            self._types,
-                            positions @ strain,
-                            system.cell @ strain,
+                            system.types,
+                            positions @ strain.to(self.device),
+                            system.cell @ strain.to(self.device),
                             system.pbc,
                         )
-                        for positions, strain in zip(positions_list, strain_list)
+                        for system, positions, strain in zip(systems, positions_list, strain_list)
                     ]
                     for options in self.model.requested_neighbor_lists():
                         # get the pre-computed NL, and re-attach it in the compute graph
                         for system, new_system in zip(systems, new_systems):
-                            neighbors = mts.detach_block(system.get_neighbor_list(options))
+                            neighbors = mts.detach_block(
+                                system.get_neighbor_list(options)
+                            )
                             mta.register_autograd_neighbors(
                                 new_system,
                                 neighbors,
@@ -317,27 +326,31 @@ class MetatomicDriver(Dummy_driver):
                             )
                             new_system.add_neighbor_list(options, neighbors)
 
-                    return self.model(
-                        new_systems,
-                        self.evaluation_options,
-                        check_consistency=self.check_consistency,
-                    )["energy_ensemble"]
+                    return (
+                        self.model(
+                            new_systems,
+                            self.evaluation_options,
+                            check_consistency=self.check_consistency,
+                        )["energy_ensemble"]
                         .block()
                         .values.sum(0)
-
-                jacobians = (
-                    torch.autograd.functional.jacobian(
-                        _compute_ensemble, [system.positions for system in systems] + strains, vectorize=True
                     )
+
+                jacobians = torch.autograd.functional.jacobian(
+                    _compute_ensemble,
+                    tuple([system.positions for system in systems] + strains),
+                    vectorize=True,
                 )
-                minus_force_ensemble_tensors, minus_virial_ensemble_tensors = jacobians[:len(systems)], jacobians[len(systems):]
-                force_ensemble_tensors = -minus_force_ensemble_tensors
-                virial_ensemble_tensors = -minus_virial_ensemble_tensors
+                print("One jacobian done")
+                force_ensemble_tensors, virial_ensemble_tensors = (
+                    [-j for j in jacobians[: len(systems)]],
+                    [-j for j in jacobians[len(systems) :]],
+                )
                 force_ensembles = [
                     unit_to_internal(
                         "force",
                         "ev/ang",
-                        force_ensembles_tensor.detach()
+                        force_ensemble_tensor.detach()
                         .to(device="cpu", dtype=torch.float64)
                         .numpy(),
                     )
@@ -355,12 +368,12 @@ class MetatomicDriver(Dummy_driver):
                 ]
                 # symmetrize the virial for rotationally unconstrained models
                 virial_ensembles = [
-                    (
-                        virial_ensemble + virial_ensemble.swapaxes(1, 2)
-                    ) / 2.0
+                    (virial_ensemble + virial_ensemble.swapaxes(1, 2)) / 2.0
                     for virial_ensemble in virial_ensembles
                 ]
-                for extras_dict, force_ensemble, virial_ensemble in zip(extras_dicts, force_ensembles, virial_ensembles):
+                for extras_dict, force_ensemble, virial_ensemble in zip(
+                    extras_dicts, force_ensembles, virial_ensembles
+                ):
                     extras_dict["committee_force"] = list(force_ensemble.flatten())
                     extras_dict["committee_virial"] = list(virial_ensemble.flatten())
 
@@ -369,7 +382,10 @@ class MetatomicDriver(Dummy_driver):
         energies = energies.flatten()
         forces = forces.reshape((len(systems), -1, 3))
         virials = virials.reshape((len(systems), 3, 3))
-        return [(e, f, v, extras) for (e, f, v, extras) in zip(energies, forces, virials, extras_list)]
+        return [
+            (e, f, v, extras)
+            for (e, f, v, extras) in zip(energies, forces, virials, extras_list)
+        ]
 
     def compute_structure(self, cell, pos):
         """Get energies, forces and virials from the atomistic model."""
