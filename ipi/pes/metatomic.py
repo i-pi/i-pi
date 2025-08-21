@@ -341,7 +341,7 @@ class MetatomicDriver(Dummy_driver):
                 jacobians = torch.autograd.functional.jacobian(
                     _compute_ensemble,
                     tuple([system.positions for system in systems] + strains),
-                    vectorize=True,
+                    vectorize=False,
                 )
                 print("One jacobian done")
                 force_ensemble_tensors, virial_ensemble_tensors = (
