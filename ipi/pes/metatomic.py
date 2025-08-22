@@ -307,8 +307,8 @@ class MetatomicDriver(Dummy_driver):
                     new_systems = [
                         mta.System(
                             system.types,
-                            positions @ strain.to(self.device),
-                            system.cell @ strain.to(self.device),
+                            positions @ strain,
+                            system.cell @ strain,
                             system.pbc,
                         )
                         for system, positions, strain in zip(
@@ -338,12 +338,19 @@ class MetatomicDriver(Dummy_driver):
                         .values.sum(0)
                     )
 
+                # calling this with vectorize=False defeats the purpose,
+                # but for mysterious reasons vectorized calls
+                # trigger a runtime error the second time this part of the
+                # code is executed. looks like a torch bug that hopefully
+                # will be fixed in the future
                 jacobians = torch.autograd.functional.jacobian(
                     _compute_ensemble,
-                    tuple([system.positions for system in systems] + strains),
+                    tuple(
+                        [system.positions for system in systems]
+                        + [s.to(self.device) for s in strains]
+                    ),
                     vectorize=False,
                 )
-                print("One jacobian done")
                 force_ensemble_tensors, virial_ensemble_tensors = (
                     [-j for j in jacobians[: len(systems)]],
                     [-j for j in jacobians[len(systems) :]],
