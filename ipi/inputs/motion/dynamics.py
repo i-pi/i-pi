@@ -16,6 +16,7 @@ from ipi.utils.inputvalue import (
 )
 from ipi.inputs.barostats import InputBaro
 from ipi.inputs.thermostats import InputThermo
+from ipi.inputs.friction import InputFriction
 
 __all__ = ["InputDynamics"]
 
@@ -109,21 +110,11 @@ class InputDynamics(InputDictionary):
                 "help": "Number of iterations for each MTS level (including the outer loop, that should in most cases have just one iteration).",
             },
         ),
-        "fric_spec_dens": (
-            InputArray,
+        "friction": (
+            InputFriction,
             {
-                "dtype": float,
-                "default": input_default(factory=np.ones, args=(0,)),
-                "help": "Laplace Transform (LT) of friction. A two column data is expected. First column: w (cm^-1). Second column: LT(eta)(w). See Eq. 11 in J. Chem. Phys. 156, 194106 (2022). Note that within the separable coupling approximation the frequency dependence of the friction tensor is position independent.",
-            },
-        ),
-        "fric_spec_dens_ener": (
-            InputValue,
-            {
-                "dtype": float,
-                "default": 0.0,
-                "help": "Energy at which the LT of the friction tensor is evaluated in the client code",
-                "dimension": "energy",
+                "default": input_default(factory=ipi.engine.friction.Friction),
+                "help": InputFriction.default_help,
             },
         ),
     }
@@ -149,9 +140,7 @@ class InputDynamics(InputDictionary):
         self.barostat.store(dyn.barostat)
         self.nmts.store(dyn.nmts)
         self.splitting.store(dyn.splitting)
-        options = dyn.options
-        self.fric_spec_dens.store(options["fric_spec_dens"])
-        self.fric_spec_dens_ener.store(options["fric_spec_dens_ener"])
+        self.friction.store(dyn.friction)
 
     def fetch(self):
         """Creates an ensemble object.

@@ -57,8 +57,7 @@ class Dynamics(Motion):
         fixcom=False,
         fixatoms_dof=None,
         nmts=None,
-        fric_spec_dens=np.zeros(0, float),
-        fric_spec_dens_ener=0.0,
+        friction=None,
         efield=None,
         bec=None,
     ):
@@ -105,11 +104,8 @@ class Dynamics(Motion):
             self.integrator = NVEIntegrator()
         elif self.enstype == "nve-f":
             self.integrator = NVEIntegratorWithFriction(
-                frictionSD=frictionSD,
-                eta0=eta0,
-                omega_cutoff=omega_cutoff,
-                fric_spec_dens=fric_spec_dens,
-                fric_spec_dens_ener=fric_spec_dens_ener,
+                spectral_density=friction.spectral_density,
+                frequency=friction.frequency,
             )
         elif self.enstype == "nvt":
             self.integrator = NVTIntegrator()
@@ -615,15 +611,15 @@ class NVEIntegratorWithFriction(NVEIntegrator):
 
     def __init__(
         self,
-        fric_spec_dens=np.zeros(0, float),
-        fric_spec_dens_ener=0.0,
+        spectral_density=np.zeros(0, float),
+        frequency=0.0,
         *args,
         **kwargs,
     ):
 
         self.friction = Friction(
-            fric_spec_dens=fric_spec_dens,
-            fric_spec_dens_ener=fric_spec_dens_ener,
+            spectral_density=spectral_density,
+            frequency=frequency,
         )
         super().__init__(*args, **kwargs)
 
@@ -632,8 +628,7 @@ class NVEIntegratorWithFriction(NVEIntegrator):
         self.friction.bind(motion)
 
     def step(self, step=None):
-        time = self.time
-        forces = self.friction.forces(time)
+        forces = self.friction.forces()
         self.beads.p += forces * self.pdt[0]
         self.pconstraints()
 

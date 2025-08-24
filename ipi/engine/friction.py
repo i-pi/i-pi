@@ -7,9 +7,6 @@
 
 import numpy as np
 
-from scipy.interpolate import CubicSpline
-from scipy.integrate import quad
-
 from ipi.engine.motion import Motion
 from ipi.engine.normalmodes import NormalModes
 from ipi.engine.beads import Beads
@@ -21,13 +18,13 @@ class Friction:
 
     def __init__(
         self,
-        fric_spec_dens=np.zeros(0, float),
-        fric_spec_dens_ener=0.0,
+        spectral_density=np.zeros(0, float),
+        frequency=0.0,
         *args,
         **kwargs,
     ):
-        self.Lambda = fric_spec_dens / fric_spec_dens_ener
-        self.omega = fric_spec_dens_ener
+        self.Lambda = spectral_density / frequency # 
+        self.omega = frequency
 
     def bind(self, motion: Motion) -> None:
         self.beads = motion.beads
@@ -38,8 +35,7 @@ class Friction:
             nm=self.nm,
         )  # (nmodes,)
 
-    def forces(self, time: float) -> np.ndarray:
-        del time  # unused for now
+    def forces(self) -> np.ndarray:
 
         fnm = self.alpha[:, np.newaxis] * self.nm.qnm  # (nmodes, 3 * natoms)
         forces = self.nm.transform.nm2b(fnm)  # (nbeads, 3 * natoms)
@@ -49,10 +45,16 @@ class Friction:
 def get_alpha_numeric(
     Lambda: np.ndarray, omega: np.ndarray, nm: NormalModes
 ) -> np.ndarray:
+    try:
+        from scipy.interpolate import CubicSpline
+        from scipy.integrate import quad
+    except ModuleNotFoundError as e:
+        raise ModuleNotFoundError("Friction class requires scipy to work, please install scipy") from e
+
     alpha = np.zeros_like(nm.omegak)
     for idx, omegak in enumerate(nm.omegak):
         f = CubicSpline(omega, Lambda * omegak**2 / (omega**2 + omegak**2))
-        alpha[idx] = 2 / np.pi * quad(f, 0, np.inf)[0]
+        alpha[idx] = 2 / np.pi * quad(f, 0, omega[-1])[0]
     return alpha
 
 
