@@ -34,7 +34,6 @@
          USE F90SOCKETS, ONLY : open_socket, writebuffer, readbuffer, f_sleep
          USE DISTANCE, only: CELL_VOLUME
          USE H2O_harm
-         USE constforce
       IMPLICIT NONE
 
       ! SOCKET VARIABLES
@@ -196,14 +195,6 @@
                   vstyle = 65
                ELSEIF (trim(cmdbuffer) == "noo3-h2o") THEN
                      vstyle = 70 
-               ELSEIF (trim(cmdbuffer) == "h2O-harm") THEN
-                  vstyle = 66
-               ELSEIF (trim(cmdbuffer) == "h2O2atm-harm") THEN
-                  vstyle = 67     
-               ELSEIF (trim(cmdbuffer) == "h2Oanyso-harm") THEN
-                  vstyle = 68
-               ELSEIF (trim(cmdbuffer) == "ConstForce") THEN
-                  vstyle = 69
                ELSEIF (trim(cmdbuffer) == "harm-z") THEN
                   vstyle = 71 
                ELSEIF (trim(cmdbuffer) == "gas") THEN
@@ -940,18 +931,6 @@
                else
                 exit
                endif
-            ELSEIF (vstyle == 67) THEN  
-               pot = 0.0d0
-               forces = 0.0d0
-               call Harm2atom_pot(nat,atoms,pot,forces)     
-            ELSEIF (vstyle == 68) THEN
-               pot = 0.0d0
-               forces = 0.0d0
-               call Harm_anysotropic_pot(nat,atoms,pot,forces)
-            ELSEIF (vstyle == 69) THEN
-               pot = 0.0d0
-               forces = 0.0d0
-               call constfor(nat,atoms,pot,forces)
             ELSEIF (vstyle == 71) THEN
                pot = 0.0d0
                forces = 0.0d0
