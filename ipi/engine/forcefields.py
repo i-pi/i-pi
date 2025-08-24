@@ -428,7 +428,8 @@ class FFDirect(ForceField):
                 before sending the positions to the client code.
             active: Indexes of active atoms in this forcefield
             pes: The name of the potential-energy surface to be used
-            batch_size:
+            batch_size: The number of structures that should be combined and evaluated
+                at once in a single batch.
         """
 
         super().__init__(latency, offset, name, pars, dopbc, active, threaded)
@@ -458,20 +459,17 @@ class FFDirect(ForceField):
 
         # We have to be thread-safe, as in multi-system mode this might get
         # called by many threads at once.
+        # This is slightly different than for FFEval because of the batched evaluation
         with self._threadlock:
-            # just assume this evaluate() is blocking
             for r in self.requests:
                 if r["status"] == "Queued":
                     r["status"] = "Running"
                     r["t_dispatched"] = time.time()
                     self.evaluate(r)
-                    if self.batch_size == 1:
-                        r["result"][0] -= self.offset  # subtract constant offset
-                if self.batch_size > 1 and r["status"] == "Done":
-                    r["result"][0] -= self.offset  # subtract constant offset
 
     def _process_results(self, results, request):
         # ensure forces and virial have the correct shape to fit the results
+        results[0] -= self.offset
         results[1] = results[1].reshape(-1)
         results[2] = results[2].reshape(3, 3)
 

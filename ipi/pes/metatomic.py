@@ -9,7 +9,7 @@ import warnings
 from ipi.utils.units import unit_to_internal, unit_to_user
 from .dummy import Dummy_driver
 
-from ipi.utils.messages import warning, info
+from ipi.utils.messages import warning, info, verbosity
 
 torch = None
 mts = None
@@ -441,12 +441,6 @@ class MetatomicDriver(Dummy_driver):
                 self.evaluation_options,
                 check_consistency=self.check_consistency,
             )
-            print(
-                "requested outputs",
-                self.evaluation_options.outputs.keys(),
-                "actual outputs",
-                outputs.keys(),
-            )
 
             if torch.cuda.is_available():
                 torch.cuda.synchronize()
@@ -457,7 +451,10 @@ class MetatomicDriver(Dummy_driver):
             # into a list of results to be passed back
             processed_outputs = self._process_outputs(outputs, sys_batch, strain_batch)
             pp_time += time()
-            print("Test timings! ", pre_time, model_time, pp_time)
+            info(
+                "Test timings %e %e %e" % (pre_time, model_time, pp_time),
+                verbosity.high,
+            )
 
             return processed_outputs
 
