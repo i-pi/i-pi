@@ -64,7 +64,7 @@ class PET_driver(Dummy_driver):
             **self.kwargs,
         )
 
-    def __call__(self, cell, pos):
+    def compute_structure(self, cell, pos):
         """Get energies, forces, and stresses from the PET model
         This routine assumes that the client will take positions
         in angstrom, and return energies in electronvolt, and forces

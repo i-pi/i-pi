@@ -3,13 +3,11 @@
     <properties stride="5" filename="out">
 		[step, time{picosecond}, conserved{electronvolt}, temperature{kelvin},
 		kinetic_md{electronvolt}, potential{electronvolt}, pressure_md{bar},
-		volume{angstrom3}, ensemble_temperature{kelvin}, cell_abcABC, virial_md]
+		volume{angstrom3}, ensemble_temperature{kelvin}, cell_abcABC]
     </properties>
     <trajectory filename="xc" stride="5" cell_units="angstrom"> x_centroid{angstrom} </trajectory>
     <trajectory filename="fc" stride="5" cell_units="angstrom"> f_centroid </trajectory>
     <trajectory filename='committee_pot' stride='5' extra_type='committee_pot'>extras</trajectory>
-    <trajectory filename='committee_force' stride='5' extra_type='committee_force'>extras</trajectory>
-    <trajectory filename='committee_vir' stride='5' extra_type='committee_virial'>extras</trajectory>    
     <checkpoint stride="1000"/>
 </output>
 <total_steps> 1000</total_steps>
@@ -17,10 +15,11 @@
 
 <ffdirect name='driver'>
     <pes> metatomic </pes>
-    <parameters> {template:nickel.xyz,model:nickel-lj.pt,device:cpu,energy_ensemble:True, force_virial_ensemble:True } </parameters>
+    <parameters> {template:nickel.xyz,model:nickel-lj.pt,device:cpu,energy_ensemble:True, force_virial_ensemble:True} </parameters>
+    <batch_size> 2 </batch_size>
 </ffdirect>
 <system>
-    <initialize nbeads="1">
+    <initialize nbeads="4"> 
         <file mode="ase" units="angstrom"> nickel.xyz </file>
         <velocities mode="thermal" units="kelvin"> 250.0 </velocities>
     </initialize>

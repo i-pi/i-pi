@@ -100,7 +100,7 @@ class MorseHarmonic_driver(Dummy_driver):
         force3[:, 2] = -self.De * self.a * (2 * z - 3 * z**2 + (7.0 / 3.0) * z**3)
         return pot, force
 
-    def __call__(self, cell: np.ndarray, pos: np.ndarray):
+    def compute_structure(self, cell, pos):
         """Compute total potential and forces: Morse in z, harmonic in x & y"""
         pot, force = self.both(pos)
         # Zero virial and dummy extras

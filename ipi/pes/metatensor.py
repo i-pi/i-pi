@@ -176,7 +176,7 @@ class MetatensorDriver(Dummy_driver):
         # Show the model metadata to the users
         info(f"Metatomic model data:\n{self.model.metadata()}", self.verbose)
 
-    def __call__(self, cell, pos):
+    def compute_structure(self, cell, pos):
         """Get energies, forces and virials from the atomistic model."""
         positions = unit_to_user("length", "angstrom", pos)
         cell = unit_to_user("length", "angstrom", cell.T)
