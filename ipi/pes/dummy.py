@@ -3,6 +3,7 @@ __DRIVER_NAME__ = "dummy"
 __DRIVER_CLASS__ = "Dummy_driver"
 
 import json
+from ipi.utils.messages import warning, verbosity
 
 
 class Dummy_driver(object):
@@ -26,8 +27,9 @@ class Dummy_driver(object):
         """Dummy function that checks the arguments required to run the driver"""
         pass
 
-    def __call__(self, cell, pos):
-        """Does nothing, but returns properties that can be used by the driver loop."""
+    def compute_structure(self, cell, pos):
+        """Evaluate a single structure"""
+        # just evaluates zeros
         pot = 0.0
         force = pos * 0.0  # makes a zero force with same shape as pos
         vir = cell * 0.0  # makes a zero virial with same shape as cell
@@ -35,3 +37,21 @@ class Dummy_driver(object):
             {"dipole": [0.0, 0.0, 0.0]}
         )  # have json formatting to potentially work with some test examples. meaningless value
         return pot, force, vir, extras
+
+    def compute(self, cell, pos):
+        """Does nothing, but returns properties that can be used by the driver loop."""
+
+        if isinstance(cell, list):
+            if not isinstance(pos, list) or len(cell) != len(pos):
+                raise ValueError(
+                    "Both position and cell should be given as lists to run in batched mode"
+                )
+            warning("Batched execution will execute in serial.", verbosity.high)
+            return [self.compute_structure(cell, pos) for cell, pos in zip(cell, pos)]
+        else:
+            return self.compute_structure(cell, pos)
+
+    def __call__(self, cell, pos):
+        """Function interface"""
+
+        return self.compute(cell, pos)
