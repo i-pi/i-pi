@@ -356,24 +356,22 @@ class InputFFDirect(InputForceField):
                 "help": "Type of PES that should be used to evaluate the forcefield",
             },
         ),
-        "batch_size": (
-            InputValue,
-            {
-                "dtype": int,
-                "default": 1,
-                "help": (
-                    "The number of structures that should be batched in a single evaluation."
-                    + " The total number of structures computed at each step should be a multiple "
-                    + "of `batch_size` or the calculation will hang forever."
-                ),
-            },
-        ),
         "file_path": (
             InputValue,
             {
                 "dtype": str,
                 "default": "",
                 "help": "File path for 'custom' client (it should end with .py)",
+            },
+        ),
+        "batch_size": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": 1,
+                "help": ("The number of structures that should be batched in a single evaluation." +
+                         " The total number of structures computed at each step should be a multiple "+
+                         "of `batch_size` or the calculation will hang forever."),
             },
         ),
     }
@@ -393,6 +391,8 @@ class InputFFDirect(InputForceField):
     def store(self, ff):
         super().store(ff)
         self.pes.store(ff.pes)
+        self.file_path.store(ff.file_path)
+        self.batch_size.store(ff.batch_size)
 
     def fetch(self):
         super().fetch()
@@ -405,6 +405,8 @@ class InputFFDirect(InputForceField):
             dopbc=self.pbc.fetch(),
             threaded=self.threaded.fetch(),
             pes=self.pes.fetch(),
+            file_path=self.file_path.fetch(),
+            batch_size=self.batch_size.fetch(),
         )
 
 
