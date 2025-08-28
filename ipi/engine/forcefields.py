@@ -412,8 +412,8 @@ class FFDirect(ForceField):
         active=np.array([-1]),
         threaded=False,
         pes="dummy",
-        batch_size=1,
         file_path="",
+        batch_size=1,
     ):
         """Initialises FFDirect.
 
@@ -440,6 +440,10 @@ class FFDirect(ForceField):
         if not "verbosity" in pars:
             pars["verbosity"] = verbosity.high
         self.pes = pes
+        self.file_path = file_path
+        self.batch_size = batch_size
+        self.request_batch = []
+
         try:
             if self.pes == "custom" and self.file_path == "":
                 raise ValueError(
