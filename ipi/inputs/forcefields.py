@@ -369,9 +369,11 @@ class InputFFDirect(InputForceField):
             {
                 "dtype": int,
                 "default": 1,
-                "help": ("The number of structures that should be batched in a single evaluation." +
-                         " The total number of structures computed at each step should be a multiple "+
-                         "of `batch_size` or the calculation will hang forever."),
+                "help": (
+                    "The number of structures that should be batched in a single evaluation."
+                    + " The total number of structures computed at each step should be a multiple "
+                    + "of `batch_size` or the calculation will hang forever."
+                ),
             },
         ),
     }
