@@ -10,7 +10,7 @@
   </prng>
   <ffdirect name='driver'>
       <pes> custom </pes>
-      <file_path> custom.py </file_path>
+      <pes_path> custom.py </pes_path>
       <parameters> { k1:1.0 } </parameters>
   </ffdirect>
   <system>

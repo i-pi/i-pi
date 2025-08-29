@@ -26,7 +26,7 @@ from ipi.utils.depend import dstrip
 from ipi.utils.io import read_file
 from ipi.utils.units import unit_to_internal
 from ipi.utils.distance import vector_separation
-from ipi.pes import load_driver
+from ipi.pes import load_pes, __drivers__
 from ipi.utils.mathtools import (
     get_rotation_quadrature_legendre,
     get_rotation_quadrature_lebedev,
@@ -412,7 +412,7 @@ class FFDirect(ForceField):
         active=np.array([-1]),
         threaded=False,
         pes="dummy",
-        file_path="",
+        pes_path="",
         batch_size=1,
     ):
         """Initialises FFDirect.
@@ -440,16 +440,17 @@ class FFDirect(ForceField):
         if not "verbosity" in pars:
             pars["verbosity"] = verbosity.high
         self.pes = pes
-        self.file_path = file_path
+        self.pes_path = pes_path
         self.batch_size = batch_size
         self.request_batch = []
 
         try:
-            if self.pes == "custom" and self.file_path == "":
+            print(__drivers__)
+            if self.pes == "custom" and self.pes_path == "":
                 raise ValueError(
-                    "You must provide a file_path for the custom PES driver."
+                    "You must provide a pes_path for the custom PES driver."
                 )
-            self.driver = load_driver(self.pes, self.file_path)(**pars)
+            self.driver = load_pes(self.pes, self.pes_path)(**pars)
         except ImportError:
             # specific errors have already been triggered
             raise

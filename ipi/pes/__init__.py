@@ -1,46 +1,46 @@
 """Small functions/classes providing access to driver PES to be called from driver.py"""
 
 import sys
+import ast
 import importlib
 from importlib import util
 from pathlib import Path
 from .dummy import Dummy_driver
-
-__drivers__ = {
-    "ase": "ase",
-    "bath": "bath",
-    "custom": None,
-    "double_double_well": "doubledouble_well",
-    "DW": "doublewell",
-    "DW_bath": "doublewell_with_bath",
-    "DW_friction": "doublewell_with_friction",
-    "driverdipole": "driverdipole",
-    "dummy": "dummy",
-    "elphmod": "elphmod",
-    "harmonic": "harmonic",
-    "mace": "mace",
-    "metatensor": "metatensor",
-    "metatomic": "metatomic",
-    "MorseHarmonic": "morse",
-    "pet": "pet",
-    "psiflow": "psiflow",
-    "rascal": "rascal",
-    "so3lr": "so3lr",
-    "Spherical_LJ": "spherical_LJ",
-    "spline": "spline",
-    "xtb": "xtb",
-}
+import pkgutil
 
 
-# sort alphabetically
-__drivers__ = dict(sorted(__drivers__.items()))
+def scan_pes_file(pyfile: str):
+    """Return (__DRIVER_CLASS__, __DRIVER_NAME__) if both are string literals, else (None, None)."""
+    try:
+        with open(pyfile, "r", encoding="utf-8") as f:
+            tree = ast.parse(f.read(), filename=pyfile)
+    except OSError:
+        return None, None
+
+    driver_class = driver_name = None
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Assign):
+            for target in node.targets:
+                if isinstance(target, ast.Name) and target.id in {
+                    "__DRIVER_CLASS__",
+                    "__DRIVER_NAME__",
+                }:
+                    try:
+                        value = ast.literal_eval(node.value)
+                    except Exception:
+                        value = None
+                    if target.id == "__DRIVER_CLASS__" and isinstance(value, str):
+                        driver_class = value
+                    elif target.id == "__DRIVER_NAME__" and isinstance(value, str):
+                        driver_name = value
+    return driver_class, driver_name
 
 
-def load_driver(mode: str, file_path: str) -> Dummy_driver:
+def load_pes(mode: str, pes_path: str) -> Dummy_driver:
     """
-    Load a driver class by mode.
+    Load a driver PES by mode.
 
-    If `mode="custom"`, imports the driver from `file_path`.
+    If `mode="custom"`, imports the driver from `pes_path`.
     Otherwise, loads a registered driver from `ipi.pes`.
     The module must define `__DRIVER_CLASS__`.
 
@@ -48,7 +48,7 @@ def load_driver(mode: str, file_path: str) -> Dummy_driver:
     ----------
     mode : str
         "custom" or a registered driver name.
-    file_path : str
+    pes_path : str
         Path to a `.py` file (used only if mode="custom").
 
     Returns
@@ -67,21 +67,25 @@ def load_driver(mode: str, file_path: str) -> Dummy_driver:
     """
 
     if mode == "custom":
-        # import client from <file_path>
-        file_path = Path(file_path)
-        spec = util.spec_from_file_location(file_path.stem, file_path)
+        # import client from <pes_path>
+        pes_path = Path(pes_path)
+        spec = util.spec_from_file_location(pes_path.stem, pes_path)
         module = util.module_from_spec(spec)
-        sys.modules[file_path.stem] = module
+        sys.modules[pes_path.stem] = module
         spec.loader.exec_module(module)
     else:
         # import client from ipi/pes/<module_name>.py
         if mode not in __drivers__:
             choices = ", ".join(__drivers__.keys())
             raise ValueError(f"Invalid mode '{mode}'. Available modes: {choices}")
-        file_path = __drivers__[mode]
-        assert file_path is not None, f"Driver '{mode}' is not implemented."
-        module_name = f"ipi.pes.{file_path}"
-        module = importlib.import_module(module_name, __package__)
+        pes_path = __drivers__[mode]
+        assert pes_path is not None, f"Driver '{mode}' is not implemented."
+        module_name = f"ipi.pes.{pes_path}"
+        try:
+            module = importlib.import_module(module_name, __package__)
+        except:
+            print(f"Could not import module '{module_name}'")
+            raise
 
     driver_class_name = getattr(module, "__DRIVER_CLASS__", None)
     if driver_class_name is None:
@@ -91,3 +95,29 @@ def load_driver(mode: str, file_path: str) -> Dummy_driver:
 
     driver_class = getattr(module, driver_class_name)
     return driver_class
+
+
+__all__ = []
+
+# Dictionary to store driver name to class mapping
+__drivers__ = {}
+
+# Iterate through all modules in the current package folder to detect
+# available PES drivers
+for loader, module_name, is_pkg in pkgutil.iter_modules(__path__):
+    spec = importlib.util.find_spec(f"{__package__}.{module_name}")
+    if not spec or not spec.origin or not spec.origin.endswith(".py"):
+        continue
+
+    driver_class, driver_name = scan_pes_file(spec.origin)
+    if not (driver_class and driver_name):
+        continue  # not a permissible driver
+
+    # If both class and name are defined, update __drivers__,
+    # but don't load the module just yet
+    if driver_class and driver_name:
+        __drivers__[driver_name] = module_name
+
+# sort alphabetically
+__drivers__ = dict(sorted(__drivers__.items()))
+__all__.append("__drivers__")

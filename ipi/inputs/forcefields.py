@@ -352,11 +352,11 @@ class InputFFDirect(InputForceField):
             {
                 "dtype": str,
                 "default": "dummy",
-                "options": list(__drivers__.keys()),
+                "options": list(__drivers__.keys()) + ["custom"],
                 "help": "Type of PES that should be used to evaluate the forcefield",
             },
         ),
-        "file_path": (
+        "pes_path": (
             InputValue,
             {
                 "dtype": str,
@@ -393,7 +393,7 @@ class InputFFDirect(InputForceField):
     def store(self, ff):
         super().store(ff)
         self.pes.store(ff.pes)
-        self.file_path.store(ff.file_path)
+        self.pes_path.store(ff.pes_path)
         self.batch_size.store(ff.batch_size)
 
     def fetch(self):
@@ -407,7 +407,7 @@ class InputFFDirect(InputForceField):
             dopbc=self.pbc.fetch(),
             threaded=self.threaded.fetch(),
             pes=self.pes.fetch(),
-            file_path=self.file_path.fetch(),
+            pes_path=self.pes_path.fetch(),
             batch_size=self.batch_size.fetch(),
         )
 
