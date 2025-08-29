@@ -445,7 +445,6 @@ class FFDirect(ForceField):
         self.request_batch = []
 
         try:
-            print(__drivers__)
             if self.pes == "custom" and self.pes_path == "":
                 raise ValueError(
                     "You must provide a pes_path for the custom PES driver."
