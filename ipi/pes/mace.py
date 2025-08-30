@@ -1,10 +1,14 @@
 """An interface for the [MACE](https://github.com/ACEsuit/mace) calculator"""
 
 from .ase import ASEDriver
-
 from ipi.utils.messages import verbosity, warning
+from mace.calculators import MACECalculator
+from ase.outputs import _defineprop, all_outputs
 
-MACECalculator = None
+# avoid duplicate
+# it complains with a committee of ffdirect MACE models
+if "node_energy" not in all_outputs:
+    _defineprop("node_energy", dtype=float, shape=("natoms",))
 
 __DRIVER_NAME__ = "mace"
 __DRIVER_CLASS__ = "MACE_driver"
@@ -31,22 +35,6 @@ class MACE_driver(ASEDriver):
             "THIS PES HAS NOT BEEN TESTED FOLLOWING CONVERSION TO THE NEW PES API.",
             verbosity.low,
         )
-        global MACECalculator
-
-        try:
-            from mace.calculators import MACECalculator
-        except:
-            raise ImportError("Couldn't load mace bindings")
-
-        try:
-            from ase.outputs import _defineprop, all_outputs
-
-            # avoid duplicate
-            # it complains with a committee of ffdirect MACE models
-            if "node_energy" not in all_outputs:
-                _defineprop("node_energy", dtype=float, shape=("natoms",))
-        except ImportError:
-            raise ValueError("Could not find or import the ASE module")
 
         self.model = model
         self.device = device
