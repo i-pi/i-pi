@@ -20,8 +20,10 @@ def scan_pes_file(pyfile: str):
     try:
         with open(pyfile, "r", encoding="utf-8") as f:
             tree = ast.parse(f.read(), filename=pyfile)
-    except OSError:
-        return None, None
+    except OSError as e:
+        # raise an error if the file cannot be opened/read
+        # this will prevent from adding badly formatted files to this folder
+        raise ValueError(f"Could not open or read file '{pyfile}'\n{e}")
 
     driver_class = driver_name = None
     for node in ast.walk(tree):
