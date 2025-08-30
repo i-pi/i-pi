@@ -6,11 +6,17 @@ import importlib
 from importlib import util
 from pathlib import Path
 from .dummy import Dummy_driver
+from ipi.utils.messages import warning
 import pkgutil
 
 
 def scan_pes_file(pyfile: str):
-    """Return (__DRIVER_CLASS__, __DRIVER_NAME__) if both are string literals, else (None, None)."""
+    """
+    Return (__DRIVER_CLASS__, __DRIVER_NAME__) if both are string literals, else (None, None).
+
+    Parse a Python source file without 'running' the file and extract values of __DRIVER_CLASS__ and __DRIVER_NAME__
+    if they are assigned as string literals at the top level of the module.
+    """
     try:
         with open(pyfile, "r", encoding="utf-8") as f:
             tree = ast.parse(f.read(), filename=pyfile)
@@ -111,6 +117,10 @@ for loader, module_name, is_pkg in pkgutil.iter_modules(__path__):
 
     driver_class, driver_name = scan_pes_file(spec.origin)
     if not (driver_class and driver_name):
+        # let's raise a warning for future developers and be sure that we are not adding badly formatted files
+        warning(
+            f"Module '{module_name}' does not define both __DRIVER_CLASS__ and __DRIVER_NAME__ as string literals. Skipping."
+        )
         continue  # not a permissible driver
 
     # If both class and name are defined, update __drivers__,

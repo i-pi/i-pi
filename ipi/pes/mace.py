@@ -10,6 +10,7 @@ from ase.outputs import _defineprop, all_outputs
 if "node_energy" not in all_outputs:
     _defineprop("node_energy", dtype=float, shape=("natoms",))
 
+__DRIVER_NAME__ = "mace"
 __DRIVER_CLASS__ = "MACE_driver"
 
 
