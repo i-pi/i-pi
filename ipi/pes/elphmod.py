@@ -27,7 +27,7 @@ class ModelIIIDriver(Dummy_driver):
         super().__init__(*args, **kwargs)
         pass
 
-    def __call__(self, cell, pos):
+    def compute_structure(self, cell, pos):
         """Calculate energy and forces for given structure."""
 
         return self.driver(cell, pos)

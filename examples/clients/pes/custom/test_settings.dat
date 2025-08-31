@@ -1,0 +1,5 @@
+driver_model custom
+  driver_code python
+  flags -o 1.0 -P custom.py
+
+nsteps 10

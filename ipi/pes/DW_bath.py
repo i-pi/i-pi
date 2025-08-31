@@ -82,7 +82,7 @@ class DoubleWell_with_explicit_bath_driver(Dummy_driver):
         self.B = ((self.m**2) * (w_b) ** 4) / (16 * v0)
         super().__init__(*args, **kwargs)
 
-    def __call__(self, cell, pos):
+    def compute_structure(self, cell, pos):
         """DoubleWell potential"""
         pot = 0
         q = pos.reshape(-1, 1)[0]

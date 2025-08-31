@@ -132,13 +132,13 @@ class Spherical_LJ_driver(Dummy_driver):
             # ... but the user can also provide symbols directly
             self.symbols = symbols
 
-    def __call__(self, cell: np.ndarray, pos: np.ndarray):
+    def compute_structure(self, cell, pos):
         """
         Core method that calculates energy and forces for given atoms using
         the spherical Lennard-Jones potential.
         """
 
-        potential, forces, vir, extras = super().__call__(cell, pos)
+        potential, forces, vir, extras = super().compute_structure(cell, pos)
 
         # check that the number of atoms has not changed
         assert pos.shape == (len(self.symbols), 3), "Positions shape mismatch."

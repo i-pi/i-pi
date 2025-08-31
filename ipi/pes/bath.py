@@ -65,7 +65,7 @@ class Harmonic_Bath_explicit(object):
 
         return dSD_dq
 
-    def __call__(self, q, x):
+    def compute_structure(self, q, x):
         pot_bath = 0
         fq_bath = np.zeros(q.shape)
         fx = np.zeros(x.shape)

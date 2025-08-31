@@ -5,7 +5,7 @@ import json
 from .ase import ASEDriver
 from .tools import gpu_oversubscription
 
-gpu_oversubscription()  # run this before importing torch
+gpu_oversubscription()
 
 from mace.calculators import MACECalculator
 from ase.outputs import _defineprop, all_outputs
@@ -15,6 +15,7 @@ from ase.outputs import _defineprop, all_outputs
 if "node_energy" not in all_outputs:
     _defineprop("node_energy", dtype=float, shape=("natoms",))
 
+__DRIVER_NAME__ = "mace"
 __DRIVER_CLASS__ = "MACE_driver"
 
 
@@ -35,14 +36,7 @@ class MACE_driver(ASEDriver):
     """
 
     def __init__(
-        self,
-        template,
-        model,
-        device="cpu",
-        requires_extra: bool = False,
-        mace_kwargs=None,
-        *args,
-        **kwargs
+        self, template, model, device="cpu", mace_kwargs=None, *args, **kwargs
     ):
 
         self.model = model
@@ -53,7 +47,6 @@ class MACE_driver(ASEDriver):
                 self.mace_kwargs = json.load(f)
 
         super().__init__(template, *args, **kwargs)
-        self.requires_extra = requires_extra
 
     def check_parameters(self):
         """Check the arguments requuired to run the driver

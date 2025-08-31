@@ -27,7 +27,7 @@ from ipi.utils.depend import dstrip
 from ipi.utils.io import read_file
 from ipi.utils.units import unit_to_internal
 from ipi.utils.distance import vector_separation
-from ipi.pes import load_driver
+from ipi.pes import load_pes
 from ipi.utils.mathtools import (
     get_rotation_quadrature_legendre,
     get_rotation_quadrature_lebedev,
@@ -416,7 +416,7 @@ class FFEval(ForceField):
         request["status"] = "Done"
 
 
-class FFDirect(FFEval):
+class FFDirect(ForceField):
     def __init__(
         self,
         latency=1.0,
@@ -427,6 +427,8 @@ class FFDirect(FFEval):
         active=np.array([-1]),
         threaded=False,
         pes="dummy",
+        pes_path="",
+        batch_size=1,
     ):
         """Initialises FFDirect.
 
@@ -441,7 +443,9 @@ class FFDirect(FFEval):
             dopbc: Decides whether or not to apply the periodic boundary conditions
                 before sending the positions to the client code.
             active: Indexes of active atoms in this forcefield
-
+            pes: The name of the potential-energy surface to be used
+            batch_size: The number of structures that should be combined and evaluated
+                at once in a single batch.
         """
 
         super().__init__(latency, offset, name, pars, dopbc, active, threaded)
@@ -451,29 +455,41 @@ class FFDirect(FFEval):
         if not "verbosity" in pars:
             pars["verbosity"] = verbosity.high
         self.pes = pes
+        self.pes_path = pes_path
+        self.batch_size = batch_size
+        self.request_batch = []
+
         try:
-            self.driver = load_driver(self.pes)(**pars)
+            if self.pes == "custom" and self.pes_path == "":
+                raise ValueError(
+                    "You must provide a pes_path for the custom PES driver."
+                )
+            self.driver = load_pes(self.pes, self.pes_path)(**pars)
         except ImportError:
             # specific errors have already been triggered
             raise
         except Exception as err:
             print(f"Error setting up PES mode {self.pes}")
-            print(load_driver(self.pes).__doc__)
             print("Error trace: ")
             raise err
 
-    def evaluate(self, request):
-        try:
-            if "extra" in request:
-                self.driver.store_extra(request["extra"])
-            results = list(
-                self.driver(request["cell"][0], request["pos"].reshape(-1, 3))
-            )
-        except Exception as err:
-            print("Error in 'FFDirect.evaluate' while evaluating energy and forces.")
-            raise err
+    def poll(self):
+        """Polls the forcefield checking if there are requests that should
+        be answered, and if necessary evaluates the associated forces and energy."""
 
+        # We have to be thread-safe, as in multi-system mode this might get
+        # called by many threads at once.
+        # This is slightly different than for FFEval because of the batched evaluation
+        with self._threadlock:
+            for r in self.requests:
+                if r["status"] == "Queued":
+                    r["status"] = "Running"
+                    r["t_dispatched"] = time.time()
+                    self.evaluate(r)
+
+    def _process_results(self, results, request):
         # ensure forces and virial have the correct shape to fit the results
+        results[0] -= self.offset
         results[1] = results[1].reshape(-1)
         results[2] = results[2].reshape(3, 3)
 
@@ -507,6 +523,25 @@ class FFDirect(FFEval):
         request["result"] = results
         request["status"] = "Done"
         request["t_finished"] = time.time()
+
+    def evaluate(self, request):
+        if self.batch_size == 1:
+            results = list(
+                self.driver(request["cell"][0], request["pos"].reshape(-1, 3))
+            )
+            self._process_results(results, request)
+        else:
+            self.request_batch.append(request)
+            if len(self.request_batch) == self.batch_size:
+                cell_batch = [request["cell"][0] for request in self.request_batch]
+                pos_batch = [
+                    request["pos"].reshape(-1, 3) for request in self.request_batch
+                ]
+                results_batch = self.driver(cell_batch, pos_batch)
+                for results, request in zip(results_batch, self.request_batch):
+                    self._process_results(list(results), request)
+
+                self.request_batch = []
 
 
 class FFLennardJones(FFEval):

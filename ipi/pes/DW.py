@@ -54,7 +54,7 @@ class DoubleWell_driver(Dummy_driver):
         self.B = ((m**2) * (w_b) ** 4) / (16 * v0)
         super().__init__(*args, **kwargs)
 
-    def __call__(self, cell, pos):
+    def compute_structure(self, cell, pos):
         """DoubleWell potential l"""
         pot = 0
         pos3 = pos.reshape(-1, 3)

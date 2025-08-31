@@ -2,9 +2,9 @@
 import socket
 import argparse
 import numpy as np
-from ipi.pes.tools import Timer
-from ipi.pes import __drivers__, Dummy_driver, load_driver
+from ipi.pes import Dummy_driver, load_pes, __drivers__
 from ipi.utils.io.inputs import read_args_kwargs
+from ipi.pes.tools import Timer
 
 description = """
 Minimal example of a Python driver connecting to i-PI and exchanging energy, forces, etc.
@@ -234,8 +234,16 @@ if __name__ == "__main__":
         "--mode",
         type=str,
         default="dummy",
-        choices=__drivers__,
+        choices=list(__drivers__.keys()) + ["custom"],
         help="""Type of potential to be used to compute the potential and its derivatives.
+        """,
+    )
+    parser.add_argument(
+        "-P",
+        "--pes_path",
+        type=str,
+        default=None,
+        help="""File path for 'custom' PES (it should end with .py).
         """,
     )
     parser.add_argument(
@@ -266,8 +274,8 @@ if __name__ == "__main__":
 
     driver_args, driver_kwargs = read_args_kwargs(args.param)
 
-    # import only what we need
-    cls = load_driver(args.mode)
+    # import the driver class
+    cls = load_pes(args.mode, args.pes_path)
 
     d_f = cls(*driver_args, **driver_kwargs)
 
