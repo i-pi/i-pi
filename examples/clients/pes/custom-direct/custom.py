@@ -1,13 +1,14 @@
 """Harmonic potential"""
 
-from .dummy import Dummy_driver
+from ipi.pes.dummy import Dummy_driver
 import numpy as np
 
-__DRIVER_NAME__ = "harmonic"
-__DRIVER_CLASS__ = "Harmonic_driver"
+__DRIVER_CLASS__ = "Custom_driver"
+
+# This is just a Harmonic_driver, but with a different name.
 
 
-class Harmonic_driver(Dummy_driver):
+class Custom_driver(Dummy_driver):
     """
     Harmonic driver, generating either an isotropic or 3D confining
     potential for each atom.
@@ -33,7 +34,7 @@ class Harmonic_driver(Dummy_driver):
 
         super().__init__(*args, **kwargs)
 
-    def compute_structure(self, cell, pos):
+    def __call__(self, cell, pos):
         """Silly harmonic potential"""
         if self.type == "isotropic":
             pot = 0.5 * self.k * (pos**2).sum()

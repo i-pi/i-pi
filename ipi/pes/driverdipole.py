@@ -204,7 +204,7 @@ class driverdipole_driver(Dummy_driver):
         print("\tInitialization completed.")
         pass
 
-    def __call__(self, cell, pos):
+    def compute_structure(self, cell, pos):
         """Get energies, forces, stresses and extra quantities"""
 
         print("\n@calling 'driverdipole_driver': step {:d}".format(self.count + 1))
@@ -227,7 +227,7 @@ class driverdipole_driver(Dummy_driver):
         cell[np.isinf(cell)] = 0.0
 
         # Get vanishing pot, forces and vir
-        pot, force, vir, extras = super().__call__(cell, pos)
+        pot, force, vir, extras = super().compute_structure(cell, pos)
         extras = {}
 
         # computing BEC tensors and dipole
