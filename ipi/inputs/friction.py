@@ -2,7 +2,6 @@ import numpy as np
 from ipi.engine.friction import Friction
 from ipi.utils.inputvalue import (
     Input,
-    InputValue,
     InputArray,
     input_default,
 )
@@ -34,7 +33,7 @@ class InputFriction(Input):
 
         super(InputFriction, self).store(friction)
         self.spectral_density.store(friction.spectral_density)
-    
+
     def fetch(self) -> Friction:
         return Friction(
             spectral_density=self.spectral_density.fetch(),
