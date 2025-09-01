@@ -7,6 +7,7 @@
 import numpy as np
 import ipi.engine.thermostats
 import ipi.engine.barostats
+import ipi.engine.friction
 from ipi.utils.inputvalue import (
     InputDictionary,
     InputAttribute,

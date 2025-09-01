@@ -25,6 +25,9 @@
       <fixcom> False </fixcom>
       <dynamics mode='nve-f'>
         <timestep units='femtosecond'> 0.5 </timestep>
+        <friction>
+          <spectral_density mode='file' shape='(999, 2)' > fric_spec_dens.dat </spectral_density>
+        </friction>
       </dynamics>
     </motion>
     <ensemble>

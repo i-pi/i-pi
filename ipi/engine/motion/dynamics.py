@@ -86,6 +86,11 @@ class Dynamics(Motion):
                 )
             self.thermostat = thermostat
 
+        if friction is None:
+            self.friction = Friction()
+        else:
+            self.friction = friction
+
         if nmts is None or len(nmts) == 0:
             self.nmts_ = depend_array(
                 name="nmts", value=np.asarray([1], int), host=True
@@ -104,8 +109,7 @@ class Dynamics(Motion):
             self.integrator = NVEIntegrator()
         elif self.enstype == "nve-f":
             self.integrator = NVEIntegratorWithFriction(
-                spectral_density=friction.spectral_density,
-                frequency=friction.frequency,
+                friction=self.friction,
             )
         elif self.enstype == "nvt":
             self.integrator = NVTIntegrator()
@@ -611,17 +615,11 @@ class NVEIntegratorWithFriction(NVEIntegrator):
 
     def __init__(
         self,
-        spectral_density=np.zeros(0, float),
-        frequency=0.0,
-        *args,
-        **kwargs,
+        friction: Friction,
     ):
-
-        self.friction = Friction(
-            spectral_density=spectral_density,
-            frequency=frequency,
-        )
-        super().__init__(*args, **kwargs)
+        assert friction is not None, "Friction must be provided to use nve-f integrator"
+        self.friction = friction
+        super().__init__()
 
     def bind(self, motion):
         super().bind(motion)
