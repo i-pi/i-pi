@@ -391,6 +391,11 @@ class MetatomicDriver(Dummy_driver):
         energies = energies.flatten()
         forces = forces.reshape((len(systems), -1, 3))
         virials = virials.reshape((len(systems), 3, 3))
+
+        # remove net force in the non-conservative case
+        if self.non_conservative:
+            forces = forces - forces.mean(1, keepdims=True)
+
         return [
             (e, f, v, extras)
             for (e, f, v, extras) in zip(energies, forces, virials, extras_list)
