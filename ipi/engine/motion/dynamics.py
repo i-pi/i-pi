@@ -627,12 +627,12 @@ class NVEIntegratorWithFriction(NVEIntegrator):
         super().bind(motion)
         self.friction.bind(motion)
 
-    def step(self, step=None):
+    def pstep(self, level: int = 0) -> None:
         forces = self.friction.forces()
-        self.beads.p += forces * self.pdt[0]
+        self.beads.p += forces * self.pdt[level]
         self.pconstraints()
 
-        super().step(step)
+        super().pstep(level)
 
 
 class NVTIntegrator(NVEIntegrator):

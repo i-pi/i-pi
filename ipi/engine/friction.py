@@ -6,13 +6,21 @@
 
 
 import numpy as np
+from typing import Protocol
 
 from ipi.engine.motion import Motion
 from ipi.engine.normalmodes import NormalModes
 from ipi.engine.beads import Beads
 
 
-class Friction:
+class FrictionProtocol(Protocol):
+    def bind(self, motion: Motion) -> None:
+        ...
+
+    def forces(self) -> np.ndarray:
+        ...
+
+class Friction(FrictionProtocol):
     spectral_density: np.ndarray  # (n, 2)
     """Input spectral density of omega and J(omega) value pairs"""
 
@@ -62,7 +70,6 @@ def get_alpha_numeric(
         f = CubicSpline(omega, Lambda * omegak**2 / (omega**2 + omegak**2))
         alpha[idx] = 2 / np.pi * quad(f, 0, omega[-1])[0]
     return alpha
-
 
 # def get_eta(beads: Beads, forces: Forces) -> np.ndarray:
 #    """

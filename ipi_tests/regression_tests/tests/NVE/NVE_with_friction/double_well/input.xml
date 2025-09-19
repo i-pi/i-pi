@@ -26,8 +26,11 @@
       <dynamics mode='nve-f'>
         <timestep units='femtosecond'> 0.5 </timestep>
         <friction>
-          <spectral_density mode='file' shape='(999, 2)' > fric_spec_dens.dat </spectral_density>
-        </friction>
+	  <spectral_density mode='file' shape='(999, 2)' > fric_spec_dens.dat </spectral_density>
+     <analytical_equation>1.34</analytical_equation>
+          <omega_cutoff>10</omega_cutoff> 
+          <eta> 0.3 </eta>
+  	</friction>
       </dynamics>
     </motion>
     <ensemble>
