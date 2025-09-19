@@ -8,7 +8,7 @@ from ipi.engine.normalmodes import NormalModes
 from ipi.engine.motion import Motion
 
 
-class Fricition_eq133(FrictionProtocol):
+class Friction_eq133(FrictionProtocol):
     def __init__(self, omega_cutoff: float, eta: float):
         self.omega_cutoff = omega_cutoff
         self.eta = eta
@@ -37,12 +37,19 @@ class Fricition_eq133(FrictionProtocol):
         return forces
 
 
-class Fricition_eq134(FrictionProtocol):
+class Friction_eq134(FrictionProtocol):
     def __init__(self, omega_cutoff: float, eta: float):
         self.omega_cutoff = omega_cutoff
         self.eta = eta
 
     def bind(self, motion: Motion) -> None:
+        try:
+            from scipy.special import xlogy
+        except ModuleNotFoundError as e:
+            raise ModuleNotFoundError(
+                "Friction class requires scipy to work, please install scipy"
+            ) from e
+
         self.beads = motion.beads
         self.nm = motion.nm
 
@@ -54,7 +61,7 @@ class Fricition_eq134(FrictionProtocol):
                 / np.pi
                 * self.eta
                 * omegak
-                * (z * (np.euler_gamma + np.log(z)) - (z - np.pi * 0.5))
+                * ( xlogy(z, z) + z * (np.euler_gamma - 1) + np.pi/2 )
             )
         self.alpha = alpha
 

@@ -46,7 +46,7 @@ class InputFriction(Input):
         ),
     }
 
-    default_help = "Simulates the elctronic friction"
+    default_help = "Simulates the electronic friction"
     default_label = "FRICTION"
 
     def store(self, friction: FrictionProtocol) -> None:
@@ -66,12 +66,12 @@ class InputFriction(Input):
     def fetch(self) -> FrictionProtocol:
         analytical_equation = self.analytical_equation.fetch()
         if analytical_equation:
-            from ipi.utils.frictiontools import Fricition_eq133, Fricition_eq134
+            from ipi.utils.frictiontools import Friction_eq133, Friction_eq134
 
             if analytical_equation == "1.33":
-                return Fricition_eq133(self.omega_cutoff.fetch(), self.eta.fetch())
+                return Friction_eq133(self.omega_cutoff.fetch(), self.eta.fetch())
             if analytical_equation == "1.34":
-                return Fricition_eq134(self.omega_cutoff.fetch(), self.eta.fetch())
+                return Friction_eq134(self.omega_cutoff.fetch(), self.eta.fetch())
             raise ValueError(
                 f"Unknown analytical equation for friction {analytical_equation}"
             )
