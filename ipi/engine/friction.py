@@ -67,7 +67,7 @@ def get_alpha_numeric(
     alpha = np.zeros(nm.omegak.shape)
     for idx, omegak in enumerate(nm.omegak):
         f = CubicSpline(omega, Lambda * omegak**2 / (omega**2 + omegak**2))
-        alpha[idx] = 2 / np.pi * quad(f, 0, omega[-1])[0]
+        alpha[idx] = 2 / np.pi * f.integrate(0, omega[-1])
     return alpha
 
 
