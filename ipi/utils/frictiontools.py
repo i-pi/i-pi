@@ -7,6 +7,7 @@ from scipy.special import sici
 from ipi.engine.normalmodes import NormalModes
 from ipi.engine.motion import Motion
 
+
 class Fricition_eq133(FrictionProtocol):
     def __init__(self, omega_cutoff: float, eta: float):
         self.omega_cutoff = omega_cutoff
@@ -15,19 +16,27 @@ class Fricition_eq133(FrictionProtocol):
     def bind(self, motion: Motion) -> None:
         self.beads = motion.beads
         self.nm = motion.nm
-  
+
         alpha = np.zeros(self.nm.omegak.shape)
         for idx, omegak in enumerate(self.nm.omegak):
-           z = omegak / self.omega_cutoff
-           si,ci = sici(z)
-           alpha[idx] = 2 / np.pi * self.eta * omegak * (ci * np.sin(z) - (si - np.pi * 0.5) * np.cos(z))
+            z = omegak / self.omega_cutoff
+            si, ci = sici(z)
+            alpha[idx] = (
+                2
+                / np.pi
+                * self.eta
+                * omegak
+                * (ci * np.sin(z) - (si - np.pi * 0.5) * np.cos(z))
+            )
         self.alpha = alpha
+
     def forces(self) -> np.ndarray:
 
         fnm = self.alpha[:, np.newaxis] * self.nm.qnm  # (nmodes, 3 * natoms)
         forces = self.nm.transform.nm2b(fnm)  # (nbeads, 3 * natoms)
         return forces
-    
+
+
 class Fricition_eq134(FrictionProtocol):
     def __init__(self, omega_cutoff: float, eta: float):
         self.omega_cutoff = omega_cutoff
@@ -39,8 +48,14 @@ class Fricition_eq134(FrictionProtocol):
 
         alpha = np.zeros(self.nm.omegak.shape)
         for idx, omegak in enumerate(self.nm.omegak):
-           z = omegak / self.omega_cutoff
-           alpha[idx] = 2 / np.pi * self.eta * omegak * (z * (np.euler_gamma + np.log(z)) - (z - np.pi *0.5))
+            z = omegak / self.omega_cutoff
+            alpha[idx] = (
+                2
+                / np.pi
+                * self.eta
+                * omegak
+                * (z * (np.euler_gamma + np.log(z)) - (z - np.pi * 0.5))
+            )
         self.alpha = alpha
 
     def forces(self) -> np.ndarray:
@@ -48,6 +63,7 @@ class Fricition_eq134(FrictionProtocol):
         fnm = self.alpha[:, np.newaxis] * self.nm.qnm  # (nmodes, 3 * natoms)
         forces = self.nm.transform.nm2b(fnm)  # (nbeads, 3 * natoms)
         return forces
+
 
 def get_alpha(eta0: float, omega_cutoff: float, nm: NormalModes) -> np.ndarray:
 

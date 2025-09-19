@@ -26,7 +26,7 @@ class InputFriction(Input):
                 "dtype": str,
                 "default": "",
                 "help": "",
-            }
+            },
         ),
         "omega_cutoff": (
             InputValue,
@@ -34,16 +34,16 @@ class InputFriction(Input):
                 "dtype": float,
                 "default": 0.0,
                 "help": "",
-            }
+            },
         ),
-        "eta":(
+        "eta": (
             InputValue,
             {
                 "dtype": float,
                 "default": 0.0,
-                "help":"",
-            }
-        )
+                "help": "",
+            },
+        ),
     }
 
     default_help = "Simulates the elctronic friction"
@@ -67,11 +67,14 @@ class InputFriction(Input):
         analytical_equation = self.analytical_equation.fetch()
         if analytical_equation:
             from ipi.utils.frictiontools import Fricition_eq133, Fricition_eq134
+
             if analytical_equation == "1.33":
                 return Fricition_eq133(self.omega_cutoff.fetch(), self.eta.fetch())
             if analytical_equation == "1.34":
                 return Fricition_eq134(self.omega_cutoff.fetch(), self.eta.fetch())
-            raise ValueError(f"Unknown analytical equation for friction {analytical_equation}")
+            raise ValueError(
+                f"Unknown analytical equation for friction {analytical_equation}"
+            )
         return Friction(
             spectral_density=self.spectral_density.fetch(),
         )

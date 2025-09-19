@@ -673,10 +673,12 @@ class NVTIntegrator(NVEIntegrator):
             self.pconstraints()
             self.mtsprop_ab(0)
 
+
 class NVTIntegratorWithFriction(NVTIntegrator):
     """
     Integrator object for constant Number of particles, Volume, and Temperature (NVT) simulations with friction.
     """
+
     def __init__(
         self,
         friction: Friction,
@@ -695,6 +697,7 @@ class NVTIntegratorWithFriction(NVTIntegrator):
         self.pconstraints()
 
         super().step(step)
+
 
 class NVTCCIntegrator(NVTIntegrator):
     """Integrator object for constant temperature simulations with constrained centroid.
