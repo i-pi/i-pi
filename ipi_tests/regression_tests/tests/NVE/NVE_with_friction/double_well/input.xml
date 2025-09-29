@@ -27,19 +27,24 @@
         <timestep units='femtosecond'> 0.5 </timestep>
         <friction>
 	  <spectral_density mode='file' shape='(999, 2)' > fric_spec_dens.dat </spectral_density>
-     <analytical_equation>1.34</analytical_equation>
-          <omega_cutoff>10</omega_cutoff> 
-          <eta> 0.3 </eta>
-  	</friction>
+	</friction>
       </dynamics>
     </motion>
     <ensemble>
       <temperature units='kelvin'> 300 </temperature>
     </ensemble>
-      <beads natoms='1' nbeads='1'>
-         <q shape='(1, 3)'> [  0, 0 ,0  ] </q>
-         <p shape='(1, 3)'> [  1.28033352e+00  ,  1.70464009e-01 ,  -8.91942460e-02 ] </p>
-         <m shape='(1)'> [   1837.36223469 ] </m>
+     <beads natoms='1' nbeads='6'>
+         <q shape='(6, 3)'>
+          [                0,                0,                0,                0,                0,
+                           0,                0,                0,                0,                0,
+                           0,                0,                0,                0,                0,
+                           0,                0,                0 ]
+         </q>
+         <p shape='(6, 3)'>
+          [ -3.13616382 ,0.41754984,-0.21848039,-1.42731025, 4.52135485 ,0.92356654,-6.78133177, -1.51514656, -3.55902132,
+ -1.96508045, -3.7661323 , -0.52972274,-2.24775799,  3.14173608, -0.44601442, 3.48849926,  0.38396854, -0.2739336 ]
+         </p>
+         <m shape='(1)'> [   1837.36223469  ] </m>
          <names shape='(1)'> [ H ] </names>
       </beads>
   </system>

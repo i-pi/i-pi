@@ -37,7 +37,18 @@ class Friction_eq133(FrictionProtocol):
         return forces
 
 
-class Friction_eq134(FrictionProtocol):
+def get_alpha_eq133(omegak, omega_cutoff, eta):
+    alpha = np.zeros(omegak.shape)
+    for idx, omegak in enumerate(omegak):
+        z = omegak / omega_cutoff
+        si, ci = sici(z)
+        alpha[idx] = (
+            2 / np.pi * eta * omegak * (ci * np.sin(z) - (si - np.pi * 0.5) * np.cos(z))
+        )
+    return alpha
+
+
+class Fricition_eq134(FrictionProtocol):
     def __init__(self, omega_cutoff: float, eta: float):
         self.omega_cutoff = omega_cutoff
         self.eta = eta

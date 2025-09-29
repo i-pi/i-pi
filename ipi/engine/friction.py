@@ -68,6 +68,7 @@ def get_alpha_numeric(
     for idx, omegak in enumerate(nm.omegak):
         f = CubicSpline(omega, Lambda * omegak**2 / (omega**2 + omegak**2))
         alpha[idx] = 2 / np.pi * f.integrate(0, omega[-1])
+        print(f"for normal mode {omegak} alpha is {alpha[idx]}")
     return alpha
 
 
