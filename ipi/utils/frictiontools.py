@@ -72,7 +72,7 @@ class Fricition_eq134(FrictionProtocol):
                 / np.pi
                 * self.eta
                 * omegak
-                * ( xlogy(z, z) + z * (np.euler_gamma - 1) + np.pi/2 )
+                * (xlogy(z, z) + z * (np.euler_gamma - 1) + np.pi / 2)
             )
         self.alpha = alpha
 
