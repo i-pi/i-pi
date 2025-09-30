@@ -6,6 +6,7 @@ from scipy.integrate import quad
 from scipy.special import sici
 from ipi.engine.normalmodes import NormalModes
 from ipi.engine.motion import Motion
+from scipy.special import xlogy
 
 
 class Friction_eq133(FrictionProtocol):
@@ -44,6 +45,20 @@ def get_alpha_eq133(omegak, omega_cutoff, eta):
         si, ci = sici(z)
         alpha[idx] = (
             2 / np.pi * eta * omegak * (ci * np.sin(z) - (si - np.pi * 0.5) * np.cos(z))
+        )
+    return alpha
+
+
+def get_alpha_eq134(omegak, omega_cutoff, eta):
+    alpha = np.zeros(omegak.shape)
+    for idx, omegak in enumerate(omegak):
+        z = omegak / omega_cutoff
+        alpha[idx] = (
+            2
+            / np.pi
+            * eta
+            * omegak
+            * (xlogy(z, z) + z * (np.euler_gamma - 1) + np.pi / 2)
         )
     return alpha
 
