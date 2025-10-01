@@ -62,6 +62,7 @@ class MetatomicDriver(Dummy_driver):
         energy_ensemble=False,
         force_virial_ensemble=False,
         non_conservative=False,
+        energy_variant=None,
         *args,
         **kwargs,
     ):
@@ -90,6 +91,9 @@ class MetatomicDriver(Dummy_driver):
         self.force_virial_ensemble = force_virial_ensemble
         self.non_conservative = non_conservative
         self.template = template
+        self.energy_output = (
+            "energy" + "" if energy_variant is None else f"/{energy_variant}"
+        )
         super().__init__(*args, **kwargs)
 
         info(f"Model arguments:\n{args}\n{kwargs}", self.verbose)
@@ -104,9 +108,9 @@ class MetatomicDriver(Dummy_driver):
         metatomic_major = int(metatomic_major)
         metatomic_minor = int(metatomic_minor)
 
-        if metatomic_major != 0 or metatomic_minor != 1:
+        if metatomic_major != 0 or metatomic_minor != 2:
             raise ImportError(
-                "this code is only compatible with metatomic-torch == v0.1, "
+                "this code is only compatible with metatomic-torch == v0.2, "
                 f"found version v{mta.__version__} at '{mta.__file__}'"
             )
 
@@ -140,7 +144,7 @@ class MetatomicDriver(Dummy_driver):
 
         # Register the requested outputs
         outputs = {
-            "energy": mta.ModelOutput(
+            self.energy_output: mta.ModelOutput(
                 quantity="energy",
                 unit="eV",
                 per_atom=False,
@@ -221,7 +225,7 @@ class MetatomicDriver(Dummy_driver):
     def _process_outputs(self, outputs, systems, strains):
         num_systems = len(systems)
 
-        energy_tensor = outputs["energy"].block().values
+        energy_tensor = outputs[self.energy_output].block().values
 
         if self.non_conservative:
             forces_tensor = outputs["non_conservative_forces"].block().values
