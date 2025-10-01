@@ -43,7 +43,7 @@ class Friction(FrictionProtocol):
         self.alpha = get_alpha_numeric(
             Lambda=Lambda,
             omega=omega,
-            omegak =self.nm.omegak,
+            omegak=self.nm.omegak,
         )  # (nmodes,)
 
     def forces(self) -> np.ndarray:

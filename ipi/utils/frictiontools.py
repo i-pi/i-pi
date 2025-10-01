@@ -1,9 +1,7 @@
 from typing import Union
 
 import numpy as np
-from scipy.integrate import quad
 from scipy.special import sici
-from ipi.engine.normalmodes import NormalModes
 from scipy.special import xlogy
 
 
@@ -32,7 +30,6 @@ def get_alpha_eq134(omegak, omega_cutoff, eta):
             * (xlogy(z, z) + z * (np.euler_gamma - 1) + np.pi / 2)
         )
     return alpha
-
 
 
 def expohmic_J(
