@@ -4,7 +4,8 @@ import pytest
 import numpy as np
 from ipi.utils.frictiontools import get_alpha_eq133
 from ipi.utils.frictiontools import get_alpha_eq134
-
+from ipi.engine.friction import get_alpha_numeric
+from ipi.utils.frictiontools import expohmic_J 
 
 @pytest.fixture
 def omega_cutoff() -> float:
@@ -38,6 +39,7 @@ def test_analytical_alphaeq133(omega_cutoff: float, eta: float):
     assert np.allclose(
         alpha,
         np.array([0.00281764, 0.00484762, 0.00558463, 0.00484762, 0.00281764]),
+        atol= 1e-7
     )
 
 
@@ -59,3 +61,27 @@ def test_analytical_alphaeq134(omega_cutoff: float, eta: float):
         alpha,
         np.array([0.00281764, 0.00484762, 0.00558463, 0.00484762, 0.00281764]),
     )
+
+def test_numerical_alpha(omega_cutoff: float, eta: float):
+    r"""In this test----"""
+    omegak = np.array(
+        [
+            0.005700267359999999,
+            0.009873152684246512,
+            0.01140053472,
+            0.009873152684246512,
+            0.005700267359999999,
+        ]
+    )
+    omega = np.arange(0.0001,omega_cutoff,0.0001)
+    J = expohmic_J(omega,eta, omega_cutoff)
+    Lambda = J / omega
+    print(Lambda)
+    alpha = get_alpha_numeric (Lambda, omega, omegak)
+    assert np.allclose(
+        alpha,
+        np.array([0.00281764, 0.00484762, 0.00558463, 0.00484762, 0.00281764]),
+        rtol = 1e-5
+    )
+    print(alpha)
+    

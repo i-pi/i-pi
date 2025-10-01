@@ -43,7 +43,7 @@ class Friction(FrictionProtocol):
         self.alpha = get_alpha_numeric(
             Lambda=Lambda,
             omega=omega,
-            nm=self.nm,
+            omegak =self.nm.omegak,
         )  # (nmodes,)
 
     def forces(self) -> np.ndarray:
@@ -54,7 +54,7 @@ class Friction(FrictionProtocol):
 
 
 def get_alpha_numeric(
-    Lambda: np.ndarray, omega: np.ndarray, nm: NormalModes
+    Lambda: np.ndarray, omega: np.ndarray, omegak: np.ndarray
 ) -> np.ndarray:
     try:
         from scipy.interpolate import CubicSpline
@@ -64,8 +64,8 @@ def get_alpha_numeric(
             "Friction class requires scipy to work, please install scipy"
         ) from e
 
-    alpha = np.zeros(nm.omegak.shape)
-    for idx, omegak in enumerate(nm.omegak):
+    alpha = np.zeros(omegak.shape)
+    for idx, omegak in enumerate(omegak):
         f = CubicSpline(omega, Lambda * omegak**2 / (omega**2 + omegak**2))
         alpha[idx] = 2 / np.pi * f.integrate(0, omega[-1])
         print(f"for normal mode {omegak} alpha is {alpha[idx]}")
