@@ -57,7 +57,7 @@ class ASEDriver(Dummy_driver):
     def check_parameters(self):
         """Check the arguments required to run the driver
 
-        This loads the potential and atoms template in metatensor
+        This loads the potential and atoms template for ASE
         """
 
         self.template_ase = read(self.template)
