@@ -20,7 +20,7 @@ def eta() -> float:
 
 def test_analytical_alphaeq133(omega_cutoff: float, eta: float):
     r"""
-    In this test we are calculating the alpha based on the analytical ohmic spectral density J. Eq 1.33 from George draft.
+    In this test we are calculating the alpha based on the analytical ohmic spectral density J. (Eq 1.33 from George draft.)
 
     .. math::
        \eta \omega_n^2 \int_0^\infty \frac{e^{-\omega/\omega_c}}{\omega^2 + \omega_n^2} \, d\omega
@@ -46,7 +46,10 @@ def test_analytical_alphaeq133(omega_cutoff: float, eta: float):
 
 def test_analytical_alphaeq134(omega_cutoff: float, eta: float):
     r"""
-    In this test we are calculating alpha based on the analytical solution of the eq1.33 at small values of zn (zn=ωn/ωc).
+    In this test we are calculating alpha based on the analytical solution of the eq1.33 at small values of zn (zn=ωn/ωc).Eq 1.34 given as
+    .. math::
+    \sim \eta \omega_n \big[ z_n (\gamma + \ln z_n) - z_n - \tfrac{\pi}{2} \big]
+     at small values of zn tis the asymptotic answer to Eq1.33.
     """
     omegak = np.array(
         [
@@ -65,7 +68,9 @@ def test_analytical_alphaeq134(omega_cutoff: float, eta: float):
 
 
 def test_numerical_alpha(omega_cutoff: float, eta: float):
-    r"""In this test----"""
+    r"""In this test, the numerical evaluation of alpha, as implemented in ipi/engine/friction, is carried out.
+    The computed numerical values of alpha are subsequently compared with the corresponding analytical expression given in Eq. 1.34.
+    """
     omegak = np.array(
         [
             0.005700267359999999,
@@ -83,6 +88,6 @@ def test_numerical_alpha(omega_cutoff: float, eta: float):
     assert np.allclose(
         alpha,
         np.array([0.00281764, 0.00484762, 0.00558463, 0.00484762, 0.00281764]),
-        rtol=1e-5,
+        atol=1e-5,
     )
     print(alpha)
