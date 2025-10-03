@@ -71,3 +71,29 @@ which you can run with
 ```bash
 i-pi input-ensemble.xml
 ```
+
+## Batched evaluation
+
+Metatomic models can be evaluated in a batched mode - useful when using a simulation
+that evaluates many structures per step and that does not saturate the GPU.
+Check how to use it in
+
+```bash
+i-pi input-batched.xml
+```
+
+and, for ensembles
+
+```bash
+i-pi input-batched-ensemble.xml
+```
+
+## Model variants
+
+Metatomic allows specifying different versions of the energy output, e.g. pbe0 or r2scan 
+energies for a mixture-of-experts model. This is achieved by specifying the
+option `energy_variant:XXXX` to the initialization parameters.
+
+```bash
+i-pi input-ensemble-variant.xml
+```

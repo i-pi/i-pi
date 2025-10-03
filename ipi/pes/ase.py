@@ -57,13 +57,13 @@ class ASEDriver(Dummy_driver):
     def check_parameters(self):
         """Check the arguments required to run the driver
 
-        This loads the potential and atoms template in metatensor
+        This loads the potential and atoms template for ASE
         """
 
         self.template_ase = read(self.template)
         self.ase_calculator = None
 
-    def __call__(self, cell, pos):
+    def compute_structure(self, cell, pos):
         """Get energies, forces, and stresses from the ASE calculator
         This routine assumes that the client will take positions
         in angstrom, and return energies in electronvolt, and forces
