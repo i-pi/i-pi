@@ -88,3 +88,12 @@ and, for ensembles
 i-pi input-batched-ensemble.xml
 ```
 
+## Model variants
+
+Metatomic allows specifying different versions of the energy output, e.g. pbe0 or r2scan 
+energies for a mixture-of-experts model. This is achieved by specifying the
+option `energy_variant:XXXX` to the initialization parameters.
+
+```bash
+i-pi input-ensemble-variant.xml
+```
