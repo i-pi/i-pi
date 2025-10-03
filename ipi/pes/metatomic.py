@@ -93,9 +93,15 @@ class MetatomicDriver(Dummy_driver):
         self.force_virial_ensemble = force_virial_ensemble
         self.non_conservative = non_conservative
         self.template = template
-        self.energy_suffix = ( "" if energy_variant is None else f"/{energy_variant}" )
-        self.non_conservative_suffix = ( self.energy_suffix if non_conservative_variant is None else f"/{non_conservative_variant}" )
-        self.ensemble_suffix = ( self.energy_suffix if ensemble_variant is None else f"/{ensemble_variant}" )
+        self.energy_suffix = "" if energy_variant is None else f"/{energy_variant}"
+        self.non_conservative_suffix = (
+            self.energy_suffix
+            if non_conservative_variant is None
+            else f"/{non_conservative_variant}"
+        )
+        self.ensemble_suffix = (
+            self.energy_suffix if ensemble_variant is None else f"/{ensemble_variant}"
+        )
 
         super().__init__(*args, **kwargs)
 
@@ -160,10 +166,12 @@ class MetatomicDriver(Dummy_driver):
                     "this model does not support non-conservative forces. "
                 )
             else:
-                outputs[f"non_conservative_forces{self.non_conservative_suffix}"] = mta.ModelOutput(
-                    quantity="force",
-                    unit="eV/Angstrom",
-                    per_atom=True,
+                outputs[f"non_conservative_forces{self.non_conservative_suffix}"] = (
+                    mta.ModelOutput(
+                        quantity="force",
+                        unit="eV/Angstrom",
+                        per_atom=True,
+                    )
                 )
             if "non_conservative_stress" not in self.model.capabilities().outputs:
                 warnings.warn(
@@ -173,10 +181,12 @@ class MetatomicDriver(Dummy_driver):
                     "them."
                 )
             else:
-                outputs[f"non_conservative_stress{self.non_conservative_suffix}"] = mta.ModelOutput(
-                    quantity="pressure",
-                    unit="eV/Angstrom^3",
-                    per_atom=False,
+                outputs[f"non_conservative_stress{self.non_conservative_suffix}"] = (
+                    mta.ModelOutput(
+                        quantity="pressure",
+                        unit="eV/Angstrom^3",
+                        per_atom=False,
+                    )
                 )
 
         if self.energy_ensemble:
@@ -231,9 +241,17 @@ class MetatomicDriver(Dummy_driver):
         energy_tensor = outputs[f"energy{self.energy_suffix}"].block().values
 
         if self.non_conservative:
-            forces_tensor = outputs[f"non_conservative_forces{self.non_conservative_suffix}"].block().values
+            forces_tensor = (
+                outputs[f"non_conservative_forces{self.non_conservative_suffix}"]
+                .block()
+                .values
+            )
             if "non_conservative_stress" in outputs:
-                stresses_tensor = outputs[f"non_conservative_stress{self.non_conservative_suffix}"].block().values
+                stresses_tensor = (
+                    outputs[f"non_conservative_stress{self.non_conservative_suffix}"]
+                    .block()
+                    .values
+                )
             else:
                 stresses_tensor = torch.full(
                     (num_systems, 3, 3),
@@ -292,7 +310,9 @@ class MetatomicDriver(Dummy_driver):
         extras_dicts = [{} for _ in range(num_systems)]
 
         if self.energy_ensemble:
-            energy_ensembles_tensor = outputs[f"energy_ensemble{self.ensemble_suffix}"].block().values
+            energy_ensembles_tensor = (
+                outputs[f"energy_ensemble{self.ensemble_suffix}"].block().values
+            )
             energy_ensembles = unit_to_internal(
                 "energy",
                 "electronvolt",
