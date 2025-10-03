@@ -1,9 +1,5 @@
 """An interface for the [MACE](https://github.com/ACEsuit/mace) calculator"""
 
-from ipi.pes.tools import gpu_oversubscription
-
-gpu_oversubscription()
-
 import json
 
 from .ase import ASEDriver
