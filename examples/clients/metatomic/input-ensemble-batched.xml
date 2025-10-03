@@ -15,7 +15,8 @@
 
 <ffdirect name='driver'>
     <pes> metatomic </pes>
-    <parameters> {template:nickel.xyz,model:nickel-lj.pt,device:cpu,energy_ensemble:True, force_virial_ensemble:True} </parameters>
+    <parameters> {template:nickel.xyz,model:nickel-lj.pt,device:cpu,energy_ensemble:True,
+                  force_virial_ensemble:True,uncertainty_threshold:1e-2} </parameters>
     <batch_size> 2 </batch_size>
 </ffdirect>
 <system>

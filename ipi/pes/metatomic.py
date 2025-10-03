@@ -5,6 +5,7 @@ used to perform calculations with arbitrary machine learning potentials.
 
 import json
 import warnings
+import numpy as np
 
 from ipi.utils.units import unit_to_internal, unit_to_user
 from .dummy import Dummy_driver
@@ -50,6 +51,15 @@ class MetatomicDriver(Dummy_driver):
             computationally expensive)
         :param non_conservative: bool, optional, whether to use non-conservative forces
             and stresses
+        :param energy_variant: string, optional, which energy variant to pick for
+            a multi-head model
+        :param non_conservative_variant: string, optional, which energy variant to pick for
+            a multi-head model (pick a different version for the direct predictions
+        :param uncertainty_variant: string, optional, which energy variant to pick for
+            a multi-head model (pick a different version than energy_variant for uncertainty and ensemble)
+        :param uncertainty_threshold: float, optional, whether the model should
+            estimate uncertainty and warn whenever it exceeds a selected threshold
+            (in eV/atom)
     """
 
     def __init__(
@@ -65,6 +75,7 @@ class MetatomicDriver(Dummy_driver):
         energy_variant=None,
         non_conservative_variant=None,
         uncertainty_variant=None,
+        uncertainty_threshold=0.0,
         *args,
         **kwargs,
     ):
@@ -105,6 +116,9 @@ class MetatomicDriver(Dummy_driver):
             else f"/{uncertainty_variant}"
         )
 
+        self.uncertainty_threshold = unit_to_internal(
+            "energy", "electronvolt", uncertainty_threshold
+        )
         super().__init__(*args, **kwargs)
 
         info(f"Model arguments:\n{args}\n{kwargs}", self.verbose)
@@ -119,7 +133,7 @@ class MetatomicDriver(Dummy_driver):
         metatomic_major = int(metatomic_major)
         metatomic_minor = int(metatomic_minor)
 
-        if metatomic_major != 0 or metatomic_minor != 1:
+        if metatomic_major != 0 or metatomic_minor != 2:
             raise ImportError(
                 "this code is only compatible with metatomic-torch == v0.1, "
                 f"found version v{mta.__version__} at '{mta.__file__}'"
@@ -191,12 +205,13 @@ class MetatomicDriver(Dummy_driver):
                     )
                 )
 
-        if self.energy_ensemble:
+        if self.uncertainty_threshold > 0.0:
             outputs[f"energy_uncertainty{self.uncertainty_suffix}"] = mta.ModelOutput(
                 quantity="energy",
                 unit="eV",
-                per_atom=False,
+                per_atom=True,
             )
+        if self.energy_ensemble:
             outputs[f"energy_ensemble{self.uncertainty_suffix}"] = mta.ModelOutput(
                 quantity="energy",
                 unit="eV",
@@ -310,6 +325,28 @@ class MetatomicDriver(Dummy_driver):
         virials = (virials + virials.swapaxes(1, 2)) * 0.5
 
         extras_dicts = [{} for _ in range(num_systems)]
+
+        if self.uncertainty_threshold > 0.0:
+            energy_uncertainty_tensor = (
+                outputs[f"energy_uncertainty{self.uncertainty_suffix}"].block().values
+            )
+
+            energy_uncertainty = unit_to_internal(
+                "energy",
+                "electronvolt",
+                energy_uncertainty_tensor.detach()
+                .to(device="cpu", dtype=torch.float64)
+                .numpy(),
+            )
+
+            for extras_dict, energy_uq in zip(extras_dicts, energy_uncertainty):
+                extras_dict["energy_uncertainty"] = list(energy_uq)
+                if np.max(energy_uq) > self.uncertainty_threshold:
+                    warning(
+                        f"the estimated atomic energy uncertainty {27.211*np.max(energy_uq):.4f} eV/atom "
+                        f"exceeds the selected threshold of {27.211*self.uncertainty_threshold:.4f} eV/atom",
+                        verbosity.medium,
+                    )
 
         if self.energy_ensemble:
             energy_ensembles_tensor = (
