@@ -64,7 +64,7 @@ class MetatomicDriver(Dummy_driver):
         non_conservative=False,
         energy_variant=None,
         non_conservative_variant=None,
-        ensemble_variant=None,
+        uncertainty_variant=None,
         *args,
         **kwargs,
     ):
@@ -99,8 +99,10 @@ class MetatomicDriver(Dummy_driver):
             if non_conservative_variant is None
             else f"/{non_conservative_variant}"
         )
-        self.ensemble_suffix = (
-            self.energy_suffix if ensemble_variant is None else f"/{ensemble_variant}"
+        self.uncertainty_suffix = (
+            self.energy_suffix
+            if uncertainty_variant is None
+            else f"/{uncertainty_variant}"
         )
 
         super().__init__(*args, **kwargs)
@@ -190,12 +192,12 @@ class MetatomicDriver(Dummy_driver):
                 )
 
         if self.energy_ensemble:
-            outputs[f"energy_uncertainty{self.ensemble_suffix}"] = mta.ModelOutput(
+            outputs[f"energy_uncertainty{self.uncertainty_suffix}"] = mta.ModelOutput(
                 quantity="energy",
                 unit="eV",
                 per_atom=False,
             )
-            outputs[f"energy_ensemble{self.ensemble_suffix}"] = mta.ModelOutput(
+            outputs[f"energy_ensemble{self.uncertainty_suffix}"] = mta.ModelOutput(
                 quantity="energy",
                 unit="eV",
                 per_atom=False,
@@ -311,7 +313,7 @@ class MetatomicDriver(Dummy_driver):
 
         if self.energy_ensemble:
             energy_ensembles_tensor = (
-                outputs[f"energy_ensemble{self.ensemble_suffix}"].block().values
+                outputs[f"energy_ensemble{self.uncertainty_suffix}"].block().values
             )
             energy_ensembles = unit_to_internal(
                 "energy",
@@ -360,7 +362,7 @@ class MetatomicDriver(Dummy_driver):
                             new_systems,
                             self.evaluation_options,
                             check_consistency=self.check_consistency,
-                        )[f"energy_ensemble{self.ensemble_suffix}"]
+                        )[f"energy_ensemble{self.uncertainty_suffix}"]
                         .block()
                         .values.sum(0)
                     )
