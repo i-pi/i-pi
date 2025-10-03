@@ -119,7 +119,7 @@ class MetatomicDriver(Dummy_driver):
 
         if metatomic_major != 0 or metatomic_minor != 2:
             raise ImportError(
-                "this code is only compatible with metatomic-torch == v0.2, "
+                "this code is only compatible with metatomic-torch == v0.1, "
                 f"found version v{mta.__version__} at '{mta.__file__}'"
             )
 
