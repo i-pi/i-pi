@@ -117,7 +117,7 @@ class MetatomicDriver(Dummy_driver):
         metatomic_major = int(metatomic_major)
         metatomic_minor = int(metatomic_minor)
 
-        if metatomic_major != 0 or metatomic_minor != 2:
+        if metatomic_major != 0 or metatomic_minor != 1:
             raise ImportError(
                 "this code is only compatible with metatomic-torch == v0.1, "
                 f"found version v{mta.__version__} at '{mta.__file__}'"
