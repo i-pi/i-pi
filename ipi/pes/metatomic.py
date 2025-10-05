@@ -133,7 +133,7 @@ class MetatomicDriver(Dummy_driver):
         metatomic_major = int(metatomic_major)
         metatomic_minor = int(metatomic_minor)
 
-        if metatomic_major != 0 or metatomic_minor != 2:
+        if metatomic_major != 0 or metatomic_minor != 1:
             raise ImportError(
                 "this code is only compatible with metatomic-torch == v0.1, "
                 f"found version v{mta.__version__} at '{mta.__file__}'"
@@ -205,13 +205,12 @@ class MetatomicDriver(Dummy_driver):
                     )
                 )
 
-        if self.uncertainty_threshold > 0.0:
+        if self.energy_ensemble or self.uncertainty_threshold > 0.0:
             outputs[f"energy_uncertainty{self.uncertainty_suffix}"] = mta.ModelOutput(
                 quantity="energy",
                 unit="eV",
                 per_atom=True,
             )
-        if self.energy_ensemble:
             outputs[f"energy_ensemble{self.uncertainty_suffix}"] = mta.ModelOutput(
                 quantity="energy",
                 unit="eV",
@@ -337,7 +336,7 @@ class MetatomicDriver(Dummy_driver):
                 energy_uncertainty_tensor.detach()
                 .to(device="cpu", dtype=torch.float64)
                 .numpy(),
-            )
+            ).reshape(num_systems,-1)
 
             for extras_dict, energy_uq in zip(extras_dicts, energy_uncertainty):
                 extras_dict["energy_uncertainty"] = list(energy_uq)
