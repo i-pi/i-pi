@@ -1,0 +1,516 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Program Overview" href="introduction.html" />
+
+    <link rel="shortcut icon" href="_static/favicon-ipi.png"/><!-- Generated with Sphinx 7.1.2 and Furo 2024.08.06 -->
+        <title>i-PI documentation pages</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=302659d7" />
+    <link rel="stylesheet" type="text/css" href="_static/custom_styles.css?v=78740f61" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="#"><div class="brand">i-PI documentation pages</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon no-toc" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="#">
+  
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="_static/ipi-logo.svg" alt="Logo"/>
+  </div>
+  
+  <span class="sidebar-brand-text">i-PI documentation pages</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Program Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features.html">Core features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="units.html">Internal units and conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input-files.html">Input files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input-tags.html">Input file tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output-files.html">Output files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output-tags.html">Output file tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="python.html">Tools and python utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="distributed.html">Distributed execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">A simple tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="onlinereso.html">Tutorials, recipes, and on-line resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently asked questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bibliography.html">Bibliography</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon no-toc" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="welcome-to-i-pi-s-documentation">
+<h1>Welcome to i-PI’s documentation!<a class="headerlink" href="#welcome-to-i-pi-s-documentation" title="Permalink to this heading">¶</a></h1>
+<p>i-PI is a force engine written in Python 3 with the goal of performing standard and advanced molecular simulations.
+The implementation is based on a client-server paradigm, where i-PI acts
+as the server and deals with the propagation of the nuclear dynamics,
+whereas the calculation of the potential energy, forces and the
+potential energy part of the pressure virial is delegated to one or more
+instances of an external code, acting as clients.
+Thus, i-PI effectively decouples the problem of evolving the
+ionic positions and the problem of computing the system-specific properties</p>
+<p>i-PI was initially developed for Path Integral Molecular
+Dynamics (PIMD) simulations, and contains probably the most
+comprehensive array of PIMD techniques. However, it has evolved over time to become
+a general-purpose code with methods ranging from phonon calculators to replica exchange molecular dynamics.</p>
+<p>The implementation of i-PI is efficient enough that, by tuning the socket parameters and avoiding
+excessive I/O, it can be used to run simulations using empirical forcefields or machine learning
+interatomic potentials with tens of thousands of atoms with only a small overhead.</p>
+<p>This documentation is structured as follows:</p>
+<div class="toctree-wrapper compound">
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Program Overview</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#communication-protocol">Communication protocol</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#force-evaluation">Force evaluation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#automated-evaluation-depend-objects">Automated evaluation (depend objects)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction.html#contributors">Contributors</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="getting-started.html#installing-i-pi">Installing i-PI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started.html#installing-clients">Installing clients</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started.html#running-i-pi">Running i-PI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started.html#testing-the-install">Testing the install</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="features.html">Core features</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="features.html#bosonic-and-fermionic-path-integral-molecular-dynamics">Bosonic and Fermionic Path Integral Molecular Dynamics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#cavity-molecular-dynamics-for-polaritonics">Cavity Molecular Dynamics for Polaritonics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#committee-models">Committee models</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#direct-estimators-for-isotope-fractionation">Direct Estimators for Isotope Fractionation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#fast-forward-langevin-thermostat">Fast-Forward Langevin Thermostat</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#finite-differences-suzuki-chin-pimd">Finite-differences Suzuki-Chin PIMD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#finite-differences-vibrational-analysis">Finite-differences Vibrational Analysis</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#free-energy-perturbation-estimators-for-isotope-fractionation">Free-energy Perturbation Estimators for Isotope Fractionation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#generalized-langevin-equation-thermostats">Generalized Langevin Equation Thermostats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#geometry-optimization">Geometry Optimization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#langevin-sampling-for-noisy-or-dissipative-forces">Langevin Sampling for Noisy or Dissipative Forces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#multiple-time-step-integrators">Multiple Time Step integrators</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#open-path-integrals">Open Path Integrals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#path-integral-gles">Path Integral GLEs</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#path-integral-molecular-dynamics">Path Integral Molecular Dynamics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#path-integrals-molecular-dynamics-at-constant-pressure">Path Integrals Molecular Dynamics at Constant Pressure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#path-integral-langevin-equation-thermostats">Path Integral Langevin Equation Thermostats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#perturbed-path-integrals">Perturbed Path Integrals</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#replica-exchange-md">Replica Exchange MD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#quantum-alchemical-transformation">Quantum Alchemical Transformation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#reweighting-based-high-order-pimd">Reweighting-based high-order PIMD</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#ring-polymer-contraction">Ring-Polymer Contraction</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#ring-polymer-instantons">Ring-polymer Instantons</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#thermodynamic-integrations">Thermodynamic Integrations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="features.html#thermostatted-ring-polymer-molecular-dynamics">Thermostatted Ring-polymer Molecular Dynamics</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="units.html">Internal units and conventions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="units.html#everything-is-a-u">Everything is a.u.</a></li>
+<li class="toctree-l2"><a class="reference internal" href="units.html#lattice-parameters">Lattice parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="units.html#the-socket-flag-pbc-true-or-pbc-false">The socket flag <code class="docutils literal notranslate"><span class="pre">pbc=True</span></code> or <code class="docutils literal notranslate"><span class="pre">pbc=False</span></code></a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="input-files.html">Input files</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="input-files.html#input-file-format-and-structure">Input file format and structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-files.html#initialization-section">Initialization section</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="input-tags.html">Input file tags</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#al6xxx-kmc">al6xxx_kmc</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#alchemy">alchemy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#atoms">atoms</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#atomswap">atomswap</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#barostat">barostat</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#beads">beads</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#bec">bec</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#bias">bias</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#bosons">bosons</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#cell">cell</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#checkpoint">checkpoint</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#constrained-dynamics">constrained_dynamics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#constraint">constraint</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#csolver">csolver</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#dmd">dmd</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#driven-dynamics">driven_dynamics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#dynamics">dynamics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#efield">efield</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#ensemble">ensemble</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#ffcavphsocket">ffcavphsocket</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#ffcommittee">ffcommittee</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#ffdebye">ffdebye</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#ffdirect">ffdirect</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#ffdmd">ffdmd</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#fflj">fflj</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#ffplumed">ffplumed</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#ffsgdml">ffsgdml</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#ffsocket">ffsocket</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#ffyaff">ffyaff</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#file">file</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#force">force</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#forcefield">forcefield</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#forces">forces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#frequencies">frequencies</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#gle">gle</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#h0">h0</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#init-cell">init_cell</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#initialize">initialize</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#instanton">instanton</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#labels">labels</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#masses">masses</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#metad">metad</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#momenta">momenta</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#motion">motion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#neb-optimizer">neb_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#normal-modes">normal_modes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#normalmodes">normalmodes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#optimizer">optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#output">output</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#p-ramp">p_ramp</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#planetary">planetary</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#positions">positions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#prng">prng</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#properties">properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#remd">remd</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#scp">scp</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#simulation">simulation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#smotion">smotion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#string-optimizer">string_optimizer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#system">system</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#system-template">system_template</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#t-ramp">t_ramp</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#thermostat">thermostat</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#trajectory">trajectory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#velocities">velocities</a></li>
+<li class="toctree-l2"><a class="reference internal" href="input-tags.html#vibrations">vibrations</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="output-files.html">Output files</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="output-files.html#properties">Properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="output-files.html#trajectory-files">Trajectory files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="output-files.html#checkpoint-files">Checkpoint files</a></li>
+<li class="toctree-l2"><a class="reference internal" href="output-files.html#reading-output-files">Reading output files</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="output-tags.html">Output file tags</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="output-tags.html#list-of-available-properties">List of available properties</a></li>
+<li class="toctree-l2"><a class="reference internal" href="output-tags.html#list-of-available-trajectory-files">List of available trajectory files</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="python.html">Tools and python utilities</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="python.html#post-processing-tools">Post-processing tools</a></li>
+<li class="toctree-l2"><a class="reference internal" href="python.html#parsing">Parsing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="python.html#scripting-i-pi">Scripting i-PI</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="distributed.html">Distributed execution</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="distributed.html#communication-protocol">Communication protocol</a></li>
+<li class="toctree-l2"><a class="reference internal" href="distributed.html#parallelization">Parallelization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="distributed.html#sockets">Sockets</a></li>
+<li class="toctree-l2"><a class="reference internal" href="distributed.html#running-i-pi-over-the-network">Running i-PI over the network</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">A simple tutorial</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="tutorials.html#part-1-nvt-equilibration-run">Part 1 - <em>NVT</em> Equilibration run</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials.html#part-2-npt-simulation">Part 2 - <em>NPT</em> simulation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="tutorials.html#part-3-a-fully-converged-simulation">Part 3 - A fully converged simulation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="onlinereso.html">Tutorials, recipes, and on-line resources</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="onlinereso.html#massive-open-online-course-mooc">Massive Open Online Course (MOOC)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="onlinereso.html#i-pi-resources">i-PI resources</a></li>
+<li class="toctree-l2"><a class="reference internal" href="onlinereso.html#examples-and-demos">Examples and demos</a></li>
+<li class="toctree-l2"><a class="reference internal" href="onlinereso.html#tutorials">Tutorials</a></li>
+<li class="toctree-l2"><a class="reference internal" href="onlinereso.html#atomistic-recipes">Atomistic recipes</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently asked questions</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="faq.html#where-to-ask-for-help">Where to ask for help?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="faq.html#which-units-does-i-pi-use">Which units does i-PI use?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="faq.html#how-to-build-i-pi">How to build i-PI?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="faq.html#how-to-run-i-pi-with-the-client-code-name">How to run i-PI with the client code &lt;name&gt;?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="faq.html#how-to-run-i-pi-with-vasp">How to run i-PI with VASP?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="faq.html#how-to-run-i-pi-on-a-cluster">How to run i-PI on a cluster?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="faq.html#how-to-setup-colored-noise-thermostats-with-meaningful-parameters">How to setup colored-noise thermostats with meaningful parameters?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="faq.html#how-to-perform-geometry-optimization">How to perform geometry optimization?</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#input-errors">Input errors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#initialization-errors">Initialization errors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#output-errors">Output errors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#socket-errors">Socket errors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#mathematical-errors">Mathematical errors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="troubleshooting.html#i-pi-is-slow">I-PI is slow!</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#useful-resources">Useful resources</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#what-we-expect-from-a-contribution">What we expect from a contribution</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#creating-a-regression-test">Creating a regression test</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#adding-features-involving-a-client-code">Adding features involving a client code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#getting-recognition-for-your-contribution">Getting recognition for your contribution</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#contributing-with-a-bug-report">Contributing with a bug report</a></li>
+<li class="toctree-l2"><a class="reference internal" href="contributing.html#questions-related-to-i-pi-usage">Questions related to i-PI usage</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="bibliography.html">Bibliography</a></li>
+</ul>
+</div>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="introduction.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Program Overview</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2021, The i-PI developers
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer no-toc">
+      
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=34e14329"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="_static/scripts/furo.js?v=5fa4622c"></script>
+    </body>
+</html>

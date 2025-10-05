@@ -1,0 +1,635 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Tools and python utilities" href="python.html" /><link rel="prev" title="Output files" href="output-files.html" />
+
+    <link rel="shortcut icon" href="_static/favicon-ipi.png"/><!-- Generated with Sphinx 7.1.2 and Furo 2024.08.06 -->
+        <title>Output file tags - i-PI documentation pages</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=302659d7" />
+    <link rel="stylesheet" type="text/css" href="_static/custom_styles.css?v=78740f61" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">i-PI documentation pages</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
+  
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="_static/ipi-logo.svg" alt="Logo"/>
+  </div>
+  
+  <span class="sidebar-brand-text">i-PI documentation pages</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Program Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features.html">Core features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="units.html">Internal units and conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input-files.html">Input files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input-tags.html">Input file tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output-files.html">Output files</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Output file tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="python.html">Tools and python utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="distributed.html">Distributed execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">A simple tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="onlinereso.html">Tutorials, recipes, and on-line resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently asked questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bibliography.html">Bibliography</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="output-file-tags">
+<span id="outputs"></span><h1>Output file tags<a class="headerlink" href="#output-file-tags" title="Permalink to this heading">¶</a></h1>
+<section id="list-of-available-properties">
+<span id="property-list"></span><h2>List of available properties<a class="headerlink" href="#list-of-available-properties" title="Permalink to this heading">¶</a></h2>
+<p>The following list briefly describes all the property names that can be listed in
+the <a class="reference internal" href="input-tags.html#properties"><span class="std std-ref">properties</span></a> tag of the <a class="reference internal" href="input-files.html#inputfiles"><span class="std std-ref">Input files</span></a>, and which will be written in
+the output files.</p>
+<p><strong>Eenvelope</strong>:
+The (gaussian) envelope function of the external applied electric field (values go from 0 to 1).</p>
+<p><strong>Efield</strong>:
+The external applied electric field (x,y,z components in cartesian axes).</p>
+<p><em>dimension: electric-field; size: 3;</em></p>
+<p><strong>atom_f</strong>:
+The force (x,y,z) acting on a particle given its index. Takes arguments index and bead (both zero based). If bead is not specified, refers to the centroid.</p>
+<p><em>dimension: force; size: 3;</em></p>
+<p><strong>atom_f_path</strong>:
+The forces acting on all the beads of a particle given its index. Takes arguments index and bead (both zero based). If bead is not specified, refers to the centroid.</p>
+<p><em>dimension: length;</em></p>
+<p><strong>atom_p</strong>:
+The momentum (x,y,z) of a particle given its index. Takes arguments index and bead (both zero based). If bead is not specified, refers to the centroid.</p>
+<p><em>dimension: momentum; size: 3;</em></p>
+<p><strong>atom_v</strong>:
+The velocity (x,y,z) of a particle given its index. Takes arguments index and bead (both zero based). If bead is not specified, refers to the centroid.</p>
+<p><em>dimension: velocity; size: 3;</em></p>
+<p><strong>atom_x</strong>:
+The position (x,y,z) of a particle given its index. Takes arguments index and bead (both zero based). If bead is not specified, refers to the centroid.</p>
+<p><em>dimension: length; size: 3;</em></p>
+<p><strong>atom_x_path</strong>:
+The positions of all the beads of a particle given its index. Takes an argument index (zero based).</p>
+<p><em>dimension: length;</em></p>
+<p><strong>bead_potentials</strong>:
+The physical system potential energy of each bead.</p>
+<p><em>dimension: energy; size: nbeads;</em></p>
+<p><strong>bweights_component</strong>:
+The weight associated one part of the hamiltonian. Takes one mandatory argument index (zero-based) that indicates for which component of the hamiltonian the weight must be returned.</p>
+<p><strong>cell_abcABC</strong>:
+The lengths of the cell vectors and the angles between them in degrees as a list of the form [a, b, c, A, B, C], where A is the angle between the sides of length b and c in degrees, and B and C are defined similarly. Since the output mixes different units, a, b and c can only be output in bohr.</p>
+<p><em>size: 6;</em></p>
+<p><strong>cell_h</strong>:
+The simulation cell as a matrix. Returns the 6 non-zero components in the form [xx, yy, zz, xy, xz, yz].</p>
+<p><em>dimension: length; size: 6;</em></p>
+<p><strong>chin_weight</strong>:
+The 3 numbers output are 1) the logarithm of the weighting factor -beta_P delta H, 2) the square of the logarithm, and 3) the weighting factor</p>
+<p><em>size: 3;</em></p>
+<p><strong>conserved</strong>:
+The value of the conserved energy quantity per bead.</p>
+<p><em>dimension: energy;</em></p>
+<p><strong>density</strong>:
+The mass density of the physical system.</p>
+<p><em>dimension: density;</em></p>
+<p><strong>dipole</strong>:
+The beads-averaged electric dipole moment or the electric dipole moment of a single bead (x,y,z components in cartesian axes).</p>
+<p><em>dimension: electric-dipole; size: 3;</em></p>
+<p><strong>displacedpath</strong>:
+This is the estimator for the end-to-end distribution, that can be used to calculate the particle momentum distribution as described in in L. Lin, J. A. Morrone, R. Car and M. Parrinello, 105, 110602 (2010), Phys. Rev. Lett. Takes arguments ‘ux’, ‘uy’ and ‘uz’, which are the components of the path opening vector. Also takes an argument ‘atom’, which can be either an atom label or index (zero based) to specify which species to find the end-to-end distribution estimator for. If not specified, all atoms are used. Note that one atom is computed at a time, and that each path opening operation costs as much as a PIMD step. Returns the average over the selected atoms of the estimator of exp(-U(u)) for each frame.</p>
+<p><strong>ensemble_bias</strong>:
+The bias applied to the current ensemble</p>
+<p><em>dimension: energy;</em></p>
+<p><strong>ensemble_lp</strong>:
+The log of the ensemble probability</p>
+<p><strong>ensemble_pressure</strong>:
+The target pressure for the current ensemble</p>
+<p><em>dimension: pressure;</em></p>
+<p><strong>ensemble_temperature</strong>:
+The target temperature for the current ensemble</p>
+<p><em>dimension: temperature;</em></p>
+<p><strong>exchange_all_prob</strong>:
+Probability of the ring polymer exchange configuration where all atoms are connected. It is divided by 1/N, so the number is between 0 and N, while the asymptotic value at low temperatures is 1.</p>
+<p><em>size: 1;</em></p>
+<p><strong>exchange_distinct_prob</strong>:
+Probability of the distinguishable ring polymer configuration, where each atom has its own separate ring polymer. A number between 0 and 1, tends to 1 in high temperatures, which indicates that bosonic exchange is negligible</p>
+<p><em>size: 1;</em></p>
+<p><strong>fermionic_sign</strong>:
+Estimator for the fermionic sign, also used for reweighting fermionic observables. Decreases exponentially with beta and the number of particles, but if not too large, can be used to recover fermionic statistics from bosonic simulations, see doi:10.1063/5.0008720.</p>
+<p><em>size: 1;</em></p>
+<p><strong>forcemod</strong>:
+The modulus of the force. With the optional argument ‘bead’ will print the force associated with the specified bead.</p>
+<p><em>dimension: force;</em></p>
+<p><strong>hweights_component</strong>:
+The weight associated one part of the hamiltonian. Takes one mandatory argument index (zero-based) that indicates for which component of the hamiltonian the weight must be returned.</p>
+<p><strong>interaction_energy</strong>:
+The value of the interaction energy due to the external electric field.</p>
+<p><em>dimension: energy;</em></p>
+<p><strong>isotope_scfep</strong>:
+Returns the (many) terms needed to compute the scaled-coordinates free energy perturbation scaled mass KE estimator (M. Ceriotti, T. Markland, J. Chem. Phys. 138, 014112 (2013)). Takes two arguments, ‘alpha’ and ‘atom’, which give the scaled mass parameter and the atom of interest respectively, and default to ‘1.0’ and ‘’. The ‘atom’ argument can either be the label of a particular kind of atom, or an index (zero based) of a specific atom. This property computes, for each atom in the selection, an estimator for the kinetic energy it would have had if it had the mass scaled by alpha. The 7 numbers output are the average over the selected atoms of the log of the weights &lt;h&gt;, the average of the squares &lt;h**2&gt;, the average of the un-weighted scaled-coordinates kinetic energies &lt;T_CV&gt; and of the squares &lt;T_CV**2&gt;, the log sum of the weights LW=ln(sum(e**(-h))), the sum of the re-weighted kinetic energies, stored as a log modulus and sign, LTW=ln(abs(sum(T_CV e**(-h)))) STW=sign(sum(T_CV e**(-h))). In practice, the best estimate of the estimator can be computed as [sum_i exp(LTW_i)*STW_i]/[sum_i exp(LW_i)]. The other terms can be used to compute diagnostics for the statistical accuracy of the re-weighting process. Note that evaluating this estimator costs as much as a PIMD step for each atom in the list. The elements that are output have different units, so the output can be only in atomic units.</p>
+<p><em>size: 7;</em></p>
+<p><strong>isotope_tdfep</strong>:
+Returns the (many) terms needed to compute the thermodynamic free energy perturbation scaled mass KE estimator (M. Ceriotti, T. Markland, J. Chem. Phys. 138, 014112 (2013)). Takes two arguments, ‘alpha’ and ‘atom’, which give the scaled mass parameter and the atom of interest respectively, and default to ‘1.0’ and ‘’. The ‘atom’ argument can either be the label of a particular kind of atom, or an index (zero based) of a specific atom. This property computes, for each atom in the selection, an estimator for the kinetic energy it would have had if it had the mass scaled by alpha. The 7 numbers output are the average over the selected atoms of the log of the weights &lt;h&gt;, the average of the squares &lt;h**2&gt;, the average of the un-weighted scaled-coordinates kinetic energies &lt;T_CV&gt; and of the squares &lt;T_CV**2&gt;, the log sum of the weights LW=ln(sum(e**(-h))), the sum of the re-weighted kinetic energies, stored as a log modulus and sign, LTW=ln(abs(sum(T_CV e**(-h)))) STW=sign(sum(T_CV e**(-h))). In practice, the best estimate of the estimator can be computed as [sum_i exp(LTW_i)*STW_i]/[sum_i exp(LW_i)]. The other terms can be used to compute diagnostics for the statistical accuracy of the re-weighting process. Evaluating this estimator is inexpensive, but typically the statistical accuracy is worse than with the scaled coordinates estimator. The elements that are output have different units, so the output can be only in atomic units.</p>
+<p><em>size: 7;</em></p>
+<p><strong>isotope_zetasc</strong>:
+Returns the (many) terms needed to directly compute the relative probablity of isotope substitution in two different systems/phases. Takes four arguments, ‘alpha’ , which gives the scaled mass parameter and default to ‘1.0’, and ‘atom’, which is the label or index of a type of atoms. The 3 numbers output are 1) the average over the excess potential energy for scaled coordinates &lt;sc&gt;, 2) the average of the squares of the excess potential energy &lt;sc**2&gt;, and 3) the average of the exponential of excess potential energy &lt;exp(-beta*sc)&gt;</p>
+<p><em>size: 3;</em></p>
+<p><strong>isotope_zetasc_4th</strong>:
+Returns the (many) terms needed to compute the scaled-coordinates fourth-order direct estimator. Takes two arguments, ‘alpha’ , which gives the scaled mass parameter and default to ‘1.0’, and ‘atom’, which is the label or index of a type of atoms. The 5 numbers output are 1) the average over the excess potential energy for an isotope atom substitution &lt;sc&gt;, 2) the average of the squares of the excess potential energy &lt;sc**2&gt;, and 3) the average of the exponential of excess potential energy &lt;exp(-beta*sc)&gt;, and 4-5) Suzuki-Chin and Takahashi-Imada 4th-order reweighing term</p>
+<p><em>size: 5;</em></p>
+<p><strong>isotope_zetatd</strong>:
+Returns the (many) terms needed to directly compute the relative probablity of isotope substitution in two different systems/phases. Takes two arguments, ‘alpha’ , which gives the scaled mass parameter and default to ‘1.0’, and ‘atom’, which is the label or index of a type of atoms. The 3 numbers output are 1) the average over the excess spring energy for an isotope atom substitution &lt;spr&gt;, 2) the average of the squares of the excess spring energy &lt;spr**2&gt;, and 3) the average of the exponential of excess spring energy &lt;exp(-beta*spr)&gt;</p>
+<p><em>size: 3;</em></p>
+<p><strong>isotope_zetatd_4th</strong>:
+Returns the (many) terms needed to compute the thermodynamic fourth-order direct estimator. Takes two arguments, ‘alpha’ , which gives the scaled mass parameter and default to ‘1.0’, and ‘atom’, which is the label or index of a type of atoms. The 5 numbers output are 1) the average over the excess spring energy for an isotope atom substitution &lt;spr&gt;, 2) the average of the squares of the excess spring energy &lt;spr**2&gt;, and 3) the average of the exponential of excess spring energy &lt;exp(-beta*spr)&gt;, and 4-5) Suzuki-Chin and Takahashi-Imada 4th-order reweighing term</p>
+<p><em>size: 5;</em></p>
+<p><strong>kinetic_cv</strong>:
+The centroid-virial quantum kinetic energy of the physical system. Takes an argument ‘atom’, which can be either an atom label or index (zero based) to specify which species to find the kinetic energy of. If not specified, all atoms are used.</p>
+<p><em>dimension: energy;</em></p>
+<p><strong>kinetic_ij</strong>:
+The centroid-virial off-diagonal quantum kinetic energy tensor of the physical system. This computes the cross terms between atoms i and atom j, whose average is &lt;p_i*p_j/(2*sqrt(m_i*m_j))&gt;. Returns the 6 independent components in the form [xx, yy, zz, xy, xz, yz]. Takes arguments ‘i’ and ‘j’, which give the indices of the two desired atoms.</p>
+<p><em>dimension: energy; size: 6;</em></p>
+<p><strong>kinetic_md</strong>:
+The kinetic energy of the (extended) classical system. Takes optional arguments ‘atom’, ‘bead’ or ‘nm’. ‘atom’ can be either an atom label or an index (zero-based) to specify which species or individual atom to output the kinetic energy of. If not specified, all atoms are used and averaged. ‘bead’ or ‘nm’ specify whether the kinetic energy should be computed for a single bead or normal mode. If not specified, all atoms/beads/nm are used.</p>
+<p><em>dimension: energy;</em></p>
+<p><strong>kinetic_opsc</strong>:
+The centroid-virial quantum kinetic energy of the physical system. Takes an argument ‘atom’, which can be either an atom label or index (zero based) to specify which species to find the kinetic energy of. If not specified, all atoms are used.</p>
+<p><em>dimension: energy;</em></p>
+<p><strong>kinetic_prsc</strong>:
+The Suzuki-Chin primitive estimator of the quantum kinetic energy of the physical system</p>
+<p><em>dimension: energy;</em></p>
+<p><strong>kinetic_td</strong>:
+The primitive quantum kinetic energy of the physical system. Takes an argument ‘atom’, which can be either an atom label or index (zero based) to specify which species to find the kinetic energy of. If not specified, all atoms are used.</p>
+<p><em>dimension: energy;</em></p>
+<p><strong>kinetic_tdsc</strong>:
+The Suzuki-Chin centroid-virial thermodynamic estimator of the quantum kinetic energy of the physical system. Takes an argument ‘atom’, which can be either an atom label or index (zero based) to specify which species to find the kinetic energy of. If not specified, all atoms are used.</p>
+<p><em>dimension: energy;</em></p>
+<p><strong>kinetic_tens</strong>:
+The centroid-virial quantum kinetic energy tensor of the physical system. Returns the 6 independent components in the form [xx, yy, zz, xy, xz, yz]. Takes an argument ‘atom’, which can be either an atom label or index (zero based) to specify which species to find the kinetic tensor components of. If not specified, all atoms are used.</p>
+<p><em>dimension: energy; size: 6;</em></p>
+<p><strong>kstress_cv</strong>:
+The quantum estimator for the kinetic stress tensor of the physical system. Returns the 6 independent components in the form [xx, yy, zz, xy, xz, yz].</p>
+<p><em>dimension: pressure; size: 6;</em></p>
+<p><strong>kstress_md</strong>:
+The kinetic stress tensor of the (extended) classical system. Returns the 6 independent components in the form [xx, yy, zz, xy, xz, yz].</p>
+<p><em>dimension: pressure; size: 6;</em></p>
+<p><strong>kstress_tdsc</strong>:
+The Suzuki-Chin thermodynamic estimator for pressure of the physical system.</p>
+<p><em>dimension: pressure;</em></p>
+<p><strong>pot_component</strong>:
+The contribution to the system potential from one of the force components. Takes one mandatory argument index (zero-based) that indicates which component of the potential must be returned. The optional argument ‘bead’ will print the potential associated with the specified bead (interpolated to the full ring polymer). If the potential is weighed, the weight will be applied.</p>
+<p><em>dimension: energy;</em></p>
+<p><strong>pot_component_raw</strong>:
+The contribution to the system potential from one of the force components. Takes one mandatory argument index (zero-based) that indicates which component of the potential must be returned. The optional argument ‘bead’ will print the potential associated with the specified bead, at the level of discretization of the given component. Potential weights will not be applied.</p>
+<p><em>dimension: energy;</em></p>
+<p><strong>potential</strong>:
+The physical system potential energy. With the optional argument ‘bead’ will print the potential associated with the specified bead.</p>
+<p><em>dimension: energy;</em></p>
+<p><strong>potential_opsc</strong>:
+The Suzuki-Chin operator estimator for the potential energy of the physical system.</p>
+<p><em>dimension: energy;</em></p>
+<p><strong>potential_tdsc</strong>:
+The Suzuki-chin thermodyanmic estimator for the potential energy of the physical system.</p>
+<p><em>dimension: energy;</em></p>
+<p><strong>pressure_cv</strong>:
+The quantum estimator for pressure of the physical system.</p>
+<p><em>dimension: pressure;</em></p>
+<p><strong>pressure_md</strong>:
+The pressure of the (extended) classical system.</p>
+<p><em>dimension: pressure;</em></p>
+<p><strong>pressure_tdsc</strong>:
+The Suzuki-Chin thermodynamic estimator for pressure of the physical system.</p>
+<p><em>dimension: pressure;</em></p>
+<p><strong>r_gyration</strong>:
+The average radius of gyration of the selected ring polymers. Takes an argument ‘atom’, which can be either an atom label or index (zero based) to specify which species to find the radius of gyration of. If not specified, all atoms are used and averaged.</p>
+<p><em>dimension: length;</em></p>
+<p><strong>sc_op_scaledcoords</strong>:
+Returns the estimators that are required to evaluate the scaled-coordinates estimators for total energy and heat capacity for a Suzuki-Chin high-order factorization, as described in Appendix B of J. Chem. Theory Comput. 2019, 15, 3237-3249 (2019). Returns eps_v and eps_v’, as defined in that paper. As the two estimators have a different dimensions, this can only be output in atomic units. Takes one argument, ‘fd_delta’, which gives the value of the finite difference parameter used - which defaults to -0.0001. If the value of ‘fd_delta’ is negative, then its magnitude will be reduced automatically by the code if the finite difference error becomes too large.</p>
+<p><em>size: 2;</em></p>
+<p><strong>sc_scaledcoords</strong>:
+Returns the estimators that are required to evaluate the scaled-coordinates estimators for total energy and heat capacity for a Suzuki-Chin fourth-order factorization, as described in T. M. Yamamoto, J. Chem. Phys., 104101, 123 (2005). Returns eps_v and eps_v’, as defined in that paper. As the two estimators have a different dimensions, this can only be output in atomic units. Takes one argument, ‘fd_delta’, which gives the value of the finite difference parameter used - which defaults to -0.0001. If the value of ‘fd_delta’ is negative, then its magnitude will be reduced automatically by the code if the finite difference error becomes too large.</p>
+<p><em>size: 2;</em></p>
+<p><strong>scaledcoords</strong>:
+Returns the estimators that are required to evaluate the scaled-coordinates estimators for total energy and heat capacity, as described in T. M. Yamamoto, J. Chem. Phys., 104101, 123 (2005). Returns eps_v and eps_v’, as defined in that paper. As the two estimators have a different dimensions, this can only be output in atomic units. Takes one argument, ‘fd_delta’, which gives the value of the finite difference parameter used - which defaults to -0.0001. If the value of ‘fd_delta’ is negative, then its magnitude will be reduced automatically by the code if the finite difference error becomes too large.</p>
+<p><em>size: 2;</em></p>
+<p><strong>spring</strong>:
+The total spring potential energy between the beads of all the ring polymers in the system.</p>
+<p><em>dimension: energy;</em></p>
+<p><strong>step</strong>:
+The current simulation time step.</p>
+<p><em>dimension: number;</em></p>
+<p><strong>stress_cv</strong>:
+The total quantum estimator for the stress tensor of the physical system. Returns the 6 independent components in the form [xx, yy, zz, xy, xz, yz].</p>
+<p><em>dimension: pressure; size: 6;</em></p>
+<p><strong>stress_md</strong>:
+The total stress tensor of the (extended) classical system. Returns the 6 independent components in the form [xx, yy, zz, xy, xz, yz].</p>
+<p><em>dimension: pressure; size: 6;</em></p>
+<p><strong>temperature</strong>:
+The current temperature, as obtained from the MD kinetic energy of the (extended) ring polymer. Takes optional arguments ‘atom’, ‘bead’ or ‘nm’. ‘atom’ can be either an atom label or an index (zero-based) to specify which species or individual atom to output the temperature of. If not specified, all atoms are used and averaged. ‘bead’ or ‘nm’ specify whether the temperature should be computed for a single bead or normal mode.</p>
+<p><em>dimension: temperature;</em></p>
+<p><strong>ti_pot</strong>:
+The correction potential in Takahashi-Imada 4th-order PI expansion. Takes an argument ‘atom’, which can be either an atom label or index (zero based) to specify which species to find the correction term for. If not specified, all atoms are used.</p>
+<p><em>dimension: energy; size: 1;</em></p>
+<p><strong>ti_weight</strong>:
+The 3 numbers output are 1) the logarithm of the weighting factor -beta_P delta H, 2) the square of the logarithm, and 3) the weighting factor</p>
+<p><em>size: 3;</em></p>
+<p><strong>time</strong>:
+The elapsed simulation time.</p>
+<p><em>dimension: time;</em></p>
+<p><strong>vcom</strong>:
+The center of mass velocity (x,y,z) of the system or of a species. Takes arguments label (default to all species) and bead (zero based). If bead is not specified, refers to the centroid.</p>
+<p><em>dimension: velocity; size: 3;</em></p>
+<p><strong>vir_component</strong>:
+The contribution to the system potential from one of the force components. Takes one mandatory argument index (zero-based) that indicates which component of the potential must be returned. The optional argument ‘bead’ will print the potential associated with the specified bead (interpolated to the full ring polymer). If the potential is weighed, the weight will be applied.</p>
+<p><em>dimension: pressure; size: 6;</em></p>
+<p><strong>vir_component_raw</strong>:
+The contribution to the system virial from one of the force components. Takes one mandatory argument index (zero-based) that indicates which component of the potential must be returned. The optional argument ‘bead’ will print the potential associated with the specified bead, at the level of discretization of the given component. Potential weights will not be applied.</p>
+<p><em>dimension: pressure; size: 6;</em></p>
+<p><strong>vir_tdsc</strong>:
+The Suzuki-Chin thermodynamic estimator for pressure of the physical system.</p>
+<p><em>dimension: pressure;</em></p>
+<p><strong>virial_cv</strong>:
+The quantum estimator for the virial stress tensor of the physical system. Returns the 6 independent components in the form [xx, yy, zz, xy, xz, yz].</p>
+<p><em>dimension: pressure; size: 6;</em></p>
+<p><strong>virial_fq</strong>:
+Returns the scalar product of force and positions. Useful to compensate for the harmonic component of a potential. Gets one argument ‘ref’ that should be a filename for a reference configuration, in the style of the FFDebye geometry input, and one that contains the input units.</p>
+<p><em>dimension: energy; size: 1;</em></p>
+<p><strong>virial_md</strong>:
+The virial tensor of the (extended) classical system. Returns the 6 independent components in the form [xx, yy, zz, xy, xz, yz].</p>
+<p><em>dimension: pressure; size: 6;</em></p>
+<p><strong>volume</strong>:
+The volume of the cell box.</p>
+<p><em>dimension: volume;</em></p>
+</section>
+<section id="list-of-available-trajectory-files">
+<span id="trajectory-list"></span><h2>List of available trajectory files<a class="headerlink" href="#list-of-available-trajectory-files" title="Permalink to this heading">¶</a></h2>
+<p>The following list briefly describes all the trajectory types that can be listed in
+the <a class="reference internal" href="input-tags.html#trajectory"><span class="std std-ref">trajectory</span></a> tag of the <a class="reference internal" href="input-files.html#inputfiles"><span class="std std-ref">Input files</span></a>.</p>
+<p><strong>Eforces</strong>:
+The external electric field contribution to the forces</p>
+<p><em>dimension: force;</em></p>
+<p><strong>becx</strong>:
+The x component of the Born Effective Charges in cartesian coordinates.</p>
+<p><em>dimension: number;</em></p>
+<p><strong>becy</strong>:
+The y component of the Born Effective Charges in cartesian coordinates.</p>
+<p><em>dimension: number;</em></p>
+<p><strong>becz</strong>:
+The z component of the Born Effective Charges in cartesian coordinates.</p>
+<p><em>dimension: number;</em></p>
+<p><strong>extras</strong>:
+The additional data returned by the client code. If the attribute “extra_type” is specified, and if the data is JSON formatted, it prints only the specified field. Otherwise (or if extra_type=”raw”) the full string is printed verbatim. Will print out one file per bead, unless the bead attribute is set by the user.</p>
+<p><strong>extras_bias</strong>:
+The additional data returned by the bias forcefield, printed verbatim or expanded as a dictionary. See “extras”.</p>
+<p><strong>extras_component_raw</strong>:
+The additional data returned by the client code, printed verbatim or expanded as a dictionary. See “extras”. Fetches the extras from a specific force component, indicated in parentheses and a specific bead [extras_component_raw(idx; bead=0)]. Never applies weighting or contraction, and does not automatically sum over beads as we don’t know if the extras are numeric</p>
+<p><strong>f_centroid</strong>:
+The force acting on the centroid.</p>
+<p><em>dimension: force;</em></p>
+<p><strong>forces</strong>:
+The force trajectories. Will print out one file per bead, unless the bead attribute is set by the user.</p>
+<p><em>dimension: force;</em></p>
+<p><strong>forces_component</strong>:
+The contribution to the system forces from one of the force components. Takes one mandatory argument index (zero-based) that indicates which component of the potential must be returned. The optional argument ‘bead’ will print the potential associated with the specified bead (interpolated to the full ring polymer), otherwise the centoid force is computed. If the potential is weighed, the weight will be applied.</p>
+<p><em>dimension: force;</em></p>
+<p><strong>forces_component_raw</strong>:
+The contribution to the system forces from one of the force components. Takes one mandatory argument index (zero-based) that indicates which component of the potential must be returned. The optional argument ‘bead’ will print the potential associated with the specified bead (with the level of discretization of the component), otherwise the centoid force is computed. The weight of the potential is not applied.</p>
+<p><em>dimension: force;</em></p>
+<p><strong>forces_sc</strong>:
+The Suzuki-Chin component of force trajectories. Will print out one file per bead, unless the bead attribute is set by the user.</p>
+<p><em>dimension: force;</em></p>
+<p><strong>forces_spring</strong>:
+The spring force trajectories. Will print out one file per bead, unless the bead attribute is set by the user.</p>
+<p><em>dimension: force;</em></p>
+<p><strong>isotope_zetasc</strong>:
+Scaled-coordinates isotope fractionation direct estimator in the form of ratios of partition functions. Takes two arguments, ‘alpha’ , which gives the scaled mass parameter and default to ‘1.0’, and ‘atom’, which is the label or index of a type of atoms. All the atoms but the selected ones will have zero output</p>
+<p><strong>isotope_zetatd</strong>:
+Thermodynamic isotope fractionation direct estimator in the form of ratios of partition functions. Takes two arguments, ‘alpha’ , which gives the scaled mass parameter and default to ‘1.0’, and ‘atom’, which is the label or index of a type of atoms. All the atoms but the selected ones will have zero output</p>
+<p><strong>kinetic_cv</strong>:
+The centroid virial quantum kinetic energy estimator for each atom, resolved into Cartesian components [xx, yy, zz]</p>
+<p><em>dimension: energy;</em></p>
+<p><strong>kinetic_od</strong>:
+The off diagonal elements of the centroid virial quantum kinetic energy tensor [xy, xz, yz]</p>
+<p><em>dimension: energy;</em></p>
+<p><strong>momenta</strong>:
+The momentum trajectories. Will print out one file per bead, unless the bead attribute is set by the user.</p>
+<p><em>dimension: momentum;</em></p>
+<p><strong>p_centroid</strong>:
+The centroid momentum.</p>
+<p><em>dimension: momentum;</em></p>
+<p><strong>positions</strong>:
+The atomic coordinate trajectories. Will print out one file per bead, unless the bead attribute is set by the user.</p>
+<p><em>dimension: length;</em></p>
+<p><strong>r_gyration</strong>:
+The radius of gyration of the ring polymer, for each atom and resolved into Cartesian components [xx, yy, zz]</p>
+<p><em>dimension: length;</em></p>
+<p><strong>v_centroid</strong>:
+The centroid velocity.</p>
+<p><em>dimension: velocity;</em></p>
+<p><strong>v_centroid_even</strong>:
+The suzuki-chin centroid velocity.</p>
+<p><em>dimension: velocity;</em></p>
+<p><strong>v_centroid_odd</strong>:
+The suzuki-chin centroid velocity.</p>
+<p><em>dimension: velocity;</em></p>
+<p><strong>velocities</strong>:
+The velocity trajectories. Will print out one file per bead, unless the bead attribute is set by the user.</p>
+<p><em>dimension: velocity;</em></p>
+<p><strong>x_centroid</strong>:
+The centroid coordinates.</p>
+<p><em>dimension: length;</em></p>
+<p><strong>x_centroid_even</strong>:
+The suzuki-chin centroid coordinates.</p>
+<p><em>dimension: length;</em></p>
+<p><strong>x_centroid_odd</strong>:
+The suzuki-chin centroid coordinates.</p>
+<p><em>dimension: length;</em></p>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="python.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Tools and python utilities</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="output-files.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Output files</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2021, The i-PI developers
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Output file tags</a><ul>
+<li><a class="reference internal" href="#list-of-available-properties">List of available properties</a></li>
+<li><a class="reference internal" href="#list-of-available-trajectory-files">List of available trajectory files</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=34e14329"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="_static/scripts/furo.js?v=5fa4622c"></script>
+    </body>
+</html>

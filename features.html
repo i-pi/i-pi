@@ -1,0 +1,1021 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Internal units and conventions" href="units.html" /><link rel="prev" title="Getting started" href="getting-started.html" />
+
+    <link rel="shortcut icon" href="_static/favicon-ipi.png"/><!-- Generated with Sphinx 7.1.2 and Furo 2024.08.06 -->
+        <title>Core features - i-PI documentation pages</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=302659d7" />
+    <link rel="stylesheet" type="text/css" href="_static/custom_styles.css?v=78740f61" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">i-PI documentation pages</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
+  
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="_static/ipi-logo.svg" alt="Logo"/>
+  </div>
+  
+  <span class="sidebar-brand-text">i-PI documentation pages</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Program Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Core features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="units.html">Internal units and conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input-files.html">Input files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input-tags.html">Input file tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output-files.html">Output files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output-tags.html">Output file tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="python.html">Tools and python utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="distributed.html">Distributed execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">A simple tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="onlinereso.html">Tutorials, recipes, and on-line resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently asked questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bibliography.html">Bibliography</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="core-features">
+<h1>Core features<a class="headerlink" href="#core-features" title="Permalink to this heading">¶</a></h1>
+<p>i-PI includes a large number of advanced molecular dynamics features,
+with an obvious focus on path integral molecular dynamics, but also
+several methods for sampling classical trajectories.
+This is an (incomplete) list of some of the main features in alphabetical order.</p>
+<p>If you implement a major new feature, this is the place to briefly outline
+what it does and what are the papers to cite. Please follow as closely as
+possible the template.</p>
+<section id="bosonic-and-fermionic-path-integral-molecular-dynamics">
+<h2>Bosonic and Fermionic Path Integral Molecular Dynamics<a class="headerlink" href="#bosonic-and-fermionic-path-integral-molecular-dynamics" title="Permalink to this heading">¶</a></h2>
+<p>PIMD simulations of bosonic particles with a polynomial scaling
+algorithm. Supports mixtures of distinguishable and bosonic particles.
+Fermionic statistics can be obtained by a reweigthing procedure by post
+processing the simulation (see ref. 2 below).</p>
+<div class="line-block">
+<div class="line"><strong>Main contributors:</strong> Yotam Feldman, Barak Hirshberg</div>
+<div class="line"><strong>Theory and Implementation:</strong></div>
+<div class="line">Y.M.Y. Feldman and B. Hirshberg <em>“Quadratic scaling bosonic path
+integral molecular dynamics simulations”</em>, J. Chem. Phys. 159, 154107 (2023) DOI:
+<a class="reference external" href="https://doi.org/10.1063/5.0173749">10.1063/5.0173749</a>
+— BibTeX:
+<a class="reference external" href="https://pubs.aip.org/Citation/Download?resourceId=2917443&amp;resourceType=3&amp;citationFormat=2">fetch</a></div>
+<div class="line"><strong>Theory:</strong></div>
+<div class="line">B. Hirshberg, V. Rizzi and M. Parrinello, <em>“Path integral molecular
+dynamics for bosons”</em>, Proc. Natl. Acad. Sci. U.S.A. 116 (43)
+21445-21449 (2019) DOI:
+<a class="reference external" href="https://doi.org/10.1073/pnas.1913365116">10.1073/pnas.1913365116</a>
+— BibTeX:
+<a class="reference external" href="https://www.doi2bib.org/bib/10.1073/pnas.1913365116">fetch</a></div>
+<div class="line">B. Hirshberg, M. Invernizzi and M. Parrinello, <em>“Path integral
+molecular dynamics for fermions: Alleviating the sign problem with the
+Bogoliubov inequality”</em>, J. Chem. Phys. 152, 171102 (2020) DOI:
+<a class="reference external" href="https://doi.org/10.1063/5.0008720">10.1063/5.0008720</a> — BibTeX:
+<a class="reference external" href="https://www.doi2bib.org/bib/10.1063/5.0008720">fetch</a></div>
+<div class="line">C. W. Myung, B. Hirshberg and M. Parrinello, <em>“Prediction of a
+Supersolid Phase in High-Pressure Deuterium”</em>, Phys. Rev. Lett., 128
+045301 (2022) DOI:
+<a class="reference external" href="https://doi.org/10.1103/PhysRevLett.128.045301">10.1103/PhysRevLett.128.045301</a>
+— BibTeX:
+<a class="reference external" href="https://www.doi2bib.org/bib/10.1103/PhysRevLett.128.045301">fetch</a></div>
+</div>
+</section>
+<section id="cavity-molecular-dynamics-for-polaritonics">
+<h2>Cavity Molecular Dynamics for Polaritonics<a class="headerlink" href="#cavity-molecular-dynamics-for-polaritonics" title="Permalink to this heading">¶</a></h2>
+<p>This initial implementation provides an efficient cavity molecular
+dynamics (CavMD) scheme for simulating strong light-matter interactions
+between molecules and an optical cavity mode, particularly in the
+vibrational strong coupling regime. At present, the nuclear partial
+charges are assumed to be fixed during the simulation. CavMD is
+implemented with a new force evaluator: <em>ffcavphsocket</em>, which is
+operated similarly to the original <em>ffsocket</em> evaluator, but with
+additional parameters for controlling cavity photons. Hence, with this
+implementation, users can study different aspects of vibrational strong
+coupling with many sophisticated methods supported in i-pi.</p>
+<div class="line-block">
+<div class="line"><strong>Main contributors:</strong> Tao E. Li</div>
+<div class="line"><strong>Implementation and theory:</strong></div>
+<div class="line">T. E. Li, J. E. Subotnik, and A. Nitzan, <em>“Cavity molecular dynamics
+simulations of liquid water under vibrational ultrastrong coupling”</em>,
+Proc. Natl. Acad. Sci. 117(31), 18324–18331. (2020)</div>
+<div class="line">DOI:
+<a class="reference external" href="http://dx.doi.org/10.1073/pnas.2009272117">10.1073/pnas.2009272117</a>
+— BibTeX:
+<a class="reference external" href="https://www.doi2bib.org/bib/10.1073/pnas.2009272117">fetch</a></div>
+<div class="line">T. E. Li, A. Nitzan, S. Hammes-Schiffer, and J. E. Subotnik, <em>“Quantum
+simulations of vibrational strong coupling via path integrals”</em>, J.
+Phys. Chem. Lett. 13(17), 3890–3895. (2022)</div>
+<div class="line">DOI:
+<a class="reference external" href="http://dx.doi.org/10.1021/acs.jpclett.2c00613">10.1021/acs.jpclett.2c00613</a>
+— BibTeX:
+<a class="reference external" href="https://www.doi2bib.org/bib/10.1021/acs.jpclett.2c00613">fetch</a></div>
+</div>
+</section>
+<section id="committee-models">
+<h2>Committee models<a class="headerlink" href="#committee-models" title="Permalink to this heading">¶</a></h2>
+<p>Uncertainty estimation for machine-learning potentials based on
+committee models. Multiple potentials are used simultaneously (they
+should have been fitted with randomized training sets). The mean is used
+to drive the system, the spread is used as an estimate of the
+uncertainty. This uncertainty can be used to select high-error
+structures for active learning, to estimate the propagation of the error
+to thermodynamic averages, or to build a weighted baseline model that
+falls back to a safe baseline potential when the ML models fail.</p>
+<div class="line-block">
+<div class="line"><strong>Main contributors:</strong> Giulio Imbalzano, Venkat Kapil, Yongbin Zhuang,
+Federico Grasselli, Michele Ceriotti</div>
+<div class="line"><strong>Implementation and theory:</strong></div>
+<div class="line">G. Imbalzano, Y. Zhuang, V. Kapil, K. Rossi, E. A. Engel, F.
+Grasselli, and M. Ceriotti, <em>“Uncertainty estimation for molecular
+dynamics and sampling”</em>, J. Chem. Phys. 154(7), 074102 (2021)</div>
+<div class="line">DOI: <a class="reference external" href="http://dx.doi.org/10.1063/5.0036522">10.1063/5.0036522</a> — BibTeX:
+<a class="reference external" href="http://www.doi2bib.org/#/doi/10.1063/5.0036522">fetch</a></div>
+<div class="line">F. Musil, M. J. Willatt, M. A. Langovoy, and M. Ceriotti, <em>“Fast and
+Accurate Uncertainty Estimation in Chemical Machine Learning”</em>,
+Journal of Chemical Theory and Computation 15(2), 906–915 (2019)</div>
+<div class="line">DOI:
+<a class="reference external" href="http://dx.doi.org/10.1021/acs.jctc.8b00959">10.1021/acs.jctc.8b00959</a> —
+BibTeX:
+<a class="reference external" href="http://www.doi2bib.org/#/doi/10.1021/acs.jctc.8b00959">fetch</a></div>
+</div>
+</section>
+<section id="direct-estimators-for-isotope-fractionation">
+<h2>Direct Estimators for Isotope Fractionation<a class="headerlink" href="#direct-estimators-for-isotope-fractionation" title="Permalink to this heading">¶</a></h2>
+<p>A direct estimator to evaluate the isotope fractionation ratios using a
+single operation (and a single keyword in the input file), without the
+need for a thermodynamic integration with respect to the mass of the
+isotope.</p>
+<div class="line-block">
+<div class="line"><strong>Main contributors:</strong> Bingqing Cheng, Michele Ceriotti</div>
+<div class="line"><strong>Implementation and Theory:</strong></div>
+<div class="line">B.Cheng, M.Ceriotti, “Direct path integral estimators for isotope
+fractionation ratios.” The Journal of chemical physics 141, 244112
+(2015)</div>
+<div class="line">DOI: <a class="reference external" href="http://dx.doi.org/10.1063/1.4904293">10.1063/1.4904293</a> —
+BibTeX: <a class="reference external" href="http://www.doi2bib.org/bib/10.1063%2F1.4904293">fetch</a></div>
+</div>
+</section>
+<section id="fast-forward-langevin-thermostat">
+<h2>Fast-Forward Langevin Thermostat<a class="headerlink" href="#fast-forward-langevin-thermostat" title="Permalink to this heading">¶</a></h2>
+<p>This is a modified form of Langevin dynamics in which sluggish
+high-friction behaviour is corrected for by flipping a particle’s
+momentum when the action of the thermostat causes it to change
+direction.</p>
+<div class="line-block">
+<div class="line"><strong>Main contributors:</strong> Mahdi Hijazi, David Wilkins, Michele Ceriotti</div>
+<div class="line"><strong>Implementation and Theory:</strong></div>
+<div class="line">M. Hijazi, D. M. Wilkins, <em>“Fast-forward Langevin dynamics with
+momentum flips”</em>, J. Chem. Phys. 148, 184109 (2018)</div>
+<div class="line">DOI: <a class="reference external" href="http://dx.doi.org/10.1063/1.5029833">10.1063/1.5029833</a> — BibTeX:
+<a class="reference external" href="https://www.doi2bib.org/bib/10.1063%2F1.5029833">fetch</a></div>
+</div>
+</section>
+<section id="finite-differences-suzuki-chin-pimd">
+<h2>Finite-differences Suzuki-Chin PIMD<a class="headerlink" href="#finite-differences-suzuki-chin-pimd" title="Permalink to this heading">¶</a></h2>
+<p>Suzuki-Chin PIMD gives better convergence w.r.t. the number of imaginary
+time slices as compared to the standard Trotter scheme. The
+implementation uses a symplectic and time-reversible finite-difference
+algorithm to compute high order corrections to traditional PIMD for any
+empirical or ab initio forcefield.</p>
+<div class="line-block">
+<div class="line"><strong>Main contributors:</strong> Venkat Kapil, Michele Ceriotti</div>
+<div class="line"><strong>Implementation and Theory:</strong></div>
+<div class="line">V.Kapil, J.Behler, M.Ceriotti <em>“High order path interals made easy”</em>,
+J. Chem. Phys. 145, 234103 (2016)</div>
+<div class="line">DOI: <a class="reference external" href="http://dx.doi.org/10.1063/1.4971438">10.1063/1.4971438</a> —
+BIBTEX: <a class="reference external" href="http://www.doi2bib.org/bib/10.1063%2F1.4971438">fetch</a></div>
+<div class="line"><strong>Theory:</strong></div>
+<div class="line">S.Jang, S.Jang, G.A.Voth <em>“Applications of higher order composite
+factorization schemes in imaginary time path integral simulations”</em>,
+J. Chem. Phys. 115, 7832 (2001)</div>
+<div class="line">DOI: <a class="reference external" href="http://dx.doi.org/10.1063/1.1410117">10.1063/1.1410117</a> —
+BIBTEX: <a class="reference external" href="http://www.doi2bib.org/bib/10.1063%2F1.1410117">fetch</a></div>
+<div class="line">S.A.Chin <em>“Symplectic integrators from composite operator
+factorizations”</em>, Phys. Lett. A 226, 344 (1997)</div>
+<div class="line">DOI:
+<a class="reference external" href="http://dx.doi.org/10.1016/s0375-9601(97)00003-0">10.1016/s0375-9601(97)00003-0</a>
+— BIBTEX:
+<a class="reference external" href="http://www.doi2bib.org/bib/10.1016%2Fs0375-9601(97)00003-0">fetch</a></div>
+<div class="line">M.Suzuki <em>“Hybrid exponential product formulas for unbounded operators
+with possible applications to Monte Carlo simulations”</em>, Phys. Lett. A
+201, 425 (1995)</div>
+<div class="line">DOI:
+<a class="reference external" href="http://dx.doi.org/10.1016/0375-9601(95)00266-6">10.1016/0375-9601(95)00266-6</a>
+— BIBTEX:
+<a class="reference external" href="http://www.doi2bib.org/bib/10.1016%2F0375-9601(95)00266-6">fetch</a></div>
+</div>
+</section>
+<section id="finite-differences-vibrational-analysis">
+<h2>Finite-differences Vibrational Analysis<a class="headerlink" href="#finite-differences-vibrational-analysis" title="Permalink to this heading">¶</a></h2>
+<p>Harmonic vibrations through finite differences for simple evaluation of
+the harmonic Hessian.</p>
+<div class="line-block">
+<div class="line"><strong>Main contributors:</strong> Kapil, Bienvenue</div>
+<div class="line"><strong>Implementation:</strong></div>
+<div class="line">M. Rossi, P. Gasparotto, M. Ceriotti, <em>“Anharmonic and Quantum
+Fluctuations in Molecular Crystals: A First-Principles Study of the
+Stability of Paracetamol”</em>, Phs. Rev. Lett. 117, 115702 (2016)</div>
+<div class="line">DOI:
+<a class="reference external" href="http://dx.doi.org/10.1103/PhysRevLett.117.115702">10.1103/PhysRevLett.117.115702</a>
+— BibTeX:
+<a class="reference external" href="http://www.doi2bib.org/#/doi/10.1103/PhysRevLett.117.115702">fetch</a></div>
+</div>
+</section>
+<section id="free-energy-perturbation-estimators-for-isotope-fractionation">
+<h2>Free-energy Perturbation Estimators for Isotope Fractionation<a class="headerlink" href="#free-energy-perturbation-estimators-for-isotope-fractionation" title="Permalink to this heading">¶</a></h2>
+<p>Computing isotope fractionation using the thermodynamic integration
+method requires evaluating the quantum kinetic energy of several systems
+containing atoms that have different fictitious masses between the
+physical masses of two isotopes, meaning that a number of PIMD
+simulations have to be performed. With the help of re-weighting, one has
+the option of running just one set of simulation with a certain
+fictitious mass, and obtain the quantum kinetic energy for systems with
+other masses.</p>
+<div class="line-block">
+<div class="line"><strong>Main contributors:</strong> Michele Ceriotti, Thomas Markland</div>
+<div class="line"><strong>Theory and implementation:</strong></div>
+<div class="line">Michele Ceriotti, Thomas E. Markland, “Efficient methods and practical
+guidelines for simulating isotope effects.” The Journal of chemical
+physics 138(1), 014112 (2013).</div>
+<div class="line">DOI: <a class="reference external" href="http://dx.doi.org/10.1063/1.4772676">10.1063/1.4772676</a> — BibTeX:
+<a class="reference external" href="http://www.doi2bib.org/#/doi/10.1063/1.4772676">fetch</a></div>
+</div>
+</section>
+<section id="generalized-langevin-equation-thermostats">
+<h2>Generalized Langevin Equation Thermostats<a class="headerlink" href="#generalized-langevin-equation-thermostats" title="Permalink to this heading">¶</a></h2>
+<p>The Generalized Langevin Equation provides a very flexible framework to
+manipulate the dynamics of a classical system, improving sampling
+efficiency and obtaining quasi-equilibrium ensembles that mimic quantum
+fluctuations. Parameters for the different modes of operation can be
+obtained from the <a class="reference external" href="http://gle4md.org/index.html?page=matrix">GLE4MD
+website</a>.</p>
+<div class="line-block">
+<div class="line"><strong>Main contributors:</strong> Michele Ceriotti</div>
+<div class="line"><strong>Implementation:</strong></div>
+<div class="line">M. Ceriotti, G. Bussi, M. Parrinello, <em>“M. Colored-Noise Thermostats à
+la Carte”</em>, J. Chem. Theory Comput. 6, 1170–1180 (2010)</div>
+<div class="line">DOI: <a class="reference external" href="http://dx.doi.org/10.1021/ct900563s">10.1021/ct900563s</a> —
+BibTeX: <a class="reference external" href="http://www.doi2bib.org/bib/10.1021%2Fct900563s">fetch</a></div>
+<div class="line"><strong>Theory:</strong></div>
+<div class="line"><em>Optimal Sampling Efficiency</em> — M. Ceriotti, G. Bussi, and M.
+Parrinello, <em>“Langevin Equation with Colored Noise for
+Constant-Temperature Molecular Dynamics Simulations”</em>, Phys.
+Rev. Lett. 102, 20601 (2009)</div>
+<div class="line">DOI:
+<a class="reference external" href="http://dx.doi.org/10.1103/PhysRevLett.102.020601">10.1103/PhysRevLett.102.020601</a>
+— BibTeX:
+<a class="reference external" href="http://www.doi2bib.org/bib/10.1103%2FPhysRevLett.102.020601">fetch</a></div>
+<div class="line"><em>Quantum Thermostat</em> — M. Ceriotti, G. Bussi, and M. Parrinello,
+<em>“Nuclear Quantum Effects in Solids Using a Colored-Noise
+Thermostat”</em>, Phys. Rev. Lett. 103, 30603 (2009)</div>
+<div class="line">DOI:
+<a class="reference external" href="http://dx.doi.org/10.1103/PhysRevLett.103.030603">10.1103/PhysRevLett.103.030603</a>
+— BibTeX:
+<a class="reference external" href="http://www.doi2bib.org/bib/10.1103%2FPhysRevLett.103.030603">fetch</a></div>
+<div class="line"><em>Delta Thermostat</em> — M. Ceriotti and M. Parrinello, <em>“The
+δ-Thermostat: Selective Normal-Modes Excitation by Colored-Noise
+Langevin Dynamics”</em>, Procedia Comput. Sci. 1, 1607 (2010)</div>
+<div class="line">DOI:
+<a class="reference external" href="http://dx.doi.org/10.1016/j.procs.2010.04.180">10.1016/j.procs.2010.04.180</a>
+— BibTeX:
+<a class="reference external" href="http://www.doi2bib.org/bib/10.1016%2Fj.procs.2010.04.180">fetch</a></div>
+<div class="line"><em>MTS Thermostat</em> — J. A. Morrone, T. E. Markland, M. Ceriotti, and B.
+J. Berne, <em>“Efficient Multiple Time Scale Molecular Dynamics: Using
+Colored Noise Thermostats to Stabilize Resonances”</em>, J. Chem. Phys.
+134, 14103 (2011)</div>
+<div class="line">DOI: <a class="reference external" href="http://dx.doi.org/10.1063/1.3518369">10.1063/1.3518369</a> —
+BibTeX: <a class="reference external" href="http://www.doi2bib.org/bib/10.1063%2F1.3518369">fetch</a></div>
+<div class="line"><em>“Hot-spot”</em> — R. Dettori, M. Ceriotti, J. Hunger, C. Melis, L.
+Colombo, and D. Donadio, <em>“Simulating Energy Relaxation in Pump-Probe
+Vibrational Spectroscopy of Hydrogen-Bonded Liquids”</em>, J. Chem. Theory
+Comput. (2017)</div>
+<div class="line">DOI:
+<a class="reference external" href="http://dx.doi.org/10.1063/10.1021/acs.jctc.6b01108">10.1021/acs.jctc.6b01108</a>
+— BibTeX:
+<a class="reference external" href="http://www.doi2bib.org/bib/10.1021%2Facs.jctc.6b01108">fetch</a></div>
+</div>
+</section>
+<section id="geometry-optimization">
+<h2>Geometry Optimization<a class="headerlink" href="#geometry-optimization" title="Permalink to this heading">¶</a></h2>
+<p>Several standard algorithms for geometry optimization have been
+implemented to give the convenience of static calculations that are
+fully compatible with (PI)MD and other advanced sampling techniques.</p>
+<div class="line-block">
+<div class="line"><strong>Main contributors:</strong> Benjamin Helfrecht, Sophie Mutzel, Riccardo
+Petraglia, Yair Litman, Mariana Rossi</div>
+<div class="line"><strong>Implementation:</strong></div>
+<div class="line">M. Rossi, P. Gasparotto, and M. Ceriotti, <em>“Anharmonic and Quantum
+Fluctuations in Molecular Crystals: A First-Principles Study of the
+Stability of Paracetamol”</em>, Phys. Rev. Lett. 117, 115702 (2016)</div>
+<div class="line">DOI:
+<a class="reference external" href="http://dx.doi.org/10.1103/PhysRevLett.117.115702">10.1103/PhysRevLett.117.115702</a>
+— BibTeX:
+<a class="reference external" href="http://www.doi2bib.org/bib/10.1103%2FPhysRevLett.117.115702">fetch</a></div>
+<div class="line"><strong>Theory:</strong></div>
+<div class="line">W. H. Press, <em>“Numerical Recipes: The Art of Scientific Computing”</em>,
+(Cambridge University Press, 2007)</div>
+</div>
+</section>
+<section id="langevin-sampling-for-noisy-or-dissipative-forces">
+<h2>Langevin Sampling for Noisy or Dissipative Forces<a class="headerlink" href="#langevin-sampling-for-noisy-or-dissipative-forces" title="Permalink to this heading">¶</a></h2>
+<p>A modified Langevin thermostat that allows for constant-temperature
+dynamics with noisy or dissipative forces by applying additional damping
+or noise for compensation. The implementation contains a method to
+adjust the amount of compensation automatically.</p>
+<div class="line-block">
+<div class="line"><strong>Main contributors:</strong> Jan Kessler, Thomas D. Kühne</div>
+<div class="line"><strong>Theory:</strong></div>
+<div class="line">T. D. Kühne, M. Krack, F. R. Mohamed, M. Parrinello, <em>“Efficient and
+Accurate Car-Parrinello-like Approach to Born-Oppenheimer Molecular
+Dynamics”</em>, Phys. Rev. Lett. 98, 066401 (2007)</div>
+<div class="line">DOI:
+<a class="reference external" href="http://dx.doi.org/10.1103/PhysRevLett.98.066401">10.1103/PhysRevLett.98.066401</a>
+— BibTeX:
+<a class="reference external" href="http://www.doi2bib.org/bib/10.1103%2FPhysRevLett.98.066401">fetch</a></div>
+<div class="line">F. R. Krajewski, M. Parrinello, <em>“Linear scaling electronic structure
+calculations and accurate statistical mechanics sampling with noisy
+forces”</em>, Phys. Rev. B 73, 041105 (2006)</div>
+<div class="line">DOI:
+<a class="reference external" href="http://dx.doi.org/10.1103/PhysRevB.73.041105">10.1103/PhysRevB.73.041105</a>
+— BibTeX:
+<a class="reference external" href="http://www.doi2bib.org/bib/10.1103%2FPhysRevB.73.041105">fetch</a></div>
+<div class="line">Y. Luo, A. Zen, S. Sorella, <em>“Ab initio molecular dynamics with noisy
+forces: Validating the quantum Monte Carlo approach with benchmark
+calculations of molecular vibrational properties”</em>, J. Chem. Phys.
+141, 194112 (2014)</div>
+<div class="line">DOI: <a class="reference external" href="http://dx.doi.org/10.1063/1.4901430">10.1063/1.4901430</a> — BibTeX:
+<a class="reference external" href="http://www.doi2bib.org/bib/10.1063%2F1.4901430">fetch</a></div>
+</div>
+</section>
+<section id="multiple-time-step-integrators">
+<h2>Multiple Time Step integrators<a class="headerlink" href="#multiple-time-step-integrators" title="Permalink to this heading">¶</a></h2>
+<p>A multiple time step integration scheme allows for integration of
+different components of forces with different time steps. It becomes
+advantageous when the total force can be decomposed into a slowly
+varying expensive part and a rapidly varying cheap part. A larger time
+step can be used to integrate the former, there by reducing the number
+of expensive computations.</p>
+<div class="line-block">
+<div class="line"><strong>Main contributors:</strong> Venkat Kapil</div>
+<div class="line"><strong>Implementation:</strong></div>
+<div class="line">V.Kapil, J.VandeVondele, M.Ceriotti <em>“Accurate molecular dynamics and
+nuclear quantum effects at low cost by multiple steps in real and
+imaginary time: using density functional theory to accelerate
+wavefunction methods”</em>, J. Chem. Phys. 144, 054111 (2016)</div>
+<div class="line">DOI: <a class="reference external" href="http://dx.doi.org/10.1063/1.4941091">10.1063/1.4941091</a> —
+BibTeX: <a class="reference external" href="http://www.doi2bib.org/bib/10.1063%2F1.4941091">fetch</a></div>
+<div class="line"><strong>Theory:</strong></div>
+<div class="line">M.Tuckerman, B.J.Berne <em>“Reversible multiple time scale molecular
+dynamics”</em>, J. Chem. Phys. 97, 1990 (1992)</div>
+<div class="line">DOI: <a class="reference external" href="http://dx.doi.org/10.1063/1.463137">10.1063/1.463137</a> —
+BibTeX: <a class="reference external" href="http://www.doi2bib.org/bib/10.1063%2F1.463137">fetch</a></div>
+</div>
+</section>
+<section id="open-path-integrals">
+<h2>Open Path Integrals<a class="headerlink" href="#open-path-integrals" title="Permalink to this heading">¶</a></h2>
+<p>Open path integrals and momentum distribution estimators for the
+computation of the particle momentum distribution including quantum
+fluctuations of nuclei.</p>
+<div class="line-block">
+<div class="line"><strong>Main contributors:</strong> Kapil, Cuzzocrea, Ceriotti</div>
+<div class="line"><strong>Implementation and Theory:</strong></div>
+<div class="line">V. Kapil, A. Cuzzocrea, M. Ceriotti, <em>“Anisotropy of the Proton
+Momentum Distribution in Water”</em>, J. Phys. Chem. B 122, 6048-6054
+(2018)</div>
+<div class="line">DOI:
+<a class="reference external" href="http://dx.doi.org/10.1021/acs.jpcb.8b03896">10.1021/acs.jpcb.8b03896</a> —
+BibTeX:
+<a class="reference external" href="http://www.doi2bib.org/#/doi/10.1021/acs.jpcb.8b03896">fetch</a></div>
+<div class="line"><strong>Theory:</strong></div>
+<div class="line">J. A. Morrone, R. Car, <em>“Nuclear Quantum Effects in Water”</em>, Phys.
+Rev. Lett. 101, 017801 (2008)</div>
+<div class="line">DOI:
+<a class="reference external" href="http://dx.doi.org/10.1103/PhysRevLett.101.017801">10.1103/PhysRevLett.101.017801</a>
+— BibTeX:
+<a class="reference external" href="http://www.doi2bib.org/#/doi/10.1103/PhysRevLett.101.017801">fetch</a></div>
+</div>
+</section>
+<section id="path-integral-gles">
+<h2>Path Integral GLEs<a class="headerlink" href="#path-integral-gles" title="Permalink to this heading">¶</a></h2>
+<p>Generalized Langevin Equations can be combined with a PIMD framework to
+accelerate convergence of quantum observables while retaining systematic
+approach to the quantum limit. Parameters formatted for i-PI input can
+be obtained from the <a class="reference external" href="http://gle4md.org/index.html?page=matrix">GLE4MD
+website</a>.</p>
+<div class="line-block">
+<div class="line"><strong>Main contributors:</strong> Michele Ceriotti, Joshua More</div>
+<div class="line"><strong>Implementation:</strong></div>
+<div class="line">M. Ceriotti, J. More, D. Manolopoulos, <em>“i-PI: A Python interface for
+ab initio path integral molecular dynamics simulations”</em>, Comp. Phys.
+Comm. 185(3), 1019 (2014)</div>
+<div class="line">DOI:
+<a class="reference external" href="http://dx.doi.org/10.1016/j.cpc.2013.10.027">10.1016/j.cpc.2013.10.027</a>
+— BibTeX:
+<a class="reference external" href="http://www.doi2bib.org/bib/10.1016%2Fj.cpc.2013.10.027">fetch</a></div>
+<div class="line"><strong>Theory:</strong></div>
+<div class="line"><em>PIGLET</em> — M. Ceriotti and D. E. Manolopoulos, <em>“Efficient
+First-Principles Calculation of the Quantum Kinetic Energy and
+Momentum Distribution of Nuclei”</em>, Phys. Rev. Lett. 109, 100604 (2012)</div>
+<div class="line">DOI:
+<a class="reference external" href="http://dx.doi.org/10.1103/PhysRevLett.109.100604">10.1103/PhysRevLett.109.100604</a>
+— BibTeX:
+<a class="reference external" href="http://www.doi2bib.org/bib/10.1103%2FPhysRevLett.109.100604">fetch</a></div>
+<div class="line"><em>PI+GLE</em> — M. Ceriotti, D. E. Manolopoulos, and M. Parrinello,
+<em>“Accelerating the Convergence of Path Integral Dynamics with a
+Generalized Langevin Equation”</em>, J. Chem. Phys. 134, 84104 (2011)</div>
+<div class="line">DOI: <a class="reference external" href="http://dx.doi.org/10.1063/1.3556661">10.1063/1.3556661</a> —
+BibTeX: <a class="reference external" href="http://www.doi2bib.org/bib/10.1063%2F1.3556661">fetch</a></div>
+</div>
+</section>
+<section id="path-integral-molecular-dynamics">
+<h2>Path Integral Molecular Dynamics<a class="headerlink" href="#path-integral-molecular-dynamics" title="Permalink to this heading">¶</a></h2>
+<p>The basic PIMD implementation in i-PI relies on a normal-modes
+integrator, and allows setting non-physical masses, so that both RPMD
+and CMD can be easily realized.</p>
+<div class="line-block">
+<div class="line"><strong>Main contributors:</strong> Michele Ceriotti, Joshua More</div>
+<div class="line"><strong>Implementation:</strong></div>
+<div class="line">M. Ceriotti, J. More, D. Manolopoulos, <em>“i-PI: A Python interface for
+ab initio path integral molecular dynamics simulations”</em>, Comp. Phys.
+Comm. 185(3), 1019 (2014) DOI:
+<a class="reference external" href="http://dx.doi.org/10.1016/j.cpc.2013.10.027">10.1016/j.cpc.2013.10.027</a>
+— BibTeX:
+<a class="reference external" href="http://www.doi2bib.org/bib/10.1016%2Fj.cpc.2013.10.027">fetch</a></div>
+<div class="line"><strong>Theory:</strong></div>
+<div class="line">R. Feynman, A. Hibbs, <em>“Quantum Mechanics and Path Integrals”</em>,
+McGraw-Hill (1964)</div>
+<div class="line">M. Tuckerman, <em>“Statistical Mechanics and Molecular Simulations”</em>,
+Oxford Univ. Press (2008)</div>
+</div>
+</section>
+<section id="path-integrals-molecular-dynamics-at-constant-pressure">
+<h2>Path Integrals Molecular Dynamics at Constant Pressure<a class="headerlink" href="#path-integrals-molecular-dynamics-at-constant-pressure" title="Permalink to this heading">¶</a></h2>
+<p>The constant-pressure implementation allows for arbitrary thermostats to
+be applied to the cell degrees of freedom, and work in both
+constant-shape and variable-cell mode.</p>
+<div class="line-block">
+<div class="line"><strong>Main contributors:</strong> Michele Ceriotti, Joshua More, Mariana Rossi</div>
+<div class="line"><strong>Implementation:</strong></div>
+<div class="line">M. Ceriotti, J. More, D. Manolopoulos, <em>“i-PI: A Python interface for
+ab initio path integral molecular dynamics simulations”</em>, Comp. Phys.
+Comm. 185(3), 1019 (2014)</div>
+<div class="line">DOI:
+<a class="reference external" href="http://dx.doi.org/10.1016/j.cpc.2013.10.027">10.1016/j.cpc.2013.10.027</a>
+— BibTeX:
+<a class="reference external" href="http://www.doi2bib.org/bib/10.1016%2Fj.cpc.2013.10.027">fetch</a></div>
+<div class="line"><strong>Theory:</strong></div>
+<div class="line">G. J. Martyna, A. Hughes, M. Tuckerman, <em>“Molecular dynamics
+algorithms for path integrals at constant pressure”</em>, J. Chem. Phys.
+110(7), 3275 (1999)</div>
+<div class="line">DOI: <a class="reference external" href="http://dx.doi.org/10.1063/1.478193">10.1063/1.478193</a> —
+BibTeX: <a class="reference external" href="http://www.doi2bib.org/bib/10.1063%2F1.478193">fetch</a></div>
+<div class="line">G. Bussi, T. Zykova-Timan, M. Parrinello, <em>“Isothermal-isobaric
+molecular dynamics using stochastic velocity rescaling”</em>, J. Chem.
+Phys. 130(7), 074101 (2009)</div>
+<div class="line">DOI: <a class="reference external" href="http://dx.doi.org/10.1063/1.3073889">10.1063/1.3073889</a> —
+BibTeX: <a class="reference external" href="http://www.doi2bib.org/bib/10.1063%2F1.3073889">fetch</a></div>
+<div class="line">P. Raiteri, J. D. Gale, G. Bussi, <em>“Reactive force field simulation of
+proton diffusion in BaZrO3 using an empirical valence bond approach”</em>,
+J. Phys. Cond. Matt. 23(33), 334213 (2011)</div>
+<div class="line">DOI:
+<a class="reference external" href="http://dx.doi.org/10.1088/0953-8984/23/33/334213">10.1088/0953-8984/23/33/334213</a>
+— BibTeX:
+<a class="reference external" href="http://www.doi2bib.org/bib/10.1088/0953-8984/23/33%2F334213">fetch</a></div>
+</div>
+</section>
+<section id="path-integral-langevin-equation-thermostats">
+<h2>Path Integral Langevin Equation Thermostats<a class="headerlink" href="#path-integral-langevin-equation-thermostats" title="Permalink to this heading">¶</a></h2>
+<p>Simple yet efficient Langevin thermostat for PIMD, with normal-modes
+thermostats optimally coupled to the ideal ring polymer frequencies</p>
+<div class="line-block">
+<div class="line"><strong>Main contributors:</strong> Michele Ceriotti</div>
+<div class="line"><strong>Implementation and Theory:</strong></div>
+<div class="line">M. Ceriotti, M. Parrinello, T. E. Markland, and D. E. Manolopoulos,
+<em>“Efficient stochastic thermostatting of path integral molecular
+dynamics”</em> J. Chem. Phys. 133, 124104 (2010).</div>
+<div class="line">DOI: <a class="reference external" href="http://dx.doi.org/10.1063/1.3489925">10.1063/1.3489925</a> —
+BibTeX: <a class="reference external" href="http://www.doi2bib.org/bib/10.1063%2F1.3489925">fetch</a></div>
+</div>
+</section>
+<section id="perturbed-path-integrals">
+<h2>Perturbed Path Integrals<a class="headerlink" href="#perturbed-path-integrals" title="Permalink to this heading">¶</a></h2>
+<p>Effectively a zeroth-order cumulant expansion of the high-order PI
+Hamiltonian, perturbed path integrals offer an attractive approach to
+compute thermochemistry of materials and molecules including quantum
+nuclei, as a post-processing of a Trotter trajectory.</p>
+<div class="line-block">
+<div class="line"><strong>Main contributors:</strong> Igor Poltavski</div>
+<div class="line"><strong>Theory:</strong></div>
+<div class="line">I. Poltavsky and A. Tkatchenko, <em>“Modeling Quantum Nuclei with
+Perturbed Path Integral Molecular Dynamics”</em>, Chem. Sci. 7, 1368
+(2016)</div>
+<div class="line">DOI: <a class="reference external" href="http://dx.doi.org/10.1039/C5SC03443D">10.1039/C5SC03443D</a> —
+BibTeX: <a class="reference external" href="http://www.doi2bib.org/bib/10.1039%2FC5SC03443D">fetch</a></div>
+</div>
+</section>
+<section id="replica-exchange-md">
+<h2>Replica Exchange MD<a class="headerlink" href="#replica-exchange-md" title="Permalink to this heading">¶</a></h2>
+<p>Accelerated convergence of averages by performing Monte Carlo exchanges
+of configurations between parallel calculations.</p>
+<div class="line-block">
+<div class="line"><strong>Main contributors:</strong> Riccardo Petraglia, Robert Meissner, Michele
+Ceriotti</div>
+<div class="line"><strong>Implementation:</strong> R. Petraglia, A. Nicolaï, M. M. D. Wodrich, M.
+Ceriotti, C. Corminboeuf, <em>“Beyond static structures: Putting forth
+remd as a tool to solve problems in computational organic chemistry”</em>,
+J. Comput. Chem. 37(1), 83-92 (2016)</div>
+<div class="line">DOI: <a class="reference external" href="http://dx.doi.org/10.1002/jcc.24025">10.1002/jcc.24025</a> — BibTeX:
+<a class="reference external" href="http://www.doi2bib.org/#/doi/10.1002/jcc.24025">fetch</a></div>
+<div class="line"><strong>Theory:</strong></div>
+<div class="line">Y. Sugita, Y. Okamoto, <em>“Replica-exchange molecular dynamics method
+for protein folding”</em>, Chem. Phys. Lett. 314(1-2), 141–151 (1999)</div>
+<div class="line">DOI:
+<a class="reference external" href="http://dx.doi.org/10.1016/s0009-2614(99)01123-9">10.1016/s0009-2614(99)01123-9</a>
+— BibTeX:
+<a class="reference external" href="http://www.doi2bib.org/#/doi/10.1016/s0009-2614(99)01123-9">fetch</a></div>
+<div class="line">T. Okabe, M. Kawata, Y. Okamoto, M. Mikami, <em>“Replica-exchange monte
+carlo method for the isobaric–isothermal ensemble”</em>, Chem. Phys. Lett.
+335(5-6), 435-439 (2001)</div>
+<div class="line">DOI: <a class="reference external" href="http://dx.doi.org/10.1016/s0009-2614(01)00055-0">10.1016/
+s0009-2614(01)00055-0</a> —
+BibTeX:
+<a class="reference external" href="http://www.doi2bib.org/#/doi/10.1016/s0009-2614(01)00055-0">fetch</a></div>
+</div>
+</section>
+<section id="quantum-alchemical-transformation">
+<h2>Quantum Alchemical Transformation<a class="headerlink" href="#quantum-alchemical-transformation" title="Permalink to this heading">¶</a></h2>
+<p>An algorithm that performs Monte Carlo moves to change a chemical
+species into its isotopes.</p>
+<div class="line-block">
+<div class="line"><strong>Main contributors:</strong> Bingqing Cheng, Michele Ceriotti</div>
+<div class="line"><strong>Implementation:</strong></div>
+<div class="line">Cheng, Bingqing, J”{o}rg Behler, Michele Ceriotti, <em>“Nuclear Quantum
+Effects in Water at the Triple Point: Using Theory as a Link Between
+Experiments.”</em> J. Phys. Chem. Lett. 7(12), 2210-2215 (2016)</div>
+<div class="line">DOI:
+<a class="reference external" href="http://dx.doi.org/10.1021/acs.jpclett.6b00729">10.1021/acs.jpclett.6b00729</a>
+— BibTeX:
+<a class="reference external" href="http://www.doi2bib.org/bib/10.1021%2Facs.jpclett.6b00729">fetch</a></div>
+<div class="line"><strong>Theory:</strong></div>
+<div class="line">Michael R. Shirts, David L. Mobley, John D. Chodera, <em>“Alchemical Free
+Energy Calculations: Ready for Prime Time?”</em>, Ann. Rep. Comp. Chem.
+41-59 (2007)</div>
+<div class="line">DOI:
+<a class="reference external" href="http://dx.doi.org/10.1016/S1574-1400(07)03004-6">10.1016/S1574-1400(07)03004-6</a>
+— BibTeX:
+<a class="reference external" href="http://www.doi2bib.org/bib/10.1016%2FS1574-1400(07)03004-6">fetch</a></div>
+<div class="line">Jian Liu, Richard S Andino, Christina M Miller, Xin Chen, David M
+Wilkins, Michele Ceriotti, David E Manolopoulos, <em>“A surface-specific
+isotope effect in mixtures of light and heavy water”</em>, J. Phys. Chem.
+C 117(6), 2944-2951 (2013)</div>
+<div class="line">DOI: <a class="reference external" href="http://dx.doi.org/10.1021/jp311986m">10.1021/jp311986m</a> —
+BibTeX: <a class="reference external" href="http://www.doi2bib.org/#/10.1021/jp311986m">fetch</a></div>
+</div>
+</section>
+<section id="reweighting-based-high-order-pimd">
+<h2>Reweighting-based high-order PIMD<a class="headerlink" href="#reweighting-based-high-order-pimd" title="Permalink to this heading">¶</a></h2>
+<p>The Boltzmann weight assciated with the high order correction to
+standard PIMD is printed out as a property so that the high order
+estimate of an arbitrary position-dependent observable can be computed
+as a weighted average.</p>
+<div class="line-block">
+<div class="line"><strong>Main contributors:</strong> Michele Ceriotti , Guy A. R. Brian</div>
+<div class="line"><strong>Implementation:</strong></div>
+<div class="line">M.Ceriotti, G.A.R.Brian, O.Riordan, D.E.Manolopolous <em>“The
+inefficiency of re-weighted sampling and the curse of system size in
+high-order path integration”</em>, Proc. R. Soc. A 468, 2-17 (2011)</div>
+<div class="line">DOI:
+<a class="reference external" href="http://dx.doi.org/10.1098/rspa.2011.0413">10.1098/rspa.2011.0413</a>
+— BIBTEX:
+<a class="reference external" href="http://www.doi2bib.org/bib/10.1098%2Frspa.2011.0413">fetch</a></div>
+<div class="line"><strong>Theory:</strong></div>
+<div class="line">S.Jang, S.Jang, G.A.Voth <em>“Applications of higher order composite
+factorization schemes in imaginary time path integral simulations”</em>,
+J. Chem. Phys. 115, 7832 (2001)</div>
+<div class="line">DOI: <a class="reference external" href="http://dx.doi.org/10.1063/1.1410117">10.1063/1.1410117</a> —
+BIBTEX: <a class="reference external" href="http://www.doi2bib.org/bib/10.1063%2F1.1410117">fetch</a></div>
+<div class="line">S.A.Chin <em>“Symplectic integrators from composite operator
+factorizations”</em>, Phys. Lett. A 226, 344 (1997)</div>
+<div class="line">DOI:
+<a class="reference external" href="http://dx.doi.org/10.1016/s0375-9601(97)00003-0">10.1016/s0375-9601(97)00003-0</a>
+— BIBTEX:
+<a class="reference external" href="http://www.doi2bib.org/bib/10.1016%2Fs0375-9601(97)00003-0">fetch</a></div>
+<div class="line">M.Suzuki <em>“Hybrid exponential product formulas for unbounded operators
+with possible applications to Monte Carlo simulations”</em>, Phys. Lett. A
+201, 425 (1995)</div>
+<div class="line">DOI:
+<a class="reference external" href="http://dx.doi.org/10.1016/0375-9601(95)00266-6">10.1016/0375-9601(95)00266-6</a>
+— BIBTEX:
+<a class="reference external" href="http://www.doi2bib.org/bib/10.1016%2F0375-9601(95)00266-6">fetch</a></div>
+</div>
+</section>
+<section id="ring-polymer-contraction">
+<h2>Ring-Polymer Contraction<a class="headerlink" href="#ring-polymer-contraction" title="Permalink to this heading">¶</a></h2>
+<p>A ring-polymer contraction makes it possible to compute different
+components of the forces on different number of imaginary time slices.
+In order to reap maximum benefits, the implementation is fully
+compatible with the multiple time step integrators.</p>
+<div class="line-block">
+<div class="line"><strong>Main contributors:</strong> Michele Ceriotti, Venkat Kapil</div>
+<div class="line"><strong>Implementation:</strong></div>
+<div class="line">V.Kapil, J.VandeVondele, M.Ceriotti <em>“Accurate molecular dynamics and
+nuclear quantum effects at low cost by multiple steps in real and
+imaginary time: using density functional theory to accelerate
+wavefunction methods”</em>, J. Chem. Phys. 144, 054111 (2016) DOI:
+<a class="reference external" href="http://dx.doi.org/10.1063/1.4941091">10.1063/1.4941091</a> — BibTeX:
+<a class="reference external" href="http://www.doi2bib.org/bib/10.1063%2F1.4941091">fetch</a></div>
+<div class="line"><strong>Theory:</strong></div>
+<div class="line">T.Markland, D.E.Manolopoulos <em>“An efficient ring polymer contraction
+scheme for imaginary time path integral simulations”</em>, J. Chem. Phys.
+129, 024105 (2008)</div>
+<div class="line">DOI: <a class="reference external" href="http://dx.doi.org/10.1063/1.2953308">10.1063/1.2953308</a> —
+BibTeX: <a class="reference external" href="http://www.doi2bib.org/bib/10.1063%2F1.2953308">fetch</a></div>
+</div>
+</section>
+<section id="ring-polymer-instantons">
+<h2>Ring-polymer Instantons<a class="headerlink" href="#ring-polymer-instantons" title="Permalink to this heading">¶</a></h2>
+<p>Semiclassical instanton theory is an efficient way of simulating
+tunneling contributions to reaction rate constants and tunneling
+splittings, based on a well-defined dominant tunneling pathway. It can
+be much more efficient than RPMD rate theory, but it is not applicable
+to condensed phases and includes anharmonicities only along the reaction
+coordinate.</p>
+<div class="line-block">
+<div class="line"><strong>Main contributors:</strong> Yair Litman, Jeremy O. Richardson, Mariana
+Rossi</div>
+<div class="line"><strong>Implementation:</strong></div>
+<div class="line">Y. Litman, J. O. Richardson, T. Kumagai, M. Rossi, <em>Elucidating the
+Quantum Dynamics of Intramolecular Double Hydrogen Transfer in
+Porphycene</em>, arXiv:1810.05681 (2018).</div>
+<div class="line">V. Kapil et al. <em>i-PI 2.0: A Universal Force Engine for
+AdvancedMolecular Simulations</em>, Comp. Phys. Comm. (2018)</div>
+<div class="line"><strong>Theory:</strong></div>
+<div class="line">W. H. Miller, <em>Semiclassical limit of quantum mechanical transition
+state theory for nonseparable systems</em>, J. Chem. Phys. 62(5) 1899–1906
+(1975)</div>
+<div class="line">DOI: <a class="reference external" href="http://dx.doi.org/10.1063/1.430676">10.1063/1.430676</a> — BibTeX:
+<a class="reference external" href="http://doi2bib.org/#/doi/10.1063/1.430676">fetch</a></div>
+<div class="line">J. O. Richardson, <em>Ring-polymer instanton theory</em>, Int. Rev. Phys.
+Chem. 37, 171 (2018)</div>
+<div class="line">DOI:
+<a class="reference external" href="http://doi.org/10.1080/0144235X.2018.1472353">10.1080/0144235X.2018.1472353</a>
+— BibTeX: <a class="reference external" href="http://doi2bib.org/#/doi/10.1080/0144235X.2018.1472353">fetch</a></div>
+</div>
+</section>
+<section id="thermodynamic-integrations">
+<h2>Thermodynamic Integrations<a class="headerlink" href="#thermodynamic-integrations" title="Permalink to this heading">¶</a></h2>
+<p>Thermodynamic integrations are made easy with i-PI, through the
+connection of different sockets and the different weights one can assign
+to different forces. It is possible to do harmonic (Debye model) to
+anharmonic integration, or integrations between different kinds of
+potentials. Also, quantum thermodynamic integrations relative to mass
+are easily done through the manual input of each atom’s masses.</p>
+<div class="line-block">
+<div class="line"><strong>Main contributors:</strong> Mariana Rossi, Michele Ceriotti</div>
+<div class="line"><strong>Implementation:</strong></div>
+<div class="line">M. Rossi, P. Gasparotto, M.Ceriotti <em>“Anharmonic and Quantum
+Fluctuations in Molecular Crystals: A First-Principles Study of the
+Stability of Paracetamol”</em>, Phys. Rev. Lett. 117, 115702 (2016)</div>
+<div class="line">DOI:
+<a class="reference external" href="http://dx.doi.org/10.1103/PhysRevLett.117.115702">10.1103/PhysRevLett.117.115702</a>
+— BIBTEX:
+<a class="reference external" href="http://www.doi2bib.org/bib/10.1103%2FPhysRevLett.117.115702">fetch</a></div>
+</div>
+</section>
+<section id="thermostatted-ring-polymer-molecular-dynamics">
+<h2>Thermostatted Ring-polymer Molecular Dynamics<a class="headerlink" href="#thermostatted-ring-polymer-molecular-dynamics" title="Permalink to this heading">¶</a></h2>
+<p>By introducing an internal mode thermostat to RPMD it is possible to
+reduce the well-known artifacts in the simulation of dynamical
+properties by path integral methods.</p>
+<div class="line-block">
+<div class="line"><strong>Main contributors:</strong> Mariana Rossi, Michele Ceriotti</div>
+<div class="line"><strong>Implementation:</strong></div>
+<div class="line">M.Rossi, M.Ceriotti, D.E.Manolopoulos, <em>“How to remove the spurious
+resonances from ring polymer molecular dynamics”</em>, J. Chem. Phys. 140,
+234116 (2014)</div>
+<div class="line">DOI: <a class="reference external" href="https://doi.org/10.1063/1.4883861">10.1063/1.4883861</a> —
+BibTeX: <a class="reference external" href="https://www.doi2bib.org/bib/10.1063%2F1.4883861">fetch</a></div>
+<div class="line"><strong>Theory:</strong></div>
+<div class="line">I.R.Craig, D.E.Manolopoulos <em>“Quantum statistics and classical
+mechanics: Real time correlation functions from ring polymer molecular
+dynamics”</em>, J. Chem. Phys. 121, 3368 (2004)</div>
+<div class="line">DOI: <a class="reference external" href="https://doi.org/10.1063/1.1777575">10.1063/1.1777575</a> —
+BibTeX: <a class="reference external" href="https://www.doi2bib.org/bib/10.1063%2F1.1777575">fetch</a></div>
+</div>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="units.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Internal units and conventions</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="getting-started.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Getting started</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2021, The i-PI developers
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Core features</a><ul>
+<li><a class="reference internal" href="#bosonic-and-fermionic-path-integral-molecular-dynamics">Bosonic and Fermionic Path Integral Molecular Dynamics</a></li>
+<li><a class="reference internal" href="#cavity-molecular-dynamics-for-polaritonics">Cavity Molecular Dynamics for Polaritonics</a></li>
+<li><a class="reference internal" href="#committee-models">Committee models</a></li>
+<li><a class="reference internal" href="#direct-estimators-for-isotope-fractionation">Direct Estimators for Isotope Fractionation</a></li>
+<li><a class="reference internal" href="#fast-forward-langevin-thermostat">Fast-Forward Langevin Thermostat</a></li>
+<li><a class="reference internal" href="#finite-differences-suzuki-chin-pimd">Finite-differences Suzuki-Chin PIMD</a></li>
+<li><a class="reference internal" href="#finite-differences-vibrational-analysis">Finite-differences Vibrational Analysis</a></li>
+<li><a class="reference internal" href="#free-energy-perturbation-estimators-for-isotope-fractionation">Free-energy Perturbation Estimators for Isotope Fractionation</a></li>
+<li><a class="reference internal" href="#generalized-langevin-equation-thermostats">Generalized Langevin Equation Thermostats</a></li>
+<li><a class="reference internal" href="#geometry-optimization">Geometry Optimization</a></li>
+<li><a class="reference internal" href="#langevin-sampling-for-noisy-or-dissipative-forces">Langevin Sampling for Noisy or Dissipative Forces</a></li>
+<li><a class="reference internal" href="#multiple-time-step-integrators">Multiple Time Step integrators</a></li>
+<li><a class="reference internal" href="#open-path-integrals">Open Path Integrals</a></li>
+<li><a class="reference internal" href="#path-integral-gles">Path Integral GLEs</a></li>
+<li><a class="reference internal" href="#path-integral-molecular-dynamics">Path Integral Molecular Dynamics</a></li>
+<li><a class="reference internal" href="#path-integrals-molecular-dynamics-at-constant-pressure">Path Integrals Molecular Dynamics at Constant Pressure</a></li>
+<li><a class="reference internal" href="#path-integral-langevin-equation-thermostats">Path Integral Langevin Equation Thermostats</a></li>
+<li><a class="reference internal" href="#perturbed-path-integrals">Perturbed Path Integrals</a></li>
+<li><a class="reference internal" href="#replica-exchange-md">Replica Exchange MD</a></li>
+<li><a class="reference internal" href="#quantum-alchemical-transformation">Quantum Alchemical Transformation</a></li>
+<li><a class="reference internal" href="#reweighting-based-high-order-pimd">Reweighting-based high-order PIMD</a></li>
+<li><a class="reference internal" href="#ring-polymer-contraction">Ring-Polymer Contraction</a></li>
+<li><a class="reference internal" href="#ring-polymer-instantons">Ring-polymer Instantons</a></li>
+<li><a class="reference internal" href="#thermodynamic-integrations">Thermodynamic Integrations</a></li>
+<li><a class="reference internal" href="#thermostatted-ring-polymer-molecular-dynamics">Thermostatted Ring-polymer Molecular Dynamics</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=34e14329"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="_static/scripts/furo.js?v=5fa4622c"></script>
+    </body>
+</html>

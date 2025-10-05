@@ -1,0 +1,505 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Input file tags" href="input-tags.html" /><link rel="prev" title="Internal units and conventions" href="units.html" />
+
+    <link rel="shortcut icon" href="_static/favicon-ipi.png"/><!-- Generated with Sphinx 7.1.2 and Furo 2024.08.06 -->
+        <title>Input files - i-PI documentation pages</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=302659d7" />
+    <link rel="stylesheet" type="text/css" href="_static/custom_styles.css?v=78740f61" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">i-PI documentation pages</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
+  
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="_static/ipi-logo.svg" alt="Logo"/>
+  </div>
+  
+  <span class="sidebar-brand-text">i-PI documentation pages</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Program Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features.html">Core features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="units.html">Internal units and conventions</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Input files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input-tags.html">Input file tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output-files.html">Output files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output-tags.html">Output file tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="python.html">Tools and python utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="distributed.html">Distributed execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">A simple tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="onlinereso.html">Tutorials, recipes, and on-line resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently asked questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bibliography.html">Bibliography</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="input-files">
+<span id="inputfiles"></span><h1>Input files<a class="headerlink" href="#input-files" title="Permalink to this heading">¶</a></h1>
+<section id="input-file-format-and-structure">
+<span id="ifilestructure"></span><h2>Input file format and structure<a class="headerlink" href="#input-file-format-and-structure" title="Permalink to this heading">¶</a></h2>
+<p>In order to give the clearest layout, xml formatting was chosen as the
+basis for the main input file. An xml file consists of a set of
+hierarchically nested tags. There are three parts to an xml tag. Each
+tag is identified by a tag name, which specifies the class or variable
+that is being initialized. Between the opening and closing tags there
+may be some data, which may or may not contain other tags. This is used
+to specify the contents of a class object, or the value of a variable.
+Finally tags can have attributes, which are used for metadata, i.e. data
+used to specify how the tag should be interpreted. As an example, a
+‘mode’ attribute can be used to select between different thermostatting
+algorithms, specifying how the options of the thermostat class should be
+interpreted.</p>
+<p>A xml tag has the following syntax:</p>
+<p>The syntax for the different types of tag data is given below:</p>
+<div class="center docutils container">
+<div class="table-wrapper docutils container">
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Data type</p></th>
+<th class="head"><p>Syntax</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Boolean</p></td>
+<td><p>&lt;tag&gt;True&lt;/tag&gt; or &lt;tag&gt;False&lt;/tag&gt;</p></td>
+</tr>
+<tr class="row-odd"><td><p>Float</p></td>
+<td><p>&lt;tag&gt;11.111&lt;/tag&gt; or &lt;tag&gt;1.1111e+1&lt;/tag&gt;</p></td>
+</tr>
+<tr class="row-even"><td><p>Integer</p></td>
+<td><p>&lt;tag&gt;12345&lt;/tag&gt;</p></td>
+</tr>
+<tr class="row-odd"><td><p>String</p></td>
+<td><p>&lt;tag&gt;string_data&lt;/tag&gt;</p></td>
+</tr>
+<tr class="row-even"><td><p>Tuple</p></td>
+<td><p>&lt;tag&gt; (int1, int2, …)&lt;/tag&gt;</p></td>
+</tr>
+<tr class="row-odd"><td><p>Array</p></td>
+<td><p>&lt;tag&gt; [ entry1, entry2, …] &lt;/tag&gt;</p></td>
+</tr>
+<tr class="row-even"><td><p>Dictionary</p></td>
+<td><p>&lt;tag&gt;{name1: data1, name2: data2, …}&lt;/tag&gt;</p></td>
+</tr>
+</tbody>
+</table>
+</div>
+</div>
+<p>Note that arrays are always given as one-dimensional lists. In cases
+where a multi-dimensional array must be entered, one can use the ‘shape’
+attribute, that determines how the list will be reshaped into a
+multi-dimensional array. For example, the bead positions are represented
+in the code as an array of shape (number of beads, 3*number of atoms).
+If we take a system with 20 atoms and 8 beads, then this can be
+represented in the xml input file as:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>&lt;beads nbeads=’8’ natoms=’20’&gt; &lt;q shape=‘(8,60)’&gt;[ q11x, q11y, q11z,
+q12x, q12y, ... ]&lt;/q&gt; ... &lt;/beads&gt;
+</pre></div>
+</div>
+<p>If ‘shape’ is not specified, a 1D array will be assumed.</p>
+<p>The code uses the hierarchical nature of the xml format to help read the
+data; if a particular object is held within a parent object in the code,
+then the tag for that object will be within the appropriate parent tags.
+This is used to make the structure of the simulation clear.</p>
+<p>For example, the system that is being studied is partly defined by the
+thermodynamic ensemble that should be sampled, which in turn may be
+partly defined by the pressure, and so on. To make this dependence clear
+in the code the global simulation object which holds all the data
+contains an ensemble object, which contains a pressure variable.</p>
+<p>Therefore the input file is specified by having a <a class="reference internal" href="input-tags.html#simulation"><span class="std std-ref">simulation</span></a> tag, containing an
+<a class="reference internal" href="input-tags.html#ensemble"><span class="std std-ref">ensemble</span></a> tag, which itself contains a <span class="xref std std-ref">pressure</span> tag, which will contain a float
+value corresponding to the external pressure. In this manner, the class
+structure can be constructed iteratively.</p>
+<p>For example, suppose we want to generate a <em>NPT</em> ensemble at an external
+pressure of <span class="math notranslate nohighlight">\(10^{-7}\)</span> atomic pressure units. This would be
+specified by the following input file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">system</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">ensemble</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">pressure</span><span class="o">&gt;</span> <span class="mf">1e-7</span> <span class="o">&lt;/</span><span class="n">pressure</span><span class="o">&gt;</span> <span class="o">...</span> <span class="o">&lt;/</span><span class="n">ensemble</span><span class="o">&gt;</span> <span class="o">...</span>
+<span class="o">&lt;/</span><span class="n">system</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<p>To help detect any user error the recognized tag names, data types and
+acceptable options are all specified in the code in a specialized input
+class for each class of object. A full list of all the available tags
+and a brief description of their function is given at
+<a class="reference external" href="input-tags.html">input tags</a>.</p>
+<section id="overriding-default-units">
+<span id="inputunits"></span><h3>Overriding default units<a class="headerlink" href="#overriding-default-units" title="Permalink to this heading">¶</a></h3>
+<p>Many of the input parameters, such as the pressure in the above example,
+can be specified in more than one unit. Indeed, often the atomic unit is
+inconvenient to use, and we would prefer something else. Let us take the
+above example, but instead take an external pressure of 3 MPa. Instead
+of converting this to the atomic unit of pressure, it is possible to use
+pascals directly using:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>&lt;system&gt; &lt;ensemble&gt; &lt;pressure units=‘pascal’&gt; 3e6 &lt;/pressure&gt; ...
+&lt;/ensemble&gt; ... &lt;/system&gt;
+</pre></div>
+</div>
+<p>The code can also understand S.I. prefixes, so this can be simplified
+further using:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>&lt;system&gt; &lt;ensemble&gt; &lt;pressure units=‘megapascal’&gt; 3 &lt;/pressure&gt; ...
+&lt;/ensemble&gt; ... &lt;/system&gt;
+</pre></div>
+</div>
+<p>A full list of which units are defined for which dimensions can be found
+in the units.py module.</p>
+</section>
+</section>
+<section id="initialization-section">
+<h2>Initialization section<a class="headerlink" href="#initialization-section" title="Permalink to this heading">¶</a></h2>
+<p>The input file can contain a <span class="xref std std-ref">initializer</span> tag, which contains a number of fields that
+determine the starting values of the various quantities that define the
+state of the simulation – atomic positions, cell parameters, velocities,
+…. These fields (<a class="reference internal" href="input-tags.html#positions"><span class="std std-ref">positions</span></a>, <a class="reference internal" href="input-tags.html#velocities"><span class="std std-ref">velocities</span></a>, <a class="reference internal" href="input-tags.html#cell"><span class="std std-ref">cell</span></a>,
+<a class="reference internal" href="input-tags.html#masses"><span class="std std-ref">masses</span></a>, <a class="reference internal" href="input-tags.html#labels"><span class="std std-ref">labels</span></a>, <a class="reference internal" href="input-tags.html#file"><span class="std std-ref">file</span></a> ) specify how the values should be obtained:
+either from a manually-input list or from an external file.</p>
+<section id="configuration-files">
+<span id="configfile"></span><h3>Configuration files<a class="headerlink" href="#configuration-files" title="Permalink to this heading">¶</a></h3>
+<p>Instead of initializing the atom positions manually, the starting
+configuration can be specified through a separate data file. The name of
+the configuration file is specified within one of the possible fields of
+an <span class="xref std std-ref">initializer</span> tag. The file format is specified with the “mode” attribute. The
+currently accepted file formats are:</p>
+<ul class="simple">
+<li><p>pdb</p></li>
+<li><p>xyz</p></li>
+<li><p>chk</p></li>
+</ul>
+<p>the last of which will be described in the next section.</p>
+<p>Depending on the field name, the values read from the external file will
+be used to initialize one component of the simulation or another (e.g.
+the positions or the velocities). The <span class="xref std std-ref">initfile</span> tag can be used as a shortcut to
+initialize the atom positions, labels, masses and possibly the cell
+parameters at the same time. For instance,</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">initialize</span> <span class="n">nbeads</span><span class="o">=</span><span class="s2">&quot;8&quot;</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">file</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;pdb&quot;</span><span class="o">&gt;</span> <span class="n">init</span><span class="o">.</span><span class="n">pdb</span> <span class="o">&lt;/</span><span class="n">file</span><span class="o">&gt;</span>
+<span class="o">&lt;/</span><span class="n">initialize</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<p>is equivalent to</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">initialize</span> <span class="n">nbeads</span><span class="o">=</span><span class="s2">&quot;8&quot;</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">positions</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;pdb&quot;</span><span class="o">&gt;</span> <span class="n">init</span><span class="o">.</span><span class="n">pdb</span> <span class="o">&lt;/</span><span class="n">positions</span><span class="o">&gt;</span>
+<span class="o">&lt;</span><span class="n">labels</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;pdb&quot;</span><span class="o">&gt;</span> <span class="n">init</span><span class="o">.</span><span class="n">pdb</span> <span class="o">&lt;/</span><span class="n">labels</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">masses</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;pdb&quot;</span><span class="o">&gt;</span> <span class="n">init</span><span class="o">.</span><span class="n">pdb</span>
+<span class="o">&lt;/</span><span class="n">masses</span><span class="o">&gt;</span> <span class="o">&lt;</span><span class="n">cell</span> <span class="n">mode</span><span class="o">=</span><span class="s2">&quot;pdb&quot;</span><span class="o">&gt;</span> <span class="n">init</span><span class="o">.</span><span class="n">pdb</span> <span class="o">&lt;/</span><span class="n">cell</span><span class="o">&gt;</span> <span class="o">&lt;/</span><span class="n">initialize</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<p>In practice, the using the <span class="xref std std-ref">initfile</span> tag will only read the information that can
+be inferred from the given file type, so for an ‘xyz’ file that does not contain a cell, the cell
+parameters will not be initialized.</p>
+</section>
+<section id="initialization-from-checkpoint-files">
+<h3>Initialization from checkpoint files<a class="headerlink" href="#initialization-from-checkpoint-files" title="Permalink to this heading">¶</a></h3>
+<p>i-PI gives the option to output the entire state of the simulation at a
+particular timestep as an xml input file, called a checkpoint file (see
+<a class="reference internal" href="output-files.html#checkpoints"><span class="std std-ref">Checkpoint files</span></a> for details). As well as being a valid input for
+i-PI, a checkpoint can also be used inside an <span class="xref std std-ref">initializer</span> tag to specify the
+configuration of the system, discarding other parameters of the
+simulation such as the current time step or the chosen ensemble. Input
+from a checkpoint is selected by using “chk” as the value of the “mode”
+attribute. As for the configuration file, a checkpoint file can be used
+to initialize either one or many variables depending on which tag name
+is used.</p>
+</section>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="input-tags.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Input file tags</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="units.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Internal units and conventions</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2021, The i-PI developers
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Input files</a><ul>
+<li><a class="reference internal" href="#input-file-format-and-structure">Input file format and structure</a><ul>
+<li><a class="reference internal" href="#overriding-default-units">Overriding default units</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#initialization-section">Initialization section</a><ul>
+<li><a class="reference internal" href="#configuration-files">Configuration files</a></li>
+<li><a class="reference internal" href="#initialization-from-checkpoint-files">Initialization from checkpoint files</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=34e14329"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="_static/scripts/furo.js?v=5fa4622c"></script>
+    <script async="async" src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
+    </body>
+</html>

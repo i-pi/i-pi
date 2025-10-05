@@ -1,0 +1,436 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Troubleshooting" href="troubleshooting.html" /><link rel="prev" title="Tutorials, recipes, and on-line resources" href="onlinereso.html" />
+
+    <link rel="shortcut icon" href="_static/favicon-ipi.png"/><!-- Generated with Sphinx 7.1.2 and Furo 2024.08.06 -->
+        <title>Frequently asked questions - i-PI documentation pages</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=302659d7" />
+    <link rel="stylesheet" type="text/css" href="_static/custom_styles.css?v=78740f61" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">i-PI documentation pages</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
+  
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="_static/ipi-logo.svg" alt="Logo"/>
+  </div>
+  
+  <span class="sidebar-brand-text">i-PI documentation pages</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Program Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features.html">Core features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="units.html">Internal units and conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input-files.html">Input files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input-tags.html">Input file tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output-files.html">Output files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output-tags.html">Output file tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="python.html">Tools and python utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="distributed.html">Distributed execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">A simple tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="onlinereso.html">Tutorials, recipes, and on-line resources</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Frequently asked questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bibliography.html">Bibliography</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="frequently-asked-questions">
+<h1>Frequently asked questions<a class="headerlink" href="#frequently-asked-questions" title="Permalink to this heading">¶</a></h1>
+<section id="where-to-ask-for-help">
+<h2>Where to ask for help?<a class="headerlink" href="#where-to-ask-for-help" title="Permalink to this heading">¶</a></h2>
+<p>There is distinction between questions and bugs.
+If your question is related to running i-PI, using or understanding its features
+(also if you think that something is not documented enough),
+the best way to ask is to post your question on the i-PI forum: <a class="reference external" href="https://groups.google.com/g/ipi-users">https://groups.google.com/g/ipi-users</a>.
+In the forum, everything discussed will be available to other members of the community in the future!</p>
+<p>If you are seeing an actual bug,
+please consider reporting an issue on Github: <a class="reference external" href="https://github.com/i-pi/i-pi/issues">https://github.com/i-pi/i-pi/issues</a>.</p>
+</section>
+<section id="which-units-does-i-pi-use">
+<h2>Which units does i-PI use?<a class="headerlink" href="#which-units-does-i-pi-use" title="Permalink to this heading">¶</a></h2>
+<p>Atomic units are used everywhere inside the code.
+The exact values and more details are given in section <a class="reference internal" href="units.html#units-conventions"><span class="std std-ref">Internal units and conventions</span></a>.
+For I/O operations, various units are accepted.
+The XML tags responsible for physical settings accept the attribute <code class="docutils literal notranslate"><span class="pre">units=&lt;unit&gt;</span></code>.
+If nothing is specified, i-PI will assume atomic units.
+Many of the provided examples have these tags,
+and the reference section of the manual contains a full list.
+Another way to use units is related to input <code class="docutils literal notranslate"><span class="pre">.xyz</span></code> files. i-PI can accept declarations of these units in the <code class="docutils literal notranslate"><span class="pre">.xyz</span></code> comment line. One example is:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># CELL(abcABC): a b c alpha beta gamma cell{units} positions/forces/velocities{units}</span>
+</pre></div>
+</div>
+<p>Another place worth looking at is <code class="docutils literal notranslate"><span class="pre">&lt;i-pi-root&gt;/ipi/utils/units.py</span></code>,
+which contains definitions and values for non-default units,
+such as <code class="docutils literal notranslate"><span class="pre">electronvolt</span></code>, <code class="docutils literal notranslate"><span class="pre">inversecm</span></code> etc.</p>
+</section>
+<section id="how-to-build-i-pi">
+<h2>How to build i-PI?<a class="headerlink" href="#how-to-build-i-pi" title="Permalink to this heading">¶</a></h2>
+<p>i-PI is a Python code, and as such, strictly speaking, does not need to be compiled and installed.
+<code class="docutils literal notranslate"><span class="pre">&lt;i-pi-root&gt;/bin/i-pi</span></code> file is an executable.
+<code class="docutils literal notranslate"><span class="pre">source</span> <span class="pre">&lt;i-pi-root&gt;/env.sh</span></code> ensures that necessary paths are added to PATH, PYTHONPATH etc.
+Note that this option will <em>soon be deprecated</em> and the usage of i-PI as a package (see below) is
+recommended.</p>
+<p>It is more convenient to install the package to the system’s Python modules path,
+so that it is accessible by all users and can be run without specifying the path to the Python script.
+For this purpose we have included a module in the root directory of the i-PI distribution, <code class="docutils literal notranslate"><span class="pre">setup.py</span></code>,
+which handles creating a package with the executable and all the modules which are necessary for it to run.
+Detailed explanation can be found in the manual.</p>
+<p>In addition, i-PI can be installed through <code class="docutils literal notranslate"><span class="pre">pip</span></code> with the command</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>pip<span class="w"> </span>install<span class="w"> </span>-U<span class="w"> </span>ipi
+</pre></div>
+</div>
+<p>And to test it (assuming all required packages are also installed)</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>$<span class="w"> </span>i-pi-tests
+</pre></div>
+</div>
+</section>
+<section id="how-to-run-i-pi-with-the-client-code-name">
+<h2>How to run i-PI with the client code &lt;name&gt;?<a class="headerlink" href="#how-to-run-i-pi-with-the-client-code-name" title="Permalink to this heading">¶</a></h2>
+<p>i-PI communicates with electronic structure and MD codes via socket communication protocol.
+For many popular codes (CP2K, FHI-aims, LAMMPS, Quantum ESPRESSO, VASP, etc.)
+we provide examples in <code class="docutils literal notranslate"><span class="pre">&lt;i-pi-root&gt;/examples/clients</span></code> folder.</p>
+<p>Another way of connecting to client codes is using the ASE client.
+This way you get access to wide variety of codes that are connected to ASE,
+but for some of them current implementation requires restarting the client code after each step,
+which may lead to a significant overhead in case of electronic structure calculations.
+We recommend using the socket connection from the client code to ASE and then from ASE to i-PI, when possible. An example of a “double-socket” setup
+can be found in:</p>
+<p><code class="docutils literal notranslate"><span class="pre">https://github.com/i-pi/i-pi/tree/main/examples/clients/ase_client</span></code></p>
+</section>
+<section id="how-to-run-i-pi-with-vasp">
+<h2>How to run i-PI with VASP?<a class="headerlink" href="#how-to-run-i-pi-with-vasp" title="Permalink to this heading">¶</a></h2>
+<p>VASP is not shipped with support to i-PI. The way to get simulations running is to patch the VASP source code.
+This patch aims to add socket support and we provide patches in <code class="docutils literal notranslate"><span class="pre">&lt;i-pi-root&gt;/examples/clients/vasp</span></code>. Check
+the README file in that folder for detailed instructions on how to patch VASP.</p>
+<p>Note that the patches are version numbered, and we cannot guarantee that a given patch will work on a different
+VASP version than the one it was created for. We welcome contributions on the updates to these patches
+to keep up-to-date to the current VASP releases. The most recent VASP version we support by explicit path (as of Jan. 2025)
+is 6.3.0. The general script <code class="docutils literal notranslate"><span class="pre">patch_vasp.py</span></code> by T. Tian in <code class="docutils literal notranslate"><span class="pre">&lt;i-pi-root&gt;/examples/clients/vasp</span></code> can work for more recent, e.g. 6.4.X, versions,
+but we recommend testing.</p>
+</section>
+<section id="how-to-run-i-pi-on-a-cluster">
+<h2>How to run i-PI on a cluster?<a class="headerlink" href="#how-to-run-i-pi-on-a-cluster" title="Permalink to this heading">¶</a></h2>
+<p>There are different ways of running i-PI on HPC systems,
+described in details in the manual. Setups differ a lot depending
+on the type of calculation and the architecture of the system.
+A few examples based on the Slurm submission system can be taken
+as the starting point, and can be found in <code class="docutils literal notranslate"><span class="pre">examples/hpc_scripts</span></code>.
+Other setups are possible, please consult the manual.</p>
+</section>
+<section id="how-to-setup-colored-noise-thermostats-with-meaningful-parameters">
+<h2>How to setup colored-noise thermostats with meaningful parameters?<a class="headerlink" href="#how-to-setup-colored-noise-thermostats-with-meaningful-parameters" title="Permalink to this heading">¶</a></h2>
+<p>If you have an application that will profit from colored noise thermostats, you can download the parameters from <a class="reference external" href="http://gle4md.org">http://gle4md.org</a>.
+This website contains sets of input parameters optimized for a variety of conditions. You can choose i-PI syntax, such that you will only have
+to copy-paste that section inside the i-PI input file.
+Also the <code class="docutils literal notranslate"><span class="pre">&lt;i-pi-root&gt;/examples</span></code> (especially withing <code class="docutils literal notranslate"><span class="pre">lammps</span></code>) folder demonstrates the syntax for various thermostats.</p>
+</section>
+<section id="how-to-perform-geometry-optimization">
+<h2>How to perform geometry optimization?<a class="headerlink" href="#how-to-perform-geometry-optimization" title="Permalink to this heading">¶</a></h2>
+<p>Several examples of geometry optimizaion, including fixing certain atoms,
+are present in the <code class="docutils literal notranslate"><span class="pre">&lt;i-pi-root&gt;/examples</span></code> folder.
+The folders with names *geop* correspond to geometry optimization.
+Note that the optimization algorithms that involve line search have two sets of convergence parameters:
+one for line search and another for the main algorithm.</p>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="troubleshooting.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Troubleshooting</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="onlinereso.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Tutorials, recipes, and on-line resources</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2021, The i-PI developers
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Frequently asked questions</a><ul>
+<li><a class="reference internal" href="#where-to-ask-for-help">Where to ask for help?</a></li>
+<li><a class="reference internal" href="#which-units-does-i-pi-use">Which units does i-PI use?</a></li>
+<li><a class="reference internal" href="#how-to-build-i-pi">How to build i-PI?</a></li>
+<li><a class="reference internal" href="#how-to-run-i-pi-with-the-client-code-name">How to run i-PI with the client code &lt;name&gt;?</a></li>
+<li><a class="reference internal" href="#how-to-run-i-pi-with-vasp">How to run i-PI with VASP?</a></li>
+<li><a class="reference internal" href="#how-to-run-i-pi-on-a-cluster">How to run i-PI on a cluster?</a></li>
+<li><a class="reference internal" href="#how-to-setup-colored-noise-thermostats-with-meaningful-parameters">How to setup colored-noise thermostats with meaningful parameters?</a></li>
+<li><a class="reference internal" href="#how-to-perform-geometry-optimization">How to perform geometry optimization?</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=34e14329"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="_static/scripts/furo.js?v=5fa4622c"></script>
+    </body>
+</html>

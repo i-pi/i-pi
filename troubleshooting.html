@@ -1,0 +1,615 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Contributing" href="contributing.html" /><link rel="prev" title="Frequently asked questions" href="faq.html" />
+
+    <link rel="shortcut icon" href="_static/favicon-ipi.png"/><!-- Generated with Sphinx 7.1.2 and Furo 2024.08.06 -->
+        <title>Troubleshooting - i-PI documentation pages</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=302659d7" />
+    <link rel="stylesheet" type="text/css" href="_static/custom_styles.css?v=78740f61" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">i-PI documentation pages</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
+  
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="_static/ipi-logo.svg" alt="Logo"/>
+  </div>
+  
+  <span class="sidebar-brand-text">i-PI documentation pages</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Program Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features.html">Core features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="units.html">Internal units and conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input-files.html">Input files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input-tags.html">Input file tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output-files.html">Output files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output-tags.html">Output file tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="python.html">Tools and python utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="distributed.html">Distributed execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">A simple tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="onlinereso.html">Tutorials, recipes, and on-line resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently asked questions</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bibliography.html">Bibliography</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="troubleshooting">
+<h1>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Permalink to this heading">¶</a></h1>
+<section id="input-errors">
+<h2>Input errors<a class="headerlink" href="#input-errors" title="Permalink to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><em>not well-formed (invalid token)</em>: Seen if the input file does not
+have the correct xml syntax. Should be accompanied by a line number
+giving the point in the file where the syntax is incorrect.</p></li>
+<li><p><em>mismatched tag</em>: One of the closing tags does not have the same name
+as the corresponding opening tag. Could be caused either by a
+misspelling of one of the tags, or by having the closing tag in the
+wrong place. This last one is a standard part of the xml syntax, if
+the opening tag of one item is after the opening tag of a second,
+then its closing tag should be before the closing tag of the second.
+Should be accompanied by a line number giving the position of the
+closing tag.</p></li>
+<li><p><em>Uninitialized value of type __</em> or <em>Attribute/Field name __ is
+mandatory and was not found in the input for property __</em>: The xml
+file is missing a mandatory tag, i.e. one without which the
+simulation cannot be initialized. Find which tag name is missing and
+add it.</p></li>
+<li><p><em>Attribute/tag name __ is not a recognized property of __
+objects</em>: The first tag should not be found within the second set of
+tags. Check that the first tag is spelt correctly, and that it has
+been put in the right place.</p></li>
+<li><p><em>__ is not a valid option (___)</em>: This attribute/tag only allows a
+certain range of inputs. Pick one of the items from the list given.</p></li>
+<li><p><em>__ is an undefined unit for kind __</em> or <em>__ is not a valid
+unit prefix</em> or <em>Unit __ is not structured with a prefix+base
+syntax</em>: The unit input by the user is not correct. Make sure it
+corresponds to the correct dimensionality, and is spelt correctly.</p></li>
+<li><p><em>Invalid literal for int() with base 10: __</em> or <em>Invalid literal
+for float(): __</em> or <em>__ does not represent a bool value</em>: The
+data input by the user does not have the correct data type. See
+section <a class="reference internal" href="input-files.html#ifilestructure"><span class="std std-ref">Input file format and structure</span></a> for what constitutes a valid
+integer/float/boolean value.</p></li>
+<li><p><em>Error in list syntax: could not locate delimiters</em>: The array input
+data did not have the required braces. For a normal array use [], for
+a dictionary use {}, and for a tuple use ().</p></li>
+<li><p><em>The number of atom records does not match the header of xyz file</em>:
+Self-explanatory.</p></li>
+<li><p><em>list index out of range</em>: This will normally occur if the
+configuration is initialized from an invalid input file. This will
+either cause the code to try to read part of the input file that does
+not exist, or to set the number of beads to zero which causes this
+error in a different place. Check that the input file has the correct
+syntax.</p></li>
+</ul>
+</section>
+<section id="initialization-errors">
+<h2>Initialization errors<a class="headerlink" href="#initialization-errors" title="Permalink to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><em>Negative __ parameter specified.</em>: Self-explanatory.</p></li>
+<li><p><em>If you are initializing cell from cell side lengths you must pass
+the ’cell’ tag an array of 3 floats</em>: If you are attempting to
+initialize a cell using the “abc” mode, the code expects three floats
+corresponding to the three side lengths.</p></li>
+<li><p><em>If you are initializing cell from cell side lengths and angles you
+must pass the ’cell’ tag an array of 6 floats</em>: If you are attempting
+to initialize a cell using the “abcABC” mode, the code expects six
+floats corresponding to the three side lengths, followed by the three
+angles in degrees.</p></li>
+<li><p><em>Cell objects must contain a 3x3 matrix describing the cell
+vectors.</em>: If you are attempting to initialize a cell using the
+“manual” mode, the code expects nine floats corresponding to the cell
+vector matrix side lengths. Note that the values of the
+lower-diagonal elements will be set to zero.</p></li>
+<li><p><em>Array shape mismatch in q/p/m/names in beads input</em>: The size of the
+array in question does not have the correct number of elements given
+the number of atoms and the number of beads used in the rest of the
+input. If the number of beads is nbeads and the number of atoms
+natoms, then q and p should have shape (nbeads, 3*natoms) and m and
+names should have shape (natoms,).</p></li>
+<li><p><em>No thermostat/barostat tag provided for NVT/NPT simulation</em>: Some
+ensembles can only be sampled if a thermostat and/or barostat have
+been defined, and so for simulations at constant temperature and/or
+pressure these tags are mandatory. If you wish to not use a
+thermostat/barostat, but still want to keep the ensemble the same,
+then use “dummy” mode thermostat/barostat, which simply does nothing.</p></li>
+<li><p><em>Pressure/Temperature should be supplied for constant
+pressure/temperature simulation</em>: Since in this case the ensemble is
+defined by these parameters, these must be input by the user. Add the
+appropriate tags to the input file.</p></li>
+<li><p><em>Manual path mode requires (nbeads-1) frequencies, one for each
+internal mode of the path.</em>: If the “mode” tag of “normal_modes” is
+set to “manual”, it will expect an array of frequencies, one for each
+of the internal normal modes of the ring polymers.</p></li>
+<li><p><em>PA-CMD mode requires the target frequency of all the internal
+modes.</em>: If the “mode” tag of “normal_modes” is set to “pa-cmd”, it
+will expect an array of one frequency, to which all the internal
+modes of the ring polymers will be set.</p></li>
+<li><p><em>WMAX-CMD mode requires [wmax, wtarget]. The normal modes will be
+scaled such that the first internal mode is at frequency wtarget and
+all the normal modes coincide at frequency wmax.</em>: If the “mode” tag
+of “normal_modes” is set to “wmax-cmd”, it will expect an array of
+two frequencies, one two set the lowest frequency normal mode, and
+one for the other normal mode frequencies.</p></li>
+<li><p><em>Number of beads __ doesn’t match GLE parameter nb= __</em>: The
+matrices used to define the generalized Langevin equations of motion
+do not have the correct first dimension. If matrices have been
+downloaded from <a class="reference external" href="http://lab-cosmo.github.io/gle4md/">http://lab-cosmo.github.io/gle4md/</a>
+make sure that you have input the correct number of beads.</p></li>
+<li><p><em>Initialization tries to match up structures with different atom
+numbers</em>: If in the initialization any of the matrices has an array
+shape which do not correspond to the same number of atoms, then they
+cannot correspond to the same system. Check the size of the arrays
+specified if they have been input manually.</p></li>
+<li><p><em>Cannot initialize single atom/bead as atom/bead index __ is
+larger than the number of atoms/beads</em>: Self-explanatory. However,
+note that indices are counted from 0, so the first replica/atom is
+defined by an index 0, the second by an index 1, and so on.</p></li>
+<li><p><em>Cannot initialize the momenta/masses/labels/single atoms before the
+size of the system is known.</em>: In the code, a beads object is created
+to hold all the information related to the configuration of the
+system. However, until a position vector has been defined, this
+object is not created. Therefore, whichever arrays are being
+initialized individually, the position vector must always be
+initialized first.</p></li>
+<li><p><em>Trying to resample velocities before having masses.</em>: A
+Maxwell-Boltzmann distribution is partly defined by the atomic
+masses, and so the masses must be defined before the velocities can
+be resampled from this distribution.</p></li>
+<li><p><em>Cannot thermalize a single bead</em>: It does not make sense to
+initialize the momenta of only one of the beads, and so i-PI does not
+give this functionality.</p></li>
+<li><p><em>Initializer could not initialize __</em>: A property of the system
+that is mandatory to properly run the simulation has not been
+initialized in either the “initialize” section or the appropriate
+section in beads.</p></li>
+<li><p><em>Ensemble does not have a thermostat to initialize</em> or <em>There is
+nothing to initialize in non-GLE thermostats</em> or <em>Checkpoint file
+does not contain usable thermostat data</em>: These are raised if the
+user has tried to initialize the matrices for the GLE thermostats
+with a checkpoint file that either does not have a GLE thermostat or
+does not have a thermostat at all.</p></li>
+<li><p><em>Size mismatch in thermostat initialization data</em>: Called if the
+shape of the GLE matrices defined in the checkpoint file is different
+from those defined in the new simulation.</p></li>
+<li><p><em>Replay can only read from PDB or XYZ files – or a single frame from
+a CHK file</em>: If the user specifies a replay ensemble, the state of
+the system must be defined by either a configuration file or a
+checkpoint file, and cannot be specified manually.</p></li>
+</ul>
+</section>
+<section id="output-errors">
+<h2>Output errors<a class="headerlink" href="#output-errors" title="Permalink to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><em>The stride length for the __ file output must be positive.</em>:
+Self-explanatory</p></li>
+<li><p><em>__ is not a recognized property/output trajectory</em>: The string as
+defined in the “properties”/”trajectory” tag does not correspond to
+one of the available trajectories. Make sure that both the syntax is
+correct, and that the property has been spelt correctly.</p></li>
+<li><p><em>Could not open file __ for output</em>: Raised if there is a problem
+opening the file defined by the “filename” attribute.</p></li>
+<li><p><em>Selected bead index __ does not exist for trajectory __</em>: You
+have asked for the trajectory of a bead index greater than the number
+of the replicas of the system. Note that indices are counted from 0,
+so the first replica is defined by an index 0, the second by an index
+1, and so on.</p></li>
+<li><p><em>Incorrect format in unit specification __</em>: Usually raised if one
+of the curly braces has been neglected.</p></li>
+<li><p><em>Incorrect format in argument list __</em>: This will be raised either
+if one of the brackets has been neglected, or if the delimiters
+between arguments, in this case “;”, are not correct. This is usually
+raised if, instead of separating the arguments using “;”, they are
+instead separated by “,”, since this causes the property array to be
+parsed incorrectly.</p></li>
+<li><p><em>__ got an unexpected keyword argument __</em>: This will occur if
+one of the argument lists of one of the properties specified by the
+user has a keyword argument that does not match any of those in the
+function to calculate it. Check the properties.py module to see which
+property this function is calculating, and what the correct keyword
+arguments are. Then check the “properties” tag, and find which of the
+arguments has been misspelt.</p></li>
+<li><p><em>Must specify the index of atom_vec property</em>: Any property which
+prints out a vector corresponding to one atom needs the index of that
+atom, as no default is specified.</p></li>
+<li><p><em>Cannot output __ as atom/bead index __ is larger than the
+number of atoms/beads</em>: Self-explanatory. However, note that indices
+are counted from 0, so the first replica/atom is defined by an index
+0, the second by an index 1, and so on.</p></li>
+<li><p><em>Couldn’t find an atom that matched the argument of __</em>: For
+certain properties, you can specify an atom index or label, so that
+the property is averaged only over the atoms that match it. If
+however no atom labels match the argument given, then the average
+will be undefined. Note that for properties which are cumulatively
+counted rather than averaged, this error is not raised, and if no
+atom matches the label given 0 will be returned.</p></li>
+</ul>
+</section>
+<section id="socket-errors">
+<h2>Socket errors<a class="headerlink" href="#socket-errors" title="Permalink to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><em>Address already in use</em>: This is called if the server socket is
+already being used by the host network. There are several possible
+reasons for getting this error. Firstly, it might simply be that two
+simulations are running concurrently using the same host and port
+number. In this case simply change the port number of one of the
+simulations. Secondly, you can get this error if you try to rerun a
+simulation that previously threw an exception, since it takes a
+minute or so before the host will disconnect the server socket if it
+is not shut down cleanly. In this case, simply wait for it to
+disconnect, and try again. Finally, you will get this error if you
+try to use a restricted port number (i.e. below 1024) while not root.
+You should always use a non-restricted port number for i-PI
+simulations.</p></li>
+<li><p><em>Error opening unix socket. Check if a file /tmp/ipi___ exists, and
+remove it if unused.</em>: Similar to the above error, but given if you
+are using a unix socket rather than an internet socket. Since this
+binds locally the socket can be removed by the user, which means that
+it is not necessary to wait for the computer to automatically
+disconnect an unused server socket.</p></li>
+<li><p><em>Port number __ out of acceptable range</em>: The port number must be
+between 1 and 65535, and should be greater than 1024. Change the port
+number accordingly.</p></li>
+<li><p><em>Slot number __ out of acceptable range</em>: The slot number must be
+between 1 and 5. Change the slot number accordingly.</p></li>
+<li><p><em>’NoneType’ object has no attribute ’Up’</em>: This is called if an
+exception is raised during writing the data to output, and so the
+thread that deals with the socket is terminated uncleanly. Check the
+stack trace for the original exception, since this will be the actual
+source of the problem. Also note that, since the socket thread was
+not cleaned up correctly, the server socket may not have been
+disconnected properly and you may have to wait for a minute before
+you can restart a simulation using the same host and port number.</p></li>
+</ul>
+</section>
+<section id="mathematical-errors">
+<h2>Mathematical errors<a class="headerlink" href="#mathematical-errors" title="Permalink to this heading">¶</a></h2>
+<ul class="simple">
+<li><p><em>math domain error</em>: If the cell parameters are defined using the
+side lengths and angles, with either a pdb file or using the “abcABC”
+initialization mode, then for some value of the angles it is
+impossible to construct a valid cell vector matrix. This will cause
+the code to attempt to take the square root of a negative number,
+which gives this exception.</p></li>
+<li><p><em>overflow encountered in exp</em>: Sometimes occurs in <em>NPT</em> runs when
+the simulation box “explodes”. Make sure you have properly
+equilibrated the system before starting and that the timestep is
+short enough to not introduce very large integration errors.</p></li>
+</ul>
+</section>
+<section id="i-pi-is-slow">
+<h2>I-PI is slow!<a class="headerlink" href="#i-pi-is-slow" title="Permalink to this heading">¶</a></h2>
+<p>i-PI is not designed to be highly efficient, but it should not be the
+bottleneck in your calculations. Most of the time, if you see a major
+slow-down, there is a problem with your setup. Here are some tricks
+you can try.</p>
+<ul class="simple">
+<li><p><em>use a UNIX domain socket</em>: if you run on a single node, it is much
+faster to use <cite>mode=”unix”</cite> in your <cite>&lt;ffsocket&gt;</cite> classes. This uses
+a shared-memory communication process, that avoids much of the
+network latency of a TCP/IP socket.</p></li>
+<li><p><em>reduce latency</em>: if you have a VERY fast forcefield (with force
+evaluation below ~1ms) it might help to set the <cite>&lt;latency&gt;</cite> parameter
+of <cite>&lt;ffsocket&gt;</cite> to a small value, 1e-4s or less</p></li>
+<li><p><em>reduce I/O</em>: outputting hundreds of beads configurations at each time
+step is going to be slow in any scenario, but particularly so when
+using text files and Python. Reduce the output frequency using a larger
+<cite>stride</cite>, and/or <cite>flush</cite> less often.</p></li>
+<li><p><em>reduce the stride of internal checkpoints</em>: to guarantee that soft
+exits leave the simulation in a state that can be restarted safely,
+i-PI stores the internal state of the simulation at each step.
+Particularly for complicated setups, the overhead can be substantial.
+You can reduce the frequency by which the internal state is stored using
+the <cite>safe_stride</cite> attribute in the <cite>&lt;simulation&gt;</cite> tag. Note that doing
+so increases the risk that the RESTART file saved upon soft exit will be
+inconsistent with the sate of the outputs, so that restarting a simulaiton
+will leave broken or discontinuous output files.</p></li>
+<li><p><em>profile i-PI</em>: if you still think i-PI is being unreasonably slow,
+you can contact the developers - your setup might have revealed some
+kind of bottleneck. It will help us if you can also generate a profiler
+output from your run (possibly with only a small number of steps).
+You can generate a profiler log by running i-PI with <cite>-p</cite> option,
+e.g. <cite>i-pi -p input.xml</cite>.
+You will need to install the <cite>yappi</cite> profiler.</p></li>
+</ul>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="contributing.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Contributing</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="faq.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Frequently asked questions</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2021, The i-PI developers
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Troubleshooting</a><ul>
+<li><a class="reference internal" href="#input-errors">Input errors</a></li>
+<li><a class="reference internal" href="#initialization-errors">Initialization errors</a></li>
+<li><a class="reference internal" href="#output-errors">Output errors</a></li>
+<li><a class="reference internal" href="#socket-errors">Socket errors</a></li>
+<li><a class="reference internal" href="#mathematical-errors">Mathematical errors</a></li>
+<li><a class="reference internal" href="#i-pi-is-slow">I-PI is slow!</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=34e14329"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="_static/scripts/furo.js?v=5fa4622c"></script>
+    </body>
+</html>

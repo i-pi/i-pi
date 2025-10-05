@@ -1,0 +1,3694 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Output files" href="output-files.html" /><link rel="prev" title="Input files" href="input-files.html" />
+
+    <link rel="shortcut icon" href="_static/favicon-ipi.png"/><!-- Generated with Sphinx 7.1.2 and Furo 2024.08.06 -->
+        <title>Input file tags - i-PI documentation pages</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=302659d7" />
+    <link rel="stylesheet" type="text/css" href="_static/custom_styles.css?v=78740f61" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">i-PI documentation pages</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
+  
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="_static/ipi-logo.svg" alt="Logo"/>
+  </div>
+  
+  <span class="sidebar-brand-text">i-PI documentation pages</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Program Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features.html">Core features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="units.html">Internal units and conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input-files.html">Input files</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Input file tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output-files.html">Output files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output-tags.html">Output file tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="python.html">Tools and python utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="distributed.html">Distributed execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">A simple tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="onlinereso.html">Tutorials, recipes, and on-line resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently asked questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bibliography.html">Bibliography</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="input-file-tags">
+<span id="input-tags"></span><h1>Input file tags<a class="headerlink" href="#input-file-tags" title="Permalink to this heading">¶</a></h1>
+<p>This chapter gives a complete list of the tags that can be specified in
+the xml input file, along with the hierarchy of objects. Note that every
+xml input file must start with the root tag . See the accompanying
+“help.xml” file in the “doc/help_files” directory to see the recommended
+input file structure.</p>
+<p>Each section of this chapter describes one of the major input classes
+used in the i-PI initialization. These sections will start with some
+normal text which describes the function of this class in detail. After
+this the attributes of the tag will be listed, enclosed within a frame
+for clarity. Finally, the fields contained within the tag will be listed
+in alphabetical order, possibly followed by their attributes.
+<strong>Attribute</strong> names will be bold and <strong>field</strong> names both bold and
+underlined. <em>Other supplementary information</em> will be in small font and
+italicized.</p>
+<section id="al6xxx-kmc">
+<span id="id1"></span><h2>al6xxx_kmc<a class="headerlink" href="#al6xxx-kmc" title="Permalink to this heading">¶</a></h2>
+<p>Holds all the information for the KMC dynamics, such as timestep, rates and barriers that control it.</p>
+<section id="attributes">
+<h3>ATTRIBUTES<a class="headerlink" href="#attributes" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p>The KMC algorithm to be used</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘rfkmc’]</p>
+<p><em>default</em>:  rfkmc</p>
+</div></blockquote>
+</section>
+<section id="fields">
+<h3>FIELDS<a class="headerlink" href="#fields" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><a class="reference internal" href="#optimizer"><span class="std std-ref">optimizer</span></a></p>
+<p>Option for geometry optimization step</p>
+<p><strong>nstep</strong></p>
+<p>The number of optimization steps.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  10</p>
+<p><strong>a0</strong></p>
+<p>FCC lattice parameter</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: length</p>
+<p><em>default</em>:  1.0</p>
+<p><strong>diffusion_barrier_al</strong></p>
+<p>Barrier for vacancy diffusion in pure Al.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  0.01</p>
+<p><strong>diffusion_prefactor_al</strong></p>
+<p>Prefactor for vacancy diffusion in pure Al.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: frequency</p>
+<p><em>default</em>:  2.4188843e-05</p>
+<p><strong>diffusion_barrier_mg</strong></p>
+<p>Barrier for vacancy-assisted diffusion of Mg.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>diffusion_prefactor_mg</strong></p>
+<p>Prefactor for vacancy-assisted diffusion of Mg.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: frequency</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>diffusion_barrier_si</strong></p>
+<p>Barrier for vacancy-assisted diffusion of Si.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>diffusion_prefactor_si</strong></p>
+<p>Prefactor for vacancy-assisted diffusion of Si.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: frequency</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>neval</strong></p>
+<p>The number of parallel force evaluators.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  4</p>
+<p><strong>ncell</strong></p>
+<p>The number of repeat cells in each direction.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  4</p>
+<p><strong>nvac</strong></p>
+<p>The number of vacancies.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  4</p>
+<p><strong>nsi</strong></p>
+<p>The number of silicon atoms.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  4</p>
+<p><strong>nmg</strong></p>
+<p>The number of magnesium atoms.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  4</p>
+<p><strong>idx</strong></p>
+<p>The position of the atoms on the lattice, relative to the canonical ordering.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>tottime</strong></p>
+<p>Total KMC time elapsed</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: time</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>ecache_file</strong></p>
+<p>Filename for storing/loading energy cache</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:</p>
+<p><strong>qcache_file</strong></p>
+<p>Filename for storing/loading positions cache</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:</p>
+<p><strong>max_cache_len</strong></p>
+<p>Maximum cache length before oldest entry is deleted</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  1000</p>
+</div></blockquote>
+</section>
+</section>
+<section id="alchemy">
+<span id="id2"></span><h2>alchemy<a class="headerlink" href="#alchemy" title="Permalink to this heading">¶</a></h2>
+<p>Holds all the information for doing Monte Carlo alchemical exchange moves.</p>
+<section id="id3">
+<h3>ATTRIBUTES<a class="headerlink" href="#id3" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘dummy’]</p>
+<p><em>default</em>:  dummy</p>
+</div></blockquote>
+</section>
+<section id="id4">
+<h3>FIELDS<a class="headerlink" href="#id4" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>names</strong></p>
+<p>The names of the atoms to be to exchanged, in the format [name1, name2, … ].</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>nxc</strong></p>
+<p>The average number of exchanges per step to be attempted</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  1</p>
+<p><strong>ealc</strong></p>
+<p>The contribution to the conserved quantity for the alchemical exchanger</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.0</p>
+</div></blockquote>
+</section>
+</section>
+<section id="atoms">
+<span id="id5"></span><h2>atoms<a class="headerlink" href="#atoms" title="Permalink to this heading">¶</a></h2>
+<p>Deals with a single replica of the system or classical simulations.</p>
+<section id="id6">
+<h3>FIELDS<a class="headerlink" href="#id6" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>natoms</strong></p>
+<p>The number of atoms.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  0</p>
+<p><strong>q</strong></p>
+<p>The positions of the atoms, in the format [x1, y1, z1, x2, … ].</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: length</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>p</strong></p>
+<p>The momenta of the atoms, in the format [px1, py1, pz1, px2, … ].</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: momentum</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>m</strong></p>
+<p>The masses of the atoms, in the format [m1, m2, … ].</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: mass</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>names</strong></p>
+<p>The names of the atoms, in the format [name1, name2, … ].</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  [ ]</p>
+</div></blockquote>
+</section>
+</section>
+<section id="atomswap">
+<span id="id7"></span><h2>atomswap<a class="headerlink" href="#atomswap" title="Permalink to this heading">¶</a></h2>
+<p>Holds all the information for doing Monte Carlo atom swap moves.</p>
+<section id="id8">
+<h3>ATTRIBUTES<a class="headerlink" href="#id8" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p>Dummy attribute, does nothing.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘dummy’]</p>
+<p><em>default</em>:  dummy</p>
+</div></blockquote>
+</section>
+<section id="id9">
+<h3>FIELDS<a class="headerlink" href="#id9" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>names</strong></p>
+<p>The names of the atoms to be to exchanged, in the format [name1, name2, … ].</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>nxc</strong></p>
+<p>The average number of exchanges per step to be attempted</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  1</p>
+<p><strong>ealc</strong></p>
+<p>The contribution to the conserved quantity for the atom swapper</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.0</p>
+</div></blockquote>
+</section>
+</section>
+<section id="barostat">
+<span id="id10"></span><h2>barostat<a class="headerlink" href="#barostat" title="Permalink to this heading">¶</a></h2>
+<p>Simulates an external pressure bath.</p>
+<section id="id11">
+<h3>ATTRIBUTES<a class="headerlink" href="#id11" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p>The type of barostat. ‘isotropic’ implements the Bussi-Zykova-Parrinello barostat [doi:10.1063/1.3073889] that isotropically scales the volume while sampling the isothermal isobaric ensemble. The implementation details are given in [doi:10.1016/j.cpc.2013.10.027]. This barostat is suitable for simulating liquids. ‘sc-isotropic’ implements the same for Suzuki-Chin path integral molecular dynamics [10.1021/acs.jctc.8b01297] and should only be used with the Suzuki-Chin NPT ensemble. ‘flexible’ implements the path integral version of the Martyna-Tuckerman-Tobias-Klein barostat which incorporates full cell fluctuations while sampling the isothermal isobaric ensemble [doi:10.1063/1.478193]. This is suitable for anisotropic systems such as molecular solids. ‘anisotropic’ implements the Raiteri-Gale-Bussi barostat which enables cell fluctuations at constant external stress [10.1088/0953-8984/23/33/334213]. It is suitable for simulating solids at given external (non-diagonal) stresses and requires specifying a reference cell for estimating strain. Note that this ensemble is valid only within the elastic limit of small strains. For diagonal stresses (or external pressures) the ‘flexible’ and the ‘anisotropic’ modes should give very similar results. ‘dummy’ barostat does not do anything.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘dummy’, ‘isotropic’, ‘flexible’, ‘anisotropic’, ‘sc-isotropic’]</p>
+<p><em>default</em>:  dummy</p>
+</div></blockquote>
+</section>
+<section id="id12">
+<h3>FIELDS<a class="headerlink" href="#id12" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><a class="reference internal" href="#thermostat"><span class="std std-ref">thermostat</span></a></p>
+<p>The thermostat for the cell. Keeps the cell velocity distribution at the correct temperature. Note that the ‘pile_l’, ‘pile_g’, ‘nm_gle’ and ‘nm_gle_g’ options will not work for this thermostat.</p>
+<p><strong>tau</strong></p>
+<p>The time constant associated with the dynamics of the piston.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: time</p>
+<p><em>default</em>:  1.0</p>
+<p><strong>p</strong></p>
+<p>Momentum (or momenta) of the piston.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: momentum</p>
+<p><em>default</em>:  [ ]</p>
+<p><a class="reference internal" href="#h0"><span class="std std-ref">h0</span></a></p>
+<p>Reference cell for Parrinello-Rahman-like barostats. Should be roughly equal to the mean size of the cell averaged over the trajectory. Sampling might be inaccurate if the difference is too large.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: length</p>
+<dl class="simple">
+<dt><em>default</em>:</dt><dd><p>[0. 0. 0. 0. 0. 0. 0. 0. 0.]</p>
+</dd>
+</dl>
+<p><strong>hfix</strong></p>
+<p>A list of the cell entries that should be held fixed (xx, yy, zz, xy, xz, yz). ‘offdiagonal’ is an alias for xy, xz, yz.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>vol_constraint</strong></p>
+<p>If True, the (N, V, sigma_a = 0, T)-ensemble is sampled, which allows for full cell fluctuations while keeping the cell volume fixed. This ensemble was introduced in [doi:10.1021/acs.jctc.5b00748]. Note that it is only implemented for the MTTK (‘flexible’) barostat, enabling it for any other barostat will not work and result in an error.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+</div></blockquote>
+</section>
+</section>
+<section id="beads">
+<span id="id13"></span><h2>beads<a class="headerlink" href="#beads" title="Permalink to this heading">¶</a></h2>
+<p>Describes the bead configurations in a path integral simulation.</p>
+<section id="id14">
+<h3>ATTRIBUTES<a class="headerlink" href="#id14" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>natoms</strong></p>
+<p>The number of atoms.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  0</p>
+<p><strong>nbeads</strong></p>
+<p>The number of beads.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  0</p>
+</div></blockquote>
+</section>
+<section id="id15">
+<h3>FIELDS<a class="headerlink" href="#id15" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>q</strong></p>
+<p>The positions of the beads. In an array of size [nbeads, 3*natoms].</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: length</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>p</strong></p>
+<p>The momenta of the beads. In an array of size [nbeads, 3*natoms].</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: momentum</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>m</strong></p>
+<p>The masses of the atoms, in the format [m1, m2, … ].</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: mass</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>names</strong></p>
+<p>The names of the atoms, in the format [name1, name2, … ].</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  [ ]</p>
+</div></blockquote>
+</section>
+</section>
+<section id="bec">
+<span id="id16"></span><h2>bec<a class="headerlink" href="#bec" title="Permalink to this heading">¶</a></h2>
+<p>Deals with the Born Effective Charges tensors</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: number</p>
+<section id="id17">
+<h3>ATTRIBUTES<a class="headerlink" href="#id17" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>units</strong></p>
+<p>The units the input data is given in.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  automatic</p>
+<p><strong>shape</strong></p>
+<p>The shape of the array.</p>
+<p><em>dtype</em>: tuple</p>
+<p><em>default</em>:  (0,)</p>
+<p><strong>mode</strong></p>
+<p>If ‘mode’ is ‘driver’, then the array is computed on the fly. If ‘mode’ is ‘manual’, then the array is read in directly, then reshaped according to the ‘shape’ specified in a row-major manner. If ‘mode’ is ‘file’ then the array is read in from the file given.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘driver’, ‘manual’, ‘file’, ‘none’]</p>
+<p><em>default</em>:  none</p>
+</div></blockquote>
+</section>
+</section>
+<section id="bias">
+<span id="id18"></span><h2>bias<a class="headerlink" href="#bias" title="Permalink to this heading">¶</a></h2>
+<p>Deals with creating all the necessary forcefield objects.</p>
+<section id="id19">
+<h3>FIELDS<a class="headerlink" href="#id19" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><a class="reference internal" href="#force"><span class="std std-ref">force</span></a></p>
+<p>The class that deals with how each forcefield contributes to the overall potential, force and virial calculation.</p>
+</div></blockquote>
+</section>
+</section>
+<section id="bosons">
+<span id="id20"></span><h2>bosons<a class="headerlink" href="#bosons" title="Permalink to this heading">¶</a></h2>
+<p>Deals with the specification of which atoms are have bosonic indistinguishability. The specified atoms participate in exchange interaction, which forms ring polymers that combine several particles together. The algorithm scales quadratically with the number of atoms and linearly with the number of beads. The implementation is based on Hirshberg et al.’s doi:10.1073/pnas.1913365116 and Feldman and Hirshberg’s doi:10.1063/5.0173749.</p>
+<p><em>dtype</em>: string</p>
+<section id="id21">
+<h3>ATTRIBUTES<a class="headerlink" href="#id21" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>shape</strong></p>
+<p>The shape of the array.</p>
+<p><em>dtype</em>: tuple</p>
+<p><em>default</em>:  (0,)</p>
+<p><strong>mode</strong></p>
+<p>If ‘mode’ is ‘manual’, then the array is read in directly, then reshaped according to the ‘shape’ specified in a row-major manner. If ‘mode’ is ‘file’ then the array is read in from the file given.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘manual’, ‘file’]</p>
+<p><em>default</em>:  manual</p>
+<p><strong>id</strong></p>
+<p>If ‘id’ is ‘index’, then bosonic atoms are specified a list of indices (zero-based). If ‘id’ is ‘label’ then specify a list of labels.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘index’, ‘label’]</p>
+<p><em>default</em>:  index</p>
+</div></blockquote>
+</section>
+</section>
+<section id="cell">
+<span id="id22"></span><h2>cell<a class="headerlink" href="#cell" title="Permalink to this heading">¶</a></h2>
+<p>Describes with the cell parameters. Takes as array which can be used to initialize the cell vector matrix. N.B.: the cell parameters are stored with the lattice vectors in the columns, and the cell must be oriented in such a way that the array is upper-triangular (i.e. with the first vector aligned along x and the second vector in the xy plane).</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: length</p>
+<section id="id23">
+<h3>ATTRIBUTES<a class="headerlink" href="#id23" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>units</strong></p>
+<p>The units the input data is given in.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  automatic</p>
+<p><strong>shape</strong></p>
+<p>The shape of the array.</p>
+<p><em>dtype</em>: tuple</p>
+<p><em>default</em>:  (0,)</p>
+<p><strong>mode</strong></p>
+<p>If ‘mode’ is ‘manual’, then the array is read in directly, then reshaped according to the ‘shape’ specified in a row-major manner. If ‘mode’ is ‘file’ then the array is read in from the file given.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘manual’, ‘file’]</p>
+<p><em>default</em>:  manual</p>
+</div></blockquote>
+</section>
+</section>
+<section id="checkpoint">
+<span id="id24"></span><h2>checkpoint<a class="headerlink" href="#checkpoint" title="Permalink to this heading">¶</a></h2>
+<p>This class defines how a checkpoint file should be output. Optionally, between the checkpoint tags, you can specify one integer giving the current step of the simulation. By default this integer will be zero.</p>
+<p><em>dtype</em>: integer</p>
+<section id="id25">
+<h3>ATTRIBUTES<a class="headerlink" href="#id25" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>filename</strong></p>
+<p>A string to specify the name of the file that is output. The file name is given by ‘prefix’.’filename’ + format_specifier. The format specifier may also include a number if multiple similar files are output.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  restart</p>
+<p><strong>stride</strong></p>
+<p>The number of steps between successive writes.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  1</p>
+<p><strong>overwrite</strong></p>
+<p>This specifies whether or not each consecutive checkpoint file will overwrite the old one.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  True</p>
+</div></blockquote>
+</section>
+</section>
+<section id="constrained-dynamics">
+<span id="id26"></span><h2>constrained_dynamics<a class="headerlink" href="#constrained-dynamics" title="Permalink to this heading">¶</a></h2>
+<p>Holds all the information for the MD integrator, such as timestep, the thermostats and barostats that control it.</p>
+<section id="id27">
+<h3>ATTRIBUTES<a class="headerlink" href="#id27" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p>The ensemble that will be sampled during the simulation.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘nve’, ‘nvt’]</p>
+<p><em>default</em>:  nve</p>
+<p><strong>splitting</strong></p>
+<p>The integrator used for sampling the target ensemble.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘obabo’, ‘baoab’]</p>
+<p><em>default</em>:  baoab</p>
+</div></blockquote>
+</section>
+<section id="id28">
+<h3>FIELDS<a class="headerlink" href="#id28" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><a class="reference internal" href="#thermostat"><span class="std std-ref">thermostat</span></a></p>
+<p>The thermostat for the atoms, keeps the atom velocity distribution at the correct temperature.</p>
+<p><a class="reference internal" href="#barostat"><span class="std std-ref">barostat</span></a></p>
+<p>Simulates an external pressure bath.</p>
+<p><strong>timestep</strong></p>
+<p>The time step.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: time</p>
+<p><em>default</em>:  1.0</p>
+<p><strong>nmts</strong></p>
+<p>Number of iterations for each MTS level (including the outer loop, that should in most cases have just one iteration).</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>nsteps_o</strong></p>
+<p>The number of sub steps used in the evolution of the thermostat (used in function step_Oc). Relevant only for GLE thermostats</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  1</p>
+<p><strong>nsteps_geo</strong></p>
+<p>The number of sub steps used in the evolution of the geodesic flow (used in function step_Ag).</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  1</p>
+<p><a class="reference internal" href="#csolver"><span class="std std-ref">csolver</span></a></p>
+<p>Define a numerical method for computing the projection operators associated with the constraint.</p>
+<p><a class="reference internal" href="#constraint"><span class="std std-ref">constraint</span></a></p>
+<p>Define a constraint to be applied onto atoms</p>
+</div></blockquote>
+</section>
+</section>
+<section id="constraint">
+<span id="id29"></span><h2>constraint<a class="headerlink" href="#constraint" title="Permalink to this heading">¶</a></h2>
+<p>Generic input value</p>
+<section id="id30">
+<h3>ATTRIBUTES<a class="headerlink" href="#id30" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p>The type of constraint.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘distance’, ‘angle’, ‘eckart’, ‘multi’, ‘multi’]</p>
+<p><em>default</em>:  distance</p>
+</div></blockquote>
+</section>
+<section id="id31">
+<h3>FIELDS<a class="headerlink" href="#id31" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>atoms</strong></p>
+<p>List of atoms indices that are to be constrained.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>values</strong></p>
+<p>List of constraint lengths.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: length</p>
+<p><em>default</em>:  [ ]</p>
+<p><a class="reference internal" href="#constraint"><span class="std std-ref">constraint</span></a></p>
+<p>One or more constraints that have to be considered coupled</p>
+</div></blockquote>
+</section>
+</section>
+<section id="csolver">
+<span id="id32"></span><h2>csolver<a class="headerlink" href="#csolver" title="Permalink to this heading">¶</a></h2>
+<p>Holds all parameters for the numerical method used to solve the contraint.</p>
+<section id="id33">
+<h3>FIELDS<a class="headerlink" href="#id33" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>tolerance</strong></p>
+<p>Tolerance value used in the Quasi-Newton iteration scheme.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.0001</p>
+<p><strong>maxit</strong></p>
+<p>Maximum number of steps used in the Quasi-Newton iteration scheme.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  1000</p>
+<p><strong>norm_order</strong></p>
+<p>Order of norm used to determine termination of the Quasi-newton iteration.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  2</p>
+</div></blockquote>
+</section>
+</section>
+<section id="dmd">
+<span id="id34"></span><h2>dmd<a class="headerlink" href="#dmd" title="Permalink to this heading">¶</a></h2>
+<p>DrivenMD with external time-dependent driving potential</p>
+<section id="id35">
+<h3>FIELDS<a class="headerlink" href="#id35" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>dmdff</strong></p>
+<p>List of names of forcefields that should do driven MD. Accepts ffdmd forcefield types. Currently implemented (2021) for ffdmd only the driving potential similar to the one described in Bowman, .., Brown JCP 119, 646 (2003).</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  [ ]</p>
+</div></blockquote>
+</section>
+</section>
+<section id="driven-dynamics">
+<span id="id36"></span><h2>driven_dynamics<a class="headerlink" href="#driven-dynamics" title="Permalink to this heading">¶</a></h2>
+<p>Holds all the information for a driven dynamics.</p>
+<section id="id37">
+<h3>ATTRIBUTES<a class="headerlink" href="#id37" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p>The ensemble that will be sampled during the simulation. eda-nve: nve with an external electric field; eda-nvt: nvt with an external electric field;</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘eda-nve’, ‘eda-nvt’]</p>
+<p><em>default</em>:  eda-nve</p>
+<p><strong>splitting</strong></p>
+<p>The Louiville splitting used for sampling the target ensemble.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘obabo’, ‘baoab’]</p>
+<p><em>default</em>:  obabo</p>
+</div></blockquote>
+</section>
+<section id="id38">
+<h3>FIELDS<a class="headerlink" href="#id38" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><a class="reference internal" href="#efield"><span class="std std-ref">efield</span></a></p>
+<p>The external electric field parameters:plane-wave parameters (intensity/amplitude, angular frequency, and phase) and gaussian envelope function parameters (peak time/mean of the gaussian, and pulse duration/standard deviation of the gaussian)</p>
+<p><a class="reference internal" href="#bec"><span class="std std-ref">bec</span></a></p>
+<p>The Born Effective Charges tensors (cartesian coordinates)</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: number</p>
+<p><em>default</em>:  [ ]</p>
+<p><a class="reference internal" href="#thermostat"><span class="std std-ref">thermostat</span></a></p>
+<p>The thermostat for the atoms, keeps the atom velocity distribution at the correct temperature.</p>
+<p><a class="reference internal" href="#barostat"><span class="std std-ref">barostat</span></a></p>
+<p>Simulates an external pressure bath.</p>
+<p><strong>timestep</strong></p>
+<p>The time step.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: time</p>
+<p><em>default</em>:  1.0</p>
+<p><strong>nmts</strong></p>
+<p>Number of iterations for each MTS level (including the outer loop, that should in most cases have just one iteration).</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  [ ]</p>
+</div></blockquote>
+</section>
+</section>
+<section id="dynamics">
+<span id="id39"></span><h2>dynamics<a class="headerlink" href="#dynamics" title="Permalink to this heading">¶</a></h2>
+<p>Holds all the information for the MD integrator, such as timestep, the thermostats and barostats that control it.</p>
+<section id="id40">
+<h3>ATTRIBUTES<a class="headerlink" href="#id40" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p>The ensemble that will be sampled during the simulation. nve: constant-energy-volume; nvt: constant-temperature-volume; npt: constant-temperature-pressure(isotropic); nst: constant-temperature-stress(anisotropic); sc: Suzuki-Chin high-order NVT; scnpt: Suzuki-Chin high-order NpT; nvt-cc: constrained-centroid NVT;</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘nve’, ‘nvt’, ‘npt’, ‘nst’, ‘sc’, ‘scnpt’, ‘nvt-cc’]</p>
+<p><em>default</em>:  nve</p>
+<p><strong>splitting</strong></p>
+<p>The Louiville splitting used for sampling the target ensemble.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘obabo’, ‘baoab’]</p>
+<p><em>default</em>:  obabo</p>
+</div></blockquote>
+</section>
+<section id="id41">
+<h3>FIELDS<a class="headerlink" href="#id41" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><a class="reference internal" href="#thermostat"><span class="std std-ref">thermostat</span></a></p>
+<p>The thermostat for the atoms, keeps the atom velocity distribution at the correct temperature.</p>
+<p><a class="reference internal" href="#barostat"><span class="std std-ref">barostat</span></a></p>
+<p>Simulates an external pressure bath.</p>
+<p><strong>timestep</strong></p>
+<p>The time step.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: time</p>
+<p><em>default</em>:  1.0</p>
+<p><strong>nmts</strong></p>
+<p>Number of iterations for each MTS level (including the outer loop, that should in most cases have just one iteration).</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  [ ]</p>
+</div></blockquote>
+</section>
+</section>
+<section id="efield">
+<span id="id42"></span><h2>efield<a class="headerlink" href="#efield" title="Permalink to this heading">¶</a></h2>
+<p>Simulates an external time dependent electric field</p>
+<section id="id43">
+<h3>FIELDS<a class="headerlink" href="#id43" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>amp</strong></p>
+<p>The amplitude of the external electric field (in cartesian coordinates)</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: electric-field</p>
+<dl class="simple">
+<dt><em>default</em>:</dt><dd><p>[0. 0. 0.]</p>
+</dd>
+</dl>
+<p><strong>freq</strong></p>
+<p>The pulsation of the external electric field</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: frequency</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>phase</strong></p>
+<p>The phase of the external electric field (in rad)</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: number</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>peak</strong></p>
+<p>The time when the external electric field gets its maximum value</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: time</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>sigma</strong></p>
+<p>The standard deviations (time) of the gaussian envelope function of the external electric field</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: time</p>
+<p><em>default</em>:  inf</p>
+</div></blockquote>
+</section>
+</section>
+<section id="ensemble">
+<span id="id44"></span><h2>ensemble<a class="headerlink" href="#ensemble" title="Permalink to this heading">¶</a></h2>
+<p>Holds all the information that is ensemble specific, such as the temperature and the external pressure.</p>
+<section id="id45">
+<h3>FIELDS<a class="headerlink" href="#id45" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>temperature</strong></p>
+<p>The temperature of the system.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: temperature</p>
+<p><em>default</em>:  -1.0</p>
+<p><strong>pressure</strong></p>
+<p>The external pressure.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: pressure</p>
+<p><em>default</em>:  -12345.0</p>
+<p><strong>stress</strong></p>
+<p>The external stress.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: pressure</p>
+<dl class="simple">
+<dt><em>default</em>:</dt><dd><p>[-12345.     -0.     -0.     -0. -12345.     -0.     -0.     -0. -12345.]</p>
+</dd>
+</dl>
+<p><strong>eens</strong></p>
+<p>The ensemble contribution to the conserved quantity.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  0.0</p>
+<p><a class="reference internal" href="#bias"><span class="std std-ref">bias</span></a></p>
+<p>Deals with creating all the necessary forcefield objects.</p>
+<p><strong>bias_weights</strong></p>
+<p>Bias weights.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>hamiltonian_weights</strong></p>
+<p>Hamiltonian weights.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>time</strong></p>
+<p>The internal time for this system</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: time</p>
+<p><em>default</em>:  0.0</p>
+</div></blockquote>
+</section>
+</section>
+<section id="ffcavphsocket">
+<span id="id46"></span><h2>ffcavphsocket<a class="headerlink" href="#ffcavphsocket" title="Permalink to this heading">¶</a></h2>
+<p>A cavity molecular dynamics driver for vibraitonal strong coupling. In the current implementation, only a single cavity mode polarized along the x and y directions is coupled to the molecules. Check <a class="reference external" href="https://doi.org/10.1073/pnas.2009272117">https://doi.org/10.1073/pnas.2009272117</a> and also examples/lammps/h2o-cavmd/ for details.</p>
+<section id="id47">
+<h3>ATTRIBUTES<a class="headerlink" href="#id47" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p>Specifies whether the driver interface will listen onto a internet socket [inet] or onto a unix socket [unix].</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘unix’, ‘inet’]</p>
+<p><em>default</em>:  inet</p>
+<p><strong>matching</strong></p>
+<p>Specifies whether requests should be dispatched to any client, automatically matched to the same client when possible [auto] or strictly forced to match with the same client [lock].</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘auto’, ‘any’, ‘lock’]</p>
+<p><em>default</em>:  auto</p>
+<p><strong>name</strong></p>
+<p>Mandatory. The name by which the forcefield will be identified in the System forces section.</p>
+<p><em>dtype</em>: string</p>
+<p><strong>pbc</strong></p>
+<p>Applies periodic boundary conditions to the atoms coordinates before passing them on to the driver code.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><strong>threaded</strong></p>
+<p>Whether the forcefield should use a thread loop to evaluate, or work in serial. Should be set to True for FFSockets</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  True</p>
+</div></blockquote>
+</section>
+<section id="id48">
+<h3>FIELDS<a class="headerlink" href="#id48" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>charge_array</strong></p>
+<p>The partial charges of all the atoms, in the format [Q1, Q2, … ].</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: length</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>apply_photon</strong></p>
+<p>Determines if additional photonic degrees of freedom is included or not.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><strong>E0</strong></p>
+<p>The value of varepsilon (effective light-matter coupling strength) in atomic units.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>omega_c</strong></p>
+<p>This gives the cavity photon frequency at normal incidence.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: frequency</p>
+<p><em>default</em>:  0.01</p>
+<p><strong>ph_rep</strong></p>
+<p>In the current implementation, two energy-degenerate photon modes polarized along x and y directions are coupled to the molecular system. If ‘loose’, the cavity photons polarized along the x, y directions are represented by two ‘L’ atoms; the x dimension of the first ‘L’ atom is coupled to the molecules, and the y dimension of the second ‘L’ atom is coupled to the molecules. If ‘dense’, the cavity photons polarized along the x, y directions are represented by one ‘L’ atom; the x and y dimensions of this ‘L’ atom are coupled to the molecules.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘loose’, ‘dense’]</p>
+<p><em>default</em>:  loose</p>
+<p><strong>address</strong></p>
+<p>This gives the server address that the socket will run on.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  localhost</p>
+<p><strong>port</strong></p>
+<p>This gives the port number that defines the socket.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  65535</p>
+<p><strong>slots</strong></p>
+<p>This gives the number of client codes that can queue at any one time.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  4</p>
+<p><strong>exit_on_disconnect</strong></p>
+<p>Determines if i-PI should quit when a client disconnects.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><strong>timeout</strong></p>
+<p>This gives the number of seconds before assuming a calculation has died. If 0 there is no timeout.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>latency</strong></p>
+<p>The number of seconds the polling thread will wait between exhamining the list of requests.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.0001</p>
+<p><strong>offset</strong></p>
+<p>A constant offset that is subtracted from the forcefield energy. Useful when there is a large core energy contribution that is constant throughout a simulation and hides significant changes in the 10th digit.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>parameters</strong></p>
+<p>The parameters of the force field</p>
+<p><em>dtype</em>: dictionary</p>
+<p><em>default</em>:  { }</p>
+<p><strong>activelist</strong></p>
+<p>List with indexes of the atoms that this socket is taking care of. Default: [-1] (corresponding to all)</p>
+<p><em>dtype</em>: integer</p>
+<dl class="simple">
+<dt><em>default</em>:</dt><dd><p>[-1]</p>
+</dd>
+</dl>
+</div></blockquote>
+</section>
+</section>
+<section id="ffcommittee">
+<span id="id49"></span><h2>ffcommittee<a class="headerlink" href="#ffcommittee" title="Permalink to this heading">¶</a></h2>
+<p>Combines multiple forcefields to build a committee model, that can be used to compute uncertainty-quantified machine-learning models. Each forcefield can be any of the other FF objects, and each should be used with a client that generates a slightly different estimation of energy and forces. These are averaged, and the mean used as the actual forcefield. Statistics about the distribution are also returned as extras fields, and can be printed for further postprocessing. It is also possible for a single FF object to return a JSON-formatted string containing entries <cite>committee_pot</cite>, <cite>committee_force</cite> and <cite>committee_virial</cite>, that contain multiple members at once. These will be unpacked and combined with whatever else is present. Also contains options to use it for uncertainty estimation and for active learning in a ML context, based on a committee model. Implements the approaches discussed in [Musil et al.](<a class="reference external" href="http://doi.org/10.1021/acs.jctc.8b00959">http://doi.org/10.1021/acs.jctc.8b00959</a>) and [Imbalzano et al.](<a class="reference external" href="http://doi.org/10.1063/5.0036522">http://doi.org/10.1063/5.0036522</a>)</p>
+<section id="id50">
+<h3>ATTRIBUTES<a class="headerlink" href="#id50" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>name</strong></p>
+<p>Mandatory. The name by which the forcefield will be identified in the System forces section.</p>
+<p><em>dtype</em>: string</p>
+<p><strong>pbc</strong></p>
+<p>Applies periodic boundary conditions to the atoms coordinates before passing them on to the driver code.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><strong>threaded</strong></p>
+<p>Whether the forcefield should use a thread loop to evaluate, or work in serial</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+</div></blockquote>
+</section>
+<section id="id51">
+<h3>FIELDS<a class="headerlink" href="#id51" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>latency</strong></p>
+<p>The number of seconds the polling thread will wait between exhamining the list of requests.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.0001</p>
+<p><strong>offset</strong></p>
+<p>A constant offset that is subtracted from the forcefield energy. Useful when there is a large core energy contribution that is constant throughout a simulation and hides significant changes in the 10th digit.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>parameters</strong></p>
+<p>The parameters of the force field</p>
+<p><em>dtype</em>: dictionary</p>
+<p><em>default</em>:  { }</p>
+<p><strong>activelist</strong></p>
+<p>List with indexes of the atoms that this socket is taking care of. Default: [-1] (corresponding to all)</p>
+<p><em>dtype</em>: integer</p>
+<dl class="simple">
+<dt><em>default</em>:</dt><dd><p>[-1]</p>
+</dd>
+</dl>
+<p><strong>weights</strong></p>
+<p>List of weights to be given to the forcefields. Defaults to 1 for each FF. Note that the components are divided by the number of FF, and so the default corresponds to an average.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>alpha</strong></p>
+<p>Scaling of the variance of the model, corresponding to a calibration of the error</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  1.0</p>
+<p><strong>baseline_name</strong></p>
+<p>Name of the forcefield object that should be treated as the baseline for a weighted baseline model.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:</p>
+<p><strong>baseline_uncertainty</strong></p>
+<p>Corresponds to the expected error of the baseline model. This represents the error on the TOTAL potential energy of the simulation.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  -1.0</p>
+<p><strong>active_thresh</strong></p>
+<p>The uncertainty threshold for active learning. Structure with an uncertainty above this value are printed in the specified output file so they can be used for active learning.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>active_output</strong></p>
+<p>Output filename for structures that exceed the accuracy threshold of the model, to be used in active learning.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  active_output</p>
+<p><strong>parse_json</strong></p>
+<p>Tell the model whether to parse extras string looking for committee values of potential, forces, and virials. Default: false.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><a class="reference internal" href="#ffsocket"><span class="std std-ref">ffsocket</span></a></p>
+<p>Deals with the assigning of force calculation jobs to different driver codes, and collecting the data, using a socket for the data communication.</p>
+<p><a class="reference internal" href="#ffdirect"><span class="std std-ref">ffdirect</span></a></p>
+<p>Direct potential that evaluates forces through a Python call, using PES providers from a list of possible external codes. The available PES interfaces are listed into the <cite>ipi/pes</cite> folder, and are the same available for the Python driver. The <cite>&lt;parameters&gt;</cite> field should contain a dictionary of the specific option of the chosen PES.</p>
+<p><a class="reference internal" href="#fflj"><span class="std std-ref">fflj</span></a></p>
+<p>Simple, internal LJ evaluator without cutoff, neighbour lists or minimal image convention. Expects standard LJ parameters, e.g. { eps: 0.1, sigma: 1.0 }.</p>
+<p><a class="reference internal" href="#ffdebye"><span class="std std-ref">ffdebye</span></a></p>
+<p>Harmonic energy calculator</p>
+<p><a class="reference internal" href="#ffplumed"><span class="std std-ref">ffplumed</span></a></p>
+<p>Direct PLUMED interface. Can be used to implement metadynamics in i-PI in combination with the &lt;metad&gt; SMotion class. NB: if you use PLUMED for constant biasing (e.g. for umbrella sampling) the bias will be computed but there will be no output as specified in the <cite>plumed.dat</cite> file unless you include a &lt;metad&gt; tag, that triggers the log update.</p>
+<p><a class="reference internal" href="#ffyaff"><span class="std std-ref">ffyaff</span></a></p>
+<p>Uses a Yaff force field to compute the forces.</p>
+<p><a class="reference internal" href="#ffsgdml"><span class="std std-ref">ffsgdml</span></a></p>
+<p>A SGDML energy calculator</p>
+</div></blockquote>
+</section>
+</section>
+<section id="ffdebye">
+<span id="id52"></span><h2>ffdebye<a class="headerlink" href="#ffdebye" title="Permalink to this heading">¶</a></h2>
+<p>Harmonic energy calculator</p>
+<section id="id53">
+<h3>ATTRIBUTES<a class="headerlink" href="#id53" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>name</strong></p>
+<p>Mandatory. The name by which the forcefield will be identified in the System forces section.</p>
+<p><em>dtype</em>: string</p>
+<p><strong>pbc</strong></p>
+<p>Applies periodic boundary conditions to the atoms coordinates before passing them on to the driver code.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><strong>threaded</strong></p>
+<p>Whether the forcefield should use a thread loop to evaluate, or work in serial</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+</div></blockquote>
+</section>
+<section id="id54">
+<h3>FIELDS<a class="headerlink" href="#id54" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>hessian</strong></p>
+<p>Specifies the Hessian of the harmonic potential. Default units are atomic. Units can be specified only by xml attribute. Implemented options are: ‘atomic_unit’, ‘ev/ang^2’</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: hessian</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>x_reference</strong></p>
+<p>Minimum-energy configuration for the harmonic potential</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: length</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>v_reference</strong></p>
+<p>Zero-value of energy for the harmonic potential</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>latency</strong></p>
+<p>The number of seconds the polling thread will wait between exhamining the list of requests.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.0001</p>
+<p><strong>offset</strong></p>
+<p>A constant offset that is subtracted from the forcefield energy. Useful when there is a large core energy contribution that is constant throughout a simulation and hides significant changes in the 10th digit.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>parameters</strong></p>
+<p>The parameters of the force field</p>
+<p><em>dtype</em>: dictionary</p>
+<p><em>default</em>:  { }</p>
+<p><strong>activelist</strong></p>
+<p>List with indexes of the atoms that this socket is taking care of. Default: [-1] (corresponding to all)</p>
+<p><em>dtype</em>: integer</p>
+<dl class="simple">
+<dt><em>default</em>:</dt><dd><p>[-1]</p>
+</dd>
+</dl>
+</div></blockquote>
+</section>
+</section>
+<section id="ffdirect">
+<span id="id55"></span><h2>ffdirect<a class="headerlink" href="#ffdirect" title="Permalink to this heading">¶</a></h2>
+<p>Direct potential that evaluates forces through a Python call, using PES providers from a list of possible external codes. The available PES interfaces are listed into the <cite>ipi/pes</cite> folder, and are the same available for the Python driver. The <cite>&lt;parameters&gt;</cite> field should contain a dictionary of the specific option of the chosen PES.</p>
+<section id="id56">
+<h3>ATTRIBUTES<a class="headerlink" href="#id56" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>name</strong></p>
+<p>Mandatory. The name by which the forcefield will be identified in the System forces section.</p>
+<p><em>dtype</em>: string</p>
+<p><strong>pbc</strong></p>
+<p>Applies periodic boundary conditions to the atoms coordinates before passing them on to the driver code.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><strong>threaded</strong></p>
+<p>Whether the forcefield should use a thread loop to evaluate, or work in serial</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+</div></blockquote>
+</section>
+<section id="id57">
+<h3>FIELDS<a class="headerlink" href="#id57" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>pes</strong></p>
+<p>Type of PES that should be used to evaluate the forcefield</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘DW’, ‘DW_bath’, ‘DW_friction’, ‘MorseHarmonic’, ‘Spherical_LJ’, ‘ase’, ‘bath’, ‘double_double_well’, ‘driverdipole’, ‘dummy’, ‘elphmod’, ‘harmonic’, ‘mace’, ‘metatomic’, ‘pet’, ‘psiflow’, ‘rascal’, ‘so3lr’, ‘spline’, ‘xtb’, ‘custom’]</p>
+<p><em>default</em>:  dummy</p>
+<p><strong>pes_path</strong></p>
+<p>File path for ‘custom’ client (it should end with .py)</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:</p>
+<p><strong>batch_size</strong></p>
+<p>The number of structures that should be batched in a single evaluation. The total number of structures computed at each step should be a multiple of <cite>batch_size</cite> or the calculation will hang forever.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  1</p>
+<p><strong>latency</strong></p>
+<p>The number of seconds the polling thread will wait between exhamining the list of requests.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.0001</p>
+<p><strong>offset</strong></p>
+<p>A constant offset that is subtracted from the forcefield energy. Useful when there is a large core energy contribution that is constant throughout a simulation and hides significant changes in the 10th digit.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>parameters</strong></p>
+<p>The parameters of the force field</p>
+<p><em>dtype</em>: dictionary</p>
+<p><em>default</em>:  { }</p>
+<p><strong>activelist</strong></p>
+<p>List with indexes of the atoms that this socket is taking care of. Default: [-1] (corresponding to all)</p>
+<p><em>dtype</em>: integer</p>
+<dl class="simple">
+<dt><em>default</em>:</dt><dd><p>[-1]</p>
+</dd>
+</dl>
+</div></blockquote>
+</section>
+</section>
+<section id="ffdmd">
+<span id="id58"></span><h2>ffdmd<a class="headerlink" href="#ffdmd" title="Permalink to this heading">¶</a></h2>
+<p>Simple, internal DMD evaluator without without neighbor lists, but with PBC. Expects coupling elements (n*(n-1)/2 of them), oscillating frequency and time step.</p>
+<section id="id59">
+<h3>ATTRIBUTES<a class="headerlink" href="#id59" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>name</strong></p>
+<p>Mandatory. The name by which the forcefield will be identified in the System forces section.</p>
+<p><em>dtype</em>: string</p>
+<p><strong>pbc</strong></p>
+<p>Applies periodic boundary conditions to the atoms coordinates before passing them on to the driver code.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><strong>threaded</strong></p>
+<p>Whether the forcefield should use a thread loop to evaluate, or work in serial</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+</div></blockquote>
+</section>
+<section id="id60">
+<h3>FIELDS<a class="headerlink" href="#id60" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>dmd_coupling</strong></p>
+<p>Specifies the coupling between atom pairs (should be size N*(N-1)/2 ordered c21, c32, c31, c43, c42, c41 etc. – in atomic units!)</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>dmd_freq</strong></p>
+<p>Frequency of the oscillation of the time-dependent term</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: frequency</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>dmd_dt</strong></p>
+<p>Time step of the oscillating potential. Should match time step of simulation</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: time</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>dmd_step</strong></p>
+<p>The current step counter for dmd.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  0</p>
+<p><strong>latency</strong></p>
+<p>The number of seconds the polling thread will wait between exhamining the list of requests.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.0001</p>
+<p><strong>offset</strong></p>
+<p>A constant offset that is subtracted from the forcefield energy. Useful when there is a large core energy contribution that is constant throughout a simulation and hides significant changes in the 10th digit.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>parameters</strong></p>
+<p>The parameters of the force field</p>
+<p><em>dtype</em>: dictionary</p>
+<p><em>default</em>:  { }</p>
+<p><strong>activelist</strong></p>
+<p>List with indexes of the atoms that this socket is taking care of. Default: [-1] (corresponding to all)</p>
+<p><em>dtype</em>: integer</p>
+<dl class="simple">
+<dt><em>default</em>:</dt><dd><p>[-1]</p>
+</dd>
+</dl>
+</div></blockquote>
+</section>
+</section>
+<section id="fflj">
+<span id="id61"></span><h2>fflj<a class="headerlink" href="#fflj" title="Permalink to this heading">¶</a></h2>
+<p>Simple, internal LJ evaluator without cutoff, neighbour lists or minimal image convention. Expects standard LJ parameters, e.g. { eps: 0.1, sigma: 1.0 }.</p>
+<section id="id62">
+<h3>ATTRIBUTES<a class="headerlink" href="#id62" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>name</strong></p>
+<p>Mandatory. The name by which the forcefield will be identified in the System forces section.</p>
+<p><em>dtype</em>: string</p>
+<p><strong>pbc</strong></p>
+<p>Applies periodic boundary conditions to the atoms coordinates before passing them on to the driver code.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><strong>threaded</strong></p>
+<p>Whether the forcefield should use a thread loop to evaluate, or work in serial</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+</div></blockquote>
+</section>
+<section id="id63">
+<h3>FIELDS<a class="headerlink" href="#id63" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>latency</strong></p>
+<p>The number of seconds the polling thread will wait between exhamining the list of requests.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.0001</p>
+<p><strong>offset</strong></p>
+<p>A constant offset that is subtracted from the forcefield energy. Useful when there is a large core energy contribution that is constant throughout a simulation and hides significant changes in the 10th digit.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>parameters</strong></p>
+<p>The parameters of the force field</p>
+<p><em>dtype</em>: dictionary</p>
+<p><em>default</em>:  { }</p>
+<p><strong>activelist</strong></p>
+<p>List with indexes of the atoms that this socket is taking care of. Default: [-1] (corresponding to all)</p>
+<p><em>dtype</em>: integer</p>
+<dl class="simple">
+<dt><em>default</em>:</dt><dd><p>[-1]</p>
+</dd>
+</dl>
+</div></blockquote>
+</section>
+</section>
+<section id="ffplumed">
+<span id="id64"></span><h2>ffplumed<a class="headerlink" href="#ffplumed" title="Permalink to this heading">¶</a></h2>
+<p>Direct PLUMED interface. Can be used to implement metadynamics in i-PI in combination with the &lt;metad&gt; SMotion class. NB: if you use PLUMED for constant biasing (e.g. for umbrella sampling) the bias will be computed but there will be no output as specified in the <cite>plumed.dat</cite> file unless you include a &lt;metad&gt; tag, that triggers the log update.</p>
+<section id="id65">
+<h3>ATTRIBUTES<a class="headerlink" href="#id65" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>name</strong></p>
+<p>Mandatory. The name by which the forcefield will be identified in the System forces section.</p>
+<p><em>dtype</em>: string</p>
+<p><strong>pbc</strong></p>
+<p>Applies periodic boundary conditions to the atoms coordinates before passing them on to the driver code.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><strong>threaded</strong></p>
+<p>Whether the forcefield should use a thread loop to evaluate, or work in serial</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+</div></blockquote>
+</section>
+<section id="id66">
+<h3>FIELDS<a class="headerlink" href="#id66" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><a class="reference internal" href="#file"><span class="std std-ref">file</span></a></p>
+<p>This describes the location to read the reference structure file from.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:</p>
+<p><strong>plumed_dat</strong></p>
+<p>The PLUMED input file</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  plumed.dat</p>
+<p><strong>plumed_step</strong></p>
+<p>The current step counter for PLUMED calls</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  0</p>
+<p><strong>compute_work</strong></p>
+<p>Compute the work done by the metadynamics bias (to correct the conserved quantity). Note that this might require multiple evaluations of the conserved quantities, and can add some overhead.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  True</p>
+<p><strong>plumed_extras</strong></p>
+<p>List of variables defined in the PLUMED input, that should be transferred to i-PI as <cite>extras</cite> fields. Note that a version of PLUMED greater or equal than 2.10 is necessary to retrieve variables into i-PI, and that, if you are using ring-polymer contraction, the associated force block should use <cite>interpolate_extras</cite> to make sure all beads have values.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>latency</strong></p>
+<p>The number of seconds the polling thread will wait between exhamining the list of requests.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.0001</p>
+<p><strong>offset</strong></p>
+<p>A constant offset that is subtracted from the forcefield energy. Useful when there is a large core energy contribution that is constant throughout a simulation and hides significant changes in the 10th digit.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>parameters</strong></p>
+<p>The parameters of the force field</p>
+<p><em>dtype</em>: dictionary</p>
+<p><em>default</em>:  { }</p>
+<p><strong>activelist</strong></p>
+<p>List with indexes of the atoms that this socket is taking care of. Default: [-1] (corresponding to all)</p>
+<p><em>dtype</em>: integer</p>
+<dl class="simple">
+<dt><em>default</em>:</dt><dd><p>[-1]</p>
+</dd>
+</dl>
+</div></blockquote>
+</section>
+</section>
+<section id="ffsgdml">
+<span id="id67"></span><h2>ffsgdml<a class="headerlink" href="#ffsgdml" title="Permalink to this heading">¶</a></h2>
+<p>A SGDML energy calculator</p>
+<section id="id68">
+<h3>ATTRIBUTES<a class="headerlink" href="#id68" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>name</strong></p>
+<p>Mandatory. The name by which the forcefield will be identified in the System forces section.</p>
+<p><em>dtype</em>: string</p>
+<p><strong>pbc</strong></p>
+<p>Applies periodic boundary conditions to the atoms coordinates before passing them on to the driver code.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><strong>threaded</strong></p>
+<p>Whether the forcefield should use a thread loop to evaluate, or work in serial</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+</div></blockquote>
+</section>
+<section id="id69">
+<h3>FIELDS<a class="headerlink" href="#id69" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>sGDML_model</strong></p>
+<p>This gives the file name of the sGDML model.</p>
+<p><em>dtype</em>: string</p>
+<p><strong>latency</strong></p>
+<p>The number of seconds the polling thread will wait between exhamining the list of requests.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.0001</p>
+<p><strong>offset</strong></p>
+<p>A constant offset that is subtracted from the forcefield energy. Useful when there is a large core energy contribution that is constant throughout a simulation and hides significant changes in the 10th digit.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>parameters</strong></p>
+<p>The parameters of the force field</p>
+<p><em>dtype</em>: dictionary</p>
+<p><em>default</em>:  { }</p>
+<p><strong>activelist</strong></p>
+<p>List with indexes of the atoms that this socket is taking care of. Default: [-1] (corresponding to all)</p>
+<p><em>dtype</em>: integer</p>
+<dl class="simple">
+<dt><em>default</em>:</dt><dd><p>[-1]</p>
+</dd>
+</dl>
+</div></blockquote>
+</section>
+</section>
+<section id="ffsocket">
+<span id="id70"></span><h2>ffsocket<a class="headerlink" href="#ffsocket" title="Permalink to this heading">¶</a></h2>
+<p>Deals with the assigning of force calculation jobs to different driver codes, and collecting the data, using a socket for the data communication.</p>
+<section id="id71">
+<h3>ATTRIBUTES<a class="headerlink" href="#id71" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p>Specifies whether the driver interface will listen onto a internet socket [inet] or onto a unix socket [unix].</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘unix’, ‘inet’]</p>
+<p><em>default</em>:  inet</p>
+<p><strong>matching</strong></p>
+<p>Specifies whether requests should be dispatched to any client, automatically matched to the same client when possible [auto] or strictly forced to match with the same client [lock].</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘auto’, ‘any’, ‘lock’]</p>
+<p><em>default</em>:  auto</p>
+<p><strong>name</strong></p>
+<p>Mandatory. The name by which the forcefield will be identified in the System forces section.</p>
+<p><em>dtype</em>: string</p>
+<p><strong>pbc</strong></p>
+<p>Applies periodic boundary conditions to the atoms coordinates before passing them on to the driver code.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><strong>threaded</strong></p>
+<p>Whether the forcefield should use a thread loop to evaluate, or work in serial. Should be set to True for FFSockets</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  True</p>
+</div></blockquote>
+</section>
+<section id="id72">
+<h3>FIELDS<a class="headerlink" href="#id72" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>address</strong></p>
+<p>This gives the server address that the socket will run on.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  localhost</p>
+<p><strong>port</strong></p>
+<p>This gives the port number that defines the socket.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  65535</p>
+<p><strong>slots</strong></p>
+<p>This gives the number of client codes that can queue at any one time.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  4</p>
+<p><strong>exit_on_disconnect</strong></p>
+<p>Determines if i-PI should quit when a client disconnects.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><strong>timeout</strong></p>
+<p>This gives the number of seconds before assuming a calculation has died. If 0 there is no timeout.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>latency</strong></p>
+<p>The number of seconds the polling thread will wait between exhamining the list of requests.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.0001</p>
+<p><strong>offset</strong></p>
+<p>A constant offset that is subtracted from the forcefield energy. Useful when there is a large core energy contribution that is constant throughout a simulation and hides significant changes in the 10th digit.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>parameters</strong></p>
+<p>The parameters of the force field</p>
+<p><em>dtype</em>: dictionary</p>
+<p><em>default</em>:  { }</p>
+<p><strong>activelist</strong></p>
+<p>List with indexes of the atoms that this socket is taking care of. Default: [-1] (corresponding to all)</p>
+<p><em>dtype</em>: integer</p>
+<dl class="simple">
+<dt><em>default</em>:</dt><dd><p>[-1]</p>
+</dd>
+</dl>
+</div></blockquote>
+</section>
+</section>
+<section id="ffyaff">
+<span id="id73"></span><h2>ffyaff<a class="headerlink" href="#ffyaff" title="Permalink to this heading">¶</a></h2>
+<p>Uses a Yaff force field to compute the forces.</p>
+<section id="id74">
+<h3>ATTRIBUTES<a class="headerlink" href="#id74" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>name</strong></p>
+<p>Mandatory. The name by which the forcefield will be identified in the System forces section.</p>
+<p><em>dtype</em>: string</p>
+<p><strong>pbc</strong></p>
+<p>Applies periodic boundary conditions to the atoms coordinates before passing them on to the driver code.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><strong>threaded</strong></p>
+<p>Whether the forcefield should use a thread loop to evaluate, or work in serial</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+</div></blockquote>
+</section>
+<section id="id75">
+<h3>FIELDS<a class="headerlink" href="#id75" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>yaffpara</strong></p>
+<p>This gives the file name of the Yaff input parameter file.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  parameters.txt</p>
+<p><strong>yaffsys</strong></p>
+<p>This gives the file name of the Yaff input system file.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  system.chk</p>
+<p><strong>yafflog</strong></p>
+<p>This gives the file name of the Yaff output log file.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  yaff.log</p>
+<p><strong>rcut</strong></p>
+<p>This gives the real space cutoff used by all pair potentials in atomic units.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  18.89726133921252</p>
+<p><strong>alpha_scale</strong></p>
+<p>This gives the alpha parameter in the Ewald summation based on the real-space cutoff: alpha = alpha_scale / rcut. Higher values for this parameter imply a faster convergence of the reciprocal terms, but a slower convergence in real-space.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  3.5</p>
+<p><strong>gcut_scale</strong></p>
+<p>This gives the reciprocale space cutoff based on the alpha parameter: gcut = gcut_scale * alpha. Higher values for this parameter imply a better convergence in the reciprocal space.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  1.1</p>
+<p><strong>skin</strong></p>
+<p>This gives the skin parameter for the neighborlist.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  0</p>
+<p><strong>smooth_ei</strong></p>
+<p>This gives the flag for smooth truncations for the electrostatic interactions.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><strong>reci_ei</strong></p>
+<p>This gives the method to be used for the reciprocal contribution to the electrostatic interactions in the case of periodic systems. This must be one of ‘ignore’ or ‘ewald’. The ‘ewald’ option is only supported for 3D periodic systems.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  ewald</p>
+<p><strong>latency</strong></p>
+<p>The number of seconds the polling thread will wait between exhamining the list of requests.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.0001</p>
+<p><strong>offset</strong></p>
+<p>A constant offset that is subtracted from the forcefield energy. Useful when there is a large core energy contribution that is constant throughout a simulation and hides significant changes in the 10th digit.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>parameters</strong></p>
+<p>The parameters of the force field</p>
+<p><em>dtype</em>: dictionary</p>
+<p><em>default</em>:  { }</p>
+<p><strong>activelist</strong></p>
+<p>List with indexes of the atoms that this socket is taking care of. Default: [-1] (corresponding to all)</p>
+<p><em>dtype</em>: integer</p>
+<dl class="simple">
+<dt><em>default</em>:</dt><dd><p>[-1]</p>
+</dd>
+</dl>
+</div></blockquote>
+</section>
+</section>
+<section id="file">
+<span id="id76"></span><h2>file<a class="headerlink" href="#file" title="Permalink to this heading">¶</a></h2>
+<p>This is the class to initialize from file.</p>
+<p><em>dtype</em>: string</p>
+<section id="id77">
+<h3>ATTRIBUTES<a class="headerlink" href="#id77" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p>The input data format. ‘xyz’ and ‘pdb’ stand for xyz and pdb input files respectively. ‘chk’ stands for initialization from a checkpoint file. ‘ase’ is to read a file with the Atomic Simulation Environment</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘xyz’, ‘pdb’, ‘chk’, ‘ase’]</p>
+<p><em>default</em>:  chk</p>
+<p><strong>bead</strong></p>
+<p>The index of the bead for which the value will be set. If a negative value is specified, then all beads are assumed.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  -1</p>
+<p><strong>cell_units</strong></p>
+<p>The units for the cell dimensions.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  automatic</p>
+</div></blockquote>
+</section>
+</section>
+<section id="force">
+<span id="id78"></span><h2>force<a class="headerlink" href="#force" title="Permalink to this heading">¶</a></h2>
+<p>The class that deals with how each forcefield contributes to the overall potential, force and virial calculation.</p>
+<section id="id79">
+<h3>ATTRIBUTES<a class="headerlink" href="#id79" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>nbeads</strong></p>
+<p>If the forcefield is to be evaluated on a contracted ring polymer, this gives the number of beads that are used. If not specified, the forcefield will be evaluated on the full ring polymer.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  0</p>
+<p><strong>weight</strong></p>
+<p>A scaling factor for this forcefield, to be applied before adding the force calculated by this forcefield to the total force.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  1.0</p>
+<p><strong>fd_epsilon</strong></p>
+<p>The finite displacement to be used for calculaing the Suzuki-Chin contribution of the force. If the value is negative, a centered finite-difference scheme will be used. [in bohr]</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  -0.001</p>
+<p><strong>name</strong></p>
+<p>An optional name to refer to this force component.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:</p>
+<p><strong>forcefield</strong></p>
+<p>Mandatory. The name of the forcefield this force is referring to.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:</p>
+</div></blockquote>
+</section>
+<section id="id80">
+<h3>FIELDS<a class="headerlink" href="#id80" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mts_weights</strong></p>
+<p>The weight of force in each mts level starting from outer.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: force</p>
+<dl class="simple">
+<dt><em>default</em>:</dt><dd><p>[1.]</p>
+</dd>
+</dl>
+<p><strong>interpolate_extras</strong></p>
+<p>A list of quantities that should be extracted from the ‘extra’ string returned by the forcefield, that are then treated the same way as energy or forces – that is treated as a numerical, physical quantity, interpolated when changing the number of PI replicas. Same quantities from different force components are summed as well. The names should correspond to entries in the JSON-formatted extra string.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  [ ]</p>
+</div></blockquote>
+</section>
+</section>
+<section id="forcefield">
+<span id="id81"></span><h2>forcefield<a class="headerlink" href="#forcefield" title="Permalink to this heading">¶</a></h2>
+<p>Base forcefield class that deals with the assigning of force calculation jobs and collecting the data.</p>
+<section id="id82">
+<h3>ATTRIBUTES<a class="headerlink" href="#id82" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>name</strong></p>
+<p>Mandatory. The name by which the forcefield will be identified in the System forces section.</p>
+<p><em>dtype</em>: string</p>
+<p><strong>pbc</strong></p>
+<p>Applies periodic boundary conditions to the atoms coordinates before passing them on to the driver code.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><strong>threaded</strong></p>
+<p>Whether the forcefield should use a thread loop to evaluate, or work in serial</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+</div></blockquote>
+</section>
+<section id="id83">
+<h3>FIELDS<a class="headerlink" href="#id83" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>latency</strong></p>
+<p>The number of seconds the polling thread will wait between exhamining the list of requests.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.0001</p>
+<p><strong>offset</strong></p>
+<p>A constant offset that is subtracted from the forcefield energy. Useful when there is a large core energy contribution that is constant throughout a simulation and hides significant changes in the 10th digit.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>parameters</strong></p>
+<p>The parameters of the force field</p>
+<p><em>dtype</em>: dictionary</p>
+<p><em>default</em>:  { }</p>
+<p><strong>activelist</strong></p>
+<p>List with indexes of the atoms that this socket is taking care of. Default: [-1] (corresponding to all)</p>
+<p><em>dtype</em>: integer</p>
+<dl class="simple">
+<dt><em>default</em>:</dt><dd><p>[-1]</p>
+</dd>
+</dl>
+</div></blockquote>
+</section>
+</section>
+<section id="forces">
+<span id="id84"></span><h2>forces<a class="headerlink" href="#forces" title="Permalink to this heading">¶</a></h2>
+<p>Deals with creating all the necessary forcefield objects.</p>
+<section id="id85">
+<h3>FIELDS<a class="headerlink" href="#id85" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><a class="reference internal" href="#force"><span class="std std-ref">force</span></a></p>
+<p>The class that deals with how each forcefield contributes to the overall potential, force and virial calculation.</p>
+</div></blockquote>
+</section>
+</section>
+<section id="frequencies">
+<span id="id86"></span><h2>frequencies<a class="headerlink" href="#frequencies" title="Permalink to this heading">¶</a></h2>
+<p>Provides a compact way of specifying the ring polymer frequencies</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: frequency</p>
+<section id="id87">
+<h3>ATTRIBUTES<a class="headerlink" href="#id87" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>units</strong></p>
+<p>The units the input data is given in.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  automatic</p>
+<p><strong>shape</strong></p>
+<p>The shape of the array.</p>
+<p><em>dtype</em>: tuple</p>
+<p><em>default</em>:  (0,)</p>
+<p><strong>mode</strong></p>
+<p>If ‘mode’ is ‘manual’, then the array is read in directly, then reshaped according to the ‘shape’ specified in a row-major manner. If ‘mode’ is ‘file’ then the array is read in from the file given.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘manual’, ‘file’]</p>
+<p><em>default</em>:  manual</p>
+<p><strong>style</strong></p>
+<p>Specifies the technique to be used to calculate the dynamical masses. ‘rpmd’ simply assigns the bead masses the physical mass. ‘manual’ sets all the normal mode frequencies except the centroid normal mode manually. ‘pa-cmd’ takes an argument giving the frequency to set all the non-centroid normal modes to. ‘wmax-cmd’ is similar to ‘pa-cmd’, except instead of taking one argument it takes two ([wmax,wtarget]). The lowest-lying normal mode will be set to wtarget for a free particle, and all the normal modes will coincide at frequency wmax.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘pa-cmd’, ‘wmax-cmd’, ‘manual’, ‘rpmd’]</p>
+<p><em>default</em>:  rpmd</p>
+</div></blockquote>
+</section>
+</section>
+<section id="gle">
+<span id="id88"></span><h2>gle<a class="headerlink" href="#gle" title="Permalink to this heading">¶</a></h2>
+<p>This is the class to initialize the thermostat (ethermo and fictitious momenta).</p>
+<p><em>dtype</em>: string</p>
+<section id="id89">
+<h3>ATTRIBUTES<a class="headerlink" href="#id89" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p>‘chk’ stands for initialization from a checkpoint file. ‘manual’ means that the value to initialize from is giving explicitly as a vector.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘chk’, ‘manual’]</p>
+<p><em>default</em>:  manual</p>
+</div></blockquote>
+</section>
+</section>
+<section id="h0">
+<span id="id90"></span><h2>h0<a class="headerlink" href="#h0" title="Permalink to this heading">¶</a></h2>
+<p>Describes with the cell parameters. Takes as array which can be used to initialize the cell vector matrix. N.B.: the cell parameters are stored with the lattice vectors in the columns, and the cell must be oriented in such a way that the array is upper-triangular (i.e. with the first vector aligned along x and the second vector in the xy plane).</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: length</p>
+<section id="id91">
+<h3>ATTRIBUTES<a class="headerlink" href="#id91" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>units</strong></p>
+<p>The units the input data is given in.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  automatic</p>
+<p><strong>shape</strong></p>
+<p>The shape of the array.</p>
+<p><em>dtype</em>: tuple</p>
+<p><em>default</em>:  (0,)</p>
+<p><strong>mode</strong></p>
+<p>If ‘mode’ is ‘manual’, then the array is read in directly, then reshaped according to the ‘shape’ specified in a row-major manner. If ‘mode’ is ‘file’ then the array is read in from the file given.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘manual’, ‘file’]</p>
+<p><em>default</em>:  manual</p>
+</div></blockquote>
+</section>
+</section>
+<section id="init-cell">
+<span id="id92"></span><h2>init_cell<a class="headerlink" href="#init-cell" title="Permalink to this heading">¶</a></h2>
+<p>This is the class to initialize cell.</p>
+<p><em>dtype</em>: string</p>
+<section id="id93">
+<h3>ATTRIBUTES<a class="headerlink" href="#id93" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p>This decides whether the system box is created from a cell parameter matrix, or from the side lengths and angles between them. If ‘mode’ is ‘manual’, then ‘cell’ takes a 9-elements vector containing the cell matrix (row-major, lattice vectors stored in columns). The 1st element define lattice vector a, the 2nd, 5th elements define lattice vector b, and the 3rd, 6th, 9th elements define lattice vector c. The other elements are ignored, as the cell must be aligned so that it is upper triangular. If ‘mode’ is ‘abcABC’, then ‘cell’ takes an array of 6 floats, the first three being the length of the sides of the system parallelopiped, and the last three being the angles (in degrees) between those sides. Angle A corresponds to the angle between sides b and c, and so on for B and C. If mode is ‘abc’, then this is the same as for ‘abcABC’, but the cell is assumed to be orthorhombic. ‘pdb’ and ‘chk’ read the cell from a PDB or a checkpoint file, respectively.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘manual’, ‘pdb’, ‘chk’, ‘abc’, ‘abcABC’]</p>
+<p><em>default</em>:  manual</p>
+</div></blockquote>
+</section>
+</section>
+<section id="initialize">
+<span id="id94"></span><h2>initialize<a class="headerlink" href="#initialize" title="Permalink to this heading">¶</a></h2>
+<p>Specifies the number of beads, and how the system should be initialized.</p>
+<section id="id95">
+<h3>ATTRIBUTES<a class="headerlink" href="#id95" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>nbeads</strong></p>
+<p>The number of beads. Will override any provision from inside the initializer. A ring polymer contraction scheme is used to scale down the number of beads if required. If instead the number of beads is scaled up, higher normal modes will be initialized to zero.</p>
+<p><em>dtype</em>: integer</p>
+</div></blockquote>
+</section>
+<section id="id96">
+<h3>FIELDS<a class="headerlink" href="#id96" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><a class="reference internal" href="#positions"><span class="std std-ref">positions</span></a></p>
+<p>Initializes atomic positions. Will take a ‘units’ attribute of dimension ‘length’</p>
+<p><em>dtype</em>: string</p>
+<p><a class="reference internal" href="#velocities"><span class="std std-ref">velocities</span></a></p>
+<p>Initializes atomic velocities. Will take a ‘units’ attribute of dimension ‘velocity’</p>
+<p><em>dtype</em>: string</p>
+<p><a class="reference internal" href="#momenta"><span class="std std-ref">momenta</span></a></p>
+<p>Initializes atomic momenta. Will take a ‘units’ attribute of dimension ‘momentum’</p>
+<p><em>dtype</em>: string</p>
+<p><a class="reference internal" href="#masses"><span class="std std-ref">masses</span></a></p>
+<p>Initializes atomic masses. Will take a ‘units’ attribute of dimension ‘mass’</p>
+<p><em>dtype</em>: string</p>
+<p><a class="reference internal" href="#labels"><span class="std std-ref">labels</span></a></p>
+<p>Initializes atomic labels</p>
+<p><em>dtype</em>: string</p>
+<p><a class="reference internal" href="#cell"><span class="std std-ref">cell</span></a></p>
+<p>Initializes the configuration of the cell. Will take a ‘units’ attribute of dimension ‘length’</p>
+<p><em>dtype</em>: string</p>
+<p><a class="reference internal" href="#file"><span class="std std-ref">file</span></a></p>
+<p>Initializes everything possible for the given mode. Will take a ‘units’ attribute of dimension ‘length’. The unit conversion will only be applied to the positions and cell parameters. The ‘units’ attribute is deprecated. Append a ‘quantity{units}’ to the comment line of the xyz or to the ‘TITLE’ tag of a pdb.</p>
+<p><em>dtype</em>: string</p>
+<p><a class="reference internal" href="#gle"><span class="std std-ref">gle</span></a></p>
+<p>Initializes the additional momenta in a GLE thermostat.</p>
+<p><em>dtype</em>: string</p>
+</div></blockquote>
+</section>
+</section>
+<section id="instanton">
+<span id="id97"></span><h2>instanton<a class="headerlink" href="#instanton" title="Permalink to this heading">¶</a></h2>
+<p>A class for instanton calculations</p>
+<section id="id98">
+<h3>ATTRIBUTES<a class="headerlink" href="#id98" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p>Defines whether it is an instanton rate or instanton tunneling splitting calculaion</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘rate’, ‘splitting’]</p>
+<p><em>default</em>:  rate</p>
+</div></blockquote>
+</section>
+<section id="id99">
+<h3>FIELDS<a class="headerlink" href="#id99" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>tolerances</strong></p>
+<p>Convergence criteria for optimization.</p>
+<p><strong>biggest_step</strong></p>
+<p>The maximum step size during the optimization.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.4</p>
+<p><strong>old_pos</strong></p>
+<p>The previous step positions during the optimization.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: length</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>old_pot</strong></p>
+<p>The previous step potential energy during the optimization</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>old_force</strong></p>
+<p>The previous step force during the optimization</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: force</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>opt</strong></p>
+<p>The geometry optimization algorithm to be used. For small system sizes nichols is recomended. Lanczos is tailored for big bigger than nbeads*natoms &gt;~38*64. NR works in both cases given that the initial guess is close to the optimized geometry. Finally lbfgs is used for tunneling splitting calculations.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘nichols’, ‘NR’, ‘lbfgs’, ‘lanczos’, ‘None’]</p>
+<p><em>default</em>:  None</p>
+<p><strong>max_e</strong></p>
+<p>Evaluate the forces in a reduced ring polymer such that the potential energy between consecutive replicas is smaller that the provided value.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>max_ms</strong></p>
+<p>Evaluate the forces in a reduced ring polymer such that that mass-scaled distance in a.u. between consecutive replicas is smaller that the provided value.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>discretization</strong></p>
+<p>Allows to specified non uniform time discretization as proposed in J. Chem. Phys. 134, 184107 (2011)</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>friction</strong></p>
+<p>Activates Friction. Add additional terms to the RP related to a position-independent frictional force. See Eq. 20 in J. Chem. Phys. 156, 194106 (2022)</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><strong>frictionSD</strong></p>
+<p>Activates SD Friction. Add additional terms to the RP related to a position-dependent frictional force. See Eq. 32 in J. Chem. Phys. 156, 194106 (2022)</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  True</p>
+<p><strong>fric_spec_dens</strong></p>
+<p>Laplace Transform (LT) of friction. A two column data is expected. First column: w (cm^-1). Second column: LT(eta)(w). See Eq. 11 in J. Chem. Phys. 156, 194106 (2022). Note that within the separable coupling approximation the frequency dependence of the friction tensor is position independent.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>fric_spec_dens_ener</strong></p>
+<p>Energy at which the LT of the friction tensor is evaluated in the client code</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>eta</strong></p>
+<p>Friction Tensor. Only to be used when frictionSD is disabled.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>alt_out</strong></p>
+<p>Alternative output:Prints different formatting of outputs for geometry, hessian and bead potential energies. All quantities are also accessible from typical i-pi output infrastructure. Default to 1, which prints every step. -1 will suppress the output (except the last one). Any other positive number will set the frequency (in steps) with which the quantities are written to file. The instanton geometry is printed in xyz format and the distances are in angrstroms The hessian is printed in one line with the following format: h1_1,h2_1,…,hN_1, h2_2,h2_2,hN_2, …. ,h1_d,h2_d,…,hN_d. Where N represents the total number of replicas, d the number of dimension of each replica (3*n_atoms) and hi_j means the row j of the physical hessian corresponding to the replica i. The physical hessian uses a convention according to the positions convention used in i-pi. Example of 2 particles, the first two rows of the physical hessian reads: ‘H_x1_x1, H_x1_y1, H_x1_z1, H_x1_x2, H_x1_y2,H_x1_z2’ ‘H_x2_x1, H_x2_y1, H_x2_z1, H_x2_x2, H_x2_y2,H_x2_z2’</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  1</p>
+<p><strong>prefix</strong></p>
+<p>Prefix of the output files.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  instanton</p>
+<p><strong>delta</strong></p>
+<p>Initial stretch amplitude.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.1</p>
+<p><strong>hessian_init</strong></p>
+<p>How to initialize the hessian if it is not fully provided.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><strong>hessian</strong></p>
+<p>(Approximate) Hessian.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>hessian_update</strong></p>
+<p>How to update the hessian after each step.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘powell’, ‘recompute’]</p>
+<p><em>default</em>:  powell</p>
+<p><strong>hessian_asr</strong></p>
+<p>Removes the zero frequency vibrational modes depending on the symmetry of the system.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘none’, ‘poly’, ‘crystal’]</p>
+<p><em>default</em>:  none</p>
+<p><strong>fric_hessian</strong></p>
+<p>(Approximate) friction second derivative from which a friction Hessian can be built.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>qlist_lbfgs</strong></p>
+<p>List of previous position differences for L-BFGS, if known.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>glist_lbfgs</strong></p>
+<p>List of previous gradient differences for L-BFGS, if known.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>old_direction</strong></p>
+<p>The previous direction in a CG or SD optimization.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>scale_lbfgs</strong></p>
+<p>Scale choice for the initial hessian. 0 identity. 1 Use first member of position/gradient list. 2 Use last member of position/gradient list.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  2</p>
+<p><strong>corrections_lbfgs</strong></p>
+<p>The number of past vectors to store for L-BFGS.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  20</p>
+<p><strong>ls_options</strong></p>
+<p>Options for line search methods. Includes: tolerance: stopping tolerance for the search, iter: the maximum number of iterations, step: initial step for bracketing, adaptive: whether to update initial step.</p>
+<p><strong>energy_shift</strong></p>
+<p>Set the zero of energy.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>hessian_final</strong></p>
+<p>Decide if we are going to compute the final big-hessian by finite difference.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+</div></blockquote>
+</section>
+</section>
+<section id="labels">
+<span id="id100"></span><h2>labels<a class="headerlink" href="#labels" title="Permalink to this heading">¶</a></h2>
+<p>This is the class to initialize atomic labels.</p>
+<p><em>dtype</em>: string</p>
+<section id="id101">
+<h3>ATTRIBUTES<a class="headerlink" href="#id101" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p>The input data format. ‘xyz’ and ‘pdb’ stand for xyz and pdb input files respectively. ‘ase’ is to read a file with the Atomic Simulation Environment. ‘chk’ stands for initialization from a checkpoint file. ‘manual’ means that the value to initialize from is giving explicitly as a vector.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘manual’, ‘xyz’, ‘pdb’, ‘ase’, ‘chk’]</p>
+<p><em>default</em>:  chk</p>
+<p><strong>index</strong></p>
+<p>The index of the atom for which the value will be set. If a negative value is specified, then all atoms are assumed.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  -1</p>
+<p><strong>bead</strong></p>
+<p>The index of the bead for which the value will be set. If a negative value is specified, then all beads are assumed.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  -1</p>
+</div></blockquote>
+</section>
+</section>
+<section id="masses">
+<span id="id102"></span><h2>masses<a class="headerlink" href="#masses" title="Permalink to this heading">¶</a></h2>
+<p>This is the class to initialize atomic masses.</p>
+<p><em>dtype</em>: string</p>
+<section id="id103">
+<h3>ATTRIBUTES<a class="headerlink" href="#id103" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p>The input data format. ‘xyz’ and ‘pdb’ stand for xyz and pdb input files respectively. ‘ase’ is to read a file with the Atomic Simulation Environment. ‘chk’ stands for initialization from a checkpoint file. ‘manual’ means that the value to initialize from is giving explicitly as a vector.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘manual’, ‘xyz’, ‘pdb’, ‘ase’, ‘chk’]</p>
+<p><em>default</em>:  chk</p>
+<p><strong>index</strong></p>
+<p>The index of the atom for which the value will be set. If a negative value is specified, then all atoms are assumed.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  -1</p>
+<p><strong>bead</strong></p>
+<p>The index of the bead for which the value will be set. If a negative value is specified, then all beads are assumed.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  -1</p>
+</div></blockquote>
+</section>
+</section>
+<section id="metad">
+<span id="id104"></span><h2>metad<a class="headerlink" href="#metad" title="Permalink to this heading">¶</a></h2>
+<p>MetaDynamics</p>
+<section id="id105">
+<h3>FIELDS<a class="headerlink" href="#id105" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>metaff</strong></p>
+<p>List of names of forcefields that should do metadynamics.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>use_energy</strong></p>
+<p>Transfer the potential energy value to PLUMED to use as a collective variable. Can only be used with classical simulations because it requires a rather hacky mechanism to transfer the energy of the system to the forcefield.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+</div></blockquote>
+</section>
+</section>
+<section id="momenta">
+<span id="id106"></span><h2>momenta<a class="headerlink" href="#momenta" title="Permalink to this heading">¶</a></h2>
+<p>This is the class to initialize momenta.</p>
+<p><em>dtype</em>: string</p>
+<section id="id107">
+<h3>ATTRIBUTES<a class="headerlink" href="#id107" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p>The input data format. ‘xyz’ and ‘pdb’ stand for xyz and pdb input files respectively. ‘chk’ stands for initialization from a checkpoint file. ‘manual’ means that the value to initialize from is giving explicitly as a vector. ‘thermal’ means that the data is to be generated from a Maxwell-Boltzmann distribution at the given temperature.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘manual’, ‘xyz’, ‘pdb’, ‘ase’, ‘chk’, ‘thermal’]</p>
+<p><em>default</em>:  chk</p>
+<p><strong>index</strong></p>
+<p>The index of the atom for which the value will be set. If a negative value is specified, then all atoms are assumed.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  -1</p>
+<p><strong>bead</strong></p>
+<p>The index of the bead for which the value will be set. If a negative value is specified, then all beads are assumed.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  -1</p>
+</div></blockquote>
+</section>
+</section>
+<section id="motion">
+<span id="id108"></span><h2>motion<a class="headerlink" href="#motion" title="Permalink to this heading">¶</a></h2>
+<p>Allow chosing the type of calculation to be performed. Holds all the information that is calculation specific, such as geometry optimization parameters, etc.</p>
+<section id="id109">
+<h3>ATTRIBUTES<a class="headerlink" href="#id109" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p>How atoms should be moved at each step in the simulatio. ‘replay’ means that a simulation is replayed from trajectories provided to i-PI.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘vibrations’, ‘minimize’, ‘replay’, ‘neb’, ‘string’, ‘dynamics’, ‘driven_dynamics’, ‘constrained_dynamics’, ‘t_ramp’, ‘p_ramp’, ‘alchemy’, ‘atomswap’, ‘planetary’, ‘instanton’, ‘al-kmc’, ‘dummy’, ‘scp’, ‘normalmodes’, ‘multi’]</p>
+</div></blockquote>
+</section>
+<section id="id110">
+<h3>FIELDS<a class="headerlink" href="#id110" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>fixcom</strong></p>
+<p>This describes whether the centre of mass of the particles is fixed.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  True</p>
+<p><strong>fixatoms</strong></p>
+<p>Indices of the atoms that should be held fixed.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>fixatoms_dof</strong></p>
+<p>Indices of the degrees of freedom that should be held fixed.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  [ ]</p>
+<p><a class="reference internal" href="#optimizer"><span class="std std-ref">optimizer</span></a></p>
+<p>Option for geometry optimization</p>
+<p><a class="reference internal" href="#neb-optimizer"><span class="std std-ref">neb_optimizer</span></a></p>
+<p>Option for NEB optimization</p>
+<p><a class="reference internal" href="#string-optimizer"><span class="std std-ref">string_optimizer</span></a></p>
+<p>Option for String minimal-energy path optimization</p>
+<p><a class="reference internal" href="#dynamics"><span class="std std-ref">dynamics</span></a></p>
+<p>Option for (path integral) molecular dynamics</p>
+<p><a class="reference internal" href="#driven-dynamics"><span class="std std-ref">driven_dynamics</span></a></p>
+<p>Option for driven molecular dynamics</p>
+<p><a class="reference internal" href="#constrained-dynamics"><span class="std std-ref">constrained_dynamics</span></a></p>
+<p>Option for constrained classical molecular dynamics</p>
+<p><a class="reference internal" href="#file"><span class="std std-ref">file</span></a></p>
+<p>This describes the location to read a trajectory file from. Replay syntax allows using some POSIX wildcards in the filename of trajectory files. If symbols ?*[] are found in a filename, the code expects to find exactly Nbeads files that match the provided pattern. Bead indices will be read from the files, and the files will be ordered ascendingly by their bead indices. Wildcarded files are expected to be in the folder where the simulation runs.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:</p>
+<p><a class="reference internal" href="#vibrations"><span class="std std-ref">vibrations</span></a></p>
+<p>Option for phonon computation</p>
+<p><a class="reference internal" href="#normalmodes"><span class="std std-ref">normalmodes</span></a></p>
+<p>Option for solving the vibrational Schroedinger’s equations in normal mode coordinates.</p>
+<p><a class="reference internal" href="#scp"><span class="std std-ref">scp</span></a></p>
+<p>Option for self consistent phonons computation</p>
+<p><a class="reference internal" href="#alchemy"><span class="std std-ref">alchemy</span></a></p>
+<p>Option for alchemical exchanges</p>
+<p><a class="reference internal" href="#atomswap"><span class="std std-ref">atomswap</span></a></p>
+<p>Option for Monte Carlo atom swap</p>
+<p><a class="reference internal" href="#t-ramp"><span class="std std-ref">t_ramp</span></a></p>
+<p>Option for temperature ramp</p>
+<p><a class="reference internal" href="#p-ramp"><span class="std std-ref">p_ramp</span></a></p>
+<p>Option for pressure ramp</p>
+<p><a class="reference internal" href="#instanton"><span class="std std-ref">instanton</span></a></p>
+<p>Option for Instanton optimization</p>
+<p><a class="reference internal" href="#al6xxx-kmc"><span class="std std-ref">al6xxx_kmc</span></a></p>
+<p>Option for Al-6xxx KMC</p>
+<p><a class="reference internal" href="#planetary"><span class="std std-ref">planetary</span></a></p>
+<p>Option for planetary model calculator</p>
+<p><a class="reference internal" href="#motion"><span class="std std-ref">motion</span></a></p>
+<p>A motion class that can be included as a member of a ‘multi’ integrator.</p>
+</div></blockquote>
+</section>
+</section>
+<section id="neb-optimizer">
+<span id="id111"></span><h2>neb_optimizer<a class="headerlink" href="#neb-optimizer" title="Permalink to this heading">¶</a></h2>
+<p>Contains the required parameters for performing nudged elastic band (NEB) calculations</p>
+<section id="id112">
+<h3>ATTRIBUTES<a class="headerlink" href="#id112" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p>The geometry optimization algorithm to optimize NEB path</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘bfgstrm’, ‘damped_bfgs’, ‘fire’]</p>
+<p><em>default</em>:  fire</p>
+</div></blockquote>
+</section>
+<section id="id113">
+<h3>FIELDS<a class="headerlink" href="#id113" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>tolerances</strong></p>
+<p>Tolerance criteria to stop NEB optimization. If you work with DFT, do not use these defaults.</p>
+<p><strong>old_coord</strong></p>
+<p>The previous position in an optimization step.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: length</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>full_force</strong></p>
+<p>The previous full-dimensional force in an optimization step.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: force</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>full_pots</strong></p>
+<p>Previous physical potentials of all beads.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>old_nebpotential</strong></p>
+<p>Previous NEB potential energy, which includes spring energy.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>old_nebgradient</strong></p>
+<p>The previous gradient including NEB spring forces.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>old_direction</strong></p>
+<p>The previous direction.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>biggest_step</strong></p>
+<p>The maximum atomic displacement in a single step of optimizations within NEB procedure. If requested step is larger, it will be downscaled so that maximal atomic displacement won’t exceed biggest_step.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: length</p>
+<p><em>default</em>:  0.5</p>
+<p><strong>scale_lbfgs</strong></p>
+<p>Scale choice for the initial hessian. 0 identity. 1 Use first member of position/gradient list. 2 Use last member of position/gradient list.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  2</p>
+<p><strong>hessian_bfgs</strong></p>
+<p>Approximate Hessian for damped_BFGS, if known.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>qlist_lbfgs</strong></p>
+<p>List of previous position differences for L-BFGS, if known.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>glist_lbfgs</strong></p>
+<p>List of previous gradient differences for L-BFGS, if known.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>corrections_lbfgs</strong></p>
+<p>The number of past vectors to store for L-BFGS.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  5</p>
+<p><strong>dtmax_fire</strong></p>
+<p>Maximum time interval per step for FIRE.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  1.0</p>
+<p><strong>v_fire</strong></p>
+<p>Current velocity for FIRE</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>alpha_fire</strong></p>
+<p>velocity mixing factor for FIRE</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.1</p>
+<p><strong>N_down_fire</strong></p>
+<p>consecutive steps in downhill dierction for FIRE</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  0</p>
+<p><strong>N_up_fire</strong></p>
+<p>consecutive steps in uphill direction</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  0</p>
+<p><strong>dt_fire</strong></p>
+<p>time per step</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.1</p>
+<p><strong>endpoints</strong></p>
+<p>Geometry optimization of endpoints (not implemented yet)</p>
+<p><strong>spring</strong></p>
+<p>Uniform or variable spring constants along the elastic band</p>
+<p><strong>tangent</strong></p>
+<p>How to calculate tangents: simple averaging from the original 1998 paper, or the improved tangent estimate from J. Chem. Phys. 113, 9978 (2000)</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘plain’, ‘improved’]</p>
+<p><em>default</em>:  improved</p>
+<p><strong>stage</strong></p>
+<p>Stage of the NEB pipeline: optimization of endpoints, NEB itself, climbing image</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘endpoints’, ‘neb’, ‘climb’]</p>
+<p><em>default</em>:  neb</p>
+<p><strong>use_climb</strong></p>
+<p>Use climbing image NEB or not</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><strong>climb_bead</strong></p>
+<p>The index of the climbing bead.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  -1</p>
+</div></blockquote>
+</section>
+</section>
+<section id="normal-modes">
+<span id="id114"></span><h2>normal_modes<a class="headerlink" href="#normal-modes" title="Permalink to this heading">¶</a></h2>
+<p>Deals with the normal mode transformations, including the adjustment of bead masses to give the desired ring polymer normal mode frequencies if appropriate. Takes as arguments frequencies, of which different numbers must be specified and which are used to scale the normal mode frequencies in different ways depending on which ‘mode’ is specified.</p>
+<section id="id115">
+<h3>ATTRIBUTES<a class="headerlink" href="#id115" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>transform</strong></p>
+<p>Specifies whether to calculate the normal mode transform using a fast Fourier transform or a matrix multiplication. For small numbers of beads the matrix multiplication may be faster.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘fft’, ‘matrix’]</p>
+<p><em>default</em>:  fft</p>
+<p><strong>propagator</strong></p>
+<p>How to propagate the free ring polymer dynamics. Cayley transform is not exact but is strongly stable and avoid potential resonance issues. A bab scheme performs numerical verlet type propagation. All three options work for distinguishable particles. Only the bab propagator can be used with bosonic particles.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘exact’, ‘cayley’, ‘bab’]</p>
+<p><em>default</em>:  exact</p>
+<p><strong>fft_threads</strong></p>
+<p>The number of threads to be used for the FFT.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  1</p>
+<p><strong>fft_float32</strong></p>
+<p>Whether to use single precision FFT.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+</div></blockquote>
+</section>
+<section id="id116">
+<h3>FIELDS<a class="headerlink" href="#id116" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><a class="reference internal" href="#frequencies"><span class="std std-ref">frequencies</span></a></p>
+<p>Specifies normal mode frequencies for a (closed path) calculation</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: frequency</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>open_paths</strong></p>
+<p>Indices of the atoms whose path should be opened (zero-based).</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  [ ]</p>
+<p><a class="reference internal" href="#bosons"><span class="std std-ref">bosons</span></a></p>
+<p>Specify which atoms are bosons.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>nmts</strong></p>
+<p>The number of iterations to perform one bab step.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  10</p>
+</div></blockquote>
+</section>
+</section>
+<section id="normalmodes">
+<span id="id117"></span><h2>normalmodes<a class="headerlink" href="#normalmodes" title="Permalink to this heading">¶</a></h2>
+<p>Vibrational self-consistent field class. Approximates the vibrational eigenstates and eigenvalues of a system by performing a normal mode expansion of the potential energy surface.</p>
+<section id="id118">
+<h3>ATTRIBUTES<a class="headerlink" href="#id118" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p>The algorithm to be used: independent mode framework (imf) and vibrational self consistent field (vscf).</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘imf’, ‘vscf’]</p>
+<p><em>default</em>:  imf</p>
+</div></blockquote>
+</section>
+<section id="id119">
+<h3>FIELDS<a class="headerlink" href="#id119" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>prefix</strong></p>
+<p>Prefix of the output files.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:</p>
+<p><strong>asr</strong></p>
+<p>Removes the zero frequency vibrational modes depending on the symmetry of the system for general polyatomic molecules, and periodic crystal structures.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘none’, ‘poly’, ‘crystal’]</p>
+<p><em>default</em>:  none</p>
+<p><strong>dynmat</strong></p>
+<p>Portion of the dynamical matrix known to the current point in the calculation.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>nprim</strong></p>
+<p>Number of primitive unit cells in the simulation cell.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  1.0</p>
+<p><strong>fnmrms</strong></p>
+<p>Fraction of harmonic RMS displacement used to sample along normal mode.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  1.0</p>
+<p><strong>nevib</strong></p>
+<p>Multiple of harm vibr energy up to which BO surface is sampled.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  25.0</p>
+<p><strong>nint</strong></p>
+<p>Integration points for Hamiltonian matrix elements.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  101</p>
+<p><strong>pair_range</strong></p>
+<p>The range of pair combinations of normal modes to be considered.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>nbasis</strong></p>
+<p>Number of SHO states used as basis for anharmonic wvfn.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  10</p>
+<p><strong>athresh</strong></p>
+<p>Convergence threshold for absolute error in vibr free energy per degree of freedom.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  3.6749322e-06</p>
+<p><strong>ethresh</strong></p>
+<p>Convergence thresh for fractional error in vibr free energy.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.01</p>
+<p><strong>alpha</strong></p>
+<p>The fraction of mean field potential to mix with the result of the previous SCF iteration.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  1.0</p>
+<p><strong>nkbt</strong></p>
+<p>Threshold for (e - e_gs)/(kB T) of vibr state to be incl in the VSCF and partition function.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  4.0</p>
+<p><strong>nexc</strong></p>
+<p>Minimum number of excited n-body states to calculate (also in MP2 correction).</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  5</p>
+<p><strong>mptwo</strong></p>
+<p>Flag determining whether MP2 correction is calculated.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><strong>solve</strong></p>
+<p>Flag determining whether the VSCF mean field Schroedinger’s equation is solved.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><strong>grid</strong></p>
+<p>Flag determining whether the coupling potential is gridded or not.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  True</p>
+<p><strong>print_mftpot</strong></p>
+<p>Flag determining whether MFT potentials are printed to file.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><strong>print_1b_map</strong></p>
+<p>Flag determining whether the independent mode potentials are printed to file.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><strong>print_2b_map</strong></p>
+<p>Flag determining whether the two body mapped coupling potentials are printed to file.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><strong>print_vib_density</strong></p>
+<p>Flag determining whether the vibrational density (psi**2) are printed to file.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><strong>threebody</strong></p>
+<p>Flag determining whether three-mode coupling terms are accounted for.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><strong>nparallel</strong></p>
+<p>The number of forces evaluations per i-PI step.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  1</p>
+</div></blockquote>
+</section>
+</section>
+<section id="optimizer">
+<span id="id120"></span><h2>optimizer<a class="headerlink" href="#optimizer" title="Permalink to this heading">¶</a></h2>
+<p>A Geometry Optimization class implementing most of the standard methods</p>
+<section id="id121">
+<h3>ATTRIBUTES<a class="headerlink" href="#id121" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p>The geometry optimization algorithm to be used</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘sd’, ‘cg’, ‘bfgs’, ‘bfgstrm’, ‘lbfgs’, ‘damped_bfgs’]</p>
+<p><em>default</em>:  lbfgs</p>
+</div></blockquote>
+</section>
+<section id="id122">
+<h3>FIELDS<a class="headerlink" href="#id122" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>ls_options</strong></p>
+<p>“Options for line search methods. Includes: tolerance: stopping tolerance for the search (as a fraction of the overall energy tolerance), iter: the maximum number of iterations, step: initial step for bracketing, adaptive: whether to update initial step.</p>
+<p><strong>exit_on_convergence</strong></p>
+<p>Terminates the simulation when the convergence criteria are met.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  True</p>
+<p><strong>tolerances</strong></p>
+<p>Convergence criteria for optimization. Default values are extremely conservative. Set them to appropriate values for production runs.</p>
+<p><strong>biggest_step</strong></p>
+<p>The maximum step size for (L)-BFGS line minimizations.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  100.0</p>
+<p><strong>scale_lbfgs</strong></p>
+<p>Scale choice for the initial hessian. 0 identity. 1 Use first member of position/gradient list. 2 Use last member of position/gradient list.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  2</p>
+<p><strong>corrections_lbfgs</strong></p>
+<p>The number of past vectors to store for L-BFGS.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  6</p>
+<p><strong>old_pos</strong></p>
+<p>The previous positions in an optimization step.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: length</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>old_pot</strong></p>
+<p>The previous potential energy in an optimization step.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>old_force</strong></p>
+<p>The previous force in an optimization step.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: force</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>old_direction</strong></p>
+<p>The previous direction in a CG or SD optimization.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>invhessian_bfgs</strong></p>
+<p>Approximate inverse Hessian for BFGS, if known.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>hessian_trm</strong></p>
+<p>Approximate Hessian for trm, if known.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>tr_trm</strong></p>
+<p>The trust radius in trm.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: length</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>qlist_lbfgs</strong></p>
+<p>List of previous position differences for L-BFGS, if known.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>glist_lbfgs</strong></p>
+<p>List of previous gradient differences for L-BFGS, if known.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+</div></blockquote>
+</section>
+</section>
+<section id="output">
+<span id="id123"></span><h2>output<a class="headerlink" href="#output" title="Permalink to this heading">¶</a></h2>
+<p>This class defines how properties, trajectories and checkpoints should be output during the simulation. May contain zero, one or many instances of properties, trajectory or checkpoint tags, each giving instructions on how one output file should be created and managed.</p>
+<section id="id124">
+<h3>ATTRIBUTES<a class="headerlink" href="#id124" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>prefix</strong></p>
+<p>A string that will be prepended to each output file name. The file name is given by ‘prefix’.’filename’ + format_specifier. The format specifier may also include a number if multiple similar files are output.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  i-pi</p>
+</div></blockquote>
+</section>
+<section id="id125">
+<h3>FIELDS<a class="headerlink" href="#id125" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><a class="reference internal" href="#properties"><span class="std std-ref">properties</span></a></p>
+<p>Each of the properties tags specify how to create a file in which one or more properties are written, one line per frame.</p>
+<p><em>dtype</em>: string</p>
+<p><a class="reference internal" href="#trajectory"><span class="std std-ref">trajectory</span></a></p>
+<p>Each of the trajectory tags specify how to create a trajectory file, containing a list of per-atom coordinate properties.</p>
+<p><em>dtype</em>: string</p>
+<p><a class="reference internal" href="#checkpoint"><span class="std std-ref">checkpoint</span></a></p>
+<p>Each of the checkpoint tags specify how to create a checkpoint file, which can be used to restart a simulation.</p>
+<p><em>dtype</em>: integer</p>
+</div></blockquote>
+</section>
+</section>
+<section id="p-ramp">
+<span id="id126"></span><h2>p_ramp<a class="headerlink" href="#p-ramp" title="Permalink to this heading">¶</a></h2>
+<p>PressureRamp Motion class. It just updates the ensemble pressure in steps, between the indicated values, and then holds to the highest value. It should typically be combined with a dynamics class and barostats, using a MultiMotion.</p>
+<section id="id127">
+<h3>FIELDS<a class="headerlink" href="#id127" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>p_start</strong></p>
+<p>Initial pressure</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: pressure</p>
+<p><em>default</em>:  1.0</p>
+<p><strong>p_end</strong></p>
+<p>Final pressure</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: pressure</p>
+<p><em>default</em>:  1.0</p>
+<p><strong>logscale</strong></p>
+<p>Change pressure on a logarihthmic scale.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><strong>total_steps</strong></p>
+<p>Total number of steps for the ramp</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  0</p>
+<p><strong>current_step</strong></p>
+<p>Current step along the ramp</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  0</p>
+</div></blockquote>
+</section>
+</section>
+<section id="planetary">
+<span id="id128"></span><h2>planetary<a class="headerlink" href="#planetary" title="Permalink to this heading">¶</a></h2>
+<p>Holds all the information for the planetary model frequency matrix calculator.</p>
+<section id="id129">
+<h3>ATTRIBUTES<a class="headerlink" href="#id129" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p>The constrained-centroid sampling mode.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘md’]</p>
+<p><em>default</em>:  md</p>
+</div></blockquote>
+</section>
+<section id="id130">
+<h3>FIELDS<a class="headerlink" href="#id130" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><a class="reference internal" href="#thermostat"><span class="std std-ref">thermostat</span></a></p>
+<p>The thermostat for the atoms, keeps the atom velocity distribution at the correct temperature.</p>
+<p><strong>timestep</strong></p>
+<p>The time step.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: time</p>
+<p><em>default</em>:  1.0</p>
+<p><strong>nmts</strong></p>
+<p>Number of iterations for each MTS level (including the outer loop, that should in most cases have just one iteration).</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>nsamples</strong></p>
+<p>Number of samples to accumulate for each planetary step.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  0</p>
+<p><strong>stride</strong></p>
+<p>How often the planetary calculation should actually be triggered.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  1</p>
+<p><strong>nbeads</strong></p>
+<p>Number of beads for centroid-constrained dynamics (default same as main trajectory)</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  -1</p>
+<p><strong>screen</strong></p>
+<p>Screening parameter for path-integral frequency matrix.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: length</p>
+<p><em>default</em>:  0.0</p>
+</div></blockquote>
+</section>
+</section>
+<section id="positions">
+<span id="id131"></span><h2>positions<a class="headerlink" href="#positions" title="Permalink to this heading">¶</a></h2>
+<p>This is the class to initialize positions.</p>
+<p><em>dtype</em>: string</p>
+<section id="id132">
+<h3>ATTRIBUTES<a class="headerlink" href="#id132" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p>The input data format. ‘xyz’ and ‘pdb’ stand for xyz and pdb input files respectively. ‘ase’ is to read a file with the Atomic Simulation Environment. ‘chk’ stands for initialization from a checkpoint file. ‘manual’ means that the value to initialize from is giving explicitly as a vector.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘manual’, ‘xyz’, ‘pdb’, ‘ase’, ‘chk’]</p>
+<p><em>default</em>:  chk</p>
+<p><strong>index</strong></p>
+<p>The index of the atom for which the value will be set. If a negative value is specified, then all atoms are assumed.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  -1</p>
+<p><strong>bead</strong></p>
+<p>The index of the bead for which the value will be set. If a negative value is specified, then all beads are assumed.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  -1</p>
+</div></blockquote>
+</section>
+</section>
+<section id="prng">
+<span id="id133"></span><h2>prng<a class="headerlink" href="#prng" title="Permalink to this heading">¶</a></h2>
+<p>Deals with the pseudo-random number generator.</p>
+<section id="id134">
+<h3>ATTRIBUTES<a class="headerlink" href="#id134" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>n_threads</strong></p>
+<p>Use parallel PRNG generator. Will make trajectories less reproducible and is only faster if the arrays are very large.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  1</p>
+</div></blockquote>
+</section>
+<section id="id135">
+<h3>FIELDS<a class="headerlink" href="#id135" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>seed</strong></p>
+<p>This specifies the seed number used to generate the initial state of the random number generator. Previously, the default seed was fixed as 123456. Currently, the default seed is random and given by the system time (down to ms). This is done in utils/prng.py.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  -1</p>
+<p><strong>state</strong></p>
+<p>Gives the state vector for the random number generator. Avoid directly modifying this unless you are very familiar with the inner workings of the algorithm used.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:</p>
+</div></blockquote>
+</section>
+</section>
+<section id="properties">
+<span id="id136"></span><h2>properties<a class="headerlink" href="#properties" title="Permalink to this heading">¶</a></h2>
+<p>This class deals with the output of properties to one file. Between each property tag there should be an array of strings, each of which specifies one property to be output.</p>
+<p><em>dtype</em>: string</p>
+<section id="id137">
+<h3>ATTRIBUTES<a class="headerlink" href="#id137" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>shape</strong></p>
+<p>The shape of the array.</p>
+<p><em>dtype</em>: tuple</p>
+<p><em>default</em>:  (0,)</p>
+<p><strong>mode</strong></p>
+<p>If ‘mode’ is ‘manual’, then the array is read in directly, then reshaped according to the ‘shape’ specified in a row-major manner. If ‘mode’ is ‘file’ then the array is read in from the file given.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘manual’, ‘file’]</p>
+<p><em>default</em>:  manual</p>
+<p><strong>filename</strong></p>
+<p>A string to specify the name of the file that is output. The file name is given by ‘prefix’.’filename’ + format_specifier. The format specifier may also include a number if multiple similar files are output.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  out</p>
+<p><strong>stride</strong></p>
+<p>The number of steps between successive writes.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  1</p>
+<p><strong>flush</strong></p>
+<p>How often should streams be flushed. 1 means each time, zero means never.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  1</p>
+<p><strong>verbosity</strong></p>
+<p>The level of output on stdout. ‘low’ will print only properties and column names, ‘high’ will print information for reproducibility.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘low’, ‘high’]</p>
+<p><em>default</em>:  low</p>
+</div></blockquote>
+</section>
+</section>
+<section id="remd">
+<span id="id138"></span><h2>remd<a class="headerlink" href="#remd" title="Permalink to this heading">¶</a></h2>
+<p>Replica Exchange</p>
+<section id="id139">
+<h3>FIELDS<a class="headerlink" href="#id139" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>stride</strong></p>
+<p>Every how often to try exchanges (on average).</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  1.0</p>
+<p><strong>krescale</strong></p>
+<p>Rescale kinetic energy upon exchanges.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  True</p>
+<p><strong>swapfile</strong></p>
+<p>File to keep track of replica exchanges</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  remd_idx</p>
+<p><strong>repindex</strong></p>
+<p>List of current indices of the replicas compared to the starting indices</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  [ ]</p>
+</div></blockquote>
+</section>
+</section>
+<section id="scp">
+<span id="id140"></span><h2>scp<a class="headerlink" href="#scp" title="Permalink to this heading">¶</a></h2>
+<p>Self-consistent phonons class. It variationally optimizes the free energy to calculate the best harmonic approximation to a system.</p>
+<section id="id141">
+<h3>ATTRIBUTES<a class="headerlink" href="#id141" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p>The statistics to be used in the calculation of the free energy. Quantum (qn) or classical (cl) Boltzmann statistics.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘qn’, ‘cl’]</p>
+<p><em>default</em>:  qn</p>
+</div></blockquote>
+</section>
+<section id="id142">
+<h3>FIELDS<a class="headerlink" href="#id142" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>prefix</strong></p>
+<p>Prefix of the output files.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:</p>
+<p><strong>asr</strong></p>
+<p>The method used to project out zero modes coming from continuous symmetries: crystal removes the three translational modes; molecule removes the three rotational modes in addition to the translational ones. none keeps all the modes.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘none’, ‘crystal’, ‘poly’]</p>
+<p><em>default</em>:  none</p>
+<p><strong>random_type</strong></p>
+<p>Chooses the type of random numbers.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘sobol’, ‘pseudo’, ‘file’]</p>
+<p><em>default</em>:  pseudo</p>
+<p><strong>displace_mode</strong></p>
+<p>The type of optimisation strategy for obtaining the mean position. sd stands for a steepest descent algorithm. ik stands for a Newton-Raphson scheme that requires the inverse of the force constant matrix iK. nmik stands for a Newton-Raphson scheme that only displaces along normal modes directions with statistically significant forces. rnmik same as nmik but performs several optimization steps using a reweighted sampling.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘ik’, ‘sd’, ‘nmik’, ‘rnmik’]</p>
+<p><em>default</em>:  nmik</p>
+<p><strong>dynmat</strong></p>
+<p>The dynamical matrix of the trial Hamiltonian.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>max_steps</strong></p>
+<p>Maximum number of Monte carlo steps per SCP iteration.</p>
+<p><em>dtype</em>: integer</p>
+<p><strong>max_iter</strong></p>
+<p>Maximum number of SCP iterations.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  1</p>
+<p><strong>tau</strong></p>
+<p>Step size along the gradient for the sd displace_mode</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  1.0</p>
+<p><strong>wthreshold</strong></p>
+<p>Threshold on minimum Boltzmann weights before more statistics must be accumulated.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.9</p>
+<p><strong>precheck</strong></p>
+<p>Flag for checking statistical significance of forces before optimisation of mean position.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  True</p>
+<p><strong>checkweights</strong></p>
+<p>Flag for checking Boltzmann weights for whether more statistics are required.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  True</p>
+<p><strong>chop</strong></p>
+<p>Threshold below which frequencies are set to zero.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  1e-09</p>
+<p><strong>nparallel</strong></p>
+<p>The number of Monte Carlo forces to be evaluated (in parallel) per i-PI step.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  1</p>
+<p><strong>batch_weight_exponent</strong></p>
+<p>The exponent used to suppress low batch weights.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  1</p>
+</div></blockquote>
+</section>
+</section>
+<section id="simulation">
+<span id="id143"></span><h2>simulation<a class="headerlink" href="#simulation" title="Permalink to this heading">¶</a></h2>
+<p>This is the top level class that deals with the running of the simulation, including holding the simulation specific properties such as the time step and outputting the data.</p>
+<section id="id144">
+<h3>ATTRIBUTES<a class="headerlink" href="#id144" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>verbosity</strong></p>
+<p>The level of output on stdout.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘quiet’, ‘low’, ‘medium’, ‘high’, ‘debug’]</p>
+<p><em>default</em>:  medium</p>
+<p><strong>threading</strong></p>
+<p>Whether multiple-systems execution should be parallel. Makes execution non-reproducible due to the random number generator being used from concurrent threads.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  True</p>
+<p><strong>mode</strong></p>
+<p>What kind of simulation should be run.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘md’, ‘static’]</p>
+<p><em>default</em>:  md</p>
+<p><strong>safe_stride</strong></p>
+<p>Consistent simulation states will be saved every this number of steps. Saving state entails a small overhead, so you may want to set this to the smallest output frequency in your simulation to make i-PI faster. Use at your own risk!</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  1</p>
+<p><strong>floatformat</strong></p>
+<p>A format for all printed floats.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  %16.8e</p>
+<p><strong>sockets_prefix</strong></p>
+<p>A prefix prepended to the <cite>address</cite> value to form the UNIX-domain socket location.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  /tmp/ipi_</p>
+</div></blockquote>
+</section>
+<section id="id145">
+<h3>FIELDS<a class="headerlink" href="#id145" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><a class="reference internal" href="#prng"><span class="std std-ref">prng</span></a></p>
+<p>Deals with the pseudo-random number generator.</p>
+<p><a class="reference internal" href="#output"><span class="std std-ref">output</span></a></p>
+<p>This class defines how properties, trajectories and checkpoints should be output during the simulation. May contain zero, one or many instances of properties, trajectory or checkpoint tags, each giving instructions on how one output file should be created and managed.</p>
+<p><strong>step</strong></p>
+<p>The current simulation time step.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  0</p>
+<p><strong>total_steps</strong></p>
+<p>The total number of steps that will be done. If ‘step’ is equal to or greater than ‘total_steps’, then the simulation will finish.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  1000</p>
+<p><strong>total_time</strong></p>
+<p>The maximum wall clock time (in seconds).</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0</p>
+<p><a class="reference internal" href="#smotion"><span class="std std-ref">smotion</span></a></p>
+<p>Options for a ‘super-motion’ step between system replicas</p>
+<p><a class="reference internal" href="#system"><span class="std std-ref">system</span></a></p>
+<p>This is the class which holds all the data which represents a single state of the system.</p>
+<p><a class="reference internal" href="#system-template"><span class="std std-ref">system_template</span></a></p>
+<p>Generic input value</p>
+<p><a class="reference internal" href="#ffsocket"><span class="std std-ref">ffsocket</span></a></p>
+<p>Deals with the assigning of force calculation jobs to different driver codes, and collecting the data, using a socket for the data communication.</p>
+<p><a class="reference internal" href="#ffdirect"><span class="std std-ref">ffdirect</span></a></p>
+<p>Direct potential that evaluates forces through a Python call, using PES providers from a list of possible external codes. The available PES interfaces are listed into the <cite>ipi/pes</cite> folder, and are the same available for the Python driver. The <cite>&lt;parameters&gt;</cite> field should contain a dictionary of the specific option of the chosen PES.</p>
+<p><a class="reference internal" href="#fflj"><span class="std std-ref">fflj</span></a></p>
+<p>Simple, internal LJ evaluator without cutoff, neighbour lists or minimal image convention. Expects standard LJ parameters, e.g. { eps: 0.1, sigma: 1.0 }.</p>
+<p><a class="reference internal" href="#ffdmd"><span class="std std-ref">ffdmd</span></a></p>
+<p>Simple, internal DMD evaluator without without neighbor lists, but with PBC. Expects coupling elements (n*(n-1)/2 of them), oscillating frequency and time step.</p>
+<p><a class="reference internal" href="#ffdebye"><span class="std std-ref">ffdebye</span></a></p>
+<p>Harmonic energy calculator</p>
+<p><a class="reference internal" href="#ffplumed"><span class="std std-ref">ffplumed</span></a></p>
+<p>Direct PLUMED interface. Can be used to implement metadynamics in i-PI in combination with the &lt;metad&gt; SMotion class. NB: if you use PLUMED for constant biasing (e.g. for umbrella sampling) the bias will be computed but there will be no output as specified in the <cite>plumed.dat</cite> file unless you include a &lt;metad&gt; tag, that triggers the log update.</p>
+<p><a class="reference internal" href="#ffyaff"><span class="std std-ref">ffyaff</span></a></p>
+<p>Uses a Yaff force field to compute the forces.</p>
+<p><a class="reference internal" href="#ffcommittee"><span class="std std-ref">ffcommittee</span></a></p>
+<p>Combines multiple forcefields to build a committee model, that can be used to compute uncertainty-quantified machine-learning models. Each forcefield can be any of the other FF objects, and each should be used with a client that generates a slightly different estimation of energy and forces. These are averaged, and the mean used as the actual forcefield. Statistics about the distribution are also returned as extras fields, and can be printed for further postprocessing. It is also possible for a single FF object to return a JSON-formatted string containing entries <cite>committee_pot</cite>, <cite>committee_force</cite> and <cite>committee_virial</cite>, that contain multiple members at once. These will be unpacked and combined with whatever else is present. Also contains options to use it for uncertainty estimation and for active learning in a ML context, based on a committee model. Implements the approaches discussed in [Musil et al.](<a class="reference external" href="http://doi.org/10.1021/acs.jctc.8b00959">http://doi.org/10.1021/acs.jctc.8b00959</a>) and [Imbalzano et al.](<a class="reference external" href="http://doi.org/10.1063/5.0036522">http://doi.org/10.1063/5.0036522</a>)</p>
+<p><span class="xref std std-ref">ffrotations</span></p>
+<p>Wraps around another forcefield to evaluate it over one or more rotated copies of the physical system. This is useful when interacting with models that are not exactly invariant/covariant with respect to rigid rotations. Besides the parameters defining how averaging is to be performed (using an integration grid, and/or randomizing the orientation at each step) the &lt;ffrotations&gt; should contain either a &lt;ffsocket&gt; or a &lt;ffdirect&gt; block that computes the “base” model. Note that this forcefield should be given a separate <cite>name</cite>, but that you cannot access this “inner” forcefield from other parts of the input file.</p>
+<p><a class="reference internal" href="#ffsgdml"><span class="std std-ref">ffsgdml</span></a></p>
+<p>A SGDML energy calculator</p>
+<p><a class="reference internal" href="#ffcavphsocket"><span class="std std-ref">ffcavphsocket</span></a></p>
+<p>A cavity molecular dynamics driver for vibraitonal strong coupling. In the current implementation, only a single cavity mode polarized along the x and y directions is coupled to the molecules. Check <a class="reference external" href="https://doi.org/10.1073/pnas.2009272117">https://doi.org/10.1073/pnas.2009272117</a> and also examples/lammps/h2o-cavmd/ for details.</p>
+</div></blockquote>
+</section>
+</section>
+<section id="smotion">
+<span id="id146"></span><h2>smotion<a class="headerlink" href="#smotion" title="Permalink to this heading">¶</a></h2>
+<p>Allow chosing the type of smotion to be performed. Holds all the information that is calculation specific, such as replica exchange parameters, etc.</p>
+<section id="id147">
+<h3>ATTRIBUTES<a class="headerlink" href="#id147" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p>Kind of smotion which should be performed.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘dummy’, ‘remd’, ‘metad’, ‘dmd’, ‘multi’]</p>
+</div></blockquote>
+</section>
+<section id="id148">
+<h3>FIELDS<a class="headerlink" href="#id148" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><a class="reference internal" href="#remd"><span class="std std-ref">remd</span></a></p>
+<p>Option for REMD simulation</p>
+<p><a class="reference internal" href="#metad"><span class="std std-ref">metad</span></a></p>
+<p>Option for REMD simulation</p>
+<p><a class="reference internal" href="#dmd"><span class="std std-ref">dmd</span></a></p>
+<p>Option for driven MD simulation</p>
+<p><a class="reference internal" href="#smotion"><span class="std std-ref">smotion</span></a></p>
+<p>A smotion class that can be included as a member of a ‘multi’ Smotion.</p>
+</div></blockquote>
+</section>
+</section>
+<section id="string-optimizer">
+<span id="id149"></span><h2>string_optimizer<a class="headerlink" href="#string-optimizer" title="Permalink to this heading">¶</a></h2>
+<p>Contains the required parameters for performing string minimal energy path optimization.</p>
+<section id="id150">
+<h3>ATTRIBUTES<a class="headerlink" href="#id150" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p>The geometry optimization algorithm to optimize MEP string</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘sd’, ‘cg’, ‘bfgs’, ‘bfgstrm’, ‘damped_bfgs’, ‘lbfgs’, ‘fire’, ‘euler’]</p>
+<p><em>default</em>:  bfgstrm</p>
+</div></blockquote>
+</section>
+<section id="id151">
+<h3>FIELDS<a class="headerlink" href="#id151" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>tolerances</strong></p>
+<p>Tolerance criteria to stop String optimization. If you work with DFT, do not use these defaults.</p>
+<p><strong>old_coord</strong></p>
+<p>The previous position in an optimization step.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: length</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>full_force</strong></p>
+<p>The previous full-dimensional force in an optimization step.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: force</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>full_pots</strong></p>
+<p>Previous physical potentials of all beads.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>old_stringpotential</strong></p>
+<p>Previous string potential energy.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>old_stringgradient</strong></p>
+<p>The previous gradient of the string.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>old_direction</strong></p>
+<p>The previous direction.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>biggest_step</strong></p>
+<p>The maximum atomic displacement in a single step of optimizations within String MEP procedure. If requested step is larger, it will be downscaled so that maximal atomic displacement won’t exceed biggest_step.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: length</p>
+<p><em>default</em>:  0.5</p>
+<p><strong>scale_lbfgs</strong></p>
+<p>Scale choice for the initial hessian. 0 identity. 1 Use first member of position/gradient list. 2 Use last member of position/gradient list.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  2</p>
+<p><strong>hessian_bfgs</strong></p>
+<p>Approximate Hessian for damped_BFGS, if known.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>qlist_lbfgs</strong></p>
+<p>List of previous position differences for L-BFGS, if known.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>glist_lbfgs</strong></p>
+<p>List of previous gradient differences for L-BFGS, if known.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>corrections_lbfgs</strong></p>
+<p>The number of past vectors to store for L-BFGS.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  5</p>
+<p><strong>tr_trm</strong></p>
+<p>Starting value for the trust radius for BFGSTRM.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: length</p>
+<dl class="simple">
+<dt><em>default</em>:</dt><dd><p>[1.]</p>
+</dd>
+</dl>
+<p><strong>dtmax_fire</strong></p>
+<p>Maximum time interval per step for FIRE.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  1.0</p>
+<p><strong>v_fire</strong></p>
+<p>Current velocity for FIRE</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>alpha_fire</strong></p>
+<p>velocity mixing factor for FIRE</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.1</p>
+<p><strong>N_down_fire</strong></p>
+<p>consecutive steps in downhill dierction for FIRE</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  0</p>
+<p><strong>N_up_fire</strong></p>
+<p>consecutive steps in uphill direction</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  0</p>
+<p><strong>dt_fire</strong></p>
+<p>time per step</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.1</p>
+<p><strong>endpoints</strong></p>
+<p>Geometry optimization of endpoints (not implemented yet)</p>
+<p><strong>stage</strong></p>
+<p>Stage of the String pipeline: optimization of the endpoints, string opt., climbing image opt.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘endpoints’, ‘string’, ‘climb’]</p>
+<p><em>default</em>:  string</p>
+<p><strong>use_climb</strong></p>
+<p>Use climbing image String MEP or not</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><strong>climb_bead</strong></p>
+<p>The index of the climbing bead.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  -1</p>
+</div></blockquote>
+</section>
+</section>
+<section id="system">
+<span id="id152"></span><h2>system<a class="headerlink" href="#system" title="Permalink to this heading">¶</a></h2>
+<p>This is the class which holds all the data which represents a single state of the system.</p>
+<section id="id153">
+<h3>ATTRIBUTES<a class="headerlink" href="#id153" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>prefix</strong></p>
+<p>Prepend this string to output files generated for this system.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:</p>
+</div></blockquote>
+</section>
+<section id="id154">
+<h3>FIELDS<a class="headerlink" href="#id154" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><a class="reference internal" href="#initialize"><span class="std std-ref">initialize</span></a></p>
+<p>Specifies the number of beads, and how the system should be initialized.</p>
+<p><a class="reference internal" href="#forces"><span class="std std-ref">forces</span></a></p>
+<p>Deals with creating all the necessary forcefield objects.</p>
+<p><a class="reference internal" href="#ensemble"><span class="std std-ref">ensemble</span></a></p>
+<p>Holds all the information that is ensemble specific, such as the temperature and the external pressure.</p>
+<p><a class="reference internal" href="#motion"><span class="std std-ref">motion</span></a></p>
+<p>Allow chosing the type of calculation to be performed. Holds all the information that is calculation specific, such as geometry optimization parameters, etc.</p>
+<p><a class="reference internal" href="#beads"><span class="std std-ref">beads</span></a></p>
+<p>Describes the bead configurations in a path integral simulation.</p>
+<p><a class="reference internal" href="#normal-modes"><span class="std std-ref">normal_modes</span></a></p>
+<p>Deals with the normal mode transformations, including the adjustment of bead masses to give the desired ring polymer normal mode frequencies if appropriate. Takes as arguments frequencies, of which different numbers must be specified and which are used to scale the normal mode frequencies in different ways depending on which ‘mode’ is specified.</p>
+<p><a class="reference internal" href="#cell"><span class="std std-ref">cell</span></a></p>
+<p>Describes with the cell parameters. Takes as array which can be used to initialize the cell vector matrix. N.B.: the cell parameters are stored with the lattice vectors in the columns, and the cell must be oriented in such a way that the array is upper-triangular (i.e. with the first vector aligned along x and the second vector in the xy plane).</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: length</p>
+<dl class="simple">
+<dt><em>default</em>:</dt><dd><p>[0. 0. 0. 0. 0. 0. 0. 0. 0.]</p>
+</dd>
+</dl>
+</div></blockquote>
+</section>
+</section>
+<section id="system-template">
+<span id="id155"></span><h2>system_template<a class="headerlink" href="#system-template" title="Permalink to this heading">¶</a></h2>
+<p>Generic input value</p>
+<section id="id156">
+<h3>FIELDS<a class="headerlink" href="#id156" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>template</strong></p>
+<p>A string that will be read verbatim containing the model for a system to be generated</p>
+<p><em>dtype</em>: string</p>
+<p><strong>labels</strong></p>
+<p>A list of strings that should be substituted in the template to create multiple systems</p>
+<p><em>dtype</em>: string</p>
+<p><strong>instance</strong></p>
+<p>A list of strings that should the labels creating one system instance</p>
+<p><em>dtype</em>: string</p>
+</div></blockquote>
+</section>
+</section>
+<section id="t-ramp">
+<span id="id157"></span><h2>t_ramp<a class="headerlink" href="#t-ramp" title="Permalink to this heading">¶</a></h2>
+<p>TemperatureRamp Motion class. It just updates the ensemble temperature in steps, between the indicated temperatures, and then holds to the highest value. It should typically be combined with a dynamics class and thermostats, using a MultiMotion.</p>
+<section id="id158">
+<h3>FIELDS<a class="headerlink" href="#id158" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>t_start</strong></p>
+<p>Initial temperature</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  1.0</p>
+<p><strong>t_end</strong></p>
+<p>Final temperature</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  1.0</p>
+<p><strong>logscale</strong></p>
+<p>Change temperature on a logarihthmic scale.</p>
+<p><em>dtype</em>: boolean</p>
+<p><em>default</em>:  False</p>
+<p><strong>total_steps</strong></p>
+<p>Total number of steps for the ramp</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  0</p>
+<p><strong>current_step</strong></p>
+<p>Current step along the ramp</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  0</p>
+</div></blockquote>
+</section>
+</section>
+<section id="thermostat">
+<span id="id159"></span><h2>thermostat<a class="headerlink" href="#thermostat" title="Permalink to this heading">¶</a></h2>
+<p>Simulates an external heat bath to keep the velocity distribution at the correct temperature.</p>
+<section id="id160">
+<h3>ATTRIBUTES<a class="headerlink" href="#id160" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p>The style of thermostatting. ‘langevin’ specifies a white noise langevin equation to be attached to the cartesian representation of the momenta. ‘svr’ attaches a velocity rescaling thermostat to the cartesian representation of the momenta. Both ‘pile_l’ and ‘pile_g’ attaches a white noise langevin thermostat to the normal mode representation, with ‘pile_l’ attaching a local langevin thermostat to the centroid mode and ‘pile_g’ instead attaching a global velocity rescaling thermostat. ‘gle’ attaches a coloured noise langevin thermostat to the cartesian representation of the momenta, ‘nm_gle’ attaches a coloured noise langevin thermostat to the normal mode representation of the momenta and a langevin thermostat to the centroid and ‘nm_gle_g’ attaches a gle thermostat to the normal modes and a svr thermostat to the centroid. ‘cl’ represents a modified langevin thermostat which compensates for additional white noise from noisy forces or for dissipative effects. ‘ffl’ is the fast-forward langevin thermostat, in which momenta are flipped back whenever the action of the thermostat changes its direction. ‘multiple’ is a special thermostat mode, in which one can define multiple thermostats _inside_ the thermostat tag.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘’, ‘langevin’, ‘svr’, ‘pile_l’, ‘pile_g’, ‘gle’, ‘nm_gle’, ‘nm_gle_g’, ‘cl’, ‘ffl’, ‘multi’]</p>
+</div></blockquote>
+</section>
+<section id="id161">
+<h3>FIELDS<a class="headerlink" href="#id161" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>ethermo</strong></p>
+<p>The initial value of the thermostat energy. Used when the simulation is restarted to guarantee continuity of the conserved quantity.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: energy</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>tau</strong></p>
+<p>The friction coefficient for white noise thermostats.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: time</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>pile_lambda</strong></p>
+<p>Scaling for the PILE damping relative to the critical damping. (gamma_k=2*lambda*omega_k</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  1.0</p>
+<p><strong>pile_centroid_t</strong></p>
+<p>Option to set a different centroid temperature wrt. that of the ensemble. Only used if value other than 0.0.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: temperature</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>A</strong></p>
+<p>The friction matrix for GLE thermostats.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: frequency</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>C</strong></p>
+<p>The covariance matrix for GLE thermostats.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: temperature</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>s</strong></p>
+<p>Input values for the additional momenta in GLE.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: ms-momentum</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>intau</strong></p>
+<p>The inherent noise time scale for compensating langevin thermostats.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: time</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>idtau</strong></p>
+<p>The inherent dissipation time scale for compensating langevin thermostats.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: time</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>apat</strong></p>
+<p>The time scale for automatic adjustment of CL thermostat’s parameters.</p>
+<p><em>dtype</em>: float</p>
+<p><em>dimension</em>: time</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>flip</strong></p>
+<p>Flipping type for ffl thermostat (‘soft’, ‘hard’, ‘rescale’, ‘none’)</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  rescale</p>
+<p><a class="reference internal" href="#thermostat"><span class="std std-ref">thermostat</span></a></p>
+<p>The thermostat for the atoms, keeps the atom velocity distribution at the correct temperature.</p>
+</div></blockquote>
+</section>
+</section>
+<section id="trajectory">
+<span id="id162"></span><h2>trajectory<a class="headerlink" href="#trajectory" title="Permalink to this heading">¶</a></h2>
+<p>This class defines how one trajectory file should be output. Between each trajectory tag one string should be given, which specifies what data is to be output.</p>
+<p><em>dtype</em>: string</p>
+<section id="id163">
+<h3>ATTRIBUTES<a class="headerlink" href="#id163" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>filename</strong></p>
+<p>A string to specify the name of the file that is output. The file name is given by ‘prefix’.’filename’ + format_specifier. The format specifier may also include a number if multiple similar files are output.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  traj</p>
+<p><strong>stride</strong></p>
+<p>The number of steps between successive writes.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  1</p>
+<p><strong>format</strong></p>
+<p>The output file format.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘xyz’, ‘pdb’, ‘ase’, ‘bin’]</p>
+<p><em>default</em>:  xyz</p>
+<p><strong>cell_units</strong></p>
+<p>The units for the cell dimensions.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:</p>
+<p><strong>bead</strong></p>
+<p>Print out only the specified bead. A negative value means print only one every -(bead) beads, e.g. -2 means print just the even beads, -4 one every four and so on.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  -1</p>
+<p><strong>flush</strong></p>
+<p>How often should streams be flushed. 1 means each time, zero means never.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  1</p>
+<p><strong>extra_type</strong></p>
+<p>What extra to print from the extra, if it’s returned as a JSON dictionary. Can also use ‘raw’ to print the full data of the unprocessed extra string, or a comma-separated list of keys to print multiple keys, horizontally stacked.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  raw</p>
+</div></blockquote>
+</section>
+</section>
+<section id="velocities">
+<span id="id164"></span><h2>velocities<a class="headerlink" href="#velocities" title="Permalink to this heading">¶</a></h2>
+<p>This is the class to initialize velocities.</p>
+<p><em>dtype</em>: string</p>
+<section id="id165">
+<h3>ATTRIBUTES<a class="headerlink" href="#id165" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p>The input data format. ‘xyz’ and ‘pdb’ stand for xyz and pdb input files respectively. ‘chk’ stands for initialization from a checkpoint file. ‘manual’ means that the value to initialize from is giving explicitly as a vector. ‘thermal’ means that the data is to be generated from a Maxwell-Boltzmann distribution at the given temperature.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘manual’, ‘xyz’, ‘pdb’, ‘ase’, ‘chk’, ‘thermal’]</p>
+<p><em>default</em>:  chk</p>
+<p><strong>index</strong></p>
+<p>The index of the atom for which the value will be set. If a negative value is specified, then all atoms are assumed.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  -1</p>
+<p><strong>bead</strong></p>
+<p>The index of the bead for which the value will be set. If a negative value is specified, then all beads are assumed.</p>
+<p><em>dtype</em>: integer</p>
+<p><em>default</em>:  -1</p>
+</div></blockquote>
+</section>
+</section>
+<section id="vibrations">
+<span id="id166"></span><h2>vibrations<a class="headerlink" href="#vibrations" title="Permalink to this heading">¶</a></h2>
+<p>Dynamical matrix Class. It calculates phonon modes and frequencies in solids as well as normal vibrational modes and frequencies of aperiodic systems.</p>
+<section id="id167">
+<h3>ATTRIBUTES<a class="headerlink" href="#id167" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>mode</strong></p>
+<p>The algorithm to be used: finite differences (fd), normal modes finite differences (nmfd), and energy-scaled normal mode finite differences (enmfd).</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘fd’, ‘nmfd’, ‘enmfd’]</p>
+<p><em>default</em>:  fd</p>
+</div></blockquote>
+</section>
+<section id="id168">
+<h3>FIELDS<a class="headerlink" href="#id168" title="Permalink to this heading">¶</a></h3>
+<blockquote>
+<div><p><strong>pos_shift</strong></p>
+<p>The finite displacement in position used to compute derivative of force.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.01</p>
+<p><strong>energy_shift</strong></p>
+<p>The finite displacement in energy used to compute derivative of force.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>output_shift</strong></p>
+<p>Shift by the dynamical matrix diagonally before outputting.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  0.0</p>
+<p><strong>prefix</strong></p>
+<p>Prefix of the output files.</p>
+<p><em>dtype</em>: string</p>
+<p><em>default</em>:  phonons</p>
+<p><strong>asr</strong></p>
+<p>Removes the zero frequency vibrational modes depending on the symmerty of the system.</p>
+<p><em>dtype</em>: string</p>
+<p><em>options</em>: [‘none’, ‘poly’, ‘lin’, ‘crystal’]</p>
+<p><em>default</em>:  none</p>
+<p><strong>dynmat</strong></p>
+<p>Portion of the dynamical matrix known up to now.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+<p><strong>refdynmat</strong></p>
+<p>Portion of the refined dynamical matrix known up to now.</p>
+<p><em>dtype</em>: float</p>
+<p><em>default</em>:  [ ]</p>
+</div></blockquote>
+</section>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="output-files.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Output files</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="input-files.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Input files</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2021, The i-PI developers
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Input file tags</a><ul>
+<li><a class="reference internal" href="#al6xxx-kmc">al6xxx_kmc</a><ul>
+<li><a class="reference internal" href="#attributes">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#fields">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#alchemy">alchemy</a><ul>
+<li><a class="reference internal" href="#id3">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id4">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#atoms">atoms</a><ul>
+<li><a class="reference internal" href="#id6">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#atomswap">atomswap</a><ul>
+<li><a class="reference internal" href="#id8">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id9">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#barostat">barostat</a><ul>
+<li><a class="reference internal" href="#id11">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id12">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#beads">beads</a><ul>
+<li><a class="reference internal" href="#id14">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id15">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#bec">bec</a><ul>
+<li><a class="reference internal" href="#id17">ATTRIBUTES</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#bias">bias</a><ul>
+<li><a class="reference internal" href="#id19">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#bosons">bosons</a><ul>
+<li><a class="reference internal" href="#id21">ATTRIBUTES</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#cell">cell</a><ul>
+<li><a class="reference internal" href="#id23">ATTRIBUTES</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#checkpoint">checkpoint</a><ul>
+<li><a class="reference internal" href="#id25">ATTRIBUTES</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#constrained-dynamics">constrained_dynamics</a><ul>
+<li><a class="reference internal" href="#id27">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id28">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#constraint">constraint</a><ul>
+<li><a class="reference internal" href="#id30">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id31">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#csolver">csolver</a><ul>
+<li><a class="reference internal" href="#id33">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#dmd">dmd</a><ul>
+<li><a class="reference internal" href="#id35">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#driven-dynamics">driven_dynamics</a><ul>
+<li><a class="reference internal" href="#id37">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id38">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#dynamics">dynamics</a><ul>
+<li><a class="reference internal" href="#id40">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id41">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#efield">efield</a><ul>
+<li><a class="reference internal" href="#id43">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#ensemble">ensemble</a><ul>
+<li><a class="reference internal" href="#id45">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#ffcavphsocket">ffcavphsocket</a><ul>
+<li><a class="reference internal" href="#id47">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id48">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#ffcommittee">ffcommittee</a><ul>
+<li><a class="reference internal" href="#id50">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id51">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#ffdebye">ffdebye</a><ul>
+<li><a class="reference internal" href="#id53">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id54">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#ffdirect">ffdirect</a><ul>
+<li><a class="reference internal" href="#id56">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id57">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#ffdmd">ffdmd</a><ul>
+<li><a class="reference internal" href="#id59">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id60">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#fflj">fflj</a><ul>
+<li><a class="reference internal" href="#id62">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id63">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#ffplumed">ffplumed</a><ul>
+<li><a class="reference internal" href="#id65">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id66">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#ffsgdml">ffsgdml</a><ul>
+<li><a class="reference internal" href="#id68">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id69">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#ffsocket">ffsocket</a><ul>
+<li><a class="reference internal" href="#id71">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id72">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#ffyaff">ffyaff</a><ul>
+<li><a class="reference internal" href="#id74">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id75">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#file">file</a><ul>
+<li><a class="reference internal" href="#id77">ATTRIBUTES</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#force">force</a><ul>
+<li><a class="reference internal" href="#id79">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id80">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#forcefield">forcefield</a><ul>
+<li><a class="reference internal" href="#id82">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id83">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#forces">forces</a><ul>
+<li><a class="reference internal" href="#id85">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#frequencies">frequencies</a><ul>
+<li><a class="reference internal" href="#id87">ATTRIBUTES</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#gle">gle</a><ul>
+<li><a class="reference internal" href="#id89">ATTRIBUTES</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#h0">h0</a><ul>
+<li><a class="reference internal" href="#id91">ATTRIBUTES</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#init-cell">init_cell</a><ul>
+<li><a class="reference internal" href="#id93">ATTRIBUTES</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#initialize">initialize</a><ul>
+<li><a class="reference internal" href="#id95">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id96">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#instanton">instanton</a><ul>
+<li><a class="reference internal" href="#id98">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id99">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#labels">labels</a><ul>
+<li><a class="reference internal" href="#id101">ATTRIBUTES</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#masses">masses</a><ul>
+<li><a class="reference internal" href="#id103">ATTRIBUTES</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#metad">metad</a><ul>
+<li><a class="reference internal" href="#id105">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#momenta">momenta</a><ul>
+<li><a class="reference internal" href="#id107">ATTRIBUTES</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#motion">motion</a><ul>
+<li><a class="reference internal" href="#id109">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id110">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#neb-optimizer">neb_optimizer</a><ul>
+<li><a class="reference internal" href="#id112">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id113">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#normal-modes">normal_modes</a><ul>
+<li><a class="reference internal" href="#id115">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id116">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#normalmodes">normalmodes</a><ul>
+<li><a class="reference internal" href="#id118">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id119">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#optimizer">optimizer</a><ul>
+<li><a class="reference internal" href="#id121">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id122">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#output">output</a><ul>
+<li><a class="reference internal" href="#id124">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id125">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#p-ramp">p_ramp</a><ul>
+<li><a class="reference internal" href="#id127">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#planetary">planetary</a><ul>
+<li><a class="reference internal" href="#id129">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id130">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#positions">positions</a><ul>
+<li><a class="reference internal" href="#id132">ATTRIBUTES</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#prng">prng</a><ul>
+<li><a class="reference internal" href="#id134">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id135">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#properties">properties</a><ul>
+<li><a class="reference internal" href="#id137">ATTRIBUTES</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#remd">remd</a><ul>
+<li><a class="reference internal" href="#id139">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#scp">scp</a><ul>
+<li><a class="reference internal" href="#id141">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id142">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#simulation">simulation</a><ul>
+<li><a class="reference internal" href="#id144">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id145">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#smotion">smotion</a><ul>
+<li><a class="reference internal" href="#id147">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id148">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#string-optimizer">string_optimizer</a><ul>
+<li><a class="reference internal" href="#id150">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id151">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#system">system</a><ul>
+<li><a class="reference internal" href="#id153">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id154">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#system-template">system_template</a><ul>
+<li><a class="reference internal" href="#id156">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#t-ramp">t_ramp</a><ul>
+<li><a class="reference internal" href="#id158">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#thermostat">thermostat</a><ul>
+<li><a class="reference internal" href="#id160">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id161">FIELDS</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#trajectory">trajectory</a><ul>
+<li><a class="reference internal" href="#id163">ATTRIBUTES</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#velocities">velocities</a><ul>
+<li><a class="reference internal" href="#id165">ATTRIBUTES</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#vibrations">vibrations</a><ul>
+<li><a class="reference internal" href="#id167">ATTRIBUTES</a></li>
+<li><a class="reference internal" href="#id168">FIELDS</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=34e14329"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="_static/scripts/furo.js?v=5fa4622c"></script>
+    </body>
+</html>

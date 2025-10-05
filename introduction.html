@@ -1,0 +1,578 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Getting started" href="getting-started.html" /><link rel="prev" title="Welcome to i-PI’s documentation!" href="index.html" />
+
+    <link rel="shortcut icon" href="_static/favicon-ipi.png"/><!-- Generated with Sphinx 7.1.2 and Furo 2024.08.06 -->
+        <title>Program Overview - i-PI documentation pages</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=302659d7" />
+    <link rel="stylesheet" type="text/css" href="_static/custom_styles.css?v=78740f61" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">i-PI documentation pages</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
+  
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="_static/ipi-logo.svg" alt="Logo"/>
+  </div>
+  
+  <span class="sidebar-brand-text">i-PI documentation pages</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul class="current">
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Program Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features.html">Core features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="units.html">Internal units and conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input-files.html">Input files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input-tags.html">Input file tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output-files.html">Output files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output-tags.html">Output file tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="python.html">Tools and python utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="distributed.html">Distributed execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">A simple tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="onlinereso.html">Tutorials, recipes, and on-line resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently asked questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bibliography.html">Bibliography</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="program-overview">
+<h1>Program Overview<a class="headerlink" href="#program-overview" title="Permalink to this heading">¶</a></h1>
+<p>i-PI is a force engine that operates with a client-server
+paradigm. i-PI acts as a server in command of the evolution of the nuclear positions, while one or more instances
+of the client code handle the evaluation of system-specific properties. Designed to be universal, i-PI’s architecture
+is agnostic to the identity of the force providers, with a general and flexible backend that accommodates to a wide range of client codes.</p>
+<p>The code is written in Python 3, a high-level, general-purpose interpreted programming language known for
+its emphasis on code readability. This choice facilitates rapid prototyping of new ideas and relatively easy code
+maintenance when compared to compiled languages traditionally used in scientific computing.</p>
+<p>i-PI is structured in a modular way that represents the underlying physics of the target simulation as faithfully
+as possible. To achieve this, the code is organized around the System class which encodes all the information related
+to the physical system, such as the number and identity of atoms, the ensemble to be sampled, the number
+of replicas in path integral simulations, the initialization procedure, and the algorithm for evolving the
+nuclear positions. Forces are managed through the Forces class, which integrates the individual force components,
+each of which is computed following the strategy specified in a Forcefield class. This two-layer approach is particu-
+larly advantageous for algorithms where the total forces and energies are obtained by a combination of these
+quantities computed at different accuracy levels, or among different system portions.
+Simulation techniques that require the evolution of many systems simultaneously make use of the SMotion (Systems Motion)
+class. This class enables the definition of evolution steps that combine the (possibly many) different systems, facil-
+itating, for example, exchanges between system replicas as done in replica exchange simulations. Finally,
+estimators can be defined within the code or computed by the provided post-processing tools or user-generated scripts.</p>
+<p>A schematic representation of the code structure and the server-client communication is presented in Fig. 1.</p>
+<figure class="align-default" id="id5">
+<a class="white-background reference internal image-reference" href="_images/ipi-structure-v3.svg"><img alt="_images/ipi-structure-v3.svg" class="white-background" src="_images/ipi-structure-v3.svg" width="90.0%" /></a>
+<figcaption>
+<p><span class="caption-text">Figure 1. Schematic representation of the i-PI code structure and the server-client communication.</span><a class="headerlink" href="#id5" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+<p>In Figure 1, the physical system is defined by one or more replicas (beads), and the sampling conditions (e.g. temperature and pressure) by an Ensemble class. The forces acting on the atoms are constructed based on a combination of energy contributions evaluated by one or more instances of the
+Forcefield class (three in this example). Each Forcefield instance communicates with a different client sending positions (<em>q</em>) and
+lattice vectors (<em>h</em>), and receiving energy (<em>V</em>), forces (<em>f</em>), stresses and possible extra properties (X) as a JSON formatted string.
+In simulations with multiple replicas, each Forcefield instance can accept connections from several clients, to achieve parallel
+evaluation. The Motion class determines the evolution of the atoms (e.g. time integration, or geometry optimization), while
+“system motion” classes (SMotion) can act on multiple systems, e.g. to carry out replica exchange simulations. The output
+class handles writing the output and restart files</p>
+<section id="communication-protocol">
+<h2>Communication protocol<a class="headerlink" href="#communication-protocol" title="Permalink to this heading">¶</a></h2>
+<p>Since i-PI is designed to be used with a wide range of codes and
+platforms, it has to rely on a simple and robust method for
+communicating between the server and the client. Even though other choices
+are possible, and it should be relatively simple to implement other
+means of communication, the preferred approach relies on sockets as the
+underlying infrastructure. Both Internet and Unix domain sockets can be
+used: the latter allows for fast communication on a single node, whereas
+the former makes it possible to realise a distributed computing paradigm,
+with clients running on different nodes or even on different HPC
+facilities. In order to facilitate the implementation of the socket
+communication in client codes, a simple set of C wrappers to the
+standard libraries socket implementation is provided as part of the i-PI
+distribution, that can be used in any programming language that can be
+linked with C code.</p>
+<p>As far as the communication protocol is concerned, the guiding principle
+has been keeping it to the lowest common denominator, and avoiding any
+feature that may be code-specific. Only a minimal amount of information
+is transferred between the client and the server; the position of the
+atoms and cell parameters in one direction, and the forces, virial and
+potential in the other.</p>
+<p>For more details about sockets and communication, see
+<a class="reference internal" href="distributed.html#distrib"><span class="std std-ref">Distributed execution</span></a>.</p>
+</section>
+<section id="force-evaluation">
+<h2>Force evaluation<a class="headerlink" href="#force-evaluation" title="Permalink to this heading">¶</a></h2>
+<p>Within i-PI, the evaluation of the forces plays a crucial role, as it is
+the step requiring communication with the client code. In order to have
+a flexible infrastructure that makes it possible to perform simulations
+with advanced techniques, the force evaluation
+machinery in i-PI might appear complicated at first, and deserves a
+brief discussion.</p>
+<figure class="align-default" id="id6">
+<a class="white-background reference internal image-reference" href="_images/ipi-forces.svg"><img alt="_images/ipi-forces.svg" class="white-background" src="_images/ipi-forces.svg" width="90.0%" /></a>
+<figcaption>
+<p><span class="caption-text">Schematic representation of the different objects that
+are involved in the evaluation of the forces. The multiple layers and
+complex structure are necessary to give the possibility of
+decomposing the evaluation of the forces between multiple different
+clients and using different imaginary time partitioning (e.g. one can
+compute the bonded interactions using one client, and use a different
+client to compute the long-range electrostatic interactions,
+contracted on a single bead <span id="id1">[<a class="reference internal" href="bibliography.html#id757"><span>MM08</span></a>]</span>).</span><a class="headerlink" href="#id6" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+<p>This figure provides an overall scheme of the objects involved in the calculation
+of the forces. The infrastructure comprises
+a force provider class that deals with the actual subdivision of work
+among the clients, and a sequence of objects that translate the request
+of the overall force of the system into atomic evaluations of one
+component of the force
+When running path integral simulations, the latter refers to the component of an individual bead:
+i-PI is built to hide the path integral infrastructure from the client, and so beads must be
+transferred individually.</p>
+<p>Let us discuss for clarity a practical example: a calculation of an
+empirical water model where the bonded interactions are computed on 32
+beads by the program A, and the non-bonded interactions are computed by
+client B, ring-polymer contracted on 8 beads. Each client “type” is
+associated with a <a class="reference internal" href="input-tags.html#forcefield"><span class="std std-ref">forcefield</span></a> object in the input. In the case of a
+<a class="reference internal" href="input-tags.html#ffsocket"><span class="std std-ref">ffsocket</span></a> interface, the
+forcefield object specifies the address to which a client should
+connect, and so multiple clients of type A or B can connect to i-PI at
+the same time. Each forcefield object deals with queueing force
+evaluation requests and computing them in a first-in-first-out fashion,
+possibly executing multiple requests in parallel.</p>
+<p>On the force evaluation side, the task of splitting the request of a
+force evaluation into individual components and individual beads is
+accomplished by a chain of three objects, Forces, ForceComponent and
+ForceBead. is the main force Forces evaluator, that is built from the
+prototypes listed within the <a class="reference internal" href="input-tags.html#forces"><span class="std std-ref">forces</span></a> field of the <a class="reference internal" href="input-tags.html#system"><span class="std std-ref">system</span></a>.
+Each <cite>forcecomponent</cite>  item within the <a class="reference internal" href="input-tags.html#forces"><span class="std std-ref">forces</span></a> tag
+describe one component of the force – in our example one ForceComponent
+bound to a forcefield of type A, evaluated on 32 beads, and one
+ForceComponent bound to type B, evaluated on 8 beads. Forces contains
+the machinery that automatically contracts the actual ring polymer to
+the number of beads required by each component, and combines the various
+components with the given weights to provide the overall force, energy
+and virial where required. Note that in order to support ring polymer
+contraction (RPC), the RPC procedure is executed even if no contraction
+was required (i.e. even if all clients contain the full amount of
+beads). ForceComponent is a very simple helper class that associates
+with each bead a ForceBead object, which  is the entity in charge of
+filing force requests to the appropriate ForceField object and waiting
+for completion of the evaluation.</p>
+</section>
+<section id="automated-evaluation-depend-objects">
+<h2>Automated evaluation (depend objects)<a class="headerlink" href="#automated-evaluation-depend-objects" title="Permalink to this heading">¶</a></h2>
+<p>i-PI uses a caching mechanism with automatic value updating to make the
+code used to propagate the dynamics as simply and clearly  as possible.
+Every physical quantity that is referenced in the code is created using
+a “depend” object class, which is given the parameters on which it
+depends and a function used to calculate its value.</p>
+<figure class="align-default" id="id7">
+<a class="white-background reference internal image-reference" href="_images/ipi-depend.svg"><img alt="_images/ipi-depend.svg" class="white-background" src="_images/ipi-depend.svg" width="90.0%" /></a>
+<figcaption>
+<p><span class="caption-text">Schematic overview of the functioning of the
+<em>depend</em> class used as the base for properties and physical
+quantities in i-PI. A few “primitive” quantities – such as atomic
+positions or momenta – can be modified directly. For most properties,
+one defines a function that can compute that property based on the
+value of other properties. Whenever one property is modified, all the
+quantities that depend on it are marked as tainted, so that when the
+value of one of the properties is used, the function can be invoked
+and the updated value obtained. If a quantity is not marked as
+tainted, the cached value is returned instead.</span><a class="headerlink" href="#id7" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+<p>“Depend” objects can be called to get the physical quantity they
+represent. However, they have further functionality. Firstly, once the
+value of a “depend” object has been calculated, its value is cached, so
+further references to that quantity will not need to evaluate the
+function that calculates it. Furthermore, the code keeps track of when
+any of the dependencies of the variable are updated, and makes sure that
+the quantity is automatically when it is needed (i.e., when
+the quantity is assessed again).</p>
+<p>This is a minimal example of how to implement dependencies in a class</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ipi.utils.depend</span><span class="w"> </span><span class="kn">import</span> <span class="n">depend_value</span><span class="p">,</span> <span class="n">dproperties</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">DObject</span><span class="p">:</span>
+   <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+      <span class="c1"># depend objects are created using an underscore prefix.</span>
+      <span class="c1"># this is a &quot;primitive&quot; value that doesn&#39;t depend on anything</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_scalar</span> <span class="o">=</span> <span class="n">depend_value</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="mi">1</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;scalar&quot;</span><span class="p">)</span>
+
+      <span class="c1"># this is a dependent object. the definition contains a function that</span>
+      <span class="c1"># is called to determine the value, and specification of what objects</span>
+      <span class="c1"># it depend on.</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_double</span> <span class="o">=</span> <span class="n">depend_value</span><span class="p">(</span><span class="n">func</span><span class="o">=</span><span class="k">lambda</span><span class="p">:</span> <span class="mi">2</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">scalar</span><span class="p">,</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;double&quot;</span><span class="p">,</span>
+                                  <span class="n">dependencies</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_scalar</span><span class="p">])</span>
+
+<span class="c1"># after the definition of a class, this helper function should be called to</span>
+<span class="c1"># create property getters and setters (use the names with no leading underscore)</span>
+<span class="c1"># note that property accessors are added to the class, not to the instances</span>
+<span class="n">dproperties</span><span class="p">(</span><span class="n">DObject</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;scalar&quot;</span><span class="p">,</span> <span class="s2">&quot;double&quot;</span><span class="p">])</span>
+
+<span class="n">myobj</span> <span class="o">=</span> <span class="n">DObject</span><span class="p">()</span>
+<span class="c1"># &quot;primitive values&quot; can be set manually</span>
+<span class="n">myobj</span><span class="o">.</span><span class="n">scalar</span> <span class="o">=</span> <span class="mi">4</span>
+<span class="c1"># dependent objects will be computed automatically on demand</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">myobj</span><span class="o">.</span><span class="n">double</span><span class="p">)</span> <span class="c1"># prints `8`</span>
+</pre></div>
+</div>
+<p>This choice makes implementation slightly more complex when the physical
+observables are first introduced as variables, as one has to take care
+of stating their dependencies as well as the function that computes
+them. However, the advantage is that when the physical quantities are
+used, in the integrator of the dynamics or in the evaluation of physical
+properties, one does not need to take care of book-keeping and the code
+can be clean, transparent and readable.</p>
+<p>It is also possible to define dependencies between different objects, in
+which case it’s necessary to make sure that the compute function has access,
+at runtime, to the value of the other object. A typical usage pattern is</p>
+<div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="c1"># NB: this is meant to be run after the previous code snippet</span>
+<span class="kn">from</span><span class="w"> </span><span class="nn">ipi.utils.depend</span><span class="w"> </span><span class="kn">import</span> <span class="n">depend_array</span>
+<span class="kn">import</span><span class="w"> </span><span class="nn">numpy</span><span class="w"> </span><span class="k">as</span><span class="w"> </span><span class="nn">np</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">DOther</span><span class="p">:</span>
+   <span class="k">def</span><span class="w"> </span><span class="fm">__init__</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+
+      <span class="c1"># depend arrays must be initialized with storage space</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_vec</span> <span class="o">=</span> <span class="n">depend_array</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">4</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;vec&quot;</span><span class="p">)</span>
+
+   <span class="k">def</span><span class="w"> </span><span class="nf">bind</span><span class="p">(</span><span class="bp">self</span><span class="p">,</span> <span class="n">factor</span><span class="p">):</span>
+
+      <span class="bp">self</span><span class="o">.</span><span class="n">factor</span> <span class="o">=</span> <span class="n">factor</span> <span class="c1"># stores a reference to the object holding the value</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_scaled</span> <span class="o">=</span> <span class="n">depend_array</span><span class="p">(</span><span class="n">value</span><span class="o">=</span><span class="n">np</span><span class="o">.</span><span class="n">ones</span><span class="p">(</span><span class="mi">4</span><span class="p">),</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;vec&quot;</span><span class="p">,</span>
+                                 <span class="n">func</span><span class="o">=</span><span class="bp">self</span><span class="o">.</span><span class="n">get_scaled</span><span class="p">,</span> <span class="n">dependencies</span><span class="o">=</span><span class="p">[</span><span class="bp">self</span><span class="o">.</span><span class="n">_vec</span><span class="p">])</span>
+
+      <span class="c1"># dependencies (or dependants) can also be added after object creation</span>
+      <span class="bp">self</span><span class="o">.</span><span class="n">_scaled</span><span class="o">.</span><span class="n">add_dependency</span><span class="p">(</span><span class="bp">self</span><span class="o">.</span><span class="n">factor</span><span class="o">.</span><span class="n">_double</span><span class="p">)</span>
+
+   <span class="k">def</span><span class="w"> </span><span class="nf">get_scaled</span><span class="p">(</span><span class="bp">self</span><span class="p">):</span>
+      <span class="c1"># computes a scaled version of the vector</span>
+      <span class="k">return</span> <span class="bp">self</span><span class="o">.</span><span class="n">vec</span><span class="o">*</span><span class="bp">self</span><span class="o">.</span><span class="n">factor</span><span class="o">.</span><span class="n">double</span>
+
+<span class="n">dproperties</span><span class="p">(</span><span class="n">DOther</span><span class="p">,</span> <span class="p">[</span><span class="s2">&quot;vec&quot;</span><span class="p">,</span> <span class="s2">&quot;scaled&quot;</span><span class="p">])</span>
+
+<span class="n">myoth</span> <span class="o">=</span> <span class="n">DOther</span><span class="p">()</span> <span class="c1"># creates the object</span>
+<span class="n">myoth</span><span class="o">.</span><span class="n">bind</span><span class="p">(</span><span class="n">myobj</span><span class="p">)</span> <span class="c1"># makes connections</span>
+
+<span class="n">myoth</span><span class="o">.</span><span class="n">vec</span> <span class="o">=</span> <span class="n">np</span><span class="o">.</span><span class="n">asarray</span><span class="p">([</span><span class="mi">0</span><span class="p">,</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">])</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">myoth</span><span class="o">.</span><span class="n">scaled</span><span class="p">)</span> <span class="c1"># prints [0,8,16,24]</span>
+
+<span class="n">myoth</span><span class="o">.</span><span class="n">vec</span><span class="p">[</span><span class="mi">3</span><span class="p">]</span> <span class="o">=</span> <span class="mi">0</span> <span class="c1"># depend_arrays can be accessed as normal np.ndarray</span>
+<span class="nb">print</span><span class="p">(</span><span class="n">myoth</span><span class="o">.</span><span class="n">scaled</span><span class="p">)</span> <span class="c1"># prints [0,8,16,0]</span>
+</pre></div>
+</div>
+<section id="licence-and-credits">
+<h3>Licence and credits<a class="headerlink" href="#licence-and-credits" title="Permalink to this heading">¶</a></h3>
+<p>The code is distributed under the dual GPL and MIT licence. For more details
+see <a class="reference external" href="www.gnu.org/licences/gpl.html">www.gnu.org/licences/gpl.html</a> and
+<a class="reference external" href="https://fedoraproject.org/wiki/Licensing:MIT">https://fedoraproject.org/wiki/Licensing:MIT</a>.</p>
+<p>If you use this code in any future publications, please cite this using
+<span id="id2">[<a class="reference internal" href="bibliography.html#id209"><span>CMM14</span></a>]</span> for v1,
+<span id="id3">[<a class="reference internal" href="bibliography.html#id597"><span>KRM+19</span></a>]</span> for v2.
+<span id="id4">[<a class="reference internal" href="bibliography.html#id2"><span>LKF+24</span></a>]</span> for v3.</p>
+</section>
+</section>
+<section id="contributors">
+<h2>Contributors<a class="headerlink" href="#contributors" title="Permalink to this heading">¶</a></h2>
+<p>i-PI was originally written by M. Ceriotti and J. More at Oxford
+University, together with D. Manolopoulos. The updated list of developers and
+contributors can be found
+<a class="reference external" href="https://ipi-code.org/about/developers/">here</a></p>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="getting-started.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Getting started</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="index.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Home</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2021, The i-PI developers
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Program Overview</a><ul>
+<li><a class="reference internal" href="#communication-protocol">Communication protocol</a></li>
+<li><a class="reference internal" href="#force-evaluation">Force evaluation</a></li>
+<li><a class="reference internal" href="#automated-evaluation-depend-objects">Automated evaluation (depend objects)</a><ul>
+<li><a class="reference internal" href="#licence-and-credits">Licence and credits</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#contributors">Contributors</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=34e14329"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="_static/scripts/furo.js?v=5fa4622c"></script>
+    </body>
+</html>
