@@ -6,7 +6,13 @@ from scipy.special import xlogy
 
 
 def get_alpha_eq133(omegak, omega_cutoff, eta):
-    """Analytical equation of the ---"""
+    """A nalytical expresion of alpha based on the ohmic spectral density J. (Eq 1.33 from George draft.)
+
+    .. math::
+    \eta \omega_n^2 \int_0^\infty \frac{e^{-\omega/\omega_c}}{\omega^2 + \omega_n^2} \, d\omega
+    = \eta \omega_n \big[ \text{Ci}(z_n)\sin(z_n) - (\text{Si}(z_n) - \tfrac{\pi}{2}) \cos(z_n) \big]
+    """
+
     alpha = np.zeros(omegak.shape)
     for idx, omegak in enumerate(omegak):
         z = omegak / omega_cutoff
@@ -18,7 +24,10 @@ def get_alpha_eq133(omegak, omega_cutoff, eta):
 
 
 def get_alpha_eq134(omegak, omega_cutoff, eta):
-    """asymtotic answer for the alpha in the lower zn ---"""
+    """E134 is the asymtotic answer for the E133 at small value of zn (zn=ωn/ωc).
+    .. math::
+    \sim \eta \omega_n \big[ z_n (\gamma + \ln z_n) - z_n - \tfrac{\pi}{2} \big]
+    """
     alpha = np.zeros(omegak.shape)
     for idx, omegak in enumerate(omegak):
         z = omegak / omega_cutoff
@@ -36,7 +45,18 @@ def expohmic_J(
     omega: Union[float, np.ndarray], eta, omega_cut
 ) -> Union[float, np.ndarray]:
     """Spectral density at frequency omega.
-    ---- to calculate alpha and J based on this function one can do as following steps---
+    Within this function the exp ohmic J can be calculated by providing eta and omegacut
+
+    ..math::
+    J(\omega) = \eta \, \omega \, e^{-\omega / \omega_c}
+
+    attributes:
+
+    eta  is a coupling strength (related to the friction coefficient at low frequency)
+    omega_c   is a cutoff frequency describing how quickly the coupling decays for high-frequency modes
+
+
+    python frictiontools.py --omega-cut OMEGA_CUT --eta ETA output
     """
     return eta * np.abs(omega) * np.exp(-np.abs(omega) / omega_cut)
 

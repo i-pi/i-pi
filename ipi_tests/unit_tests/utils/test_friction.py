@@ -1,4 +1,33 @@
-"""Test electron-friction implementations. """
+"""Test electron-friction implementations.
+
+
+This test can be executed using the following command:
+
+pytest test_friction.py -v
+
+where test_friction.py is located in "i-pi/ipi_tests/unit_tests/utils".
+
+In this test, the analytical and numerical evaluations of the alpha parameter within the friction class and frictiontool.py are performed.
+The model system consists of a hydrogen atom represented by six beads, where the normal mode frequencies (omega_k, as defined in i-PI) are obtained by running i-PI (i-pi input.xml) in the directory "ipi_tests/regression_tests/tests/NVE/NVE_with_friction/double_well".
+
+These normal mode frequencies are then used as input for Eqs. (1.33) and (1.34):
+
+ - Eq. (1.33) represents the analytical expression for alpha, assuming an exponential Ohmic spectral density J(ω). The zero-frequency term is omitted to avoid undefined (NaN) values.
+
+ - Eq. (1.34) provides the asymptotic analytical approximation of Eq. (1.33).
+
+The reference values correspond to the results of Eq. (1.34).
+During the unit test, alpha is computed using:
+
+ - The analytical formulations defined in frictiontool.py ("i-pi/ipi/utils/frictiontools.py"), and
+
+ - The numerical implementation in friction.py ("i-pi/ipi/engine/friction.py").
+
+The computed results are then compared against the reference values.
+For the analytical case (Eq. 1.33), the deviation is within 1e-8, while for the numerical implementation, the deviation remains within 1e-5.
+
+
+"""
 
 import pytest
 import numpy as np
