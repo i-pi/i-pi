@@ -5,6 +5,10 @@ This test can be executed using the following command:
 
 pytest -v test_friction.py
 
+or 
+
+pytest -s test_friction.py
+
 where test_friction.py is located in "i-pi/ipi_tests/unit_tests/utils".
 
 In this test, the analytical and numerical evaluations of the alpha parameter within the friction class and frictiontool.py are performed.
