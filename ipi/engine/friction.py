@@ -76,6 +76,44 @@ def get_alpha_numeric(
     return alpha
 
 
+def get_alpha_numeric_2(
+    Lambda: np.ndarray, omega: np.ndarray, omegak: np.ndarray
+) -> np.ndarray:
+    try:
+        from scipy.interpolate import PchipInterpolator
+    except ModuleNotFoundError as e:
+        raise ModuleNotFoundError(
+            "Friction class requires scipy to work, please install scipy"
+        ) from e
+
+    alpha = np.zeros(omegak.shape)
+    for idx, omegak in enumerate(omegak):
+        f = PchipInterpolator(omega, Lambda * omegak**2 / (omega**2 + omegak**2))
+        alpha[idx] = 2 / np.pi * f.integrate(0, omega[-1])
+        print(f"for normal mode {omegak} alpha is {alpha[idx]}")
+    return alpha
+
+
+def get_alpha_numeric_3(
+    Lambda: np.ndarray, omega: np.ndarray, omegak: np.ndarray, s: int = 0, k: int = 5
+) -> np.ndarray:
+    try:
+        from scipy.interpolate import UnivariateSpline
+    except ModuleNotFoundError as e:
+        raise ModuleNotFoundError(
+            "Friction class requires scipy to work, please install scipy"
+        ) from e
+
+    alpha = np.zeros(omegak.shape)
+    for idx, omegak in enumerate(omegak):
+        f = UnivariateSpline(
+            omega, Lambda * omegak**2 / (omega**2 + omegak**2), s=s, k=k
+        )
+        alpha[idx] = 2 / np.pi * f.integral(0, omega[-1])
+        print(f"for normal mode {omegak} alpha is {alpha[idx]}")
+    return alpha
+
+
 # def get_eta(beads: Beads, forces: Forces) -> np.ndarray:
 #    """
 #    Get the friction matrix from the forces object.

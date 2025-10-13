@@ -61,6 +61,26 @@ def expohmic_J(
     return eta * np.abs(omega) * np.exp(-np.abs(omega) / omega_cut)
 
 
+def expohmic_Lambda(
+    omega: Union[float, np.ndarray], eta, omega_cut
+) -> Union[float, np.ndarray]:
+    """Spectrum at frequency omega.
+    Within this function the exp ohmic Lambda can be calculated by providing eta and omegacut
+
+    ..math::
+    Lambda(\omega) = \eta \,  e^{-\omega / \omega_c}
+
+    attributes:
+
+    eta  is a coupling strength (related to the friction coefficient at low frequency)
+    omega_c   is a cutoff frequency describing how quickly the coupling decays for high-frequency modes
+
+
+    python frictiontools.py --omega-cut OMEGA_CUT --eta ETA output
+    """
+    return eta * np.exp(-np.abs(omega) / omega_cut)
+
+
 if __name__ == "__main__":
     import argparse
 

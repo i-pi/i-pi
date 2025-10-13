@@ -37,8 +37,12 @@ import pytest
 import numpy as np
 from ipi.utils.frictiontools import get_alpha_eq133
 from ipi.utils.frictiontools import get_alpha_eq134
+
 from ipi.engine.friction import get_alpha_numeric
+from ipi.engine.friction import get_alpha_numeric_2
+from ipi.engine.friction import get_alpha_numeric_3
 from ipi.utils.frictiontools import expohmic_J
+from ipi.utils.frictiontools import expohmic_Lambda
 
 
 @pytest.fixture
@@ -79,6 +83,7 @@ def test_analytical_alphaeq133(omega_cutoff: float, eta: float):
         ALPHAK,
         atol=1e-7,
     )
+    # assert False
 
 
 def test_analytical_alphaeq134(omega_cutoff: float, eta: float):
@@ -93,8 +98,11 @@ def test_analytical_alphaeq134(omega_cutoff: float, eta: float):
     assert np.allclose(
         alpha,
         ALPHAK,
-        atol=1e-7,
+        atol=1e-8,
     )
+
+
+# assert False
 
 
 def test_numerical_alpha(omega_cutoff: float, eta: float):
@@ -112,4 +120,64 @@ def test_numerical_alpha(omega_cutoff: float, eta: float):
         ALPHAK,
         atol=1e-5,  # Note: this is not a very great accuracy. Can this be made better?
     )
+    # assert False
+    print(alpha, ALPHAK)
+
+
+def test_numerical_alpha_1(omega_cutoff: float, eta: float):
+    r"""In this test, the numerical evaluation of alpha, as implemented in ipi/engine/friction, is carried out with applying the spectrum (expohmic_Lambda).
+    The computed numerical values of alpha are subsequently compared with the corresponding analytical expression given in Eq. 1.34.
+    """
+
+    omega = np.arange(0.0001, omega_cutoff, 0.0001)
+
+    Lambda = expohmic_Lambda(omega, eta, omega_cutoff)
+    print(Lambda)
+    alpha = get_alpha_numeric(Lambda, omega, OMEGAK)
+    assert np.allclose(
+        alpha,
+        ALPHAK,
+        atol=1e-6,
+    )
+    # assert False
+    print(alpha, ALPHAK)
+
+
+def test_numerical_alpha_2(omega_cutoff: float, eta: float):
+    r"""In this test, the numerical evaluation of alpha, as implemented in ipi/engine/friction, is carried out.
+    In this test PchipInterpolator integrator applied instead of CubicSpline.
+    The computed numerical values of alpha are subsequently compared with the corresponding analytical expression given in Eq. 1.34.
+    """
+
+    omega = np.arange(0.0001, omega_cutoff, 0.0001)
+    J = expohmic_J(omega, eta, omega_cutoff)
+    Lambda = J / omega
+    print(Lambda)
+    alpha = get_alpha_numeric_2(Lambda, omega, OMEGAK)
+    assert np.allclose(
+        alpha,
+        ALPHAK,
+        atol=1e-6,
+    )
+    # assert False
+    print(alpha, ALPHAK)
+
+
+def test_numerical_alpha_3(omega_cutoff: float, eta: float):
+    r"""In this test, the numerical evaluation of alpha, as implemented in ipi/engine/friction, is carried out.
+    In this test UnivariateSpline integrator applied instead of CubicSpline.
+    The computed numerical values of alpha are subsequently compared with the corresponding analytical expression given in Eq. 1.34.
+    """
+
+    omega = np.arange(0.00001, omega_cutoff, 0.00001)
+    J = expohmic_J(omega, eta, omega_cutoff)
+    Lambda = J / omega
+    print(Lambda)
+    alpha = get_alpha_numeric_3(Lambda, omega, OMEGAK, s=0, k=5)
+    assert np.allclose(
+        alpha,
+        ALPHAK,
+        atol=1e-6,
+    )
+    # assert False
     print(alpha, ALPHAK)
