@@ -5,10 +5,6 @@ This test can be executed using the following command:
 
 pytest -v test_friction.py
 
-or 
-
-pytest -s test_friction.py
-
 where test_friction.py is located in "i-pi/ipi_tests/unit_tests/utils".
 
 In this test, the analytical and numerical evaluations of the alpha parameter within the friction class and frictiontool.py are performed.
@@ -39,8 +35,7 @@ from ipi.utils.frictiontools import get_alpha_eq133
 from ipi.utils.frictiontools import get_alpha_eq134
 
 from ipi.engine.friction import get_alpha_numeric
-from ipi.engine.friction import get_alpha_numeric_2
-from ipi.engine.friction import get_alpha_numeric_3
+
 from ipi.utils.frictiontools import expohmic_J
 from ipi.utils.frictiontools import expohmic_Lambda
 
@@ -134,46 +129,6 @@ def test_numerical_alpha_1(omega_cutoff: float, eta: float):
     Lambda = expohmic_Lambda(omega, eta, omega_cutoff)
     print(Lambda)
     alpha = get_alpha_numeric(Lambda, omega, OMEGAK)
-    assert np.allclose(
-        alpha,
-        ALPHAK,
-        atol=1e-6,
-    )
-    # assert False
-    print(alpha, ALPHAK)
-
-
-def test_numerical_alpha_2(omega_cutoff: float, eta: float):
-    r"""In this test, the numerical evaluation of alpha, as implemented in ipi/engine/friction, is carried out.
-    In this test PchipInterpolator integrator applied instead of CubicSpline.
-    The computed numerical values of alpha are subsequently compared with the corresponding analytical expression given in Eq. 1.34.
-    """
-
-    omega = np.arange(0.0001, omega_cutoff, 0.0001)
-    J = expohmic_J(omega, eta, omega_cutoff)
-    Lambda = J / omega
-    print(Lambda)
-    alpha = get_alpha_numeric_2(Lambda, omega, OMEGAK)
-    assert np.allclose(
-        alpha,
-        ALPHAK,
-        atol=1e-6,
-    )
-    # assert False
-    print(alpha, ALPHAK)
-
-
-def test_numerical_alpha_3(omega_cutoff: float, eta: float):
-    r"""In this test, the numerical evaluation of alpha, as implemented in ipi/engine/friction, is carried out.
-    In this test UnivariateSpline integrator applied instead of CubicSpline.
-    The computed numerical values of alpha are subsequently compared with the corresponding analytical expression given in Eq. 1.34.
-    """
-
-    omega = np.arange(0.00001, omega_cutoff, 0.00001)
-    J = expohmic_J(omega, eta, omega_cutoff)
-    Lambda = J / omega
-    print(Lambda)
-    alpha = get_alpha_numeric_3(Lambda, omega, OMEGAK, s=0, k=5)
     assert np.allclose(
         alpha,
         ALPHAK,
