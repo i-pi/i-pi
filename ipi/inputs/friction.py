@@ -43,8 +43,6 @@ class InputFriction(Input):
         if isinstance(friction, Friction):
             self.spectral_density.store(friction.spectral_density)
             self.alpha.store(friction.alpha)
-  
-
 
     def fetch(self) -> FrictionProtocol:
         return Friction(

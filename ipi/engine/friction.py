@@ -40,10 +40,9 @@ class Friction(FrictionProtocol):
         self.beads = motion.beads
         self.nm = motion.nm
 
-        
         # if self.alpha is already provided as a file, use it
-        #if self.alpha.size ==self.nm.omegak.size
-        if self.alpha.shape [0] ==self.nm.omegak.size:
+        # if self.alpha.size ==self.nm.omegak.size
+        if self.alpha.shape[0] == self.nm.omegak.size:
             self.alpha = self.alpha[:, 1]
             print("using loaded alpha values")
         else:
@@ -52,14 +51,13 @@ class Friction(FrictionProtocol):
             omega = self.spectral_density[:, 0]
 
             # otherwise, compute alpha numerically
-           
+
             self.alpha = get_alpha_numeric(
                 Lambda=Lambda,
                 omega=omega,
                 omegak=self.nm.omegak,
-                )  # (nmodes,)
+            )  # (nmodes,)
             print("comput alpha using get_alpha_numeric().")
-
 
     def forces(self) -> np.ndarray:
 
