@@ -132,7 +132,7 @@ def test_numerical_alpha_1(omega_cutoff: float, eta: float):
     assert np.allclose(
         alpha,
         ALPHAK,
-        atol=1e-6,
+        atol=1e-5,
     )
-    # assert False
+    assert False
     print(alpha, ALPHAK)

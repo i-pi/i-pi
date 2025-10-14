@@ -31,23 +31,35 @@ class Friction(FrictionProtocol):
     def __init__(
         self,
         spectral_density=np.zeros(0, float),
-        # alpha=np.zero(0, float),
+        alpha=np.zeros(0, float),
     ):
         self.spectral_density = np.asanyarray(spectral_density, dtype=float)
-        # self.alpha = np.asanyarray(alpha, dtype=float)
+        self.alpha = np.asanyarray(alpha, dtype=float)
 
     def bind(self, motion: Motion) -> None:
         self.beads = motion.beads
         self.nm = motion.nm
-        assert self.spectral_density.ndim == 2
-        Lambda = self.spectral_density[:, 1] / self.spectral_density[:, 0]
-        omega = self.spectral_density[:, 0]
 
-        self.alpha = get_alpha_numeric(
-            Lambda=Lambda,
-            omega=omega,
-            omegak=self.nm.omegak,
-        )  # (nmodes,)
+        
+        # if self.alpha is already provided as a file, use it
+        #if self.alpha.size ==self.nm.omegak.size
+        if self.alpha.shape [0] ==self.nm.omegak.size:
+            self.alpha = self.alpha[:, 1]
+            print("using loaded alpha values")
+        else:
+            assert self.spectral_density.ndim == 2
+            Lambda = self.spectral_density[:, 1] / self.spectral_density[:, 0]
+            omega = self.spectral_density[:, 0]
+
+            # otherwise, compute alpha numerically
+           
+            self.alpha = get_alpha_numeric(
+                Lambda=Lambda,
+                omega=omega,
+                omegak=self.nm.omegak,
+                )  # (nmodes,)
+            print("comput alpha using get_alpha_numeric().")
+
 
     def forces(self) -> np.ndarray:
 
