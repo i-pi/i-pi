@@ -257,7 +257,7 @@ diff -rupN ../6.3.0_orig/src/main.F src/main.F
        TSIF = 0.0_q
  
 +      ! ipi initialize variables
-+      EVTOHA = 1_q/(2_q*13.605692)
++      EVTOHA = 1_q/(2_q*13.605693)
 +      FOCTOAU = AUTOA*EVTOHA
 +      HASDATA = .FALSE.
 +
