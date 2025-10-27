@@ -257,7 +257,7 @@ diff -rupN ../6.3.0_orig/src/main.F src/main.F
        TSIF = 0.0_q
  
 +      ! ipi initialize variables
-+      EVTOHA = 1_q/(2_q*RYTOEV)
++      EVTOHA = 1_q/(2_q*13.605692)
 +      FOCTOAU = AUTOA*EVTOHA
 +      HASDATA = .FALSE.
 +
@@ -456,7 +456,7 @@ diff -rupN ../6.3.0_orig/src/main.F src/main.F
 +          ! communicates energy info back to i-pi
 +          IF (COMM%NODE_ME == 1) THEN
 +            WRITE(TIU0,*) " @ DRIVER MODE: Returning v,forces,stress "
-+            IPIPOT = (TOTEN-E%EENTROPY/(2+NORDER))*EVTOHA
++            IPIPOT = TOTEN*EVTOHA
 +            DO NI=1,NAT
 +              IPIFORCES(NI*3-2) = TIFOR(1,NI)*FOCTOAU
 +              IPIFORCES(NI*3-1) = TIFOR(2,NI)*FOCTOAU
