@@ -6,12 +6,11 @@
 
 
 import numpy as np
-from typing import Protocol
 
 from ipi.engine.motion import Motion
 from ipi.engine.normalmodes import NormalModes
 from ipi.engine.beads import Beads
-from ipi.utils.depend import depend_value,dproperties
+from ipi.utils.depend import depend_value, dproperties
 
 
 class Friction:
@@ -32,7 +31,7 @@ class Friction:
         """Initialises friction
 
         Args:
-        spectral density: 
+        spectral density:
         alpha:
         efric: The initial friction energy.
             Default to 0.0. It will be non-zero if the friction class is initialised from a checkpoint file.
@@ -40,7 +39,6 @@ class Friction:
         self.spectral_density = np.asanyarray(spectral_density, dtype=float)
         self.alpha = np.asanyarray(alpha, dtype=float)
         self._efric = depend_value(name="efric", value=efric)
-
 
     def bind(self, motion: Motion) -> None:
         self.beads = motion.beads
@@ -70,14 +68,16 @@ class Friction:
         fnm = self.alpha[:, np.newaxis] * self.nm.qnm  # (nmodes, 3 * natoms)
         forces = self.nm.transform.nm2b(fnm)  # (nbeads, 3 * natoms)
         return forces
-    
+
     def step(self, pdt: float) -> None:
         forces = self.forces()
         self.beads.p += forces * pdt
-        self.efric = 0.5 * np.einsum("n,nm,nm->",self.alpha, self.nm.qnm, self.nm.qnm)
-        
+        self.efric = 0.5 * np.einsum("n,nm,nm->", self.alpha, self.nm.qnm, self.nm.qnm)
+
+
 dproperties(Friction, ["efric"])
-  
+
+
 def get_alpha_numeric(
     Lambda: np.ndarray, omega: np.ndarray, omegak: np.ndarray
 ) -> np.ndarray:
@@ -97,5 +97,3 @@ def get_alpha_numeric(
             f"for normal mode {omegak} alpha is {alpha[idx]}"
         )  # MR: Change to only print if verbosity set to high.
     return alpha
-
-
