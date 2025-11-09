@@ -213,6 +213,7 @@ class Dynamics(Motion):
 
         self.ensemble.add_econs(self.thermostat.ethermo_)
         self.ensemble.add_econs(self.barostat.ebaro_)
+        self.ensemble.add_econs(self.friction._efric)
 
         # adds the potential, kinetic energy and the cell Jacobian to the ensemble
         self.ensemble.add_xlpot(self.barostat.pot_)
@@ -626,13 +627,32 @@ class NVEIntegratorWithFriction(NVEIntegrator):
     def bind(self, motion):
         super().bind(motion)
         self.friction.bind(motion)
+    def fstep(self):
+        """Velocity Verlet friction step"""
 
-    def pstep(self, level: int = 0) -> None:
-        if level == 0:
-            forces = self.friction.forces()
-            self.beads.p += forces * self.pdt[level]
+        self.friction.step(self.pdt[0])
+
+    def step(self, step=None):
+        """Does one simulation time step."""
+
+        if self.splitting == "obabo":
+            # friction is applied for dt/2
+            self.fstep()
+            self.pconstraints()  #I am not sure this sould include or not!
+
+            # forces are integerated for dt with MTS.
+            self.mtsprop(0)
+
+            # friction is applied for dt/2
+            self.fstep()
             self.pconstraints()
-        super().pstep(level)
+
+        elif self.splitting == "baoab":
+            self.mtsprop_ba(0)
+            # friction is applied for dt
+            self.fstep()
+            self.pconstraints()
+            self.mtsprop_ab(0)
 
 
 class NVTIntegrator(NVEIntegrator):

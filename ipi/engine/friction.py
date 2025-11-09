@@ -11,15 +11,10 @@ from typing import Protocol
 from ipi.engine.motion import Motion
 from ipi.engine.normalmodes import NormalModes
 from ipi.engine.beads import Beads
+from ipi.utils.depend import depend_value,dproperties
 
 
-class FrictionProtocol(Protocol):
-    def bind(self, motion: Motion) -> None: ...
-
-    def forces(self) -> np.ndarray: ...
-
-
-class Friction(FrictionProtocol):
+class Friction:
     spectral_density: np.ndarray  # (n, 2)
     """Input spectral density of omega and J(omega) value pairs"""
 
@@ -32,9 +27,20 @@ class Friction(FrictionProtocol):
         self,
         spectral_density=np.zeros(0, float),
         alpha=np.zeros(0, float),
+        efric=0.0,
     ):
+        """Initialises friction
+
+        Args:
+        spectral density: 
+        alpha:
+        efric: The initial friction energy.
+            Default to 0.0. It will be non-zero if the friction class is initialised from a checkpoint file.
+        """
         self.spectral_density = np.asanyarray(spectral_density, dtype=float)
         self.alpha = np.asanyarray(alpha, dtype=float)
+        self._efric = depend_value(name="efric", value=efric)
+
 
     def bind(self, motion: Motion) -> None:
         self.beads = motion.beads
@@ -64,8 +70,14 @@ class Friction(FrictionProtocol):
         fnm = self.alpha[:, np.newaxis] * self.nm.qnm  # (nmodes, 3 * natoms)
         forces = self.nm.transform.nm2b(fnm)  # (nbeads, 3 * natoms)
         return forces
-
-
+    
+    def step(self, pdt: float) -> None:
+        forces = self.forces()
+        self.beads.p += forces * pdt
+        self.efric = 0.5 * np.einsum("n,nm,nm->",self.alpha, self.nm.qnm, self.nm.qnm)
+        
+dproperties(Friction, ["efric"])
+  
 def get_alpha_numeric(
     Lambda: np.ndarray, omega: np.ndarray, omegak: np.ndarray
 ) -> np.ndarray:
@@ -87,14 +99,3 @@ def get_alpha_numeric(
     return alpha
 
 
-# def get_eta(beads: Beads, forces: Forces) -> np.ndarray:
-#    """
-#    Get the friction matrix from the forces object.
-
-#    Returns
-#    -------
-#    np.ndarray
-#        The friction matrix, shape (nbeads, 3 * natoms, 3 * natoms)
-#    """
-#    shape = (beads.nbeads, 3 * beads.natoms, 3 * beads.natoms)
-#    return np.array(forces.extras["friction"]).reshape(shape)

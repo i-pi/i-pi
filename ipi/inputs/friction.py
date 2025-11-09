@@ -1,5 +1,5 @@
 import numpy as np
-from ipi.engine.friction import Friction, FrictionProtocol
+from ipi.engine.friction import Friction
 from ipi.utils.inputvalue import (
     Input,
     InputArray,
@@ -32,7 +32,7 @@ class InputFriction(Input):
     default_help = "Simulates the electronic friction"
     default_label = "FRICTION"
 
-    def store(self, friction: FrictionProtocol) -> None:
+    def store(self, friction: Friction) -> None:
         """Takes a friction instance and store a minimal representation of it.
 
         Args:
@@ -44,7 +44,7 @@ class InputFriction(Input):
             self.spectral_density.store(friction.spectral_density)
             self.alpha.store(friction.alpha)
 
-    def fetch(self) -> FrictionProtocol:
+    def fetch(self) -> Friction:
         return Friction(
             spectral_density=self.spectral_density.fetch(),
             alpha=self.alpha.fetch(),
