@@ -10,7 +10,8 @@ import numpy as np
 from ipi.engine.motion import Motion
 from ipi.engine.normalmodes import NormalModes
 from ipi.engine.beads import Beads
-from ipi.utils.depend import depend_value, dproperties
+from ipi.utils.depend import depend_value
+from ipi.utils.messages import info, verbosity
 
 
 class Friction:
@@ -75,7 +76,7 @@ class Friction:
         self.efric = 0.5 * np.einsum("n,nm,nm->", self.alpha, self.nm.qnm, self.nm.qnm)
 
 
-dproperties(Friction, ["efric"])
+# dproperties(Friction, ["efric"])
 
 
 def get_alpha_numeric(
@@ -93,7 +94,8 @@ def get_alpha_numeric(
     for idx, omegak in enumerate(omegak):
         f = CubicSpline(omega, Lambda * omegak**2 / (omega**2 + omegak**2))
         alpha[idx] = 2 / np.pi * f.integrate(0, omega[-1])
-        print(
-            f"for normal mode {omegak} alpha is {alpha[idx]}"
+        info(
+            f"for normal mode {omegak} alpha is {alpha[idx]}",
+            verbosity.high,
         )  # MR: Change to only print if verbosity set to high.
     return alpha
