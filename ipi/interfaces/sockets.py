@@ -23,7 +23,8 @@ from ipi.utils.messages import verbosity, warning, info
 from ipi.utils.softexit import softexit
 
 from concurrent.futures import ThreadPoolExecutor
-
+from ipi.utils.timing_manager import timers
+from multiprocessing import shared_memory
 
 __all__ = ["InterfaceSocket"]
 
@@ -201,6 +202,429 @@ class DriverSocket(socket.socket):
             return dest  # tmp.copy() #np.frombuffer(self._buf[0:blen], dest.dtype).reshape(dest.shape).copy()
         else:
             return np.frombuffer(self._buf[0:blen], dest.dtype)[0]
+
+class SHMDriver(DriverSocket):
+    """Deals with communication between the client and driver code.
+
+    Deals with sending and receiving the data from the driver code. Keeps track
+    of the status of the driver. Initialises the driver forcefield, sends the
+    position and cell data, and receives the force data.
+
+    Attributes:
+       waitstatus: Boolean giving whether the driver is waiting to get a status answer.
+       status: Keeps track of the status of the driver.
+       lastreq: The ID of the last request processed by the client.
+       locked: Flag to mark if the client has been working consistently on one image.
+    """
+
+
+    def __init__(self, sock):
+        """Initialises Driver.
+
+        Args:
+           socket: A socket through which the communication should be done.
+        """
+
+        super(SHMDriver, self).__init__(sock)
+        self.waitstatus = False
+        self.status = Status.Up
+        self.lastreq = None
+        self.locked = False
+        self.exit_on_disconnect = False
+        self.first_dispatch = True
+
+        self.nat = None
+        self.nbeads = None
+
+        self.id = sock.fileno()
+        # must be uppercase!
+        self.pos_bufname = f"IPI-POS-{self.id}"
+        self.h_bufname = f"IPI-H-{self.id}"
+        self.ih_bufname = f"IPI-IH-{self.id}"
+        
+        self.pot_bufname = f"IPI-POT-{self.id}"
+        self.f_bufname = f"IPI-F-{self.id}"
+        self.vir_bufname = f"IPI-VIR-{self.id}"
+
+        print(f"Inited SHMDriver with {self.pos_bufname}")
+        self.pos_shm = None
+        self.h_shm = None
+        self.ih_shm = None
+        self.pot_shm = None
+        self.f_shm = None
+        self.vir_shm = None
+
+        self.pos_snp = None
+        self.h_snp = None
+        self.ih_snp = None
+        self.pot_snp = None
+        self.f_snp = None
+        self.vir_snp = None
+
+
+    def shutdown(self, how=socket.SHUT_RDWR):
+        """Tries to send an exit message to clients to let them exit gracefully."""
+
+        if self.exit_on_disconnect:
+            trd = threading.Thread(
+                target=softexit.trigger, kwargs={"message": "Client shutdown."}
+            )
+            trd.daemon = True
+            trd.start()
+
+        self.send_msg("exit")
+        self.status = Status.Disconnected
+
+        self.pos_shm.close()
+        self.h_shm.close()
+        self.ih_shm.close()
+        self.pot_shm.close()
+        self.f_shm.close()
+        self.vir_shm.close()
+
+        self.pos_shm.unlink()
+        self.h_shm.unlink()
+        self.ih_shm.unlink()
+        self.pot_shm.unlink()
+        self.f_shm.unlink()
+        self.vir_shm.unlink()
+
+
+
+        super(DriverSocket, self).shutdown(how)
+
+    def _getstatus_select(self):
+        """Gets driver status. Uses socket.select to make sure one can read/write on the socket.
+
+        Returns:
+           An integer labelling the status via bitwise or of the relevant members
+           of Status.
+        """
+
+        if not self.waitstatus:
+            try:
+                # This can sometimes hang with no timeout.
+                readable, writable, errored = select.select(
+                    [], [self], [], SELECTTIMEOUT
+                )
+                if self in writable:
+                    self.send_msg("status")
+                    self.waitstatus = True
+            except socket.error:
+                return Status.Disconnected
+
+        try:
+            readable, writable, errored = select.select([self], [], [], SELECTTIMEOUT)
+            if self in readable:
+                reply = self.recv_msg(HDRLEN)
+                self.waitstatus = False  # got some kind of reply
+            else:
+                # This is usually due to VERY slow clients.
+                warning(
+                    f" @SOCKET: Couldn't find readable socket in {SELECTTIMEOUT}s, will try again",
+                    verbosity.low,
+                )
+                return Status.Busy
+        except socket.timeout:
+            warning(" @SOCKET:   Timeout in status recv!", verbosity.debug)
+            return Status.Up | Status.Busy | Status.Timeout
+        except:
+            warning(
+                " @SOCKET:   Other socket exception. Disconnecting client and trying to carry on.",
+                verbosity.debug,
+            )
+            return Status.Disconnected
+
+        if not len(reply) == HDRLEN:
+            return Status.Disconnected
+        elif reply == MESSAGE["ready"]:
+            return Status.Up | Status.Ready
+        elif reply == MESSAGE["needinit"]:
+            return Status.Up | Status.NeedsInit
+        elif reply == MESSAGE["havedata"]:
+            return Status.Up | Status.HasData
+        else:
+            warning(" @SOCKET:    Unrecognized reply: " + str(reply), verbosity.low)
+            return Status.Up
+
+    def _getstatus_direct(self):
+        """Gets driver status. Relies on blocking send/recv, which might lead to
+        timeouts with slow networks.
+
+        Returns:
+           An integer labelling the status via bitwise or of the relevant members
+           of Status.
+        """
+
+        if not self.waitstatus:
+            try:
+                self.send_msg("status")
+                self.waitstatus = True
+            except socket.error:
+                return Status.Disconnected
+        try:
+            reply = self.recv_msg(HDRLEN)
+            self.waitstatus = False  # got some kind of reply
+        except socket.timeout:
+            warning(" @SOCKET:   Timeout in status recv!", verbosity.debug)
+            return Status.Up | Status.Busy | Status.Timeout
+        except:
+            warning(
+                " @SOCKET:   Other socket exception. Disconnecting client and trying to carry on.",
+                verbosity.debug,
+            )
+            return Status.Disconnected
+
+        if not len(reply) == HDRLEN:
+            return Status.Disconnected
+        elif reply == MESSAGE["ready"]:
+            return Status.Up | Status.Ready
+        elif reply == MESSAGE["needinit"]:
+            return Status.Up | Status.NeedsInit
+        elif reply == MESSAGE["havedata"]:
+            return Status.Up | Status.HasData
+        else:
+            warning(" @SOCKET:    Unrecognized reply: " + str(reply), verbosity.low)
+            return Status.Up
+
+    # depending on the system either _select or _direct can be slightly faster
+    # if you're network limited it might be worth experimenting changing this
+    _getstatus = _getstatus_select
+
+    def get_status(self):
+        """Sets (and returns) the client internal status. Wait for an answer if
+        the client is busy."""
+        status = self._getstatus()
+        while status & Status.Busy:
+            status = self._getstatus()
+        self.status = status
+        return status
+
+    def initialize(self, rid, pars, nat):
+        """Sends the initialisation string to the driver.
+
+        Args:
+           rid: The index of the request, i.e. the replica that
+              the force calculation is for.
+           pars: The parameter string to be sent to the driver.
+
+        Raises:
+           InvalidStatus: Raised if the status is not NeedsInit.
+        """
+
+        if self.status & Status.NeedsInit:
+            try:
+                # combines all messages in one to reduce latency
+                self.sendall(
+                    MESSAGE["init"]
+                    + np.int32(rid)
+                    + np.int32(len(pars))
+                    + pars.encode()
+                    + np.int32(nat)
+                    + Message(self.pos_bufname)
+                    + Message(self.h_bufname)
+                    + Message(self.ih_bufname)
+                    + Message(self.pot_bufname)
+                    + Message(self.f_bufname)
+                    + Message(self.vir_bufname)
+                )
+            except:
+                self.get_status()
+                return
+        else:
+            raise InvalidStatus("Status in init was " + self.status)
+
+    def sendpos(self, r):
+        """Sends the position and cell data to the driver.
+
+        Args:
+           pos: An array containing the atom positions.
+           cell: A cell object giving the system box.
+
+        Raises:
+           InvalidStatus: Raised if the status is not Ready.
+        """
+        global TIMEOUT  # we need to update TIMEOUT in case of sendall failure
+        # this is to handle the batch mode for multiple bead positions
+        timers.start
+        
+        if self.status & Status.Ready:
+            try:
+                self.np_to_shm(r) 
+                self.sendall(
+                    MESSAGE["posdata"]  # header
+                )
+                self.status = Status.Up | Status.Busy
+            except socket.timeout:
+                warning(
+                    f"Timeout in sendall after {TIMEOUT}s: resetting status and increasing timeout",
+                    verbosity.quiet,
+                )
+                self.status = Status.Timeout
+                TIMEOUT *= 2
+                return
+            except Exception as exc:
+                warning(
+                    f"Other exception during posdata receive: {exc}", verbosity.quiet
+                )
+                raise exc
+        else:
+            raise InvalidStatus("Status in sendpos was " + self.status)
+
+    def getforce(self):
+        """Gets the potential energy, force and virial from the driver.
+
+        Raises:
+           InvalidStatus: Raised if the status is not HasData.
+           Disconnected: Raised if the driver has disconnected.
+
+        Returns:
+           A list of the form [potential, force, virial, extra].
+        """
+
+        if self.status & Status.HasData:
+            self.send_msg("getforce")
+            reply = ""
+            while True:
+                try:
+                    reply = self.recv_msg()
+                except socket.timeout:
+                    warning(
+                        " @SOCKET:   Timeout in getforce, trying again!", verbosity.low
+                    )
+                    continue
+                except:
+                    warning(
+                        " @SOCKET:   Error while receiving message: %s" % (reply),
+                        verbosity.low,
+                    )
+                    raise Disconnected()
+                if reply == MESSAGE["forceready"]:
+                    break
+                else:
+                    warning(
+                        " @SOCKET:   Unexpected getforce reply: %s" % (reply),
+                        verbosity.low,
+                    )
+                if reply == "":
+                    raise Disconnected()
+        else:
+            raise InvalidStatus("Status in getforce was " + str(self.status))
+
+
+        return self.shm_to_np()
+
+    
+    def alloc_shm(self, r):
+        try:
+            self.nat = len(r["pos"]) // 3
+            
+            # assuming float64 in size*8
+            self.pos_shm =  shared_memory.SharedMemory(create=True, size=r["pos"].size*8, name=self.pos_bufname)
+            self.h_shm = shared_memory.SharedMemory(create=True, size=9*8, name=self.h_bufname)
+            self.ih_shm = shared_memory.SharedMemory(create=True, size=9*8, name=self.ih_bufname)
+            
+            self.pot_shm = shared_memory.SharedMemory(create=True, size=8, name=self.pot_bufname)
+            self.f_shm = shared_memory.SharedMemory(create=True, size=r["pos"].size*8, name=self.f_bufname)
+            self.vir_shm = shared_memory.SharedMemory(create=True, size=9*8, name=self.vir_bufname)
+
+            self.pos_snp = np.ndarray(r["pos"].shape, dtype=np.float64, buffer=self.pos_shm.buf)
+            self.h_snp = np.ndarray((3,3), dtype=np.float64, buffer=self.h_shm.buf)
+            self.ih_snp = np.ndarray((3,3), dtype=np.float64, buffer=self.ih_shm.buf)
+            
+            self.pot_snp = np.ndarray((1), dtype=np.float64, buffer=self.pot_shm.buf)
+            self.f_snp = np.ndarray(r["pos"].shape, dtype=np.float64, buffer=self.f_shm.buf)
+            self.vir_snp = np.ndarray((3,3), dtype=np.float64, buffer=self.vir_shm.buf)
+        except Exception as exc:
+            warning(
+                f"Exception occured:: {exc}", verbosity.quiet
+            )
+            raise exc
+
+
+    def np_to_shm(self, r):
+        self.pos_snp, self.h_snp, self.ih_snp = r["pos"], r["cell"][0], r["cell"][1]
+
+    def shm_to_np(self):
+        mxtradict = ""
+        pot = float(self.pot_snp)
+        return [pot, self.f_snp, self.vir_snp, mxtradict]
+        
+
+    def dispatch(self, r):
+        """Dispatches a request r and looks after it setting results
+        once it has been evaluated. This is meant to be launched as a
+        separate thread, and takes care of all the communication related to
+        the request.
+        """
+        
+        if self.first_dispatch:
+            self.alloc_shm(r)
+            self.first_dispatch = False
+
+        timers.start("[++++++]Get Stat1")
+        if not self.status & Status.Up:
+            warning(
+                " @SOCKET:   Inconsistent client state in dispatch thread! (I)",
+                verbosity.low,
+            )
+            return
+        r["t_dispatched"] = time.time()
+
+        self.get_status()
+        if self.status & Status.NeedsInit:
+            self.initialize(r["id"], r["pars"], len(r["pos"])//3) # also sending here buffer names to find shm on driver
+            self.status = self.get_status()
+
+        if not (self.status & Status.Ready):
+            warning(
+                " @SOCKET:   Inconsistent client state in dispatch thread! (II)",
+                verbosity.low,
+            )
+            return
+
+        r["start"] = time.time()
+
+        self.sendpos(r)
+
+        self.get_status()
+        if not (self.status & Status.HasData):
+            warning(
+                " @SOCKET:   Inconsistent client state in dispatch thread! (III)",
+                verbosity.low,
+            )
+            return
+        
+        try:
+            r["result"] = self.getforce()
+        except Disconnected:
+            self.status = Status.Disconnected
+            return
+        except Exception as exc:
+            warning(
+                f"Other exception during force receive: {exc}", verbosity.quiet
+            )
+            raise exc
+
+
+        r["result"][0] -= r["offset"]
+
+        if len(r["result"][1]) != len(r["active"]):
+            raise InvalidSize
+
+        # If only a piece of the system is active, resize forces and reassign
+        if len(r["active"]) != len(r["pos"]):
+            rftemp = r["result"][1]
+            r["result"][1] = np.zeros(len(r["pos"]), dtype=np.float64)
+            r["result"][1] = r["result"][1].at[r["active"]].set(rftemp)
+        r["t_finished"] = time.time()
+        self.lastreq = r["id"]  #
+
+        # updates the status of the client before leaving
+        self.get_status()
+
+        # marks the request as done as the very last thing
+        r["status"] = "Done"
 
 
 class Driver(DriverSocket):
@@ -609,6 +1033,7 @@ class InterfaceSocket(object):
         port=31415,
         slots=4,
         mode="unix",
+        shm=False,
         timeout=1.0,
         match_mode="auto",
         exit_on_disconnect=False,
@@ -636,6 +1061,7 @@ class InterfaceSocket(object):
         self.port = port
         self.slots = slots
         self.mode = mode
+        self.shm = shm
         self.timeout = timeout
         self.sockets_prefix = sockets_prefix
         self.poll_iter = UPDATEFREQ  # triggers pool_update at first poll
@@ -802,7 +1228,13 @@ class InterfaceSocket(object):
             if self.server in readable:
                 client, address = self.server.accept()
                 client.settimeout(TIMEOUT)
-                driver = Driver(client)
+               
+                if self.shm:
+                    driver = SHMDriver(client)
+                    info(" @interfacesocket.pool_update: Using SHM communication", verbosity.low)
+                else:
+                    driver = Driver(client)
+                
                 info(
                     " @interfacesocket.pool_update:   Client asked for connection from "
                     + str(address)
