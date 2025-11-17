@@ -25,8 +25,7 @@ from ipi.utils.depend import *
 from ipi.utils.nmtransform import nm_rescale
 from ipi.engine.beads import Beads
 from ipi.engine.cell import Cell
-
-
+from ipi.utils.timing_manager import timers
 __all__ = ["Forces", "ForceComponent"]
 
 
@@ -174,6 +173,7 @@ class ForceBead:
             self.queue()
 
         # sleeps until the request has been evaluated
+        timers.start("[+++++]Waiting Driver(++++++)")
         request = self.request
         latency = self.ff.latency
         while request["status"] != "Done":
@@ -189,6 +189,7 @@ class ForceBead:
                     time.sleep(latency)
                 sys.exit()
             time.sleep(latency)
+        timers.stop("[+++++]Waiting Driver(++++++)")
 
         # print diagnostics about the elapsed time
         info(

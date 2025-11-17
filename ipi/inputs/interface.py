@@ -96,6 +96,15 @@ class InputInterfaceSocket(Input):
                 "help": "Specifies whether the driver interface will listen onto a internet socket [inet] or onto a unix socket [unix].",
             },
         ),
+        "shm": (
+            InputAttribute,
+            {
+                "dtype": bool,
+                "options": [False, True],
+                "default": False,
+                "help": "Specifies whether to comminucate via shared memory (in the framework of unix sockets).",
+            },
+        ),
         "pbc": (
             InputAttribute,
             {
@@ -119,6 +128,7 @@ class InputInterfaceSocket(Input):
         super(InputInterfaceSocket, self).store(iface)
         self.latency.store(iface.latency)
         self.mode.store(iface.mode)
+        self.shm.store(iface.shm)
         self.address.store(iface.address)
         self.port.store(iface.port)
         self.slots.store(iface.slots)
@@ -140,6 +150,7 @@ class InputInterfaceSocket(Input):
             port=self.port.fetch(),
             slots=self.slots.fetch(),
             mode=self.mode.fetch(),
+            shm=self.shm.fetch(),
             latency=self.latency.fetch(),
             timeout=self.timeout.fetch(),
             dopbc=self.pbc.fetch(),

@@ -18,7 +18,7 @@ from ipi.engine.thermostats import Thermostat
 from ipi.engine.barostats import Barostat, BaroRGB
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import warning, verbosity
-
+from ipi.utils.timing_manager import timers
 
 class Dynamics(Motion):
     """self (path integral) molecular dynamics class.
@@ -467,12 +467,18 @@ class NVEIntegrator(DummyIntegrator):
 
         if self.nmts[index] % 2 == 1:
             # propagate p for dt/2alpha with force at level index
+            timers.start("[****]Verlet")
             self.pstep(index)
+            timers.stop("[****]Verlet")
             self.pconstraints()
             if index == self.nmtslevels - 1:
                 # call Q propagation for dt/alpha at the inner step
+                timers.start("[****]Centr. Verlet")
                 self.qcstep()
+                timers.stop("[****]Centr. Verlet")
+                timers.start("[****]Free RingPol. Verlet")
                 self.nm.free_qstep()
+                timers.stop("[****]Free RingPol. Verlet")
             else:
                 self.mtsprop_ba(index + 1)
 
@@ -482,13 +488,19 @@ class NVEIntegrator(DummyIntegrator):
         if self.nmts[index] % 2 == 1:
             if index == self.nmtslevels - 1:
                 # call Q propagation for dt/alpha at the inner step
+                timers.start("[++++]Centr. Verlet")
                 self.qcstep()
+                timers.stop("[++++]Centr. Verlet")
+                timers.start("[++++]Free RingPol. Verlet")
                 self.nm.free_qstep()
+                timers.stop("[++++]Free RingPol. Verlet")
             else:
                 self.mtsprop_ab(index + 1)
 
             # propagate p for dt/2alpha with force at level index
+            timers.start("[++++]Verlet(+++++)")
             self.pstep(index)
+            timers.stop("[++++]Verlet(+++++)")
             self.pconstraints()
 
         for i in range(int(self.nmts[index] / 2)):  # do nmts/2 full sub-steps
@@ -508,8 +520,13 @@ class NVEIntegrator(DummyIntegrator):
 
     def mtsprop(self, index):
         # just calls the two pieces together
+        timers.start("[+++]MTSprop_ba(****)")
         self.mtsprop_ba(index)
+        timers.stop("[+++]MTSprop_ba(****)")
+        
+        timers.start("[+++]MTSprop_ab(++++)")
         self.mtsprop_ab(index)
+        timers.stop("[+++]MTSprop_ab(++++)")
 
     def step(self, step=None):
         """Does one simulation time step."""
@@ -537,16 +554,32 @@ class NVTIntegrator(NVEIntegrator):
         """Does one simulation time step."""
 
         if self.splitting == "obabo":
+            timers.start("[++]Thermostat Step(***)")
             # thermostat is applied for dt/2
             self.tstep()
-            self.pconstraints()
+            timers.stop("[++]Thermostat Step(***)")
 
+            #timers.start("[++]PConstraints")
+            self.pconstraints() # timing: 0.00 ms
+            #timers.stop("[++]PConstraints")
+
+
+            
+            timers.start("[++]MTS propagation(+++)")
             # forces are integerated for dt with MTS.
             self.mtsprop(0)
+            timers.stop("[++]MTS propagation(+++)")
 
+            timers.start("[++]Thermostat Step(***)")
             # thermostat is applied for dt/2
             self.tstep()
-            self.pconstraints()
+            timers.stop("[++]Thermostat Step(***)")
+            
+
+            #timers.start("[++]PConstraints")
+            self.pconstraints() # timing: 0.00 ms
+            #timers.stop("[++]PConstraints")
+            
 
         elif self.splitting == "baoab":
             self.mtsprop_ba(0)
