@@ -1,10 +1,12 @@
 #!/bin/bash
 
 # Adjust before use ----------------
-source ~/soft/i-pi-mahrossi/env.sh
-IPI_EXE='python2 -u ~/bin/i-pi'
-AIMS_EXE=~/bin/ipi.aims.190214.mpi.x
+IPI_EXE='i-pi'
+AIMS_EXE=~/Codes/FHIaims/build_2025/aims.250507.serial.x
 # ----------------------------------
+
+# To run, example  ----------
+# bash run.sh bfgs
 
 mode=$1
 if [ $mode -eq '']

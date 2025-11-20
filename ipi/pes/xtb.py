@@ -54,7 +54,7 @@ class TBLiteDriver(Dummy_driver):
         )
         self.calc.set("verbosity", self.verbosity)
 
-    def __call__(self, cell, pos):
+    def compute_structure(self, cell, pos):
         """
         Get energies, forces, and stresses from the tblite library
         This routine assumes that the client will take positions

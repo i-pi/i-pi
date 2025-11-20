@@ -6,17 +6,13 @@ from .dummy import Dummy_driver
 import json
 from ipi.utils.messages import verbosity, warning
 
-try:
-    from scipy import interpolate
-except ImportError:
-    raise ImportError("Could not import scipy. Please install to use this.")
-
 """Spline driver. This is not a serious interpolation, use it if you know what you are doing. """
 factor_coord = 5
 mass = 1836
 friction = False
 SI = True
 fric_value = 0.165
+scipy = None
 
 __DRIVER_NAME__ = "spline"
 __DRIVER_CLASS__ = "Spline_driver"
@@ -30,6 +26,13 @@ class Spline_driver(Dummy_driver):
             "THIS PES HAS NOT BEEN TESTED FOLLOWING CONVERSION TO THE NEW PES API.",
             verbosity.low,
         )
+
+        global scipy
+        try:
+            import scipy
+        except ImportError:
+            raise ImportError("Could not import scipy. Please install to use this.")
+
         self.data_file = data_file
         super().__init__(*args, **kwargs)
         self.get_spline()
@@ -52,10 +55,12 @@ class Spline_driver(Dummy_driver):
         self.spline_f = []
         for i in range(3):
             self.spline_f.append(
-                interpolate.interp1d(self.data[:, 0], self.data[:, i + 1], kind="cubic")
+                scipy.interpolate.interp1d(
+                    self.data[:, 0], self.data[:, i + 1], kind="cubic"
+                )
             )
 
-        self.spline_e = interpolate.interp1d(
+        self.spline_e = scipy.interpolate.interp1d(
             factor_coord * self.data[:, 0], self.data[:, 4], kind="cubic"
         )
 
@@ -65,7 +70,7 @@ class Spline_driver(Dummy_driver):
         self.spline_fric = []
         for i in range(9):
             self.spline_fric.append(
-                interpolate.interp1d(
+                scipy.interpolate.interp1d(
                     factor_coord * data[:, 0], mass * data[:, i + 1], kind="cubic"
                 )
             )
@@ -113,7 +118,7 @@ class Spline_driver(Dummy_driver):
         """Functions that checks dimensions of the received position"""
         assert pos.shape == (1, 3)
 
-    def __call__(self, cell, pos):
+    def compute_structure(self, cell, pos):
         """Evaluate energy, forces and friction"""
         self.check_dimensions(pos)
         vir = cell * 0.0  # makes a zero virial with same shape as cell

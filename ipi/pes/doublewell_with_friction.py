@@ -102,12 +102,12 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
         friction_tensor[0, 0] = self.eta0 * self.dSD_dq(x) ** 2
         return friction_tensor
 
-    def __call__(self, cell, pos):
+    def compute_structure(self, cell, pos):
         """DoubleWell potential l"""
 
-        pot, force, vir, extras = super(DoubleWell_with_friction_driver, self).__call__(
-            cell, pos
-        )
+        pot, force, vir, extras = super(
+            DoubleWell_with_friction_driver, self
+        ).compute_structure(cell, pos)
 
         friction_tensor = self.get_friction_tensor(pos)
         extras = json.dumps({"friction": friction_tensor.tolist()})

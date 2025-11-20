@@ -1,0 +1,13 @@
+{
+    "center" : [0,0,0],
+    "radius": 11.7,
+    "sigma": 3.28,
+    "epsilon": 1.0,
+    "center_unit": "angstrom",
+    "radius_unit": "angstrom",
+    "sigma_unit": "angstrom",
+    "epsilon_unit": "kilocal/mol",
+    "symbols": ["O","H"],
+    "first_power": 9,
+    "second_power": 3
+}
