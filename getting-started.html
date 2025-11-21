@@ -1,0 +1,821 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Core features" href="features.html" /><link rel="prev" title="Program Overview" href="introduction.html" />
+
+    <link rel="shortcut icon" href="_static/favicon-ipi.png"/><!-- Generated with Sphinx 7.1.2 and Furo 2024.08.06 -->
+        <title>Getting started - i-PI documentation pages</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=302659d7" />
+    <link rel="stylesheet" type="text/css" href="_static/custom_styles.css?v=78740f61" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">i-PI documentation pages</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
+  
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="_static/ipi-logo.svg" alt="Logo"/>
+  </div>
+  
+  <span class="sidebar-brand-text">i-PI documentation pages</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Program Overview</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features.html">Core features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="units.html">Internal units and conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input-files.html">Input files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input-tags.html">Input file tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output-files.html">Output files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output-tags.html">Output file tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="python.html">Tools and python utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="distributed.html">Distributed execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">A simple tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="onlinereso.html">Tutorials, recipes, and on-line resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently asked questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bibliography.html">Bibliography</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="getting-started">
+<h1>Getting started<a class="headerlink" href="#getting-started" title="Permalink to this heading">¶</a></h1>
+<section id="installing-i-pi">
+<span id="install"></span><h2>Installing i-PI<a class="headerlink" href="#installing-i-pi" title="Permalink to this heading">¶</a></h2>
+<section id="requirements">
+<h3>Requirements<a class="headerlink" href="#requirements" title="Permalink to this heading">¶</a></h3>
+<p>i-PI is Python code, and as such strictly speaking does not need to be
+compiled and installed. The <code class="docutils literal notranslate"><span class="pre">i-pi</span></code> file in the <code class="docutils literal notranslate"><span class="pre">bin</span></code> directory of
+the distribution is the main (executable) script, and can be run as long
+as the system has installed:</p>
+<ul class="simple">
+<li><p>Python version 3.6 or greater (starting from version 2.0, i-PI is not Python2
+compatible)</p></li>
+<li><p>The Python numerical library NumPy</p></li>
+</ul>
+<p>See <a class="reference internal" href="#runningsimulations"><span class="std std-ref">Running i-PI</span></a> for more details on how to launch i-PI.</p>
+<p>Additionally, most client codes will have their own requirements. Many
+of them, including the test client codes given in the “drivers”
+directory, will need a suitable Fortran compiler. A C compiler is
+required for the sockets.c wrapper to the sockets standard library. Most
+electronic structure codes will also need to be linked with some
+mathematical libraries, such as BLAS, FFTW and LAPACK. Installation
+instructions for these codes should be provided as part of the code
+distribution and on the appropriate website.
+Patching for use with i-PI should not
+introduce further dependencies.</p>
+</section>
+<section id="quick-setup">
+<h3>Quick Setup<a class="headerlink" href="#quick-setup" title="Permalink to this heading">¶</a></h3>
+<p>To use i-PI with an existing driver, install and update using <cite>pip</cite>:</p>
+<p>Last version:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">python</span> <span class="o">-</span><span class="n">m</span> <span class="n">pip</span> <span class="n">install</span> <span class="n">git</span><span class="o">+</span><span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">i</span><span class="o">-</span><span class="n">pi</span><span class="o">/</span><span class="n">i</span><span class="o">-</span><span class="n">pi</span><span class="o">.</span><span class="n">git</span>
+</pre></div>
+</div>
+<p>Last Release:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">pip</span> <span class="n">install</span> <span class="o">-</span><span class="n">U</span> <span class="n">ipi</span>
+</pre></div>
+</div>
+</section>
+<section id="full-installation">
+<h3>Full installation<a class="headerlink" href="#full-installation" title="Permalink to this heading">¶</a></h3>
+<section id="i-pi">
+<h4>i-PI<a class="headerlink" href="#i-pi" title="Permalink to this heading">¶</a></h4>
+<p>To develop i-PI or test it with the self-contained driver, follow these
+instructions. It is assumed that i-PI will
+be run from a Linux environment, with a recent version of Python, Numpy and
+gfortran, and that the terminal is initially in the i-pi package directory (the
+directory containing this file), which you can obtain by cloning the repository</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">git</span> <span class="n">clone</span> <span class="n">https</span><span class="p">:</span><span class="o">//</span><span class="n">github</span><span class="o">.</span><span class="n">com</span><span class="o">/</span><span class="n">i</span><span class="o">-</span><span class="n">pi</span><span class="o">/</span><span class="n">i</span><span class="o">-</span><span class="n">pi</span><span class="o">.</span><span class="n">git</span>
+</pre></div>
+</div>
+<p>Source the environment settings file <cite>env.sh</cite> as <cite>source env.sh</cite> or <cite>.
+env.sh</cite>.  It is useful to put this in your <cite>.bashrc</cite> or other settings file if
+you always want to have i-PI available.</p>
+</section>
+<section id="fortran-built-in-driver">
+<h4>Fortran built-in driver<a class="headerlink" href="#fortran-built-in-driver" title="Permalink to this heading">¶</a></h4>
+<p>The built-in driver requires a FORTRAN compiler, and can be built as</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">cd</span> <span class="n">drivers</span><span class="o">/</span><span class="n">f90</span>
+<span class="n">make</span>
+<span class="n">cd</span> <span class="o">../..</span>
+</pre></div>
+</div>
+</section>
+<section id="python-driver-and-pes">
+<h4>Python driver and PES<a class="headerlink" href="#python-driver-and-pes" title="Permalink to this heading">¶</a></h4>
+<p>In addition to the FORTRAN drive, the i-PI distribution contains also a Python
+driver, available in <cite>drivers/py</cite> and through the command-line command
+<cite>i-pi-py_driver</cite>, which evaluates potential energy surfaces evaluated by simple
+driver classes, that can be found in <cite>ipi/pes</cite>.</p>
+<p>These classes are particularly suitable to perform inference with machine-learning
+potentials implemented in Python, and it is reasonably simple to add your own,
+if you need to (see also the <a class="reference internal" href="contributing.html#contributing"><span class="std std-ref">Contributing</span></a> section).</p>
+<p>These PES files can also be used directly, without the need to go through a
+client-server interface, using a <a class="reference internal" href="input-tags.html#ffdirect"><span class="std std-ref">ffdirect</span></a> forcefield, including in the
+XML input a block similar to</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">ffdirect</span> <span class="n">name</span><span class="o">=</span><span class="s2">&quot;ff_name&quot;</span><span class="o">&gt;</span>
+   <span class="o">&lt;</span><span class="n">pes</span><span class="o">&gt;</span> <span class="n">harmonic</span> <span class="o">&lt;/</span><span class="n">pes</span><span class="o">&gt;</span>
+   <span class="o">&lt;</span><span class="n">parameters</span><span class="o">&gt;</span> <span class="p">{</span> <span class="n">k1</span><span class="p">:</span> <span class="mf">1.0</span><span class="p">}</span> <span class="o">&lt;/</span><span class="n">parameters</span><span class="o">&gt;</span>
+<span class="o">&lt;/</span><span class="n">ffdirect</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="alternative-installation-using-the-setup-py-module">
+<h3>Alternative installation using the setup.py module<a class="headerlink" href="#alternative-installation-using-the-setup-py-module" title="Permalink to this heading">¶</a></h3>
+<p>It is sometimes  more convenient to install the package to the system’s Python
+modules path, so that it is accessible by all users and can be run
+without specifying the path to the Python script.</p>
+<p>For this purpose we have included a module in the root directory of the
+i-PI distribution, <code class="docutils literal notranslate"><span class="pre">setup.py</span></code>, which handles creating a package with
+the executable and all the modules which are necessary for it to run.
+The first step is to build the distribution using:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">python</span> <span class="n">setup</span><span class="o">.</span><span class="n">py</span> <span class="n">build</span>
+</pre></div>
+</div>
+<p>Note that this requires the distutils package that comes with the
+python-dev package.</p>
+<p>This creates a “build” directory containing only the files that are used
+to run an i-PI simulation, which can then be used to create the
+executable. This can be done in two ways, depending on whether or not
+the user has root access. If the user does have root access, then the
+following command will add the relevant source files to the standard
+Python library directory:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">python</span> <span class="n">setup</span><span class="o">.</span><span class="n">py</span> <span class="n">install</span>
+</pre></div>
+</div>
+<p>This will install the package in the /usr/lib/py_vers directory, where
+py_vers is the version of Python that is being used. This requires
+administrator privileges.</p>
+<p>Otherwise, one can install i-PI in a local Python path. If such path
+does not exist yet, one must create directories for the package to go
+into, using:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">mkdir</span> <span class="o">~/</span><span class="nb">bin</span>
+<span class="o">&gt;</span> <span class="n">mkdir</span> <span class="o">~/</span><span class="n">lib</span><span class="o">/</span><span class="n">py_vers</span>
+<span class="o">&gt;</span> <span class="n">mkdir</span> <span class="o">~/</span><span class="n">lib</span><span class="o">/</span><span class="n">py_vers</span><span class="o">/</span><span class="n">site</span><span class="o">-</span><span class="n">packages</span>
+</pre></div>
+</div>
+<p>Next, you must tell Python where to find this library, by appending it to
+the Linux environment variable PYTHONPATH, using:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>export PYTHONPATH=$PYTHONPATH:~/lib/py_vers/site-packages/
+</pre></div>
+</div>
+<p>Finally, the code can be installed using:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>&gt; python setup.py install –prefix=
+</pre></div>
+</div>
+<p>Either way, it will now be possible to run the code automatically, using</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">i</span><span class="o">-</span><span class="n">pi</span> <span class="nb">input</span><span class="o">-</span><span class="n">file</span><span class="o">.</span><span class="n">xml</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="installing-clients">
+<h2>Installing clients<a class="headerlink" href="#installing-clients" title="Permalink to this heading">¶</a></h2>
+<p>As of today, the following codes provide out-of-the-box an i-PI
+interface: CP2K, DFTB+, Lammps, Quantum ESPRESSO, Siesta, FHI-aims,
+Yaff, deMonNano, TBE. Links to the web pages of these codes, including
+information on how to obtain them, can be found at <a class="reference external" href="http://ipi-code.org/">http://ipi-code.org/</a>.</p>
+<p>If you are interested in interfacing your code to i-PI please get in
+touch, we are always glad to help. We keep some information below in
+case you are interested in writing a patch to a code.</p>
+</section>
+<section id="running-i-pi">
+<span id="runningsimulations"></span><h2>Running i-PI<a class="headerlink" href="#running-i-pi" title="Permalink to this heading">¶</a></h2>
+<p>i-PI functions based on a client-server protocol, where the evolution of
+the nuclear dynamics is performed by the i-PI server, whereas the energy
+and forces evaluation is delegated to one or more instances of an
+external program, that acts as a client. This design principle has
+several advantages, but it also makes running a
+simulation slightly more complicated, since the two components must be
+set up and started independently.</p>
+<section id="running-the-i-pi-server">
+<h3>Running the i-PI server<a class="headerlink" href="#running-the-i-pi-server" title="Permalink to this heading">¶</a></h3>
+<p>i-PI simulations are run using the i-PI Python script found in the
+“bin” directory. This script takes an xml-formatted file as input, and
+automatically starts a simulation as specified by the data held in it.
+If the input file is called “input_file.xml”, then i-PI is run using:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">python</span> <span class="n">i</span><span class="o">-</span><span class="n">pi</span> <span class="n">input_file</span><span class="o">.</span><span class="n">xml</span>
+</pre></div>
+</div>
+<p>This reads in the input data, initializes all the internally used
+objects, and then creates the server socket. The code will then wait
+until at least one client code has connected to the server before
+running any dynamics. Note that until this has happened the code is
+essentially idle, the only action that it performs is to periodically
+poll for incoming connections.</p>
+</section>
+<section id="running-the-client-code">
+<span id="runningclients"></span><h3>Running the client code<a class="headerlink" href="#running-the-client-code" title="Permalink to this heading">¶</a></h3>
+<p>Below we give examples on how to make different clients communicate with
+i-PI. Most clients also include descriptions on how to do this from
+their own documentation.</p>
+<section id="built-in-fortran-client">
+<span id="driver-x"></span><h4>Built-in, fortran client<a class="headerlink" href="#built-in-fortran-client" title="Permalink to this heading">¶</a></h4>
+<p>i-PI includes a Fortran empirical potential
+client code to do simple calculations and to run the examples.</p>
+<p>The source code for this is included in the directory “drivers/f90”, and can
+be compiled into an executable “i-pi-driver” using the UNIX utility
+make.</p>
+<p>This code currently has several empirical potentials hardcoded into it, including
+a Lennard-Jones potential, the Silvera-Goldman potential
+<span id="id1">[<a class="reference internal" href="bibliography.html#id1073"><span>SG78</span></a>]</span>,
+a primitive implementation of the  qtip4pf potential for water ,
+<span id="id2">[<a class="reference internal" href="bibliography.html#id479"><span>HMM09</span></a>]</span>,
+several toy model potentials,
+the ideal gas (i.e. no potential interaction), and several more.</p>
+<p>How the code is run is based on what command line arguments are passed
+to it. The command line syntax is:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">i</span><span class="o">-</span><span class="n">pi</span><span class="o">-</span><span class="n">driver</span> <span class="p">[</span><span class="o">-</span><span class="n">u</span><span class="p">]</span> <span class="o">-</span><span class="n">a</span> <span class="n">address</span> <span class="p">[</span><span class="o">-</span><span class="n">p</span> <span class="n">port</span><span class="p">]</span> <span class="o">-</span><span class="n">m</span> <span class="p">[</span><span class="n">model</span><span class="o">-</span><span class="n">name</span><span class="p">]</span> <span class="o">-</span><span class="n">o</span> <span class="p">[</span><span class="n">parameters</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">S</span> <span class="n">sockets_prefix</span><span class="p">]</span> <span class="p">[</span><span class="o">-</span><span class="n">v</span><span class="p">]</span>
+</pre></div>
+</div>
+<p>The flags do the following:</p>
+<dl class="simple">
+<dt>-u:</dt><dd><p>Optional parameter. If specified, the client will connect to a Unix
+domain socket. If not, it will connect to an internet socket.</p>
+</dd>
+<dt>-a:</dt><dd><p>Is followed in the command line argument list by the hostname (address) of the
+server.</p>
+</dd>
+<dt>-p:</dt><dd><p>Is followed in the command line argument list by the port number of
+the server.</p>
+</dd>
+<dt>-m:</dt><dd><p>Is followed in the command line argument list by a string specifying
+the type of potential to be used. “gas” gives no potential, “lj”
+gives a Lennard-Jones potential, “sg” gives a Silvera-Goldman
+potential and “harm” gives a 1D harmonic oscillator potential. Other
+options should be clear from their description.</p>
+</dd>
+<dt>-o:</dt><dd><p>Is followed in the command line argument list by a string of comma-separated values needed to initialize the potential parameters. “gas”
+requires no parameters, “harm” requires a spring constant, “sg”
+requires a cut-off radius and “lj” requires the length and energy
+scales and a cut-off radius to be specified. All of these must be
+given in atomic units.</p>
+</dd>
+<dt>-v:</dt><dd><p>Optional parameter. If given, the client will print out more
+information each time step.</p>
+</dd>
+<dt>-S:</dt><dd><p>Optional parameter. If given, overwrite the default socket prefix used in the creation of files for the socket communication.
+(default “/tmp/ipi_”)</p>
+</dd>
+</dl>
+<p>This code should be fairly simple to extend to other pair-wise
+interaction potentials, and examples of its use can be seen in the
+“examples” directory, as explained in <a class="reference internal" href="#tests"><span class="std std-ref">Testing the install</span></a>.</p>
+</section>
+<section id="cp2k">
+<h4>CP2K<a class="headerlink" href="#cp2k" title="Permalink to this heading">¶</a></h4>
+<p>To use CP2K as the client code using an internet domain socket on the
+host address “host_address” and on the port number “port” the following
+lines must be added to its input file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&amp;</span><span class="n">GLOBAL</span>
+   <span class="o">...</span>
+   <span class="n">RUN_TYPE</span> <span class="n">DRIVER</span>
+   <span class="o">...</span>
+<span class="o">&amp;</span><span class="n">END</span> <span class="n">GLOBAL</span>
+
+<span class="o">&amp;</span><span class="n">MOTION</span>
+   <span class="o">...</span>
+   <span class="o">&amp;</span><span class="n">DRIVER</span>
+      <span class="n">HOST</span> <span class="n">host_address</span>
+      <span class="n">PORT</span> <span class="n">port</span>
+   <span class="o">&amp;</span><span class="n">END</span> <span class="n">DRIVER</span>
+   <span class="o">...</span>
+<span class="o">&amp;</span><span class="n">END</span> <span class="n">MOTION</span>
+</pre></div>
+</div>
+<p>If instead a Unix domain socket is required then the following
+modification is necessary:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&amp;</span><span class="n">MOTION</span>
+   <span class="o">...</span>
+   <span class="o">&amp;</span><span class="n">DRIVER</span>
+      <span class="n">HOST</span> <span class="n">host_address</span>
+      <span class="n">PORT</span> <span class="n">port</span>
+      <span class="n">UNIX</span>
+   <span class="o">&amp;</span><span class="n">END</span> <span class="n">DRIVER</span>
+   <span class="o">...</span>
+<span class="o">&amp;</span><span class="n">END</span> <span class="n">MOTION</span>
+</pre></div>
+</div>
+<p>The rest of the input file should be the same as for a standard CP2K
+calculation, as explained at it the documentation of
+<a class="reference external" href="http://www.cp2k.org/">CP2K</a>.</p>
+</section>
+<section id="quantum-espresso">
+<h4>Quantum-Espresso<a class="headerlink" href="#quantum-espresso" title="Permalink to this heading">¶</a></h4>
+<p>To use Quantum-Espresso as the client code using an internet domain
+socket on the host address “host_address” and on the port number “port”
+the following lines must be added to its input file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>&amp;CONTROL
+   ...
+   calculation=`driver&#39;
+   srvaddress=`host_address:port&#39;
+   ...
+/
+</pre></div>
+</div>
+<p>If instead a Unix domain socket is required then the following
+modification is necessary:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>&amp;CONTROL
+   ...
+   calculation=`driver&#39;
+   srvaddress=`UNIX:socket_name:port&#39;
+   ...
+/
+</pre></div>
+</div>
+<p>The rest of the input file should be the same as for a standard Quantum
+Espresso calculation, as explained at
+<a class="reference external" href="www.quantum-espresso.org/">www.quantum-espresso.org/</a>.</p>
+</section>
+<section id="lammps">
+<h4>LAMMPS<a class="headerlink" href="#lammps" title="Permalink to this heading">¶</a></h4>
+<p>To use LAMMPS as the client code using an internet domain socket on the
+host address “host_address” and on the port number “port” the following
+lines must be added to its input file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fix</span>  <span class="mi">1</span> <span class="nb">all</span> <span class="n">ipi</span> <span class="n">host_address</span> <span class="n">port</span>
+</pre></div>
+</div>
+<p>If instead a unix domain socket is required then the following
+modification is necessary:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">fix</span>  <span class="mi">1</span> <span class="nb">all</span> <span class="n">ipi</span> <span class="n">host_address</span> <span class="n">port</span> <span class="n">unix</span>
+</pre></div>
+</div>
+<p>The rest of the input file should be the same as for a standard LAMMPS
+calculation, as explained at <a class="reference external" href="http://lammps.sandia.gov/index.html">http://lammps.sandia.gov/index.html</a>. Note
+that LAMMPS must be compiled with the <code class="docutils literal notranslate"><span class="pre">yes-user-misc</span></code> option to
+communicate with i-PI. More information from
+<a class="reference external" href="https://lammps.sandia.gov/doc/fix_ipi.html">https://lammps.sandia.gov/doc/fix_ipi.html</a>.</p>
+</section>
+<section id="fhi-aims">
+<h4>FHI-aims<a class="headerlink" href="#fhi-aims" title="Permalink to this heading">¶</a></h4>
+<p>To use FHI-aims as the client code using an internet domain socket on
+the host address “host_address” and on the port number “port” the
+following lines must be added to its <code class="docutils literal notranslate"><span class="pre">control.in</span></code> file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">use_pimd_wrapper</span> <span class="n">host_address</span> <span class="n">port</span>
+</pre></div>
+</div>
+<p>If instead a unix domain socket is required then the following
+modification is necessary:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">use_pimd_wrapper</span> <span class="n">UNIX</span><span class="p">:</span><span class="n">host_address</span> <span class="n">port</span>
+</pre></div>
+</div>
+<p>One can also communicate different electronic-structure quantities to
+i-PI through the <code class="docutils literal notranslate"><span class="pre">extra</span></code> string from FHI-aims. In this case, the
+following lines can be added to the <code class="docutils literal notranslate"><span class="pre">control.in</span></code> file:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">communicate_pimd_wrapper</span> <span class="n">option</span>
+</pre></div>
+</div>
+<p>where option can be, e.g.,
+<code class="docutils literal notranslate"><span class="pre">dipole,</span> <span class="pre">hirshfeld,</span> <span class="pre">workfunction,</span> <span class="pre">friction</span></code>.</p>
+</section>
+</section>
+<section id="running-on-a-hpc-system">
+<span id="hpc"></span><h3>Running on a HPC system<a class="headerlink" href="#running-on-a-hpc-system" title="Permalink to this heading">¶</a></h3>
+<p>Running i-PI on a high-performance computing (HPC) system can be a bit
+more challenging than running it locally using UNIX-domain sockets or
+using the <em>localhost</em> network interface. The main problem is related to
+the fact that different HPC systems adopt a variety of solutions to have
+the different nodes communicate with each other and with the login
+nodes, and to queue and manage computational jobs.</p>
+<figure class="align-default" id="id3">
+<span id="fig-running"></span><a class="white-background reference internal image-reference" href="_images/ipi-running.svg"><img alt="_images/ipi-running.svg" class="white-background" src="_images/ipi-running.svg" width="90.0%" /></a>
+<figcaption>
+<p><span class="caption-text">Different approaches to run i-PI and a number of
+instances of the forces code on a HPC system: a) running i-PI and the
+clients in a single job; b) running i-PI and the clients on the same
+system, but using different jobs, or running i-PI interactively on
+the login node; c) running i-PI on a local workstation, communicating
+with the clients (that can run on one or multiple HPC systems) over
+the internet.</span><a class="headerlink" href="#id3" title="Permalink to this image">¶</a></p>
+</figcaption>
+</figure>
+<p>The figure represents schematically three different
+approaches to run i-PI on a HPC system:</p>
+<ol class="arabic">
+<li><p>running both i-PI and multiple instances of the client as a single
+job on the HPC system. The job submission script must launch i-PI
+first, as a serial background job, then wait a few seconds for it to
+load and create a socket</p>
+<blockquote>
+<div><div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">python</span> <span class="n">i</span><span class="o">-</span><span class="n">pi</span> <span class="n">input_file</span><span class="o">.</span><span class="n">xml</span> <span class="o">&amp;&gt;</span> <span class="n">log</span> <span class="o">&amp;</span> <span class="n">wait</span> <span class="mi">10</span>
+</pre></div>
+</div>
+</div></blockquote>
+<p>Then, one should launch with mpirun or any system-specific mechanism
+one or more independent instances of the client code. Note that not
+all queing systems allow launching several mpirun instances from a
+single job.</p>
+</li>
+<li><p>running i-PI and the clients on the HPC system, but in separate jobs.
+Since i-PI consumes very little resources, one should ideally launch
+it interactively on a login node</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">nohup</span> <span class="n">python</span> <span class="n">i</span><span class="o">-</span><span class="n">pi</span> <span class="n">input_file</span><span class="o">.</span><span class="n">xml</span> <span class="o">&lt;</span> <span class="o">/</span><span class="n">dev</span><span class="o">/</span><span class="n">null</span> <span class="o">&amp;&gt;</span> <span class="n">log</span> <span class="o">&amp;</span>
+</pre></div>
+</div>
+<p>or alternative on a queue with a very long wall-clock time. Then,
+multiple instances of the client can be run as independent jobs: as
+they start, they will connect to the server which will take care of
+adding them dynamically to the list of active clients, dispatching
+force calculations to them, and removing them from the list when
+their wall-clock time expires. This is perhaps the model that applies
+more easily to different HPC systems; however it requires having
+permission to run on the head node, or having access to a long
+wall-clock time queue that ensures that i-PI is always active.</p>
+</li>
+<li><p>running i-PI on a simple workstation, and performing communication
+over the internet with the clients that run on one or more HPC
+systems. This model exploits in full the distributed-computing model
+that underlies the philosophy of i-PI and is very robust – as the
+server can be always on, and the output of the simulation is
+generated locally. However, this is also the most complicated to set
+up, as the local workstation must accept in-coming connections from
+the internet – which is not always possible when behind a firewall –
+and the compute nodes of the HPC centre must have an outgoing
+connection to the internet, which often requires ssh tunnelling
+through a login node (see section <a class="reference internal" href="distributed.html#distrib"><span class="std std-ref">Distributed execution</span></a> for more
+details).</p></li>
+</ol>
+</section>
+</section>
+<section id="testing-the-install">
+<span id="tests"></span><h2>Testing the install<a class="headerlink" href="#testing-the-install" title="Permalink to this heading">¶</a></h2>
+<section id="test-the-installation-with-pytest">
+<h3>test the installation with ‘pytest‘<a class="headerlink" href="#test-the-installation-with-pytest" title="Permalink to this heading">¶</a></h3>
+<p>There are several test cases included, that can be run automatically
+with ‘i-pi-tests‘ from the root directory.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">i</span><span class="o">-</span><span class="n">pi</span><span class="o">-</span><span class="n">tests</span>
+</pre></div>
+</div>
+<p>Note 1: pytest and pytest-mock python packages are required to run these tests, but they are required to run i-PI.
+Note 2: please compile the fortran driver, as explained in <a class="reference internal" href="#driver-x"><span class="std std-ref">Built-in, fortran client</span></a>.
+Note 3: use the ‘-h’ flag to see all the available tests</p>
+</section>
+<section id="test-cases-and-examples">
+<h3>test cases and examples<a class="headerlink" href="#test-cases-and-examples" title="Permalink to this heading">¶</a></h3>
+<p>The <cite>examples/</cite> folder contains a multitude of examples for i-PI, covering
+most of the existing functionalities, and including also simple tests that
+can be run with different client codes.</p>
+<p>The example folder is structured such that each sub-folder is focused on a different aspect of using i-PI:</p>
+<ul class="simple">
+<li><dl class="simple">
+<dt><strong>clients</strong>:</dt><dd><dl class="simple">
+<dt>Contains examples that are code-specific, highlighting how the driver code should be set up</dt><dd><p>(client-specific syntax and tags) to run it properly with i-PI</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>features</strong> :</dt><dd><dl class="simple">
+<dt>Examples of different functionalities implemented in i-PI.</dt><dd><p>All examples can be run locally with the drivers provided with the code.</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>hpc_scripts</strong> :</dt><dd><p>Examples of submission scripts on HPC platforms</p>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>temp</strong>     :</dt><dd><dl class="simple">
+<dt>Temporary folder with historical examples that have not yet been adapted</dt><dd><p>to the current folder structure</p>
+</dd>
+</dl>
+</dd>
+</dl>
+</li>
+<li><dl class="simple">
+<dt><strong>init_files</strong>:</dt><dd><p>repository of input files shared by many examples</p>
+</dd>
+</dl>
+</li>
+</ul>
+<p>We keep this folder updated as much as we can, and try to run automated tests on these inputs, but in some cases, e.g. when using external clients, we cannot run tests.
+Please report a bug if you find something that is not working.</p>
+</section>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="features.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Core features</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="introduction.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Program Overview</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2021, The i-PI developers
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Getting started</a><ul>
+<li><a class="reference internal" href="#installing-i-pi">Installing i-PI</a><ul>
+<li><a class="reference internal" href="#requirements">Requirements</a></li>
+<li><a class="reference internal" href="#quick-setup">Quick Setup</a></li>
+<li><a class="reference internal" href="#full-installation">Full installation</a><ul>
+<li><a class="reference internal" href="#i-pi">i-PI</a></li>
+<li><a class="reference internal" href="#fortran-built-in-driver">Fortran built-in driver</a></li>
+<li><a class="reference internal" href="#python-driver-and-pes">Python driver and PES</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#alternative-installation-using-the-setup-py-module">Alternative installation using the setup.py module</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#installing-clients">Installing clients</a></li>
+<li><a class="reference internal" href="#running-i-pi">Running i-PI</a><ul>
+<li><a class="reference internal" href="#running-the-i-pi-server">Running the i-PI server</a></li>
+<li><a class="reference internal" href="#running-the-client-code">Running the client code</a><ul>
+<li><a class="reference internal" href="#built-in-fortran-client">Built-in, fortran client</a></li>
+<li><a class="reference internal" href="#cp2k">CP2K</a></li>
+<li><a class="reference internal" href="#quantum-espresso">Quantum-Espresso</a></li>
+<li><a class="reference internal" href="#lammps">LAMMPS</a></li>
+<li><a class="reference internal" href="#fhi-aims">FHI-aims</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#running-on-a-hpc-system">Running on a HPC system</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#testing-the-install">Testing the install</a><ul>
+<li><a class="reference internal" href="#test-the-installation-with-pytest">test the installation with ‘pytest‘</a></li>
+<li><a class="reference internal" href="#test-cases-and-examples">test cases and examples</a></li>
+</ul>
+</li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=34e14329"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="_static/scripts/furo.js?v=5fa4622c"></script>
+    </body>
+</html>
