@@ -5,6 +5,7 @@ from .ase import ASEDriver
 
 
 # --------------------------------------- #
+__DRIVER_NAME__ = "extmace"
 __DRIVER_CLASS__ = "Extended_MACE_driver"
 
 
