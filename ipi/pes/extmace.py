@@ -41,7 +41,7 @@ from ase.calculators.calculator import Calculator, all_changes
 
 from .tools import Timer
 
-LOGGER: Timer = None
+LOGGER = Timer(False, "")
 
 
 class Extended_MACECalculator(MACECalculator):
