@@ -1,6 +1,8 @@
 import os
 import time
 from datetime import datetime
+from typing import Protocol, Callable, Any
+import functools
 
 
 # --------------------------------------- #
@@ -96,3 +98,37 @@ class _DummySection:
 
     def __exit__(self, *args):
         pass
+
+
+# --------------------------------------- #
+# Define a protocol that requires a `logger` attribute
+class HasLogger(Protocol):
+    logger: "Timer"  # replace "Timer" with your actual Timer class name
+
+
+def timeit(
+    name: str, report: bool = False
+) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+    """
+    Decorator to measure the execution time of a class method using `self.logger.section`.
+
+    Parameters
+    ----------
+    name : str
+        The name of the timed section; will be shown in the logger.
+    report : bool, default=False
+        If True, calls `self.logger.report()` after the method finishes.
+    """
+
+    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+        @functools.wraps(func)
+        def wrapper(self: HasLogger, *args, **kwargs) -> Any:
+            with self.logger.section(name):
+                result = func(self, *args, **kwargs)
+            if report:
+                self.logger.report()
+            return result
+
+        return wrapper
+
+    return decorator

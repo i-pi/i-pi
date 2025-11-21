@@ -34,28 +34,12 @@ class Extended_MACE_driver(MACE_driver):
 import torch
 import numpy as np
 import inspect
-import functools
-from typing import List, Dict, Callable, Any
+from typing import List, Dict
 from mace.tools.torch_geometric.batch import Batch
 from mace.calculators import MACECalculator
 from mace.modules.utils import get_outputs
 from ase.calculators.calculator import Calculator, all_changes
-from .tools import Timer
-
-
-def timeit(name: str, report: bool = False):
-    def decorator(func):
-        @functools.wraps(func)
-        def wrapper(self, *args, **kwargs):
-            with self.logger.section(name):
-                result = func(self, *args, **kwargs)
-            if report:
-                self.logger.report()
-            return result
-
-        return wrapper
-
-    return decorator
+from .tools import Timer, timeit
 
 
 class Extended_MACECalculator(MACECalculator):
@@ -212,12 +196,15 @@ class Extended_MACECalculator(MACECalculator):
                         out["node_energy"] - node_e0
                     ).detach()
 
-        del out
-
         # remove properties
         if "ignore" in self.instructions:
             for k in self.instructions["ignore"]:  # List[str]
                 del ret_tensors[k]
+
+        self.post_process_results(ret_tensors)
+
+    @timeit(name="'post_process_results'")
+    def post_process_results(self, ret_tensors: Dict[str, torch.Tensor]):
 
         # process outputs
         self.results = {}
