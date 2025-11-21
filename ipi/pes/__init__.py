@@ -117,6 +117,9 @@ for loader, module_name, is_pkg in pkgutil.iter_modules(__path__):
     if not spec or not spec.origin or not spec.origin.endswith(".py"):
         continue
 
+    if spec.origin.startswith("_"):
+        continue  # skip private modules
+
     driver_class, driver_name = scan_pes_file(spec.origin)
     if not (driver_class and driver_name):
         # let's raise a warning for future developers and be sure that we are not adding badly formatted files
