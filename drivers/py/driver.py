@@ -110,7 +110,7 @@ def run_driver(
             # initialization
             rid = recv_data(sock, np.int32())
             initlen = recv_data(sock, np.int32())
-            initstr = recv_data(sock, np.chararray(initlen))
+            initstr = recv_data(sock, np.empty(initlen, dtype="S1"))
             if f_verbose:
                 print(rid, initstr)
             f_init = True  # we are initialized now
