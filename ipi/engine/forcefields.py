@@ -2380,6 +2380,7 @@ class FFDielectric(ForceField):
         Efield = self.field.get(time)
         u -= dipole @ Efield
         f += Efield @ Z.reshape((3, -1))
+        # ToDo: updated virial or stress tensor
         return u, f, v, x
 
     def fixed_D(self, request: dict):

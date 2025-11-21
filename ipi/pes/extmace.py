@@ -366,6 +366,7 @@ class Extended_MACECalculator(MACECalculator):
                 Z = data["BEC"]
                 data["energy"] -= mu @ Efield
                 data["forces"] += torch.einsum("ijk,i->jk", Z, Efield)
+                # ToDo: updated virial or stress tensor
 
             elif ensemble == "E":
                 data["energy"] -= mu @ Efield
