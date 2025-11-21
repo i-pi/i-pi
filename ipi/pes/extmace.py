@@ -75,6 +75,8 @@ class Extended_MACECalculator(MACECalculator):
         :return:
         """
 
+        assert not self.use_compile, "self.use_compile=True is not supported yet."
+
         # time single operations
         with LOGGER.section("calculate()"):
             # call to base-class to set atoms attribute
@@ -110,11 +112,15 @@ class Extended_MACECalculator(MACECalculator):
                 batch = self._clone_batch(batch_base)
                 node_heads = batch["head"][batch["batch"]]
                 num_atoms_arange = torch.arange(batch["positions"].shape[0])
+
+                # this try-except is to be compatible with different MACE versions
                 try:
+                    # newer versions of MACE
                     node_e0 = self.models[0].atomic_energies_fn(batch["node_attrs"])[
                         num_atoms_arange, node_heads
                     ]
                 except:
+                    # older versions of MACE
                     node_e0 = self.models[0].atomic_energies_fn(
                         batch["node_attrs"], node_heads
                     )
