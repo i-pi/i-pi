@@ -1,9 +1,5 @@
 """An (extended) interface for the [MACE](https://github.com/ACEsuit/mace) calculator"""
 
-from .tools import gpu_oversubscription
-
-gpu_oversubscription()  # run this before importing torch
-
 from .mace import MACE_driver
 from .ase import ASEDriver
 
