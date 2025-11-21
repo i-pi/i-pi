@@ -5,6 +5,7 @@ used to perform calculations with arbitrary machine learning potentials.
 
 import json
 import warnings
+import numpy as np
 
 from ipi.utils.units import unit_to_internal, unit_to_user
 from .dummy import Dummy_driver
@@ -50,6 +51,15 @@ class MetatomicDriver(Dummy_driver):
             computationally expensive)
         :param non_conservative: bool, optional, whether to use non-conservative forces
             and stresses
+        :param energy_variant: string, optional, which energy variant to pick for
+            a multi-head model
+        :param non_conservative_variant: string, optional, which energy variant to pick for
+            a multi-head model (pick a different version for the direct predictions
+        :param uncertainty_variant: string, optional, which energy variant to pick for
+            a multi-head model (pick a different version than energy_variant for uncertainty and ensemble)
+        :param uncertainty_threshold: float, optional, whether the model should
+            estimate uncertainty and warn whenever it exceeds a selected threshold
+            (in eV/atom)
     """
 
     def __init__(
@@ -62,6 +72,10 @@ class MetatomicDriver(Dummy_driver):
         energy_ensemble=False,
         force_virial_ensemble=False,
         non_conservative=False,
+        energy_variant=None,
+        non_conservative_variant=None,
+        uncertainty_variant=None,
+        uncertainty_threshold=0.0,
         *args,
         **kwargs,
     ):
@@ -90,6 +104,21 @@ class MetatomicDriver(Dummy_driver):
         self.force_virial_ensemble = force_virial_ensemble
         self.non_conservative = non_conservative
         self.template = template
+        self.energy_suffix = "" if energy_variant is None else f"/{energy_variant}"
+        self.non_conservative_suffix = (
+            self.energy_suffix
+            if non_conservative_variant is None
+            else f"/{non_conservative_variant}"
+        )
+        self.uncertainty_suffix = (
+            self.energy_suffix
+            if uncertainty_variant is None
+            else f"/{uncertainty_variant}"
+        )
+
+        self.uncertainty_threshold = unit_to_internal(
+            "energy", "electronvolt", uncertainty_threshold
+        )
         super().__init__(*args, **kwargs)
 
         info(f"Model arguments:\n{args}\n{kwargs}", self.verbose)
@@ -140,7 +169,7 @@ class MetatomicDriver(Dummy_driver):
 
         # Register the requested outputs
         outputs = {
-            "energy": mta.ModelOutput(
+            f"energy{self.energy_suffix}": mta.ModelOutput(
                 quantity="energy",
                 unit="eV",
                 per_atom=False,
@@ -153,10 +182,12 @@ class MetatomicDriver(Dummy_driver):
                     "this model does not support non-conservative forces. "
                 )
             else:
-                outputs["non_conservative_forces"] = mta.ModelOutput(
-                    quantity="force",
-                    unit="eV/Angstrom",
-                    per_atom=True,
+                outputs[f"non_conservative_forces{self.non_conservative_suffix}"] = (
+                    mta.ModelOutput(
+                        quantity="force",
+                        unit="eV/Angstrom",
+                        per_atom=True,
+                    )
                 )
             if "non_conservative_stress" not in self.model.capabilities().outputs:
                 warnings.warn(
@@ -166,19 +197,21 @@ class MetatomicDriver(Dummy_driver):
                     "them."
                 )
             else:
-                outputs["non_conservative_stress"] = mta.ModelOutput(
-                    quantity="pressure",
-                    unit="eV/Angstrom^3",
-                    per_atom=False,
+                outputs[f"non_conservative_stress{self.non_conservative_suffix}"] = (
+                    mta.ModelOutput(
+                        quantity="pressure",
+                        unit="eV/Angstrom^3",
+                        per_atom=False,
+                    )
                 )
 
-        if self.energy_ensemble:
-            outputs["energy_uncertainty"] = mta.ModelOutput(
+        if self.energy_ensemble or self.uncertainty_threshold > 0.0:
+            outputs[f"energy_uncertainty{self.uncertainty_suffix}"] = mta.ModelOutput(
                 quantity="energy",
                 unit="eV",
-                per_atom=False,
+                per_atom=True,
             )
-            outputs["energy_ensemble"] = mta.ModelOutput(
+            outputs[f"energy_ensemble{self.uncertainty_suffix}"] = mta.ModelOutput(
                 quantity="energy",
                 unit="eV",
                 per_atom=False,
@@ -221,12 +254,20 @@ class MetatomicDriver(Dummy_driver):
     def _process_outputs(self, outputs, systems, strains):
         num_systems = len(systems)
 
-        energy_tensor = outputs["energy"].block().values
+        energy_tensor = outputs[f"energy{self.energy_suffix}"].block().values
 
         if self.non_conservative:
-            forces_tensor = outputs["non_conservative_forces"].block().values
+            forces_tensor = (
+                outputs[f"non_conservative_forces{self.non_conservative_suffix}"]
+                .block()
+                .values
+            )
             if "non_conservative_stress" in outputs:
-                stresses_tensor = outputs["non_conservative_stress"].block().values
+                stresses_tensor = (
+                    outputs[f"non_conservative_stress{self.non_conservative_suffix}"]
+                    .block()
+                    .values
+                )
             else:
                 stresses_tensor = torch.full(
                     (num_systems, 3, 3),
@@ -284,8 +325,32 @@ class MetatomicDriver(Dummy_driver):
 
         extras_dicts = [{} for _ in range(num_systems)]
 
+        if self.uncertainty_threshold > 0.0:
+            energy_uncertainty_tensor = (
+                outputs[f"energy_uncertainty{self.uncertainty_suffix}"].block().values
+            )
+
+            energy_uncertainty = unit_to_internal(
+                "energy",
+                "electronvolt",
+                energy_uncertainty_tensor.detach()
+                .to(device="cpu", dtype=torch.float64)
+                .numpy(),
+            ).reshape(num_systems,-1)
+
+            for extras_dict, energy_uq in zip(extras_dicts, energy_uncertainty):
+                extras_dict["energy_uncertainty"] = list(energy_uq)
+                if np.max(energy_uq) > self.uncertainty_threshold:
+                    warning(
+                        f"the estimated atomic energy uncertainty {27.211*np.max(energy_uq):.4f} eV/atom "
+                        f"exceeds the selected threshold of {27.211*self.uncertainty_threshold:.4f} eV/atom",
+                        verbosity.medium,
+                    )
+
         if self.energy_ensemble:
-            energy_ensembles_tensor = outputs["energy_ensemble"].block().values
+            energy_ensembles_tensor = (
+                outputs[f"energy_ensemble{self.uncertainty_suffix}"].block().values
+            )
             energy_ensembles = unit_to_internal(
                 "energy",
                 "electronvolt",
@@ -333,7 +398,7 @@ class MetatomicDriver(Dummy_driver):
                             new_systems,
                             self.evaluation_options,
                             check_consistency=self.check_consistency,
-                        )["energy_ensemble"]
+                        )[f"energy_ensemble{self.uncertainty_suffix}"]
                         .block()
                         .values.sum(0)
                     )
@@ -391,6 +456,11 @@ class MetatomicDriver(Dummy_driver):
         energies = energies.flatten()
         forces = forces.reshape((len(systems), -1, 3))
         virials = virials.reshape((len(systems), 3, 3))
+
+        # remove net force in the non-conservative case
+        if self.non_conservative:
+            forces = forces - forces.mean(1, keepdims=True)
+
         return [
             (e, f, v, extras)
             for (e, f, v, extras) in zip(energies, forces, virials, extras_list)

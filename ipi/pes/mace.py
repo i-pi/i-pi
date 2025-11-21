@@ -3,10 +3,6 @@
 import json
 
 from .ase import ASEDriver
-from .tools import gpu_oversubscription
-
-gpu_oversubscription()
-
 from mace.calculators import MACECalculator
 from ase.outputs import _defineprop, all_outputs
 

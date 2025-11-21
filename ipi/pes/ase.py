@@ -58,7 +58,7 @@ class ASEDriver(Dummy_driver):
     def check_parameters(self):
         """Check the arguments required to run the driver
 
-        This loads the potential and atoms template in metatensor
+        This loads the potential and atoms template for ASE
         """
 
         self.template_ase = read(self.template)
@@ -105,7 +105,10 @@ class ASEDriver(Dummy_driver):
             unit_to_internal("energy", "electronvolt", vir_calc.T), dtype=np.float64
         )
 
-        # extra information
+        # Extra information apart from the "mandatory" ones (energy, forces, and stress).
+        # The model could return the dipole, polarizability, Born charges for example.
+        # These information will be stored in the 'extras' variable (a python dict)
+        # with the same keys as returned by the model and values converted to float or list.
         extras = {}
         for key in properties:
             if key not in ["energy", "forces", "stress"]:
