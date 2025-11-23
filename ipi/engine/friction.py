@@ -28,6 +28,8 @@ class Friction:
         spectral_density=np.zeros(0, float),
         alpha=np.zeros(0, float),
         efric=0.0,
+        position_dependent: bool = False,
+        non_markovian: bool = False,
     ):
         """Initialises friction
 
@@ -40,6 +42,16 @@ class Friction:
         self.spectral_density = np.asanyarray(spectral_density, dtype=float)
         self.alpha = np.asanyarray(alpha, dtype=float)
         self._efric = depend_value(name="efric", value=efric)
+        self.position_dependent = position_dependent
+        self.non_markovian = non_markovian
+
+        if self.position_dependent:
+            raise NotImplementedError(
+                "Position dependent friction not implemented yet."
+            )
+
+        if self.non_markovian:
+            raise NotImplementedError("Non-markovian friction not implemented yet.")
 
     def bind(self, motion: Motion) -> None:
         self.beads = motion.beads
@@ -49,7 +61,11 @@ class Friction:
         # if self.alpha.size ==self.nm.omegak.size
         if self.alpha.shape[0] == self.nm.omegak.size:
             self.alpha = self.alpha[:, 1]
-            print("using loaded alpha values")
+            omegak_input = self.alpha[:, 0]
+            if not np.allclose(omegak_input, self.nm.omegak):
+                raise ValueError(
+                    "The provided alpha values do not correspond to the current normal mode frequencies."
+                )
         else:
             assert self.spectral_density.ndim == 2
             Lambda = self.spectral_density[:, 1] / self.spectral_density[:, 0]
@@ -62,12 +78,14 @@ class Friction:
                 omega=omega,
                 omegak=self.nm.omegak,
             )  # (nmodes,)
-            print("comput alpha using get_alpha_numeric().")
+            info("compute alpha using get_alpha_numeric().")
 
     def forces(self) -> np.ndarray:
 
         fnm = self.alpha[:, np.newaxis] * self.nm.qnm  # (nmodes, 3 * natoms)
         forces = self.nm.transform.nm2b(fnm)  # (nbeads, 3 * natoms)
+        if self.position_dependent:
+            ...  # To be implemented
         return forces
 
     def step(self, pdt: float) -> None:
@@ -97,5 +115,5 @@ def get_alpha_numeric(
         info(
             f"for normal mode {omegak} alpha is {alpha[idx]}",
             verbosity.high,
-        )  # MR: Change to only print if verbosity set to high.
+        )
     return alpha

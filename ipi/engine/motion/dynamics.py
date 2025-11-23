@@ -634,9 +634,17 @@ class NVEIntegratorWithFriction(NVEIntegrator):
         self.friction.step(self.pdt[0])
 
     def step(self, step=None):
-        """Does one simulation time step."""
+        """Does one simulation time step.
 
-        if self.splitting == "obabo":
+        a
+          is propagation of positions
+        b
+          is propagation of momenta with forces
+        f
+          is propagation of momenta with friction
+        """
+
+        if self.splitting == "fbabf":
             # friction is applied for dt/2
             self.fstep()
             self.pconstraints()  # I am not sure this sould include or not!
@@ -648,7 +656,7 @@ class NVEIntegratorWithFriction(NVEIntegrator):
             self.fstep()
             self.pconstraints()
 
-        elif self.splitting == "baoab":
+        elif self.splitting == "bafab":
             self.mtsprop_ba(0)
             # friction is applied for dt
             self.fstep()
@@ -712,12 +720,46 @@ class NVTIntegratorWithFriction(NVTIntegrator):
         super().bind(motion)
         self.friction.bind(motion)
 
-    def pstep(self, level: int = 0) -> None:
-        forces = self.friction.forces()
-        self.beads.p += forces * self.pdt[level]
-        self.pconstraints()
+    def fstep(self):
+        """Velocity Verlet friction step"""
 
-        super().pstep(level)
+        self.friction.step(self.pdt[0])
+
+    def step(self, step=None):
+        """Does one simulation time step.
+
+        a
+          is propagation of positions
+        b
+          is propagation of momenta with forces
+        f
+          is propagation of momenta with friction
+        o
+            is update of momenta with thermostat
+        """
+
+        if self.splitting == "ofbabfo":
+            # Thermostat and friction is applied for dt/2
+            self.tstep()
+            self.fstep()
+            self.pconstraints()
+
+            # forces are integerated for dt with MTS.
+            self.mtsprop(0)
+
+            # friction and thermostat is applied for dt/2
+            self.fstep()
+            self.tstep()
+            self.pconstraints()
+
+        elif self.splitting == "bafofab":
+            self.mtsprop_ba(0)
+            # friction and thermostat is applied for dt
+            self.fstep()
+            self.tstep()
+            self.fstep()
+            self.pconstraints()
+            self.mtsprop_ab(0)
 
 
 class NVTCCIntegrator(NVTIntegrator):
