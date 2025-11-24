@@ -662,6 +662,11 @@ class NVEIntegratorWithFriction(NVEIntegrator):
             self.fstep()
             self.pconstraints()
             self.mtsprop_ab(0)
+        
+        else:
+            raise ValueError(
+                f"Invalid splitting {self.splitting} requested. Only FBABF and BAFAB are supported for NVE-f integrator."
+            )
 
 
 class NVTIntegrator(NVEIntegrator):
@@ -701,6 +706,11 @@ class NVTIntegrator(NVEIntegrator):
             self.tstep()
             self.pconstraints()
             self.mtsprop_ab(0)
+
+        else:
+            raise ValueError(
+                f"Invalid splitting {self.splitting} requested. Only OBABO and BAOAB are supported for NVT integrator."
+            )
 
 
 class NVTIntegratorWithFriction(NVTIntegrator):
@@ -760,6 +770,11 @@ class NVTIntegratorWithFriction(NVTIntegrator):
             self.fstep()
             self.pconstraints()
             self.mtsprop_ab(0)
+
+        else:
+            raise ValueError(
+                f"Invalid splitting {self.splitting} requested. Only OFBABFO and BAFOFAB are supported for NVT-f integrator."
+            )
 
 
 class NVTCCIntegrator(NVTIntegrator):

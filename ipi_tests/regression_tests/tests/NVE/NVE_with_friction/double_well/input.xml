@@ -5,6 +5,7 @@
     <trajectory filename='frc_c' stride='1'> f_centroid </trajectory>
     <trajectory filename='vel_c' stride='1'> v_centroid </trajectory>
     <trajectory filename='mom_c' stride='1'> p_centroid </trajectory>
+    <trajectory filename='extra' stride='1'> extras </trajectory>
   </output>
   <total_steps>10</total_steps>
   <prng>

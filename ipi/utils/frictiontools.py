@@ -6,7 +6,7 @@ from scipy.special import xlogy
 
 
 def get_alpha_eq133(omegak, omega_cutoff, eta):
-    """A nalytical expresion of alpha based on the ohmic spectral density J. (Eq 1.33 from George draft.)
+    r"""A nalytical expresion of alpha based on the ohmic spectral density J. (Eq 1.33 from George draft.)
 
     .. math::
     \eta \omega_n^2 \int_0^\infty \frac{e^{-\omega/\omega_c}}{\omega^2 + \omega_n^2} \, d\omega
@@ -24,7 +24,7 @@ def get_alpha_eq133(omegak, omega_cutoff, eta):
 
 
 def get_alpha_eq134(omegak, omega_cutoff, eta):
-    """E134 is the asymtotic answer for the E133 at small value of zn (zn=ωn/ωc).
+    r"""E134 is the asymtotic answer for the E133 at small value of zn (zn=ωn/ωc).
     .. math::
     \sim \eta \omega_n \big[ z_n (\gamma + \ln z_n) - z_n - \tfrac{\pi}{2} \big]
     """
@@ -44,7 +44,7 @@ def get_alpha_eq134(omegak, omega_cutoff, eta):
 def expohmic_J(
     omega: Union[float, np.ndarray], eta, omega_cut
 ) -> Union[float, np.ndarray]:
-    """Spectral density at frequency omega.
+    r"""Spectral density at frequency omega.
     Within this function the exp ohmic J can be calculated by providing eta and omegacut
 
     ..math::
@@ -64,7 +64,7 @@ def expohmic_J(
 def expohmic_Lambda(
     omega: Union[float, np.ndarray], eta, omega_cut
 ) -> Union[float, np.ndarray]:
-    """Spectrum at frequency omega.
+    r"""Spectrum at frequency omega.
     Within this function the exp ohmic Lambda can be calculated by providing eta and omegacut
 
     ..math::
@@ -95,7 +95,7 @@ if __name__ == "__main__":
     omega_cut = args.omega_cut
 
     eta = args.eta
-    omega = np.arange(omega_cut)
+    omega = np.arange(0,omega_cut,0.5)[1:]  # avoid zero frequency
 
     J = expohmic_J(omega, eta, omega_cut)
 
