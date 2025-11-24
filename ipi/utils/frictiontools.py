@@ -95,7 +95,7 @@ if __name__ == "__main__":
     omega_cut = args.omega_cut
 
     eta = args.eta
-    omega = np.arange(0,omega_cut,0.5)[1:]  # avoid zero frequency
+    omega = np.arange(0, omega_cut, 0.5)[1:]  # avoid zero frequency
 
     J = expohmic_J(omega, eta, omega_cut)
 

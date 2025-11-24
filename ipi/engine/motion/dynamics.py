@@ -662,7 +662,7 @@ class NVEIntegratorWithFriction(NVEIntegrator):
             self.fstep()
             self.pconstraints()
             self.mtsprop_ab(0)
-        
+
         else:
             raise ValueError(
                 f"Invalid splitting {self.splitting} requested. Only FBABF and BAFAB are supported for NVE-f integrator."
