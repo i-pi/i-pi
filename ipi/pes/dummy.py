@@ -15,13 +15,12 @@ class Dummy_driver(object):
         :param verbose: bool to determine whether the PES should output verbose info.
     """
 
-    def __init__(self, verbose=False, *args, **kwargs):
+    def __init__(self, verbose=False, requires_extra=False, *args, **kwargs):
         """Initialized dummy drivers"""
         self.verbose = verbose
         self.args = args
         self.kwargs = kwargs
-        self.requires_extra = False
-        self.extradata = ""
+        self.requires_extra = requires_extra
         self.extra = None
 
         self.check_parameters()
@@ -58,3 +57,12 @@ class Dummy_driver(object):
         """Function interface"""
 
         return self.compute(cell, pos)
+
+    def store_extra(self, extra: str):
+        """Convert the JSON formatted string 'extra' into a dict and store it into self.extra."""
+        # ToDo: improve error handling
+        try:
+            self.extra = json.loads(extra)
+        except Exception as e:
+            warning(f"Error while parsing extra data.\n{e}", verbosity.high)
+            self.extra = {}
