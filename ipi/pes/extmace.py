@@ -33,13 +33,14 @@ class Extended_MACE_driver(MACE_driver):
 # --------------------------------------- #
 import torch
 import numpy as np
-import inspect
-from typing import List, Dict
+from typing import List, Dict, Tuple
 from mace.tools.torch_geometric.batch import Batch
 from mace.calculators import MACECalculator
 from mace.modules.utils import get_outputs
 from ase.calculators.calculator import Calculator, all_changes
+from ase.outputs import _defineprop, all_outputs
 from .tools import Timer, timeit
+from ipi.utils.messages import warning, verbosity
 
 
 class Extended_MACECalculator(MACECalculator):
@@ -63,21 +64,15 @@ class Extended_MACECalculator(MACECalculator):
     def get_extras(self) -> dict:
         return {}
 
-    @timeit(name="calculate()", report=True)
-    def calculate(self, atoms=None, properties=None, system_changes=all_changes):
+    @timeit(name="preprocess()")
+    def preprocess(self, atoms=None):
         """
-        Calculate properties.
-        :param atoms: ase.Atoms object
-        :param properties: [str], properties to be computed, used by ASE internally
-        :param system_changes: [str], system changes since last calculation, used by ASE internally
-        :return:
+        Preprocess the calculation: prepare the batch, result tensors, etc.
         """
+
+        Calculator.calculate(self, atoms)
 
         assert not self.use_compile, "self.use_compile=True is not supported yet."
-
-        # time single operations
-        with self.logger.section("Base calculate"):
-            Calculator.calculate(self, atoms)
 
         with self.logger.section("Prepare batch"):
             batch_base: Batch = self._atoms_to_batch(atoms)
@@ -86,14 +81,17 @@ class Extended_MACECalculator(MACECalculator):
         if "compute_BEC" in self.instructions:
             compute_bec = self.instructions["compute_BEC"]
 
-        if self.instructions["ensemble"] == "E-debug":
+        ensemble = str(self.instructions["ensemble"]).upper()
+        if ensemble == "E-DEBUG":
+            if not compute_bec:
+                warning(
+                    f"'compute_bec' will be switched automatically to True since you specified 'ensemble' : 'E-debug'",
+                    verbosity.high,
+                )
             compute_bec = True
 
-        if compute_bec:
-            from ase.outputs import _defineprop, all_outputs
-
-            if "BEC" not in all_outputs:
-                _defineprop("BEC", dtype=float, shape=("natoms", 3, 3))
+        if compute_bec and "BEC" not in all_outputs:
+            _defineprop("BEC", dtype=float, shape=("natoms", 3, 3))
 
         # Attention:
         # if we want to compute the Born Charges we need to call 'torch.autograd.grad' on the dipoles w.r.t. the positions.
@@ -141,15 +139,20 @@ class Extended_MACECalculator(MACECalculator):
 
         forward_kwargs = self.instructions["forward_kwargs"].copy()
 
-        if self.instructions["ensemble"] == "E":
+        if ensemble == "E":
             # disable all autograd flags to turn them on again in 'self.apply_ensemble'
             forward_kwargs["compute_force"] = False
             forward_kwargs["compute_stress"] = False
             forward_kwargs["compute_virials"] = False
             forward_kwargs["compute_edge_forces"] = False
+            forward_kwargs["compute_displacement"] = compute_stress
             # disable Born Effective Charges computation if implemented in the model
-            if forward_has_param(self.models[0], "compute_bec"):
-                forward_kwargs["compute_bec"] = False
+            # if self.model_type in ["EnergyDipoleMACE"]:
+            #     forward_kwargs["compute_bec"] = False
+        else:
+            # disable always these quantities
+            forward_kwargs["compute_virials"] = False
+            forward_kwargs["compute_edge_forces"] = False
 
         ret_tensors = self._create_result_tensors(
             self.model_type, self.num_models, len(atoms)
@@ -161,6 +164,32 @@ class Extended_MACECalculator(MACECalculator):
             ret_tensors["BEC"] = torch.zeros(
                 (len(self.models), *f.shape[1:], 3), device=self.device
             )
+
+        return (
+            batch_base,
+            ret_tensors,
+            node_e0,
+            {
+                "training": training,
+                "compute_bec": compute_bec,
+                "forward_kwargs": forward_kwargs,
+            },
+        )
+
+    @timeit(name="calculate()", report=True)
+    def calculate(self, atoms=None, properties=None, system_changes=all_changes):
+        """
+        Calculate properties.
+        :param atoms: ase.Atoms object
+        :param properties: [str], properties to be computed, used by ASE internally
+        :param system_changes: [str], system changes since last calculation, used by ASE internally
+        :return:
+        """
+
+        batch_base, ret_tensors, node_e0, options = self.preprocess(atoms)
+        training = options["training"]
+        compute_bec = options["compute_bec"]
+        forward_kwargs = options["forward_kwargs"]
 
         # model evaluation
         with self.logger.section("Forward pass loop"):
@@ -174,7 +203,6 @@ class Extended_MACECalculator(MACECalculator):
                         batch.to_dict(),
                         training=training,
                         **forward_kwargs,
-                        compute_displacement=True,
                     )
 
                 # apply the external electric/dielectric field
@@ -185,106 +213,100 @@ class Extended_MACECalculator(MACECalculator):
                     if keyword in out:
                         ret_tensors[keyword][i] = out[keyword].detach()
 
-                for keyword in ["atomic_stresses", "atomic_virials"]:
-                    if keyword in out:
-                        ret_tensors.setdefault(keyword, []).append(
-                            out[keyword].detach()
-                        )
+                # for keyword in ["atomic_stresses", "atomic_virials"]:
+                #     if keyword in out:
+                #         ret_tensors.setdefault(keyword, []).append(
+                #             out[keyword].detach()
+                #         )
 
-                if "node_energy" in out:
-                    ret_tensors["node_energy"][i] = (
-                        out["node_energy"] - node_e0
-                    ).detach()
+                # if "node_energy" in out:
+                #     ret_tensors["node_energy"][i] = (
+                #         out["node_energy"] - node_e0
+                #     ).detach()
 
         # remove properties
         if "ignore" in self.instructions:
             for k in self.instructions["ignore"]:  # List[str]
                 del ret_tensors[k]
 
-        self.post_process_results(ret_tensors)
+        self.postprocess(ret_tensors)
 
-    @timeit(name="'post_process_results'")
-    def post_process_results(self, ret_tensors: Dict[str, torch.Tensor]):
+    @timeit(name="'postprocess'")
+    def postprocess(self, ret_tensors: Dict[str, torch.Tensor]):
 
         # process outputs
         self.results = {}
-        if self.model_type in ["MACE", "EnergyDipoleMACE"]:
-            self.results["energy"] = (
-                torch.mean(ret_tensors["energy"], dim=0).cpu().item()
-                * self.energy_units_to_eV
-            )
-            self.results["free_energy"] = self.results["energy"]
+        # if self.model_type in ["MACE", "EnergyDipoleMACE"]:
+        self.results["energy"] = (
+            torch.mean(ret_tensors["energy"], dim=0).cpu().item()
+            * self.energy_units_to_eV
+        )
+        self.results["free_energy"] = self.results["energy"]
+        if "node_energy" in ret_tensors:
             self.results["node_energy"] = (
                 torch.mean(ret_tensors["node_energy"], dim=0).cpu().numpy()
+            ) * self.energy_units_to_eV
+        self.results["forces"] = (
+            torch.mean(ret_tensors["forces"], dim=0).cpu().numpy()
+            * self.energy_units_to_eV
+            / self.length_units_to_A
+        )
+        if self.num_models > 1:
+            energies = ret_tensors["energy"].cpu().numpy() * self.energy_units_to_eV
+            self.results["energy_var"] = (
+                torch.var(energies, dim=0, unbiased=False).cpu().item()
+                * self.energy_units_to_eV
             )
-            self.results["forces"] = (
-                torch.mean(ret_tensors["forces"], dim=0).cpu().numpy()
+            self.results["forces_comm"] = (
+                ret_tensors["forces"].cpu().numpy()
                 * self.energy_units_to_eV
                 / self.length_units_to_A
             )
+        if ret_tensors["stress"] is not None:
+            try:
+                from ase.stress import full_3x3_to_voigt_6_stress
+            except:
+                raise ImportError("Couldn't load full_3x3_to_voigt_6_stress from ase.")
+            self.results["stress"] = full_3x3_to_voigt_6_stress(
+                torch.mean(ret_tensors["stress"], dim=0).cpu().numpy()
+                * self.energy_units_to_eV
+                / self.length_units_to_A**3
+            )
             if self.num_models > 1:
-                energies = ret_tensors["energy"].cpu().numpy() * self.energy_units_to_eV
-                self.results["energy_var"] = (
-                    torch.var(energies, dim=0, unbiased=False).cpu().item()
-                    * self.energy_units_to_eV
-                )
-                self.results["forces_comm"] = (
-                    ret_tensors["forces"].cpu().numpy()
-                    * self.energy_units_to_eV
-                    / self.length_units_to_A
-                )
-            if ret_tensors["stress"] is not None:
-                try:
-                    from ase.stress import full_3x3_to_voigt_6_stress
-                except:
-                    raise ImportError(
-                        "Couldn't load full_3x3_to_voigt_6_stress from ase."
-                    )
-                self.results["stress"] = full_3x3_to_voigt_6_stress(
-                    torch.mean(ret_tensors["stress"], dim=0).cpu().numpy()
-                    * self.energy_units_to_eV
-                    / self.length_units_to_A**3
-                )
-                if self.num_models > 1:
-                    self.results["stress_var"] = full_3x3_to_voigt_6_stress(
-                        torch.var(ret_tensors["stress"], dim=0, unbiased=False)
-                        .cpu()
-                        .numpy()
-                        * self.energy_units_to_eV
-                        / self.length_units_to_A**3
-                    )
-            if "atomic_stresses" in ret_tensors:
-                self.results["stresses"] = (
-                    torch.mean(torch.stack(ret_tensors["atomic_stresses"]), dim=0)
+                self.results["stress_var"] = full_3x3_to_voigt_6_stress(
+                    torch.var(ret_tensors["stress"], dim=0, unbiased=False)
                     .cpu()
                     .numpy()
                     * self.energy_units_to_eV
                     / self.length_units_to_A**3
                 )
-            if "atomic_virials" in ret_tensors:
-                self.results["virials"] = (
-                    torch.mean(torch.stack(ret_tensors["atomic_virials"]), dim=0)
-                    .cpu()
-                    .numpy()
-                    * self.energy_units_to_eV
-                )
-        if self.model_type in ["DipoleMACE", "EnergyDipoleMACE"]:
+            # if "atomic_stresses" in ret_tensors:
+            #     self.results["stresses"] = (
+            #         torch.mean(torch.stack(ret_tensors["atomic_stresses"]), dim=0)
+            #         .cpu()
+            #         .numpy()
+            #         * self.energy_units_to_eV
+            #         / self.length_units_to_A**3
+            #     )
+            # if "atomic_virials" in ret_tensors:
+            #     self.results["virials"] = (
+            #         torch.mean(torch.stack(ret_tensors["atomic_virials"]), dim=0)
+            #         .cpu()
+            #         .numpy()
+            #         * self.energy_units_to_eV
+            #     )
+        # if self.model_type in ["DipoleMACE", "EnergyDipoleMACE"]:
+        if "dipole" in ret_tensors:
             self.results["dipole"] = (
                 torch.mean(ret_tensors["dipole"], dim=0).cpu().numpy()
             )
-            if self.num_models > 1:
-                self.results["dipole_var"] = (
-                    torch.var(ret_tensors["dipole"], dim=0, unbiased=False)
-                    .cpu()
-                    .numpy()
-                )
         if "BEC" in ret_tensors:
             self.results["BEC"] = torch.mean(ret_tensors["BEC"], dim=0).cpu().numpy()
 
-        # self.logger.report()
-
-    @timeit("'compute_BEC'")
-    def compute_BEC(self, data: Dict[str, torch.Tensor], batch: Batch) -> torch.Tensor:
+    @timeit("'compute_BEC_piezo'")
+    def compute_BEC_piezo(
+        self, data: Dict[str, torch.Tensor], batch: Batch
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
         if "dipole" not in data:
             raise ValueError(
                 f"The keyword 'dipole' is not in the output data of the MACE model.\nThe data provided by the model is: {list(data.keys())}"
@@ -295,7 +317,8 @@ class Extended_MACECalculator(MACECalculator):
             raise ValueError(
                 f"The attribute 'positions' is not in the batch data provided to the MACE model.\nThe batch contains: {list(batch.__dict__.keys())}"
             )
-        mu = data["dipole"]
+        dipole_components = 3
+        mu = data["dipole"]  # [:,:dipole_components] # uncomment to debug
         pos = batch.positions
         if not isinstance(mu, torch.Tensor):
             raise ValueError(f"The dipole is not a torch.Tensor rather a {type(mu)}")
@@ -303,27 +326,42 @@ class Extended_MACECalculator(MACECalculator):
             raise ValueError(
                 f"The positions are not a torch.Tensor rather a {type(pos)}"
             )
-        bec = compute_dielectric_gradients(mu, pos)
+
+        displacement = data["displacement"]
+        if displacement.requires_grad:
+            res = compute_dielectric_gradients(mu, [pos, displacement])
+            bec = res[0]  # (3,n_nodes,3)
+            piezo = res[1]  # (3,n_graphs,3,3)
+        else:
+            bec = compute_dielectric_gradients(mu, [pos])[0]
+            piezo = None
 
         if not isinstance(bec, torch.Tensor):
             raise ValueError(
                 f"The computed Born Charges are not a torch.Tensor rather a {type(bec)}"
             )
-        if tuple(bec.shape) != (3, *pos.shape):
+        if tuple(bec.shape) != (dipole_components, *pos.shape):
             raise ValueError(
-                f"The computed Born Charges have the wrong shape. The shape {(*pos.shape,3)} was expected but got {tuple(bec.shape)}."
+                f"The computed Born Charges have the wrong shape. The shape {(dipole_components,*pos.shape)} was expected but got {tuple(bec.shape)}."
             )
+
+        if piezo is not None:
+            if not isinstance(piezo, torch.Tensor):
+                raise ValueError(
+                    f"The computed piezoelectric tensor is not a torch.Tensor rather a {type(piezo)}"
+                )
+            if tuple(piezo.shape) != (dipole_components, *displacement.shape):
+                raise ValueError(
+                    f"The computed piezoelectric tensor has the wrong shape. The shape {(dipole_components,*displacement.shape)} was expected but got {tuple(piezo.shape)}."
+                )
+
         # Attention:
         # The tensor 'bec' has 3 dimensions.
         # Its shape is (3,*pos.shape).
         # This means that bec[0,3,2] will contain d mu_x / d R^3_z,
         # where mu_x is the x-component of the dipole and R^3_z is the z-component of the 4th (zero-indexed) atom i n the structure/batch.
 
-        # we need to reshape 'bec' so that the first two axis will become d.o.f. once flattened
-        # and the last axis will the the component of the dipole
-        bec = bec.moveaxis(0, 2).moveaxis(1, 2)
-        # bec.sum(dim=0) should be a (3,3) matrix filled with zeros.
-        return bec
+        return bec, piezo
 
     @timeit("'apply_ensemble'")
     def apply_ensemble(
@@ -348,22 +386,26 @@ class Extended_MACECalculator(MACECalculator):
             mu = data["dipole"][0]
             Efield = torch.from_numpy(Efield).to(device=self.device, dtype=mu.dtype)
 
-            if ensemble == "E-debug":  # fixed external electric field
+            if ensemble == "E-DEBUG":  # fixed external electric field
                 # This is very similar to what is done in the function 'fixed_E' in 'ipi/engine/forcefields.py'.
                 if not compute_bec:
                     raise ValueError("coding error")
-                data["BEC"] = self.compute_BEC(data, batch)
+                bec, piezo = self.compute_BEC_piezo(data, batch)
+                data["BEC"] = bec.moveaxis(0, 2).moveaxis(1, 2)
+                if piezo is not None:
+                    data["piezo"] = piezo
 
-                Z = data["BEC"]
                 data["energy"] -= mu @ Efield
-                data["forces"] += torch.einsum("ijk,i->jk", Z, Efield)
-                # ToDo: updated virial or stress tensor
+                data["forces"] += torch.einsum("ijk,i->jk", bec, Efield)
+                if piezo is not None:
+                    data["stress"] += torch.einsum("ijkl,i->jkl", piezo, Efield)
 
             elif ensemble == "E":
                 data["energy"] -= mu @ Efield
 
-                if data["forces"] is not None:
-                    raise ValueError("'forces' in 'data' should be None.")
+                for keyword in ["forces", "stress"]:  # "virials"
+                    if data[keyword] is not None:
+                        raise ValueError(f"'{keyword}' in 'data' should be None.")
 
                 with self.logger.section("'get_outputs'"):
                     forces, virials, stress, hessian, edge_forces = get_outputs(
@@ -375,16 +417,18 @@ class Extended_MACECalculator(MACECalculator):
                         training=training,
                     )
 
-                if forces is not None:
-                    data["forces"] = forces
-                if virials is not None:
-                    data["virials"] = virials
-                if stress is not None:
-                    data["stress"] = stress
-                if hessian is not None:
-                    data["hessian"] = hessian
-                if edge_forces is not None:
-                    data["edge_forces"] = edge_forces
+                to_assign = {
+                    "forces": forces,
+                    # "virials": virials,
+                    "stress": stress,
+                    "hessian": hessian,
+                    "edge_forces": edge_forces,
+                }
+
+                for keyword, value in to_assign.items():
+                    if keyword in data and data[keyword] is not None:
+                        raise ValueError(f"'{keyword}' in 'data' should be None.")
+                    data[keyword] = value
 
             elif ensemble == "D":  # fixed dielectric displacement
                 ValueError("Not implemented yet")
@@ -393,7 +437,10 @@ class Extended_MACECalculator(MACECalculator):
                 raise ValueError("coding error")
 
         if compute_bec and "BEC" not in data:
-            data["BEC"] = self.compute_BEC(data, batch)
+            bec, piezo = self.compute_BEC_piezo(data, batch)
+            data["BEC"] = bec.moveaxis(0, 2).moveaxis(1, 2)
+            if piezo is not None:
+                data["piezo"] = piezo
 
         return data
 
@@ -401,74 +448,38 @@ class Extended_MACECalculator(MACECalculator):
 # --------------------------------------- #
 # Function taken from https://github.com/davkovacs/mace/tree/mu_alpha
 def compute_dielectric_gradients(
-    dielectric: torch.Tensor, positions: torch.Tensor
+    dielectric: torch.Tensor, inputs: List[torch.Tensor]
 ) -> torch.Tensor:
     """Compute the spatial derivatives of dielectric tensor.
 
     Args:
         dielectric (torch.Tensor): Dielectric tensor.
-        positions (torch.Tensor): Atom positions.
+        inputs (List of torch.Tensor): Atom positions.
 
     Returns:
         torch.Tensor: Spatial derivatives of dielectric tensor.
     """
     # dielectric = dielectric[:,0:2]
-    d_dielectric_dr = [None] * dielectric.shape[-1]
+    d_dielectric_dr = d_dielectric_dr = [
+        [None for _ in range(dielectric.shape[-1])] for _ in range(len(inputs))
+    ]
+    # [Pxyz,atoms,Rxyz]
     grad_outputs: List[torch.Tensor] = [
         torch.ones((dielectric.shape[0], 1)).to(dielectric.device)
     ]
     for i in range(dielectric.shape[-1]):
-        gradient = torch.autograd.grad(
+        gradients = torch.autograd.grad(
             outputs=[dielectric[:, i].unsqueeze(-1)],
-            inputs=[positions],
+            inputs=inputs,
             grad_outputs=grad_outputs,
             retain_graph=(i < dielectric.shape[-1] - 1),  # small optimization
             create_graph=False,  # small optimization
             allow_unused=False,  # small optimization
-        )[0]
-        d_dielectric_dr[i] = gradient.detach()
-        del gradient  # cleanup
+        )
+        assert len(gradients) == len(inputs), "coding error"
+        for j, (gradient, input) in enumerate(zip(gradients, inputs)):
+            assert gradient.shape == input.shape, "coding error"
+            d_dielectric_dr[j][i] = gradient.detach()
+        del gradients  # cleanup
     del grad_outputs  # cleanup
-    return torch.stack(d_dielectric_dr, dim=0)  # [Pxyz,atoms,Rxyz]
-
-
-def forward_has_param(module: torch.nn.Module, param_name: str) -> bool:
-    """
-    Check whether the `forward` method of a PyTorch module defines a parameter
-    with the given name.
-
-    Parameters
-    ----------
-    module : nn.Module
-        The PyTorch module whose `forward` method will be inspected.
-    param_name : str
-        The name of the parameter to check for in the `forward` signature.
-
-    Returns
-    -------
-    bool
-        True if `forward` has a parameter named `param_name`, False otherwise.
-    """
-    signature = inspect.signature(module.forward)
-    return param_name in signature.parameters
-
-
-# --------------------------------------- #
-# Function taken from https://github.com/ACEsuit/mace/blob/main/mace/modules/utils.py
-# def compute_dielectric_gradients(
-#     dielectric: torch.Tensor,
-#     positions: torch.Tensor,
-# ) -> torch.Tensor:
-#     dielectric_flatten = dielectric.view(-1)
-
-#     def get_vjp(v):
-#         return torch.autograd.grad(
-#             dielectric_flatten,
-#             positions,
-#             v,
-#             retain_graph=True,
-#             create_graph=False,
-#             allow_unused=False,
-#         )
-#     I_N = torch.eye(dielectric.shape[-1]).to(dielectric.device)
-#     return torch.vmap(get_vjp, in_dims=0, out_dims=0)(I_N)[0]
+    return [torch.stack(out, dim=0) for out in d_dielectric_dr]  # [Pxyz,atoms,Rxyz]
