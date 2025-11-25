@@ -1,7 +1,8 @@
 import os
 import time
 from datetime import datetime
-from typing import Protocol, Callable, Any
+from typing import Protocol, Callable, Any, TypeVar
+from typing_extensions import ParamSpec
 import functools
 
 
@@ -106,9 +107,13 @@ class HasLogger(Protocol):
     logger: "Timer"  # replace "Timer" with your actual Timer class name
 
 
+P = ParamSpec("P")
+R = TypeVar("R")
+
+
 def timeit(
     name: str, report: bool = False
-) -> Callable[[Callable[..., Any]], Callable[..., Any]]:
+) -> Callable[[Callable[P, R]], Callable[P, R]]:
     """
     Decorator to measure the execution time of a class method using `self.logger.section`.
 
@@ -120,7 +125,7 @@ def timeit(
         If True, calls `self.logger.report()` after the method finishes.
     """
 
-    def decorator(func: Callable[..., Any]) -> Callable[..., Any]:
+    def decorator(func: Callable[P, R]) -> Callable[P, R]:
         @functools.wraps(func)
         def wrapper(self: HasLogger, *args, **kwargs) -> Any:
             with self.logger.section(name):
