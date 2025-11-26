@@ -41,6 +41,7 @@ from ase.calculators.calculator import Calculator, all_changes
 from ase.outputs import _defineprop, all_outputs
 from .tools import Timer, timeit
 from ipi.utils.messages import warning, verbosity
+from ipi.utils.units import unit_to_user
 
 
 class Extended_MACECalculator(MACECalculator):
@@ -382,7 +383,8 @@ class Extended_MACECalculator(MACECalculator):
             extras = self.get_extras()
             if extras is None or extras == {}:
                 raise ValueError("The extra information dictionary is empty.")
-            Efield = np.asarray(extras["Efield"])
+            Efield = np.asarray(extras["Efield"])  # in atomic units
+            Efield = unit_to_user("electric-field", "v/ang", Efield)
             mu = data["dipole"][0]
             Efield = torch.from_numpy(Efield).to(device=self.device, dtype=mu.dtype)
 
@@ -395,13 +397,19 @@ class Extended_MACECalculator(MACECalculator):
                 if piezo is not None:
                     data["piezo"] = piezo
 
-                data["energy"] -= mu @ Efield
+                interaction_energy = mu @ Efield
+                data["energy"] -= interaction_energy
                 data["forces"] += torch.einsum("ijk,i->jk", bec, Efield)
                 if piezo is not None:
-                    data["stress"] += torch.einsum("ijkl,i->jkl", piezo, Efield)
+                    volume = torch.det(batch.cell)
+                    data["stress"] -= (
+                        torch.einsum("ijkl,i->jkl", piezo, Efield)
+                        + interaction_energy / volume
+                    )
 
             elif ensemble == "E":
-                data["energy"] -= mu @ Efield
+                interaction_energy = mu @ Efield
+                data["energy"] -= interaction_energy
 
                 for keyword in ["forces", "stress"]:  # "virials"
                     if data[keyword] is not None:
