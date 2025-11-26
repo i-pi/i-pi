@@ -2375,11 +2375,11 @@ class FFDielectric(ForceField):
     def fixed_E(self, results: dict):
         u, f, v, x = results
         dipole = self.dipole.get(x)
-        Z = self.bec.get(x)
+        Z = self.bec.get(x) # (natoms,3,3)
         time = self.template["time"]
         Efield = self.field.get(time)
         u -= dipole @ Efield
-        f += Efield @ Z.reshape((3, -1))
+        f += np.einsum("ijk,j->ik",Z,Efield).flatten()
         # ToDo: updated virial or stress tensor
         return u, f, v, x
 
