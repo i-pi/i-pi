@@ -44,9 +44,9 @@ class Timer:
 
         lines = []
         for t, level, name, elapsed in sorted(self._records):
-            timestamp = datetime.fromtimestamp(t).strftime("%Y-%m-%d %H:%M:%S")
+            timestamp = datetime.fromtimestamp(t).strftime("%Y-%m-%d %H:%M:%S.%f")[:-3]
             indent = "    " * level
-            slurmid = int(os.environ.get("SLURM_LOCALID", "0"))
+            slurmid = int(os.environ.get("SLURM_LOCALID", "-1"))
             lines.append(
                 f"{timestamp} [id:{slurmid:3d}] {indent}{name}: {elapsed:.4f} s"
             )
