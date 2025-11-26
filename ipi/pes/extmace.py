@@ -403,8 +403,7 @@ class Extended_MACECalculator(MACECalculator):
                 if piezo is not None:
                     volume = torch.det(batch.cell)
                     data["stress"] -= (
-                        torch.einsum("ijkl,i->jkl", piezo, Efield)
-                        + interaction_energy / volume
+                        torch.einsum("ijkl,i->jkl", piezo, Efield) / volume
                     )
 
             elif ensemble == "E":
