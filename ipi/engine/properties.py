@@ -1614,7 +1614,7 @@ class Properties:
             return self.forces.pot / self.beads.nbeads
         else:
             return self.forces.pots[int(bead)]
-        
+
     def get_efric(self):
         raise NotImplementedError("Friction estimator is not implemented yet.")
         # TODO: get efric which is registered in the ensemble to print out
