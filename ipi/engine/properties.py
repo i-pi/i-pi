@@ -474,6 +474,11 @@ class Properties:
                 "help": "The total spring potential energy between the beads of all the ring polymers in the system.",
                 "func": (lambda: self.nm.vspring / self.beads.nbeads),
             },
+            "friction_energy": {
+                "dimension": "energy",
+                "help": "The energy dissipated by the friction forces.",
+                "func": self.get_efric,
+            },
             "kinetic_md": {
                 "dimension": "energy",
                 "help": "The kinetic energy of the (extended) classical system.",
@@ -1609,6 +1614,10 @@ class Properties:
             return self.forces.pot / self.beads.nbeads
         else:
             return self.forces.pots[int(bead)]
+        
+    def get_efric(self):
+        raise NotImplementedError("Friction estimator is not implemented yet.")
+        # TODO: get efric which is registered in the ensemble to print out
 
     def get_kinmd(self, atom="", bead="", nm="", return_count=False):
         """Calculates the (bead-average) classical kinetic energy of the simulation (p^2/2m)
