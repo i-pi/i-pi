@@ -1,0 +1,4 @@
+PIMD with friction dynamics
+--------------------------------------------------
+The NVE with friction has been tested againest the independent implementaion from https://github.com/GeorgeTrenins/rpmd-gle.
+

@@ -1,18 +1,12 @@
 PIMD_friction Calculations:
 =================================
 NVE-f: 
-Contains the PIMD simulation with two types of ipi driver 1D_double_well and 1D_double_well_friction. The bafab and bafab in the name of folders demonstrate the inclusion of the friction term in the propagator and the type of splitting.
+Contains the PIMD simulation with ipi driver 1D_double_well. The bafab and bafab in the name of folders demonstrate the inclusion of the friction term in the propagator and the type of splitting.
 
-    DW-NVE: reference calculation without friction in NVE ensemble and 1D double well potential  
     DW-NVE-bafab: calculation with friction using bafab splitting for the propagation step in NVE ensemble and 1D double well potential  
     DW-NVE-fbabf: calculation with friction using fbabf splitting for the propagation step in NVE ensemble and 1D double well potential  
-    DWFriction-NVE: reference calculation without friction in NVE ensemble and 1D double well with friction potential 
-    DWFriction-NVE-bafab: calculation with friction using bafab splitting for the propagation step in NVE ensemble and 1D double well with friction potential  
-    DWFriction-NVE-fbabf: calculation with friction using fbabf splitting for the propagation step in NVE ensemble and 1D double well with friction potential  
 
-    reference-gle-rpmd: Reference result of RPMD calculation with friction implemented in the GLE. https://github.com/GeorgeTrenins/rpmd-gle/tree/main/rpmdgle
 
-    NVE-f.ipynb: Analysis notebook for plotting and comparing the calculation results.
 
 
 

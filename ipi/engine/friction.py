@@ -26,7 +26,7 @@ class Friction:
     def __init__(
         self,
         spectral_density=np.zeros(0, float),
-        alpha=np.zeros(0, float),
+        alpha_input=np.zeros(0, float),
         efric=0.0,
         position_dependent: bool = False,
         non_markovian: bool = False,
@@ -40,7 +40,7 @@ class Friction:
             Default to 0.0. It will be non-zero if the friction class is initialised from a checkpoint file.
         """
         self.spectral_density = np.asanyarray(spectral_density, dtype=float)
-        self.alpha = np.asanyarray(alpha, dtype=float)
+        self.alpha_input = np.asanyarray(alpha_input, dtype=float)
         self._efric = depend_value(name="efric", value=efric)
         self.position_dependent = position_dependent
         self.non_markovian = non_markovian
@@ -59,9 +59,9 @@ class Friction:
 
         # if self.alpha is already provided as a file, use it
         # if self.alpha.size ==self.nm.omegak.size
-        if self.alpha.shape[0] == self.nm.omegak.size:
-            self.alpha = self.alpha[:, 1]
-            omegak_input = self.alpha[:, 0]
+        if self.alpha_input.shape[0] == self.nm.omegak.size:
+            self.alpha = self.alpha_input[:, 1]
+            omegak_input = self.alpha_input[:, 0]
             if not np.allclose(omegak_input, self.nm.omegak):
                 raise ValueError(
                     "The provided alpha values do not correspond to the current normal mode frequencies."

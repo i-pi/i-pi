@@ -20,7 +20,7 @@ class InputFriction(Input):
                 "help": "A two column data is expected. First column: w (cm^-1) frequency. Second column: J(w) spectral density. See Eq. 6 in Phys. Rev. Lett. 134,226201(2025).",
             },
         ),
-        "alpha": (
+        "alpha_input": (
             InputArray,
             {
                 "dtype": float,
@@ -59,14 +59,14 @@ class InputFriction(Input):
         super(InputFriction, self).store(friction)
         if isinstance(friction, Friction):
             self.spectral_density.store(friction.spectral_density)
-            self.alpha.store(friction.alpha)
+            self.alpha_input.store(friction.alpha_input)
             self.position_dependent.store(friction.position_dependent)
             self.non_markovian.store(friction.non_markovian)
 
     def fetch(self) -> Friction:
         return Friction(
             spectral_density=self.spectral_density.fetch(),
-            alpha=self.alpha.fetch(),
+            alpha_input=self.alpha_input.fetch(),
             position_dependent=self.position_dependent.fetch(),
             non_markovian=self.non_markovian.fetch(),
         )
