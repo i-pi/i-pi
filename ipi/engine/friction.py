@@ -81,8 +81,7 @@ class Friction:
             info("compute alpha using get_alpha_numeric().")
 
     def forces(self) -> np.ndarray:
-
-        fnm = self.alpha[:, np.newaxis] * self.nm.qnm  # (nmodes, 3 * natoms)
+        fnm = -self.alpha[:, np.newaxis] * self.nm.qnm  # (nmodes, 3 * natoms)
         forces = self.nm.transform.nm2b(fnm)  # (nbeads, 3 * natoms)
         if self.position_dependent:
             ...  # To be implemented
@@ -102,7 +101,6 @@ def get_alpha_numeric(
 ) -> np.ndarray:
     try:
         from scipy.interpolate import CubicSpline
-        from scipy.integrate import quad
     except ModuleNotFoundError as e:
         raise ModuleNotFoundError(
             "Friction class requires scipy to work, please install scipy"

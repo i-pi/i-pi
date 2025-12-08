@@ -17,7 +17,8 @@
   <system>
     <initialize nbeads='32'>
       <file mode='xyz'> init.xyz </file>
-<cell mode='abc' units='angstrom'> [300, 300, 300] </cell>
+       <momenta mode='xyz' units='atomic_unit'> initial_momenta.xyz </momenta>
+      <cell mode='abc' units='angstrom'> [300, 300, 300] </cell>
     </initialize>
     <forces>
       <force forcefield='doublewell_1D'> </force>
@@ -27,7 +28,7 @@
       <dynamics mode='nve-f' splitting='bafab'>
         <timestep units='femtosecond'> 0.5 </timestep>
         <friction>
-	  <spectral_density mode='file' shape='(999, 2)' > fric_spec_dens.dat </spectral_density>
+	  <spectral_density mode='file' shape='(999, 2)' > fric_SD.dat </spectral_density>
 	</friction>
       </dynamics>
     </motion>

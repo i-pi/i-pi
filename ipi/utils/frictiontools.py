@@ -90,12 +90,13 @@ if __name__ == "__main__":
     parser.add_argument("--omega-cut", required=True, type=float)
     parser.add_argument("--eta", required=True, type=float)
     parser.add_argument("output", type=str)
+    parser.add_argument("--points", type=int, default=999)
     args = parser.parse_args()
 
     omega_cut = args.omega_cut
 
     eta = args.eta
-    omega = np.arange(0, omega_cut, 0.5)[1:]  # avoid zero frequency
+    omega = np.linspace(0, omega_cut, args.points + 1)[1:]
 
     J = expohmic_J(omega, eta, omega_cut)
 
