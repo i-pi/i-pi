@@ -1,18 +1,115 @@
 """An (extended) interface for the [MACE](https://github.com/ACEsuit/mace) calculator"""
 
-from .mace import MACE_driver
+import json
 from .ase import ASEDriver
+import torch
+import numpy as np
+from typing import List, Dict, Tuple, Union
+from mace.tools import torch_geometric
+from mace.calculators import MACECalculator
+from mace.tools.torch_geometric.batch import Batch
+from mace.modules.utils import get_outputs
+from mace.data import config_from_atoms_list
+from mace import data
+from ase.calculators.calculator import Calculator
+from ase.outputs import _defineprop, all_outputs
+from ase import Atoms
+from ase.io import read
+from .tools import Timer, timeit
+from ipi.utils.messages import warning, verbosity
+from ipi.utils.units import unit_to_user
 
 
 # --------------------------------------- #
 __DRIVER_NAME__ = "extmace"
 __DRIVER_CLASS__ = "Extended_MACE_driver"
 
+ase_like_properties = {
+    "energy": (),
+    "node_energy": ("natoms",),
+    "forces": ("natoms", 3),
+    "displacement": (3, 3),
+    "stress": (3, 3),
+    "virials": (3, 3),
+    "dipole": (3,),
+    "atomic_dipoles": ("natoms", 3),
+    "atomic-oxn-dipole": ("natoms", 3),
+    "BEC": ("natoms", 3, 3),
+    "piezo": (3, 3, 3),
+}
 
-class Extended_MACE_driver(MACE_driver):
+
+def batch2list_of_dict(
+    batch, output: Dict[str, np.ndarray]
+) -> Dict[str, List[Union[float, np.ndarray]]]:
+    Nstructures = len(batch.ptr) - 1
+    results = [{} for _ in range(Nstructures)]  # {}
+    Natoms = [
+        a.shape[0] for a in np.split(output["forces"], batch.ptr[1:], axis=0)[:-1]
+    ]
+    assert (
+        len(Natoms) == Nstructures
+    ), f"len(Natoms) should be equal to {Nstructures} but its {len(Natoms)}."
+
+    def correct_shape(value: np.ndarray, shape: tuple):
+        if shape == ():
+            return float(value)
+        else:
+            return value.reshape(shape)
+
+    for key in output.keys():
+
+        if key not in ase_like_properties:
+            warning(f"Please add '{key}' to 'ase_like_properties' in {__file__}")
+            continue
+
+        value = output[key]
+        shape = ase_like_properties[key]
+
+        # for n in range(Nstructures):
+        #     results[key] = [None] * Nstructures
+
+        shape1 = () if len(shape) <= 1 else shape[1:]
+
+        if "natoms" in shape:
+            assert shape[0] == "natoms", "'natoms' allowed only as first dimension."
+            # [n_nodes,...] --> [ [n_atoms_0,...] , [n_atoms_1,...], ... ]
+            value = np.split(value, batch.ptr[1:], axis=0)[:-1]
+            assert len(value) == Nstructures, f"coding error for '{key}'"
+            for n, v in enumerate(value):
+                results[n][key] = correct_shape(v, (Natoms[n],) + shape1)
+
+        elif "natoms" in shape1:
+            raise ValueError("'natoms' allowed only as first dimension.")
+
+        else:
+            assert value.shape[0] == Nstructures, f"coding error for '{key}'"
+            for n, v in enumerate(value):
+                results[n][key] = correct_shape(v, shape)
+
+    return results
+
+
+class Extended_MACE_driver(ASEDriver):
     """
     MACE driver with the torch tensors exposed.
     """
+
+    template: Atoms
+
+    def __init__(
+        self, template, model, device="cpu", mace_kwargs=None, *args, **kwargs
+    ):
+
+        self.model = model
+        self.device = device
+        self.mace_kwargs = {}
+        self.all_templates = None
+        if mace_kwargs is not None:
+            with open(mace_kwargs, "r") as f:
+                self.mace_kwargs = json.load(f)
+        template = read(template)
+        super().__init__(template, *args, **kwargs)
 
     def check_parameters(self):
         """Check the arguments requuired to run the driver
@@ -20,33 +117,65 @@ class Extended_MACE_driver(MACE_driver):
         This loads the potential and atoms template in MACE
         """
 
-        ASEDriver.check_parameters(self)  # Explicitly bypass MACE_driver
-
-        self.ase_calculator = Extended_MACECalculator(
+        self.batched_calculator = ExtendedMACECalculator(
             model_paths=self.model,
             device=self.device,
             get_extras=lambda: self.extra,
             **self.mace_kwargs,
         )
 
+    def template2atoms(
+        self,
+        cell: List[np.ndarray],
+        pos: List[np.ndarray],
+    ) -> List[Atoms]:
+        Nstructures = len(cell)
+        if self.all_templates is None:
+            # create the attribute from scratch
+            self.all_templates = [self.template.copy() for _ in range(Nstructures)]
+        elif len(self.all_templates) < Nstructures:
+            # update length
+            Nalready = len(self.all_templates)
+            self.all_templates.append(
+                [self.template.copy() for _ in range(Nstructures - Nalready)]
+            )
+        for n, (atoms, c, p) in enumerate(zip(self.all_templates, cell, pos)):
+            atoms.set_positions(p)
+            atoms.set_pbc(True)
+            atoms.set_cell(c)
+        return self.all_templates[:Nstructures]
+
+    def compute(self, cell, pos):
+        """Calls the model evaluation, taking care of both serial and batched execution"""
+
+        if isinstance(cell, list):
+            # we are getting a list of structure, so we run in batched mode
+            for n, (c, p) in enumerate(zip(cell, pos)):
+                cell[n], pos[n] = self.convert_units(c, p)  # atomic_unit to angstrom
+
+            # (cell,pos) to ase.Atoms
+            atoms = self.template2atoms(cell, pos)
+            results = self.batched_calculator.compute_batched(atoms)
+
+            # from eV and angstrom to atomic_unit
+            out = [self.post_process(r, a) for r, a in zip(results, atoms)]
+            if len(out) == 1:
+                return out[0]
+            else:
+                return out
+        else:
+            return self.compute([cell], [pos])
+
 
 # --------------------------------------- #
-import torch
-import numpy as np
-from typing import List, Dict, Tuple
-from mace.tools.torch_geometric.batch import Batch
-from mace.calculators import MACECalculator
-from mace.modules.utils import get_outputs
-from ase.calculators.calculator import Calculator, all_changes
-from ase.outputs import _defineprop, all_outputs
-from .tools import Timer, timeit
-from ipi.utils.messages import warning, verbosity
-from ipi.utils.units import unit_to_user
-
-
-class Extended_MACECalculator(MACECalculator):
+class ExtendedMACECalculator(MACECalculator):
     def __init__(
-        self, instructions: dict = {}, get_extras: callable = None, *argc, **kwargs
+        self,
+        instructions: dict = {},
+        get_extras: callable = None,
+        batch_size: int = 1,
+        *argc,
+        **kwargs,
     ):
         if get_extras is not None:
             self.get_extras = get_extras
@@ -59,21 +188,46 @@ class Extended_MACECalculator(MACECalculator):
 
         log = self.instructions.get("log", None)
         self.logger = Timer(log is not None, log)
-
+        self.batch_size = self.instructions.get("batch_size", 1)
+        self.instructions = instructions
         super().__init__(*argc, **kwargs)
 
     def get_extras(self) -> dict:
         return {}
 
+    def _atoms_to_batch(self, atoms: List[Atoms]) -> Batch:
+        keyspec = data.KeySpecification(
+            info_keys=self.info_keys, arrays_keys=self.arrays_keys
+        )
+        configs = config_from_atoms_list(
+            atoms, key_specification=keyspec, head_name=self.head
+        )
+        data_loader = torch_geometric.dataloader.DataLoader(
+            dataset=[
+                data.AtomicData.from_config(
+                    config,
+                    z_table=self.z_table,
+                    cutoff=self.r_max,
+                    heads=self.available_heads,
+                )
+                for config in configs
+            ],
+            batch_size=self.batch_size,
+            shuffle=False,
+            drop_last=False,
+        )
+        batch = next(iter(data_loader)).to(self.device)
+        return batch
+
     @timeit(name="preprocess()")
-    def preprocess(self, atoms=None):
+    def preprocess(self, atoms: List[Atoms] = None):
         """
         Preprocess the calculation: prepare the batch, result tensors, etc.
         """
 
-        Calculator.calculate(self, atoms)
+        # Calculator.calculate(self, atoms)
 
-        assert not self.use_compile, "self.use_compile=True is not supported yet."
+        # assert not self.use_compile, "self.use_compile=True is not supported yet."
 
         with self.logger.section("Prepare batch"):
             batch_base: Batch = self._atoms_to_batch(atoms)
@@ -155,20 +309,20 @@ class Extended_MACECalculator(MACECalculator):
             forward_kwargs["compute_virials"] = False
             forward_kwargs["compute_edge_forces"] = False
 
-        ret_tensors = self._create_result_tensors(
-            self.model_type, self.num_models, len(atoms)
-        )
-        if "energy" not in ret_tensors:
-            ret_tensors["energy"] = ret_tensors["energies"].clone()
-        if compute_bec:
-            f = ret_tensors["forces"]
-            ret_tensors["BEC"] = torch.zeros(
-                (len(self.models), *f.shape[1:], 3), device=self.device
-            )
+        # results_tensors = self._create_result_tensors(
+        #     self.model_type, self.num_models, len(atoms)
+        # )
+        # if "energy" not in results_tensors:
+        #     results_tensors["energy"] = results_tensors["energies"].clone()
+        # if compute_bec:
+        #     f = results_tensors["forces"]
+        #     results_tensors["BEC"] = torch.zeros(
+        #         (len(self.models), *f.shape[1:], 3), device=self.device
+        #     )
 
         return (
             batch_base,
-            ret_tensors,
+            # results_tensors,
             node_e0,
             {
                 "training": training,
@@ -178,7 +332,7 @@ class Extended_MACECalculator(MACECalculator):
         )
 
     @timeit(name="calculate()", report=True)
-    def calculate(self, atoms=None, properties=None, system_changes=all_changes):
+    def compute_batched(self, atoms: List[Atoms]):
         """
         Calculate properties.
         :param atoms: ase.Atoms object
@@ -187,12 +341,13 @@ class Extended_MACECalculator(MACECalculator):
         :return:
         """
 
-        batch_base, ret_tensors, node_e0, options = self.preprocess(atoms)
+        batch_base, node_e0, options = self.preprocess(atoms)
         training = options["training"]
         compute_bec = options["compute_bec"]
         forward_kwargs = options["forward_kwargs"]
 
         # model evaluation
+        results_tensors = {}
         with self.logger.section("Forward pass loop"):
             # loop over models in the committee
             for i, model in enumerate(self.models):
@@ -209,100 +364,34 @@ class Extended_MACECalculator(MACECalculator):
                 # apply the external electric/dielectric field
                 out = self.apply_ensemble(out, batch, training, compute_bec)
 
-                # collect the output
-                for keyword in ["energy", "forces", "stress", "dipole", "BEC"]:
-                    if keyword in out:
-                        ret_tensors[keyword][i] = out[keyword].detach()
+                # collect the results
+                for key, value in out.items():
+                    if (
+                        "ignore" in self.instructions
+                        and key in self.instructions["ignore"]
+                    ):
+                        continue
+                    if key not in results_tensors:
+                        results_tensors[key] = [None] * len(self.models)
+                    results_tensors[key][i] = value.detach().cpu().numpy()
 
-                # for keyword in ["atomic_stresses", "atomic_virials"]:
-                #     if keyword in out:
-                #         ret_tensors.setdefault(keyword, []).append(
-                #             out[keyword].detach()
-                #         )
-
-                # if "node_energy" in out:
-                #     ret_tensors["node_energy"][i] = (
-                #         out["node_energy"] - node_e0
-                #     ).detach()
-
-        # remove properties
-        if "ignore" in self.instructions:
-            for k in self.instructions["ignore"]:  # List[str]
-                del ret_tensors[k]
-
-        self.postprocess(ret_tensors)
+        return self.postprocess(batch, results_tensors)
 
     @timeit(name="'postprocess'")
-    def postprocess(self, ret_tensors: Dict[str, torch.Tensor]):
-
-        # process outputs
-        self.results = {}
-        # if self.model_type in ["MACE", "EnergyDipoleMACE"]:
-        self.results["energy"] = (
-            torch.mean(ret_tensors["energy"], dim=0).cpu().item()
-            * self.energy_units_to_eV
-        )
-        self.results["free_energy"] = self.results["energy"]
-        if "node_energy" in ret_tensors:
-            self.results["node_energy"] = (
-                torch.mean(ret_tensors["node_energy"], dim=0).cpu().numpy()
-            ) * self.energy_units_to_eV
-        self.results["forces"] = (
-            torch.mean(ret_tensors["forces"], dim=0).cpu().numpy()
-            * self.energy_units_to_eV
-            / self.length_units_to_A
-        )
-        if self.num_models > 1:
-            energies = ret_tensors["energy"].cpu().numpy() * self.energy_units_to_eV
-            self.results["energy_var"] = (
-                torch.var(energies, dim=0, unbiased=False).cpu().item()
-                * self.energy_units_to_eV
-            )
-            self.results["forces_comm"] = (
-                ret_tensors["forces"].cpu().numpy()
-                * self.energy_units_to_eV
-                / self.length_units_to_A
-            )
-        if ret_tensors["stress"] is not None:
-            try:
-                from ase.stress import full_3x3_to_voigt_6_stress
-            except:
-                raise ImportError("Couldn't load full_3x3_to_voigt_6_stress from ase.")
-            self.results["stress"] = full_3x3_to_voigt_6_stress(
-                torch.mean(ret_tensors["stress"], dim=0).cpu().numpy()
-                * self.energy_units_to_eV
-                / self.length_units_to_A**3
-            )
+    def postprocess(self, batch: Batch, results_tensors: Dict[str, torch.Tensor]):
+        results = {}
+        for key, value in results_tensors.items():
+            assert isinstance(
+                value, list
+            ), f"'{key}' should be a list of length {self.num_models}"
+            assert (
+                len(value) == self.num_models
+            ), f"'{key}' should be a list of length {self.num_models}"
+            values = np.asarray(value)
+            results[key] = np.mean(values, axis=0)
             if self.num_models > 1:
-                self.results["stress_var"] = full_3x3_to_voigt_6_stress(
-                    torch.var(ret_tensors["stress"], dim=0, unbiased=False)
-                    .cpu()
-                    .numpy()
-                    * self.energy_units_to_eV
-                    / self.length_units_to_A**3
-                )
-            # if "atomic_stresses" in ret_tensors:
-            #     self.results["stresses"] = (
-            #         torch.mean(torch.stack(ret_tensors["atomic_stresses"]), dim=0)
-            #         .cpu()
-            #         .numpy()
-            #         * self.energy_units_to_eV
-            #         / self.length_units_to_A**3
-            #     )
-            # if "atomic_virials" in ret_tensors:
-            #     self.results["virials"] = (
-            #         torch.mean(torch.stack(ret_tensors["atomic_virials"]), dim=0)
-            #         .cpu()
-            #         .numpy()
-            #         * self.energy_units_to_eV
-            #     )
-        # if self.model_type in ["DipoleMACE", "EnergyDipoleMACE"]:
-        if "dipole" in ret_tensors:
-            self.results["dipole"] = (
-                torch.mean(ret_tensors["dipole"], dim=0).cpu().numpy()
-            )
-        if "BEC" in ret_tensors:
-            self.results["BEC"] = torch.mean(ret_tensors["BEC"], dim=0).cpu().numpy()
+                results[f"{key}_var"] = np.var(values, axis=0)
+        return batch2list_of_dict(batch, results)
 
     @timeit("'compute_BEC_piezo'")
     def compute_BEC_piezo(
@@ -395,7 +484,7 @@ class Extended_MACECalculator(MACECalculator):
                 bec, piezo = self.compute_BEC_piezo(data, batch)
                 data["BEC"] = bec.moveaxis(0, 2).moveaxis(1, 2)
                 if piezo is not None:
-                    data["piezo"] = piezo
+                    data["piezo"] = piezo.moveaxis(0, 3).moveaxis(1, 3)
 
                 interaction_energy = mu @ Efield
                 data["energy"] -= interaction_energy
@@ -447,7 +536,7 @@ class Extended_MACECalculator(MACECalculator):
             bec, piezo = self.compute_BEC_piezo(data, batch)
             data["BEC"] = bec.moveaxis(0, 2).moveaxis(1, 2)
             if piezo is not None:
-                data["piezo"] = piezo
+                data["piezo"] = piezo.moveaxis(0, 3).moveaxis(1, 3)
 
         return data
 
