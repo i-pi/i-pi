@@ -464,7 +464,10 @@ class FFDirect(ForceField):
                 raise ValueError(
                     "You must provide a pes_path for the custom PES driver."
                 )
+            from ipi.pes.dummy import Dummy_driver
             self.driver = load_pes(self.pes, self.pes_path)(**pars)
+            if not isinstance(self.driver, Dummy_driver):
+                raise ValueError("coding error")
         except ImportError:
             # specific errors have already been triggered
             raise
@@ -525,6 +528,8 @@ class FFDirect(ForceField):
         request["t_finished"] = time.time()
 
     def evaluate(self, request):
+        if "extra" in request:
+            self.driver.store_extra(request["extra"])
         if self.batch_size == 1:
             results = list(
                 self.driver(request["cell"][0], request["pos"].reshape(-1, 3))
@@ -2292,9 +2297,6 @@ class FFDielectric(ForceField):
     def start(self):
         return self.forcefield.start()
 
-    def store_extra(self, template: dict):
-        self.template = template
-
     def get_extra(self):
         """Store all the templates used in a MD step so that the user can inspect them by printing them to file"""
         return self.template.copy()
@@ -2311,7 +2313,7 @@ class FFDielectric(ForceField):
             "time": time,  # not strictly necessary but useful for debugging
             "extra": json.dumps({"Efield": field}),  # extra information
         }
-        self.store_extra(extra_template)
+        self.template = extra_template.copy() # just for debugging
 
         assert self.where in ["client", "server"], "coding error"
 
