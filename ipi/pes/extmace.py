@@ -206,7 +206,7 @@ class Extended_MACE_driver(ASEDriver):
             atoms = self.template2atoms(cell, pos)
             results = self.batched_calculator.compute_batched(atoms)  # Dict[str,List]
             list_of_results = dict_of_list2list_of_dict(results)  # List[Dict]
-            
+
             # convert from angstrom to atomic_unit
             out = [self.post_process(r, a) for r, a in zip(list_of_results, atoms)]
 
@@ -223,6 +223,7 @@ class ExtendedMACECalculator(MACECalculator):
      - supports the inclusion of external electric fields
      - can be used with a i-PI driver or as a standalone
     """
+
     def __init__(
         self,
         instructions: dict = {},
