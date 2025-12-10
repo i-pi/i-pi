@@ -269,7 +269,7 @@ class ExtendedMACECalculator(MACECalculator):
         if ensemble == "E-DEBUG":
             if not compute_bec:
                 warning(
-                    f"'compute_bec' will be switched automatically to True since you specified 'ensemble' : 'E-debug'",
+                    "'compute_bec' will be switched automatically to True since you specified 'ensemble' : 'E-debug'",
                     verbosity.high,
                 )
             compute_bec = True
