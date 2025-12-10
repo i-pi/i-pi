@@ -121,54 +121,6 @@ def batch2dict_of_list(
     return results
 
 
-def batch2list_of_dict(
-    batch, output: Dict[str, np.ndarray]
-) -> Dict[str, List[Union[float, np.ndarray]]]:
-    Nstructures = len(batch["ptr"]) - 1
-    results = [{} for _ in range(Nstructures)]  # {}
-    Natoms = [
-        a.shape[0] for a in np.split(output["forces"], batch["ptr"][1:], axis=0)[:-1]
-    ]
-    assert (
-        len(Natoms) == Nstructures
-    ), f"len(Natoms) should be equal to {Nstructures} but its {len(Natoms)}."
-
-    def correct_shape(value: np.ndarray, shape: tuple):
-        if shape == ():
-            return float(value)
-        else:
-            return value.reshape(shape)
-
-    for key in output.keys():
-
-        if key not in ase_like_properties:
-            warning(f"Please add '{key}' to 'ase_like_properties' in {__file__}")
-            continue
-
-        value = output[key]
-        shape = ase_like_properties[key]
-
-        shape1 = () if len(shape) <= 1 else shape[1:]
-
-        if "natoms" in shape:
-            assert shape[0] == "natoms", "'natoms' allowed only as first dimension."
-            # [n_nodes,...] --> [ [n_atoms_0,...] , [n_atoms_1,...], ... ]
-            value = np.split(value, batch["ptr"][1:], axis=0)[:-1]
-            assert len(value) == Nstructures, f"coding error for '{key}'"
-            for n, v in enumerate(value):
-                results[n][key] = correct_shape(v, (Natoms[n],) + shape1)
-
-        elif "natoms" in shape1:
-            raise ValueError("'natoms' allowed only as first dimension.")
-
-        else:
-            assert value.shape[0] == Nstructures, f"coding error for '{key}'"
-            for n, v in enumerate(value):
-                results[n][key] = correct_shape(v, shape)
-
-    return results
-
-
 class Extended_MACE_driver(ASEDriver):
     """ASE driver for running MACE models with batched torch-based execution."""
 
@@ -282,17 +234,16 @@ class ExtendedMACECalculator(MACECalculator):
         self.batch_size = self.instructions.get("batch_size", 1)
         self.instructions = instructions
         super().__init__(*argc, **kwargs)
+        assert not self.use_compile, "self.use_compile=True is not supported yet."
 
     def get_extras(self) -> dict:
         return {}
 
     @timeit(name="preprocess")
-    def preprocess(self, atoms: List[Atoms] = None):
+    def preprocess(self, atoms: List[Atoms]):
         """
         Preprocess the calculation: prepare the batch, result tensors, etc.
         """
-
-        assert not self.use_compile, "self.use_compile=True is not supported yet."
 
         keyspec = data.KeySpecification(
             info_keys=self.info_keys, arrays_keys=self.arrays_keys
@@ -402,7 +353,9 @@ class ExtendedMACECalculator(MACECalculator):
 
     @timeit(name="compute_batched", report=True)
     def compute_batched(self, atoms: List[Atoms]):
-        """ """
+        """
+        Evaluate the model(s) on a list of structures.
+        """
 
         data_loader, options = self.preprocess(atoms)
         training = options["training"]
@@ -441,8 +394,10 @@ class ExtendedMACECalculator(MACECalculator):
                         results_tensors[key] = [None] * len(self.models)
                     results_tensors[key][i] = value.detach().cpu().numpy()
 
+            # post process results
             pp_results = self.postprocess(batch, results_tensors)
 
+            # aggregate results ovet the different batches
             if results is None:
                 results = pp_results
             else:
@@ -453,6 +408,9 @@ class ExtendedMACECalculator(MACECalculator):
 
     @timeit(name="postprocess")
     def postprocess(self, batch: Batch, results_tensors: Dict[str, torch.Tensor]):
+        """
+        Post process the results by taking the mean and variance over the models in the committe.
+        """
         results = {}
         for key, value in results_tensors.items():
             assert isinstance(
@@ -467,10 +425,17 @@ class ExtendedMACECalculator(MACECalculator):
                 results[f"{key}_var"] = np.var(values, axis=0)
         return batch2dict_of_list(batch, results)
 
-    @timeit("compute_BEC_piezo")
-    def compute_BEC_piezo(
+    @timeit("compute_dmu_dR_deta")
+    def compute_dmu_dR_deta(
         self, data: Dict[str, torch.Tensor], batch: Batch
     ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Compute the derivative of the dipole (mu) w.r.t. the positions (R) and lattice displacements (eta).
+        The derivatives w.r.t. the positions returns the Born Effective Charges,
+        while the derivatives w.r.t. the lattice displacements returns a tensor that can be related to the piezoelectric tensor.
+        The conversion from this tensor to the piezoelectric one is performed in 'apply_ensemble'.
+        """
+
         if "dipole" not in data:
             raise ValueError(
                 f"The keyword 'dipole' is not in the output data of the MACE model.\nThe data provided by the model is: {list(data.keys())}"
@@ -552,7 +517,7 @@ class ExtendedMACECalculator(MACECalculator):
                 # This is very similar to what is done in the function 'fixed_E' in 'ipi/engine/forcefields.py'.
                 if not compute_bec:
                     raise ValueError("coding error")
-                bec, piezo = self.compute_BEC_piezo(data, batch)
+                bec, piezo = self.compute_dmu_dR_deta(data, batch)
                 data["BEC"] = bec.moveaxis(0, 2).moveaxis(1, 2)
                 if piezo is not None:
                     data["piezo"] = piezo.moveaxis(0, 3).moveaxis(1, 3)
@@ -605,7 +570,7 @@ class ExtendedMACECalculator(MACECalculator):
                 raise ValueError(f"Ensemble {ensemble} not implemented (yet).")
 
         if compute_bec and "BEC" not in data:
-            bec, piezo = self.compute_BEC_piezo(data, batch)
+            bec, piezo = self.compute_dmu_dR_deta(data, batch)
             data["BEC"] = bec.moveaxis(0, 2).moveaxis(1, 2)
             if piezo is not None:
                 data["piezo"] = piezo.moveaxis(0, 3).moveaxis(1, 3)
