@@ -6,3 +6,4 @@ pytest-mock
 pytest-cov
 mock
 flake8>=3.8.4
+typing_extensions
