@@ -16,7 +16,7 @@
   </ffsocket>
   <system>
     <initialize nbeads='4'>
-      <file mode='ase'> h2o.xyz </file>
+      <file mode='ase'> h2o.extxyz </file>
       <velocities mode='thermal' units='kelvin'> 500 </velocities>
     </initialize>
     <forces>
