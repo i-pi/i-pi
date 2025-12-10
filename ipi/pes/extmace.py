@@ -198,12 +198,16 @@ class Extended_MACE_driver(ASEDriver):
         """
 
         if isinstance(cell, list):
+            # convert from atomic_unit to angstrom
             for n, (c, p) in enumerate(zip(cell, pos)):
                 cell[n], pos[n] = self.convert_units(c, p)
 
+            # modify cell and positions, keep the other arrays and info as in the template
             atoms = self.template2atoms(cell, pos)
             results = self.batched_calculator.compute_batched(atoms)  # Dict[str,List]
             list_of_results = dict_of_list2list_of_dict(results)  # List[Dict]
+            
+            # convert from angstrom to atomic_unit
             out = [self.post_process(r, a) for r, a in zip(list_of_results, atoms)]
 
             return out[0] if len(out) == 1 else out
@@ -213,6 +217,12 @@ class Extended_MACE_driver(ASEDriver):
 
 # --------------------------------------- #
 class ExtendedMACECalculator(MACECalculator):
+    """
+    Extended ase Calculator for MACE:
+     - supports batched evaluation of many atomic structures
+     - supports the inclusion of external electric fields
+     - can be used with a i-PI driver or as a standalone
+    """
     def __init__(
         self,
         instructions: dict = {},
