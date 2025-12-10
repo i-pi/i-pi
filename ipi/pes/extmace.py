@@ -39,6 +39,38 @@ ase_like_properties = {
     "piezo": (3, 3, 3),
 }
 
+
+def to_scalar_or_array(x):
+    """
+    Convert size-1 list/array to float.
+    Otherwise return a NumPy array.
+    """
+    arr = np.asarray(x)
+
+    if arr.size == 1:
+        return float(arr.reshape(()))
+    else:
+        return arr
+
+
+def dict_of_list2list_of_dict(
+    results: Dict[str, List[Union[float, np.ndarray]]],
+) -> List[Dict[str, Union[float, np.ndarray]]]:
+
+    out = []
+
+    # Get number of entries from the first key
+    n = len(next(iter(results.values())))
+
+    for i in range(n):
+        entry = {}
+        for key, values in results.items():
+            entry[key] = to_scalar_or_array(values[i])
+        out.append(entry)
+
+    return out
+
+
 def batch2dict_of_list(
     batch, output: Dict[str, np.ndarray]
 ) -> Dict[str, Union[List[float], List[np.ndarray]]]:
@@ -65,7 +97,7 @@ def batch2dict_of_list(
 
         value = output[key]
         shape = ase_like_properties[key]
-        
+
         results[key] = [None] * Nstructures
 
         shape1 = () if len(shape) <= 1 else shape[1:]
@@ -87,6 +119,7 @@ def batch2dict_of_list(
                 results[key][n] = correct_shape(v, shape)
 
     return results
+
 
 def batch2list_of_dict(
     batch, output: Dict[str, np.ndarray]
@@ -217,8 +250,9 @@ class Extended_MACE_driver(ASEDriver):
                 cell[n], pos[n] = self.convert_units(c, p)
 
             atoms = self.template2atoms(cell, pos)
-            results = self.batched_calculator.compute_batched(atoms)
-            out = [self.post_process(r, a) for r, a in zip(results, atoms)]
+            results = self.batched_calculator.compute_batched(atoms)  # Dict[str,List]
+            list_of_results = dict_of_list2list_of_dict(results)  # List[Dict]
+            out = [self.post_process(r, a) for r, a in zip(list_of_results, atoms)]
 
             return out[0] if len(out) == 1 else out
         else:
@@ -252,31 +286,7 @@ class ExtendedMACECalculator(MACECalculator):
     def get_extras(self) -> dict:
         return {}
 
-    def _atoms_to_batch(self, atoms: List[Atoms]) -> DataLoader:
-        keyspec = data.KeySpecification(
-            info_keys=self.info_keys, arrays_keys=self.arrays_keys
-        )
-        configs = data.config_from_atoms_list(
-            atoms, key_specification=keyspec, head_name=self.head
-        )
-        data_loader = DataLoader(
-            dataset=[
-                data.AtomicData.from_config(
-                    config,
-                    z_table=self.z_table,
-                    cutoff=self.r_max,
-                    heads=self.available_heads,
-                )
-                for config in configs
-            ],
-            batch_size=self.batch_size,
-            shuffle=False,
-            drop_last=False,
-        )
-        # batch = next(iter(data_loader)).to(self.device)
-        return data_loader
-
-    @timeit(name="preprocess()")
+    @timeit(name="preprocess")
     def preprocess(self, atoms: List[Atoms] = None):
         """
         Preprocess the calculation: prepare the batch, result tensors, etc.
@@ -284,8 +294,21 @@ class ExtendedMACECalculator(MACECalculator):
 
         assert not self.use_compile, "self.use_compile=True is not supported yet."
 
-        with self.logger.section("Prepare batch"):
-            data_loader: DataLoader = self._atoms_to_batch(atoms)
+        keyspec = data.KeySpecification(
+            info_keys=self.info_keys, arrays_keys=self.arrays_keys
+        )
+        configs = data.config_from_atoms_list(
+            atoms, key_specification=keyspec, head_name=self.head
+        )
+        dataset = [
+            data.AtomicData.from_config(
+                config,
+                z_table=self.z_table,
+                cutoff=self.r_max,
+                heads=self.available_heads,
+            )
+            for config in configs
+        ]
 
         compute_bec = False
         if "compute_BEC" in self.instructions:
@@ -313,22 +336,24 @@ class ExtendedMACECalculator(MACECalculator):
         training = self.use_compile or compute_bec
 
         if self.model_type in ["MACE", "EnergyDipoleMACE"]:
-            batch = next(iter(data_loader)).to(self.device)
-            batch = self._clone_batch(batch)
-            node_heads = batch["head"][batch["batch"]]
-            num_atoms_arange = torch.arange(batch["positions"].shape[0])
+            for n, batch in enumerate(dataset):
+                # batch = next(iter(data_loader)).to(self.device)
+                # batch = self._clone_batch(batch)
+                node_heads = batch["head"][batch["batch"]]
+                num_atoms_arange = torch.arange(batch["positions"].shape[0])
 
-            # this try-except is to be compatible with different MACE versions
-            try:
-                # newer versions of MACE
-                node_e0 = self.models[0].atomic_energies_fn(batch["node_attrs"])[
-                    num_atoms_arange, node_heads
-                ]
-            except:
-                # older versions of MACE
-                node_e0 = self.models[0].atomic_energies_fn(
-                    batch["node_attrs"], node_heads
-                )
+                # this try-except is to be compatible with different MACE versions
+                try:
+                    # newer versions of MACE
+                    node_e0 = self.models[0].atomic_energies_fn(batch["node_attrs"])[
+                        num_atoms_arange, node_heads
+                    ]
+                except:
+                    # older versions of MACE
+                    node_e0 = self.models[0].atomic_energies_fn(
+                        batch["node_attrs"], node_heads
+                    )
+                dataset[n]["node_e0"] = node_e0
             compute_stress = not self.use_compile
         else:
             compute_stress = False
@@ -339,14 +364,8 @@ class ExtendedMACECalculator(MACECalculator):
             self.instructions["forward_kwargs"][
                 "compute_edge_forces"
             ] = self.compute_atomic_stresses
-        # if "compute_atomic_stresses" not in self.instructions["forward_kwargs"]:
-        #     self.instructions["forward_kwargs"]["compute_atomic_stresses"] = (
-        #         self.compute_atomic_stresses
-        #     )
         if "compute_stress" not in self.instructions["forward_kwargs"]:
             self.instructions["forward_kwargs"]["compute_stress"] = compute_stress
-        # if "compute_hessian" not in self.instructions["forward_kwargs"]:
-        #     self.instructions["forward_kwargs"]["compute_hessian"] = False
 
         forward_kwargs = self.instructions["forward_kwargs"].copy()
 
@@ -365,21 +384,15 @@ class ExtendedMACECalculator(MACECalculator):
             forward_kwargs["compute_virials"] = False
             forward_kwargs["compute_edge_forces"] = False
 
-        # results_tensors = self._create_result_tensors(
-        #     self.model_type, self.num_models, len(atoms)
-        # )
-        # if "energy" not in results_tensors:
-        #     results_tensors["energy"] = results_tensors["energies"].clone()
-        # if compute_bec:
-        #     f = results_tensors["forces"]
-        #     results_tensors["BEC"] = torch.zeros(
-        #         (len(self.models), *f.shape[1:], 3), device=self.device
-        #     )
+        data_loader = DataLoader(
+            dataset,
+            batch_size=self.batch_size,
+            shuffle=False,
+            drop_last=False,
+        )
 
         return (
             data_loader,
-            # results_tensors,
-            node_e0,
             {
                 "training": training,
                 "compute_bec": compute_bec,
@@ -387,63 +400,58 @@ class ExtendedMACECalculator(MACECalculator):
             },
         )
 
-    @timeit(name="calculate()", report=True)
+    @timeit(name="compute_batched", report=True)
     def compute_batched(self, atoms: List[Atoms]):
-        """
-        Calculate properties.
-        :param atoms: ase.Atoms object
-        :param properties: [str], properties to be computed, used by ASE internally
-        :param system_changes: [str], system changes since last calculation, used by ASE internally
-        :return:
-        """
+        """ """
 
-        data_loader, node_e0, options = self.preprocess(atoms)
+        data_loader, options = self.preprocess(atoms)
         training = options["training"]
         compute_bec = options["compute_bec"]
         forward_kwargs = options["forward_kwargs"]
 
         # model evaluation
         results = None
-        with self.logger.section("Forward pass loop"):
-            # loop over models in the committee
-            for batch_base in data_loader:
-                batch = batch_base.to(self.device)
-                batch = self._clone_batch(batch_base).to_dict()
-                        
-                for i, model in enumerate(self.models):
+        #
+        # loop over models in the committee
+        for batch_base in data_loader:
+            batch = batch_base.to(self.device)
+            batch = self._clone_batch(batch_base).to_dict()
+
+            for i, model in enumerate(self.models):
+                with self.logger.section("forward"):
                     out = model(
                         batch,
                         training=training,
                         **forward_kwargs,
                     )
 
-                    # apply the external electric/dielectric field
-                    out = self.apply_ensemble(out, batch, training, compute_bec)
+                # apply the external electric/dielectric field
+                out = self.apply_ensemble(out, batch, training, compute_bec)
+                out["node_energy"] -= batch["node_e0"]
 
-                    # collect the results
-                    results_tensors = {}
-                    for key, value in out.items():
-                        if (
-                            "ignore" in self.instructions
-                            and key in self.instructions["ignore"]
-                        ):
-                            continue
-                        if key not in results_tensors:
-                            results_tensors[key] = [None] * len(self.models)
-                        results_tensors[key][i] = value.detach().cpu().numpy()
-                
-                pp_results =  self.postprocess(batch, results_tensors)
-                
-                if results is None:
-                    results = pp_results
-                else:
-                    for key,value in pp_results.items():
-                        results[key].append(*value)
-                
+                # collect the results
+                results_tensors = {}
+                for key, value in out.items():
+                    if (
+                        "ignore" in self.instructions
+                        and key in self.instructions["ignore"]
+                    ):
+                        continue
+                    if key not in results_tensors:
+                        results_tensors[key] = [None] * len(self.models)
+                    results_tensors[key][i] = value.detach().cpu().numpy()
+
+            pp_results = self.postprocess(batch, results_tensors)
+
+            if results is None:
+                results = pp_results
+            else:
+                for key, value in pp_results.items():
+                    results[key].extend(value if len(value) > 1 else [value])
+
         return results
 
-
-    @timeit(name="'postprocess'")
+    @timeit(name="postprocess")
     def postprocess(self, batch: Batch, results_tensors: Dict[str, torch.Tensor]):
         results = {}
         for key, value in results_tensors.items():
@@ -459,7 +467,7 @@ class ExtendedMACECalculator(MACECalculator):
                 results[f"{key}_var"] = np.var(values, axis=0)
         return batch2dict_of_list(batch, results)
 
-    @timeit("'compute_BEC_piezo'")
+    @timeit("compute_BEC_piezo")
     def compute_BEC_piezo(
         self, data: Dict[str, torch.Tensor], batch: Batch
     ) -> Tuple[torch.Tensor, torch.Tensor]:
@@ -519,7 +527,7 @@ class ExtendedMACECalculator(MACECalculator):
 
         return bec, piezo
 
-    @timeit("'apply_ensemble'")
+    @timeit("apply_ensemble")
     def apply_ensemble(
         self,
         data: Dict[str, torch.Tensor],
@@ -527,12 +535,9 @@ class ExtendedMACECalculator(MACECalculator):
         training: bool,
         compute_bec: bool,
     ) -> Dict[str, torch.Tensor]:
-        # if self.instructions == {}:
-        #     return data
 
         ensemble = str(self.instructions["ensemble"]).upper()
         if ensemble == "NONE":  # no ensemble (just for debugging purposes)
-            # compute Born Effective Charges using autodiff
             pass
         else:
             extras = self.get_extras()
@@ -556,13 +561,16 @@ class ExtendedMACECalculator(MACECalculator):
                 data["energy"] -= interaction_energy
                 data["forces"] += torch.einsum("ijk,i->jk", bec, Efield)
                 if piezo is not None:
-                    cell:torch.Tensor = batch["cell"].view((-1,3,3))
+                    cell: torch.Tensor = batch["cell"].view((-1, 3, 3))
                     volume = torch.det(cell)
                     data["stress"] -= (
-                        torch.einsum("ijkl,i->jkl", piezo, Efield) / volume[:,None,None]
+                        torch.einsum("ijkl,i->jkl", piezo, Efield)
+                        / volume[:, None, None]
                     )
 
             elif ensemble == "E":
+
+                # Interaction energy due to the Electric Dipole Approximation
                 interaction_energy = mu @ Efield
                 data["energy"] -= interaction_energy
 
@@ -593,11 +601,8 @@ class ExtendedMACECalculator(MACECalculator):
                         raise ValueError(f"'{keyword}' in 'data' should be None.")
                     data[keyword] = value
 
-            elif ensemble == "D":  # fixed dielectric displacement
-                ValueError("Not implemented yet")
-
             else:
-                raise ValueError("coding error")
+                raise ValueError(f"Ensemble {ensemble} not implemented (yet).")
 
         if compute_bec and "BEC" not in data:
             bec, piezo = self.compute_BEC_piezo(data, batch)

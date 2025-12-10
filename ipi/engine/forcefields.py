@@ -465,6 +465,7 @@ class FFDirect(ForceField):
                     "You must provide a pes_path for the custom PES driver."
                 )
             from ipi.pes.dummy import Dummy_driver
+
             self.driver = load_pes(self.pes, self.pes_path)(**pars)
             if not isinstance(self.driver, Dummy_driver):
                 raise ValueError("coding error")
@@ -2309,11 +2310,15 @@ class FFDielectric(ForceField):
         time = float(atoms.motion.actual_time)
         field = self.field.get(time)
         field = dstrip(field).tolist()
-        extra_template = {
-            "time": time,  # not strictly necessary but useful for debugging
-            "extra": json.dumps({"Efield": field}),  # extra information
+        extra_template = {  # extra informationssss
+            "extra": json.dumps(
+                {
+                    "Efield": field,  # electric field
+                    "time": time,  # not strictly necessary but useful for debugging
+                }
+            ),
         }
-        self.template = extra_template.copy() # just for debugging
+        self.template = extra_template.copy()  # just for debugging
 
         assert self.where in ["client", "server"], "coding error"
 
