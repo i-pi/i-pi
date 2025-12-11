@@ -2395,7 +2395,7 @@ class FFDielectric(ForceField):
 
 
 class ArrayFromDict:
-    def __init__(self, family: str, units, key: str):
+    def __init__(self, family: str, units:str , key: str):
         self.family = family
         self.units = units
         self.key = key
