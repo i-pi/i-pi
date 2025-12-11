@@ -1,18 +1,19 @@
+#!/usr/bin/env python
 """An (extended) interface for the [MACE](https://github.com/ACEsuit/mace) calculator"""
 
 import json
 import torch
 import numpy as np
-from typing import List, Dict, Tuple, Union
+from typing import List, Dict, Tuple, Union, Optional
 
-from mace import data
+# from mace import data
 from mace.tools.torch_geometric.dataloader import DataLoader
 from mace.tools.torch_geometric.batch import Batch
 from mace.calculators import MACECalculator
 from mace.modules.utils import get_outputs
 
 from ase import Atoms
-from ase.io import read
+from ase.io import read, write
 from ase.outputs import _defineprop, all_outputs
 
 from ipi.pes.ase import ASEDriver
@@ -25,6 +26,8 @@ from ipi.utils.units import unit_to_user
 __DRIVER_NAME__ = "extmace"
 __DRIVER_CLASS__ = "Extended_MACE_driver"
 
+DEBUG = False
+
 ase_like_properties = {
     "energy": (),
     "node_energy": ("natoms",),
@@ -36,89 +39,8 @@ ase_like_properties = {
     "atomic_dipoles": ("natoms", 3),
     "atomic-oxn-dipole": ("natoms", 3),
     "BEC": ("natoms", 3, 3),
-    "piezo": (3, 3, 3),
+    "piezoelectric": (3, 3, 3),
 }
-
-
-def to_scalar_or_array(x):
-    """
-    Convert size-1 list/array to float.
-    Otherwise return a NumPy array.
-    """
-    arr = np.asarray(x)
-
-    if arr.size == 1:
-        return float(arr.reshape(()))
-    else:
-        return arr
-
-
-def dict_of_list2list_of_dict(
-    results: Dict[str, List[Union[float, np.ndarray]]],
-) -> List[Dict[str, Union[float, np.ndarray]]]:
-
-    out = []
-
-    # Get number of entries from the first key
-    n = len(next(iter(results.values())))
-
-    for i in range(n):
-        entry = {}
-        for key, values in results.items():
-            entry[key] = to_scalar_or_array(values[i])
-        out.append(entry)
-
-    return out
-
-
-def batch2dict_of_list(
-    batch, output: Dict[str, np.ndarray]
-) -> Dict[str, Union[List[float], List[np.ndarray]]]:
-    Nstructures = len(batch["ptr"]) - 1
-    results = {}
-    Natoms = [
-        a.shape[0] for a in np.split(output["forces"], batch["ptr"][1:], axis=0)[:-1]
-    ]
-    assert (
-        len(Natoms) == Nstructures
-    ), f"len(Natoms) should be equal to {Nstructures} but its {len(Natoms)}."
-
-    def correct_shape(value: np.ndarray, shape: tuple):
-        if shape == ():
-            return float(value)
-        else:
-            return value.reshape(shape)
-
-    for key in output.keys():
-
-        if key not in ase_like_properties:
-            warning(f"Please add '{key}' to 'ase_like_properties' in {__file__}")
-            continue
-
-        value = output[key]
-        shape = ase_like_properties[key]
-
-        results[key] = [None] * Nstructures
-
-        shape1 = () if len(shape) <= 1 else shape[1:]
-
-        if "natoms" in shape:
-            assert shape[0] == "natoms", "'natoms' allowed only as first dimension."
-            # [n_nodes,...] --> [ [n_atoms_0,...] , [n_atoms_1,...], ... ]
-            value = np.split(value, batch["ptr"][1:], axis=0)[:-1]
-            assert len(value) == Nstructures, f"coding error for '{key}'"
-            for n, v in enumerate(value):
-                results[key][n] = correct_shape(v, (Natoms[n],) + shape1)
-
-        elif "natoms" in shape1:
-            raise ValueError("'natoms' allowed only as first dimension.")
-
-        else:
-            assert value.shape[0] == Nstructures, f"coding error for '{key}'"
-            for n, v in enumerate(value):
-                results[key][n] = correct_shape(v, shape)
-
-    return results
 
 
 class Extended_MACE_driver(ASEDriver):
@@ -408,7 +330,7 @@ class ExtendedMACECalculator(MACECalculator):
             # post process results
             pp_results = self.postprocess(batch, results_tensors)
 
-            # aggregate results ovet the different batches
+            # aggregate results over the different batches
             if results is None:
                 results = pp_results
             else:
@@ -471,10 +393,10 @@ class ExtendedMACECalculator(MACECalculator):
         if displacement.requires_grad:
             res = compute_dielectric_gradients(mu, [pos, displacement])
             bec = res[0]  # (3,n_nodes,3)
-            piezo = res[1]  # (3,n_graphs,3,3)
+            dmu_deta = res[1]  # (3,n_graphs,3,3)
         else:
             bec = compute_dielectric_gradients(mu, [pos])[0]
-            piezo = None
+            dmu_deta = None
 
         if not isinstance(bec, torch.Tensor):
             raise ValueError(
@@ -485,14 +407,14 @@ class ExtendedMACECalculator(MACECalculator):
                 f"The computed Born Charges have the wrong shape. The shape {(dipole_components,*pos.shape)} was expected but got {tuple(bec.shape)}."
             )
 
-        if piezo is not None:
-            if not isinstance(piezo, torch.Tensor):
+        if dmu_deta is not None:
+            if not isinstance(dmu_deta, torch.Tensor):
                 raise ValueError(
-                    f"The computed piezoelectric tensor is not a torch.Tensor rather a {type(piezo)}"
+                    f"The computed piezoelectric tensor is not a torch.Tensor rather a {type(dmu_deta)}"
                 )
-            if tuple(piezo.shape) != (dipole_components, *displacement.shape):
+            if tuple(dmu_deta.shape) != (dipole_components, *displacement.shape):
                 raise ValueError(
-                    f"The computed piezoelectric tensor has the wrong shape. The shape {(dipole_components,*displacement.shape)} was expected but got {tuple(piezo.shape)}."
+                    f"The computed piezoelectric tensor has the wrong shape. The shape {(dipole_components,*displacement.shape)} was expected but got {tuple(dmu_deta.shape)}."
                 )
 
         # Attention:
@@ -501,7 +423,7 @@ class ExtendedMACECalculator(MACECalculator):
         # This means that bec[0,3,2] will contain d mu_x / d R^3_z,
         # where mu_x is the x-component of the dipole and R^3_z is the z-component of the 4th (zero-indexed) atom i n the structure/batch.
 
-        return bec, piezo
+        return bec, dmu_deta
 
     @timeit("apply_ensemble")
     def apply_ensemble(
@@ -528,21 +450,58 @@ class ExtendedMACECalculator(MACECalculator):
                 # This is very similar to what is done in the function 'fixed_E' in 'ipi/engine/forcefields.py'.
                 if not compute_bec:
                     raise ValueError("coding error")
-                bec, piezo = self.compute_dmu_dR_deta(data, batch)
-                data["BEC"] = bec.moveaxis(0, 2).moveaxis(1, 2)
-                if piezo is not None:
-                    data["piezo"] = piezo.moveaxis(0, 3).moveaxis(1, 3)
+                bec, dmu_deta = self.compute_dmu_dR_deta(data, batch)
 
                 interaction_energy = mu @ Efield
                 data["energy"] -= interaction_energy
                 data["forces"] += torch.einsum("ijk,i->jk", bec, Efield)
-                if piezo is not None:
+
+                # store to output results
+                data["BEC"] = bec.moveaxis(
+                    0, 1
+                )  # (mu_xyz,node,R_xyz) --> (node,mu_xyz,R_xyz)
+
+                if dmu_deta is not None:
                     cell: torch.Tensor = batch["cell"].view((-1, 3, 3))
                     volume = torch.det(cell)
-                    data["stress"] -= (
-                        torch.einsum("ijkl,i->jkl", piezo, Efield)
+                    stress_E = (
+                        torch.einsum("ijkl,i->jkl", dmu_deta, Efield)
                         / volume[:, None, None]
                     )
+                    data["stress"] -= stress_E
+
+                    dmu_deta = dmu_deta.moveaxis(
+                        0, 1
+                    )  # (mu_xyz,graph,eta_i,eta_j) --> (graph,mu_xyz,eta_i,eta_j)
+                    data["piezoelectric"] = dmu_deta2piezoelectric(
+                        dmu_deta, data["dipole"], volume
+                    )
+                    if DEBUG:
+                        # Eq. (16) of Computer Physics Communications 190 (2015) 33-50
+                        cell = torch.einsum(
+                            "ijk,ikl->ijl",
+                            batch["cell"].view((-1, 3, 3)),
+                            torch.eye(3)[None, :, :] + data["displacement"],
+                        )
+                        volume = torch.det(cell)
+                        test = compute_dielectric_gradients(
+                            data["dipole"] / volume[:, None], [data["displacement"]]
+                        )[0]
+                        test = test.moveaxis(
+                            0, 1
+                        )  # (mu_xyz,graph,eta_i,eta_j) --> (graph,mu_xyz,eta_i,eta_j)
+                        assert torch.allclose(
+                            test, data["piezoelectric"]
+                        ), "coding error"
+
+                        test = (
+                            data["piezoelectric"]
+                            + data["dipole"][:, :, None, None]
+                            * torch.eye(3)[None, None, :, :]
+                            / volume[:, None, None, None]
+                        )
+                        test = torch.einsum("ijkl,j->ikl", test, Efield)
+                        assert torch.allclose(test, stress_E), "coding error"
 
             elif ensemble == "E":
 
@@ -581,33 +540,84 @@ class ExtendedMACECalculator(MACECalculator):
                 raise ValueError(f"Ensemble {ensemble} not implemented (yet).")
 
         if compute_bec and "BEC" not in data:
-            bec, piezo = self.compute_dmu_dR_deta(data, batch)
-            data["BEC"] = bec.moveaxis(0, 2).moveaxis(1, 2)
-            if piezo is not None:
-                data["piezo"] = piezo.moveaxis(0, 3).moveaxis(1, 3)
+            bec, dmu_deta = self.compute_dmu_dR_deta(data, batch)
+            # store to output results
+            # (mu_xyz,node,R_xyz) --> (node,mu_xyz,R_xyz)
+            data["BEC"] = bec.moveaxis(0, 1)
+            if dmu_deta is not None:
+                dmu_deta = dmu_deta.moveaxis(0, 3).moveaxis(1, 3)
+                data["piezoelectric"] = dmu_deta2piezoelectric(
+                    dmu_deta, data["dipole"], volume
+                )
 
         return data
 
 
 # --------------------------------------- #
+def dmu_deta2piezoelectric(
+    dmu_deta: torch.Tensor, mu: torch.Tensor, volume: torch.Tensor
+):
+    """
+    Convert the derivative of the dipole (mu) w.r.t. the lattice displacements (eta)
+    to the piezoelectric tensor e_{ijk}.
+
+    e_{ijk} = [ ∂μ_i / ∂η_{jk} - μ_i δ_{jk} ] / V
+    """
+
+    Nbatches = dmu_deta.shape[0]
+
+    assert dmu_deta.shape == (
+        Nbatches,
+        3,
+        3,
+        3,
+    ), f"dmu_deta must have shape (B, 3, 3, 3), got {tuple(dmu_deta.shape)}"
+
+    assert mu.shape == (
+        Nbatches,
+        3,
+    ), f"mu must have shape (B, 3), got {tuple(mu.shape)}"
+
+    assert volume.shape == (
+        Nbatches,
+    ), f"volume must have shape (B,), got {tuple(volume.shape)}"
+
+    delta = torch.eye(3, device=dmu_deta.device, dtype=dmu_deta.dtype)
+
+    # Correct batched μ_i δ_jk → (B, 3, 3, 3)
+    mu_delta = mu[:, :, None, None] * delta[None, None, :, :]
+
+    e = (dmu_deta - mu_delta) / volume[:, None, None, None]
+
+    assert e.shape == (
+        Nbatches,
+        3,
+        3,
+        3,
+    ), f"output must have shape (B, 3, 3, 3), got {tuple(e.shape)}"
+
+    return e
+
+
+# --------------------------------------- #
 # Function taken from https://github.com/davkovacs/mace/tree/mu_alpha
 def compute_dielectric_gradients(
-    dielectric: torch.Tensor, inputs: List[torch.Tensor]
-) -> torch.Tensor:
-    """Compute the spatial derivatives of dielectric tensor.
+    dielectric: torch.Tensor, inputs: List[torch.Tensor], clean: Optional[bool] = False
+) -> List[torch.Tensor]:
+    """
+    Compute gradients of the dielectric tensor with respect to a list of input tensors.
 
     Args:
-        dielectric (torch.Tensor): Dielectric tensor.
-        inputs (List of torch.Tensor): Atom positions.
+        dielectric: Tensor whose gradients are computed.
+        inputs: Tensors to differentiate with respect to (arbitrary shapes allowed).
+        clean: If True, frees parts of the autograd graph when possible.
 
     Returns:
-        torch.Tensor: Spatial derivatives of dielectric tensor.
+        List[torch.Tensor]: For each input tensor, the gradient d(dielectric)/d(input).
     """
-    # dielectric = dielectric[:,0:2]
     d_dielectric_dr = d_dielectric_dr = [
         [None for _ in range(dielectric.shape[-1])] for _ in range(len(inputs))
     ]
-    # [Pxyz,atoms,Rxyz]
     grad_outputs: List[torch.Tensor] = [
         torch.ones((dielectric.shape[0], 1)).to(dielectric.device)
     ]
@@ -616,7 +626,8 @@ def compute_dielectric_gradients(
             outputs=[dielectric[:, i].unsqueeze(-1)],
             inputs=inputs,
             grad_outputs=grad_outputs,
-            retain_graph=(i < dielectric.shape[-1] - 1),  # small optimization
+            retain_graph=(i < dielectric.shape[-1] - 1)
+            or not clean,  # small optimization
             create_graph=False,  # small optimization
             allow_unused=False,  # small optimization
         )
@@ -626,4 +637,193 @@ def compute_dielectric_gradients(
             d_dielectric_dr[j][i] = gradient.detach()
         del gradients  # cleanup
     del grad_outputs  # cleanup
-    return [torch.stack(out, dim=0) for out in d_dielectric_dr]  # [Pxyz,atoms,Rxyz]
+    return [torch.stack(out, dim=0) for out in d_dielectric_dr]
+
+
+# --------------------------------------- #
+def to_scalar_or_array(x):
+    """
+    Convert size-1 list/array to float.
+    Otherwise return a NumPy array.
+    """
+    arr = np.asarray(x)
+
+    if arr.size == 1:
+        return float(arr.reshape(()))
+    else:
+        return arr
+
+
+# --------------------------------------- #
+def dict_of_list2list_of_dict(
+    results: Dict[str, List[Union[float, np.ndarray]]],
+) -> List[Dict[str, Union[float, np.ndarray]]]:
+    """
+    Convert a dict of lists into a list of dicts, converting size-1 arrays to floats.
+    """
+
+    out = []
+
+    # Get number of entries from the first key
+    n = len(next(iter(results.values())))
+
+    for i in range(n):
+        entry = {}
+        for key, values in results.items():
+            entry[key] = to_scalar_or_array(values[i])
+        out.append(entry)
+
+    return out
+
+
+# --------------------------------------- #
+def batch2dict_of_list(
+    batch, output: Dict[str, np.ndarray]
+) -> Dict[str, Union[List[float], List[np.ndarray]]]:
+    """
+    Convert batched model outputs into a dict of per-structure lists,
+    reshaping values according to `ase_like_properties` and handling
+    'natoms'-dependent dimensions.
+    """
+
+    Nstructures = len(batch["ptr"]) - 1
+    results = {}
+    Natoms = [
+        a.shape[0] for a in np.split(output["forces"], batch["ptr"][1:], axis=0)[:-1]
+    ]
+    assert (
+        len(Natoms) == Nstructures
+    ), f"len(Natoms) should be equal to {Nstructures} but its {len(Natoms)}."
+
+    def correct_shape(value: np.ndarray, shape: tuple):
+        if shape == ():
+            return float(value)
+        else:
+            return value.reshape(shape)
+
+    for key in output.keys():
+
+        if key not in ase_like_properties:
+            warning(f"Please add '{key}' to 'ase_like_properties' in {__file__}")
+            continue
+
+        value = output[key]
+        shape = ase_like_properties[key]
+
+        results[key] = [None] * Nstructures
+
+        shape1 = () if len(shape) <= 1 else shape[1:]
+
+        if "natoms" in shape:
+            assert shape[0] == "natoms", "'natoms' allowed only as first dimension."
+            # [n_nodes,...] --> [ [n_atoms_0,...] , [n_atoms_1,...], ... ]
+            value = np.split(value, batch["ptr"][1:], axis=0)[:-1]
+            assert len(value) == Nstructures, f"coding error for '{key}'"
+            for n, v in enumerate(value):
+                results[key][n] = correct_shape(v, (Natoms[n],) + shape1)
+
+        elif "natoms" in shape1:
+            raise ValueError("'natoms' allowed only as first dimension.")
+
+        else:
+            assert value.shape[0] == Nstructures, f"coding error for '{key}'"
+            for n, v in enumerate(value):
+                results[key][n] = correct_shape(v, shape)
+
+    return results
+
+
+# -----------------------------------------------------------
+# Script entry point
+# -----------------------------------------------------------
+if __name__ == "__main__":
+    import argparse
+    import json
+    from ase.io import read, write
+
+    parser = argparse.ArgumentParser(
+        description="Evaluate a MACE model on structures using ExtendedMACECalculator."
+    )
+
+    parser.add_argument(
+        "-m",
+        "--model",
+        type=str,
+        required=True,
+        help="Path to the trained MACE model file.",
+    )
+    parser.add_argument(
+        "-d",
+        "--device",
+        type=str,
+        default="cpu",
+        help="Torch device (default: cpu). Example: cuda:0",
+    )
+    parser.add_argument(
+        "-mk",
+        "--mace_kwargs",
+        type=str,
+        default=None,
+        help="JSON file with extra input arguments for the calculator.",
+    )
+    parser.add_argument(
+        "-i",
+        "--input_structures",
+        type=str,
+        required=True,
+        help="Input file (ASE-readable).",
+    )
+    parser.add_argument(
+        "-o",
+        "--output_structures",
+        type=str,
+        required=True,
+        help="Output file (ASE-readable).",
+    )
+    parser.add_argument(
+        "-p",
+        "--prefix",
+        type=str,
+        default="MACE_",
+        help="Prefix for saved properties.",
+    )
+
+    args = parser.parse_args()
+
+    print(f"Loading input structures from '{args.input_structures}'...")
+    structures = read(args.input_structures, index=":")
+    print(f"Loaded {len(structures)} structure(s).")
+
+    # Load extra kwargs if provided
+    mace_kwargs = {}
+    if args.mace_kwargs is not None:
+        print(f"Loading extra MACE kwargs from '{args.mace_kwargs}'...")
+        with open(args.mace_kwargs, "r") as f:
+            mace_kwargs = json.load(f)
+        print("Loaded extra kwargs:", mace_kwargs)
+
+    print(
+        f"Initializing ExtendedMACECalculator with model '{args.model}' on device '{args.device}'..."
+    )
+    calc = ExtendedMACECalculator(
+        model_path=args.model, device=args.device, **mace_kwargs
+    )
+    print("Calculator initialized.")
+
+    print("Evaluating structures with MACE model...")
+    results = calc.compute_batched(structures)
+    list_of_results = dict_of_list2list_of_dict(results)
+    assert len(structures) == len(results), "coding error"
+    print("Evaluation complete.")
+
+    print("Saving results into ASE Atoms objects...")
+    for n, (atoms, results) in enumerate(zip(structures, list_of_results)):
+        for key, value in results.items():
+            shape = ase_like_properties[key]
+            if "natoms" in shape:
+                atoms.arrays[f"{args.prefix}{key}"] = value
+            else:
+                atoms.info[f"{args.prefix}{key}"] = value
+    print(f"Writing output structures to '{args.output_structures}'...")
+    write(args.output_structures, images=structures, format="extxyz")
+    print("All done!")
