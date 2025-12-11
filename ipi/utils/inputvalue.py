@@ -24,6 +24,7 @@ import numpy as np
 
 from ipi.utils.io.inputs.io_xml import *
 from ipi.utils.units import unit_to_internal, unit_to_user, UnitMap
+from ipi.utils.softexit import softexit
 
 __all__ = [
     "Input",
@@ -1325,11 +1326,11 @@ class InputValueFromDict(Input):
     # The user can not provide the 'family', but only 'units' and 'key'.
     # The 'family' is provided by the developer.
 
+    family: InputAttribute  # str
+    units: InputAttribute  # str
+    key: InputAttribute  # str
+
     attribs = {
-        # "family": (
-        #     InputAttribute,
-        #     {"dtype": str, "default": "", "help": "Help message for 'family'", "options": None},
-        # ),
         "units": (
             InputAttribute,
             {
@@ -1355,11 +1356,11 @@ class InputValueFromDict(Input):
     # - The new attribute will not be saved to file because it will always have the default value (this is the default in i-PI)
     # - the user can not specify 'family': the code will raise an exception.
     @classmethod
-    def specialize(cls, family: str, default: str, key: str):
+    def specialize(cls, family: str, units: str, key: str):
         assert family in UnitMap, "coding error"
-        assert default in UnitMap[family], "coding error"
+        assert units in UnitMap[family], "coding error"
         options = list(UnitMap[family].keys())
-        assert default in options, "coding error"
+        assert units in options, "coding error"
 
         # Create a deep copy of the original fields
         new_attribs = deepcopy(cls.attribs)
@@ -1375,7 +1376,7 @@ class InputValueFromDict(Input):
         )
 
         new_attribs["units"][1]["options"] = options
-        new_attribs["units"][1]["default"] = default
+        new_attribs["units"][1]["default"] = units
 
         new_attribs["key"][1]["default"] = key
 
@@ -1395,3 +1396,54 @@ class InputValueFromDict(Input):
         for f, v in self.attribs.items():
             rdic[f] = self.__dict__[f].fetch()
         return rdic
+
+    def default(self):
+        """Return the (hard-coded) default value."""
+        return input_default(
+            factory=ArrayFromDict,
+            kwargs={
+                "family": self.family.fetch(),
+                "units": self.units.fetch(),
+                "key": self.key.fetch(),
+            },
+        )
+
+
+class ArrayFromDict:
+    def __init__(self, family: str, units: str, key: str):
+        self.family = family
+        self.units = units
+        self.key = key
+        # self.shape = shape
+
+    def __repr__(self):
+        return (
+            f"{self.__class__.__name__}("
+            f"family={self.family!r}, "
+            f"units={self.units!r}, "
+            f"key={self.key!r}, "
+            # f"shape={self.shape!r})"
+        )
+
+    def get(self, dictionary: dict) -> np.ndarray:
+        if not isinstance(dictionary, dict):
+            softexit.trigger(
+                status="bad",
+                message=f"The input variable was supposed to be a python dictionary but it is {type(dictionary)}.",
+            )
+        if self.key not in dictionary:
+            softexit.trigger(
+                status="bad",
+                message=f"The key '{self.key}' is not in the provided dictionary.",
+            )
+        value = dictionary[self.key]
+        value = np.asarray(value)
+        # if self.shape is not None:
+        #     value = np.reshape(value,self.shape)
+        return unit_to_internal(self.family, self.units, value)
+
+    def __getitem__(self, name):
+        return self.__getattribute__(name)
+
+    def keys(self):
+        return ["family", "units", "key"]

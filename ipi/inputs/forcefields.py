@@ -1210,6 +1210,11 @@ class InputFFCavPhSocket(InputFFSocket):
 
 class InputFFDielectric(InputForceField):
 
+    _dipole_cls = InputValueFromDict.specialize(
+        family="electric-dipole", units="eang", key="dipole"
+    )
+    _bec_cls = InputValueFromDict.specialize(family="charge", units="e", key="BEC")
+
     dynamic = {
         "ffsocket": (InputFFSocket, {"help": InputFFSocket.default_help}),
         "ffdirect": (InputFFDirect, {"help": InputFFDirect.default_help}),
@@ -1233,16 +1238,16 @@ class InputFFDielectric(InputForceField):
     )
 
     fields["dipole"] = (
-        InputValueFromDict.specialize(
-            family="electric-dipole", default="eang", key="dipole"
-        ),
+        _dipole_cls,
         {
+            "default": _dipole_cls().default(),
             "help": "How to extract the dipole (keyword and units) from the extra information.",
         },
     )
     fields["bec"] = (
-        InputValueFromDict.specialize(family="charge", default="e", key="BEC"),
+        _bec_cls,
         {
+            "default": _bec_cls().default(),
             "help": "How to extract the Born Charges (keyword and units) from the extra information.",
         },
     )

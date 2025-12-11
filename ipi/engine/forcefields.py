@@ -27,6 +27,7 @@ from ipi.utils.depend import dstrip
 from ipi.utils.io import read_file
 from ipi.utils.units import unit_to_internal
 from ipi.utils.distance import vector_separation
+from ipi.utils.inputvalue import ArrayFromDict
 from ipi.pes import load_pes
 from ipi.utils.mathtools import (
     get_rotation_quadrature_legendre,
@@ -2392,43 +2393,3 @@ class FFDielectric(ForceField):
 
     def fixed_D(self, request: dict):
         raise ValueError("Not implemented yet")
-
-
-class ArrayFromDict:
-    def __init__(self, family: str, units:str , key: str):
-        self.family = family
-        self.units = units
-        self.key = key
-        # self.shape = shape
-
-    def __repr__(self):
-        return (
-            f"{self.__class__.__name__}("
-            f"family={self.family!r}, "
-            f"units={self.units!r}, "
-            f"key={self.key!r}, "
-            # f"shape={self.shape!r})"
-        )
-
-    def get(self, dictionary: dict) -> np.ndarray:
-        if not isinstance(dictionary, dict):
-            softexit.trigger(
-                status="bad",
-                message=f"The input variable was supposed to be a python dictionary but it is {type(dictionary)}.",
-            )
-        if self.key not in dictionary:
-            softexit.trigger(
-                status="bad",
-                message=f"The key '{self.key}' is not in the provided dictionary.",
-            )
-        value = dictionary[self.key]
-        value = np.asarray(value)
-        # if self.shape is not None:
-        #     value = np.reshape(value,self.shape)
-        return unit_to_internal(self.family, self.units, value)
-
-    def __getitem__(self, name):
-        return self.__getattribute__(name)
-
-    def keys(self):
-        return ["family", "units", "key"]
