@@ -530,11 +530,13 @@ class ExtendedMACECalculator(MACECalculator):
                     "hessian": hessian,
                     "edge_forces": edge_forces,
                 }
+                del data["virials"]  # virials should be computed from the stress tensor
 
                 for keyword, value in to_assign.items():
                     if keyword in data and data[keyword] is not None:
                         raise ValueError(f"'{keyword}' in 'data' should be None.")
-                    data[keyword] = value
+                    if value is not None:
+                        data[keyword] = value
 
             else:
                 raise ValueError(f"Ensemble {ensemble} not implemented (yet).")
