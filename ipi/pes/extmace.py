@@ -6,14 +6,14 @@ import torch
 import numpy as np
 from typing import List, Dict, Tuple, Union, Optional
 
-# from mace import data
+from mace import data
 from mace.tools.torch_geometric.dataloader import DataLoader
 from mace.tools.torch_geometric.batch import Batch
 from mace.calculators import MACECalculator
 from mace.modules.utils import get_outputs
 
 from ase import Atoms
-from ase.io import read, write
+from ase.io import read
 from ase.outputs import _defineprop, all_outputs
 
 from ipi.pes.ase import ASEDriver
@@ -738,8 +738,7 @@ def batch2dict_of_list(
 # -----------------------------------------------------------
 if __name__ == "__main__":
     import argparse
-    import json
-    from ase.io import read, write
+    from ase.io import write
 
     parser = argparse.ArgumentParser(
         description="Evaluate a MACE model on structures using ExtendedMACECalculator."
