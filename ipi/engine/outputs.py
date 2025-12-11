@@ -609,8 +609,12 @@ class TrajectoryOutput(BaseOutput):
                             )
                         )
                     else:
-                        raise ValueError(
-                            "No specialized writer for arrays of dimension > 2"
+                        flattened = floatarray.flatten()
+                        stream.write(
+                            " ".join(
+                                ipi_global_settings["floatformat"] % el
+                                for el in flattened
+                            )
                         )
                     stream.write("\n")
             if flush:
