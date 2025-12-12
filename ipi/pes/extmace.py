@@ -506,7 +506,7 @@ class ExtendedMACECalculator(MACECalculator):
                     if data[keyword] is not None:
                         raise ValueError(f"'{keyword}' in 'data' should be None.")
 
-                with self.logger.section("'get_outputs'"):
+                with self.logger.section("get_outputs"):
                     forces, virials, stress, hessian, edge_forces = get_outputs(
                         energy=data["energy"],
                         positions=batch["positions"],
