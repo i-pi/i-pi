@@ -540,7 +540,7 @@ class ExtendedMACECalculator(MACECalculator):
             # (mu_xyz,node,R_xyz) --> (node,mu_xyz,R_xyz)
             data["BEC"] = bec.moveaxis(0, 1)
             if dmu_deta is not None:
-                dmu_deta = dmu_deta.moveaxis(0, 3).moveaxis(1, 3)
+                dmu_deta = dmu_deta.moveaxis(0, 1)
                 cell: torch.Tensor = batch["cell"].view((-1, 3, 3))
                 volume = torch.det(cell)
                 data["piezoelectric"] = dmu_deta2piezoelectric(
