@@ -17,7 +17,7 @@ from ase.io import read
 from ase.outputs import _defineprop, all_outputs
 
 from ipi.pes.ase import ASEDriver
-from ipi.pes.tools import Timer, timeit
+from ipi.pes.tools import Timer, timeit, JSONLogger, ModelResults
 from ipi.utils.messages import warning, verbosity
 from ipi.utils.units import unit_to_user
 
@@ -26,7 +26,7 @@ from ipi.utils.units import unit_to_user
 __DRIVER_NAME__ = "extmace"
 __DRIVER_CLASS__ = "Extended_MACE_driver"
 
-DEBUG = False
+DEBUG = True
 
 ase_like_properties = {
     "energy": (),
@@ -127,10 +127,10 @@ class Extended_MACE_driver(ASEDriver):
             # modify cell and positions, keep the other arrays and info as in the template
             atoms = self.template2atoms(cell, pos)
             results = self.batched_calculator.compute_batched(atoms)  # Dict[str,List]
-            list_of_results = dict_of_list2list_of_dict(results)  # List[Dict]
+            # list_of_results = dict_of_list2list_of_dict(results)  # List[Dict]
 
             # convert from angstrom to atomic_unit
-            out = [self.post_process(r, a) for r, a in zip(list_of_results, atoms)]
+            out = [self.post_process(r, a) for r, a in zip(results, atoms)]
 
             return out[0] if len(out) == 1 else out
         else:
@@ -162,9 +162,11 @@ class ExtendedMACECalculator(MACECalculator):
         if "ensemble" not in self.instructions:
             self.instructions["ensemble"] = "none"
 
-        log = self.instructions.get("log", None)
+        log = self.instructions.pop("log", None)
         self.logger = Timer(log is not None, log)
-        self.batch_size = self.instructions.get("batch_size", 1)
+        log = self.instructions.pop("log_results", None)
+        self.results_logger = JSONLogger(log)
+        self.batch_size = self.instructions.pop("batch_size", 1)
         self.instructions = instructions
         super().__init__(*argc, **kwargs)
         assert not self.use_compile, "self.use_compile=True is not supported yet."
@@ -297,11 +299,14 @@ class ExtendedMACECalculator(MACECalculator):
 
         # model evaluation
         results = None
-        #
+        model_results = [
+            ModelResults(ase_like_properties) for _ in range(self.num_models)
+        ]
         # loop over models in the committee
         for batch_base in data_loader:
             batch = batch_base.to(self.device)
             batch = self._clone_batch(batch_base).to_dict()
+            Natoms = batch2natoms(batch)
 
             for i, model in enumerate(self.models):
                 with self.logger.section("forward"):
@@ -325,19 +330,27 @@ class ExtendedMACECalculator(MACECalculator):
                         continue
                     if key not in results_tensors:
                         results_tensors[key] = [None] * len(self.models)
-                    results_tensors[key][i] = value.detach().cpu().numpy()
+                    results_tensors[key] = value.detach().cpu().numpy()
 
-            # post process results
-            pp_results = self.postprocess(batch, results_tensors)
+                model_results[i].store(Natoms, results_tensors)
 
-            # aggregate results over the different batches
-            if results is None:
-                results = pp_results
-            else:
-                for key, value in pp_results.items():
-                    results[key].extend(value if len(value) > 1 else [value])
+        out = ModelResults.mean(model_results)
+        [self.results_logger.save(a, f"results.{n}.json") for n, a in enumerate(out)]
+        return out
 
-        return results
+        #     # post process results
+        #     pp_results = self.postprocess(batch, results_tensors)
+        #     self.results_logger.save(pp_results,"pp_results.json")
+
+        #     # aggregate results over the different batches
+        #     if results is None:
+        #         results = pp_results
+        #     else:
+        #         for key, value in pp_results.items():
+        #             results[key].extend(value if len(value) > 1 else [value])
+
+        # self.results_logger.save(results)
+        # return results
 
     @timeit(name="postprocess")
     def postprocess(self, batch: Batch, results_tensors: Dict[str, torch.Tensor]):
@@ -443,7 +456,7 @@ class ExtendedMACECalculator(MACECalculator):
                 raise ValueError("The extra information dictionary is empty.")
             Efield = np.asarray(extras["Efield"])  # in atomic units
             Efield = unit_to_user("electric-field", "v/ang", Efield)
-            mu = data["dipole"][0]
+            mu = data["dipole"]
             Efield = torch.from_numpy(Efield).to(device=self.device, dtype=mu.dtype)
 
             if ensemble == "E-DEBUG":  # fixed external electric field
@@ -452,7 +465,7 @@ class ExtendedMACECalculator(MACECalculator):
                     raise ValueError("coding error")
                 bec, dmu_deta = self.compute_dmu_dR_deta(data, batch)
 
-                interaction_energy = mu @ Efield
+                interaction_energy = torch.einsum("ij,j->i", mu, Efield)
                 data["energy"] -= interaction_energy
                 data["forces"] += torch.einsum("ijk,i->jk", bec, Efield)
 
@@ -681,8 +694,16 @@ def dict_of_list2list_of_dict(
 
 
 # --------------------------------------- #
+
+
+def batch2natoms(batch: Batch) -> List[int]:
+    return [
+        a.shape[0] for a in np.split(batch["positions"], batch["ptr"][1:], axis=0)[:-1]
+    ]
+
+
 def batch2dict_of_list(
-    batch, output: Dict[str, np.ndarray]
+    batch: Batch, output: Dict[str, np.ndarray]
 ) -> Dict[str, Union[List[float], List[np.ndarray]]]:
     """
     Convert batched model outputs into a dict of per-structure lists,
@@ -692,9 +713,8 @@ def batch2dict_of_list(
 
     Nstructures = len(batch["ptr"]) - 1
     results = {}
-    Natoms = [
-        a.shape[0] for a in np.split(output["forces"], batch["ptr"][1:], axis=0)[:-1]
-    ]
+    Natoms = batch2natoms(batch)
+
     assert (
         len(Natoms) == Nstructures
     ), f"len(Natoms) should be equal to {Nstructures} but its {len(Natoms)}."
