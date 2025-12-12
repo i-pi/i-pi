@@ -243,6 +243,12 @@ UnitMap = {
         "eang": 1.8897261,  # electron charge * angstrom
         "debye": 0.3934303,  # https://en.wikipedia.org/wiki/Debye#cite_note-10
     },
+    "electric-polarization": {  # electron charge * Bohr
+        "": 1.00,
+        "automatic": 1.00,
+        "atomic_unit": 1.00,
+        "e/ang2": 1.0 / 1.8897261**2,  # electron charge / angstrom^2
+    },
     "ms-momentum": {  # TODO fill up units here (mass-scaled momentum)
         "": 1.00,
         "automatic": 1.00,
@@ -295,7 +301,7 @@ UnitMap = {
         "atomic_unit": 1.00,
         "ev/ang^2": 0.010290858,
     },
-    "charge": {"": 1.00, "automatic": 1.00, "e": 1.00},
+    "charge": {"": 1.00, "automatic": 1.00, "e": 1.00, "c": 1.60217663e-19},
 }
 
 # Conditionally includes "ase" units for each quantity
