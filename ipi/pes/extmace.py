@@ -4,7 +4,7 @@
 import json
 import torch
 import numpy as np
-from typing import List, Dict, Tuple, Union, Optional
+from typing import List, Dict, Tuple, Optional
 
 from mace import data
 from mace.tools.torch_geometric.dataloader import DataLoader
@@ -26,7 +26,7 @@ from ipi.utils.units import unit_to_user
 __DRIVER_NAME__ = "extmace"
 __DRIVER_CLASS__ = "Extended_MACE_driver"
 
-DEBUG = True
+DEBUG = False
 
 ase_like_properties = {
     "energy": (),
@@ -127,7 +127,6 @@ class Extended_MACE_driver(ASEDriver):
             # modify cell and positions, keep the other arrays and info as in the template
             atoms = self.template2atoms(cell, pos)
             results = self.batched_calculator.compute_batched(atoms)  # Dict[str,List]
-            # list_of_results = dict_of_list2list_of_dict(results)  # List[Dict]
 
             # convert from angstrom to atomic_unit
             out = [self.post_process(r, a) for r, a in zip(results, atoms)]
@@ -286,6 +285,16 @@ class ExtendedMACECalculator(MACECalculator):
             },
         )
 
+    @staticmethod
+    def batch2natoms(batch: Batch) -> List[int]:
+        """
+        Return the number of atoms in batch.
+        """
+        return [
+            a.shape[0]
+            for a in np.split(batch["positions"], batch["ptr"][1:], axis=0)[:-1]
+        ]
+
     @timeit(name="compute_batched", report=True)
     def compute_batched(self, atoms: List[Atoms]):
         """
@@ -298,7 +307,6 @@ class ExtendedMACECalculator(MACECalculator):
         forward_kwargs = options["forward_kwargs"]
 
         # model evaluation
-        results = None
         model_results = [
             ModelResults(ase_like_properties) for _ in range(self.num_models)
         ]
@@ -306,7 +314,7 @@ class ExtendedMACECalculator(MACECalculator):
         for batch_base in data_loader:
             batch = batch_base.to(self.device)
             batch = self._clone_batch(batch_base).to_dict()
-            Natoms = batch2natoms(batch)
+            Natoms = self.batch2natoms(batch)
 
             for i, model in enumerate(self.models):
                 with self.logger.section("forward"):
@@ -334,42 +342,14 @@ class ExtendedMACECalculator(MACECalculator):
 
                 model_results[i].store(Natoms, results_tensors)
 
-        out = ModelResults.mean(model_results)
-        [self.results_logger.save(a, f"results.{n}.json") for n, a in enumerate(out)]
+        # re-order results
+        with self.logger.section("postprocess"):
+            out = ModelResults.mean(model_results)
+            [
+                self.results_logger.save(a, f"results.{n}.json")
+                for n, a in enumerate(out)
+            ]
         return out
-
-        #     # post process results
-        #     pp_results = self.postprocess(batch, results_tensors)
-        #     self.results_logger.save(pp_results,"pp_results.json")
-
-        #     # aggregate results over the different batches
-        #     if results is None:
-        #         results = pp_results
-        #     else:
-        #         for key, value in pp_results.items():
-        #             results[key].extend(value if len(value) > 1 else [value])
-
-        # self.results_logger.save(results)
-        # return results
-
-    @timeit(name="postprocess")
-    def postprocess(self, batch: Batch, results_tensors: Dict[str, torch.Tensor]):
-        """
-        Post process the results by taking the mean and variance over the models in the committe.
-        """
-        results = {}
-        for key, value in results_tensors.items():
-            assert isinstance(
-                value, list
-            ), f"'{key}' should be a list of length {self.num_models}"
-            assert (
-                len(value) == self.num_models
-            ), f"'{key}' should be a list of length {self.num_models}"
-            values = np.asarray(value)
-            results[key] = np.mean(values, axis=0)
-            if self.num_models > 1:
-                results[f"{key}_var"] = np.var(values, axis=0)
-        return batch2dict_of_list(batch, results)
 
     @timeit("compute_dmu_dR_deta")
     def compute_dmu_dR_deta(
@@ -657,106 +637,6 @@ def compute_dielectric_gradients(
     return [torch.stack(out, dim=0) for out in d_dielectric_dr]
 
 
-# --------------------------------------- #
-def to_scalar_or_array(x):
-    """
-    Convert size-1 list/array to float.
-    Otherwise return a NumPy array.
-    """
-    arr = np.asarray(x)
-
-    if arr.size == 1:
-        return float(arr.reshape(()))
-    else:
-        return arr
-
-
-# --------------------------------------- #
-def dict_of_list2list_of_dict(
-    results: Dict[str, List[Union[float, np.ndarray]]],
-) -> List[Dict[str, Union[float, np.ndarray]]]:
-    """
-    Convert a dict of lists into a list of dicts, converting size-1 arrays to floats.
-    """
-
-    out = []
-
-    # Get number of entries from the first key
-    n = len(next(iter(results.values())))
-
-    for i in range(n):
-        entry = {}
-        for key, values in results.items():
-            entry[key] = to_scalar_or_array(values[i])
-        out.append(entry)
-
-    return out
-
-
-# --------------------------------------- #
-
-
-def batch2natoms(batch: Batch) -> List[int]:
-    return [
-        a.shape[0] for a in np.split(batch["positions"], batch["ptr"][1:], axis=0)[:-1]
-    ]
-
-
-def batch2dict_of_list(
-    batch: Batch, output: Dict[str, np.ndarray]
-) -> Dict[str, Union[List[float], List[np.ndarray]]]:
-    """
-    Convert batched model outputs into a dict of per-structure lists,
-    reshaping values according to `ase_like_properties` and handling
-    'natoms'-dependent dimensions.
-    """
-
-    Nstructures = len(batch["ptr"]) - 1
-    results = {}
-    Natoms = batch2natoms(batch)
-
-    assert (
-        len(Natoms) == Nstructures
-    ), f"len(Natoms) should be equal to {Nstructures} but its {len(Natoms)}."
-
-    def correct_shape(value: np.ndarray, shape: tuple):
-        if shape == ():
-            return float(value)
-        else:
-            return value.reshape(shape)
-
-    for key in output.keys():
-
-        if key not in ase_like_properties:
-            warning(f"Please add '{key}' to 'ase_like_properties' in {__file__}")
-            continue
-
-        value = output[key]
-        shape = ase_like_properties[key]
-
-        results[key] = [None] * Nstructures
-
-        shape1 = () if len(shape) <= 1 else shape[1:]
-
-        if "natoms" in shape:
-            assert shape[0] == "natoms", "'natoms' allowed only as first dimension."
-            # [n_nodes,...] --> [ [n_atoms_0,...] , [n_atoms_1,...], ... ]
-            value = np.split(value, batch["ptr"][1:], axis=0)[:-1]
-            assert len(value) == Nstructures, f"coding error for '{key}'"
-            for n, v in enumerate(value):
-                results[key][n] = correct_shape(v, (Natoms[n],) + shape1)
-
-        elif "natoms" in shape1:
-            raise ValueError("'natoms' allowed only as first dimension.")
-
-        else:
-            assert value.shape[0] == Nstructures, f"coding error for '{key}'"
-            for n, v in enumerate(value):
-                results[key][n] = correct_shape(v, shape)
-
-    return results
-
-
 # -----------------------------------------------------------
 # Script entry point
 # -----------------------------------------------------------
@@ -835,12 +715,11 @@ if __name__ == "__main__":
 
     print("Evaluating structures with MACE model...")
     results = calc.compute_batched(structures)
-    list_of_results = dict_of_list2list_of_dict(results)
     assert len(structures) == len(results), "coding error"
     print("Evaluation complete.")
 
     print("Saving results into ASE Atoms objects...")
-    for n, (atoms, results) in enumerate(zip(structures, list_of_results)):
+    for n, (atoms, results) in enumerate(zip(structures, results)):
         for key, value in results.items():
             shape = ase_like_properties[key]
             if "natoms" in shape:
