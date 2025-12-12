@@ -1214,6 +1214,9 @@ class InputFFDielectric(InputForceField):
         family="electric-dipole", units="eang", key="dipole"
     )
     _bec_cls = InputValueFromDict.specialize(family="charge", units="e", key="BEC")
+    _piezo_cls = InputValueFromDict.specialize(
+        family="electric-polarization", units="e/ang2", key="piezoelectric"
+    )
 
     dynamic = {
         "ffsocket": (InputFFSocket, {"help": InputFFSocket.default_help}),
@@ -1249,6 +1252,13 @@ class InputFFDielectric(InputForceField):
         {
             "default": _bec_cls().default(),
             "help": "How to extract the Born Charges (keyword and units) from the extra information.",
+        },
+    )
+    fields["piezo"] = (
+        _piezo_cls,
+        {
+            "default": _piezo_cls().default(),
+            "help": "How to extract the piezoelectric tensor (keyword and units) from the extra information.",
         },
     )
 
@@ -1327,6 +1337,7 @@ class InputFFDielectric(InputForceField):
         self.field.store(ff.field)
         self.dipole.store(ff.dipole)
         self.bec.store(ff.bec)
+        self.piezo.store(ff.piezo)
 
     def fetch(self):
         """Fetches all of the FF objects"""
@@ -1343,6 +1354,7 @@ class InputFFDielectric(InputForceField):
             where=self.where.fetch(),
             dipole=self.dipole.fetch(),
             bec=self.bec.fetch(),
+            piezo=self.piezo.fetch(),
             field=self.field.fetch(),  # this is a 'VectorField' object
             forcefield=ff,
         )

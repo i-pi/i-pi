@@ -2272,6 +2272,7 @@ class FFDielectric(ForceField):
         where: str,
         dipole: dict,
         bec: dict,
+        piezo: dict,
         field: VectorField,
         forcefield: ForceField,
     ):
@@ -2285,6 +2286,9 @@ class FFDielectric(ForceField):
         self.bec = ArrayFromDict(
             **bec
         )  # how to read the Born Charges from the client code
+        self.piezo = ArrayFromDict(
+            **piezo
+        )  # how to read the piezoelectric tensor from the client code
         self.field = field  # what type of external field should be applied
         self.forcefield = forcefield
         self.template = {}
@@ -2311,11 +2315,11 @@ class FFDielectric(ForceField):
         time = float(atoms.motion.actual_time)
         field = self.field.get(time)
         field = dstrip(field).tolist()
-        extra_template = {  # extra informationssss
+        extra_template = {  # extra information
+            "time": time,  # necessary in 'fixed_E'
             "extra": json.dumps(
                 {
                     "Efield": field,  # electric field
-                    "time": time,  # not strictly necessary but useful for debugging
                 }
             ),
         }
@@ -2365,30 +2369,55 @@ class FFDielectric(ForceField):
         # check that we have all necessary information
         u, f, v, x = request["result"]
 
-        mu = self.dipole.get(x)
-        # check that the Born Charges are provided
-        Z = self.bec.get(x)
+        mu = self.dipole.get(x)  # check that the dipole has been provided
+        Z = self.bec.get(x)  # check that the Born Charges have been provided
+        e = self.piezo.get(x)  # check that the piezoelectric tensor has been provided
 
         assert mu is not None, "Just to let the automatic tests pass"
         assert Z is not None, "Just to let the automatic tests pass"
 
         if self.mode == "E":  # apply fixed-E ensemble
-            request["result"] = self.fixed_E(request["result"])
+            request["result"] = self.fixed_E(request)
         elif self.mode == "D":  # apply fixed-D ensemble
-            request["result"] = self.fixed_D(request["result"])
+            request["result"] = self.fixed_D(request)
         else:  # there is an error in the implementation
             raise ValueError("coding error")
         return request
 
-    def fixed_E(self, results: dict):
-        u, f, v, x = results
-        dipole = self.dipole.get(x)
-        Z = self.bec.get(x)  # (natoms,3,3)
+    def fixed_E(self, request: dict) -> tuple:
+
+        # Extract  energy, forces, virials and extra information
+        # from the results returned from the driver.
+        u, f, v, x = request["result"]
+
+        # Extract extra information from the driver.
+        # The values returned here will be already in atomic_unit
+        # even though the driver might return them with differnt units
+        dipole = self.dipole.get(x)  # electric dipole, with shape = (3,)
+        Z = self.bec.get(x)  # Born Effective Charges, with (natoms,3,3)
+        e = self.piezo.get(
+            x, np.zeros((3, 3, 3))
+        )  # piezoelectric tensor, with shape (3,3,3)
+
+        # Evaluate the (time-dependent) electric field
         time = self.template["time"]
         Efield = self.field.get(time)
+
+        # Compute the volume of the structure
+        cell = request["cell"][0]
+        volume = np.linalg.det(cell)
+
+        # Update energy, forces and virials
         u -= dipole @ Efield
         f += np.einsum("ijk,j->ik", Z, Efield).flatten()
-        # ToDo: updated virial or stress tensor
+
+        # stress
+        s = e + dipole[:, None, None] * np.eye(3)[None, :, :] / volume
+        s = np.einsum("ijk,i->jk", s, Efield)
+
+        # virials
+        v -= volume * s
+
         return u, f, v, x
 
     def fixed_D(self, request: dict):
