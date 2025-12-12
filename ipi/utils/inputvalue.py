@@ -25,6 +25,7 @@ import numpy as np
 from ipi.utils.io.inputs.io_xml import *
 from ipi.utils.units import unit_to_internal, unit_to_user, UnitMap
 from ipi.utils.softexit import softexit
+from ipi.utils.messages import verbosity, warning
 
 __all__ = [
     "Input",
@@ -1425,18 +1426,26 @@ class ArrayFromDict:
             # f"shape={self.shape!r})"
         )
 
-    def get(self, dictionary: dict) -> np.ndarray:
+    def get(self, dictionary: dict, default=None) -> np.ndarray:
         if not isinstance(dictionary, dict):
             softexit.trigger(
                 status="bad",
                 message=f"The input variable was supposed to be a python dictionary but it is {type(dictionary)}.",
             )
         if self.key not in dictionary:
-            softexit.trigger(
-                status="bad",
-                message=f"The key '{self.key}' is not in the provided dictionary.",
-            )
-        value = dictionary[self.key]
+            if default is None:
+                softexit.trigger(
+                    status="bad",
+                    message=f"The key '{self.key}' is not in the provided dictionary.",
+                )
+            else:
+                warning(
+                    f"The key '{self.key}' is not in the provided dictionary but the default value {str(default)} will be used.",
+                    verbosity,
+                )
+                value = default
+        else:
+            value = dictionary[self.key]
         value = np.asarray(value)
         # if self.shape is not None:
         #     value = np.reshape(value,self.shape)
