@@ -2362,23 +2362,14 @@ class FFDielectric(ForceField):
             raise ValueError("coding error")
 
     def apply_ensemble(self, request: dict) -> dict:
-        # do nothing
+        """
+        Apply the selected ensemble.
+        """
         if self.mode == "none":
             return request
-
-        # check that we have all necessary information
-        u, f, v, x = request["result"]
-
-        mu = self.dipole.get(x)  # check that the dipole has been provided
-        Z = self.bec.get(x)  # check that the Born Charges have been provided
-        e = self.piezo.get(x)  # check that the piezoelectric tensor has been provided
-
-        assert mu is not None, "Just to let the automatic tests pass"
-        assert Z is not None, "Just to let the automatic tests pass"
-
-        if self.mode == "E":  # apply fixed-E ensemble
+        elif self.mode == "E":  # fixed-E ensemble
             request["result"] = self.fixed_E(request)
-        elif self.mode == "D":  # apply fixed-D ensemble
+        elif self.mode == "D":  # fixed-D ensemble
             request["result"] = self.fixed_D(request)
         else:  # there is an error in the implementation
             raise ValueError("coding error")
@@ -2411,12 +2402,13 @@ class FFDielectric(ForceField):
         u -= dipole @ Efield
         f += np.einsum("ijk,j->ik", Z, Efield).flatten()
 
-        # stress
-        s = e + dipole[:, None, None] * np.eye(3)[None, :, :] / volume
-        s = np.einsum("ijk,i->jk", s, Efield)
-
         # virials
-        v -= volume * s
+        ve = volume * e + dipole[:, None, None] * np.eye(3)[None, :, :]
+        ve = np.einsum("ijk,i->jk", ve, Efield)
+        # assert np.allclose(
+        #     ve, ve.T
+        # ), "E-dependent part of the virials tensor is not symmetric"
+        v += ve
 
         return u, f, v, x
 
