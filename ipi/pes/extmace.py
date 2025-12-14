@@ -167,6 +167,10 @@ class ExtendedMACECalculator(MACECalculator):
         self.results_logger = JSONLogger(log)
         self.batch_size = self.instructions.pop("batch_size", 1)
         self.instructions = instructions
+        if "arrays_keys" not in kwargs:
+            kwargs["arrays_keys"] = {}
+        if "oxn" not in kwargs["arrays_keys"]:
+            kwargs["arrays_keys"].update({"oxn": "oxn"})
         super().__init__(*argc, **kwargs)
         assert not self.use_compile, "self.use_compile=True is not supported yet."
 
