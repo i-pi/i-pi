@@ -191,7 +191,7 @@ class ExtendedMACECalculator(MACECalculator):
                 z_table=self.z_table,
                 cutoff=self.r_max,
                 heads=self.available_heads,
-            )
+            ).to(self.device)
             for config in configs
         ]
 
@@ -312,7 +312,7 @@ class ExtendedMACECalculator(MACECalculator):
         ]
         # loop over models in the committee
         for batch_base in data_loader:
-            batch = batch_base.to(self.device)
+            # batch = batch_base.to(self.device)
             batch = self._clone_batch(batch_base).to_dict()
             Natoms = self.batch2natoms(batch)
 
