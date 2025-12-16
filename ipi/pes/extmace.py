@@ -258,15 +258,15 @@ class ExtendedMACECalculator(MACECalculator):
 
         forward_kwargs = self.instructions["forward_kwargs"].copy()
 
-        if ensemble in ["E", "E-DEBUG"]:
-            # disable all autograd flags to turn them on again in 'self.apply_ensemble'
-            forward_kwargs["compute_force"] = False
-            forward_kwargs["compute_stress"] = False
-            forward_kwargs["compute_displacement"] = compute_stress
+        # if ensemble in ["E", "E-DEBUG"]:
+        # disable all autograd flags to turn them on again in 'self.apply_ensemble'
+        forward_kwargs["compute_force"] = False
+        forward_kwargs["compute_stress"] = False
+        forward_kwargs["compute_displacement"] = compute_stress
 
-            # disable Born Effective Charges computation if implemented in the model
-            # if self.model_type in ["EnergyDipoleMACE"]:
-            #     forward_kwargs["compute_bec"] = False
+        # disable Born Effective Charges computation if implemented in the model
+        # if self.model_type in ["EnergyDipoleMACE"]:
+        #     forward_kwargs["compute_bec"] = False
 
         forward_kwargs["compute_virials"] = False
         forward_kwargs["compute_edge_forces"] = False
@@ -364,7 +364,7 @@ class ExtendedMACECalculator(MACECalculator):
 
         ensemble = str(self.instructions["ensemble"]).upper()
         if ensemble == "NONE":  # no ensemble (just for debugging purposes)
-            pass
+            data = self.get_forces_stress(data, batch, training)
         else:
             extras = self.get_extras()
             if extras is None or extras == {}:
@@ -471,15 +471,14 @@ class ExtendedMACECalculator(MACECalculator):
             if data[keyword] is not None:
                 raise ValueError(f"'{keyword}' in 'data' should be None.")
 
-        with self.logger.section("get_outputs"):
-            forces, virials, stress, hessian, edge_forces = get_outputs(
-                energy=data["energy"],
-                positions=batch["positions"],
-                cell=batch["cell"],
-                displacement=data["displacement"],
-                **self.instructions["forward_kwargs"],
-                training=training,
-            )
+        forces, virials, stress, hessian, edge_forces = get_outputs(
+            energy=data["energy"],
+            positions=batch["positions"],
+            cell=batch["cell"],
+            displacement=data["displacement"],
+            **self.instructions["forward_kwargs"],
+            training=training,
+        )
 
         to_assign = {
             "forces": forces,
