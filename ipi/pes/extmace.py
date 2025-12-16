@@ -353,73 +353,6 @@ class ExtendedMACECalculator(MACECalculator):
             ]
         return out
 
-    @timeit("compute_dmu_dR_deta")
-    def compute_dmu_dR_deta(
-        self, data: Dict[str, torch.Tensor], batch: Batch
-    ) -> Tuple[torch.Tensor, torch.Tensor]:
-        """
-        Compute the derivative of the dipole (mu) w.r.t. the positions (R) and lattice displacements (eta).
-        The derivatives w.r.t. the positions returns the Born Effective Charges,
-        while the derivatives w.r.t. the lattice displacements returns a tensor that can be related to the piezoelectric tensor.
-        The conversion from this tensor to the piezoelectric one is performed in 'apply_ensemble'.
-        """
-
-        if "dipole" not in data:
-            raise ValueError(
-                f"The keyword 'dipole' is not in the output data of the MACE model.\nThe data provided by the model is: {list(data.keys())}"
-            )
-        try:
-            batch["positions"]
-        except:
-            raise ValueError(
-                f"The attribute 'positions' is not in the batch data provided to the MACE model.\nThe batch contains: {list(batch.keys())}"
-            )
-        dipole_components = 3
-        mu = data["dipole"]  # [:,:dipole_components] # uncomment to debug
-        pos = batch["positions"]
-        if not isinstance(mu, torch.Tensor):
-            raise ValueError(f"The dipole is not a torch.Tensor rather a {type(mu)}")
-        if not isinstance(pos, torch.Tensor):
-            raise ValueError(
-                f"The positions are not a torch.Tensor rather a {type(pos)}"
-            )
-
-        displacement = data["displacement"]
-        if displacement.requires_grad:
-            res = compute_dielectric_gradients(mu, [pos, displacement])
-            bec = res[0]  # (3,n_nodes,3)
-            dmu_deta = res[1]  # (3,n_graphs,3,3)
-        else:
-            bec = compute_dielectric_gradients(mu, [pos])[0]
-            dmu_deta = None
-
-        if not isinstance(bec, torch.Tensor):
-            raise ValueError(
-                f"The computed Born Charges are not a torch.Tensor rather a {type(bec)}"
-            )
-        if tuple(bec.shape) != (dipole_components, *pos.shape):
-            raise ValueError(
-                f"The computed Born Charges have the wrong shape. The shape {(dipole_components,*pos.shape)} was expected but got {tuple(bec.shape)}."
-            )
-
-        if dmu_deta is not None:
-            if not isinstance(dmu_deta, torch.Tensor):
-                raise ValueError(
-                    f"The computed piezoelectric tensor is not a torch.Tensor rather a {type(dmu_deta)}"
-                )
-            if tuple(dmu_deta.shape) != (dipole_components, *displacement.shape):
-                raise ValueError(
-                    f"The computed piezoelectric tensor has the wrong shape. The shape {(dipole_components,*displacement.shape)} was expected but got {tuple(dmu_deta.shape)}."
-                )
-
-        # Attention:
-        # The tensor 'bec' has 3 dimensions.
-        # Its shape is (3,*pos.shape).
-        # This means that bec[0,3,2] will contain d mu_x / d R^3_z,
-        # where mu_x is the x-component of the dipole and R^3_z is the z-component of the 4th (zero-indexed) atom i n the structure/batch.
-
-        return bec, dmu_deta
-
     @timeit("apply_ensemble")
     def apply_ensemble(
         self,
@@ -564,6 +497,73 @@ class ExtendedMACECalculator(MACECalculator):
                 data[keyword] = value
 
         return data
+
+    @timeit("compute_dmu_dR_deta")
+    def compute_dmu_dR_deta(
+        self, data: Dict[str, torch.Tensor], batch: Batch
+    ) -> Tuple[torch.Tensor, torch.Tensor]:
+        """
+        Compute the derivative of the dipole (mu) w.r.t. the positions (R) and lattice displacements (eta).
+        The derivatives w.r.t. the positions returns the Born Effective Charges,
+        while the derivatives w.r.t. the lattice displacements returns a tensor that can be related to the piezoelectric tensor.
+        The conversion from this tensor to the piezoelectric one is performed in 'apply_ensemble'.
+        """
+
+        if "dipole" not in data:
+            raise ValueError(
+                f"The keyword 'dipole' is not in the output data of the MACE model.\nThe data provided by the model is: {list(data.keys())}"
+            )
+        try:
+            batch["positions"]
+        except:
+            raise ValueError(
+                f"The attribute 'positions' is not in the batch data provided to the MACE model.\nThe batch contains: {list(batch.keys())}"
+            )
+        dipole_components = 3
+        mu = data["dipole"]  # [:,:dipole_components] # uncomment to debug
+        pos = batch["positions"]
+        if not isinstance(mu, torch.Tensor):
+            raise ValueError(f"The dipole is not a torch.Tensor rather a {type(mu)}")
+        if not isinstance(pos, torch.Tensor):
+            raise ValueError(
+                f"The positions are not a torch.Tensor rather a {type(pos)}"
+            )
+
+        displacement = data["displacement"]
+        if displacement.requires_grad:
+            res = compute_dielectric_gradients(mu, [pos, displacement])
+            bec = res[0]  # (3,n_nodes,3)
+            dmu_deta = res[1]  # (3,n_graphs,3,3)
+        else:
+            bec = compute_dielectric_gradients(mu, [pos])[0]
+            dmu_deta = None
+
+        if not isinstance(bec, torch.Tensor):
+            raise ValueError(
+                f"The computed Born Charges are not a torch.Tensor rather a {type(bec)}"
+            )
+        if tuple(bec.shape) != (dipole_components, *pos.shape):
+            raise ValueError(
+                f"The computed Born Charges have the wrong shape. The shape {(dipole_components,*pos.shape)} was expected but got {tuple(bec.shape)}."
+            )
+
+        if dmu_deta is not None:
+            if not isinstance(dmu_deta, torch.Tensor):
+                raise ValueError(
+                    f"The computed piezoelectric tensor is not a torch.Tensor rather a {type(dmu_deta)}"
+                )
+            if tuple(dmu_deta.shape) != (dipole_components, *displacement.shape):
+                raise ValueError(
+                    f"The computed piezoelectric tensor has the wrong shape. The shape {(dipole_components,*displacement.shape)} was expected but got {tuple(dmu_deta.shape)}."
+                )
+
+        # Attention:
+        # The tensor 'bec' has 3 dimensions.
+        # Its shape is (3,*pos.shape).
+        # This means that bec[0,3,2] will contain d mu_x / d R^3_z,
+        # where mu_x is the x-component of the dipole and R^3_z is the z-component of the 4th (zero-indexed) atom i n the structure/batch.
+
+        return bec, dmu_deta
 
 
 # --------------------------------------- #
