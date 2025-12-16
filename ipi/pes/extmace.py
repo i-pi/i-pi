@@ -258,20 +258,18 @@ class ExtendedMACECalculator(MACECalculator):
 
         forward_kwargs = self.instructions["forward_kwargs"].copy()
 
-        if ensemble == "E":
+        if ensemble in ["E", "E-DEBUG"]:
             # disable all autograd flags to turn them on again in 'self.apply_ensemble'
             forward_kwargs["compute_force"] = False
             forward_kwargs["compute_stress"] = False
-            forward_kwargs["compute_virials"] = False
-            forward_kwargs["compute_edge_forces"] = False
             forward_kwargs["compute_displacement"] = compute_stress
+
             # disable Born Effective Charges computation if implemented in the model
             # if self.model_type in ["EnergyDipoleMACE"]:
             #     forward_kwargs["compute_bec"] = False
-        else:
-            # disable always these quantities
-            forward_kwargs["compute_virials"] = False
-            forward_kwargs["compute_edge_forces"] = False
+
+        forward_kwargs["compute_virials"] = False
+        forward_kwargs["compute_edge_forces"] = False
 
         data_loader = DataLoader(
             dataset,
@@ -447,6 +445,8 @@ class ExtendedMACECalculator(MACECalculator):
                 # This is very similar to what is done in the function 'fixed_E' in 'ipi/engine/forcefields.py'.
                 if not compute_bec:
                     raise ValueError("coding error")
+
+                data = self.get_forces_stress(data, batch, training)
                 bec, dmu_deta = self.compute_dmu_dR_deta(data, batch)
 
                 interaction_energy = torch.einsum("ij,j->i", mu, Efield)
@@ -506,34 +506,7 @@ class ExtendedMACECalculator(MACECalculator):
                 interaction_energy = mu @ Efield
                 data["energy"] -= interaction_energy
 
-                for keyword in ["forces", "stress"]:  # "virials"
-                    if data[keyword] is not None:
-                        raise ValueError(f"'{keyword}' in 'data' should be None.")
-
-                with self.logger.section("get_outputs"):
-                    forces, virials, stress, hessian, edge_forces = get_outputs(
-                        energy=data["energy"],
-                        positions=batch["positions"],
-                        cell=batch["cell"],
-                        displacement=data["displacement"],
-                        **self.instructions["forward_kwargs"],
-                        training=training,
-                    )
-
-                to_assign = {
-                    "forces": forces,
-                    # "virials": virials,
-                    "stress": stress,
-                    "hessian": hessian,
-                    "edge_forces": edge_forces,
-                }
-                del data["virials"]  # virials should be computed from the stress tensor
-
-                for keyword, value in to_assign.items():
-                    if keyword in data and data[keyword] is not None:
-                        raise ValueError(f"'{keyword}' in 'data' should be None.")
-                    if value is not None:
-                        data[keyword] = value
+                data = self.get_forces_stress(data, batch, training)
 
             else:
                 raise ValueError(f"Ensemble {ensemble} not implemented (yet).")
@@ -550,6 +523,45 @@ class ExtendedMACECalculator(MACECalculator):
                 data["piezoelectric"] = dmu_deta2piezoelectric(
                     dmu_deta, data["dipole"], volume
                 )
+
+        return data
+
+    @timeit("get_forces_stress")
+    def get_forces_stress(
+        self, data: Dict[str, torch.Tensor], batch: Batch, training: bool
+    ) -> Dict[str, torch.Tensor]:
+        """
+        Compute forces and stress from the energy.
+        """
+
+        for keyword in ["forces", "stress"]:  # "virials"
+            if data[keyword] is not None:
+                raise ValueError(f"'{keyword}' in 'data' should be None.")
+
+        with self.logger.section("get_outputs"):
+            forces, virials, stress, hessian, edge_forces = get_outputs(
+                energy=data["energy"],
+                positions=batch["positions"],
+                cell=batch["cell"],
+                displacement=data["displacement"],
+                **self.instructions["forward_kwargs"],
+                training=training,
+            )
+
+        to_assign = {
+            "forces": forces,
+            # "virials": virials,
+            "stress": stress,
+            "hessian": hessian,
+            "edge_forces": edge_forces,
+        }
+        del data["virials"]  # virials should be computed from the stress tensor
+
+        for keyword, value in to_assign.items():
+            if keyword in data and data[keyword] is not None:
+                raise ValueError(f"'{keyword}' in 'data' should be None.")
+            if value is not None:
+                data[keyword] = value
 
         return data
 
