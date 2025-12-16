@@ -510,7 +510,7 @@ class PlaneWaveVectorField(VectorField):
         )
 
     def get(self, time: float):
-        return self.amplitude * np.cos(self.freq * time + self.phase)
+        return self.amplitude * np.cos(self.freq * time + np.pi * self.phase / 180.0)
 
 
 dproperties(

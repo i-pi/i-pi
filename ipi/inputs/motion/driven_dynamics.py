@@ -50,7 +50,7 @@ CommonFields = {
         {
             "dtype": float,
             "default": 0.0,
-            "help": "The phase of the external field (in rad)",
+            "help": "The phase of the external field (in deg)",
             "dimension": "number",
         },
     ),
