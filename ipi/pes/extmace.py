@@ -331,18 +331,19 @@ class ExtendedMACECalculator(MACECalculator):
                 out["node_energy"] -= batch["node_e0"]
 
                 # collect the results
-                results_tensors = {}
-                for key, value in out.items():
-                    if (
-                        "ignore" in self.instructions
-                        and key in self.instructions["ignore"]
-                    ):
-                        continue
-                    if key not in results_tensors:
-                        results_tensors[key] = [None] * len(self.models)
-                    results_tensors[key] = value.detach().cpu().numpy()
+                with self.logger.section("postprocess"):
+                    results_tensors = {}
+                    for key, value in out.items():
+                        if (
+                            "ignore" in self.instructions
+                            and key in self.instructions["ignore"]
+                        ):
+                            continue
+                        if key not in results_tensors:
+                            results_tensors[key] = [None] * len(self.models)
+                        results_tensors[key] = value.detach().cpu().numpy()
 
-                model_results[i].store(Natoms, results_tensors)
+                    model_results[i].store(Natoms, results_tensors)
 
         # re-order results
         with self.logger.section("postprocess"):
