@@ -8,7 +8,7 @@ pytest -v test_friction.py
 where test_friction.py is located in "i-pi/ipi_tests/unit_tests/utils".
 
 In this test, the analytical and numerical evaluations of the alpha parameter within the friction class and frictiontool.py are performed.
-The model system consists of a hydrogen atom represented by six beads, where the normal mode frequencies (omega_k, as defined in i-PI) are obtained by running i-PI (i-pi input.xml) in the directory "ipi_tests/regression_tests/tests/NVE/NVE_with_friction/double_well".
+The model system consists of a hydrogen atom represented by six beads, where the normal mode frequencies (omega_k, as defined in i-PI) are obtained by running i-PI.
 
 These normal mode frequencies are then used as input for two different expressions for the ohmic spectral density
 
@@ -112,14 +112,14 @@ def test_numerical_alpha(
     The computed numerical values of alpha are subsequently compared with the corresponding analytical expression given in the asymptotic equation.
     """
 
-    omega = np.arange(0.0001, omega_cutoff, 0.0001)
+    omega = np.linspace(0, omega_cutoff, 10000)[1:]
     J = expohmic_J(omega, eta, omega_cutoff)
     Lambda = J / omega
-    print(Lambda)
+    # print(Lambda)
     alpha = get_alpha_numeric(Lambda, omega, omegak)
     assert np.allclose(
         alpha,
         alphak,
-        atol=1e-5,  # Note: this is not a very great accuracy. Can this be made better?
+        atol=1e-5,
     )
     print(alpha, alphak)
