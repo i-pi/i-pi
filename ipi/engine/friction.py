@@ -29,7 +29,6 @@ class Friction:
         alpha_input=np.zeros(0, float),
         efric=0.0,
         position_dependent: bool = False,
-        non_markovian: bool = False,
     ):
         """Initialises friction
 
@@ -43,15 +42,11 @@ class Friction:
         self.alpha_input = np.asanyarray(alpha_input, dtype=float)
         self._efric = depend_value(name="efric", value=efric)
         self.position_dependent = position_dependent
-        self.non_markovian = non_markovian
 
         if self.position_dependent:
             raise NotImplementedError(
                 "Position dependent friction not implemented yet."
             )
-
-        if self.non_markovian:
-            raise NotImplementedError("Non-markovian friction not implemented yet.")
 
     def bind(self, motion: Motion) -> None:
         self.beads = motion.beads

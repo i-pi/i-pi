@@ -36,14 +36,6 @@ class InputFriction(Input):
                 "help": "If True, position dependent friction is used. Not implemented yet.",
             },
         ),
-        "non_markovian": (
-            InputValue,
-            {
-                "dtype": bool,
-                "default": False,
-                "help": "If True, non-markovian friction is used. Not implemented yet.",
-            },
-        ),
     }
 
     default_help = "Simulates the electronic friction"

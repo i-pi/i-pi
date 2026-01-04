@@ -18,7 +18,6 @@
     <initialize nbeads='32'>
       <file mode='xyz'> init.xyz </file>
       <momenta mode='xyz' units='atomic_unit'> initial_momenta.xyz </momenta>
-      <cell mode='abc' units='angstrom'> [300, 300, 300] </cell>
     </initialize>
     <forces>
       <force forcefield='doublewell_1D'> </force>
