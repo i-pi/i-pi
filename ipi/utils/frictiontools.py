@@ -6,7 +6,7 @@ from scipy.special import xlogy
 
 
 def get_alpha_ohmic(omegak, omega_cutoff, eta):
-    r"""Analytical expression of alpha based on the ohmic spectral density J.
+    r"""Analytical expression of alpha based on the exponentially damped ohmic spectral density J.
 
     .. math::
 
@@ -24,8 +24,8 @@ def get_alpha_ohmic(omegak, omega_cutoff, eta):
     return alpha
 
 
-def get_alpha_ohmic_asymtotic(omegak, omega_cutoff, eta):
-    r"""Asymtotic answer for ohmic spectral density at small value of zn (zn=ωn/ωc).
+def get_alpha_ohmic_asymptotic(omegak, omega_cutoff, eta):
+    r"""asymptotic answer for the exponentially damped ohmic spectral density at small value of zn (zn=ωn/ωc).
 
     .. math::
 
