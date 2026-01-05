@@ -2,7 +2,6 @@ from typing import Union
 
 import numpy as np
 from scipy.special import sici
-from scipy.special import xlogy
 
 
 def get_alpha_ohmic(omegak, omega_cutoff, eta):
@@ -20,26 +19,6 @@ def get_alpha_ohmic(omegak, omega_cutoff, eta):
         si, ci = sici(z)
         alpha[idx] = (
             2 / np.pi * eta * omegak * (ci * np.sin(z) - (si - np.pi * 0.5) * np.cos(z))
-        )
-    return alpha
-
-
-def get_alpha_ohmic_asymptotic(omegak, omega_cutoff, eta):
-    r"""asymptotic answer for the exponentially damped ohmic spectral density at small value of zn (zn=ωn/ωc).
-
-    .. math::
-
-       \sim \eta \omega_n \big[ z_n (\gamma + \ln z_n) - z_n - \tfrac{\pi}{2} \big]
-    """
-    alpha = np.zeros(omegak.shape)
-    for idx, omegak in enumerate(omegak):
-        z = omegak / omega_cutoff
-        alpha[idx] = (
-            2
-            / np.pi
-            * eta
-            * omegak
-            * (xlogy(z, z) + z * (np.euler_gamma - 1) + np.pi / 2)
         )
     return alpha
 
