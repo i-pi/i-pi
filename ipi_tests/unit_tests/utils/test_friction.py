@@ -70,13 +70,13 @@ def test_numerical_alpha(
     The computed numerical values of alpha are subsequently compared with the corresponding analytical expression.
     """
 
-    omega = np.linspace(0, omega_cutoff, 1000000)
+    omega = np.linspace(0, 10 * omega_cutoff, 100000)
     Lambda = expohmic_Lambda(omega, eta, omega_cutoff)
     # print(Lambda)
     alpha = get_alpha_numeric(Lambda, omega, omegak)
     assert np.allclose(
         alpha,
         alphak,
-        atol=1e-5,
+        rtol=1e-6,
     )
     print(alpha, alphak)
