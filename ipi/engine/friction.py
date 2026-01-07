@@ -51,6 +51,7 @@ class Friction:
     def bind(self, motion: Motion) -> None:
         self.beads = motion.beads
         self.nm = motion.nm
+        self.forces = motion.ensemble.forces
 
         # if self.alpha is already provided as a file, use it
         # if self.alpha.size ==self.nm.omegak.size
@@ -75,16 +76,17 @@ class Friction:
             )  # (nmodes,)
             info("compute alpha using get_alpha_numeric().")
 
-    def forces(self) -> np.ndarray:
+    def fric_forces(self) -> np.ndarray:
         fnm = -self.alpha[:, np.newaxis] * self.nm.qnm  # (nmodes, 3 * natoms)
         forces = self.nm.transform.nm2b(fnm)  # (nbeads, 3 * natoms)
+        eta0 = np.asarray(self.forces.extras["eta0"])
         if self.position_dependent:
             ...  # To be implemented
-        return forces
+        return forces * eta0[:, np.newaxis]
 
     def step(self, pdt: float) -> None:
-        forces = self.forces()
-        self.beads.p += forces * pdt
+        fric_forces = self.fric_forces()
+        self.beads.p += fric_forces * pdt
         self.efric = 0.5 * np.einsum("n,nm,nm->", self.alpha, self.nm.qnm, self.nm.qnm)
 
 

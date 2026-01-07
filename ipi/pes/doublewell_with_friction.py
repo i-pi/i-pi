@@ -109,5 +109,5 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
         ).compute_structure(cell, pos)
 
         friction_tensor = self.get_friction_tensor(pos)
-        extras = json.dumps({"friction": friction_tensor.tolist()})
+        extras = json.dumps({"friction": friction_tensor.tolist(), "eta0": self.eta0})
         return pot, force, vir, extras

@@ -53,12 +53,10 @@ class InputFriction(Input):
             self.spectral_density.store(friction.spectral_density)
             self.alpha_input.store(friction.alpha_input)
             self.position_dependent.store(friction.position_dependent)
-            self.non_markovian.store(friction.non_markovian)
 
     def fetch(self) -> Friction:
         return Friction(
             spectral_density=self.spectral_density.fetch(),
             alpha_input=self.alpha_input.fetch(),
             position_dependent=self.position_dependent.fetch(),
-            non_markovian=self.non_markovian.fetch(),
         )
