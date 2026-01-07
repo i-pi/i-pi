@@ -6,6 +6,7 @@ from datetime import datetime
 from typing import Protocol, Callable, Any, TypeVar, Dict, Tuple, List, Union
 from typing_extensions import ParamSpec
 import functools
+from ipi.utils.units import unit_to_internal, unit_to_user
 
 
 # --------------------------------------- #
@@ -324,3 +325,40 @@ class ModelResults:
 
     def __getitem__(self, i: int) -> Parent:
         return self._results[i].as_dict()
+
+
+# ---------------------- #
+def convert(
+    what: float,
+    family: str = None,
+    _from: str = "atomic_unit",
+    _to: str = "atomic_unit",
+) -> float:
+    """
+    Converts a physical quantity between units of the same type (length, energy, etc.)
+    Example:
+    value = convert(7.6,'length','angstrom','atomic_unit')
+    arr = convert([1,3,4],'energy','atomic_unit','millielectronvolt')
+    """
+    # from ipi.utils.units import unit_to_internal, unit_to_user
+    if family is not None:
+        factor = unit_to_internal(family, _from, 1)
+        factor *= unit_to_user(family, _to, 1)
+        return what * factor
+    else:
+        return what
+
+
+# ---------------------- #
+def process_input(value):
+    """
+    Standardizes user input into numerical format (float or np.array).
+    """
+    if isinstance(value, float):
+        return value
+    elif isinstance(value, int):
+        return value
+    elif isinstance(value, list):
+        return np.array(value)
+    else:
+        raise TypeError("Input must be a float or a list.")

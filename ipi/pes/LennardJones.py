@@ -1,4 +1,4 @@
-"""Spherical Lennard-Jones potential driver.
+"""=Lennard-Jones potential driver.
 
 This module implements a spherical Lennard-Jones (LJ) potential centered around a given point
 and applies it to a specified set of atomic species. It supports both NumPy and PyTorch backends,
@@ -12,16 +12,7 @@ import json
 import numpy as np
 from ipi.pes.tools import convert, process_input
 from ipi.utils.messages import warning
-
-# Attempt relative import first (for i-PI structure), fall back to absolute
-try:
-    from .dummy import Dummy_driver
-except:
-    from dummy import Dummy_driver
-
-
-__DRIVER_NAME__ = "Spherical_LJ"
-__DRIVER_CLASS__ = "Spherical_LJ_driver"
+from ipi.pes.dummy import Dummy_driver
 
 # ---------------------- #
 # Attention/comments:
@@ -32,19 +23,17 @@ __DRIVER_CLASS__ = "Spherical_LJ_driver"
 
 
 # ---------------------- #
-class Spherical_LJ_driver(Dummy_driver):
+class LJdriver(Dummy_driver):
     """
     Spherical Lennard-Jones potential driver.
     Driver implementing a Spherical Lennard-Jones (LJ) potential.
     Parameters must be passed via a dictionary or a JSON file with the following keys:
     {
-        "center": [0,0,0],              // center of the sphere
-        "radius": 10,                   // radius of the spherical potential
+        "z_plane": 10,                  // z-coordinate of the plane
         "sigma": 2.569,                 // sigma parameter of the LJ potential
         "epsilon": 2.754,               // epsilon parameter of the LJ potential
 
-        "center_unit": "angstrom",      // unit of the center (supported: angstrom, atomic_unit[bohr] + derived quantities)
-        "radius_unit": "angstrom",      // unit of the radius (supported: angstrom, atomic_unit[bohr] + derived quantities)
+        "z_plane_unit": "angstrom",     // unit of the z-coordinate (supported: angstrom, atomic_unit[bohr] + derived quantities)
         "sigma_unit": "angstrom",       // unit of sigma      (supported: angstrom, atomic_unit[bohr] + derived quantities)
         "epsilon_unit": "kilocal/mol",  // unit of epsilon    (supported: electronvolt, atomic_unit[Hartree], j/mol, cal/mol, kelvin + derived quantities)
 
@@ -57,8 +46,6 @@ class Spherical_LJ_driver(Dummy_driver):
     """
 
     dimensions = {
-        "center": "length",
-        "radius": "length",
         "sigma": "length",
         "epsilon": "energy",
     }
@@ -76,12 +63,11 @@ class Spherical_LJ_driver(Dummy_driver):
         *args,
         **kwargs,
     ):
-        assert has_energy, "Spherical_LJ_driver requires energy calculation."
-        assert has_forces, "Spherical_LJ_driver requires forces calculation."
-
+        assert has_energy, "LJWall_driver requires energy calculation."
+        assert has_forces, "LJWall_driver requires forces calculation."
         assert (
             not has_stress
-        ), "Spherical_LJ_driver does not support stress calculation."
+        ), "LJWall_driver does not support stress calculation."
 
         super().__init__(self, *args, **kwargs)
 
@@ -132,16 +118,20 @@ class Spherical_LJ_driver(Dummy_driver):
             # ... but the user can also provide symbols directly
             self.symbols = symbols
 
-    def compute_structure(self, cell, pos):
+    def compute(self, cell:np.ndarray, pos:np.ndarray):
         """
         Core method that calculates energy and forces for given atoms using
         the spherical Lennard-Jones potential.
         """
+        
+        if not isinstance(cell, list):
+            return self.compute([cell], [pos])
+        
+        assert len(cell) == len(pos), "Cell and position lists must have the same length."
+        assert cell.ndim == 3 and cell.shape[1:] == (3, 3), "Cell must be a list of 3x3 matrices."
+        assert pos.ndim == 3 and pos.shape[1:] == (len(self.symbols), 3), "Position must be a list of Nx3 matrices."
 
-        potential, forces, vir, extras = super().compute_structure(cell, pos)
-
-        # check that the number of atoms has not changed
-        assert pos.shape == (len(self.symbols), 3), "Positions shape mismatch."
+        potential, forces, vir, extras = super().compute(cell, pos)
 
         # atoms to be considered
         indices = [
@@ -150,60 +140,49 @@ class Spherical_LJ_driver(Dummy_driver):
             if symbol in self.instructions["symbols"]
         ]
 
-        potential, some_forces = compute_energy_and_forces(
-            pos[indices], self.instructions
+        potential, some_forces = self.compute_energy_and_forces(
+            pos[indices]
         )
 
         forces[indices, :] = some_forces
 
         return potential, forces, vir, extras
+    
+    def compute_energy_and_forces(self,pos:np.ndarray)->tuple:
+        raise ValueError("This method should have been overridden.")
+    
+    def lennard_jones(self,r:np.ndarray):
+        """
+        Computes potential and analytical forces using NumPy.
 
+        Returns:
+            potential (float), forces (ndarray)
+        """
+        
+        assert r.ndim == 2, "Input positions must be a 2D array of distances."
+        
+        sigma = float(self.instructions["sigma"])
+        epsilon = float(self.instructions["epsilon"])
+        first_power = int(self.instructions["first_power"])
+        second_power = int(self.instructions["second_power"])
 
-# ---------------------- #
-# Here starts a list of functions that are used to compute
-# the potential and forces withing the Spherical_LJ_driver class.
+        # Check if any atom is outside the spherical potential
+        if np.any(r <= 0):
+            warning(
+                "Some atoms are outside the spherical potential. This can lead to numerical instability."
+            )
 
+        # Calculate the potential
+        sr = sigma / r
+        potential = epsilon * ( sr**first_power - sr**second_power)
+        potential = np.sum(potential)
 
-# ---------------------- #
-def compute_energy_and_forces(pos, instructions):
-    """
-    Computes potential and analytical forces using NumPy.
-
-    Returns:
-        potential (float), forces (ndarray)
-    """
-    center = np.asarray(instructions["center"])
-    radius = float(instructions["radius"])
-    sigma = float(instructions["sigma"])
-    epsilon = float(instructions["epsilon"])
-    first_power = int(instructions["first_power"])
-    second_power = int(instructions["second_power"])
-
-    delta = pos - center
-    r = radius - np.linalg.norm(delta, axis=1)
-
-    # Check if any atom is outside the spherical potential
-    if np.any(r <= 0):
-        warning(
-            "Some atoms are outside the spherical potential. This can lead to numerical instability."
+        # Correct derivative of the potential including the 2/15 factor
+        forces = epsilon * (
+            -first_power * (sigma**first_power) / (r ** (first_power + 1))
+            + second_power * (sigma**second_power) / (r ** (second_power + 1))
         )
+        
+        assert forces.shape == r.shape, "Forces shape mismatch."
 
-    # Calculate the potential
-    sr = sigma / r
-    potential = epsilon * (2.0 / 15.0 * sr**first_power - sr**second_power)
-    potential = np.sum(potential)
-
-    # Calculate the forces
-    r_vec = np.linalg.norm(delta, axis=1)  # ||delta||
-
-    # Correct derivative of the potential including the 2/15 factor
-    dU_dr = -epsilon * (
-        -first_power * (2.0 / 15.0) * (sigma**first_power) / (r ** (first_power + 1))
-        + second_power * (sigma**second_power) / (r ** (second_power + 1))
-    )
-
-    unit_vectors = delta / r_vec[:, np.newaxis]  # normalize delta
-    forces = -dU_dr[:, np.newaxis] * unit_vectors
-
-    return potential, forces
-
+        return potential, forces

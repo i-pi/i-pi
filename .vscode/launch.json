@@ -1,0 +1,83 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+
+        {
+            "name": "MACE",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "/home/stoccoel/codes/i-pi/bin/i-pi-py_driver",
+            "console": "integratedTerminal",
+            "cwd" : "/home/stoccoel/Documents/E-driver/server/",
+            "args": ["-u", "-a", "host", "-m", "extmace", "-o", "template=start.extxyz,model=pes+mu.model,requires_extra=True,mace_kwargs=mace_kwargs.json"],
+            "justMyCode": false
+        }
+        ,
+        {
+          "name": "i-PI",
+          "type": "debugpy",
+          "request": "launch",
+          "program": "/home/stoccoel/codes/i-pi/bin/i-pi",
+          "console": "integratedTerminal",
+          "cwd" : "/home/stoccoel/Downloads/run-0/",
+          //"cwd" : "/home/stoccoel/codes/i-pi/ipi_tests/regression_tests/tests/TEMPERATURE/nvt_pilel_pimd4/",
+          "args": ["input.xml"],
+          "justMyCode": false
+      }
+    ],
+      "compounds": [
+      {
+        "name": "Debug Both Programs",
+        "configurations": ["MACE", "i-PI"],
+        "stopAll": true
+      }
+    ]
+}
+
+// {
+//     "version": "0.2.0",
+//     "configurations": [
+      
+//         {
+//             "name": "i-PI",
+//             "type": "debugpy",
+//             "request": "launch",
+//             "program": "/home/stoccoel/codes/i-pi/bin/i-pi",
+//             "console": "integratedTerminal",
+//             "cwd": "/home/stoccoel/codes/i-pi/examples/clients/pes/harmonic/",
+//             "args": ["input.xml"],
+//             "justMyCode": false
+//           },
+//       {
+//         "name": "MACE",
+//         "type": "debugpy",
+//         "request": "launch",
+//         "program": "/home/stoccoel/codes/i-pi/bin/i-pi-py_driver",
+//         "console": "integratedTerminal",
+//         "cwd": "//home/stoccoel/codes/i-pi/examples/clients/pes/harmonic/",
+//         "args": [
+//           "-u",
+//           "-a",
+//           "localhost",
+//           "-m",
+//           "harmonic",
+//           //"-l",
+//           //"",
+//           "-o",
+//           "template=start.extxyz,model=../../models/MACE.ch=32.rmax=5.0.max_ell=2.corr=2.n=17.seed=113355_stagetwo.model,mace_kwargs=mace_kwargs.json"
+//         ],
+//         "justMyCode": false
+//       }
+//     ],
+//     "compounds": [
+//       {
+//         "name": "Debug Both Programs",
+//         "configurations": ["MACE", "i-PI"],
+//         "stopAll": true
+//       }
+//     ]
+//   }
+  
