@@ -15,7 +15,7 @@ import numpy as np
 from ipi.engine.motion import Motion
 from ipi.utils.depend import *
 from ipi.engine.thermostats import Thermostat
-from ipi.engine.barostats import Barostat
+from ipi.engine.barostats import Barostat, BaroRGB
 from ipi.utils.softexit import softexit
 from ipi.utils.messages import warning, verbosity
 
@@ -221,6 +221,10 @@ class Dynamics(Motion):
             elif self.enstype == "nst":
                 if np.allclose(self.ensemble.stressext.diagonal(), -12345):
                     raise ValueError("Unspecified stress for a constant-s integrator")
+                if type(self.barostat) is not BaroRGB:
+                    raise ValueError(
+                        "NST ensemble only supported with the RGB ('anisotropic') barostat."
+                    )
         if self.enstype == "nve" and self.beads.nbeads > 1:
             if self.ensemble.temp < 0:
                 raise ValueError(
