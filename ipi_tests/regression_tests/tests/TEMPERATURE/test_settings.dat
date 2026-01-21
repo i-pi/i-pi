@@ -1,4 +1,4 @@
 driver_model gas 
-address driver
+address localhost 
 port 31415
 socket_mode unix
