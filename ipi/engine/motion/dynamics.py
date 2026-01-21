@@ -630,6 +630,7 @@ class NVEIntegratorWithFriction(NVEIntegrator):
         self,
         friction: Friction,
     ):
+        #TODO: should this not be done in bind() ?
         assert friction is not None, "Friction must be provided to use nve-f integrator"
         self.friction = friction
         super().__init__()

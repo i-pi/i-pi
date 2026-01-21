@@ -39,7 +39,7 @@ class DoubleWell_driver(Dummy_driver):
             w_b = 500 * invcm2au  # Tc = 115K
             v0 = 2085 * invcm2au
             m = 1837.36223469
-            self.delta = 00
+            self.delta = 0.0
         else:
             try:
                 w_b = w_b * invcm2au

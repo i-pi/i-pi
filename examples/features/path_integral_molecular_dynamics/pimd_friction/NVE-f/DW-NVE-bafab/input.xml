@@ -1,11 +1,12 @@
 <simulation verbosity='high'>
   <output prefix='simulation'>
-    <properties stride='1' filename='out'>  [ step, conserved, temperature{kelvin},  potential, kinetic_md ] </properties>
+    <properties stride='1' filename='out'>  [ 
+      step, temperature{kelvin}, conserved{electronvolt}, potential{electronvolt}, kinetic_md{electronvolt}, spring{electronvolt}, friction_energy{electronvolt} ] </properties>
     <trajectory filename='pos_c' stride='1'> x_centroid </trajectory>
     <trajectory filename='frc_c' stride='1'> f_centroid </trajectory>
     <trajectory filename='vel_c' stride='1'> v_centroid </trajectory>
     <trajectory filename='mom_c' stride='1'> p_centroid </trajectory>
-   
+    <trajectory filename='sigma' stride='1' extra_type='diffusion_coefficient' bead='0'> extras </trajectory>
   </output>
   <total_steps>2000 </total_steps>
   <prng>

@@ -35,7 +35,7 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
     sd(q) = [1+eps1 exp( (q-0)^2 / (2deltaQ^2) ) ] + eps2 tanh(q/deltaQ)
 
     DW+fric driver expects 8 arguments.
-        Example: python driver.py -m DoubleWell_with_fric -o omega_b (cm^-1) V0 (cm^-1) mass delta(\AA) eta0  eps1 eps2  deltaQ
+        Example: python driver.py -m DoubleWell_with_fric -o omega_b (cm^-1) V0 (cm^-1) mass eta0 eps1 eps2 delta(\AA) deltaQ
         python driver.py -m DoubleWell -o 500,2085,1837,0.00,1,0,0,1
     """
 
@@ -58,6 +58,7 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
             v0 = v0 * invcm2au
             self.delta = delta * A2au
             self.eta0 = eta0
+            self.root_eta0 = np.sqrt(eta0)
             self.eps1 = eps1
             self.eps2 = eps2
             self.deltaQ = deltaQ
@@ -90,6 +91,16 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
         dSD_dq = q * (dsddq1 + dsddq2) + self.SD(q)
 
         return dSD_dq
+    
+    def get_diffusion_coefficient(self, pos):
+        """Function that computes the array of diffusion coefficients.
+        """
+        self.check_dimensions(pos)
+        q = pos[0,0]
+        diffusion_coefficient = np.zeros(3)
+        dSD_dq = self.dSD_dq(q)
+        diffusion_coefficient[0] = self.root_eta0 * dSD_dq
+        return diffusion_coefficient
 
     def get_friction_tensor(self, pos):
         """Function that computes spatially dependent friction tensor"""
@@ -100,6 +111,14 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
 
         friction_tensor[0, 0] = self.eta0 * self.dSD_dq(x) ** 2
         return friction_tensor
+    
+    def get_diffusion_and_friction(self, pos):
+        """Function that computes the vector of diffusion coefficients 
+        and its outer product with itself, i.e., the static friction tensor.
+        """
+        diffusion_coefficient = self.get_diffusion_coefficient(pos)
+        friction_tensor = diffusion_coefficient * diffusion_coefficient.T
+        return diffusion_coefficient, friction_tensor
 
     def get_sigma_tensor(self, pos):
         self.check_dimensions(pos)
@@ -117,15 +136,8 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
     def compute_structure(self, cell, pos):
         pot, force, vir, extras = super().compute_structure(cell, pos)
 
-        friction_tensor = self.get_friction_tensor(pos)
-        sigma_tensor = self.get_sigma_tensor(pos)
-        coupling_value = self.get_coupling_value(pos)
-
-        extras = json.dumps({
-            "friction": friction_tensor.tolist(),  # keep old
-            "sigma": sigma_tensor.tolist(),        # new
-            "coupling": coupling_value             # new (scalar)
-        })
+        diffusion_coefficient, friction_tensor = self.get_diffusion_and_friction(pos)
+        extras = json.dumps({"friction": friction_tensor.tolist(), "diffusion_coefficient": diffusion_coefficient.tolist()})
         return pot, force, vir, extras
 
 
