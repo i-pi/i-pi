@@ -20,7 +20,7 @@ jobs:
           - os: ubuntu-22.04
             python-version: "3.8"
           - os: ubuntu-22.04
-	  python-version: "3.12"
+	    python-version: "3.12"
 
     steps:
       - uses: actions/checkout@v4
