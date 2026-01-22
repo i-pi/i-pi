@@ -584,7 +584,13 @@ class IMF(DummyCalculator):
                     dA = np.abs(bs_Aanh[-1] - bs_Aanh[-2]) / (self.dof - self.imm.nz)
                     info(
                         " @NM: CONVERGENCE : fnmrms = %10.8e   nbasis = %5d    A =  %10.8e   D(A) =  %10.8e /  %10.8e"
-                        % (ffnmrms, nnbasis, bs_Aanh[-1].item(), dA.item(), self.athresh),
+                        % (
+                            ffnmrms,
+                            nnbasis,
+                            bs_Aanh[-1].item(),
+                            dA.item(),
+                            self.athresh,
+                        ),
                         verbosity.medium,
                     )
 
