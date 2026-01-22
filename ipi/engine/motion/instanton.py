@@ -542,7 +542,9 @@ class FrictionMapper(PesMapper):
                 for j in range(nphys):
                     for k in range(nphys):
                         suma = np.sum(dgdq[nl, :, j] * dgdq[ne, :, k])
-                        h_fric[nphys * nl + j, nphys * ne + k] = prefactor * suma
+                        h_fric[nphys * nl + j, nphys * ne + k] = (
+                            prefactor * suma
+                        ).item()
         return h_fric
 
     def obtain_g(self, s):
