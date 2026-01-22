@@ -502,7 +502,11 @@ class SCPhononator(DummyPhononator):
             self.apply_hpf()
             self.get_KnD()
 
-            info(" @SCP: <f> =  %10.8f +/-  %10.8f: " % (f, f_err), verbosity.medium)
+            info(
+                " @SCP: <f> =  %10.8f +/-  %10.8f: "
+                % (np.linalg.norm(f).item(), np.linalg.norm(f_err).item()),
+                verbosity.medium,
+            )
             info(
                 " @SCP: OPTMODE = sd : Using the displacement correlation as a preconditioner.",
                 verbosity.medium,
@@ -530,7 +534,11 @@ class SCPhononator(DummyPhononator):
             self.apply_hpf()
             self.get_KnD()
 
-            info(" @SCP: <f> =  %10.8f +/-  %10.8f: " % (f, f_err), verbosity.medium)
+            info(
+                " @SCP: <f> =  %10.8f +/-  %10.8f: "
+                % (np.linalg.norm(f).item(), np.linalg.norm(f_err).item()),
+                verbosity.medium,
+            )
             info(
                 " @SCP: OPTMODE = iK : Using the inverse Hessian as a preconditioner.",
                 verbosity.medium,
@@ -647,19 +655,18 @@ class SCPhononator(DummyPhononator):
                     dqnm[self.z] = 0.0
 
                     self.dm.beads.q += np.dot(self.dm.V, dqnm)
-                    info(
-                        " @SCP: <f> =  %10.8f +/-  %10.8f : number of batch weights > %10.8f =  %8d / %8d : largest batch weight = %10.8e"
-                        % (
-                            np.linalg.norm(f),
-                            np.linalg.norm(f_err),
-                            self.wthreshold,
-                            sum(batch_w > self.wthreshold),
-                            len(batch_w),
-                            batch_w[-1],
-                        ),
-                        verbosity.medium,
-                    )
-
+                                info(
+                                    " @SCP: <f> =  %10.8f +/-  %10.8f : number of batch weights > %10.8f =  %8d / %8d : largest batch weight = %10.8e"
+                                    % (
+                                        np.linalg.norm(f),
+                                        np.linalg.norm(f_err),
+                                        self.wthreshold,
+                                        sum(batch_w > self.wthreshold),
+                                        len(batch_w),
+                                        batch_w[-1].item(),
+                                    ),
+                                    verbosity.medium,
+                                )
                 # Calculates the hessian.
                 # Applies acoustic sum rule to project out zero modes.
                 # Applies a high pass filter to zero out low frequency modes.

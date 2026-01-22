@@ -406,7 +406,7 @@ class IMF(DummyCalculator):
                 dA = np.abs(bs_Aanh[-1] - bs_Aanh[-2]) / (self.dof - self.imm.nz)
                 info(
                     " @NM: CONVERGENCE : nbasis = %5d    A =  %10.8e   D(A) =  %10.8e /  %10.8e"
-                    % (nnbasis, bs_Aanh[-1], dA, self.athresh),
+                    % (nnbasis, bs_Aanh[-1].item(), dA.item(), self.athresh),
                     verbosity.medium,
                 )
 
@@ -584,7 +584,7 @@ class IMF(DummyCalculator):
                     dA = np.abs(bs_Aanh[-1] - bs_Aanh[-2]) / (self.dof - self.imm.nz)
                     info(
                         " @NM: CONVERGENCE : fnmrms = %10.8e   nbasis = %5d    A =  %10.8e   D(A) =  %10.8e /  %10.8e"
-                        % (ffnmrms, nnbasis, bs_Aanh[-1], dA, self.athresh),
+                        % (ffnmrms, nnbasis, bs_Aanh[-1].item(), dA.item(), self.athresh),
                         verbosity.medium,
                     )
 
@@ -1323,7 +1323,7 @@ class VSCF(IMF):
             da = np.absolute(a_vscf - a_vscf_old) / len(self.inms)
             info(
                 " @NM: CONVERGENCE : iteration = %8d   A =  %10.8e    D(A) = %10.8e / %10.8e"
-                % (vscf_iter, a_vscf, da, self.athresh),
+                % (vscf_iter, a_vscf.item(), da.item(), self.athresh),
                 verbosity.medium,
             )
 
