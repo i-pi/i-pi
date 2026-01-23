@@ -45,7 +45,7 @@ class Friction:
                 Defaults to False.
 
         """
-        # TODO: make these depend objects
+        # TODO: make these depend objects?
         self.spectral_density = np.asanyarray(spectral_density, dtype=float).copy()
         self.alpha_input = np.asanyarray(alpha_input, dtype=float).copy()
         self.position_dependent = position_dependent
@@ -57,10 +57,6 @@ class Friction:
             func=self.get_friction_coupling_nm,
             dependencies=[self._Sigma],
         )
-        # Frictional mean-field potential
-        self._efric = depend_value(
-            name="efric", func=self.get_efric, dependencies=[self._friction_coupling_nm]
-        )
         # Frictional mean-field force
         self._ffric_nm = depend_value(
             name="ffric_nm",
@@ -70,6 +66,9 @@ class Friction:
         self._ffric = depend_value(
             name="ffric", func=self.get_ffric, dependencies=[self._ffric_nm]
         )
+        # Frictional mean-field potential
+        self._efric = depend_value(name="efric", value=0.0)
+        
         if self.position_dependent:
             raise NotImplementedError(
                 "Position dependent friction not implemented yet."
@@ -102,6 +101,8 @@ class Friction:
             info("compute alpha using get_alpha_numeric().")
         self._Sigma.add_dependency(self.forces._extras)
         self._friction_coupling_nm.add_dependency(self.beads._q)
+        self._efric.add_dependency(self._friction_coupling_nm)
+        self._efric._func = self.get_efric
 
     def get_diffusion_coefficient(self):
         return np.asarray(self.forces.extras["diffusion_coefficient"])
