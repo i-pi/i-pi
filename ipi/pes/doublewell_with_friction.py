@@ -116,7 +116,9 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
         and its outer product with itself, i.e., the static friction tensor.
         """
         diffusion_coefficient = self.get_diffusion_coefficient(pos)
-        friction_tensor = diffusion_coefficient[:,None] * diffusion_coefficient[None,:]
+        friction_tensor = (
+            diffusion_coefficient[:, None] * diffusion_coefficient[None, :]
+        )
         return diffusion_coefficient, friction_tensor
 
     def get_sigma_tensor(self, pos):

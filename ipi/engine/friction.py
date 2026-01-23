@@ -68,7 +68,7 @@ class Friction:
         )
         # Frictional mean-field potential
         self._efric = depend_value(name="efric", value=0.0)
-        
+
         if self.position_dependent:
             raise NotImplementedError(
                 "Position dependent friction not implemented yet."
