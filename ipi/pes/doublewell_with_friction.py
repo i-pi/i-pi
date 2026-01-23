@@ -91,12 +91,11 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
         dSD_dq = q * (dsddq1 + dsddq2) + self.SD(q)
 
         return dSD_dq
-    
+
     def get_diffusion_coefficient(self, pos):
-        """Function that computes the array of diffusion coefficients.
-        """
+        """Function that computes the array of diffusion coefficients."""
         self.check_dimensions(pos)
-        q = pos[0,0]
+        q = pos[0, 0]
         diffusion_coefficient = np.zeros(3)
         dSD_dq = self.dSD_dq(q)
         diffusion_coefficient[0] = self.root_eta0 * dSD_dq
@@ -111,9 +110,9 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
 
         friction_tensor[0, 0] = self.eta0 * self.dSD_dq(x) ** 2
         return friction_tensor
-    
+
     def get_diffusion_and_friction(self, pos):
-        """Function that computes the vector of diffusion coefficients 
+        """Function that computes the vector of diffusion coefficients
         and its outer product with itself, i.e., the static friction tensor.
         """
         diffusion_coefficient = self.get_diffusion_coefficient(pos)
@@ -137,7 +136,12 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
         pot, force, vir, extras = super().compute_structure(cell, pos)
 
         diffusion_coefficient, friction_tensor = self.get_diffusion_and_friction(pos)
-        extras = json.dumps({"friction": friction_tensor.tolist(), "diffusion_coefficient": diffusion_coefficient.tolist()})
+        extras = json.dumps(
+            {
+                "friction": friction_tensor.tolist(),
+                "diffusion_coefficient": diffusion_coefficient.tolist(),
+            }
+        )
         return pot, force, vir, extras
 
 

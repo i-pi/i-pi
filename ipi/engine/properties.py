@@ -15,7 +15,10 @@ from ipi.utils.units import Constants, unit_to_internal
 from ipi.utils.mathtools import logsumlog, h2abc_deg
 from ipi.utils.io.inputs import io_xml
 from ipi.engine.motion.driven_dynamics import DrivenDynamics
-from ipi.engine.motion.dynamics import NVEIntegratorWithFriction, NVTIntegratorWithFriction
+from ipi.engine.motion.dynamics import (
+    NVEIntegratorWithFriction,
+    NVTIntegratorWithFriction,
+)
 from ipi.utils.softexit import softexit
 
 __all__ = ["Properties", "Trajectories", "getkey", "getall", "help_latex", "help_rst"]
@@ -478,14 +481,17 @@ class Properties:
             "friction_energy": {
                 "dimension": "energy",
                 "help": "The mean-field potential energy contributed by friction.",
-                #TODO: can this be managed nicer?
+                # TODO: can this be managed nicer?
                 "func": (
                     lambda: (
                         self.motion.integrator.friction.efric / self.beads.nbeads
-                        if isinstance(self.motion.integrator, (NVEIntegratorWithFriction, NVTIntegratorWithFriction) )
+                        if isinstance(
+                            self.motion.integrator,
+                            (NVEIntegratorWithFriction, NVTIntegratorWithFriction),
+                        )
                         else 0.0
                     )
-                )
+                ),
             },
             "kinetic_md": {
                 "dimension": "energy",
@@ -1622,7 +1628,6 @@ class Properties:
             return self.forces.pot / self.beads.nbeads
         else:
             return self.forces.pots[int(bead)]
-        
 
     def get_kinmd(self, atom="", bead="", nm="", return_count=False):
         """Calculates the (bead-average) classical kinetic energy of the simulation (p^2/2m)

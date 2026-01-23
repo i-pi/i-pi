@@ -64,7 +64,6 @@ class Psiflow_driver(Dummy_driver):
         initialise_driver(self)
 
     def compute_structure(self, cell, pos):
-
         pos = unit_to_user("length", "angstrom", pos)
         cell = unit_to_user("length", "angstrom", cell.T)
 

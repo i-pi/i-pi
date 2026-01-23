@@ -24,7 +24,6 @@ class Custom_driver(Dummy_driver):
     """
 
     def __init__(self, k1, k2=None, k3=None, *args, **kwargs):
-
         if k2 == None or k3 == None:
             self.k = k1
             self.type = "isotropic"
