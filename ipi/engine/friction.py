@@ -105,7 +105,11 @@ class Friction:
         self._efric._func = self.get_efric
 
     def get_diffusion_coefficient(self):
-        return np.asarray(self.forces.extras["diffusion_coefficient"])
+        Sigma = self.forces.extras.get("diffusion_coefficient")
+        if Sigma is None:
+            raise KeyError(f"Did not find 'diffusion_coefficient' among the force extras = {self.forces.extras}")
+        else:
+            return np.asarray(Sigma)
 
     def get_friction_coupling_nm(self):
         """Compute the friction coupling for each normal-mode index"""
