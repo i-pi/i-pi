@@ -616,7 +616,7 @@ def BFGSTRM(x0, u0, f0, h0, tr, mapper, big_step):
     accept = False
     while not accept:
         # Find new movement direction candidate
-        d_x = min_trm(f0, h0, tr)
+        d_x = min_trm(f0, h0, tr[0])
         # Make movement  and get new energy (u)  and forces(f) using mapper
         x = x0 + d_x
         u, g = mapper(x)
@@ -643,9 +643,9 @@ def BFGSTRM(x0, u0, f0, h0, tr, mapper, big_step):
         # Update TrustRadius (tr)
         if quality < 0.25:
             tr[0] = 0.5 * d_x_norm
-        elif quality > 0.75 and d_x_norm > 0.9 * tr:
-            tr[0] = 2.0 * tr
-            if tr > big_step:
+        elif quality > 0.75 and d_x_norm > 0.9 * tr[0]:
+            tr[0] = 2.0 * tr[0]
+            if tr[0] > big_step:
                 tr[0] = big_step
 
     # After accept, update the Hessian
