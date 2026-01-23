@@ -107,7 +107,9 @@ class Friction:
     def get_diffusion_coefficient(self):
         Sigma = self.forces.extras.get("diffusion_coefficient")
         if Sigma is None:
-            raise KeyError(f"Did not find 'diffusion_coefficient' among the force extras = {self.forces.extras}")
+            raise KeyError(
+                f"Did not find 'diffusion_coefficient' among the force extras = {self.forces.extras}"
+            )
         else:
             return np.asarray(Sigma)
 
