@@ -1,6 +1,7 @@
 <simulation verbosity='high'>
   <output prefix='simulation'>
-    <properties stride='1' filename='out'>  [ step, conserved, temperature{kelvin},  potential, kinetic_md ] </properties>
+    <properties stride='1' filename='out'>  [ 
+      step, conserved, potential, kinetic_md, spring, friction_energy ] </properties>
     <trajectory filename='pos_c' stride='1'> x_centroid </trajectory>
     <trajectory filename='mom_c' stride='1'> p_centroid </trajectory>
   </output>
@@ -8,14 +9,23 @@
   <prng>
     <seed>31415</seed>
   </prng>
-  <ffsocket name='doublewell_1D' mode='unix' pbc='false'>
-    <address>localhost</address>
-  </ffsocket>
+  <ffdirect name='doublewell_1D'>
+    <pes> DW_friction </pes>
+    <parameters> {
+      w_b : 500.0,
+      v0 : 2085,
+      m : 1837.36223469,
+      eta0 : 5.0,
+      eps1 : 0,
+      eps2 : 0,
+      delta : 0,
+      deltaQ : 1} 
+    </parameters>
+  </ffdirect>
   <system>
     <initialize nbeads='32'>
       <file mode='xyz'> init.xyz </file>
       <momenta mode='xyz' units='atomic_unit'> initial_momenta.xyz </momenta>
-      <cell mode='abc' units='angstrom'> [300, 300, 300] </cell>
     </initialize>
     <forces>
       <force forcefield='doublewell_1D'> </force>

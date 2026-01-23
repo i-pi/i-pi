@@ -1,96 +1,96 @@
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H -1.2233308 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:       0 momenta{atomic_unit}  cell{atomic_unit}
+       H  1.7087398943683072e+00  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H 0.048892379 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:       1 momenta{atomic_unit}  cell{atomic_unit}
+       H -5.7102033818328426e+00  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H 0.5651168 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:       2 momenta{atomic_unit}  cell{atomic_unit}
+       H  1.6737534015401638e+00  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H 0.11641069 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:       3 momenta{atomic_unit}  cell{atomic_unit}
+       H -8.3263621168827289e+00  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H 0.65882294 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:       4 momenta{atomic_unit}  cell{atomic_unit}
+       H  4.3208257572499873e+00  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H 2.2219742 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:       5 momenta{atomic_unit}  cell{atomic_unit}
+       H -1.0920099961889139e+01  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H -1.1279764 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:       6 momenta{atomic_unit}  cell{atomic_unit}
+       H  2.3333688709766713e+00  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H 0.72116202 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:       7 momenta{atomic_unit}  cell{atomic_unit}
+       H -6.4416783573520320e-02  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H -1.2708492 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:       8 momenta{atomic_unit}  cell{atomic_unit}
+       H -3.0235558186228872e-01  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H 0.26219209 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:       9 momenta{atomic_unit}  cell{atomic_unit}
+       H -9.7829912652344397e+00  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H -0.3908678 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:      10 momenta{atomic_unit}  cell{atomic_unit}
+       H -3.7615798457386362e+00  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H 1.0097007 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:      11 momenta{atomic_unit}  cell{atomic_unit}
+       H -1.1187707083280337e+01  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H -0.656181 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:      12 momenta{atomic_unit}  cell{atomic_unit}
+       H -1.2123446501523416e-02  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H 0.39624481 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:      13 momenta{atomic_unit}  cell{atomic_unit}
+       H  2.1340213806057711e+00  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H -0.96499172 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:      14 momenta{atomic_unit}  cell{atomic_unit}
+       H -6.2657204941566302e-01  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H -1.646889 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:      15 momenta{atomic_unit}  cell{atomic_unit}
+       H  3.3463167390696458e-01  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H 0.33159447 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:      16 momenta{atomic_unit}  cell{atomic_unit}
+       H  3.1891370819990952e+00  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H 1.322071 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:      17 momenta{atomic_unit}  cell{atomic_unit}
+       H -6.4630513569214116e+00  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H 0.39673371 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:      18 momenta{atomic_unit}  cell{atomic_unit}
+       H -5.9036170501730894e+00  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H -0.76440462 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:      19 momenta{atomic_unit}  cell{atomic_unit}
+       H -4.7174367758479914e+00  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H 0.20468127 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:      20 momenta{atomic_unit}  cell{atomic_unit}
+       H  1.0236594939615893e+00  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H 0.58516454 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:      21 momenta{atomic_unit}  cell{atomic_unit}
+       H  5.0173108419373946e-01  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H 0.9086459 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:      22 momenta{atomic_unit}  cell{atomic_unit}
+       H -6.6220423185686625e+00  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H -0.88281816 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:      23 momenta{atomic_unit}  cell{atomic_unit}
+       H -6.1029289901871326e+00  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H 0.53108895 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:      24 momenta{atomic_unit}  cell{atomic_unit}
+       H -9.7956589792086568e-01  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H 0.26801884 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:      25 momenta{atomic_unit}  cell{atomic_unit}
+       H -4.3189775726123134e+00  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H -0.02472469 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:      26 momenta{atomic_unit}  cell{atomic_unit}
+       H  2.3044107454314076e+00  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H 0.010054284 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:      27 momenta{atomic_unit}  cell{atomic_unit}
+       H -4.0638099789471127e-01  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H -0.51809971 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:      28 momenta{atomic_unit}  cell{atomic_unit}
+       H -2.0935315396108987e+00  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H -0.47331245 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:      29 momenta{atomic_unit}  cell{atomic_unit}
+       H  9.7361391365500216e-01  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H 1.0153872 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:      30 momenta{atomic_unit}  cell{atomic_unit}
+       H  5.2326233200350130e+00  0.0000000000000000e+00  0.0000000000000000e+00
 1
-CELL(abcABC): 300.0 300.0 300.0 90.0 90.0 90.0 cell{atomic_unit} Traj: momenta{atomic_unit}
-H 0.19742976 0.0 0.0
+# CELL(abcABC):  300.00000   300.00000   300.00000    90.00000    90.00000    90.00000  Step:           0  Bead:      31 momenta{atomic_unit}  cell{atomic_unit}
+       H -2.4700039243867566e+00  0.0000000000000000e+00  0.0000000000000000e+00
