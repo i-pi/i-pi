@@ -5,6 +5,7 @@ used to perform calculations with arbitrary machine learning potentials.
 
 import json
 import warnings
+import concurrent.futures
 import numpy as np
 
 from ipi.utils.units import unit_to_internal, unit_to_user
@@ -157,10 +158,25 @@ class MetatomicDriver(Dummy_driver):
 
         # Load the model
         model_path = self.model
-        self.model = mta.load_atomistic_model(
-            model_path, extensions_directory=self.extensions
-        )
-        self.model = self.model.to(self.device)
+
+        if "|" in self.device:
+            self.devices = [d.strip() for d in self.device.split("|")]
+        else:
+            self.devices = [self.device]
+
+        self.models = []
+        for device in self.devices:
+            model = mta.load_atomistic_model(
+                model_path, extensions_directory=self.extensions
+            )
+            model = model.to(device)
+            self.models.append(model)
+
+        self.model = self.models[0]
+        # ensure self.device is set to a single device (the first one)
+        # to ensure compatibility with single-device methods
+        self.device = self.devices[0]
+
         self._dtype = getattr(torch, self.model.capabilities().dtype)
 
         # read the template and extract the corresponding atomic types
@@ -225,7 +241,12 @@ class MetatomicDriver(Dummy_driver):
         # Show the model metadata to the users
         info(f"Metatomic model information:\n{self.model.metadata()}", self.verbose)
 
-    def _prepare_system(self, cell, pos):
+    def _prepare_system(self, cell, pos, model=None, device=None):
+        if model is None:
+            model = self.model
+        if device is None:
+            device = self.device
+
         positions = unit_to_user("length", "angstrom", pos)
         cell = unit_to_user("length", "angstrom", cell.T)
 
@@ -245,14 +266,18 @@ class MetatomicDriver(Dummy_driver):
         system = mta.System(self._types, positions, cell, pbc)
         # compute the requires neighbor lists with vesin
         vesin_metatomic.compute_requested_neighbors(
-            system, system_length_unit="Angstrom", model=self.model
+            system, system_length_unit="Angstrom", model=model
         )
-        system = system.to(self.device)
+        system = system.to(device)
 
         return system, strain
 
-    def _process_outputs(self, outputs, systems, strains):
+    def _process_outputs(self, outputs, systems, strains, model=None):
+        if model is None:
+            model = self.model
         num_systems = len(systems)
+        # determine device from systems
+        device = systems[0].positions.device
 
         energy_tensor = outputs[f"energy{self.energy_suffix}"].block().values
 
@@ -272,7 +297,7 @@ class MetatomicDriver(Dummy_driver):
                 stresses_tensor = torch.full(
                     (num_systems, 3, 3),
                     torch.nan,
-                    device=self.device,
+                    device=device,
                     dtype=self._dtype,
                 )
             virials_tensor = torch.stack(
@@ -380,7 +405,7 @@ class MetatomicDriver(Dummy_driver):
                             systems, positions_list, strain_list
                         )
                     ]
-                    for options in self.model.requested_neighbor_lists():
+                    for options in model.requested_neighbor_lists():
                         # get the pre-computed NL, and re-attach it in the compute graph
                         for system, new_system in zip(systems, new_systems):
                             neighbors = mts.detach_block(
@@ -394,7 +419,7 @@ class MetatomicDriver(Dummy_driver):
                             new_system.add_neighbor_list(options, neighbors)
 
                     return (
-                        self.model(
+                        model(
                             new_systems,
                             self.evaluation_options,
                             check_consistency=self.check_consistency,
@@ -412,7 +437,7 @@ class MetatomicDriver(Dummy_driver):
                     _compute_ensemble,
                     tuple(
                         [system.positions for system in systems]
-                        + [s.to(self.device) for s in strains]
+                        + [s.to(device) for s in strains]
                     ),
                     vectorize=False,
                 )
@@ -489,40 +514,73 @@ class MetatomicDriver(Dummy_driver):
                     "Both position and cell should be given as lists to run in batched mode"
                 )
 
-            # assemble a list of mta.System. we need also to hold the
-            # strains because they're used to backpropagate the stress
-            sys_batch = []
-            strain_batch = []
+            n_devices = len(self.devices)
+            n_samples = len(cell)
+
+            def compute_chunk(device_idx, cell_chunk, pos_chunk):
+                model = self.models[device_idx]
+                device = self.devices[device_idx]
+
+                # assemble a list of mta.System. we need also to hold the
+                # strains because they're used to backpropagate the stress
+                sys_batch = []
+                strain_batch = []
+
+                for c, p in zip(cell_chunk, pos_chunk):
+                    sy, st = self._prepare_system(c, p, model=model, device=device)
+                    sys_batch.append(sy)
+                    strain_batch.append(st)
+
+                if torch.cuda.is_available() and "cuda" in str(device):
+                    torch.cuda.synchronize(device=device)
+
+                # computes the model (in batched mode)
+                outputs = model(
+                    sys_batch,
+                    self.evaluation_options,
+                    check_consistency=self.check_consistency,
+                )
+
+                if torch.cuda.is_available() and "cuda" in str(device):
+                    torch.cuda.synchronize(device=device)
+
+                # parse the outputs (that come as a dict of tensormaps)
+                # into a list of results to be passed back
+                return self._process_outputs(
+                    outputs, sys_batch, strain_batch, model=model
+                )
 
             pre_time = -time()
-            for c, p in zip(cell, pos):
-                sy, st = self._prepare_system(c, p)
-                sys_batch.append(sy)
-                strain_batch.append(st)
+
+            if n_devices == 1:
+                processed_outputs = compute_chunk(0, cell, pos)
+            else:
+                # Simple batch splitting
+                batch_size = (n_samples + n_devices - 1) // n_devices
+                futures = []
+                with concurrent.futures.ThreadPoolExecutor(
+                    max_workers=n_devices
+                ) as executor:
+                    for i in range(n_devices):
+                        start = i * batch_size
+                        end = min(start + batch_size, n_samples)
+                        if start >= end:
+                            break
+
+                        cell_chunk = cell[start:end]
+                        pos_chunk = pos[start:end]
+                        futures.append(
+                            executor.submit(compute_chunk, i, cell_chunk, pos_chunk)
+                        )
+
+                processed_outputs = []
+                for f in futures:
+                    processed_outputs.extend(f.result())
+
             pre_time += time()
 
-            if torch.cuda.is_available():
-                torch.cuda.synchronize()
-            model_time = -time()
-
-            # computes the model (in batched mode)
-            outputs = self.model(
-                sys_batch,
-                self.evaluation_options,
-                check_consistency=self.check_consistency,
-            )
-
-            if torch.cuda.is_available():
-                torch.cuda.synchronize()
-            model_time += time()
-
-            pp_time = -time()
-            # parse the outputs (that come as a dict of tensormaps)
-            # into a list of results to be passed back
-            processed_outputs = self._process_outputs(outputs, sys_batch, strain_batch)
-            pp_time += time()
             info(
-                "Test timings %e %e %e" % (pre_time, model_time, pp_time),
+                "Total compute time %e" % (pre_time),
                 verbosity.high,
             )
 
