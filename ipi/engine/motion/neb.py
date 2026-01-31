@@ -815,20 +815,25 @@ class NEBMover(Motion):
                 info(
                     " @NEB: Not converged, deltaEnergy = %.8f, tol = %.8f per atom"
                     % (
-                        np.amax(np.abs(self.nebpot - old_nebpot))
-                        / (self.beads.nbeads * self.beads.natoms),
+                        (
+                            np.amax(np.abs(self.nebpot - old_nebpot))
+                            / (self.beads.nbeads * self.beads.natoms)
+                        ).item(),
                         self.tolerances["energy"],
                     ),
                     verbosity.debug,
                 )
                 info(
                     " @NEB: Not converged, nebgrad = %.8f, tol = %f"
-                    % (np.amax(np.abs(self.nebgrad)), self.tolerances["force"]),
+                    % (
+                        np.amax(np.abs(self.nebgrad)).item(),
+                        self.tolerances["force"],
+                    ),
                     verbosity.debug,
                 )
                 info(
                     " @NEB: Not converged, deltaX = %.8f, tol = %.8f"
-                    % (dx, self.tolerances["position"]),
+                    % (dx.item(), self.tolerances["position"]),
                     verbosity.debug,
                 )
 
@@ -965,18 +970,24 @@ class NEBMover(Motion):
                 info(
                     " @NEB_CLIMB: Not converged, deltaEnergy = %.8f, tol = %.8f per atom"
                     % (
-                        np.amax(np.abs(self.nebpot - old_nebpot)) / self.beads.natoms,
+                        (
+                            np.amax(np.abs(self.nebpot - old_nebpot))
+                            / self.beads.natoms
+                        ).item(),
                         self.tolerances["energy"],
                     ),
                     verbosity.debug,
                 )
                 info(
                     " @NEB_CLIMB: Not converged, climbgrad = %.8f, tol = %f"
-                    % (np.amax(np.abs(self.nebgrad)), self.tolerances["force"]),
+                    % (
+                        np.amax(np.abs(self.nebgrad)).item(),
+                        self.tolerances["force"],
+                    ),
                     verbosity.debug,
                 )
                 info(
                     " @NEB_CLIMB: Not converged, deltaX = %.8f, tol = %.8f"
-                    % (dx, self.tolerances["position"]),
+                    % (dx.item(), self.tolerances["position"]),
                     verbosity.debug,
                 )
