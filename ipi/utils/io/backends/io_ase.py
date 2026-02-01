@@ -107,6 +107,14 @@ def read_ase(filedesc):
         _ase_open_files.pop(filedesc)
         raise EOFError()
 
+    # Issue #477 fix
+    if "mass" in atoms.arrays and "masses" not in atoms.arrays:
+        raise RuntimeError(
+            "ASE reader found 'mass' array but will ignore it. "
+            "Rename column to 'masses' if you want to read custom atomic masses, "
+            "or remove it to use default atomic masses."
+        )
+
     if all(atoms.get_pbc()):
         # We want to make the cell conform
         a = atoms.cell[0]
