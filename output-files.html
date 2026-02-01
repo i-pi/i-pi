@@ -1,0 +1,542 @@
+<!doctype html>
+<html class="no-js" lang="en" data-content_root="">
+  <head><meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width,initial-scale=1"/>
+    <meta name="color-scheme" content="light dark"><meta name="viewport" content="width=device-width, initial-scale=1" />
+<link rel="index" title="Index" href="genindex.html" /><link rel="search" title="Search" href="search.html" /><link rel="next" title="Output file tags" href="output-tags.html" /><link rel="prev" title="Input file tags" href="input-tags.html" />
+
+    <link rel="shortcut icon" href="_static/favicon-ipi.png"/><!-- Generated with Sphinx 7.1.2 and Furo 2024.08.06 -->
+        <title>Output files - i-PI documentation pages</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=8f2a1f02" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo.css?v=354aac6f" />
+    <link rel="stylesheet" type="text/css" href="_static/styles/furo-extensions.css?v=302659d7" />
+    <link rel="stylesheet" type="text/css" href="_static/custom_styles.css?v=78740f61" />
+    
+    
+
+
+<style>
+  body {
+    --color-code-background: #f8f8f8;
+  --color-code-foreground: black;
+  
+  }
+  @media not print {
+    body[data-theme="dark"] {
+      --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+    }
+    @media (prefers-color-scheme: dark) {
+      body:not([data-theme="light"]) {
+        --color-code-background: #202020;
+  --color-code-foreground: #d0d0d0;
+  
+      }
+    }
+  }
+</style></head>
+  <body>
+    
+    <script>
+      document.body.dataset.theme = localStorage.getItem("theme") || "auto";
+    </script>
+    
+
+<svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+  <symbol id="svg-toc" viewBox="0 0 24 24">
+    <title>Contents</title>
+    <svg stroke="currentColor" fill="currentColor" stroke-width="0" viewBox="0 0 1024 1024">
+      <path d="M408 442h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8zm-8 204c0 4.4 3.6 8 8 8h480c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8H408c-4.4 0-8 3.6-8 8v56zm504-486H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zm0 632H120c-4.4 0-8 3.6-8 8v56c0 4.4 3.6 8 8 8h784c4.4 0 8-3.6 8-8v-56c0-4.4-3.6-8-8-8zM115.4 518.9L271.7 642c5.8 4.6 14.4.5 14.4-6.9V388.9c0-7.4-8.5-11.5-14.4-6.9L115.4 505.1a8.74 8.74 0 0 0 0 13.8z"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-menu" viewBox="0 0 24 24">
+    <title>Menu</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-menu">
+      <line x1="3" y1="12" x2="21" y2="12"></line>
+      <line x1="3" y1="6" x2="21" y2="6"></line>
+      <line x1="3" y1="18" x2="21" y2="18"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-arrow-right" viewBox="0 0 24 24">
+    <title>Expand</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather-chevron-right">
+      <polyline points="9 18 15 12 9 6"></polyline>
+    </svg>
+  </symbol>
+  <symbol id="svg-sun" viewBox="0 0 24 24">
+    <title>Light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="feather-sun">
+      <circle cx="12" cy="12" r="5"></circle>
+      <line x1="12" y1="1" x2="12" y2="3"></line>
+      <line x1="12" y1="21" x2="12" y2="23"></line>
+      <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+      <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+      <line x1="1" y1="12" x2="3" y2="12"></line>
+      <line x1="21" y1="12" x2="23" y2="12"></line>
+      <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+      <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon" viewBox="0 0 24 24">
+    <title>Dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-moon">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M12 3c.132 0 .263 0 .393 0a7.5 7.5 0 0 0 7.92 12.446a9 9 0 1 1 -8.313 -12.454z" />
+    </svg>
+  </symbol>
+  <symbol id="svg-sun-with-moon" viewBox="0 0 24 24">
+    <title>Auto light/dark, in light mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path style="opacity: 50%" d="M 5.411 14.504 C 5.471 14.504 5.532 14.504 5.591 14.504 C 3.639 16.319 4.383 19.569 6.931 20.352 C 7.693 20.586 8.512 20.551 9.25 20.252 C 8.023 23.207 4.056 23.725 2.11 21.184 C 0.166 18.642 1.702 14.949 4.874 14.536 C 5.051 14.512 5.231 14.5 5.411 14.5 L 5.411 14.504 Z"/>
+      <line x1="14.5" y1="3.25" x2="14.5" y2="1.25"/>
+      <line x1="14.5" y1="15.85" x2="14.5" y2="17.85"/>
+      <line x1="10.044" y1="5.094" x2="8.63" y2="3.68"/>
+      <line x1="19" y1="14.05" x2="20.414" y2="15.464"/>
+      <line x1="8.2" y1="9.55" x2="6.2" y2="9.55"/>
+      <line x1="20.8" y1="9.55" x2="22.8" y2="9.55"/>
+      <line x1="10.044" y1="14.006" x2="8.63" y2="15.42"/>
+      <line x1="19" y1="5.05" x2="20.414" y2="3.636"/>
+      <circle cx="14.5" cy="9.55" r="3.6"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-moon-with-sun" viewBox="0 0 24 24">
+    <title>Auto light/dark, in dark mode</title>
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round"
+      class="icon-custom-derived-from-feather-sun-and-tabler-moon">
+      <path d="M 8.282 7.007 C 8.385 7.007 8.494 7.007 8.595 7.007 C 5.18 10.184 6.481 15.869 10.942 17.24 C 12.275 17.648 13.706 17.589 15 17.066 C 12.851 22.236 5.91 23.143 2.505 18.696 C -0.897 14.249 1.791 7.786 7.342 7.063 C 7.652 7.021 7.965 7 8.282 7 L 8.282 7.007 Z"/>
+      <line style="opacity: 50%" x1="18" y1="3.705" x2="18" y2="2.5"/>
+      <line style="opacity: 50%" x1="18" y1="11.295" x2="18" y2="12.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="4.816" x2="14.464" y2="3.964"/>
+      <line style="opacity: 50%" x1="20.711" y1="10.212" x2="21.563" y2="11.063"/>
+      <line style="opacity: 50%" x1="14.205" y1="7.5" x2="13.001" y2="7.5"/>
+      <line style="opacity: 50%" x1="21.795" y1="7.5" x2="23" y2="7.5"/>
+      <line style="opacity: 50%" x1="15.316" y1="10.184" x2="14.464" y2="11.036"/>
+      <line style="opacity: 50%" x1="20.711" y1="4.789" x2="21.563" y2="3.937"/>
+      <circle style="opacity: 50%" cx="18" cy="7.5" r="2.169"/>
+    </svg>
+  </symbol>
+  <symbol id="svg-pencil" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-pencil-code">
+      <path d="M4 20h4l10.5 -10.5a2.828 2.828 0 1 0 -4 -4l-10.5 10.5v4" />
+      <path d="M13.5 6.5l4 4" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+  <symbol id="svg-eye" viewBox="0 0 24 24">
+    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+      stroke-width="1" stroke-linecap="round" stroke-linejoin="round" class="icon-tabler-eye-code">
+      <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+      <path d="M10 12a2 2 0 1 0 4 0a2 2 0 0 0 -4 0" />
+      <path
+        d="M11.11 17.958c-3.209 -.307 -5.91 -2.293 -8.11 -5.958c2.4 -4 5.4 -6 9 -6c3.6 0 6.6 2 9 6c-.21 .352 -.427 .688 -.647 1.008" />
+      <path d="M20 21l2 -2l-2 -2" />
+      <path d="M17 17l-2 2l2 2" />
+    </svg>
+  </symbol>
+</svg>
+
+<input type="checkbox" class="sidebar-toggle" name="__navigation" id="__navigation">
+<input type="checkbox" class="sidebar-toggle" name="__toc" id="__toc">
+<label class="overlay sidebar-overlay" for="__navigation">
+  <div class="visually-hidden">Hide navigation sidebar</div>
+</label>
+<label class="overlay toc-overlay" for="__toc">
+  <div class="visually-hidden">Hide table of contents sidebar</div>
+</label>
+
+<a class="skip-to-content muted-link" href="#furo-main-content">Skip to content</a>
+
+
+
+<div class="page">
+  <header class="mobile-header">
+    <div class="header-left">
+      <label class="nav-overlay-icon" for="__navigation">
+        <div class="visually-hidden">Toggle site navigation sidebar</div>
+        <i class="icon"><svg><use href="#svg-menu"></use></svg></i>
+      </label>
+    </div>
+    <div class="header-center">
+      <a href="index.html"><div class="brand">i-PI documentation pages</div></a>
+    </div>
+    <div class="header-right">
+      <div class="theme-toggle-container theme-toggle-header">
+        <button class="theme-toggle">
+          <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+          <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+          <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+          <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+          <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+        </button>
+      </div>
+      <label class="toc-overlay-icon toc-header-icon" for="__toc">
+        <div class="visually-hidden">Toggle table of contents sidebar</div>
+        <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+      </label>
+    </div>
+  </header>
+  <aside class="sidebar-drawer">
+    <div class="sidebar-container">
+      
+      <div class="sidebar-sticky"><a class="sidebar-brand" href="index.html">
+  
+  <div class="sidebar-logo-container">
+    <img class="sidebar-logo" src="_static/ipi-logo.svg" alt="Logo"/>
+  </div>
+  
+  <span class="sidebar-brand-text">i-PI documentation pages</span>
+  
+</a><form class="sidebar-search-container" method="get" action="search.html" role="search">
+  <input class="sidebar-search" placeholder="Search" name="q" aria-label="Search">
+  <input type="hidden" name="check_keywords" value="yes">
+  <input type="hidden" name="area" value="default">
+</form>
+<div id="searchbox"></div><div class="sidebar-scroll"><div class="sidebar-tree">
+  <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="introduction.html">Program Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started.html">Getting started</a></li>
+<li class="toctree-l1"><a class="reference internal" href="features.html">Core features</a></li>
+<li class="toctree-l1"><a class="reference internal" href="units.html">Internal units and conventions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input-files.html">Input files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="input-tags.html">Input file tags</a></li>
+<li class="toctree-l1 current current-page"><a class="current reference internal" href="#">Output files</a></li>
+<li class="toctree-l1"><a class="reference internal" href="output-tags.html">Output file tags</a></li>
+<li class="toctree-l1"><a class="reference internal" href="python.html">Tools and python utilities</a></li>
+<li class="toctree-l1"><a class="reference internal" href="distributed.html">Distributed execution</a></li>
+<li class="toctree-l1"><a class="reference internal" href="tutorials.html">A simple tutorial</a></li>
+<li class="toctree-l1"><a class="reference internal" href="onlinereso.html">Tutorials, recipes, and on-line resources</a></li>
+<li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently asked questions</a></li>
+<li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="contributing.html">Contributing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="bibliography.html">Bibliography</a></li>
+</ul>
+
+</div>
+</div>
+
+      </div>
+      
+    </div>
+  </aside>
+  <div class="main">
+    <div class="content">
+      <div class="article-container">
+        <a href="#" class="back-to-top muted-link">
+          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
+            <path d="M13 20h-2V8l-5.5 5.5-1.42-1.42L12 4.16l7.92 7.92-1.42 1.42L13 8v12z"></path>
+          </svg>
+          <span>Back to top</span>
+        </a>
+        <div class="content-icon-container">
+          <div class="theme-toggle-container theme-toggle-content">
+            <button class="theme-toggle">
+              <div class="visually-hidden">Toggle Light / Dark / Auto color theme</div>
+              <svg class="theme-icon-when-auto-light"><use href="#svg-sun-with-moon"></use></svg>
+              <svg class="theme-icon-when-auto-dark"><use href="#svg-moon-with-sun"></use></svg>
+              <svg class="theme-icon-when-dark"><use href="#svg-moon"></use></svg>
+              <svg class="theme-icon-when-light"><use href="#svg-sun"></use></svg>
+            </button>
+          </div>
+          <label class="toc-overlay-icon toc-content-icon" for="__toc">
+            <div class="visually-hidden">Toggle table of contents sidebar</div>
+            <i class="icon"><svg><use href="#svg-toc"></use></svg></i>
+          </label>
+        </div>
+        <article role="main" id="furo-main-content">
+          <section id="output-files">
+<span id="outputfiles"></span><h1>Output files<a class="headerlink" href="#output-files" title="Permalink to this heading">¶</a></h1>
+<p>i-PI uses a very flexible mechanism to specify how and how often atomic
+configurations and physical properties should be output. Within the <a class="reference internal" href="output-tags.html#outputs"><span class="std std-ref">Output file tags</span></a> tag
+of the xml input file the user can specify multiple tags, each one of
+which will correspond to a particular output file. Each file is managed
+separately by the code, so what is output to a particular file and how
+often can be adjusted for different files independently.</p>
+<p>For example, some of the possible output properties require more than
+one force evaluation per time step to calculate, and so can considerably
+increase the computational cost of a simulation unless they are computed
+once every several time steps. On the other hand, for properties such as
+the conserved energy quantity it is easy, and often useful, to output
+them every time step as they are simple to compute and do not take long
+to output to file.</p>
+<p>There are three types of output file that can be specified; property
+files for system level properties, trajectory files for atom/bead level
+properties, and checkpoint files which save the state of the system and
+so can be used to restart the simulation from a particular point. For a
+brief overview of the format of each of these types of files, and some
+of their more common uses, see <a class="reference internal" href="tutorials.html#part1"><span class="std std-ref">Part 1 - NVT Equilibration run</span></a>. To give a more in depth
+explanation of each of these files, they will now be considered in turn.</p>
+<section id="properties">
+<span id="propertyfile"></span><h2>Properties<a class="headerlink" href="#properties" title="Permalink to this heading">¶</a></h2>
+<p>This is the output file for all the system and simulation level
+properties, such as the total energy and the time elapsed. It is
+designed to track a small number of important properties throughout a
+simulation run, and as such has been formatted to be used as input for
+plotting programs such as gnuplot.</p>
+<p>The file starts with a header, which describes the properties being
+written in the different columns and their output units. This is
+followed by the actual data. Each line corresponds to one instant of the
+simulation. The file is fixed formatted, with two blank characters at
+the start of each row, then the data in the same order as the header
+row. By default, each column is 16 characters wide and every float is
+written in exponential format with 8 digits after the decimal point.</p>
+<p>For example, if we had asked for the current time step, the total
+simulation time in picoseconds, and the potential energy in
+electronvolt, then the properties output file would look something like:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="c1"># column 1 –&gt; step : The current simulation time step. # column 2 –&gt;</span>
+<span class="n">timepicosecond</span> <span class="p">:</span> <span class="n">The</span> <span class="n">elapsed</span> <span class="n">simulation</span> <span class="n">time</span><span class="o">.</span> <span class="c1"># column 3 –&gt;</span>
+<span class="n">potential</span><span class="p">{</span><span class="n">electronvolt</span><span class="p">}</span> <span class="p">:</span> <span class="n">The</span> <span class="n">physical</span> <span class="n">system</span> <span class="n">potential</span> <span class="n">energy</span><span class="o">.</span>
+<span class="mf">0.00000000e+00</span> <span class="mf">0.00000000e+00</span> <span class="o">-</span><span class="mf">1.32860475e+04</span> <span class="mf">1.00000000e+00</span>
+<span class="mf">1.00000000e-03</span> <span class="o">-</span><span class="mf">1.32865789e+04</span> <span class="o">...</span>
+</pre></div>
+</div>
+<p>The properties that are output are determined by the <a class="reference internal" href="input-tags.html#properties"><span class="std std-ref">properties</span></a> tag in the xml
+input file. The format of this tag is:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">properties</span> <span class="n">stride</span><span class="o">=</span> <span class="n">filename</span><span class="o">=</span> <span class="n">flush</span><span class="o">=</span> <span class="n">shape</span><span class="o">=&gt;</span> <span class="p">[</span> <span class="n">prop1name</span><span class="p">{</span><span class="n">units</span><span class="p">}(</span><span class="n">arg1</span><span class="p">;</span>
+<span class="o">...</span> <span class="p">),</span> <span class="n">prop2name</span><span class="p">{</span><span class="n">units</span><span class="p">}(</span><span class="o">...</span><span class="p">),</span> <span class="o">...</span> <span class="p">]</span> <span class="o">&lt;/</span><span class="n">properties</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<p>e.g.</p>
+<p>The attributes have the following meanings:</p>
+<dl class="simple">
+<dt>stride</dt><dd><p>The number of steps between each output to file</p>
+</dd>
+<dt>filename</dt><dd><p>The name of the output file</p>
+</dd>
+<dt>flush</dt><dd><p>The number of output lines between buffer flushes</p>
+</dd>
+<dt>shape</dt><dd><p>The number of properties in the list.</p>
+</dd>
+</dl>
+<p>The tag data is an array of strings, each of which contains three
+different parts:</p>
+<ul>
+<li><p>The property name, which describes which type of property is to be
+output. This is a mandatory part of the string.</p></li>
+<li><p>The units that the property will be output in. These are specified
+between curly brackets. If this is not specified, then the property
+will be output in atomic units. Note that some properties can only be
+output in atomic units.</p></li>
+<li><p>The arguments to be passed to the function. These are specified
+between standard brackets, with each argument separated by a
+semi-colon. These may or may not be mandatory depending on the
+property, as some arguments have well defined default values. The
+arguments can be specified by either of two different syntaxes,
+(name1=arg1; …) or (arg1; …).</p>
+<p>The first syntax uses keyword arguments. The above example would set
+the variable with the name “name1” the value “arg1”. The second
+syntax uses positional arguments. This syntax relies on the arguments
+being specified in the correct order, as defined in the relevant
+function in the property.py module, since the user has not specified
+which variable to assign the value to.</p>
+<p>The two syntaxes may be mixed, but positional arguments must be
+specified first otherwise undefined behaviour will result. If no
+arguments are specified, then the defaults as defined in the
+properties.py module will be used.</p>
+</li>
+</ul>
+<p>See also the documentation of the <a class="reference internal" href="input-tags.html#properties"><span class="std std-ref">properties</span></a> tag, and
+the full <a class="reference internal" href="output-tags.html#property-list"><span class="std std-ref">List of available properties</span></a>.</p>
+</section>
+<section id="trajectory-files">
+<span id="trajectories"></span><h2>Trajectory files<a class="headerlink" href="#trajectory-files" title="Permalink to this heading">¶</a></h2>
+<p>These are the output files for atomic or bead level properties, such as
+the bead positions. In contrast to properties files, they output data
+for all atomic degrees of freedom, in a format that can be read by
+visualization packages such as VMD.</p>
+<p>Multiple trajectory files can be specified, each described by a separate <a class="reference internal" href="input-tags.html#trajectory"><span class="std std-ref">trajectory</span></a>
+tag within the <a class="reference internal" href="output-tags.html#outputs"><span class="std std-ref">Output file tags</span></a> section of the input file. The allowable file formats for
+the trajectory output files are the same as for the configuration input
+files, given in <a class="reference internal" href="input-files.html#configfile"><span class="std std-ref">Configuration files</span></a>.</p>
+<p>These tags have the format:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span>&lt;trajectory stride=`&#39; filename=`&#39; format=`&#39; cell_units=`&#39; flush=`&#39; bead=`&#39;&gt;
+     traj_name{units}(arg1;...)
+&lt;/trajectory&gt;
+</pre></div>
+</div>
+<p>This is very similar to the <a class="reference internal" href="input-tags.html#properties"><span class="std std-ref">properties</span></a> tag, except that it has the additional
+tags “format” and “cell_units”, and only one <em>traj_name</em> quantity can be
+specified per file. ‘format’ specifies the format of the output file,
+and ‘cell_units’ specifies the units in which the cell dimensions are
+output. Depending on the quantity being output, the trajectory may
+consist of just one file per time step (e.g. the position of the
+centroid) or of several files, one for each bead, whose name will be
+automatically determined by appending the bead index to the specified
+“filename” attribute (e.g. the beads position). In the latter case it is
+also possible to output the quantity computed for a single bead by
+specifying its (zero-based) index in the “bead” attribute.</p>
+<p>See also the <a class="reference internal" href="input-tags.html#trajectory"><span class="std std-ref">trajectory</span></a> tag, and the full
+<a class="reference internal" href="output-tags.html#trajectory-list"><span class="std std-ref">List of available trajectory files</span></a>.</p>
+</section>
+<section id="checkpoint-files">
+<span id="checkpoints"></span><h2>Checkpoint files<a class="headerlink" href="#checkpoint-files" title="Permalink to this heading">¶</a></h2>
+<p>As well as the above output files, the state of the system at a
+particular time step can also be saved to file. These checkpoint files
+can later be used as input files, with all the information required to
+restore the state of the system to the point at which the file was
+created.</p>
+<p>This is specified by the <a class="reference internal" href="input-tags.html#checkpoint"><span class="std std-ref">checkpoint</span></a> tag which has the syntax:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">checkpoint</span> <span class="n">stride</span><span class="o">=</span> <span class="n">filename</span><span class="o">=</span> <span class="n">overwrite</span><span class="o">=&gt;</span> <span class="n">step</span> <span class="o">&lt;/</span><span class="n">checkpoint</span><span class="o">&gt;</span>
+</pre></div>
+</div>
+<p>Again, this is similar to the <a class="reference internal" href="input-tags.html#properties"><span class="std std-ref">properties</span></a> and
+<a class="reference internal" href="input-tags.html#trajectory"><span class="std std-ref">trajectory</span></a> tags, but instead of having a value
+which specifies what to output, the value simply gives a number to
+identify the current checkpoint file. There is also one additional
+attribute, “overwrite”, which specifies whether each new checkpoint file
+overwrites the old one, or whether all checkpoint files are kept. If
+they are kept, they will be written not to the file “filename”, but
+instead an index based on the value of “step” will be appended to it to
+distinguish between different files.</p>
+<p>If the ‘step’ parameter is not specified, the following syntax can also
+be used:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&lt;</span><span class="n">checkpoint</span> <span class="n">stride</span><span class="o">=</span> <span class="n">filename</span><span class="o">=</span> <span class="n">overwrite</span><span class="o">=/&gt;</span>
+</pre></div>
+</div>
+<section id="soft-exit-and-restart">
+<h3>Soft exit and RESTART<a class="headerlink" href="#soft-exit-and-restart" title="Permalink to this heading">¶</a></h3>
+<p>As well as outputting checkpoint files during a simulation run, i-PI
+also creates a checkpoint automatically at the end of the simulation,
+with file name “RESTART”. In the same way as the checkpoint files
+discussed above, it contains the full state of the simulation. It can be
+used to seamlessly restart the simulation if the user decides that a
+longer run is needed to gather sufficient statistics, or if i-PI is
+terminated before the desired number of steps have been completed.</p>
+<p>i-PI will try to generate a RESTART file when it terminates, either
+because <em>total_time</em> has elapsed, or because it received a (soft) kill
+signal by the operating system. A soft exit can also be forced by
+creating an empty file named “EXIT” in the directory in which i-PI is
+running.</p>
+<p>An important point to note is that since each time step is split into
+several parts, it is only at the end of each step that all the variables
+are consistent with each other in such a way that the simulation can be
+restarted from them without changing the dynamics. Thus if a soft exit
+call is made during a step, then the restart file that is created must
+correspond to the state of the system <em>before</em> that step began. To this
+end, the state of the system is saved at the start of every step.</p>
+<p>In order to restart i-PI from a file named “RESTART” one simply has to
+run</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="o">&gt;</span> <span class="n">python</span> <span class="n">i</span><span class="o">-</span><span class="n">pi</span> <span class="n">RESTART</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="reading-output-files">
+<h2>Reading output files<a class="headerlink" href="#reading-output-files" title="Permalink to this heading">¶</a></h2>
+<p>It can be useful to parse the output files of i-PI into a format that can
+be readily manipulated in a custom Python script. To this end, i-PI provides
+a few utilities. <cite>ipi.read_output</cite> that can be used to parse a property output
+file, that returns data blocks as a dictionary of numpy array, and additional
+information from the header (such as units, and the description of each
+property) as a separate dictionary</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ipi</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_output</span>
+<span class="n">data</span><span class="p">,</span> <span class="n">info</span> <span class="o">=</span> <span class="n">read_output</span><span class="p">(</span><span class="s2">&quot;simulation.out&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Trajectory files can be read with <cite>ipi.read_trajectory</cite>. This reads the
+trajectory output into a list of <cite>ase.Atoms</cite> objects (hence this functionality
+has a dependency on <cite>ase</cite>), converting positions and cell to angstrom, and
+moving other properties to arrays and converting
+them to ASE units (e.g. forces are in eV/Å). <cite>extras</cite> output files (that
+contain either numerical data, or raw strings, returned by the driver code
+in addition to energy and forces) can be processed by using <cite>format=’extras’</cite>
+and an option: the call will then return a dictionary with an entry having the
+name of the type of extra (if present) and either a list of the raw strings,
+or a numpy array with the data. A second dictionary entry contains the list
+of step numbers.</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="kn">from</span><span class="w"> </span><span class="nn">ipi</span><span class="w"> </span><span class="kn">import</span> <span class="n">read_trajectory</span>
+<span class="n">data</span> <span class="o">=</span> <span class="n">read_trajectory</span><span class="p">(</span><span class="s2">&quot;simulation.dipoles&quot;</span><span class="p">,</span> <span class="nb">format</span><span class="o">=</span><span class="s2">&quot;extras&quot;</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+        </article>
+      </div>
+      <footer>
+        
+        <div class="related-pages">
+          <a class="next-page" href="output-tags.html">
+              <div class="page-info">
+                <div class="context">
+                  <span>Next</span>
+                </div>
+                <div class="title">Output file tags</div>
+              </div>
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+            </a>
+          <a class="prev-page" href="input-tags.html">
+              <svg class="furo-related-icon"><use href="#svg-arrow-right"></use></svg>
+              <div class="page-info">
+                <div class="context">
+                  <span>Previous</span>
+                </div>
+                
+                <div class="title">Input file tags</div>
+                
+              </div>
+            </a>
+        </div>
+        <div class="bottom-of-page">
+          <div class="left-details">
+            <div class="copyright">
+                Copyright &#169; 2021, The i-PI developers
+            </div>
+            Made with <a href="https://www.sphinx-doc.org/">Sphinx</a> and <a class="muted-link" href="https://pradyunsg.me">@pradyunsg</a>'s
+            
+            <a href="https://github.com/pradyunsg/furo">Furo</a>
+            
+          </div>
+          <div class="right-details">
+            
+          </div>
+        </div>
+        
+      </footer>
+    </div>
+    <aside class="toc-drawer">
+      
+      
+      <div class="toc-sticky toc-scroll">
+        <div class="toc-title-container">
+          <span class="toc-title">
+            On this page
+          </span>
+        </div>
+        <div class="toc-tree-container">
+          <div class="toc-tree">
+            <ul>
+<li><a class="reference internal" href="#">Output files</a><ul>
+<li><a class="reference internal" href="#properties">Properties</a></li>
+<li><a class="reference internal" href="#trajectory-files">Trajectory files</a></li>
+<li><a class="reference internal" href="#checkpoint-files">Checkpoint files</a><ul>
+<li><a class="reference internal" href="#soft-exit-and-restart">Soft exit and RESTART</a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#reading-output-files">Reading output files</a></li>
+</ul>
+</li>
+</ul>
+
+          </div>
+        </div>
+      </div>
+      
+      
+    </aside>
+  </div>
+</div><script data-url_root="./" id="documentation_options" src="_static/documentation_options.js?v=34e14329"></script>
+    <script src="_static/doctools.js?v=888ff710"></script>
+    <script src="_static/sphinx_highlight.js?v=4825356b"></script>
+    <script src="_static/scripts/furo.js?v=5fa4622c"></script>
+    </body>
+</html>
