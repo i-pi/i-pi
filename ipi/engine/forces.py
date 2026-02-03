@@ -173,7 +173,6 @@ class ForceBead:
             self.queue()
 
         # sleeps until the request has been evaluated
-        timers.start("[+++++]Waiting Driver(++++++)")
         request = self.request
         latency = self.ff.latency
         while request["status"] != "Done":
@@ -189,7 +188,6 @@ class ForceBead:
                     time.sleep(latency)
                 sys.exit()
             time.sleep(latency)
-        timers.stop("[+++++]Waiting Driver(++++++)")
 
         # print diagnostics about the elapsed time
         info(
