@@ -1,0 +1,361 @@
+#!/usr/bin/env python3
+'''
+import builtins, traceback
+
+_real_import = builtins.__import__
+
+def tracing_import(name, *args, **kwargs):
+    if name.startswith("jax"):
+        print(f"\n*** JAX IMPORT TRIGGERED: {name} ***")
+        traceback.print_stack()
+    return _real_import(name, *args, **kwargs)
+
+builtins.__import__ = tracing_import
+'''
+
+
+import socket
+import argparse
+import numpy as np
+import time
+from ipi.pes import *
+
+from ipi.utils.io.inputs import read_args_kwargs
+from mpi4py import MPI
+from ipi.utils.timing_manager import timers
+from multiprocessing import shared_memory
+
+description = """
+Minimal example of a Python driver connecting to i-PI and exchanging energy, forces, etc.
+"""
+def recv_data(sock, data):
+    """Fetches binary data from i-PI socket."""
+    blen = data.itemsize * data.size
+    buf = np.zeros(blen, np.byte)
+
+    bpos = 0
+    while bpos < blen:
+        timeout = False
+        try:
+            bpart = sock.recv_into(buf[bpos:], blen - bpos)
+        except socket.timeout:
+            print(" @SOCKET:   Timeout in status recvall, trying again!")
+            timeout = True
+        if not timeout and bpart == 0:
+            raise RuntimeError("Socket disconnected!")
+        bpos += bpart
+    if np.isscalar(data):
+        return np.frombuffer(buf[0:blen], data.dtype)[0]
+    else:
+        return np.frombuffer(buf[0:blen], data.dtype).reshape(data.shape)
+
+def send_data(sock, data):
+    """Sends binary data to i-PI socket."""
+    if np.isscalar(data):
+        data = np.array([data], data.dtype)
+    buf = data.tobytes()
+    sock.send(buf)
+
+def send_datas(sock, *args, extras=None):
+    """Send multiple scalars/arrays and an optional extras string in one go."""
+    buffers = []
+    for data in args:
+        if np.isscalar(data):
+            data = np.array([data], dtype=type(data))
+        buffers.append(data.tobytes())
+
+    sock.send(b"".join(buffers))
+
+    if extras is not None:
+        sock.sendall(extras.encode("utf-8"))
+
+HDRLEN = 12  # number of characters of the default message strings
+
+def Message(mystr):
+    """Returns a header of standard length HDRLEN."""
+    return str.ljust(str.upper(mystr), HDRLEN).encode()
+
+def run_driver(
+    unix=False,
+    address="",
+    port=12345,
+    driver=None,
+    dummy=False,
+    f_verbose=False,
+    f_debug=False,
+    sockets_prefix="/tmp/ipi_",
+):
+    """Minimal socket client for i-PI with MPI rank 0 socket communication and data distribution."""
+
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+    size = comm.Get_size()
+
+    t_start = time.perf_counter()
+    
+    def dbg_print(msg):
+        if f_debug and rank == 0:
+            elapsed = time.perf_counter() - t_start
+            print(f"[{elapsed:8.4f} s] Rank {rank}: {msg}", flush=True)
+
+    # Only rank 0 opens and communicates on the socket
+    if rank == 0:
+        dbg_print("Connecting to socket...")
+        if unix:
+            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            sock.connect(sockets_prefix + address)
+        else:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
+            sock.connect((address, port))
+        dbg_print("Socket connected.")
+    else:
+        sock = None  # Other ranks don't have socket
+
+    f_init = False
+    f_data = False
+
+    # Initialize arrays (all ranks keep them)
+    cell = np.zeros((3, 3), float)
+    icell = np.zeros((3, 3), float)
+    pos = np.zeros(0, float)
+
+    pot = 0.0
+    force = np.zeros(0, float)
+    vir = np.zeros((3, 3), float)
+
+    while True:
+        if rank == 0:
+            timers.start("Recv Header")
+            header = sock.recv(HDRLEN)
+            if f_verbose:
+                print(f"Rank {rank} received ", header)
+            timers.stop("Recv Header")
+        else:
+            header = None
+
+        header = comm.bcast(header, root=0)
+
+        if header == Message("STATUS"):
+            if rank == 0:
+                if not f_init:
+                    sock.sendall(Message("NEEDINIT"))
+                elif f_data:
+                    sock.sendall(Message("HAVEDATA"))
+                else:
+                    sock.sendall(Message("READY"))
+                    if f_verbose:
+                        print(f"Driver ready")
+
+        elif header == Message("INIT"):
+            if rank == 0:
+                rid = recv_data(sock, np.int32())
+                initlen = recv_data(sock, np.int32())
+                initstr = recv_data(sock, np.chararray(initlen))
+                
+                # receiving nat and nbeads at init, necessary to be able to allocate the correct numpy shapes in SHM
+                nat = recv_data(sock, np.int32())
+                nbeads = recv_data(sock, np.int32())
+
+
+                # reading buffer names for shaerd memory access
+                pos_bufname = sock.recv(HDRLEN).decode("utf-8").strip()
+                h_bufname = sock.recv(HDRLEN).decode("utf-8").strip()
+                ih_bufname = sock.recv(HDRLEN).decode("utf-8").strip()
+                pot_bufname = sock.recv(HDRLEN).decode("utf-8").strip()
+                f_bufname = sock.recv(HDRLEN).decode("utf-8").strip()
+                vir_bufname = sock.recv(HDRLEN).decode("utf-8").strip()
+
+                print("Driver initing SHM with buffer names:")
+                print(pos_bufname, h_bufname, ih_bufname, pot_bufname, f_bufname, vir_bufname)
+
+                #shm objects
+                cell_shm = shared_memory.SharedMemory(name=h_bufname)
+                icell_shm = shared_memory.SharedMemory(name=ih_bufname)
+                pot_shm = shared_memory.SharedMemory(name=pot_bufname)
+                pos_shm = shared_memory.SharedMemory(name=pos_bufname)
+                f_shm = shared_memory.SharedMemory(name=f_bufname)
+                vir_shm = shared_memory.SharedMemory(name=vir_bufname)
+
+
+                # allocating numpy arrays in shared memory on the same buffer as in the server
+                cell_snp = np.ndarray((3,3), dtype=np.float64, buffer=cell_shm.buf)
+                icell_snp = np.ndarray((3,3), dtype=np.float64, buffer=icell_shm.buf)
+                pot_snp = np.ndarray((nbeads), dtype=np.float64, buffer=pot_shm.buf)
+                pos_snp = np.ndarray((nbeads, nat*3), dtype=np.float64, buffer=pos_shm.buf)
+                f_snp = np.ndarray((nbeads, nat*3), dtype=np.float64, buffer=f_shm.buf)
+                vir_snp = np.ndarray((nbeads, 3,3), dtype=np.float64, buffer=vir_shm.buf)
+                
+                if f_verbose:
+                    print(f"Rank {rank} initing with rid, initstr: {rid}, {initstr}")
+                f_init = True
+            f_init = comm.bcast(f_init, root=0)
+
+        elif header == Message("POSDATA"):
+            if rank == 0:
+                timers.start("Read Posdata")
+                
+                # copy from SHM
+                pos = pos_snp[:] 
+                cell = cell_snp[:] 
+                icell = icell_snp[:] 
+                
+                timers.stop("Read Posdata")
+            else:
+                nbeads = None
+                nat = None
+
+            timers.start("MPI Bcast")
+
+            # fist, broadcast nat, nbeads, and cell data to other ranks
+            if rank == 0:
+                    buf = np.concatenate([
+                        np.atleast_1d(np.int32(nbeads)),
+                        np.atleast_1d(np.int32(nat)),
+                        cell.ravel(),
+                        icell.ravel(),
+                    ])
+            else:
+                buf = np.empty(20, dtype=np.float64)
+            
+            comm.Bcast([buf, MPI.DOUBLE], root=0)
+
+            # unpack after broadcast
+            nbeads = np.int32(buf[0])
+            nat = np.int32(buf[1])
+            cell = buf[2:11].reshape(3,3)
+            icell = buf[11:].reshape(3,3)
+            
+            timers.stop("MPI Bcast")
+            
+            if rank == 0:
+                # pos is shape (nbeads, nat, 3)
+                sendbuf = pos
+            else:
+                sendbuf = None
+
+            # Allocate local slice on each worker
+            recvbuf = np.empty((nat, 3), dtype=np.float64)
+
+            timers.start("MPI Scatter Pos")
+            comm.Scatter(sendbuf, recvbuf, root=0)
+            pos_local = recvbuf
+            timers.stop("MPI Scatter Pos")
+
+            timers.start("Run Driver(+)")
+
+            if  dummy:
+                #results = np.zeros(nbeads), np.zeros(pos.shape), np.zeros((nbeads,3,3)), ""
+                
+                pot = np.zeros(1)
+                f = np.zeros((nat*3))
+                vir = np.zeros((3,3))
+
+                timers.start("[+]MPI Gather Forces")
+                if rank == 0:
+                    pot_all = np.empty(nbeads)
+                    f_all   = np.empty(pos.shape)
+                    vir_all = np.empty((nbeads, 3,3))
+                else:
+                    pot_all = f_all = vir_all = None
+
+                comm.Gather(pot, pot_all, root=0)
+                comm.Gather(f, f_all, root=0)
+                comm.Gather(vir, vir_all, root=0)
+                
+                if rank ==0:
+                    results = (pot_all, f_all, vir_all, "")
+                timers.stop("[+]MPI Gather Forces")
+            else:
+                results = driver(cell, pos_local, nbeads, nat)
+            
+            timers.stop("Run Driver(+)")
+
+
+            if rank == 0:
+                pot, force, vir, extras = results
+
+            f_data = True
+
+        elif header == Message("GETFORCE"):
+            if rank == 0:
+                timers.start("Send Forces")
+                # we update SHM first, than send message via socket
+                '''
+                if not isinstance(force, np.ndarray) or force.dtype != np.float64:
+                    raise ValueError("Forces must be float64 numpy array")
+                if not isinstance(vir, np.ndarray) or vir.dtype != np.float64:
+                    raise ValueError("Virial must be float64 numpy array")
+                if len(force.flatten()) != len(pos.flatten()):
+                    raise ValueError("Force array shape mismatch")
+                if len(vir.flatten()) != nbeads * 9:
+                    raise ValueError("Virial shape mismatch")
+                '''
+                pot_snp = pot[:]
+                f_snp = force[:]
+                vir_snp = vir[:]
+                
+                sock.sendall(Message("FORCEREADY"))
+                
+                timers.stop("Send Forces")
+                
+                f_data = False
+        
+        elif header == Message("EXIT"):
+            if rank == 0:
+                print("Received exit message from i-PI. Bye bye!")
+                timers.summary()
+            return
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=description)
+
+    comm = MPI.COMM_WORLD
+    rank = comm.Get_rank()
+
+    parser.add_argument("-u", "--unix", action="store_true", default=False)
+    parser.add_argument("-a", "--address", type=str, default="localhost")
+    parser.add_argument("-S", "--sockets_prefix", type=str, default="/tmp/ipi_")
+    parser.add_argument("-p", "--port", type=int, default=12345)
+    parser.add_argument(
+        "-m", "--mode", type=str, default="dummy", choices=list(__drivers__.keys())
+    )
+    parser.add_argument("-o", "--param", type=str, default="")
+    parser.add_argument("-v", "--verbose", action="store_true", default=False)
+    parser.add_argument(
+        "--debug", action="store_true", default=False,
+        help="Detailed timing output for debugging MPI and socket performance."
+    )
+
+    args = parser.parse_args()
+
+    driver_args, driver_kwargs = read_args_kwargs(args.param)
+
+    dummy = False
+    if args.mode == "dummy":
+        dummy = True
+
+    if args.mode in __drivers__:
+        try:
+            d_f = __drivers__[args.mode](
+                *driver_args, verbose=args.verbose, **driver_kwargs
+            )
+        except ImportError:
+            raise
+        except Exception as err:
+            print(f"Error setting up PES mode {args.mode}")
+            raise err
+    else:
+        raise ValueError("Unsupported driver mode ", args.mode)
+
+    run_driver(
+        unix=args.unix,
+        address=args.address,
+        port=args.port,
+        driver=d_f,
+        dummy=dummy,
+        f_verbose=args.verbose,
+        f_debug=args.debug,
+        sockets_prefix=args.sockets_prefix,
+    )
+

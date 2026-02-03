@@ -432,14 +432,22 @@ class NVEIntegrator(DummyIntegrator):
                     dstrip(self.bias.f)[:, self.activeatoms_mask] * self.pdt[level]
                 )
         else:
-            self.beads.p[:] += dstrip(self.forces.mts_forces[level].f) * self.pdt[level]
+            timers.start("[+++]Waiting Driver")
+            f = dstrip(self.forces.mts_forces[level].f)
+            timers.stop("[+++]Waiting Driver")
+            
+            timers.start("[+++]Verlet")
+            self.beads.p[:] += f * self.pdt[level]
             if level == 0 and self.ensemble.has_bias:  # adds bias in the outer loop
                 self.beads.p[:] += dstrip(self.bias.f) * self.pdt[level]
+            timers.stop("[+++]Verlet")
 
     def qcstep(self):
         """Velocity Verlet centroid position propagator."""
         # dt/inmts
+        timers.start("[+++]Centr. Verlet")
         self.nm.qnm[0, :] += dstrip(self.nm.pnm)[0, :] * dstrip(self.qdt_on_m)
+        timers.stop("[+++]Centr. Verlet")
 
     # now the idea is that for BAOAB the MTS should work as follows:
     # take the BAB MTS, and insert the O in the very middle. This might imply breaking a A step in two, e.g. one could have
@@ -467,18 +475,14 @@ class NVEIntegrator(DummyIntegrator):
 
         if self.nmts[index] % 2 == 1:
             # propagate p for dt/2alpha with force at level index
-            timers.start("[****]Verlet")
             self.pstep(index)
-            timers.stop("[****]Verlet")
             self.pconstraints()
             if index == self.nmtslevels - 1:
                 # call Q propagation for dt/alpha at the inner step
-                timers.start("[****]Centr. Verlet")
                 self.qcstep()
-                timers.stop("[****]Centr. Verlet")
-                timers.start("[****]Free RingPol. Verlet")
+                timers.start("[+++]Free RingPol. Verlet")
                 self.nm.free_qstep()
-                timers.stop("[****]Free RingPol. Verlet")
+                timers.stop("[+++]Free RingPol. Verlet")
             else:
                 self.mtsprop_ba(index + 1)
 
@@ -488,19 +492,15 @@ class NVEIntegrator(DummyIntegrator):
         if self.nmts[index] % 2 == 1:
             if index == self.nmtslevels - 1:
                 # call Q propagation for dt/alpha at the inner step
-                timers.start("[++++]Centr. Verlet")
                 self.qcstep()
-                timers.stop("[++++]Centr. Verlet")
-                timers.start("[++++]Free RingPol. Verlet")
+                timers.start("[+++]Free RingPol. Verlet")
                 self.nm.free_qstep()
-                timers.stop("[++++]Free RingPol. Verlet")
+                timers.stop("[+++]Free RingPol. Verlet")
             else:
                 self.mtsprop_ab(index + 1)
 
             # propagate p for dt/2alpha with force at level index
-            timers.start("[++++]Verlet(+++++)")
             self.pstep(index)
-            timers.stop("[++++]Verlet(+++++)")
             self.pconstraints()
 
         for i in range(int(self.nmts[index] / 2)):  # do nmts/2 full sub-steps
@@ -520,13 +520,9 @@ class NVEIntegrator(DummyIntegrator):
 
     def mtsprop(self, index):
         # just calls the two pieces together
-        timers.start("[+++]MTSprop_ba(****)")
         self.mtsprop_ba(index)
-        timers.stop("[+++]MTSprop_ba(****)")
         
-        timers.start("[+++]MTSprop_ab(++++)")
         self.mtsprop_ab(index)
-        timers.stop("[+++]MTSprop_ab(++++)")
 
     def step(self, step=None):
         """Does one simulation time step."""
