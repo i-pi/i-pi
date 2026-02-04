@@ -108,7 +108,7 @@ class MetatomicDriver(Dummy_driver):
         self.force_virial_ensemble = force_virial_ensemble
         self.non_conservative = non_conservative
         self.template = template
-        
+
         # Determine suffixes for different model outputs
         self.energy_suffix = "" if energy_variant is None else f"/{energy_variant}"
         self.non_conservative_suffix = (
@@ -221,7 +221,7 @@ class MetatomicDriver(Dummy_driver):
                 per_atom=False,
             )
         }
-        
+
         if self.non_conservative:
             if "non_conservative_forces" not in self.model.capabilities().outputs:
                 raise ValueError(
@@ -293,7 +293,7 @@ class MetatomicDriver(Dummy_driver):
             cell = cell @ strain
 
         system = mta.System(self._types, positions, cell, pbc)
-        
+
         # Compute neighbor lists using vesin
         vesin_metatomic.compute_requested_neighbors(
             system, system_length_unit="Angstrom", model=model
@@ -337,7 +337,7 @@ class MetatomicDriver(Dummy_driver):
         else:
             # For conservative, compute gradients (forces and virials)
             gradients = torch.autograd.grad(
-                energy_tensor, 
+                energy_tensor,
                 [system.positions for system in systems] + strains,
                 grad_outputs=-torch.ones_like(energy_tensor),
             )
@@ -408,7 +408,7 @@ class MetatomicDriver(Dummy_driver):
 
     def _compute_force_virial_ensemble(self, systems, strains, model, device):
         """Computes force and virial ensembles using Jacobian calculation."""
-        
+
         # Function wrapper for jacobian calculation
         def _compute_ensemble(*positions_and_strain_tuple):
             positions_list = positions_and_strain_tuple[: len(systems)]
@@ -427,9 +427,7 @@ class MetatomicDriver(Dummy_driver):
             for options in model.requested_neighbor_lists():
                 # Re-attach pre-computed neighbor lists
                 for system, new_system in zip(systems, new_systems):
-                    neighbors = mts.detach_block(
-                        system.get_neighbor_list(options)
-                    )
+                    neighbors = mts.detach_block(system.get_neighbor_list(options))
                     mta.register_autograd_neighbors(
                         new_system,
                         neighbors,
@@ -448,7 +446,7 @@ class MetatomicDriver(Dummy_driver):
             )
 
         # Compute Jacobian
-        # Note: vectorize=False is required to avoid mysterious runtime errors 
+        # Note: vectorize=False is required to avoid mysterious runtime errors
         # (potential PyTorch/Metatomic bug workaround)
         jacobians = torch.autograd.functional.jacobian(
             _compute_ensemble,
@@ -458,10 +456,10 @@ class MetatomicDriver(Dummy_driver):
             ),
             vectorize=False,
         )
-        
+
         force_ensemble_tensors = [-j for j in jacobians[: len(systems)]]
         virial_ensemble_tensors = [-j for j in jacobians[len(systems) :]]
-        
+
         return force_ensemble_tensors, virial_ensemble_tensors
 
     def _process_ensemble(self, outputs, systems, strains, model, device, extras_dicts):
@@ -483,10 +481,10 @@ class MetatomicDriver(Dummy_driver):
             extras_dict["committee_pot"] = list(energy_ensemble)
 
         if self.force_virial_ensemble:
-            force_ensemble_tensors, virial_ensemble_tensors = self._compute_force_virial_ensemble(
-                systems, strains, model, device
+            force_ensemble_tensors, virial_ensemble_tensors = (
+                self._compute_force_virial_ensemble(systems, strains, model, device)
             )
-            
+
             force_ensembles = [
                 unit_to_internal(
                     "force",
@@ -507,13 +505,13 @@ class MetatomicDriver(Dummy_driver):
                 )
                 for virial_ensemble_tensor in virial_ensemble_tensors
             ]
-            
+
             # Symmetrize virial ensembles
             virial_ensembles = [
                 (virial_ensemble + virial_ensemble.swapaxes(1, 2)) / 2.0
                 for virial_ensemble in virial_ensembles
             ]
-            
+
             for extras_dict, force_ensemble, virial_ensemble in zip(
                 extras_dicts, force_ensembles, virial_ensembles
             ):
@@ -524,7 +522,7 @@ class MetatomicDriver(Dummy_driver):
         """Processes raw model outputs into i-PI compatible formats."""
         if model is None:
             model = self.model
-        
+
         device = systems[0].positions.device
         num_systems = len(systems)
 
@@ -593,15 +591,13 @@ class MetatomicDriver(Dummy_driver):
         )
 
         # Process outputs
-        return self._process_outputs(
-            outputs, sys_batch, strain_batch, model=model
-        )
+        return self._process_outputs(outputs, sys_batch, strain_batch, model=model)
 
     def compute(self, cell, pos):
         """Calls the model evaluation, taking care of both serial and batched execution.
-        
+
         The implementation handles both batched evaluations (many structures are sent at
-        once for evaluation by one instance) and concurrent evaluation (the batch is 
+        once for evaluation by one instance) and concurrent evaluation (the batch is
         split across multiple devices, each running its own instance of the model).
         """
 
