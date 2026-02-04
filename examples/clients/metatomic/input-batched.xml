@@ -13,8 +13,15 @@
 
 <ffdirect name='driver'>
     <pes> metatomic </pes>
-    <parameters> {template:nickel.xyz,model:nickel-lj.pt,device:cpu } </parameters>
-    <batch_size> 2 </batch_size>
+    <!-- 
+        Uses multiprocessing to run on multiple devices independently. 
+        If you have multiple gpus you can also specify device:cuda:0;cuda:1
+        In this specific example, two separate threads will be started,
+        and each thread will handle a batch size of 2 (that is, batch_size
+        must be greater than or equal to the number of devices requested). 
+    -->
+    <parameters> {template:nickel.xyz,model:nickel-lj.pt,device:cpu;cpu } </parameters>
+    <batch_size> 4 </batch_size>
 </ffdirect>
 
 <system>
