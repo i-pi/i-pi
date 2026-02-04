@@ -502,7 +502,11 @@ class SCPhononator(DummyPhononator):
             self.apply_hpf()
             self.get_KnD()
 
-            info(" @SCP: <f> =  %10.8f +/-  %10.8f: " % (f, f_err), verbosity.medium)
+            info(
+                " @SCP: <f> =  %10.8f +/-  %10.8f: "
+                % (np.linalg.norm(f).item(), np.linalg.norm(f_err).item()),
+                verbosity.medium,
+            )
             info(
                 " @SCP: OPTMODE = sd : Using the displacement correlation as a preconditioner.",
                 verbosity.medium,
@@ -530,7 +534,11 @@ class SCPhononator(DummyPhononator):
             self.apply_hpf()
             self.get_KnD()
 
-            info(" @SCP: <f> =  %10.8f +/-  %10.8f: " % (f, f_err), verbosity.medium)
+            info(
+                " @SCP: <f> =  %10.8f +/-  %10.8f: "
+                % (np.linalg.norm(f).item(), np.linalg.norm(f_err).item()),
+                verbosity.medium,
+            )
             info(
                 " @SCP: OPTMODE = iK : Using the inverse Hessian as a preconditioner.",
                 verbosity.medium,
@@ -655,11 +663,10 @@ class SCPhononator(DummyPhononator):
                             self.wthreshold,
                             sum(batch_w > self.wthreshold),
                             len(batch_w),
-                            batch_w[-1],
+                            batch_w[-1].item(),
                         ),
                         verbosity.medium,
                     )
-
                 # Calculates the hessian.
                 # Applies acoustic sum rule to project out zero modes.
                 # Applies a high pass filter to zero out low frequency modes.
