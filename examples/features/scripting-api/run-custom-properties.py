@@ -1,10 +1,5 @@
 #!/usr/bin/python
-from ipi.utils.scripting import (
-    simulation_xml,
-    forcefield_xml,
-    motion_nvt_xml,
-    InteractiveSimulation,
-)
+from ipi.utils.scripting import InteractiveSimulation
 from ipi.utils.depend import dstrip
 import numpy as np
 import ase, ase.io
