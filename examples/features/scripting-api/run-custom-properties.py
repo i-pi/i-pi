@@ -33,6 +33,23 @@ def my_virial_xyz(self):
     return virial
 
 
+# in order to have a class method used as a property
+# (useful e.g. for caching) we need to be a bit more elaborate
+class MyPropertyCalculator:
+    def __init__(self, scaling_factor):
+        # can initialize some stuff in here
+        self.scaling_factor = scaling_factor
+
+    def class_virial(self, properties):
+        return self.scaling_factor * my_virial(properties)
+
+
+# we create an instance of the class...
+my_calculator = MyPropertyCalculator(scaling_factor=2.0)
+# and use a lambda to wrap the method so that it complies with the
+# expected function signature
+my_virial_class = lambda properties: my_calculator.class_virial(properties)
+
 # properties can be just a function, or a full dictionary defining size, help string, etc.
 props = {
     "fancy_virial": my_virial,
@@ -42,6 +59,7 @@ props = {
         "size": 3,
         "help": "A dummy function returning a 3-vector",
     },
+    "class_virial": my_virial_class,
 }
 sim = InteractiveSimulation(input_xml, custom_properties=props)
 
@@ -53,6 +71,7 @@ print(
     f'Temperature: {sim.properties("temperature")}  '
     f'Virial:      {sim.properties("fancy_virial")}  '
     f'Virial_xyz:  {sim.properties("fancy_virial_xyz")}  '
+    f'Class_virial: {sim.properties("class_virial")}  '
 )
 # `run` advances the interactive simulation by one (or the prescribed number) of steps
 sim.run(10)
@@ -63,4 +82,5 @@ print(
     f'Temperature: {sim.properties("temperature")}  '
     f'Virial:      {sim.properties("fancy_virial")}  '
     f'Virial_xyz:  {sim.properties("fancy_virial_xyz")}  '
+    f'Class_virial: {sim.properties("class_virial")}  '
 )
