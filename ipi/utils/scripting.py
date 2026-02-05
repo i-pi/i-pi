@@ -239,7 +239,6 @@ def _define_calculator():
                 if "forces" in properties:
                     self.results["forces"] = self._forces
 
-
     def add_custom_property(self, name, compute_function, size=1):
         """
         Adds a custom property simulation, which is then printed
@@ -258,6 +257,7 @@ def _define_calculator():
            original system class, this might contain beads, cell, forces, etc.
         """
 
+
 class InteractiveSimulation(Simulation):
     """A wrapper to `Simulation` that allows accessing
     properties and configurations in a "safe" way from Python.
@@ -272,11 +272,11 @@ class InteractiveSimulation(Simulation):
        and the values should be either a callable (in which case the property
        is assumed to be of size 1), or a dictionary with the following keys:
          - 'func': the callable that computes the property, defined as a function
-              taking `self` as the compulsory argument (where `self` is a reference 
+              taking `self` as the compulsory argument (where `self` is a reference
               to the `properties` object of a system, holding references to beads,
               forces, etc.)
          - 'size': Optional(int), the size of the property (default 1)
-         - 'dimension': Optional(str), the dimension of the property 
+         - 'dimension': Optional(str), the dimension of the property
             (default 'undefined', could be 'length', 'energy', etc.)
          - 'help': Optional(str), a help string describing the property
     """
@@ -288,7 +288,9 @@ class InteractiveSimulation(Simulation):
         # the line, but for the moment all looks good.
 
         self._custom_properties = custom_properties or {}
-        sim = Simulation.load_from_xml(xml_input, post_init_hook=self._add_custom_properties)
+        sim = Simulation.load_from_xml(
+            xml_input, post_init_hook=self._add_custom_properties
+        )
         self.__dict__.update(sim.__dict__)
 
     def _add_custom_properties(self, simulation):
@@ -306,11 +308,15 @@ class InteractiveSimulation(Simulation):
             if "dimension" not in property:
                 property["dimension"] = "undefined"
             if "help" not in property:
-                property["help"] = "Custom property, the devs didn't bother to add a description."
+                property["help"] = (
+                    "Custom property, the devs didn't bother to add a description."
+                )
             for s in simulation.syslist:
-                # hooks the property function to the system instance 
+                # hooks the property function to the system instance
                 sys_property = deepcopy(property)
-                sys_property["func"] = sys_property["func"].__get__(s.properties, s.properties.__class__)
+                sys_property["func"] = sys_property["func"].__get__(
+                    s.properties, s.properties.__class__
+                )
                 s.properties.property_dict[name] = sys_property
 
     def run(self, steps=1, write_outputs=True):

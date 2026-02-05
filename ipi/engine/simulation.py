@@ -203,9 +203,9 @@ class Simulation:
 
     def bind(self, read_only=False):
         """Calls the bind routines for all the objects in the simulation.
-        
+
         Args:
-            read_only: If set to true, it creates the simulation object but 
+            read_only: If set to true, it creates the simulation object but
                 doesn't initialize/open the sockets or start the output threads.
         """
 
