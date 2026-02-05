@@ -1,0 +1,42 @@
+<simulation verbosity='quiet' safe_stride='20'>
+
+<ffdirect name='harmonic'>
+<pes>harmonic</pes>
+<parameters>{k1:1e-3}</parameters>
+</ffdirect>
+
+
+  <output prefix='script'>
+    <properties stride='2' filename='out'>[ step, time{picosecond}, 
+    conserved{electronvolt}, temperature{kelvin}, 
+    potential{electronvolt}, fancy_virial, fancy_virial_xyz ]</properties>
+    <trajectory filename='pos' stride='20' cell_units='angstrom'>positions{angstrom}</trajectory>
+    <checkpoint stride='200'>
+    </checkpoint>
+  </output>
+<system>
+    <initialize nbeads='1'>
+        <file mode='ase'> water-64.xyz </file>
+        <velocities mode='thermal' units='ase'> 400 </velocities>
+        </initialize>
+    <ensemble>
+        <temperature units='ase'> 400 </temperature>
+    </ensemble>
+<forces>
+<force forcefield='harmonic'> </force>
+</forces>
+
+<motion mode="dynamics">
+<dynamics mode="nvt">
+<timestep units="ase"> 0.04911347394232032 </timestep>
+
+<thermostat mode='svr'>
+    <tau units='ase'> 0.4911347394232032 </tau>
+</thermostat>
+
+</dynamics>
+</motion>
+
+</system>
+</simulation>
+

@@ -1,4 +1,6 @@
 import numpy as np
+from copy import deepcopy
+
 from ipi.utils.depend import dstrip
 from ipi.utils.units import Elements, unit_to_internal, unit_to_user, Constants
 from ipi.inputs.beads import InputBeads
@@ -238,6 +240,24 @@ def _define_calculator():
                     self.results["forces"] = self._forces
 
 
+    def add_custom_property(self, name, compute_function, size=1):
+        """
+        Adds a custom property simulation, which is then printed
+
+        :param name: str, the name of the property to be added
+        :param compute_function: function, a function that computes the property.
+           It should be defined as
+
+           ```
+           def compute_function(self):
+               do_something
+               return value, dimension, unit
+           ```
+
+           where `self` is a reference to the system object itself; depending on the
+           original system class, this might contain beads, cell, forces, etc.
+        """
+
 class InteractiveSimulation(Simulation):
     """A wrapper to `Simulation` that allows accessing
     properties and configurations in a "safe" way from Python.
@@ -247,16 +267,51 @@ class InteractiveSimulation(Simulation):
 
     :param xml_input: An open XML file, or an XML-formatted string
        containing the i-PI simulation that should be run.
+    : param custom_properties: Optional(dict) A dictionary of custom properties
+       to be added to the simulation. The keys should be the property names,
+       and the values should be either a callable (in which case the property
+       is assumed to be of size 1), or a dictionary with the following keys:
+         - 'func': the callable that computes the property, defined as a function
+              taking `self` as the compulsory argument (where `self` is a reference 
+              to the `properties` object of a system, holding references to beads,
+              forces, etc.)
+         - 'size': Optional(int), the size of the property (default 1)
+         - 'dimension': Optional(str), the dimension of the property 
+            (default 'undefined', could be 'length', 'energy', etc.)
+         - 'help': Optional(str), a help string describing the property
     """
 
-    def __init__(self, xml_input):
+    def __init__(self, xml_input, custom_properties=None):
         # not-so-great way to initialize from the class method-generated
         # Simulation object. one should probably reconsider how Simulation
         # is initialized as this hack might lead to issues further down
         # the line, but for the moment all looks good.
 
-        sim = Simulation.load_from_xml(xml_input)
+        self._custom_properties = custom_properties or {}
+        sim = Simulation.load_from_xml(xml_input, post_init_hook=self._add_custom_properties)
         self.__dict__.update(sim.__dict__)
+
+    def _add_custom_properties(self, simulation):
+        for name, property in self._custom_properties.items():
+            # checks if properties have the right format
+            if callable(property):
+                property = {"func": property, "size": 1}
+            elif not isinstance(property, dict):
+                raise ValueError("Custom property should be a callable or a dict")
+            if "func" not in property:
+                raise ValueError("Custom property should contain a 'func' entry")
+            if "size" not in property:
+                # defaults to size 1
+                property["size"] = 1
+            if "dimension" not in property:
+                property["dimension"] = "undefined"
+            if "help" not in property:
+                property["help"] = "Custom property, the devs didn't bother to add a description."
+            for s in simulation.syslist:
+                # hooks the property function to the system instance 
+                sys_property = deepcopy(property)
+                sys_property["func"] = sys_property["func"].__get__(s.properties, s.properties.__class__)
+                s.properties.property_dict[name] = sys_property
 
     def run(self, steps=1, write_outputs=True):
         """Stepper through the simulation.
@@ -335,6 +390,31 @@ class InteractiveSimulation(Simulation):
                         "momenta"
                     ].flatten() * unit_to_internal("momentum", "ase", 1.0)
 
+    def thermalize_momenta(self, temperature_K=None):
+        """Resets system momenta"""
+
+        for s in self.syslist:
+            if temperature_K is not None:
+                temperature = unit_to_internal("energy", "kelvin", temperature_K)
+            else:
+                temperature = s.ensemble.temp
+
+            # also correct for the change in kinetic energy
+            s.ensemble.eens += s.nm.kin
+
+            # initialize in the nm basis to handle PIMD mass scaling
+            s.nm.pnm[:] = (
+                self.prng.gvec((s.beads.nbeads, 3 * s.beads.natoms))
+                * np.sqrt(dstrip(s.nm.dynm3))
+                * np.sqrt(s.beads.nbeads * temperature * Constants.kb)
+            )
+
+            s.ensemble.eens -= s.nm.kin
+
+            # apply momentum constraints
+            if isinstance(s.motion, Dynamics):
+                s.motion.integrator.pconstraints()
+
     def get_motion_step(self):
         """
         Fetches the step function(s) associated with the system motion classes.
@@ -374,28 +454,3 @@ class InteractiveSimulation(Simulation):
 
         for s, f in zip(self.syslist, custom_step):
             s.motion.__dict__["step"] = f.__get__(s.motion, s.motion.__class__)
-
-    def thermalize_momenta(self, temperature_K=None):
-        """Resets system momenta"""
-
-        for s in self.syslist:
-            if temperature_K is not None:
-                temperature = unit_to_internal("energy", "kelvin", temperature_K)
-            else:
-                temperature = s.ensemble.temp
-
-            # also correct for the change in kinetic energy
-            s.ensemble.eens += s.nm.kin
-
-            # initialize in the nm basis to handle PIMD mass scaling
-            s.nm.pnm[:] = (
-                self.prng.gvec((s.beads.nbeads, 3 * s.beads.natoms))
-                * np.sqrt(dstrip(s.nm.dynm3))
-                * np.sqrt(s.beads.nbeads * temperature * Constants.kb)
-            )
-
-            s.ensemble.eens -= s.nm.kin
-
-            # apply momentum constraints
-            if isinstance(s.motion, Dynamics):
-                s.motion.integrator.pconstraints()

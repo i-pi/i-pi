@@ -257,6 +257,12 @@ UnitMap = {
         "radian": 1.00,
         "degree": 0.017453292519943295,
     },
+    "action": {
+        "": 1.00,
+        "automatic": 1.00,
+        "atomic_unit": 1.00,
+        "joule*second": 9.4825216e+33,
+    },
     "volume": {
         "": 1.00,
         "automatic": 1.00,
@@ -310,6 +316,7 @@ if ase is not None:
     UnitMap["force"]["ase"] = UnitMap["energy"]["ase"] / UnitMap["length"]["ase"]
     UnitMap["volume"]["ase"] = UnitMap["length"]["ase"] ** 3
     UnitMap["frequency"]["ase"] = 1 / UnitMap["time"]["ase"]
+    UnitMap["action"]["ase"] = UnitMap["energy"]["ase"]*UnitMap["time"]["ase"]
     UnitMap["mass"]["ase"] = (
         UnitMap["energy"]["ase"] / UnitMap["velocity"]["ase"] ** 2
     )  # to check
