@@ -5,8 +5,7 @@
 <parameters>{k1:1e-3}</parameters>
 </ffdirect>
 
-
-  <output prefix='script'>
+  <output prefix='script-c-p'>
     <properties stride='2' filename='out'>[ step, time{picosecond}, 
     conserved{electronvolt}, temperature{kelvin}, 
     potential{electronvolt}, fancy_virial, fancy_virial_xyz ]</properties>
