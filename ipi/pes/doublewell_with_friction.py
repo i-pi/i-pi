@@ -119,25 +119,21 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
         friction_tensor = (
             diffusion_coefficient[:, None] * diffusion_coefficient[None, :]
         )
+
+        # Friction will expect diffusion coefficient in shape nbdeads, nbath, ndof
+        diffusion_coefficient = diffusion_coefficient[None, :]        
+
         return diffusion_coefficient, friction_tensor
 
-    def get_sigma_tensor(self, pos):
-        self.check_dimensions(pos)
-        x = pos[0, 0]
-        sigma = np.zeros((3, 3))
-        sigma[0, 0] = np.sqrt(self.eta0) * self.dSD_dq(x)  # = dF/dx
-        return sigma
-
-    def get_coupling_value(self, pos):
-        self.check_dimensions(pos)
-        x = pos[0, 0]
-        F = np.sqrt(self.eta0) * x * self.SD(x)           # F(x)
-        return F
-
     def compute_structure(self, cell, pos):
-        pot, force, vir, extras = super().compute_structure(cell, pos)
+        """DoubleWell potential l"""
+
+        pot, force, vir, extras = super(
+            DoubleWell_with_friction_driver, self
+        ).compute_structure(cell, pos)
 
         diffusion_coefficient, friction_tensor = self.get_diffusion_and_friction(pos)
+
         extras = json.dumps(
             {
                 "friction": friction_tensor.tolist(),
@@ -145,15 +141,3 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
             }
         )
         return pot, force, vir, extras
-
-
-    # def compute_structure(self, cell, pos):
-    #     """DoubleWell potential l"""
-
-    #     pot, force, vir, extras = super(DoubleWell_with_friction_driver, self).__call__(
-    #         cell, pos
-    #     )
-
-    #     friction_tensor = self.get_friction_tensor(pos)
-    #     extras = json.dumps({"friction": friction_tensor.tolist()})
-    #     return pot, force, vir, extras
