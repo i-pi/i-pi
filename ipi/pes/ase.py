@@ -34,7 +34,7 @@ class ASEDriver(Dummy_driver):
         has_forces=True,
         has_stress=True,
         *args,
-        **kwargs
+        **kwargs,
     ):
         global read
         try:
@@ -92,8 +92,19 @@ class ASEDriver(Dummy_driver):
         )
         stress = properties["stress"] if "stress" in self.capabilities else np.zeros(9)
         if len(stress) == 6:
-            # converts from voight notation
+            # converts from voigt notation
             stress = np.array(stress[[0, 5, 4, 5, 1, 3, 4, 3, 2]])
+        else:
+            # check that the stress tensor is symmetric
+            if stress.shape != (3, 3):
+                raise ValueError(
+                    f"The stress tensor should have shape (3,3) but it has shape {stress.shape}."
+                )
+            delta = np.abs(stress - stress.T).sum()
+            if delta > 1e-6:
+                raise ValueError(
+                    f"The stress tensor should be symmetric, but its antisymmetric part has norm {delta}."
+                )
 
         # converts to internal quantities
         pot_ipi = np.asarray(
