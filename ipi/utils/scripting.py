@@ -28,11 +28,22 @@ DEFAULT_OUTPUTS = """
   </output>
 """
 
+Pos_Vel_OUTPUS = """
+  <output prefix='simulation'>
+    <properties stride='20' filename='out'>
+     [ step, time{picosecond}, conserved{electronvolt}, temperature{kelvin}, kinetic_md{electronvolt}, potential{electronvolt}]
+    </properties>
+    <trajectory format='xyz' filename='pos' stride='40'> x_centroid </trajectory>
+    <trajectory format='xyz' filename='vel' stride='40'> v_centroid </trajectory>
+    <checkpoint filename="chk" stride="2000" overwrite="true"/>
+  </output>
+"""
 
 def simulation_xml(
     structures,
     forcefield,
     motion,
+    total_steps=None,
     temperature=None,
     output=None,
     verbosity="quiet",
@@ -84,7 +95,9 @@ def simulation_xml(
 
     input_beads = InputBeads()
     input_beads.store(beads)
-
+    
+    if not np.any(structure.cell): # no cell set
+        structure.set_cell(np.array([1000, 1000, 1000]))
     cell = Cell(h=np.array(structure.cell).T * unit_to_internal("length", "ase", 1.0))
     input_cell = InputCell()
     input_cell.store(cell)
@@ -96,17 +109,24 @@ def simulation_xml(
     # parses the outputs and overrides prefix
     if output is None:
         output = DEFAULT_OUTPUTS
+    elif output == "sampling":
+        output = Pos_Vel_OUTPUS
     if prefix is not None:
         xml_output = xml_parse_string(output)
         if xml_output.fields[0][0] != "output":
             raise ValueError("the output parameter should be a valid 'output' block")
         xml_output.fields[0][1].attribs["prefix"] = prefix
         output = xml_write(xml_output)
+    if total_steps is not None:
+        steps = f"<total_steps>{total_steps}</total_steps>"
+    else:
+        steps = ""
 
     return f"""
 <simulation verbosity='{verbosity}' safe_stride='{safe_stride}'>
 {forcefield}
 {output}
+{steps}
 <system>
 {input_beads.write("beads")}
 {input_cell.write("cell")}
@@ -159,7 +179,7 @@ def forcefield_xml(
         if mode == "inet" and port is None:
             raise ValueError("Must specify port for {mode} forcefields")
         xml_ff = f"""
-<ffsocket name='{name}'>
+<ffsocket mode='{mode}' name='{name}'>
 <address>{address}</address>
 {f"<port>{port}</port>" if mode=="inet" else ""}
 <latency> 1e-4 </latency>
@@ -173,7 +193,7 @@ def forcefield_xml(
     return xml_ff
 
 
-def motion_nvt_xml(timestep, thermostat=None, path_integrals=False):
+def motion_nvt_xml(timestep, thermostat=None, path_integrals=False, **kwargs):
     """
     A helper function to generate an XML string for a MD simulation input.
     """
@@ -195,14 +215,26 @@ def motion_nvt_xml(timestep, thermostat=None, path_integrals=False):
     <tau units='ase'> {10*timestep} </tau>
 </thermostat>
 """
+    elif thermostat == 'langevin':
+        xml_thermostat = langevin_therm_xml(**kwargs)
 
     return f"""
 <motion mode="dynamics">
 <dynamics mode="nvt">
 <timestep units="ase"> {timestep} </timestep>
-{xml_thermostat}
+    {xml_thermostat}
 </dynamics>
 </motion>
+"""
+
+def langevin_therm_xml(tau=10):
+    """
+    A helper function to generate XML input string for langevin thermostat
+    """
+    return f"""
+<thermostat mode='langevin'>
+    <tau units="ase"> {tau} </tau>
+</thermostat>
 """
 
 
