@@ -39,6 +39,15 @@ Pos_Vel_OUTPUS = """
   </output>
 """
 
+MINIMAL_OUTPUTS = """
+  <output prefix="simulation">
+    <properties stride='1' filename='out'>
+       [ step, potential{electronvolt} ]
+    </properties>
+    <trajectory format='xyz' filename='pos' cell_units='angstrom'>x_centroid{angstrom}</trajectory>
+  </output>
+"""
+
 def simulation_xml(
     structures,
     forcefield,
@@ -111,6 +120,8 @@ def simulation_xml(
         output = DEFAULT_OUTPUTS
     elif output == "sampling":
         output = Pos_Vel_OUTPUS
+    elif output == "minimal":
+        output = MINIMAL_OUTPUTS
     if prefix is not None:
         xml_output = xml_parse_string(output)
         if xml_output.fields[0][0] != "output":
@@ -122,8 +133,7 @@ def simulation_xml(
     else:
         steps = ""
 
-    return f"""
-<simulation verbosity='{verbosity}' safe_stride='{safe_stride}'>
+    return f"""<simulation verbosity='{verbosity}' safe_stride='{safe_stride}'>
 {forcefield}
 {output}
 {steps}
@@ -144,8 +154,7 @@ def simulation_xml(
 </forces>
 {motion}
 </system>
-</simulation>
-"""
+</simulation>"""
 
 
 def forcefield_xml(
@@ -236,6 +245,18 @@ def langevin_therm_xml(tau=10):
     <tau units="ase"> {tau} </tau>
 </thermostat>
 """
+
+def motion_vib_xml(mode='fd', shift=0.001):
+    """
+    A helper function to generate an XML string for a vibrations motion block.
+    """  
+    return f"""
+<motion mode="vibrations">
+    <vibrations mode='{mode}'>
+        <pos_shift>{shift}</pos_shift>
+    </vibrations>
+</motion>
+""" 
 
 
 DummyASECalculator = None
