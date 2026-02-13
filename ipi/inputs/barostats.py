@@ -173,7 +173,7 @@ class InputBaro(Input):
         elif self.mode.fetch() == "sc-isotropic":
             if len(self.hfix.fetch()) > 0:
                 raise ValueError(
-                    "'hfix' can not be provided with a 'sc-isotropic' barostat"
+                    "Cannot fix individual cell components with an 'sc-isotropic' barostat"
                 )
             baro = BaroSCBZP(thermostat=self.thermostat.fetch(), tau=self.tau.fetch())
             if self.p._explicit:
