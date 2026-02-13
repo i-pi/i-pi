@@ -102,7 +102,7 @@ class ASEDriver(Dummy_driver):
                 )
             delta = np.abs(stress - stress.T).sum()
             if delta > 1e-6:
-                raise ValueError(
+                warning(
                     f"The stress tensor should be symmetric, but its antisymmetric part has norm {delta}."
                 )
 
