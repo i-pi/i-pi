@@ -3,8 +3,10 @@ from ipi.utils.depend import dstrip
 from ipi.utils.units import Elements, unit_to_internal, unit_to_user, Constants
 from ipi.inputs.beads import InputBeads
 from ipi.inputs.cell import InputCell
+from ipi.inputs.thermostats import InputThermoBase
 from ipi.engine.beads import Beads
 from ipi.engine.cell import Cell
+from ipi.engine.thermostats import ThermoGLE
 from ipi.engine.simulation import Simulation
 from ipi.engine.motion import Dynamics
 from ipi.utils.io.inputs.io_xml import xml_parse_string, xml_write, write_dict
@@ -226,6 +228,8 @@ def motion_nvt_xml(timestep, thermostat=None, path_integrals=False, **kwargs):
 """
     elif thermostat == 'langevin':
         xml_thermostat = langevin_therm_xml(**kwargs)
+    elif thermostat == 'gle':
+        xml_thermostat = gle_therm_xml(**kwargs)
 
     return f"""
 <motion mode="dynamics">
@@ -245,6 +249,16 @@ def langevin_therm_xml(tau=10):
     <tau units="ase"> {tau} </tau>
 </thermostat>
 """
+
+def gle_therm_xml(A, C=None):
+    """
+    A helper function to generate XML input string for gle thermostat
+    Note: atomic units for time and energy necessary!!!
+    """   
+    thermo = ThermoGLE(A=A, C=C)
+    input_thermo = InputThermoBase()
+    input_thermo.store(thermo)
+    return input_thermo.write("thermostat")
 
 def motion_vib_xml(mode='fd', shift=0.001):
     """
