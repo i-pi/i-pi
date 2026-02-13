@@ -401,8 +401,8 @@ class MetatomicDriver(Dummy_driver):
             extras_dict["energy_uncertainty"] = list(energy_uq)
             if np.max(energy_uq) > self.uncertainty_threshold:
                 warning(
-                    f"the estimated atomic energy uncertainty {27.211*np.max(energy_uq):.4f} eV/atom "
-                    f"exceeds the selected threshold of {27.211*self.uncertainty_threshold:.4f} eV/atom",
+                    f"the estimated atomic energy uncertainty {unit_to_user('energy','electronvolt',np.max(energy_uq)):.4f} eV/atom "
+                    f"exceeds the selected threshold of {unit_to_user('energy','electronvolt',self.uncertainty_threshold):.4f} eV/atom",
                     verbosity.medium,
                 )
 
