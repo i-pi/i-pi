@@ -260,6 +260,24 @@ def gle_therm_xml(A, C=None):
     input_thermo.store(thermo)
     return input_thermo.write("thermostat")
 
+def motion_min_xml(opt='bfgs', tolerances={'energy': 1e-5, 'force' : 1e-4, 'position': 1e-5}):
+    """
+    A helper function to generate an XML string geometry optimization input.
+    """
+    xml_tolerance = ""
+    for k, v in tolerances.items():
+        xml_tolerance += f"""<{k} units='ase'>{v}</{k}>\n"""
+    return f"""
+<motion mode='minimize'>
+    <optimizer mode='{opt}'>
+        <tolerances>
+            {xml_tolerance}
+        </tolerances>
+    </optimizer>
+</motion>
+"""
+
+
 def motion_vib_xml(mode='fd', shift=0.001):
     """
     A helper function to generate an XML string for a vibrations motion block.
