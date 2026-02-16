@@ -34,7 +34,6 @@ class MACE_driver(ASEDriver):
     def __init__(
         self, template, model, device="cpu", mace_kwargs=None, *args, **kwargs
     ):
-
         self.model = model
         self.device = device
         self.mace_kwargs = {}

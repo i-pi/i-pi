@@ -50,6 +50,7 @@ MINIMAL_OUTPUTS = """
   </output>
 """
 
+
 def simulation_xml(
     structures,
     forcefield,
@@ -106,8 +107,8 @@ def simulation_xml(
 
     input_beads = InputBeads()
     input_beads.store(beads)
-    
-    if not np.any(structure.cell): # no cell set
+
+    if not np.any(structure.cell):  # no cell set
         structure.set_cell(np.array([1000, 1000, 1000]))
     cell = Cell(h=np.array(structure.cell).T * unit_to_internal("length", "ase", 1.0))
     input_cell = InputCell()
@@ -226,9 +227,9 @@ def motion_nvt_xml(timestep, thermostat=None, path_integrals=False, **kwargs):
     <tau units='ase'> {10*timestep} </tau>
 </thermostat>
 """
-    elif thermostat == 'langevin':
+    elif thermostat == "langevin":
         xml_thermostat = langevin_therm_xml(**kwargs)
-    elif thermostat == 'gle':
+    elif thermostat == "gle":
         xml_thermostat = gle_therm_xml(**kwargs)
 
     return f"""
@@ -240,6 +241,7 @@ def motion_nvt_xml(timestep, thermostat=None, path_integrals=False, **kwargs):
 </motion>
 """
 
+
 def langevin_therm_xml(tau=10):
     """
     A helper function to generate XML input string for langevin thermostat
@@ -250,17 +252,21 @@ def langevin_therm_xml(tau=10):
 </thermostat>
 """
 
+
 def gle_therm_xml(A, C=None):
     """
     A helper function to generate XML input string for gle thermostat
     Note: atomic units for time and energy necessary!!!
-    """   
+    """
     thermo = ThermoGLE(A=A, C=C)
     input_thermo = InputThermoBase()
     input_thermo.store(thermo)
     return input_thermo.write("thermostat")
 
-def motion_min_xml(opt='bfgs', tolerances={'energy': 1e-5, 'force' : 1e-4, 'position': 1e-5}):
+
+def motion_min_xml(
+    opt="bfgs", tolerances={"energy": 1e-5, "force": 1e-4, "position": 1e-5}
+):
     """
     A helper function to generate an XML string geometry optimization input.
     """
@@ -278,17 +284,17 @@ def motion_min_xml(opt='bfgs', tolerances={'energy': 1e-5, 'force' : 1e-4, 'posi
 """
 
 
-def motion_vib_xml(mode='fd', shift=0.001):
+def motion_vib_xml(mode="fd", shift=0.001):
     """
     A helper function to generate an XML string for a vibrations motion block.
-    """  
+    """
     return f"""
 <motion mode="vibrations">
     <vibrations mode='{mode}'>
         <pos_shift>{shift}</pos_shift>
     </vibrations>
 </motion>
-""" 
+"""
 
 
 DummyASECalculator = None

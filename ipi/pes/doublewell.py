@@ -33,7 +33,6 @@ class DoubleWell_driver(Dummy_driver):
         python driver.py -m DoubleWell -o 500,2085,1837,0.00 \n"""
 
     def __init__(self, w_b=None, v0=None, m=None, delta=None, *args, **kwargs):
-
         if w_b == None or v0 == None or m == None or delta == None:
             print("using default values from Craig-JCP-2005")
             # We used Craig's values (J. Chem. Phys. 122, 084106, 2005)
