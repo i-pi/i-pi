@@ -22,6 +22,7 @@ class TBLiteDriver(Dummy_driver):
     def __init__(
         self, template, method, charge=None, uhf=None, periodic=None, *args, **kwargs
     ):
+
         super().__init__(*args, **kwargs)
 
         global tb

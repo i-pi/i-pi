@@ -71,6 +71,7 @@ class DDW_with_explicit_bath_driver(Dummy_driver):
         *args,
         **kwargs
     ):
+
         self.init = False
         try:
             wb1 = wb1 * invcm2au

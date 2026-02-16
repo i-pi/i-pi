@@ -53,6 +53,7 @@ class DoubleWell_with_friction_driver(DoubleWell_driver):
         *args,
         **kwargs
     ):
+
         try:
             w_b = w_b * invcm2au
             v0 = v0 * invcm2au

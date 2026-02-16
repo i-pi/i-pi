@@ -57,6 +57,7 @@ class DoubleWell_with_explicit_bath_driver(Dummy_driver):
         *args,
         **kwargs
     ):
+
         self.init = False
 
         try:
