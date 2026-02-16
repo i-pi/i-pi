@@ -182,12 +182,12 @@ class MetatomicDriver(Dummy_driver):
                     "this model does not support non-conservative forces. "
                 )
             else:
-                outputs[
-                    f"non_conservative_forces{self.non_conservative_suffix}"
-                ] = mta.ModelOutput(
-                    quantity="force",
-                    unit="eV/Angstrom",
-                    per_atom=True,
+                outputs[f"non_conservative_forces{self.non_conservative_suffix}"] = (
+                    mta.ModelOutput(
+                        quantity="force",
+                        unit="eV/Angstrom",
+                        per_atom=True,
+                    )
                 )
             if "non_conservative_stress" not in self.model.capabilities().outputs:
                 warnings.warn(
@@ -197,12 +197,12 @@ class MetatomicDriver(Dummy_driver):
                     "them."
                 )
             else:
-                outputs[
-                    f"non_conservative_stress{self.non_conservative_suffix}"
-                ] = mta.ModelOutput(
-                    quantity="pressure",
-                    unit="eV/Angstrom^3",
-                    per_atom=False,
+                outputs[f"non_conservative_stress{self.non_conservative_suffix}"] = (
+                    mta.ModelOutput(
+                        quantity="pressure",
+                        unit="eV/Angstrom^3",
+                        per_atom=False,
+                    )
                 )
 
         if self.energy_ensemble or self.uncertainty_threshold > 0.0:
