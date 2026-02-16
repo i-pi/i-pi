@@ -103,6 +103,17 @@ class InputBaro(Input):
                 "help": "If True, the (N, V, sigma_a = 0, T)-ensemble is sampled, which allows for full cell fluctuations while keeping the cell volume fixed. This ensemble was introduced in [doi:10.1021/acs.jctc.5b00748]. Note that it is only implemented for the MTTK ('flexible') barostat, enabling it for any other barostat will not work and result in an error.",
             },
         ),
+        "pressure_mask": (
+            InputArray,
+            {
+                "default": np.ones(3, int),
+                "dtype": int,
+                "dimension": "undefined",
+                "help": "Array of 0,1 value with length 3 to select which diagonal components of the stress tensor are used to compute the pressure for the barostat. \
+                    This is only used for the 'isotropic' and 'sc-isotropic' barostats, and is ignored for the 'flexible' and 'anisotropic' barostats. \
+                    By default all three diagonal components are used, but setting an entry to 0 will exclude that component from the pressure calculation.",
+            },
+        ),
     }
 
     default_help = "Simulates an external pressure bath."
@@ -121,9 +132,11 @@ class InputBaro(Input):
         if type(baro) is BaroBZP:
             self.mode.store("isotropic")
             self.p.store(baro.p)
+            self.pressure_mask.store(baro.pressure_mask)
         elif type(baro) is BaroSCBZP:
             self.mode.store("sc-isotropic")
             self.p.store(baro.p)
+            self.pressure_mask.store(baro.pressure_mask)
         elif type(baro) is BaroMTK:
             self.mode.store("flexible")
             self.p.store(baro.p)
@@ -167,7 +180,11 @@ class InputBaro(Input):
                 raise ValueError(
                     "Cannot fix individual cell components with an 'isotropic' barostat"
                 )
-            baro = BaroBZP(thermostat=self.thermostat.fetch(), tau=self.tau.fetch())
+            baro = BaroBZP(
+                thermostat=self.thermostat.fetch(),
+                tau=self.tau.fetch(),
+                pressure_mask=self.pressure_mask.fetch(),
+            )
             if self.p._explicit:
                 baro.p = self.p.fetch()
         elif self.mode.fetch() == "sc-isotropic":
@@ -175,10 +192,18 @@ class InputBaro(Input):
                 raise ValueError(
                     "Cannot fix individual cell components with an 'sc-isotropic' barostat"
                 )
-            baro = BaroSCBZP(thermostat=self.thermostat.fetch(), tau=self.tau.fetch())
+            baro = BaroSCBZP(
+                thermostat=self.thermostat.fetch(),
+                tau=self.tau.fetch(),
+                pressure_mask=self.pressure_mask.fetch(),
+            )
             if self.p._explicit:
                 baro.p = self.p.fetch()
         elif self.mode.fetch() == "flexible":
+            if np.any(self.pressure_mask.fetch() != np.ones(3, int)):
+                raise ValueError(
+                    "Cannot use 'pressure_mask' with a 'flexible' barostat"
+                )
             baro = BaroMTK(
                 thermostat=self.thermostat.fetch(),
                 tau=self.tau.fetch(),
@@ -188,6 +213,10 @@ class InputBaro(Input):
             if self.p._explicit:
                 baro.p = self.p.fetch()
         elif self.mode.fetch() == "anisotropic":
+            if np.any(self.pressure_mask.fetch() != np.ones(3, int)):
+                raise ValueError(
+                    "Cannot use 'pressure_mask' with a 'flexible' barostat"
+                )
             baro = BaroRGB(
                 thermostat=self.thermostat.fetch(),
                 tau=self.tau.fetch(),
