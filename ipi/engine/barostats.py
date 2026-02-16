@@ -580,6 +580,7 @@ class BaroBZP(Barostat):
         ]  # this is already set to be half a time step at the specified MTS depth
 
         # computes the pressure associated with the forces at each MTS level.
+        # ToDo: this should be masked out
         press = np.trace(self.stress_mts(level)) / 3.0
         self.p += dt * 3.0 * (self.cell.V * press)
 
@@ -790,6 +791,7 @@ class BaroSCBZP(Barostat):
         dt3 = dt**3 / 3.0
 
         # computes the pressure associated with the forces at each MTS level and adds the +- 1/3 SC correction.
+        # ToDo: this should be masked out
         press = np.trace(self.stress_mts_sc(level)) / 3.0
         self.p += dt * 3.0 * (self.cell.V * press)
 
