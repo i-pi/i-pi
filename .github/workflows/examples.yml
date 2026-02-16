@@ -19,7 +19,7 @@ jobs:
         include:
           - os: ubuntu-22.04
             python-version: "3.8"
-          - os: ubuntu-22.04
+          - os: ubuntu-24.04
             python-version: "3.12"
 
     steps:
@@ -39,7 +39,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt 
           pip install .
-          pip install ase==3.22.1
+          pip install ase
           echo "${GITHUB_WORKSPACE}/bin" >> $GITHUB_PATH
 
       - name: Install Gfortran and Compile Driver
