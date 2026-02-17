@@ -478,13 +478,43 @@ class Properties:
                 "help": "The total spring potential energy between the beads of all the ring polymers in the system.",
                 "func": (lambda: self.nm.vspring / self.beads.nbeads),
             },
-            "friction_energy": {
+            "friction_emf": {
                 "dimension": "energy",
                 "help": "The mean-field potential energy contributed by friction.",
                 # TODO: can this be managed nicer?
                 "func": (
                     lambda: (
-                        self.motion.integrator.friction.efric / self.beads.nbeads
+                        self.motion.integrator.friction.emf / self.beads.nbeads
+                        if isinstance(
+                            self.motion.integrator,
+                            (NVEIntegratorWithFriction, NVTIntegratorWithFriction),
+                        )
+                        else 0.0
+                    )
+                ),
+            },
+            "friction_ediss": {
+                "dimension": "energy",
+                "help": "Cumulative energy dissipated to the bath (positive system->bath)",
+                # TODO: can this be managed nicer?
+                "func": (
+                    lambda: (
+                        self.motion.integrator.friction.ediss / self.beads.nbeads
+                        if isinstance(
+                            self.motion.integrator,
+                            (NVEIntegratorWithFriction, NVTIntegratorWithFriction),
+                        )
+                        else 0.0
+                    )
+                ),
+            },
+            "friction_erand": {
+                "dimension": "energy",
+                "help": "Cumulative energy injected by random forceb (positive bath->system)",
+                # TODO: can this be managed nicer?
+                "func": (
+                    lambda: (
+                        self.motion.integrator.friction.erand / self.beads.nbeads
                         if isinstance(
                             self.motion.integrator,
                             (NVEIntegratorWithFriction, NVTIntegratorWithFriction),

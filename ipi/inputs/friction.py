@@ -36,9 +36,9 @@ class InputFriction(Input):
                 "help": "...",
             },
         ),
-        "friction_static": (
+        "sigma_static": (
             InputValue,
-            {"dtype": float, "default": 1.0, "help": "..."},
+            {"dtype": float, "default": 1.0, "help": "Constant linear coupling amplitude sigma (used when variable_friction=False"},
         ),
         "ou_nterms": (InputValue, {"dtype": int, "default": 4, "help": "..."}),
         "ou_tmax": (InputValue, {"dtype": float, "default": 200.0, "help": "..."}),
@@ -81,7 +81,7 @@ class InputFriction(Input):
 
         self.Lambda.store(friction.Lambda)
         self.alpha_input.store(friction.alpha_input)
-        self.friction_static.store(friction.friction_static)
+        self.sigma_static.store(friction.sigma_static)
 
         self.ou_nterms.store(friction.ou_nterms)
         self.ou_tmax.store(friction.ou_tmax)
@@ -110,7 +110,7 @@ class InputFriction(Input):
             
             Lambda=self.Lambda.fetch(),
             alpha_input=self.alpha_input.fetch(),
-            friction_static=self.friction_static.fetch(),
+            sigma_static=self.sigma_static.fetch(),
 
             ou_nterms=self.ou_nterms.fetch(),
             ou_tmax=self.ou_tmax.fetch(),

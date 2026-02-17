@@ -25,7 +25,7 @@ class Friction:
     Lambda: np.ndarray  # [omega, J(omega)] for non-markovian OU fit
     alpha_input: np.ndarray      # optional [omega_k, alpha]
 
-    friction_static: float
+    sigma_static: float
 
     # OU fitting (non-markovian)
     ou_nterms: int
@@ -56,7 +56,7 @@ class Friction:
         mf_mode: str = "reconstruct",
         Lambda=np.zeros((0, 2), float),
         alpha_input=np.zeros((0, 2), float),
-        friction_static: float = 1.0,
+        sigma_static: float = 1.0,
         ou_nterms: int = 4,
         ou_tmax: float = 200.0,
         ou_nt: int = 2000,
@@ -111,7 +111,7 @@ class Friction:
         #Conserved mean-field potential
         self._emf = depend_value(name="emf", value=0.0)
 
-        self.friction_static = float(friction_static)
+        self.sigma_static = float(sigma_static)
 
         self.ou_nterms = int(ou_nterms)
         self.ou_tmax = float(ou_tmax)
@@ -139,6 +139,10 @@ class Friction:
         self._F_beads: np.ndarray | None = None  # (nbeads, nbath)
         self._q_prev: np.ndarray | None = None   # (nbeads, ndof)
 
+         # bookkeeping: cumulative energy exchange with bath (Markovian)
+        self._ediss = depend_value(name="ediss", value=0.0)     # positive = system -> bath via friction
+        self._erand = depend_value(name="erand", value=0.0)  # positive = bath -> system via random force
+
 
 
     # ==========================================================================
@@ -161,17 +165,6 @@ class Friction:
         if self.ou_propagator not in ("exact", "euler"):
             raise ValueError("ou_propagator must be one of: 'exact', 'euler'.")
 
-        # Markovian MF policy: off unless alpha_input exists
-        if self.bath_mode == "markovian" and self.mf_mode != "none":
-            if self.alpha_input.size == 0:
-                warning(
-                    "Friction: bath_mode='markovian' -> MF disabled unless alpha_input is provided. "
-                    "Setting mf_mode='none'.",
-                    verbosity.low,
-                )
-                self.mf_mode = "none"
-
-
 
         # Non-Markovian OU fit requires spectral density
         if self.bath_mode == "non-markovian":
@@ -180,8 +173,6 @@ class Friction:
                     "non-markovian requires Lambda to fit OU embedding "
                     "(or provide alpha_input + pre-set OU params)."
                 )
-
-
 
 
             # self._fit_ou_params()
@@ -197,7 +188,7 @@ class Friction:
             f"  variable_friction = {self.variable_friction}\n"
             f"  bath_mode           = {self.bath_mode}\n"
             f"  mf_mode             = {self.mf_mode}\n"
-            f"  friction_static     = {self.friction_static}\n"
+            f"  sigma_static     = {self.sigma_static}\n"
             f"  ou_propagator       = {self.ou_propagator}\n"
             f"  sigma_key           = '{self.sigma_key}'\n"
             f"  friction_key        = '{self.friction_key}'\n",
@@ -205,17 +196,9 @@ class Friction:
         )
 
         if (self.variable_friction) and self.mf_mode == "linear":
-            warning(
-                "mf_mode='linear' is only meaningful with variable_friction=False. Setting mf_mode='none'.",
-                verbosity.low,
-            )
-            self.mf_mode = "none"
+            raise ValueError(
+                "mf_mode='linear' is only meaningful with variable_friction=False.")
 
-        if self.bath_mode == "non-markovian" and self.ou_propagator == "euler":
-            warning(
-                "Friction: ou_propagator='euler' is legacy/debug and can be unstable for stiff gamma*dt >> 1.",
-                verbosity.low,
-            )
 
         # Dependencies
         self._sigma.add_dependency(self.forces._extras)
@@ -236,6 +219,12 @@ class Friction:
     def _kbt(self) -> float:
         from ipi.utils.units import Constants
         return Constants.kb * float(self.ensemble.temp)
+    
+    @staticmethod
+    def _kinetic(p: np.ndarray, m3: np.ndarray) -> float:
+        # p and m3 same shape
+        return 0.5 * float(np.sum((p * p) / m3))
+
 
 
     # ==========================================================================
@@ -273,12 +262,9 @@ class Friction:
             info("Friction: computed alpha^(n) from Lambda.", verbosity.low)
             return alpha
 
-        warning(
-            "Friction: MF requested but no alpha_input (and no Lambda). Disabling MF.",
-            verbosity.low,
+        raise ValueError(
+            "Friction: MF requested but no alpha_input (and no Lambda)."
         )
-        self.mf_mode = "none"
-        return np.zeros(nmodes, dtype=float)
 
     # ==========================================================================
     # Parse Sigma
@@ -302,6 +288,10 @@ class Friction:
         """
         info("Inside get_sigma", verbosity.low) 
 
+
+        if (not self.variable_friction):
+            return float(self.sigma_static)
+
         nbeads = int(self.beads.nbeads)
         natoms = int(self.beads.natoms)
         ndof = 3 * natoms
@@ -315,77 +305,19 @@ class Friction:
             )
         else:
             info(str(sigma), verbosity.low)
-            return np.asarray(sigma)
+            sigma = np.asarray(sigma,dtype=float)
 
-    # ==========================================================================
-    # MF reconstruction and forces (general coupling)
-    # ==========================================================================
+        
+        if sigma.ndim != 3:
+            raise ValueError(f"{self.sigma_key} must have ndim=3 (nbeads, nbath, ndof). Got shape {sigma.shape}.")
+        if sigma.shape[0] != nbeads or sigma.shape[2] != ndof:
+            raise ValueError(
+                f"{self.sigma_key} shape {sigma.shape} incompatible with (nbeads={nbeads}, ndof={ndof})."
+            )
+        
+        sigma = sigma.sum(axis=1)  # (nbeads, ndof)  
+        return sigma
 
-    def _ensure_F_beads(self, nbath: int) -> None:
-        nbeads = int(self.beads.nbeads)
-        if self._F_beads is None or self._F_beads.shape != (nbeads, nbath):
-            self._F_beads = np.zeros((nbeads, nbath), float)
-
-    def _update_reconstructed_F(self, sigma: np.ndarray) -> None:
-        """
-        Reconstruct coupling coordinate:
-            F <- F + sigma_eff dr
-        where sigma_eff = friction_static * sigma.
-        """
-        if self._q_prev is None:
-            self._q_prev = np.array(self.beads.q, copy=True)
-
-        q_now = np.array(self.beads.q, copy=False)
-        dr = q_now - self._q_prev  # (nbeads, ndof)
-
-        nbath = sigma.shape[1]
-        self._ensure_F_beads(nbath)
-
-        sigma_eff = self.friction_static * sigma
-        dF = np.einsum("baj,bj->ba", sigma_eff, dr)
-        self._F_beads += dF
-
-        self._q_prev = np.array(q_now, copy=True)
-
-    def _mf_forces_reconstruct(self, sigma: np.ndarray) -> np.ndarray:
-        """
-        MF for general coupling using reconstructed F.
-
-        E = 1/2 sum_{n,a} alpha[n] |F_nm[n,a]|^2
-        g_nm[n,a] = alpha[n] * F_nm[n,a]
-        f_beads = - sigma_eff^T g_beads
-        """
-        if self.alpha is None:
-            raise RuntimeError("MF called before bind().")
-
-        nbeads = int(self.beads.nbeads)
-        ndof = 3 * int(self.beads.natoms)
-        nbath = sigma.shape[1]
-        nmodes = int(np.asarray(self.nm.omegak).size)
-
-        self._ensure_F_beads(nbath)
-
-        # Transform F to NM per channel
-        F_nm = np.zeros((nmodes, nbath), float)
-        for a in range(nbath):
-            bead_vec = self._F_beads[:, a].reshape(nbeads, 1)
-            nm_vec = self.nm.transform.b2nm(bead_vec)
-            F_nm[:, a] = nm_vec[:, 0]
-
-        g_nm = self.alpha[:, None] * F_nm
-
-        # Back to beads
-        g_beads = np.zeros((nbeads, nbath), float)
-        for a in range(nbath):
-            nm_vec = g_nm[:, a].reshape(nmodes, 1)
-            bead_vec = self.nm.transform.nm2b(nm_vec)
-            g_beads[:, a] = bead_vec[:, 0]
-
-        # sigma_eff = self.friction_static * sigma
-        f_beads = -np.einsum("baj,ba->bj", sigma, g_beads)
-
-        # self.emf = 0.5 * float(np.sum(self.alpha[:, None] * (F_nm * F_nm)))
-        return f_beads.reshape(nbeads, ndof)
 
     # def meanfield_forces(self) -> np.ndarray:
     #     """
@@ -450,7 +382,10 @@ class Friction:
 
         if self.mf_mode == "none":
             return 0.0
-        
+
+        info("alpha "+str(self.alpha), verbosity.low)
+        info("coupling "+str(self.friction_coupling_nm**2))
+        info("EMF "+str(np.sum(self.alpha * self.friction_coupling_nm**2)), verbosity.low) 
         return np.sum(self.alpha * self.friction_coupling_nm**2) / 2
         
     def get_fmf_nm(self):
@@ -470,13 +405,13 @@ class Friction:
         Markovian dissipation + noise.
 
         Linear coupling:
-          gamma = friction_static
+          gamma = sigma_static * sigma_static
           dp_nm = -gamma v_nm dt + sqrt(2 kBT gamma dt) N
 
-        General coupling:
-          sigma_eff = friction_static * sigma
-          dp_drift = -dt sigma_eff^T (sigma_eff v)
-          dp_noise = sqrt(2 kBT dt) sigma_eff^T g, g~N(0,I)
+        Variable friction:
+          sigma is position - dependent
+          dp_drift = -dt sigma^T (sigma v)
+          dp_noise = sqrt(2 kBT dt) sigma^T g, g~N(0,I)
         """
 
         info("Inside Markovian step:", verbosity.low)
@@ -487,38 +422,79 @@ class Friction:
         kbt = self._kbt()
 
         # Linear coupling: friction does not depend on instaneous atomic configuration.
-        # friction_static is gamma
+        # sigma**2 is gamma
         if not self.variable_friction:
-            gamma = float(self.friction_static)
+            sigma = float(self.sigma_static)
+            gamma = sigma * sigma
             if gamma < 0.0:
-                raise ValueError("friction_static (gamma) must be non-negative for Markovian linear coupling.")
+                raise ValueError("gamma must be non-negative for Markovian linear coupling.")
 
+            # Record energy before dissipative kick
+            pnm0 = self.nm.pnm.copy()
+            K0 = self._kinetic(pnm0, self.nm.dynm3)
+
+            # Dissipative kick
             vnm = self.nm.pnm / self.nm.dynm3
             nmodes, ndof_nm = vnm.shape
-
             self.nm.pnm += -(gamma * vnm) * pdt
+
+            # Calculate addional dissipation energy
+            p1 = self.beads.p
+            K1 = self._kinetic(self.nm.pnm, self.nm.dynm3)
+            self.ediss += -(K1 - K0)
 
             amp = np.sqrt(2.0 * kbt * gamma * pdt)
             for n in range(nmodes):
                 self.nm.pnm[n, :] += amp * self.prng.gvec(ndof_nm)
+
+            p2 = self.beads.p
+            K2 = self._kinetic(self.nm.pnm, self.nm.dynm3)
+            self.erand += (K2 - K1)
             return
 
         info("Markov: before get sigma", verbosity.low)
         # variable friction / seperable coupling: requires sigma per bead
         sigma = self._get_sigma()  # (nbeads, nbath, ndof)
         info("Markov: after get sigma", verbosity.low)
-        nbeads, nbath, ndof = sigma.shape
-        info("nbeads from sigma"+str(nbeads), verbosity.low)
 
+        Gamma = sigma[0,:,:].T @ sigma[0,:,:]
+        info("Gamma shape "+str(np.shape(Gamma)), verbosity.low)
+        info("Gamma "+str(Gamma), verbosity.low)
+
+        nbeads, ndof = sigma.shape
+
+
+
+
+        # # Euler-Maruyama (Kloeden pg 339)
+
+        # Record energy before dissipative kick
+        p0 = self.beads.p.copy()
+        K0 = self._kinetic(p0, self.beads.m3)
+        
+        # Dissipative force
         v = self.beads.p / self.beads.m3
-
         u = np.einsum("baj,bj->ba", sigma, v)
         self.beads.p += -np.einsum("baj,ba->bj", sigma, u) * pdt
 
+        # Calculate addional dissipation energy
+        p1 = self.beads.p
+        K1 = self._kinetic(p1, self.beads.m3)
+        self.ediss += -(K1 - K0)
+
+        # Random force
         amp = np.sqrt(2.0 * kbt * pdt)
         for b in range(nbeads):
-            g = self.prng.gvec(nbath)
+            g = self.prng.gvec(1)
             self.beads.p[b, :] += amp * (sigma[b, :, :].T @ g)
+
+        p2 = self.beads.p
+        K2 = self._kinetic(p2, self.beads.m3)
+        self.erand += (K2 - K1)
+        return
+
+
+
 
     # ==========================================================================
     # Non-Markovian OU: exact block update
@@ -614,7 +590,7 @@ class Friction:
 
 
 
-dproperties(Friction, ["sigma", "friction_coupling_nm", "emf", "fmf_nm", "fmf"])
+dproperties(Friction, ["sigma", "friction_coupling_nm", "emf", "ediss","erand","fmf_nm", "fmf"])
 
 
 
