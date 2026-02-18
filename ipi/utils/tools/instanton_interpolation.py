@@ -14,7 +14,7 @@ from ipi.utils.nmtransform import nm_rescale
 from ipi.utils.units import unit_to_internal
 
 
-def interpolate_instanton(chk, input_geo, input_hess, nbeadsNew, manual):
+def interpolate_instanton(chk=None, input_geo=None, input_hess=None, nbeadsNew=None, manual=False):
 
     if input_geo != "None" or chk != "None":
         if manual:
