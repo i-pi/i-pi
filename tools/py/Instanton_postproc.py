@@ -1,9 +1,7 @@
-import numpy as np
-import sys
-
 import argparse
-from ipi.utils.messages import verbosity, info
+from ipi.utils.units import unit_to_internal
 from ipi.utils.tools import instanton_compute
+from ipi.utils.messages import verbosity
 
 """ Reads all the information needed from a i-pi RESTART file and compute the partition functions of the reactant, transition state (TS) or
 instanton according to J. Phys. Chem. Lett. 7, 437(2016) (Instanton Rate calculations) or J. Chem. Phys. 134, 054109 (2011) (Tunneling Splitting)
@@ -42,22 +40,8 @@ main directory must be added to the PYTHONPATH environment variable.
 #    print 'Please correct the path'
 #    sys.exit()
 # sys.path.insert(0, ipi_path)
-
-from ipi.engine.simulation import Simulation
-from ipi.utils.units import unit_to_internal, Constants
-from ipi.utils.instools import red2comp
-from ipi.utils.hesstools import clean_hessian
-from ipi.engine.motion.instanton import SpringMapper
-
 # UNITS
 K2au = unit_to_internal("temperature", "kelvin", 1.0)
-kb = Constants.kb
-hbar = Constants.hbar
-eV2au = unit_to_internal("energy", "electronvolt", 1.0)
-cal2au = unit_to_internal("energy", "cal/mol", 1.0)
-cm2au = unit_to_internal("frequency", "hertz", 1.0) * 3e10
-
-
 
 
 if __name__ == "__main__":

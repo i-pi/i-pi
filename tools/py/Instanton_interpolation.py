@@ -16,10 +16,9 @@ main directory must be added to the PYTHONPATH environment variable.
 
 # Y. Litman 2017
 
-import os
-import numpy as np
 import sys
 import argparse
+from ipi.utils.tools import interpolate_instanton
 
 # You can insert the i-pi path with the following lines.
 # Uncomment them and adjust the ipi_path variable
@@ -32,10 +31,6 @@ import argparse
 #   sys.exit()
 # sys.path.insert(0, ipi_path)
 
-from ipi.utils.io import read_file, print_file
-from ipi.utils.nmtransform import nm_rescale
-from ipi.utils.units import unit_to_internal
-from ipi.utils.tools import interpolate_instanton
 
 if __name__ == "__main__":
 

@@ -7,14 +7,15 @@ Simple function to interpolate an instanton geometry and/or hessian to a new num
 import os
 import numpy as np
 import sys
-import argparse
 
 from ipi.utils.io import read_file, print_file
 from ipi.utils.nmtransform import nm_rescale
 from ipi.utils.units import unit_to_internal
 
 
-def interpolate_instanton(chk=None, input_geo=None, input_hess=None, nbeadsNew=None, manual=False):
+def interpolate_instanton(
+    chk=None, input_geo=None, input_hess=None, nbeadsNew=None, manual=False
+):
 
     if input_geo != "None" or chk != "None":
         if manual:
@@ -188,5 +189,3 @@ def interpolate_instanton(chk=None, input_geo=None, input_hess=None, nbeadsNew=N
             )
         )
         print("")
-
-

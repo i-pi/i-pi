@@ -1,7 +1,6 @@
 import numpy as np
 import sys
 
-import argparse
 from ipi.utils.messages import verbosity, info
 
 """ Simple function to post-process the results of an instanton calculation."""
@@ -156,7 +155,7 @@ def instanton_compute(
     if asr == "linear":
         raise NotImplementedError("Sum rules for linear molecules is not implemented")
 
-    if args.temperature == 0.0:
+    if temp == 0.0:
         raise ValueError("The temperature must be specified.'")
 
     # -----READ---------------------------------
@@ -501,5 +500,3 @@ def instanton_compute(
     info("Tunneling Splitting: J. Chem. Phys. 134, 054109 (2011)", verbosity.medium)
     info("\n\n", verbosity.medium)
     sys.exit(0)
-
-
