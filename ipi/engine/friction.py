@@ -315,53 +315,7 @@ class Friction:
                 f"{self.sigma_key} shape {sigma.shape} incompatible with (nbeads={nbeads}, ndof={ndof})."
             )
         
-        sigma = sigma.sum(axis=1)  # (nbeads, ndof)  
         return sigma
-
-
-    # def meanfield_forces(self) -> np.ndarray:
-    #     """
-    #     MF force in bead representation.
-
-    #     - mf_mode='none' : zero
-    #     - variable_friction = false i.e linear coupling + mf_mode='linear' : f_nm = -alpha q_nm, transformed to beads
-    #     - variable_friction true i.e separable coupling + mf_mode='reconstruct' : reconstructed-F MF (requires sigma)
-    #     """
-    #     nbeads = int(self.beads.nbeads)
-    #     ndof = 3 * int(self.beads.natoms)
-
-    #     if self.mf_mode == "none":
-    #         self.emf = 0.0
-    #         return np.zeros((nbeads, ndof), float)
-
-    #     # linear coupling MF
-    #     if not self.variable_friction:
-
-    #         if self.mf_mode == "reconstruct":
-    #             # reconstruct requires sigma from extras. We probably dont ask for that in the linear case. Might be a good validation of reconstruct method in future.
-    #             raise ValueError("if variable_friction is false, mf_mode must be linear or none. reconstruct is currently not supported")
-
-
-    #         if self.mf_mode != "linear":
-    #             # either none or reconstruct
-    #             self.emf = 0.0
-    #             return np.zeros((nbeads, ndof), float)
-
-    #         # analytical mean-field force when the coupling is linear
-    #         qnm = self.nm.qnm
-    #         fnm = -self.alpha[:, None] * qnm
-    #         f_beads = self.nm.transform.nm2b(fnm)
-    #         self.emf = 0.5 * np.einsum("n,nm,nm->", self.alpha, qnm, qnm)
-    #         return f_beads
-
-    #     # general coupling MF
-    #     if self.mf_mode == "reconstruct":
-    #         sigma = self._get_sigma()  # (nbeads, nbath, ndof)
-    #         self._update_reconstructed_F(sigma)
-    #         return self._mf_forces_reconstruct(sigma)
-
-    #     self.emf = 0.0
-    #     return np.zeros((nbeads, ndof), float)
     
 
     def get_friction_coupling_nm(self):
@@ -413,141 +367,183 @@ class Friction:
           dp_drift = -dt sigma^T (sigma v)
           dp_noise = sqrt(2 kBT dt) sigma^T g, g~N(0,I)
         """
+        from ipi.utils.mathtools import matrix_exp, root_herm
 
         info("Inside Markovian step:", verbosity.low)
         
         if pdt <= 0.0:
             return
 
-        kbt = self._kbt()
+        kbt = self._kbt_rp()
 
         # Linear coupling: friction does not depend on instaneous atomic configuration.
-        # sigma**2 is gamma
+        # Exact OU update for: dp = -gamma v dt + sqrt(2 kBT gamma) dW,  v = p/m
         if not self.variable_friction:
             sigma = float(self.sigma_static)
             gamma = sigma * sigma
             if gamma < 0.0:
                 raise ValueError("gamma must be non-negative for Markovian linear coupling.")
+            if gamma == 0.0:
+                return  # no coupling
 
-            # Record energy before dissipative kick
-            pnm0 = self.nm.pnm.copy()
-            K0 = self._kinetic(pnm0, self.nm.dynm3)
+            # masses and momenta in NM space
+            m = self.nm.dynm3.copy()   # (nmodes, ndof_nm)
+            p = self.nm.pnm.copy()     # (nmodes, ndof_nm)
+            sm = np.sqrt(m)
 
-            # Dissipative kick
-            vnm = self.nm.pnm / self.nm.dynm3
-            nmodes, ndof_nm = vnm.shape
-            self.nm.pnm += -(gamma * vnm) * pdt
+            info("before: " + str(self.beads.p), verbosity.low)
 
-            # Calculate addional dissipation energy
-            p1 = self.beads.p
-            K1 = self._kinetic(self.nm.pnm, self.nm.dynm3)
-            self.ediss += -(K1 - K0)
+            # --- ThermoLangevin coefficients but elementwise (because tau = m/gamma) ---
+            # tau_ij = m_ij / gamma  =>  T_ij = exp(-pdt/tau_ij) = exp(-(gamma/m_ij)*pdt)
+            T = np.exp(-(gamma / m) * pdt)
 
-            amp = np.sqrt(2.0 * kbt * gamma * pdt)
-            for n in range(nmodes):
-                self.nm.pnm[n, :] += amp * self.prng.gvec(ndof_nm)
+            # ThermoLangevin: S = sqrt(kB*Tsys * (1 - T^2))
+            # NOTE: this S is the coefficient in mass-scaled space (same as i-PI)
+            S = np.sqrt(kbt * (1.0 - T * T))
 
-            p2 = self.beads.p
-            K2 = self._kinetic(self.nm.pnm, self.nm.dynm3)
-            self.erand += (K2 - K1)
+            # --- goes in a single step to mass scaled coordinates and applies damping ---
+            # i-PI: p = dstrip(self.p) * dstrip(self.T_on_sm)
+            # with T_on_sm = T / sm
+            p = p * (T / sm)
+
+            # --- ThermoLangevin deltah bookkeeping (thermostat work) ---
+            # ThermoLangevin: deltah = noddot(p,p)/(T^2)  # must correct for the "pre-damping"
+            # Here T is array, so do elementwise divide before summing.
+            deltah = np.sum((p * p) / (T * T))
+
+            # ThermoLangevin: p += S * prng.gvec(...)
+            p += S * self.prng.gvec(p.shape)
+
+            # ThermoLangevin: deltah -= noddot(p,p)
+            deltah -= np.sum(p * p)
+
+            # ThermoLangevin: self.p[:] = p * sm
+            p = p * sm
+            self.nm.pnm[:] = p
+            self.beads.p = self.nm.transform.nm2b(p)
+
+            # THermoLangvin: self.ethermo += deltah * 0.5.
+            # The *net* bath exchange is exactly 0.5*deltah, so track it consistently:
+            # Convention: + means energy to bath (same sign spirit as i-PI's ethermo).
+            self.ediss += 0.5 * deltah
+
+            info("after: " + str(self.beads.p), verbosity.low)
             return
 
-        info("Markov: before get sigma", verbosity.low)
-        # variable friction / seperable coupling: requires sigma per bead
-        sigma = self._get_sigma()  # (nbeads, nbath, ndof)
-        info("Markov: after get sigma", verbosity.low)
+        # =========================
+        # Variable friction: exact OU with frozen sigma over the substep
+        # =========================
 
-        Gamma = sigma[0,:,:].T @ sigma[0,:,:]
-        info("Gamma shape "+str(np.shape(Gamma)), verbosity.low)
-        info("Gamma "+str(Gamma), verbosity.low)
+        # For ring-polymer momenta, i-PI thermostats typically use kB * (P*T).
+        # If you explicitly want physical T instead, swap to self._kbt().
+        kbt = self._kbt_rp()
 
-        nbeads, ndof = sigma.shape
+        sigma = self._get_sigma()   # (nbeads, nbath, ndof)
+        nbeads, nbath, ndof = sigma.shape
 
+        p = self.beads.p            # (nbeads, ndof)
+        m = self.beads.m3           # (nbeads, ndof)
+        sm = np.sqrt(m)             # (nbeads, ndof)
 
+        # Optional: “i-PI-esque” net bath work accumulator (ThermoGLE/ThermoCL style)
+        # Track in your existing ediss as *net* work, or add a new depend_value ethermo.
+        # Here: ediss += (K_before - K_after) in mass-scaled coordinates /2
+        # (same sign pattern as ThermoGLE: et += old/2 ; et -= new/2)
+        et = 0.0
 
-
-        # # Euler-Maruyama (Kloeden pg 339)
-
-        # Record energy before dissipative kick
-        p0 = self.beads.p.copy()
-        K0 = self._kinetic(p0, self.beads.m3)
-        
-        # Dissipative force
-        v = self.beads.p / self.beads.m3
-        u = np.einsum("baj,bj->ba", sigma, v)
-        self.beads.p += -np.einsum("baj,ba->bj", sigma, u) * pdt
-
-        # Calculate addional dissipation energy
-        p1 = self.beads.p
-        K1 = self._kinetic(p1, self.beads.m3)
-        self.ediss += -(K1 - K0)
-
-        # Random force
-        amp = np.sqrt(2.0 * kbt * pdt)
+        # Loop beads: exact OU needs matrix exp + matrix square-root per bead
+        # (cost ~ O(ndof^3) per bead; only practical for modest ndof or small subsets)
         for b in range(nbeads):
-            g = self.prng.gvec(1)
-            self.beads.p[b, :] += amp * (sigma[b, :, :].T @ g)
+            sig_b = sigma[b, :, :]          # (nbath, ndof)
 
-        p2 = self.beads.p
-        K2 = self._kinetic(p2, self.beads.m3)
-        self.erand += (K2 - K1)
+            # Gamma = sigma^T sigma  (ndof, ndof)
+            Gamma = sig_b.T @ sig_b
+
+            # Build A = M^{-1/2} Gamma M^{-1/2} (symmetric PSD)
+            inv_sm = 1.0 / sm[b, :]         # (ndof,)
+            # efficient diagonal sandwich: A_ij = inv_sm[i] * Gamma_ij * inv_sm[j]
+            A = (inv_sm[:, None] * Gamma) * inv_sm[None, :]
+
+            # Current mass-scaled momenta s = p / sqrt(m)
+            s = p[b, :] * inv_sm
+
+            # i-PI-esque bookkeeping (ThermoGLE/ThermoCL pattern)
+            et += 0.5 * float(np.dot(s, s))
+
+            # Exact OU drift: E = exp(-A dt)
+            E = matrix_exp(-pdt * A)
+
+            # Exact OU noise covariance in s-space:
+            # C = I - exp(-2A dt) = I - (E @ E) because A symmetric => E symmetric
+            EE = E @ E
+            C = np.eye(ndof) - EE
+
+            # Numerical safety: symmetrize & clip tiny negatives
+            C = 0.5 * (C + C.T)
+
+            # root_herm gives a symmetric square root: R R^T = C
+            R = root_herm(C)
+
+            # Draw ndof standard normals
+            g = self.prng.gvec(ndof)
+
+            # Update s
+            s = E @ s + np.sqrt(kbt) * (R @ g)
+
+            # i-PI-esque bookkeeping
+            et -= 0.5 * float(np.dot(s, s))
+
+            # Back to physical p
+            p[b, :] = s * sm[b, :]
+
+        # write back
+        self.beads.p[:] = p
+
+        # Store net bath work (ethermo-like)
+        # If you want a separate variable, create self._ethermo depend_value like i-PI.
+        self.ediss += et
         return
 
 
 
 
-    # ==========================================================================
-    # Non-Markovian OU: exact block update
-    # ==========================================================================
+        # # # Euler-Maruyama (Kloeden pg 339)
+        # info("Markov: before get sigma", verbosity.low)
+        # # variable friction / seperable coupling: requires sigma per bead
+        # sigma = self._get_sigma()  # (nbeads, nbath, ndof)
+        # info("Markov: after get sigma", verbosity.low)
 
-    def _ou_block_exact_update(
-        self,
-        y: np.ndarray,
-        u: np.ndarray,
-        g: float,
-        w: float,
-        dt: float,
-        kbt: float,
-    ) -> None:
-        """
-        Exact discrete-time update for one damped-cosine OU block:
+        # Gamma = sigma[0,:,:].T @ sigma[0,:,:]
+        # info("Gamma shape "+str(np.shape(Gamma)), verbosity.low)
+        # info("Gamma "+str(Gamma), verbosity.low)
 
-            d/dt y0 = -g y0 + w y1 + u + noise
-            d/dt y1 = -w y0 - g y1     + noise
+        # nbeads, nbath,  ndof = sigma.shape
 
-        Uses exact exp(M dt) + forcing integral + exact discrete-time noise covariance:
-          cov_increment = kBT(1 - exp(-2 g dt)) I
-        """
-        if dt <= 0.0:
-            return
+        # # Record energy before dissipative kick
+        # p0 = self.beads.p.copy()
+        # K0 = self._kinetic(p0, self.beads.m3)
+        
+        # # Dissipative force
+        # v = self.beads.p / self.beads.m3
+        # u = np.einsum("baj,bj->ba", sigma, v)
+        # self.beads.p += -np.einsum("baj,ba->bj", sigma, u) * pdt
 
-        ed = np.exp(-g * dt)
-        c = np.cos(w * dt)
-        s = np.sin(w * dt)
+        # # Calculate addional dissipation energy
+        # p1 = self.beads.p
+        # K1 = self._kinetic(p1, self.beads.m3)
+        # self.ediss += -(K1 - K0)
 
-        y0 = y[:, 0].copy()
-        y1 = y[:, 1].copy()
+        # # Random force
+        # amp = np.sqrt(2.0 * kbt * pdt)
+        # for b in range(nbeads):
+        #     g = self.prng.gvec(nbath)
+        #     self.beads.p[b, :] += amp * (sigma[b, :, :].T @ g)
 
-        # homogeneous
-        y[:, 0] = ed * (c * y0 + s * y1)
-        y[:, 1] = ed * (-s * y0 + c * y1)
+        # p2 = self.beads.p
+        # K2 = self._kinetic(p2, self.beads.m3)
+        # self.erand += (K2 - K1)
+        return
 
-        # forcing integral: M^{-1}(T - I) [u,0]
-        db0 = (ed * c - 1.0) * u
-        db1 = (ed * (-s)) * u
-
-        denom = g * g + w * w
-        if denom > 0.0:
-            y[:, 0] += (-g * db0 - w * db1) / denom
-            y[:, 1] += (w * db0 - g * db1) / denom
-        else:
-            y[:, 0] += u * dt
-
-        # exact discrete-time noise
-        if kbt > 0.0 and g > 0.0:
-            sig = np.sqrt(kbt * (1.0 - np.exp(-2.0 * g * dt)))
-            y[:, 0] += sig * self.prng.gvec(y.shape[0])
-            y[:, 1] += sig * self.prng.gvec(y.shape[0])
 
     # ==========================================================================
     # Non-Markovian OU: step
