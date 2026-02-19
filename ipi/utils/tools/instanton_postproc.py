@@ -132,9 +132,7 @@ def save_frequencies(d, nzeros, filename="freq.dat"):
 
 # -----END of some functions-----------------
 
-
-def instanton_compute(
-    inputt, case, temp, asr, V00, filt, nbeadsR, input_freq, quiet, Verbosity
+def instanton_compute(inputt, case, temp, asr='poly', V00=0.0, filt=[], nbeadsR=0, input_freq=None, quiet=False, Verbosity=verbosity)
 ):
 
     if case not in list(["reactant", "TS", "instanton"]):
