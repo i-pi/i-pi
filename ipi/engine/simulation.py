@@ -17,6 +17,7 @@ from copy import deepcopy
 
 from ipi.utils.depend import depend_value, dpipe, dproperties
 from ipi.utils.io.inputs.io_xml import xml_parse_file, xml_parse_string, xml_write
+from ipi.utils.io.inputs.io_json import json_parse_file, json_parse_string
 from ipi.utils.messages import verbosity, info, warning, banner
 from ipi.utils.softexit import softexit
 import ipi.engine.outputs as eoutputs
@@ -86,7 +87,12 @@ class Simulation:
 
         # parse the file
         if type(xml_input) is str:
-            xmlrestart = xml_parse_string(xml_input)
+            if xml_input.strip().startswith("{"):
+                xmlrestart = json_parse_string(xml_input)
+            else:
+                xmlrestart = xml_parse_string(xml_input)
+        elif hasattr(xml_input, "name") and xml_input.name.endswith(".json"):
+            xmlrestart = json_parse_file(xml_input)
         else:
             xmlrestart = xml_parse_file(xml_input)
 

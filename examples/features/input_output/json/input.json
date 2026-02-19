@@ -1,0 +1,125 @@
+{
+  "attributes": {
+    "verbosity": "high"
+  },
+  "output": {
+    "attributes": {
+      "prefix": "tut1"
+    },
+    "checkpoint": {
+      "attributes": {
+        "filename": "checkpoint",
+        "stride": 1000,
+        "overwrite": "True"
+      }
+    },
+    "properties": [
+      {
+        "attributes": {
+          "filename": "md",
+          "stride": 1
+        },
+        "value": "[step, time{picosecond}, conserved{kelvin}, temperature{kelvin}, potential{kelvin}, kinetic_cv{kelvin}]"
+      },
+      {
+        "attributes": {
+          "filename": "force",
+          "stride": 20
+        },
+        "value": "[atom_f{piconewton}(atom=0;bead=0)]"
+      }
+    ],
+    "trajectory": [
+      {
+        "attributes": {
+          "filename": "pos",
+          "stride": 100,
+          "format": "pdb",
+          "cell_units": "angstrom"
+        },
+        "value": "positions{angstrom}"
+      },
+      {
+        "attributes": {
+          "filename": "forces",
+          "stride": 100
+        },
+        "value": "forces"
+      }
+    ]
+  },
+  "total_steps": 5000,
+  "prng": {
+    "seed": 31415
+  },
+  "ffsocket": {
+    "attributes": {
+      "mode": "inet",
+      "name": "driver"
+    },
+    "address": "localhost",
+    "port": 31415
+  },
+  "system": {
+    "initialize": {
+      "attributes": {
+        "nbeads": 4
+      },
+      "file": {
+        "attributes": {
+          "mode": "pdb"
+        },
+        "value": "init.pdb"
+      },
+      "velocities": {
+        "attributes": {
+          "mode": "thermal",
+          "units": "kelvin"
+        },
+        "value": 25
+      }
+    },
+    "forces": {
+      "force": {
+        "attributes": {
+          "forcefield": "driver"
+        }
+      }
+    },
+    "ensemble": {
+      "temperature": {
+        "attributes": {
+          "units": "kelvin"
+        },
+        "value": 25
+      }
+    },
+    "motion": {
+      "attributes": {
+        "mode": "dynamics"
+      },
+      "dynamics": {
+        "attributes": {
+          "mode": "nvt"
+        },
+        "thermostat": {
+          "attributes": {
+            "mode": "pile_g"
+          },
+          "tau": {
+            "attributes": {
+              "units": "femtosecond"
+            },
+            "value": 25
+          }
+        },
+        "timestep": {
+          "attributes": {
+            "units": "femtosecond"
+          },
+          "value": 1
+        }
+      }
+    }
+  }
+}
