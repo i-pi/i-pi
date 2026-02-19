@@ -10,7 +10,11 @@ class InputFriction(Input):
     fields = {
         "variable_friction": (
             InputValue,
-            {"dtype": bool, "default": True, "help": "..."},
+            {
+                "dtype": bool,
+                "default": True,
+                "help": "If true, read position-dependent sigma from force extras; if false, use sigma_static.",
+            },
         ),
         "bath_mode": (
             InputValue,
@@ -38,7 +42,11 @@ class InputFriction(Input):
         ),
         "sigma_static": (
             InputValue,
-            {"dtype": float, "default": 1.0, "help": "Constant linear coupling amplitude sigma (used when variable_friction=False"},
+            {
+                "dtype": float,
+                "default": 1.0,
+                "help": "Constant linear coupling amplitude used when variable_friction=False.",
+            },
         ),
         "ou_nterms": (InputValue, {"dtype": int, "default": 4, "help": "..."}),
         "ou_tmax": (InputValue, {"dtype": float, "default": 200.0, "help": "..."}),
@@ -46,27 +54,29 @@ class InputFriction(Input):
         "ou_print": (InputValue, {"dtype": bool, "default": True, "help": "..."}),
         "ou_propagator": (InputValue, {"dtype": str, "default": "exact", "help": "..."}),
 
-        "sigma_key": (InputValue, {"dtype": str, "default": "sigma", "help": "..."}),
+        "sigma_key": (
+            InputValue,
+            {
+                "dtype": str,
+                "default": "sigma",
+                "help": "Force-extras key for variable friction payload. Expected shape is (nbeads, nbath, 3*natoms) or (nbeads, nbath, 3*len(friction_atoms)).",
+            },
+        ),
         "friction_key": (InputValue, {"dtype": str, "default": "friction", "help": "..."}),
 
 
-        # IMPORTANT: empty int array default (not ones)
+        # 0-based atom indices to include in friction; empty means all atoms.
         "friction_atoms": (
             InputArray,
             {
                 "dtype": int,
                 "default": input_default(factory=lambda n: np.zeros(n, dtype=int), args=(0,)),
-                "help": "...",
+                "help": "0-based atom indices included in friction. Empty means all atoms. If set, driver may return sigma only for this subset (3*len(friction_atoms) DOFs), and the rest are treated as zero-friction.",
             },
-        ),
-
-        "broadcast_single_bead_friction": (
-            InputValue,
-            {"dtype": bool, "default": True, "help": "..."},
         ),
     }
 
-    default_help = "Friction operator configuration (MF + markovian/non-markovian bath)."
+    default_help = "Friction operator configuration (MF + markovian/non-markovian bath). For variable friction, sigma must be provided in force extras."
     default_label = "FRICTION"
 
     def store(self, friction: Friction) -> None:
@@ -97,10 +107,6 @@ class InputFriction(Input):
         if fa is None:
             fa = np.zeros(0, dtype=int)
         self.friction_atoms.store(np.array(fa, dtype=int).flatten())
-
-        self.broadcast_single_bead_friction.store(
-            getattr(friction, "broadcast_single_bead_friction", True)
-        )
 
     def fetch(self) -> Friction:
         return Friction(
