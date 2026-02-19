@@ -8,7 +8,6 @@ import os
 import numpy as np
 import sys
 
-# from ipi.utils.tools import interpolate_instanton
 
 from ipi.utils.io import read_file, print_file
 from ipi.utils.nmtransform import nm_rescale
@@ -191,14 +190,6 @@ def interpolate_instanton(
             )
         )
         print("")
-
-
-# Y. Litman 2017
-
-
-# You can insert the i-pi path with the following lines.
-# Uncomment them and adjust the ipi_path variable
-
 
 if __name__ == "__main__":
 
