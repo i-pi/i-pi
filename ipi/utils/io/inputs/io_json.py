@@ -12,6 +12,7 @@ from ipi.utils.io.inputs.io_xml import xml_node
 __all__ = [
     "json_parse_file",
     "json_parse_string",
+    "xmlnode_to_json",
 ]
 
 
@@ -126,3 +127,47 @@ def json_to_xmlnode(data, name="root"):
             fields.append((k, json_to_xmlnode(v, name=k)))
 
     return xml_node(name=name, attribs=attribs, fields=fields)
+
+
+def xmlnode_to_json(node):
+    """
+    Recursively converts an xml_node structure into a dictionary (for JSON).
+
+    Args:
+        node: An xml_node object.
+
+    Returns:
+        A dictionary representation of the node.
+    """
+    data = {}
+
+    # Attributes
+    if node.attribs:
+        data["attributes"] = node.attribs.copy()
+
+    # Fields
+    for name, child in node.fields:
+        if name == "_text":
+            # If we have text content, append it to "value"
+            val = child.strip()
+            if val:
+                if "value" in data:
+                    data["value"] += val
+                else:
+                    data["value"] = val
+        else:
+            child_json = xmlnode_to_json(child)
+
+            if name in data:
+                # If key exists, convert to list if not already
+                if isinstance(data[name], list):
+                    data[name].append(child_json)
+                else:
+                    data[name] = [data[name], child_json]
+            else:
+                data[name] = child_json
+
+    if len(data) == 1 and "value" in data:
+        return data["value"]
+
+    return data
