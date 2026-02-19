@@ -13,7 +13,6 @@ import signal
 
 from ipi.utils.messages import verbosity, warning
 
-
 __all__ = ["Softexit", "softexit"]
 
 
