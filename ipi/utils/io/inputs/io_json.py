@@ -30,7 +30,7 @@ def json_parse_file(stream):
     except json.JSONDecodeError as e:
         raise ValueError(f"Error parsing JSON: {e}")
 
-    return json_to_xmlnode(data)
+    return _process_json_node(json_to_xmlnode(data))
 
 
 def json_parse_string(string):
@@ -48,7 +48,31 @@ def json_parse_string(string):
     except json.JSONDecodeError as e:
         raise ValueError(f"Error parsing JSON string: {e}")
 
-    return json_to_xmlnode(data)
+    return _process_json_node(json_to_xmlnode(data))
+
+
+def _process_json_node(node):
+    """
+    Post-processes the xml_node generated from JSON to ensure it has the correct
+    root structure expected by i-PI (a root node containing a 'simulation' node).
+    """
+    # Check if we already have a structure like root -> simulation
+    # This corresponds to JSON input { "simulation": { ... } }
+    if (
+        len(node.fields) == 1
+        and node.fields[0][0] == "simulation"
+        and len(node.attribs) == 0
+    ):
+        return node
+
+    # Otherwise, assume the JSON content represents the content of the <simulation> tag
+    # { "attributes": {...}, "output": ... }
+    # We wrap it in a simulation node, and then in a root node.
+
+    sim_node = xml_node(name="simulation", attribs=node.attribs, fields=node.fields)
+    root_node = xml_node(name="root", fields=[("simulation", sim_node)])
+
+    return root_node
 
 
 def json_to_xmlnode(data, name="root"):
