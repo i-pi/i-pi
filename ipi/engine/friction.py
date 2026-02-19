@@ -436,72 +436,57 @@ class Friction:
 
         # For ring-polymer momenta, i-PI thermostats typically use kB * (P*T).
         # If you explicitly want physical T instead, swap to self._kbt().
-        kbt = self._kbt_rp()
+        # inside _step_markovian, variable_friction branch
+        kbt = self._kbt_rp()  # usually correct for RP momenta
 
-        sigma = self._get_sigma()   # (nbeads, nbath, ndof)
+        sigma = self._get_sigma()  # (nbeads, nbath, ndof)
         nbeads, nbath, ndof = sigma.shape
 
-        p = self.beads.p            # (nbeads, ndof)
-        m = self.beads.m3           # (nbeads, ndof)
-        sm = np.sqrt(m)             # (nbeads, ndof)
+        p = self.beads.p
+        m = self.beads.m3
+        sm = np.sqrt(m)
 
-        # Optional: “i-PI-esque” net bath work accumulator (ThermoGLE/ThermoCL style)
-        # Track in your existing ediss as *net* work, or add a new depend_value ethermo.
-        # Here: ediss += (K_before - K_after) in mass-scaled coordinates /2
-        # (same sign pattern as ThermoGLE: et += old/2 ; et -= new/2)
+        # optional i-PI-esque net bath work bookkeeping (ThermoCL/ThermoGLE style)
         et = 0.0
 
-        # Loop beads: exact OU needs matrix exp + matrix square-root per bead
-        # (cost ~ O(ndof^3) per bead; only practical for modest ndof or small subsets)
         for b in range(nbeads):
-            sig_b = sigma[b, :, :]          # (nbath, ndof)
+            # build Lambda = sigma^T sigma  (ndof, ndof)
+            sig = sigma[b, :, :]               # (nbath, ndof)
+            Lam = sig.T @ sig                  # friction tensor in p-space: dp = -Lam v dt + ...
 
-            # Gamma = sigma^T sigma  (ndof, ndof)
-            Gamma = sig_b.T @ sig_b
+            inv_sm = 1.0 / sm[b, :]            # (ndof,)
+            # mass-weighted A = M^{-1/2} Lam M^{-1/2}
+            A = (inv_sm[:, None] * Lam) * inv_sm[None, :]
 
-            # Build A = M^{-1/2} Gamma M^{-1/2} (symmetric PSD)
-            inv_sm = 1.0 / sm[b, :]         # (ndof,)
-            # efficient diagonal sandwich: A_ij = inv_sm[i] * Gamma_ij * inv_sm[j]
-            A = (inv_sm[:, None] * Gamma) * inv_sm[None, :]
-
-            # Current mass-scaled momenta s = p / sqrt(m)
+            # mass-scaled momentum
             s = p[b, :] * inv_sm
 
-            # i-PI-esque bookkeeping (ThermoGLE/ThermoCL pattern)
+            # i-PI-style work accumulation: et += 1/2 s^2 (before), et -= 1/2 s^2 (after)
             et += 0.5 * float(np.dot(s, s))
 
-            # Exact OU drift: E = exp(-A dt)
-            E = matrix_exp(-pdt * A)
+            # diagonalize symmetric PSD A
+            # (use eigh; A should be symmetric up to roundoff)
+            A = 0.5 * (A + A.T)
+            a, V = np.linalg.eigh(A)
+            a = np.clip(a, 0.0, None)          # guard tiny negatives
 
-            # Exact OU noise covariance in s-space:
-            # C = I - exp(-2A dt) = I - (E @ E) because A symmetric => E symmetric
-            EE = E @ E
-            C = np.eye(ndof) - EE
+            # OU coefficients along eigenmodes
+            c = np.exp(-a * pdt)               # exact OU drift factors
+            s2 = np.sqrt(1.0 - c * c)          # exact OU noise factors
 
-            # Numerical safety: symmetrize & clip tiny negatives
-            C = 0.5 * (C + C.T)
+            # transform, damp, add noise, transform back
+            y = V.T @ s
+            y = c * y + np.sqrt(kbt) * s2 * self.prng.gvec(ndof)
+            s = V @ y
 
-            # root_herm gives a symmetric square root: R R^T = C
-            R = root_herm(C)
-
-            # Draw ndof standard normals
-            g = self.prng.gvec(ndof)
-
-            # Update s
-            s = E @ s + np.sqrt(kbt) * (R @ g)
-
-            # i-PI-esque bookkeeping
             et -= 0.5 * float(np.dot(s, s))
 
-            # Back to physical p
+            # back to physical momentum
             p[b, :] = s * sm[b, :]
 
-        # write back
         self.beads.p[:] = p
+        self.ediss += et   # this is really "ethermo-like" net exchange
 
-        # Store net bath work (ethermo-like)
-        # If you want a separate variable, create self._ethermo depend_value like i-PI.
-        self.ediss += et
         return
 
 
