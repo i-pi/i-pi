@@ -1,14 +1,13 @@
 import numpy as np
 import sys
 import argparse
-from ipi.utils.units import unit_to_internal
-from ipi.utils.messages import verbosity, info
 
 """ Simple function to post-process the results of an instanton calculation."""
 # Y. Litman, 2017.
 
 from ipi.engine.simulation import Simulation
 from ipi.utils.units import unit_to_internal, Constants
+from ipi.utils.messages import verbosity, info
 from ipi.utils.instools import red2comp
 from ipi.utils.hesstools import clean_hessian
 from ipi.engine.motion.instanton import SpringMapper
@@ -514,7 +513,6 @@ def instanton_compute(
 
 if __name__ == "__main__":
     # INPUT
-    import argparse
 
     parser = argparse.ArgumentParser(
         description="""

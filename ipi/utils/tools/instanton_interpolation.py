@@ -7,7 +7,7 @@ Simple function to interpolate an instanton geometry and/or hessian to a new num
 import os
 import numpy as np
 import sys
-
+import argparse
 
 from ipi.utils.io import read_file, print_file
 from ipi.utils.nmtransform import nm_rescale
@@ -190,6 +190,7 @@ def interpolate_instanton(
             )
         )
         print("")
+
 
 if __name__ == "__main__":
 
