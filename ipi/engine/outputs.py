@@ -397,6 +397,8 @@ class TrajectoryOutput(BaseOutput):
             "forces_spring",
             "Eforces",
             "extras",
+            "friction_sigma_matrix",
+            "friction_gamma_matrix",
             # "extras_component_raw", write out a single file as we don't know how to do contraction here
             "extras_bias",
             "forces_sc",
@@ -610,6 +612,36 @@ class TrajectoryOutput(BaseOutput):
                             "No specialized writer for arrays of dimension > 2"
                         )
                     stream.write("\n")
+            if flush:
+                stream.flush()
+                os.fsync(stream)
+            return
+        elif key in ["friction_sigma_matrix", "friction_gamma_matrix"]:
+            stream.write(
+                " #%s# Step:  %10d  Bead:  %5d  \n"
+                % (key.upper(), self.system.simul.step + 1, b)
+            )
+            arr = np.asarray(data[b], dtype=float)
+            if arr.ndim == 0:
+                stream.write(ipi_global_settings["floatformat"] % arr.item())
+                stream.write("\n")
+            elif arr.ndim == 1:
+                stream.write(
+                    " ".join(ipi_global_settings["floatformat"] % el for el in arr)
+                )
+                stream.write("\n")
+            elif arr.ndim == 2:
+                stream.write(
+                    "\n".join(
+                        " ".join(ipi_global_settings["floatformat"] % item for item in row)
+                        for row in arr
+                    )
+                )
+                stream.write("\n")
+            else:
+                raise ValueError(
+                    f"No specialized writer for {key} arrays of dimension > 2 (got {arr.ndim})."
+                )
             if flush:
                 stream.flush()
                 os.fsync(stream)

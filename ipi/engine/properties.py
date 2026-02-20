@@ -508,21 +508,6 @@ class Properties:
                     )
                 ),
             },
-            "friction_erand": {
-                "dimension": "energy",
-                "help": "Cumulative energy injected by random forceb (positive bath->system)",
-                # TODO: can this be managed nicer?
-                "func": (
-                    lambda: (
-                        self.motion.integrator.friction.erand / self.beads.nbeads
-                        if isinstance(
-                            self.motion.integrator,
-                            (NVEIntegratorWithFriction, NVTIntegratorWithFriction),
-                        )
-                        else 0.0
-                    )
-                ),
-            },
             "kinetic_md": {
                 "dimension": "energy",
                 "help": "The kinetic energy of the (extended) classical system.",
@@ -3179,6 +3164,18 @@ class Trajectories:
                 "help": """The additional data returned by the bias forcefield, printed verbatim or expanded as a dictionary. See "extras". """,
                 "func": (lambda: self.system.ensemble.bias.extras),
             },
+            "friction_sigma_matrix": {
+                "dimension": "undefined",
+                "help": """The per-bead friction coupling matrix Sigma used by friction dynamics.
+                      Written as a matrix block per step, one file per bead unless bead output is selected.""",
+                "func": self.get_friction_sigma_matrix,
+            },
+            "friction_gamma_matrix": {
+                "dimension": "undefined",
+                "help": """The per-bead Markovian friction matrix Gamma = Sigma .* Sigma (elementwise).
+                      Written as a matrix block per step, one file per bead unless bead output is selected.""",
+                "func": self.get_friction_gamma_matrix,
+            },
             "isotope_zetatd": {
                 "dimension": "undefined",
                 "help": """Thermodynamic isotope fractionation direct estimator in the form of ratios of partition functions. Takes two arguments, 'alpha' , which gives the
@@ -3385,6 +3382,44 @@ class Trajectories:
         zetasc[:, 2] = np.exp(-1.0 * beta * zetasc[:, 0])
 
         return zetasc.reshape(nat * 3)
+
+    def _get_motion_friction(self):
+        """Returns bound Friction object from the active integrator, if present."""
+        integ = getattr(self.system.motion, "integrator", None)
+        if integ is None or not hasattr(integ, "friction"):
+            raise ValueError(
+                "friction_*_matrix outputs require a friction-enabled integrator (nve-f or nvt-f)."
+            )
+        return integ.friction
+
+    def get_friction_sigma_matrix(self):
+        """Returns Sigma as (nbeads, nbath, ndof)."""
+        friction = self._get_motion_friction()
+        sigma = np.asarray(dstrip(friction.sigma), dtype=float)
+        if sigma.ndim == 0:
+            # Static scalar friction: make it printable in matrix form.
+            sigma = sigma.reshape((1, 1, 1))
+        elif sigma.ndim == 2:
+            sigma = sigma.reshape((1,) + sigma.shape)
+        elif sigma.ndim != 3:
+            raise ValueError(
+                f"friction.sigma has unsupported ndim={sigma.ndim}, expected 0/2/3."
+            )
+        return sigma
+
+    def get_friction_gamma_matrix(self):
+        """Returns Gamma matrix as (nbeads, ndof, ndof)."""
+        friction = self._get_motion_friction()
+        gamma = np.asarray(dstrip(friction.gamma), dtype=float)
+        if gamma.ndim == 0:
+            gamma = gamma.reshape((1, 1, 1))
+        elif gamma.ndim == 2:
+            gamma = gamma.reshape((1,) + gamma.shape)
+        elif gamma.ndim != 3:
+            raise ValueError(
+                f"friction.gamma has unsupported ndim={gamma.ndim}, expected 0/2/3."
+            )
+        return gamma
 
     def __getitem__(self, key):
         """Retrieves the item given by key.

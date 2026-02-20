@@ -1,5 +1,5 @@
-from __future__ import annotations
 
+import json
 import numpy as np
 
 from ipi.engine.motion import Motion
@@ -91,6 +91,9 @@ class Friction:
         self.alpha_input = np.asanyarray(alpha_input, dtype=float).copy()
 
         self._sigma = depend_value(name="sigma", func=self._get_sigma)
+        self._gamma = depend_value(
+            name="gamma", func=self._get_gamma, dependencies=[self._sigma]
+        )
     
     #     # Friction coupling: F(q), such that Σ{i,α} = ∂F(q) / ∂q{i,α}
         self._friction_coupling_nm = depend_value(
@@ -146,9 +149,8 @@ class Friction:
         self._F_beads: np.ndarray | None = None  # (nbeads, nbath)
         self._q_prev: np.ndarray | None = None   # (nbeads, ndof)
 
-         # bookkeeping: cumulative energy exchange with bath (Markovian)
+        # bookkeeping: cumulative energy exchange with bath (Markovian)
         self._ediss = depend_value(name="ediss", value=0.0)     # positive = system -> bath via friction
-        self._erand = depend_value(name="erand", value=0.0)  # positive = bath -> system via random force
 
 
 
@@ -331,7 +333,6 @@ class Friction:
             sigma : (shape)
 
         """
-        info("Inside get_sigma", verbosity.low) 
 
 
         if (not self.variable_friction):
@@ -342,14 +343,77 @@ class Friction:
 
         sigma = self.forces.extras.get(self.sigma_key)
 
-
         if sigma is None:
             raise KeyError(
-                f"Did not find 'sigma' among the force extras = {self.forces.extras}"
+                f"Did not find '{self.sigma_key}' among the force extras = {self.forces.extras}"
             )
+
+        # Accept JSON-string payloads and decode before shape handling.
+        if isinstance(sigma, str):
+            try:
+                sigma = json.loads(sigma)
+            except json.JSONDecodeError:
+                pass
+
+        # Handle nested ACE/Julia payload:
+        #   {"inv": {"1": M, ...}, "equ"/"eqv": {"1": M, ...}}
+        # or per-bead list/tuple of such dicts.
+        # IMPORTANT: independent representation blocks are concatenated along the
+        # bath dimension (rows), not summed. Summing would introduce cross terms
+        # in Sigma^T Sigma and distort Gamma.
+        def _concat_rep_dict(dsig: dict) -> np.ndarray:
+            mats = []
+            for rep_key in ("equ", "eqv", "inv"):
+                rep_data = dsig.get(rep_key)
+                if rep_data is None:
+                    continue
+                if isinstance(rep_data, dict):
+                    # Preserve deterministic ordering of channels.
+                    for k in sorted(rep_data.keys(), key=lambda x: str(x)):
+                        mats.append(np.asarray(rep_data[k], dtype=float))
+                else:
+                    mats.append(np.asarray(rep_data, dtype=float))
+
+            if len(mats) == 0:
+                raise ValueError(
+                    f"{self.sigma_key} dict payload does not contain 'equ'/'eqv' or 'inv' entries."
+                )
+
+            ndof0 = None
+            for m in mats:
+                if m.ndim != 2:
+                    raise ValueError(
+                        f"Each matrix in {self.sigma_key} dict payload must be 2D. Got {m.shape}."
+                    )
+                if ndof0 is None:
+                    ndof0 = int(m.shape[1])
+                elif int(m.shape[1]) != ndof0:
+                    raise ValueError(
+                        f"Inconsistent ndof across {self.sigma_key} dict payload: "
+                        f"{[mm.shape for mm in mats]}"
+                    )
+
+            return np.concatenate(mats, axis=0)
+
+        if isinstance(sigma, dict):
+            if nbeads != 1:
+                raise ValueError(
+                    f"{self.sigma_key} received a single dict payload but nbeads={nbeads}. "
+                    f"Provide one dict per bead (list length must equal nbeads)."
+                )
+            sigma_eff = _concat_rep_dict(sigma)
+            sigma = sigma_eff[np.newaxis, :, :].copy()
+        elif isinstance(sigma, (list, tuple)) and len(sigma) > 0 and all(
+            isinstance(s, dict) for s in sigma
+        ):
+            if len(sigma) != nbeads:
+                raise ValueError(
+                    f"{self.sigma_key} list-of-dicts length {len(sigma)} incompatible with nbeads={nbeads}."
+                )
+            sigma = np.asarray([_concat_rep_dict(s) for s in sigma], dtype=float)
         else:
             info(str(sigma), verbosity.low)
-            sigma = np.asarray(sigma,dtype=float)
+            sigma = np.asarray(sigma, dtype=float)
 
         
         if sigma.ndim != 3:
@@ -360,6 +424,25 @@ class Friction:
             )
         sigma = self._embed_if_needed(sigma, ndof=ndof)
         return sigma
+
+    def _get_gamma(self):
+        """Returns Gamma from Sigma.
+
+        - static friction: gamma = sigma_static^2 (scalar)
+        - variable friction: Gamma[b] = Sigma[b]^T Sigma[b] (ndof x ndof)
+        """
+        sigma = self.sigma
+        if np.isscalar(sigma):
+            s = float(sigma)
+            return s * s
+
+        sarr = np.asarray(sigma, dtype=float)
+        if sarr.ndim != 3:
+            raise ValueError(
+                f"friction.sigma has unsupported ndim={sarr.ndim}, expected scalar or 3."
+            )
+        # (nbeads, nbath, ndof) -> (nbeads, ndof, ndof)
+        return np.einsum("bai,baj->bij", sarr, sarr)
     
 
     def get_friction_coupling_nm(self):
@@ -425,9 +508,7 @@ class Friction:
           dp_noise = sqrt(2 kBT dt) sigma^T g, g~N(0,I)
         """
         from ipi.utils.mathtools import matrix_exp, root_herm
-
-        info("Inside Markovian step:", verbosity.low)
-        
+ 
         if pdt <= 0.0:
             return
 
@@ -502,6 +583,7 @@ class Friction:
 
         sigma = self._get_sigma()  # (nbeads, nbath, ndof)
         nbeads, nbath, ndof = sigma.shape
+        gamma = np.asarray(self.gamma, dtype=float)  # (nbeads, ndof, ndof)
 
         p = self.beads.p
         m = self.beads.m3
@@ -511,13 +593,12 @@ class Friction:
         et = 0.0
 
         for b in range(nbeads):
-            # build Lambda = sigma^T sigma  (ndof, ndof)
-            sig = sigma[b, :, :]               # (nbath, ndof)
-            Lam = sig.T @ sig                  # friction tensor in p-space: dp = -Lam v dt + ...
+            # Gamma = sigma^T sigma (ndof, ndof) from dependent property
+            gam = gamma[b, :, :]
 
             inv_sm = 1.0 / sm[b, :]            # (ndof,)
             # mass-weighted A = M^{-1/2} Lam M^{-1/2}
-            A = (inv_sm[:, None] * Lam) * inv_sm[None, :]
+            A = (inv_sm[:, None] * gam) * inv_sm[None, :]
 
             # mass-scaled momentum
             s = p[b, :] * inv_sm
@@ -549,47 +630,6 @@ class Friction:
         self.ediss += et   # this is really "ethermo-like" net exchange
 
         return
-
-
-
-
-        # # # Euler-Maruyama (Kloeden pg 339)
-        # info("Markov: before get sigma", verbosity.low)
-        # # variable friction / seperable coupling: requires sigma per bead
-        # sigma = self._get_sigma()  # (nbeads, nbath, ndof)
-        # info("Markov: after get sigma", verbosity.low)
-
-        # Gamma = sigma[0,:,:].T @ sigma[0,:,:]
-        # info("Gamma shape "+str(np.shape(Gamma)), verbosity.low)
-        # info("Gamma "+str(Gamma), verbosity.low)
-
-        # nbeads, nbath,  ndof = sigma.shape
-
-        # # Record energy before dissipative kick
-        # p0 = self.beads.p.copy()
-        # K0 = self._kinetic(p0, self.beads.m3)
-        
-        # # Dissipative force
-        # v = self.beads.p / self.beads.m3
-        # u = np.einsum("baj,bj->ba", sigma, v)
-        # self.beads.p += -np.einsum("baj,ba->bj", sigma, u) * pdt
-
-        # # Calculate addional dissipation energy
-        # p1 = self.beads.p
-        # K1 = self._kinetic(p1, self.beads.m3)
-        # self.ediss += -(K1 - K0)
-
-        # # Random force
-        # amp = np.sqrt(2.0 * kbt * pdt)
-        # for b in range(nbeads):
-        #     g = self.prng.gvec(nbath)
-        #     self.beads.p[b, :] += amp * (sigma[b, :, :].T @ g)
-
-        # p2 = self.beads.p
-        # K2 = self._kinetic(p2, self.beads.m3)
-        # self.erand += (K2 - K1)
-        return
-
 
     # ==========================================================================
     # Non-Markovian OU: step
@@ -632,7 +672,7 @@ class Friction:
 
 
 
-dproperties(Friction, ["sigma", "friction_coupling_nm", "emf", "ediss","erand","fmf_nm", "fmf"])
+dproperties(Friction, ["sigma", "gamma", "friction_coupling_nm", "emf", "ediss", "fmf_nm", "fmf"])
 
 
 
