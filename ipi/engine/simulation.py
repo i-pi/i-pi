@@ -87,10 +87,16 @@ class Simulation:
 
         # parse the file
         if type(xml_input) is str:
-            if xml_input.strip().startswith("{"):
+            try:
                 xmlrestart = json_parse_string(xml_input)
-            else:
-                xmlrestart = xml_parse_string(xml_input)
+            except ValueError as json_err:
+                try:
+                    xmlrestart = xml_parse_string(xml_input)
+                except Exception as xml_err:
+                    raise ValueError(
+                        "Input is neither valid JSON nor valid XML. "
+                        f"JSON error: {json_err}; XML error: {xml_err}"
+                    )
         elif hasattr(xml_input, "name") and xml_input.name.endswith(".json"):
             xmlrestart = json_parse_file(xml_input)
         else:
