@@ -6,10 +6,7 @@ import pytest
 from ipi.utils.io.inputs.io_json import json_parse_string, xmlnode_to_json
 from ipi.utils.io.inputs.io_xml import xml_parse_file
 
-
-REGTESTS_ROOT = (
-    Path(__file__).resolve().parents[3] / "regression_tests" / "tests"
-)
+REGTESTS_ROOT = Path(__file__).resolve().parents[3] / "regression_tests" / "tests"
 REGTEST_INPUTS = sorted(REGTESTS_ROOT.rglob("input.xml"))
 
 if not REGTEST_INPUTS:
