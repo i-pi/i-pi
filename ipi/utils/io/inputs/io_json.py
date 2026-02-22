@@ -107,13 +107,7 @@ def json_to_xmlnode(data, name="root"):
     if "value" in data:
         val = data["value"]
         # Convert value to string representation expected by i-PI parsers
-        if isinstance(val, list):
-            # For arrays/lists, we want "[v1, v2, ...]"
-            # json.dumps would produce "[v1, v2, ...]" which is compatible
-            # but str(val) is also "[v1, v2, ...]" in Python
-            fields.append(("_text", str(val)))
-        else:
-            fields.append(("_text", str(val)))
+        fields.append(("_text", str(val)))
 
     # Process children
     for k, v in data.items():
