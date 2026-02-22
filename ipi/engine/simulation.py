@@ -97,7 +97,7 @@ class Simulation:
                         "Input is neither valid JSON nor valid XML. "
                         f"JSON error: {json_err}; XML error: {xml_err}"
                     )
-        elif hasattr(xml_input, "name") and xml_input.name.endswith(".json"):
+        elif hasattr(xml_input, "name") and isinstance(xml_input.name, str) and xml_input.name.endswith(".json"):
             xmlrestart = json_parse_file(xml_input)
         else:
             xmlrestart = xml_parse_file(xml_input)
