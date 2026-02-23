@@ -74,12 +74,12 @@ class Dynamics(Motion):
         if thermostat is None:
             self.thermostat = Thermostat()
         else:
-            if (
-                thermostat.__class__.__name__ is ("ThermoPILE_G" or "ThermoNMGLEG ")
-            ) and (len(fixatoms_dof) > 0):
+            if (thermostat.__class__.__name__ is ("ThermoNMGLEG ")) and (
+                len(fixatoms_dof) > 0
+            ):
                 softexit.trigger(
                     status="bad",
-                    message="!! Sorry, fixed atoms and global thermostat on the centroid not supported. Use a local thermostat. !!",
+                    message="!! Sorry, fixed atoms and global thermostat on the centroid with NMGLE not yet supported. Use a local thermostat. !!",
                 )
             self.thermostat = thermostat
 
@@ -170,7 +170,9 @@ class Dynamics(Motion):
         dpipe(self._ntemp, self.thermostat._temp)
 
         # depending on the kind, the thermostat might work in the normal mode or the bead representation.
-        self.thermostat.bind(beads=self.beads, nm=self.nm, prng=prng, fixdof=fixdof)
+        self.thermostat.bind(
+            beads=self.beads, nm=self.nm, prng=prng, fixdof=fixdof, fixcom=self.fixcom
+        )
 
         # first makes sure that the barostat has the correct stress and timestep, then proceeds with binding it.
         dpipe(self._ntemp, self.barostat._temp)
