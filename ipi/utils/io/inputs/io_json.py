@@ -53,9 +53,21 @@ def json_parse_string(string):
 
 
 def _process_json_node(node):
-    """
-    Post-processes the xml_node generated from JSON to ensure it has the correct
-    root structure expected by i-PI (a root node containing a 'simulation' node).
+    """Post-processes an xml_node generated from JSON.
+
+    Ensures the node has the correct root structure expected by i-PI,
+    i.e., a root node containing a single ``simulation`` node.
+
+    Args:
+        node: An xml_node produced from the JSON data (typically by
+            :func:`json_to_xmlnode`).
+
+    Returns:
+        An xml_node representing the root of the input structure. If the
+        input node is already a root node with a single ``simulation``
+        child and no attributes, it is returned unchanged; otherwise,
+        a new root node containing a ``simulation`` child wrapping the
+        original node content is returned.
     """
     # Check if we already have a structure like root -> simulation
     # This corresponds to JSON input { "simulation": { ... } }
