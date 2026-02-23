@@ -89,8 +89,15 @@ def _process_json_node(node):
 
 
 def json_to_xmlnode(data, name="root"):
-    """
-    Recursively converts a dictionary (from JSON) into an xml_node structure.
+    """Recursively converts JSON-derived data into an xml_node structure.
+
+    Args:
+        data: A Python object obtained from JSON parsing (typically a dict
+            representing a node, but may also be a list or a primitive value).
+        name: The name to use for the resulting xml_node tag. Defaults to "root".
+
+    Returns:
+        An xml_node instance representing the converted JSON structure.
     """
 
     # Attributes and fields containers
