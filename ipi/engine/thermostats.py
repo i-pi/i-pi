@@ -136,6 +136,7 @@ class Thermostat:
             self.ndof = len(self.p)
         else:
             self.ndof = float(len(self.p) - fixdof)
+            print("SELF.NDOF THERMO", self.ndof)
 
         self._sm = depend_array(
             name="sm",
@@ -503,6 +504,7 @@ class ThermoSVR(Thermostat):
 
         # gets the stochastic term (basically a Gamma distribution for the kinetic energy)
         r1 = self.prng.g
+        print("SELF.NDOF IN SVR", self.ndof)
         if (self.ndof - 1) % 2 == 0:
             rg = 2.0 * self.prng.gamma((self.ndof - 1) / 2)
         else:
@@ -518,7 +520,9 @@ class ThermoSVR(Thermostat):
             alpha *= -1
 
         self.ethermo += K * (1 - alpha2)
+        print("SELF.p IN SVR before", self.p)
         self.p *= alpha
+        print("SELF.p IN SVR after", self.p)
 
 
 dproperties(ThermoSVR, ["tau", "et", "K"])
@@ -597,7 +601,7 @@ class ThermoPILE_G(ThermoPILE_L):
             fixdof0 = fixdof
             print("FIXCOM FIXDOF0", fixdof0)
         else:
-            fixdof0 = fixdof / nm.nbeads
+            fixdof0 = int(fixdof / nm.nbeads)
             print("FIXDOF FIXDOF0", fixdof0, fixdof)
 
         t = self._thermos[0]
