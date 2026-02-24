@@ -17,6 +17,7 @@ from copy import deepcopy
 
 from ipi.utils.depend import depend_value, dpipe, dproperties
 from ipi.utils.io.inputs.io_xml import xml_parse_file, xml_parse_string, xml_write
+from ipi.utils.io.inputs.io_json import json_parse_file, json_parse_string
 from ipi.utils.messages import verbosity, info, warning, banner
 from ipi.utils.softexit import softexit
 import ipi.engine.outputs as eoutputs
@@ -65,6 +66,7 @@ class Simulation:
         sockets_prefix=None,
         request_banner=False,
         read_only=False,
+        post_init_hook=None,
     ):
         """Load an XML input file and return a `Simulation` object.
 
@@ -75,11 +77,32 @@ class Simulation:
             request_banner (bool): Whether to print the i-PI banner,
                 if verbosity is higher than 'quiet'.
             sockets_prefix (str): Use the specified prefix for all Unix domain sockets.
+            read_only (bool): If set to true, it creates the simulation object but
+                doesn't initialize/open the sockets or start the output threads.
+            post_init_hook (function): If provided, this function is called
+                after the simulation object is created, with the simulation object
+                as the only argument. This can be used to modify the simulation
+                before it is bound and started.
         """
 
         # parse the file
         if type(xml_input) is str:
-            xmlrestart = xml_parse_string(xml_input)
+            try:
+                xmlrestart = json_parse_string(xml_input)
+            except ValueError as json_err:
+                try:
+                    xmlrestart = xml_parse_string(xml_input)
+                except Exception as xml_err:
+                    raise ValueError(
+                        "Input is neither valid JSON nor valid XML. "
+                        f"JSON error: {json_err}; XML error: {xml_err}"
+                    )
+        elif (
+            hasattr(xml_input, "name")
+            and isinstance(xml_input.name, str)
+            and xml_input.name.endswith(".json")
+        ):
+            xmlrestart = json_parse_file(xml_input)
         else:
             xmlrestart = xml_parse_file(xml_input)
 
@@ -112,6 +135,10 @@ class Simulation:
             print(" --- begin input file content ---")
             print(xml_write(xmlrestart))
             print(" ---  end input file content  ---")
+
+        # call any post-initialization hook
+        if post_init_hook is not None:
+            post_init_hook(simulation)
 
         # pipe between the components of the simulation
         simulation.bind(read_only)
@@ -191,7 +218,12 @@ class Simulation:
         self.rollback = True
 
     def bind(self, read_only=False):
-        """Calls the bind routines for all the objects in the simulation."""
+        """Calls the bind routines for all the objects in the simulation.
+
+        Args:
+            read_only: If set to true, it creates the simulation object but
+                doesn't initialize/open the sockets or start the output threads.
+        """
 
         if self.tsteps <= self.step:
             raise ValueError(

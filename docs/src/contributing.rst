@@ -35,7 +35,11 @@ For a PR to be issued, we will expect that:
 
 * You have produced code that is compliant with our formatting requirements (`black` and `flake8`, as explained in the README here: https://github.com/i-pi/i-pi)
 
-* You have written understandable docstrings for all functions and classes you have created
+* You have written understandable docstrings for all functions and classes you have created.
+  
+* The input documentation is automatically generated based on the helpstrings in the input folder.
+  When you add a new tag, you should also add an entry into `scripts/help.py` to have it added 
+  to the documentation
 
 * For all contributions (bug fixes, new functionalities, etc.), ensure that the continuous integration tests all pass.
 
