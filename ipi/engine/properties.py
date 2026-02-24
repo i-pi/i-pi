@@ -1018,7 +1018,7 @@ class Properties:
            the property specified by the keyword key.
         """
 
-        (key, unit, arglist, kwarglist) = getall(key)
+        key, unit, arglist, kwarglist = getall(key)
         pkey = self.property_dict[key]
 
         # pkey["func"](*arglist,**kwarglist) gives the value of the property
@@ -2293,7 +2293,7 @@ class Properties:
             if ni == 1:
                 law = -logr
             else:
-                (law, drop) = logsumlog((law, 1.0), (-logr, 1.0))
+                law, drop = logsumlog((law, 1.0), (-logr, 1.0))
 
             # here we need to take care of the sign of tcv, which might as well be
             # negative... almost never but...
@@ -2301,7 +2301,7 @@ class Properties:
                 lawke = -logr + np.log(abs(tcv))
                 sawke = np.sign(tcv)
             else:
-                (lawke, sawke) = logsumlog(
+                lawke, sawke = logsumlog(
                     (lawke, sawke), (-logr + np.log(abs(tcv)), np.sign(tcv))
                 )
 
@@ -2401,7 +2401,7 @@ class Properties:
             if ni == 1:
                 law = -logr
             else:
-                (law, drop) = logsumlog((law, 1.0), (-logr, 1.0))
+                law, drop = logsumlog((law, 1.0), (-logr, 1.0))
 
             # here we need to take care of the sign of tcv, which might as well be
             # negative... almost never but...
@@ -2409,7 +2409,7 @@ class Properties:
                 lawke = -logr + np.log(abs(tcv))
                 sawke = np.sign(tcv)
             else:
-                (lawke, sawke) = logsumlog(
+                lawke, sawke = logsumlog(
                     (lawke, sawke), (-logr + np.log(abs(tcv)), np.sign(tcv))
                 )
 
@@ -2492,7 +2492,7 @@ class Properties:
         spraverage = sprsum / ni
         spr2average = spr2sum / ni
 
-        free_particle_factor = alpha ** (1.5 * (self.beads.nbeads - 1)) 
+        free_particle_factor = alpha ** (1.5 * (self.beads.nbeads - 1))
         sprexpaverage = (sprexpsum / ni) * free_particle_factor
 
         return np.asarray([spraverage, spr2average, sprexpaverage])
@@ -2678,8 +2678,13 @@ class Properties:
         free_particle_factor = alpha ** (1.5 * (self.beads.nbeads - 1))
 
         return np.asarray(
-            [tdsum / ni, td2sum / ni, (tdexpsum / ni) * free_particle_factor, 
-             (tiexpsum / ni) * free_particle_factor, (chinexpsum / ni) * free_particle_factor]
+            [
+                tdsum / ni,
+                td2sum / ni,
+                (tdexpsum / ni) * free_particle_factor,
+                (tiexpsum / ni) * free_particle_factor,
+                (chinexpsum / ni) * free_particle_factor,
+            ]
         )
 
     def get_isotope_zetasc_4th(self, alpha="1.0", atom=""):
@@ -3342,7 +3347,7 @@ class Trajectories:
            the trajectory specified by the keyword key.
         """
 
-        (key, unit, arglist, kwarglist) = getall(key)
+        key, unit, arglist, kwarglist = getall(key)
         pkey = self.traj_dict[key]
 
         # pkey["func"](*arglist,**kwarglist) gives the value of the trajectory
