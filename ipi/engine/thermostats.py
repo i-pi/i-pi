@@ -859,7 +859,7 @@ class ThermoNMGLE(Thermostat):
         pm=None,
         nm=None,
         prng=None,
-        fixdof=Non,
+        fixdof=None,
         fixcom=None,
     ):
         """Binds the appropriate degrees of freedom to the thermostat.
