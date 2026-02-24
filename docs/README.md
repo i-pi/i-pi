@@ -9,4 +9,8 @@ This folder contains the files needed to locally build the documentation for i-P
 
 To make the docs, make sure you have all the needed packages in `requirements.txt` installed, which can be achieved with `pip install -r requirements.txt`, and type `make html`. The local documentation will be generated in `_build/html`. 
 
+The input documentation is automatically generated based on the helpstrings in the input folder.
+When you add a new tag, you should also add an entry into `scripts/help.py` to have it added 
+to the documentation.
+
 To make the TeX docs follow the instructions in `latex`.
