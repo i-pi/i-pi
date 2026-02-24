@@ -2491,7 +2491,9 @@ class Properties:
 
         spraverage = sprsum / ni
         spr2average = spr2sum / ni
-        sprexpaverage = sprexpsum / ni
+
+        free_particle_factor = alpha ** (1.5 * (self.beads.nbeads - 1)) 
+        sprexpaverage = (sprexpsum / ni) * free_particle_factor
 
         return np.asarray([spraverage, spr2average, sprexpaverage])
 
@@ -2673,8 +2675,11 @@ class Properties:
                 "Couldn't find an atom which matched the argument of isotope_zetatd"
             )
 
+        free_particle_factor = alpha ** (1.5 * (self.beads.nbeads - 1))
+
         return np.asarray(
-            [tdsum / ni, td2sum / ni, tdexpsum / ni, tiexpsum / ni, chinexpsum / ni]
+            [tdsum / ni, td2sum / ni, (tdexpsum / ni) * free_particle_factor, 
+             (tiexpsum / ni) * free_particle_factor, (chinexpsum / ni) * free_particle_factor]
         )
 
     def get_isotope_zetasc_4th(self, alpha="1.0", atom=""):
