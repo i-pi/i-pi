@@ -28,7 +28,11 @@ from ipi.utils.timing_manager import timers
 from multiprocessing import shared_memory
 
 description = """
-Minimal example of a Python driver connecting to i-PI and exchanging energy, forces, etc.
+Minimal MPI Python driver for i-PI batch mode.
+
+Implements the socket protocol expected by FFBatch/ForceBatchBead: rank 0
+handles control messages, reads/writes shared-memory buffers when --shm is
+enabled, and scatters bead positions across MPI ranks for evaluation.
 """
 def recv_data(sock, data):
     """Fetches binary data from i-PI socket."""
@@ -87,7 +91,13 @@ def run_shmdriver(
     f_debug=False,
     sockets_prefix="/tmp/ipi_",
 ):
-    """Minimal socket client for i-PI with MPI rank 0 socket communication and data distribution."""
+    """Batch socket client for i-PI with SHM data exchange.
+
+    Rank 0 handles the socket protocol and SHM buffer mapping, broadcasts
+    cell/nbead metadata to all ranks, scatters bead positions, and gathers
+    forces/energies/virials before writing results back to SHM and signaling
+    readiness to i-PI.
+    """
 
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()

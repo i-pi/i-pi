@@ -268,10 +268,10 @@ class ForceBead:
 dproperties(ForceBead, ["ufvx", "pot", "vir", "f", "extra", "fx", "fy", "fz"])
 
 class ForceBatchBead:
-    """Base force helper class.
+    """Base force helper class for batch bead evaluation.
 
-    This is the object that computes forces for all beads. This is the last
-    layer before calling a forcefield object.
+    Computes forces for all beads in one batched request to the forcefield.
+    This differs from ``ForceBead``, which sends one request per bead.
 
     Attributes:
        atoms: An Atoms object containing all the atom positions.
@@ -290,9 +290,9 @@ class ForceBatchBead:
 
     Depend objects:
        ufvx: A list of the form [pot, f, vir, extra]. These quantities are calculated
-          all at one time by the driver, so are collected together. Each separate
-          object is then taken from the list. Depends on the atom positions and
-          the system box.
+          all at one time by the driver for all beads, so are collected together.
+          Each separate object is then taken from the list. Depends on the bead
+          positions and the system box.
        extra: A string containing some formatted output returned by the client. Depends on ufvx.
        pot: A float giving the potential energy of the system. Depends on ufvx.
        f: An array containing all the components of the force. Depends on ufvx.
@@ -317,11 +317,10 @@ class ForceBatchBead:
         """Binds beads, cell and a forcefield template to the ForceBatchBead object.
 
         Args:
-           atoms: The Atoms object from which the atom positions are taken.
+           beads: The Beads object containing positions for all replicas.
            cell: The Cell object from which the system box is taken.
            ff: A forcefield object which can calculate the potential, virial
-              and forces given an unit cell and atom positions of one replica
-              of the system.
+              and forces given an unit cell and bead positions for the system.
         """
 
         global fbuid  # assign a unique identifier to each forcebead object
@@ -379,9 +378,8 @@ class ForceBatchBead:
     def queue(self):
         """Sends the job to the interface queue directly.
 
-        Allows the ForceBead object to ask for the ufvx list of each replica
-        directly without going through the get_all function. This allows
-        all the jobs to be sent at once, allowing them to be parallelized.
+        Allows the ForceBatchBead object to ask for the batched ufvx list
+        directly without going through the get_all function.
 
         Returns True if a calculation is running
         """
@@ -398,9 +396,10 @@ class ForceBatchBead:
         """Driver routine.
 
         When one of the force, potential or virial are called, this sends the
-        atoms and cell to the client code, requesting that it calculates the
-        potential, forces and virial tensor. This then waits until the
-        driver is finished, and then returns the ufvx list.
+        beads and cell to the client code in a single batched request,
+        requesting that it calculates the potential, forces and virial tensor
+        for all beads. This then waits until the driver is finished, and then
+        returns the ufvx list.
 
         Returns:
            A list of the form [potential, force, virial, extra].
