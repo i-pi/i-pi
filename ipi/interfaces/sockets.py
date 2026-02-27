@@ -204,25 +204,33 @@ class DriverSocket(socket.socket):
             return np.frombuffer(self._buf[0:blen], dest.dtype)[0]
 
 class SHMDriver(DriverSocket):
-    """Deals with communication between the client and driver code.
+    """Shared-memory driver client with socket-based control.
 
-    Deals with sending and receiving the data from the driver code. Keeps track
-    of the status of the driver. Initialises the driver forcefield, sends the
-    position and cell data, and receives the force data.
+    Uses the socket only for control/status messages and to exchange the
+    shared-memory buffer names during initialization. Bulk data (positions,
+    cell, forces, potential, virial) are transferred through named
+    ``multiprocessing.shared_memory`` blocks created on the first dispatch.
 
     Attributes:
        waitstatus: Boolean giving whether the driver is waiting to get a status answer.
        status: Keeps track of the status of the driver.
        lastreq: The ID of the last request processed by the client.
        locked: Flag to mark if the client has been working consistently on one image.
+       first_dispatch: True until shared-memory buffers are allocated.
+       nat: Number of atoms inferred from the first request.
+       nbeads: Number of beads inferred from the first request.
+       *_bufname: Names of shared-memory blocks (pos/h/ih/pot/f/vir).
+       *_shm: SharedMemory handles for each buffer.
+       *_snp: Numpy views into shared-memory buffers.
     """
 
 
     def __init__(self, sock):
-        """Initialises Driver.
+        """Initialises an SHM-backed driver client.
 
         Args:
-           socket: A socket through which the communication should be done.
+           socket: Control socket used for status/commands and buffer name exchange.
+              Shared-memory blocks are allocated on the first dispatch.
         """
 
         super(SHMDriver, self).__init__(sock)
@@ -439,8 +447,8 @@ class SHMDriver(DriverSocket):
         """Sends the position and cell data to the driver.
 
         Args:
-           pos: An array containing the atom positions.
-           cell: A cell object giving the system box.
+           r: Request dict containing ``pos`` and ``cell`` data. The data are
+              written to shared memory before sending the control header.
 
         Raises:
            InvalidStatus: Raised if the status is not Ready.
@@ -474,6 +482,9 @@ class SHMDriver(DriverSocket):
 
     def getforce(self):
         """Gets the potential energy, force and virial from the driver.
+
+        For SHM drivers the socket is only used to synchronize when the shared
+        buffers are ready; data are read from shared memory.
 
         Raises:
            InvalidStatus: Raised if the status is not HasData.
@@ -517,6 +528,18 @@ class SHMDriver(DriverSocket):
 
     
     def alloc_shm(self, r):
+        """Allocate and map shared-memory buffers for the first request.
+
+        Initializes shared-memory blocks sized to match the current request
+        data layout and creates NumPy views into those buffers.
+
+        Args:
+           r: Request dict with ``pos`` and ``cell`` data. ``pos`` may be
+              shape (3*nat,) for a single bead or (nbeads, 3*nat).
+
+        Raises:
+           Exception: Propagates allocation/mapping errors.
+        """
         try:
             if r["pos"].ndim == 1:
                 self.nat = len(r["pos"]) // 3
@@ -549,9 +572,20 @@ class SHMDriver(DriverSocket):
 
 
     def np_to_shm(self, r):
+        """Write request data into shared-memory buffers.
+
+        Args:
+           r: Request dict with ``pos`` and ``cell`` (h, ih) data.
+        """
         self.pos_snp, self.h_snp, self.ih_snp = r["pos"], r["cell"][0], r["cell"][1]
 
     def shm_to_np(self):
+        """Read potential, forces, and virial from shared memory.
+
+        Returns:
+           List ``[potential, force, virial, extra]`` matching Driver semantics.
+           ``extra`` (``mxtradict``) is currently a placeholder and not yet implemented.
+        """
         mxtradict = ""
         if self.nbeads == 1:
             return [float(self.pot_snp), self.f_snp.squeeze(), self.vir_snp.squeeze(), mxtradict]
@@ -564,6 +598,9 @@ class SHMDriver(DriverSocket):
         once it has been evaluated. This is meant to be launched as a
         separate thread, and takes care of all the communication related to
         the request.
+
+        On the first dispatch, shared-memory buffers are allocated and their
+        names are sent to the driver during initialization.
         """
         
         if self.first_dispatch:

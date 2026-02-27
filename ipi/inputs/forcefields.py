@@ -360,10 +360,14 @@ class InputFFSocket(InputForceField):
 class InputFFBatch(InputForceField):
     """Creates a ForceField object with a socket interface for batch eval.
 
-    Handles generating one instance of a socket interface forcefield class.
+    Handles generating one instance of a socket interface forcefield class
+    that evaluates all beads in a single batched request. This requires a
+    driver that supports batch communication.
 
     Attributes:
        mode: Describes whether the socket will be a unix or an internet socket.
+       shm: Whether to use shared memory for bulk data transfer (unix only).
+       matching: Dispatch policy for mapping requests to clients.
 
     Fields:
        address: The server socket binding address.
@@ -457,7 +461,10 @@ class InputFFBatch(InputForceField):
         },
     )
 
-    default_help = "Deals with the assigning of force calculation jobs to different driver codes, and collecting the data, using a socket for the data communication."
+    default_help = (
+        "Deals with assigning batched force calculation jobs (all beads at once) "
+        "to driver codes and collecting the data using a socket interface."
+    )
     default_label = "FFBATCH"
 
     def store(self, ff):
