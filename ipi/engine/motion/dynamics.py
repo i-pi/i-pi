@@ -432,9 +432,9 @@ class NVEIntegrator(DummyIntegrator):
                     dstrip(self.bias.f)[:, self.activeatoms_mask] * self.pdt[level]
                 )
         else:
-            timers.start("[+++]Waiting Driver")
+            timers.start("[+++]F(++++)")
             f = dstrip(self.forces.mts_forces[level].f)
-            timers.stop("[+++]Waiting Driver")
+            timers.stop("[+++]F(++++)")
             
             timers.start("[+++]Verlet")
             self.beads.p[:] += f * self.pdt[level]

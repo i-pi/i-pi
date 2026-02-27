@@ -441,7 +441,7 @@ class Simulation:
 
             timers.stop("Total Step(+)")
 
-        timers.summary()
+        timers.summary("timing_breakdown")
         self.rollback = False
 
     def run_step(self, step):

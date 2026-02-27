@@ -104,8 +104,10 @@ def run_driver(
             rid = recv_data(sock, np.int32())
             initlen = recv_data(sock, np.int32())
             initstr = recv_data(sock, np.chararray(initlen))
+            #initstr = recv_data(sock, np.empty(initlen, dtype=np.uint8))
+
             if f_verbose:
-                print(rid, initstr)
+                print(rid, "Initing...")
             f_init = True  # we are initialized now
         elif header == Message("POSDATA"):
             # receives structural information
@@ -142,13 +144,13 @@ def run_driver(
                     "numpy.ndarray containing 64-bit floating points values"
                 )
 
-            if len(force.flatten()) != len(pos.flatten()):
+            if force.size != pos.size:
                 raise ValueError(
                     "driver returned forces with the wrong size: number of "
                     "atoms and dimensions must match positions"
                 )
 
-            if len(vir.flatten()) != 9:
+            if vir.size != 9:
                 raise ValueError(
                     "driver returned a virial tensor which does not have 9 components"
                 )
@@ -197,6 +199,7 @@ def run_shmdriver(
     pot = 0.0
     force = np.zeros(0, float)
     vir = np.zeros((3, 3), float)
+    
     while True:  # ah the infinite loop!
         header = sock.recv(HDRLEN)
         if f_verbose:
@@ -211,12 +214,19 @@ def run_shmdriver(
                 sock.sendall(Message("READY"))
         elif header == Message("INIT"):
             # initialization
+            print("start initing")
             rid = recv_data(sock, np.int32())
             initlen = recv_data(sock, np.int32())
             initstr = recv_data(sock, np.chararray(initlen))
-            
+            print("initstr")
+                  
             # receiving nat and nbeads at init, necessary to be able to allocate the correct numpy shapes in SHM
             nat = recv_data(sock, np.int32())
+            nbeads = recv_data(sock, np.int32())
+          
+            if f_verbose:
+                print(rid, initstr)
+                print(f"natoms, nbeads: {nat}, {nbeads}")
             
             # reading buffer names for shaerd memory access
             pos_bufname = sock.recv(HDRLEN).decode("utf-8").strip()
@@ -248,8 +258,6 @@ def run_shmdriver(
 
             
             
-            if f_verbose:
-                print(rid, initstr)
             f_init = True  # we are initialized now
         
         elif header == Message("POSDATA"):

@@ -99,7 +99,7 @@ class TimingManager:
 
 
 
-    def summary(self, skip_first=5):
+    def summary(self, filename, skip_first=5):
         """Print hierarchical timing summary and write .log and .dat files."""
 
         if not ENABLED:
@@ -198,7 +198,11 @@ class TimingManager:
             if direct_children:
                 parent_avg = self.get_average(parent_name, skip_first)
                 remainder = round(parent_avg - total_child_time, 3)
-                percent = f"[{marker}]Remainder: {remainder/parent_avg*100:3.1f}%"
+                if parent_avg > 0:
+                    percent = f"[{marker}]Remainder: {remainder/parent_avg*100:3.1f}%"
+                else:
+                    percent = 0
+                    print(f"Error in timing manager: Parent time of [{marker}] is 0.")
                 print(f"{'  ' * indent_level}{percent:<40} {remainder:15.3f}")
 
 
@@ -222,12 +226,12 @@ class TimingManager:
         sys.stdout = old_stdout
 
         # Write log file
-        with open("timing_breakdown.log", "w") as f:
+        with open(f"{filename}.log", "w") as f:
             f.write(log_buffer.getvalue())
 
         # Write dataframe
         df = pd.DataFrame(rows)
-        df.to_csv("timing_breakdown.dat", sep=";", index=False, float_format='%.4f')
+        df.to_csv(f"{filename}.dat", sep=";", index=False, float_format='%.4f')
 
         # Print to console what user would normally see
         print(log_buffer.getvalue(), end="")
