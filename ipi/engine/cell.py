@@ -83,26 +83,38 @@ class Cell:
 
         return np.dot(self.h, s)
 
+   
     def array_pbc(self, pos):
-        """Uses the minimum image convention to return a list of particles to the
-           unit cell.
-
-        Args:
-           atom: An Atom object.
-
-        Returns:
-           An array giving the position of the image that is inside the
-           system box.
         """
+        Apply minimum image convention to positions.
+        
+        Args:
+            pos: numpy array, either shape (nbeads, nat*3) or (nat*3,)
+        
+        Updates:
+            pos in-place (shared memory safe)
+        """
+        # normalize shape to (nbeads, nat*3)
+        squeeze = False
+        if pos.ndim == 1:
+            pos = pos[np.newaxis, :]  # shape becomes (1, nat*3)
+            squeeze = True
 
-        s = dstrip(pos).copy().reshape(-1, 3)
+        nbeads, nflat = pos.shape
+        nat = nflat // 3
 
-        s = np.dot(dstrip(self.ih), s.T)
-        s = s - np.round(s)
+        s = dstrip(pos).reshape(nbeads, nat, 3)
 
-        s = np.dot(dstrip(self.h), s).T
+        s = np.einsum('ij,bnj->bni', dstrip(self.ih), s)
+        s -= np.round(s)
+        s = np.einsum('ij,bnj->bni', dstrip(self.h), s)
+        s = s.reshape(nbeads, nat*3)
 
-        pos[:] = s.reshape(-1)
+        pos[:] = s
+
+        # if original pos was 1D, return flattened 1D view
+        if squeeze:
+            pos.shape = (nat*3,)
 
     def minimum_distance(self, atom1, atom2):
         """Takes two atoms and tries to find the smallest vector between two

@@ -18,7 +18,9 @@ import socket
 import argparse
 import numpy as np
 import time
-from ipi.pes import *
+
+
+from ipi.pes import Dummy_driver, load_pes, __drivers__
 
 from ipi.utils.io.inputs import read_args_kwargs
 from mpi4py import MPI
@@ -75,7 +77,7 @@ def Message(mystr):
     """Returns a header of standard length HDRLEN."""
     return str.ljust(str.upper(mystr), HDRLEN).encode()
 
-def run_driver(
+def run_shmdriver(
     unix=False,
     address="",
     port=12345,
@@ -267,7 +269,7 @@ def run_driver(
                     results = (pot_all, f_all, vir_all, "")
                 timers.stop("[+]MPI Gather Forces")
             else:
-                results = driver(cell, pos_local, nbeads, nat)
+                results = driver(cell, pos_local)
             
             timers.stop("Run Driver(+)")
 
@@ -291,7 +293,7 @@ def run_driver(
                 if len(vir.flatten()) != nbeads * 9:
                     raise ValueError("Virial shape mismatch")
                 '''
-                pot_snp = pot[:]
+                pot_snp = pot
                 f_snp = force[:]
                 vir_snp = vir[:]
                 
@@ -304,7 +306,7 @@ def run_driver(
         elif header == Message("EXIT"):
             if rank == 0:
                 print("Received exit message from i-PI. Bye bye!")
-                timers.summary()
+                timers.summary("driver_timing_breakdown")
             return
 
 if __name__ == "__main__":
@@ -313,49 +315,106 @@ if __name__ == "__main__":
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
 
-    parser.add_argument("-u", "--unix", action="store_true", default=False)
-    parser.add_argument("-a", "--address", type=str, default="localhost")
-    parser.add_argument("-S", "--sockets_prefix", type=str, default="/tmp/ipi_")
-    parser.add_argument("-p", "--port", type=int, default=12345)
-    parser.add_argument(
-        "-m", "--mode", type=str, default="dummy", choices=list(__drivers__.keys())
-    )
-    parser.add_argument("-o", "--param", type=str, default="")
-    parser.add_argument("-v", "--verbose", action="store_true", default=False)
     parser.add_argument(
         "--debug", action="store_true", default=False,
         help="Detailed timing output for debugging MPI and socket performance."
     )
+    parser.add_argument(
+        "-u",
+        "--unix",
+        action="store_true",
+        default=False,
+        help="Use a UNIX domain socket.",
+    )
+    parser.add_argument(
+        "-s",
+        "--shm",
+        action="store_true",
+        default=False,
+        help="Use shared memory communication",
+    )   
+    parser.add_argument(
+        "-a",
+        "--address",
+        type=str,
+        default="localhost",
+        help="Host name (for INET sockets) or name of the UNIX domain socket to connect to.",
+    )
+    parser.add_argument(
+        "-S",
+        "--sockets_prefix",
+        type=str,
+        default="/tmp/ipi_",
+        help="Prefix used for the unix domain sockets. Ignored when using TCP/IP sockets.",
+    )
+    parser.add_argument(
+        "-p",
+        "--port",
+        type=int,
+        default=12345,
+        help="TCP/IP port number. Ignored when using UNIX domain sockets.",
+    )
+    parser.add_argument(
+        "-m",
+        "--mode",
+        type=str,
+        default="dummy",
+        choices=list(__drivers__.keys()) + ["custom"],
+        help="""Type of potential to be used to compute the potential and its derivatives.
+        """,
+    )
+    parser.add_argument(
+        "-P",
+        "--pes_path",
+        type=str,
+        default=None,
+        help="""File path for 'custom' PES (it should end with .py).
+        """,
+    )
+    parser.add_argument(
+        "-o",
+        "--param",
+        type=str,
+        default="",
+        help="""Parameters required to run the driver. Comma-separated list of values
+        """,
+    )
+    parser.add_argument(
+        "-v",
+        "--verbose",
+        action="store_true",
+        default=False,
+        help="Verbose output.",
+    )
 
     args = parser.parse_args()
-
-    driver_args, driver_kwargs = read_args_kwargs(args.param)
 
     dummy = False
     if args.mode == "dummy":
         dummy = True
 
-    if args.mode in __drivers__:
-        try:
-            d_f = __drivers__[args.mode](
-                *driver_args, verbose=args.verbose, **driver_kwargs
-            )
-        except ImportError:
-            raise
-        except Exception as err:
-            print(f"Error setting up PES mode {args.mode}")
-            raise err
+    driver_args, driver_kwargs = read_args_kwargs(args.param)
+
+    # import the driver class
+    cls = load_pes(args.mode, args.pes_path)
+
+    d_f = cls(*driver_args, **driver_kwargs)
+
+    if args.shm:
+        run_shmdriver(
+            unix=True,
+            address=args.address,
+            port=args.port,
+            driver=d_f,
+            f_verbose=args.verbose,
+            sockets_prefix=args.sockets_prefix,
+        )
     else:
-        raise ValueError("Unsupported driver mode ", args.mode)
-
-    run_driver(
-        unix=args.unix,
-        address=args.address,
-        port=args.port,
-        driver=d_f,
-        dummy=dummy,
-        f_verbose=args.verbose,
-        f_debug=args.debug,
-        sockets_prefix=args.sockets_prefix,
-    )
-
+        run_driver(
+            unix=args.unix,
+            address=args.address,
+            port=args.port,
+            driver=d_f,
+            f_verbose=args.verbose,
+            sockets_prefix=args.sockets_prefix,
+        )

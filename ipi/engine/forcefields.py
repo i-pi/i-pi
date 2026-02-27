@@ -16,6 +16,7 @@ import sys
 from contextlib import nullcontext
 
 import numpy as np
+from ipi.utils.timing_manager import timers
 
 from ipi.engine.cell import GenericCell
 from ipi.utils.prng import Random
@@ -33,8 +34,14 @@ from ipi.utils.mathtools import (
     random_rotation,
 )
 
+
 plumed = None
 
+
+def tracer(frame, event, arg):
+    if event == "call":
+        print("CALL:", frame.f_code.co_name)
+    return tracer
 
 class ForceRequest(dict):
     """An extension of the standard Python dict class which only has a == b
@@ -155,7 +162,17 @@ class ForceField:
         else:
             par_str = " "
 
+        """
+        timers.start("[******]copy")
         pbcpos = dstrip(atoms.q).copy()
+        timers.stop("[******]copy")
+        """
+
+        timers.start("[******]Update atoms.q")
+        pbcpos = dstrip(atoms.q)
+        timers.stop("[******]Update atoms.q")
+        
+
 
         # Indexes come from input in a per atom basis and we need to make a per atom-coordinate basis
         # Reformat indexes for full system (default) or piece of system
@@ -178,10 +195,13 @@ class ForceField:
             self.iactive = activehere
 
         if self.dopbc:
+            timers.start("[******]PBC")
             cell.array_pbc(pbcpos)
+            timers.stop("[******]PBC")
 
         if template is None:
             template = {}
+
         template.update(
             {
                 "id": reqid,
@@ -371,6 +391,9 @@ class FFSocket(ForceField):
             self._thread.join()
         self.socket.close()
 
+
+class FFBatch(FFSocket):
+    pass
 
 class FFEval(ForceField):
     """General class for models that provide a self.evaluate(request)

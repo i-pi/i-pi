@@ -159,6 +159,10 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
             iforcefields.InputFFSocket,
             {"help": iforcefields.InputFFSocket.default_help},
         ),
+        "ffbatch": (
+            iforcefields.InputFFBatch,
+            {"help": iforcefields.InputFFBatch.default_help},
+        ),
         "ffdirect": (
             iforcefields.InputFFDirect,
             {"help": iforcefields.InputFFDirect.default_help},
@@ -254,6 +258,10 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
                     _iobj = iforcefields.InputFFSocket()
                     _iobj.store(_obj)
                     self.extra[_ii] = ("ffsocket", _iobj)
+                elif type(_obj) is eforcefields.FFBatch:
+                    _iobj = iforcefields.InputFFBatch()
+                    _iobj.store(_obj)
+                    self.extra[_ii] = ("ffbatch", _iobj)
                 elif isinstance(_obj, eforcefields.FFDirect):
                     _iobj = iforcefields.InputFFDirect()
                     _iobj.store(_obj)
@@ -340,6 +348,7 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
                 syslist += v.fetch()
             elif k in [
                 "ffsocket",
+                "ffbatch",
                 "ffdirect",
                 "fflj",
                 "ffdebye",
@@ -352,7 +361,7 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
                 "ffcavphsocket",
             ]:
                 new_ff = v.fetch()
-                if k == "ffsocket":
+                if k in [ "ffsocket", "ffbatch" ]:
                     # overrides ffsocket prefix
                     new_ff.socket.sockets_prefix = self.sockets_prefix.fetch()
                 fflist.append(new_ff)

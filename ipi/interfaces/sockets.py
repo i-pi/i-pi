@@ -400,7 +400,7 @@ class SHMDriver(DriverSocket):
         self.status = status
         return status
 
-    def initialize(self, rid, pars, nat):
+    def initialize(self, rid, pars):
         """Sends the initialisation string to the driver.
 
         Args:
@@ -420,7 +420,8 @@ class SHMDriver(DriverSocket):
                     + np.int32(rid)
                     + np.int32(len(pars))
                     + pars.encode()
-                    + np.int32(nat)
+                    + np.int32(self.nat)
+                    + np.int32(self.nbeads)
                     + Message(self.pos_bufname)
                     + Message(self.h_bufname)
                     + Message(self.ih_bufname)
@@ -517,24 +518,29 @@ class SHMDriver(DriverSocket):
     
     def alloc_shm(self, r):
         try:
-            self.nat = len(r["pos"]) // 3
+            if r["pos"].ndim == 1:
+                self.nat = len(r["pos"]) // 3
+                self.nbeads = 1
+            else:
+                self.nat = r["pos"].shape[1] // 3
+                self.nbeads = r["pos"].shape[0]
             
             # assuming float64 in size*8
             self.pos_shm =  shared_memory.SharedMemory(create=True, size=r["pos"].size*8, name=self.pos_bufname)
             self.h_shm = shared_memory.SharedMemory(create=True, size=9*8, name=self.h_bufname)
             self.ih_shm = shared_memory.SharedMemory(create=True, size=9*8, name=self.ih_bufname)
             
-            self.pot_shm = shared_memory.SharedMemory(create=True, size=8, name=self.pot_bufname)
+            self.pot_shm = shared_memory.SharedMemory(create=True, size=self.nbeads*8, name=self.pot_bufname)
             self.f_shm = shared_memory.SharedMemory(create=True, size=r["pos"].size*8, name=self.f_bufname)
-            self.vir_shm = shared_memory.SharedMemory(create=True, size=9*8, name=self.vir_bufname)
+            self.vir_shm = shared_memory.SharedMemory(create=True, size=self.nbeads*9*8, name=self.vir_bufname)
 
             self.pos_snp = np.ndarray(r["pos"].shape, dtype=np.float64, buffer=self.pos_shm.buf)
             self.h_snp = np.ndarray((3,3), dtype=np.float64, buffer=self.h_shm.buf)
             self.ih_snp = np.ndarray((3,3), dtype=np.float64, buffer=self.ih_shm.buf)
             
-            self.pot_snp = np.ndarray((1), dtype=np.float64, buffer=self.pot_shm.buf)
-            self.f_snp = np.ndarray(r["pos"].shape, dtype=np.float64, buffer=self.f_shm.buf)
-            self.vir_snp = np.ndarray((3,3), dtype=np.float64, buffer=self.vir_shm.buf)
+            self.pot_snp =np.ndarray((self.nbeads), dtype=np.float64, buffer=self.pot_shm.buf)
+            self.f_snp =np.ndarray(r["pos"].shape, dtype=np.float64, buffer=self.f_shm.buf)
+            self.vir_snp =np.ndarray((self.nbeads,3,3), dtype=np.float64, buffer=self.vir_shm.buf)
         except Exception as exc:
             warning(
                 f"Exception occured:: {exc}", verbosity.quiet
@@ -547,8 +553,10 @@ class SHMDriver(DriverSocket):
 
     def shm_to_np(self):
         mxtradict = ""
-        pot = float(self.pot_snp)
-        return [pot, self.f_snp, self.vir_snp, mxtradict]
+        if self.nbeads == 1:
+            return [float(self.pot_snp), self.f_snp.squeeze(), self.vir_snp.squeeze(), mxtradict]
+        else:
+            return [self.pot_snp, self.f_snp, self.vir_snp, mxtradict]
         
 
     def dispatch(self, r):
@@ -562,7 +570,7 @@ class SHMDriver(DriverSocket):
             self.alloc_shm(r)
             self.first_dispatch = False
 
-        timers.start("[++++++]Get Stat1")
+        #timers.start("[++++++]Get Stat1")
         if not self.status & Status.Up:
             warning(
                 " @SOCKET:   Inconsistent client state in dispatch thread! (I)",
@@ -573,7 +581,7 @@ class SHMDriver(DriverSocket):
 
         self.get_status()
         if self.status & Status.NeedsInit:
-            self.initialize(r["id"], r["pars"], len(r["pos"])//3) # also sending here buffer names to find shm on driver
+            self.initialize(r["id"], r["pars"]) # also sending here buffer names to find shm on driver
             self.status = self.get_status()
 
         if not (self.status & Status.Ready):
@@ -815,7 +823,14 @@ class Driver(DriverSocket):
            InvalidStatus: Raised if the status is not Ready.
         """
         global TIMEOUT  # we need to update TIMEOUT in case of sendall failure
-
+        # this is to handle the batch mode for multiple bead positions
+        timers.start
+        if pos.ndim == 2:
+            nat = pos.shape[1] // 3
+            nbeads = pos.shape[0]
+        else:
+            nat = len(pos) // 3
+            nbeads = 1
         if self.status & Status.Ready:
             try:
                 # reduces latency by combining all messages in one
@@ -888,7 +903,20 @@ class Driver(DriverSocket):
 
         mlen = np.int32()
         mlen = self.recvall(mlen)
+        """
+        if self.nbeads > 1:
+            mf = np.zeros((mbeads, 3 * mlen), np.float64)
+            mf = self.recvall(mf)
 
+            mvir = np.zeros((mbeads, 3, 3), np.float64)
+            mvir = self.recvall(mvir)
+        else:
+            mf = np.zeros(3 * mlen, np.float64)
+            mf = self.recvall(mf)
+
+            mvir = np.zeros((3, 3), np.float64)
+            mvir = self.recvall(mvir)
+        """
         mf = np.zeros(3 * mlen, np.float64)
         mf = self.recvall(mf)
 
