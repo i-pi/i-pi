@@ -1,6 +1,6 @@
         filename                        format
 ----------------------------------------------------------
-ref_simulation.committee_force_0        numpy
+ref_simulation.committee_force_0        numpy    all,1e-7,1e-7
 ref_simulation.committee_pot_0          numpy
 ref_simulation.committee_sigma_0        numpy
 ref_simulation.committee_virial_0       numpy

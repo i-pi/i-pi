@@ -1,5 +1,5 @@
 black==24.8.0
-numpy
+numpy<3
 pathlib
 pytest
 pytest-mock

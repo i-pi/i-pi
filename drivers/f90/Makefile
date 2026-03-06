@@ -54,5 +54,10 @@ driver_pure.x: $(OBJECTS) fsockets_pure.o driver.o | $(OBJECTS)
 %.o: %.f
 	$(FC) $(FFLAGS) -c $< -o $@
 
+LJ.o: distance.o
+LJPolymer.o: distance.o
+SG.o: distance.o
+driver.o: LJ.o LJPolymer.o SG.o pes/pswater.o fsockets.o distance.o
+
 clean:
 	rm -f *.o *.mod *.x */*.mod */*.o ../../bin/i-pi-driver
