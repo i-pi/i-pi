@@ -1,0 +1,35 @@
+<simulation verbosity='low' threading='false' safe_stride='100'>
+   <total_steps>4000</total_steps>
+    <ffdirect name='mydriver'>
+      <pes> dummy </pes>
+      <batch_size>32</batch_size>
+    </ffdirect>
+   <output prefix='simulation'>
+      <trajectory stride='1000' filename='pos'> positions </trajectory>
+      <properties stride='1000'> [ step, time, conserved, temperature, kinetic_md, potential, pressure_md, volume ] </properties>
+   </output>
+   <prng>
+      <seed>18885</seed>
+   </prng>
+   <system>
+      <forces> 
+          <force forcefield='mydriver' weight='1.0'> </force>
+      </forces>
+      <initialize nbeads='32'>
+        <file mode='xyz'> test-1000.xyz</file>
+        <cell> [10.0, 0, 0, 0, 10.0, 0, 0, 0, 10.0] </cell>
+        <masses mode='manual'> [1.0] </masses>
+        <velocities mode='thermal'> 1 </velocities>
+      </initialize>
+      <ensemble>
+          <temperature> 1 </temperature>
+      </ensemble>
+      <motion mode='dynamics'>
+        <fixcom> False </fixcom>
+        <dynamics mode='nvt'>
+            <timestep> 0.1 </timestep>
+            <thermostat mode='langevin'> <tau> 1 </tau> </thermostat>
+        </dynamics>
+      </motion>
+  </system>
+</simulation>
