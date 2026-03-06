@@ -20,7 +20,7 @@ import numpy as np
 import time
 
 
-from ipi.pes import Dummy_driver, load_pes, __drivers__
+from ipi.pes import load_pes, __drivers__
 
 from ipi.utils.io.inputs import read_args_kwargs
 from mpi4py import MPI
@@ -86,7 +86,6 @@ def run_shmdriver(
     address="",
     port=12345,
     driver=None,
-    dummy=False,
     f_verbose=False,
     f_debug=False,
     sockets_prefix="/tmp/ipi_",
@@ -255,31 +254,7 @@ def run_shmdriver(
             timers.stop("MPI Scatter Pos")
 
             timers.start("Run Driver(+)")
-
-            if  dummy:
-                #results = np.zeros(nbeads), np.zeros(pos.shape), np.zeros((nbeads,3,3)), ""
-                
-                pot = np.zeros(1)
-                f = np.zeros((nat*3))
-                vir = np.zeros((3,3))
-
-                timers.start("[+]MPI Gather Forces")
-                if rank == 0:
-                    pot_all = np.empty(nbeads)
-                    f_all   = np.empty(pos.shape)
-                    vir_all = np.empty((nbeads, 3,3))
-                else:
-                    pot_all = f_all = vir_all = None
-
-                comm.Gather(pot, pot_all, root=0)
-                comm.Gather(f, f_all, root=0)
-                comm.Gather(vir, vir_all, root=0)
-                
-                if rank ==0:
-                    results = (pot_all, f_all, vir_all, "")
-                timers.stop("[+]MPI Gather Forces")
-            else:
-                results = driver(cell, pos_local)
+            results = driver(cell, pos_local)
             
             timers.stop("Run Driver(+)")
 
@@ -398,10 +373,6 @@ if __name__ == "__main__":
     )
 
     args = parser.parse_args()
-
-    dummy = False
-    if args.mode == "dummy":
-        dummy = True
 
     driver_args, driver_kwargs = read_args_kwargs(args.param)
 
