@@ -13,7 +13,6 @@ import numpy as np
 from ipi.utils.depend import *
 from ipi.utils.mathtools import *
 
-
 __all__ = ["Cell", "GenericCell"]
 
 
@@ -83,14 +82,13 @@ class Cell:
 
         return np.dot(self.h, s)
 
-   
     def array_pbc(self, pos):
         """
         Apply minimum image convention to positions.
-        
+
         Args:
             pos: numpy array, either shape (nbeads, nat*3) or (nat*3,)
-        
+
         Updates:
             pos in-place (shared memory safe)
         """
@@ -105,16 +103,16 @@ class Cell:
 
         s = dstrip(pos).reshape(nbeads, nat, 3)
 
-        s = np.einsum('ij,bnj->bni', dstrip(self.ih), s)
+        s = np.einsum("ij,bnj->bni", dstrip(self.ih), s)
         s -= np.round(s)
-        s = np.einsum('ij,bnj->bni', dstrip(self.h), s)
-        s = s.reshape(nbeads, nat*3)
+        s = np.einsum("ij,bnj->bni", dstrip(self.h), s)
+        s = s.reshape(nbeads, nat * 3)
 
         pos[:] = s
 
         # if original pos was 1D, return flattened 1D view
         if squeeze:
-            pos.shape = (nat*3,)
+            pos.shape = (nat * 3,)
 
     def minimum_distance(self, atom1, atom2):
         """Takes two atoms and tries to find the smallest vector between two

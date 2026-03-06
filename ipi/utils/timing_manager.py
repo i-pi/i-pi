@@ -39,6 +39,7 @@ try:
 except ValueError:
     DEFAULT_SKIP_FIRST = 5
 
+
 class TimingManager:
     """Collects elapsed times and writes a human-readable + tabular summary.
 
@@ -63,10 +64,21 @@ class TimingManager:
                 }
             )
             self.group_symbols = [
-                                    "+", "++", "+++", "++++","+++++","++++++",
-                                    "*", "**", "***", "****",
-                                    "#", "##", "###", "####"
-                                  ]  # supported hierarchy roots
+                "+",
+                "++",
+                "+++",
+                "++++",
+                "+++++",
+                "++++++",
+                "*",
+                "**",
+                "***",
+                "****",
+                "#",
+                "##",
+                "###",
+                "####",
+            ]  # supported hierarchy roots
             self.decimals = 4
             self.skip_first_default = max(DEFAULT_SKIP_FIRST, 0)
             self.current_step = 0
@@ -182,10 +194,10 @@ class TimingManager:
 
         if "(" in name and name.endswith(")"):
             _, marker = name.rsplit("(", 1)
-            marker_of_children =  marker[:-1]
+            marker_of_children = marker[:-1]
         if "]" in name and name.startswith("["):
             marker, _ = name.rsplit("]", 1)
-            marker_of_parent =  marker[1:]
+            marker_of_parent = marker[1:]
 
         return marker_of_parent, marker_of_children
 
@@ -201,8 +213,6 @@ class TimingManager:
             display = display.rsplit("(", 1)[0]
 
         return display.strip()
-
-
 
     def summary(self, filename, skip_first=None, tree_numbers=False):
         """Generate and print a hierarchical timing report.
@@ -242,29 +252,40 @@ class TimingManager:
         rows = []
 
         # Determine global total time (sum of top-level timers)
-        top_level = [n for n in self._all_times.keys()
-                     if self._parse_marker(n)[0] is None]
+        top_level = [
+            n for n in self._all_times.keys() if self._parse_marker(n)[0] is None
+        ]
         global_total = sum(self.get_total(n) for n in top_level)
 
         # Helper to register a row
-        def record_row(name, avg_skip, avg_all, max_skip, max_all,
-                       count, total, indent_level, parent_total):
+        def record_row(
+            name,
+            avg_skip,
+            avg_all,
+            max_skip,
+            max_all,
+            count,
+            total,
+            indent_level,
+            parent_total,
+        ):
             total_pct = (total / global_total * 100) if global_total > 0 else 0.0
             parent_pct = (total / parent_total * 100) if parent_total > 0 else 0.0
 
-            rows.append({
-                "Name": name,
-                "Indent": indent_level,
-                "Avg_aftern(ms/step)": avg_skip,
-                "Total%": total_pct,
-                "Parent%": parent_pct,
-                "Avg(ms/step)": avg_all,
-                "Max_aftern(ms/step)": max_skip,
-                "Max(ms/step)": max_all,
-                "Count": count,
-                "Total(ms)": total
-            })
-
+            rows.append(
+                {
+                    "Name": name,
+                    "Indent": indent_level,
+                    "Avg_aftern(ms/step)": avg_skip,
+                    "Total%": total_pct,
+                    "Parent%": parent_pct,
+                    "Avg(ms/step)": avg_all,
+                    "Max_aftern(ms/step)": max_skip,
+                    "Max(ms/step)": max_all,
+                    "Count": count,
+                    "Total(ms)": total,
+                }
+            )
 
         # ---------------- Print identical header ----------------
         print("\n")
@@ -274,13 +295,24 @@ class TimingManager:
         count_w = 8
         total_w = 12
         table_w = name_w + avg_w + max_w + count_w + total_w + 4
-        header_fmt = (f"{{:<{name_w}}} {{:>{avg_w}}} {{:>{max_w}}} "
-                      f"{{:>{count_w}}} {{:>{total_w}}}")
-        row_fmt = (f"{{:<{name_w}}} {{:>{avg_w}}} {{:>{max_w}}} "
-                   f"{{:>{count_w}}} {{:>{total_w}}}")
+        header_fmt = (
+            f"{{:<{name_w}}} {{:>{avg_w}}} {{:>{max_w}}} "
+            f"{{:>{count_w}}} {{:>{total_w}}}"
+        )
+        row_fmt = (
+            f"{{:<{name_w}}} {{:>{avg_w}}} {{:>{max_w}}} "
+            f"{{:>{count_w}}} {{:>{total_w}}}"
+        )
 
-        print(header_fmt.format("Timer", "Avg_aftern(ms/step)",
-                                "Max_aftern(ms/step)", "Count", "Total(ms)"))
+        print(
+            header_fmt.format(
+                "Timer",
+                "Avg_aftern(ms/step)",
+                "Max_aftern(ms/step)",
+                "Count",
+                "Total(ms)",
+            )
+        )
         print("-" * table_w)
 
         all_names = sorted(self._all_times.keys())
@@ -290,8 +322,9 @@ class TimingManager:
         def build_tree_prefix(ancestor_has_more, is_last):
             if is_last is None:
                 return "", 0
-            stem = "".join("│   " if has_more else "    "
-                           for has_more in ancestor_has_more)
+            stem = "".join(
+                "│   " if has_more else "    " for has_more in ancestor_has_more
+            )
             branch = "└─ " if is_last else "├─ "
             indent_width = 4 * len(ancestor_has_more)
             return stem + branch, indent_width
@@ -307,8 +340,14 @@ class TimingManager:
             return f"{prefix}{value_str:>{width - len(prefix)}}"
 
         # Local helper for printing line AND recording DF row
-        def print_line(name, skip_first, indent_level, parent_name=None,
-                       ancestor_has_more=None, is_last=None):
+        def print_line(
+            name,
+            skip_first,
+            indent_level,
+            parent_name=None,
+            ancestor_has_more=None,
+            is_last=None,
+        ):
             if ancestor_has_more is None:
                 ancestor_has_more = []
             avg_all = self.get_average(name)
@@ -317,7 +356,7 @@ class TimingManager:
             max_skip = self.get_max(name, skip_first)
             total = self.get_total(name)
             count = self.get_count(name)
-            #for some reason indented number print doesnt work yet
+            # for some reason indented number print doesnt work yet
             tree_prefix, indent_width = build_tree_prefix(ancestor_has_more, is_last)
             indent_width = len(tree_prefix)
             rendered_name = f"{tree_prefix}{self._display_name(name)}"
@@ -327,20 +366,31 @@ class TimingManager:
             count_cell = _numeric_cell(count, count_w, "", is_int=True)
             total_cell = _numeric_cell(total, total_w, "", is_int=False)
 
-            print(row_fmt.format(rendered_name, avg_cell, max_cell,
-                                 count_cell, total_cell))
+            print(
+                row_fmt.format(
+                    rendered_name, avg_cell, max_cell, count_cell, total_cell
+                )
+            )
 
             parent_total = self.get_total(parent_name) if parent_name else total
-            record_row(name, avg_skip, avg_all, max_skip, max_all, count,
-                       total, indent_level, parent_total)
-
+            record_row(
+                name,
+                avg_skip,
+                avg_all,
+                max_skip,
+                max_all,
+                count,
+                total,
+                indent_level,
+                parent_total,
+            )
 
         # ---------------- Recursive children printer ----------------
-        def print_children(parent_name, marker, skip_first, indent_level,
-                           ancestor_has_more):
+        def print_children(
+            parent_name, marker, skip_first, indent_level, ancestor_has_more
+        ):
             direct_children = [
-                n for n in self._all_times.keys()
-                if self._parse_marker(n)[0] == marker
+                n for n in self._all_times.keys() if self._parse_marker(n)[0] == marker
             ]
             direct_children.sort()
 
@@ -348,9 +398,15 @@ class TimingManager:
 
             for i, child in enumerate(direct_children):
                 visited.add(child)
-                is_last_child = (i == len(direct_children) - 1)
-                print_line(child, skip_first, indent_level, parent_name,
-                           ancestor_has_more, is_last=is_last_child)
+                is_last_child = i == len(direct_children) - 1
+                print_line(
+                    child,
+                    skip_first,
+                    indent_level,
+                    parent_name,
+                    ancestor_has_more,
+                    is_last=is_last_child,
+                )
 
                 # get_average already returns per-step cost, including repeated
                 # calls within a step, so no extra count scaling is needed.
@@ -359,9 +415,13 @@ class TimingManager:
                 _, child_marker = self._parse_marker(child)
                 if child_marker:
                     child_ancestor_has_more = ancestor_has_more + [not is_last_child]
-                    print_children(child, child_marker, skip_first,
-                                   indent_level + 1,
-                                   ancestor_has_more=child_ancestor_has_more)
+                    print_children(
+                        child,
+                        child_marker,
+                        skip_first,
+                        indent_level + 1,
+                        ancestor_has_more=child_ancestor_has_more,
+                    )
 
             # Remainder line (console only)
             if direct_children:
@@ -372,17 +432,24 @@ class TimingManager:
                 else:
                     percent = 0
                     print(f"Error in timing manager: Parent time of [{marker}] is 0.")
-                remainder_indent = "".join("│   " if has_more else "    "
-                                           for has_more in ancestor_has_more)
+                remainder_indent = "".join(
+                    "│   " if has_more else "    " for has_more in ancestor_has_more
+                )
                 remainder_indent_width = 4 * len(ancestor_has_more)
-                remainder_num_prefix = (" " * remainder_indent_width) if tree_numbers else ""
-                print(row_fmt.format(remainder_indent + str(percent),
-                                     _numeric_cell(remainder,
-                                                   avg_w,
-                                                   remainder_num_prefix,
-                                                   is_int=False),
-                                     "", "", ""))
-
+                remainder_num_prefix = (
+                    (" " * remainder_indent_width) if tree_numbers else ""
+                )
+                print(
+                    row_fmt.format(
+                        remainder_indent + str(percent),
+                        _numeric_cell(
+                            remainder, avg_w, remainder_num_prefix, is_int=False
+                        ),
+                        "",
+                        "",
+                        "",
+                    )
+                )
 
         # ---------------- Top-level timers ----------------
         for name in all_names:
@@ -394,8 +461,13 @@ class TimingManager:
             if marker_of_parent is None and marker_of_children:
                 visited.add(name)
                 print_line(name, skip_first, indent_level=0, parent_name=None)
-                print_children(name, marker_of_children, skip_first,
-                               indent_level=1, ancestor_has_more=[])
+                print_children(
+                    name,
+                    marker_of_children,
+                    skip_first,
+                    indent_level=1,
+                    ancestor_has_more=[],
+                )
             else:
                 visited.add(name)
                 print_line(name, skip_first, indent_level=0, parent_name=None)
@@ -409,7 +481,7 @@ class TimingManager:
 
         # Write dataframe
         df = pd.DataFrame(rows)
-        df.to_csv(f"{filename}.dat", sep=";", index=False, float_format='%.4f')
+        df.to_csv(f"{filename}.dat", sep=";", index=False, float_format="%.4f")
 
         # Print to console what user would normally see
         print(log_buffer.getvalue(), end="")

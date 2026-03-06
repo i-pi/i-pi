@@ -34,7 +34,6 @@ from ipi.utils.mathtools import (
     random_rotation,
 )
 
-
 plumed = None
 
 
@@ -42,6 +41,7 @@ def tracer(frame, event, arg):
     if event == "call":
         print("CALL:", frame.f_code.co_name)
     return tracer
+
 
 class ForceRequest(dict):
     """An extension of the standard Python dict class which only has a == b
@@ -171,8 +171,6 @@ class ForceField:
         timers.start("[******]Update atoms.q")
         pbcpos = dstrip(atoms.q)
         timers.stop("[******]Update atoms.q")
-        
-
 
         # Indexes come from input in a per atom basis and we need to make a per atom-coordinate basis
         # Reformat indexes for full system (default) or piece of system
@@ -394,6 +392,7 @@ class FFSocket(ForceField):
 
 class FFBatch(FFSocket):
     pass
+
 
 class FFEval(ForceField):
     """General class for models that provide a self.evaluate(request)
@@ -1051,13 +1050,11 @@ class FFYaff(FFEval):
 
         """
 
-        warning(
-            """
+        warning("""
                 <ffyaff> is deprecated and might be removed in a future release of i-PI.
                 If you are interested in using it, please help port it to the PES
                 infrastructure.
-                """
-        )
+                """)
 
         from yaff import System, ForceField, log
         import codecs
@@ -1151,13 +1148,11 @@ class FFsGDML(FFEval):
 
         """
 
-        warning(
-            """
+        warning("""
                 <ffsgdml> is deprecated and might be removed in a future release of i-PI.
                 If you are interested in using it, please help port it to the PES
                 infrastructure.
-                """
-        )
+                """)
 
         # a socket to the communication library is created or linked
         super(FFsGDML, self).__init__(

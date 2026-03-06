@@ -21,7 +21,6 @@ import numpy as np
 import sys
 import argparse
 
-
 # You can insert the i-pi path with the following lines.
 # Uncomment them and adjust the ipi_path variable
 

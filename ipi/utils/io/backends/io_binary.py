@@ -10,7 +10,6 @@
 import sys
 import numpy as np
 
-
 __all__ = ["print_binary", "read_binary"]
 
 

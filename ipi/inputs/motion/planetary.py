@@ -16,7 +16,6 @@ from ipi.utils.inputvalue import (
 )
 from ipi.inputs.thermostats import InputThermo
 
-
 __all__ = ["InputPlanetary"]
 
 

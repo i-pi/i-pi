@@ -43,8 +43,8 @@ def logsumlog(lasa, lbsb):
        (log(|A+B|), sign(A+B)) as a tuple
     """
 
-    (la, sa) = lasa
-    (lb, sb) = lbsb
+    la, sa = lasa
+    lb, sb = lbsb
 
     if la > lb:
         sr = sa
@@ -215,7 +215,7 @@ def h2abc_deg(h):
        in degrees.
     """
 
-    (a, b, c, alpha, beta, gamma) = h2abc(h)
+    a, b, c, alpha, beta, gamma = h2abc(h)
     return a, b, c, alpha * 180 / math.pi, beta * 180 / math.pi, gamma * 180 / math.pi
 
 

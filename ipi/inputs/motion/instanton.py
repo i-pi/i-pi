@@ -23,7 +23,6 @@ Classes:
 import numpy as np
 from ipi.utils.inputvalue import *
 
-
 __all__ = ["InputInst"]
 
 

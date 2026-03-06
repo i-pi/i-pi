@@ -203,6 +203,7 @@ class DriverSocket(socket.socket):
         else:
             return np.frombuffer(self._buf[0:blen], dest.dtype)[0]
 
+
 class SHMDriver(DriverSocket):
     """Shared-memory driver client with socket-based control.
 
@@ -223,7 +224,6 @@ class SHMDriver(DriverSocket):
        *_shm: SharedMemory handles for each buffer.
        *_snp: Numpy views into shared-memory buffers.
     """
-
 
     def __init__(self, sock):
         """Initialises an SHM-backed driver client.
@@ -249,7 +249,7 @@ class SHMDriver(DriverSocket):
         self.pos_bufname = f"IPI-POS-{self.id}"
         self.h_bufname = f"IPI-H-{self.id}"
         self.ih_bufname = f"IPI-IH-{self.id}"
-        
+
         self.pot_bufname = f"IPI-POT-{self.id}"
         self.f_bufname = f"IPI-F-{self.id}"
         self.vir_bufname = f"IPI-VIR-{self.id}"
@@ -272,7 +272,6 @@ class SHMDriver(DriverSocket):
         self.pot_snp = None
         self.f_snp = None
         self.vir_snp = None
-
 
     def shutdown(self, how=socket.SHUT_RDWR):
         """Tries to send an exit message to clients to let them exit gracefully."""
@@ -300,8 +299,6 @@ class SHMDriver(DriverSocket):
         self.pot_shm.unlink()
         self.f_shm.unlink()
         self.vir_shm.unlink()
-
-
 
         super(DriverSocket, self).shutdown(how)
 
@@ -460,13 +457,11 @@ class SHMDriver(DriverSocket):
         global TIMEOUT  # we need to update TIMEOUT in case of sendall failure
         # this is to handle the batch mode for multiple bead positions
         timers.start
-        
+
         if self.status & Status.Ready:
             try:
-                self.np_to_shm(r) 
-                self.sendall(
-                    MESSAGE["posdata"]  # header
-                )
+                self.np_to_shm(r)
+                self.sendall(MESSAGE["posdata"])  # header
                 self.status = Status.Up | Status.Busy
             except socket.timeout:
                 warning(
@@ -527,10 +522,8 @@ class SHMDriver(DriverSocket):
         else:
             raise InvalidStatus("Status in getforce was " + str(self.status))
 
-
         return self.shm_to_np()
 
-    
     def alloc_shm(self, r):
         """Allocate and map shared-memory buffers for the first request.
 
@@ -551,29 +544,46 @@ class SHMDriver(DriverSocket):
             else:
                 self.nat = r["pos"].shape[1] // 3
                 self.nbeads = r["pos"].shape[0]
-            
+
             # assuming float64 in size*8
-            self.pos_shm =  shared_memory.SharedMemory(create=True, size=r["pos"].size*8, name=self.pos_bufname)
-            self.h_shm = shared_memory.SharedMemory(create=True, size=9*8, name=self.h_bufname)
-            self.ih_shm = shared_memory.SharedMemory(create=True, size=9*8, name=self.ih_bufname)
-            
-            self.pot_shm = shared_memory.SharedMemory(create=True, size=self.nbeads*8, name=self.pot_bufname)
-            self.f_shm = shared_memory.SharedMemory(create=True, size=r["pos"].size*8, name=self.f_bufname)
-            self.vir_shm = shared_memory.SharedMemory(create=True, size=self.nbeads*9*8, name=self.vir_bufname)
-
-            self.pos_snp = np.ndarray(r["pos"].shape, dtype=np.float64, buffer=self.pos_shm.buf)
-            self.h_snp = np.ndarray((3,3), dtype=np.float64, buffer=self.h_shm.buf)
-            self.ih_snp = np.ndarray((3,3), dtype=np.float64, buffer=self.ih_shm.buf)
-            
-            self.pot_snp =np.ndarray((self.nbeads), dtype=np.float64, buffer=self.pot_shm.buf)
-            self.f_snp =np.ndarray(r["pos"].shape, dtype=np.float64, buffer=self.f_shm.buf)
-            self.vir_snp =np.ndarray((self.nbeads,3,3), dtype=np.float64, buffer=self.vir_shm.buf)
-        except Exception as exc:
-            warning(
-                f"Exception occured:: {exc}", verbosity.quiet
+            self.pos_shm = shared_memory.SharedMemory(
+                create=True, size=r["pos"].size * 8, name=self.pos_bufname
             )
-            raise exc
+            self.h_shm = shared_memory.SharedMemory(
+                create=True, size=9 * 8, name=self.h_bufname
+            )
+            self.ih_shm = shared_memory.SharedMemory(
+                create=True, size=9 * 8, name=self.ih_bufname
+            )
 
+            self.pot_shm = shared_memory.SharedMemory(
+                create=True, size=self.nbeads * 8, name=self.pot_bufname
+            )
+            self.f_shm = shared_memory.SharedMemory(
+                create=True, size=r["pos"].size * 8, name=self.f_bufname
+            )
+            self.vir_shm = shared_memory.SharedMemory(
+                create=True, size=self.nbeads * 9 * 8, name=self.vir_bufname
+            )
+
+            self.pos_snp = np.ndarray(
+                r["pos"].shape, dtype=np.float64, buffer=self.pos_shm.buf
+            )
+            self.h_snp = np.ndarray((3, 3), dtype=np.float64, buffer=self.h_shm.buf)
+            self.ih_snp = np.ndarray((3, 3), dtype=np.float64, buffer=self.ih_shm.buf)
+
+            self.pot_snp = np.ndarray(
+                (self.nbeads), dtype=np.float64, buffer=self.pot_shm.buf
+            )
+            self.f_snp = np.ndarray(
+                r["pos"].shape, dtype=np.float64, buffer=self.f_shm.buf
+            )
+            self.vir_snp = np.ndarray(
+                (self.nbeads, 3, 3), dtype=np.float64, buffer=self.vir_shm.buf
+            )
+        except Exception as exc:
+            warning(f"Exception occured:: {exc}", verbosity.quiet)
+            raise exc
 
     def np_to_shm(self, r):
         """Write request data into shared-memory buffers.
@@ -592,10 +602,14 @@ class SHMDriver(DriverSocket):
         """
         mxtradict = ""
         if self.nbeads == 1:
-            return [float(self.pot_snp), self.f_snp.squeeze(), self.vir_snp.squeeze(), mxtradict]
+            return [
+                float(self.pot_snp),
+                self.f_snp.squeeze(),
+                self.vir_snp.squeeze(),
+                mxtradict,
+            ]
         else:
             return [self.pot_snp, self.f_snp, self.vir_snp, mxtradict]
-        
 
     def dispatch(self, r):
         """Dispatches a request r and looks after it setting results
@@ -606,12 +620,12 @@ class SHMDriver(DriverSocket):
         On the first dispatch, shared-memory buffers are allocated and their
         names are sent to the driver during initialization.
         """
-        
+
         if self.first_dispatch:
             self.alloc_shm(r)
             self.first_dispatch = False
 
-        #timers.start("[++++++]Get Stat1")
+        # timers.start("[++++++]Get Stat1")
         if not self.status & Status.Up:
             warning(
                 " @SOCKET:   Inconsistent client state in dispatch thread! (I)",
@@ -622,7 +636,9 @@ class SHMDriver(DriverSocket):
 
         self.get_status()
         if self.status & Status.NeedsInit:
-            self.initialize(r["id"], r["pars"]) # also sending here buffer names to find shm on driver
+            self.initialize(
+                r["id"], r["pars"]
+            )  # also sending here buffer names to find shm on driver
             self.status = self.get_status()
 
         if not (self.status & Status.Ready):
@@ -643,18 +659,15 @@ class SHMDriver(DriverSocket):
                 verbosity.low,
             )
             return
-        
+
         try:
             r["result"] = self.getforce()
         except Disconnected:
             self.status = Status.Disconnected
             return
         except Exception as exc:
-            warning(
-                f"Other exception during force receive: {exc}", verbosity.quiet
-            )
+            warning(f"Other exception during force receive: {exc}", verbosity.quiet)
             raise exc
-
 
         r["result"][0] -= r["offset"]
 
@@ -1297,13 +1310,16 @@ class InterfaceSocket(object):
             if self.server in readable:
                 client, address = self.server.accept()
                 client.settimeout(TIMEOUT)
-               
+
                 if self.shm:
                     driver = SHMDriver(client)
-                    info(" @interfacesocket.pool_update: Using SHM communication", verbosity.low)
+                    info(
+                        " @interfacesocket.pool_update: Using SHM communication",
+                        verbosity.low,
+                    )
                 else:
                     driver = Driver(client)
-                
+
                 info(
                     " @interfacesocket.pool_update:   Client asked for connection from "
                     + str(address)

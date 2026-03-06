@@ -6,7 +6,6 @@ from ipi.pes import Dummy_driver, load_pes, __drivers__
 from ipi.utils.io.inputs import read_args_kwargs
 from multiprocessing import shared_memory
 
-
 description = """
 Minimal example of a Python driver connecting to i-PI and exchanging energy, forces, etc.
 """
@@ -19,7 +18,6 @@ def Message(mystr):
 
     # convert to bytestream since we'll be sending this over a socket
     return str.ljust(str.upper(mystr), HDRLEN).encode()
-
 
 
 def recv_data(sock, data):
@@ -104,7 +102,7 @@ def run_driver(
             rid = recv_data(sock, np.int32())
             initlen = recv_data(sock, np.int32())
             initstr = recv_data(sock, np.chararray(initlen))
-            #initstr = recv_data(sock, np.empty(initlen, dtype=np.uint8))
+            # initstr = recv_data(sock, np.empty(initlen, dtype=np.uint8))
 
             if f_verbose:
                 print(rid, "Initing...")
@@ -167,6 +165,7 @@ def run_driver(
             print("Received exit message from i-PI. Bye bye!")
             return
 
+
 def run_shmdriver(
     unix=True,
     address="",
@@ -199,7 +198,7 @@ def run_shmdriver(
     pot = 0.0
     force = np.zeros(0, float)
     vir = np.zeros((3, 3), float)
-    
+
     while True:  # ah the infinite loop!
         header = sock.recv(HDRLEN)
         if f_verbose:
@@ -219,15 +218,15 @@ def run_shmdriver(
             initlen = recv_data(sock, np.int32())
             initstr = recv_data(sock, np.chararray(initlen))
             print("initstr")
-                  
+
             # receiving nat and nbeads at init, necessary to be able to allocate the correct numpy shapes in SHM
             nat = recv_data(sock, np.int32())
             nbeads = recv_data(sock, np.int32())
-          
+
             if f_verbose:
                 print(rid, initstr)
                 print(f"natoms, nbeads: {nat}, {nbeads}")
-            
+
             # reading buffer names for shaerd memory access
             pos_bufname = sock.recv(HDRLEN).decode("utf-8").strip()
             h_bufname = sock.recv(HDRLEN).decode("utf-8").strip()
@@ -237,9 +236,11 @@ def run_shmdriver(
             vir_bufname = sock.recv(HDRLEN).decode("utf-8").strip()
 
             print("Driver initing SHM with buffer names:")
-            print(pos_bufname, h_bufname, ih_bufname, pot_bufname, f_bufname, vir_bufname)
+            print(
+                pos_bufname, h_bufname, ih_bufname, pot_bufname, f_bufname, vir_bufname
+            )
 
-            #shm objects
+            # shm objects
             cell_shm = shared_memory.SharedMemory(name=h_bufname)
             icell_shm = shared_memory.SharedMemory(name=ih_bufname)
             pot_shm = shared_memory.SharedMemory(name=pot_bufname)
@@ -247,26 +248,23 @@ def run_shmdriver(
             f_shm = shared_memory.SharedMemory(name=f_bufname)
             vir_shm = shared_memory.SharedMemory(name=vir_bufname)
 
-
             # allocating numpy arrays in shared memory on the same buffer as in the server
-            cell_snp = np.ndarray((3,3), dtype=np.float64, buffer=cell_shm.buf)
-            icell_snp = np.ndarray((3,3), dtype=np.float64, buffer=icell_shm.buf)
+            cell_snp = np.ndarray((3, 3), dtype=np.float64, buffer=cell_shm.buf)
+            icell_snp = np.ndarray((3, 3), dtype=np.float64, buffer=icell_shm.buf)
             pot_snp = np.ndarray((1), dtype=np.float64, buffer=pot_shm.buf)
-            pos_snp = np.ndarray((nat*3), dtype=np.float64, buffer=pos_shm.buf)
-            f_snp = np.ndarray((nat*3), dtype=np.float64, buffer=f_shm.buf)
-            vir_snp = np.ndarray((3,3), dtype=np.float64, buffer=vir_shm.buf)
+            pos_snp = np.ndarray((nat * 3), dtype=np.float64, buffer=pos_shm.buf)
+            f_snp = np.ndarray((nat * 3), dtype=np.float64, buffer=f_shm.buf)
+            vir_snp = np.ndarray((3, 3), dtype=np.float64, buffer=vir_shm.buf)
 
-            
-            
             f_init = True  # we are initialized now
-        
+
         elif header == Message("POSDATA"):
             # receives structural information
             pos = pos_snp[:]
             cell = cell_snp[:]
             icell = icell_snp[:]
-            
-            ''' 
+
+            """ 
             if len(pos) == 0:
                 # shapes up the position array
                 pos.resize((nat, 3), refcheck=False)
@@ -274,7 +272,7 @@ def run_shmdriver(
             else:
                 if len(pos) != nat:
                     raise RuntimeError("Atom number changed during i-PI run")
-            '''
+            """
 
             ##### THIS IS THE TIME TO DO SOMETHING WITH THE POSITIONS!
             pot, force, vir, extras = driver(cell, pos)
@@ -332,7 +330,7 @@ if __name__ == "__main__":
         action="store_true",
         default=False,
         help="Use shared memory communication",
-    )   
+    )
     parser.add_argument(
         "-a",
         "--address",

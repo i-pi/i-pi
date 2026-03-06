@@ -20,7 +20,6 @@ Syntax:
    remdsort.py inputfile.xml
 """
 
-
 import sys
 from copy import deepcopy
 import numpy as np
@@ -63,10 +62,8 @@ def main(inputfile, prefix="SRT_"):
                         )
                     swapfile = sm.swapfile
         if swapfile == "":
-            raise ValueError(
-                "Could not determine the REMD swapfile name. \
-                 Sorry, you'll have to look carefully at your inputs."
-            )
+            raise ValueError("Could not determine the REMD swapfile name. \
+                 Sorry, you'll have to look carefully at your inputs.")
 
     # reconstructs the list of the property and trajectory files that have been output
     # and that should be re-ordered

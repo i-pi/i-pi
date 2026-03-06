@@ -336,7 +336,7 @@ class MetatomicDriver(Dummy_driver):
                 energy_uncertainty_tensor.detach()
                 .to(device="cpu", dtype=torch.float64)
                 .numpy(),
-            ).reshape(num_systems,-1)
+            ).reshape(num_systems, -1)
 
             for extras_dict, energy_uq in zip(extras_dicts, energy_uncertainty):
                 extras_dict["energy_uncertainty"] = list(energy_uq)

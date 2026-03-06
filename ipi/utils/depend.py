@@ -33,7 +33,6 @@ import numpy as np
 
 from ipi.utils.messages import verbosity, warning, info
 
-
 __all__ = [
     "depend_value",
     "depend_array",
