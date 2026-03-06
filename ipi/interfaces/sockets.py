@@ -254,7 +254,11 @@ class SHMDriver(DriverSocket):
         self.f_bufname = f"IPI-F-{self.id}"
         self.vir_bufname = f"IPI-VIR-{self.id}"
 
-        print(f"Inited SHMDriver with {self.pos_bufname}")
+        info(
+            f" @SOCKET: SHMDriver initied with buffer: {self.pos_bufname}",
+            verbosity.low,
+        )
+
         self.pos_shm = None
         self.h_shm = None
         self.ih_shm = None

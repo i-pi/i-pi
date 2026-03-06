@@ -357,6 +357,7 @@ class Simulation:
         ttot = 0.0
         # main MD loop
         for self.step in range(self.step, self.tsteps):
+            timers.set_step(self.step)
             timers.start("Total Step(+)")
             # stores the state before doing a step.
             # this is a bit time-consuming but makes sure that we can honor soft
