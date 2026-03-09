@@ -1,13 +1,13 @@
 import numpy as np
 import sys
-
-from ipi.utils.messages import verbosity, info
+import argparse
 
 """ Simple function to post-process the results of an instanton calculation."""
 # Y. Litman, 2017.
 
 from ipi.engine.simulation import Simulation
 from ipi.utils.units import unit_to_internal, Constants
+from ipi.utils.messages import verbosity, info
 from ipi.utils.instools import red2comp
 from ipi.utils.hesstools import clean_hessian
 from ipi.engine.motion.instanton import SpringMapper
@@ -134,7 +134,16 @@ def save_frequencies(d, nzeros, filename="freq.dat"):
 
 
 def instanton_compute(
-    inputt, case, temp, asr, V00, filt, nbeadsR, input_freq, quiet, Verbosity
+    inputt,
+    case,
+    temp,
+    asr="poly",
+    V00=0.0,
+    filt=[],
+    nbeadsR=0,
+    input_freq=None,
+    quiet=False,
+    Verbosity=verbosity,
 ):
 
     if case not in list(["reactant", "TS", "instanton"]):
@@ -500,3 +509,123 @@ def instanton_compute(
     info("Tunneling Splitting: J. Chem. Phys. 134, 054109 (2011)", verbosity.medium)
     info("\n\n", verbosity.medium)
     sys.exit(0)
+
+
+if __name__ == "__main__":
+    # INPUT
+
+    parser = argparse.ArgumentParser(
+        description="""
+    Post-processing tool for instanton and instanton-related calculations.
+    
+    This script extracts the required information from an i-PI RESTART file
+    and computes thermodynamic quantities within the instanton approximation.
+    These quantities can be used to evaluate reaction rates or tunneling
+    splittings.
+    """,
+        epilog="""
+     Theory references
+     -----------------
+     Rate calculations:
+       J. Phys. Chem. Lett. 7, 437 (2016)
+     
+     Tunneling splittings:
+       J. Chem. Phys. 134, 054109 (2011)
+     
+     
+     Syntax
+     ------
+       python Instanton_postproc.py <checkpoint_file> -c <case> -t <temperature (K)>
+                                    [-n <nbeads (full polymer)>]
+                                    [-freq <freq_reactant.dat>]
+     
+     
+     Examples (rate calculations)
+     ----------------------------
+       python Instanton_postproc.py RESTART -c instanton -t 300
+       python Instanton_postproc.py RESTART -c reactant  -t 300 -n 50
+       python Instanton_postproc.py RESTART -c TS        -t 300
+     
+     
+     Examples (tunneling splitting, two steps)
+     -----------------------------------------
+       i)  python Instanton_postproc.py RESTART -c reactant  -t 10 -n 32
+           → generates 'eigenvalues_reactant.dat'
+     
+       ii) python Instanton_postproc.py RESTART -c instanton -t 10
+           -freq eigenvalues_reactant.dat
+     
+     
+     Dependencies
+     ------------
+     This script relies on the i-PI Python infrastructure.
+     The ipi package must be installed in your Python environment,
+     or the i-PI source directory must be added to PYTHONPATH.
+     """,
+        formatter_class=argparse.RawTextHelpFormatter,
+    )
+
+    parser.add_argument("input", help="Restart file")
+    parser.add_argument(
+        "-c",
+        "--case",
+        default=False,
+        help="Type of the calculation to analyse. Options: 'instanton', 'reactant' or 'TS'.",
+    )
+    parser.add_argument(
+        "-t", "--temperature", type=float, default=0.0, help="Temperature in K."
+    )
+    parser.add_argument(
+        "-asr",
+        "--asr",
+        default="poly",
+        help="Removes the zero frequency vibrational modes depending on the symmerty of the system",
+    )
+    parser.add_argument(
+        "-e", "--energy_shift", type=float, default=0.0, help="Zero of energy in eV"
+    )
+    parser.add_argument(
+        "-f",
+        "--filter",
+        default=[],
+        help="List of atoms indexes to filter (i.e. eliminate its componentes in the position,mass and hessian arrays. It is 0 based.",
+        type=int,
+        action="append",
+    )
+    parser.add_argument(
+        "-n",
+        "--nbeadsR",
+        default=0,
+        help="Number of beads (full polymer) to compute the approximate partition function (only reactant case)",
+        type=int,
+    )
+    parser.add_argument(
+        "-freq",
+        "--freq_reac",
+        default=None,
+        help="List of frequencies of the minimum. Required for splitting calculation.",
+    )
+    parser.add_argument(
+        "-q",
+        "--quiet",
+        default=False,
+        action="store_true",
+        help="Avoid the Qvib and Qrot calculation in the instanton case.",
+    )
+
+    args = parser.parse_args()
+    inputt = args.input
+    case = args.case
+    temp = args.temperature * K2au
+    asr = args.asr
+    V00 = args.energy_shift
+    filt = args.filter
+    nbeadsR = args.nbeadsR
+    input_freq = args.freq_reac
+    quiet = args.quiet
+    Verbosity = verbosity
+    Verbosity.level = "quiet"
+
+    instanton_compute(
+        inputt, case, temp, asr, V00, filt, nbeadsR, input_freq, quiet, Verbosity
+    )
