@@ -352,8 +352,8 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
                 "ffcavphsocket",
             ]:
                 new_ff = v.fetch()
-                if k == "ffsocket":
-                    # overrides ffsocket prefix
+                if k == ["ffsocket", "ffcavphsocket"]:
+                    # overrides ffsocket and ffcavsocket prefix - important if no access to /tmp in machines
                     new_ff.socket.sockets_prefix = self.sockets_prefix.fetch()
                 fflist.append(new_ff)
 
