@@ -35,7 +35,7 @@
       <dynamics mode='nve-f' splitting='fbabf'>
         <timestep units='femtosecond'> 0.5 </timestep>
         <friction>
-	  <alpha_input mode='file' shape='(32, 2)' > alpha_ref.dat </alpha_input>
+	  <debug_alpha_input mode='file' shape='(32, 2)' > alpha_ref.dat </debug_alpha_input>
 	</friction>
       </dynamics>
     </motion>

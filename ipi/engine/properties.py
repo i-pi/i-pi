@@ -478,13 +478,13 @@ class Properties:
                 "help": "The total spring potential energy between the beads of all the ring polymers in the system.",
                 "func": (lambda: self.nm.vspring / self.beads.nbeads),
             },
-            "friction_emf": {
+            "friction_energy_mf": {
                 "dimension": "energy",
                 "help": "The mean-field potential energy contributed by friction.",
                 # TODO: can this be managed nicer?
                 "func": (
                     lambda: (
-                        self.motion.integrator.friction.emf / self.beads.nbeads
+                        self.motion.integrator.friction.energy_mf / self.beads.nbeads
                         if isinstance(
                             self.motion.integrator,
                             (NVEIntegratorWithFriction, NVTIntegratorWithFriction),

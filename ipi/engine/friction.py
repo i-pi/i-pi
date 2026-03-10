@@ -20,23 +20,15 @@ class Friction:
     # -------------------------
     variable_friction: bool
     bath_mode: str       # "none" | "markovian" | "non-markovian"
-    mf_mode: str         # "none" | "linear" | "reconstruct"
+    debug_mf_mode: str         # "none" | "linear"
 
     Lambda: np.ndarray  # [omega, J(omega)] for non-markovian OU fit
-    alpha_input: np.ndarray      # optional [omega_k, alpha]
+    debug_alpha_input: np.ndarray      # optional [omega_k, alpha]
 
     sigma_static: float
 
-    # OU fitting (non-markovian)
-    ou_nterms: int
-    ou_tmax: float
-    ou_nt: int
-    ou_print: bool
-    ou_propagator: str           # "exact" | "euler"
-
     # Extras parsing
     sigma_key: str
-    #friction_key: str
 
     # Optional: subset of atoms (0-based) that participate in electronic friction
     friction_atoms: np.ndarray | list | None
@@ -57,32 +49,20 @@ class Friction:
 
         #todo: block that is identity then it si automatically markovian.  Ap
 
-        mf_mode: str = "reconstruct",   
+        debug_mf_mode: str = "none",
         #none - no friction contribution to consevative force (basically same as alpha=0).
         ##linear - 
-        #todo: change to debug for now
-
 
         Lambda=np.zeros((0, 2), float),
         #todo: switch back to spectral density.  with some extrapolation to zero. use cubic spline and linear extrapolation to zero. and check
         # rename spectral_density
 
-        alpha_input=np.zeros((0, 2), float), #kinda debug_
-        #todo: rename debug_
+        debug_alpha_input=np.zeros((0, 2), float),
 
         sigma_static: float = 1.0,
         # if vartiable_friction is false.. then gamma = s * s   (s is a float)
 
-        #unusued
-        ou_nterms: int = 4,
-        ou_tmax: float = 200.0,
-        ou_nt: int = 2000,
-        ou_print: bool = True,
-        ou_propagator: str = "exact",
-
-
         sigma_key: str = "sigma", # points to dictionary key where sigma AKA diffusion coefficient is stored. 
-        friction_key: str = "friction", #unused
         friction_atoms = np.zeros(0, dtype=int), #atoms where sigma is provided. 
         #ideally the sigma provided is 3*natoms fullsize by the driver. or ideally the driver provides friction_atom index and IPI can pad zeros
         # or the interface returns full matrix
@@ -93,7 +73,7 @@ class Friction:
                 divided by frequncy. Supplied as a 2d array of two columns containing frequency and
                 spectral density, respectively.
                 Defaults to np.zeros(0, float).
-            alpha_input: Normal-mode coefficients in expression for the frictional mean-field
+            debug_alpha_input: Normal-mode coefficients in expression for the frictional mean-field
                 potential [Eq. (8b) in https://doi.org/10.1103/PhysRevLett.134.226201].
                 Defaults to np.zeros(0, float).
             variable_friction (bool, optional): True if the gradient of the friction coupling F(q)
@@ -106,11 +86,11 @@ class Friction:
         # Choices
         self.variable_friction = bool(variable_friction)
         self.bath_mode = str(bath_mode)
-        self.mf_mode = str(mf_mode)
+        self.debug_mf_mode = str(debug_mf_mode)
 
         # Kernel shape
         self.Lambda = np.asanyarray(Lambda, dtype=float).copy()
-        self.alpha_input = np.asanyarray(alpha_input, dtype=float).copy()
+        self.debug_alpha_input = np.asanyarray(debug_alpha_input, dtype=float).copy()
 
         self._sigma = depend_value(name="sigma", func=self._get_sigma)
         self._gamma = depend_value(
@@ -124,33 +104,23 @@ class Friction:
             dependencies=[self._sigma],
         )
         # Frictional mean-field force
-        self._fmf_nm = depend_value(
-            name="fmf_nm",
-            func=self.get_fmf_nm,
+        self._force_mf_nm = depend_value(
+            name="force_mf_nm",
+            func=self.get_force_mf_nm,
             dependencies=[self._friction_coupling_nm],
         )
 
         #force_meanfield
-        self._fmf = depend_value(
-            name="fmf", func=self.get_fmf, dependencies=[self._fmf_nm]
+        self._force_mf = depend_value(
+            name="force_mf", func=self.get_force_mf, dependencies=[self._force_mf_nm]
         )
 
         #Conserved mean-field potential 
-        #todo: energy_meanfield
-        self._emf = depend_value(name="emf", value=0.0)
+        self._energy_mf = depend_value(name="energy_mf", value=0.0)
 
         self.sigma_static = float(sigma_static)
 
-        # unused
-        self.ou_nterms = int(ou_nterms)
-        self.ou_tmax = float(ou_tmax)
-        self.ou_nt = int(ou_nt)
-        self.ou_print = bool(ou_print)
-        self.ou_propagator = str(ou_propagator)
-
-
         self.sigma_key = str(sigma_key)
-        self.friction_key = str(friction_key)
         self.sigma_meta_key = "sigma_meta"
         self._sigma_meta = {}
         self._sigma_blocks = None
@@ -169,15 +139,6 @@ class Friction:
         self.forces = None
         self.ensemble = None
         self.prng = None
-
-        # OU params: (nmodes, nterms, 3) = [c, gamma, omega]
-        self._ou_params: np.ndarray | None = None
-        # OU auxiliary states: (nmodes, nbath, nterms, 2)
-        self._ou_y: np.ndarray | None = None
-
-        # Reconstruction memory for F   # unused  - todo: remove
-        self._F_beads: np.ndarray | None = None  # (nbeads, nbath)
-        self._q_prev: np.ndarray | None = None   # (nbeads, ndof)
 
         # bookkeeping: cumulative energy exchange with bath (Markovian)
         self._ediss = depend_value(name="ediss", value=0.0)     # positive = system -> bath via friction
@@ -199,11 +160,8 @@ class Friction:
         if self.bath_mode not in ("none", "markovian", "non-markovian"):
             raise ValueError("bath_mode must be one of: 'none', 'markovian', 'non-markovian'.")
 
-        if self.mf_mode not in ("none", "linear", "reconstruct"):
-            raise ValueError("mf_mode must be one of: 'none', 'linear', 'reconstruct'.")
-
-        if self.ou_propagator not in ("exact", "euler"):
-            raise ValueError("ou_propagator must be one of: 'exact', 'euler'.")
+        if self.debug_mf_mode not in ("none", "linear"):
+            raise ValueError("debug_mf_mode must be one of: 'none', 'linear'.")
 
 
         # Non-Markovian OU fit requires spectral density
@@ -211,40 +169,32 @@ class Friction:
             if self.Lambda.size == 0:
                 raise ValueError(
                     "non-markovian requires Lambda to fit OU embedding "
-                    "(or provide alpha_input + pre-set OU params)."
+                    "(or provide debug_alpha_input explicitly)."
                 )
-
-
-            # self._fit_ou_params()
 
         # Setup alpha for MF (may be zeros if MF disabled)
         self.alpha = self._setup_alpha()
-
-        # init reconstruction memory of positions
-        self._q_prev = np.array(self.beads.q, copy=True)
 
         info(
             "Friction.bind:\n"
             f"  variable_friction = {self.variable_friction}\n"
             f"  bath_mode           = {self.bath_mode}\n"
-            f"  mf_mode             = {self.mf_mode}\n"
+            f"  debug_mf_mode       = {self.debug_mf_mode}\n"
             f"  sigma_static     = {self.sigma_static}\n"
-            f"  ou_propagator       = {self.ou_propagator}\n"
-            f"  sigma_key           = '{self.sigma_key}'\n"
-            f"  friction_key        = '{self.friction_key}'\n",
+            f"  sigma_key           = '{self.sigma_key}'\n",
             verbosity.low,
         )
 
-        if (self.variable_friction) and self.mf_mode == "linear":
+        if (self.variable_friction) and self.debug_mf_mode == "linear":
             raise ValueError(
-                "mf_mode='linear' is only meaningful with variable_friction=False.")
+                "debug_mf_mode='linear' is only meaningful with variable_friction=False.")
 
 
         # Dependencies
         self._sigma.add_dependency(self.forces._extras)
         self._friction_coupling_nm.add_dependency(self.beads._q)
-        self._emf.add_dependency(self._friction_coupling_nm)
-        self._emf._func = self.get_emf
+        self._energy_mf.add_dependency(self._friction_coupling_nm)
+        self._energy_mf._func = self.get_energy_mf
 
     def _setup_friction_atoms(self) -> None:
         """Resolves and validates the 0-based list of atoms affected by friction."""
@@ -295,22 +245,22 @@ class Friction:
         wk = np.asarray(self.nm.omegak, dtype=float)
         nmodes = wk.size
 
-        # alpha_input overrides everything
-        if self.alpha_input.size > 0:
-            if self.alpha_input.ndim != 2 or self.alpha_input.shape[1] != 2:
-                raise ValueError("alpha_input must have shape (nmodes,2) [omega_k, alpha].")
-            if self.alpha_input.shape[0] != nmodes:
-                raise ValueError(f"alpha_input rows ({self.alpha_input.shape[0]}) != nmodes ({nmodes}).")
-            if not np.allclose(self.alpha_input[:, 0], wk):
-                raise ValueError("alpha_input omega_k does not match current nm.omegak.")
-            info("Friction: using alpha from alpha_input table.", verbosity.low)
-            return np.asarray(self.alpha_input[:, 1], dtype=float)
+        # debug_alpha_input overrides everything
+        if self.debug_alpha_input.size > 0:
+            if self.debug_alpha_input.ndim != 2 or self.debug_alpha_input.shape[1] != 2:
+                raise ValueError("debug_alpha_input must have shape (nmodes,2) [omega_k, alpha].")
+            if self.debug_alpha_input.shape[0] != nmodes:
+                raise ValueError(f"debug_alpha_input rows ({self.debug_alpha_input.shape[0]}) != nmodes ({nmodes}).")
+            if not np.allclose(self.debug_alpha_input[:, 0], wk):
+                raise ValueError("debug_alpha_input omega_k does not match current nm.omegak.")
+            info("Friction: using alpha from debug_alpha_input table.", verbosity.low)
+            return np.asarray(self.debug_alpha_input[:, 1], dtype=float)
 
         # If MF disabled, keep alpha zeros
-        if self.mf_mode == "none":
+        if self.debug_mf_mode == "none":
             return np.zeros(nmodes, dtype=float)
 
-        # If MF requested but no alpha_input:
+        # If MF requested but no debug_alpha_input:
         # - for non-markovian compute from Lambda
         if self.Lambda.size > 0:
             omega = np.asarray(self.Lambda[:, 0], dtype=float)
@@ -323,7 +273,7 @@ class Friction:
             return alpha
 
         raise ValueError(
-            "Friction: MF requested but no alpha_input (and no Lambda)."
+            "Friction: MF requested but no debug_alpha_input (and no Lambda)."
         )
 
     # ==========================================================================
@@ -521,18 +471,11 @@ class Friction:
             raise ValueError(
                 f"friction.sigma has unsupported ndim={sarr.ndim}, expected scalar or 3."
             )
-        # Optional metadata-controlled sigma mode:
+        # Metadata-controlled sigma mode:
         # - "column" (default): Gamma = Sigma^T Sigma from packed rows/channels.
         # - "row": Gamma = sum_k (M_k M_k^T) using per-channel blocks M_k.
         # - "pairwise": ACE PWC-style block square on 3x3 atom blocks.
-        # Backward compatibility:
-        # - sigma_meta["square"] = "right" -> column
-        # - sigma_meta["square"] = "left"  -> pairwise
-        sigma_mode = self._sigma_meta.get("sigma_mode", None)
-        if sigma_mode is None:
-            square_mode = str(self._sigma_meta.get("square", "right")).lower()
-            sigma_mode = "pairwise" if square_mode == "left" else "column"
-        sigma_mode = str(sigma_mode).lower()
+        sigma_mode = str(self._sigma_meta.get("sigma_mode", "column")).lower()
 
         if sigma_mode in ("row", "pairwise"):
             if self._sigma_blocks is None:
@@ -616,10 +559,10 @@ class Friction:
             q_active = self.nm.qnm[:, self._friction_dof_idx]
             return np.sum(self.sigma * q_active, axis=-1)
 
-    def get_emf(self):
+    def get_energy_mf(self):
         """Compute the frictional potential of mean field, Eq. (S19) of https://doi.org/10.1103/PhysRevLett.134.226201"""
 
-        if self.mf_mode == "none":
+        if self.debug_mf_mode == "none":
             return 0.0
 
         # debug
@@ -630,7 +573,7 @@ class Friction:
 
         return np.sum(self.alpha * self.friction_coupling_nm**2) / 2
         
-    def get_fmf_nm(self):
+    def get_force_mf_nm(self):
         """Negative derivative of the frictional potential of mean field with respect to normal modes"""
         if self.variable_friction:
             return -(self.alpha * self.friction_coupling_nm)[:, np.newaxis] * self.sigma
@@ -638,15 +581,15 @@ class Friction:
         if self._friction_dof_idx is None:
             raise RuntimeError("Friction atoms have not been initialized. Call bind() first.")
 
-        fmf_nm = np.zeros_like(self.nm.qnm)
-        fmf_nm[:, self._friction_dof_idx] = (
+        force_mf_nm = np.zeros_like(self.nm.qnm)
+        force_mf_nm[:, self._friction_dof_idx] = (
             -(self.alpha * self.friction_coupling_nm)[:, np.newaxis] * self.sigma
         )
-        return fmf_nm
+        return force_mf_nm
 
-    def get_fmf(self):
+    def get_force_mf(self):
         """Negative derivative of the frictional potential of mean field with respect to bead positions"""
-        return self.nm.transform.nm2b(self.fmf_nm)
+        return self.nm.transform.nm2b(self.force_mf_nm)
 
     # ==========================================================================
     # Markovian bath
@@ -797,10 +740,7 @@ class Friction:
     # =========================================================================
 
     def _step_non_markovian(self, pdt: float) -> None:
-        if self._ou_params is None:
-            raise RuntimeError("non-markovian requested but OU params not initialized.") 
-        
-        return
+        raise NotImplementedError("non-markovian friction bath is not implemented.")
 
     # ==========================================================================
     # main step
@@ -814,8 +754,8 @@ class Friction:
         """
 
         # MF
-        if self.mf_mode != "none":
-            self.beads.p += self.fmf * pdt
+        if self.debug_mf_mode != "none":
+            self.beads.p += self.force_mf * pdt
 
         # Bath
         if self.bath_mode == "none":
@@ -831,7 +771,7 @@ class Friction:
 
 
 
-dproperties(Friction, ["sigma", "gamma", "friction_coupling_nm", "emf", "ediss", "fmf_nm", "fmf"])
+dproperties(Friction, ["sigma", "gamma", "friction_coupling_nm", "energy_mf", "ediss", "force_mf_nm", "force_mf"])
 
 
 
@@ -842,7 +782,7 @@ def get_alpha_numeric(Lambda: np.ndarray, omega: np.ndarray, omegak: np.ndarray)
     except ModuleNotFoundError as e:
         raise ModuleNotFoundError(
             "Friction: scipy is required to compute alpha from Lambda. "
-            "Install scipy or provide alpha_input explicitly."
+            "Install scipy or provide debug_alpha_input explicitly."
         ) from e
 
     omega = np.asarray(omega, dtype=float)

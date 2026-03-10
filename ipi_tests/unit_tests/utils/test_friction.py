@@ -173,7 +173,7 @@ def test_doublewell_friction_bath_modes(
     friction = Friction(
         variable_friction=variable_friction,
         bath_mode=bath_mode,
-        mf_mode="none",
+        debug_mf_mode="none",
         sigma_static=1.2,
         sigma_key="diffusion_coefficient",
         friction_atoms=np.array([0], dtype=int),
@@ -221,7 +221,7 @@ def test_nested_sigma_payload_concatenates_channels() -> None:
     friction = Friction(
         variable_friction=True,
         bath_mode="markovian",
-        mf_mode="none",
+        debug_mf_mode="none",
         sigma_key="sigma",
         friction_atoms=np.array([0], dtype=int),
     )
@@ -254,7 +254,7 @@ def test_nested_sigma_single_dict_raises_for_multiple_beads() -> None:
     friction = Friction(
         variable_friction=True,
         bath_mode="markovian",
-        mf_mode="none",
+        debug_mf_mode="none",
         sigma_key="sigma",
         friction_atoms=np.array([0], dtype=int),
     )
@@ -289,7 +289,7 @@ def test_nested_sigma_list_of_dicts_length_mismatch_raises() -> None:
     friction = Friction(
         variable_friction=True,
         bath_mode="markovian",
-        mf_mode="none",
+        debug_mf_mode="none",
         sigma_key="sigma",
         friction_atoms=np.array([0], dtype=int),
     )
@@ -319,7 +319,7 @@ def test_gamma_from_sigma_variable_is_sigma_t_sigma() -> None:
     friction = Friction(
         variable_friction=True,
         bath_mode="markovian",
-        mf_mode="none",
+        debug_mf_mode="none",
         sigma_key="sigma",
         friction_atoms=np.array([0], dtype=int),
     )
@@ -339,7 +339,7 @@ def test_gamma_from_sigma_static_is_scalar_square() -> None:
     friction = Friction(
         variable_friction=False,
         bath_mode="markovian",
-        mf_mode="none",
+        debug_mf_mode="none",
         sigma_static=1.7,
     )
     np.testing.assert_allclose(friction.gamma, 1.7 * 1.7)
@@ -366,7 +366,7 @@ def test_gamma_from_sigma_pairwise_mode_uses_pwc_block_square() -> None:
     friction = Friction(
         variable_friction=True,
         bath_mode="markovian",
-        mf_mode="none",
+        debug_mf_mode="none",
         sigma_key="sigma",
         friction_atoms=np.array([0], dtype=int),
     )
@@ -411,7 +411,7 @@ def test_gamma_from_sigma_invalid_mode_raises() -> None:
     friction = Friction(
         variable_friction=True,
         bath_mode="markovian",
-        mf_mode="none",
+        debug_mf_mode="none",
         sigma_key="sigma",
         friction_atoms=np.array([0], dtype=int),
     )
