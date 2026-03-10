@@ -36,7 +36,7 @@ class Friction:
 
     # Extras parsing
     sigma_key: str
-    friction_key: str
+    #friction_key: str
 
     # Optional: subset of atoms (0-based) that participate in electronic friction
     friction_atoms: np.ndarray | list | None
@@ -51,20 +51,41 @@ class Friction:
 
     def __init__(
         self,
-        variable_friction: bool = True,
-        bath_mode: str = "non-markovian",
-        mf_mode: str = "reconstruct",
+        variable_friction: bool = True,   #Variable_friction true means sigma changes with position. Otherwise use static_sigma
+        bath_mode: str = "non-markovian", # can be 1. none (no dissipative, no random force),  
+        # todo:Make a boolean, only_conservative - true or false. 
+
+        #todo: block that is identity then it si automatically markovian.  Ap
+
+        mf_mode: str = "reconstruct",   
+        #none - no friction contribution to consevative force (basically same as alpha=0).
+        ##linear - 
+        #todo: change to debug for now
+
+
         Lambda=np.zeros((0, 2), float),
-        alpha_input=np.zeros((0, 2), float),
+        #todo: switch back to spectral density.  with some extrapolation to zero. use cubic spline and linear extrapolation to zero. and check
+        # rename spectral_density
+
+        alpha_input=np.zeros((0, 2), float), #kinda debug_
+        #todo: rename debug_
+
         sigma_static: float = 1.0,
+        # if vartiable_friction is false.. then gamma = s * s   (s is a float)
+
+        #unusued
         ou_nterms: int = 4,
         ou_tmax: float = 200.0,
         ou_nt: int = 2000,
         ou_print: bool = True,
         ou_propagator: str = "exact",
-        sigma_key: str = "sigma",
-        friction_key: str = "friction",
-        friction_atoms = np.zeros(0, dtype=int),
+
+
+        sigma_key: str = "sigma", # points to dictionary key where sigma AKA diffusion coefficient is stored. 
+        friction_key: str = "friction", #unused
+        friction_atoms = np.zeros(0, dtype=int), #atoms where sigma is provided. 
+        #ideally the sigma provided is 3*natoms fullsize by the driver. or ideally the driver provides friction_atom index and IPI can pad zeros
+        # or the interface returns full matrix
     ):
         """Initialises the friction object.
         Args:
@@ -80,6 +101,7 @@ class Friction:
                 depends on position.
                 Defaults to False.
         """
+        #todo: more descriptive.
 
         # Choices
         self.variable_friction = bool(variable_friction)
@@ -107,32 +129,40 @@ class Friction:
             func=self.get_fmf_nm,
             dependencies=[self._friction_coupling_nm],
         )
+
+        #force_meanfield
         self._fmf = depend_value(
             name="fmf", func=self.get_fmf, dependencies=[self._fmf_nm]
         )
 
-        #Conserved mean-field potential
+        #Conserved mean-field potential 
+        #todo: energy_meanfield
         self._emf = depend_value(name="emf", value=0.0)
 
         self.sigma_static = float(sigma_static)
 
+        # unused
         self.ou_nterms = int(ou_nterms)
         self.ou_tmax = float(ou_tmax)
         self.ou_nt = int(ou_nt)
         self.ou_print = bool(ou_print)
         self.ou_propagator = str(ou_propagator)
 
+
         self.sigma_key = str(sigma_key)
         self.friction_key = str(friction_key)
+        self.sigma_meta_key = "sigma_meta"
+        self._sigma_meta = {}
+        self._sigma_blocks = None
 
         if friction_atoms is None:
             self.friction_atoms = None
         else:
             f_atoms = np.asarray(friction_atoms, dtype=int).flatten()
             # Empty means "not specified" -> all atoms participate (resolved at bind time).
-            self.friction_atoms = None if f_atoms.size == 0 else f_atoms
-        self._friction_atoms_idx: np.ndarray | None = None
-        self._friction_dof_idx: np.ndarray | None = None
+            self.friction_atoms = None if f_atoms.size == 0 else f_atoms  # index in full structure
+        self._friction_atoms_idx: np.ndarray | None = None  # 0 for first friction atom, 1 for second ..
+        self._friction_dof_idx: np.ndarray | None = None  # 0 for first friction coord .... 
 
         # runtime handles
         self.alpha: np.ndarray | None = None
@@ -145,7 +175,7 @@ class Friction:
         # OU auxiliary states: (nmodes, nbath, nterms, 2)
         self._ou_y: np.ndarray | None = None
 
-        # Reconstruction memory for F
+        # Reconstruction memory for F   # unused  - todo: remove
         self._F_beads: np.ndarray | None = None  # (nbeads, nbath)
         self._q_prev: np.ndarray | None = None   # (nbeads, ndof)
 
@@ -342,6 +372,9 @@ class Friction:
         ndof = 3 * int(self.beads.natoms)
 
         sigma = self.forces.extras.get(self.sigma_key)
+        sigma_meta = self._get_sigma_meta()
+        self._sigma_meta = sigma_meta
+        self._sigma_blocks = None
 
         if sigma is None:
             raise KeyError(
@@ -361,9 +394,21 @@ class Friction:
         # IMPORTANT: independent representation blocks are concatenated along the
         # bath dimension (rows), not summed. Summing would introduce cross terms
         # in Sigma^T Sigma and distort Gamma.
-        def _concat_rep_dict(dsig: dict) -> np.ndarray:
+        def _rep_mats_from_dict(dsig: dict, meta: dict | None = None) -> list[np.ndarray]:
             mats = []
-            for rep_key in ("equ", "eqv", "inv"):
+            # Keep historical keys first for deterministic channel order.
+            # Driver can override ordering via extras[sigma_meta_key]["rep_order"].
+            rep_order = None
+            if isinstance(meta, dict):
+                ro = meta.get("rep_order")
+                if isinstance(ro, (list, tuple)) and all(isinstance(k, str) for k in ro):
+                    rep_order = list(ro)
+            if rep_order is None:
+                pref_keys = ("equ", "eqv", "inv", "cov")
+                extra_keys = sorted([k for k in dsig.keys() if k not in pref_keys], key=lambda x: str(x))
+                rep_order = list(pref_keys) + list(extra_keys)
+
+            for rep_key in rep_order:
                 rep_data = dsig.get(rep_key)
                 if rep_data is None:
                     continue
@@ -393,7 +438,7 @@ class Friction:
                         f"{[mm.shape for mm in mats]}"
                     )
 
-            return np.concatenate(mats, axis=0)
+            return mats
 
         if isinstance(sigma, dict):
             if nbeads != 1:
@@ -401,8 +446,10 @@ class Friction:
                     f"{self.sigma_key} received a single dict payload but nbeads={nbeads}. "
                     f"Provide one dict per bead (list length must equal nbeads)."
                 )
-            sigma_eff = _concat_rep_dict(sigma)
+            mats = _rep_mats_from_dict(sigma, sigma_meta)
+            sigma_eff = np.concatenate(mats, axis=0)
             sigma = sigma_eff[np.newaxis, :, :].copy()
+            self._sigma_blocks = [mats]
         elif isinstance(sigma, (list, tuple)) and len(sigma) > 0 and all(
             isinstance(s, dict) for s in sigma
         ):
@@ -410,8 +457,10 @@ class Friction:
                 raise ValueError(
                     f"{self.sigma_key} list-of-dicts length {len(sigma)} incompatible with nbeads={nbeads}."
                 )
-            sigma = np.asarray([_concat_rep_dict(s) for s in sigma], dtype=float)
-        else:
+            sigma_blocks = [_rep_mats_from_dict(s, sigma_meta) for s in sigma]
+            sigma = np.asarray([np.concatenate(mats, axis=0) for mats in sigma_blocks], dtype=float)
+            self._sigma_blocks = sigma_blocks
+        else: # plain array like double well driver
             info(str(sigma), verbosity.low)
             sigma = np.asarray(sigma, dtype=float)
 
@@ -423,7 +472,38 @@ class Friction:
                 f"{self.sigma_key} shape {sigma.shape} incompatible with nbeads={nbeads}."
             )
         sigma = self._embed_if_needed(sigma, ndof=ndof)
+
         return sigma
+
+    def _get_sigma_meta(self) -> dict:
+        """Fetches optional sigma metadata dictionary from force extras."""
+        meta = self.forces.extras.get(self.sigma_meta_key)
+        if meta is None:
+            return {}
+        # Extras can be bead-resolved lists/tuples.
+        if isinstance(meta, (list, tuple)):
+            if len(meta) == 0:
+                return {}
+            nbeads = int(self.beads.nbeads)
+            if len(meta) == nbeads:
+                # Use bead-0 metadata; require consistency if multiple beads.
+                m0 = meta[0]
+                for mb in meta[1:]:
+                    if type(mb) != type(m0):
+                        raise ValueError(
+                            f"{self.sigma_meta_key} payload types differ across beads: "
+                            f"{[type(x) for x in meta]}"
+                        )
+                meta = m0
+            else:
+                # Non-bead list: try first item as a best-effort fallback.
+                meta = meta[0]
+        if isinstance(meta, str):
+            try:
+                meta = json.loads(meta)
+            except json.JSONDecodeError:
+                return {}
+        return meta if isinstance(meta, dict) else {}
 
     def _get_gamma(self):
         """Returns Gamma from Sigma.
@@ -441,6 +521,81 @@ class Friction:
             raise ValueError(
                 f"friction.sigma has unsupported ndim={sarr.ndim}, expected scalar or 3."
             )
+        # Optional metadata-controlled sigma mode:
+        # - "column" (default): Gamma = Sigma^T Sigma from packed rows/channels.
+        # - "row": Gamma = sum_k (M_k M_k^T) using per-channel blocks M_k.
+        # - "pairwise": ACE PWC-style block square on 3x3 atom blocks.
+        # Backward compatibility:
+        # - sigma_meta["square"] = "right" -> column
+        # - sigma_meta["square"] = "left"  -> pairwise
+        sigma_mode = self._sigma_meta.get("sigma_mode", None)
+        if sigma_mode is None:
+            square_mode = str(self._sigma_meta.get("square", "right")).lower()
+            sigma_mode = "pairwise" if square_mode == "left" else "column"
+        sigma_mode = str(sigma_mode).lower()
+
+        if sigma_mode in ("row", "pairwise"):
+            if self._sigma_blocks is None:
+                raise ValueError(
+                    f"{self.sigma_meta_key}.sigma_mode='{sigma_mode}' requires sigma payload with dict blocks."
+                )
+            nbeads, _, ndof = sarr.shape
+            gamma = np.zeros((nbeads, ndof, ndof), dtype=float)
+            idx = self._friction_dof_idx
+            nred = None if idx is None else int(len(idx))
+            for b, mats in enumerate(self._sigma_blocks):
+                for m in mats:
+                    mm = np.asarray(m, dtype=float)
+
+                    def _square_pairwise_block(M: np.ndarray) -> np.ndarray:
+                        """ACE PWC-style square on dense 3x3 atom blocks."""
+                        if M.ndim != 2 or M.shape[0] != M.shape[1] or (M.shape[0] % 3) != 0:
+                            raise ValueError(
+                                f"{self.sigma_meta_key}.sigma_mode='pairwise' requires square 3N x 3N blocks. "
+                                f"Got shape {M.shape}."
+                            )
+                        nat = M.shape[0] // 3
+                        G = np.zeros_like(M)
+                        for i in range(nat):
+                            si = slice(3 * i, 3 * i + 3)
+                            for j in range(i, nat):
+                                sj = slice(3 * j, 3 * j + 3)
+                                sij = M[si, sj]
+                                sji = M[sj, si]
+                                G[si, sj] += sij @ sji.T
+                                G[sj, si] += sji @ sij.T
+                                G[si, si] += sij @ sij.T
+                                G[sj, sj] += sji @ sji.T
+                        return G
+
+                    # Full-dof square block: use directly.
+                    if mm.shape == (ndof, ndof):
+                        gamma[b] += (
+                            _square_pairwise_block(mm) if sigma_mode == "pairwise" else mm @ mm.T
+                        )
+                        continue
+
+                    # Reduced square block on active friction dofs: square then embed.
+                    if idx is not None and nred is not None and mm.shape == (nred, nred):
+                        gamma_b = gamma[b]
+                        gamma_b[np.ix_(idx, idx)] += (
+                            _square_pairwise_block(mm) if sigma_mode == "pairwise" else mm @ mm.T
+                        )
+                        gamma[b] = gamma_b
+                        continue
+
+                    raise ValueError(
+                        f"{self.sigma_meta_key}.sigma_mode='{sigma_mode}' got unsupported block shape {mm.shape}. "
+                        f"Expected ({ndof},{ndof}) or ({nred},{nred}) for friction subset embedding."
+                    )
+            return gamma
+
+        if sigma_mode != "column":
+            raise ValueError(
+                f"Unsupported {self.sigma_meta_key}.sigma_mode='{sigma_mode}'. "
+                "Supported values are 'column', 'row', 'pairwise'."
+            )
+
         # (nbeads, nbath, ndof) -> (nbeads, ndof, ndof)
         return np.einsum("bai,baj->bij", sarr, sarr)
     
@@ -467,9 +622,12 @@ class Friction:
         if self.mf_mode == "none":
             return 0.0
 
+        # debug
         info("alpha "+str(self.alpha), verbosity.low)
         info("coupling "+str(self.friction_coupling_nm**2))
         info("EMF "+str(np.sum(self.alpha * self.friction_coupling_nm**2)), verbosity.low) 
+
+
         return np.sum(self.alpha * self.friction_coupling_nm**2) / 2
         
     def get_fmf_nm(self):
@@ -507,7 +665,7 @@ class Friction:
           dp_drift = -dt sigma^T (sigma v)
           dp_noise = sqrt(2 kBT dt) sigma^T g, g~N(0,I)
         """
-        from ipi.utils.mathtools import matrix_exp, root_herm
+        #from ipi.utils.mathtools import matrix_exp, root_herm
  
         if pdt <= 0.0:
             return
@@ -569,6 +727,7 @@ class Friction:
             # Convention: + means energy to bath (same sign spirit as i-PI's ethermo).
             self.ediss += 0.5 * deltah
 
+            #debug
             info("after: " + str(self.beads.p), verbosity.low)
             return
 
@@ -664,7 +823,7 @@ class Friction:
         if self.bath_mode == "markovian":
             self._step_markovian(pdt)
             return
-        if self.bath_mode == "non-markovian":
+        if self.bath_mode == "non-markovian": #not implemented
             self._step_non_markovian(pdt)
             return
 

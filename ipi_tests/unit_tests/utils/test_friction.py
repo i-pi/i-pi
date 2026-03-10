@@ -343,3 +343,84 @@ def test_gamma_from_sigma_static_is_scalar_square() -> None:
         sigma_static=1.7,
     )
     np.testing.assert_allclose(friction.gamma, 1.7 * 1.7)
+
+
+def test_gamma_from_sigma_pairwise_mode_uses_pwc_block_square() -> None:
+    q = np.array([[0.0, 0.0, 0.0]], dtype=float)
+    p = np.zeros_like(q)
+    m3 = np.ones_like(q)
+    beads = _DummyBeads(q=q, p=p, m3=m3)
+    nm = _DummyNM(beads)
+
+    m1 = np.array([[1.0, 2.0, 0.0], [0.5, -1.0, 1.0], [0.0, 0.0, 1.5]])
+    m2 = np.array([[0.0, 1.0, -0.5], [2.0, 0.0, 1.0], [1.0, 0.0, 0.0]])
+    extras_sigma = {
+        "equ": {"1": m1.tolist()},
+        "inv": {"1": m2.tolist()},
+    }
+    forces = _DummyForces(
+        extras={"sigma": extras_sigma, "sigma_meta": {"sigma_mode": "pairwise"}}
+    )
+    ensemble = _DummyEnsemble(temp=300.0, forces=forces)
+
+    friction = Friction(
+        variable_friction=True,
+        bath_mode="markovian",
+        mf_mode="none",
+        sigma_key="sigma",
+        friction_atoms=np.array([0], dtype=int),
+    )
+    friction.beads = beads
+    friction.nm = nm
+    friction.ensemble = ensemble
+    friction.forces = forces
+    friction.prng = _DummyPRNG()
+    friction._setup_friction_atoms()
+
+    def _pwc_square(M: np.ndarray) -> np.ndarray:
+        g = np.zeros_like(M)
+        nat = M.shape[0] // 3
+        for i in range(nat):
+            si = slice(3 * i, 3 * i + 3)
+            for j in range(i, nat):
+                sj = slice(3 * j, 3 * j + 3)
+                sij = M[si, sj]
+                sji = M[sj, si]
+                g[si, sj] += sij @ sji.T
+                g[sj, si] += sji @ sij.T
+                g[si, si] += sij @ sij.T
+                g[sj, sj] += sji @ sji.T
+        return g
+
+    gamma = friction.gamma
+    expected = np.array([_pwc_square(m1) + _pwc_square(m2)], dtype=float)
+    np.testing.assert_allclose(gamma, expected)
+
+
+def test_gamma_from_sigma_invalid_mode_raises() -> None:
+    q = np.array([[0.0, 0.0, 0.0]], dtype=float)
+    p = np.zeros_like(q)
+    m3 = np.ones_like(q)
+    beads = _DummyBeads(q=q, p=p, m3=m3)
+    nm = _DummyNM(beads)
+
+    sigma = np.array([[[1.0, 0.0, 0.0]]], dtype=float)
+    forces = _DummyForces(extras={"sigma": sigma, "sigma_meta": {"sigma_mode": "bad"}})
+    ensemble = _DummyEnsemble(temp=300.0, forces=forces)
+
+    friction = Friction(
+        variable_friction=True,
+        bath_mode="markovian",
+        mf_mode="none",
+        sigma_key="sigma",
+        friction_atoms=np.array([0], dtype=int),
+    )
+    friction.beads = beads
+    friction.nm = nm
+    friction.ensemble = ensemble
+    friction.forces = forces
+    friction.prng = _DummyPRNG()
+    friction._setup_friction_atoms()
+
+    with pytest.raises(ValueError, match="Unsupported sigma_meta.sigma_mode"):
+        _ = friction.gamma
