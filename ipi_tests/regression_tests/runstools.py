@@ -60,9 +60,7 @@ class Runner_regression(Runner):
             cwd: folder where all the original regression tests are stored
         """
 
-        error_msg = super().run(cwd, nid)
-        if error_msg is not None:
-            return error_msg
+        super().run(cwd, nid)
 
         with open(self.tmp_dir / "files_to_check.txt") as f:
             lines = f.readlines()

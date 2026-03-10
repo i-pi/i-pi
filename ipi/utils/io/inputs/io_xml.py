@@ -480,7 +480,7 @@ def read_dict(data, delims="{}", split=",", key_split=":", strip=" \n\t"):
 
     rdict = {}
     for s in rlist:
-        rtuple = list(map(mystrip, s.split(key_split, 1)))
+        rtuple = list(map(mystrip, s.split(key_split)))
         if not len(rtuple) == 2:
             raise ValueError("Format for a key:value format is wrong for item " + s)
         rdict[rtuple[0]] = read_value(rtuple[1])

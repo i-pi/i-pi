@@ -90,7 +90,6 @@ objects = {
     "forcefield": forcefields.InputForceField(),
     "ffsocket": forcefields.InputFFSocket(),
     "ffdirect": forcefields.InputFFDirect(),
-    "ffrotations": forcefields.InputFFRotations(),
     "fflj": forcefields.InputFFLennardJones(),
     "ffdebye": forcefields.InputFFDebye(),
     "ffplumed": forcefields.InputFFPlumed(),

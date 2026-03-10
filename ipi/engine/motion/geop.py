@@ -369,17 +369,17 @@ class DummyOptimizer:
         info("   Current energy             %e" % (fx))
         info(
             "   Position displacement      %e  Tolerance %e"
-            % (x.item(), self.tolerances["position"]),
+            % (x, self.tolerances["position"]),
             verbosity.medium,
         )
         info(
             "   Max force component        %e  Tolerance %e"
-            % (fmax.item(), self.tolerances["force"]),
+            % (fmax, self.tolerances["force"]),
             verbosity.medium,
         )
         info(
             "   Energy difference per atom %e  Tolerance %e"
-            % (e.item(), self.tolerances["energy"]),
+            % (e, self.tolerances["energy"]),
             verbosity.medium,
         )
 

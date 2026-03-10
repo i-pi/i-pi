@@ -683,17 +683,17 @@ class StringMover(Motion):
         else:
             info(
                 " @STRING: Not converged, deltaEnergy = %.8f, tol = %.8f per atom"
-                % (de.item(), self.tolerances["energy"]),
+                % (de, self.tolerances["energy"]),
                 vrb.debug,
             )
             info(
                 " @STRING: Not converged, f_perp_2 = %.8f, tol = %f"
-                % (np.amax(np.abs(f_perp)).item(), self.tolerances["force"]),
+                % (np.amax(np.abs(f_perp)), self.tolerances["force"]),
                 vrb.debug,
             )
             info(
                 " @STRING: Not converged, deltaX = %.8f, tol = %.8f"
-                % (dx.item(), self.tolerances["position"]),
+                % (dx, self.tolerances["position"]),
                 vrb.debug,
             )
 
@@ -1077,25 +1077,19 @@ class StringMover(Motion):
             info(
                 " @STRING_CLIMB: Not converged, deltaEnergy = %.8f, tol = %.8f per atom"
                 % (
-                    (
-                        np.amax(np.abs(self.stringpot - old_stringpot))
-                        / self.beads.natoms
-                    ).item(),
+                    np.amax(np.abs(self.stringpot - old_stringpot)) / self.beads.natoms,
                     self.tolerances["energy"],
                 ),
                 vrb.debug,
             )
             info(
                 " @STRING_CLIMB: Not converged, climbgrad = %.8f, tol = %f"
-                % (
-                    np.amax(np.abs(self.stringgrad)).item(),
-                    self.tolerances["force"],
-                ),
+                % (np.amax(np.abs(self.stringgrad)), self.tolerances["force"]),
                 vrb.debug,
             )
             info(
                 " @STRING_CLIMB: Not converged, deltaX = %.8f, tol = %.8f"
-                % (dx.item(), self.tolerances["position"]),
+                % (dx, self.tolerances["position"]),
                 vrb.debug,
             )
 
