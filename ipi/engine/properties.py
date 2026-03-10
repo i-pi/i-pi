@@ -2676,6 +2676,9 @@ class Properties:
             )
 
         free_particle_factor = alpha ** (1.5 * (self.beads.nbeads - 1))
+        #This is the ratio of factors that comes from the integral of kinetic energy of the beads in the Boltzmann factor
+        #which is ( \frac{mP}{2\pi\beta\hbar^2})^{3P/2}
+        #we have also removed the centroid mode contribution to the ratio, as it is irrelevant here. 
 
         return np.asarray(
             [
