@@ -17,6 +17,7 @@ from ipi.utils.inputvalue import (
 from ipi.inputs.barostats import InputBaro
 from ipi.inputs.thermostats import InputThermo
 
+
 __all__ = ["InputDynamics"]
 
 

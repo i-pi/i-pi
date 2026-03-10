@@ -7,7 +7,6 @@ using the "syntaxer" variable.
 Prior to running the script, black >20.8b1 and flake8 >3.8.4 must be installed.
 For details of usage call it with "-h" option.
 """
-
 import subprocess as sp
 import argparse
 from argparse import RawTextHelpFormatter

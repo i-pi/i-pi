@@ -37,6 +37,7 @@ from ipi.utils.instools import (
 from ipi.utils.instools import print_instanton_hess, diag_banded, ms_pathway
 from ipi.utils.hesstools import get_hessian, clean_hessian, get_dynmat
 
+
 __all__ = ["InstantonMotion"]
 
 
@@ -1339,9 +1340,11 @@ class HessianOptimizer(DummyOptimizer):
                             )
                         )
                     else:
-                        raise ValueError("""
+                        raise ValueError(
+                            """
               'Hessian_init' is false, 'friction' is true so an initial fric_hessian (of the proper size) must be provided.
-                    """)
+                    """
+                        )
                 self.optarrays["fric_hessian"] = geop.optarrays["fric_hessian"]
 
     def initialize(self, step):

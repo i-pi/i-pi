@@ -20,7 +20,6 @@ from ipi.utils.softexit import softexit
 from ipi.utils.messages import warning, verbosity
 from ipi.utils.timing_manager import timers
 
-
 class Dynamics(Motion):
     """self (path integral) molecular dynamics class.
 
@@ -432,7 +431,7 @@ class NVEIntegrator(DummyIntegrator):
             timers.start("[+++]F(++++)")
             f = dstrip(self.forces.mts_forces[level].f)
             timers.stop("[+++]F(++++)")
-
+            
             timers.start("[+++]Verlet")
             self.beads.p[:] += f * self.pdt[level]
             if level == 0 and self.ensemble.has_bias:  # adds bias in the outer loop
@@ -518,7 +517,7 @@ class NVEIntegrator(DummyIntegrator):
     def mtsprop(self, index):
         # just calls the two pieces together
         self.mtsprop_ba(index)
-
+        
         self.mtsprop_ab(index)
 
     def step(self, step=None):
@@ -552,10 +551,12 @@ class NVTIntegrator(NVEIntegrator):
             self.tstep()
             timers.stop("[++]Thermostat Step(***)")
 
-            # timers.start("[++]PConstraints")
-            self.pconstraints()  # timing: 0.00 ms
-            # timers.stop("[++]PConstraints")
+            #timers.start("[++]PConstraints")
+            self.pconstraints() # timing: 0.00 ms
+            #timers.stop("[++]PConstraints")
 
+
+            
             timers.start("[++]MTS propagation(+++)")
             # forces are integerated for dt with MTS.
             self.mtsprop(0)
@@ -565,10 +566,12 @@ class NVTIntegrator(NVEIntegrator):
             # thermostat is applied for dt/2
             self.tstep()
             timers.stop("[++]Thermostat Step(***)")
+            
 
-            # timers.start("[++]PConstraints")
-            self.pconstraints()  # timing: 0.00 ms
-            # timers.stop("[++]PConstraints")
+            #timers.start("[++]PConstraints")
+            self.pconstraints() # timing: 0.00 ms
+            #timers.stop("[++]PConstraints")
+            
 
         elif self.splitting == "baoab":
             self.mtsprop_ba(0)

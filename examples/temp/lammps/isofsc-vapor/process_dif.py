@@ -4,8 +4,8 @@ table1 = np.loadtxt("accumulated.out.w")
 table2 = np.loadtxt("accumulated.out.v")
 
 
-asize1, bsize = np.shape(table1)
-asize2, bsize = np.shape(table2)
+(asize1, bsize) = np.shape(table1)
+(asize2, bsize) = np.shape(table2)
 
 if asize1 > asize2:
     asize = asize2

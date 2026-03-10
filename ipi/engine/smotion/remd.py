@@ -16,6 +16,7 @@ from ipi.engine.ensembles import ensemble_swap
 from ipi.utils.depend import *
 from ipi.utils.messages import verbosity, info
 
+
 __all__ = ["ReplicaExchange"]
 
 

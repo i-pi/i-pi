@@ -17,6 +17,7 @@ from ipi.inputs.thermostats import *
 from ipi.inputs.cell import *
 from copy import copy
 
+
 __all__ = ["InputDrivenDynamics", "InputElectricField", "InputBEC"]
 
 

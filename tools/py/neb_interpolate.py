@@ -24,7 +24,6 @@ Arguments:
 Output:
     Writes a file "init.xyz" with N beads.
 """
-
 # (c) Karen Fidanyan 2022
 
 import os
@@ -249,7 +248,7 @@ if __name__ == "__main__":
             natoms = inipos.natoms
             with open(input_ini, "r") as fd_ini:
                 rr = read_file_raw("xyz", fd_ini)
-                _, units, cell_units = auto_units(rr["comment"])
+                (_, units, cell_units) = auto_units(rr["comment"])
         else:
             print("Error: cannot find {}.".format(input_ini))
             exit(-1)
@@ -338,7 +337,7 @@ if __name__ == "__main__":
             # Extract units information to write output with the same units as input
             with open(input_xyz, "r") as fd_xyz:
                 rr = read_file_raw("xyz", fd_xyz)
-                _, units, cell_units = auto_units(rr["comment"])
+                (_, units, cell_units) = auto_units(rr["comment"])
         else:
             print("Error: cannot find {}.".format(input_xyz))
             exit(-1)

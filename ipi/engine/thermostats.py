@@ -19,6 +19,7 @@ from ipi.utils.prng import Random
 from ipi.utils.messages import verbosity, warning, info
 from ipi.engine.normalmodes import NormalModes
 
+
 __all__ = [
     "Thermostat",
     "ThermoLangevin",

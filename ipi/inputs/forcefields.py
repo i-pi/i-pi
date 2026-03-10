@@ -243,6 +243,7 @@ class InputFFSocket(InputForceField):
                 "help": "Specifies whether to use shared memory communication (only available in unix mode)",
             },
         ),
+
         "matching": (
             InputAttribute,
             {
@@ -355,7 +356,6 @@ class InputFFSocket(InputForceField):
             raise ValueError("Negative latency parameter specified.")
         if self.timeout.fetch() < 0.0:
             raise ValueError("Negative timeout parameter specified.")
-
 
 class InputFFBatch(InputForceField):
     """Creates a ForceField object with a socket interface for batch eval.

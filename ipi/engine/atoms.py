@@ -14,6 +14,7 @@ import numpy as np
 
 from ipi.utils.depend import *
 
+
 __all__ = ["Atoms", "Atom"]
 
 

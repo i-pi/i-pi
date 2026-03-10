@@ -10,6 +10,7 @@ import numpy as np
 from ipi.utils.depend import dstrip
 from ipi.utils.messages import verbosity, info, warning
 
+
 __all__ = [
     "nm_noop",
     "nm_trans",
@@ -460,14 +461,14 @@ class nm_fft(
 
         if self.nbeads % 2 == 0:
             self.qnmdummy[1:-1, :] *= np.sqrt(2)
-            qnm[1:nmodes, :], qnm[self.nbeads : nmodes : -1, :] = (
+            (qnm[1:nmodes, :], qnm[self.nbeads : nmodes : -1, :]) = (
                 self.qnmdummy[1:-1, :].real,
                 self.qnmdummy[1:-1, :].imag,
             )
             qnm[nmodes, :] = self.qnmdummy[nmodes, :].real
         else:
             self.qnmdummy[1:, :] *= np.sqrt(2)
-            qnm[1 : nmodes + 1, :], qnm[self.nbeads : nmodes : -1, :] = (
+            (qnm[1 : nmodes + 1, :], qnm[self.nbeads : nmodes : -1, :]) = (
                 self.qnmdummy[1:, :].real,
                 self.qnmdummy[1:, :].imag,
             )

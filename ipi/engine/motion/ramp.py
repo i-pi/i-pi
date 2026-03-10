@@ -10,6 +10,7 @@ Algorithms implemented by Robert Meissner and Riccardo Petraglia, 2016
 
 from ipi.engine.motion import Motion
 
+
 __all__ = ["TemperatureRamp", "PressureRamp"]
 
 

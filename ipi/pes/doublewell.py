@@ -10,6 +10,7 @@ except:
 import numpy as np
 from ipi.utils import units
 
+
 __DRIVER_NAME__ = "DW"
 __DRIVER_CLASS__ = "DoubleWell_driver"
 

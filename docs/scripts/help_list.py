@@ -48,7 +48,7 @@ parser.add_option(
     default=False,
     help="If false, this creates a stand-alone document.",
 )
-options, args = parser.parse_args()
+(options, args) = parser.parse_args()
 
 if options.opt not in list_objects:
     raise ValueError("Option " + options.opt + " is not a viable tag name")

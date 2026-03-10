@@ -193,13 +193,15 @@ def get_A(path2iipi):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="""
+    parser = argparse.ArgumentParser(
+        description="""
 Calculates the Helmholtz free energy within the self consistent phonons
 approximation. The output contains the full self-consistent-phonon
 energies, including the minimum energy potential. The center-of-mass
 component is not included. The correction relative to the baseline
 harmonic description is also reported.
-""")
+"""
+    )
     parser.add_argument(
         "-i",
         "--input_xml",

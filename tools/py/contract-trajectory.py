@@ -15,6 +15,7 @@ from ipi.utils.io import open_backup, iter_file_name_raw, print_file
 from ipi.utils.io.io_units import auto_units
 from ipi.utils.messages import verbosity
 
+
 description = """
 Read individual beads from a set of trajectory files (positions or other data)
 and contract them to a different number of beads using ring polymer

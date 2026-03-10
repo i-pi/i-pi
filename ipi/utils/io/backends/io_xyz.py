@@ -16,6 +16,7 @@ import ipi.utils.mathtools as mt
 from ipi.utils.depend import dstrip
 from ipi.utils.units import Elements
 
+
 __all__ = ["print_xyz_path", "print_xyz", "read_xyz"]
 
 deg2rad = np.pi / 180.0

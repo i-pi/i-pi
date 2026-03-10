@@ -27,7 +27,6 @@ from ipi.engine.beads import Beads
 from ipi.engine.cell import Cell
 from ipi.engine.forcefields import FFBatch
 from ipi.utils.timing_manager import timers
-
 __all__ = ["Forces", "ForceComponent"]
 
 
@@ -144,7 +143,7 @@ class ForceBead:
 
         Returns True if a calculation is running
         """
-
+        
         # only dispatches a request if the forcefield needs it
         with self._threadlock:
             is_tainted = self._ufvx.tainted()
@@ -165,7 +164,7 @@ class ForceBead:
         """
 
         timers.start(f"[+++++]Waiting Driver{self.uid}")
-
+        
         # because we thread over many systems and outputs, we might get called
         # more than once. keep track of how many times we are called so we
         # can make sure to wait until the last call has returned before we release
@@ -219,7 +218,7 @@ class ForceBead:
         else:
             while self._getallcount > 0:
                 time.sleep(latency)
-
+        
         timers.stop(f"[+++++]Waiting Driver{self.uid}")
 
         return result
@@ -267,7 +266,6 @@ class ForceBead:
 
 
 dproperties(ForceBead, ["ufvx", "pot", "vir", "f", "extra", "fx", "fy", "fz"])
-
 
 class ForceBatchBead:
     """Base force helper class for batch bead evaluation.
@@ -333,7 +331,7 @@ class ForceBatchBead:
         # stores a reference to the atoms and cell we are computing forces for
         self.beads = beads
         self.nbeads = beads.nbeads
-        # self.atoms_list = [ atoms for atoms in beads]
+        #self.atoms_list = [ atoms for atoms in beads]
         self.natoms = self.beads.natoms
         self.cell = cell
         self.ff = ff
@@ -370,9 +368,9 @@ class ForceBatchBead:
             name="extra", func=self.get_extra, dependencies=[self._ufvx]
         )
 
-        self._fx = depend_array(name="fx", value=fbase[:, 0 : 3 * self.natoms : 3])
-        self._fy = depend_array(name="fy", value=fbase[:, 1 : 3 * self.natoms : 3])
-        self._fz = depend_array(name="fz", value=fbase[:, 2 : 3 * self.natoms : 3])
+        self._fx = depend_array(name="fx", value=fbase[:,0 : 3 * self.natoms : 3])
+        self._fy = depend_array(name="fy", value=fbase[:,1 : 3 * self.natoms : 3])
+        self._fz = depend_array(name="fz", value=fbase[:,2 : 3 * self.natoms : 3])
         dcopy(self._f, self._fx)
         dcopy(self._f, self._fy)
         dcopy(self._f, self._fz)
@@ -394,6 +392,7 @@ class ForceBatchBead:
         return is_tainted
 
     def get_all(self):
+        
         """Driver routine.
 
         When one of the force, potential or virial are called, this sends the
@@ -414,14 +413,14 @@ class ForceBatchBead:
 
         # sleeps until the request has been evaluated
         timers.start(f"[+++++]Waiting Driver{self.uid}")
-
+        
         # this is converting the distribution library requests into [ u, f, v ]  lists
         if self.request is None:
             self.queue()
 
         request = self.request
         latency = self.ff.latency
-
+        
         # optional to fill RNG buffer here
         while request["status"] != "Done":
             if request["status"] == "Exit" or softexit.triggered:
@@ -442,6 +441,7 @@ class ForceBatchBead:
         result = request["result"]
         timers.stop(f"[+++++]Waiting Driver{self.uid}")
 
+
         # reduce the reservation count (and wait for all calls to return)
         with self._threadlock:
             self._getallcount -= 1
@@ -453,6 +453,7 @@ class ForceBatchBead:
         else:
             while self._getallcount > 0:
                 time.sleep(latency)
+        
 
         return result
 
@@ -474,6 +475,8 @@ class ForceBatchBead:
 
         return self.ufvx[1]
 
+
+
     def get_vir(self):
         """Calls get_all routine of forcefield to update the virial.
 
@@ -482,9 +485,9 @@ class ForceBatchBead:
            by the volume.
         """
         vir = self.ufvx[2]
-
-        vir[:, 1, 0] = 0.0
-        vir[:, 2, 0:2] = 0.0
+        
+        vir[:,1,0] = 0.0
+        vir[:,2,0:2] = 0.0
         return vir
 
     def get_extra(self):
@@ -524,10 +527,12 @@ class ForceBatchBead:
                     "interpolate_extras has to be numerical to be treated as a physical quantity. It is not -- check the quantity that is being passed."
                 )
 
+
         return fc_extra
 
 
 dproperties(ForceBatchBead, ["ufvx", "pot", "vir", "f", "extra", "fx", "fy", "fz"])
+
 
 
 class ForceComponent:
@@ -641,27 +646,21 @@ class ForceComponent:
 
         self._forces = []
         self.beads = beads
-
+        
         if isinstance(self.ff, FFBatch):
             self.batch_mode = True
             self.batch_force = ForceBatchBead()
-
+            
             # here we bind all beads to one ffbatch object's depend values
             self.batch_force.bind(beads, cell, self.ff, output_maker=output_maker)
-
+            
             self._f = self.batch_force._f
             self._pots = self.batch_force._pot
             self._virs = self.batch_force._vir
             self._extras = self.batch_force._extra
-
-            self._vir = depend_value(
-                name="vir",
-                func=(lambda: self.virs.sum(axis=0)),
-                dependencies=[self._virs],
-            )
-            self._pot = depend_value(
-                name="pot", func=(lambda: self.pots.sum()), dependencies=[self._pots]
-            )
+            
+            self._vir = depend_value(name="vir", func=(lambda: self.virs.sum(axis=0)), dependencies=[self._virs])
+            self._pot = depend_value(name="pot", func=(lambda: self.pots.sum()), dependencies=[self._pots])
 
         else:
             for b in range(self.nbeads):
@@ -798,6 +797,7 @@ class ForceComponent:
         self.queue()
         for b in range(self.nbeads):
             newf[b] = dstrip(self._forces[b].f)
+        
 
         return newf
 
@@ -970,7 +970,8 @@ class MTSForces:
         timers.stop("[+++++]Init zeros")
 
         mforces = self.mforces
-
+        
+        
         mrpc = self.mrpc
         for index in range(len(mforces)):
             # forces with no MTS specification are applied at the outer level
@@ -983,7 +984,11 @@ class MTSForces:
                 timers.start("[+++++]B2B1")
                 bf = mrpc[index].b2tob1(f)
                 timers.stop("[+++++]B2B1")
-                fk += weight * mts_weights[level] * bf
+                fk += (
+                    weight
+                    * mts_weights[level]
+                    * bf
+                )
         timers.stop("[++++]Get Forces MTS(+++++)")
         return fk
 
@@ -1769,7 +1774,7 @@ class Forces:
     def f_combine(self):
         """Obtains the total force vector."""
 
-        # timers.start("[++++]F Combine(+++++)")
+        #timers.start("[++++]F Combine(+++++)")
         self.queue()
         rf = np.zeros((self.nbeads, 3 * self.natoms), float)
         for k in range(self.nforces):
@@ -1781,7 +1786,7 @@ class Forces:
                     * self.mforces[k].mts_weights.sum()
                     * self.mrpc[k].b2tob1(dstrip(self.mforces[k].f))
                 )
-        # timers.stop("[++++]F Combine(+++++)")
+        #timers.stop("[++++]F Combine(+++++)")
         return rf
 
     def fvir_4th_order_combine(self):

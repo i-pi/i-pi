@@ -22,6 +22,7 @@ import ipi.engine.forcefields as eforcefields
 import ipi.inputs.outputs as ioutputs
 from ipi.inputs.smotion import InputSmotion
 
+
 __all__ = ["InputSimulation"]
 
 
@@ -360,7 +361,7 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
                 "ffcavphsocket",
             ]:
                 new_ff = v.fetch()
-                if k in ["ffsocket", "ffbatch"]:
+                if k in [ "ffsocket", "ffbatch" ]:
                     # overrides ffsocket prefix
                     new_ff.socket.sockets_prefix = self.sockets_prefix.fetch()
                 fflist.append(new_ff)

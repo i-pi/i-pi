@@ -14,6 +14,7 @@ Syntax:
    posforce2kinetic.py prefix temperature[K]
 """
 
+
 import numpy as np
 import sys
 import glob

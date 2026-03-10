@@ -10,6 +10,7 @@ from ipi.utils import units
 import json
 import sys
 
+
 __DRIVER_NAME__ = "DW_friction"
 __DRIVER_CLASS__ = "DoubleWell_with_friction_driver"
 

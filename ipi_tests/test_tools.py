@@ -413,14 +413,18 @@ class Runner(object):
                 driver_out, driver_err = "", "Could not get outputs from drivers"
                 pass
 
-            print("Timeout during {} test \
+            print(
+                "Timeout during {} test \
               **** i-PI output **** \
               stdout {} \
               stderr {} \
               **** driver output **** \
               stdout {} \
               stderr {} \
-              ".format(str(cwd), ipi_out, ipi_error, driver_out, driver_err))
+              ".format(
+                    str(cwd), ipi_out, ipi_error, driver_out, driver_err
+                )
+            )
             raise
 
             raise RuntimeError(

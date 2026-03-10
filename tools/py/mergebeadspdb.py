@@ -11,6 +11,7 @@ Syntax:
    mergebeadspdb.py prefix
 """
 
+
 import sys
 import glob
 from ipi.utils.io import read_file, print_file_path

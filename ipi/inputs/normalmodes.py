@@ -13,6 +13,7 @@ from ipi.engine.normalmodes import *
 from ipi.utils.inputvalue import *
 from ipi.utils.units import *
 
+
 __all__ = ["InputNormalModes", "InputNMFrequencies", "InputBosons"]
 
 

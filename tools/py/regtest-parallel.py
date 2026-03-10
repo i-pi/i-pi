@@ -88,6 +88,7 @@ in parallel while the tasks queued on QUEUE_COM will be run in serial.
 
 """
 
+
 import argparse
 import os
 import queue
