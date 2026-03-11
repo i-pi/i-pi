@@ -30,9 +30,6 @@ class Friction:
     # Extras parsing
     sigma_key: str
 
-    # Optional: subset of atoms (0-based) that participate in electronic friction
-    friction_atoms: np.ndarray | list | None
-
     # -------------------------
     # Runtime bound
     # -------------------------
@@ -63,9 +60,6 @@ class Friction:
         # if vartiable_friction is false.. then gamma = s * s   (s is a float)
 
         sigma_key: str = "sigma", # points to dictionary key where sigma AKA diffusion coefficient is stored. 
-        friction_atoms = np.zeros(0, dtype=int), #atoms where sigma is provided. 
-        #ideally the sigma provided is 3*natoms fullsize by the driver. or ideally the driver provides friction_atom index and IPI can pad zeros
-        # or the interface returns full matrix
     ):
         """Initialises the friction object.
         Args:
@@ -124,15 +118,8 @@ class Friction:
         self.sigma_meta_key = "sigma_meta"
         self._sigma_meta = {}
         self._sigma_blocks = None
-
-        if friction_atoms is None:
-            self.friction_atoms = None
-        else:
-            f_atoms = np.asarray(friction_atoms, dtype=int).flatten()
-            # Empty means "not specified" -> all atoms participate (resolved at bind time).
-            self.friction_atoms = None if f_atoms.size == 0 else f_atoms  # index in full structure
-        self._friction_atoms_idx: np.ndarray | None = None  # 0 for first friction atom, 1 for second ..
-        self._friction_dof_idx: np.ndarray | None = None  # 0 for first friction coord .... 
+        self._friction_atoms_idx: np.ndarray | None = None
+        self._friction_dof_idx: np.ndarray | None = None
 
         # runtime handles
         self.alpha: np.ndarray | None = None
@@ -155,8 +142,6 @@ class Friction:
         self.ensemble = motion.ensemble
         self.forces = motion.ensemble.forces
         self.prng = motion.prng
-        self._setup_friction_atoms()
-
         if self.bath_mode not in ("none", "markovian", "non-markovian"):
             raise ValueError("bath_mode must be one of: 'none', 'markovian', 'non-markovian'.")
 
@@ -195,26 +180,6 @@ class Friction:
         self._friction_coupling_nm.add_dependency(self.beads._q)
         self._energy_mf.add_dependency(self._friction_coupling_nm)
         self._energy_mf._func = self.get_energy_mf
-
-    def _setup_friction_atoms(self) -> None:
-        """Resolves and validates the 0-based list of atoms affected by friction."""
-        natoms = int(self.beads.natoms)
-        if self.friction_atoms is None:
-            atoms = np.arange(natoms, dtype=int)
-        else:
-            atoms = np.asarray(self.friction_atoms, dtype=int).flatten()
-
-        if np.any(atoms < 0) or np.any(atoms >= natoms):
-            raise ValueError(
-                f"friction_atoms must be 0-based indices in [0, {natoms - 1}], got {atoms}."
-            )
-        if np.unique(atoms).size != atoms.size:
-            raise ValueError(f"friction_atoms contains duplicate indices: {atoms}")
-
-        self._friction_atoms_idx = atoms
-        self._friction_dof_idx = np.concatenate(
-            [np.arange(3 * a, 3 * a + 3, dtype=int) for a in atoms]
-        )
 
     # ==========================================================================
     # temperature helper
@@ -280,24 +245,47 @@ class Friction:
     # Parse Sigma
     # ==========================================================================
 
+    def _set_friction_atoms_from_meta(self, sigma_meta: dict, natoms: int) -> None:
+        atoms = sigma_meta.get("friction_atoms")
+        if atoms is None:
+            self._friction_atoms_idx = None
+            self._friction_dof_idx = None
+            return
+
+        atoms = np.asarray(atoms, dtype=int).flatten()
+        if atoms.size == 0:
+            self._friction_atoms_idx = None
+            self._friction_dof_idx = None
+            return
+        if np.any(atoms < 0) or np.any(atoms >= natoms):
+            raise ValueError(
+                f"{self.sigma_meta_key}.friction_atoms must be 0-based indices in [0, {natoms - 1}], got {atoms}."
+            )
+        if np.unique(atoms).size != atoms.size:
+            raise ValueError(
+                f"{self.sigma_meta_key}.friction_atoms contains duplicate indices: {atoms}"
+            )
+
+        self._friction_atoms_idx = atoms
+        self._friction_dof_idx = np.concatenate(
+            [np.arange(3 * a, 3 * a + 3, dtype=int) for a in atoms]
+        )
+
     def _embed_if_needed(self, sigma3d: np.ndarray, ndof: int) -> np.ndarray:
-        """Embeds reduced sigma payload into full Cartesian space with zero padding."""
         ndof_reduced = int(sigma3d.shape[2])
         if ndof_reduced == ndof:
             return sigma3d
-
         if self._friction_dof_idx is None:
-            raise RuntimeError("Friction atoms have not been initialized. Call bind() first.")
-
+            raise ValueError(
+                f"{self.sigma_key} shape {sigma3d.shape} incompatible with ndof={ndof}, "
+                f"and no {self.sigma_meta_key}.friction_atoms metadata was provided."
+            )
         if ndof_reduced != self._friction_dof_idx.size:
             raise ValueError(
                 f"Reduced {self.sigma_key} ndof={ndof_reduced} does not match "
-                f"3*len(friction_atoms)={self._friction_dof_idx.size}."
+                f"3*len({self.sigma_meta_key}.friction_atoms)={self._friction_dof_idx.size}."
             )
-
-        sigma_full = np.zeros(
-            (sigma3d.shape[0], sigma3d.shape[1], ndof), dtype=sigma3d.dtype
-        )
+        sigma_full = np.zeros((sigma3d.shape[0], sigma3d.shape[1], ndof), dtype=sigma3d.dtype)
         sigma_full[:, :, self._friction_dof_idx] = sigma3d
         return sigma_full
 
@@ -325,6 +313,7 @@ class Friction:
         sigma_meta = self._get_sigma_meta()
         self._sigma_meta = sigma_meta
         self._sigma_blocks = None
+        self._set_friction_atoms_from_meta(sigma_meta, natoms=int(self.beads.natoms))
 
         if sigma is None:
             raise KeyError(
@@ -484,8 +473,6 @@ class Friction:
                 )
             nbeads, _, ndof = sarr.shape
             gamma = np.zeros((nbeads, ndof, ndof), dtype=float)
-            idx = self._friction_dof_idx
-            nred = None if idx is None else int(len(idx))
             for b, mats in enumerate(self._sigma_blocks):
                 for m in mats:
                     mm = np.asarray(m, dtype=float)
@@ -518,18 +505,23 @@ class Friction:
                         )
                         continue
 
-                    # Reduced square block on active friction dofs: square then embed.
-                    if idx is not None and nred is not None and mm.shape == (nred, nred):
-                        gamma_b = gamma[b]
-                        gamma_b[np.ix_(idx, idx)] += (
-                            _square_pairwise_block(mm) if sigma_mode == "pairwise" else mm @ mm.T
-                        )
-                        gamma[b] = gamma_b
-                        continue
+                    if self._friction_dof_idx is not None:
+                        nred = int(len(self._friction_dof_idx))
+                        if mm.shape == (nred, nred):
+                            gamma[b][np.ix_(self._friction_dof_idx, self._friction_dof_idx)] += (
+                                _square_pairwise_block(mm) if sigma_mode == "pairwise" else mm @ mm.T
+                            )
+                            continue
 
                     raise ValueError(
                         f"{self.sigma_meta_key}.sigma_mode='{sigma_mode}' got unsupported block shape {mm.shape}. "
-                        f"Expected ({ndof},{ndof}) or ({nred},{nred}) for friction subset embedding."
+                        f"Expected ({ndof},{ndof})"
+                        + (
+                            ""
+                            if self._friction_dof_idx is None
+                            else f" or ({len(self._friction_dof_idx)},{len(self._friction_dof_idx)})"
+                        )
+                        + "."
                     )
             return gamma
 
@@ -543,6 +535,10 @@ class Friction:
         return np.einsum("bai,baj->bij", sarr, sarr)
     
 
+    # ==========================================================================
+    # Friction forces and coupling
+    # ==========================================================================
+
     def get_friction_coupling_nm(self):
         """Compute the friction coupling for each normal-mode index"""
         if self.variable_friction:
@@ -554,10 +550,7 @@ class Friction:
             # is of the form F(q) = SUM[ c{i,α} q{i,α}, {{i,0,n_atom-1}, {α,0,2}} ] where α indexes Cartesian components
             # The diffusion coefficients for bead index l returned by the driver are expected to be packed as
             # Σ{i,α} = ∂F(q) / ∂q{i,α} = diffusion_coeff[l, 3*i+α].
-            if self._friction_dof_idx is None:
-                raise RuntimeError("Friction atoms have not been initialized. Call bind() first.")
-            q_active = self.nm.qnm[:, self._friction_dof_idx]
-            return np.sum(self.sigma * q_active, axis=-1)
+            return np.sum(self.sigma * self.nm.qnm, axis=-1)
 
     def get_energy_mf(self):
         """Compute the frictional potential of mean field, Eq. (S19) of https://doi.org/10.1103/PhysRevLett.134.226201"""
@@ -578,14 +571,7 @@ class Friction:
         if self.variable_friction:
             return -(self.alpha * self.friction_coupling_nm)[:, np.newaxis] * self.sigma
 
-        if self._friction_dof_idx is None:
-            raise RuntimeError("Friction atoms have not been initialized. Call bind() first.")
-
-        force_mf_nm = np.zeros_like(self.nm.qnm)
-        force_mf_nm[:, self._friction_dof_idx] = (
-            -(self.alpha * self.friction_coupling_nm)[:, np.newaxis] * self.sigma
-        )
-        return force_mf_nm
+        return -(self.alpha * self.friction_coupling_nm)[:, np.newaxis] * self.sigma
 
     def get_force_mf(self):
         """Negative derivative of the frictional potential of mean field with respect to bead positions"""
@@ -629,15 +615,11 @@ class Friction:
             m = self.nm.dynm3.copy()   # (nmodes, ndof_nm)
             p = self.nm.pnm.copy()     # (nmodes, ndof_nm)
             sm = np.sqrt(m)
-            if self._friction_dof_idx is None:
-                raise RuntimeError("Friction atoms have not been initialized. Call bind() first.")
-
             info("before: " + str(self.beads.p), verbosity.low)
 
             # --- ThermoLangevin coefficients but elementwise (because tau = m/gamma) ---
             # tau_ij = m_ij / gamma  =>  T_ij = exp(-pdt/tau_ij) = exp(-(gamma/m_ij)*pdt)
-            gamma_nm = np.zeros_like(m)
-            gamma_nm[:, self._friction_dof_idx] = gamma
+            gamma_nm = np.full_like(m, gamma)
             T = np.exp(-(gamma_nm / m) * pdt)
 
             # ThermoLangevin: S = sqrt(kB*Tsys * (1 - T^2))

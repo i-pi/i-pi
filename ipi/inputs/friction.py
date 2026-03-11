@@ -53,17 +53,7 @@ class InputFriction(Input):
             {
                 "dtype": str,
                 "default": "sigma",
-                "help": "Force-extras key for variable friction payload. Expected shape is (nbeads, nbath, 3*natoms) or (nbeads, nbath, 3*len(friction_atoms)).",
-            },
-        ),
-
-        # 0-based atom indices to include in friction; empty means all atoms.
-        "friction_atoms": (
-            InputArray,
-            {
-                "dtype": int,
-                "default": input_default(factory=lambda n: np.zeros(n, dtype=int), args=(0,)),
-                "help": "0-based atom indices included in friction. Empty means all atoms. If set, driver may return sigma only for this subset (3*len(friction_atoms) DOFs), and the rest are treated as zero-friction.",
+                "help": "Force-extras key for variable friction payload. Expected shape is (nbeads, nbath, 3*natoms).",
             },
         ),
     }
@@ -87,11 +77,6 @@ class InputFriction(Input):
 
         self.sigma_key.store(friction.sigma_key)
 
-        fa = getattr(friction, "friction_atoms", None)
-        if fa is None:
-            fa = np.zeros(0, dtype=int)
-        self.friction_atoms.store(np.array(fa, dtype=int).flatten())
-
     def fetch(self) -> Friction:
         return Friction(
             variable_friction=self.variable_friction.fetch(),
@@ -103,6 +88,4 @@ class InputFriction(Input):
             sigma_static=self.sigma_static.fetch(),
 
             sigma_key=self.sigma_key.fetch(),
-
-            friction_atoms=self.friction_atoms.fetch(),
         )
