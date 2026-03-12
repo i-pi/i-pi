@@ -60,7 +60,7 @@ def send_data(sock, data):
     if np.isscalar(data):
         data = np.array([data], data.dtype)
     buf = data.tobytes()
-    sock.send(buf)
+    sock.sendall(buf)
 
 def send_datas(sock, *args, extras=None):
     """Send multiple scalars/arrays and an optional extras string in one go."""
@@ -97,6 +97,7 @@ def run_shmdriver(
     f_verbose=False,
     f_debug=False,
     sockets_prefix="/tmp/ipi_",
+    shm=True,
 ):
     """Batch socket client for i-PI with SHM data exchange.
 
@@ -171,39 +172,36 @@ def run_shmdriver(
                 rid = recv_data(sock, np.int32())
                 initlen = recv_data(sock, np.int32())
                 initstr = recv_data(sock, np.chararray(initlen))
-                
-                # receiving nat and nbeads at init, necessary to be able to allocate the correct numpy shapes in SHM
-                nat = recv_data(sock, np.int32())
-                nbeads = recv_data(sock, np.int32())
+                if shm:
+                    # receiving nat and nbeads at init, necessary to be able to allocate the correct numpy shapes in SHM
+                    nat = recv_data(sock, np.int32())
+                    nbeads = recv_data(sock, np.int32())
 
+                    # reading buffer names for shared memory access
+                    pos_bufname = sock.recv(HDRLEN).decode("utf-8").strip()
+                    h_bufname = sock.recv(HDRLEN).decode("utf-8").strip()
+                    ih_bufname = sock.recv(HDRLEN).decode("utf-8").strip()
+                    pot_bufname = sock.recv(HDRLEN).decode("utf-8").strip()
+                    f_bufname = sock.recv(HDRLEN).decode("utf-8").strip()
+                    vir_bufname = sock.recv(HDRLEN).decode("utf-8").strip()
 
-                # reading buffer names for shaerd memory access
-                pos_bufname = sock.recv(HDRLEN).decode("utf-8").strip()
-                h_bufname = sock.recv(HDRLEN).decode("utf-8").strip()
-                ih_bufname = sock.recv(HDRLEN).decode("utf-8").strip()
-                pot_bufname = sock.recv(HDRLEN).decode("utf-8").strip()
-                f_bufname = sock.recv(HDRLEN).decode("utf-8").strip()
-                vir_bufname = sock.recv(HDRLEN).decode("utf-8").strip()
+                    print("Driver initing SHM with buffer names:")
+                    print(pos_bufname, h_bufname, ih_bufname, pot_bufname, f_bufname, vir_bufname)
 
-                print("Driver initing SHM with buffer names:")
-                print(pos_bufname, h_bufname, ih_bufname, pot_bufname, f_bufname, vir_bufname)
+                    cell_shm = attach_shared_memory(h_bufname)
+                    icell_shm = attach_shared_memory(ih_bufname)
+                    pot_shm = attach_shared_memory(pot_bufname)
+                    pos_shm = attach_shared_memory(pos_bufname)
+                    f_shm = attach_shared_memory(f_bufname)
+                    vir_shm = attach_shared_memory(vir_bufname)
 
-                #shm objects
-                cell_shm = attach_shared_memory(h_bufname)
-                icell_shm = attach_shared_memory(ih_bufname)
-                pot_shm = attach_shared_memory(pot_bufname)
-                pos_shm = attach_shared_memory(pos_bufname)
-                f_shm = attach_shared_memory(f_bufname)
-                vir_shm = attach_shared_memory(vir_bufname)
-
-
-                # allocating numpy arrays in shared memory on the same buffer as in the server
-                cell_snp = np.ndarray((3,3), dtype=np.float64, buffer=cell_shm.buf)
-                icell_snp = np.ndarray((3,3), dtype=np.float64, buffer=icell_shm.buf)
-                pot_snp = np.ndarray((nbeads), dtype=np.float64, buffer=pot_shm.buf)
-                pos_snp = np.ndarray((nbeads, nat*3), dtype=np.float64, buffer=pos_shm.buf)
-                f_snp = np.ndarray((nbeads, nat*3), dtype=np.float64, buffer=f_shm.buf)
-                vir_snp = np.ndarray((nbeads, 3,3), dtype=np.float64, buffer=vir_shm.buf)
+                    # allocating numpy arrays in shared memory on the same buffer as in the server
+                    cell_snp = np.ndarray((3,3), dtype=np.float64, buffer=cell_shm.buf)
+                    icell_snp = np.ndarray((3,3), dtype=np.float64, buffer=icell_shm.buf)
+                    pot_snp = np.ndarray((nbeads), dtype=np.float64, buffer=pot_shm.buf)
+                    pos_snp = np.ndarray((nbeads, nat*3), dtype=np.float64, buffer=pos_shm.buf)
+                    f_snp = np.ndarray((nbeads, nat*3), dtype=np.float64, buffer=f_shm.buf)
+                    vir_snp = np.ndarray((nbeads, 3,3), dtype=np.float64, buffer=vir_shm.buf)
                 
                 if f_verbose:
                     print(f"Rank {rank} initing with rid, initstr: {rid}, {initstr}")
@@ -213,11 +211,24 @@ def run_shmdriver(
         elif header == Message("POSDATA"):
             if rank == 0:
                 timers.start("Read Posdata")
-                
-                # copy from SHM
-                pos = pos_snp[:] 
-                cell = cell_snp[:] 
-                icell = icell_snp[:] 
+                if shm:
+                    # copy from SHM
+                    pos = pos_snp[:]
+                    cell = cell_snp[:]
+                    icell = icell_snp[:]
+                else:
+                    cell = recv_data(sock, cell)
+                    icell = recv_data(sock, icell)
+                    nat_token = int(recv_data(sock, np.int32()))
+                    if nat_token >= 0:
+                        raise RuntimeError(
+                            "MPI driver plain-socket mode expects batched positions"
+                        )
+                    nat = -nat_token
+                    nbeads = int(recv_data(sock, np.int32()))
+                    pos = recv_data(
+                        sock, np.zeros((nbeads, nat * 3), dtype=np.float64)
+                    )
                 
                 timers.stop("Read Posdata")
             else:
@@ -266,9 +277,15 @@ def run_shmdriver(
             
             timers.stop("Run Driver(+)")
 
+            pot = comm.gather(results[0], root=0)
+            force = comm.gather(results[1], root=0)
+            vir = comm.gather(results[2], root=0)
+            extras = comm.gather(results[3], root=0)
 
             if rank == 0:
-                pot, force, vir, extras = results
+                pot = np.asarray(pot, dtype=np.float64)
+                force = np.asarray(force, dtype=np.float64).reshape((nbeads, nat * 3))
+                vir = np.asarray(vir, dtype=np.float64).reshape((nbeads, 3, 3))
 
             f_data = True
 
@@ -286,11 +303,18 @@ def run_shmdriver(
                 if len(vir.flatten()) != nbeads * 9:
                     raise ValueError("Virial shape mismatch")
                 '''
-                pot_snp = pot
-                f_snp = force[:]
-                vir_snp = vir[:]
-                
-                sock.sendall(Message("FORCEREADY"))
+                if shm:
+                    pot_snp[:] = pot
+                    f_snp[:] = force
+                    vir_snp[:] = vir
+                    sock.sendall(Message("FORCEREADY"))
+                else:
+                    sock.sendall(Message("FORCEREADY"))
+                    send_data(sock, pot)
+                    send_data(sock, np.int32(nat))
+                    send_data(sock, force)
+                    send_data(sock, vir)
+                    send_data(sock, np.int32(0))
                 
                 timers.stop("Send Forces")
                 
@@ -299,12 +323,13 @@ def run_shmdriver(
         elif header == Message("EXIT"):
             if rank == 0:
                 print("Received exit message from i-PI. Bye bye!")
-                cell_shm.close()
-                icell_shm.close()
-                pot_shm.close()
-                pos_shm.close()
-                f_shm.close()
-                vir_shm.close()
+                if shm:
+                    cell_shm.close()
+                    icell_shm.close()
+                    pot_shm.close()
+                    pos_shm.close()
+                    f_shm.close()
+                    vir_shm.close()
                 timers.summary("driver_timing_breakdown")
             return
 
@@ -395,21 +420,13 @@ if __name__ == "__main__":
 
     d_f = cls(*driver_args, **driver_kwargs)
 
-    if args.shm:
-        run_shmdriver(
-            unix=True,
-            address=args.address,
-            port=args.port,
-            driver=d_f,
-            f_verbose=args.verbose,
-            sockets_prefix=args.sockets_prefix,
-        )
-    else:
-        run_driver(
-            unix=args.unix,
-            address=args.address,
-            port=args.port,
-            driver=d_f,
-            f_verbose=args.verbose,
-            sockets_prefix=args.sockets_prefix,
-        )
+    run_shmdriver(
+        unix=True if args.shm else args.unix,
+        address=args.address,
+        port=args.port,
+        driver=d_f,
+        f_verbose=args.verbose,
+        f_debug=args.debug,
+        sockets_prefix=args.sockets_prefix,
+        shm=args.shm,
+    )

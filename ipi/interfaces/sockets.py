@@ -956,14 +956,25 @@ class Driver(DriverSocket):
                     self.np_to_shm({"pos": pos, "cell": h_ih})
                     self.sendall(MESSAGE["posdata"])
                 else:
-                    # reduces latency by combining all messages in one
-                    self.sendall(
-                        MESSAGE["posdata"]  # header
-                        + h_ih[0].tobytes()  # cell
-                        + h_ih[1].tobytes()  # inverse cell
-                        + np.int32(len(pos) // 3).tobytes()  # length of position array
-                        + pos.tobytes()  # positions
-                    )
+                    if self.nbeads == 1:
+                        # preserves the original serial socket protocol exactly
+                        self.sendall(
+                            MESSAGE["posdata"]  # header
+                            + h_ih[0].tobytes()  # cell
+                            + h_ih[1].tobytes()  # inverse cell
+                            + np.int32(len(pos) // 3).tobytes()  # number of atoms
+                            + pos.tobytes()  # positions
+                        )
+                    else:
+                        # batch-only extension for the MPI driver
+                        self.sendall(
+                            MESSAGE["posdata"]
+                            + h_ih[0].tobytes()
+                            + h_ih[1].tobytes()
+                            + np.int32(-self.nat).tobytes()
+                            + np.int32(self.nbeads).tobytes()
+                            + pos.tobytes()
+                        )
                 self.status = Status.Up | Status.Busy
             except socket.timeout:
                 warning(
@@ -1024,30 +1035,27 @@ class Driver(DriverSocket):
         if self.shm:
             return self.shm_to_np()
 
-        mu = np.float64()
-        mu = self.recvall(mu)
+        if self.nbeads == 1:
+            mu = np.float64()
+            mu = self.recvall(mu)
+        else:
+            mu = np.zeros(self.nbeads, np.float64)
+            mu = self.recvall(mu)
 
         mlen = np.int32()
         mlen = self.recvall(mlen)
-        """
-        if self.nbeads > 1:
-            mf = np.zeros((mbeads, 3 * mlen), np.float64)
-            mf = self.recvall(mf)
-
-            mvir = np.zeros((mbeads, 3, 3), np.float64)
-            mvir = self.recvall(mvir)
-        else:
+        if self.nbeads == 1:
             mf = np.zeros(3 * mlen, np.float64)
             mf = self.recvall(mf)
 
             mvir = np.zeros((3, 3), np.float64)
             mvir = self.recvall(mvir)
-        """
-        mf = np.zeros(3 * mlen, np.float64)
-        mf = self.recvall(mf)
+        else:
+            mf = np.zeros((self.nbeads, 3 * mlen), np.float64)
+            mf = self.recvall(mf)
 
-        mvir = np.zeros((3, 3), np.float64)
-        mvir = self.recvall(mvir)
+            mvir = np.zeros((self.nbeads, 3, 3), np.float64)
+            mvir = self.recvall(mvir)
 
         # Machinery to return a string as an "extra" field.
         # Comment if you are using a ancient patched driver that does not return anything!
@@ -1097,6 +1105,8 @@ class Driver(DriverSocket):
 
         if self.shm:
             self.sendpos(r["pos"], r["cell"])
+        elif r["pos"].ndim == 2:
+            self.sendpos(r["pos"], r["cell"])
         else:
             self.sendpos(r["pos"][r["active"]], r["cell"])
 
@@ -1110,6 +1120,9 @@ class Driver(DriverSocket):
             else:
                 if r["result"][1].shape != r["pos"].shape:
                     raise InvalidSize
+        elif r["pos"].ndim == 2:
+            if r["result"][1].shape != r["pos"].shape:
+                raise InvalidSize
         else:
             if len(r["result"][1]) != len(r["pos"][r["active"]]):
                 raise InvalidSize
@@ -1122,6 +1135,8 @@ class Driver(DriverSocket):
                 rftemp = r["result"][1]
                 r["result"][1] = np.zeros(len(r["pos"]), dtype=np.float64)
                 r["result"][1] = r["result"][1].at[r["active"]].set(rftemp)
+        elif r["pos"].ndim == 2:
+            return
         elif len(r["active"]) != len(r["pos"]):
             rftemp = r["result"][1]
             r["result"][1] = np.zeros(len(r["pos"]), dtype=np.float64)
