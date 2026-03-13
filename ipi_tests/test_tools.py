@@ -221,7 +221,7 @@ def modify_xml_4_dummy_test(
 
         model = driver_info["driver_model"][s]
 
-        clients.append([model, "unix", address, port])
+        clients.append([model, driver_info["socket_mode"][s], address, port])
 
         for key in driver_info["flag"][s].keys():
             if "-o" in key:
@@ -235,7 +235,14 @@ def modify_xml_4_dummy_test(
         ):
             for remaining_client_idx in range(s + 1, len(driver_info["driver_model"])):
                 model = driver_info["driver_model"][remaining_client_idx]
-                clients.append([model, "unix", address, port])
+                clients.append(
+                    [
+                        model,
+                        driver_info["socket_mode"][remaining_client_idx],
+                        address,
+                        port,
+                    ]
+                )
 
                 for key in driver_info["flag"][remaining_client_idx].keys():
                     if "-o" in key:
@@ -316,7 +323,6 @@ class Runner(object):
                 stdout=sp.PIPE,
                 stderr=sp.PIPE,
             )
-
             if len(clients) > 0:
                 f_connected = False
                 for client in clients:
@@ -365,13 +371,17 @@ class Runner(object):
                     clientcall = call_driver + " -m {} {} {} -u ".format(
                         client[0], address_key, client[2]
                     )
+                elif client[1] == "shm":
+                    clientcall = call_driver + " -m {} {} {} -u --shm ".format(
+                        client[0], address_key, client[2]
+                    )
                 elif client[1] == "inet":
                     clientcall = call_driver + " -m {} {} {} -p {}".format(
                         client[0], client[2], address_key, client[3]
                     )
 
                 else:
-                    raise ValueError("Driver mode has to be either unix or inet")
+                    raise ValueError("Driver mode has to be either unix, shm or inet")
 
                 cmd = clientcall
 
