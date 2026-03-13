@@ -1,4 +1,33 @@
 
+"""Electronic-friction operators for friction-enabled dynamics in i-PI.
+
+This module separates electronic friction into two layers.
+
+`Friction`
+    High-level operator owned by the `nve-f` / `nvt-f` integrators. It parses
+    force-driver extras, constructs `sigma` and `gamma`, manages metadata such
+    as `sigma_meta`, and evaluates the optional friction mean-field (MF)
+    contribution (`friction_coupling_nm`, `force_mf`, `energy_mf`).
+
+`FrictionGLE`
+    Bath propagator used by `Friction.step(pdt)`. In the current implementation
+    it covers the Markovian electronic-friction bath for both:
+      - static friction (`sigma_static`)
+      - variable friction (`sigma(q)` from driver extras)
+    and is structured so that explicit non-Markovian auxiliary variables can be
+    added later in the same class.
+
+Current Markovian behavior:
+    1. `Friction.step(pdt)` applies the MF momentum kick, if enabled.
+    2. `FrictionGLE.step(pdt)` applies the dissipative/stochastic bath update.
+
+For variable friction, drivers provide `sigma`; i-PI converts it to
+`gamma = sigma^T sigma` and uses an exact frozen-geometry OU update over the
+current substep. When the driver only returns friction-active atoms,
+`sigma_meta["friction_atoms"]` is used to embed the reduced matrix into the
+full Cartesian system (n_atoms).
+"""
+
 import json
 import numpy as np
 
@@ -8,6 +37,231 @@ from ipi.engine.beads import Beads
 
 from ipi.utils.depend import depend_value,  dproperties
 from ipi.utils.messages import info, verbosity, warning
+
+
+def _apply_mass_scaled_ou(p, sm, drift, noise_scale, noise):
+    """Applies an exact OU step in mass-scaled coordinates."""
+
+    p_ms = p * (drift / sm)
+    deltah = np.sum((p_ms * p_ms) / (drift * drift))
+    p_ms += noise_scale * noise
+    deltah -= np.sum(p_ms * p_ms)
+    return p_ms * sm, 0.5 * deltah
+
+
+def _apply_mass_scaled_matrix_ou(s, A, dt, kbt, noise):
+    """Applies an exact matrix OU step in mass-scaled coordinates."""
+
+    et = 0.5 * float(np.dot(s, s))
+    A = 0.5 * (A + A.T)
+    evals, evecs = np.linalg.eigh(A)
+    evals = np.clip(evals, 0.0, None)
+    c = np.exp(-evals * dt)
+    s2 = np.sqrt(1.0 - c * c)
+    y = evecs.T @ s
+    y = c * y + np.sqrt(kbt) * s2 * noise
+    s = evecs @ y
+    et -= 0.5 * float(np.dot(s, s))
+    return s, et
+
+
+class FrictionBath:
+    """Base class for electronic-friction bath propagators."""
+
+    def __init__(self):
+        self.friction = None
+        self.motion = None
+
+    def bind(self, friction, motion: Motion | None) -> None:
+        self.friction = friction
+        self.motion = motion
+
+    @property
+    def ediss(self) -> float:
+        return float(self.friction.ediss)
+
+    def state_shape(self):
+        return None
+
+    def initialize_state(self) -> None:
+        pass
+
+    def step(self, pdt: float) -> None:
+        raise NotImplementedError
+
+
+class FrictionGLE(FrictionBath):
+    """Unified electronic-friction bath propagator.
+
+    Markovian friction is treated as the zero-auxiliary limit of the GLE bath.
+    For the future non-Markovian case, this object keeps the auxiliary bath
+    variables separate from the physical system momentum: unlike `ThermoGLE`,
+    `self.s` is reserved for auxiliary bath variables only.
+    """
+
+    def __init__(self):
+        super().__init__()
+        self.s = None
+        self.ns = 0
+        self.theta = None
+        self.A_aux = None
+        self.T_aux = None
+        self.S_aux = None
+
+    def bind(self, friction, motion: Motion | None) -> None:
+        super().bind(friction, motion)
+        self.initialize_state()
+
+    def initialize_state(self) -> None:
+        if self.is_markovian():
+            self.s = np.zeros((0,), dtype=float)
+            self.ns = 0
+            self.theta = None
+            self.A_aux = None
+            self.T_aux = None
+            self.S_aux = None
+            return
+
+        # Non-Markovian scaffold:
+        # `s` is reserved for auxiliary bath variables only, not the system
+        # momentum. The eventual implementation should populate:
+        #   - theta : coupling vectors entering S40/S42
+        #   - A_aux : auxiliary drift matrices
+        #   - T_aux : exp(-A_aux * dt/2), Eq. (S38)
+        #   - S_aux : noise matrices satisfying Eq. (S38)
+        self.s = np.zeros(self.state_shape(), dtype=float)
+        self.theta = None
+        self.A_aux = None
+        self.T_aux = None
+        self.S_aux = None
+
+    def is_markovian(self) -> bool:
+        return str(self.friction.bath_mode) == "markovian"
+
+    def state_shape(self):
+        if self.is_markovian():
+            return (0,)
+        # Future non-Markovian layout: one auxiliary stack per bead and
+        # Cartesian DOF. The auxiliary dimension is left at zero until the OU
+        # embedding fit is implemented.
+        return (int(self.friction.beads.nbeads), 0, 3 * int(self.friction.beads.natoms))
+
+    def step(self, pdt: float) -> None:
+        if self.is_markovian():
+            self._step_markovian(pdt)
+            return
+        self._step_non_markovian(pdt)
+
+    def _step_markovian(self, pdt: float) -> None:
+        if pdt <= 0.0:
+            return
+        if self.friction.variable_friction:
+            self._step_markovian_variable(pdt)
+        else:
+            self._step_markovian_static(pdt)
+
+    def _step_markovian_static(self, pdt: float) -> None:
+        friction = self.friction
+        sigma = float(friction.sigma_static)
+        gamma = sigma * sigma
+        if gamma < 0.0:
+            raise ValueError("gamma must be non-negative for Markovian linear coupling.")
+        if gamma == 0.0:
+            return
+
+        m = friction.nm.dynm3.copy()
+        p = friction.nm.pnm.copy()
+        sm = np.sqrt(m)
+        gamma_nm = np.full_like(m, gamma)
+        drift = np.exp(-(gamma_nm / m) * pdt)
+        noise_scale = np.sqrt(friction._kbt_rp() * (1.0 - drift * drift))
+        p_new, bath_energy = _apply_mass_scaled_ou(
+            p, sm, drift, noise_scale, friction.prng.gvec(p.shape)
+        )
+        friction.nm.pnm[:] = p_new
+        friction.beads.p = friction.nm.transform.nm2b(p_new)
+        friction.ediss += bath_energy
+
+    def _step_markovian_variable(self, pdt: float) -> None:
+        friction = self.friction
+        sigma = friction._get_sigma()
+        nbeads = sigma.shape[0]
+        gamma = np.asarray(friction.gamma, dtype=float)
+        p = friction.beads.p
+        m = friction.beads.m3
+        sm = np.sqrt(m)
+        et = 0.0
+
+        for b in range(nbeads):
+            gam = gamma[b, :, :]
+            inv_sm = 1.0 / sm[b, :]
+            A = (inv_sm[:, None] * gam) * inv_sm[None, :]
+            s = p[b, :] * inv_sm
+            s, et_b = _apply_mass_scaled_matrix_ou(
+                s,
+                A,
+                pdt,
+                friction._kbt_rp(),
+                friction.prng.gvec(s.shape),
+            )
+            et += et_b
+            p[b, :] = s * sm[b, :]
+
+        friction.beads.p[:] = p
+        friction.ediss += et
+
+    def _step_non_markovian(self, pdt: float) -> None:
+        # Symmetric non-Markovian bath splitting scaffold:
+        #   O_s(dt/2)   : Eq. (S38)
+        #   B_P,F(dt/2) : Eq. (S40)
+        #   B_s(dt)     : Eq. (S42)
+        #   B_P,F(dt/2) : Eq. (S40)
+        #   O_s(dt/2)   : Eq. (S38)
+        if pdt <= 0.0:
+            return
+
+        self.os_step(0.5 * pdt)
+        self.bp_f_step(0.5 * pdt)
+        self.bs_step(pdt)
+        self.bp_f_step(0.5 * pdt)
+        self.os_step(0.5 * pdt)
+
+    def os_step(self, pdt: float) -> None:
+        """Auxiliary OU step, Eq. (S38).
+
+        Implements:
+            s <- T_{dt} s + S_{dt} xi
+
+        This acts on auxiliary bath variables only. Physical system momenta
+        remain in `beads.p` / `nm.pnm`.
+        """
+
+        raise NotImplementedError(
+            "FrictionGLE.os_step (Eq. S38) is not implemented for the non-markovian bath."
+        )
+
+    def bp_f_step(self, pdt: float) -> None:
+        """Bath-to-momentum coupling, Eq. (S40).
+
+        Implements the momentum kick generated by the current auxiliary bath
+        state through:
+            P <- P - dt * dF/dQ * theta^T s
+        """
+
+        raise NotImplementedError(
+            "FrictionGLE.bp_f_step (Eq. S40) is not implemented for the non-markovian bath."
+        )
+
+    def bs_step(self, pdt: float) -> None:
+        """Momentum-to-bath coupling, Eq. (S42).
+
+        Implements the auxiliary update driven by physical momentum through:
+            s <- s + dt * dF/dQ * theta * P
+        """
+
+        raise NotImplementedError(
+            "FrictionGLE.bs_step (Eq. S42) is not implemented for the non-markovian bath."
+        )
 
 
 class Friction:
@@ -120,6 +374,7 @@ class Friction:
         self._sigma_blocks = None
         self._friction_atoms_idx: np.ndarray | None = None
         self._friction_dof_idx: np.ndarray | None = None
+        self.bath: FrictionBath | None = None
 
         # runtime handles
         self.alpha: np.ndarray | None = None
@@ -174,12 +429,29 @@ class Friction:
             raise ValueError(
                 "debug_mf_mode='linear' is only meaningful with variable_friction=False.")
 
+        self.bath = self._build_bath()
+        if self.bath is not None:
+            self.bath.bind(self, motion)
 
         # Dependencies
         self._sigma.add_dependency(self.forces._extras)
         self._friction_coupling_nm.add_dependency(self.beads._q)
         self._energy_mf.add_dependency(self._friction_coupling_nm)
         self._energy_mf._func = self.get_energy_mf
+
+    def _build_bath(self) -> FrictionBath | None:
+        if self.bath_mode == "none":
+            return None
+        if self.bath_mode in ("markovian", "non-markovian"):
+            return FrictionGLE()
+        raise RuntimeError("bath_mode must be one of none, markovian or non-markovian")
+
+    def _ensure_bath_bound(self) -> None:
+        if self.bath is not None or self.bath_mode == "none":
+            return
+        self.bath = self._build_bath()
+        if self.bath is not None:
+            self.bath.bind(self, None)
 
     # ==========================================================================
     # temperature helper
@@ -578,153 +850,6 @@ class Friction:
         return self.nm.transform.nm2b(self.force_mf_nm)
 
     # ==========================================================================
-    # Markovian bath
-    # ==========================================================================
-
-    def _step_markovian(self, pdt: float) -> None:
-        """
-        Markovian dissipation + noise.
-
-        Linear coupling:
-          gamma = sigma_static * sigma_static
-          dp_nm = -gamma v_nm dt + sqrt(2 kBT gamma dt) N
-
-        Variable friction:
-          sigma is position - dependent
-          dp_drift = -dt sigma^T (sigma v)
-          dp_noise = sqrt(2 kBT dt) sigma^T g, g~N(0,I)
-        """
-        #from ipi.utils.mathtools import matrix_exp, root_herm
- 
-        if pdt <= 0.0:
-            return
-
-        kbt = self._kbt_rp()
-
-        # Linear coupling: friction does not depend on instaneous atomic configuration.
-        # Exact OU update for: dp = -gamma v dt + sqrt(2 kBT gamma) dW,  v = p/m
-        if not self.variable_friction:
-            sigma = float(self.sigma_static)
-            gamma = sigma * sigma
-            if gamma < 0.0:
-                raise ValueError("gamma must be non-negative for Markovian linear coupling.")
-            if gamma == 0.0:
-                return  # no coupling
-
-            # masses and momenta in NM space
-            m = self.nm.dynm3.copy()   # (nmodes, ndof_nm)
-            p = self.nm.pnm.copy()     # (nmodes, ndof_nm)
-            sm = np.sqrt(m)
-            info("before: " + str(self.beads.p), verbosity.low)
-
-            # --- ThermoLangevin coefficients but elementwise (because tau = m/gamma) ---
-            # tau_ij = m_ij / gamma  =>  T_ij = exp(-pdt/tau_ij) = exp(-(gamma/m_ij)*pdt)
-            gamma_nm = np.full_like(m, gamma)
-            T = np.exp(-(gamma_nm / m) * pdt)
-
-            # ThermoLangevin: S = sqrt(kB*Tsys * (1 - T^2))
-            # NOTE: this S is the coefficient in mass-scaled space (same as i-PI)
-            S = np.sqrt(kbt * (1.0 - T * T))
-
-            # --- goes in a single step to mass scaled coordinates and applies damping ---
-            # i-PI: p = dstrip(self.p) * dstrip(self.T_on_sm)
-            # with T_on_sm = T / sm
-            p = p * (T / sm)
-
-            # --- ThermoLangevin deltah bookkeeping (thermostat work) ---
-            # ThermoLangevin: deltah = noddot(p,p)/(T^2)  # must correct for the "pre-damping"
-            # Here T is array, so do elementwise divide before summing.
-            deltah = np.sum((p * p) / (T * T))
-
-            # ThermoLangevin: p += S * prng.gvec(...)
-            p += S * self.prng.gvec(p.shape)
-
-            # ThermoLangevin: deltah -= noddot(p,p)
-            deltah -= np.sum(p * p)
-
-            # ThermoLangevin: self.p[:] = p * sm
-            p = p * sm
-            self.nm.pnm[:] = p
-            self.beads.p = self.nm.transform.nm2b(p)
-
-            # THermoLangvin: self.ethermo += deltah * 0.5.
-            # The *net* bath exchange is exactly 0.5*deltah, so track it consistently:
-            # Convention: + means energy to bath (same sign spirit as i-PI's ethermo).
-            self.ediss += 0.5 * deltah
-
-            #debug
-            info("after: " + str(self.beads.p), verbosity.low)
-            return
-
-        # =========================
-        # Variable friction: exact OU with frozen sigma over the substep
-        # =========================
-
-        # For ring-polymer momenta, i-PI thermostats typically use kB * (P*T).
-        # If you explicitly want physical T instead, swap to self._kbt().
-        # inside _step_markovian, variable_friction branch
-        kbt = self._kbt_rp()  # usually correct for RP momenta
-
-        sigma = self._get_sigma()  # (nbeads, nbath, ndof)
-        nbeads, nbath, ndof = sigma.shape
-        gamma = np.asarray(self.gamma, dtype=float)  # (nbeads, ndof, ndof)
-
-        p = self.beads.p
-        m = self.beads.m3
-        sm = np.sqrt(m)
-
-        # optional i-PI-esque net bath work bookkeeping (ThermoCL/ThermoGLE style)
-        et = 0.0
-
-        for b in range(nbeads):
-            # Gamma = sigma^T sigma (ndof, ndof) from dependent property
-            gam = gamma[b, :, :]
-
-            inv_sm = 1.0 / sm[b, :]            # (ndof,)
-            # mass-weighted A = M^{-1/2} Lam M^{-1/2}
-            A = (inv_sm[:, None] * gam) * inv_sm[None, :]
-
-            # mass-scaled momentum
-            s = p[b, :] * inv_sm
-
-            # i-PI-style work accumulation: et += 1/2 s^2 (before), et -= 1/2 s^2 (after)
-            et += 0.5 * float(np.dot(s, s))
-
-            # diagonalize symmetric PSD A
-            # (use eigh; A should be symmetric up to roundoff)
-            A = 0.5 * (A + A.T)
-            a, V = np.linalg.eigh(A)
-            a = np.clip(a, 0.0, None)          # guard tiny negatives
-
-            # OU coefficients along eigenmodes
-            c = np.exp(-a * pdt)               # exact OU drift factors
-            s2 = np.sqrt(1.0 - c * c)          # exact OU noise factors
-
-            # transform, damp, add noise, transform back
-            y = V.T @ s
-            y = c * y + np.sqrt(kbt) * s2 * self.prng.gvec(ndof)
-            s = V @ y
-
-            et -= 0.5 * float(np.dot(s, s))
-
-            # back to physical momentum
-            p[b, :] = s * sm[b, :]
-
-        self.beads.p[:] = p
-        self.ediss += et   # this is really "ethermo-like" net exchange
-
-        return
-
-    # ==========================================================================
-    # Non-Markovian OU: step
-
-    # Fit will be outsourced to George's code
-    # =========================================================================
-
-    def _step_non_markovian(self, pdt: float) -> None:
-        raise NotImplementedError("non-markovian friction bath is not implemented.")
-
-    # ==========================================================================
     # main step
     # ==========================================================================
 
@@ -739,17 +864,10 @@ class Friction:
         if self.debug_mf_mode != "none":
             self.beads.p += self.force_mf * pdt
 
-        # Bath
-        if self.bath_mode == "none":
+        self._ensure_bath_bound()
+        if self.bath is None:
             return
-        if self.bath_mode == "markovian":
-            self._step_markovian(pdt)
-            return
-        if self.bath_mode == "non-markovian": #not implemented
-            self._step_non_markovian(pdt)
-            return
-
-        raise RuntimeError("bath_mode must be one of none, markovian or non-markovian")
+        self.bath.step(pdt)
 
 
 

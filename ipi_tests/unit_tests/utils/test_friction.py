@@ -32,7 +32,7 @@ import pytest
 import numpy as np
 from ipi.utils.frictiontools import expohmic_Lambda, get_alpha_ohmic
 
-from ipi.engine.friction import Friction, get_alpha_numeric
+from ipi.engine.friction import Friction, FrictionGLE, get_alpha_numeric
 from ipi.pes.doublewell_with_friction import DoubleWell_with_friction_driver
 
 
@@ -433,3 +433,92 @@ def test_gamma_from_sigma_invalid_mode_raises() -> None:
     friction.prng = _DummyPRNG()
     with pytest.raises(ValueError, match="Unsupported sigma_meta.sigma_mode"):
         _ = friction.gamma
+
+
+def test_markovian_bath_is_unified_friction_gle() -> None:
+    friction = Friction(
+        variable_friction=False,
+        bath_mode="markovian",
+        debug_mf_mode="none",
+    )
+    bath = friction._build_bath()
+    assert isinstance(bath, FrictionGLE)
+
+
+def test_step_builds_friction_gle_lazily() -> None:
+    q = np.array([[0.2, 0.0, 0.0]], dtype=float)
+    p0 = np.array([[1.0, 0.5, -0.3]], dtype=float)
+    m3 = np.ones_like(p0) * 1837.36223469
+    beads = _DummyBeads(q=q, p=p0, m3=m3)
+    nm = _DummyNM(beads)
+    forces = _DummyForces(extras={})
+    ensemble = _DummyEnsemble(temp=300.0, forces=forces)
+
+    friction = Friction(
+        variable_friction=False,
+        bath_mode="markovian",
+        debug_mf_mode="none",
+        sigma_static=1.2,
+    )
+    friction.beads = beads
+    friction.nm = nm
+    friction.ensemble = ensemble
+    friction.forces = forces
+    friction.prng = _DummyPRNG()
+
+    assert friction.bath is None
+    friction.step(0.1)
+    assert isinstance(friction.bath, FrictionGLE)
+
+
+def test_non_markovian_friction_gle_has_auxiliary_scaffold() -> None:
+    q = np.array([[0.2, 0.0, 0.0]], dtype=float)
+    p0 = np.array([[1.0, 0.5, -0.3]], dtype=float)
+    m3 = np.ones_like(p0)
+    beads = _DummyBeads(q=q, p=p0, m3=m3)
+    nm = _DummyNM(beads)
+    nm.omegak = np.array([0.0], dtype=float)
+    forces = _DummyForces(extras={})
+    ensemble = _DummyEnsemble(temp=300.0, forces=forces)
+
+    friction = Friction(
+        variable_friction=False,
+        bath_mode="non-markovian",
+        debug_mf_mode="none",
+        Lambda=np.array([[1.0, 0.1], [2.0, 0.2]], dtype=float),
+    )
+    friction.beads = beads
+    friction.nm = nm
+    friction.ensemble = ensemble
+    friction.forces = forces
+    friction.prng = _DummyPRNG()
+    friction._ensure_bath_bound()
+
+    assert isinstance(friction.bath, FrictionGLE)
+    assert friction.bath.state_shape() == (1, 0, 3)
+
+
+def test_non_markovian_step_raises_at_operator_scaffold() -> None:
+    q = np.array([[0.2, 0.0, 0.0]], dtype=float)
+    p0 = np.array([[1.0, 0.5, -0.3]], dtype=float)
+    m3 = np.ones_like(p0)
+    beads = _DummyBeads(q=q, p=p0, m3=m3)
+    nm = _DummyNM(beads)
+    nm.omegak = np.array([0.0], dtype=float)
+    forces = _DummyForces(extras={})
+    ensemble = _DummyEnsemble(temp=300.0, forces=forces)
+
+    friction = Friction(
+        variable_friction=False,
+        bath_mode="non-markovian",
+        debug_mf_mode="none",
+        Lambda=np.array([[1.0, 0.1], [2.0, 0.2]], dtype=float),
+    )
+    friction.beads = beads
+    friction.nm = nm
+    friction.ensemble = ensemble
+    friction.forces = forces
+    friction.prng = _DummyPRNG()
+
+    with pytest.raises(NotImplementedError, match="Eq. S38"):
+        friction.step(0.1)
