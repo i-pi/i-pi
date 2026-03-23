@@ -12,6 +12,7 @@ from ipi.utils.units import unit_to_internal, unit_to_user
 from .dummy import Dummy_driver
 
 from ipi.utils.messages import warning, info, verbosity
+from vesin.metatomic import NeighborList
 
 torch = None
 mts = None
@@ -142,6 +143,7 @@ class MetatomicDriver(Dummy_driver):
         self._load_models_and_device()
         self._load_template()
         self._register_model_outputs()
+        self._initialize_NL_calculators()
 
         # Show the model metadata to the users
         info(f"Metatomic model information:\n{self.model.metadata()}", self.verbose)
@@ -269,6 +271,13 @@ class MetatomicDriver(Dummy_driver):
             outputs=outputs,
         )
 
+    def _initialize_NL_calculators(self):
+        """Initializes neighbor list calculators for all requested neighbor lists."""
+        self._nl_calculators = [
+            NeighborList(options, self.model.capabilities().length_unit, True, False)
+            for options in self.model.requested_neighbor_lists()
+        ]
+
     def _prepare_system(self, cell, pos, model=None, device=None):
         """Prepares a metatomic System object from cell and positions."""
         if model is None:
@@ -293,12 +302,16 @@ class MetatomicDriver(Dummy_driver):
             cell = cell @ strain
 
         system = mta.System(self._types, positions, cell, pbc)
+        # Move system to the correct device before computing neighbor lists, to utilize
+        # vesin-cuda if available
+        system = system.to(device)
 
         # Compute neighbor lists using vesin
-        vesin_metatomic.compute_requested_neighbors(
-            system, system_length_unit="Angstrom", model=model
-        )
-        system = system.to(device)
+        for option, nl_calculator in zip(
+            self.model.requested_neighbor_lists(), self._nl_calculators, strict=True
+        ):
+            neighbors = nl_calculator.compute(system)
+            system.add_neighbor_list(option, neighbors)
 
         return system, strain
 
