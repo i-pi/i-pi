@@ -1855,6 +1855,12 @@ class PhotonDriver:
         Returns:
             total energy of photonic system
         """
+        # convert the input dipole array to numpy array if it is a scalar
+        if np.isscalar(dx_array):
+            dx_array = np.array([dx_array])
+        if np.isscalar(dy_array):
+            dy_array = np.array([dy_array])
+
         # calculate the photonic potential energy
         e_ph = np.sum(0.5 * self.omega_klambda3**2 * self.pos_ph**2)
 
@@ -1895,6 +1901,12 @@ class PhotonDriver:
         Returns:
             force array of all photonic dimensions (3*nphoton) [1x, 1y, 1z, 2x..]
         """
+        # convert the input dipole array to numpy array if it is a scalar
+        if np.isscalar(dx_array):
+            dx_array = np.array([dx_array])
+        if np.isscalar(dy_array):
+            dy_array = np.array([dy_array])
+
         # calculat the bare photonic contribution of the force
         f_ph = -self.omega_klambda3**2 * self.pos_ph
 
@@ -1911,7 +1923,9 @@ class PhotonDriver:
             f_ph[1::3] -= self.varepsilon_k * d_dot_f_y
         return f_ph
 
-    def get_nuc_cav_forces(self, dx_array, dy_array, charge_array_bath):
+    def get_nuc_cav_forces(
+        self, dx_array, dy_array, charge_array_bath=None, dipole_der=None
+    ):
         """
         Calculate the photonic forces on nuclei from MM partial charges
 
@@ -1919,10 +1933,28 @@ class PhotonDriver:
             dx_array: x-direction dipole array of molecular subsystems
             dy_array: y-direction dipole array of molecular subsystems
             charge_array_bath: partial charges of all atoms in a single bath
+            dipole_der: the (9*natoms) derivative of the dipole moment with respect to nuclear coordinates
 
         Returns:
             force array of all nuclear dimensions (3*natoms) [1x, 1y, 1z, 2x..]
         """
+        if charge_array_bath is None and dipole_der is None:
+            softexit.trigger(
+                "Both charge array and dipole derivative are None. No force will be applied on nuclei from cavity photons."
+            )
+
+        if charge_array_bath is not None and dipole_der is not None:
+            softexit.trigger(
+                "Both charge array and dipole derivative are provided. \
+                 The forces on nuclei from cavity photons will be calculated by considering \
+                 both contributions from partial charges and dipole derivatives."
+            )
+
+        # convert the input dipole array to numpy array if it is a scalar
+        if np.isscalar(dx_array):
+            dx_array = np.array([dx_array])
+        if np.isscalar(dy_array):
+            dy_array = np.array([dy_array])
 
         # calculate the dot products between mode functions and dipole array
         d_dot_f_x = np.dot(self.ftilde_kx, dx_array)
@@ -1941,9 +1973,21 @@ class PhotonDriver:
         # dimension of independent baths (xy grid points)
         coeff_x = np.dot(np.transpose(Ekx), self.ftilde_kx)
         coeff_y = np.dot(np.transpose(Eky), self.ftilde_ky)
-        fx = -np.kron(coeff_x, charge_array_bath)
-        fy = -np.kron(coeff_y, charge_array_bath)
-        return fx, fy
+
+        if dipole_der is None:
+            fx = -np.kron(coeff_x, charge_array_bath)
+            fy = -np.kron(coeff_y, charge_array_bath)
+            fz = np.zeros_like(fx)
+        else:
+            fx = -np.kron(coeff_x, dipole_der[::9]) - np.kron(coeff_y, dipole_der[3::9])
+            fy = -np.kron(coeff_x, dipole_der[1::9]) - np.kron(
+                coeff_y, dipole_der[4::9]
+            )
+            fz = -np.kron(coeff_x, dipole_der[2::9]) - np.kron(
+                coeff_y, dipole_der[5::9]
+            )
+
+        return fx, fy, fz
 
 
 class FFCavPhSocket(FFSocket):
@@ -2052,6 +2096,59 @@ class FFCavPhSocket(FFSocket):
         dy_array = np.array(dy_array)
         dz_array = np.array(dz_array)
         return dx_array, dy_array, dz_array
+
+    def combine_bath_extras(self, extras_list):
+        """Collects bath-level extras into one system-level extras dictionary.
+
+        For multiple baths, values are kept in bath-index order so that
+        `combined[key][idx]` corresponds to the `idx`-th bath.
+        """
+
+        if len(extras_list) == 0:
+            return {"raw": ""}
+
+        if len(extras_list) == 1:
+            if isinstance(extras_list[0], dict):
+                combined = dict(extras_list[0])
+                if "raw" not in combined:
+                    combined["raw"] = ""
+                return combined
+            return {"raw": str(extras_list[0])}
+
+        if not all(isinstance(extra, dict) for extra in extras_list):
+            return {"raw": [str(extra) for extra in extras_list]}
+
+        combined = {}
+        keys = set()
+        for extra in extras_list:
+            keys.update(extra.keys())
+
+        for key in keys:
+            values = [extra.get(key, None) for extra in extras_list]
+
+            if key == "raw":
+                combined[key] = [
+                    "" if value is None else str(value) for value in values
+                ]
+                continue
+
+            try:
+                if any(value is None for value in values):
+                    combined[key] = values
+                    continue
+
+                arrays = [np.asarray(value, dtype=float) for value in values]
+                if all(array.shape == arrays[0].shape for array in arrays):
+                    combined[key] = np.asarray(arrays)
+                else:
+                    combined[key] = values
+            except Exception:
+                combined[key] = values
+
+        if "raw" not in combined:
+            combined["raw"] = [""] * len(extras_list)
+
+        return combined
 
     def queue(self, atoms, cell, reqid=-1):
         """Adds a request.
@@ -2181,43 +2278,92 @@ class FFCavPhSocket(FFSocket):
 
         # 3. At this moment, we combine the small requests to a big mega request (updated results)
         result_tot = [0.0, np.zeros(len(pbcpos), float), np.zeros((3, 3), float), {}]
+        bath_extras = []
         for idx, newreq in enumerate(newreq_lst):
             u, f, vir, extra = newreq["result"]
             result_tot[0] += u
             result_tot[1][ndim_local * idx : ndim_local * (idx + 1)] = f
             result_tot[2] += vir
-            result_tot[3][idx] = extra
+            bath_extras.append(extra)
+        result_tot[3] = self.combine_bath_extras(bath_extras)
+
+        # When multiple drivers are attached to i-pi, only one of them needs to
+        # be coupled to the photons; the others may just provide nuclear force components.
+        # For the driver coupled to the photons, `evaluate_driver = True`;
+        # For the other drivers, `evaluate_driver = False`, and photonic energy, forces, cavity forces
+        # will be set as zero. This is to avoid double counting of photonic contributions when multiple drivers are attached.
+
+        # if `charge_array` is all zeros, `evaluate_driver` is False
+        evaluate_driver = not np.all(self.charge_array == 0)
+        # if `charge_array` is [], we will fall back to dipole driver path for obtaining dipole information,
+        # and `evaluate_driver` will be set as True
+        evaluate_driver = evaluate_driver or (len(self.charge_array) == 0)
 
         if self.ph.apply_photon:
-            # 4. calculate total dipole moment array for N baths
-            dx_array, dy_array, dz_array = self.calc_dipole_xyz_mm(
-                pos=pbcpos_atoms,
-                n_bath=self.n_independent_bath,
-                charge_array_bath=self.charge_array,
-            )
-            # check the size of photon modes + molecules to match the total number of particles
-            if (
-                self.ph.n_photon + self.n_independent_bath * self.charge_array.size
-                != int(len(pbcpos) // 3)
-            ):
-                softexit.trigger(
-                    "Total number of photons + molecules does not match total number of particles"
+
+            # this path is for the driver that is coupled to the photons, and we need to calculate photonic contributions to energy and forces
+            if evaluate_driver:
+
+                # first determine whether the dipole info is calculated using charge_array or dipole surfaces (using dipole driver)
+                has_dipole_der = ("dipole" in extra) and ("dipole_derivative" in extra)
+                do_dipole_der = (
+                    has_dipole_der
+                    and (len(extra["dipole"]) == 3)
+                    and (
+                        len(extra["dipole_derivative"])
+                        == (len(pbcpos) - self.ph.n_photon * 3) * 3
+                    )
                 )
-            # info("mux = %.6f muy = %.6f muz = %.6f [units of a.u.]" %(dipole_x_tot, dipole_y_tot, dipole_z_tot), verbosity.medium)
-            # 5. calculate photonic contribution of total energy
-            e_ph = self.ph.get_ph_energy(dx_array=dx_array, dy_array=dy_array)
-            # 6. calculate photonic forces
-            f_ph = self.ph.get_ph_forces(dx_array=dx_array, dy_array=dy_array)
-            # 7. calculate cavity forces on nuclei
-            fx_cav, fy_cav = self.ph.get_nuc_cav_forces(
-                dx_array=dx_array,
-                dy_array=dy_array,
-                charge_array_bath=self.charge_array,
-            )
+                if do_dipole_der:
+                    # this is the path when using a dipole driver in i-pi to calculate dipole information
+                    # !!! ONLY WORK FOR A SINGLE GRID POINT (BATH) FOR NOW !!!
+                    dx_array, dy_array = extra["dipole"][0], extra["dipole"][1]
+                    dipole_der = extra["dipole_derivative"]
+                else:
+                    # we fall back to the original path with charge array to calculate dipole information
+                    # check the size of photon modes + molecules to match the total number of particles
+                    if (
+                        self.ph.n_photon
+                        + self.n_independent_bath * self.charge_array.size
+                        != int(len(pbcpos) // 3)
+                    ):
+                        softexit.trigger(
+                            "Total number of photons + molecules does not match total number of particles"
+                        )
+                    # 4. calculate total dipole moment array for N baths
+                    dx_array, dy_array, _ = self.calc_dipole_xyz_mm(
+                        pos=pbcpos_atoms,
+                        n_bath=self.n_independent_bath,
+                        charge_array_bath=self.charge_array,
+                    )
+
+                # 5. calculate photonic contribution of total energy
+                e_ph = self.ph.get_ph_energy(dx_array=dx_array, dy_array=dy_array)
+                # 6. calculate photonic forces
+                f_ph = self.ph.get_ph_forces(dx_array=dx_array, dy_array=dy_array)
+                # 7. calculate cavity forces on nuclei
+                if do_dipole_der:
+                    fx_cav, fy_cav, fz_cav = self.ph.get_nuc_cav_forces(
+                        dx_array=dx_array, dy_array=dy_array, dipole_der=dipole_der
+                    )
+                else:
+                    fx_cav, fy_cav, fz_cav = self.ph.get_nuc_cav_forces(
+                        dx_array=dx_array,
+                        dy_array=dy_array,
+                        charge_array_bath=self.charge_array,
+                    )
+
+            # this is the path to avoid double counting of photonic contributions when multiple drivers are attached to i-pi
+            else:
+                e_ph = 0
+                f_ph = np.zeros((self.ph.n_photon * 3))
+                fx_cav, fy_cav, fz_cav = [np.zeros((self.charge_array.size))] * 3
+
             # 8. add cavity effects to our output
             result_tot[0] += e_ph
             result_tot[1][:ndim_tot:3] += fx_cav
             result_tot[1][1:ndim_tot:3] += fy_cav
+            result_tot[1][2:ndim_tot:3] += fz_cav
             result_tot[1][ndim_tot:] = f_ph
 
         result_tot[0] -= self.offset

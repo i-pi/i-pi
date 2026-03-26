@@ -1267,5 +1267,109 @@ class MultiThermo(Thermostat):
         pass
 
 
+# Start Tao E. Li's modifications 2021/09/28
+class ThermoCavLossMultiLangevin(Thermostat):
+    """Represents a cavloss_multilangevin thermostat that defines different frictions
+    for molecules and the cavity modes.
+
+    Depend objects:
+       tau_m: Thermostat damping time scale for molecules. Larger values give a
+          less strongly coupled thermostat.
+       tau_l: Thermostat damping time scale for cavity modes. Larger values give
+          a less strongly coupled thermostat.
+       T: [T_m, T_l], Coefficients of the diffusive contribution of the thermostat, i.e. the
+          drift back towards equilibrium. Depends on tau and the time step.
+       S: [S_m, S_l], Coefficients of the stochastic contribution of the thermostat, i.e.
+          the uncorrelated Gaussian noise. Depends on T and the temperature.
+    """
+
+    def __init__(self, temp=1.0, dt=1.0, tau_m=1.0, tau_l=1.0, ethermo=0.0):
+        """Initialises ThermoCavLossLangevin.
+
+        Args:
+           temp: The simulation temperature. Defaults to 1.0.
+           dt: The simulation time step. Defaults to 1.0.
+           tau_m: The thermostat damping timescale for molecules. Defaults to 1.0.
+           tau_l: The thermostat damping timescale for photons. Defaults to 1.0.
+           ethermo: The initial heat energy transferred to the bath.
+              Defaults to 0.0. Will be non-zero if the thermostat is
+              initialised from a checkpoint file.
+        """
+
+        super(ThermoCavLossMultiLangevin, self).__init__(temp, dt, ethermo)
+
+        self.dt = depend_value(value=dt, name="dt")
+        self.tau_m = depend_value(value=tau_m, name="tau_m")
+        self.tau_l = depend_value(value=tau_l, name="tau_l")
+        self.temp = depend_value(name="temp", value=temp)
+        self.T0 = depend_value(
+            name="T0", value=np.exp(-self.dt._value / self.tau_m._value)
+        )
+        self.T1 = depend_value(
+            name="T1", value=np.exp(-self.dt._value / self.tau_l._value)
+        )
+        self.S0 = depend_value(
+            name="S0",
+            value=np.sqrt(Constants.kb * self.temp._value * (1 - self.T0._value**2)),
+        )
+        self.S1 = depend_value(
+            name="S1",
+            value=np.sqrt(Constants.kb * self.temp._value * (1 - self.T1._value**2)),
+        )
+
+        # invoke the definition of photons
+        # self.photons = photons()
+        # self.apply_photon = self.photons.apply_photon
+        # if not self.apply_photon:
+        #    raise ValueError("Using cavloss_multilangevin needs cavity photons !!!")
+
+    def get_nphoton(self):
+        """Get number of cavity photon modes using the mass of the cavity photon modes == 1.0 a.u."""
+        sm = dstrip(self.sm)
+        nphoton = int(np.size(sm[sm == 1.0]) // 3.0)
+        return nphoton
+
+    def step(self):
+        """Updates the bound momentum vector with a multilangevin thermostat."""
+        et = self.ethermo
+        p = dstrip(self.p).copy()
+        sm = dstrip(self.sm)
+
+        # let's operate them separately
+        nphoton = self.get_nphoton()
+        p_m = p[0 : -3 * nphoton].copy()
+        p_l = p[-3 * nphoton :].copy()
+        sm_m = sm[0 : -3 * nphoton]
+        sm_l = sm[-3 * nphoton :]
+
+        # for the matter side
+        p_m /= sm_m
+        et += np.dot(p_m, p_m) * 0.5
+        p_m *= self.T0._value
+        p_m += self.S0._value * self.prng.gvec(len(p_m))
+        et -= np.dot(p_m, p_m) * 0.5
+
+        p_m *= sm_m
+
+        # for the photon side
+        p_l /= sm_l
+
+        et += np.dot(p_l, p_l) * 0.5
+        p_l *= self.T1._value
+        p_l += self.S1._value * self.prng.gvec(len(p_l))
+        et -= np.dot(p_l, p_l) * 0.5
+
+        p_l *= sm_l
+
+        # join the two subsystems
+        p = np.concatenate((p_m, p_l))
+
+        self.p = p
+        self.ethermo = et
+
+
+# End with Tao E. Li's modifications
+
+
 def hfunc(x):
     return (np.sign(x) - 1.0) * x

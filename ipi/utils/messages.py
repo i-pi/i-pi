@@ -195,11 +195,11 @@ def get_system_info():
     working_directory = os.getcwd()
 
     # Get the machine name (hostname)
-    try:
-        with open("/etc/hostname", "r") as file:
-            machine_name = file.read().strip()
-    except FileNotFoundError:
-        machine_name = "Unknown"  # Fallback in case the file is not found
+    # try:
+    #    with open("/etc/hostname", "r") as file:
+    #        machine_name = file.read().strip()
+    # except FileNotFoundError:
+    machine_name = "Unknown"  # Fallback in case the file is not found
 
     # Get the current time as a struct_time object
     current_time = time.localtime()
