@@ -970,8 +970,9 @@ class FFPlumed(FFEval):
         # so see if you can avoid it)
         if np.linalg.norm(self.lastq - pos) > 1e-10:
             warning(
-                "mtd_update: Positions moved since last PLUMED evaluation: " \
-                "triggering a full PLUMED update.", verbosity.medium
+                "mtd_update: Positions moved since last PLUMED evaluation: "
+                "triggering a full PLUMED update.",
+                verbosity.medium,
             )
             request = {"pos": dstrip(pos), "cell": (dstrip(cell), None), "result": None}
             self.evaluate(request)
