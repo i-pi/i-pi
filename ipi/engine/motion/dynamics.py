@@ -591,7 +591,9 @@ class NVTCCIntegrator(NVTIntegrator):
         self.nm.pnm[0, :] = 0.0
         self.pconstraints()
 
-        # self.qcstep() # for the moment I just avoid doing the centroid step.
+        # The centroid is constrained, so qcstep is skipped, but the internal
+        # ring-polymer modes still need the two half-step free propagations.
+        self.nm.free_qstep()
         self.nm.free_qstep()
 
         self.pstep()
