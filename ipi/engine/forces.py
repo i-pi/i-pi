@@ -558,9 +558,9 @@ class ScaledForceComponent:
         )
         self._extras = depend_value(
             name="extras",
-            func=lambda: self.bf.extras,
+            func=lambda: self.bf.extras if self.scaling != 0 else {},
             value={},
-            dependencies=[self.bf._extras],
+            dependencies=[self.bf._extras, self._scaling],
         )
 
         # total potential and total virial
@@ -1518,6 +1518,8 @@ class Forces:
 
         re = {}
         for k in range(self.nforces):
+            if self.mforces[k].weight == 0:
+                continue
             # combines the extras from the different force components
             for e, v in self.mforces[k].extras.items():
                 if e in self.mforces[k].interpolate_extras:
