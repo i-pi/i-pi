@@ -1740,13 +1740,17 @@ class FFRotations(ForceField):
         # "dissolve" the extras dictionaries into a list
         if isinstance(xtrs[0], dict):
             for k in xtrs[0].keys():
-                r["result"][3][k] = []
-                for x in xtrs:
-                    r["result"][3][k].append(x[k])
+                if k == "raw":
+                    # "raw" must stay a string for compatibility with extra_combine
+                    r["result"][3][k] = (
+                        "[ " + ", ".join(x.get(k, "") for x in xtrs) + " ]"
+                    )
+                else:
+                    r["result"][3][k] = []
+                    for x in xtrs:
+                        r["result"][3][k].append(x[k])
         else:
-            r["result"][3]["raw"] = []
-            for x in xtrs:
-                r["result"][3]["raw"].append(x)
+            r["result"][3]["raw"] = "[ " + ", ".join(str(x) for x in xtrs) + " ]"
 
         for ff_r in r["ff_handles"]:
             self.ff.release(ff_r)
