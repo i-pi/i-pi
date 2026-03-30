@@ -916,15 +916,21 @@ class FFPlumed(FFEval):
         self.plumed.cmd("setMasses", self.masses)
 
         # these instead are set properly. units conversion is done on the PLUMED side
-        self.plumed.cmd("setBox", r["cell"][0].T.copy())
-        pos = r["pos"].reshape(-1, 3)
-
         if self.system_force is not None:
+            # setup to use energy as CV
             f[:] = dstrip(self.system_force.f).reshape((-1, 3))
             vir[:] = -dstrip(self.system_force.vir)
             self.plumed.cmd("setEnergy", dstrip(self.system_force.pot))
 
-        self.plumed.cmd("setPositions", pos)
+        # must hold a copy of cell and positions because plumed stores a pointer!
+        # there is potential for memory corruption if these are overwritten before
+        # next time getBias is called
+        self.box = r["cell"][0].T.copy()
+        self.plumed.cmd("setBox", self.box)
+
+        self.pos = r["pos"].reshape(-1, 3).copy()
+        self.plumed.cmd("setPositions", self.pos)
+
         self.plumed.cmd("setForces", f)
         self.plumed.cmd("setVirial", vir)
         self.plumed.cmd("prepareCalc")
