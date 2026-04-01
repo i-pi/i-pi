@@ -317,7 +317,7 @@ class FFSocket(ForceField):
 
     def __init__(
         self,
-        latency=1.0,
+        latency=1e-4,
         offset=0.0,
         name="",
         pars=None,
@@ -404,7 +404,7 @@ class FFEval(ForceField):
 class FFDirect(ForceField):
     def __init__(
         self,
-        latency=1.0,
+        latency=1e-4,
         offset=0.0,
         name="",
         pars=None,
@@ -433,6 +433,11 @@ class FFDirect(ForceField):
                 at once in a single batch.
         """
 
+        # batched evaluation requires threaded mode so the poll loop
+        # can flush incomplete batches after a few idle cycles
+        if batch_size > 1:
+            threaded = True
+
         super().__init__(latency, offset, name, pars, dopbc, active, threaded)
 
         if pars is None:
@@ -443,6 +448,8 @@ class FFDirect(ForceField):
         self.pes_path = pes_path
         self.batch_size = batch_size
         self.request_batch = []
+        self._batch_idle_cycles = 0
+        self._batch_idle_threshold = 4
 
         try:
             if self.pes == "custom" and self.pes_path == "":
@@ -466,11 +473,23 @@ class FFDirect(ForceField):
         # called by many threads at once.
         # This is slightly different than for FFEval because of the batched evaluation
         with self._threadlock:
+            new_requests = False
             for r in self.requests:
                 if r["status"] == "Queued":
                     r["status"] = "Running"
                     r["t_dispatched"] = time.time()
                     self.evaluate(r)
+                    new_requests = True
+
+            # for batched evaluation, flush incomplete batches
+            # if the poll loop has been idle for a few cycles
+            if self.batch_size > 1 and len(self.request_batch) > 0:
+                if new_requests:
+                    self._batch_idle_cycles = 0
+                else:
+                    self._batch_idle_cycles += 1
+                if self._batch_idle_cycles >= self._batch_idle_threshold:
+                    self.launch_batch()
 
     def _process_results(self, results, request):
         # ensure forces and virial have the correct shape to fit the results
@@ -509,6 +528,16 @@ class FFDirect(ForceField):
         request["status"] = "Done"
         request["t_finished"] = time.time()
 
+    def launch_batch(self):
+        """Dispatches the current batch for evaluation, even if not full."""
+        cell_batch = [r["cell"][0] for r in self.request_batch]
+        pos_batch = [r["pos"].reshape(-1, 3) for r in self.request_batch]
+        results_batch = self.driver(cell_batch, pos_batch)
+        for results, request in zip(results_batch, self.request_batch):
+            self._process_results(list(results), request)
+        self.request_batch = []
+        self._batch_idle_cycles = 0
+
     def evaluate(self, request):
         if self.batch_size == 1:
             results = list(
@@ -517,16 +546,8 @@ class FFDirect(ForceField):
             self._process_results(results, request)
         else:
             self.request_batch.append(request)
-            if len(self.request_batch) == self.batch_size:
-                cell_batch = [request["cell"][0] for request in self.request_batch]
-                pos_batch = [
-                    request["pos"].reshape(-1, 3) for request in self.request_batch
-                ]
-                results_batch = self.driver(cell_batch, pos_batch)
-                for results, request in zip(results_batch, self.request_batch):
-                    self._process_results(list(results), request)
-
-                self.request_batch = []
+            if len(self.request_batch) >= self.batch_size:
+                self.launch_batch()
 
 
 class FFLennardJones(FFEval):
@@ -547,7 +568,7 @@ class FFLennardJones(FFEval):
 
     def __init__(
         self,
-        latency=1.0,
+        latency=1e-4,
         offset=0.0,
         name="",
         pars=None,
@@ -724,7 +745,7 @@ class FFDebye(FFEval):
 
     def __init__(
         self,
-        latency=1.0,
+        latency=1e-4,
         offset=0.0,
         name="",
         H=None,
@@ -801,7 +822,7 @@ class FFPlumed(FFEval):
 
     def __init__(
         self,
-        latency=1.0e-3,
+        latency=1.0e-4,
         offset=0.0,
         name="",
         pars=None,
@@ -1005,7 +1026,7 @@ class FFYaff(FFEval):
 
     def __init__(
         self,
-        latency=1.0,
+        latency=1e-4,
         offset=0.0,
         name="",
         threaded=False,
@@ -1122,7 +1143,7 @@ class FFsGDML(FFEval):
 
     def __init__(
         self,
-        latency=1.0,
+        latency=1e-4,
         offset=0.0,
         name="",
         threaded=False,
@@ -1255,7 +1276,7 @@ class FFCommittee(ForceField):
 
     def __init__(
         self,
-        latency=1.0,
+        latency=1e-4,
         offset=0.0,
         name="",
         pars=None,
@@ -1569,7 +1590,7 @@ class FFRotations(ForceField):
 
     def __init__(
         self,
-        latency=1.0,
+        latency=1e-4,
         offset=0.0,
         name="",
         pars=None,
@@ -1971,7 +1992,7 @@ class FFCavPhSocket(FFSocket):
 
     def __init__(
         self,
-        latency=1.0,
+        latency=1e-4,
         offset=0.0,
         name="",
         pars=None,
