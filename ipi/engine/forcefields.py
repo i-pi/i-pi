@@ -250,6 +250,9 @@ class ForceField:
 
         """Frees up a request."""
 
+        if "thread" in request:
+            request["thread"].join()
+
         with self._threadlock if lock else nullcontext():
             if request in self.requests:
                 try:
@@ -377,6 +380,11 @@ class FFEval(ForceField):
     to compute the potential, force and virial.
     """
 
+    def _eval_thread(self, request):
+        """Evaluates a single request and applies the offset."""
+        self.evaluate(request)
+        request["result"][0] -= self.offset
+
     def poll(self):
         """Polls the forcefield checking if there are requests that should
         be answered, and if necessary evaluates the associated forces and energy."""
@@ -384,12 +392,21 @@ class FFEval(ForceField):
         # We have to be thread-safe, as in multi-system mode this might get
         # called by many threads at once.
         with self._threadlock:
+            new_requests = []
             for r in self.requests:
                 if r["status"] == "Queued":
                     r["status"] = "Running"
                     r["t_dispatched"] = time.time()
-                    self.evaluate(r)
-                    r["result"][0] -= self.offset  # subtract constant offset
+                    new_requests.append(r)
+
+        for r in new_requests:
+            if self.threaded:
+                r["thread"] = threading.Thread(
+                    target=self._eval_thread, args=(r,)
+                )
+                r["thread"].start()
+            else:
+                self._eval_thread(r)
 
     def evaluate(self, request):
         request["result"] = [
