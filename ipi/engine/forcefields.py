@@ -401,9 +401,7 @@ class FFEval(ForceField):
 
         for r in new_requests:
             if self.threaded:
-                r["thread"] = threading.Thread(
-                    target=self._eval_thread, args=(r,)
-                )
+                r["thread"] = threading.Thread(target=self._eval_thread, args=(r,))
                 r["thread"].start()
             else:
                 self._eval_thread(r)
