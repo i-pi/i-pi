@@ -400,16 +400,12 @@ class FFEval(ForceField):
                     new_requests.append(r)
 
         for r in new_requests:
-            print(
-                f"Launching with {self.threaded} threading, request id {r['id']}, ff {self.name}"
-            )
             if self.threaded:
                 r["thread"] = threading.Thread(target=self._eval_thread, args=(r,))
                 r["thread"].start()
             else:
                 with self._threadlock:
                     self._eval_thread(r)
-            print(f"Done computing {self.name} for request id {r['id']}")
 
     def evaluate(self, request):
         request["result"] = [
@@ -491,7 +487,6 @@ class FFDirect(ForceField):
         # We have to be thread-safe, as in multi-system mode this might get
         # called by many threads at once.
         # This is slightly different than for FFEval because of the batched evaluation
-        print("polling ", len(self.request_batch), self._batch_idle_cycles)
         with self._threadlock:
             new_requests = False
             for r in self.requests:
@@ -878,11 +873,6 @@ class FFPlumed(FFEval):
             latency, offset, name, pars, dopbc=False, threaded=threaded
         )
 
-        print(
-            " @FFPlumed: Initializing PLUMED interface with plumed_dat=",
-            plumed_dat,
-            self.threaded,
-        )
         if self.threaded:
             warning(
                 "PLUMED is not thread-safe, overriding threaded execution",
