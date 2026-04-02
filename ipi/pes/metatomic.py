@@ -640,7 +640,8 @@ class MetatomicDriver(Dummy_driver):
             pre_time += time()
 
             info(
-                "Total compute time %e" % (pre_time),
+                "Total compute time %e (samples: %d; devices: %d)"
+                % (pre_time, n_samples, n_devices),
                 verbosity.high,
             )
 

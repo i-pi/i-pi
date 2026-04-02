@@ -544,7 +544,13 @@ class FFDirect(ForceField):
         request["t_finished"] = time.time()
 
     def launch_batch(self):
-        """Dispatches the current batch for evaluation, even if not full."""
+        """Dispatches the current batch for evaluation."""
+
+        info(
+            f"Launching batch evaluation, "
+            f"{len(self.request_batch)} / {self.batch_size}",
+            verbosity.high,
+        )
         cell_batch = [r["cell"][0] for r in self.request_batch]
         pos_batch = [r["pos"].reshape(-1, 3) for r in self.request_batch]
         results_batch = self.driver(cell_batch, pos_batch)
