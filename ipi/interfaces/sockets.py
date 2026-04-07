@@ -565,8 +565,11 @@ class Driver(DriverSocket):
         r["t_finished"] = time.time()
         self.lastreq = r["id"]  #
 
-        # updates the status of the client before leaving
-        self.get_status()
+        # after getforce succeeds, the client is guaranteed to be ready
+        # by the protocol. Set status optimistically to avoid an extra
+        # round-trip; the get_status() at the start of the next dispatch()
+        # will confirm before sending new positions.
+        self.status = Status.Up | Status.Ready
 
         # marks the request as done as the very last thing
         r["status"] = "Done"
