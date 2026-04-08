@@ -1855,11 +1855,6 @@ class PhotonDriver:
         Returns:
             total energy of photonic system
         """
-        # convert the input dipole array to numpy array if it is a scalar
-        if np.isscalar(dx_array):
-            dx_array = np.array([dx_array])
-        if np.isscalar(dy_array):
-            dy_array = np.array([dy_array])
 
         # calculate the photonic potential energy
         e_ph = np.sum(0.5 * self.omega_klambda3**2 * self.pos_ph**2)
@@ -1901,11 +1896,6 @@ class PhotonDriver:
         Returns:
             force array of all photonic dimensions (3*nphoton) [1x, 1y, 1z, 2x..]
         """
-        # convert the input dipole array to numpy array if it is a scalar
-        if np.isscalar(dx_array):
-            dx_array = np.array([dx_array])
-        if np.isscalar(dy_array):
-            dy_array = np.array([dy_array])
 
         # calculat the bare photonic contribution of the force
         f_ph = -self.omega_klambda3**2 * self.pos_ph
@@ -1949,12 +1939,6 @@ class PhotonDriver:
                  The forces on nuclei from cavity photons will be calculated by considering \
                  both contributions from partial charges and dipole derivatives."
             )
-
-        # convert the input dipole array to numpy array if it is a scalar
-        if np.isscalar(dx_array):
-            dx_array = np.array([dx_array])
-        if np.isscalar(dy_array):
-            dy_array = np.array([dy_array])
 
         # calculate the dot products between mode functions and dipole array
         d_dot_f_x = np.dot(self.ftilde_kx, dx_array)
@@ -2317,7 +2301,7 @@ class FFCavPhSocket(FFSocket):
                 if do_dipole_der:
                     # this is the path when using a dipole driver in i-pi to calculate dipole information
                     # !!! ONLY WORK FOR A SINGLE GRID POINT (BATH) FOR NOW !!!
-                    dx_array, dy_array = extra["dipole"][0], extra["dipole"][1]
+                    dx_array, dy_array = np.array([extra["dipole"][0]]), np.array([extra["dipole"][1]])
                     dipole_der = extra["dipole_derivative"]
                 else:
                     # we fall back to the original path with charge array to calculate dipole information

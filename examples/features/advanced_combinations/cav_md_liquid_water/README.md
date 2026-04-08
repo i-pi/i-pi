@@ -47,8 +47,8 @@ Here, we have 216 water molecules (648 nuclei) and two photons (labeled as **L**
 ## More advanced dipole surfaces
 
 A more advanced way to propagate CavMD is to use more accurate dipole surfaces. The following input file and bash script use a dipole-induced-dipole water dipole surface (`water_dip_pol`, which is supported in i-PI):
-- **input_multiple_dirvers.xml**
-- **run_multiple_dirvers.sh**
+- **input_multiple_drivers.xml**
+- **run_multiple_drivers.sh**
 
 In this case, i-PI is connected to two separate **ffcavphsocket** force evaluators: the **qtip4pf** driver provides the nuclear forces, while the **dipole** driver provides the dipole and dipole derivatives used for CavMD simulations. In this setup, nuclear forces can come from any conventional MD driver supported by i-PI; and users need to provide or implement a dipole driver for accurate dipole evaluations.
 
