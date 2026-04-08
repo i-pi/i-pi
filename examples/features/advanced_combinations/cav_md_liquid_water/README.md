@@ -78,7 +78,7 @@ In practice, the input file reads as follows:
   </system>
 ```
 
-The accompanying **run_multiple_dirvers.sh** script starts i-PI first and then connects the two drivers to their corresponding sockets:
+The accompanying **run_multiple_drivers.sh** script starts i-PI first and then connects the two drivers to their corresponding sockets:
 
 ```bash
 i-pi-driver -m qtip4pf -u -a h2o-cl-cavmd > /dev/null &
