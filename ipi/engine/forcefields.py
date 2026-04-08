@@ -1923,7 +1923,7 @@ class PhotonDriver:
             dx_array: x-direction dipole array of molecular subsystems
             dy_array: y-direction dipole array of molecular subsystems
             charge_array_bath: partial charges of all atoms in a single bath
-            dipole_der: the (9*natoms) derivative of the dipole moment with respect to nuclear coordinates
+            dipole_der: the (9*natoms) derivative of the dipole moment (or born effective charges) with respect to nuclear coordinates
 
         Returns:
             force array of all nuclear dimensions (3*natoms) [1x, 1y, 1z, 2x..]
