@@ -1,7 +1,7 @@
 ipi=i-pi
 sleep_time=4
 
-${ipi} input_multiple_dirvers.xml > log.i-pi & 
+${ipi} input_multiple_drivers.xml > log.i-pi & 
 echo "# i-PI is running"
 
 echo "# Waiting for ${sleep_time} (s) before executing driver"

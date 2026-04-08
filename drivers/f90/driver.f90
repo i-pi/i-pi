@@ -70,7 +70,7 @@
       DOUBLE PRECISION volume
       DOUBLE PRECISION, PARAMETER :: fddx = 1.0d-5
 
-      DOUBLE PRECISION, ALLOCATABLE :: dip_der(:, :) ! Dipole (z-component) derivative (water_dip_pol model)
+      DOUBLE PRECISION, ALLOCATABLE :: dip_der(:, :) ! Dipole derivative (water_dip_pol model)
       DOUBLE PRECISION :: pol(3, 3) !Polarizability (water_dip_pol model)
 
       ! NEIGHBOUR LIST ARRAYS
