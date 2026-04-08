@@ -573,6 +573,7 @@ class Driver(DriverSocket):
 
         # marks the request as done as the very last thing
         r["status"] = "Done"
+        r._event.set()
 
 
 class InterfaceSocket(object):
@@ -846,9 +847,8 @@ class InterfaceSocket(object):
         ttotal -= time.time()
 
         # get clients that are still free
-        freec = self.clients[:]
-        for [r2, c, ct] in self.jobs:
-            freec.remove(c)
+        busy = {id(c) for _, c, _ in self.jobs}
+        freec = [c for c in self.clients if id(c) not in busy]
 
         # fills up list of pending requests if empty, or if clients are abundant
         if len(self.prlist) == 0 or len(freec) > len(self.prlist):
@@ -895,14 +895,20 @@ class InterfaceSocket(object):
         # check for finished jobs
         nchecked = 0
         nfinished = 0
+        finished_ids = []
         tcheck -= time.time()
-        for [r, c, ct] in self.jobs[:]:
+        for ijob, [r, c, ct] in enumerate(self.jobs):
             chk = self.check_job_finished(r, c, ct)
             if chk == 1:
                 nfinished += 1
+                finished_ids.append(ijob)
             elif chk == 0:
                 self.poll_iter = UPDATEFREQ  # client disconnected. force a pool_update
+                finished_ids.append(ijob)
             nchecked += 1
+        # batch removal of finished/disconnected jobs (reverse order to preserve indices)
+        for ijob in reversed(finished_ids):
+            del self.jobs[ijob]
         tcheck += time.time()
 
         ttotal += time.time()
@@ -990,9 +996,6 @@ class InterfaceSocket(object):
 
         if r["status"] == "Done":
             ct.result()
-            self.jobs = [
-                w for w in self.jobs if not (w[0] is r and w[1] is c)
-            ]  # removes pair in a robust way
             return 1
 
         if (

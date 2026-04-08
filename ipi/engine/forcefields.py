@@ -45,6 +45,10 @@ class ForceRequest(dict):
     This is useful for the `in` operator, which uses equality to test membership.
     """
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._event = threading.Event()
+
     def __eq__(self, y):
         """Overwrites the standard equals function."""
         return self is y
@@ -222,6 +226,7 @@ class ForceField:
                         {"raw": ""},
                     ]
                     r["status"] = "Done"
+                    r._event.set()
                     r["t_finished"] = time.time()
 
     def _poll_loop(self):
@@ -415,6 +420,7 @@ class FFEval(ForceField):
             {"raw": ""},
         ]
         request["status"] = "Done"
+        request._event.set()
 
 
 class FFDirect(ForceField):
@@ -541,6 +547,7 @@ class FFDirect(ForceField):
 
         request["result"] = results
         request["status"] = "Done"
+        request._event.set()
         request["t_finished"] = time.time()
 
     def launch_batch(self):
@@ -643,6 +650,7 @@ class FFLennardJones(FFEval):
 
         r["result"] = [v, f.reshape(nat * 3), np.zeros((3, 3), float), {"raw": ""}]
         r["status"] = "Done"
+        r._event.set()
 
 
 class FFdmd(FFEval):
@@ -743,6 +751,7 @@ class FFdmd(FFEval):
 
         r["result"] = [v, f.reshape(nat * 3), vir, ""]
         r["status"] = "Done"
+        r._event.set()
 
     def dmd_update(self):
         """Updates time step when a full step is done. Can only be called after implementation goes into smotion mode..."""
@@ -823,6 +832,7 @@ class FFDebye(FFEval):
             {"raw": ""},
         ]
         r["status"] = "Done"
+        r._event.set()
         r["t_finished"] = time.time()
 
 
@@ -1003,6 +1013,7 @@ class FFPlumed(FFEval):
         # nb: the virial is a symmetric tensor, so we don't need to transpose
         r["result"] = [v, f, vir, extras]
         r["status"] = "Done"
+        r._event.set()
 
     def mtd_update(self, pos, cell):
         """Makes updates to the potential that only need to be triggered
@@ -1160,6 +1171,7 @@ class FFYaff(FFEval):
 
         r["result"] = [e, -gpos.ravel(), -vtens, {"raw": ""}]
         r["status"] = "Done"
+        r._event.set()
 
 
 class FFsGDML(FFEval):
@@ -1294,6 +1306,7 @@ class FFsGDML(FFEval):
             {"raw": ""},
         ]
         r["status"] = "Done"
+        r._event.set()
         r["t_finished"] = time.time()
 
 
@@ -1609,6 +1622,7 @@ class FFCommittee(ForceField):
                     self.gather(r)
                     r["result"][0] -= self.offset
                     r["status"] = "Done"
+                    r._event.set()
 
 
 class FFRotations(ForceField):
@@ -1814,6 +1828,7 @@ class FFRotations(ForceField):
                     self.gather(r)
                     r["result"][0] -= self.offset
                     r["status"] = "Done"
+                    r._event.set()
                     self.release(r, lock=False)
 
 
@@ -2223,7 +2238,7 @@ class FFCavPhSocket(FFSocket):
                     while softexit.exiting:
                         time.sleep(self.latency)
                     sys.exit()
-                time.sleep(self.latency)
+                self.request._event.wait(timeout=1.0)
 
             """
             with self._threadlock:
