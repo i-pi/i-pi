@@ -90,7 +90,9 @@ def get_test_settings(
     port_numbers = list()
     address_names = list()
     flaglists = list()
+    driver_commands = list()
     found_nsteps = False
+    timeout = TIMEOUT
 
     try:
         with open(Path(example_folder) / settings_file) as f:
@@ -111,6 +113,7 @@ def get_test_settings(
             port_number = 33333
             socket_mode = "unix"
             flaglist = {}
+            driver_command = None
             for line in block:
                 if "driver_code" in line:
                     driver_code = line.split()[1]
@@ -124,9 +127,13 @@ def get_test_settings(
                     socket_mode = line.split()[1]
                 elif "flags" in line:
                     flaglist = {line.split()[1]: line.split()[2:]}
+                elif "driver_command" in line:
+                    driver_command = " ".join(line.split()[1:])
                 elif "nsteps" in line:
                     nsteps = line.split()[1]
                     found_nsteps = True
+                elif "timeout" in line:
+                    timeout = int(line.split()[1])
 
             # Checking that each driver has appropriate settings, if not, use default.
             if driver_code == "fortran" and driver_model not in fortran_driver_models:
@@ -153,6 +160,7 @@ def get_test_settings(
             port_numbers.append(port_number)
             address_names.append(address_name)
             flaglists.append(flaglist)
+            driver_commands.append(driver_command)
 
     except:
         driver_codes.append("fortran")
@@ -161,6 +169,7 @@ def get_test_settings(
         port_numbers.append(33333)
         socket_modes.append("unix")
         flaglists.append({})
+        driver_commands.append(None)
 
     driver_info = {
         "driver_model": driver_models,
@@ -169,12 +178,13 @@ def get_test_settings(
         "address_name": address_names,
         "driver_code": driver_codes,
         "flag": flaglists,
+        "driver_command": driver_commands,
     }
 
     if found_nsteps:
-        test_settings = {"nsteps": nsteps}
+        test_settings = {"nsteps": nsteps, "timeout": timeout}
     else:
-        test_settings = {"nsteps": "1"}
+        test_settings = {"nsteps": "1", "timeout": timeout}
 
     return driver_info, test_settings
 
@@ -287,6 +297,7 @@ class Runner(object):
             cwd: folder where all the original regression tests are stored
             nid: identification number to avoid repetitions of addresses"""
 
+        drivers = []
         try:
             # Create temp file and copy files
             self.tmp_dir = Path(tempfile.mkdtemp())
@@ -311,6 +322,7 @@ class Runner(object):
             return "Problem getting driver_info"
 
         clients = self.create_client_list(driver_info, nid, test_settings)
+        timeout = test_settings.get("timeout", TIMEOUT)
 
         try:
             # Run i-pi
@@ -335,7 +347,7 @@ class Runner(object):
                     if not f_connected:
                         # Check if i-pi finished successfully
                         if ipi.poll() is not None:
-                            ipi_out, ipi_error = ipi.communicate(timeout=TIMEOUT)
+                            ipi_out, ipi_error = ipi.communicate(timeout=timeout)
                             if ipi.returncode == 0:
                                 print(
                                     "i-PI finished before socket check. Assuming success."
@@ -358,15 +370,13 @@ class Runner(object):
                         print("List all files  /tmp/ipi_*")
                         for filename in glob.glob("/tmp/ipi_*"):
                             print(filename)
-                        ipi_out, ipi_error = ipi.communicate(timeout=TIMEOUT)
+                        ipi_out, ipi_error = ipi.communicate(timeout=timeout)
                         print("i-PI Output:", ipi_out.decode("ascii"))
                         print("i-PI Error:", ipi_error.decode("ascii"))
                         return "Could not find the i-PI UNIX socket"
 
             # Run drivers by defining cmd2 which will be called, eventually
-            drivers = list()
-
-            for client in clients:
+            for driver_idx, client in enumerate(clients):
                 if client[1] == "unix":
                     clientcall = call_driver + " -m {} {} {} -u ".format(
                         client[0], address_key, client[2]
@@ -382,6 +392,9 @@ class Runner(object):
 
                 else:
                     raise ValueError("Driver mode has to be either unix, shm or inet")
+
+                if driver_info["driver_command"][driver_idx] is not None:
+                    clientcall = driver_info["driver_command"][driver_idx] + " " + clientcall
 
                 cmd = clientcall
 
@@ -416,13 +429,13 @@ class Runner(object):
                 drivers.append(driver)
 
             # check i-pi errors
-            ipi_out, ipi_error = ipi.communicate(timeout=TIMEOUT)
+            ipi_out, ipi_error = ipi.communicate(timeout=timeout)
             assert ipi.returncode == 0, "i-PI error occurred: {}".format(ipi_error)
 
             # check driver errors
             for driver in drivers:
                 # if i-PI has ended, we can wait for the driver to quit
-                driver_out, driver_err = driver.communicate(timeout=TIMEOUT)
+                driver_out, driver_err = driver.communicate(timeout=timeout)
                 if driver.returncode != 0:
                     ipi.kill()
                     ipi_out, ipi_error = ipi.communicate()
