@@ -1,0 +1,5 @@
+/scratch/c_ccmd/GroupBin/i-pi-stable/bin/i-pi-py_mpidriver:176: DeprecationWarning: `np.chararray` is deprecated and will be removed from the main namespace in the future. Use an array with a string or bytes dtype instead.
+  initstr = recv_data(sock, np.chararray(initlen))
+Driver initing SHM with buffer names:
+IPI-POS-38 IPI-H-38 IPI-IH-38 IPD759970004 IPD759970006 IPD759970005
+Received exit message from i-PI. Bye bye!

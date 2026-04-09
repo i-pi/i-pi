@@ -134,6 +134,7 @@ def run_shmdriver(
 
     f_init = False
     f_data = False
+    request_count = 0
 
     # Initialize arrays (all ranks keep them)
     cell = np.zeros((3, 3), float)
@@ -145,6 +146,7 @@ def run_shmdriver(
     vir = np.zeros((3, 3), float)
 
     while True:
+        timers.set_step(request_count)
         if rank == 0:
             timers.start("Recv Header")
             header = sock.recv(HDRLEN)
@@ -209,13 +211,14 @@ def run_shmdriver(
             f_init = comm.bcast(f_init, root=0)
 
         elif header == Message("POSDATA"):
+            request_count += 1
+            timers.set_step(request_count)
             if rank == 0:
                 timers.start("Read Posdata")
                 if shm:
-                    # copy from SHM
-                    pos = pos_snp[:]
-                    cell = cell_snp[:]
-                    icell = icell_snp[:]
+                    pos = pos_snp
+                    cell = cell_snp
+                    icell = icell_snp
                 else:
                     cell = recv_data(sock, cell)
                     icell = recv_data(sock, icell)
@@ -277,10 +280,32 @@ def run_shmdriver(
             
             timers.stop("Run Driver(+)")
 
-            pot = comm.gather(results[0], root=0)
-            force = comm.gather(results[1], root=0)
-            vir = comm.gather(results[2], root=0)
+            local_pot = np.asarray([results[0]], dtype=np.float64)
+            local_force = np.asarray(results[1], dtype=np.float64).reshape(nat * 3)
+            local_vir = np.asarray(results[2], dtype=np.float64).reshape(9)
+
+            if rank == 0:
+                if shm:
+                    # Gather directly into the SHM-backed result arrays so
+                    # GETFORCE only needs to notify i-PI that results are ready.
+                    pot = pot_snp
+                    force = f_snp.reshape((nbeads, nat * 3))
+                    vir = vir_snp.reshape((nbeads, 9))
+                else:
+                    pot = np.empty(size, dtype=np.float64)
+                    force = np.empty((size, nat * 3), dtype=np.float64)
+                    vir = np.empty((size, 9), dtype=np.float64)
+            else:
+                pot = None
+                force = None
+                vir = None
+
+            timers.start("MPI Gather Results")
+            comm.Gather([local_pot, MPI.DOUBLE], [pot, MPI.DOUBLE], root=0)
+            comm.Gather([local_force, MPI.DOUBLE], [force, MPI.DOUBLE], root=0)
+            comm.Gather([local_vir, MPI.DOUBLE], [vir, MPI.DOUBLE], root=0)
             extras = comm.gather(results[3], root=0)
+            timers.stop("MPI Gather Results")
 
             if rank == 0:
                 pot = np.asarray(pot, dtype=np.float64)
@@ -291,7 +316,6 @@ def run_shmdriver(
 
         elif header == Message("GETFORCE"):
             if rank == 0:
-                timers.start("Send Forces")
                 # we update SHM first, than send message via socket
                 '''
                 if not isinstance(force, np.ndarray) or force.dtype != np.float64:
@@ -304,19 +328,18 @@ def run_shmdriver(
                     raise ValueError("Virial shape mismatch")
                 '''
                 if shm:
-                    pot_snp[:] = pot
-                    f_snp[:] = force
-                    vir_snp[:] = vir
+                    timers.start("Notify Force Ready")
                     sock.sendall(Message("FORCEREADY"))
+                    timers.stop("Notify Force Ready")
                 else:
+                    timers.start("Write Force Results")
                     sock.sendall(Message("FORCEREADY"))
                     send_data(sock, pot)
                     send_data(sock, np.int32(nat))
                     send_data(sock, force)
                     send_data(sock, vir)
                     send_data(sock, np.int32(0))
-                
-                timers.stop("Send Forces")
+                    timers.stop("Write Force Results")
                 
                 f_data = False
         

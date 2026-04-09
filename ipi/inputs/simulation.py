@@ -330,14 +330,12 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
 
         syslist = []
         fflist = []
+        system_inputs = []
+        forcefield_inputs = []
+
         for k, v in self.extra:
-            if k == "system":
-                syslist.append(v.fetch())
-            elif k == "system_template":
-                # This will actually generate automatically a bunch
-                # of system objects with the desired properties set
-                # automatically to many values.
-                syslist += v.fetch()
+            if k in ["system", "system_template"]:
+                system_inputs.append((k, v))
             elif k in [
                 "ffsocket",
                 "ffdirect",
@@ -351,11 +349,28 @@ frequency in your simulation to make i-PI faster. Use at your own risk!
                 "ffrotations",
                 "ffcavphsocket",
             ]:
-                new_ff = v.fetch()
-                if k in ["ffsocket", "ffcavphsocket"]:
-                    # overrides ffsocket and ffcavsocket prefix - important if no access to /tmp in machines
-                    new_ff.socket.sockets_prefix = self.sockets_prefix.fetch()
-                fflist.append(new_ff)
+                forcefield_inputs.append((k, v))
+
+        batched_shm_forcefields = set()
+        for k, v in forcefield_inputs:
+            new_ff = v.fetch()
+            if k in ["ffsocket", "ffcavphsocket"]:
+                # overrides ffsocket and ffcavsocket prefix - important if no access to /tmp in machines
+                new_ff.socket.sockets_prefix = self.sockets_prefix.fetch()
+            if (
+                isinstance(new_ff, eforcefields.FFSocket)
+                and new_ff.socket.mode == "shm"
+                and new_ff.batch
+            ):
+                # Used later to decide which systems should build Beads.q on SHM.
+                batched_shm_forcefields.add(new_ff.name)
+            fflist.append(new_ff)
+
+        for k, v in system_inputs:
+            if k == "system":
+                syslist.append(v.fetch(batched_shm_forcefields=batched_shm_forcefields))
+            elif k == "system_template":
+                syslist += v.fetch(batched_shm_forcefields=batched_shm_forcefields)
 
         # this creates a simulation object which gathers all the little bits
         import ipi.engine.simulation as esimulation  # import here as otherwise this is the mother of all circular imports...

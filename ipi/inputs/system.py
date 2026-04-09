@@ -65,7 +65,7 @@ class InputSysTemplate(Input):
         )
     }
 
-    def fetch(self):
+    def fetch(self, batched_shm_forcefields=None):
         """Creates a series of physical system objects using a template and label substitutions.
 
         Returns:
@@ -96,9 +96,7 @@ class InputSysTemplate(Input):
                 isys.parse(
                     xsys.fields[0][1]
                 )  # parses the XML object into an InputSystem
-                lsys.append(
-                    isys.fetch()
-                )  # fetches the generated System and appends to the list
+                lsys.append(isys.fetch(batched_shm_forcefields=batched_shm_forcefields))
 
         return lsys
 
@@ -199,7 +197,7 @@ class InputSystem(Input):
         self.normal_modes.store(psys.nm)
         self.cell.store(psys.cell)
 
-    def fetch(self):
+    def fetch(self, batched_shm_forcefields=None):
         """Creates a physical system object.
 
         Returns:
@@ -214,14 +212,27 @@ class InputSystem(Input):
 
         super(InputSystem, self).fetch()
 
+        if batched_shm_forcefields is None:
+            batched_shm_forcefields = set()
+
+        fcomponents = self.forces.fetch()
+        beads_nbeads = self.beads.nbeads.fetch()
+        shm_batch = any(
+            # Only full-bead batched SHM forcefields need canonical Beads.q to
+            # be allocated in SHM from the start.
+            fc.ffield in batched_shm_forcefields
+            and fc.nbeads in (0, beads_nbeads)
+            for fc in fcomponents
+        )
+
         # this creates a simulation object which gathers all the little bits
         # TODO use named arguments since this list is a bit too long...
         rsys = ipi.engine.system.System(
             init=self.initialize.fetch(),
-            beads=self.beads.fetch(),
+            beads=self.beads.fetch(shm_q=shm_batch),
             nm=self.normal_modes.fetch(),
-            cell=self.cell.fetch(),
-            fcomponents=self.forces.fetch(),
+            cell=self.cell.fetch(shm_h=shm_batch),
+            fcomponents=fcomponents,
             ensemble=self.ensemble.fetch(),
             motion=self.motion.fetch(),
             prefix=self.prefix.fetch(),

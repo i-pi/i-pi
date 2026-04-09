@@ -1,0 +1,8 @@
+2
+# CELL(abcABC):   10.00000    10.00000    10.00000    90.00000    90.00000    90.00000  Step:           0  Bead:       1 positions{atomic_unit}  cell{atomic_unit}
+       H  0.00000e+00  0.00000e+00  0.00000e+00
+       H  0.00000e+00  0.00000e+00  1.00000e+00
+2
+# CELL(abcABC):   10.00000    10.00000    10.00000    90.00000    90.00000    90.00000  Step:           5  Bead:       1 positions{atomic_unit}  cell{atomic_unit}
+       H  5.27902e-01  1.78103e-01  3.76904e-01
+       H  3.50913e-01  2.45044e-01  1.62340e+00

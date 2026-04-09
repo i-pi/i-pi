@@ -202,12 +202,19 @@ class ForceField:
         if template is None:
             template = {}
 
+        if pbcpos.ndim == 2 and getattr(atoms, "q_shm_name", None) is not None:
+            cell_h = dstrip(cell.h)
+            cell_ih = dstrip(cell.ih)
+        else:
+            cell_h = dstrip(cell.h).copy()
+            cell_ih = dstrip(cell.ih).copy()
+
         template.update(
             {
                 "id": reqid,
                 "pos": pbcpos,
                 "active": self.iactive,
-                "cell": (dstrip(cell.h).copy(), dstrip(cell.ih).copy()),
+                "cell": (cell_h, cell_ih),
                 "pars": par_str,
                 "result": None,
                 "status": "Queued",
@@ -217,6 +224,18 @@ class ForceField:
                 "t_finished": 0,
             }
         )
+
+        if pbcpos.ndim == 2 and getattr(atoms, "q_shm_name", None) is not None:
+            # Batched SHM requests export the canonical Beads.q storage name so
+            # the socket layer can reuse it instead of allocating/copying POS.
+            template["pos_shm_name"] = atoms.q_shm_name
+            template["pos_shm_array"] = dstrip(atoms.q)
+            if getattr(cell, "h_shm_name", None) is not None:
+                template["h_shm_name"] = cell.h_shm_name
+                template["h_shm_array"] = dstrip(cell.h)
+            if getattr(cell, "ih_shm_name", None) is not None:
+                template["ih_shm_name"] = cell.ih_shm_name
+                template["ih_shm_array"] = dstrip(cell.ih)
 
         newreq = ForceRequest(template)
 

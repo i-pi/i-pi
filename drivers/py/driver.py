@@ -207,9 +207,9 @@ def run_driver(
             f_init = True  # we are initialized now
         elif header == Message("POSDATA"):
             if shm:
-                pos = pos_snp[:]
-                cell = cell_snp[:]
-                icell = icell_snp[:]
+                pos = pos_snp
+                cell = cell_snp
+                icell = icell_snp
             else:
                 # receives structural information
                 cell = recv_data(sock, cell)

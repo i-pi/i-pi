@@ -52,7 +52,7 @@ vector in the xy plane).
         super(InputCell, self).store(cell.h)
         self.shape.store((3, 3))
 
-    def fetch(self):
+    def fetch(self, shm_h=False):
         """Creates a cell object.
 
         Returns:
@@ -63,7 +63,7 @@ vector in the xy plane).
         h = super(InputCell, self).fetch()
         h.shape = (3, 3)
 
-        return Cell(h=h)
+        return Cell(h=h, shm_h=shm_h)
 
     def check(self):
         """Checks for optional parameters."""

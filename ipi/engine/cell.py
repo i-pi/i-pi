@@ -30,7 +30,7 @@ class Cell:
        V: The volume of the cell.
     """
 
-    def __init__(self, h=None):
+    def __init__(self, h=None, shm_h=False):
         """Initialises base cell class.
 
         Args:
@@ -42,17 +42,51 @@ class Cell:
         if h is None:
             h = np.zeros((3, 3), float)
 
-        self._h = depend_array(name="h", value=h)
+        self._shm_h_enabled = shm_h
+        self._h = depend_array(
+            name="h",
+            value=None if shm_h else h,
+            storage="shm" if shm_h else None,
+            storage_opts=(
+                {
+                    "shape": (3, 3),
+                    "dtype": float,
+                    "initializer": "zeros",
+                }
+                if shm_h
+                else None
+            ),
+        )
+        if shm_h:
+            self._h[:] = h
         self._ih = depend_array(
             name="ih",
-            value=np.zeros((3, 3), float),
+            value=None if shm_h else np.zeros((3, 3), float),
             func=self.get_ih,
             dependencies=[self._h],
+            storage="shm" if shm_h else None,
+            storage_opts=(
+                {
+                    "shape": (3, 3),
+                    "dtype": float,
+                    "initializer": "zeros",
+                }
+                if shm_h
+                else None
+            ),
         )
         self._V = depend_value(name="V", func=self.get_volume, dependencies=[self._h])
 
     def clone(self):
         return Cell(dstrip(self.h).copy())
+
+    @property
+    def h_shm_name(self):
+        return getattr(self._h, "shm_name", None)
+
+    @property
+    def ih_shm_name(self):
+        return getattr(self._ih, "shm_name", None)
 
     def get_ih(self):
         """Inverts the lattice vector matrix."""

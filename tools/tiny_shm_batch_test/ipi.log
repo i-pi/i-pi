@@ -1,0 +1,80 @@
+
+ ____       ____       ____       ____
+/    \     /    \     /    \     /    \
+|  #################################  |
+\__#_/     \____/     \____/     \_#__/
+   #    _        _______  _____    #
+   #   (_)      |_   __ \|_   _|   #      -*-   v unknown  -*-
+   #   __  ______ | |__) | | |     #
+   Y  [  ||______||  ___/  | |     #      A Universal Force Engine
+  0 0  | |       _| |_    _| |_    #
+   #  [___]     |_____|  |_____|   #
+ __#_       ____       ____       _#__
+/  # \     /    \     /    \     / #  \
+|  #################################  |
+\____/     \____/     \____/     \____/
+
+    
+# Git information:
+#    i-PI version: unknown
+#      Remote URL: https://github.com/i-pi/i-pi.git
+#          Branch: clean-upstream-base     
+#     Last Commit: e096c5df714da839bfdbc7099bf867a5974a2d47
+#
+# Simulation information:
+#           Machine Name: vn01
+#      Working Directory: /scratch/c_ccmd/GroupBin/i-pi-stable/tools/tiny_shm_batch_test
+#          Date and Time: 2026-04-09 16:36:54
+
+ !W! When using matching="lock" pay attention to the possibility of superfluous drivers idling if there are more client codes connected than there are replicas.
+ @system: Initializing system object 
+ @simulation: Initializing simulation object 
+@ RANDOM SEED: The seed used in this calculation was 18885
+ @init_file: Initializing from file init.xyz. Dimension: length, units: automatic, cell_units: automatic
+ @set_vector: Initialize is rescaling from     1 beads to     2 beads
+ @init_file: Initializing from file init.xyz. Dimension: length, units: automatic, cell_units: automatic
+ @init_file: Initializing from file init.xyz. Dimension: length, units: automatic, cell_units: automatic
+ @init_file: Initializing from file init.xyz. Dimension: length, units: automatic, cell_units: automatic
+ @initializer: Resampling velocities at temperature 1.0 automatic
+ @system.bind: Binding the forces 
+ @ForceField (mydriver): Starting the polling thread main loop.
+ @SOCKET: SHM driver initialized with buffer: IPI-POS-38
+ @interfacesocket.pool_update: Using SHM communication
+ @interfacesocket.pool_update:   Client asked for connection from . Now hand-shaking.
+ @interfacesocket.pool_update:   Handshaking was successful. Added to the client list.
+ @forces debug: batch f shares_memory=True force_id=140148688882160 f_id=140148688881392
+ @depend debug: auto-set f shares_memory=True shape=(2, 6)
+ @depend debug: auto-set f skipped copy
+ @depend debug: auto-set f shares_memory=False shape=(2, 6)
+ @depend debug: auto-set f performed copy
+ @forces debug: batch f shares_memory=True force_id=140148688882160 f_id=140148688888208
+ @depend debug: auto-set f shares_memory=True shape=(2, 6)
+ @depend debug: auto-set f skipped copy
+ @depend debug: auto-set f shares_memory=False shape=(2, 6)
+ @depend debug: auto-set f performed copy
+ @simulation.run: Average timings at MD step       0. t/step: 1.05159e-01
+ @forces debug: batch f shares_memory=True force_id=140148688882160 f_id=140148688888112
+ @depend debug: auto-set f shares_memory=True shape=(2, 6)
+ @depend debug: auto-set f skipped copy
+ @depend debug: auto-set f shares_memory=False shape=(2, 6)
+ @depend debug: auto-set f performed copy
+ @forces debug: batch f shares_memory=True force_id=140148688882160 f_id=140148688884080
+ @depend debug: auto-set f shares_memory=True shape=(2, 6)
+ @depend debug: auto-set f skipped copy
+ @depend debug: auto-set f shares_memory=False shape=(2, 6)
+ @depend debug: auto-set f performed copy
+ @forces debug: batch f shares_memory=True force_id=140148688882160 f_id=140148688884080
+ @depend debug: auto-set f shares_memory=True shape=(2, 6)
+ @depend debug: auto-set f skipped copy
+ @depend debug: auto-set f shares_memory=False shape=(2, 6)
+ @depend debug: auto-set f performed copy
+ @forces debug: batch f shares_memory=True force_id=140148688882160 f_id=140148688888976
+ @depend debug: auto-set f shares_memory=True shape=(2, 6)
+ @depend debug: auto-set f skipped copy
+ @depend debug: auto-set f shares_memory=False shape=(2, 6)
+ @depend debug: auto-set f performed copy
+ @softexit.trigger:  SOFTEXIT CALLED FROM THREAD <_MainThread(MainThread, started 140150733920064)>  @ SIMULATION: Exiting cleanly.
+ !W! Soft exit has been requested with message: ' @ SIMULATION: Exiting cleanly. I-PI reports success. Restartable as is: NO.'. Cleaning up.
+ @interfacesocket.close: Shutting down the driver interface.
+ @softexit.trigger:  SOFTEXIT CALLED FROM THREAD <Thread(Thread-1 (trigger), started daemon 140148688267008)> Client shutdown.
+ @simulation.softexit: Saving the latest status at the end of the step

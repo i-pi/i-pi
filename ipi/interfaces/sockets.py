@@ -729,6 +729,12 @@ class Driver(DriverSocket):
         self.pot_snp = None
         self.f_snp = None
         self.vir_snp = None
+        self.external_pos_shm = False
+        self.external_h_shm = False
+        self.external_ih_shm = False
+        self.external_pot_shm = False
+        self.external_force_shm = False
+        self.external_vir_shm = False
         
         
         if self.shm:
@@ -781,6 +787,15 @@ class Driver(DriverSocket):
                 if handle is None:
                     continue
                 handle.close()
+                if (
+                    (handle is self.pos_shm and self.external_pos_shm)
+                    or (handle is self.h_shm and self.external_h_shm)
+                    or (handle is self.ih_shm and self.external_ih_shm)
+                    or (handle is self.pot_shm and self.external_pot_shm)
+                    or (handle is self.f_shm and self.external_force_shm)
+                    or (handle is self.vir_shm and self.external_vir_shm)
+                ):
+                    continue
                 handle.unlink()
 
         super(DriverSocket, self).shutdown(how)
@@ -953,7 +968,14 @@ class Driver(DriverSocket):
         if self.status & Status.Ready:
             try:
                 if self.shm:
-                    self.np_to_shm({"pos": pos, "cell": h_ih})
+                    if self.external_pos_shm:
+                        # In batched SHM mode canonical arrays can already back
+                        # POS/H/IH directly, so only fall back to copying cell
+                        # buffers if they are not externally provided.
+                        if not (self.external_h_shm and self.external_ih_shm):
+                            self.cell_to_shm(h_ih)
+                    else:
+                        self.np_to_shm({"pos": pos, "cell": h_ih})
                     self.sendall(MESSAGE["posdata"])
                 else:
                     if self.nbeads == 1:
@@ -1151,42 +1173,100 @@ class Driver(DriverSocket):
             self.nbeads = r["pos"].shape[0]
 
         
-        self.pos_shm = shared_memory.SharedMemory(
-            create=True, size=r["pos"].size * 8, name=self.pos_bufname
-        )
-        self.h_shm = shared_memory.SharedMemory(
-            create=True, size=9 * 8, name=self.h_bufname
-        )
-        self.ih_shm = shared_memory.SharedMemory(
-            create=True, size=9 * 8, name=self.ih_bufname
-        )
-        self.pot_shm = shared_memory.SharedMemory(
-            create=True, size=self.nbeads * 8, name=self.pot_bufname
-        )
-        self.f_shm = shared_memory.SharedMemory(
-            create=True, size=r["pos"].size * 8, name=self.f_bufname
-        )
-        self.vir_shm = shared_memory.SharedMemory(
-            create=True, size=self.nbeads * 9 * 8, name=self.vir_bufname
-        )
+        self.external_pos_shm = False
+        if r["pos"].ndim == 2 and r.get("pos_shm_name") is not None:
+            # Batched SHM reuses the request-owned POS storage instead of
+            # creating a second driver-owned position buffer.
+            self.pos_bufname = r["pos_shm_name"]
+            self.pos_snp = r["pos"]
+            self.pos_shm = None
+            self.external_pos_shm = True
+        else:
+            self.pos_bufname = f"IPI-POS-{self.id}"
+            self.pos_shm = shared_memory.SharedMemory(
+                create=True, size=r["pos"].size * 8, name=self.pos_bufname
+            )
+            self.pos_snp = np.ndarray(
+                r["pos"].shape, dtype=np.float64, buffer=self.pos_shm.buf
+            )
+        self.external_h_shm = False
+        if r.get("h_shm_name") is not None:
+            self.h_bufname = r["h_shm_name"]
+            self.h_shm = None
+            self.h_snp = r["h_shm_array"]
+            self.external_h_shm = True
+        else:
+            self.h_shm = shared_memory.SharedMemory(
+                create=True, size=9 * 8, name=self.h_bufname
+            )
+        self.external_ih_shm = False
+        if r.get("ih_shm_name") is not None:
+            self.ih_bufname = r["ih_shm_name"]
+            self.ih_shm = None
+            self.ih_snp = r["ih_shm_array"]
+            self.external_ih_shm = True
+        else:
+            self.ih_shm = shared_memory.SharedMemory(
+                create=True, size=9 * 8, name=self.ih_bufname
+            )
+        self.external_pot_shm = False
+        if r.get("pot_shm_name") is not None:
+            self.pot_bufname = r["pot_shm_name"]
+            self.pot_shm = None
+            self.pot_snp = r["pot_shm_array"]
+            self.external_pot_shm = True
+        else:
+            self.pot_shm = shared_memory.SharedMemory(
+                create=True, size=self.nbeads * 8, name=self.pot_bufname
+            )
+        self.external_force_shm = False
+        if r["pos"].ndim == 2 and r.get("force_shm_name") is not None:
+            # Batched SHM can also reuse canonical force storage so the driver
+            # writes directly into the array later exposed as ForceBatchBead.f.
+            self.f_bufname = r["force_shm_name"]
+            self.f_shm = None
+            self.f_snp = r["force_shm_array"]
+            self.external_force_shm = True
+        else:
+            self.f_bufname = f"IPI-F-{self.id}"
+            self.f_shm = shared_memory.SharedMemory(
+                create=True, size=r["pos"].size * 8, name=self.f_bufname
+            )
+        self.external_vir_shm = False
+        if r.get("vir_shm_name") is not None:
+            self.vir_bufname = r["vir_shm_name"]
+            self.vir_shm = None
+            self.vir_snp = r["vir_shm_array"]
+            self.external_vir_shm = True
+        else:
+            self.vir_shm = shared_memory.SharedMemory(
+                create=True, size=self.nbeads * 9 * 8, name=self.vir_bufname
+            )
 
-        self.pos_snp = np.ndarray(
-            r["pos"].shape, dtype=np.float64, buffer=self.pos_shm.buf
-        )
-        self.h_snp = np.ndarray((3, 3), dtype=np.float64, buffer=self.h_shm.buf)
-        self.ih_snp = np.ndarray((3, 3), dtype=np.float64, buffer=self.ih_shm.buf)
-        self.pot_snp = np.ndarray(
-            (self.nbeads), dtype=np.float64, buffer=self.pot_shm.buf
-        )
-        self.f_snp = np.ndarray(r["pos"].shape, dtype=np.float64, buffer=self.f_shm.buf)
-        self.vir_snp = np.ndarray(
-            (self.nbeads, 3, 3), dtype=np.float64, buffer=self.vir_shm.buf
-        )
+        if not self.external_h_shm:
+            self.h_snp = np.ndarray((3, 3), dtype=np.float64, buffer=self.h_shm.buf)
+        if not self.external_ih_shm:
+            self.ih_snp = np.ndarray((3, 3), dtype=np.float64, buffer=self.ih_shm.buf)
+        if not self.external_pot_shm:
+            self.pot_snp = np.ndarray(
+                (self.nbeads), dtype=np.float64, buffer=self.pot_shm.buf
+            )
+        if not self.external_force_shm:
+            self.f_snp = np.ndarray(
+                r["pos"].shape, dtype=np.float64, buffer=self.f_shm.buf
+            )
+        if not self.external_vir_shm:
+            self.vir_snp = np.ndarray(
+                (self.nbeads, 3, 3), dtype=np.float64, buffer=self.vir_shm.buf
+            )
 
     def np_to_shm(self, r):
         self.pos_snp[:] = r["pos"]
-        self.h_snp[:] = r["cell"][0]
-        self.ih_snp[:] = r["cell"][1]
+        self.cell_to_shm(r["cell"])
+
+    def cell_to_shm(self, h_ih):
+        self.h_snp[:] = h_ih[0]
+        self.ih_snp[:] = h_ih[1]
 
     def shm_to_np(self):
         mxtradict = ""
@@ -1230,18 +1310,26 @@ class Driver(DriverSocket):
             return
 
         r["start"] = time.time()
+        wd_marker = f"WD{r['id']}"
+        timers.start(f"[{wd_marker}]Server->Driver transfer")
         self.dispatch_sendpos(r)
+        timers.stop(f"[{wd_marker}]Server->Driver transfer")
 
+        timers.start(f"[{wd_marker}]Driver compute/wait")
         self.get_status()
         if not (self.status & Status.HasData):
             warning(
                 " @SOCKET:   Inconsistent client state in dispatch thread! (III)",
                 verbosity.low,
             )
+            timers.stop(f"[{wd_marker}]Driver compute/wait")
             return
+        timers.stop(f"[{wd_marker}]Driver compute/wait")
 
         try:
+            timers.start(f"[{wd_marker}]Driver->Server transfer")
             r["result"] = self.getforce()
+            timers.stop(f"[{wd_marker}]Driver->Server transfer")
         except Disconnected:
             self.status = Status.Disconnected
             return

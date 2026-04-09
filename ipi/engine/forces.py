@@ -15,6 +15,7 @@ and the driver (that only cares about a single bead).
 import time
 import sys
 import threading
+import os
 from copy import deepcopy
 
 import numpy as np
@@ -27,6 +28,17 @@ from ipi.engine.beads import Beads
 from ipi.engine.cell import Cell
 from ipi.engine.forcefields import FFSocket
 from ipi.utils.timing_manager import timers
+
+
+def _shm_debug_log(message):
+    debug_path = os.environ.get("IPI_SHM_DEBUG_FILE", "")
+    if debug_path:
+        try:
+            with open(debug_path, "a") as f:
+                f.write(message + "\n")
+        except Exception:
+            pass
+
 __all__ = ["Forces", "ForceComponent"]
 
 
@@ -122,6 +134,8 @@ class ForceBead:
         self._f = depend_array(
             name="f", value=fbase, func=self.get_f, dependencies=[self._ufvx]
         )
+        self._f._timing_marker = f"WD{self.uid}"
+        self._f._timing_label = "ForceBead f"
 
         self._extra = depend_value(
             name="extra", func=self.get_extra, dependencies=[self._ufvx]
@@ -163,7 +177,8 @@ class ForceBead:
            A list of the form [potential, force, virial, extra].
         """
 
-        timers.start(f"[+++++]Waiting Driver{self.uid}")
+        wd_marker = f"WD{self.uid}"
+        timers.start(f"[+++++]Waiting Driver{self.uid}({wd_marker})")
         
         # because we thread over many systems and outputs, we might get called
         # more than once. keep track of how many times we are called so we
@@ -219,7 +234,7 @@ class ForceBead:
             while self._getallcount > 0:
                 time.sleep(latency)
         
-        timers.stop(f"[+++++]Waiting Driver{self.uid}")
+        timers.stop(f"[+++++]Waiting Driver{self.uid}({wd_marker})")
 
         return result
 
@@ -335,6 +350,11 @@ class ForceBatchBead:
         self.natoms = self.beads.natoms
         self.cell = cell
         self.ff = ff
+        self._shm_force_enabled = (
+            isinstance(self.ff, FFSocket)
+            and getattr(self.ff, "batch", False)
+            and getattr(self.ff.socket, "mode", None) == "shm"
+        )
 
         # ufvx depends on the atomic positions and on the cell
         """
@@ -346,23 +366,71 @@ class ForceBatchBead:
         self._ufvx.add_dependency(self.cell._h)
 
         # potential and virial are to be extracted very simply from ufvx
-        self._pot = depend_value(
+        self._pot = depend_array(
             name="pot", func=self.get_pot, dependencies=[self._ufvx]
+            ,value=(
+                None if self._shm_force_enabled else np.zeros((self.nbeads,), float)
+            ),
+            storage="shm" if self._shm_force_enabled else None,
+            storage_opts=(
+                {
+                    "shape": (self.nbeads,),
+                    "dtype": float,
+                    "initializer": "zeros",
+                }
+                if self._shm_force_enabled
+                else None
+            ),
         )
 
         self._vir = depend_array(
             name="vir",
-            value=np.zeros((self.nbeads, 3, 3), float),
+            value=(
+                None
+                if self._shm_force_enabled
+                else np.zeros((self.nbeads, 3, 3), float)
+            ),
             func=self.get_vir,
             dependencies=[self._ufvx],
+            storage="shm" if self._shm_force_enabled else None,
+            storage_opts=(
+                {
+                    "shape": (self.nbeads, 3, 3),
+                    "dtype": float,
+                    "initializer": "zeros",
+                }
+                if self._shm_force_enabled
+                else None
+            ),
         )
 
         # NB: the force requires a bit more work, to define shortcuts to xyz
         # slices without calculating the force at this point.
-        fbase = np.zeros((self.nbeads, self.natoms * 3), float)
         self._f = depend_array(
-            name="f", value=fbase, func=self.get_f, dependencies=[self._ufvx]
+            name="f",
+            value=(
+                None
+                if self._shm_force_enabled
+                else np.zeros((self.nbeads, self.natoms * 3), float)
+            ),
+            func=self.get_f,
+            dependencies=[self._ufvx],
+            storage="shm" if self._shm_force_enabled else None,
+            storage_opts=(
+                {
+                    # Batched SHM force requests can reuse this canonical
+                    # result storage directly as the socket F buffer.
+                    "shape": (self.nbeads, self.natoms * 3),
+                    "dtype": float,
+                    "initializer": "zeros",
+                }
+                if self._shm_force_enabled
+                else None
+            ),
         )
+        self._f._timing_marker = f"WD{self.uid}"
+        self._f._timing_label = "ForceBatchBead f"
+        fbase = dstrip(self._f)
 
         self._extra = depend_value(
             name="extra", func=self.get_extra, dependencies=[self._ufvx]
@@ -388,7 +456,17 @@ class ForceBatchBead:
         with self._threadlock:
             is_tainted = self._ufvx.tainted()
             if self.request is None and is_tainted:
-                self.request = self.ff.queue(self.beads, self.cell, reqid=self.uid)
+                template = {}
+                if self._shm_force_enabled and getattr(self._f, "shm_name", None) is not None:
+                    template["force_shm_name"] = self._f.shm_name
+                    template["force_shm_array"] = dstrip(self._f)
+                    template["pot_shm_name"] = self._pot.shm_name
+                    template["pot_shm_array"] = dstrip(self._pot)
+                    template["vir_shm_name"] = self._vir.shm_name
+                    template["vir_shm_array"] = dstrip(self._vir)
+                self.request = self.ff.queue(
+                    self.beads, self.cell, reqid=self.uid, template=template
+                )
         return is_tainted
 
     def get_all(self):
@@ -412,7 +490,8 @@ class ForceBatchBead:
             self._getallcount += 1
 
         # sleeps until the request has been evaluated
-        timers.start(f"[+++++]Waiting Driver{self.uid}")
+        wd_marker = f"WD{self.uid}"
+        timers.start(f"[+++++]Waiting Driver{self.uid}({wd_marker})")
         
         # this is converting the distribution library requests into [ u, f, v ]  lists
         if self.request is None:
@@ -439,7 +518,6 @@ class ForceBatchBead:
         # data has been collected, so the request can be released and a slot
         # freed up for new calculations
         result = request["result"]
-        timers.stop(f"[+++++]Waiting Driver{self.uid}")
 
 
         # reduce the reservation count (and wait for all calls to return)
@@ -454,6 +532,7 @@ class ForceBatchBead:
             while self._getallcount > 0:
                 time.sleep(latency)
         
+        timers.stop(f"[+++++]Waiting Driver{self.uid}({wd_marker})")
 
         return result
 
@@ -472,8 +551,19 @@ class ForceBatchBead:
         Returns:
            An array containing all the components of the force.
         """
-
-        return self.ufvx[1]
+        force = self.ufvx[1]
+        if os.environ.get("IPI_SHM_DEBUG", ""):
+            shares_memory = np.shares_memory(np.asarray(force), dstrip(self._f))
+            info(
+                " @forces debug: batch f shares_memory=%s force_id=%s f_id=%s"
+                % (shares_memory, id(force), id(dstrip(self._f))),
+                verbosity.low,
+            )
+            _shm_debug_log(
+                "forces batch f shares_memory=%s force_id=%s f_id=%s"
+                % (shares_memory, id(force), id(dstrip(self._f)))
+            )
+        return force
 
 
 
@@ -1150,6 +1240,9 @@ class Forces:
             func=self.f_combine,
             dependencies=[ff._f for ff in self.mforces],
         )
+        if len(self.mforces) == 1 and hasattr(self.mforces[0]._f, "_timing_marker"):
+            self._f._timing_marker = self.mforces[0]._f._timing_marker
+            self._f._timing_label = "Forces total f"
 
         # collection of pots and virs from individual ff objects
         self._pots = depend_array(

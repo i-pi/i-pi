@@ -1,0 +1,30 @@
+forces batch f shares_memory=True force_id=140148688882160 f_id=140148688881392
+depend auto-set f shares_memory=True shape=(2, 6)
+depend auto-set f skipped copy
+depend auto-set f shares_memory=False shape=(2, 6)
+depend auto-set f performed copy
+forces batch f shares_memory=True force_id=140148688882160 f_id=140148688888208
+depend auto-set f shares_memory=True shape=(2, 6)
+depend auto-set f skipped copy
+depend auto-set f shares_memory=False shape=(2, 6)
+depend auto-set f performed copy
+forces batch f shares_memory=True force_id=140148688882160 f_id=140148688888112
+depend auto-set f shares_memory=True shape=(2, 6)
+depend auto-set f skipped copy
+depend auto-set f shares_memory=False shape=(2, 6)
+depend auto-set f performed copy
+forces batch f shares_memory=True force_id=140148688882160 f_id=140148688884080
+depend auto-set f shares_memory=True shape=(2, 6)
+depend auto-set f skipped copy
+depend auto-set f shares_memory=False shape=(2, 6)
+depend auto-set f performed copy
+forces batch f shares_memory=True force_id=140148688882160 f_id=140148688884080
+depend auto-set f shares_memory=True shape=(2, 6)
+depend auto-set f skipped copy
+depend auto-set f shares_memory=False shape=(2, 6)
+depend auto-set f performed copy
+forces batch f shares_memory=True force_id=140148688882160 f_id=140148688888976
+depend auto-set f shares_memory=True shape=(2, 6)
+depend auto-set f skipped copy
+depend auto-set f shares_memory=False shape=(2, 6)
+depend auto-set f performed copy

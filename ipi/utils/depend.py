@@ -24,14 +24,17 @@ For a more detailed discussion, see the reference manual.
 # See the "licenses" directory for full license information.
 
 
-import weakref
 import threading
+import weakref
+import os
+from multiprocessing import resource_tracker, shared_memory
 
 from copy import deepcopy
 
 import numpy as np
 
 from ipi.utils.messages import verbosity, warning, info
+from ipi.utils.timing_manager import timers
 
 
 __all__ = [
@@ -46,6 +49,56 @@ __all__ = [
     "ddot",
     "noddot",
 ]
+
+
+_SHM_DEPEND_COUNTER = 0
+
+
+def _shm_debug_log(message):
+    debug_path = os.environ.get("IPI_SHM_DEBUG_FILE", "")
+    if debug_path:
+        try:
+            with open(debug_path, "a") as f:
+                f.write(message + "\n")
+        except Exception:
+            pass
+
+
+def _next_depend_shm_name():
+    global _SHM_DEPEND_COUNTER
+    _SHM_DEPEND_COUNTER += 1
+    return f"IPD{os.getpid() % 100000:05d}{_SHM_DEPEND_COUNTER % 10000:04d}"
+
+
+def _allocate_depend_storage(value, storage=None, storage_opts=None):
+    storage_opts = {} if storage_opts is None else dict(storage_opts)
+
+    if storage == "shm" and value is None:
+        # Allows callers such as Beads.q to allocate canonical storage directly
+        # in SHM without building a temporary NumPy array first.
+        shape = tuple(storage_opts["shape"])
+        dtype = np.dtype(storage_opts.get("dtype", float))
+        array = np.empty(shape, dtype=dtype)
+    else:
+        array = np.asarray(value)
+
+    if storage != "shm" or array.size == 0:
+        return array, None, None
+
+    initializer = storage_opts.get("initializer")
+    fill_value = storage_opts.get("fill_value", 0.0)
+    shm = shared_memory.SharedMemory(
+        create=True,
+        size=array.nbytes,
+        name=storage_opts.get("name", _next_depend_shm_name()),
+    )
+    resource_tracker.unregister(shm._name, "shared_memory")
+    shm_array = np.ndarray(array.shape, dtype=array.dtype, buffer=shm.buf)
+    if initializer == "zeros":
+        shm_array.fill(fill_value)
+    else:
+        shm_array[...] = array
+    return shm_array, shm, shm.name
 
 
 class synchronizer(object):
@@ -418,6 +471,8 @@ class depend_array(np.ndarray, depend_base):
         dependencies=None,
         tainted=None,
         base=None,
+        storage=None,
+        storage_opts=None,
     ):
         """Creates a new array from a template.
 
@@ -429,7 +484,14 @@ class depend_array(np.ndarray, depend_base):
            See __init__().
         """
 
-        obj = np.asarray(value).view(cls)
+        storage_array, shm_handle, shm_name = _allocate_depend_storage(
+            value, storage=storage, storage_opts=storage_opts
+        )
+        obj = np.asarray(storage_array).view(cls)
+        obj._storage = "numpy" if storage is None else storage
+        obj._shm_handle = shm_handle
+        obj._shm_name = shm_name
+        obj._shm_owner = shm_handle is not None
         return obj
 
     def __init__(
@@ -442,6 +504,8 @@ class depend_array(np.ndarray, depend_base):
         dependencies=None,
         tainted=None,
         base=None,
+        storage=None,
+        storage_opts=None,
     ):
         """Initialises depend_array.
 
@@ -468,9 +532,24 @@ class depend_array(np.ndarray, depend_base):
         )
 
         if base is None:
-            self._bval = value
+            if self._storage == "shm":
+                self._bval = dstrip(self)
+            else:
+                self._bval = value
         else:
             self._bval = base
+
+    @property
+    def shm_name(self):
+        return self._shm_name
+
+    def __del__(self):
+        try:
+            if getattr(self, "_shm_owner", False) and self._shm_handle is not None:
+                self._shm_handle.close()
+                self._shm_handle.unlink()
+        except Exception:
+            pass
 
     def copy(self, order="C", maskna=None):
         """Wrapper for numpy copy mechanism."""
@@ -516,6 +595,10 @@ class depend_array(np.ndarray, depend_base):
             # Most likely we came here on the way to init.
             # Just sets a defaults for safety
             self._bval = dstrip(self)
+        self._storage = getattr(obj, "_storage", "numpy")
+        self._shm_name = getattr(obj, "_shm_name", None)
+        self._shm_handle = None
+        self._shm_owner = False
 
     def __array_prepare__(self, arr, context=None):
         """Prepare output array for ufunc.
@@ -689,7 +772,53 @@ class depend_array(np.ndarray, depend_base):
                 self.view(np.ndarray)[index] = value
                 self.update_man()
             elif index == slice(None, None, None):
-                self._bval[index] = value
+                # If the producer already wrote into the same backing storage
+                # (e.g. SHM-backed batched socket results), avoid an in-place
+                # self-assignment copy on update.
+                timing_marker = getattr(self, "_timing_marker", None)
+                timing_label = getattr(self, "_timing_label", self._name)
+                try:
+                    shares_memory = np.shares_memory(np.asarray(value), self._bval)
+                    if os.environ.get("IPI_SHM_DEBUG", "") and self._name == "f":
+                        info(
+                            " @depend debug: auto-set f shares_memory=%s shape=%s"
+                            % (shares_memory, self._bval.shape),
+                            verbosity.low,
+                        )
+                        _shm_debug_log(
+                            "depend auto-set f shares_memory=%s shape=%s"
+                            % (shares_memory, self._bval.shape)
+                        )
+                    if not shares_memory:
+                        if timing_marker is not None:
+                            timers.start(f"[{timing_marker}]{timing_label} copy assign")
+                        self._bval[index] = value
+                        if timing_marker is not None:
+                            timers.stop(f"[{timing_marker}]{timing_label} copy assign")
+                        if os.environ.get("IPI_SHM_DEBUG", "") and self._name == "f":
+                            info(
+                                " @depend debug: auto-set f performed copy",
+                                verbosity.low,
+                            )
+                            _shm_debug_log("depend auto-set f performed copy")
+                    elif os.environ.get("IPI_SHM_DEBUG", "") and self._name == "f":
+                        info(
+                            " @depend debug: auto-set f skipped copy",
+                            verbosity.low,
+                        )
+                        _shm_debug_log("depend auto-set f skipped copy")
+                except Exception:
+                    if timing_marker is not None:
+                        timers.start(f"[{timing_marker}]{timing_label} fallback copy")
+                    self._bval[index] = value
+                    if timing_marker is not None:
+                        timers.stop(f"[{timing_marker}]{timing_label} fallback copy")
+                    if os.environ.get("IPI_SHM_DEBUG", "") and self._name == "f":
+                        info(
+                            " @depend debug: auto-set f fallback copy",
+                            verbosity.low,
+                        )
+                        _shm_debug_log("depend auto-set f fallback copy")
                 self.taint(taintme=False)
             else:
                 raise IndexError(
