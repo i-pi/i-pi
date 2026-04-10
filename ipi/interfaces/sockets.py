@@ -24,7 +24,6 @@ from ipi.utils.softexit import softexit
 
 from concurrent.futures import ThreadPoolExecutor
 
-
 __all__ = ["InterfaceSocket"]
 
 
@@ -230,6 +229,7 @@ class Driver(DriverSocket):
         self.lastreq = None
         self.locked = False
         self.exit_on_disconnect = False
+        self.assume_consistent_status = False
 
     def shutdown(self, how=socket.SHUT_RDWR):
         """Tries to send an exit message to clients to let them exit gracefully."""
@@ -523,7 +523,11 @@ class Driver(DriverSocket):
 
         r["t_dispatched"] = time.time()
 
-        self.get_status()
+        # When assume_consistent_status is set, we trust the optimistic status
+        # set at the end of each successful dispatch and skip the redundant
+        # STATUS round-trip. Otherwise we always query.
+        if not (self.assume_consistent_status and (self.status & Status.Ready)):
+            self.get_status()
         if self.status & Status.NeedsInit:
             self.initialize(r["id"], r["pars"])
             self.status = self.get_status()
@@ -538,13 +542,20 @@ class Driver(DriverSocket):
         r["start"] = time.time()
         self.sendpos(r["pos"][r["active"]], r["cell"])
 
-        self.get_status()
-        if not (self.status & Status.HasData):
-            warning(
-                " @SOCKET:   Inconsistent client state in dispatch thread! (III)",
-                verbosity.low,
-            )
-            return
+        if self.assume_consistent_status:
+            # Skip the STATUS→HAVEDATA round-trip.  After receiving POSDATA the
+            # client computes and then blocks on recv(); sending GETFORCE right
+            # away lets it respond as soon as the computation finishes, saving
+            # one full round-trip per dispatch.
+            self.status = Status.Up | Status.HasData
+        else:
+            self.get_status()
+            if not (self.status & Status.HasData):
+                warning(
+                    " @SOCKET:   Inconsistent client state in dispatch thread! (III)",
+                    verbosity.low,
+                )
+                return
 
         try:
             r["result"] = self.getforce()
@@ -565,11 +576,14 @@ class Driver(DriverSocket):
         r["t_finished"] = time.time()
         self.lastreq = r["id"]  #
 
-        # after getforce succeeds, the client is guaranteed to be ready
-        # by the protocol. Set status optimistically to avoid an extra
-        # round-trip; the get_status() at the start of the next dispatch()
-        # will confirm before sending new positions.
-        self.status = Status.Up | Status.Ready
+        if self.assume_consistent_status:
+            # after getforce succeeds, the client is guaranteed to be ready
+            # by the protocol. Set status optimistically to avoid an extra
+            # round-trip on the next dispatch.
+            self.status = Status.Up | Status.Ready
+        else:
+            # updates the status of the client before leaving
+            self.get_status()
 
         # marks the request as done as the very last thing
         r["status"] = "Done"
@@ -618,6 +632,7 @@ class InterfaceSocket(object):
         exit_on_disconnect=False,
         max_workers=128,
         sockets_prefix="/tmp/ipi_",
+        assume_consistent_status=False,
     ):
         """Initialises interface.
 
@@ -631,6 +646,11 @@ class InterfaceSocket(object):
            timeout: Length of time waiting for data from a client before we assume
               the connection is dead and disconnect the client.
             max_workers: Maximum number of threads launched concurrently
+            assume_consistent_status: If True, skip the redundant STATUS
+              round-trips during dispatch and trust the optimistic status set
+              after each successful exchange.  Saves up to 3 round-trips per
+              dispatch but assumes the client follows the protocol strictly
+              and never changes state spontaneously.
 
         Raises:
            NameError: Raised if mode is not 'unix' or 'inet'.
@@ -648,6 +668,7 @@ class InterfaceSocket(object):
         self.requests = None  # these will be linked to the request list of the FFSocket object using the interface
         self.exit_on_disconnect = exit_on_disconnect
         self.max_workers = max_workers
+        self.assume_consistent_status = assume_consistent_status
         self.offset = 0.0  # a constant energy offset added to the results returned by the driver (hacky but simple)
 
     def open(self):
@@ -807,6 +828,7 @@ class InterfaceSocket(object):
                 client, address = self.server.accept()
                 client.settimeout(TIMEOUT)
                 driver = Driver(client)
+                driver.assume_consistent_status = self.assume_consistent_status
                 info(
                     " @interfacesocket.pool_update:   Client asked for connection from "
                     + str(address)
@@ -842,6 +864,10 @@ class InterfaceSocket(object):
         jobs, adds jobs to free clients and initialises the forcefields of new
         clients.
         """
+
+        # nothing to do if there are no pending requests and no running jobs
+        if len(self.requests) == 0 and len(self.jobs) == 0:
+            return
 
         ttotal = tdispatch = tcheck = 0
         ttotal -= time.time()
@@ -978,13 +1004,8 @@ class InterfaceSocket(object):
                 ),
                 verbosity.high,
             )
-            # fc_thread = threading.Thread(
-            #    target=fc.dispatch, name="DISPATCH", kwargs={"r": r}
-            # )
             fc_thread = self.executor.submit(fc.dispatch, r=r)
             self.jobs.append([r, fc, fc_thread])
-            # fc_thread.daemon = True
-            # fc_thread.start()
             return True
 
         return False

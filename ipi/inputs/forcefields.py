@@ -222,6 +222,22 @@ class InputFFSocket(InputForceField):
                 "help": "This gives the number of seconds before assuming a calculation has died. If 0 there is no timeout.",
             },
         ),
+        "max_workers": (
+            InputValue,
+            {
+                "dtype": int,
+                "default": 128,
+                "help": "This gives the maximum number of job threads that are active simultaneously.",
+            },
+        ),
+        "assume_consistent_status": (
+            InputValue,
+            {
+                "dtype": bool,
+                "default": False,
+                "help": "If True, skip the redundant STATUS round-trips during dispatch and trust the optimistic status set after each successful exchange. Saves up to 3 round-trips per dispatch but assumes the client follows the protocol strictly and never changes state spontaneously.",
+            },
+        ),
     }
     attribs = {
         "mode": (
@@ -281,6 +297,8 @@ class InputFFSocket(InputForceField):
         self.mode.store(ff.socket.mode)
         self.matching.store(ff.socket.match_mode)
         self.exit_on_disconnect.store(ff.socket.exit_on_disconnect)
+        self.max_workers.store(ff.socket.max_workers)
+        self.assume_consistent_status.store(ff.socket.assume_consistent_status)
         self.threaded.store(True)  # hard-coded
 
     def fetch(self):
@@ -317,7 +335,9 @@ class InputFFSocket(InputForceField):
                 mode=self.mode.fetch(),
                 timeout=self.timeout.fetch(),
                 match_mode=self.matching.fetch(),
+                max_workers=self.max_workers.fetch(),
                 exit_on_disconnect=self.exit_on_disconnect.fetch(),
+                assume_consistent_status=self.assume_consistent_status.fetch(),
             ),
         )
 

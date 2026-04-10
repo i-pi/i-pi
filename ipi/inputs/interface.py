@@ -77,6 +77,14 @@ class InputInterfaceSocket(Input):
                 "help": "This gives the maximum number of job threads that are active simultaneously.",
             },
         ),
+        "assume_consistent_status": (
+            InputValue,
+            {
+                "dtype": bool,
+                "default": False,
+                "help": "If True, skip the redundant STATUS round-trips during dispatch and trust the optimistic status set after each successful exchange. Saves up to 3 round-trips per dispatch but assumes the client follows the protocol strictly and never changes state spontaneously.",
+            },
+        ),
         "timeout": (
             InputValue,
             {
@@ -125,6 +133,7 @@ class InputInterfaceSocket(Input):
         self.timeout.store(iface.timeout)
         self.pbc.store(iface.dopbc)
         self.max_workers.store(iface.max_workers)
+        self.assume_consistent_status.store(iface.assume_consistent_status)
 
     def fetch(self):
         """Creates an InterfaceSocket object.
@@ -144,6 +153,7 @@ class InputInterfaceSocket(Input):
             timeout=self.timeout.fetch(),
             dopbc=self.pbc.fetch(),
             max_workers=self.max_workers.fetch(),
+            assume_consistent_status=self.assume_consistent_status.fetch(),
         )
 
     def check(self):
