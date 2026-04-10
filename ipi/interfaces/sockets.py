@@ -1218,8 +1218,19 @@ class InterfaceSocket(object):
                 ),
                 verbosity.high,
             )
-            fc_thread = self.executor.submit(fc.dispatch, r=r)
-            self.jobs.append([r, fc, fc_thread])
+            if self.assume_consistent_status:
+                # Single-threaded path: do the send inline in the poll thread.
+                # The corresponding receive will happen in _pool_distribute_select
+                # when the socket becomes readable.
+                if not fc.dispatch_send(r):
+                    # Send failed; put the request back in the queue so it can
+                    # be retried once clients recover.
+                    r["status"] = "Queued"
+                    return False
+                self.jobs.append([r, fc, None])
+            else:
+                fc_thread = self.executor.submit(fc.dispatch, r=r)
+                self.jobs.append([r, fc, fc_thread])
             return True
 
         return False
